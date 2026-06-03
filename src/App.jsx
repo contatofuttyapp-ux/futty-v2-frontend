@@ -8,6 +8,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import Home from './pages/Home';
 import CriarEquipa from './pages/CriarEquipa';
 import Equipa from './pages/Equipa';
+import Convite from './pages/Convite';
 
 // "/" → redireciona para /home (se autenticado) ou /login
 function IndexRedirect() {
@@ -22,6 +23,12 @@ function EquipaRoute() {
   return <Equipa key={slug} />;
 }
 
+// Remonta a página de convite quando o token muda
+function ConviteRoute() {
+  const { token } = useParams();
+  return <Convite key={token} />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -31,6 +38,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/convite/:token" element={<ConviteRoute />} />
           <Route
             path="/home"
             element={

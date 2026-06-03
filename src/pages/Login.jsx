@@ -34,7 +34,7 @@ export default function Login() {
     setError('');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/home` },
+      options: { redirectTo: `${window.location.origin}${from}` },
     });
     if (error) setError(error.message);
   }

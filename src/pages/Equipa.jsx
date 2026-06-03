@@ -14,6 +14,7 @@ export default function Equipa() {
   const [error, setError] = useState('');
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -34,10 +35,18 @@ export default function Equipa() {
     };
   }, [slug]);
 
-  function gerarConvite() {
-    // Por agora apenas gera e mostra o link (sem fluxo de aceitação ainda)
-    setInviteLink(`${window.location.origin}/equipa/${slug}`);
+  async function gerarConvite() {
+    setError('');
     setCopied(false);
+    setGenerating(true);
+    try {
+      const { token } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
+      setInviteLink(`${window.location.origin}/convite/${token}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGenerating(false);
+    }
   }
 
   async function copiar() {
@@ -103,10 +112,16 @@ export default function Equipa() {
 
             <h2 className="section-title">Convidar jogador</h2>
             <p className="muted" style={{ fontSize: 14 }}>
-              Gera um link de convite para partilhar com novos jogadores.
+              Gera um link de convite (válido 7 dias, uso único) para partilhar com novos jogadores.
             </p>
-            <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 12 }} onClick={gerarConvite}>
-              Convidar jogador
+            <button
+              type="button"
+              className="btn btn--purple btn--sm"
+              style={{ marginTop: 12 }}
+              onClick={gerarConvite}
+              disabled={generating}
+            >
+              {generating ? 'A gerar…' : 'Convidar jogador'}
             </button>
 
             {inviteLink && (
