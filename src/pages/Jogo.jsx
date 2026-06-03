@@ -1,0 +1,200 @@
+// Futty v2.0 — Detalhe do jogo: confirmados, sorteio e resultado
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { apiFetch } from '../lib/api';
+import { formatDataHora, STATUS_LABEL } from '../lib/format';
+import { initials } from '../lib/teamColors';
+import Topbar from '../components/Topbar';
+import SorteioTimes from '../components/SorteioTimes';
+import '../styles/app.css';
+
+export default function Jogo() {
+  const { slug, id } = useParams();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const res = await apiFetch(`/api/games/${id}`);
+    setData(res);
+  }, [id]);
+
+  useEffect(() => {
+    let active = true;
+    apiFetch(`/api/games/${id}`)
+      .then((res) => {
+        if (active) setData(res);
+      })
+      .catch((err) => {
+        if (active) setError(err.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  async function confirmar(confirmado, goleiro) {
+    setError('');
+    setBusy(true);
+    try {
+      await apiFetch(`/api/games/${id}/confirmar`, {
+        method: 'POST',
+        body: JSON.stringify({ confirmado, goleiro }),
+      });
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sortear() {
+    setError('');
+    setBusy(true);
+    try {
+      await apiFetch(`/api/games/${id}/sortear`, { method: 'POST' });
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="app-shell">
+        <Topbar />
+        <main className="app-main">
+          <p className="muted">A carregar jogo…</p>
+        </main>
+      </div>
+    );
+  }
+
+  const { team, game, players, meuEstado } = data || {};
+  const isAdmin = team?.role === 'admin';
+  const confirmados = (players || []).filter((p) => p.confirmado);
+  const estouConfirmado = !!meuEstado?.confirmado;
+  const souGoleiro = !!meuEstado?.goleiro;
+
+  return (
+    <div className="app-shell">
+      <Topbar />
+      <main className="app-main">
+        <Link to={`/equipa/${slug}/jogos`} className="back-link">
+          ← Jogos
+        </Link>
+
+        {error && <div className="alert alert--error">{error}</div>}
+
+        {!game ? (
+          <p className="muted">Jogo não encontrado.</p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <h1 className="app-page-title" style={{ marginBottom: 4 }}>
+                  {game.local || 'Jogo'}
+                </h1>
+                <span className="muted">{formatDataHora(game.data)} · {game.num_times} times</span>
+              </div>
+              <span className={`badge badge--${game.status}`}>
+                {STATUS_LABEL[game.status] || game.status}
+              </span>
+            </div>
+
+            {/* Confirmação de presença */}
+            <h2 className="section-title">A tua presença</h2>
+            <div className="confirm-bar">
+              {estouConfirmado ? (
+                <>
+                  <span style={{ color: 'var(--neon)', fontWeight: 700 }}>✓ Estás confirmado</span>
+                  <label className="check-inline">
+                    <input
+                      type="checkbox"
+                      checked={souGoleiro}
+                      disabled={busy}
+                      onChange={(e) => confirmar(true, e.target.checked)}
+                    />
+                    Sou goleiro
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    style={{ marginLeft: 'auto' }}
+                    onClick={() => confirmar(false, false)}
+                    disabled={busy}
+                  >
+                    Cancelar presença
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="muted">Ainda não confirmaste presença.</span>
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--sm"
+                    style={{ marginLeft: 'auto' }}
+                    onClick={() => confirmar(true, false)}
+                    disabled={busy}
+                  >
+                    Confirmar presença
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Confirmados */}
+            <h2 className="section-title">
+              Confirmados <span className="muted">({confirmados.length})</span>
+            </h2>
+            {confirmados.length === 0 ? (
+              <p className="muted">Ainda ninguém confirmou.</p>
+            ) : (
+              <div className="member-list">
+                {confirmados.map((p) => (
+                  <div className="member-row" key={p.user_id}>
+                    <div className="member-avatar">{initials(p.nome) || '?'}</div>
+                    <div className="member-info">
+                      <div className="member-name">{p.nome}</div>
+                    </div>
+                    {p.goleiro && <span className="sorteio-player__gk">GR</span>}
+                    <span className="rating-pill">★ {p.rating}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Sorteio */}
+            <h2 className="section-title">Sorteio</h2>
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn btn--primary btn--sm"
+                onClick={sortear}
+                disabled={busy}
+              >
+                {busy ? 'A processar…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
+              </button>
+            )}
+            {!isAdmin && !game.sorteio_realizado && (
+              <p className="muted">O sorteio ainda não foi realizado.</p>
+            )}
+
+            {game.times_resultado && (
+              <div style={{ marginTop: 16 }}>
+                <SorteioTimes resultado={game.times_resultado} teamCor={team?.cor} />
+              </div>
+            )}
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

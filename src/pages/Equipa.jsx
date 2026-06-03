@@ -92,6 +92,17 @@ export default function Equipa() {
               </div>
             </div>
 
+            <div className="header-actions">
+              <Link to={`/equipa/${slug}/jogos`} className="btn btn--primary btn--sm">
+                ⚽ Jogos
+              </Link>
+              {team.role === 'admin' && (
+                <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--ghost btn--sm">
+                  + Criar jogo
+                </Link>
+              )}
+            </div>
+
             <h2 className="section-title">Membros</h2>
             <div className="member-list">
               {members.map((m) => (

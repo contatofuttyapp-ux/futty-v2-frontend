@@ -9,6 +9,9 @@ import Home from './pages/Home';
 import CriarEquipa from './pages/CriarEquipa';
 import Equipa from './pages/Equipa';
 import Convite from './pages/Convite';
+import Jogos from './pages/Jogos';
+import NovoJogo from './pages/NovoJogo';
+import Jogo from './pages/Jogo';
 
 // "/" → redireciona para /home (se autenticado) ou /login
 function IndexRedirect() {
@@ -27,6 +30,12 @@ function EquipaRoute() {
 function ConviteRoute() {
   const { token } = useParams();
   return <Convite key={token} />;
+}
+
+// Remonta a página do jogo quando o id muda
+function JogoRoute() {
+  const { id } = useParams();
+  return <Jogo key={id} />;
 }
 
 export default function App() {
@@ -60,6 +69,30 @@ export default function App() {
             element={
               <AuthGuard>
                 <EquipaRoute />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/equipa/:slug/jogos"
+            element={
+              <AuthGuard>
+                <Jogos />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/equipa/:slug/jogo/novo"
+            element={
+              <AuthGuard>
+                <NovoJogo />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/equipa/:slug/jogo/:id"
+            element={
+              <AuthGuard>
+                <JogoRoute />
               </AuthGuard>
             }
           />

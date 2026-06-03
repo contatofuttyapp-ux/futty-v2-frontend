@@ -368,3 +368,174 @@
   margin-bottom: 16px;
   font-size: 14px;
 }
+
+/* ===== Fase 5 — Jogos e sorteio ===== */
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0 8px;
+}
+
+/* Lista de jogos */
+.game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s, transform 0.08s;
+}
+
+.game-card:hover {
+  border-color: var(--neon);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+.game-card__date {
+  flex-shrink: 0;
+  width: 56px;
+  text-align: center;
+}
+
+.game-card__day {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.game-card__month {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+.game-card__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-card__title {
+  font-weight: 700;
+}
+
+.game-card__sub {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.badge--agendado {
+  background: rgba(124, 58, 237, 0.2);
+  color: #b69cff;
+}
+.badge--em_curso {
+  background: rgba(0, 229, 160, 0.15);
+  color: var(--neon);
+}
+.badge--terminado {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+}
+.badge--cancelado {
+  background: rgba(255, 77, 109, 0.15);
+  color: #ff8095;
+}
+
+/* Confirmação de presença */
+.confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  margin-top: 12px;
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.rating-pill {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 229, 160, 0.12);
+  color: var(--neon);
+}
+
+/* Grelha de times sorteados */
+.sorteio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.sorteio-team {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+
+.sorteio-team__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  font-weight: 800;
+  background: linear-gradient(135deg, rgba(0, 229, 160, 0.15), rgba(124, 58, 237, 0.2));
+  border-bottom: 1px solid var(--border);
+}
+
+.sorteio-team__avg {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--neon);
+}
+
+.sorteio-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sorteio-player:last-child {
+  border-bottom: none;
+}
+
+.sorteio-player__gk {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--purple);
+  background: rgba(124, 58, 237, 0.2);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
