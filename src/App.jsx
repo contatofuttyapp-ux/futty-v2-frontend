@@ -12,6 +12,7 @@ import Convite from './pages/Convite';
 import Jogos from './pages/Jogos';
 import NovoJogo from './pages/NovoJogo';
 import Jogo from './pages/Jogo';
+import Ranking from './pages/Ranking';
 
 // "/" → redireciona para /home (se autenticado) ou /login
 function IndexRedirect() {
@@ -77,6 +78,14 @@ export default function App() {
             element={
               <AuthGuard>
                 <Jogos />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/equipa/:slug/ranking"
+            element={
+              <AuthGuard>
+                <Ranking />
               </AuthGuard>
             }
           />

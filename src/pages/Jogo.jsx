@@ -1,19 +1,23 @@
-// Futty v2.0 — Detalhe do jogo: confirmados, sorteio e resultado
+// Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio, resultado e votação
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { formatDataHora, STATUS_LABEL } from '../lib/format';
 import { initials } from '../lib/teamColors';
 import Topbar from '../components/Topbar';
 import SorteioTimes from '../components/SorteioTimes';
+import Votacao from '../components/Votacao';
 import '../styles/app.css';
 
 export default function Jogo() {
   const { slug, id } = useParams();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [votoOk, setVotoOk] = useState(false);
 
   const load = useCallback(async () => {
     const res = await apiFetch(`/api/games/${id}`);
@@ -53,11 +57,45 @@ export default function Jogo() {
     }
   }
 
+  // Admin marca um jogador como goleiro / cabeça de chave
+  async function marcar(userId, patch) {
+    setError('');
+    setBusy(true);
+    try {
+      await apiFetch(`/api/games/${id}/jogador`, {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, ...patch }),
+      });
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sortear() {
     setError('');
     setBusy(true);
     try {
       await apiFetch(`/api/games/${id}/sortear`, { method: 'POST' });
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function votar(votos) {
+    setError('');
+    setBusy(true);
+    try {
+      await apiFetch(`/api/games/${id}/votar`, {
+        method: 'POST',
+        body: JSON.stringify({ votos }),
+      });
+      setVotoOk(true);
       await load();
     } catch (err) {
       setError(err.message);
@@ -77,11 +115,13 @@ export default function Jogo() {
     );
   }
 
-  const { team, game, players, meuEstado } = data || {};
+  const { team, game, players, meuEstado, jaVotei } = data || {};
   const isAdmin = team?.role === 'admin';
   const confirmados = (players || []).filter((p) => p.confirmado);
   const estouConfirmado = !!meuEstado?.confirmado;
   const souGoleiro = !!meuEstado?.goleiro;
+  const votacaoAberta = game?.status === 'em_curso' || game?.status === 'terminado';
+  const paraVotar = confirmados.filter((p) => p.user_id !== user?.id);
 
   return (
     <div className="app-shell">
@@ -111,6 +151,12 @@ export default function Jogo() {
               <span className={`badge badge--${game.status}`}>
                 {STATUS_LABEL[game.status] || game.status}
               </span>
+            </div>
+
+            <div className="header-actions">
+              <Link to={`/equipa/${slug}/ranking`} className="btn btn--ghost btn--sm">
+                🏆 Ranking
+              </Link>
             </div>
 
             {/* Confirmação de presença */}
@@ -158,6 +204,11 @@ export default function Jogo() {
             <h2 className="section-title">
               Confirmados <span className="muted">({confirmados.length})</span>
             </h2>
+            {isAdmin && confirmados.length > 0 && (
+              <p className="muted" style={{ fontSize: 13 }}>
+                Marca jogadores como goleiro (GR) ou cabeça de chave (C) antes de sortear.
+              </p>
+            )}
             {confirmados.length === 0 ? (
               <p className="muted">Ainda ninguém confirmou.</p>
             ) : (
@@ -168,7 +219,33 @@ export default function Jogo() {
                     <div className="member-info">
                       <div className="member-name">{p.nome}</div>
                     </div>
-                    {p.goleiro && <span className="sorteio-player__gk">GR</span>}
+                    {isAdmin ? (
+                      <>
+                        <button
+                          type="button"
+                          className="mark-toggle mark-toggle--gk"
+                          aria-pressed={p.goleiro}
+                          disabled={busy}
+                          onClick={() => marcar(p.user_id, { goleiro: !p.goleiro })}
+                        >
+                          GR
+                        </button>
+                        <button
+                          type="button"
+                          className="mark-toggle"
+                          aria-pressed={p.cabeca_chave}
+                          disabled={busy}
+                          onClick={() => marcar(p.user_id, { cabeca_chave: !p.cabeca_chave })}
+                        >
+                          C
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {p.cabeca_chave && <span className="sorteio-player__cap">C</span>}
+                        {p.goleiro && <span className="sorteio-player__gk">GR</span>}
+                      </>
+                    )}
                     <span className="rating-pill">★ {p.rating}</span>
                   </div>
                 ))}
@@ -195,6 +272,25 @@ export default function Jogo() {
               <div style={{ marginTop: 16 }}>
                 <SorteioTimes resultado={game.times_resultado} teamCor={team?.cor} />
               </div>
+            )}
+
+            {/* Votação (após o sorteio) */}
+            {game.sorteio_realizado && votacaoAberta && (
+              <>
+                <h2 className="section-title">Votação</h2>
+                {jaVotei || votoOk ? (
+                  <div className="alert" style={{ background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--neon)' }}>
+                    ✓ Já votaste neste jogo. Obrigado!
+                  </div>
+                ) : (
+                  <>
+                    <p className="muted" style={{ fontSize: 14, marginBottom: 12 }}>
+                      Avalia os outros jogadores de 1 a 5 estrelas. Só podes votar uma vez.
+                    </p>
+                    <Votacao jogadores={paraVotar} onSubmit={votar} busy={busy} />
+                  </>
+                )}
+              </>
             )}
           </>
         )}

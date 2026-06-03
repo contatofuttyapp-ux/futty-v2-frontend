@@ -96,6 +96,9 @@ export default function Equipa() {
               <Link to={`/equipa/${slug}/jogos`} className="btn btn--primary btn--sm">
                 ⚽ Jogos
               </Link>
+              <Link to={`/equipa/${slug}/ranking`} className="btn btn--ghost btn--sm">
+                🏆 Ranking
+              </Link>
               {team.role === 'admin' && (
                 <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--ghost btn--sm">
                   + Criar jogo
