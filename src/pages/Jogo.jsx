@@ -102,7 +102,11 @@ export default function Jogo() {
                 <h1 className="app-page-title" style={{ marginBottom: 4 }}>
                   {game.local || 'Jogo'}
                 </h1>
-                <span className="muted">{formatDataHora(game.data)} · {game.num_times} times</span>
+                <span className="muted">
+                  {formatDataHora(game.data)}
+                  {game.jogadores_por_time ? ` · ${game.jogadores_por_time} por time` : ''}
+                  {game.sorteio_realizado && game.num_times ? ` · ${game.num_times} times` : ''}
+                </span>
               </div>
               <span className={`badge badge--${game.status}`}>
                 {STATUS_LABEL[game.status] || game.status}

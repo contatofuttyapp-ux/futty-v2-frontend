@@ -12,7 +12,6 @@ export default function NovoJogo() {
   const [data, setData] = useState('');
   const [hora, setHora] = useState('');
   const [local, setLocal] = useState('');
-  const [numTimes, setNumTimes] = useState(2);
   const [porTime, setPorTime] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,6 +20,10 @@ export default function NovoJogo() {
     e.preventDefault();
     if (!data || !hora) {
       setError('Indica a data e a hora do jogo.');
+      return;
+    }
+    if (!porTime || Number(porTime) < 1) {
+      setError('Indica quantos jogadores por time.');
       return;
     }
     setError('');
@@ -33,8 +36,7 @@ export default function NovoJogo() {
           team_slug: slug,
           data: iso,
           local: local.trim() || null,
-          num_times: Number(numTimes),
-          jogadores_por_time: porTime ? Number(porTime) : null,
+          jogadores_por_time: Number(porTime),
         }),
       });
       navigate(`/equipa/${slug}/jogo/${game.id}`);
@@ -92,35 +94,21 @@ export default function NovoJogo() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="numTimes">Número de times</label>
-              <select
-                id="numTimes"
-                className="input"
-                value={numTimes}
-                onChange={(e) => setNumTimes(e.target.value)}
-              >
-                {[2, 3, 4, 5, 6].map((n) => (
-                  <option key={n} value={n}>
-                    {n} times
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="porTime">Jogadores por time</label>
-              <input
-                id="porTime"
-                type="number"
-                min="1"
-                max="11"
-                className="input"
-                placeholder="Opcional"
-                value={porTime}
-                onChange={(e) => setPorTime(e.target.value)}
-              />
-            </div>
+          <div className="field">
+            <label htmlFor="porTime">Jogadores por time</label>
+            <input
+              id="porTime"
+              type="number"
+              min="1"
+              max="11"
+              className="input"
+              placeholder="Ex.: 5"
+              value={porTime}
+              onChange={(e) => setPorTime(e.target.value)}
+            />
+            <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+              O número de times é calculado automaticamente no sorteio, conforme os jogadores confirmados.
+            </span>
           </div>
 
           <button

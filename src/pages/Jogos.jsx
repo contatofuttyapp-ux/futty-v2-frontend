@@ -85,7 +85,9 @@ export default function Jogos() {
                   <div className="game-card__main">
                     <div className="game-card__title">{g.local || 'Jogo'}</div>
                     <div className="game-card__sub">
-                      {formatDataHora(g.data)} · {g.confirmados} confirmados · {g.num_times} times
+                      {formatDataHora(g.data)} · {g.confirmados} confirmados
+                      {g.jogadores_por_time ? ` · ${g.jogadores_por_time}/time` : ''}
+                      {g.sorteio_realizado && g.num_times ? ` · ${g.num_times} times` : ''}
                     </div>
                   </div>
                   <span className={`badge badge--${g.status}`}>
