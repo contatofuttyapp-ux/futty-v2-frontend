@@ -1,6 +1,6 @@
 // Futty v2.0 — Criar equipa
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { COLOR_OPTIONS, initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
@@ -37,11 +37,8 @@ export default function CriarEquipa() {
 
   return (
     <div className="app-shell">
-      <Topbar />
+      <Topbar back="/home" title="Criar equipa" />
       <main className="app-main">
-        <Link to="/home" className="back-link">
-          ← Voltar
-        </Link>
         <h1 className="app-page-title">Criar equipa</h1>
         <p className="app-page-sub">Dá um nome e escolhe a cor da tua equipa.</p>
 

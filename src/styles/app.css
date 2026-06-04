@@ -10,26 +10,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  min-height: 56px;
 }
 
+/* Marca "FUT" (logótipo) */
 .app-brand {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.app-brand__dot {
+  letter-spacing: 0.16em;
   color: var(--neon);
+  text-decoration: none;
 }
 
-.app-topbar__user {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 13px;
-  color: var(--text-dim);
+.app-brand:hover {
+  text-decoration: none;
+}
+
+/* "← Voltar" (links secundários -> roxo) */
+.topbar-back {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Título à direita (ex.: FIGURINHA, nome do jogo) */
+.topbar-title {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  text-align: right;
+}
+
+/* Linha gradiente por baixo da topbar */
+.app-topbar__line {
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(to right, #00e5a0, #7c3aed);
 }
 
 .app-main {

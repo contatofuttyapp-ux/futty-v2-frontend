@@ -37,7 +37,7 @@ export default function Jogo() {
   if (loading) {
     return (
       <div className="app-shell">
-        <Topbar />
+        <Topbar back={`/equipa/${slug}/jogos`} />
         <main className="app-main">
           <Loading text="A carregar jogo…" />
         </main>
@@ -53,12 +53,8 @@ export default function Jogo() {
 
   return (
     <div className="app-shell">
-      <Topbar />
+      <Topbar back={`/equipa/${slug}/jogos`} title={game?.local || 'Jogo'} />
       <main className="app-main">
-        <Link to={`/equipa/${slug}/jogos`} className="back-link">
-          ← Jogos
-        </Link>
-
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
         {!game ? (

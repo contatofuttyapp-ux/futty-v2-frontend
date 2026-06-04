@@ -1,5 +1,5 @@
 // Futty v2.0 — Perfil do jogador: avatar com glow, stats, posição, fotos e radar
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { assetUrl } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { formatRating } from '../utils/format';
@@ -33,12 +33,8 @@ export default function JogadorPerfil() {
 
   return (
     <div className="app-shell">
-      <Topbar />
+      <Topbar back={`/equipa/${slug}/ranking`} title={jogador?.nome} />
       <main className="app-main">
-        <Link to={`/equipa/${slug}/ranking`} className="back-link">
-          ← Ranking
-        </Link>
-
         {error && <div className="alert alert--error">{error}</div>}
 
         {loading ? (

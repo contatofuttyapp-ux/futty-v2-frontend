@@ -1,21 +1,23 @@
-// Futty v2.0 — Barra de topo das páginas internas
+// Futty v2.0 — Barra de topo. Esquerda: marca "FUT" ou "← Voltar" (se back).
+// Direita: título opcional. Linha gradiente verde→roxo por baixo.
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 
-export default function Topbar() {
-  const { user, signOut } = useAuth();
-
+export default function Topbar({ title = null, back = null }) {
   return (
-    <header className="app-topbar">
-      <Link to="/home" className="app-brand" style={{ color: 'inherit' }}>
-        Futty<span className="app-brand__dot">.</span>
-      </Link>
-      <div className="app-topbar__user">
-        <span>{user?.email}</span>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={() => signOut()}>
-          Sair
-        </button>
-      </div>
-    </header>
+    <div className="app-topbar-wrap">
+      <header className="app-topbar">
+        {back ? (
+          <Link to={back} className="topbar-back">
+            ← Voltar
+          </Link>
+        ) : (
+          <Link to="/home" className="app-brand">
+            FUT
+          </Link>
+        )}
+        {title && <span className="topbar-title">{title}</span>}
+      </header>
+      <div className="app-topbar__line" />
+    </div>
   );
 }

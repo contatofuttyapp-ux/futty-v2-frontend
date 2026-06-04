@@ -1,6 +1,6 @@
 // Futty v2.0 — Criar jogo (só admin)
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import Topbar from '../components/Topbar';
 import '../styles/app.css';
@@ -48,11 +48,8 @@ export default function NovoJogo() {
 
   return (
     <div className="app-shell">
-      <Topbar />
+      <Topbar back={`/equipa/${slug}/jogos`} title="Criar jogo" />
       <main className="app-main">
-        <Link to={`/equipa/${slug}/jogos`} className="back-link">
-          ← Jogos
-        </Link>
         <h1 className="app-page-title">Criar jogo</h1>
         <p className="app-page-sub">Agenda um novo jogo para a equipa.</p>
 

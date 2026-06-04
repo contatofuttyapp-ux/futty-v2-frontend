@@ -4,7 +4,6 @@ import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useRanking } from '../hooks/useRanking';
 import { formatRating } from '../utils/format';
-import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
 import Stars from '../components/Stars';
@@ -104,7 +103,6 @@ export default function Ranking() {
 
   return (
     <div className="app-shell">
-      <Topbar />
       <main className="app-main">
         <Link to={`/equipa/${slug}`} className="back-link">
           ← {team?.nome || 'Equipa'}
