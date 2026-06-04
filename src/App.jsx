@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -15,6 +16,9 @@ import NovoJogo from './pages/NovoJogo';
 import Jogo from './pages/Jogo';
 import Ranking from './pages/Ranking';
 import JogadorPerfil from './pages/JogadorPerfil';
+import Feed from './pages/Feed';
+import Figurinha from './pages/Figurinha';
+import MeuPerfil from './pages/MeuPerfil';
 
 // "/" → redireciona para /home (se autenticado) ou /login
 function IndexRedirect() {
@@ -45,7 +49,8 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
+        <Layout>
+          <Routes>
           <Route path="/" element={<IndexRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -115,9 +120,34 @@ export default function App() {
               </AuthGuard>
             }
           />
+          <Route
+            path="/feed"
+            element={
+              <AuthGuard>
+                <Feed />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/figurinha"
+            element={
+              <AuthGuard>
+                <Figurinha />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/perfil"
+            element={
+              <AuthGuard>
+                <MeuPerfil />
+              </AuthGuard>
+            }
+          />
           {/* fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </Layout>
       </BrowserRouter>
     </AuthProvider>
   );
