@@ -7,6 +7,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
 
   // Não mostrar o aviso de "nenhum goleiro marcado" (mesmo em sorteios antigos)
   const avisos = (resultado.avisos || []).filter((a) => !/nenhum goleiro marcado/i.test(a));
+  const reservas = resultado.reservas || [];
 
   return (
     <>
@@ -35,6 +36,24 @@ export default function DrawnTeams({ resultado, teamCor }) {
           </div>
         ))}
       </div>
+
+      {reservas.length > 0 && (
+        <>
+          <h2 className="section-title">Reservas</h2>
+          <div className="member-list">
+            {reservas.map((r, i) => (
+              <div className="member-row" key={r.user_id}>
+                <div className="member-info">
+                  <div className="member-name">
+                    Reserva {i + 1} · {r.nome}
+                  </div>
+                </div>
+                <span className="rating-pill">{r.rating}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 }

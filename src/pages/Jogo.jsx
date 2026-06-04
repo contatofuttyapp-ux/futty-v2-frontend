@@ -8,6 +8,7 @@ import { initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import DrawnTeams from '../components/DrawnTeams';
+import SorteioSlotMachine from '../components/SorteioSlotMachine';
 import '../styles/app.css';
 
 export default function Jogo() {
@@ -15,6 +16,7 @@ export default function Jogo() {
   const { data, loading, error, reload } = useApi(`/api/games/${id}`);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [slotResult, setSlotResult] = useState(null); // resultado a animar na slot machine
 
   // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
   async function runAction(path, body) {
@@ -32,7 +34,21 @@ export default function Jogo() {
 
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
   const marcar = (userId, patch) => runAction(`/api/games/${id}/jogador`, { user_id: userId, ...patch });
-  const sortear = () => runAction(`/api/games/${id}/sortear`);
+
+  // Sorteio: faz o POST, abre a slot machine com o resultado e recarrega o jogo.
+  async function sortear() {
+    setActionError('');
+    setBusy(true);
+    try {
+      const res = await apiFetch(`/api/games/${id}/sortear`, { method: 'POST' });
+      setSlotResult(res?.game?.times_resultado || null);
+      await reload();
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -199,6 +215,15 @@ export default function Jogo() {
           </>
         )}
       </main>
+
+      {/* Slot machine do sorteio (overlay) */}
+      {slotResult && (
+        <SorteioSlotMachine
+          resultado={slotResult}
+          confirmados={confirmados}
+          onClose={() => setSlotResult(null)}
+        />
+      )}
     </div>
   );
 }
