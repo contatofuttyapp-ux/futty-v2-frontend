@@ -3,6 +3,13 @@ import { supabase } from './supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// Converte um caminho relativo do backend (ex.: /uploads/x.png) em URL absoluto.
+export function assetUrl(p) {
+  if (!p) return '';
+  if (/^https?:\/\//i.test(p)) return p;
+  return `${API_URL}${p}`;
+}
+
 // Faz um pedido autenticado à API, anexando o access token da sessão Supabase.
 export async function apiFetch(path, options = {}) {
   const {

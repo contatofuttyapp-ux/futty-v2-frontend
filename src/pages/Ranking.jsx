@@ -174,7 +174,13 @@ export default function Ranking() {
               return (
                 <div className={`rank-row ${i < 3 ? 'rank-row--top' : ''}`} key={p.user_id}>
                   <div className="rank-pos">{i < 3 ? MEDALHAS[i] : `#${i + 1}`}</div>
-                  <PlayerAvatar nome={p.nome} avatarUrl={p.avatar_url} />
+                  <Link
+                    to={`/equipa/${slug}/jogador/${p.user_id}`}
+                    aria-label={`Ver perfil de ${p.nome}`}
+                    style={{ lineHeight: 0 }}
+                  >
+                    <PlayerAvatar nome={p.nome} avatarUrl={p.avatar_url} />
+                  </Link>
                   <div className="rank-info">
                     <div className="rank-name">{p.nome}</div>
                     <div className="rank-votes" style={{ marginTop: 4 }}>

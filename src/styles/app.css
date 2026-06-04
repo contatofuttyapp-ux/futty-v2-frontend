@@ -856,10 +856,78 @@
 }
 
 .radar-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--purple);
   text-align: center;
   letter-spacing: 0.04em;
-  margin-top: 8px;
+  margin: 8px 0 0;
+}
+
+/* Aproxima o gráfico radar do título (remove o espaço em branco do SVG) */
+.radar-wrap {
+  margin-top: -26px;
+}
+
+/* ===== Perfil do jogador ===== */
+.profile-name {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 16px 0 2px;
+}
+
+.profile-sub {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin: 18px 0 10px;
+}
+
+@media (max-width: 480px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.stat-chip {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 6px;
+  text-align: center;
+}
+
+.stat-chip__val {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.stat-chip__lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+.profile-media {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 4px;
+}
+
+.profile-rank-pos {
+  text-align: center;
+  font-size: 14px;
+  margin: 0 0 14px;
 }

@@ -1,7 +1,7 @@
-// Futty v2.0 — Perfil do jogador: stats, posição, fotos campeão e radar
+// Futty v2.0 — Perfil do jogador: avatar com glow, stats, posição, fotos e radar
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { apiFetch, assetUrl } from '../lib/api';
 import Topbar from '../components/Topbar';
 import PlayerAvatar from '../components/PlayerAvatar';
 import MediaStars from '../components/MediaStars';
@@ -35,6 +35,16 @@ export default function JogadorPerfil() {
   const radar = data?.radar;
   const jogosCampeao = data?.jogos_campeao || [];
 
+  const stats = jogador
+    ? [
+        { lbl: 'Média', val: jogador.media_votos > 0 ? jogador.media_votos.toFixed(2) : '--', cor: 'var(--neon)' },
+        { lbl: 'Votos', val: jogador.votos, cor: 'var(--purple)' },
+        { lbl: 'Gols', val: jogador.gols, cor: 'var(--neon)' },
+        { lbl: 'Artilharia', val: jogador.artilharia, cor: 'var(--purple)' },
+        { lbl: 'Vitórias', val: jogador.vitorias, cor: '#d4a017' },
+      ]
+    : [];
+
   return (
     <div className="app-shell">
       <Topbar />
@@ -51,62 +61,57 @@ export default function JogadorPerfil() {
           !error && <p className="muted">Jogador não encontrado.</p>
         ) : (
           <>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
               <PlayerAvatar nome={jogador.nome} avatarUrl={jogador.avatar_url} lg />
             </div>
-            <h1 style={{ textAlign: 'center', fontSize: 24, marginBottom: 6 }}>{jogador.nome}</h1>
+            <h1 className="profile-name">{jogador.nome}</h1>
+            {jogador.is_goleiro && <p className="profile-sub">🧤 Goleiro</p>}
 
-            <div className="profile-stats">
-              <span>
-                Média <b style={{ color: 'var(--neon)' }}>{jogador.media_votos > 0 ? jogador.media_votos.toFixed(2) : '--'}</b>
-              </span>
-              <span>
-                Votos <b style={{ color: 'var(--purple)' }}>{jogador.votos}</b>
-              </span>
-              <span>
-                Gols <b style={{ color: 'var(--neon)' }}>{jogador.gols}</b>
-              </span>
-              <span>
-                Artilharia <b style={{ color: 'var(--purple)' }}>{jogador.artilharia}</b>
-              </span>
-              <span>
-                Vitórias <b style={{ color: '#d4a017' }}>{jogador.vitorias}</b>
-              </span>
+            <div className="profile-media">
+              <MediaStars value={jogador.media_votos} size={26} />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-              <MediaStars value={jogador.media_votos} />
+            <div className="stat-grid">
+              {stats.map((s) => (
+                <div className="stat-chip" key={s.lbl}>
+                  <div className="stat-chip__val" style={{ color: s.cor }}>
+                    {s.val}
+                  </div>
+                  <div className="stat-chip__lbl">{s.lbl}</div>
+                </div>
+              ))}
             </div>
 
-            <div className="profile-card">
-              {jogador.posicao != null ? (
-                <p style={{ margin: '0 0 12px', fontSize: 14 }}>
-                  Posição no ranking (média):{' '}
-                  <strong style={{ color: 'var(--neon)' }}>#{jogador.posicao}</strong> de{' '}
-                  {jogador.total_com_media || '--'} com média
-                </p>
-              ) : (
-                <p className="muted" style={{ margin: '0 0 12px', fontSize: 13 }}>
-                  Sem posição (ainda sem média).
-                </p>
-              )}
+            {jogador.posicao != null ? (
+              <p className="profile-rank-pos">
+                Posição no ranking (média):{' '}
+                <strong style={{ color: 'var(--neon)' }}>#{jogador.posicao}</strong> de{' '}
+                {jogador.total_com_media || '--'} com média
+              </p>
+            ) : (
+              <p className="profile-rank-pos muted">Sem posição (ainda sem média).</p>
+            )}
 
-              {jogosCampeao.length ? (
+            {jogosCampeao.length > 0 && (
+              <div className="profile-card">
+                <div className="radar-title" style={{ marginBottom: 12 }}>
+                  Fotos de Campeão
+                </div>
                 <div className="profile-photos">
                   {jogosCampeao.map((f, i) => (
-                    <img key={i} src={f.foto} alt="" />
+                    <img key={i} src={assetUrl(f.foto)} alt="Campeão" />
                   ))}
                 </div>
-              ) : (
-                <p className="muted" style={{ fontSize: 13 }}>
-                  Sem fotos de jogos como campeão.
-                </p>
-              )}
-
-              <div className="radar-title" style={{ marginTop: 16 }}>
-                Mapa de Performance
               </div>
-              {radar && <RadarChart valores={radar} />}
+            )}
+
+            <div className="profile-card">
+              <div className="radar-title">Mapa de Performance</div>
+              {radar && (
+                <div className="radar-wrap">
+                  <RadarChart valores={radar} />
+                </div>
+              )}
             </div>
           </>
         )}
