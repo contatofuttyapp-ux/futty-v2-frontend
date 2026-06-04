@@ -97,8 +97,8 @@
 }
 
 .auth-input:focus {
-  border-color: var(--neon);
-  box-shadow: 0 0 0 3px rgba(0, 229, 160, 0.15);
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
 }
 
 /* Botão primário (verde neon) */

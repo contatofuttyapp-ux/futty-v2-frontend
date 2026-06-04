@@ -20,13 +20,14 @@ export default function JogadorPerfil() {
   const radar = data?.radar;
   const galeria = data?.jogos_campeao || [];
 
+  // Só a Média é verde (rating); o resto em branco.
   const stats = jogador
     ? [
         { lbl: 'Média', val: formatRating(jogador.media_votos), cor: 'var(--neon)' },
-        { lbl: 'Votos', val: jogador.votos, cor: 'var(--purple)' },
-        { lbl: 'Gols', val: jogador.gols, cor: 'var(--neon)' },
-        { lbl: 'Artilharia', val: jogador.artilharia, cor: 'var(--purple)' },
-        { lbl: 'Vitórias', val: jogador.vitorias, cor: '#d4a017' },
+        { lbl: 'Votos', val: jogador.votos, cor: 'var(--text)' },
+        { lbl: 'Gols', val: jogador.gols, cor: 'var(--text)' },
+        { lbl: 'Artilharia', val: jogador.artilharia, cor: 'var(--text)' },
+        { lbl: 'Vitórias', val: jogador.vitorias, cor: 'var(--text)' },
       ]
     : [];
 
@@ -47,7 +48,7 @@ export default function JogadorPerfil() {
         ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-              <PlayerAvatar nome={jogador.nome} avatarUrl={jogador.avatar_url} lg />
+              <PlayerAvatar nome={jogador.nome} avatarUrl={jogador.avatar_url} lg glow />
             </div>
             <h1 className="profile-name">{jogador.nome}</h1>
             {jogador.is_goleiro && <p className="profile-sub">🧤 Goleiro</p>}
