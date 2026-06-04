@@ -13,6 +13,7 @@ import Jogos from './pages/Jogos';
 import NovoJogo from './pages/NovoJogo';
 import Jogo from './pages/Jogo';
 import Ranking from './pages/Ranking';
+import JogadorPerfil from './pages/JogadorPerfil';
 
 // "/" → redireciona para /home (se autenticado) ou /login
 function IndexRedirect() {
@@ -86,6 +87,14 @@ export default function App() {
             element={
               <AuthGuard>
                 <Ranking />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/equipa/:slug/jogador/:userId"
+            element={
+              <AuthGuard>
+                <JogadorPerfil />
               </AuthGuard>
             }
           />

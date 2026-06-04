@@ -688,3 +688,178 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+/* ===== Ranking completo (v1) ===== */
+
+/* Tabs de período */
+.rank-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 4px 0 16px;
+}
+
+.rank-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: all 0.12s;
+}
+
+.rank-tab--active {
+  border-color: rgba(0, 229, 160, 0.45);
+  background: rgba(0, 229, 160, 0.1);
+  color: var(--neon);
+}
+
+/* Avatar com glow neon */
+.pavatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--neon);
+  background: radial-gradient(circle at 50% 35%, rgba(0, 229, 160, 0.18), rgba(8, 8, 8, 0.9));
+  border: 2px solid rgba(0, 229, 160, 0.55);
+  box-shadow: 0 0 14px rgba(0, 229, 160, 0.35), inset 0 0 10px rgba(0, 229, 160, 0.15);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pavatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pavatar--lg {
+  width: 128px;
+  height: 128px;
+  font-size: 40px;
+  border-width: 3px;
+  box-shadow: 0 0 32px rgba(0, 229, 160, 0.5), inset 0 0 18px rgba(0, 229, 160, 0.18);
+}
+
+/* Etiquetas roxas (cabeça de chave / goleiro) */
+.player-tag {
+  font-size: 12px;
+  font-weight: 700;
+  color: #b69cff;
+  margin-top: 2px;
+}
+
+/* Botões de ação por linha (Votar / Ver perfil) */
+.rank-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rank-actions .btn {
+  white-space: nowrap;
+}
+
+/* Estrelas grandes (modal) */
+.stars--lg {
+  gap: 6px;
+}
+
+.stars--lg .star {
+  font-size: 34px;
+}
+
+.star--ro {
+  cursor: default;
+}
+
+.star--ro:hover {
+  transform: none;
+}
+
+/* Modal genérico */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 360px;
+  padding: 2px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--neon), var(--purple));
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+}
+
+.modal-card__inner {
+  background: var(--bg-elev);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 24px 20px;
+  text-align: center;
+}
+
+/* Perfil do jogador */
+.profile-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin: 12px 0;
+  text-align: center;
+}
+
+.profile-stats b {
+  font-weight: 800;
+}
+
+.profile-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  margin-top: 16px;
+}
+
+.profile-photos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.profile-photos img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.radar-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--purple);
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin-top: 8px;
+}
