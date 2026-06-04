@@ -1,10 +1,12 @@
 // Futty v2.0 — Perfil do jogador: avatar com glow, stats, posição, fotos e radar
-import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { apiFetch, assetUrl } from '../lib/api';
+import { assetUrl } from '../lib/api';
+import { useApi } from '../hooks/useApi';
+import { formatRating } from '../utils/format';
 import Topbar from '../components/Topbar';
+import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
-import MediaStars from '../components/MediaStars';
+import RatingStars from '../components/RatingStars';
 import RadarChart from '../components/RadarChart';
 import '../styles/app.css';
 
@@ -12,26 +14,7 @@ const TIPO_LABEL = { vitoria: 'Campeão', artilharia: 'Artilheiro', destaque: 'D
 
 export default function JogadorPerfil() {
   const { slug, userId } = useParams();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    apiFetch(`/api/teams/${slug}/jogador/${userId}`)
-      .then((res) => {
-        if (active) setData(res);
-      })
-      .catch((err) => {
-        if (active) setError(err.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [slug, userId]);
+  const { data, loading, error } = useApi(`/api/teams/${slug}/jogador/${userId}`);
 
   const jogador = data?.jogador;
   const radar = data?.radar;
@@ -39,7 +22,7 @@ export default function JogadorPerfil() {
 
   const stats = jogador
     ? [
-        { lbl: 'Média', val: jogador.media_votos > 0 ? jogador.media_votos.toFixed(2) : '--', cor: 'var(--neon)' },
+        { lbl: 'Média', val: formatRating(jogador.media_votos), cor: 'var(--neon)' },
         { lbl: 'Votos', val: jogador.votos, cor: 'var(--purple)' },
         { lbl: 'Gols', val: jogador.gols, cor: 'var(--neon)' },
         { lbl: 'Artilharia', val: jogador.artilharia, cor: 'var(--purple)' },
@@ -58,7 +41,7 @@ export default function JogadorPerfil() {
         {error && <div className="alert alert--error">{error}</div>}
 
         {loading ? (
-          <p className="muted">A carregar perfil…</p>
+          <Loading text="A carregar perfil…" />
         ) : !jogador ? (
           !error && <p className="muted">Jogador não encontrado.</p>
         ) : (
@@ -70,7 +53,7 @@ export default function JogadorPerfil() {
             {jogador.is_goleiro && <p className="profile-sub">🧤 Goleiro</p>}
 
             <div className="profile-media">
-              <MediaStars value={jogador.media_votos} size={26} />
+              <RatingStars value={jogador.media_votos} size={26} />
             </div>
 
             <div className="stat-grid">

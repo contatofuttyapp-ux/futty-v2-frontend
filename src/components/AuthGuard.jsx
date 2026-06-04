@@ -1,6 +1,6 @@
 // Futty v2.0 — Protege rotas privadas: redireciona para /login se não autenticado
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 export default function AuthGuard({ children }) {
   const { session, loading } = useAuth();

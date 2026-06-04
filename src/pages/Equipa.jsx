@@ -1,49 +1,31 @@
 // Futty v2.0 — Detalhe da equipa + membros + convite
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { colorOf, initials } from '../lib/teamColors';
+import { useTeam } from '../hooks/useTeam';
+import { colorOf, initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
+import Loading from '../components/Loading';
 import '../styles/app.css';
 
 export default function Equipa() {
   const { slug } = useParams();
-  const [team, setTeam] = useState(null);
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { team, members, loading, error } = useTeam(slug);
+
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    apiFetch(`/api/teams/${slug}`)
-      .then((data) => {
-        if (!active) return;
-        setTeam(data.team);
-        setMembers(data.members || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (!active) return;
-        setError(err.message);
-        setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [slug]);
+  const [actionError, setActionError] = useState('');
 
   async function gerarConvite() {
-    setError('');
+    setActionError('');
     setCopied(false);
     setGenerating(true);
     try {
       const { token } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
       setInviteLink(`${window.location.origin}/convite/${token}`);
     } catch (err) {
-      setError(err.message);
+      setActionError(err.message);
     } finally {
       setGenerating(false);
     }
@@ -58,7 +40,7 @@ export default function Equipa() {
     }
   }
 
-  const c = team ? colorOf(team.cor) : colorOf('verde');
+  const c = colorOf(team?.cor);
 
   return (
     <div className="app-shell">
@@ -68,17 +50,16 @@ export default function Equipa() {
           ← As tuas equipas
         </Link>
 
-        {error && <div className="alert alert--error">{error}</div>}
+        {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
         {loading ? (
-          <p className="muted">A carregar…</p>
-        ) : team ? (
+          <Loading />
+        ) : !team ? (
+          !error && <p className="muted">Equipa não encontrada.</p>
+        ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
-              <div
-                className="team-avatar team-avatar--lg"
-                style={{ background: c.hex, color: c.text }}
-              >
+              <div className="team-avatar team-avatar--lg" style={{ background: c.hex, color: c.text }}>
                 {initials(team.nome)}
               </div>
               <div>
@@ -110,16 +91,12 @@ export default function Equipa() {
             <div className="member-list">
               {members.map((m) => (
                 <div className="member-row" key={m.id || m.email}>
-                  <div className="member-avatar">
-                    {initials(m.nome || m.email || '?') || '?'}
-                  </div>
+                  <div className="member-avatar">{initials(m.nome || m.email || '?') || '?'}</div>
                   <div className="member-info">
                     <div className="member-name">{m.nome || m.email}</div>
                     {m.nome && <div className="member-email">{m.email}</div>}
                   </div>
-                  <span className={`badge badge--${m.role === 'admin' ? 'admin' : 'member'}`}>
-                    {m.role}
-                  </span>
+                  <span className={`badge badge--${m.role === 'admin' ? 'admin' : 'member'}`}>{m.role}</span>
                 </div>
               ))}
             </div>
@@ -150,8 +127,6 @@ export default function Equipa() {
               </div>
             )}
           </>
-        ) : (
-          !error && <p className="muted">Equipa não encontrada.</p>
         )}
       </main>
     </div>

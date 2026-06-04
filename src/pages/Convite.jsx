@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { useAuth } from '../context/AuthContext';
-import { colorOf, initials } from '../lib/teamColors';
+import { useAuth } from '../hooks/useAuth';
+import { colorOf, initials } from '../utils/teamColors';
 import '../styles/app.css';
 
 const MOTIVOS = {

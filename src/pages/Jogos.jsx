@@ -1,37 +1,14 @@
 // Futty v2.0 — Lista de jogos da equipa
-import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
-import { diaMes, formatDataHora, STATUS_LABEL } from '../lib/format';
+import { useTeamGames } from '../hooks/useTeam';
+import { dayMonth, formatDateTime, STATUS_LABELS } from '../utils/format';
 import Topbar from '../components/Topbar';
+import Loading from '../components/Loading';
 import '../styles/app.css';
 
 export default function Jogos() {
   const { slug } = useParams();
-  const [team, setTeam] = useState(null);
-  const [games, setGames] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    apiFetch(`/api/teams/${slug}/games`)
-      .then((data) => {
-        if (!active) return;
-        setTeam(data.team);
-        setGames(data.games || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (!active) return;
-        setError(err.message);
-        setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [slug]);
-
+  const { team, games, loading, error } = useTeamGames(slug);
   const isAdmin = team?.role === 'admin';
 
   return (
@@ -56,7 +33,9 @@ export default function Jogos() {
         {error && <div className="alert alert--error" style={{ marginTop: 16 }}>{error}</div>}
 
         {loading ? (
-          <p className="muted" style={{ marginTop: 16 }}>A carregar jogos…</p>
+          <div style={{ marginTop: 16 }}>
+            <Loading text="A carregar jogos…" />
+          </div>
         ) : games.length === 0 ? (
           <div className="empty-state" style={{ marginTop: 20 }}>
             <div className="empty-state__emoji">📅</div>
@@ -75,24 +54,22 @@ export default function Jogos() {
         ) : (
           <div className="game-list">
             {games.map((g) => {
-              const { dia, mes } = diaMes(g.data);
+              const { day, month } = dayMonth(g.data);
               return (
                 <Link key={g.id} to={`/equipa/${slug}/jogo/${g.id}`} className="game-card">
                   <div className="game-card__date">
-                    <div className="game-card__day">{dia}</div>
-                    <div className="game-card__month">{mes}</div>
+                    <div className="game-card__day">{day}</div>
+                    <div className="game-card__month">{month}</div>
                   </div>
                   <div className="game-card__main">
                     <div className="game-card__title">{g.local || 'Jogo'}</div>
                     <div className="game-card__sub">
-                      {formatDataHora(g.data)} · {g.confirmados} confirmados
+                      {formatDateTime(g.data)} · {g.confirmados} confirmados
                       {g.jogadores_por_time ? ` · ${g.jogadores_por_time}/time` : ''}
                       {g.sorteio_realizado && g.num_times ? ` · ${g.num_times} times` : ''}
                     </div>
                   </div>
-                  <span className={`badge badge--${g.status}`}>
-                    {STATUS_LABEL[g.status] || g.status}
-                  </span>
+                  <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>
                 </Link>
               );
             })}

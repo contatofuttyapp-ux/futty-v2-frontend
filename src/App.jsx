@@ -1,6 +1,7 @@
 // Futty v2.0 — Router principal
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
 import Login from './pages/Login';
 import Register from './pages/Register';

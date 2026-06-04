@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { COLOR_OPTIONS, initials } from '../lib/teamColors';
+import { COLOR_OPTIONS, initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
 import '../styles/app.css';
 

@@ -1,10 +1,13 @@
 // Futty v2.0 — Ranking completo (pesos v1): tabs, lista, modal de voto e lembrete
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { useRanking } from '../hooks/useRanking';
+import { formatRating } from '../utils/format';
 import Topbar from '../components/Topbar';
+import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
-import Estrelas from '../components/Estrelas';
+import Stars from '../components/Stars';
 import '../styles/app.css';
 
 const TABS = [
@@ -12,57 +15,26 @@ const TABS = [
   { k: 'mes', l: 'Mês' },
   { k: 'geral', l: 'Geral' },
 ];
-const MEDALHAS = ['🥇', '🥈', '🥉'];
+const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function Ranking() {
   const { slug } = useParams();
   const [periodo, setPeriodo] = useState('geral');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { team, ranking, votacao, loading, error, reload } = useRanking(slug, periodo);
 
-  const [voteModal, setVoteModal] = useState(null); // jogador a votar
+  const [voteModal, setVoteModal] = useState(null);
   const [modalStars, setModalStars] = useState(null);
   const [voteBusy, setVoteBusy] = useState(false);
+  const [voteError, setVoteError] = useState('');
 
   const [reminder, setReminder] = useState(null); // { faltam }
   const reminderChecked = useRef(false);
 
-  const load = useCallback(
-    async (per) => {
-      const res = await apiFetch(`/api/teams/${slug}/ranking?periodo=${per}`);
-      setData(res);
-      return res;
-    },
-    [slug]
-  );
-
-  useEffect(() => {
-    let active = true;
-    apiFetch(`/api/teams/${slug}/ranking?periodo=${periodo}`)
-      .then((res) => {
-        if (active) setData(res);
-      })
-      .catch((err) => {
-        if (active) setError(err.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [slug, periodo]);
-
-  function mudarPeriodo(k) {
-    if (k === periodo) return;
-    setLoading(true);
-    setPeriodo(k);
-  }
+  const votaveis = new Set(votacao?.votaveis || []);
 
   // Lembrete de votação — uma vez por sessão, se votou em < 85% dos colegas
   useEffect(() => {
-    if (reminderChecked.current) return;
+    if (reminderChecked.current) return undefined;
     const key = `futty_vote_reminder_${slug}`;
     let stored = false;
     try {
@@ -72,7 +44,7 @@ export default function Ranking() {
     }
     if (stored) {
       reminderChecked.current = true;
-      return;
+      return undefined;
     }
     let active = true;
     apiFetch(`/api/teams/${slug}/votacao-status`)
@@ -91,19 +63,15 @@ export default function Ranking() {
     };
   }, [slug]);
 
-  const team = data?.team;
-  const ranking = data?.ranking || [];
-  const votaveis = new Set(data?.votacao?.votaveis || []);
-
-  function abrirVoto(p) {
-    setVoteModal(p);
-    setModalStars(p.minha_nota ?? null);
+  function openVote(player) {
+    setVoteModal(player);
+    setModalStars(player.minha_nota ?? null);
   }
 
-  async function confirmarVoto() {
+  async function confirmVote() {
     if (!voteModal || modalStars == null) return;
     setVoteBusy(true);
-    setError('');
+    setVoteError('');
     try {
       await apiFetch(`/api/teams/${slug}/votar`, {
         method: 'POST',
@@ -111,9 +79,9 @@ export default function Ranking() {
       });
       setVoteModal(null);
       setModalStars(null);
-      await load(periodo);
+      await reload();
     } catch (err) {
-      setError(err.message);
+      setVoteError(err.message);
     } finally {
       setVoteBusy(false);
     }
@@ -128,10 +96,10 @@ export default function Ranking() {
     setReminder(null);
   }
 
-  function reminderVotarAgora() {
+  function reminderVoteNow() {
     dismissReminder();
-    const alvo = ranking.find((p) => votaveis.has(p.user_id) && p.minha_nota == null);
-    if (alvo) abrirVoto(alvo);
+    const target = ranking.find((p) => votaveis.has(p.user_id) && p.minha_nota == null);
+    if (target) openVote(target);
   }
 
   return (
@@ -154,26 +122,31 @@ export default function Ranking() {
               role="tab"
               aria-selected={periodo === k}
               className={`rank-tab ${periodo === k ? 'rank-tab--active' : ''}`}
-              onClick={() => mudarPeriodo(k)}
+              onClick={() => setPeriodo(k)}
             >
               {l}
             </button>
           ))}
-          {loading && <span className="muted" style={{ fontSize: 12 }}>A carregar…</span>}
+          {loading && (
+            <span className="muted" style={{ fontSize: 12 }}>
+              A carregar…
+            </span>
+          )}
         </div>
 
-        {error && <div className="alert alert--error">{error}</div>}
+        {(error || voteError) && <div className="alert alert--error">{error || voteError}</div>}
 
-        {ranking.length === 0 && !loading ? (
+        {loading && ranking.length === 0 ? (
+          <Loading />
+        ) : ranking.length === 0 ? (
           <p className="muted">Ainda não há jogadores.</p>
         ) : (
           <div className="rank-list">
             {ranking.map((p, i) => {
-              const podeVotar = votaveis.has(p.user_id);
-              const mediaStr = p.media_votos > 0 ? p.media_votos.toFixed(2) : '--';
+              const canVote = votaveis.has(p.user_id);
               return (
                 <div className={`rank-row ${i < 3 ? 'rank-row--top' : ''}`} key={p.user_id}>
-                  <div className="rank-pos">{i < 3 ? MEDALHAS[i] : `#${i + 1}`}</div>
+                  <div className="rank-pos">{i < 3 ? MEDALS[i] : `#${i + 1}`}</div>
                   <Link
                     to={`/equipa/${slug}/jogador/${p.user_id}`}
                     aria-label={`Ver perfil de ${p.nome}`}
@@ -184,18 +157,16 @@ export default function Ranking() {
                   <div className="rank-info">
                     <div className="rank-name">{p.nome}</div>
                     <div className="rank-votes" style={{ marginTop: 4 }}>
-                      Média <span style={{ color: 'var(--neon)', fontWeight: 700 }}>{mediaStr}</span>
-                      {p.minha_nota != null && (
-                        <span className="muted"> · a tua nota {p.minha_nota}★</span>
-                      )}
+                      Média <span style={{ color: 'var(--neon)', fontWeight: 700 }}>{formatRating(p.media_votos)}</span>
+                      {p.minha_nota != null && <span className="muted"> · a tua nota {p.minha_nota}★</span>}
                     </div>
                   </div>
                   <div className="rank-actions">
                     <button
                       type="button"
                       className="btn btn--primary btn--sm"
-                      disabled={!podeVotar}
-                      onClick={() => abrirVoto(p)}
+                      disabled={!canVote}
+                      onClick={() => openVote(p)}
                     >
                       Votar
                     </button>
@@ -213,26 +184,21 @@ export default function Ranking() {
       {/* Modal de votação */}
       {voteModal && (
         <div className="modal-overlay" role="presentation" onClick={() => !voteBusy && setVoteModal(null)}>
-          <div
-            className="modal-card"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
                 <PlayerAvatar nome={voteModal.nome} avatarUrl={voteModal.avatar_url} />
               </div>
               <h2 style={{ fontSize: 18, marginBottom: 14 }}>{voteModal.nome}</h2>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
-                <Estrelas big valor={modalStars || 0} onChange={setModalStars} />
+                <Stars big value={modalStars || 0} onChange={setModalStars} />
               </div>
               <button
                 type="button"
                 className="btn btn--primary"
                 style={{ width: '100%' }}
                 disabled={voteBusy || modalStars == null}
-                onClick={confirmarVoto}
+                onClick={confirmVote}
               >
                 {voteBusy ? 'A guardar…' : 'Confirmar voto'}
               </button>
@@ -260,12 +226,7 @@ export default function Ranking() {
                 Ainda tens <strong style={{ color: 'var(--neon)' }}>{reminder.faltam}</strong>{' '}
                 {reminder.faltam === 1 ? 'jogador' : 'jogadores'} para avaliar.
               </p>
-              <button
-                type="button"
-                className="btn btn--primary"
-                style={{ width: '100%' }}
-                onClick={reminderVotarAgora}
-              >
+              <button type="button" className="btn btn--primary" style={{ width: '100%' }} onClick={reminderVoteNow}>
                 Votar agora
               </button>
               <button

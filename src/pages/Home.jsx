@@ -1,37 +1,36 @@
 // Futty v2.0 — Home: lista de equipas do utilizador
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
-import { colorOf, initials } from '../lib/teamColors';
+import { useTeams } from '../hooks/useTeam';
+import { colorOf, initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
+import Loading from '../components/Loading';
 import '../styles/app.css';
+
+// Formulário para entrar numa equipa a partir de um link de convite.
+function JoinForm({ value, onChange, onSubmit, style }) {
+  return (
+    <form className="invite-link" style={style} onSubmit={onSubmit}>
+      <input
+        className="input"
+        placeholder="Cola aqui o link de convite"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <button type="submit" className="btn btn--ghost btn--sm">
+        Ir
+      </button>
+    </form>
+  );
+}
 
 export default function Home() {
   const navigate = useNavigate();
-  const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { teams, loading, error } = useTeams();
   const [showJoin, setShowJoin] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
 
-  useEffect(() => {
-    let active = true;
-    apiFetch('/api/teams')
-      .then((data) => {
-        if (active) setTeams(data.teams || []);
-      })
-      .catch((err) => {
-        if (active) setError(err.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  // "Entrar numa equipa": extrai o slug de um link de convite e navega
+  // Extrai o slug de um link de convite e navega para a equipa.
   function handleJoin(e) {
     e.preventDefault();
     const match = inviteLink.trim().match(/equipa\/([a-z0-9-]+)/i);
@@ -49,7 +48,7 @@ export default function Home() {
         {error && <div className="alert alert--error">{error}</div>}
 
         {loading ? (
-          <p className="muted">A carregar equipas…</p>
+          <Loading text="A carregar equipas…" />
         ) : teams.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state__emoji">⚽</div>
@@ -59,27 +58,17 @@ export default function Home() {
               <Link to="/criar-equipa" className="btn btn--primary">
                 + Criar equipa
               </Link>
-              <button
-                type="button"
-                className="btn btn--purple"
-                onClick={() => setShowJoin((v) => !v)}
-              >
+              <button type="button" className="btn btn--purple" onClick={() => setShowJoin((v) => !v)}>
                 Entrar numa equipa
               </button>
             </div>
-
             {showJoin && (
-              <form className="invite-link" style={{ maxWidth: 420, margin: '20px auto 0' }} onSubmit={handleJoin}>
-                <input
-                  className="input"
-                  placeholder="Cola aqui o link de convite"
-                  value={inviteLink}
-                  onChange={(e) => setInviteLink(e.target.value)}
-                />
-                <button type="submit" className="btn btn--ghost btn--sm">
-                  Ir
-                </button>
-              </form>
+              <JoinForm
+                value={inviteLink}
+                onChange={setInviteLink}
+                onSubmit={handleJoin}
+                style={{ maxWidth: 420, margin: '20px auto 0' }}
+              />
             )}
           </div>
         ) : (
@@ -89,10 +78,7 @@ export default function Home() {
                 const c = colorOf(team.cor);
                 return (
                   <Link key={team.id} to={`/equipa/${team.slug}`} className="team-card">
-                    <div
-                      className="team-avatar"
-                      style={{ background: c.hex, color: c.text }}
-                    >
+                    <div className="team-avatar" style={{ background: c.hex, color: c.text }}>
                       {initials(team.nome)}
                     </div>
                     <div>
@@ -108,27 +94,17 @@ export default function Home() {
               <Link to="/criar-equipa" className="btn btn--primary">
                 + Criar equipa
               </Link>
-              <button
-                type="button"
-                className="btn btn--purple"
-                onClick={() => setShowJoin((v) => !v)}
-              >
+              <button type="button" className="btn btn--purple" onClick={() => setShowJoin((v) => !v)}>
                 Entrar numa equipa
               </button>
             </div>
-
             {showJoin && (
-              <form className="invite-link" style={{ maxWidth: 420, marginTop: 16 }} onSubmit={handleJoin}>
-                <input
-                  className="input"
-                  placeholder="Cola aqui o link de convite"
-                  value={inviteLink}
-                  onChange={(e) => setInviteLink(e.target.value)}
-                />
-                <button type="submit" className="btn btn--ghost btn--sm">
-                  Ir
-                </button>
-              </form>
+              <JoinForm
+                value={inviteLink}
+                onChange={setInviteLink}
+                onSubmit={handleJoin}
+                style={{ maxWidth: 420, marginTop: 16 }}
+              />
             )}
           </>
         )}

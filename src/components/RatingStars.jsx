@@ -1,7 +1,7 @@
-// Futty v2.0 — Estrelas visuais da média (com preenchimento fracionário)
-export default function MediaStars({ value = 0, size = 22 }) {
+// Futty v2.0 — Estrelas da média (com preenchimento fracionário).
+export default function RatingStars({ value = 0, size = 22 }) {
   const stars = [];
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 5; i += 1) {
     const fill = Math.min(1, Math.max(0, value - (i - 1)));
     stars.push(
       <span key={i} style={{ position: 'relative', display: 'inline-block', fontSize: size, lineHeight: 1 }}>

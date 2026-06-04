@@ -1,14 +1,12 @@
-// Futty v2.0 — Mostra os times resultantes do sorteio
-import { colorOf } from '../lib/teamColors';
+// Futty v2.0 — Mostra os times resultantes do sorteio + avisos.
+import { colorOf } from '../utils/teamColors';
 
-export default function SorteioTimes({ resultado, teamCor }) {
+export default function DrawnTeams({ resultado, teamCor }) {
   if (!resultado?.times?.length) return null;
   const c = colorOf(teamCor);
 
   // Não mostrar o aviso de "nenhum goleiro marcado" (mesmo em sorteios antigos)
-  const avisos = (resultado.avisos || []).filter(
-    (a) => !/nenhum goleiro marcado/i.test(a)
-  );
+  const avisos = (resultado.avisos || []).filter((a) => !/nenhum goleiro marcado/i.test(a));
 
   return (
     <>

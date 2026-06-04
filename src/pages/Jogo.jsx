@@ -1,94 +1,45 @@
 // Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { formatDataHora, STATUS_LABEL } from '../lib/format';
-import { initials } from '../lib/teamColors';
+import { useApi } from '../hooks/useApi';
+import { formatDateTime, STATUS_LABELS } from '../utils/format';
+import { initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
-import SorteioTimes from '../components/SorteioTimes';
+import Loading from '../components/Loading';
+import DrawnTeams from '../components/DrawnTeams';
 import '../styles/app.css';
 
 export default function Jogo() {
   const { slug, id } = useParams();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data, loading, error, reload } = useApi(`/api/games/${id}`);
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
 
-  const load = useCallback(async () => {
-    const res = await apiFetch(`/api/games/${id}`);
-    setData(res);
-  }, [id]);
-
-  useEffect(() => {
-    let active = true;
-    apiFetch(`/api/games/${id}`)
-      .then((res) => {
-        if (active) setData(res);
-      })
-      .catch((err) => {
-        if (active) setError(err.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [id]);
-
-  async function confirmar(confirmado, goleiro) {
-    setError('');
+  // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
+  async function runAction(path, body) {
+    setActionError('');
     setBusy(true);
     try {
-      await apiFetch(`/api/games/${id}/confirmar`, {
-        method: 'POST',
-        body: JSON.stringify({ confirmado, goleiro }),
-      });
-      await load();
+      await apiFetch(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
+      await reload();
     } catch (err) {
-      setError(err.message);
+      setActionError(err.message);
     } finally {
       setBusy(false);
     }
   }
 
-  // Admin marca um jogador como goleiro / cabeça de chave
-  async function marcar(userId, patch) {
-    setError('');
-    setBusy(true);
-    try {
-      await apiFetch(`/api/games/${id}/jogador`, {
-        method: 'POST',
-        body: JSON.stringify({ user_id: userId, ...patch }),
-      });
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function sortear() {
-    setError('');
-    setBusy(true);
-    try {
-      await apiFetch(`/api/games/${id}/sortear`, { method: 'POST' });
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
+  const marcar = (userId, patch) => runAction(`/api/games/${id}/jogador`, { user_id: userId, ...patch });
+  const sortear = () => runAction(`/api/games/${id}/sortear`);
 
   if (loading) {
     return (
       <div className="app-shell">
         <Topbar />
         <main className="app-main">
-          <p className="muted">A carregar jogo…</p>
+          <Loading text="A carregar jogo…" />
         </main>
       </div>
     );
@@ -108,10 +59,10 @@ export default function Jogo() {
           ← Jogos
         </Link>
 
-        {error && <div className="alert alert--error">{error}</div>}
+        {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
         {!game ? (
-          <p className="muted">Jogo não encontrado.</p>
+          !error && <p className="muted">Jogo não encontrado.</p>
         ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -120,14 +71,12 @@ export default function Jogo() {
                   {game.local || 'Jogo'}
                 </h1>
                 <span className="muted">
-                  {formatDataHora(game.data)}
+                  {formatDateTime(game.data)}
                   {game.jogadores_por_time ? ` · ${game.jogadores_por_time} por time` : ''}
                   {game.sorteio_realizado && game.num_times ? ` · ${game.num_times} times` : ''}
                 </span>
               </div>
-              <span className={`badge badge--${game.status}`}>
-                {STATUS_LABEL[game.status] || game.status}
-              </span>
+              <span className={`badge badge--${game.status}`}>{STATUS_LABELS[game.status] || game.status}</span>
             </div>
 
             <div className="header-actions">
@@ -232,26 +181,19 @@ export default function Jogo() {
             {/* Sorteio */}
             <h2 className="section-title">Sorteio</h2>
             {isAdmin && (
-              <button
-                type="button"
-                className="btn btn--primary btn--sm"
-                onClick={sortear}
-                disabled={busy}
-              >
+              <button type="button" className="btn btn--primary btn--sm" onClick={sortear} disabled={busy}>
                 {busy ? 'A processar…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
               </button>
             )}
-            {!isAdmin && !game.sorteio_realizado && (
-              <p className="muted">O sorteio ainda não foi realizado.</p>
-            )}
+            {!isAdmin && !game.sorteio_realizado && <p className="muted">O sorteio ainda não foi realizado.</p>}
 
             {game.times_resultado && (
               <div style={{ marginTop: 16 }}>
-                <SorteioTimes resultado={game.times_resultado} teamCor={team?.cor} />
+                <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} />
               </div>
             )}
 
-            {/* A votação passou para a página de ranking */}
+            {/* A votação está na página de ranking */}
             {game.sorteio_realizado && (game.status === 'em_curso' || game.status === 'terminado') && (
               <p className="muted" style={{ marginTop: 20, fontSize: 14 }}>
                 🗳️ A votação deste jogo está disponível na{' '}

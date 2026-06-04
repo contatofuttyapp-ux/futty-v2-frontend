@@ -1,5 +1,5 @@
 // Futty v2.0 — Avatar do jogador com glow neon (foto ou iniciais)
-import { initials } from '../lib/teamColors';
+import { initials } from '../utils/teamColors';
 
 export default function PlayerAvatar({ nome, avatarUrl, lg = false }) {
   return (
