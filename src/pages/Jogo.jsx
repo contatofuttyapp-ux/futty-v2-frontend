@@ -1,23 +1,19 @@
-// Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio, resultado e votação
+// Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { useAuth } from '../context/AuthContext';
 import { formatDataHora, STATUS_LABEL } from '../lib/format';
 import { initials } from '../lib/teamColors';
 import Topbar from '../components/Topbar';
 import SorteioTimes from '../components/SorteioTimes';
-import Votacao from '../components/Votacao';
 import '../styles/app.css';
 
 export default function Jogo() {
   const { slug, id } = useParams();
-  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [votoOk, setVotoOk] = useState(false);
 
   const load = useCallback(async () => {
     const res = await apiFetch(`/api/games/${id}`);
@@ -87,23 +83,6 @@ export default function Jogo() {
     }
   }
 
-  async function votar(votos) {
-    setError('');
-    setBusy(true);
-    try {
-      await apiFetch(`/api/games/${id}/votar`, {
-        method: 'POST',
-        body: JSON.stringify({ votos }),
-      });
-      setVotoOk(true);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (loading) {
     return (
       <div className="app-shell">
@@ -115,13 +94,11 @@ export default function Jogo() {
     );
   }
 
-  const { team, game, players, meuEstado, jaVotei } = data || {};
+  const { team, game, players, meuEstado } = data || {};
   const isAdmin = team?.role === 'admin';
   const confirmados = (players || []).filter((p) => p.confirmado);
   const estouConfirmado = !!meuEstado?.confirmado;
   const souGoleiro = !!meuEstado?.goleiro;
-  const votacaoAberta = game?.status === 'em_curso' || game?.status === 'terminado';
-  const paraVotar = confirmados.filter((p) => p.user_id !== user?.id);
 
   return (
     <div className="app-shell">
@@ -274,23 +251,12 @@ export default function Jogo() {
               </div>
             )}
 
-            {/* Votação (após o sorteio) */}
-            {game.sorteio_realizado && votacaoAberta && (
-              <>
-                <h2 className="section-title">Votação</h2>
-                {jaVotei || votoOk ? (
-                  <div className="alert" style={{ background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--neon)' }}>
-                    ✓ Já votaste neste jogo. Obrigado!
-                  </div>
-                ) : (
-                  <>
-                    <p className="muted" style={{ fontSize: 14, marginBottom: 12 }}>
-                      Avalia os outros jogadores de 1 a 5 estrelas. Só podes votar uma vez.
-                    </p>
-                    <Votacao jogadores={paraVotar} onSubmit={votar} busy={busy} />
-                  </>
-                )}
-              </>
+            {/* A votação passou para a página de ranking */}
+            {game.sorteio_realizado && (game.status === 'em_curso' || game.status === 'terminado') && (
+              <p className="muted" style={{ marginTop: 20, fontSize: 14 }}>
+                🗳️ A votação deste jogo está disponível na{' '}
+                <Link to={`/equipa/${slug}/ranking`}>página de ranking</Link>.
+              </p>
             )}
           </>
         )}
