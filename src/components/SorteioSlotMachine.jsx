@@ -2,7 +2,7 @@
 // Mostra "ruído" (avatares genéricos + iniciais dos confirmados) a rolar e, no
 // fim, revela os times com avatar colorido na cor do time, nome e badges GR/C.
 import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, assetUrl } from '../lib/api';
 import { COLORS } from '../styles/theme';
 import { initials } from '../utils/teamColors';
 
@@ -129,11 +129,30 @@ export default function SorteioSlotMachine({ resultado, confirmados = [], onClos
     );
   }
 
-  // Renderiza a carta final de um jogador (cor do time, nome, badges).
+  // Renderiza a carta final de um jogador.
+  // Com foto (avatar_url) -> mostra a foto; sem foto -> avatar colorido na cor do time.
   function renderJogador(p, cor) {
+    const foto = p.avatar_url; // string (caminho/URL) ou null
     return (
-      <div className="slot-pcard" key={p.user_id} style={{ background: corHex[cor] }}>
-        <span className="slot-pcard__ini">{initials(p.nome) || '?'}</span>
+      <div
+        className="slot-pcard"
+        key={p.user_id}
+        style={foto ? undefined : { background: corHex[cor] }}
+      >
+        {foto ? (
+          <img
+            className="slot-pcard__photo"
+            src={assetUrl(foto)}
+            alt={p.nome}
+            onError={(e) => {
+              // se a foto falhar, cai no avatar colorido
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement.style.background = corHex[cor];
+            }}
+          />
+        ) : (
+          <span className="slot-pcard__ini">{initials(p.nome) || '?'}</span>
+        )}
         <div className="slot-pcard__badges">
           {p.goleiro && <span className="slot-badge slot-badge--gr">GR</span>}
           {p.cabeca_chave && <span className="slot-badge slot-badge--c">C</span>}
