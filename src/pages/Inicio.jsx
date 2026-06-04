@@ -7,6 +7,7 @@ import { useTeams } from '../hooks/useTeam';
 import { formatDateTime, formatRating } from '../utils/format';
 import PlayerAvatar from '../components/PlayerAvatar';
 import Loading from '../components/Loading';
+import SorteioOverlay from '../components/SorteioOverlay';
 import '../styles/app.css';
 
 const ADS_ENABLED = true;
@@ -44,7 +45,7 @@ function AdCard() {
 }
 
 // ----- Card de jogo -----
-function GameCard({ game, busy, onPresence }) {
+function GameCard({ game, busy, onPresence, onVerSorteio }) {
   const today = isToday(game.date);
   const isPast = game.status === 'finished';
   const isDrawn = game.status === 'drawn';
@@ -78,9 +79,9 @@ function GameCard({ game, busy, onPresence }) {
               {going ? 'Vais jogar' : notGoing ? 'Não vais' : 'Sem resposta'}
             </span>
           </span>
-          <Link to={`/equipa/${game.team_slug}/jogo/${game.id}`} className="btn btn--purple btn--sm">
+          <button type="button" className="btn btn--purple btn--sm" onClick={() => onVerSorteio(game)}>
             Ver sorteio
-          </Link>
+          </button>
         </div>
       ) : (
         <div className="gcard__presence">
@@ -135,6 +136,17 @@ export default function Inicio() {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState('all');
+  const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay
+
+  // "Ver sorteio": busca o jogo completo (my-invites não traz times_resultado) e abre o overlay.
+  async function verSorteio(game) {
+    try {
+      const res = await apiFetch(`/api/games/${game.id}`);
+      setJogoSorteio(res?.game || null);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -261,6 +273,7 @@ export default function Inicio() {
                     game={item.game}
                     busy={busyId === item.game.id}
                     onPresence={onPresence}
+                    onVerSorteio={verSorteio}
                   />
                 )
               )
@@ -268,6 +281,9 @@ export default function Inicio() {
           </>
         )}
       </main>
+
+      {/* Overlay do sorteio */}
+      <SorteioOverlay jogo={jogoSorteio} onClose={() => setJogoSorteio(null)} />
     </div>
   );
 }

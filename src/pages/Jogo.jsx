@@ -8,7 +8,8 @@ import { initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import DrawnTeams from '../components/DrawnTeams';
-import SorteioSlotMachine from '../components/SorteioSlotMachine';
+import SorteioOverlay from '../components/SorteioOverlay';
+import CountdownSorteio from '../components/CountdownSorteio';
 import '../styles/app.css';
 
 export default function Jogo() {
@@ -16,7 +17,7 @@ export default function Jogo() {
   const { data, loading, error, reload } = useApi(`/api/games/${id}`);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
-  const [slotResult, setSlotResult] = useState(null); // resultado a animar na slot machine
+  const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay do sorteio
 
   // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
   async function runAction(path, body) {
@@ -35,13 +36,14 @@ export default function Jogo() {
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
   const marcar = (userId, patch) => runAction(`/api/games/${id}/jogador`, { user_id: userId, ...patch });
 
-  // Sorteio: faz o POST, abre a slot machine com o resultado e recarrega o jogo.
+  // Sorteio: faz o POST, abre o overlay com o resultado e recarrega o jogo.
   async function sortear() {
     setActionError('');
     setBusy(true);
     try {
       const res = await apiFetch(`/api/games/${id}/sortear`, { method: 'POST' });
-      setSlotResult(res?.game?.times_resultado || null);
+      // Junta os dados do jogo (local/data) ao resultado fresco (times_resultado).
+      setJogoSorteio({ ...(data?.game || {}), ...res.game });
       await reload();
     } catch (err) {
       setActionError(err.message);
@@ -192,11 +194,23 @@ export default function Jogo() {
 
             {/* Sorteio */}
             <h2 className="section-title">Sorteio</h2>
-            {isAdmin && (
-              <button type="button" className="btn btn--primary btn--sm" onClick={sortear} disabled={busy}>
-                {busy ? 'A processar…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
-              </button>
+            {!game.sorteio_realizado && (
+              <div style={{ marginBottom: 12 }}>
+                <CountdownSorteio jogo={game} />
+              </div>
             )}
+            <div className="header-actions" style={{ marginTop: 0 }}>
+              {isAdmin && (
+                <button type="button" className="btn btn--primary btn--sm" onClick={sortear} disabled={busy}>
+                  {busy ? 'A processar…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
+                </button>
+              )}
+              {game.sorteio_realizado && (
+                <button type="button" className="btn btn--purple btn--sm" onClick={() => setJogoSorteio(data.game)}>
+                  Ver sorteio
+                </button>
+              )}
+            </div>
             {!isAdmin && !game.sorteio_realizado && <p className="muted">O sorteio ainda não foi realizado.</p>}
 
             {game.times_resultado && (
@@ -216,14 +230,8 @@ export default function Jogo() {
         )}
       </main>
 
-      {/* Slot machine do sorteio (overlay) */}
-      {slotResult && (
-        <SorteioSlotMachine
-          resultado={slotResult}
-          confirmados={confirmados}
-          onClose={() => setSlotResult(null)}
-        />
-      )}
+      {/* Overlay do sorteio (slot machine) */}
+      <SorteioOverlay jogo={jogoSorteio} onClose={() => setJogoSorteio(null)} />
     </div>
   );
 }
