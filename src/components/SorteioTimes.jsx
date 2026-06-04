@@ -5,9 +5,14 @@ export default function SorteioTimes({ resultado, teamCor }) {
   if (!resultado?.times?.length) return null;
   const c = colorOf(teamCor);
 
+  // Não mostrar o aviso de "nenhum goleiro marcado" (mesmo em sorteios antigos)
+  const avisos = (resultado.avisos || []).filter(
+    (a) => !/nenhum goleiro marcado/i.test(a)
+  );
+
   return (
     <>
-      {(resultado.avisos || []).map((aviso, i) => (
+      {avisos.map((aviso, i) => (
         <div className="aviso" key={i}>
           ⚠️ {aviso}
         </div>

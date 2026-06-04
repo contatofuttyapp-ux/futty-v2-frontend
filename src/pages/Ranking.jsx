@@ -88,20 +88,11 @@ export default function Ranking() {
           <p className="muted">Ainda não há jogadores.</p>
         ) : (
           <>
-            {/* Cabeçalho da votação */}
-            {votacao && (
-              jaVotei ? (
-                <div
-                  className="alert"
-                  style={{ background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--neon)' }}
-                >
-                  ✓ Já votaste no jogo "{votacao.game_label}". Abaixo vês as notas que deste.
-                </div>
-              ) : (
-                <div className="aviso" style={{ marginTop: 0, marginBottom: 16 }}>
-                  🗳️ Votação aberta — jogo "{votacao.game_label}". Avalia os jogadores de 1 a 5 estrelas.
-                </div>
-              )
+            {/* Aviso discreto de votação (estilo v1, sem banner chamativo) */}
+            {votacao && !jaVotei && (
+              <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+                Ainda não votaste neste jogo.
+              </p>
             )}
 
             <div className="rank-list">
