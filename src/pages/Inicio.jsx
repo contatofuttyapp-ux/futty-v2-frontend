@@ -9,6 +9,8 @@ import PlayerAvatar from '../components/PlayerAvatar';
 import Loading from '../components/Loading';
 import '../styles/app.css';
 
+const ADS_ENABLED = true;
+const ADS_VIDEO_URL = '/ads/promo.mp4';
 const ADS_EVERY = 3;
 
 function isToday(iso) {
@@ -18,12 +20,25 @@ function isToday(iso) {
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 }
 
-// ----- Card de publicidade -----
+// ----- Card de publicidade (vídeo com fallback para placeholder) -----
 function AdCard() {
+  const [failed, setFailed] = useState(false);
   return (
     <div className="ad-card">
       <span className="ad-card__badge">Publicidade</span>
-      <div className="ad-card__text">Espaço publicitário</div>
+      {failed ? (
+        <div className="ad-card__text">Espaço publicitário</div>
+      ) : (
+        <video
+          className="ad-card__video"
+          src={ADS_VIDEO_URL}
+          autoPlay
+          loop
+          muted
+          playsInline
+          onError={() => setFailed(true)}
+        />
+      )}
     </div>
   );
 }
@@ -165,11 +180,12 @@ export default function Inicio() {
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
 
-  // Intercalar publicidade a cada 3 jogos.
+  // Intercalar publicidade a cada 3 jogos (só se ativada). Se desativada,
+  // não há cards de publicidade e o layout fecha de forma natural.
   const items = [];
   filtered.forEach((g, i) => {
     items.push({ type: 'game', game: g });
-    if ((i + 1) % ADS_EVERY === 0) items.push({ type: 'ad', key: `ad-${g.id}` });
+    if (ADS_ENABLED && (i + 1) % ADS_EVERY === 0) items.push({ type: 'ad', key: `ad-${g.id}` });
   });
 
   const noTeams = !teamsLoading && teams.length === 0;
