@@ -7,7 +7,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
-import Home from './pages/Home';
+import Inicio from './pages/Inicio';
 import CriarEquipa from './pages/CriarEquipa';
 import Equipa from './pages/Equipa';
 import Convite from './pages/Convite';
@@ -19,6 +19,7 @@ import JogadorPerfil from './pages/JogadorPerfil';
 import Feed from './pages/Feed';
 import Figurinha from './pages/Figurinha';
 import MeuPerfil from './pages/MeuPerfil';
+import Explorar from './pages/Explorar';
 
 // "/" → redireciona para /home (se autenticado) ou /login
 function IndexRedirect() {
@@ -60,7 +61,7 @@ export default function App() {
             path="/home"
             element={
               <AuthGuard>
-                <Home />
+                <Inicio />
               </AuthGuard>
             }
           />
@@ -141,6 +142,14 @@ export default function App() {
             element={
               <AuthGuard>
                 <MeuPerfil />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/explorar"
+            element={
+              <AuthGuard>
+                <Explorar />
               </AuthGuard>
             }
           />

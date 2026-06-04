@@ -1056,3 +1056,246 @@
   background: var(--danger);
   border: 1px solid #0f0f0f;
 }
+
+/* ===== Página Início ===== */
+.pavatar--md {
+  width: 72px;
+  height: 72px;
+  font-size: 24px;
+}
+
+.inicio-avatar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 8px;
+}
+
+.inicio-name {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.inicio-stats {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 5px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.inicio-stats b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.inicio-stats .nota {
+  color: var(--neon);
+  font-weight: 800;
+}
+
+/* Chips de equipas (scroll horizontal) */
+.chips-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 14px 0 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  background: #222222;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.chip--active {
+  background: transparent;
+  border-color: var(--neon);
+  color: var(--text);
+}
+
+.chip--explore {
+  background: transparent;
+  border: 1px solid var(--purple);
+  color: #b69cff;
+}
+
+.chip--explore:hover {
+  text-decoration: none;
+}
+
+/* Lista de jogos */
+.games-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin: 18px 0 10px;
+}
+
+.gcard {
+  background: #111111;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.gcard--past {
+  opacity: 0.55;
+}
+
+.gcard__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gcard__title {
+  font-weight: 800;
+}
+
+.gcard__team {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b69cff;
+  background: rgba(124, 58, 237, 0.2);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.gcard__meta {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+.gcard__date {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.gcard__date--today {
+  color: var(--neon);
+}
+
+.gcard__presence {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pbtn {
+  flex: 1;
+  padding: 9px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  transition: all 0.15s ease;
+}
+
+.pbtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pbtn--go.active {
+  background: var(--neon);
+  color: #04140d;
+  border-color: var(--neon);
+}
+
+.pbtn--no.active {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.gcard__drawn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.badge--sorteado {
+  background: rgba(124, 58, 237, 0.2);
+  color: #b69cff;
+}
+
+.badge--encerrado {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+}
+
+/* Card de publicidade */
+.ad-card {
+  position: relative;
+  background: #111111;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 16px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.ad-card__badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 10px;
+  color: #555555;
+}
+
+.ad-card__text {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* Estado vazio (sem equipas) */
+.home-empty {
+  text-align: center;
+  padding: 36px 8px;
+}
+
+.home-empty__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 320px;
+  margin: 24px auto 0;
+}
+
+.btn--purple-outline {
+  background: transparent;
+  border: 1px solid var(--purple);
+  color: #b69cff;
+}
