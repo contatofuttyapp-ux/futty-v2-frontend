@@ -8,6 +8,8 @@ import MediaStars from '../components/MediaStars';
 import RadarChart from '../components/RadarChart';
 import '../styles/app.css';
 
+const TIPO_LABEL = { vitoria: 'Campeão', artilharia: 'Artilheiro', destaque: 'Destaque' };
+
 export default function JogadorPerfil() {
   const { slug, userId } = useParams();
   const [data, setData] = useState(null);
@@ -33,7 +35,7 @@ export default function JogadorPerfil() {
 
   const jogador = data?.jogador;
   const radar = data?.radar;
-  const jogosCampeao = data?.jogos_campeao || [];
+  const galeria = data?.jogos_campeao || [];
 
   const stats = jogador
     ? [
@@ -92,15 +94,23 @@ export default function JogadorPerfil() {
               <p className="profile-rank-pos muted">Sem posição (ainda sem média).</p>
             )}
 
-            {jogosCampeao.length > 0 && (
+            {galeria.length > 0 && (
               <div className="profile-card">
                 <div className="radar-title" style={{ marginBottom: 12 }}>
-                  Fotos de Campeão
+                  🏆 Galeria de Vitórias 🏆
                 </div>
                 <div className="profile-photos">
-                  {jogosCampeao.map((f, i) => (
-                    <img key={i} src={assetUrl(f.foto)} alt="Campeão" />
-                  ))}
+                  {galeria.map((f, i) => {
+                    const label = TIPO_LABEL[f.tipo] || 'Campeão';
+                    return (
+                      <figure className="gallery-item" key={i}>
+                        <img src={assetUrl(f.foto)} alt={label} />
+                        <figcaption className={`gallery-tag gallery-tag--${f.tipo || 'vitoria'}`}>
+                          {label}
+                        </figcaption>
+                      </figure>
+                    );
+                  })}
                 </div>
               </div>
             )}

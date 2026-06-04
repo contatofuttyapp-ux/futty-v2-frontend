@@ -853,6 +853,36 @@
   object-fit: cover;
   border-radius: 12px;
   border: 1px solid var(--border);
+  display: block;
+}
+
+.gallery-item {
+  position: relative;
+  margin: 0;
+}
+
+.gallery-tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(8, 8, 8, 0.78);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.gallery-tag--vitoria {
+  color: #d4a017;
+}
+.gallery-tag--artilharia {
+  color: var(--neon);
+}
+.gallery-tag--destaque {
+  color: #b69cff;
 }
 
 .radar-title {
