@@ -111,9 +111,10 @@ function PremioRow({ glow, label, labelColor, nome, sub }) {
 }
 
 // ─── Card de JOGO ──────────────────────────────────────────────────────────────
-function JogoCard({ j, onOpenImage }) {
+function JogoCard({ j, isAdmin, onOpenImage }) {
   const [detalhes, setDetalhes] = useState(true);
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
+  const [contagem, setContagem] = useState(null);
 
   const campeao = timeCampeao(j);
   const jogadoresCampeao = campeao?.jogadores || [];
@@ -251,19 +252,20 @@ function JogoCard({ j, onOpenImage }) {
       {/* H) COMENTÁRIOS */}
       <div style={{ padding: '0 14px 12px' }}>
         <button type="button" onClick={() => setComentariosAbertos((v) => !v)} style={linkBtn}>
-          {comentariosAbertos ? 'Esconder comentários' : 'Ver comentários'}
+          {comentariosAbertos ? 'Esconder comentários' : `Ver comentários${contagem != null ? ` (${contagem})` : ''}`}
         </button>
-        {comentariosAbertos ? <Comentarios parentType="game" parentId={j.id} /> : null}
+        <Comentarios parentType="game" parentId={j.id} visivel={comentariosAbertos} isAdmin={isAdmin} onCount={setContagem} />
       </div>
     </div>
   );
 }
 
 // ─── Card de POST editorial ────────────────────────────────────────────────────
-function PostCard({ p, podeApagar, onDelete, onOpenImage }) {
+function PostCard({ p, podeApagar, isAdmin, onDelete, onOpenImage }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
+  const [contagem, setContagem] = useState(null);
   const media = Array.isArray(p.media) ? p.media : [];
 
   return (
@@ -336,9 +338,9 @@ function PostCard({ p, podeApagar, onDelete, onOpenImage }) {
       {/* D) COMENTÁRIOS */}
       <div style={{ padding: '0 14px 12px' }}>
         <button type="button" onClick={() => setComentariosAbertos((v) => !v)} style={linkBtn}>
-          {comentariosAbertos ? 'Esconder comentários' : 'Ver comentários'}
+          {comentariosAbertos ? 'Esconder comentários' : `Ver comentários${contagem != null ? ` (${contagem})` : ''}`}
         </button>
-        {comentariosAbertos ? <Comentarios parentType="post" parentId={p.id} /> : null}
+        <Comentarios parentType="post" parentId={p.id} visivel={comentariosAbertos} isAdmin={isAdmin} onCount={setContagem} />
       </div>
 
       {/* Modal de confirmação de apagar */}
@@ -613,19 +615,21 @@ export default function Feed() {
               <p className="muted">Ainda não há jogos na resenha.</p>
             </div>
           ) : (
-            filtrados.map((item) =>
-              item.kind === 'post' ? (
+            filtrados.map((item) => {
+              const ehAdmin = teams.find((t) => t.id === item.team_id)?.role === 'admin';
+              return item.kind === 'post' ? (
                 <PostCard
                   key={`post-${item.id}`}
                   p={item}
-                  podeApagar={item.author_id === meId || teams.find((t) => t.id === item.team_id)?.role === 'admin'}
+                  podeApagar={item.author_id === meId || ehAdmin}
+                  isAdmin={ehAdmin}
                   onDelete={apagarPost}
                   onOpenImage={setImgFull}
                 />
               ) : (
-                <JogoCard key={`jogo-${item.id}`} j={item} onOpenImage={setImgFull} />
-              )
-            )
+                <JogoCard key={`jogo-${item.id}`} j={item} isAdmin={ehAdmin} onOpenImage={setImgFull} />
+              );
+            })
           )}
         </div>
       </main>
