@@ -23,6 +23,10 @@ const AVATARES_TEMATICOS = [
 // Fundo colorido por cor do time (quando não há foto — nunca animal).
 const COR_FILL = { verde: '#0c5', azul: '#3b82f6', vermelho: '#ef4444', preto: '#1c1c20' };
 
+// Animação do reel.
+const EASE_SLOT = 'cubic-bezier(0.33, 1, 0.68, 1)';
+const FRAMES_RUIDO = 28; // nº de frames de ruído antes do vencedor
+
 // ─── 2. FUNÇÕES UTILITÁRIAS PURAS ───────────────────────────────────────────────
 
 // ≤2 palavras → nome completo; ≥3 → primeira + última.
@@ -73,6 +77,14 @@ function gerarDuracoesMs(n) {
   return dur;
 }
 
+// Gera os frames de ruído do reel (n URLs aleatórios do pool).
+function gerarFramesRuido(pool, n) {
+  const fonte = pool && pool.length ? pool : [''];
+  const arr = [];
+  for (let i = 0; i < n; i += 1) arr.push(fonte[Math.floor(Math.random() * fonte.length)]);
+  return arr;
+}
+
 // Toca um som com try/catch (nunca quebra se o ficheiro não existir).
 function tocarSom(audio) {
   try {
@@ -83,46 +95,96 @@ function tocarSom(audio) {
 }
 
 // ─── 3. SlotCell (carta individual, proporção 2:3) ──────────────────────────────
+// Reel vertical: rola um strip de avatares de ruído e pára no vencedor (translateY).
 function SlotCell({ corTime, winner, noiseUrls, durationMs, skipAll, onStopped }) {
-  const [cur, setCur] = useState(noiseUrls[0] || null);
+  const cellRef = useRef(null);
+  const moverRef = useRef(null);
+  const [cellH, setCellH] = useState(0); // altura real da célula (medida)
+  const [ty, setTy] = useState(0); // translateY atual
+  const [transicao, setTransicao] = useState('none');
   const [done, setDone] = useState(false);
   const [imgErro, setImgErro] = useState(false);
   const paradoRef = useRef(false);
 
-  useEffect(() => {
-    let timer;
-    let cancelado = false;
-    const parar = () => {
-      if (paradoRef.current) return;
-      paradoRef.current = true;
-      setDone(true);
-      onStopped();
-    };
+  // Avatar final: foto real ou cor sólida + iniciais (lógica de avatares intacta).
+  const urlFinal = winner ? avatarParaCor(winner, corTime) : '';
+  const ehFoto = urlFinal && !urlFinal.includes('/avatares/genericos/');
+  const goleiro = winner?.goleiro === true || winner?.is_goalkeeper === true;
+  const cabeca = winner?.cabeca_chave === true || winner?.is_key_player === true;
 
+  // Frames de ruído do reel (o frame do vencedor é o último, renderizado à parte).
+  const frames = useMemo(() => gerarFramesRuido(noiseUrls, FRAMES_RUIDO), [noiseUrls]);
+  const totalFrames = frames.length + 1; // ruído + vencedor
+
+  // Mede a altura real da célula (ResizeObserver) — só depois disto é seguro animar.
+  useEffect(() => {
+    const el = cellRef.current;
+    if (!el) return undefined;
+    const medir = () => setCellH(el.getBoundingClientRect().height);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const parar = () => {
+    if (paradoRef.current) return;
+    paradoRef.current = true;
+    setDone(true);
+    onStopped();
+  };
+
+  // Arranca a animação SÓ depois de cellH > 0 (DOM medido e pintado).
+  useEffect(() => {
+    let cancelled = false;
+
+    // Saltar animação → vai direto ao vencedor (diferido para fora do effect body).
     if (skipAll) {
-      parar();
-      return () => {};
+      const raf = requestAnimationFrame(() => {
+        if (cancelled) return;
+        if (cellH > 0) {
+          setTransicao('none');
+          setTy(-(totalFrames - 1) * cellH);
+        }
+        parar();
+      });
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(raf);
+      };
     }
 
-    const inicio = performance.now();
-    const step = () => {
-      if (cancelado) return;
-      const t = Math.min(1, (performance.now() - inicio) / durationMs);
-      setCur(noiseUrls[Math.floor(Math.random() * noiseUrls.length)]);
-      if (t >= 1) {
-        parar();
-        return;
-      }
-      // Ease-out: o intervalo cresce (abranda visualmente perto do fim).
-      timer = window.setTimeout(step, 40 + 360 * t * t);
-    };
-    step();
+    if (cellH <= 0 || !noiseUrls.length) return () => { cancelled = true; };
+
+    const endTy = -(totalFrames - 1) * cellH; // mostra o último frame (vencedor)
+
+    // setTimeout(0) + duplo requestAnimationFrame + reflow → garante que o DOM
+    // foi pintado antes de aplicar a transição (senão "salta" para o resultado).
+    const boot = window.setTimeout(() => {
+      if (cancelled || cellH <= 0) return;
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        const node = moverRef.current;
+        if (node) void node.offsetHeight; // força reflow
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          setTransicao(`transform ${durationMs}ms ${EASE_SLOT}`);
+          setTy(endTy);
+        });
+      });
+    }, 0);
+
     return () => {
-      cancelado = true;
-      window.clearTimeout(timer);
+      cancelled = true;
+      window.clearTimeout(boot);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skipAll]);
+  }, [cellH, skipAll]);
+
+  // Fim da transição → carta parada.
+  const aoTerminarTransicao = () => {
+    if (!paradoRef.current) parar();
+  };
 
   const cellStyle = {
     position: 'relative',
@@ -135,33 +197,46 @@ function SlotCell({ corTime, winner, noiseUrls, durationMs, skipAll, onStopped }
     background: '#0c0f18',
     border: '1px solid #222',
   };
-
-  // Avatar final: foto real ou cor sólida + iniciais (nunca animal).
-  const urlFinal = winner ? avatarParaCor(winner, corTime) : '';
-  const ehFoto = urlFinal && !urlFinal.includes('/avatares/genericos/');
-  const goleiro = winner?.goleiro === true || winner?.is_goalkeeper === true;
-  const cabeca = winner?.cabeca_chave === true || winner?.is_key_player === true;
+  const frameStyle = { width: '100%', height: cellH || '100%', flexShrink: 0 };
+  const imgStyle = { width: '100%', height: '100%', objectFit: 'cover' };
 
   return (
-    <div style={cellStyle}>
-      {!done ? (
-        cur ? (
-          <img
-            src={cur}
-            alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => {
-              e.currentTarget.style.visibility = 'hidden';
-            }}
-          />
-        ) : null
-      ) : (
-        <>
+    <div ref={cellRef} style={cellStyle}>
+      {/* Strip que rola (ruído + frame do vencedor) */}
+      <div
+        ref={moverRef}
+        onTransitionEnd={aoTerminarTransicao}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          transform: `translateY(${ty}px)`,
+          transition: transicao,
+          willChange: 'transform',
+        }}
+      >
+        {frames.map((u, i) => (
+          <div key={i} style={frameStyle}>
+            {u ? (
+              <img
+                src={u}
+                alt=""
+                style={imgStyle}
+                onError={(e) => {
+                  e.currentTarget.style.visibility = 'hidden';
+                }}
+              />
+            ) : null}
+          </div>
+        ))}
+        {/* Frame do vencedor (último do strip) */}
+        <div style={frameStyle}>
           {ehFoto && !imgErro ? (
             <img
               src={urlFinal}
               alt={nomeJogador(winner)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+              style={{ ...imgStyle, objectPosition: 'top center' }}
               onError={() => setImgErro(true)}
             />
           ) : (
@@ -180,8 +255,12 @@ function SlotCell({ corTime, winner, noiseUrls, durationMs, skipAll, onStopped }
               {iniciaisNome(nomeJogador(winner))}
             </div>
           )}
+        </div>
+      </div>
 
-          {/* Badges */}
+      {/* Nome + badges (só quando a carta pára) */}
+      {done && (
+        <>
           <div style={{ position: 'absolute', top: 4, left: 4, display: 'flex', gap: 3 }}>
             {goleiro && (
               <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 5, background: COR_NEON, color: '#04140d' }}>
@@ -194,8 +273,6 @@ function SlotCell({ corTime, winner, noiseUrls, durationMs, skipAll, onStopped }
               </span>
             )}
           </div>
-
-          {/* Nome com gradiente escuro */}
           <div
             style={{
               position: 'absolute',
