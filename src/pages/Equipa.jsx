@@ -1,21 +1,56 @@
 // Futty v2.0 — Detalhe da equipa + membros + convite
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useTeam } from '../hooks/useTeam';
 import { colorOf, initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
+import PlayerAvatar from '../components/PlayerAvatar';
+import Toast from '../components/Toast';
 import '../styles/app.css';
 
 export default function Equipa() {
   const { slug } = useParams();
-  const { team, members, loading, error } = useTeam(slug);
+  const { team, members, loading, error, reload } = useTeam(slug);
 
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [actionError, setActionError] = useState('');
+
+  const [pedidos, setPedidos] = useState([]);
+  const [busyPedido, setBusyPedido] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  // Carrega os pedidos pendentes (só se for admin).
+  useEffect(() => {
+    if (!team || team.role !== 'admin') return undefined;
+    let ativo = true;
+    apiFetch(`/api/teams/${slug}/pedidos`)
+      .then((d) => ativo && setPedidos(d.pedidos || []))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, [team, slug]);
+
+  async function decidirPedido(pedidoId, status) {
+    setBusyPedido(pedidoId);
+    try {
+      await apiFetch(`/api/teams/${slug}/pedidos/${pedidoId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      setPedidos((cur) => cur.filter((p) => p.id !== pedidoId));
+      setToast({ tipo: status === 'approved' ? 'success' : 'info', mensagem: status === 'approved' ? 'Jogador adicionado!' : 'Pedido rejeitado.' });
+      if (status === 'approved') reload();
+    } catch (e) {
+      setToast({ tipo: 'error', mensagem: e.message });
+    } finally {
+      setBusyPedido(null);
+    }
+  }
 
   async function gerarConvite() {
     setActionError('');
@@ -87,6 +122,44 @@ export default function Equipa() {
               )}
             </div>
 
+            {team.role === 'admin' && pedidos.length > 0 && (
+              <>
+                <h2 className="section-title">Pedidos de entrada</h2>
+                <div className="member-list">
+                  {pedidos.map((p) => (
+                    <div className="member-row" key={p.id}>
+                      <PlayerAvatar nome={p.nome_jogador || p.nome || 'Jogador'} avatarUrl={p.avatar_url} />
+                      <div className="member-info" style={{ flex: 1, minWidth: 0 }}>
+                        <div className="member-name">{p.nome_jogador || p.nome || 'Jogador'}</div>
+                        {p.mensagem && (
+                          <div className="member-email" style={{ whiteSpace: 'normal', color: 'var(--text-dim)' }}>{p.mensagem}</div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          className="btn btn--primary btn--sm"
+                          disabled={busyPedido === p.id}
+                          onClick={() => decidirPedido(p.id, 'approved')}
+                        >
+                          Aprovar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn--ghost btn--sm"
+                          style={{ borderColor: 'var(--danger)', color: '#fda4af' }}
+                          disabled={busyPedido === p.id}
+                          onClick={() => decidirPedido(p.id, 'rejected')}
+                        >
+                          Rejeitar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
             <h2 className="section-title">Membros</h2>
             <div className="member-list">
               {members.map((m) => (
@@ -129,6 +202,7 @@ export default function Equipa() {
           </>
         )}
       </main>
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
   );
 }

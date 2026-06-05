@@ -10,6 +10,9 @@ export default function CriarEquipa() {
   const navigate = useNavigate();
   const [nome, setNome] = useState('');
   const [cor, setCor] = useState('verde');
+  const [localizacao, setLocalizacao] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [publica, setPublica] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +29,13 @@ export default function CriarEquipa() {
     try {
       const { team } = await apiFetch('/api/teams', {
         method: 'POST',
-        body: JSON.stringify({ nome: nome.trim(), cor }),
+        body: JSON.stringify({
+          nome: nome.trim(),
+          cor,
+          publica,
+          localizacao: localizacao.trim() || undefined,
+          descricao: descricao.trim() || undefined,
+        }),
       });
       navigate(`/equipa/${team.slug}`);
     } catch (err) {
@@ -88,6 +97,51 @@ export default function CriarEquipa() {
                 />
               ))}
             </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="localizacao">Localização (opcional)</label>
+            <input
+              id="localizacao"
+              className="input"
+              placeholder="Ex: Lisboa · Campo do Ze"
+              value={localizacao}
+              onChange={(e) => setLocalizacao(e.target.value.slice(0, 100))}
+              maxLength={100}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="descricao">Descrição (opcional)</label>
+            <textarea
+              id="descricao"
+              className="input"
+              placeholder="Conta um pouco sobre a tua equipa…"
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value.slice(0, 300))}
+              maxLength={300}
+              rows={3}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          <div className="field">
+            <label
+              htmlFor="publica"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer' }}
+            >
+              <span>Equipa pública</span>
+              <input
+                id="publica"
+                type="checkbox"
+                checked={publica}
+                onChange={(e) => setPublica(e.target.checked)}
+                style={{ width: 20, height: 20, accentColor: '#00e5a0', cursor: 'pointer' }}
+              />
+            </label>
+            <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              Pública — aparece na pesquisa · Privada — só por convite
+            </p>
           </div>
 
           <button
