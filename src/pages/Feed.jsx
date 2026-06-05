@@ -9,6 +9,8 @@ import PlayerAvatar from '../components/PlayerAvatar';
 import Reacoes from '../components/Reacoes';
 import Comentarios from '../components/Comentarios';
 import UploadComCrop from '../components/UploadComCrop';
+import DenunciaModal from '../components/DenunciaModal';
+import Toast from '../components/Toast';
 import '../styles/app.css';
 
 // Cores de acento (theme.js): neon, purple, warning (#f59e0b). O laranja da
@@ -111,7 +113,7 @@ function PremioRow({ glow, label, labelColor, nome, sub }) {
 }
 
 // ─── Card de JOGO ──────────────────────────────────────────────────────────────
-function JogoCard({ j, isAdmin, onOpenImage }) {
+function JogoCard({ j, isAdmin, teamSlug, onOpenImage }) {
   const [detalhes, setDetalhes] = useState(true);
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
   const [contagem, setContagem] = useState(null);
@@ -254,19 +256,22 @@ function JogoCard({ j, isAdmin, onOpenImage }) {
         <button type="button" onClick={() => setComentariosAbertos((v) => !v)} style={linkBtn}>
           {comentariosAbertos ? 'Esconder comentários' : `Ver comentários${contagem != null ? ` (${contagem})` : ''}`}
         </button>
-        <Comentarios parentType="game" parentId={j.id} visivel={comentariosAbertos} isAdmin={isAdmin} onCount={setContagem} />
+        <Comentarios parentType="game" parentId={j.id} visivel={comentariosAbertos} isAdmin={isAdmin} teamSlug={teamSlug} onCount={setContagem} />
       </div>
     </div>
   );
 }
 
 // ─── Card de POST editorial ────────────────────────────────────────────────────
-function PostCard({ p, podeApagar, isAdmin, onDelete, onOpenImage }) {
+function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImage }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
   const [contagem, setContagem] = useState(null);
+  const [denunciaAberta, setDenunciaAberta] = useState(false);
+  const [toast, setToast] = useState(null);
   const media = Array.isArray(p.media) ? p.media : [];
+  const podeDenunciar = p.author_id !== meId;
 
   return (
     <div style={CARD}>
@@ -284,23 +289,37 @@ function PostCard({ p, podeApagar, isAdmin, onDelete, onOpenImage }) {
           </div>
           <div style={{ marginTop: 2, fontSize: 11, color: 'var(--text-dim)' }}>{haQuantoTempo(p.created_at)}</div>
         </div>
-        {podeApagar ? (
+        {podeApagar || podeDenunciar ? (
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <button type="button" aria-label="Opções" onClick={() => setMenuAberto((v) => !v)} style={iconBtn}>
               ⋯
             </button>
             {menuAberto ? (
-              <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, minWidth: 140, background: '#0c0c0c', border: '1px solid #222222', borderRadius: 10, overflow: 'hidden', zIndex: 5 }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuAberto(false);
-                    setConfirmar(true);
-                  }}
-                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fda4af', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-                >
-                  Apagar
-                </button>
+              <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, minWidth: 150, background: '#0c0c0c', border: '1px solid #222222', borderRadius: 10, overflow: 'hidden', zIndex: 5 }}>
+                {podeDenunciar ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuAberto(false);
+                      setDenunciaAberta(true);
+                    }}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                  >
+                    Denunciar
+                  </button>
+                ) : null}
+                {podeApagar ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuAberto(false);
+                      setConfirmar(true);
+                    }}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fda4af', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                  >
+                    Apagar
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -340,8 +359,19 @@ function PostCard({ p, podeApagar, isAdmin, onDelete, onOpenImage }) {
         <button type="button" onClick={() => setComentariosAbertos((v) => !v)} style={linkBtn}>
           {comentariosAbertos ? 'Esconder comentários' : `Ver comentários${contagem != null ? ` (${contagem})` : ''}`}
         </button>
-        <Comentarios parentType="post" parentId={p.id} visivel={comentariosAbertos} isAdmin={isAdmin} onCount={setContagem} />
+        <Comentarios parentType="post" parentId={p.id} visivel={comentariosAbertos} isAdmin={isAdmin} teamSlug={teamSlug} onCount={setContagem} />
       </div>
+
+      {/* Denúncia do post + toast */}
+      {denunciaAberta ? (
+        <DenunciaModal
+          targetType="post"
+          targetId={p.id}
+          onClose={() => setDenunciaAberta(false)}
+          onResult={(r) => setToast({ tipo: r.tipo, mensagem: r.mensagem })}
+        />
+      ) : null}
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
       {/* Modal de confirmação de apagar */}
       {confirmar ? (
@@ -616,18 +646,22 @@ export default function Feed() {
             </div>
           ) : (
             filtrados.map((item) => {
-              const ehAdmin = teams.find((t) => t.id === item.team_id)?.role === 'admin';
+              const equipa = teams.find((t) => t.id === item.team_id);
+              const ehAdmin = equipa?.role === 'admin';
+              const slug = equipa?.slug || item.team_slug || null;
               return item.kind === 'post' ? (
                 <PostCard
                   key={`post-${item.id}`}
                   p={item}
                   podeApagar={item.author_id === meId || ehAdmin}
                   isAdmin={ehAdmin}
+                  teamSlug={slug}
+                  meId={meId}
                   onDelete={apagarPost}
                   onOpenImage={setImgFull}
                 />
               ) : (
-                <JogoCard key={`jogo-${item.id}`} j={item} isAdmin={ehAdmin} onOpenImage={setImgFull} />
+                <JogoCard key={`jogo-${item.id}`} j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} />
               );
             })
           )}
