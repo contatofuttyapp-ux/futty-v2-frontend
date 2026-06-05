@@ -1,6 +1,7 @@
 // Futty v2.0 — Perfil (/perfil): a página mais pessoal — define como o
 // utilizador aparece em todo o lado. Sem Topbar, mobile-first, dark theme.
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch, assetUrl } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
@@ -101,7 +102,15 @@ function StatsAvatar({ url, nome, cor, size = 80, onClick }) {
 export default function MeuPerfil() {
   const { user, signOut } = useAuth();
   const { teams } = useTeams();
-  const isAdmin = teams.some((t) => t.role === 'admin');
+  const navigate = useNavigate();
+  const adminTeams = teams.filter((t) => t.role === 'admin');
+  const [adminPicker, setAdminPicker] = useState(false);
+
+  // Vai para o painel de admin (ou abre selector se for admin de várias equipas).
+  function irParaAdmin() {
+    if (adminTeams.length === 1) navigate(`/admin/${adminTeams[0].slug}`);
+    else if (adminTeams.length > 1) setAdminPicker(true);
+  }
 
   const [perfil, setPerfil] = useState(null); // { user, stats }
   const [erro, setErro] = useState('');
@@ -333,8 +342,8 @@ export default function MeuPerfil() {
         <div style={{ ...CARD, overflow: 'hidden' }}>
           <ContaRow onClick={() => showToast('Em breve', 'info')}>🔑 Alterar password</ContaRow>
           <ContaRow onClick={() => { window.location.href = 'mailto:suporte@futty.app'; }}>📋 Relatar um problema</ContaRow>
-          {isAdmin ? (
-            <ContaRow onClick={() => showToast('Em breve', 'info')} cor="#b69cff">🛡️ Painel de administração</ContaRow>
+          {adminTeams.length > 0 ? (
+            <ContaRow onClick={irParaAdmin} cor="#b69cff">🛡️ Painel de administração</ContaRow>
           ) : null}
           <ContaRow onClick={() => setConfirmSignOut(true)} cor="#fda4af" semBorda>Terminar sessão</ContaRow>
         </div>
@@ -350,6 +359,36 @@ export default function MeuPerfil() {
                 Terminar sessão
               </button>
               <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} onClick={() => setConfirmSignOut(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Selector de equipa (admin de várias) */}
+      {adminPicker ? (
+        <div className="modal-overlay" role="presentation" onClick={() => setAdminPicker(false)}>
+          <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-card__inner" style={{ textAlign: 'left' }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, textAlign: 'center' }}>Escolhe a equipa</h2>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {adminTeams.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className="btn btn--ghost"
+                    style={{ width: '100%', justifyContent: 'flex-start' }}
+                    onClick={() => {
+                      setAdminPicker(false);
+                      navigate(`/admin/${t.slug}`);
+                    }}
+                  >
+                    {t.nome}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} onClick={() => setAdminPicker(false)}>
                 Cancelar
               </button>
             </div>
