@@ -3,10 +3,17 @@ import { supabase } from './supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// Converte um caminho relativo do backend (ex.: /uploads/x.png) em URL absoluto.
+// Converte um caminho de asset numa URL utilizável. Três casos:
+//  - http(s)://    → intacto (ex.: Supabase Storage)
+//  - /avatares/... → genérico do PUBLIC do frontend (origin do frontend)
+//  - resto (/uploads/, /public/, …) → backend
 export function assetUrl(p) {
   if (!p) return '';
   if (/^https?:\/\//i.test(p)) return p;
+  if (p.startsWith('/avatares/')) {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}${encodeURI(p)}`;
+  }
   return `${API_URL}${p}`;
 }
 

@@ -16,11 +16,18 @@ const CORES_VALIDAS = ['verde', 'azul', 'vermelho', 'preto'];
 
 // ─── Funções base ─────────────────────────────────────────────────────────────
 
-// Converte um caminho do backend em URL absoluta. URLs http(s) passam intactas.
+// Converte um caminho de avatar/asset numa URL utilizável. Três casos:
+//  - http(s)://       → URL absoluta, intacta (ex.: Supabase Storage)
+//  - /avatares/...    → genérico servido pelo PUBLIC do frontend (origin do frontend)
+//  - resto (/public/, /uploads/, …) → servido pelo backend
 export function urlAsset(caminho) {
   if (!caminho) return '';
   const s = String(caminho).trim();
   if (s.startsWith('http://') || s.startsWith('https://')) return s;
+  if (s.startsWith('/avatares/')) {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}${encodeURI(s)}`; // encode trata espaços/acentos (ex.: "Peixe boi.png")
+  }
   return `${backendBase()}${s.startsWith('/') ? s : `/${s}`}`;
 }
 
