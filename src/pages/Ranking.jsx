@@ -54,7 +54,7 @@ export default function Ranking() {
   }
 
   async function confirmVote() {
-    if (!voteModal || !(modalNota >= 1)) return;
+    if (!voteModal || !(modalNota >= 0.5)) return;
     setVoteBusy(true);
     try {
       await apiFetch(`/api/teams/${slug}/votar`, {
@@ -127,9 +127,13 @@ export default function Ranking() {
                     </div>
                   </div>
                   <div className="rank-actions">
-                    <button type="button" className="btn btn--primary btn--sm" onClick={() => openVote(p)}>
-                      {eu ? 'Alterar' : 'Votar'}
-                    </button>
+                    {p.sou_eu ? (
+                      <span className="muted" style={{ fontSize: 11, fontWeight: 800, color: 'var(--neon)', border: '1px solid var(--neon)', borderRadius: 999, padding: '3px 9px' }}>Tu</span>
+                    ) : (
+                      <button type="button" className="btn btn--primary btn--sm" onClick={() => openVote(p)}>
+                        {eu ? 'Alterar' : 'Votar'}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -149,13 +153,13 @@ export default function Ranking() {
               <h2 style={{ fontSize: 18, marginBottom: 14 }}>{voteModal.nome}</h2>
               <MeiaEstrelas value={modalNota} onChange={setModalNota} />
               <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)' }}>
-                {modalNota >= 1 ? (
+                {modalNota >= 0.5 ? (
                   <>A tua nota: <b style={{ color: 'var(--neon)' }}>{notaParaExibir(modalNota).toFixed(1)}</b></>
                 ) : (
-                  'Escolhe de 1 a 5 estrelas'
+                  'Escolhe de 0.5 a 5 estrelas'
                 )}
               </div>
-              <button type="button" className="btn btn--primary" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || !(modalNota >= 1)} onClick={confirmVote}>
+              <button type="button" className="btn btn--primary" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || !(modalNota >= 0.5)} onClick={confirmVote}>
                 {voteBusy ? 'A guardar…' : 'Guardar voto'}
               </button>
               <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} disabled={voteBusy} onClick={() => setVoteModal(null)}>
