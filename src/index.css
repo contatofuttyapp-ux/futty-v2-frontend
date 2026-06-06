@@ -44,39 +44,37 @@ body {
   color: var(--text);
 }
 
-/* z0 — Nebulosa animada (respira/pulsa) atrás de tudo. */
+/* z0 — Nebulosa que flui lentamente (deriva de posição) atrás de tudo. */
 @keyframes nebulaBreath {
   0% {
-    background:
-      radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.2) 0%, transparent 55%),
-      radial-gradient(ellipse at 85% 90%, rgba(0, 229, 160, 0.1) 0%, transparent 55%),
-      radial-gradient(ellipse at 80% 10%, rgba(212, 160, 23, 0.06) 0%, transparent 40%),
-      radial-gradient(ellipse at 20% 90%, rgba(0, 100, 255, 0.05) 0%, transparent 40%);
-    opacity: 0.8;
+    background-position: 20% 20%, 80% 80%, 40% 60%, 60% 30%;
+    opacity: 0.85;
   }
-  33% {
-    background:
-      radial-gradient(ellipse at 25% 20%, rgba(124, 58, 237, 0.25) 0%, transparent 50%),
-      radial-gradient(ellipse at 75% 80%, rgba(0, 229, 160, 0.12) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 15%, rgba(212, 160, 23, 0.08) 0%, transparent 45%),
-      radial-gradient(ellipse at 30% 85%, rgba(0, 100, 255, 0.06) 0%, transparent 35%);
-    opacity: 1;
+  25% {
+    background-position: 25% 25%, 75% 75%, 45% 55%, 55% 35%;
+    opacity: 0.95;
   }
-  66% {
-    background:
-      radial-gradient(ellipse at 10% 25%, rgba(124, 58, 237, 0.15) 0%, transparent 60%),
-      radial-gradient(ellipse at 90% 75%, rgba(0, 229, 160, 0.08) 0%, transparent 60%),
-      radial-gradient(ellipse at 85% 5%, rgba(212, 160, 23, 0.05) 0%, transparent 35%),
-      radial-gradient(ellipse at 15% 95%, rgba(0, 100, 255, 0.07) 0%, transparent 45%);
+  50% {
+    background-position: 22% 30%, 78% 70%, 42% 58%, 58% 28%;
     opacity: 0.9;
   }
+  75% {
+    background-position: 18% 22%, 82% 78%, 38% 62%, 62% 32%;
+    opacity: 1;
+  }
   100% {
-    background:
-      radial-gradient(ellipse at 20% 15%, rgba(124, 58, 237, 0.22) 0%, transparent 52%),
-      radial-gradient(ellipse at 80% 85%, rgba(0, 229, 160, 0.11) 0%, transparent 52%),
-      radial-gradient(ellipse at 75% 12%, rgba(212, 160, 23, 0.07) 0%, transparent 42%),
-      radial-gradient(ellipse at 25% 88%, rgba(0, 100, 255, 0.05) 0%, transparent 38%);
+    background-position: 20% 20%, 80% 80%, 40% 60%, 60% 30%;
     opacity: 0.85;
+  }
+}
+
+/* Leve rotação orgânica (combinada com o flow). */
+@keyframes nebulaRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(3deg);
   }
 }
 
@@ -86,13 +84,14 @@ body::after {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  will-change: opacity;
+  will-change: opacity, transform, background-position;
   background:
     radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.2) 0%, transparent 55%),
     radial-gradient(ellipse at 85% 90%, rgba(0, 229, 160, 0.1) 0%, transparent 55%),
     radial-gradient(ellipse at 80% 10%, rgba(212, 160, 23, 0.06) 0%, transparent 40%),
     radial-gradient(ellipse at 20% 90%, rgba(0, 100, 255, 0.05) 0%, transparent 40%);
-  animation: nebulaBreath 8s ease-in-out infinite alternate;
+  background-size: 200% 200%;
+  animation: nebulaBreath 12s ease-in-out infinite alternate, nebulaRotate 24s ease-in-out infinite alternate;
 }
 
 /* O conteúdo fica acima da nebulosa (z0) e das estrelas (z1). */
@@ -188,4 +187,41 @@ button {
 input,
 button {
   font-size: 1rem;
+}
+
+/* Entrada suave de cards (Início, Resenha). */
+@keyframes notifSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.anim-slide-in {
+  animation: notifSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Linha decorativa do nome (Início): revela + shimmer dourado. */
+@keyframes lineReveal {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes lineShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }

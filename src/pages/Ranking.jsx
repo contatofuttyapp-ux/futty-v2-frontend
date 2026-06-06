@@ -99,6 +99,10 @@ export default function Ranking() {
   return (
     <div className="app-shell">
       <main className="app-main">
+        <style>{`
+@keyframes rankShimmer { 0% { transform: translateX(-100%) skewX(-15deg); } 100% { transform: translateX(300%) skewX(-15deg); } }
+@keyframes rankGlowBreath { 0%,100% { box-shadow: 0 0 8px rgba(212,160,23,0.2); } 50% { box-shadow: 0 0 20px rgba(212,160,23,0.45), 0 0 40px rgba(212,160,23,0.1); } }
+`}</style>
         <Link to={`/equipa/${slug}`} className="back-link">
           ← {team?.nome || 'Equipa'}
         </Link>
@@ -121,11 +125,31 @@ export default function Ranking() {
           <p className="muted">Ainda não há jogadores.</p>
         ) : (
           <div className="rank-list">
-            {ranking.map((p) => {
+            {ranking.map((p, idx) => {
               const eu = p.minha_nota != null;
+              const top = p.posicao;
+              // Borda + glow especiais para o pódio.
+              const podioStyle =
+                top === 1
+                  ? { border: '1px solid #d4a017', animation: 'rankGlowBreath 2.5s ease-in-out infinite' }
+                  : top === 2
+                    ? { border: '1px solid #aaaaaa', boxShadow: '0 0 12px rgba(170,170,170,0.25)' }
+                    : top === 3
+                      ? { border: '1px solid #cd7f32', boxShadow: '0 0 12px rgba(205,127,50,0.25)' }
+                      : {};
+              const medalShadow =
+                top === 1
+                  ? 'drop-shadow(0 0 6px rgba(212,160,23,0.85))'
+                  : top === 2
+                    ? 'drop-shadow(0 0 5px rgba(190,190,190,0.7))'
+                    : top === 3
+                      ? 'drop-shadow(0 0 5px rgba(205,127,50,0.7))'
+                      : 'none';
+              const shimmerDelay = top === 1 ? 0 : top === 2 ? 1.3 : top === 3 ? 2.6 : idx % 2 ? 0.5 : 0;
               return (
-                <div className={`rank-row ${p.posicao <= 3 ? 'rank-row--top' : ''}`} key={p.user_id}>
-                  <div className="rank-pos">{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
+                <div className={`rank-row ${p.posicao <= 3 ? 'rank-row--top' : ''}`} key={p.user_id} style={{ position: 'relative', overflow: 'hidden', ...podioStyle }}>
+                  <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: `rankShimmer 4s ease-in-out ${shimmerDelay}s infinite` }} />
+                  <div className="rank-pos" style={top <= 3 ? { filter: medalShadow } : undefined}>{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
                   <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${p.nome}`} style={{ lineHeight: 0 }}>
                     <RankingAvatar nome={p.nome} avatarUrl={p.avatar_url} cor={p.cor_frame} />
                   </Link>

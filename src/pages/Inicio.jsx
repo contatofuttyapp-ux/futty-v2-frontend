@@ -48,7 +48,7 @@ function AdCard() {
 }
 
 // ----- Card de jogo -----
-function GameCard({ game, busy, isNext, onPresence, onVerSorteio }) {
+function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
   const today = isToday(game.date);
   const isPast = game.status === 'finished';
   const isDrawn = game.status === 'drawn';
@@ -56,7 +56,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio }) {
   const notGoing = game.user_status === 'not_going';
 
   return (
-    <div className={`gcard ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`}>
+    <div className={`gcard anim-slide-in ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`} style={{ animationDelay: `${index * 0.08}s` }}>
       {isNext ? <div className="gcard__next-badge">PRÓXIMO</div> : null}
       <div className="gcard__top">
         <span className="gcard__title">{game.name}</span>
@@ -282,7 +282,7 @@ export default function Inicio() {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '85%', maxWidth: 280 }}>
-              <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right, transparent, #d4a017)', opacity: 0.5 }} />
+              <div style={{ flex: 1, height: 2, borderRadius: 2, transformOrigin: 'left center', backgroundImage: 'linear-gradient(90deg, #d4a017, #f5e070, #d4a017, #8B6508, #d4a017)', backgroundSize: '200% 100%', animation: 'lineReveal 0.8s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 3s linear infinite 0.8s' }} />
               <div
                 style={{
                   fontFamily: "'Rajdhani', sans-serif",
@@ -304,7 +304,7 @@ export default function Inicio() {
               >
                 {nome}
               </div>
-              <div style={{ flex: 1, height: 1, background: 'linear-gradient(to left, transparent, #d4a017)', opacity: 0.5 }} />
+              <div style={{ flex: 1, height: 2, borderRadius: 2, transformOrigin: 'right center', backgroundImage: 'linear-gradient(90deg, #d4a017, #f5e070, #d4a017, #8B6508, #d4a017)', backgroundSize: '200% 100%', animation: 'lineReveal 0.8s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 3s linear infinite 0.8s' }} />
             </div>
           )}
           {teams[0] ? (
@@ -366,7 +366,7 @@ export default function Inicio() {
             ) : filtered.length === 0 ? (
               <p className="muted">Sem jogos para mostrar.</p>
             ) : (
-              items.map((item) =>
+              items.map((item, i) =>
                 item.type === 'ad' ? (
                   <AdCard key={item.key} />
                 ) : (
@@ -377,6 +377,7 @@ export default function Inicio() {
                     isNext={item.game.id === nextId}
                     onPresence={onPresence}
                     onVerSorteio={verSorteio}
+                    index={i}
                   />
                 )
               )

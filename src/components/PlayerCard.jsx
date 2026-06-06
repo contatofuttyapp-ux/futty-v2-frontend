@@ -71,6 +71,8 @@ const KEYFRAMES = `
 }
 @keyframes pcAura { from { opacity: 0.6; transform: translateX(-50%) scale(0.9); } to { opacity: 1; transform: translateX(-50%) scale(1.1); } }
 @keyframes pcCornerBlink { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes pcHoloSpin1 { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes pcHoloSpin2 { to { transform: translate(-50%, -50%) rotate(-360deg); } }
 `;
 
 export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true }) {
@@ -95,6 +97,13 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
     ? 'drop-shadow(0 0 3px #f5e070) drop-shadow(0 0 8px #d4a017) drop-shadow(0 0 16px rgba(212,160,23,0.8)) drop-shadow(0 0 30px rgba(212,160,23,0.4)) drop-shadow(0 0 50px rgba(212,160,23,0.15))'
     : `drop-shadow(0 0 3px ${fc.stroke}) drop-shadow(0 0 8px ${fc.glow}0.8)) drop-shadow(0 0 16px ${fc.glow}0.5)) drop-shadow(0 0 30px ${fc.glow}0.2))`;
   const frameAnim = ehDourado ? 'pcGlow 2s ease-in-out infinite' : 'none';
+  // Glow "respiração" do card (cor segue o frame) — keyframe único por cor.
+  const breathName = `pcCardBreath_${corFrame}`;
+  const breathKeyframes = `@keyframes ${breathName} { 0%,100% { box-shadow: 0 0 20px ${fc.glow}0.35), 0 0 50px ${fc.glow}0.08); } 50% { box-shadow: 0 0 35px ${fc.glow}0.55), 0 0 80px ${fc.glow}0.15); } }`;
+  // Anéis holográficos — cor do frame com opacidade (hex alpha).
+  const anel1Cor = `${fc.stroke}66`; // ~40%
+  const anel2Cor = `${fc.stroke}40`; // ~25%
+  const anel3Cor = `${fc.stroke}26`; // ~15%
   const fundoCss =
     fundo === 'preto'
       ? '#000000'
@@ -105,9 +114,9 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   return (
     <div
       aria-label={`Card de ${nome}${equipa?.nome ? ` · ${equipa.nome}` : ''}`}
-      style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 16, overflow: 'hidden', background: fundoCss }}
+      style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 16, overflow: 'hidden', background: fundoCss, animation: `${breathName} 3.5s ease-in-out infinite`, willChange: 'box-shadow' }}
     >
-      <style>{KEYFRAMES}</style>
+      <style>{KEYFRAMES + breathKeyframes}</style>
 
       {/* z0 — FUNDO DE ESTÁDIO (só na opção estádio) */}
       {fundo === 'estadio' ? (
@@ -230,6 +239,11 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           {iniciaisNome(nome)}
         </div>
       )}
+
+      {/* z5 — ANÉIS HOLOGRÁFICOS a rodar sobre o avatar */}
+      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '70%', height: '70%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1.5px solid ${anel1Cor}`, borderTopColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin1 4s linear infinite' }} />
+      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '82%', height: '82%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1px dashed ${anel2Cor}`, borderBottomColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin2 6s linear infinite' }} />
+      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '94%', height: '94%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1px solid ${anel3Cor}`, borderLeftColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin1 9s linear infinite' }} />
 
       {/* z4 — REFLEXO DE LUZ (holográfico) */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none', overflow: 'hidden' }}>
