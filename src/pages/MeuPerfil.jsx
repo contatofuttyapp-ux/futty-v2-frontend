@@ -11,24 +11,6 @@ import PlayerAvatar from '../components/PlayerAvatar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
-// Cores de uniforme (hex explícito do briefing; azul/cinzento não estão no theme).
-const COR_HEX = {
-  preto: '#1a1a1a',
-  verde: '#00e5a0',
-  azul: '#3b82f6',
-  vermelho: '#ef4444',
-  amarelo: '#f59e0b',
-  cinzento: '#888888',
-};
-const UNIFORMES = [
-  { k: 'preto', label: 'PADRÃO' },
-  { k: 'verde' },
-  { k: 'azul' },
-  { k: 'vermelho' },
-  { k: 'amarelo' },
-  { k: 'cinzento' },
-];
-
 // Avatares genéricos existentes em /public/avatares/genericos (frontend).
 // (Exclui verde/azul/vermelho.png, que são fallback de uniforme.)
 const GENERICOS = [
@@ -134,10 +116,6 @@ export default function MeuPerfil() {
     if (ok) showToast('Avatar atualizado!');
   }
 
-  async function escolherCor(cor) {
-    await patchMe({ cor_preferida: cor });
-  }
-
   if (!perfil) {
     return (
       <div className="app-shell">
@@ -153,7 +131,6 @@ export default function MeuPerfil() {
   const stats = perfil.stats || {};
   const nomeMostrar = u.nome_jogador || u.nome || (u.email || '').split('@')[0] || 'Jogador';
   const creditos = u.avatar_ia_creditos ?? 3;
-  const corSel = u.cor_preferida || null;
 
   return (
     <div className="app-shell">
@@ -255,34 +232,7 @@ export default function MeuPerfil() {
           </div>
         )}
 
-        {/* 3. SECÇÃO UNIFORME */}
-        <SecLabel>Uniforme</SecLabel>
-        <div style={{ ...CARD, padding: 14, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {UNIFORMES.map(({ k, label }) => {
-            const sel = corSel === k;
-            return (
-              <button
-                key={k}
-                type="button"
-                onClick={() => escolherCor(k)}
-                aria-label={`Uniforme ${k}`}
-                aria-pressed={sel}
-                title={label ? `${k} (padrão)` : k}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  background: COR_HEX[k],
-                  border: sel ? '2px solid #fff' : '2px solid #333',
-                  boxShadow: sel ? `0 0 12px ${COR_HEX[k]}aa` : 'none',
-                }}
-              />
-            );
-          })}
-        </div>
-
-        {/* 4. SECÇÃO DADOS */}
+        {/* 3. SECÇÃO DADOS */}
         <SecLabel>Dados</SecLabel>
         <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
           <label style={{ display: 'grid', gap: 6 }}>

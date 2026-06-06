@@ -1,6 +1,7 @@
 // Futty v2.0 — Geração da figurinha (PNG via canvas), 400×600 (2:3).
 // Replica o visual do PlayerCard. Tudo no cliente, sem servidor.
 import { urlAsset, iniciaisNome, nomeJogador } from './avatar';
+import { getFrameColor } from './frameColors';
 
 const W = 400;
 const H = 600;
@@ -28,7 +29,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = 'stadium', corFrame = '#d4a017', mostrarStats = true }) {
+export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = 'estadio', corFrame = 'dourado', mostrarStats = true }) {
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -39,7 +40,7 @@ export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = '
   if (fundo === 'preto') {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, W, H);
-  } else if (fundo === 'blur') {
+  } else if (fundo === 'gradiente') {
     const g = ctx.createRadialGradient(W / 2, H * 0.45, 40, W / 2, H * 0.45, H * 0.7);
     g.addColorStop(0, '#0c3a26');
     g.addColorStop(0.55, '#061410');
@@ -160,14 +161,15 @@ export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = '
   const by = 14;
   const bw = 58;
   const bh = 44;
+  const badgeCor = getFrameColor(corFrame).stroke;
   ctx.fillStyle = 'rgba(0,0,0,0.65)';
   roundRect(ctx, bx, by, bw, bh, 8);
   ctx.fill();
-  ctx.strokeStyle = '#d4a017';
+  ctx.strokeStyle = badgeCor;
   ctx.lineWidth = 1;
   roundRect(ctx, bx, by, bw, bh, 8);
   ctx.stroke();
-  ctx.fillStyle = '#d4a017';
+  ctx.fillStyle = badgeCor;
   ctx.font = '900 26px system-ui, "Segoe UI", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -188,7 +190,9 @@ export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = '
   ctx.lineTo(W, cut);
   ctx.lineTo(W - cut, 0);
   ctx.closePath();
-  if (corFrame === '#d4a017') {
+  const fc = getFrameColor(corFrame);
+  const ehDourado = corFrame === 'dourado';
+  if (ehDourado) {
     const fg = ctx.createLinearGradient(0, 0, W, H);
     fg.addColorStop(0, '#f0d060');
     fg.addColorStop(0.35, '#d4a017');
@@ -196,13 +200,13 @@ export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = '
     fg.addColorStop(1, '#b8860b');
     ctx.strokeStyle = fg;
   } else {
-    ctx.strokeStyle = corFrame;
+    ctx.strokeStyle = fc.stroke;
   }
   ctx.lineWidth = 4;
   ctx.stroke();
 
-  const dotOuter = corFrame === '#d4a017' ? '#d4a017' : corFrame;
-  const dotInner = corFrame === '#d4a017' ? '#f5e070' : '#ffffff';
+  const dotOuter = ehDourado ? '#d4a017' : fc.stroke;
+  const dotInner = ehDourado ? '#f5e070' : fc.dot;
   for (const [cx, cy] of [[16, 16], [W - 16, 16], [16, H - 16], [W - 16, H - 16]]) {
     ctx.fillStyle = dotOuter;
     ctx.beginPath();

@@ -1,19 +1,23 @@
 // Futty v2.0 — Figurinha (/figurinha): card premium em fullscreen, personalizar
 // e partilhar. Sem Topbar, mobile-first. Tudo no cliente (canvas), sem IA.
+// As escolhas de frame e fundo guardam-se no perfil e aplicam-se em todo o app.
 import { useEffect, useState } from 'react';
-import { useApi } from '../hooks/useApi';
+import { apiFetch } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador } from '../utils/avatar';
+import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
 import PlayerCard from '../components/PlayerCard';
+import Toast from '../components/Toast';
 import '../styles/app.css';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
-const FRAMES = ['#d4a017', '#00e5a0', '#7c3aed', '#ffffff'];
+// Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
+const FRAMES = ['dourado', 'verde', 'roxo', 'branco'];
 const FUNDOS = [
-  { k: 'stadium', label: 'Estádio' },
-  { k: 'blur', label: 'Desfocado' },
-  { k: 'preto', label: 'Preto' },
+  { k: 'estadio', label: 'Estádio', emoji: '🏟️' },
+  { k: 'gradiente', label: 'Gradiente', emoji: '🌌' },
+  { k: 'preto', label: 'Preto', emoji: '⬛' },
 ];
 
 // Nome de ficheiro seguro a partir do nome do jogador.
@@ -36,19 +40,37 @@ function SecLabel({ children }) {
 }
 
 export default function Figurinha() {
-  const { data: me } = useApi('/api/me');
   const { teams } = useTeams();
 
-  const [fundo, setFundo] = useState('stadium');
-  const [corFrame, setCorFrame] = useState('#d4a017');
+  const [me, setMe] = useState(null);
+  const [fundo, setFundo] = useState('estadio');
+  const [corFrame, setCorFrame] = useState('dourado');
   const [mostrarStats, setMostrarStats] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState('');
+  const [toast, setToast] = useState(null);
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
   const equipa = teams[0] || null;
+
+  // Carrega o perfil e pré-selecciona as escolhas guardadas.
+  useEffect(() => {
+    let ativo = true;
+    apiFetch('/api/me')
+      .then((d) => {
+        if (!ativo) return;
+        setMe(d);
+        if (d?.user?.fundo_figurinha) setFundo(d.user.fundo_figurinha);
+        if (d?.user?.cor_frame) setCorFrame(d.user.cor_frame);
+      })
+      .catch((e) => ativo && setErro(e.message));
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   // Fechar fullscreen com Escape.
   useEffect(() => {
@@ -60,6 +82,25 @@ export default function Figurinha() {
 
   async function gerar() {
     return gerarFigurinhaCanvas({ jogador, stats, fundo, corFrame, mostrarStats });
+  }
+
+  // Guarda as escolhas no perfil (aplicam-se em todo o app).
+  async function guardar() {
+    if (saving) return;
+    setSaving(true);
+    setErro('');
+    try {
+      const res = await apiFetch('/api/me', {
+        method: 'PATCH',
+        body: JSON.stringify({ cor_frame: corFrame, fundo_figurinha: fundo }),
+      });
+      setMe((m) => (m ? { ...m, user: { ...m.user, ...res.user } } : m));
+      setToast({ tipo: 'success', mensagem: 'Figurinha guardada! ✨' });
+    } catch (e) {
+      setToast({ tipo: 'error', mensagem: e?.message || 'Não foi possível guardar.' });
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function baixar() {
@@ -140,17 +181,33 @@ export default function Figurinha() {
           {/* A) FUNDO */}
           <SecLabel>Fundo</SecLabel>
           <div style={{ display: 'flex', gap: 10 }}>
-            {FUNDOS.map((f) => (
-              <button
-                key={f.k}
-                type="button"
-                onClick={() => setFundo(f.k)}
-                title={f.label}
-                style={{ padding: 0, border: `2px solid ${fundo === f.k ? 'var(--neon)' : 'transparent'}`, borderRadius: 8, overflow: 'hidden', cursor: 'pointer', lineHeight: 0, background: 'transparent' }}
-              >
-                <div style={{ width: 56, height: 40, ...fundoThumb(f.k) }} />
-              </button>
-            ))}
+            {FUNDOS.map((f) => {
+              const sel = fundo === f.k;
+              return (
+                <button
+                  key={f.k}
+                  type="button"
+                  onClick={() => setFundo(f.k)}
+                  aria-pressed={sel}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '10px 6px',
+                    border: `2px solid ${sel ? 'var(--neon)' : '#222'}`,
+                    borderRadius: 10,
+                    background: sel ? 'rgba(0,229,160,0.08)' : '#111',
+                    color: '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: 20, lineHeight: 1 }}>{f.emoji}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>{f.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* B) COR DO FRAME */}
@@ -158,6 +215,7 @@ export default function Figurinha() {
           <div style={{ display: 'flex', gap: 12 }}>
             {FRAMES.map((c) => {
               const sel = corFrame === c;
+              const hex = getFrameColor(c).stroke;
               return (
                 <button
                   key={c}
@@ -165,7 +223,7 @@ export default function Figurinha() {
                   onClick={() => setCorFrame(c)}
                   aria-label={`Frame ${c}`}
                   aria-pressed={sel}
-                  style={{ width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', background: c, border: sel ? '2px solid #fff' : '2px solid #333', boxShadow: sel ? `0 0 10px ${c}` : 'none' }}
+                  style={{ width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', background: hex, border: sel ? '2px solid #fff' : '2px solid #333', boxShadow: sel ? `0 0 10px ${hex}` : 'none' }}
                 />
               );
             })}
@@ -182,7 +240,10 @@ export default function Figurinha() {
 
           {/* 4. BOTÕES */}
           <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
-            <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={busy} onClick={baixar}>
+            <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
+              {saving ? 'A guardar…' : '💾 Guardar figurinha'}
+            </button>
+            <button type="button" className="btn btn--purple-outline" style={{ width: '100%' }} disabled={busy} onClick={baixar}>
               {busy ? 'A gerar…' : '✨ Baixar figurinha'}
             </button>
             <button type="button" className="btn btn--purple" style={{ width: '100%' }} disabled={busy} onClick={partilhar}>
@@ -214,13 +275,8 @@ export default function Figurinha() {
           </div>
         </div>
       ) : null}
+
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
   );
-}
-
-// Miniatura do fundo para os chips.
-function fundoThumb(k) {
-  if (k === 'preto') return { background: '#000000' };
-  if (k === 'blur') return { background: 'radial-gradient(ellipse 90% 70% at 50% 50%, #0c3a26, #061410 60%, #000)' };
-  return { backgroundImage: 'url(/stadium_bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' };
 }

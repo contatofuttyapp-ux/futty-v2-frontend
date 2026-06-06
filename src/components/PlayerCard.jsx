@@ -2,6 +2,7 @@
 // Tudo em CSS puro (zero libs). Usado em Início e Figurinha.
 import { useState } from 'react';
 import { urlAsset, iniciaisNome, nomeJogador } from '../utils/avatar';
+import { getFrameColor } from '../utils/frameColors';
 
 // Cores de uniforme (6) para o fundo das iniciais quando não há avatar.
 const COR_HEX = {
@@ -72,7 +73,7 @@ const KEYFRAMES = `
 @keyframes pcCornerBlink { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 `;
 
-export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'stadium', corFrame = '#d4a017', mostrarStats = false, mostrarNome = true }) {
+export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true }) {
   const [imgFalhou, setImgFalhou] = useState(false);
 
   const nome = nomeJogador(jogador);
@@ -81,14 +82,23 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   const nota = Number.isFinite(stats?.nota) ? Number(stats.nota).toFixed(1) : '--';
   const temAvatar = avatarSrc && !imgFalhou;
 
-  const ehDourado = corFrame === '#d4a017';
-  const strokeRef = ehDourado ? 'url(#goldGrad)' : corFrame;
-  const dotOuter = ehDourado ? '#d4a017' : corFrame;
-  const dotInner = ehDourado ? '#f5e070' : '#ffffff';
+  // Cor do frame (chave nomeada → hex/glow). 'dourado' mantém o gradiente especial.
+  const fc = getFrameColor(corFrame);
+  const ehDourado = corFrame === 'dourado';
+  const strokeRef = ehDourado ? 'url(#goldGrad)' : fc.stroke;
+  const dotOuter = ehDourado ? '#d4a017' : fc.stroke;
+  const dotInner = ehDourado ? '#f5e070' : fc.dot;
+  // Aura atrás do avatar — cor segue o frame.
+  const auraBg = `radial-gradient(ellipse at 50% 55%, ${fc.glow}0.5) 0%, ${fc.glow}0.25) 35%, ${fc.glow}0.08) 60%, transparent 75%)`;
+  // Glow exterior do frame: dourado é animado; outras cores usam glow estático.
+  const frameFilter = ehDourado
+    ? 'drop-shadow(0 0 3px #f5e070) drop-shadow(0 0 8px #d4a017) drop-shadow(0 0 16px rgba(212,160,23,0.8)) drop-shadow(0 0 30px rgba(212,160,23,0.4)) drop-shadow(0 0 50px rgba(212,160,23,0.15))'
+    : `drop-shadow(0 0 3px ${fc.stroke}) drop-shadow(0 0 8px ${fc.glow}0.8)) drop-shadow(0 0 16px ${fc.glow}0.5)) drop-shadow(0 0 30px ${fc.glow}0.2))`;
+  const frameAnim = ehDourado ? 'pcGlow 2s ease-in-out infinite' : 'none';
   const fundoCss =
     fundo === 'preto'
       ? '#000000'
-      : fundo === 'blur'
+      : fundo === 'gradiente'
         ? 'radial-gradient(ellipse 90% 70% at 50% 45%, #0c3a26, #061410 55%, #000 100%)'
         : 'radial-gradient(ellipse 120% 80% at 50% 0%, #1b2433, #0a0d14 70%, #05070b)';
 
@@ -100,7 +110,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
       <style>{KEYFRAMES}</style>
 
       {/* z0 — FUNDO DE ESTÁDIO (só na opção estádio) */}
-      {fundo === 'stadium' ? (
+      {fundo === 'estadio' ? (
         <img
           src="/stadium_bg.png"
           alt=""
@@ -186,8 +196,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           zIndex: 3,
           pointerEvents: 'none',
           borderRadius: '50%',
-          background:
-            'radial-gradient(ellipse at 50% 55%, rgba(212,160,23,0.5) 0%, rgba(212,160,23,0.25) 35%, rgba(212,160,23,0.08) 60%, transparent 75%)',
+          background: auraBg,
           filter: 'blur(22px)',
           transform: 'translateX(-50%)',
           willChange: 'transform, opacity',
@@ -312,9 +321,9 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           width: '100%',
           height: '100%',
           pointerEvents: 'none',
-          filter: 'drop-shadow(0 0 3px #f5e070) drop-shadow(0 0 8px #d4a017) drop-shadow(0 0 16px rgba(212,160,23,0.8)) drop-shadow(0 0 30px rgba(212,160,23,0.4)) drop-shadow(0 0 50px rgba(212,160,23,0.15))',
+          filter: frameFilter,
           willChange: 'filter, opacity',
-          animation: 'pcGlow 2s ease-in-out infinite',
+          animation: frameAnim,
         }}
       >
         <defs>
@@ -347,24 +356,24 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
 
         {/* Cantos decorativos em L (piscar alternado) */}
         <g style={{ animation: 'pcCornerBlink 2s ease-in-out 0s infinite' }}>
-          <line x1="0" y1="40" x2="0" y2="16" stroke="#f5e070" strokeWidth="2" />
-          <line x1="0" y1="16" x2="40" y2="16" stroke="#f5e070" strokeWidth="2" />
-          <circle cx="0" cy="16" r="2.5" fill="#f5e070" />
+          <line x1="0" y1="40" x2="0" y2="16" stroke={dotInner} strokeWidth="2" />
+          <line x1="0" y1="16" x2="40" y2="16" stroke={dotInner} strokeWidth="2" />
+          <circle cx="0" cy="16" r="2.5" fill={dotInner} />
         </g>
         <g style={{ animation: 'pcCornerBlink 2s ease-in-out 0.5s infinite' }}>
-          <line x1="300" y1="40" x2="300" y2="16" stroke="#f5e070" strokeWidth="2" />
-          <line x1="300" y1="16" x2="260" y2="16" stroke="#f5e070" strokeWidth="2" />
-          <circle cx="300" cy="16" r="2.5" fill="#f5e070" />
+          <line x1="300" y1="40" x2="300" y2="16" stroke={dotInner} strokeWidth="2" />
+          <line x1="300" y1="16" x2="260" y2="16" stroke={dotInner} strokeWidth="2" />
+          <circle cx="300" cy="16" r="2.5" fill={dotInner} />
         </g>
         <g style={{ animation: 'pcCornerBlink 2s ease-in-out 1s infinite' }}>
-          <line x1="0" y1="260" x2="0" y2="284" stroke="#f5e070" strokeWidth="2" />
-          <line x1="0" y1="284" x2="40" y2="284" stroke="#f5e070" strokeWidth="2" />
-          <circle cx="0" cy="284" r="2.5" fill="#f5e070" />
+          <line x1="0" y1="260" x2="0" y2="284" stroke={dotInner} strokeWidth="2" />
+          <line x1="0" y1="284" x2="40" y2="284" stroke={dotInner} strokeWidth="2" />
+          <circle cx="0" cy="284" r="2.5" fill={dotInner} />
         </g>
         <g style={{ animation: 'pcCornerBlink 2s ease-in-out 1.5s infinite' }}>
-          <line x1="300" y1="260" x2="300" y2="284" stroke="#f5e070" strokeWidth="2" />
-          <line x1="300" y1="284" x2="260" y2="284" stroke="#f5e070" strokeWidth="2" />
-          <circle cx="300" cy="284" r="2.5" fill="#f5e070" />
+          <line x1="300" y1="260" x2="300" y2="284" stroke={dotInner} strokeWidth="2" />
+          <line x1="300" y1="284" x2="260" y2="284" stroke={dotInner} strokeWidth="2" />
+          <circle cx="300" cy="284" r="2.5" fill={dotInner} />
         </g>
       </svg>
     </div>

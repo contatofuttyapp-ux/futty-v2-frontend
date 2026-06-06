@@ -5,12 +5,35 @@ import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useRanking } from '../hooks/useRanking';
+import { urlAsset, iniciaisNome } from '../utils/avatar';
+import { getFrameColor } from '../utils/frameColors';
 import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+
+// Avatar quadrado (44px) com micro-frame nos cantos, na cor do frame do jogador.
+function RankingAvatar({ nome, avatarUrl, cor }) {
+  const fc = getFrameColor(cor);
+  const src = avatarUrl ? urlAsset(avatarUrl) : null;
+  return (
+    <div style={{ position: 'relative', width: 44, height: 44, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#15151a' }}>
+      {src ? (
+        <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+      ) : (
+        <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 900, fontSize: 16 }}>{iniciaisNome(nome)}</div>
+      )}
+      <svg viewBox="0 0 44 44" width="44" height="44" aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <path d="M2,10 L2,2 L10,2" fill="none" stroke={fc.stroke} strokeWidth="1.5" />
+        <path d="M34,2 L42,2 L42,10" fill="none" stroke={fc.stroke} strokeWidth="1.5" />
+        <path d="M2,34 L2,42 L10,42" fill="none" stroke={fc.stroke} strokeWidth="1.5" />
+        <path d="M34,42 L42,42 L42,34" fill="none" stroke={fc.stroke} strokeWidth="1.5" />
+      </svg>
+    </div>
+  );
+}
 
 // Converte a média interna (1-5) para a nota exibida (6-10).
 function notaParaExibir(n) {
@@ -104,7 +127,7 @@ export default function Ranking() {
                 <div className={`rank-row ${p.posicao <= 3 ? 'rank-row--top' : ''}`} key={p.user_id}>
                   <div className="rank-pos">{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
                   <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${p.nome}`} style={{ lineHeight: 0 }}>
-                    <PlayerAvatar nome={p.nome} avatarUrl={p.avatar_url} glow={p.posicao <= 3} gold={p.posicao <= 3} />
+                    <RankingAvatar nome={p.nome} avatarUrl={p.avatar_url} cor={p.cor_frame} />
                   </Link>
                   <div className="rank-info">
                     <div className="rank-name" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
