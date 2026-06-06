@@ -90,10 +90,11 @@ body::after {
   pointer-events: none;
   will-change: opacity, transform, background-position;
   background:
-    radial-gradient(ellipse 80% 40% at 50% 20%, rgba(212, 160, 23, 0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 50% at 20% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 70%, rgba(139, 92, 246, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 100% 60% at 50% 50%, rgba(212, 160, 23, 0.04) 0%, transparent 80%);
+    radial-gradient(ellipse 80% 40% at 50% 20%, rgba(212, 160, 23, 0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 20% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 60% at 50% 50%, rgba(212, 160, 23, 0.07) 0%, transparent 80%),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(80, 60, 180, 0.06) 0%, transparent 70%);
   background-size: 200% 200%;
   animation: nebulaBreath 20s ease-in-out infinite, nebulaRotate 35s ease-in-out infinite alternate;
 }
@@ -110,18 +111,45 @@ body::after {
   font-family: 'Rajdhani', var(--sans);
 }
 
-/* Céu de estrelas global (50 pontos via box-shadow num único pseudo-elemento). */
-@keyframes twinkle {
+/* Céu de estrelas global — 3 grupos com ritmos diferentes (mais vivo). */
+@keyframes twinkleA {
   0%,
   100% {
-    opacity: 0.1;
+    opacity: 0.15;
   }
   50% {
-    opacity: 0.8;
+    opacity: 0.9;
+  }
+}
+@keyframes twinkleB {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  33% {
+    opacity: 0.05;
+  }
+  66% {
+    opacity: 1;
+  }
+}
+@keyframes twinkleC {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  25% {
+    opacity: 0.1;
+  }
+  75% {
+    opacity: 0.95;
   }
 }
 
-body::before {
+/* Base comum dos 3 céus (pseudo-elementos fixos atrás do conteúdo). */
+body::before,
+html::before,
+html::after {
   content: '';
   position: fixed;
   top: 0;
@@ -133,32 +161,45 @@ body::before {
   pointer-events: none;
   background: transparent;
   will-change: opacity;
-  animation: twinkle 4s ease-in-out infinite;
+}
+
+/* Grupo A — estrelas pequenas (ritmo A). */
+body::before {
+  animation: twinkleA 4s ease-in-out infinite;
   box-shadow:
-    /* pequenas (1px, opacidade baixa) */
     14px 32px rgba(255, 255, 255, 0.3), 58px 90px rgba(255, 255, 255, 0.25), 110px 24px rgba(255, 255, 255, 0.3),
     160px 140px rgba(255, 255, 255, 0.2), 210px 60px rgba(255, 255, 255, 0.35), 250px 200px rgba(255, 255, 255, 0.25),
     300px 40px rgba(255, 255, 255, 0.3), 350px 120px rgba(255, 255, 255, 0.2), 30px 180px rgba(255, 255, 255, 0.3),
     90px 250px rgba(255, 255, 255, 0.25), 140px 300px rgba(255, 255, 255, 0.3), 190px 360px rgba(255, 255, 255, 0.2),
     240px 280px rgba(255, 255, 255, 0.35), 290px 340px rgba(255, 255, 255, 0.25), 340px 250px rgba(255, 255, 255, 0.3),
-    20px 400px rgba(255, 255, 255, 0.2), 70px 460px rgba(255, 255, 255, 0.3), 130px 420px rgba(255, 255, 255, 0.25),
+    20px 400px rgba(255, 255, 255, 0.2), 70px 460px rgba(255, 255, 255, 0.3), 130px 420px rgba(255, 255, 255, 0.25);
+}
+
+/* Grupo B — estrelas pequenas (ritmo B). */
+html::before {
+  animation: twinkleB 5s ease-in-out infinite;
+  box-shadow:
     180px 480px rgba(255, 255, 255, 0.35), 230px 440px rgba(255, 255, 255, 0.2), 280px 500px rgba(255, 255, 255, 0.3),
     330px 420px rgba(255, 255, 255, 0.25), 50px 540px rgba(255, 255, 255, 0.3), 100px 600px rgba(255, 255, 255, 0.2),
     150px 560px rgba(255, 255, 255, 0.3), 200px 620px rgba(255, 255, 255, 0.25), 260px 580px rgba(255, 255, 255, 0.35),
     310px 640px rgba(255, 255, 255, 0.2), 360px 560px rgba(255, 255, 255, 0.3), 40px 680px rgba(255, 255, 255, 0.25),
     95px 720px rgba(255, 255, 255, 0.3), 145px 700px rgba(255, 255, 255, 0.2), 205px 760px rgba(255, 255, 255, 0.3),
-    255px 700px rgba(255, 255, 255, 0.25), 305px 740px rgba(255, 255, 255, 0.3), 355px 690px rgba(255, 255, 255, 0.2),
-    /* médias (1.5px via spread 0.5, opacidade média) */
+    255px 700px rgba(255, 255, 255, 0.25), 305px 740px rgba(255, 255, 255, 0.3), 355px 690px rgba(255, 255, 255, 0.2);
+}
+
+/* Grupo C — estrelas médias/grandes, mais brilhantes (ritmo C). */
+html::after {
+  animation: twinkleC 6s ease-in-out infinite;
+  box-shadow:
     78px 234px 0 0.5px rgba(255, 255, 255, 0.6), 125px 70px 0 0.5px rgba(255, 255, 255, 0.55),
     175px 210px 0 0.5px rgba(255, 255, 255, 0.65), 275px 160px 0 0.5px rgba(255, 255, 255, 0.5),
     10px 250px 0 0.5px rgba(255, 255, 255, 0.6), 215px 330px 0 0.5px rgba(255, 255, 255, 0.55),
     285px 260px 0 0.5px rgba(255, 255, 255, 0.6), 65px 350px 0 0.5px rgba(255, 255, 255, 0.5),
     320px 470px 0 0.5px rgba(255, 255, 255, 0.6), 115px 510px 0 0.5px rgba(255, 255, 255, 0.65),
-    /* grandes (2px via spread 1, opacidade alta) */
-    145px 67px 0 1px rgba(255, 255, 255, 0.9), 230px 130px 0 1px rgba(255, 255, 255, 0.95),
-    55px 300px 0 1px rgba(255, 255, 255, 0.85), 300px 300px 0 1px rgba(255, 255, 255, 0.9),
-    165px 640px 0 1px rgba(255, 255, 255, 0.9), 345px 380px 0 1px rgba(255, 255, 255, 0.95),
-    25px 600px 0 1px rgba(255, 255, 255, 0.85), 260px 690px 0 1px rgba(255, 255, 255, 0.9);
+    145px 67px 0 1px rgba(255, 255, 255, 1), 230px 130px 0 1px rgba(255, 255, 255, 1),
+    55px 300px 0 1px rgba(255, 255, 255, 0.9), 300px 300px 0 1px rgba(255, 255, 255, 0.95),
+    165px 640px 0 1px rgba(255, 255, 255, 0.95), 345px 380px 0 1px rgba(255, 255, 255, 1),
+    25px 600px 0 1px rgba(255, 255, 255, 0.9), 260px 690px 0 1px rgba(255, 255, 255, 0.95);
 }
 
 h1,
