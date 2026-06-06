@@ -39,15 +39,17 @@ html {
   background: #050810;
 }
 
+/* Fundo escuro base (atrás do céu de estrelas, que é o body::before). */
 body {
-  background: transparent;
+  background: #050810;
   color: var(--text);
 }
 
-/* O conteúdo fica acima do céu de estrelas. */
+/* O conteúdo fica acima do céu de estrelas (e transparente para o deixar ver). */
 #root {
   position: relative;
   z-index: 1;
+  background: transparent;
 }
 
 /* Tipografia premium — só logos/títulos, nunca texto de interface. */

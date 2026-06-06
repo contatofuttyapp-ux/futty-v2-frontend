@@ -19,9 +19,9 @@
   font-family: 'Rajdhani', var(--sans);
   font-size: 22px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.18em;
   color: var(--neon);
-  text-shadow: 0 0 10px rgba(0, 229, 160, 0.5);
+  text-shadow: 0 0 10px rgba(0, 229, 160, 0.6);
   text-decoration: none;
 }
 

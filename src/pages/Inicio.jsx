@@ -190,6 +190,8 @@ export default function Inicio() {
   const user = me?.user;
   const stats = me?.stats;
   const nome = user?.nome || user?.email?.split('@')[0] || 'Jogador';
+  // Fallback premium: se o utilizador ainda não tem avatar, mostra o Jefin (demo).
+  const avatarParaMostrar = user?.avatar_url || '/avatares/verde/Jefin.png';
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
@@ -209,13 +211,27 @@ export default function Inicio() {
   return (
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        <h1 className="app-page-title">Início</h1>
-        <p className="app-page-sub" style={{ marginBottom: 12 }}>O teu resumo do Futty.</p>
+        {/* Logo (esta página não tem Topbar) */}
+        <div style={{ marginBottom: 14 }}>
+          <span className="app-brand">FUT<span className="app-brand__dot">.</span></span>
+        </div>
+        <h1
+          className="app-page-title font-premium"
+          style={{ fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}
+        >
+          Início
+        </h1>
+        <p
+          className="app-page-sub"
+          style={{ marginBottom: 12, fontSize: 12, color: '#333', letterSpacing: '0.08em', textTransform: 'uppercase' }}
+        >
+          O teu resumo do Futty
+        </p>
 
         {/* Zona do card premium */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
           <div style={{ width: '65%', maxWidth: 260 }}>
-            <PlayerCard jogador={user || { nome }} stats={stats} equipa={teams[0] || null} />
+            <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} />
           </div>
           {teams[0] ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
