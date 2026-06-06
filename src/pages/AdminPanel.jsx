@@ -101,6 +101,21 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
   const [stats, setStats] = useState(null);
   const [pedidos, setPedidos] = useState(0);
   const [denuncias, setDenuncias] = useState(0);
+  const [confirmRevotar, setConfirmRevotar] = useState(false);
+  const [revotarBusy, setRevotarBusy] = useState(false);
+
+  async function pedirRevotacao() {
+    setRevotarBusy(true);
+    try {
+      await apiFetch(`/api/teams/${slug}/pedir-revotacao`, { method: 'POST' });
+      showToast('Pedido enviado a todos os membros!');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setRevotarBusy(false);
+      setConfirmRevotar(false);
+    }
+  }
 
   useEffect(() => {
     let ativo = true;
@@ -156,6 +171,25 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
           </div>
         </div>
       ) : null}
+
+      {/* Pedir revotação a todos */}
+      <button
+        type="button"
+        disabled={revotarBusy}
+        onClick={() => setConfirmRevotar(true)}
+        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #d4a017', background: 'rgba(212,160,23,0.08)', color: '#f5e070', fontWeight: 700, cursor: 'pointer' }}
+      >
+        ✨ Pedir revotação a todos
+      </button>
+
+      {confirmRevotar ? (
+        <ConfirmModal
+          texto="Pedir a todos os membros para atualizarem as suas notas?"
+          confirmarLabel="Pedir revotação"
+          onConfirm={pedirRevotacao}
+          onCancel={() => setConfirmRevotar(false)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -168,6 +202,18 @@ function TabEquipa({ slug, team, showToast }) {
   const [descricao, setDescricao] = useState(team.descricao || '');
   const [publica, setPublica] = useState(!!team.publica);
   const [saving, setSaving] = useState(false);
+  const [zerarStep, setZerarStep] = useState(0); // 0=nada, 1=1ª confirmação, 2=2ª
+
+  async function zerarTodosVotos() {
+    try {
+      const r = await apiFetch(`/api/teams/${slug}/votos`, { method: 'DELETE' });
+      showToast(`Todos os votos zerados${r?.count != null ? ` (${r.count})` : ''}.`);
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setZerarStep(0);
+    }
+  }
 
   async function guardar() {
     if (saving) return;
@@ -186,6 +232,7 @@ function TabEquipa({ slug, team, showToast }) {
   }
 
   return (
+    <div style={{ display: 'grid', gap: 14 }}>
     <div style={{ ...CARD, padding: 14, display: 'grid', gap: 14 }}>
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Nome da equipa</span>
@@ -231,6 +278,38 @@ function TabEquipa({ slug, team, showToast }) {
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
         {saving ? 'A guardar…' : 'Guardar'}
       </button>
+    </div>
+
+    {/* Zona de perigo */}
+    <div style={{ ...CARD, padding: 14, borderColor: 'rgba(239,68,68,0.4)' }}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--danger)', textTransform: 'uppercase', marginBottom: 8 }}>Zona de perigo</div>
+      <button
+        type="button"
+        onClick={() => setZerarStep(1)}
+        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--danger)', background: 'transparent', color: '#fda4af', fontWeight: 700, cursor: 'pointer' }}
+      >
+        Zerar todos os votos da equipa
+      </button>
+    </div>
+
+    {zerarStep === 1 ? (
+      <ConfirmModal
+        texto="Vais apagar TODOS os votos da equipa. Continuar?"
+        perigo
+        confirmarLabel="Continuar"
+        onConfirm={() => setZerarStep(2)}
+        onCancel={() => setZerarStep(0)}
+      />
+    ) : null}
+    {zerarStep === 2 ? (
+      <ConfirmModal
+        texto="Tens mesmo a certeza? Esta ação é irreversível."
+        perigo
+        confirmarLabel="Zerar tudo"
+        onConfirm={zerarTodosVotos}
+        onCancel={() => setZerarStep(0)}
+      />
+    ) : null}
     </div>
   );
 }
@@ -282,6 +361,27 @@ function TabMembros({ slug, meId, showToast }) {
     }
   }
 
+  // Alterna categoria linha <-> GR (optimista).
+  async function toggleGR(m) {
+    const nova = m.categoria === 'GR' ? 'linha' : 'GR';
+    setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, categoria: nova } : x)));
+    try {
+      await apiFetch(`/api/teams/${slug}/membros/${m.user_id}`, { method: 'PATCH', body: JSON.stringify({ categoria: nova }) });
+    } catch (e) {
+      setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, categoria: m.categoria } : x)));
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function zerarVotos(m) {
+    try {
+      const r = await apiFetch(`/api/teams/${slug}/votos/${m.user_id}`, { method: 'DELETE' });
+      showToast(`Votos de ${m.nome_jogador || m.nome} zerados${r?.count != null ? ` (${r.count})` : ''}.`);
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
   if (membros === null) return <Loading text="A carregar membros…" />;
 
   return (
@@ -303,12 +403,21 @@ function TabMembros({ slug, meId, showToast }) {
 
             <button
               type="button"
+              onClick={() => toggleGR(m)}
+              aria-pressed={m.categoria === 'GR'}
+              title="Goleiro"
+              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${m.categoria === 'GR' ? 'var(--purple)' : '#333'}`, background: m.categoria === 'GR' ? 'rgba(124,58,237,0.18)' : 'transparent', color: m.categoria === 'GR' ? '#b69cff' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
+            >
+              GR
+            </button>
+            <button
+              type="button"
               onClick={() => togglePostar(m)}
               aria-pressed={m.pode_postar}
               title="Pode postar"
               style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${m.pode_postar ? 'var(--neon)' : '#333'}`, background: m.pode_postar ? 'rgba(0,229,160,0.12)' : 'transparent', color: m.pode_postar ? 'var(--neon)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
             >
-              {m.pode_postar ? '✓ Pode postar' : 'Pode postar'}
+              {m.pode_postar ? '✓ Postar' : 'Postar'}
             </button>
 
             {!ehProprio ? (
@@ -321,6 +430,7 @@ function TabMembros({ slug, meId, showToast }) {
                     ) : (
                       <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'despromover', membro: m }); }} style={menuItem}>Remover de admin</button>
                     )}
+                    <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'zerar-votos', membro: m }); }} style={{ ...menuItem, color: '#fda4af' }}>Zerar votos</button>
                     <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'remover', membro: m }); }} style={{ ...menuItem, color: '#fda4af' }}>Remover da equipa</button>
                   </div>
                 ) : null}
@@ -337,14 +447,17 @@ function TabMembros({ slug, meId, showToast }) {
               ? `Remover ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} da equipa?`
               : confirmacao.tipo === 'promover'
                 ? `Promover ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} a admin?`
-                : `Remover o admin de ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
+                : confirmacao.tipo === 'zerar-votos'
+                  ? `Zerar os votos recebidos por ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
+                  : `Remover o admin de ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
           }
-          perigo={confirmacao.tipo === 'remover'}
-          confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : 'Confirmar'}
+          perigo={confirmacao.tipo === 'remover' || confirmacao.tipo === 'zerar-votos'}
+          confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : confirmacao.tipo === 'zerar-votos' ? 'Zerar' : 'Confirmar'}
           onConfirm={() => {
             const { tipo, membro } = confirmacao;
             setConfirmacao(null);
             if (tipo === 'remover') remover(membro);
+            else if (tipo === 'zerar-votos') zerarVotos(membro);
             else mudarRole(membro, tipo === 'promover' ? 'admin' : 'member');
           }}
           onCancel={() => setConfirmacao(null)}

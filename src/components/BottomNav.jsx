@@ -79,7 +79,7 @@ export default function BottomNav() {
 
   // Votos pendentes -> badge vermelho na tab Ranking.
   const { data: votacao } = useApi(slug ? `/api/teams/${slug}/votacao-status` : null);
-  const hasPendingVotes = !!votacao?.game_id && votacao.faltam > 0;
+  const hasPendingVotes = !!votacao && (votacao.faltam > 0 || votacao.pedido_revotacao);
 
   const tabs = [
     { key: 'home', label: 'Início', Icon: IconInicio, to: '/home', isActive: (p) => p === '/home' },
