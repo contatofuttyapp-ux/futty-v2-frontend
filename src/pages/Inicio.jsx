@@ -1,6 +1,6 @@
 // Futty v2.0 — Início: avatar, chips de equipas, próximos jogos e publicidade.
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
@@ -132,7 +132,6 @@ function EmptyState() {
 export default function Inicio() {
   const { data: me } = useApi('/api/me');
   const { teams, loading: teamsLoading } = useTeams();
-  const navigate = useNavigate();
 
   const [games, setGames] = useState(null); // null = a carregar
   const [error, setError] = useState('');
@@ -193,6 +192,12 @@ export default function Inicio() {
   // Fallback premium: se o utilizador ainda não tem avatar, mostra o Jefin (demo).
   const avatarParaMostrar = user?.avatar_url || '/avatares/verde/Jefin.png';
 
+  // Proteção de layout para o nome (tamanho/espaçamento conforme o comprimento).
+  const nomeLen = nome?.length || 0;
+  const nomeComposto = (nome || '').trim().includes(' ') && nomeLen > 12;
+  const nomeFontSize = nomeComposto ? 18 : nomeLen <= 10 ? 26 : nomeLen <= 15 ? 20 : 16;
+  const nomeSpacing = nomeLen <= 10 ? '0.28em' : nomeLen <= 15 ? '0.16em' : '0.08em';
+
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
   // Próximo jogo = o primeiro que não está encerrado (lista vem ordenada por data).
@@ -226,20 +231,57 @@ export default function Inicio() {
           <div style={{ width: '70%', maxWidth: 280 }}>
             <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} mostrarNome={false} />
           </div>
-          {/* Nome por baixo do card */}
-          <div
-            style={{
-              fontFamily: "'Rajdhani', sans-serif",
-              fontSize: 22,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              color: '#fff',
-              textShadow: '0 0 12px rgba(0,229,160,0.8)',
-              letterSpacing: '0.06em',
-            }}
-          >
-            {nome}
-          </div>
+          {/* Nome por baixo do card — gradiente dourado + linhas decorativas */}
+          {nomeComposto ? (
+            // Nome composto e longo: quebra em 2 linhas, sem linhas decorativas.
+            <div
+              style={{
+                fontFamily: "'Rajdhani', sans-serif",
+                fontSize: 18,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: nomeSpacing,
+                background: 'linear-gradient(90deg, #d4a017 0%, #fff 40%, #f5e070 60%, #d4a017 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                textShadow: 'none',
+                maxWidth: '85%',
+                textAlign: 'center',
+                whiteSpace: 'normal',
+                wordBreak: 'break-word',
+                lineHeight: 1.1,
+              }}
+            >
+              {nome}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '85%', maxWidth: 280 }}>
+              <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right, transparent, #d4a017)', opacity: 0.5 }} />
+              <div
+                style={{
+                  fontFamily: "'Rajdhani', sans-serif",
+                  fontSize: nomeFontSize,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: nomeSpacing,
+                  background: 'linear-gradient(90deg, #d4a017 0%, #fff 40%, #f5e070 60%, #d4a017 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  textShadow: 'none',
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.1,
+                }}
+              >
+                {nome}
+              </div>
+              <div style={{ flex: 1, height: 1, background: 'linear-gradient(to left, transparent, #d4a017)', opacity: 0.5 }} />
+            </div>
+          )}
           {teams[0] ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neon)' }} />
@@ -257,13 +299,6 @@ export default function Inicio() {
               <b>{stats?.gols ?? 0}</b> gols
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/figurinha')}
-            style={{ background: 'transparent', border: '1px solid var(--purple)', color: '#b69cff', borderRadius: 20, padding: '6px 16px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-          >
-            ✨ Personalizar figurinha
-          </button>
         </div>
 
         {error && <div className="alert alert--error" style={{ marginTop: 12 }}>{error}</div>}
