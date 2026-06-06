@@ -28,7 +28,7 @@ const KEYFRAMES = `
 @keyframes pcGlow { 0%,100% { opacity:0.7; } 50% { opacity:1; } }
 `;
 
-export default function PlayerCard({ jogador = {}, stats = {}, equipa = null }) {
+export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'stadium', corFrame = '#d4a017', mostrarStats = false }) {
   const [imgFalhou, setImgFalhou] = useState(false);
 
   const nome = nomeJogador(jogador);
@@ -36,6 +36,18 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null }) 
   const corBg = COR_HEX[jogador?.cor_preferida] || '#15151a';
   const nota = Number.isFinite(stats?.nota) ? Number(stats.nota).toFixed(1) : '--';
   const temAvatar = avatarSrc && !imgFalhou;
+
+  // Frame: o dourado usa o gradiente; outras cores são sólidas.
+  const ehDourado = corFrame === '#d4a017';
+  const strokeRef = ehDourado ? 'url(#goldGrad)' : corFrame;
+  const dotOuter = ehDourado ? '#d4a017' : corFrame;
+  const dotInner = ehDourado ? '#f5e070' : '#ffffff';
+  const fundoCss =
+    fundo === 'preto'
+      ? '#000000'
+      : fundo === 'blur'
+        ? 'radial-gradient(ellipse 90% 70% at 50% 45%, #0c3a26, #061410 55%, #000 100%)'
+        : 'radial-gradient(ellipse 120% 80% at 50% 0%, #1b2433, #0a0d14 70%, #05070b)';
 
   return (
     <div
@@ -46,21 +58,23 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null }) 
         aspectRatio: '2 / 3',
         borderRadius: 16,
         overflow: 'hidden',
-        // Fallback de estádio (caso a imagem não carregue).
-        background: 'radial-gradient(ellipse 120% 80% at 50% 0%, #1b2433, #0a0d14 70%, #05070b)',
+        // Fundo conforme a opção (no estádio há img por cima; senão é só CSS).
+        background: fundoCss,
       }}
     >
       <style>{KEYFRAMES}</style>
 
-      {/* 1. FUNDO DE ESTÁDIO */}
-      <img
-        src="/stadium_bg.png"
-        alt=""
-        onError={(e) => {
-          e.currentTarget.style.display = 'none';
-        }}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-      />
+      {/* 1. FUNDO DE ESTÁDIO (só na opção estádio) */}
+      {fundo === 'stadium' ? (
+        <img
+          src="/stadium_bg.png"
+          alt=""
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      ) : null}
 
       {/* 2. EFEITOS DE LUZ — holofotes + faíscas */}
       <div
@@ -146,26 +160,32 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null }) 
         }}
       />
 
-      {/* 5. NOME DO JOGADOR */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 8,
-          right: 8,
-          bottom: 12,
-          textAlign: 'center',
-          textTransform: 'uppercase',
-          fontWeight: 900,
-          fontSize: 20,
-          lineHeight: 1.1,
-          color: '#fff',
-          textShadow: '0 0 20px rgba(0,229,160,0.5)',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        {nome}
+      {/* 5. NOME DO JOGADOR (+ stats opcionais) */}
+      <div style={{ position: 'absolute', left: 8, right: 8, bottom: 12, textAlign: 'center' }}>
+        <div
+          style={{
+            textTransform: 'uppercase',
+            fontWeight: 900,
+            fontSize: 20,
+            lineHeight: 1.1,
+            color: '#fff',
+            textShadow: '0 0 20px rgba(0,229,160,0.5)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {nome}
+        </div>
+        {mostrarStats ? (
+          <div style={{ marginTop: 4, display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.9)' }}>
+            <span style={{ color: '#d4a017' }}>{nota}</span>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span>{stats?.jogos ?? 0}J</span>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span>{stats?.gols ?? 0}G</span>
+          </div>
+        ) : null}
       </div>
 
       {/* 6. BADGE NOTA */}
@@ -207,21 +227,21 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null }) 
         <path
           d="M16,0 L0,16 L0,314 L16,330 L204,330 L220,314 L220,16 L204,0 Z"
           fill="none"
-          stroke="url(#goldGrad)"
+          stroke={strokeRef}
           strokeWidth="2"
         />
         {/* Borda interior mais fina */}
         <path
           d="M18,4 L4,18 L4,312 L18,326 L202,326 L216,312 L216,18 L202,4 Z"
           fill="none"
-          stroke="#f5e070"
+          stroke={dotInner}
           strokeWidth="0.5"
           strokeOpacity="0.3"
         />
         {/* Linhas decorativas a meio (esquerda/direita) */}
-        <line x1="0" y1="165" x2="16" y2="165" stroke="url(#goldGrad)" strokeWidth="1" />
-        <line x1="204" y1="165" x2="220" y2="165" stroke="url(#goldGrad)" strokeWidth="1" />
-        {/* Círculos dourados nos cantos */}
+        <line x1="0" y1="165" x2="16" y2="165" stroke={strokeRef} strokeWidth="1" />
+        <line x1="204" y1="165" x2="220" y2="165" stroke={strokeRef} strokeWidth="1" />
+        {/* Círculos nos cantos */}
         {[
           [9, 9],
           [211, 9],
@@ -229,8 +249,8 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null }) 
           [211, 321],
         ].map(([cx, cy]) => (
           <g key={`${cx}-${cy}`}>
-            <circle cx={cx} cy={cy} r="3" fill="#d4a017" />
-            <circle cx={cx} cy={cy} r="1.5" fill="#f5e070" />
+            <circle cx={cx} cy={cy} r="3" fill={dotOuter} />
+            <circle cx={cx} cy={cy} r="1.5" fill={dotInner} />
           </g>
         ))}
       </svg>

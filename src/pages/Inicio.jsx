@@ -1,6 +1,6 @@
 // Futty v2.0 — Início: avatar, chips de equipas, próximos jogos e publicidade.
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
@@ -131,6 +131,7 @@ function EmptyState() {
 export default function Inicio() {
   const { data: me } = useApi('/api/me');
   const { teams, loading: teamsLoading } = useTeams();
+  const navigate = useNavigate();
 
   const [games, setGames] = useState(null); // null = a carregar
   const [error, setError] = useState('');
@@ -230,6 +231,13 @@ export default function Inicio() {
               <b>{stats?.gols ?? 0}</b> gols
             </span>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate('/figurinha')}
+            style={{ background: 'transparent', border: '1px solid var(--purple)', color: '#b69cff', borderRadius: 20, padding: '6px 16px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+          >
+            ✨ Personalizar figurinha
+          </button>
         </div>
 
         {error && <div className="alert alert--error" style={{ marginTop: 12 }}>{error}</div>}
