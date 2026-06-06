@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
 import { formatRating } from '../utils/format';
 import UploadComCrop from '../components/UploadComCrop';
-import PlayerCard from '../components/PlayerCard';
+import PlayerAvatar from '../components/PlayerAvatar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -155,30 +155,31 @@ export default function MeuPerfil() {
 
         {erro ? <div className="alert alert--error" style={{ marginBottom: 12 }}>{erro}</div> : null}
 
-        {/* 1. CARTÃO DE STATS */}
-        <div style={{ ...CARD, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        {/* 1. HEADER SIMPLES (avatar + nome + email) */}
+        <div style={{ ...CARD, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
             role="button"
             tabIndex={0}
+            aria-label="Editar avatar"
             onClick={() => setAvatarAberto((v) => !v)}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setAvatarAberto((v) => !v)}
-            style={{ width: '55%', maxWidth: 200, cursor: 'pointer' }}
+            style={{ cursor: 'pointer', lineHeight: 0, flexShrink: 0 }}
           >
-            <PlayerCard
-              jogador={{ nome_jogador: u.nome_jogador, nome: u.nome, avatar_url: u.avatar_url, cor_preferida: corSel }}
-              stats={stats}
-            />
+            <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} />
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{nomeMostrar}</div>
-            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-dim)', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{stats.nota != null ? formatRating(stats.nota) : '--'}</span>
-              <span>·</span>
-              <span><b style={{ color: '#fff' }}>{stats.jogos ?? 0}</b> jogos</span>
-              <span>·</span>
-              <span><b style={{ color: '#fff' }}>{stats.gols ?? 0}</b> gols</span>
-            </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeMostrar}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email || ''}</div>
           </div>
+        </div>
+
+        {/* Stats por baixo do header */}
+        <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 13, color: 'var(--text-dim)' }}>
+          <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{stats.nota != null ? formatRating(stats.nota) : '--'}</span>
+          <span>·</span>
+          <span><b style={{ color: '#fff' }}>{stats.jogos ?? 0}</b> jogos</span>
+          <span>·</span>
+          <span><b style={{ color: '#fff' }}>{stats.gols ?? 0}</b> gols</span>
         </div>
 
         {/* 2. SECÇÃO AVATAR */}
