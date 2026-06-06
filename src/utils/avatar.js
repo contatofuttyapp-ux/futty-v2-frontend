@@ -16,10 +16,10 @@ const CORES_VALIDAS = ['verde', 'azul', 'vermelho', 'preto'];
 
 // ─── Funções base ─────────────────────────────────────────────────────────────
 
-// Converte um caminho de avatar/asset numa URL utilizável. Três casos:
-//  - http(s)://       → URL absoluta, intacta (ex.: Supabase Storage)
-//  - /avatares/...    → genérico servido pelo PUBLIC do frontend (origin do frontend)
-//  - resto (/public/, /uploads/, …) → servido pelo backend
+// Resolve um avatar_url para URL utilizável.
+// Após a normalização (scripts/normalizar-avatares.js), os URLs do backend já
+// são absolutos. Só os genéricos do frontend (/avatares/...) precisam de
+// tratamento especial; o resto é um fallback para caminhos ainda não normalizados.
 export function urlAsset(caminho) {
   if (!caminho) return '';
   const s = String(caminho).trim();
