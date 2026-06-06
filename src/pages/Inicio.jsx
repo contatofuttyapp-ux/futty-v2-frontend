@@ -8,6 +8,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatDateTime, formatRating } from '../utils/format';
 import PlayerCard from '../components/PlayerCard';
 import TeamAvatar from '../components/TeamAvatar';
+import ProductTour from '../components/ProductTour';
 import Loading from '../components/Loading';
 import SorteioOverlay from '../components/SorteioOverlay';
 import '../styles/app.css';
@@ -149,6 +150,9 @@ export default function Inicio() {
     sessionStorage.setItem('futty_push_dismiss', '1');
   }
 
+  // Onboarding (product tour) — só na primeira vez.
+  const [tourDone, setTourDone] = useState(() => !!localStorage.getItem('futty_tour_done'));
+
   // "Ver sorteio": busca o jogo completo (my-invites não traz times_resultado) e abre o overlay.
   async function verSorteio(game) {
     try {
@@ -249,7 +253,7 @@ export default function Inicio() {
 
         {/* Zona do card premium */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
-          <div style={{ width: '70%', maxWidth: 280 }}>
+          <div data-tour="player-card" style={{ width: '70%', maxWidth: 280 }}>
             <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} mostrarNome={false} corFrame={corFrame} />
           </div>
           {/* Nome por baixo do card — gradiente dourado + linhas decorativas */}
@@ -355,7 +359,8 @@ export default function Inicio() {
             </div>
 
             {/* Jogos */}
-            <div className="games-label">Próximos Jogos</div>
+            <div data-tour="jogos-section">
+              <div className="games-label">Próximos Jogos</div>
             {loadingGames ? (
               <Loading text="A carregar jogos…" />
             ) : filtered.length === 0 ? (
@@ -376,12 +381,23 @@ export default function Inicio() {
                 )
               )
             )}
+            </div>
           </>
         )}
       </main>
 
       {/* Overlay do sorteio */}
       <SorteioOverlay jogo={jogoSorteio} onClose={() => setJogoSorteio(null)} />
+
+      {/* Onboarding (primeira visita) */}
+      {!tourDone && (
+        <ProductTour
+          onDone={() => {
+            localStorage.setItem('futty_tour_done', '1');
+            setTourDone(true);
+          }}
+        />
+      )}
     </div>
   );
 }

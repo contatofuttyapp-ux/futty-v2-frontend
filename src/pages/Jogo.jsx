@@ -8,8 +8,10 @@ import { initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import DrawnTeams from '../components/DrawnTeams';
+import TimesEditor from '../components/TimesEditor';
 import SorteioOverlay from '../components/SorteioOverlay';
 import CountdownSorteio from '../components/CountdownSorteio';
+import Toast from '../components/Toast';
 import '../styles/app.css';
 
 export default function Jogo() {
@@ -18,6 +20,8 @@ export default function Jogo() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay do sorteio
+  const [editando, setEditando] = useState(false); // modo ajuste manual dos times
+  const [toast, setToast] = useState(null);
 
   // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
   async function runAction(path, body) {
@@ -210,12 +214,31 @@ export default function Jogo() {
                   Ver sorteio
                 </button>
               )}
+              {isAdmin && game.sorteio_realizado && !editando && (
+                <button type="button" className="btn btn--purple-outline btn--sm" onClick={() => setEditando(true)}>
+                  ✏️ Ajustar times
+                </button>
+              )}
             </div>
             {!isAdmin && !game.sorteio_realizado && <p className="muted">O sorteio ainda não foi realizado.</p>}
 
             {game.times_resultado && (
               <div style={{ marginTop: 16 }}>
-                <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} />
+                {editando ? (
+                  <TimesEditor
+                    gameId={id}
+                    resultadoInicial={game.times_resultado}
+                    confirmados={confirmados}
+                    showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })}
+                    onCancel={() => setEditando(false)}
+                    onSaved={async () => {
+                      setEditando(false);
+                      await reload();
+                    }}
+                  />
+                ) : (
+                  <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} />
+                )}
               </div>
             )}
 
@@ -232,6 +255,8 @@ export default function Jogo() {
 
       {/* Overlay do sorteio (slot machine) */}
       <SorteioOverlay jogo={jogoSorteio} onClose={() => setJogoSorteio(null)} />
+
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
   );
 }

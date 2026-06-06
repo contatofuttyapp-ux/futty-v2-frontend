@@ -90,7 +90,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="bottom-nav" aria-label="Navegação principal">
+    <nav className="bottom-nav" aria-label="Navegação principal" data-tour="bottom-nav">
       {tabs.map(({ key, label, Icon, to, isActive, badge }) => {
         const active = isActive(pathname);
         return (
