@@ -757,6 +757,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: top center; /* mostra a cabeça em vez do tronco */
 }
 
 /* Glow verde — apenas top 3 do ranking e avatar de perfil */

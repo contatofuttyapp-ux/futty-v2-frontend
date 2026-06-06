@@ -17,6 +17,7 @@ import Jogo from './pages/Jogo';
 import Ranking from './pages/Ranking';
 import JogadorPerfil from './pages/JogadorPerfil';
 import AdminPanel from './pages/AdminPanel';
+import AlterarPassword from './pages/AlterarPassword';
 import Feed from './pages/Feed';
 import Figurinha from './pages/Figurinha';
 import MeuPerfil from './pages/MeuPerfil';
@@ -151,6 +152,14 @@ export default function App() {
             element={
               <AuthGuard>
                 <MeuPerfil />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/alterar-password"
+            element={
+              <AuthGuard>
+                <AlterarPassword />
               </AuthGuard>
             }
           />

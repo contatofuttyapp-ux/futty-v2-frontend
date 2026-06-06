@@ -87,6 +87,14 @@ export default function MeuPerfil() {
     setToast({ mensagem, tipo });
   }
 
+  // Abre o cliente de email; se não houver, mostra o email para copiar.
+  function relatarProblema() {
+    window.location.href = 'mailto:suporte@futty.app?subject=Problema%20no%20Futty';
+    setTimeout(() => {
+      showToast('Email: suporte@futty.app', 'info');
+    }, 500);
+  }
+
   // Atualiza um campo localmente (sem gravar — só para os inputs de texto).
   function setField(k, v) {
     setPerfil((p) => (p ? { ...p, user: { ...p.user, [k]: v } } : p));
@@ -306,8 +314,8 @@ export default function MeuPerfil() {
         {/* 5. SECÇÃO CONTA */}
         <SecLabel>Conta</SecLabel>
         <div style={{ ...CARD, overflow: 'hidden' }}>
-          <ContaRow onClick={() => showToast('Em breve', 'info')}>🔑 Alterar password</ContaRow>
-          <ContaRow onClick={() => { window.location.href = 'mailto:suporte@futty.app'; }}>📋 Relatar um problema</ContaRow>
+          <ContaRow onClick={() => navigate('/alterar-password')}>🔑 Alterar password</ContaRow>
+          <ContaRow onClick={relatarProblema}>📋 Relatar um problema</ContaRow>
           {adminTeams.length > 0 ? (
             <ContaRow onClick={irParaAdmin} cor="#b69cff">🛡️ Painel de administração</ContaRow>
           ) : null}
