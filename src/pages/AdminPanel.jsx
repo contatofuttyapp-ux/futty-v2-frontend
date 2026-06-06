@@ -1,12 +1,11 @@
-// Futty v2.0 — Painel de Admin por equipa (/admin/:slug).
-// Só admins. Tabs: Equipa · Membros · Jogos · Resultados · Denúncias.
+// Futty v2.0 — Painel de Admin por equipa (/admin/:slug?tab=...).
+// Só admins. Sidebar (desktop) / drawer (mobile). Tab persistida na URL.
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
-import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import Toast from '../components/Toast';
 import PlayerAvatar from '../components/PlayerAvatar';
@@ -14,12 +13,15 @@ import UploadComCrop from '../components/UploadComCrop';
 import '../styles/app.css';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
-const TABS = [
-  { k: 'equipa', label: '⚙️ Equipa' },
-  { k: 'membros', label: '👥 Membros' },
-  { k: 'jogos', label: '⚽ Jogos' },
-  { k: 'resultados', label: '🏆 Resultados' },
-  { k: 'denuncias', label: '🚩 Denúncias' },
+const MENU = [
+  { k: 'dashboard', icon: '🏠', label: 'Dashboard' },
+  { k: 'equipa', icon: '⚙️', label: 'Equipa' },
+  { k: 'membros', icon: '👥', label: 'Membros' },
+  { k: 'convites', icon: '🔗', label: 'Convites' },
+  { k: 'jogos', icon: '⚽', label: 'Jogos' },
+  { k: 'resultados', icon: '🏆', label: 'Resultados' },
+  { k: 'estatisticas', icon: '📊', label: 'Estatísticas' },
+  { k: 'denuncias', icon: '🚩', label: 'Denúncias' },
 ];
 const inputStyle = {
   width: '100%',
@@ -31,6 +33,20 @@ const inputStyle = {
   color: '#fff',
   fontSize: 14,
 };
+const lbl = { fontSize: 12, color: 'var(--text-dim)' };
+const secLbl = { fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-dim)', textTransform: 'uppercase' };
+const menuItem = { display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' };
+
+const ADMIN_CSS = `
+.admin-layout { display: flex; align-items: stretch; }
+.admin-sidebar { width: 210px; flex-shrink: 0; background: #0a0a0a; border-right: 1px solid #1a1a1a; padding: 12px 0; }
+.admin-content { flex: 1; min-width: 0; padding: 16px; }
+.admin-burger { display: none; }
+@media (max-width: 760px) {
+  .admin-sidebar { display: none; }
+  .admin-burger { display: inline-flex; }
+}
+`;
 
 function haQuantoTempo(iso) {
   const ts = new Date(iso).getTime();
@@ -41,6 +57,10 @@ function haQuantoTempo(iso) {
   const h = Math.floor(diff / 3600000);
   if (h < 48) return `há ${h} h`;
   return `há ${Math.floor(diff / 86400000)} dias`;
+}
+function diasAte(iso) {
+  const ms = new Date(iso).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / 86400000));
 }
 
 // Pequeno modal de confirmação reutilizável.
@@ -67,7 +87,80 @@ function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, onC
   );
 }
 
-// ─── TAB 1: EQUIPA ───────────────────────────────────────────────────────────
+// ─── TAB: DASHBOARD ──────────────────────────────────────────────────────────
+function MetricCard({ valor, label, alerta = false }) {
+  return (
+    <div style={{ ...CARD, padding: 14, textAlign: 'center' }}>
+      <div style={{ fontSize: 28, fontWeight: 900, color: alerta ? 'var(--danger)' : '#fff' }}>{valor}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+function TabDashboard({ slug, navigate, onGoTab, showToast }) {
+  const [stats, setStats] = useState(null);
+  const [pedidos, setPedidos] = useState(0);
+  const [denuncias, setDenuncias] = useState(0);
+
+  useEffect(() => {
+    let ativo = true;
+    apiFetch(`/api/teams/${slug}/stats`)
+      .then((d) => ativo && setStats(d.stats || {}))
+      .catch((e) => ativo && (setStats({}), showToast(e.message, 'error')));
+    apiFetch(`/api/teams/${slug}/pedidos`).then((d) => ativo && setPedidos((d.pedidos || []).length)).catch(() => {});
+    apiFetch('/api/feed/denuncias').then((d) => ativo && setDenuncias((d.denuncias || []).length)).catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, [slug, showToast]);
+
+  if (!stats) return <Loading text="A carregar…" />;
+  const pj = stats.proximo_jogo;
+  const art = stats.artilheiro;
+
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <MetricCard valor={stats.total_jogos ?? 0} label="jogos" />
+        <MetricCard valor={stats.total_membros ?? 0} label="membros" />
+        <MetricCard valor={(stats.media_confirmacoes ?? 0).toFixed(1)} label="por jogo" />
+        <MetricCard valor={denuncias} label="denúncias" alerta={denuncias > 0} />
+      </div>
+
+      {pj ? (
+        <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: 'var(--neon)', fontWeight: 800, letterSpacing: '0.08em' }}>PRÓXIMO JOGO</div>
+            <div style={{ fontWeight: 700, color: '#fff', marginTop: 2 }}>{pj.location || 'Jogo'}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{formatDateTime(pj.date)} · {pj.confirmados} confirmados</div>
+          </div>
+          <button type="button" className="btn btn--purple btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Ver jogo</button>
+        </div>
+      ) : null}
+
+      {pedidos > 0 ? (
+        <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 10, borderColor: 'rgba(124,58,237,0.4)' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, color: '#fff' }}>{pedidos} {pedidos === 1 ? 'pedido pendente' : 'pedidos pendentes'}</div>
+          </div>
+          <button type="button" className="btn btn--purple btn--sm" onClick={() => onGoTab('membros')}>Ver pedidos</button>
+        </div>
+      ) : null}
+
+      {art ? (
+        <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <PlayerAvatar nome={art.nome || 'Jogador'} avatarUrl={art.avatar_url} />
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>⚽ Artilheiro da equipa</div>
+            <div style={{ fontWeight: 800, color: '#fff' }}>{art.nome} <span style={{ color: 'var(--neon)' }}>· {art.gols} gols</span></div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── TAB: EQUIPA ─────────────────────────────────────────────────────────────
 function TabEquipa({ slug, team, showToast }) {
   const [nome, setNome] = useState(team.nome || '');
   const [cor, setCor] = useState(team.cor || 'verde');
@@ -95,12 +188,12 @@ function TabEquipa({ slug, team, showToast }) {
   return (
     <div style={{ ...CARD, padding: 14, display: 'grid', gap: 14 }}>
       <label style={{ display: 'grid', gap: 6 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Nome da equipa</span>
+        <span style={lbl}>Nome da equipa</span>
         <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 60))} style={inputStyle} />
       </label>
 
       <div style={{ display: 'grid', gap: 6 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Cor</span>
+        <span style={lbl}>Cor</span>
         <div className="color-picker">
           {COLOR_OPTIONS.map((c) => (
             <button
@@ -118,12 +211,12 @@ function TabEquipa({ slug, team, showToast }) {
       </div>
 
       <label style={{ display: 'grid', gap: 6 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Localização</span>
+        <span style={lbl}>Localização</span>
         <input value={localizacao} onChange={(e) => setLocalizacao(e.target.value.slice(0, 100))} placeholder="Ex: Lisboa · Campo do Ze" style={inputStyle} />
       </label>
 
       <label style={{ display: 'grid', gap: 6 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Descrição</span>
+        <span style={lbl}>Descrição</span>
         <textarea value={descricao} onChange={(e) => setDescricao(e.target.value.slice(0, 300))} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
       </label>
 
@@ -142,11 +235,11 @@ function TabEquipa({ slug, team, showToast }) {
   );
 }
 
-// ─── TAB 2: MEMBROS ──────────────────────────────────────────────────────────
+// ─── TAB: MEMBROS ────────────────────────────────────────────────────────────
 function TabMembros({ slug, meId, showToast }) {
   const [membros, setMembros] = useState(null);
   const [menuId, setMenuId] = useState(null);
-  const [confirmacao, setConfirmacao] = useState(null); // { tipo, membro }
+  const [confirmacao, setConfirmacao] = useState(null);
 
   useEffect(() => {
     let ativo = true;
@@ -261,13 +354,126 @@ function TabMembros({ slug, meId, showToast }) {
   );
 }
 
-const menuItem = { display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' };
+// ─── TAB: CONVITES ───────────────────────────────────────────────────────────
+function TabConvites({ slug, showToast }) {
+  const [convites, setConvites] = useState(null);
+  const [gerando, setGerando] = useState(false);
+  const [novoLink, setNovoLink] = useState('');
+  const [revogar, setRevogar] = useState(null);
 
-// ─── TAB 3: JOGOS ────────────────────────────────────────────────────────────
+  function recarregar() {
+    return apiFetch(`/api/teams/${slug}/convites`)
+      .then((d) => setConvites(d.convites || []))
+      .catch((e) => {
+        setConvites([]);
+        showToast(e.message, 'error');
+      });
+  }
+
+  useEffect(() => {
+    let ativo = true;
+    apiFetch(`/api/teams/${slug}/convites`)
+      .then((d) => ativo && setConvites(d.convites || []))
+      .catch((e) => ativo && (setConvites([]), showToast(e.message, 'error')));
+    return () => {
+      ativo = false;
+    };
+  }, [slug, showToast]);
+
+  function linkDe(token) {
+    return `${window.location.origin}/convite/${token}`;
+  }
+
+  async function gerar() {
+    if (gerando) return;
+    setGerando(true);
+    try {
+      const { token } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
+      setNovoLink(linkDe(token));
+      await recarregar();
+      showToast('Convite gerado!');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setGerando(false);
+    }
+  }
+
+  async function copiar(texto) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      showToast('Link copiado!');
+    } catch {
+      showToast('Não foi possível copiar.', 'error');
+    }
+  }
+
+  async function confirmarRevogar(c) {
+    try {
+      await apiFetch(`/api/teams/${slug}/convites/${c.id}`, { method: 'DELETE' });
+      setConvites((cur) => cur.filter((x) => x.id !== c.id));
+      showToast('Convite revogado.');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  if (convites === null) return <Loading text="A carregar convites…" />;
+
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={gerando} onClick={gerar}>
+        {gerando ? 'A gerar…' : '＋ Gerar novo convite'}
+      </button>
+
+      {novoLink ? (
+        <div style={{ ...CARD, padding: 12, borderColor: 'rgba(0,229,160,0.4)' }}>
+          <div style={{ fontSize: 11, color: 'var(--neon)', fontWeight: 800, marginBottom: 6 }}>NOVO LINK</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input readOnly value={novoLink} onFocus={(e) => e.target.select()} style={{ ...inputStyle, flex: 1 }} />
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => copiar(novoLink)}>Copiar</button>
+          </div>
+        </div>
+      ) : null}
+
+      {convites.length === 0 ? (
+        <div className="empty-state"><div className="empty-state__emoji">🔗</div><p className="muted">Sem convites activos.</p></div>
+      ) : (
+        convites.map((c) => (
+          <div key={c.id} style={{ ...CARD, padding: 12, display: 'grid', gap: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+              Criado por <b style={{ color: '#fff' }}>{c.criado_por_nome || 'alguém'}</b> · {haQuantoTempo(c.created_at)}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Expira em {diasAte(c.expires_at)} dias</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {linkDe(c.token).slice(0, 20)}…
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => copiar(linkDe(c.token))}>Copiar link</button>
+              <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => setRevogar(c)}>Revogar</button>
+            </div>
+          </div>
+        ))
+      )}
+
+      {revogar ? (
+        <ConfirmModal
+          texto="Revogar este convite? O link deixa de funcionar."
+          perigo
+          confirmarLabel="Revogar"
+          onConfirm={() => { const c = revogar; setRevogar(null); confirmarRevogar(c); }}
+          onCancel={() => setRevogar(null)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+// ─── TAB: JOGOS ──────────────────────────────────────────────────────────────
 function TabJogos({ slug, showToast, navigate }) {
   const [games, setGames] = useState(null);
-  const [editar, setEditar] = useState(null); // jogo a editar
-  const [confirmacao, setConfirmacao] = useState(null); // { tipo, jogo }
+  const [editar, setEditar] = useState(null);
+  const [confirmacao, setConfirmacao] = useState(null);
 
   useEffect(() => {
     let ativo = true;
@@ -365,7 +571,7 @@ function TabJogos({ slug, showToast, navigate }) {
         )}
       </div>
 
-      {editar ? <EditarJogoModal slug={slug} jogo={editar} onClose={() => setEditar(null)} onSaved={onEditado} showToast={showToast} /> : null}
+      {editar ? <EditarJogoModal jogo={editar} onClose={() => setEditar(null)} onSaved={onEditado} showToast={showToast} /> : null}
 
       {confirmacao ? (
         <ConfirmModal
@@ -425,12 +631,20 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
   );
 }
 
-const lbl = { fontSize: 12, color: 'var(--text-dim)' };
-
-// ─── TAB 4: RESULTADOS ───────────────────────────────────────────────────────
+// ─── TAB: RESULTADOS ─────────────────────────────────────────────────────────
 function TabResultados({ slug, showToast }) {
   const [games, setGames] = useState(null);
   const [registar, setRegistar] = useState(null);
+  const [modo, setModo] = useState('sem'); // 'sem' | 'com'
+
+  function carregar() {
+    return apiFetch(`/api/teams/${slug}/games`)
+      .then((d) => setGames(d.games || []))
+      .catch((e) => {
+        setGames([]);
+        showToast(e.message, 'error');
+      });
+  }
 
   useEffect(() => {
     let ativo = true;
@@ -446,36 +660,51 @@ function TabResultados({ slug, showToast }) {
     () => (games || []).filter((g) => g.sorteio_realizado && (g.campeao_time_index === null || g.campeao_time_index === undefined)),
     [games]
   );
+  const comResultado = useMemo(
+    () => (games || []).filter((g) => g.campeao_time_index !== null && g.campeao_time_index !== undefined),
+    [games]
+  );
 
-  function onGuardado(gameId) {
-    setGames((cur) => cur.filter((g) => g.id !== gameId));
+  async function onGuardado() {
     setRegistar(null);
+    await carregar();
     showToast('Resultado guardado! Aparece na Resenha.');
   }
 
   if (games === null) return <Loading text="A carregar jogos…" />;
-  if (semResultado.length === 0) {
-    return (
-      <div className="empty-state">
-        <div className="empty-state__emoji">🏆</div>
-        <p className="muted">Nenhum jogo à espera de resultado.</p>
-      </div>
-    );
-  }
+  const lista = modo === 'sem' ? semResultado : comResultado;
 
   return (
-    <div style={{ display: 'grid', gap: 10 }}>
-      {semResultado.map((g) => (
-        <div key={g.id} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data)} · Sem resultado registado</div>
-          </div>
-          <button type="button" className="btn btn--primary btn--sm" onClick={() => setRegistar(g)}>Registar resultado</button>
-        </div>
-      ))}
+    <div style={{ display: 'grid', gap: 12 }}>
+      {/* Toggle */}
+      <div className="chips-row">
+        <button type="button" className={`chip ${modo === 'sem' ? 'chip--active' : ''}`} onClick={() => setModo('sem')}>Sem resultado</button>
+        <button type="button" className={`chip ${modo === 'com' ? 'chip--active' : ''}`} onClick={() => setModo('com')}>Com resultado</button>
+      </div>
 
-      {registar ? <ResultadoModal slug={slug} jogo={registar} onClose={() => setRegistar(null)} onSaved={onGuardado} showToast={showToast} /> : null}
+      {lista.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state__emoji">🏆</div>
+          <p className="muted">{modo === 'sem' ? 'Nenhum jogo à espera de resultado.' : 'Nenhum jogo com resultado.'}</p>
+        </div>
+      ) : (
+        lista.map((g) => (
+          <div key={g.id} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
+                {formatDateTime(g.data)}
+                {modo === 'com' ? ` · Time ${(g.campeao_time_index ?? 0) + 1} venceu` : ' · Sem resultado registado'}
+              </div>
+            </div>
+            <button type="button" className={`btn btn--sm ${modo === 'sem' ? 'btn--primary' : 'btn--ghost'}`} onClick={() => setRegistar(g)}>
+              {modo === 'sem' ? 'Registar resultado' : 'Editar resultado'}
+            </button>
+          </div>
+        ))
+      )}
+
+      {registar ? <ResultadoModal jogo={registar} onClose={() => setRegistar(null)} onSaved={onGuardado} showToast={showToast} /> : null}
     </div>
   );
 }
@@ -495,10 +724,32 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
   const [rodadaFoto, setRodadaFoto] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  // Carrega o detalhe do jogo e pré-preenche (edição de resultado existente).
   useEffect(() => {
     let ativo = true;
     apiFetch(`/api/games/${jogo.id}`)
-      .then((d) => ativo && setDetail(d))
+      .then((d) => {
+        if (!ativo) return;
+        setDetail(d);
+        const g = d.game || {};
+        if (g.campeao_time_index !== null && g.campeao_time_index !== undefined) setCampeaoIdx(g.campeao_time_index);
+        if (g.campeao_foto_url) setCampeaoFoto(g.campeao_foto_url);
+        if (g.artilheiro_user_id) {
+          setTemArt(true);
+          setArtId(g.artilheiro_user_id);
+          setArtGols(g.artilheiro_gols || 1);
+        }
+        if (g.destaque_user_id) {
+          setTemDest(true);
+          setDestId(g.destaque_user_id);
+          setDestTitulo(g.destaque_titulo || '');
+        }
+        if (g.rodada_user_id) {
+          setTemRodada(true);
+          setRodadaId(g.rodada_user_id);
+          if (g.rodada_foto_url) setRodadaFoto(g.rodada_foto_url);
+        }
+      })
       .catch((e) => ativo && showToast(e.message, 'error'));
     return () => {
       ativo = false;
@@ -514,18 +765,13 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
     try {
       const patch = { campeao_time_index: campeaoIdx };
       if (campeaoFoto) patch.campeao_foto_url = campeaoFoto;
-      if (temArt && artId) {
-        patch.artilheiro_user_id = artId;
-        patch.artilheiro_gols = Math.max(1, Number(artGols) || 1);
-      }
-      if (temDest && destId) {
-        patch.destaque_user_id = destId;
-        patch.destaque_titulo = destTitulo.trim() || null;
-      }
-      if (temRodada && rodadaId) {
-        patch.rodada_user_id = rodadaId;
-        if (rodadaFoto) patch.rodada_foto_url = rodadaFoto;
-      }
+      // Artilheiro/destaque/rodada: envia ou limpa conforme o toggle.
+      patch.artilheiro_user_id = temArt && artId ? artId : null;
+      patch.artilheiro_gols = temArt && artId ? Math.max(1, Number(artGols) || 1) : null;
+      patch.destaque_user_id = temDest && destId ? destId : null;
+      patch.destaque_titulo = temDest && destId ? destTitulo.trim() || null : null;
+      patch.rodada_user_id = temRodada && rodadaId ? rodadaId : null;
+      if (temRodada && rodadaId && rodadaFoto) patch.rodada_foto_url = rodadaFoto;
       await apiFetch(`/api/feed/games/${jogo.id}/resultado`, { method: 'PATCH', body: JSON.stringify(patch) });
       onSaved(jogo.id);
     } catch (e) {
@@ -595,8 +841,6 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
   );
 }
 
-const secLbl = { fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-dim)', textTransform: 'uppercase' };
-
 function Seccao({ titulo, ligado, onToggle, children }) {
   return (
     <div style={{ display: 'grid', gap: 8, borderTop: '1px solid #222', paddingTop: 12 }}>
@@ -620,7 +864,95 @@ function SelectJogador({ value, onChange, confirmados }) {
   );
 }
 
-// ─── TAB 5: DENÚNCIAS ────────────────────────────────────────────────────────
+// ─── TAB: ESTATÍSTICAS ───────────────────────────────────────────────────────
+function BarraProgresso({ valor, max }) {
+  const pct = max > 0 ? Math.round((valor / max) * 100) : 0;
+  return (
+    <div style={{ height: 6, background: '#222', borderRadius: 999, overflow: 'hidden', marginTop: 4 }}>
+      <div style={{ width: `${pct}%`, height: '100%', background: 'var(--neon)' }} />
+    </div>
+  );
+}
+
+function TabEstatisticas({ slug, membrosBasicos, showToast }) {
+  const [membros, setMembros] = useState(null);
+  const [games, setGames] = useState([]);
+
+  useEffect(() => {
+    let ativo = true;
+    apiFetch(`/api/teams/${slug}/membros`)
+      .then((d) => ativo && setMembros(d.membros || []))
+      .catch((e) => ativo && (setMembros([]), showToast(e.message, 'error')));
+    apiFetch(`/api/teams/${slug}/games`).then((d) => ativo && setGames(d.games || [])).catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, [slug, showToast]);
+
+  if (membros === null) return <Loading text="A carregar estatísticas…" />;
+
+  const topGols = [...membros].sort((a, b) => (b.gols || 0) - (a.gols || 0)).slice(0, 5);
+  const maxGols = topGols[0]?.gols || 0;
+  const topVitorias = [...membros].sort((a, b) => (b.vitorias || 0) - (a.vitorias || 0)).slice(0, 5);
+  const totalGols = membros.reduce((s, m) => s + (m.gols || 0), 0);
+  const jogoMaisConf = [...games].sort((a, b) => (b.confirmados || 0) - (a.confirmados || 0))[0] || null;
+  const maisAntigo = [...(membrosBasicos || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0] || null;
+
+  return (
+    <div style={{ display: 'grid', gap: 18 }}>
+      {/* Top Jogadores (por gols) */}
+      <div>
+        <div className="games-label">Top jogadores</div>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {topGols.map((m) => (
+            <div key={m.user_id} style={{ ...CARD, padding: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
+              <PlayerAvatar nome={m.nome_jogador || m.nome || 'Jogador'} avatarUrl={m.avatar_url} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, color: '#fff' }}>{m.nome_jogador || m.nome || 'Jogador'}</div>
+                <BarraProgresso valor={m.gols || 0} max={maxGols} />
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                  <b style={{ color: 'var(--neon)' }}>{m.gols || 0}</b> gols · {m.vitorias || 0} vitórias · {m.artilharia || 0} artilharia
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Presença (por vitórias) */}
+      <div>
+        <div className="games-label">Presença</div>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {topVitorias.map((m) => (
+            <div key={m.user_id} style={{ ...CARD, padding: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
+              <PlayerAvatar nome={m.nome_jogador || m.nome || 'Jogador'} avatarUrl={m.avatar_url} />
+              <div style={{ flex: 1, fontWeight: 700, color: '#fff' }}>{m.nome_jogador || m.nome || 'Jogador'}</div>
+              <div style={{ fontSize: 13, color: 'var(--neon)', fontWeight: 800 }}>{m.vitorias || 0} vitórias</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Visão geral */}
+      <div>
+        <div className="games-label">Visão geral</div>
+        <div style={{ ...CARD, padding: 14, display: 'grid', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={lbl}>Total de gols</span><b style={{ color: '#fff' }}>{totalGols}</b></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+            <span style={lbl}>Jogo com mais confirmações</span>
+            <b style={{ color: '#fff', textAlign: 'right' }}>{jogoMaisConf ? `${jogoMaisConf.local || 'Jogo'} (${jogoMaisConf.confirmados || 0})` : '—'}</b>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+            <span style={lbl}>Membro mais antigo</span>
+            <b style={{ color: '#fff', textAlign: 'right' }}>{maisAntigo ? maisAntigo.nome || maisAntigo.email : '—'}</b>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TAB: DENÚNCIAS ──────────────────────────────────────────────────────────
 function TabDenuncias({ showToast }) {
   const [denuncias, setDenuncias] = useState(null);
   const [confirmar, setConfirmar] = useState(null);
@@ -688,20 +1020,67 @@ function TabDenuncias({ showToast }) {
   );
 }
 
+// ─── Itens do menu (sidebar + drawer) ────────────────────────────────────────
+function MenuItems({ tab, onPick }) {
+  return (
+    <div style={{ display: 'grid' }}>
+      {MENU.map((m) => {
+        const on = tab === m.k;
+        return (
+          <button
+            key={m.k}
+            type="button"
+            onClick={() => onPick(m.k)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              width: '100%',
+              textAlign: 'left',
+              padding: '11px 14px',
+              border: 'none',
+              borderLeft: `3px solid ${on ? '#00e5a0' : 'transparent'}`,
+              background: on ? 'rgba(0,229,160,0.08)' : 'transparent',
+              color: on ? '#fff' : '#555',
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>{m.icon}</span>
+            {m.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── PÁGINA ──────────────────────────────────────────────────────────────────
 export default function AdminPanel() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const meId = user?.id || null;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') || 'dashboard';
 
   const [team, setTeam] = useState(null);
+  const [membrosBasicos, setMembrosBasicos] = useState([]); // de GET /api/teams/:slug (com created_at)
   const [negado, setNegado] = useState(false);
-  const [tab, setTab] = useState('equipa');
   const [toast, setToast] = useState(null);
+  const [drawer, setDrawer] = useState(false);
 
   function showToast(mensagem, tipo = 'success') {
     setToast({ mensagem, tipo });
+  }
+  function irTab(k) {
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.set('tab', k);
+      return p;
+    }, { replace: true });
+    setDrawer(false);
   }
 
   // Carrega a equipa e verifica acesso de admin.
@@ -716,6 +1095,7 @@ export default function AdminPanel() {
           return;
         }
         setTeam(d.team);
+        setMembrosBasicos(d.members || []);
       })
       .catch(() => {
         if (!ativo) return;
@@ -731,31 +1111,59 @@ export default function AdminPanel() {
 
   return (
     <div className="app-shell">
-      <Topbar back={`/equipa/${slug}`} title="Admin" />
-      <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {!team ? (
-          <Loading text="A carregar…" />
-        ) : (
-          <>
-            <h1 className="app-page-title" style={{ marginBottom: 12 }}>{team.nome}</h1>
+      <style>{ADMIN_CSS}</style>
 
-            {/* Tabs */}
-            <div className="chips-row" style={{ marginBottom: 14 }}>
-              {TABS.map((t) => (
-                <button key={t.k} type="button" className={`chip ${tab === t.k ? 'chip--active' : ''}`} onClick={() => setTab(t.k)}>
-                  {t.label}
-                </button>
-              ))}
+      {/* Header do painel */}
+      <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
+        <Link to={`/equipa/${slug}`} className="topbar-back" style={{ flexShrink: 0 }}>← Voltar</Link>
+        <div style={{ flex: 1, textAlign: 'center', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {team?.nome || 'Admin'}
+        </div>
+        <button
+          type="button"
+          className="admin-burger"
+          aria-label="Menu"
+          onClick={() => setDrawer(true)}
+          style={{ alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10, border: '1px solid #222', background: 'transparent', color: '#fff', fontSize: 18, cursor: 'pointer' }}
+        >
+          ☰
+        </button>
+        <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '3px 8px' }}>ADMIN</span>
+      </header>
+      <div className="app-topbar__line" />
+
+      {!team ? (
+        <main className="app-main"><Loading text="A carregar…" /></main>
+      ) : (
+        <div className="admin-layout">
+          <aside className="admin-sidebar">
+            <MenuItems tab={tab} onPick={irTab} />
+          </aside>
+
+          <main className="admin-content">
+            <div style={{ maxWidth: 760, margin: '0 auto' }}>
+              {tab === 'dashboard' && <TabDashboard slug={slug} navigate={navigate} onGoTab={irTab} showToast={showToast} />}
+              {tab === 'equipa' && <TabEquipa slug={slug} team={team} showToast={showToast} />}
+              {tab === 'membros' && <TabMembros slug={slug} meId={meId} showToast={showToast} />}
+              {tab === 'convites' && <TabConvites slug={slug} showToast={showToast} />}
+              {tab === 'jogos' && <TabJogos slug={slug} showToast={showToast} navigate={navigate} />}
+              {tab === 'resultados' && <TabResultados slug={slug} showToast={showToast} />}
+              {tab === 'estatisticas' && <TabEstatisticas slug={slug} membrosBasicos={membrosBasicos} showToast={showToast} />}
+              {tab === 'denuncias' && <TabDenuncias showToast={showToast} />}
             </div>
+          </main>
+        </div>
+      )}
 
-            {tab === 'equipa' && <TabEquipa slug={slug} team={team} showToast={showToast} />}
-            {tab === 'membros' && <TabMembros slug={slug} meId={meId} showToast={showToast} />}
-            {tab === 'jogos' && <TabJogos slug={slug} showToast={showToast} navigate={navigate} />}
-            {tab === 'resultados' && <TabResultados slug={slug} showToast={showToast} />}
-            {tab === 'denuncias' && <TabDenuncias showToast={showToast} />}
-          </>
-        )}
-      </main>
+      {/* Drawer mobile */}
+      {drawer ? (
+        <div role="presentation" onClick={() => setDrawer(false)} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-end' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', background: '#0a0a0a', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderTop: '1px solid #1a1a1a', padding: '10px 0 16px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ width: 40, height: 4, borderRadius: 999, background: '#333', margin: '6px auto 10px' }} />
+            <MenuItems tab={tab} onPick={irTab} />
+          </div>
+        </div>
+      ) : null}
 
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
