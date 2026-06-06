@@ -39,9 +39,14 @@ html {
   background: #050810;
 }
 
-/* Fundo escuro base (atrás do céu de estrelas, que é o body::before). */
+/* Fundo vivo (nebulosa) — atrás do céu de estrelas (body::before). */
 body {
-  background: #050810;
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 90%, rgba(0, 229, 160, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(212, 160, 23, 0.04) 0%, transparent 60%),
+    #050810;
+  background-attachment: fixed;
   color: var(--text);
 }
 
@@ -78,7 +83,7 @@ body::before {
   z-index: 0;
   border-radius: 50%;
   pointer-events: none;
-  background: #fff;
+  background: transparent;
   animation: twinkle 4s ease-in-out infinite;
   box-shadow:
     14px 32px #fff, 58px 90px rgba(255, 255, 255, 0.6), 110px 24px rgba(255, 255, 255, 0.5),

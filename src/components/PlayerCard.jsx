@@ -65,8 +65,8 @@ const KEYFRAMES = `
 @keyframes pcStarTwinkle { 0%, 100% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } }
 @keyframes pcRays { 0%, 100% { opacity: 0.15; transform: scaleY(0.7); } 50% { opacity: 0.5; transform: scaleY(1.1); } }
 @keyframes pcGlow {
-  0%, 100% { filter: drop-shadow(0 0 4px #d4a017) drop-shadow(0 0 10px rgba(212,160,23,0.7)) drop-shadow(0 0 20px rgba(212,160,23,0.4)); opacity: 0.8; }
-  50% { filter: drop-shadow(0 0 6px #f5e070) drop-shadow(0 0 16px rgba(212,160,23,1)) drop-shadow(0 0 32px rgba(212,160,23,0.6)) drop-shadow(0 0 50px rgba(212,160,23,0.3)); opacity: 1; }
+  0%, 100% { filter: drop-shadow(0 0 3px #d4a017) drop-shadow(0 0 8px rgba(212,160,23,0.8)) drop-shadow(0 0 16px rgba(212,160,23,0.5)) drop-shadow(0 0 30px rgba(212,160,23,0.2)); opacity: 0.85; }
+  50% { filter: drop-shadow(0 0 5px #f5e070) drop-shadow(0 0 14px #d4a017) drop-shadow(0 0 28px rgba(212,160,23,0.9)) drop-shadow(0 0 50px rgba(212,160,23,0.5)) drop-shadow(0 0 80px rgba(212,160,23,0.2)); opacity: 1; }
 }
 @keyframes pcAura { from { opacity: 0.6; transform: translateX(-50%) scale(0.9); } to { opacity: 1; transform: translateX(-50%) scale(1.1); } }
 `;
@@ -311,7 +311,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           width: '100%',
           height: '100%',
           pointerEvents: 'none',
-          filter: 'drop-shadow(0 0 4px #d4a017) drop-shadow(0 0 12px rgba(212,160,23,0.8)) drop-shadow(0 0 24px rgba(212,160,23,0.5)) drop-shadow(0 0 40px rgba(212,160,23,0.2))',
+          filter: 'drop-shadow(0 0 3px #f5e070) drop-shadow(0 0 8px #d4a017) drop-shadow(0 0 16px rgba(212,160,23,0.8)) drop-shadow(0 0 30px rgba(212,160,23,0.4)) drop-shadow(0 0 50px rgba(212,160,23,0.15))',
           willChange: 'filter, opacity',
           animation: 'pcGlow 2s ease-in-out infinite',
         }}
@@ -325,9 +325,9 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           </linearGradient>
         </defs>
         {/* Borda principal com cantos cortados (quadrado) */}
-        <path d="M20,0 L0,20 L0,280 L20,300 L280,300 L300,280 L300,20 L280,0 Z" fill="none" stroke={strokeRef} strokeWidth="2.5" />
+        <path d="M20,0 L0,20 L0,280 L20,300 L280,300 L300,280 L300,20 L280,0 Z" fill="none" stroke={strokeRef} strokeWidth="3" />
         {/* Borda interior mais fina */}
-        <path d="M24,4 L4,24 L4,276 L24,296 L276,296 L296,276 L296,24 L276,4 Z" fill="none" stroke={dotInner} strokeWidth="0.6" strokeOpacity="0.35" />
+        <path d="M24,4 L4,24 L4,276 L24,296 L276,296 L296,276 L296,24 L276,4 Z" fill="none" stroke={dotInner} strokeWidth="1" strokeOpacity="0.35" />
         {/* Linhas decorativas a meio (esquerda/direita) */}
         <line x1="0" y1="150" x2="20" y2="150" stroke={strokeRef} strokeWidth="1.4" />
         <line x1="280" y1="150" x2="300" y2="150" stroke={strokeRef} strokeWidth="1.4" />

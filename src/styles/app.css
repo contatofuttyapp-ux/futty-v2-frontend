@@ -1027,9 +1027,10 @@
   height: 54px;
   position: relative;
   color: #2a2a2a;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   text-decoration: none;
 }
 
@@ -1075,6 +1076,26 @@
   border-radius: 50%;
   background: var(--danger);
   border: 1px solid #0f0f0f;
+}
+
+/* Estrela do Ranking (tab activa) */
+@keyframes starSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes starPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px #00e5a0);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px #00e5a0) drop-shadow(0 0 16px rgba(0, 229, 160, 0.5));
+  }
 }
 
 /* ===== Página Início ===== */
