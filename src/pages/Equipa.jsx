@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useTeam } from '../hooks/useTeam';
-import { colorOf, initials } from '../utils/teamColors';
+import { initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
+import TeamAvatar from '../components/TeamAvatar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -75,8 +76,6 @@ export default function Equipa() {
     }
   }
 
-  const c = colorOf(team?.cor);
-
   return (
     <div className="app-shell">
       <Topbar />
@@ -94,9 +93,7 @@ export default function Equipa() {
         ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
-              <div className="team-avatar team-avatar--lg" style={{ background: c.hex, color: c.text }}>
-                {initials(team.nome)}
-              </div>
+              <TeamAvatar team={team} size="lg" />
               <div>
                 <h1 className="app-page-title" style={{ marginBottom: 0 }}>
                   {team.nome}

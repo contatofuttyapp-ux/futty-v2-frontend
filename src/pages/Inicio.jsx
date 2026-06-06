@@ -7,6 +7,7 @@ import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatDateTime, formatRating } from '../utils/format';
 import PlayerCard from '../components/PlayerCard';
+import TeamAvatar from '../components/TeamAvatar';
 import Loading from '../components/Loading';
 import SorteioOverlay from '../components/SorteioOverlay';
 import '../styles/app.css';
@@ -342,7 +343,9 @@ export default function Inicio() {
                   type="button"
                   className={`chip ${selectedTeam === t.id ? 'chip--active' : ''}`}
                   onClick={() => setSelectedTeam(t.id)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
+                  <TeamAvatar team={t} size="sm" />
                   {t.nome}
                 </button>
               ))}

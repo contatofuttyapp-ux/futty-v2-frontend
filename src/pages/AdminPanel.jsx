@@ -1,17 +1,31 @@
 // Futty v2.0 — Painel de Admin por equipa (/admin/:slug?tab=...).
 // Só admins. Sidebar (desktop) / drawer (mobile). Tab persistida na URL.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
 import Loading from '../components/Loading';
 import Toast from '../components/Toast';
 import PlayerAvatar from '../components/PlayerAvatar';
+import TeamAvatar from '../components/TeamAvatar';
 import UploadComCrop from '../components/UploadComCrop';
 import NumberStepper from '../components/NumberStepper';
 import '../styles/app.css';
+
+// Opções de cor de fundo do avatar da equipa (sem logo) e de visibilidade.
+const CORES_FUNDO = ['#1a1a2e', '#0d1f0d', '#1f0d0d', '#1f1a0d', '#0d0d1f', '#111111'];
+const VIS_OPCOES = [
+  { k: 'privado', icon: '🔒', label: 'Privada' },
+  { k: 'publico_aprovacao', icon: '🔓', label: 'Com aprovação' },
+  { k: 'publico_aberto', icon: '🌐', label: 'Aberta' },
+];
+const VIS_DESC = {
+  privado: 'Só por convite — não aparece no Explorar.',
+  publico_aprovacao: 'Aparece no Explorar; a entrada precisa de aprovação.',
+  publico_aberto: 'Aparece no Explorar; qualquer pessoa entra logo.',
+};
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
 const MENU = [
@@ -201,9 +215,56 @@ function TabEquipa({ slug, team, showToast }) {
   const [cor, setCor] = useState(team.cor || 'verde');
   const [localizacao, setLocalizacao] = useState(team.localizacao || '');
   const [descricao, setDescricao] = useState(team.descricao || '');
-  const [publica, setPublica] = useState(!!team.publica);
+  const [logoUrl, setLogoUrl] = useState(team.logo_url || null);
+  const [previewLogo, setPreviewLogo] = useState(null);
+  const [corFundo, setCorFundo] = useState(team.cor_fundo || '#1a1a2e');
+  const [modo, setModo] = useState(team.modo_visibilidade || 'privado');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [zerarStep, setZerarStep] = useState(0); // 0=nada, 1=1ª confirmação, 2=2ª
+
+  // Carrega o logo escolhido (preview imediato) e envia para o backend.
+  async function aoEscolherLogo(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setPreviewLogo(URL.createObjectURL(file));
+    setUploadingLogo(true);
+    try {
+      const { logo_url } = await apiUpload(`/api/teams/${slug}/logo`, file, 'logo');
+      setLogoUrl(logo_url);
+      showToast('Logo actualizado!');
+    } catch (err) {
+      setPreviewLogo(null);
+      showToast(err.message, 'error');
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  // Cor de fundo do avatar (guarda logo ao clicar).
+  async function guardarCorFundo(novaCor) {
+    setCorFundo(novaCor);
+    try {
+      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ cor_fundo: novaCor }) });
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // Modo de visibilidade (guarda logo ao selecionar; reverte em erro).
+  async function guardarModo(novoModo) {
+    const anterior = modo;
+    setModo(novoModo);
+    try {
+      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ modo_visibilidade: novoModo }) });
+      showToast('Visibilidade actualizada!');
+    } catch (err) {
+      setModo(anterior);
+      showToast(err.message, 'error');
+    }
+  }
 
   async function zerarTodosVotos() {
     try {
@@ -222,7 +283,7 @@ function TabEquipa({ slug, team, showToast }) {
     try {
       await apiFetch(`/api/teams/${slug}`, {
         method: 'PATCH',
-        body: JSON.stringify({ nome: nome.trim(), cor, publica, localizacao: localizacao.trim(), descricao: descricao.trim() }),
+        body: JSON.stringify({ nome: nome.trim(), cor, localizacao: localizacao.trim(), descricao: descricao.trim() }),
       });
       showToast('Equipa actualizada!');
     } catch (e) {
@@ -268,13 +329,77 @@ function TabEquipa({ slug, team, showToast }) {
         <textarea value={descricao} onChange={(e) => setDescricao(e.target.value.slice(0, 300))} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
       </label>
 
-      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer' }}>
-        <div>
-          <div style={{ fontWeight: 700 }}>Equipa pública</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{publica ? 'Pública — aparece na pesquisa' : 'Privada — só por convite'}</div>
+      {/* LOGO */}
+      <div style={{ display: 'grid', gap: 8 }}>
+        <span style={lbl}>Logo</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <TeamAvatar team={{ nome, logo_url: previewLogo || logoUrl, cor_fundo: corFundo }} size="lg" />
+          <div style={{ display: 'grid', gap: 6 }}>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              disabled={uploadingLogo}
+              onClick={() => logoInputRef.current?.click()}
+            >
+              {uploadingLogo ? 'A carregar…' : 'Carregar logo'}
+            </button>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>PNG, JPG ou WEBP · máx 2MB</span>
+          </div>
+          <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={aoEscolherLogo} style={{ display: 'none' }} />
         </div>
-        <input type="checkbox" checked={publica} onChange={(e) => setPublica(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#00e5a0' }} />
-      </label>
+      </div>
+
+      {/* COR DE FUNDO (avatar sem logo) */}
+      <div style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Cor de fundo do avatar</span>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {CORES_FUNDO.map((hex) => (
+            <button
+              key={hex}
+              type="button"
+              aria-label={`Fundo ${hex}`}
+              aria-pressed={corFundo === hex}
+              onClick={() => guardarCorFundo(hex)}
+              style={{ width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', background: hex, border: corFundo === hex ? '2px solid #fff' : '2px solid #333' }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* VISIBILIDADE */}
+      <div style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Visibilidade</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {VIS_OPCOES.map((o) => {
+            const ativa = modo === o.k;
+            return (
+              <button
+                key={o.k}
+                type="button"
+                aria-pressed={ativa}
+                onClick={() => guardarModo(o.k)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  border: `1px solid ${ativa ? 'var(--neon)' : '#1a1a1a'}`,
+                  background: ativa ? 'rgba(0,229,160,0.08)' : '#080808',
+                  color: '#fff',
+                }}
+              >
+                <span style={{ fontSize: 16, lineHeight: 1 }}>{o.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 700 }}>{o.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{VIS_DESC[modo]}</span>
+      </div>
 
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
         {saving ? 'A guardar…' : 'Guardar'}
@@ -383,6 +508,31 @@ function TabMembros({ slug, meId, showToast }) {
     }
   }
 
+  // Alterna a visibilidade no ranking (optimista).
+  async function toggleRanking(m) {
+    const visivel = m.visivel_ranking !== false;
+    const novo = !visivel;
+    setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, visivel_ranking: novo } : x)));
+    try {
+      await apiFetch(`/api/teams/${slug}/membros/${m.user_id}`, { method: 'PATCH', body: JSON.stringify({ visivel_ranking: novo }) });
+    } catch (e) {
+      setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, visivel_ranking: visivel } : x)));
+      showToast(e.message, 'error');
+    }
+  }
+
+  // Edita a nota interna localmente; grava ao sair do input.
+  function setNotaLocal(m, value) {
+    setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, nota_interna: value } : x)));
+  }
+  async function saveNota(m) {
+    try {
+      await apiFetch(`/api/teams/${slug}/membros/${m.user_id}`, { method: 'PATCH', body: JSON.stringify({ nota_interna: m.nota_interna || null }) });
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
   if (membros === null) return <Loading text="A carregar membros…" />;
 
   return (
@@ -390,7 +540,8 @@ function TabMembros({ slug, meId, showToast }) {
       {membros.map((m) => {
         const ehProprio = m.user_id === meId;
         return (
-          <div key={m.user_id} style={{ ...CARD, padding: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div key={m.user_id} style={{ ...CARD, padding: 12 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <PlayerAvatar nome={m.nome_jogador || m.nome || 'Jogador'} avatarUrl={m.avatar_url} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -420,6 +571,15 @@ function TabMembros({ slug, meId, showToast }) {
             >
               {m.pode_postar ? '✓ Postar' : 'Postar'}
             </button>
+            <button
+              type="button"
+              onClick={() => toggleRanking(m)}
+              aria-pressed={m.visivel_ranking !== false}
+              title="Visível no ranking"
+              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${m.visivel_ranking !== false ? 'var(--neon)' : '#333'}`, background: m.visivel_ranking !== false ? 'rgba(0,229,160,0.12)' : 'transparent', color: m.visivel_ranking !== false ? 'var(--neon)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
+            >
+              {m.visivel_ranking !== false ? '✓ Ranking' : 'Ranking'}
+            </button>
 
             {!ehProprio ? (
               <div style={{ position: 'relative' }} data-menu>
@@ -436,6 +596,18 @@ function TabMembros({ slug, meId, showToast }) {
                   </div>
                 ) : null}
               </div>
+            ) : null}
+            </div>
+
+            {!ehProprio && m.visivel_ranking === false ? (
+              <input
+                type="text"
+                value={m.nota_interna || ''}
+                onChange={(e) => setNotaLocal(m, e.target.value.slice(0, 200))}
+                onBlur={() => saveNota(m)}
+                placeholder="Razão (só tu vês)…"
+                style={{ marginTop: 10, width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 13 }}
+              />
             ) : null}
           </div>
         );

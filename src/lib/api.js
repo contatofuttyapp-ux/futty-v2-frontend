@@ -35,6 +35,30 @@ export async function apiFetch(path, options = {}) {
   return body;
 }
 
+// Upload genérico (multipart) para qualquer endpoint. Não usa apiFetch porque
+// este força Content-Type JSON (o browser tem de definir o boundary sozinho).
+export async function apiUpload(path, file, field = 'file') {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const fd = new FormData();
+  fd.append(field, file);
+
+  const headers = {};
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
+  const res = await fetch(`${API_URL}${path}`, { method: 'POST', headers, body: fd });
+  let body = null;
+  try {
+    body = await res.json();
+  } catch {
+    // sem corpo JSON
+  }
+  if (!res.ok) throw new Error(body?.error || `Erro ${res.status}`);
+  return body;
+}
+
 // Upload de um ficheiro (multipart) para /api/feed/upload.
 // NÃO usa apiFetch porque este força Content-Type JSON, que parte o FormData
 // (o browser tem de definir o boundary do multipart sozinho).

@@ -2,34 +2,11 @@
 // Sem Topbar, mobile-first, dark theme.
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { colorOf, initials } from '../utils/teamColors';
+import TeamAvatar from '../components/TeamAvatar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
-
-// Avatar da equipa (iniciais + cor).
-function TeamAvatar({ nome, cor, size = 48 }) {
-  const c = colorOf(cor);
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        flexShrink: 0,
-        display: 'grid',
-        placeItems: 'center',
-        background: c.hex,
-        color: c.text,
-        fontWeight: 800,
-        fontSize: Math.round(size * 0.36),
-      }}
-    >
-      {initials(nome) || '?'}
-    </div>
-  );
-}
 
 function SkeletonCard() {
   return (
@@ -82,14 +59,17 @@ export default function Explorar() {
     if (enviando || !modalTeam) return;
     setEnviando(true);
     try {
-      await apiFetch(`/api/teams/${modalTeam.slug}/pedir-entrada`, {
+      const r = await apiFetch(`/api/teams/${modalTeam.slug}/pedir-entrada`, {
         method: 'POST',
         body: JSON.stringify({ mensagem: mensagem.trim() || undefined }),
       });
-      // Atualiza o card imediatamente.
-      setTeams((cur) => (cur || []).map((t) => (t.slug === modalTeam.slug ? { ...t, pedido_pendente: true } : t)));
+      // Equipa aberta → entrou já; com aprovação → pedido pendente.
+      const entrou = !!r?.entrou;
+      setTeams((cur) =>
+        (cur || []).map((t) => (t.slug === modalTeam.slug ? { ...t, ja_membro: entrou, pedido_pendente: !entrou } : t))
+      );
       setModalTeam(null);
-      setToast({ tipo: 'success', mensagem: 'Pedido enviado!' });
+      setToast({ tipo: 'success', mensagem: entrou ? 'Entraste na equipa!' : 'Pedido enviado!' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {
@@ -135,7 +115,7 @@ export default function Explorar() {
           ) : (
             teams.map((t) => (
               <div key={t.id} style={{ ...CARD, padding: 14, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <TeamAvatar nome={t.nome} cor={t.cor} />
+                <TeamAvatar team={t} size="md" />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>{t.nome}</div>
                   {t.localizacao ? (
@@ -161,7 +141,7 @@ export default function Explorar() {
                       onClick={() => abrirPedido(t)}
                       style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid var(--purple)', background: 'rgba(124,58,237,0.14)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}
                     >
-                      Pedir entrada
+                      {t.modo_visibilidade === 'publico_aberto' ? 'Entrar' : 'Pedir entrada'}
                     </button>
                   )}
                 </div>
