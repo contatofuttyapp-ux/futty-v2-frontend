@@ -388,7 +388,7 @@ function TabEquipa({ slug, team, showToast }) {
                   borderRadius: 8,
                   cursor: 'pointer',
                   border: `1px solid ${ativa ? 'var(--neon)' : '#1a1a1a'}`,
-                  background: ativa ? 'rgba(0,229,160,0.08)' : '#080808',
+                  background: ativa ? 'rgba(139,92,246,0.08)' : '#080808',
                   color: '#fff',
                 }}
               >
@@ -567,7 +567,7 @@ function TabMembros({ slug, meId, showToast }) {
               onClick={() => togglePostar(m)}
               aria-pressed={m.pode_postar}
               title="Pode postar"
-              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${m.pode_postar ? 'var(--neon)' : '#333'}`, background: m.pode_postar ? 'rgba(0,229,160,0.12)' : 'transparent', color: m.pode_postar ? 'var(--neon)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
+              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${m.pode_postar ? 'var(--neon)' : '#333'}`, background: m.pode_postar ? 'rgba(139,92,246,0.12)' : 'transparent', color: m.pode_postar ? 'var(--neon)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
             >
               {m.pode_postar ? '✓ Postar' : 'Postar'}
             </button>
@@ -576,7 +576,7 @@ function TabMembros({ slug, meId, showToast }) {
               onClick={() => toggleRanking(m)}
               aria-pressed={m.visivel_ranking !== false}
               title="Visível no ranking"
-              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${m.visivel_ranking !== false ? 'var(--neon)' : '#333'}`, background: m.visivel_ranking !== false ? 'rgba(0,229,160,0.12)' : 'transparent', color: m.visivel_ranking !== false ? 'var(--neon)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
+              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${m.visivel_ranking !== false ? 'var(--neon)' : '#333'}`, background: m.visivel_ranking !== false ? 'rgba(139,92,246,0.12)' : 'transparent', color: m.visivel_ranking !== false ? 'var(--neon)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
             >
               {m.visivel_ranking !== false ? '✓ Ranking' : 'Ranking'}
             </button>
@@ -713,7 +713,7 @@ function TabConvites({ slug, showToast }) {
       </button>
 
       {novoLink ? (
-        <div style={{ ...CARD, padding: 12, borderColor: 'rgba(0,229,160,0.4)' }}>
+        <div style={{ ...CARD, padding: 12, borderColor: 'rgba(139,92,246,0.4)' }}>
           <div style={{ fontSize: 11, color: 'var(--neon)', fontWeight: 800, marginBottom: 6 }}>NOVO LINK</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input readOnly value={novoLink} onFocus={(e) => e.target.select()} style={{ ...inputStyle, flex: 1 }} />
@@ -1087,7 +1087,7 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
                       key={i}
                       type="button"
                       onClick={() => setCampeaoIdx(i)}
-                      style={{ textAlign: 'left', padding: 10, borderRadius: 10, cursor: 'pointer', border: `1px solid ${campeaoIdx === i ? 'var(--neon)' : '#222'}`, background: campeaoIdx === i ? 'rgba(0,229,160,0.1)' : 'transparent', color: '#fff' }}
+                      style={{ textAlign: 'left', padding: 10, borderRadius: 10, cursor: 'pointer', border: `1px solid ${campeaoIdx === i ? 'var(--neon)' : '#222'}`, background: campeaoIdx === i ? 'rgba(139,92,246,0.1)' : 'transparent', color: '#fff' }}
                     >
                       <div style={{ fontWeight: 700 }}>{t.nome || `Time ${i + 1}`}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{(t.jogadores || []).map((p) => p.nome).join(' · ')}</div>
@@ -1132,7 +1132,7 @@ function Seccao({ titulo, ligado, onToggle, children }) {
     <div style={{ display: 'grid', gap: 8, borderTop: '1px solid #222', paddingTop: 12 }}>
       <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
         <span style={secLbl}>{titulo}</span>
-        <input type="checkbox" checked={ligado} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#00e5a0' }} />
+        <input type="checkbox" checked={ligado} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#8b5cf6' }} />
       </label>
       {ligado ? children : null}
     </div>
@@ -1266,7 +1266,7 @@ function TabDenuncias({ showToast }) {
   if (denuncias === null) return <Loading text="A carregar denúncias…" />;
   if (denuncias.length === 0) {
     return (
-      <div className="empty-state" style={{ borderColor: 'rgba(0,229,160,0.4)' }}>
+      <div className="empty-state" style={{ borderColor: 'rgba(139,92,246,0.4)' }}>
         <div className="empty-state__emoji">✅</div>
         <p className="muted">Sem denúncias pendentes.</p>
       </div>
@@ -1325,8 +1325,8 @@ function MenuItems({ tab, onPick }) {
               textAlign: 'left',
               padding: '11px 14px',
               border: 'none',
-              borderLeft: `3px solid ${on ? '#00e5a0' : 'transparent'}`,
-              background: on ? 'rgba(0,229,160,0.08)' : 'transparent',
+              borderLeft: `3px solid ${on ? '#8b5cf6' : 'transparent'}`,
+              background: on ? 'rgba(139,92,246,0.08)' : 'transparent',
               color: on ? '#fff' : '#555',
               fontWeight: 700,
               fontSize: 14,

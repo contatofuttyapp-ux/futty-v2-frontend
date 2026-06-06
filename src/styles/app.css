@@ -21,7 +21,7 @@
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--neon);
-  text-shadow: 0 0 10px rgba(0, 229, 160, 0.6);
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
   text-decoration: none;
 }
 
@@ -58,7 +58,7 @@
 .app-topbar__line {
   height: 2px;
   width: 100%;
-  background: linear-gradient(to right, #00e5a0, #7c3aed);
+  background: linear-gradient(to right, #8b5cf6, #7c3aed);
 }
 
 .app-main {
@@ -106,11 +106,11 @@
 .btn--primary {
   background: var(--neon);
   color: #04140d;
-  box-shadow: 0 8px 24px -8px rgba(0, 229, 160, 0.6);
+  box-shadow: 0 8px 24px -8px rgba(139, 92, 246, 0.6);
 }
 
 .btn--primary:hover:not(:disabled) {
-  box-shadow: 0 10px 30px -8px rgba(0, 229, 160, 0.8);
+  box-shadow: 0 10px 30px -8px rgba(139, 92, 246, 0.8);
   text-decoration: none;
 }
 
@@ -511,7 +511,7 @@
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(0, 229, 160, 0.12);
+  background: rgba(139, 92, 246, 0.12);
   color: var(--neon);
 }
 
@@ -536,7 +536,7 @@
   justify-content: space-between;
   padding: 12px 14px;
   font-weight: 800;
-  background: linear-gradient(135deg, rgba(0, 229, 160, 0.15), rgba(124, 58, 237, 0.2));
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.2));
   border-bottom: 1px solid var(--border);
 }
 
@@ -608,7 +608,7 @@
 
 .mark-toggle[aria-pressed='true'] {
   border-color: var(--neon);
-  background: rgba(0, 229, 160, 0.12);
+  background: rgba(139, 92, 246, 0.12);
   color: var(--neon);
 }
 
@@ -744,8 +744,8 @@
 }
 
 .rank-tab--active {
-  border-color: rgba(0, 229, 160, 0.45);
-  background: rgba(0, 229, 160, 0.1);
+  border-color: rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.1);
   color: var(--neon);
 }
 
@@ -775,9 +775,9 @@
 /* Glow verde — apenas top 3 do ranking e avatar de perfil */
 .pavatar--glow {
   color: var(--neon);
-  background: radial-gradient(circle at 50% 35%, rgba(0, 229, 160, 0.18), rgba(8, 8, 8, 0.9));
-  border-color: rgba(0, 229, 160, 0.55);
-  box-shadow: 0 0 14px rgba(0, 229, 160, 0.35), inset 0 0 10px rgba(0, 229, 160, 0.15);
+  background: radial-gradient(circle at 50% 35%, rgba(139, 92, 246, 0.18), rgba(8, 8, 8, 0.9));
+  border-color: rgba(139, 92, 246, 0.55);
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.35), inset 0 0 10px rgba(139, 92, 246, 0.15);
 }
 
 .pavatar--lg {
@@ -788,7 +788,7 @@
 }
 
 .pavatar--lg.pavatar--glow {
-  box-shadow: 0 0 32px rgba(0, 229, 160, 0.5), inset 0 0 18px rgba(0, 229, 160, 0.18);
+  box-shadow: 0 0 32px rgba(139, 92, 246, 0.5), inset 0 0 18px rgba(139, 92, 246, 0.18);
 }
 
 /* Etiquetas roxas (cabeça de chave / goleiro) */
@@ -1046,7 +1046,7 @@
 
 /* Ícone activo com glow verde */
 .bottom-nav__tab--active .bottom-nav__icon {
-  filter: drop-shadow(0 0 6px rgba(0, 229, 160, 0.7));
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.7));
 }
 
 /* Dot verde 4px acima do ícone (só na tab activa) */
@@ -1059,7 +1059,7 @@
   height: 4px;
   border-radius: 50%;
   background: var(--neon);
-  box-shadow: 0 0 6px rgba(0, 229, 160, 0.8);
+  box-shadow: 0 0 6px rgba(139, 92, 246, 0.8);
 }
 
 .bottom-nav__icon {
@@ -1091,10 +1091,10 @@
 @keyframes starPulse {
   0%,
   100% {
-    filter: drop-shadow(0 0 3px #00e5a0);
+    filter: drop-shadow(0 0 3px #8b5cf6);
   }
   50% {
-    filter: drop-shadow(0 0 8px #00e5a0) drop-shadow(0 0 16px rgba(0, 229, 160, 0.5));
+    filter: drop-shadow(0 0 8px #8b5cf6) drop-shadow(0 0 16px rgba(139, 92, 246, 0.5));
   }
 }
 
@@ -1174,17 +1174,17 @@
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid transparent;
-  background: #222222;
-  color: var(--text-dim);
+  border: 1px solid #1a1a2e;
+  background: #0d0d12;
+  color: rgba(255, 255, 255, 0.45);
   text-decoration: none;
   transition: all 0.15s ease;
 }
 
 .chip--active {
-  background: transparent;
-  border-color: var(--neon);
-  color: var(--text);
+  background: rgba(139, 92, 246, 0.1);
+  border-color: #8b5cf6;
+  color: #8b5cf6;
 }
 
 .chip--explore {
@@ -1202,15 +1202,27 @@
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--gold);
   font-weight: 700;
   margin: 18px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Linha decorativa dourada a seguir ao título. */
+.games-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, rgba(212, 160, 23, 0.5), transparent);
 }
 
 .gcard {
-  background: #080808;
+  background: #0d0d12;
   border: 1px solid #141414;
-  border-radius: 12px;
+  border-left: 2px solid var(--gold);
+  border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 10px;
 }
@@ -1222,7 +1234,7 @@
 /* Próximo jogo — destaque com borda e glow verde + badge */
 .gcard--next {
   border-left: 2px solid var(--neon);
-  box-shadow: 0 0 12px rgba(0, 229, 160, 0.08), inset 0 0 20px rgba(0, 229, 160, 0.02);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.08), inset 0 0 20px rgba(139, 92, 246, 0.02);
 }
 
 .gcard__next-badge {
@@ -1231,8 +1243,8 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--neon);
-  background: rgba(0, 229, 160, 0.08);
-  border: 1px solid rgba(0, 229, 160, 0.2);
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 999px;
   padding: 2px 8px;
   margin-bottom: 8px;
@@ -1255,11 +1267,11 @@
   flex: 0 0 auto;
   font-size: 11px;
   font-weight: 700;
-  color: #9d6fff;
-  background: rgba(124, 58, 237, 0.12);
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.3);
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
 }
 
 .gcard__meta {
@@ -1270,11 +1282,16 @@
 
 .gcard__date {
   font-weight: 700;
-  color: var(--neon);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .gcard__date--today {
-  color: var(--neon);
+  color: #8b5cf6;
+}
+
+/* Próximo jogo — data em destaque roxo. */
+.gcard--next .gcard__date {
+  color: #8b5cf6;
 }
 
 .gcard__presence {
@@ -1322,8 +1339,8 @@
 }
 
 .badge--sorteado {
-  background: rgba(0, 229, 160, 0.08);
-  border: 1px solid rgba(0, 229, 160, 0.2);
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
   color: var(--neon);
 }
 

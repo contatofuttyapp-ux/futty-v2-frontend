@@ -7,7 +7,7 @@ import { getFrameColor } from '../utils/frameColors';
 // Cores de uniforme (6) para o fundo das iniciais quando não há avatar.
 const COR_HEX = {
   preto: '#1a1a1a',
-  verde: '#00e5a0',
+  verde: '#8b5cf6',
   azul: '#3b82f6',
   vermelho: '#ef4444',
   amarelo: '#f59e0b',
@@ -17,16 +17,16 @@ const COR_HEX = {
 // 18 partículas (12 finas + 6 maiores douradas), distribuídas pelo card.
 const PARTICULAS = [
   { left: '12%', top: '70%', size: 3, cor: '#d4a017', dur: '3.2s', delay: '0s' },
-  { left: '24%', top: '55%', size: 2, cor: '#00e5a0', dur: '4s', delay: '0.6s' },
+  { left: '24%', top: '55%', size: 2, cor: '#8b5cf6', dur: '4s', delay: '0.6s' },
   { left: '38%', top: '80%', size: 4, cor: '#ffffff', dur: '2.6s', delay: '1.1s' },
   { left: '50%', top: '62%', size: 2, cor: '#d4a017', dur: '3.6s', delay: '0.3s' },
-  { left: '63%', top: '74%', size: 3, cor: '#00e5a0', dur: '4.4s', delay: '1.5s' },
+  { left: '63%', top: '74%', size: 3, cor: '#8b5cf6', dur: '4.4s', delay: '1.5s' },
   { left: '78%', top: '58%', size: 2, cor: '#ffffff', dur: '3s', delay: '0.9s' },
   { left: '86%', top: '72%', size: 4, cor: '#d4a017', dur: '5s', delay: '2s' },
-  { left: '18%', top: '40%', size: 2, cor: '#00e5a0', dur: '3.4s', delay: '1.8s' },
+  { left: '18%', top: '40%', size: 2, cor: '#8b5cf6', dur: '3.4s', delay: '1.8s' },
   { left: '44%', top: '34%', size: 3, cor: '#ffffff', dur: '4.2s', delay: '0.2s' },
   { left: '70%', top: '42%', size: 2, cor: '#d4a017', dur: '2.8s', delay: '1.3s' },
-  { left: '32%', top: '24%', size: 2, cor: '#00e5a0', dur: '3.8s', delay: '2.4s' },
+  { left: '32%', top: '24%', size: 2, cor: '#8b5cf6', dur: '3.8s', delay: '2.4s' },
   { left: '58%', top: '20%', size: 3, cor: '#ffffff', dur: '4.6s', delay: '0.7s' },
   // 6 maiores douradas (#f5e070)
   { left: '22%', top: '30%', size: 5, cor: '#f5e070', dur: '4s', delay: '0.5s' },
@@ -62,7 +62,7 @@ const ESTRELAS = [
 const KEYFRAMES = `
 @keyframes pcFloat { 0% { transform: translateY(0) scale(1); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 0.8; } 100% { transform: translateY(-24px) scale(0.5); opacity: 0; } }
 @keyframes pcShine { 0% { transform: translateY(-100%) skewY(-5deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(200%) skewY(-5deg); opacity: 0; } }
-@keyframes pcNamePulse { from { text-shadow: 0 0 10px rgba(0,229,160,0.6), 0 0 20px rgba(0,229,160,0.3); } to { text-shadow: 0 0 16px rgba(0,229,160,1), 0 0 32px rgba(0,229,160,0.6), 0 0 48px rgba(0,229,160,0.2); } }
+@keyframes pcNamePulse { from { text-shadow: 0 0 10px rgba(139,92,246,0.6), 0 0 20px rgba(139,92,246,0.3); } to { text-shadow: 0 0 16px rgba(139,92,246,1), 0 0 32px rgba(139,92,246,0.6), 0 0 48px rgba(139,92,246,0.2); } }
 @keyframes pcStarTwinkle { 0%, 100% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } }
 @keyframes pcRays { 0%, 100% { opacity: 0.15; transform: scaleY(0.7); } 50% { opacity: 0.5; transform: scaleY(1.1); } }
 @keyframes pcGlow {
@@ -317,7 +317,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
                 letterSpacing: '0.16em',
                 lineHeight: 1.1,
                 color: '#fff',
-                textShadow: '0 0 10px rgba(0,229,160,0.8), 0 0 20px rgba(0,229,160,0.4), 0 0 40px rgba(0,229,160,0.2)',
+                textShadow: '0 0 10px rgba(139,92,246,0.8), 0 0 20px rgba(139,92,246,0.4), 0 0 40px rgba(139,92,246,0.2)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

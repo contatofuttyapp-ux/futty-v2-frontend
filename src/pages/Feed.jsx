@@ -181,7 +181,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage }) {
               style={{
                 padding: 14,
                 borderTop: '1px solid #222222',
-                background: foto ? 'transparent' : 'linear-gradient(135deg, rgba(0,229,160,0.08), rgba(124,58,237,0.08))',
+                background: foto ? 'transparent' : 'linear-gradient(135deg, rgba(139,92,246,0.08), rgba(124,58,237,0.08))',
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', color: 'var(--neon)', textTransform: 'uppercase' }}>
@@ -688,7 +688,7 @@ export default function Feed() {
             fontSize: 28,
             fontWeight: 800,
             cursor: 'pointer',
-            boxShadow: '0 8px 24px -6px rgba(0,229,160,0.7)',
+            boxShadow: '0 8px 24px -6px rgba(139,92,246,0.7)',
           }}
         >
           ＋

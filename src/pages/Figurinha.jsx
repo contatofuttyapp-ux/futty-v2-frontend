@@ -198,7 +198,7 @@ export default function Figurinha() {
                     padding: '10px 6px',
                     border: `2px solid ${sel ? 'var(--neon)' : '#222'}`,
                     borderRadius: 10,
-                    background: sel ? 'rgba(0,229,160,0.08)' : '#111',
+                    background: sel ? 'rgba(139,92,246,0.08)' : '#111',
                     color: '#fff',
                     cursor: 'pointer',
                   }}
@@ -233,7 +233,7 @@ export default function Figurinha() {
           <SecLabel>Stats no card</SecLabel>
           <label style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer' }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Mostrar nota · jogos · gols</span>
-            <input type="checkbox" checked={mostrarStats} onChange={(e) => setMostrarStats(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#00e5a0' }} />
+            <input type="checkbox" checked={mostrarStats} onChange={(e) => setMostrarStats(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#8b5cf6' }} />
           </label>
 
           {erro ? <div className="alert alert--error" style={{ marginTop: 12 }}>{erro}</div> : null}

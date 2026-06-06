@@ -6,7 +6,7 @@ import { avatarParaCor, nomeJogador, iniciaisNome } from '../utils/avatar.js';
 import { gerarImagemSorteio } from '../utils/sorteioCanvas.js';
 
 // ─── 1. CONSTANTES ────────────────────────────────────────────────────────────
-const COR_NEON = '#00e5a0';
+const COR_NEON = '#8b5cf6';
 const COR_ROXO = '#7c3aed';
 const COR_FUNDO = '#050810';
 const SOM_ROLAGEM = '/sons/slot-machine.mp3';

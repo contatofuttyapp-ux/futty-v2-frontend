@@ -1,6 +1,6 @@
 // Futty v2.0 — Cores das equipas (chave -> apresentação) + helpers de avatar.
 export const TEAM_COLORS = {
-  verde: { label: 'Verde', hex: '#00e5a0', text: '#04140d' },
+  verde: { label: 'Verde', hex: '#8b5cf6', text: '#04140d' },
   azul: { label: 'Azul', hex: '#3b82f6', text: '#04101f' },
   vermelho: { label: 'Vermelho', hex: '#ef4444', text: '#1f0606' },
   preto: { label: 'Preto', hex: '#1c1c20', text: '#f5f5f7' },

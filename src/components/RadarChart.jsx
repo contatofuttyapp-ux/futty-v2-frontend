@@ -52,7 +52,7 @@ export default function RadarChart({ valores }) {
             strokeWidth={1}
           />
         ))}
-        <polygon points={pts} fill="rgba(0,229,160,0.2)" stroke="#00e5a0" strokeWidth={2} />
+        <polygon points={pts} fill="rgba(139,92,246,0.2)" stroke="#8b5cf6" strokeWidth={2} />
         {EIXOS.map((e, i) => {
           const lx = cx + labelR * Math.cos(ang(i));
           const ly = cy + labelR * Math.sin(ang(i));
@@ -61,7 +61,7 @@ export default function RadarChart({ valores }) {
               key={e.label}
               x={lx}
               y={ly}
-              fill="#00e5a0"
+              fill="#8b5cf6"
               fontSize={12}
               fontWeight={800}
               textAnchor="middle"

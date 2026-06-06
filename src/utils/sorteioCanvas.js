@@ -16,7 +16,7 @@ const SLOT_RADIUS = 12;
 const TITLE_FONT = 28;
 const NAME_FONT = 18;
 
-const COR_HEX = { verde: '#00e5a0', azul: '#3b82f6', vermelho: '#ef4444', preto: '#cccccc' };
+const COR_HEX = { verde: '#8b5cf6', azul: '#3b82f6', vermelho: '#ef4444', preto: '#cccccc' };
 const COR_FILL = { verde: '#0c3', azul: '#3b82f6', vermelho: '#ef4444', preto: '#1c1c20' };
 const COR_RESERVAS = '#9ca3af';
 
@@ -190,7 +190,7 @@ export async function gerarImagemSorteio(sorteio, meta = {}) {
       // etiqueta GR / C
       if (ehGoleiro(p) || ehCabeca(p)) {
         ctx.font = `800 13px system-ui, Segoe UI, sans-serif`;
-        ctx.fillStyle = ehGoleiro(p) ? '#00e5a0' : '#a78bfa';
+        ctx.fillStyle = ehGoleiro(p) ? '#8b5cf6' : '#a78bfa';
         ctx.fillText(ehGoleiro(p) ? 'GR' : 'C', cx + l.slotW / 2, rowTop + l.slotH + 8 + NAME_FONT + 2);
       }
       cx += l.slotW + SLOT_GAP;

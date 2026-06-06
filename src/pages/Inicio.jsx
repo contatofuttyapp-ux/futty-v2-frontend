@@ -234,7 +234,7 @@ export default function Inicio() {
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {/* Header: logo FUT. (esquerda) + Início (direita). Sem Topbar. */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#00e5a0', letterSpacing: '0.18em', textShadow: '0 0 10px rgba(0,229,160,0.6)' }}>
+          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#8b5cf6', letterSpacing: '0.18em', textShadow: '0 0 10px rgba(139,92,246,0.6)' }}>
             FUT<span style={{ color: '#d4a017' }}>.</span>
           </span>
           <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>
@@ -244,7 +244,7 @@ export default function Inicio() {
 
         {/* Banner discreto para ativar notificações push */}
         {pushEstado === 'suportado' && !pushBannerFechado ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, borderRadius: 10, background: 'rgba(0,229,160,0.06)', border: '1px solid rgba(0,229,160,0.2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, borderRadius: 10, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>🔔 Ativar notificações para não perderes nenhum jogo</span>
             <button type="button" className="btn btn--primary btn--sm" onClick={() => pushSubscrever()}>Ativar</button>
             <button type="button" aria-label="Fechar" onClick={fecharPushBanner} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>

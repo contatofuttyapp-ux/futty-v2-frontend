@@ -8,14 +8,14 @@ export const FRAME_COLORS = {
     dot: '#f5e070',
   },
   verde: {
-    stroke: '#00e5a0',
-    glow: 'rgba(0,229,160,',
-    dot: '#00ffb3',
+    stroke: '#8b5cf6',
+    glow: 'rgba(139,92,246,',
+    dot: '#a78bfa',
   },
   roxo: {
-    stroke: '#7c3aed',
-    glow: 'rgba(124,58,237,',
-    dot: '#a855f7',
+    stroke: '#8b5cf6',
+    glow: 'rgba(139,92,246,',
+    dot: '#a78bfa',
   },
   branco: {
     stroke: '#ffffff',

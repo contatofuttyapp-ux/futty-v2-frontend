@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
 
 const EDITOR_CSS = `
-@keyframes teDropPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,229,160,0.5); } 50% { box-shadow: 0 0 0 4px rgba(0,229,160,0.15); } }
+@keyframes teDropPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(139,92,246,0.5); } 50% { box-shadow: 0 0 0 4px rgba(139,92,246,0.15); } }
 .te-zone--over { border-color: var(--neon) !important; animation: teDropPulse 1s ease-in-out infinite; }
 `;
 

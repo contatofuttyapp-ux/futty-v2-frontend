@@ -7,7 +7,7 @@
 //  - grayDark  : bordas de cards, separadores
 //  - bg    : fundo
 export const COLORS = {
-  neon: '#00e5a0',
+  neon: '#8b5cf6',
   purple: '#7c3aed',
   white: '#ffffff',
   grayLight: '#aaaaaa',

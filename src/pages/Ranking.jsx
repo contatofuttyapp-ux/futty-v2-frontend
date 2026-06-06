@@ -111,9 +111,9 @@ export default function Ranking() {
         <p className="app-page-sub">Classificação dos jogadores da equipa.</p>
 
         {mostrarBanner ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(212,160,23,0.08)', border: '1px solid #d4a017', color: '#f5e070', fontSize: 13, fontWeight: 700 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.3)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
             <span style={{ flex: 1 }}>✨ Actualize as suas notas</span>
-            <button type="button" aria-label="Fechar" onClick={() => setBannerFechado(true)} style={{ border: 'none', background: 'transparent', color: '#f5e070', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+            <button type="button" aria-label="Fechar" onClick={() => setBannerFechado(true)} style={{ border: 'none', background: 'transparent', color: '#8b5cf6', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}
 
@@ -162,7 +162,7 @@ export default function Ranking() {
                     </div>
                     <div className="rank-votes" style={{ marginTop: 4, fontSize: 12 }}>
                       {p.nota != null ? (
-                        <span style={{ color: 'var(--neon)', fontWeight: 800, fontSize: 15 }}>{p.nota.toFixed(1)}</span>
+                        <span style={{ color: '#d4a017', fontWeight: 800, fontSize: 15 }}>{p.nota.toFixed(1)}</span>
                       ) : (
                         <span style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">--</span>
                       )}

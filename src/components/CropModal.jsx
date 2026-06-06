@@ -102,7 +102,7 @@ export default function CropModal({ file, aspect = 1, onConfirm, onCancel }) {
                   fontWeight: 700,
                   cursor: 'pointer',
                   border: `1px solid ${on ? 'var(--neon)' : 'var(--border)'}`,
-                  background: on ? 'rgba(0,229,160,0.12)' : '#222',
+                  background: on ? 'rgba(139,92,246,0.12)' : '#222',
                   color: on ? 'var(--neon)' : 'var(--text-dim)',
                 }}
               >
@@ -122,7 +122,7 @@ export default function CropModal({ file, aspect = 1, onConfirm, onCancel }) {
             step={0.01}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
-            style={{ flex: 1, accentColor: '#00e5a0' }}
+            style={{ flex: 1, accentColor: '#8b5cf6' }}
           />
         </label>
 

@@ -13,14 +13,14 @@ const GOLD = '#d4a017';
 // Badges de conquistas (emoji + cor por tipo).
 const BADGES = [
   { key: 'campeao', emoji: '🏆', label: 'Campeão', cor: '#d4a017' },
-  { key: 'artilheiro', emoji: '⚽', label: 'Artilheiro', cor: '#00e5a0' },
+  { key: 'artilheiro', emoji: '⚽', label: 'Artilheiro', cor: '#8b5cf6' },
   { key: 'destaque', emoji: '⭐', label: 'Destaque', cor: '#7c3aed' },
   { key: 'rodada', emoji: '🍺', label: 'Rodada', cor: '#f59e0b' },
 ];
 
 // Estilo do badge de resultado por tipo.
 const RESULTADO = {
-  vitoria: { txt: 'V', cor: '#00e5a0', bd: '#00e5a0', bg: 'rgba(0,229,160,0.14)' },
+  vitoria: { txt: 'V', cor: '#8b5cf6', bd: '#8b5cf6', bg: 'rgba(139,92,246,0.14)' },
   derrota: { txt: 'D', cor: '#fda4af', bd: '#ef4444', bg: 'rgba(239,68,68,0.14)' },
   empate: { txt: 'E', cor: 'var(--text-dim)', bd: '#333', bg: 'rgba(255,255,255,0.05)' },
 };

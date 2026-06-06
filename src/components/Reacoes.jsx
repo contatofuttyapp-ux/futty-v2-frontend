@@ -67,7 +67,7 @@ export default function Reacoes({ targetType, targetId, contagemInicial = {}, mi
               lineHeight: 1,
               cursor: 'pointer',
               border: `1px solid ${on ? 'var(--neon)' : 'var(--border)'}`,
-              background: on ? 'rgba(0,229,160,0.12)' : 'rgba(255,255,255,0.04)',
+              background: on ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.04)',
               color: on ? 'var(--neon)' : 'var(--text)',
               transition: 'background 0.15s, border-color 0.15s',
             }}

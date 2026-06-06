@@ -5,7 +5,7 @@ import { getFrameColor } from './frameColors';
 
 const W = 400;
 const H = 600;
-const COR_HEX = { preto: '#1a1a1a', verde: '#00e5a0', azul: '#3b82f6', vermelho: '#ef4444', amarelo: '#f59e0b', cinzento: '#888888' };
+const COR_HEX = { preto: '#1a1a1a', verde: '#8b5cf6', azul: '#3b82f6', vermelho: '#ef4444', amarelo: '#f59e0b', cinzento: '#888888' };
 
 // Carrega uma imagem; devolve null se falhar (evita tainting do canvas).
 function carregarImagem(src, crossOrigin) {
@@ -121,7 +121,7 @@ export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = '
   // 5. NOME
   const nomeY = mostrarStats ? H - 54 : H - 32;
   ctx.save();
-  ctx.shadowColor = 'rgba(0,229,160,0.5)';
+  ctx.shadowColor = 'rgba(139,92,246,0.5)';
   ctx.shadowBlur = 24;
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';

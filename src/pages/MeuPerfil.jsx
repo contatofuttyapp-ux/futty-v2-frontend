@@ -191,7 +191,7 @@ export default function MeuPerfil() {
                 padding: 16,
                 textAlign: 'left',
                 cursor: 'pointer',
-                background: 'linear-gradient(135deg, rgba(0,229,160,0.10), rgba(124,58,237,0.12))',
+                background: 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(124,58,237,0.12))',
                 borderColor: 'rgba(124,58,237,0.4)',
               }}
             >
@@ -274,7 +274,7 @@ export default function MeuPerfil() {
                 checked={pushEstado === 'subscrito'}
                 disabled={pushEstado === 'negado'}
                 onChange={(e) => (e.target.checked ? pushSubscrever() : pushDessubscrever())}
-                style={{ width: 20, height: 20, accentColor: '#00e5a0' }}
+                style={{ width: 20, height: 20, accentColor: '#8b5cf6' }}
               />
             </div>
           ) : null}

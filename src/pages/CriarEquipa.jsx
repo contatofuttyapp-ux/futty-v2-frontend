@@ -136,7 +136,7 @@ export default function CriarEquipa() {
                 type="checkbox"
                 checked={publica}
                 onChange={(e) => setPublica(e.target.checked)}
-                style={{ width: 20, height: 20, accentColor: '#00e5a0', cursor: 'pointer' }}
+                style={{ width: 20, height: 20, accentColor: '#8b5cf6', cursor: 'pointer' }}
               />
             </label>
             <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>

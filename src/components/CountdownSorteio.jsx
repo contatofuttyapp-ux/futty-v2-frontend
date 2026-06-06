@@ -3,7 +3,7 @@
 // Fallback V1: data_jogo + hora, horas_antes_para_sortear, sorteado.
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-const NEON = '#00e5a0';
+const NEON = '#8b5cf6';
 const ROXO = '#a78bfa';
 
 // Momento de início do jogo em ms.
@@ -71,8 +71,8 @@ export default function CountdownSorteio({ jogo, style }) {
     gap: 6,
     padding: '4px 10px',
     borderRadius: 999,
-    border: `1px solid ${b ? 'rgba(0,229,160,0.32)' : 'rgba(167,139,250,0.45)'}`,
-    background: b ? 'rgba(0,229,160,0.06)' : 'rgba(167,139,250,0.12)',
+    border: `1px solid ${b ? 'rgba(139,92,246,0.32)' : 'rgba(167,139,250,0.45)'}`,
+    background: b ? 'rgba(139,92,246,0.06)' : 'rgba(167,139,250,0.12)',
     fontSize: 12,
     color: 'rgba(255,255,255,0.72)',
     ...style,

@@ -122,7 +122,7 @@ export default function Convite() {
 
               {info.jaMembro ? (
                 <>
-                  <div className="alert" style={{ background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--neon)' }}>
+                  <div className="alert" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: 'var(--neon)' }}>
                     Já és membro desta equipa.
                   </div>
                   <Link
