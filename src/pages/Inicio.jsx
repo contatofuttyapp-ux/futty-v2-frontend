@@ -211,33 +211,26 @@ export default function Inicio() {
   return (
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* Logo (esta página não tem Topbar) */}
-        <div style={{ marginBottom: 14 }}>
-          <span className="app-brand">FUT<span className="app-brand__dot">.</span></span>
+        {/* Header: logo FUT. (esquerda) + Início (direita). Sem Topbar. */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#00e5a0', letterSpacing: '0.18em', textShadow: '0 0 10px rgba(0,229,160,0.6)' }}>
+            FUT<span style={{ color: '#d4a017' }}>.</span>
+          </span>
+          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>
+            Início
+          </span>
         </div>
-        <h1
-          className="app-page-title font-premium"
-          style={{ fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}
-        >
-          Início
-        </h1>
-        <p
-          className="app-page-sub"
-          style={{ marginBottom: 12, fontSize: 12, color: '#333', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-        >
-          O teu resumo do Futty
-        </p>
 
         {/* Zona do card premium */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
-          <div style={{ width: '75%', maxWidth: 300 }}>
+          <div style={{ width: '70%', maxWidth: 280 }}>
             <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} mostrarNome={false} />
           </div>
           {/* Nome por baixo do card */}
           <div
             style={{
               fontFamily: "'Rajdhani', sans-serif",
-              fontSize: 26,
+              fontSize: 22,
               fontWeight: 700,
               textTransform: 'uppercase',
               color: '#fff',

@@ -68,7 +68,7 @@ const KEYFRAMES = `
   0%, 100% { filter: drop-shadow(0 0 4px #d4a017) drop-shadow(0 0 10px rgba(212,160,23,0.7)) drop-shadow(0 0 20px rgba(212,160,23,0.4)); opacity: 0.8; }
   50% { filter: drop-shadow(0 0 6px #f5e070) drop-shadow(0 0 16px rgba(212,160,23,1)) drop-shadow(0 0 32px rgba(212,160,23,0.6)) drop-shadow(0 0 50px rgba(212,160,23,0.3)); opacity: 1; }
 }
-@keyframes pcBadgePulse { 0%, 100% { box-shadow: 0 0 6px rgba(212,160,23,0.4); } 50% { box-shadow: 0 0 14px rgba(212,160,23,0.8); } }
+@keyframes pcAura { from { opacity: 0.6; transform: translateX(-50%) scale(0.9); } to { opacity: 1; transform: translateX(-50%) scale(1.1); } }
 `;
 
 export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'stadium', corFrame = '#d4a017', mostrarStats = false, mostrarNome = true }) {
@@ -174,20 +174,40 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
         />
       ))}
 
-      {/* z3 — AVATAR DO JOGADOR (preenche o quadrado, topo) */}
+      {/* z3 — AURA DOURADA atrás do avatar */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '5%',
+          left: '50%',
+          width: '70%',
+          height: '70%',
+          zIndex: 3,
+          pointerEvents: 'none',
+          borderRadius: '50%',
+          background:
+            'radial-gradient(ellipse at 50% 60%, rgba(212,160,23,0.35) 0%, rgba(212,160,23,0.15) 40%, transparent 70%)',
+          filter: 'blur(18px)',
+          transform: 'translateX(-50%)',
+          willChange: 'transform, opacity',
+          animation: 'pcAura 3s ease-in-out infinite alternate',
+        }}
+      />
+
+      {/* z4 — AVATAR DO JOGADOR (preenche o quadrado, topo) */}
       {temAvatar ? (
         <img
           src={avatarSrc}
           alt=""
           onError={() => setImgFalhou(true)}
-          style={{ position: 'absolute', inset: 0, zIndex: 3, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+          style={{ position: 'absolute', inset: 0, zIndex: 4, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
         />
       ) : (
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            zIndex: 3,
+            zIndex: 4,
             display: 'grid',
             placeItems: 'center',
             background: `radial-gradient(circle at 50% 38%, ${corBg}, rgba(0,0,0,0.35))`,
@@ -278,29 +298,6 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           ) : null}
         </div>
       ) : null}
-
-      {/* z7 — BADGE NOTA */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          zIndex: 7,
-          background: 'rgba(0,0,0,0.65)',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-          border: '1px solid #d4a017',
-          borderRadius: 8,
-          padding: '4px 8px',
-          textAlign: 'center',
-          lineHeight: 1,
-          boxShadow: '0 0 8px rgba(212,160,23,0.5)',
-          animation: 'pcBadgePulse 2s ease-in-out infinite',
-        }}
-      >
-        <div style={{ color: '#d4a017', fontSize: 20, fontWeight: 900 }}>{nota}</div>
-        <div style={{ color: 'var(--text-dim)', fontSize: 7, fontWeight: 800, letterSpacing: '0.12em' }}>NOTA</div>
-      </div>
 
       {/* z8 — FRAME QUADRADO (SVG com glow dourado exagerado) */}
       <svg
