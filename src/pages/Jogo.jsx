@@ -12,6 +12,7 @@ import TimesEditor from '../components/TimesEditor';
 import SorteioOverlay from '../components/SorteioOverlay';
 import CountdownSorteio from '../components/CountdownSorteio';
 import Toast from '../components/Toast';
+import AdCard from '../components/AdCard';
 import '../styles/app.css';
 
 export default function Jogo() {
@@ -76,7 +77,7 @@ export default function Jogo() {
   return (
     <div className="app-shell">
       <Topbar back={`/equipa/${slug}/jogos`} title={game?.local || 'Jogo'} />
-      <main className="app-main">
+      <main className="app-main" style={game?.times_resultado ? { paddingBottom: 140 } : undefined}>
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
         {!game ? (
@@ -255,6 +256,13 @@ export default function Jogo() {
 
       {/* Overlay do sorteio (slot machine) */}
       <SorteioOverlay jogo={jogoSorteio} onClose={() => setJogoSorteio(null)} />
+
+      {/* Banner fixo de publicidade quando há sorteio */}
+      {game?.times_resultado ? (
+        <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, zIndex: 50, padding: '0 16px 8px' }}>
+          <AdCard variant="banner" />
+        </div>
+      ) : null}
 
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>

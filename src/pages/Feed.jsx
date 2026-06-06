@@ -1,7 +1,8 @@
 // Futty v2.0 — Resenha (/feed): feed social por equipa.
 // Jogos passados com resultado + posts editoriais. Sem Topbar (título no conteúdo).
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { apiFetch, assetUrl } from '../lib/api';
+import AdCard from '../components/AdCard';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
 import { iniciaisNome } from '../utils/avatar';
@@ -645,24 +646,35 @@ export default function Feed() {
               <p className="muted">Ainda não há jogos na resenha.</p>
             </div>
           ) : (
-            filtrados.map((item) => {
+            filtrados.map((item, i) => {
               const equipa = teams.find((t) => t.id === item.team_id);
               const ehAdmin = equipa?.role === 'admin';
               const slug = equipa?.slug || item.team_slug || null;
-              return item.kind === 'post' ? (
-                <PostCard
-                  key={`post-${item.id}`}
-                  p={item}
-                  podeApagar={item.author_id === meId || ehAdmin}
-                  isAdmin={ehAdmin}
-                  teamSlug={slug}
-                  meId={meId}
-                  onDelete={apagarPost}
-                  onOpenImage={setImgFull}
-                />
-              ) : (
-                <JogoCard key={`jogo-${item.id}`} j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} />
-              );
+              const card =
+                item.kind === 'post' ? (
+                  <PostCard
+                    key={`post-${item.id}`}
+                    p={item}
+                    podeApagar={item.author_id === meId || ehAdmin}
+                    isAdmin={ehAdmin}
+                    teamSlug={slug}
+                    meId={meId}
+                    onDelete={apagarPost}
+                    onOpenImage={setImgFull}
+                  />
+                ) : (
+                  <JogoCard key={`jogo-${item.id}`} j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} />
+                );
+              // Anúncio nativo entre o 3º e o 4º item do feed.
+              if (i === 2) {
+                return (
+                  <Fragment key={`feed-ad-${item.id}`}>
+                    {card}
+                    <AdCard variant="native" />
+                  </Fragment>
+                );
+              }
+              return card;
             })
           )}
         </div>

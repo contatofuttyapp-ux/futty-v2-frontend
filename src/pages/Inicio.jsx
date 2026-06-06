@@ -11,40 +11,14 @@ import TeamAvatar from '../components/TeamAvatar';
 import ProductTour from '../components/ProductTour';
 import Loading from '../components/Loading';
 import SorteioOverlay from '../components/SorteioOverlay';
+import AdCard from '../components/AdCard';
 import '../styles/app.css';
-
-const ADS_ENABLED = true;
-const ADS_VIDEO_URL = '/ads/promo.mp4';
-const ADS_EVERY = 3;
 
 function isToday(iso) {
   if (!iso) return false;
   const d = new Date(iso);
   const n = new Date();
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
-}
-
-// ----- Card de publicidade (vídeo com fallback para placeholder) -----
-function AdCard() {
-  const [failed, setFailed] = useState(false);
-  return (
-    <div className="ad-card">
-      <span className="ad-card__badge">Publicidade</span>
-      {failed ? (
-        <div className="ad-card__text">Espaço publicitário</div>
-      ) : (
-        <video
-          className="ad-card__video"
-          src={ADS_VIDEO_URL}
-          autoPlay
-          loop
-          muted
-          playsInline
-          onError={() => setFailed(true)}
-        />
-      )}
-    </div>
-  );
 }
 
 // ----- Card de jogo -----
@@ -219,13 +193,13 @@ export default function Inicio() {
   // Próximo jogo = o primeiro que não está encerrado (lista vem ordenada por data).
   const nextId = filtered.find((g) => g.status !== 'finished')?.id ?? null;
 
-  // Intercalar publicidade a cada 3 jogos (só se ativada). Se desativada,
-  // não há cards de publicidade e o layout fecha de forma natural.
+  // Anúncio nativo: a seguir ao 2º jogo; se houver ≤1 jogo, no fim.
   const items = [];
   filtered.forEach((g, i) => {
     items.push({ type: 'game', game: g });
-    if (ADS_ENABLED && (i + 1) % ADS_EVERY === 0) items.push({ type: 'ad', key: `ad-${g.id}` });
+    if (i === 1) items.push({ type: 'ad', key: 'ad-inicio' });
   });
+  if (filtered.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
 
   const noTeams = !teamsLoading && teams.length === 0;
 
@@ -234,7 +208,7 @@ export default function Inicio() {
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {/* Header: logo FUT. (esquerda) + Início (direita). Sem Topbar. */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#8b5cf6', letterSpacing: '0.18em', textShadow: '0 0 10px rgba(139,92,246,0.6)' }}>
+          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#d4a017', letterSpacing: '0.18em', textShadow: '0 0 10px rgba(212,160,23,0.6)' }}>
             FUT<span style={{ color: '#d4a017' }}>.</span>
           </span>
           <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>
@@ -363,24 +337,25 @@ export default function Inicio() {
               <div className="games-label">Próximos Jogos</div>
             {loadingGames ? (
               <Loading text="A carregar jogos…" />
-            ) : filtered.length === 0 ? (
-              <p className="muted">Sem jogos para mostrar.</p>
             ) : (
-              items.map((item, i) =>
-                item.type === 'ad' ? (
-                  <AdCard key={item.key} />
-                ) : (
-                  <GameCard
-                    key={item.game.id}
-                    game={item.game}
-                    busy={busyId === item.game.id}
-                    isNext={item.game.id === nextId}
-                    onPresence={onPresence}
-                    onVerSorteio={verSorteio}
-                    index={i}
-                  />
-                )
-              )
+              <>
+                {filtered.length === 0 && <p className="muted">Sem jogos para mostrar.</p>}
+                {items.map((item, i) =>
+                  item.type === 'ad' ? (
+                    <AdCard key={item.key} />
+                  ) : (
+                    <GameCard
+                      key={item.game.id}
+                      game={item.game}
+                      busy={busyId === item.game.id}
+                      isNext={item.game.id === nextId}
+                      onPresence={onPresence}
+                      onVerSorteio={verSorteio}
+                      index={i}
+                    />
+                  )
+                )}
+              </>
             )}
             </div>
           </>
