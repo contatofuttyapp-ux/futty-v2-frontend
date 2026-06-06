@@ -5,7 +5,7 @@ import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
 import { formatDateTime, formatRating } from '../utils/format';
-import PlayerAvatar from '../components/PlayerAvatar';
+import PlayerCard from '../components/PlayerCard';
 import Loading from '../components/Loading';
 import SorteioOverlay from '../components/SorteioOverlay';
 import '../styles/app.css';
@@ -208,22 +208,27 @@ export default function Inicio() {
         <h1 className="app-page-title">Início</h1>
         <p className="app-page-sub" style={{ marginBottom: 12 }}>O teu resumo do Futty.</p>
 
-        {/* Zona avatar */}
-        <div className="inicio-avatar">
-          <PlayerAvatar nome={nome} avatarUrl={user?.avatar_url} md />
-          <div>
-            <div className="inicio-name">{nome}</div>
-            <div className="inicio-stats">
-              <span className="nota">{stats ? formatRating(stats.nota) : '--'}</span>
-              <span>·</span>
-              <span>
-                <b>{stats?.jogos ?? 0}</b> jogos
-              </span>
-              <span>·</span>
-              <span>
-                <b>{stats?.gols ?? 0}</b> gols
-              </span>
+        {/* Zona do card premium */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
+          <div style={{ width: '65%', maxWidth: 260 }}>
+            <PlayerCard jogador={user || { nome }} stats={stats} equipa={teams[0] || null} />
+          </div>
+          {teams[0] ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neon)' }} />
+              {teams[0].nome}
             </div>
+          ) : null}
+          <div className="inicio-stats">
+            <span className="nota">{stats ? formatRating(stats.nota) : '--'}</span>
+            <span>·</span>
+            <span>
+              <b>{stats?.jogos ?? 0}</b> jogos
+            </span>
+            <span>·</span>
+            <span>
+              <b>{stats?.gols ?? 0}</b> gols
+            </span>
           </div>
         </div>
 

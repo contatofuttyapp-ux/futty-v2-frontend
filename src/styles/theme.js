@@ -31,4 +31,8 @@ export const CSS_VARS = {
   error: 'var(--danger)',
 };
 
+// Dourado do PlayerCard premium (frame, badge de nota).
+export const gold = '#d4a017';
+export const goldLight = '#f5e070';
+
 export default COLORS;

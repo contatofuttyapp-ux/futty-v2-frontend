@@ -2,12 +2,12 @@
 // utilizador aparece em todo o lado. Sem Topbar, mobile-first, dark theme.
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch, assetUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
-import { iniciaisNome } from '../utils/avatar';
 import { formatRating } from '../utils/format';
 import UploadComCrop from '../components/UploadComCrop';
+import PlayerCard from '../components/PlayerCard';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -40,15 +40,6 @@ const GENERICOS = [
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
 
-// Resolve o avatar_url para um src utilizável: http(s) intacto; /avatares/ é do
-// frontend (encode espaços/acentos); o resto (ex.: /public/...) vai ao backend.
-function resolveAvatar(url) {
-  if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  if (url.startsWith('/avatares/')) return encodeURI(url);
-  return assetUrl(url);
-}
-
 function genericoSrc(file) {
   return encodeURI(`/avatares/genericos/${file}`);
 }
@@ -59,43 +50,6 @@ function SecLabel({ children }) {
     <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--text-dim)', textTransform: 'uppercase', margin: '22px 0 10px' }}>
       {children}
     </div>
-  );
-}
-
-// Avatar do cartão de stats (glow na cor do uniforme).
-function StatsAvatar({ url, nome, cor, size = 80, onClick }) {
-  const [falhou, setFalhou] = useState(false);
-  const src = resolveAvatar(url);
-  const glow = COR_HEX[cor] || '#00e5a0';
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Editar avatar"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        flexShrink: 0,
-        padding: 0,
-        cursor: 'pointer',
-        overflow: 'hidden',
-        display: 'grid',
-        placeItems: 'center',
-        background: 'var(--bg-elev)',
-        color: '#fff',
-        fontWeight: 800,
-        fontSize: Math.round(size * 0.34),
-        border: `2px solid ${glow}`,
-        boxShadow: `0 0 18px ${glow}66`,
-      }}
-    >
-      {src && !falhou ? (
-        <img src={src} alt="" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : (
-        iniciaisNome(nome)
-      )}
-    </button>
   );
 }
 
@@ -202,11 +156,22 @@ export default function MeuPerfil() {
         {erro ? <div className="alert alert--error" style={{ marginBottom: 12 }}>{erro}</div> : null}
 
         {/* 1. CARTÃO DE STATS */}
-        <div style={{ ...CARD, padding: 16, display: 'flex', gap: 14, alignItems: 'center' }}>
-          <StatsAvatar url={u.avatar_url} nome={nomeMostrar} cor={corSel} onClick={() => setAvatarAberto((v) => !v)} />
-          <div style={{ minWidth: 0 }}>
+        <div style={{ ...CARD, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setAvatarAberto((v) => !v)}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setAvatarAberto((v) => !v)}
+            style={{ width: '55%', maxWidth: 200, cursor: 'pointer' }}
+          >
+            <PlayerCard
+              jogador={{ nome_jogador: u.nome_jogador, nome: u.nome, avatar_url: u.avatar_url, cor_preferida: corSel }}
+              stats={stats}
+            />
+          </div>
+          <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{nomeMostrar}</div>
-            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-dim)', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-dim)', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{stats.nota != null ? formatRating(stats.nota) : '--'}</span>
               <span>·</span>
               <span><b style={{ color: '#fff' }}>{stats.jogos ?? 0}</b> jogos</span>
