@@ -69,6 +69,7 @@ const KEYFRAMES = `
   50% { filter: drop-shadow(0 0 5px #f5e070) drop-shadow(0 0 14px #d4a017) drop-shadow(0 0 28px rgba(212,160,23,0.9)) drop-shadow(0 0 50px rgba(212,160,23,0.5)) drop-shadow(0 0 80px rgba(212,160,23,0.2)); opacity: 1; }
 }
 @keyframes pcAura { from { opacity: 0.6; transform: translateX(-50%) scale(0.9); } to { opacity: 1; transform: translateX(-50%) scale(1.1); } }
+@keyframes pcCornerBlink { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 `;
 
 export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'stadium', corFrame = '#d4a017', mostrarStats = false, mostrarNome = true }) {
@@ -180,14 +181,14 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           position: 'absolute',
           bottom: '5%',
           left: '50%',
-          width: '70%',
-          height: '70%',
+          width: '80%',
+          height: '80%',
           zIndex: 3,
           pointerEvents: 'none',
           borderRadius: '50%',
           background:
-            'radial-gradient(ellipse at 50% 60%, rgba(212,160,23,0.35) 0%, rgba(212,160,23,0.15) 40%, transparent 70%)',
-          filter: 'blur(18px)',
+            'radial-gradient(ellipse at 50% 55%, rgba(212,160,23,0.5) 0%, rgba(212,160,23,0.25) 35%, rgba(212,160,23,0.08) 60%, transparent 75%)',
+          filter: 'blur(22px)',
           transform: 'translateX(-50%)',
           willChange: 'transform, opacity',
           animation: 'pcAura 3s ease-in-out infinite alternate',
@@ -343,6 +344,28 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
             <circle cx={cx} cy={cy} r="2" fill={dotInner} />
           </g>
         ))}
+
+        {/* Cantos decorativos em L (piscar alternado) */}
+        <g style={{ animation: 'pcCornerBlink 2s ease-in-out 0s infinite' }}>
+          <line x1="0" y1="40" x2="0" y2="16" stroke="#f5e070" strokeWidth="2" />
+          <line x1="0" y1="16" x2="40" y2="16" stroke="#f5e070" strokeWidth="2" />
+          <circle cx="0" cy="16" r="2.5" fill="#f5e070" />
+        </g>
+        <g style={{ animation: 'pcCornerBlink 2s ease-in-out 0.5s infinite' }}>
+          <line x1="300" y1="40" x2="300" y2="16" stroke="#f5e070" strokeWidth="2" />
+          <line x1="300" y1="16" x2="260" y2="16" stroke="#f5e070" strokeWidth="2" />
+          <circle cx="300" cy="16" r="2.5" fill="#f5e070" />
+        </g>
+        <g style={{ animation: 'pcCornerBlink 2s ease-in-out 1s infinite' }}>
+          <line x1="0" y1="260" x2="0" y2="284" stroke="#f5e070" strokeWidth="2" />
+          <line x1="0" y1="284" x2="40" y2="284" stroke="#f5e070" strokeWidth="2" />
+          <circle cx="0" cy="284" r="2.5" fill="#f5e070" />
+        </g>
+        <g style={{ animation: 'pcCornerBlink 2s ease-in-out 1.5s infinite' }}>
+          <line x1="300" y1="260" x2="300" y2="284" stroke="#f5e070" strokeWidth="2" />
+          <line x1="300" y1="284" x2="260" y2="284" stroke="#f5e070" strokeWidth="2" />
+          <circle cx="300" cy="284" r="2.5" fill="#f5e070" />
+        </g>
       </svg>
     </div>
   );

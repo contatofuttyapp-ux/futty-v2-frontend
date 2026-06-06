@@ -39,21 +39,66 @@ html {
   background: #050810;
 }
 
-/* Fundo vivo (nebulosa) — atrás do céu de estrelas (body::before). */
 body {
-  background:
-    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 90%, rgba(0, 229, 160, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(212, 160, 23, 0.04) 0%, transparent 60%),
-    #050810;
-  background-attachment: fixed;
+  background: #050810;
   color: var(--text);
 }
 
-/* O conteúdo fica acima do céu de estrelas (e transparente para o deixar ver). */
+/* z0 — Nebulosa animada (respira/pulsa) atrás de tudo. */
+@keyframes nebulaBreath {
+  0% {
+    background:
+      radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.2) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 90%, rgba(0, 229, 160, 0.1) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 10%, rgba(212, 160, 23, 0.06) 0%, transparent 40%),
+      radial-gradient(ellipse at 20% 90%, rgba(0, 100, 255, 0.05) 0%, transparent 40%);
+    opacity: 0.8;
+  }
+  33% {
+    background:
+      radial-gradient(ellipse at 25% 20%, rgba(124, 58, 237, 0.25) 0%, transparent 50%),
+      radial-gradient(ellipse at 75% 80%, rgba(0, 229, 160, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 15%, rgba(212, 160, 23, 0.08) 0%, transparent 45%),
+      radial-gradient(ellipse at 30% 85%, rgba(0, 100, 255, 0.06) 0%, transparent 35%);
+    opacity: 1;
+  }
+  66% {
+    background:
+      radial-gradient(ellipse at 10% 25%, rgba(124, 58, 237, 0.15) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 75%, rgba(0, 229, 160, 0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 85% 5%, rgba(212, 160, 23, 0.05) 0%, transparent 35%),
+      radial-gradient(ellipse at 15% 95%, rgba(0, 100, 255, 0.07) 0%, transparent 45%);
+    opacity: 0.9;
+  }
+  100% {
+    background:
+      radial-gradient(ellipse at 20% 15%, rgba(124, 58, 237, 0.22) 0%, transparent 52%),
+      radial-gradient(ellipse at 80% 85%, rgba(0, 229, 160, 0.11) 0%, transparent 52%),
+      radial-gradient(ellipse at 75% 12%, rgba(212, 160, 23, 0.07) 0%, transparent 42%),
+      radial-gradient(ellipse at 25% 88%, rgba(0, 100, 255, 0.05) 0%, transparent 38%);
+    opacity: 0.85;
+  }
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  will-change: opacity;
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.2) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 90%, rgba(0, 229, 160, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 10%, rgba(212, 160, 23, 0.06) 0%, transparent 40%),
+    radial-gradient(ellipse at 20% 90%, rgba(0, 100, 255, 0.05) 0%, transparent 40%);
+  animation: nebulaBreath 8s ease-in-out infinite alternate;
+}
+
+/* O conteúdo fica acima da nebulosa (z0) e das estrelas (z1). */
 #root {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   background: transparent;
 }
 
@@ -80,29 +125,37 @@ body::before {
   left: 0;
   width: 1px;
   height: 1px;
-  z-index: 0;
+  z-index: 1;
   border-radius: 50%;
   pointer-events: none;
   background: transparent;
+  will-change: opacity;
   animation: twinkle 4s ease-in-out infinite;
   box-shadow:
-    14px 32px #fff, 58px 90px rgba(255, 255, 255, 0.6), 110px 24px rgba(255, 255, 255, 0.5),
-    160px 140px #fff, 210px 60px rgba(255, 255, 255, 0.4), 250px 200px rgba(255, 255, 255, 0.7),
-    300px 40px #fff, 350px 120px rgba(255, 255, 255, 0.5), 30px 180px rgba(255, 255, 255, 0.6),
-    90px 250px #fff, 140px 300px rgba(255, 255, 255, 0.45), 190px 360px rgba(255, 255, 255, 0.7),
-    240px 280px #fff, 290px 340px rgba(255, 255, 255, 0.5), 340px 250px rgba(255, 255, 255, 0.6),
-    20px 400px #fff, 70px 460px rgba(255, 255, 255, 0.55), 130px 420px rgba(255, 255, 255, 0.7),
-    180px 480px #fff, 230px 440px rgba(255, 255, 255, 0.4), 280px 500px rgba(255, 255, 255, 0.6),
-    330px 420px #fff, 50px 540px rgba(255, 255, 255, 0.5), 100px 600px rgba(255, 255, 255, 0.7),
-    150px 560px #fff, 200px 620px rgba(255, 255, 255, 0.45), 260px 580px rgba(255, 255, 255, 0.6),
-    310px 640px #fff, 360px 560px rgba(255, 255, 255, 0.5), 40px 680px rgba(255, 255, 255, 0.6),
-    95px 720px #fff, 145px 700px rgba(255, 255, 255, 0.4), 205px 760px rgba(255, 255, 255, 0.7),
-    255px 700px #fff, 305px 740px rgba(255, 255, 255, 0.5), 355px 690px rgba(255, 255, 255, 0.6),
-    75px 130px rgba(255, 255, 255, 0.5), 125px 70px #fff, 175px 210px rgba(255, 255, 255, 0.6),
-    225px 110px #fff, 275px 160px rgba(255, 255, 255, 0.45), 325px 90px rgba(255, 255, 255, 0.7),
-    10px 250px #fff, 215px 330px rgba(255, 255, 255, 0.5), 165px 640px rgba(255, 255, 255, 0.6),
-    285px 260px #fff, 65px 350px rgba(255, 255, 255, 0.4), 115px 510px rgba(255, 255, 255, 0.7),
-    345px 380px #fff;
+    /* pequenas (1px, opacidade baixa) */
+    14px 32px rgba(255, 255, 255, 0.3), 58px 90px rgba(255, 255, 255, 0.25), 110px 24px rgba(255, 255, 255, 0.3),
+    160px 140px rgba(255, 255, 255, 0.2), 210px 60px rgba(255, 255, 255, 0.35), 250px 200px rgba(255, 255, 255, 0.25),
+    300px 40px rgba(255, 255, 255, 0.3), 350px 120px rgba(255, 255, 255, 0.2), 30px 180px rgba(255, 255, 255, 0.3),
+    90px 250px rgba(255, 255, 255, 0.25), 140px 300px rgba(255, 255, 255, 0.3), 190px 360px rgba(255, 255, 255, 0.2),
+    240px 280px rgba(255, 255, 255, 0.35), 290px 340px rgba(255, 255, 255, 0.25), 340px 250px rgba(255, 255, 255, 0.3),
+    20px 400px rgba(255, 255, 255, 0.2), 70px 460px rgba(255, 255, 255, 0.3), 130px 420px rgba(255, 255, 255, 0.25),
+    180px 480px rgba(255, 255, 255, 0.35), 230px 440px rgba(255, 255, 255, 0.2), 280px 500px rgba(255, 255, 255, 0.3),
+    330px 420px rgba(255, 255, 255, 0.25), 50px 540px rgba(255, 255, 255, 0.3), 100px 600px rgba(255, 255, 255, 0.2),
+    150px 560px rgba(255, 255, 255, 0.3), 200px 620px rgba(255, 255, 255, 0.25), 260px 580px rgba(255, 255, 255, 0.35),
+    310px 640px rgba(255, 255, 255, 0.2), 360px 560px rgba(255, 255, 255, 0.3), 40px 680px rgba(255, 255, 255, 0.25),
+    95px 720px rgba(255, 255, 255, 0.3), 145px 700px rgba(255, 255, 255, 0.2), 205px 760px rgba(255, 255, 255, 0.3),
+    255px 700px rgba(255, 255, 255, 0.25), 305px 740px rgba(255, 255, 255, 0.3), 355px 690px rgba(255, 255, 255, 0.2),
+    /* médias (1.5px via spread 0.5, opacidade média) */
+    78px 234px 0 0.5px rgba(255, 255, 255, 0.6), 125px 70px 0 0.5px rgba(255, 255, 255, 0.55),
+    175px 210px 0 0.5px rgba(255, 255, 255, 0.65), 275px 160px 0 0.5px rgba(255, 255, 255, 0.5),
+    10px 250px 0 0.5px rgba(255, 255, 255, 0.6), 215px 330px 0 0.5px rgba(255, 255, 255, 0.55),
+    285px 260px 0 0.5px rgba(255, 255, 255, 0.6), 65px 350px 0 0.5px rgba(255, 255, 255, 0.5),
+    320px 470px 0 0.5px rgba(255, 255, 255, 0.6), 115px 510px 0 0.5px rgba(255, 255, 255, 0.65),
+    /* grandes (2px via spread 1, opacidade alta) */
+    145px 67px 0 1px rgba(255, 255, 255, 0.9), 230px 130px 0 1px rgba(255, 255, 255, 0.95),
+    55px 300px 0 1px rgba(255, 255, 255, 0.85), 300px 300px 0 1px rgba(255, 255, 255, 0.9),
+    165px 640px 0 1px rgba(255, 255, 255, 0.9), 345px 380px 0 1px rgba(255, 255, 255, 0.95),
+    25px 600px 0 1px rgba(255, 255, 255, 0.85), 260px 690px 0 1px rgba(255, 255, 255, 0.9);
 }
 
 h1,
