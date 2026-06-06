@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
 import UploadComCrop from '../components/UploadComCrop';
 import PlayerAvatar from '../components/PlayerAvatar';
@@ -39,6 +40,7 @@ export default function MeuPerfil() {
   const { user, signOut } = useAuth();
   const { teams } = useTeams();
   const navigate = useNavigate();
+  const { estado: pushEstado, subscrever: pushSubscrever, dessubscrever: pushDessubscrever } = usePushNotifications();
   const adminTeams = teams.filter((t) => t.role === 'admin');
   const [adminPicker, setAdminPicker] = useState(false);
 
@@ -264,6 +266,18 @@ export default function MeuPerfil() {
         {/* 5. SECÇÃO CONTA */}
         <SecLabel>Conta</SecLabel>
         <div style={{ ...CARD, overflow: 'hidden' }}>
+          {pushEstado !== 'nao_suportado' ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #222222' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>🔔 Notificações push</span>
+              <input
+                type="checkbox"
+                checked={pushEstado === 'subscrito'}
+                disabled={pushEstado === 'negado'}
+                onChange={(e) => (e.target.checked ? pushSubscrever() : pushDessubscrever())}
+                style={{ width: 20, height: 20, accentColor: '#00e5a0' }}
+              />
+            </div>
+          ) : null}
           <ContaRow onClick={() => navigate('/alterar-password')}>🔑 Alterar password</ContaRow>
           <ContaRow onClick={relatarProblema}>📋 Relatar um problema</ContaRow>
           {adminTeams.length > 0 ? (

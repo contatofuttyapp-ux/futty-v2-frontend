@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatDateTime, formatRating } from '../utils/format';
 import PlayerCard from '../components/PlayerCard';
 import Loading from '../components/Loading';
@@ -139,6 +140,14 @@ export default function Inicio() {
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay
 
+  // Notificações push: banner discreto (uma vez por sessão).
+  const { estado: pushEstado, subscrever: pushSubscrever } = usePushNotifications();
+  const [pushBannerFechado, setPushBannerFechado] = useState(() => sessionStorage.getItem('futty_push_dismiss') === '1');
+  function fecharPushBanner() {
+    setPushBannerFechado(true);
+    sessionStorage.setItem('futty_push_dismiss', '1');
+  }
+
   // "Ver sorteio": busca o jogo completo (my-invites não traz times_resultado) e abre o overlay.
   async function verSorteio(game) {
     try {
@@ -227,6 +236,15 @@ export default function Inicio() {
             Início
           </span>
         </div>
+
+        {/* Banner discreto para ativar notificações push */}
+        {pushEstado === 'suportado' && !pushBannerFechado ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, borderRadius: 10, background: 'rgba(0,229,160,0.06)', border: '1px solid rgba(0,229,160,0.2)' }}>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>🔔 Ativar notificações para não perderes nenhum jogo</span>
+            <button type="button" className="btn btn--primary btn--sm" onClick={() => pushSubscrever()}>Ativar</button>
+            <button type="button" aria-label="Fechar" onClick={fecharPushBanner} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+          </div>
+        ) : null}
 
         {/* Zona do card premium */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
