@@ -150,7 +150,7 @@ export default function Ranking() {
                     aria-label={`Ver perfil de ${p.nome}`}
                     style={{ lineHeight: 0 }}
                   >
-                    <PlayerAvatar nome={p.nome} avatarUrl={p.avatar_url} glow={i < 3} />
+                    <PlayerAvatar nome={p.nome} avatarUrl={p.avatar_url} glow={i < 3} gold={i < 3} />
                   </Link>
                   <div className="rank-info">
                     <div className="rank-name">{p.nome}</div>

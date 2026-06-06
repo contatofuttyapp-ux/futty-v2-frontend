@@ -230,8 +230,22 @@ export default function Inicio() {
 
         {/* Zona do card premium */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
-          <div style={{ width: '65%', maxWidth: 260 }}>
-            <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} />
+          <div style={{ width: '75%', maxWidth: 300 }}>
+            <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} mostrarNome={false} />
+          </div>
+          {/* Nome por baixo do card */}
+          <div
+            style={{
+              fontFamily: "'Rajdhani', sans-serif",
+              fontSize: 26,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              color: '#fff',
+              textShadow: '0 0 12px rgba(0,229,160,0.8)',
+              letterSpacing: '0.06em',
+            }}
+          >
+            {nome}
           </div>
           {teams[0] ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>

@@ -173,7 +173,7 @@ export default function MeuPerfil() {
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setAvatarAberto((v) => !v)}
             style={{ cursor: 'pointer', lineHeight: 0, flexShrink: 0 }}
           >
-            <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} />
+            <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeMostrar}</div>
