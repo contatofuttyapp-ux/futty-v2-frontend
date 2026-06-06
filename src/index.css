@@ -86,12 +86,12 @@ body::after {
   pointer-events: none;
   will-change: opacity, transform, background-position;
   background:
-    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.2) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 90%, rgba(0, 229, 160, 0.1) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 10%, rgba(212, 160, 23, 0.06) 0%, transparent 40%),
-    radial-gradient(ellipse at 20% 90%, rgba(0, 100, 255, 0.05) 0%, transparent 40%);
+    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.3) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 90%, rgba(0, 229, 160, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 10%, rgba(212, 160, 23, 0.13) 0%, transparent 40%),
+    radial-gradient(ellipse at 20% 90%, rgba(0, 100, 255, 0.12) 0%, transparent 40%);
   background-size: 200% 200%;
-  animation: nebulaBreath 12s ease-in-out infinite alternate, nebulaRotate 24s ease-in-out infinite alternate;
+  animation: nebulaBreath 20s ease-in-out infinite alternate, nebulaRotate 35s ease-in-out infinite alternate;
 }
 
 /* O conteúdo fica acima da nebulosa (z0) e das estrelas (z1). */

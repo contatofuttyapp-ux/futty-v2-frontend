@@ -73,6 +73,7 @@ const KEYFRAMES = `
 @keyframes pcCornerBlink { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 @keyframes pcHoloSpin1 { to { transform: translate(-50%, -50%) rotate(360deg); } }
 @keyframes pcHoloSpin2 { to { transform: translate(-50%, -50%) rotate(-360deg); } }
+@keyframes pcBottomGlow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 `;
 
 export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true }) {
@@ -241,9 +242,9 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
       )}
 
       {/* z5 — ANÉIS HOLOGRÁFICOS a rodar sobre o avatar */}
-      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '70%', height: '70%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1.5px solid ${anel1Cor}`, borderTopColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin1 4s linear infinite' }} />
-      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '82%', height: '82%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1px dashed ${anel2Cor}`, borderBottomColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin2 6s linear infinite' }} />
-      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '94%', height: '94%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1px solid ${anel3Cor}`, borderLeftColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin1 9s linear infinite' }} />
+      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '70%', height: '70%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1.5px solid ${anel1Cor}`, borderTopColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin1 8s linear infinite' }} />
+      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '82%', height: '82%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1px dashed ${anel2Cor}`, borderBottomColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin2 12s linear infinite' }} />
+      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '94%', height: '94%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1px solid ${anel3Cor}`, borderLeftColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin1 18s linear infinite' }} />
 
       {/* z4 — REFLEXO DE LUZ (holográfico) */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none', overflow: 'hidden' }}>
@@ -264,6 +265,21 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
       {/* z5 — GRADIENTE INFERIOR */}
       <div
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5, height: '35%', pointerEvents: 'none', background: 'linear-gradient(transparent, rgba(0,0,0,0.88))' }}
+      />
+
+      {/* z6 — BRILHO INFERIOR (cor do frame, pulsa) */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 'auto 0 0 0',
+          height: '35%',
+          zIndex: 6,
+          pointerEvents: 'none',
+          borderRadius: '0 0 inherit inherit',
+          background: `linear-gradient(to top, ${fc.glow}0.18), ${fc.glow}0.08), transparent)`,
+          willChange: 'opacity',
+          animation: 'pcBottomGlow 3s ease-in-out infinite',
+        }}
       />
 
       {/* z6 — NOME (+ estrelinhas + stats), só dentro do card se mostrarNome */}
