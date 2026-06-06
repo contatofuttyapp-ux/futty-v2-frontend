@@ -10,6 +10,7 @@ import Loading from '../components/Loading';
 import Toast from '../components/Toast';
 import PlayerAvatar from '../components/PlayerAvatar';
 import UploadComCrop from '../components/UploadComCrop';
+import NumberStepper from '../components/NumberStepper';
 import '../styles/app.css';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -736,7 +737,7 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Data</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} /></label>
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Hora</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inputStyle} /></label>
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Local</span><input value={local} onChange={(e) => setLocal(e.target.value)} style={inputStyle} /></label>
-          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Jogadores por time</span><input type="number" min={1} value={porTime} onChange={(e) => setPorTime(e.target.value)} style={inputStyle} /></label>
+          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Jogadores por time</span><NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} /></label>
           <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>{saving ? 'A guardar…' : 'Guardar'}</button>
         </div>
       </div>

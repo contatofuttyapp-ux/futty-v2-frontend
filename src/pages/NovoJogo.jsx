@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import Topbar from '../components/Topbar';
+import NumberStepper from '../components/NumberStepper';
 import '../styles/app.css';
 
 export default function NovoJogo() {
@@ -12,7 +13,7 @@ export default function NovoJogo() {
   const [data, setData] = useState('');
   const [hora, setHora] = useState('');
   const [local, setLocal] = useState('');
-  const [porTime, setPorTime] = useState('');
+  const [porTime, setPorTime] = useState(5);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -22,8 +23,8 @@ export default function NovoJogo() {
       setError('Indica a data e a hora do jogo.');
       return;
     }
-    if (!porTime || Number(porTime) < 1) {
-      setError('Indica quantos jogadores por time.');
+    if (!porTime || Number(porTime) < 2) {
+      setError('Indica quantos jogadores por time (mínimo 2).');
       return;
     }
     setError('');
@@ -92,17 +93,8 @@ export default function NovoJogo() {
           </div>
 
           <div className="field">
-            <label htmlFor="porTime">Jogadores por time</label>
-            <input
-              id="porTime"
-              type="number"
-              min="1"
-              max="11"
-              className="input"
-              placeholder="Ex.: 5"
-              value={porTime}
-              onChange={(e) => setPorTime(e.target.value)}
-            />
+            <label>Jogadores por time</label>
+            <NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} />
             <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>
               O número de times é calculado automaticamente no sorteio, conforme os jogadores confirmados.
             </span>

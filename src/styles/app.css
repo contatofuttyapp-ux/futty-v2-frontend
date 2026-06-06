@@ -1105,6 +1105,18 @@
   font-size: 24px;
 }
 
+.pavatar--sm {
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+  border-width: 1px;
+}
+
+/* Botões +/- do NumberStepper */
+.stepper-btn:active {
+  transform: scale(0.95);
+}
+
 .inicio-avatar {
   display: flex;
   align-items: center;
