@@ -16,11 +16,17 @@
 
 /* Marca "FUT" (logótipo) */
 .app-brand {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--neon);
+  text-shadow: 0 0 10px rgba(0, 229, 160, 0.5);
   text-decoration: none;
+}
+
+.app-brand__dot {
+  color: #d4a017;
 }
 
 .app-brand:hover {
@@ -999,9 +1005,10 @@
   bottom: 0;
   z-index: 50;
   display: flex;
-  background: #0f0f0f;
-  border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom);
+  background: #050810;
+  border-top: 1px solid #0d0d0d;
+  padding: 8px 0;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
 }
 
 .bottom-nav__tab {
@@ -1011,9 +1018,9 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  height: 60px;
+  height: 54px;
   position: relative;
-  color: var(--text-dim);
+  color: #2a2a2a;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -1022,7 +1029,7 @@
 
 .bottom-nav__tab:hover {
   text-decoration: none;
-  color: var(--text-dim);
+  color: #2a2a2a;
 }
 
 .bottom-nav__tab--active,
@@ -1030,16 +1037,22 @@
   color: var(--neon);
 }
 
-/* Linha fina verde por cima do ícone (largura do ícone) */
+/* Ícone activo com glow verde */
+.bottom-nav__tab--active .bottom-nav__icon {
+  filter: drop-shadow(0 0 6px rgba(0, 229, 160, 0.7));
+}
+
+/* Dot verde 4px acima do ícone (só na tab activa) */
 .bottom-nav__indicator {
   position: absolute;
-  top: 0;
+  top: 2px;
   left: 50%;
   transform: translateX(-50%);
-  width: 24px;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
   background: var(--neon);
+  box-shadow: 0 0 6px rgba(0, 229, 160, 0.8);
 }
 
 .bottom-nav__icon {
@@ -1156,8 +1169,8 @@
 }
 
 .gcard {
-  background: #111111;
-  border: 1px solid var(--border);
+  background: #080808;
+  border: 1px solid #141414;
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 10px;
@@ -1165,6 +1178,25 @@
 
 .gcard--past {
   opacity: 0.55;
+}
+
+/* Próximo jogo — destaque com borda e glow verde + badge */
+.gcard--next {
+  border-left: 2px solid var(--neon);
+  box-shadow: 0 0 12px rgba(0, 229, 160, 0.08), inset 0 0 20px rgba(0, 229, 160, 0.02);
+}
+
+.gcard__next-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--neon);
+  background: rgba(0, 229, 160, 0.08);
+  border: 1px solid rgba(0, 229, 160, 0.2);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-bottom: 8px;
 }
 
 .gcard__top {
@@ -1175,28 +1207,31 @@
 }
 
 .gcard__title {
-  font-weight: 800;
+  font-family: 'Rajdhani', var(--sans);
+  font-weight: 700;
+  font-size: 15px;
 }
 
 .gcard__team {
   flex: 0 0 auto;
   font-size: 11px;
   font-weight: 700;
-  color: #b69cff;
-  background: rgba(124, 58, 237, 0.2);
+  color: #9d6fff;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.3);
   padding: 2px 8px;
   border-radius: 999px;
 }
 
 .gcard__meta {
   font-size: 13px;
-  color: var(--text-dim);
+  color: #333333;
   margin-top: 6px;
 }
 
 .gcard__date {
   font-weight: 700;
-  color: var(--text);
+  color: var(--neon);
 }
 
 .gcard__date--today {
@@ -1248,8 +1283,9 @@
 }
 
 .badge--sorteado {
-  background: rgba(124, 58, 237, 0.2);
-  color: #b69cff;
+  background: rgba(0, 229, 160, 0.08);
+  border: 1px solid rgba(0, 229, 160, 0.2);
+  color: var(--neon);
 }
 
 .badge--encerrado {
@@ -1257,29 +1293,31 @@
   color: var(--text-dim);
 }
 
-/* Card de publicidade — mesmo estilo dos cards de jogo (gcard) */
+/* Card de publicidade — 16:9, integrado no scroll */
 .ad-card {
   position: relative;
-  background: #111111;
-  border: 1px solid var(--border);
+  aspect-ratio: 16 / 9;
+  background: #080808;
+  border: 1px solid #141414;
   border-radius: 12px;
-  padding: 14px 16px;
+  overflow: hidden;
   margin-bottom: 10px;
 }
 
 .ad-card__badge {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 6px;
+  right: 8px;
   z-index: 1;
-  font-size: 10px;
-  color: #666666;
+  font-size: 8px;
+  color: #222222;
 }
 
 .ad-card__video {
   display: block;
   width: 100%;
-  border-radius: 8px;
+  height: 100%;
+  object-fit: cover;
 }
 
 .ad-card__text {

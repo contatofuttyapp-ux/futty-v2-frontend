@@ -35,9 +35,67 @@ body,
   min-height: 100svh;
 }
 
+html {
+  background: #050810;
+}
+
 body {
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
+}
+
+/* O conteúdo fica acima do céu de estrelas. */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tipografia premium — só logos/títulos, nunca texto de interface. */
+.font-premium {
+  font-family: 'Rajdhani', var(--sans);
+}
+
+/* Céu de estrelas global (50 pontos via box-shadow num único pseudo-elemento). */
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: #fff;
+  animation: twinkle 4s ease-in-out infinite;
+  box-shadow:
+    14px 32px #fff, 58px 90px rgba(255, 255, 255, 0.6), 110px 24px rgba(255, 255, 255, 0.5),
+    160px 140px #fff, 210px 60px rgba(255, 255, 255, 0.4), 250px 200px rgba(255, 255, 255, 0.7),
+    300px 40px #fff, 350px 120px rgba(255, 255, 255, 0.5), 30px 180px rgba(255, 255, 255, 0.6),
+    90px 250px #fff, 140px 300px rgba(255, 255, 255, 0.45), 190px 360px rgba(255, 255, 255, 0.7),
+    240px 280px #fff, 290px 340px rgba(255, 255, 255, 0.5), 340px 250px rgba(255, 255, 255, 0.6),
+    20px 400px #fff, 70px 460px rgba(255, 255, 255, 0.55), 130px 420px rgba(255, 255, 255, 0.7),
+    180px 480px #fff, 230px 440px rgba(255, 255, 255, 0.4), 280px 500px rgba(255, 255, 255, 0.6),
+    330px 420px #fff, 50px 540px rgba(255, 255, 255, 0.5), 100px 600px rgba(255, 255, 255, 0.7),
+    150px 560px #fff, 200px 620px rgba(255, 255, 255, 0.45), 260px 580px rgba(255, 255, 255, 0.6),
+    310px 640px #fff, 360px 560px rgba(255, 255, 255, 0.5), 40px 680px rgba(255, 255, 255, 0.6),
+    95px 720px #fff, 145px 700px rgba(255, 255, 255, 0.4), 205px 760px rgba(255, 255, 255, 0.7),
+    255px 700px #fff, 305px 740px rgba(255, 255, 255, 0.5), 355px 690px rgba(255, 255, 255, 0.6),
+    75px 130px rgba(255, 255, 255, 0.5), 125px 70px #fff, 175px 210px rgba(255, 255, 255, 0.6),
+    225px 110px #fff, 275px 160px rgba(255, 255, 255, 0.45), 325px 90px rgba(255, 255, 255, 0.7),
+    10px 250px #fff, 215px 330px rgba(255, 255, 255, 0.5), 165px 640px rgba(255, 255, 255, 0.6),
+    285px 260px #fff, 65px 350px rgba(255, 255, 255, 0.4), 115px 510px rgba(255, 255, 255, 0.7),
+    345px 380px #fff;
 }
 
 h1,

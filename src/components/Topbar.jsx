@@ -12,7 +12,7 @@ export default function Topbar({ title = null, back = null }) {
           </Link>
         ) : (
           <Link to="/home" className="app-brand">
-            FUT
+            FUT<span className="app-brand__dot">.</span>
           </Link>
         )}
         {title && <span className="topbar-title">{title}</span>}

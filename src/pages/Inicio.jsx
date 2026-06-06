@@ -45,7 +45,7 @@ function AdCard() {
 }
 
 // ----- Card de jogo -----
-function GameCard({ game, busy, onPresence, onVerSorteio }) {
+function GameCard({ game, busy, isNext, onPresence, onVerSorteio }) {
   const today = isToday(game.date);
   const isPast = game.status === 'finished';
   const isDrawn = game.status === 'drawn';
@@ -53,7 +53,8 @@ function GameCard({ game, busy, onPresence, onVerSorteio }) {
   const notGoing = game.user_status === 'not_going';
 
   return (
-    <div className={`gcard ${isPast ? 'gcard--past' : ''}`}>
+    <div className={`gcard ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`}>
+      {isNext ? <div className="gcard__next-badge">PRÓXIMO</div> : null}
       <div className="gcard__top">
         <span className="gcard__title">{game.name}</span>
         {game.team_name && <span className="gcard__team">{game.team_name}</span>}
@@ -192,6 +193,8 @@ export default function Inicio() {
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
+  // Próximo jogo = o primeiro que não está encerrado (lista vem ordenada por data).
+  const nextId = filtered.find((g) => g.status !== 'finished')?.id ?? null;
 
   // Intercalar publicidade a cada 3 jogos (só se ativada). Se desativada,
   // não há cards de publicidade e o layout fecha de forma natural.
@@ -285,6 +288,7 @@ export default function Inicio() {
                     key={item.game.id}
                     game={item.game}
                     busy={busyId === item.game.id}
+                    isNext={item.game.id === nextId}
                     onPresence={onPresence}
                     onVerSorteio={verSorteio}
                   />
