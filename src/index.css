@@ -15,6 +15,10 @@
   --border: #222222;
   --radius: 16px;
 
+  /* Fundo de estádio — afina os efeitos volumétricos aqui (0 = desligado). */
+  --beam-intensity: 0.85;  /* feixes de luz */
+  --smoke-intensity: 0.6;  /* fumaça */
+
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 
   font-family: var(--sans);
@@ -83,6 +87,73 @@ body::after {
     /* Escuridão no fundo */
     radial-gradient(ellipse 100% 40% at 50% 100%, rgba(0, 0, 0, 0.65) 0%, transparent 100%);
   animation: stadiumBreath 10.4s ease-in-out infinite alternate;
+}
+
+/* ─── Estádio à noite: feixes volumétricos + fumaça ──────────────────────────
+   Sobre os holofotes (body::after), atrás de todo o conteúdo. CSS puro: anima
+   apenas transform/opacity (GPU). pointer-events:none — nunca capta cliques. */
+.stadium-fx {
+  position: fixed;
+  inset: 0;
+  z-index: -1;          /* dentro de #root (z2): acima dos holofotes, sob o conteúdo */
+  pointer-events: none;
+  overflow: hidden;
+  contain: paint;
+}
+
+/* Cones de luz a descer do topo (sway lento como holofotes a varrer). */
+.fx-beam {
+  position: absolute;
+  top: -12%;
+  height: 130vh;
+  transform-origin: 50% 0;
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0% 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(228, 232, 255, 0.14) 0%,   /* branco-frio no foco */
+    rgba(139, 92, 246, 0.07) 55%,   /* desvanece para roxo ténue (--neon) */
+    transparent 100%
+  );
+  filter: blur(7px);
+  mix-blend-mode: screen;
+  opacity: var(--beam-intensity);
+  will-change: transform;
+  animation: beamSway 15s ease-in-out infinite;
+}
+
+@keyframes beamSway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+/* Manchas de fumaça cinza-azulada em deriva lenta. */
+.fx-smoke {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(130, 150, 180, 0.5) 0%, rgba(130, 150, 180, 0.18) 40%, transparent 70%);
+  filter: blur(28px);
+  mix-blend-mode: screen;
+  opacity: var(--smoke-intensity);
+  will-change: transform;
+  animation: smokeDrift 26s ease-in-out infinite;
+}
+
+@keyframes smokeDrift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(4%, -3%, 0) scale(1.15); }
+  66% { transform: translate3d(-3%, 2%, 0) scale(1.08); }
+}
+
+/* Acessibilidade: sem movimento → efeito estático e mais suave. */
+@media (prefers-reduced-motion: reduce) {
+  .stadium-fx {
+    --beam-intensity: 0.45;
+    --smoke-intensity: 0.35;
+  }
+  .fx-beam,
+  .fx-smoke {
+    animation: none;
+  }
 }
 
 /* O conteúdo fica acima da nebulosa (z0) e das estrelas (z1). */
