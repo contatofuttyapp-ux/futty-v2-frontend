@@ -9,6 +9,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
 import UploadComCrop from '../components/UploadComCrop';
 import PlayerAvatar from '../components/PlayerAvatar';
+import AvatarFrame from '../components/AvatarFrame';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -137,13 +138,13 @@ export default function MeuPerfil() {
   return (
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        <h1 className="app-page-title">O meu perfil</h1>
-        <p className="app-page-sub" style={{ marginBottom: 16 }}>Como apareces em todo o lado.</p>
+        <h1 className="app-page-title" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 24, fontWeight: 700, color: '#ffffff' }}>O meu perfil</h1>
+        <p className="app-page-sub" style={{ marginBottom: 16, color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Como apareces em todo o lado.</p>
 
         {erro ? <div className="alert alert--error" style={{ marginBottom: 12 }}>{erro}</div> : null}
 
         {/* 1. HEADER SIMPLES (avatar + nome + email) */}
-        <div style={{ ...CARD, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
           <div
             role="button"
             tabIndex={0}
@@ -152,7 +153,9 @@ export default function MeuPerfil() {
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setAvatarAberto((v) => !v)}
             style={{ cursor: 'pointer', lineHeight: 0, flexShrink: 0 }}
           >
-            <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold />
+            <AvatarFrame size={64}>
+              <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold />
+            </AvatarFrame>
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeMostrar}</div>
@@ -236,9 +239,9 @@ export default function MeuPerfil() {
 
         {/* 3. SECÇÃO DADOS */}
         <SecLabel>Dados</SecLabel>
-        <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
+        <div className="perfil-form" style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Nome de jogador</span>
+            <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Nome de jogador</span>
             <input
               value={u.nome_jogador || ''}
               onChange={(e) => setField('nome_jogador', e.target.value.slice(0, 30))}
@@ -247,15 +250,15 @@ export default function MeuPerfil() {
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Nome completo</span>
+            <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Nome completo</span>
             <input value={u.nome || ''} onChange={(e) => setField('nome', e.target.value.slice(0, 60))} placeholder="Nome completo" style={inputStyle} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Telefone</span>
+            <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Telefone</span>
             <input type="tel" value={u.telefone || ''} onChange={(e) => setField('telefone', e.target.value.slice(0, 20))} placeholder="+351 912 345 678" style={inputStyle} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Email</span>
+            <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Email</span>
             <div style={{ ...inputStyle, color: 'var(--text-dim)' }}>{u.email || user?.email || '—'}</div>
           </label>
           <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={savingDados} onClick={guardarDados}>
@@ -342,11 +345,11 @@ export default function MeuPerfil() {
 const inputStyle = {
   width: '100%',
   boxSizing: 'border-box',
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid #222222',
-  background: '#0c0c0c',
-  color: '#fff',
+  padding: '10px 14px',
+  borderRadius: 8,
+  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'rgba(255,255,255,0.04)',
+  color: '#ffffff',
   fontSize: 14,
 };
 

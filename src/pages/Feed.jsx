@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Trophy, Eye, Share2 } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import AdCard from '../components/AdCard';
+import AvatarFrame from '../components/AvatarFrame';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
 import { iniciaisNome } from '../utils/avatar';
@@ -66,7 +67,7 @@ function timeCampeao(j) {
 function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
   const [falhou, setFalhou] = useState(false);
   const src = avatarUrl ? assetUrl(avatarUrl) : null;
-  return (
+  const inner = (
     <div
       style={{
         width: size,
@@ -91,6 +92,8 @@ function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
       )}
     </div>
   );
+  // Cantos em L dourados só em avatares >= 48px.
+  return size >= 48 ? <AvatarFrame size={size}>{inner}</AvatarFrame> : inner;
 }
 
 // ─── Bloco "prémio" (artilheiro / destaque) ────────────────────────────────────

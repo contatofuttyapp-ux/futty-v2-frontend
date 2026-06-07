@@ -160,8 +160,8 @@ export default function Figurinha() {
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {/* 1. CABEÇALHO */}
-        <h1 style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: '#fff', margin: '4px 0 2px' }}>✨ A minha figurinha</h1>
-        <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: 13, marginBottom: 16 }}>O teu card de jogador</p>
+        <h1 style={{ textAlign: 'center', fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '4px 0 2px' }}>A minha figurinha</h1>
+        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 16 }}>personaliza o teu card</p>
 
         {/* 2. CARD PREMIUM */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -197,9 +197,9 @@ export default function Figurinha() {
                     alignItems: 'center',
                     gap: 4,
                     padding: '10px 6px',
-                    border: `2px solid ${sel ? 'var(--neon)' : '#222'}`,
-                    borderRadius: 10,
-                    background: sel ? 'rgba(139,92,246,0.08)' : '#111',
+                    border: `1px solid ${sel ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: 8,
+                    background: sel ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)',
                     color: '#fff',
                     cursor: 'pointer',
                   }}

@@ -1,6 +1,7 @@
 // Futty v2.0 — Barra de topo. Esquerda: marca "FUT." ou "← Voltar" (se back).
 // Direita: título opcional. Linha gradiente por baixo.
 import { Link } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import FuttyLogo from './FuttyLogo';
 
 export default function Topbar({ title = null, back = null }) {
@@ -8,8 +9,8 @@ export default function Topbar({ title = null, back = null }) {
     <div className="app-topbar-wrap">
       <header className="app-topbar">
         {back ? (
-          <Link to={back} className="topbar-back">
-            ← Voltar
+          <Link to={back} className="topbar-back" aria-label="Voltar">
+            <ChevronLeft size={24} />
           </Link>
         ) : (
           <FuttyLogo size="md" linkTo="/home" />

@@ -31,7 +31,23 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
   const notGoing = game.user_status === 'not_going';
 
   return (
-    <div className={`gcard anim-slide-in ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`} style={{ animationDelay: `${index * 0.08}s` }}>
+    <div
+      className={`gcard anim-slide-in ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`}
+      style={{ animationDelay: `${index * 0.08}s` }}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+        const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+        e.currentTarget.style.transform = `perspective(800px) translateY(-4px) scale(1.01) rotateX(${-dy * 3}deg) rotateY(${dx * 3}deg)`;
+        e.currentTarget.style.transition = 'none';
+        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(212,160,23,0.08)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = '';
+        e.currentTarget.style.transition = '';
+        e.currentTarget.style.boxShadow = '';
+      }}
+    >
       {isNext ? <div className="gcard__next-badge">PRÓXIMO</div> : null}
       <div className="gcard__top">
         <span className="gcard__title">{game.name}</span>
