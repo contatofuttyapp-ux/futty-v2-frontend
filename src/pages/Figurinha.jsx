@@ -2,7 +2,7 @@
 // e partilhar. Sem Topbar, mobile-first. Tudo no cliente (canvas), sem IA.
 // As escolhas de frame e fundo guardam-se no perfil e aplicam-se em todo o app.
 import { useEffect, useState } from 'react';
-import { Landmark, Layers, Square } from 'lucide-react';
+import { Landmark, Layers, Circle } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador } from '../utils/avatar';
@@ -10,7 +10,6 @@ import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
 import PlayerCard from '../components/PlayerCard';
 import Topbar from '../components/Topbar';
-import Toast from '../components/Toast';
 import '../styles/app.css';
 
 const TOGGLE = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 };
@@ -19,7 +18,7 @@ const FRAMES = ['dourado', 'verde', 'roxo', 'branco'];
 const FUNDOS = [
   { k: 'estadio', label: 'Estádio', Icon: Landmark },
   { k: 'gradiente', label: 'Gradiente', Icon: Layers },
-  { k: 'preto', label: 'Preto', Icon: Square },
+  { k: 'preto', label: 'Neutro', Icon: Circle },
 ];
 
 // Nome de ficheiro seguro a partir do nome do jogador.
@@ -59,9 +58,7 @@ export default function Figurinha() {
   const [mostrarNome, setMostrarNome] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState('');
-  const [toast, setToast] = useState(null);
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
@@ -93,25 +90,6 @@ export default function Figurinha() {
 
   async function gerar() {
     return gerarFigurinhaCanvas({ jogador, stats, fundo, corFrame, mostrarStats, mostrarNome });
-  }
-
-  // Guarda as escolhas no perfil (aplicam-se em todo o app).
-  async function guardar() {
-    if (saving) return;
-    setSaving(true);
-    setErro('');
-    try {
-      const res = await apiFetch('/api/me', {
-        method: 'PATCH',
-        body: JSON.stringify({ cor_frame: corFrame, fundo_figurinha: fundo }),
-      });
-      setMe((m) => (m ? { ...m, user: { ...m.user, ...res.user } } : m));
-      setToast({ tipo: 'success', mensagem: 'Figurinha guardada! ✨' });
-    } catch (e) {
-      setToast({ tipo: 'error', mensagem: e?.message || 'Não foi possível guardar.' });
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function baixar() {
@@ -271,9 +249,6 @@ export default function Figurinha() {
 
           {/* 4. BOTÕES */}
           <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
-            <button type="button" style={{ width: '100%', padding: '12px', background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: 8, color: '#8b5cf6', fontFamily: "'Rajdhani', sans-serif", fontSize: 15, fontWeight: 700, cursor: 'pointer' }} disabled={saving} onClick={guardar}>
-              {saving ? 'A guardar…' : '💾 Guardar figurinha'}
-            </button>
             <button type="button" className="btn btn--purple-outline" style={{ width: '100%' }} disabled={busy} onClick={baixar}>
               {busy ? 'A gerar…' : '✨ Baixar figurinha'}
             </button>
@@ -306,8 +281,6 @@ export default function Figurinha() {
           </div>
         </div>
       ) : null}
-
-      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
   );
 }
