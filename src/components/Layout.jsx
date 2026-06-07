@@ -1,7 +1,6 @@
 // Futty v2.0 — Layout: envolve o conteúdo e mostra a BottomNav nas rotas certas.
 import { useLocation } from 'react-router-dom';
 import BottomNav from './BottomNav';
-import StadiumFx from './StadiumFx';
 
 // Rotas onde a BottomNav NÃO aparece.
 const HIDE_NAV_PATTERNS = [
@@ -25,7 +24,6 @@ export default function Layout({ children }) {
 
   return (
     <div style={{ paddingBottom: showNav ? 70 : 0 }}>
-      <StadiumFx />
       {children}
       {showNav && <BottomNav />}
     </div>
