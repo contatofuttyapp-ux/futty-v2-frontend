@@ -100,7 +100,7 @@ function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
 // ─── Bloco "prémio" (artilheiro / destaque) ────────────────────────────────────
 function PremioRow({ glow, label, labelColor, nome, sub }) {
   return (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '14px', borderTop: '1px solid #222222' }}>
+    <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '14px', margin: '12px 14px', borderRadius: 12, border: '1px solid rgba(212,160,23,0.3)', animation: 'heroicPulse 3.9s ease-in-out infinite' }}>
       <FeedAvatar nome={nome} avatarUrl={sub?.avatarUrl} size={64} glow={glow} />
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: labelColor, textTransform: 'uppercase' }}>
@@ -228,7 +228,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
 
           {/* F) PAGOU RODADA DE CERVEJA */}
           {j.rodada_user_id ? (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 14, borderTop: '1px solid #222222', background: 'rgba(249,115,22,0.06)' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 14, margin: '12px 14px', borderRadius: 12, border: '1px solid rgba(212,160,23,0.3)', background: 'rgba(249,115,22,0.06)', animation: 'heroicPulse 3.9s ease-in-out infinite' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, maxWidth: 120 }}>
                 <FeedAvatar nome={j.rodada_nome} avatarUrl={j.rodada_avatar_url} size={56} glow={COR_RODADA} />
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', textAlign: 'center' }}>{j.rodada_nome}</div>

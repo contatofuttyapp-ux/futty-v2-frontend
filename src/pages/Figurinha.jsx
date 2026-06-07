@@ -2,6 +2,7 @@
 // e partilhar. Sem Topbar, mobile-first. Tudo no cliente (canvas), sem IA.
 // As escolhas de frame e fundo guardam-se no perfil e aplicam-se em todo o app.
 import { useEffect, useState } from 'react';
+import { Landmark, Layers, Square } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador } from '../utils/avatar';
@@ -12,13 +13,13 @@ import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
-const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
+const TOGGLE = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 };
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
 const FRAMES = ['dourado', 'verde', 'roxo', 'branco'];
 const FUNDOS = [
-  { k: 'estadio', label: 'Estádio', emoji: '🏟️' },
-  { k: 'gradiente', label: 'Gradiente', emoji: '🌌' },
-  { k: 'preto', label: 'Preto', emoji: '⬛' },
+  { k: 'estadio', label: 'Estádio', Icon: Landmark },
+  { k: 'gradiente', label: 'Gradiente', Icon: Layers },
+  { k: 'preto', label: 'Preto', Icon: Square },
 ];
 
 // Nome de ficheiro seguro a partir do nome do jogador.
@@ -34,11 +35,19 @@ function ficheiroNome(nome) {
 
 function SecLabel({ children }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--text-dim)', textTransform: 'uppercase', margin: '18px 0 8px' }}>
+    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '18px 0 8px' }}>
       {children}
     </div>
   );
 }
+
+// Cantos em L (snakeGlow) para o frame seleccionado.
+const CANTOS_FRAME = [
+  { top: -2, left: -2, borderTop: '2px solid', borderLeft: '2px solid' },
+  { top: -2, right: -2, borderTop: '2px solid', borderRight: '2px solid' },
+  { bottom: -2, right: -2, borderBottom: '2px solid', borderRight: '2px solid' },
+  { bottom: -2, left: -2, borderBottom: '2px solid', borderLeft: '2px solid' },
+];
 
 export default function Figurinha() {
   const { teams } = useTeams();
@@ -185,6 +194,7 @@ export default function Figurinha() {
           <div style={{ display: 'flex', gap: 10 }}>
             {FUNDOS.map((f) => {
               const sel = fundo === f.k;
+              const cor = sel ? '#d4a017' : 'rgba(255,255,255,0.6)';
               return (
                 <button
                   key={f.k}
@@ -196,16 +206,16 @@ export default function Figurinha() {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 6,
                     padding: '10px 6px',
-                    border: `1px solid ${sel ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.08)'}`,
+                    border: `1px solid ${sel ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.06)'}`,
                     borderRadius: 8,
                     background: sel ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)',
-                    color: '#fff',
+                    color: cor,
                     cursor: 'pointer',
                   }}
                 >
-                  <span style={{ fontSize: 20, lineHeight: 1 }}>{f.emoji}</span>
+                  <f.Icon size={16} />
                   <span style={{ fontSize: 12, fontWeight: 700 }}>{f.label}</span>
                 </button>
               );
@@ -225,19 +235,34 @@ export default function Figurinha() {
                   onClick={() => setCorFrame(c)}
                   aria-label={`Frame ${c}`}
                   aria-pressed={sel}
-                  style={{ width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', background: hex, border: sel ? '2px solid #fff' : '2px solid #333', boxShadow: sel ? `0 0 10px ${hex}` : 'none' }}
-                />
+                  style={{
+                    position: 'relative',
+                    width: 32,
+                    height: 32,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    background: hex,
+                    border: sel ? `2px solid ${hex}` : '2px solid rgba(255,255,255,0.2)',
+                    opacity: sel ? 1 : 0.5,
+                  }}
+                >
+                  {sel
+                    ? CANTOS_FRAME.map((ct, i) => (
+                        <span key={i} aria-hidden style={{ position: 'absolute', width: 10, height: 10, pointerEvents: 'none', borderColor: hex, animation: `snakeGlow 2.6s ease-in-out ${i * 0.5}s infinite`, ...ct }} />
+                      ))
+                    : null}
+                </button>
               );
             })}
           </div>
 
           {/* C) MOSTRAR NOME / STATS */}
           <SecLabel>No card</SecLabel>
-          <label style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer', marginBottom: 8 }}>
+          <label style={{ ...TOGGLE, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer', marginBottom: 8 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Mostrar nome</span>
             <input type="checkbox" checked={mostrarNome} onChange={(e) => setMostrarNome(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#8b5cf6' }} />
           </label>
-          <label style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer' }}>
+          <label style={{ ...TOGGLE, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer' }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Mostrar nota · jogos · gols</span>
             <input type="checkbox" checked={mostrarStats} onChange={(e) => setMostrarStats(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#8b5cf6' }} />
           </label>
@@ -246,7 +271,7 @@ export default function Figurinha() {
 
           {/* 4. BOTÕES */}
           <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
-            <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
+            <button type="button" style={{ width: '100%', padding: '12px', background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: 8, color: '#8b5cf6', fontFamily: "'Rajdhani', sans-serif", fontSize: 15, fontWeight: 700, cursor: 'pointer' }} disabled={saving} onClick={guardar}>
               {saving ? 'A guardar…' : '💾 Guardar figurinha'}
             </button>
             <button type="button" className="btn btn--purple-outline" style={{ width: '100%' }} disabled={busy} onClick={baixar}>

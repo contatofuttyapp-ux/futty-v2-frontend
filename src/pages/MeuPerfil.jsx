@@ -31,7 +31,7 @@ function genericoSrc(file) {
 // Label de secção (uppercase cinzento).
 function SecLabel({ children }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--text-dim)', textTransform: 'uppercase', margin: '22px 0 10px' }}>
+    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '22px 0 8px' }}>
       {children}
     </div>
   );
@@ -261,17 +261,17 @@ export default function MeuPerfil() {
             <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Email</span>
             <div style={{ ...inputStyle, color: 'var(--text-dim)' }}>{u.email || user?.email || '—'}</div>
           </label>
-          <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={savingDados} onClick={guardarDados}>
+          <button type="button" style={{ width: '100%', padding: 14, background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: 8, color: '#8b5cf6', fontFamily: "'Rajdhani', sans-serif", fontSize: 15, fontWeight: 700, cursor: 'pointer' }} disabled={savingDados} onClick={guardarDados}>
             {savingDados ? 'A guardar…' : 'Guardar dados'}
           </button>
         </div>
 
         {/* 5. SECÇÃO CONTA */}
         <SecLabel>Conta</SecLabel>
-        <div style={{ ...CARD, overflow: 'hidden' }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden' }}>
           {pushEstado !== 'nao_suportado' ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #222222' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>🔔 Notificações push</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>🔔 Notificações push</span>
               <input
                 type="checkbox"
                 checked={pushEstado === 'subscrito'}
@@ -284,9 +284,9 @@ export default function MeuPerfil() {
           <ContaRow onClick={() => navigate('/alterar-password')}>🔑 Alterar password</ContaRow>
           <ContaRow onClick={relatarProblema}>📋 Relatar um problema</ContaRow>
           {adminTeams.length > 0 ? (
-            <ContaRow onClick={irParaAdmin} cor="#b69cff">🛡️ Painel de administração</ContaRow>
+            <ContaRow onClick={irParaAdmin} cor="#8b5cf6">🛡️ Painel de administração</ContaRow>
           ) : null}
-          <ContaRow onClick={() => setConfirmSignOut(true)} cor="#fda4af" semBorda>Terminar sessão</ContaRow>
+          <ContaRow onClick={() => setConfirmSignOut(true)} cor="rgba(239,68,68,0.8)" semBorda>Terminar sessão</ContaRow>
         </div>
       </main>
 
@@ -354,22 +354,23 @@ const inputStyle = {
 };
 
 // Linha de ação da secção Conta.
-function ContaRow({ children, onClick, cor = '#fff', semBorda = false }) {
+function ContaRow({ children, onClick, cor = 'rgba(255,255,255,0.7)', semBorda = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        display: 'block',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
         width: '100%',
         textAlign: 'left',
         padding: '14px 16px',
         border: 'none',
-        borderBottom: semBorda ? 'none' : '1px solid #222222',
+        borderBottom: semBorda ? 'none' : '1px solid rgba(255,255,255,0.04)',
         background: 'transparent',
         color: cor,
         fontSize: 14,
-        fontWeight: 700,
         cursor: 'pointer',
       }}
     >

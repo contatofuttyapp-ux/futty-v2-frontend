@@ -110,7 +110,7 @@ export default function Ranking() {
       <main className="app-main">
         <style>{`
 @keyframes rankShimmer { 0% { transform: translateX(-100%) skewX(-15deg); } 100% { transform: translateX(300%) skewX(-15deg); } }
-@keyframes rankGlowBreath { 0%,100% { box-shadow: 0 0 8px rgba(212,160,23,0.2); } 50% { box-shadow: 0 0 20px rgba(212,160,23,0.45), 0 0 40px rgba(212,160,23,0.1); } }
+@keyframes medalGlow { 0%,100% { filter: brightness(1) drop-shadow(0 0 3px currentColor); transform: scale(1); } 50% { filter: brightness(1.5) drop-shadow(0 0 10px currentColor) drop-shadow(0 0 20px currentColor); transform: scale(1.2); } }
 `}</style>
 
         {mostrarBanner ? (
@@ -134,25 +134,19 @@ export default function Ranking() {
               // Borda + glow especiais para o pódio.
               const podioStyle =
                 top === 1
-                  ? { border: '1px solid #d4a017', animation: 'rankGlowBreath 3.3s ease-in-out infinite' }
+                  ? { border: '1px solid #d4a017', animation: 'heroicPulse 3.9s ease-in-out 0s infinite' }
                   : top === 2
-                    ? { border: '1px solid #aaaaaa', boxShadow: '0 0 12px rgba(170,170,170,0.25)' }
+                    ? { border: '1px solid #aaaaaa', animation: 'heroicPulse 3.9s ease-in-out 0.6s infinite' }
                     : top === 3
-                      ? { border: '1px solid #cd7f32', boxShadow: '0 0 12px rgba(205,127,50,0.25)' }
+                      ? { border: '1px solid #cd7f32', animation: 'heroicPulse 3.9s ease-in-out 1.2s infinite' }
                       : {};
-              const medalShadow =
-                top === 1
-                  ? 'drop-shadow(0 0 6px rgba(212,160,23,0.85))'
-                  : top === 2
-                    ? 'drop-shadow(0 0 5px rgba(190,190,190,0.7))'
-                    : top === 3
-                      ? 'drop-shadow(0 0 5px rgba(205,127,50,0.7))'
-                      : 'none';
+              const medalColor = top === 1 ? '#d4a017' : top === 2 ? '#aaaaaa' : top === 3 ? '#cd7f32' : null;
+              const medalDelay = top === 1 ? 0 : top === 2 ? 0.5 : 1;
               const shimmerDelay = top === 1 ? 0 : top === 2 ? 1.3 : top === 3 ? 2.6 : idx % 2 ? 0.5 : 0;
               return (
                 <div className={`rank-row ${p.posicao <= 3 ? 'rank-row--top' : ''}`} key={p.user_id} style={{ position: 'relative', overflow: 'hidden', ...podioStyle }}>
                   <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: `rankShimmer 5.2s ease-in-out ${shimmerDelay}s infinite` }} />
-                  <div className="rank-pos" style={top <= 3 ? { filter: medalShadow } : undefined}>{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
+                  <div className="rank-pos" style={top <= 3 ? { color: medalColor, display: 'inline-block', animation: `medalGlow 3.9s ease-in-out ${medalDelay}s infinite` } : undefined}>{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
                   <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${p.nome}`} style={{ lineHeight: 0 }}>
                     <RankingAvatar nome={p.nome} avatarUrl={p.avatar_url} dur={top <= 3 ? '2.6s' : '4.6s'} />
                   </Link>
@@ -176,7 +170,7 @@ export default function Ranking() {
                       )}
                     </div>
                   </div>
-                  <div className="rank-actions">
+                  <div className="rank-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     {p.sou_eu ? (
                       <span className="muted" style={{ fontSize: 11, fontWeight: 800, color: 'var(--neon)', border: '1px solid var(--neon)', borderRadius: 999, padding: '3px 9px' }}>Tu</span>
                     ) : (
@@ -184,6 +178,9 @@ export default function Ranking() {
                         {eu ? 'Alterar' : 'Votar'}
                       </button>
                     )}
+                    <Link to={`/equipa/${slug}/jogador/${p.user_id}`} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: 11, textDecoration: 'none', cursor: 'pointer' }}>
+                      Ver perfil
+                    </Link>
                   </div>
                 </div>
               );

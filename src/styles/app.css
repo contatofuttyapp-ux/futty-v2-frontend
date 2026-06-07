@@ -1338,6 +1338,12 @@
   50% { opacity: 0.15; box-shadow: none; }
 }
 
+/* Pulso dourado "heróico" — blocos de prémio (artilheiro, destaque, rodada) e pódio. */
+@keyframes heroicPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(212, 160, 23, 0.2); border-color: rgba(212, 160, 23, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(212, 160, 23, 0.5), 0 0 40px rgba(212, 160, 23, 0.2); border-color: rgba(212, 160, 23, 0.7); }
+}
+
 .gcard--past {
   opacity: 0.55;
 }
