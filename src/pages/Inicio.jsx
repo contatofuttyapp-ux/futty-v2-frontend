@@ -8,6 +8,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatDateTime, formatRating } from '../utils/format';
 import PlayerCard from '../components/PlayerCard';
 import TeamAvatar from '../components/TeamAvatar';
+import FuttyLogo from '../components/FuttyLogo';
 import ProductTour from '../components/ProductTour';
 import Loading from '../components/Loading';
 import SorteioOverlay from '../components/SorteioOverlay';
@@ -208,9 +209,7 @@ export default function Inicio() {
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {/* Header: logo FUT. (esquerda) + Início (direita). Sem Topbar. */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#d4a017', letterSpacing: '0.18em', textShadow: '0 0 10px rgba(212,160,23,0.6)' }}>
-            FUT<span style={{ color: '#d4a017' }}>.</span>
-          </span>
+          <FuttyLogo size="lg" showIcon />
           <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>
             Início
           </span>

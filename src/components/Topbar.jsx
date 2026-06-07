@@ -1,6 +1,7 @@
-// Futty v2.0 — Barra de topo. Esquerda: marca "FUT" ou "← Voltar" (se back).
-// Direita: título opcional. Linha gradiente verde→roxo por baixo.
+// Futty v2.0 — Barra de topo. Esquerda: marca "FUT." ou "← Voltar" (se back).
+// Direita: título opcional. Linha gradiente por baixo.
 import { Link } from 'react-router-dom';
+import FuttyLogo from './FuttyLogo';
 
 export default function Topbar({ title = null, back = null }) {
   return (
@@ -11,9 +12,7 @@ export default function Topbar({ title = null, back = null }) {
             ← Voltar
           </Link>
         ) : (
-          <Link to="/home" className="app-brand">
-            FUT<span className="app-brand__dot">.</span>
-          </Link>
+          <FuttyLogo size="md" linkTo="/home" />
         )}
         {title && <span className="topbar-title">{title}</span>}
       </header>

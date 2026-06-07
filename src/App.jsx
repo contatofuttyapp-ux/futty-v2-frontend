@@ -1,9 +1,11 @@
 // Futty v2.0 — Router principal
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
 import Layout from './components/Layout';
+import LoadingScreen from './components/LoadingScreen';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -49,9 +51,12 @@ function JogoRoute() {
 }
 
 export default function App() {
+  const [loading, setLoading] = useState(true);
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <>
+      {loading && <LoadingScreen onDone={() => setLoading(false)} />}
+      <AuthProvider>
+        <BrowserRouter>
         <Layout>
           <Routes>
           <Route path="/" element={<IndexRedirect />} />
@@ -176,6 +181,7 @@ export default function App() {
           </Routes>
         </Layout>
       </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </>
   );
 }
