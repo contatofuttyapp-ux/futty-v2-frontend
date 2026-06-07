@@ -33,7 +33,7 @@ export default function LoadingScreen({ onDone }) {
       }}
     >
       <style>{CSS}</style>
-      <FuttyLogo size="lg" showIcon />
+      <FuttyLogo size="lg" showIcon={false} />
       <div style={{ width: 180, height: 2, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
         <div style={{ height: '100%', background: '#d4a017', borderRadius: 2, animation: 'loadBar 1.5s ease-in-out infinite alternate' }} />
       </div>
