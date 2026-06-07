@@ -1,10 +1,11 @@
 // Futty v2.0 — Ranking (modelo definitivo): voto por jogador (meias estrelas),
 // nota exibida 6-10, score por categoria. Sem jogo de votação nem períodos.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useRanking } from '../hooks/useRanking';
+import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset, iniciaisNome } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
 import Loading from '../components/Loading';
@@ -70,6 +71,17 @@ export default function Ranking() {
   const [voteBusy, setVoteBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const [bannerFechado, setBannerFechado] = useState(false);
+  const celebrouTop3 = useRef(false);
+
+  // Confetti uma vez se o utilizador estiver no pódio (top 3).
+  useEffect(() => {
+    if (celebrouTop3.current) return;
+    const meu = ranking.find((p) => p.sou_eu && p.posicao <= 3);
+    if (meu) {
+      celebrouTop3.current = true;
+      celebrarTop3(meu.posicao);
+    }
+  }, [ranking]);
 
   function openVote(player) {
     setVoteModal(player);

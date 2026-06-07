@@ -12,6 +12,7 @@ import PlayerAvatar from '../components/PlayerAvatar';
 import TeamAvatar from '../components/TeamAvatar';
 import UploadComCrop from '../components/UploadComCrop';
 import NumberStepper from '../components/NumberStepper';
+import { celebrarCerveja } from '../hooks/useConfetti';
 import '../styles/app.css';
 
 // Opções de cor de fundo do avatar da equipa (sem logo) e de visibilidade.
@@ -1058,7 +1059,8 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
       patch.destaque_titulo = temDest && destId ? destTitulo.trim() || null : null;
       patch.rodada_user_id = temRodada && rodadaId ? rodadaId : null;
       if (temRodada && rodadaId && rodadaFoto) patch.rodada_foto_url = rodadaFoto;
-      await apiFetch(`/api/feed/games/${jogo.id}/resultado`, { method: 'PATCH', body: JSON.stringify(patch) });
+      const res = await apiFetch(`/api/feed/games/${jogo.id}/resultado`, { method: 'PATCH', body: JSON.stringify(patch) });
+      if (res?.game?.rodada_user_id) celebrarCerveja();
       onSaved(jogo.id);
     } catch (e) {
       showToast(e.message, 'error');
