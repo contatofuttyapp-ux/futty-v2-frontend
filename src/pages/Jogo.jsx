@@ -13,7 +13,6 @@ import SorteioOverlay from '../components/SorteioOverlay';
 import CountdownSorteio from '../components/CountdownSorteio';
 import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
-import { celebrarSorteio } from '../hooks/useConfetti';
 import '../styles/app.css';
 
 export default function Jogo() {
@@ -49,8 +48,8 @@ export default function Jogo() {
     try {
       const res = await apiFetch(`/api/games/${id}/sortear`, { method: 'POST' });
       // Junta os dados do jogo (local/data) ao resultado fresco (times_resultado).
-      setJogoSorteio({ ...(data?.game || {}), ...res.game });
-      celebrarSorteio();
+      // __fresco: true → o overlay corre as 4 fases (confetti incluído).
+      setJogoSorteio({ ...(data?.game || {}), ...res.game, __fresco: true });
       await reload();
     } catch (err) {
       setActionError(err.message);
