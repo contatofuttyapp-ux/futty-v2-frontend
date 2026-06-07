@@ -1026,7 +1026,7 @@
   gap: 3px;
   height: 54px;
   position: relative;
-  color: #2a2a2a;
+  color: rgba(255, 255, 255, 0.35);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -1036,30 +1036,23 @@
 
 .bottom-nav__tab:hover {
   text-decoration: none;
-  color: #2a2a2a;
+  color: rgba(255, 255, 255, 0.35);
 }
 
+/* Tab activa: ícone + label roxo; Ranking é o único dourado. */
 .bottom-nav__tab--active,
 .bottom-nav__tab--active:hover {
-  color: var(--neon);
+  color: #8b5cf6;
 }
 
-/* Ícone activo com glow verde */
+.bottom-nav__tab--active.bottom-nav__tab--ranking,
+.bottom-nav__tab--active.bottom-nav__tab--ranking:hover {
+  color: #d4a017;
+}
+
+/* Glow do ícone activo (segue a cor do tab). */
 .bottom-nav__tab--active .bottom-nav__icon {
-  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.7));
-}
-
-/* Dot verde 4px acima do ícone (só na tab activa) */
-.bottom-nav__indicator {
-  position: absolute;
-  top: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--neon);
-  box-shadow: 0 0 6px rgba(139, 92, 246, 0.8);
+  filter: drop-shadow(0 0 6px currentColor);
 }
 
 .bottom-nav__icon {
@@ -1078,24 +1071,42 @@
   border: 1px solid #0f0f0f;
 }
 
-/* Estrela do Ranking (tab activa) */
-@keyframes starSpin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* ── Animações por tab activa ──────────────────────────────── */
+@keyframes homeBreath {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+.bottom-nav__tab--active .nav-home {
+  animation: homeBreath 2.5s ease-in-out infinite;
 }
 
-@keyframes starPulse {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 3px #8b5cf6);
-  }
-  50% {
-    filter: drop-shadow(0 0 8px #8b5cf6) drop-shadow(0 0 16px rgba(139, 92, 246, 0.5));
-  }
+@keyframes trophyShake {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-4deg); }
+  80% { transform: rotate(4deg); }
+}
+.bottom-nav__tab--active .nav-resenha {
+  animation: trophyShake 2s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+@keyframes starFlipY {
+  0%, 80%, 100% { transform: rotateY(0deg); }
+  40% { transform: rotateY(180deg); }
+}
+.bottom-nav__tab--active .nav-ranking {
+  animation: starFlipY 3s ease-in-out infinite;
+  color: #d4a017;
+}
+
+@keyframes cardShine {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; transform: scale(1.08); }
+}
+.bottom-nav__tab--active .nav-figurinha {
+  animation: cardShine 2s ease-in-out infinite;
 }
 
 /* ===== Página Início ===== */
