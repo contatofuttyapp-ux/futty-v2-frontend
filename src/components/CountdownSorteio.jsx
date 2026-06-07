@@ -1,10 +1,17 @@
 // Futty v2.0 — Contagem decrescente até ao momento do sorteio.
 // Campos V2: data (timestamp), draw_window_hours, sorteio_realizado.
 // Fallback V1: data_jogo + hora, horas_antes_para_sortear, sorteado.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 
-const NEON = '#8b5cf6';
-const ROXO = '#a78bfa';
+// Estilos dos dígitos estilo cassino (injectados via <style>).
+const CD_CSS = `
+.cd-wrap { display: flex; align-items: center; gap: 6px; justify-content: center; padding: 8px 0; }
+.cd-unit { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.cd-digit { position: relative; overflow: hidden; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #0d0d12; border: 1px solid rgba(212,160,23,0.25); border-radius: 6px; font-size: 20px; font-weight: 700; color: #d4a017; font-family: 'Rajdhani', monospace; }
+.cd-digit::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(212,160,23,0.10); }
+.cd-label { font-size: 9px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.08em; }
+.cd-sep { font-size: 20px; font-weight: 700; color: rgba(212,160,23,0.4); margin-bottom: 14px; }
+`;
 
 // Momento de início do jogo em ms.
 function inicioJogoMs(j) {
@@ -65,40 +72,38 @@ export default function CountdownSorteio({ jogo, style }) {
 
   const b = decompor(alvo - agora);
 
-  const wrap = {
-    display: 'inline-flex',
-    alignItems: 'baseline',
-    gap: 6,
-    padding: '4px 10px',
-    borderRadius: 999,
-    border: `1px solid ${b ? 'rgba(139,92,246,0.32)' : 'rgba(167,139,250,0.45)'}`,
-    background: b ? 'rgba(139,92,246,0.06)' : 'rgba(167,139,250,0.12)',
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.72)',
-    ...style,
-  };
-
-  // Tempo esgotado → "A sortear…" (roxo).
+  // Tempo esgotado → "A sortear…" (bloco roxo com ⚡).
   if (!b) {
     return (
-      <span style={wrap} aria-live="polite">
-        <span style={{ color: ROXO, fontWeight: 800, fontSize: 15 }}>A sortear…</span>
-      </span>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0', ...style }} aria-live="polite">
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 8, padding: '10px 16px', color: '#a78bfa', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+          <span aria-hidden>⚡</span> A sortear…
+        </span>
+      </div>
     );
   }
 
-  const parts = [];
-  if (b.d > 0) parts.push(`${b.d}d`);
-  if (b.d > 0 || b.h > 0) parts.push(`${b.h}h`);
-  parts.push(`${b.m}m`);
-  if (b.d === 0) parts.push(`${b.s}s`);
+  // Dígitos estilo cassino — esconde "Dias" quando é 0.
+  const pad = (n) => String(n).padStart(2, '0');
+  const unidades = [
+    ...(b.d > 0 ? [{ v: b.d, lbl: 'Dias' }] : []),
+    { v: b.h, lbl: 'Horas' },
+    { v: b.m, lbl: 'Min' },
+    { v: b.s, lbl: 'Seg' },
+  ];
 
   return (
-    <span style={wrap}>
-      <span style={{ fontWeight: 700 }}>Sorteio em</span>
-      <span style={{ color: NEON, fontWeight: 900, fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>
-        {parts.join(' ')}
-      </span>
-    </span>
+    <div className="cd-wrap" style={style}>
+      <style>{CD_CSS}</style>
+      {unidades.map((u, i) => (
+        <Fragment key={u.lbl}>
+          {i > 0 ? <span className="cd-sep">:</span> : null}
+          <div className="cd-unit">
+            <div className="cd-digit">{pad(u.v)}</div>
+            <div className="cd-label">{u.lbl}</div>
+          </div>
+        </Fragment>
+      ))}
+    </div>
   );
 }
