@@ -154,7 +154,7 @@ export default function MeuPerfil() {
             style={{ cursor: 'pointer', lineHeight: 0, flexShrink: 0 }}
           >
             <AvatarFrame size={64}>
-              <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold />
+              <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold size={64} />
             </AvatarFrame>
           </div>
           <div style={{ minWidth: 0 }}>

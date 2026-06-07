@@ -1338,6 +1338,16 @@
   50% { opacity: 0.15; box-shadow: none; }
 }
 
+/* Cantos em L (AvatarFrame) — respiração lenta e elegante (só opacity). */
+@keyframes cornerBreath {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-corner { animation: none !important; opacity: 0.55 !important; }
+}
+
 /* Pulso dourado "heróico" — blocos de prémio (artilheiro, destaque, rodada) e pódio. */
 @keyframes heroicPulse {
   0%, 100% { box-shadow: 0 0 8px rgba(212, 160, 23, 0.2); border-color: rgba(212, 160, 23, 0.3); }

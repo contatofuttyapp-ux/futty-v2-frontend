@@ -17,10 +17,10 @@ import '../styles/app.css';
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 // Avatar quadrado (48px) com cantos em L dourados (AvatarFrame).
-function RankingAvatar({ nome, avatarUrl, dur = '2s' }) {
+function RankingAvatar({ nome, avatarUrl, delay = '0s' }) {
   const src = avatarUrl ? urlAsset(avatarUrl) : null;
   return (
-    <AvatarFrame size={48} active dur={dur}>
+    <AvatarFrame size={48} active dur="4.5s" delay={delay}>
       <div style={{ width: 48, height: 48, borderRadius: 6, overflow: 'hidden', background: '#15151a', display: 'grid', placeItems: 'center' }}>
         {src ? (
           <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
@@ -148,7 +148,7 @@ export default function Ranking() {
                   <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: `rankShimmer 5.2s ease-in-out ${shimmerDelay}s infinite` }} />
                   <div className="rank-pos" style={top <= 3 ? { color: medalColor, display: 'inline-block', animation: `medalGlow 3.9s ease-in-out ${medalDelay}s infinite` } : undefined}>{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
                   <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${p.nome}`} style={{ lineHeight: 0 }}>
-                    <RankingAvatar nome={p.nome} avatarUrl={p.avatar_url} dur={top <= 3 ? '2.6s' : '4.6s'} />
+                    <RankingAvatar nome={p.nome} avatarUrl={p.avatar_url} delay={`${(idx % 5) * 0.9}s`} />
                   </Link>
                   <div className="rank-info">
                     <div className="rank-name" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>

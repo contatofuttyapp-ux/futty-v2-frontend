@@ -78,7 +78,7 @@ const KEYFRAMES = `
 @keyframes snakeGlow { 0%, 100% { opacity: 0.15; box-shadow: none; } 25% { opacity: 1; box-shadow: 0 0 8px rgba(212,160,23,0.8), 0 0 16px rgba(212,160,23,0.4); } 50% { opacity: 0.15; box-shadow: none; } }
 `;
 
-export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true }) {
+export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true }) {
   const [imgFalhou, setImgFalhou] = useState(false);
 
   const nome = nomeJogador(jogador);
@@ -302,14 +302,16 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
         </div>
       ) : null}
 
-      {/* z8 — 4 CANTOS EM L DOURADOS (sem frame completo) */}
-      {CANTOS.map((c, i) => (
-        <div
-          key={i}
-          aria-hidden
-          style={{ position: 'absolute', width: 24, height: 24, zIndex: 8, pointerEvents: 'none', ...c.pos, ...c.b, animation: `snakeGlow 2.6s ease-in-out ${c.delay} infinite` }}
-        />
-      ))}
+      {/* z8 — 4 CANTOS EM L DOURADOS (sem frame completo); ocultos no Início. */}
+      {cantos
+        ? CANTOS.map((c, i) => (
+            <div
+              key={i}
+              aria-hidden
+              style={{ position: 'absolute', width: 24, height: 24, zIndex: 8, pointerEvents: 'none', ...c.pos, ...c.b, animation: `snakeGlow 2.6s ease-in-out ${c.delay} infinite` }}
+            />
+          ))
+        : null}
     </div>
   );
 }

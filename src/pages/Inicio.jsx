@@ -243,7 +243,7 @@ export default function Inicio() {
         {/* Zona do card premium */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
           <div data-tour="player-card" style={{ width: '70%', maxWidth: 280 }}>
-            <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} mostrarNome={false} corFrame={corFrame} />
+            <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} mostrarNome={false} corFrame={corFrame} cantos={false} />
           </div>
           {/* Nome por baixo do card — gradiente dourado + linhas decorativas */}
           {nomeComposto ? (

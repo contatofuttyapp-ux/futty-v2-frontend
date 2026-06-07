@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { initials } from '../utils/teamColors';
 import { avatarParaCor, nomeJogador, urlAsset } from '../utils/avatar';
 
-export default function PlayerAvatar({ nome, avatarUrl, jogador = null, cor = null, lg = false, md = false, sm = false, glow = false, gold = false }) {
+export default function PlayerAvatar({ nome, avatarUrl, jogador = null, cor = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null }) {
   const [falhou, setFalhou] = useState(false);
 
   // Fonte da imagem: avatarUrl resolvido (frontend/backend/absoluto) OU por cor do time.
@@ -24,8 +24,12 @@ export default function PlayerAvatar({ nome, avatarUrl, jogador = null, cor = nu
     .filter(Boolean)
     .join(' ');
 
+  // size numérico → preenche caixas não-standard (ex.: dentro de AvatarFrame).
+  // A imagem já preenche 100% via `.pavatar img` (cover, top center).
+  const estilo = size ? { width: size, height: size, fontSize: Math.round(size * 0.34) } : undefined;
+
   return (
-    <div className={cls}>
+    <div className={cls} style={estilo}>
       {src && !falhou ? (
         <img src={src} alt="" onError={() => setFalhou(true)} />
       ) : (

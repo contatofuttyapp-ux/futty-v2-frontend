@@ -64,6 +64,14 @@ function timeCampeao(j) {
   return times[idx];
 }
 
+// Delay estável (0–3.9s) a partir do nome — desencontra a respiração dos cantos.
+function delayDoNome(nome) {
+  const s = String(nome || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) % 40;
+  return `${(h / 10).toFixed(1)}s`;
+}
+
 // ─── Avatar com glow colorido (artilheiro/destaque/rodada/autor) ───────────────
 function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
   const [falhou, setFalhou] = useState(false);
@@ -94,7 +102,7 @@ function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
     </div>
   );
   // Cantos em L dourados só em avatares >= 48px.
-  return size >= 48 ? <AvatarFrame size={size}>{inner}</AvatarFrame> : inner;
+  return size >= 48 ? <AvatarFrame size={size} delay={delayDoNome(nome)}>{inner}</AvatarFrame> : inner;
 }
 
 // ─── Bloco "prémio" (artilheiro / destaque) ────────────────────────────────────
