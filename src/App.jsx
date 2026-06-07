@@ -1,29 +1,33 @@
 // Futty v2.0 — Router principal
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import Inicio from './pages/Inicio';
-import CriarEquipa from './pages/CriarEquipa';
-import Equipa from './pages/Equipa';
-import Convite from './pages/Convite';
-import Jogos from './pages/Jogos';
-import NovoJogo from './pages/NovoJogo';
-import Jogo from './pages/Jogo';
-import Ranking from './pages/Ranking';
-import JogadorPerfil from './pages/JogadorPerfil';
-import AdminPanel from './pages/AdminPanel';
-import AlterarPassword from './pages/AlterarPassword';
-import Feed from './pages/Feed';
-import Figurinha from './pages/Figurinha';
-import MeuPerfil from './pages/MeuPerfil';
-import Explorar from './pages/Explorar';
+import ErrorBoundary from './components/ErrorBoundary';
+import ErrorPage from './components/ErrorPage';
+
+// Páginas em lazy loading (cada uma no seu chunk).
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const Inicio = lazy(() => import('./pages/Inicio'));
+const CriarEquipa = lazy(() => import('./pages/CriarEquipa'));
+const Equipa = lazy(() => import('./pages/Equipa'));
+const Convite = lazy(() => import('./pages/Convite'));
+const Jogos = lazy(() => import('./pages/Jogos'));
+const NovoJogo = lazy(() => import('./pages/NovoJogo'));
+const Jogo = lazy(() => import('./pages/Jogo'));
+const Ranking = lazy(() => import('./pages/Ranking'));
+const JogadorPerfil = lazy(() => import('./pages/JogadorPerfil'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const AlterarPassword = lazy(() => import('./pages/AlterarPassword'));
+const Feed = lazy(() => import('./pages/Feed'));
+const Figurinha = lazy(() => import('./pages/Figurinha'));
+const MeuPerfil = lazy(() => import('./pages/MeuPerfil'));
+const Explorar = lazy(() => import('./pages/Explorar'));
 
 // "/" → redireciona para /home (se autenticado) ou /login
 function IndexRedirect() {
@@ -53,11 +57,12 @@ function JogoRoute() {
 export default function App() {
   const [loading, setLoading] = useState(true);
   return (
-    <>
+    <ErrorBoundary>
       {loading && <LoadingScreen onDone={() => setLoading(false)} />}
       <AuthProvider>
         <BrowserRouter>
         <Layout>
+          <Suspense fallback={<LoadingScreen />}>
           <Routes>
           <Route path="/" element={<IndexRedirect />} />
           <Route path="/login" element={<Login />} />
@@ -176,12 +181,13 @@ export default function App() {
               </AuthGuard>
             }
           />
-          {/* fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* fallback — página inexistente */}
+          <Route path="*" element={<ErrorPage mensagem="Esta página não existe." />} />
           </Routes>
+          </Suspense>
         </Layout>
       </BrowserRouter>
       </AuthProvider>
-    </>
+    </ErrorBoundary>
   );
 }
