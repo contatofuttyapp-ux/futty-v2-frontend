@@ -8,6 +8,7 @@ import { nomeJogador } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
 import PlayerCard from '../components/PlayerCard';
+import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -158,10 +159,10 @@ export default function Figurinha() {
 
   return (
     <div className="app-shell">
+      <Topbar title="Figurinha" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {/* 1. CABEÇALHO */}
-        <h1 style={{ textAlign: 'center', fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '4px 0 2px' }}>A minha figurinha</h1>
-        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 16 }}>personaliza o teu card</p>
+        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '4px 0 16px' }}>personaliza o teu card</p>
 
         {/* 2. CARD PREMIUM */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>

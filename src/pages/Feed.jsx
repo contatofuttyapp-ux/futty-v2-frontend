@@ -1,10 +1,11 @@
 // Futty v2.0 — Resenha (/feed): feed social por equipa.
 // Jogos passados com resultado + posts editoriais. Sem Topbar (título no conteúdo).
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Trophy, Eye, Share2 } from 'lucide-react';
+import { Eye, Share2 } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import AdCard from '../components/AdCard';
 import AvatarFrame from '../components/AvatarFrame';
+import Topbar from '../components/Topbar';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
 import { iniciaisNome } from '../utils/avatar';
@@ -617,13 +618,8 @@ export default function Feed() {
 
   return (
     <div className="app-shell">
+      <Topbar title="Resenha" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* 1. CABEÇALHO */}
-        <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontWeight: 800, fontSize: 24, color: '#fff', margin: '4px 0 10px' }}>
-          <Trophy className="trophy-entrance" size={22} strokeWidth={2} color="#d4a017" />
-          Resenha
-        </h1>
-        <div className="app-topbar__line" style={{ marginBottom: 6 }} />
 
         {/* 2. CHIPS DE EQUIPA */}
         <div className="chips-row">

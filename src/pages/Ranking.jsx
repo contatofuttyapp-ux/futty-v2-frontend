@@ -10,6 +10,7 @@ import { urlAsset, iniciaisNome } from '../utils/avatar';
 import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
 import AvatarFrame from '../components/AvatarFrame';
+import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -58,7 +59,7 @@ function MeiaEstrelas({ value = 0, onChange }) {
 
 export default function Ranking() {
   const { slug } = useParams();
-  const { team, ranking, loading, error, reload } = useRanking(slug);
+  const { ranking, loading, error, reload } = useRanking(slug);
   const { data: status } = useApi(slug ? `/api/teams/${slug}/votacao-status` : null);
 
   const [voteModal, setVoteModal] = useState(null); // jogador a votar
@@ -105,16 +106,12 @@ export default function Ranking() {
 
   return (
     <div className="app-shell">
+      <Topbar title="Ranking" back={`/equipa/${slug}`} />
       <main className="app-main">
         <style>{`
 @keyframes rankShimmer { 0% { transform: translateX(-100%) skewX(-15deg); } 100% { transform: translateX(300%) skewX(-15deg); } }
 @keyframes rankGlowBreath { 0%,100% { box-shadow: 0 0 8px rgba(212,160,23,0.2); } 50% { box-shadow: 0 0 20px rgba(212,160,23,0.45), 0 0 40px rgba(212,160,23,0.1); } }
 `}</style>
-        <Link to={`/equipa/${slug}`} className="back-link">
-          ← {team?.nome || 'Equipa'}
-        </Link>
-
-        <h1 className="app-page-title font-premium" style={{ letterSpacing: '0.04em' }}>Ranking</h1>
 
         {mostrarBanner ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.3)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
@@ -137,7 +134,7 @@ export default function Ranking() {
               // Borda + glow especiais para o pódio.
               const podioStyle =
                 top === 1
-                  ? { border: '1px solid #d4a017', animation: 'rankGlowBreath 2.5s ease-in-out infinite' }
+                  ? { border: '1px solid #d4a017', animation: 'rankGlowBreath 3.3s ease-in-out infinite' }
                   : top === 2
                     ? { border: '1px solid #aaaaaa', boxShadow: '0 0 12px rgba(170,170,170,0.25)' }
                     : top === 3
@@ -154,10 +151,10 @@ export default function Ranking() {
               const shimmerDelay = top === 1 ? 0 : top === 2 ? 1.3 : top === 3 ? 2.6 : idx % 2 ? 0.5 : 0;
               return (
                 <div className={`rank-row ${p.posicao <= 3 ? 'rank-row--top' : ''}`} key={p.user_id} style={{ position: 'relative', overflow: 'hidden', ...podioStyle }}>
-                  <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: `rankShimmer 4s ease-in-out ${shimmerDelay}s infinite` }} />
+                  <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: `rankShimmer 5.2s ease-in-out ${shimmerDelay}s infinite` }} />
                   <div className="rank-pos" style={top <= 3 ? { filter: medalShadow } : undefined}>{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
                   <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${p.nome}`} style={{ lineHeight: 0 }}>
-                    <RankingAvatar nome={p.nome} avatarUrl={p.avatar_url} dur={top <= 3 ? '2s' : '3.5s'} />
+                    <RankingAvatar nome={p.nome} avatarUrl={p.avatar_url} dur={top <= 3 ? '2.6s' : '4.6s'} />
                   </Link>
                   <div className="rank-info">
                     <div className="rank-name" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>

@@ -20,7 +20,7 @@ export default function FuttyLogo({ size = 'md', showIcon = false, linkTo = null
           fontFamily: "'Rajdhani', sans-serif",
           fontWeight: 700,
           fontSize: s.text,
-          letterSpacing: '0.18em',
+          letterSpacing: '0.2em',
           color: '#ffffff',
           lineHeight: 1,
         }}

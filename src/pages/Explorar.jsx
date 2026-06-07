@@ -20,7 +20,7 @@ function SkeletonCard() {
     <div style={{ position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', borderRadius: 8, height: 68, marginBottom: 8 }}>
       <span
         aria-hidden
-        style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: 'rankShimmer 1.5s ease-in-out infinite' }}
+        style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: 'rankShimmer 2.0s ease-in-out infinite' }}
       />
     </div>
   );

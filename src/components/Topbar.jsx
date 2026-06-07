@@ -10,14 +10,13 @@ export default function Topbar({ title = null, back = null }) {
       <header className="app-topbar">
         {back ? (
           <Link to={back} className="topbar-back" aria-label="Voltar">
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} />
           </Link>
         ) : (
           <FuttyLogo size="md" linkTo="/home" />
         )}
         {title && <span className="topbar-title">{title}</span>}
       </header>
-      <div className="app-topbar__line" />
     </div>
   );
 }

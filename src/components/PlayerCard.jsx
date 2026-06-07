@@ -1,4 +1,4 @@
-// Futty v2.0 — PlayerCard: card quadrado épico (ouro exagerado + raios de luz).
+// Futty v2.0 — PlayerCard: card quadrado épico (4 cantos em L dourados).
 // Tudo em CSS puro (zero libs). Usado em Início e Figurinha.
 import { useState } from 'react';
 import { urlAsset, iniciaisNome, nomeJogador } from '../utils/avatar';
@@ -16,25 +16,25 @@ const COR_HEX = {
 
 // 18 partículas (12 finas + 6 maiores douradas), distribuídas pelo card.
 const PARTICULAS = [
-  { left: '12%', top: '70%', size: 3, cor: '#d4a017', dur: '3.2s', delay: '0s' },
-  { left: '24%', top: '55%', size: 2, cor: '#8b5cf6', dur: '4s', delay: '0.6s' },
-  { left: '38%', top: '80%', size: 4, cor: '#ffffff', dur: '2.6s', delay: '1.1s' },
-  { left: '50%', top: '62%', size: 2, cor: '#d4a017', dur: '3.6s', delay: '0.3s' },
-  { left: '63%', top: '74%', size: 3, cor: '#8b5cf6', dur: '4.4s', delay: '1.5s' },
-  { left: '78%', top: '58%', size: 2, cor: '#ffffff', dur: '3s', delay: '0.9s' },
-  { left: '86%', top: '72%', size: 4, cor: '#d4a017', dur: '5s', delay: '2s' },
-  { left: '18%', top: '40%', size: 2, cor: '#8b5cf6', dur: '3.4s', delay: '1.8s' },
-  { left: '44%', top: '34%', size: 3, cor: '#ffffff', dur: '4.2s', delay: '0.2s' },
-  { left: '70%', top: '42%', size: 2, cor: '#d4a017', dur: '2.8s', delay: '1.3s' },
-  { left: '32%', top: '24%', size: 2, cor: '#8b5cf6', dur: '3.8s', delay: '2.4s' },
-  { left: '58%', top: '20%', size: 3, cor: '#ffffff', dur: '4.6s', delay: '0.7s' },
+  { left: '12%', top: '70%', size: 3, cor: '#d4a017', dur: '4.2s', delay: '0s' },
+  { left: '24%', top: '55%', size: 2, cor: '#8b5cf6', dur: '5.2s', delay: '0.6s' },
+  { left: '38%', top: '80%', size: 4, cor: '#ffffff', dur: '3.4s', delay: '1.1s' },
+  { left: '50%', top: '62%', size: 2, cor: '#d4a017', dur: '4.7s', delay: '0.3s' },
+  { left: '63%', top: '74%', size: 3, cor: '#8b5cf6', dur: '5.7s', delay: '1.5s' },
+  { left: '78%', top: '58%', size: 2, cor: '#ffffff', dur: '3.9s', delay: '0.9s' },
+  { left: '86%', top: '72%', size: 4, cor: '#d4a017', dur: '6.5s', delay: '2s' },
+  { left: '18%', top: '40%', size: 2, cor: '#8b5cf6', dur: '4.4s', delay: '1.8s' },
+  { left: '44%', top: '34%', size: 3, cor: '#ffffff', dur: '5.5s', delay: '0.2s' },
+  { left: '70%', top: '42%', size: 2, cor: '#d4a017', dur: '3.6s', delay: '1.3s' },
+  { left: '32%', top: '24%', size: 2, cor: '#8b5cf6', dur: '4.9s', delay: '2.4s' },
+  { left: '58%', top: '20%', size: 3, cor: '#ffffff', dur: '6s', delay: '0.7s' },
   // 6 maiores douradas (#f5e070)
-  { left: '22%', top: '30%', size: 5, cor: '#f5e070', dur: '4s', delay: '0.5s' },
-  { left: '76%', top: '30%', size: 6, cor: '#f5e070', dur: '4.8s', delay: '1.2s' },
-  { left: '50%', top: '18%', size: 5, cor: '#f5e070', dur: '3.6s', delay: '2.1s' },
-  { left: '30%', top: '60%', size: 6, cor: '#f5e070', dur: '5.2s', delay: '0.8s' },
-  { left: '68%', top: '62%', size: 5, cor: '#f5e070', dur: '4.4s', delay: '1.6s' },
-  { left: '48%', top: '46%', size: 6, cor: '#f5e070', dur: '4s', delay: '0.3s' },
+  { left: '22%', top: '30%', size: 5, cor: '#f5e070', dur: '5.2s', delay: '0.5s' },
+  { left: '76%', top: '30%', size: 6, cor: '#f5e070', dur: '6.2s', delay: '1.2s' },
+  { left: '50%', top: '18%', size: 5, cor: '#f5e070', dur: '4.7s', delay: '2.1s' },
+  { left: '30%', top: '60%', size: 6, cor: '#f5e070', dur: '6.8s', delay: '0.8s' },
+  { left: '68%', top: '62%', size: 5, cor: '#f5e070', dur: '5.7s', delay: '1.6s' },
+  { left: '48%', top: '46%', size: 6, cor: '#f5e070', dur: '5.2s', delay: '0.3s' },
 ];
 
 // 8 raios de luz a partir do centro.
@@ -51,12 +51,21 @@ const RAIOS = [
 
 // 6 estrelinhas à volta do nome (só quando o nome é mostrado dentro do card).
 const ESTRELAS = [
-  { left: '20%', bottom: '70px', dur: '2.4s', delay: '0s' },
-  { left: '34%', bottom: '84px', dur: '3s', delay: '0.5s' },
-  { left: '48%', bottom: '90px', dur: '2.6s', delay: '1s' },
-  { left: '60%', bottom: '84px', dur: '3.2s', delay: '0.3s' },
-  { left: '74%', bottom: '72px', dur: '2.8s', delay: '0.8s' },
-  { left: '84%', bottom: '64px', dur: '3.4s', delay: '1.4s' },
+  { left: '20%', bottom: '70px', dur: '3.1s', delay: '0s' },
+  { left: '34%', bottom: '84px', dur: '3.9s', delay: '0.5s' },
+  { left: '48%', bottom: '90px', dur: '3.4s', delay: '1s' },
+  { left: '60%', bottom: '84px', dur: '4.2s', delay: '0.3s' },
+  { left: '74%', bottom: '72px', dur: '3.6s', delay: '0.8s' },
+  { left: '84%', bottom: '64px', dur: '4.4s', delay: '1.4s' },
+];
+
+// 4 cantos em L dourados (sequência horária via snakeGlow).
+const CANTO = '2px solid #d4a017';
+const CANTOS = [
+  { pos: { top: 8, left: 8 }, b: { borderTop: CANTO, borderLeft: CANTO }, delay: '0s' },
+  { pos: { top: 8, right: 8 }, b: { borderTop: CANTO, borderRight: CANTO }, delay: '0.5s' },
+  { pos: { bottom: 8, right: 8 }, b: { borderBottom: CANTO, borderRight: CANTO }, delay: '1s' },
+  { pos: { bottom: 8, left: 8 }, b: { borderBottom: CANTO, borderLeft: CANTO }, delay: '1.5s' },
 ];
 
 const KEYFRAMES = `
@@ -65,12 +74,8 @@ const KEYFRAMES = `
 @keyframes pcNamePulse { from { text-shadow: 0 0 10px rgba(139,92,246,0.6), 0 0 20px rgba(139,92,246,0.3); } to { text-shadow: 0 0 16px rgba(139,92,246,1), 0 0 32px rgba(139,92,246,0.6), 0 0 48px rgba(139,92,246,0.2); } }
 @keyframes pcStarTwinkle { 0%, 100% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } }
 @keyframes pcRays { 0%, 100% { opacity: 0.15; transform: scaleY(0.7); } 50% { opacity: 0.5; transform: scaleY(1.1); } }
-@keyframes pcGlow {
-  0%, 100% { filter: drop-shadow(0 0 3px #d4a017) drop-shadow(0 0 8px rgba(212,160,23,0.8)) drop-shadow(0 0 16px rgba(212,160,23,0.5)) drop-shadow(0 0 30px rgba(212,160,23,0.2)); opacity: 0.85; }
-  50% { filter: drop-shadow(0 0 5px #f5e070) drop-shadow(0 0 14px #d4a017) drop-shadow(0 0 28px rgba(212,160,23,0.9)) drop-shadow(0 0 50px rgba(212,160,23,0.5)) drop-shadow(0 0 80px rgba(212,160,23,0.2)); opacity: 1; }
-}
-@keyframes pcCornerBlink { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 @keyframes pcBottomGlow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes snakeGlow { 0%, 100% { opacity: 0.15; box-shadow: none; } 25% { opacity: 1; box-shadow: 0 0 8px rgba(212,160,23,0.8), 0 0 16px rgba(212,160,23,0.4); } 50% { opacity: 0.15; box-shadow: none; } }
 `;
 
 export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true }) {
@@ -82,17 +87,8 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   const nota = Number.isFinite(stats?.nota) ? Number(stats.nota).toFixed(1) : '--';
   const temAvatar = avatarSrc && !imgFalhou;
 
-  // Cor do frame (chave nomeada → hex/glow). 'dourado' mantém o gradiente especial.
+  // Cor do frame (chave nomeada → hex/glow) para a aura/respiração do card.
   const fc = getFrameColor(corFrame);
-  const ehDourado = corFrame === 'dourado';
-  const strokeRef = ehDourado ? 'url(#goldGrad)' : fc.stroke;
-  const dotOuter = ehDourado ? '#d4a017' : fc.stroke;
-  const dotInner = ehDourado ? '#f5e070' : fc.dot;
-  // Glow exterior do frame: dourado é animado; outras cores usam glow estático.
-  const frameFilter = ehDourado
-    ? 'drop-shadow(0 0 3px #f5e070) drop-shadow(0 0 8px #d4a017) drop-shadow(0 0 16px rgba(212,160,23,0.8)) drop-shadow(0 0 30px rgba(212,160,23,0.4)) drop-shadow(0 0 50px rgba(212,160,23,0.15))'
-    : `drop-shadow(0 0 3px ${fc.stroke}) drop-shadow(0 0 8px ${fc.glow}0.8)) drop-shadow(0 0 16px ${fc.glow}0.5)) drop-shadow(0 0 30px ${fc.glow}0.2))`;
-  const frameAnim = ehDourado ? 'pcGlow 2s ease-in-out infinite' : 'none';
   // Glow "respiração" do card (cor segue o frame) — keyframe único por cor.
   const breathName = `pcCardBreath_${corFrame}`;
   const breathKeyframes = `@keyframes ${breathName} { 0%,100% { box-shadow: 0 0 20px ${fc.glow}0.35), 0 0 50px ${fc.glow}0.08); } 50% { box-shadow: 0 0 35px ${fc.glow}0.55), 0 0 80px ${fc.glow}0.15); } }`;
@@ -106,7 +102,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   return (
     <div
       aria-label={`Card de ${nome}${equipa?.nome ? ` · ${equipa.nome}` : ''}`}
-      style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 0, overflow: 'hidden', background: fundoCss, animation: `${breathName} 3.5s ease-in-out infinite`, willChange: 'box-shadow' }}
+      style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 0, overflow: 'hidden', background: fundoCss, animation: `${breathName} 4.6s ease-in-out infinite`, willChange: 'box-shadow' }}
     >
       <style>{KEYFRAMES + breathKeyframes}</style>
 
@@ -159,7 +155,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
               background: 'linear-gradient(to top, rgba(212,160,23,0.6) 0%, transparent 100%)',
               transformOrigin: 'bottom center',
               willChange: 'transform, opacity',
-              animation: `pcRays 3s ease-in-out ${r.delay} infinite alternate`,
+              animation: `pcRays 3.9s ease-in-out ${r.delay} infinite alternate`,
             }}
           />
         </div>
@@ -224,7 +220,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
             height: '60%',
             background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.08), transparent)',
             willChange: 'transform, opacity',
-            animation: 'pcShine 3s ease-in-out 6s infinite',
+            animation: 'pcShine 3.9s ease-in-out 6s infinite',
           }}
         />
       </div>
@@ -245,7 +241,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           borderRadius: '0 0 inherit inherit',
           background: `linear-gradient(to top, ${fc.glow}0.18), ${fc.glow}0.08), transparent)`,
           willChange: 'opacity',
-          animation: 'pcBottomGlow 3s ease-in-out infinite',
+          animation: 'pcBottomGlow 3.9s ease-in-out infinite',
         }}
       />
 
@@ -288,7 +284,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                animation: 'pcNamePulse 3s ease-in-out infinite alternate',
+                animation: 'pcNamePulse 3.9s ease-in-out infinite alternate',
               }}
             >
               {nome}
@@ -306,73 +302,14 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
         </div>
       ) : null}
 
-      {/* z8 — FRAME QUADRADO (SVG com glow dourado exagerado) */}
-      <svg
-        viewBox="0 0 300 300"
-        preserveAspectRatio="none"
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 8,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          filter: frameFilter,
-          willChange: 'filter, opacity',
-          animation: frameAnim,
-        }}
-      >
-        <defs>
-          <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#f0d060" />
-            <stop offset="35%" stopColor="#d4a017" />
-            <stop offset="70%" stopColor="#f5e070" />
-            <stop offset="100%" stopColor="#b8860b" />
-          </linearGradient>
-        </defs>
-        {/* Borda principal (cantos retos, 90°) */}
-        <rect x="1.5" y="1.5" width="297" height="297" fill="none" stroke={strokeRef} strokeWidth="3" />
-        {/* Borda interior mais fina */}
-        <rect x="5" y="5" width="290" height="290" fill="none" stroke={dotInner} strokeWidth="1" strokeOpacity="0.35" />
-        {/* Linhas decorativas a meio (esquerda/direita) */}
-        <line x1="0" y1="150" x2="20" y2="150" stroke={strokeRef} strokeWidth="1.4" />
-        <line x1="280" y1="150" x2="300" y2="150" stroke={strokeRef} strokeWidth="1.4" />
-        {/* Círculos nos cantos */}
-        {[
-          [12, 12],
-          [288, 12],
-          [12, 288],
-          [288, 288],
-        ].map(([cx, cy]) => (
-          <g key={`${cx}-${cy}`}>
-            <circle cx={cx} cy={cy} r="4" fill={dotOuter} />
-            <circle cx={cx} cy={cy} r="2" fill={dotInner} />
-          </g>
-        ))}
-
-        {/* Cantos decorativos em L (piscar alternado) */}
-        <g style={{ animation: 'pcCornerBlink 2s ease-in-out 0s infinite' }}>
-          <line x1="4" y1="44" x2="4" y2="4" stroke={dotInner} strokeWidth="2" />
-          <line x1="4" y1="4" x2="44" y2="4" stroke={dotInner} strokeWidth="2" />
-          <circle cx="4" cy="4" r="2.5" fill={dotInner} />
-        </g>
-        <g style={{ animation: 'pcCornerBlink 2s ease-in-out 0.5s infinite' }}>
-          <line x1="296" y1="44" x2="296" y2="4" stroke={dotInner} strokeWidth="2" />
-          <line x1="296" y1="4" x2="256" y2="4" stroke={dotInner} strokeWidth="2" />
-          <circle cx="296" cy="4" r="2.5" fill={dotInner} />
-        </g>
-        <g style={{ animation: 'pcCornerBlink 2s ease-in-out 1s infinite' }}>
-          <line x1="4" y1="256" x2="4" y2="296" stroke={dotInner} strokeWidth="2" />
-          <line x1="4" y1="296" x2="44" y2="296" stroke={dotInner} strokeWidth="2" />
-          <circle cx="4" cy="296" r="2.5" fill={dotInner} />
-        </g>
-        <g style={{ animation: 'pcCornerBlink 2s ease-in-out 1.5s infinite' }}>
-          <line x1="296" y1="256" x2="296" y2="296" stroke={dotInner} strokeWidth="2" />
-          <line x1="296" y1="296" x2="256" y2="296" stroke={dotInner} strokeWidth="2" />
-          <circle cx="296" cy="296" r="2.5" fill={dotInner} />
-        </g>
-      </svg>
+      {/* z8 — 4 CANTOS EM L DOURADOS (sem frame completo) */}
+      {CANTOS.map((c, i) => (
+        <div
+          key={i}
+          aria-hidden
+          style={{ position: 'absolute', width: 24, height: 24, zIndex: 8, pointerEvents: 'none', ...c.pos, ...c.b, animation: `snakeGlow 2.6s ease-in-out ${c.delay} infinite` }}
+        />
+      ))}
     </div>
   );
 }

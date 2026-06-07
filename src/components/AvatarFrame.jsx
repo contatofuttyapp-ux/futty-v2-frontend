@@ -1,6 +1,6 @@
 // Futty v2.0 — Moldura de avatar com 4 cantos em L dourados (animados).
 // Usar só em avatares >= 48px. active=false → cantos estáticos mais subtis.
-export default function AvatarFrame({ children, size = 48, active = true, dur = '2s', className }) {
+export default function AvatarFrame({ children, size = 48, active = true, dur = '2.6s', className }) {
   const cornerSize = size >= 56 ? 12 : 10;
   const canto = (extra, delay) => ({
     position: 'absolute',

@@ -15,7 +15,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(5, 8, 15, 0.7);
+  background: rgba(5, 8, 15, 0.8);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -52,16 +52,16 @@
   display: inline-flex;
   align-items: center;
   padding: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* Título da página — centrado e em maiúsculas */
 .topbar-title {
   font-family: 'Rajdhani', var(--sans);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: #ffffff;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   position: absolute;
   left: 50%;
@@ -1091,7 +1091,7 @@
   50% { transform: scale(1.12); }
 }
 .bottom-nav__tab--active .nav-home {
-  animation: homeBreath 2.5s ease-in-out infinite;
+  animation: homeBreath 3.3s ease-in-out infinite;
 }
 
 @keyframes trophyShake {
@@ -1102,7 +1102,7 @@
   80% { transform: rotate(4deg); }
 }
 .bottom-nav__tab--active .nav-resenha {
-  animation: trophyShake 2s ease-in-out infinite;
+  animation: trophyShake 2.6s ease-in-out infinite;
   animation-delay: 0.5s;
 }
 
@@ -1111,7 +1111,7 @@
   40% { transform: rotateY(180deg); }
 }
 .bottom-nav__tab--active .nav-ranking {
-  animation: starFlipY 3s ease-in-out infinite;
+  animation: starFlipY 3.9s ease-in-out infinite;
   color: #d4a017;
 }
 
@@ -1120,7 +1120,7 @@
   50% { opacity: 0.7; transform: scale(1.08); }
 }
 .bottom-nav__tab--active .nav-figurinha {
-  animation: cardShine 2s ease-in-out infinite;
+  animation: cardShine 2.6s ease-in-out infinite;
 }
 
 /* ===== Página Início ===== */
@@ -1223,7 +1223,7 @@
   padding: 1px;
   background: linear-gradient(90deg, transparent 0%, #f5e070 20%, #d4a017 40%, transparent 60%);
   background-size: 200% 100%;
-  animation: chipSnake 2s linear infinite;
+  animation: chipSnake 2.6s linear infinite;
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -1298,7 +1298,7 @@
   to { transform: scale(1); }
 }
 .reac-picker {
-  animation: reacPickerPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: reacPickerPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   transform-origin: bottom left;
 }
 .reac-emoji {
@@ -1322,7 +1322,7 @@
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 .trophy-entrance {
-  animation: trophyEntrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: trophyEntrance 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 /* Foco dos inputs do perfil */
@@ -1383,7 +1383,7 @@
   border: 1px solid rgba(139, 92, 246, 0.35);
   padding: 2px 6px;
   border-radius: 4px;
-  animation: badgePulse 3s ease-in-out infinite;
+  animation: badgePulse 3.9s ease-in-out infinite;
 }
 
 @keyframes badgePulse {
