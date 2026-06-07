@@ -46,6 +46,7 @@ export default function Figurinha() {
   const [fundo, setFundo] = useState('estadio');
   const [corFrame, setCorFrame] = useState('dourado');
   const [mostrarStats, setMostrarStats] = useState(true);
+  const [mostrarNome, setMostrarNome] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -81,7 +82,7 @@ export default function Figurinha() {
   }, [fullscreen]);
 
   async function gerar() {
-    return gerarFigurinhaCanvas({ jogador, stats, fundo, corFrame, mostrarStats });
+    return gerarFigurinhaCanvas({ jogador, stats, fundo, corFrame, mostrarStats, mostrarNome });
   }
 
   // Guarda as escolhas no perfil (aplicam-se em todo o app).
@@ -172,7 +173,7 @@ export default function Figurinha() {
             style={{ width: '72%', maxWidth: 300, cursor: 'pointer' }}
             aria-label="Abrir figurinha em ecrã inteiro"
           >
-            <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} mostrarStats={mostrarStats} />
+            <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} mostrarStats={mostrarStats} mostrarNome={mostrarNome} />
           </div>
         </div>
 
@@ -229,8 +230,12 @@ export default function Figurinha() {
             })}
           </div>
 
-          {/* C) MOSTRAR STATS */}
-          <SecLabel>Stats no card</SecLabel>
+          {/* C) MOSTRAR NOME / STATS */}
+          <SecLabel>No card</SecLabel>
+          <label style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer', marginBottom: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Mostrar nome</span>
+            <input type="checkbox" checked={mostrarNome} onChange={(e) => setMostrarNome(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#8b5cf6' }} />
+          </label>
           <label style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer' }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Mostrar nota · jogos · gols</span>
             <input type="checkbox" checked={mostrarStats} onChange={(e) => setMostrarStats(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#8b5cf6' }} />
@@ -271,7 +276,7 @@ export default function Figurinha() {
             ✕
           </button>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '90%', maxWidth: 380 }}>
-            <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} mostrarStats={mostrarStats} />
+            <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} mostrarStats={mostrarStats} mostrarNome={mostrarNome} />
           </div>
         </div>
       ) : null}

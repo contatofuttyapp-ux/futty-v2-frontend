@@ -69,10 +69,7 @@ const KEYFRAMES = `
   0%, 100% { filter: drop-shadow(0 0 3px #d4a017) drop-shadow(0 0 8px rgba(212,160,23,0.8)) drop-shadow(0 0 16px rgba(212,160,23,0.5)) drop-shadow(0 0 30px rgba(212,160,23,0.2)); opacity: 0.85; }
   50% { filter: drop-shadow(0 0 5px #f5e070) drop-shadow(0 0 14px #d4a017) drop-shadow(0 0 28px rgba(212,160,23,0.9)) drop-shadow(0 0 50px rgba(212,160,23,0.5)) drop-shadow(0 0 80px rgba(212,160,23,0.2)); opacity: 1; }
 }
-@keyframes pcAura { from { opacity: 0.6; transform: translateX(-50%) scale(0.9); } to { opacity: 1; transform: translateX(-50%) scale(1.1); } }
 @keyframes pcCornerBlink { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-@keyframes pcHoloSpin1 { to { transform: translate(-50%, -50%) rotate(360deg); } }
-@keyframes pcHoloSpin2 { to { transform: translate(-50%, -50%) rotate(-360deg); } }
 @keyframes pcBottomGlow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 `;
 
@@ -91,8 +88,6 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   const strokeRef = ehDourado ? 'url(#goldGrad)' : fc.stroke;
   const dotOuter = ehDourado ? '#d4a017' : fc.stroke;
   const dotInner = ehDourado ? '#f5e070' : fc.dot;
-  // Aura atrás do avatar — cor segue o frame.
-  const auraBg = `radial-gradient(ellipse at 50% 55%, ${fc.glow}0.5) 0%, ${fc.glow}0.25) 35%, ${fc.glow}0.08) 60%, transparent 75%)`;
   // Glow exterior do frame: dourado é animado; outras cores usam glow estático.
   const frameFilter = ehDourado
     ? 'drop-shadow(0 0 3px #f5e070) drop-shadow(0 0 8px #d4a017) drop-shadow(0 0 16px rgba(212,160,23,0.8)) drop-shadow(0 0 30px rgba(212,160,23,0.4)) drop-shadow(0 0 50px rgba(212,160,23,0.15))'
@@ -101,10 +96,6 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   // Glow "respiração" do card (cor segue o frame) — keyframe único por cor.
   const breathName = `pcCardBreath_${corFrame}`;
   const breathKeyframes = `@keyframes ${breathName} { 0%,100% { box-shadow: 0 0 20px ${fc.glow}0.35), 0 0 50px ${fc.glow}0.08); } 50% { box-shadow: 0 0 35px ${fc.glow}0.55), 0 0 80px ${fc.glow}0.15); } }`;
-  // Anéis holográficos — cor do frame com opacidade (hex alpha).
-  const anel1Cor = `${fc.stroke}66`; // ~40%
-  const anel2Cor = `${fc.stroke}40`; // ~25%
-  const anel3Cor = `${fc.stroke}26`; // ~15%
   const fundoCss =
     fundo === 'preto'
       ? '#000000'
@@ -115,7 +106,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   return (
     <div
       aria-label={`Card de ${nome}${equipa?.nome ? ` · ${equipa.nome}` : ''}`}
-      style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 16, overflow: 'hidden', background: fundoCss, animation: `${breathName} 3.5s ease-in-out infinite`, willChange: 'box-shadow' }}
+      style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 0, overflow: 'hidden', background: fundoCss, animation: `${breathName} 3.5s ease-in-out infinite`, willChange: 'box-shadow' }}
     >
       <style>{KEYFRAMES + breathKeyframes}</style>
 
@@ -195,25 +186,6 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
         />
       ))}
 
-      {/* z3 — AURA DOURADA atrás do avatar */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '5%',
-          left: '50%',
-          width: '80%',
-          height: '80%',
-          zIndex: 3,
-          pointerEvents: 'none',
-          borderRadius: '50%',
-          background: auraBg,
-          filter: 'blur(22px)',
-          transform: 'translateX(-50%)',
-          willChange: 'transform, opacity',
-          animation: 'pcAura 3s ease-in-out infinite alternate',
-        }}
-      />
-
       {/* z4 — AVATAR DO JOGADOR (preenche o quadrado, topo) */}
       {temAvatar ? (
         <img
@@ -240,11 +212,6 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           {iniciaisNome(nome)}
         </div>
       )}
-
-      {/* z5 — ANÉIS HOLOGRÁFICOS a rodar sobre o avatar */}
-      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '70%', height: '70%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1.5px solid ${anel1Cor}`, borderTopColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin1 8s linear infinite' }} />
-      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '82%', height: '82%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1px dashed ${anel2Cor}`, borderBottomColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin2 12s linear infinite' }} />
-      <div style={{ position: 'absolute', left: '50%', top: '45%', width: '94%', height: '94%', transform: 'translate(-50%, -50%)', borderRadius: '50%', border: `1px solid ${anel3Cor}`, borderLeftColor: 'transparent', zIndex: 5, pointerEvents: 'none', willChange: 'transform', animation: 'pcHoloSpin1 18s linear infinite' }} />
 
       {/* z4 — REFLEXO DE LUZ (holográfico) */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none', overflow: 'hidden' }}>
@@ -364,10 +331,10 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
             <stop offset="100%" stopColor="#b8860b" />
           </linearGradient>
         </defs>
-        {/* Borda principal com cantos cortados (quadrado) */}
-        <path d="M20,0 L0,20 L0,280 L20,300 L280,300 L300,280 L300,20 L280,0 Z" fill="none" stroke={strokeRef} strokeWidth="3" />
+        {/* Borda principal (cantos retos, 90°) */}
+        <rect x="1.5" y="1.5" width="297" height="297" fill="none" stroke={strokeRef} strokeWidth="3" />
         {/* Borda interior mais fina */}
-        <path d="M24,4 L4,24 L4,276 L24,296 L276,296 L296,276 L296,24 L276,4 Z" fill="none" stroke={dotInner} strokeWidth="1" strokeOpacity="0.35" />
+        <rect x="5" y="5" width="290" height="290" fill="none" stroke={dotInner} strokeWidth="1" strokeOpacity="0.35" />
         {/* Linhas decorativas a meio (esquerda/direita) */}
         <line x1="0" y1="150" x2="20" y2="150" stroke={strokeRef} strokeWidth="1.4" />
         <line x1="280" y1="150" x2="300" y2="150" stroke={strokeRef} strokeWidth="1.4" />
@@ -386,24 +353,24 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
 
         {/* Cantos decorativos em L (piscar alternado) */}
         <g style={{ animation: 'pcCornerBlink 2s ease-in-out 0s infinite' }}>
-          <line x1="0" y1="40" x2="0" y2="16" stroke={dotInner} strokeWidth="2" />
-          <line x1="0" y1="16" x2="40" y2="16" stroke={dotInner} strokeWidth="2" />
-          <circle cx="0" cy="16" r="2.5" fill={dotInner} />
+          <line x1="4" y1="44" x2="4" y2="4" stroke={dotInner} strokeWidth="2" />
+          <line x1="4" y1="4" x2="44" y2="4" stroke={dotInner} strokeWidth="2" />
+          <circle cx="4" cy="4" r="2.5" fill={dotInner} />
         </g>
         <g style={{ animation: 'pcCornerBlink 2s ease-in-out 0.5s infinite' }}>
-          <line x1="300" y1="40" x2="300" y2="16" stroke={dotInner} strokeWidth="2" />
-          <line x1="300" y1="16" x2="260" y2="16" stroke={dotInner} strokeWidth="2" />
-          <circle cx="300" cy="16" r="2.5" fill={dotInner} />
+          <line x1="296" y1="44" x2="296" y2="4" stroke={dotInner} strokeWidth="2" />
+          <line x1="296" y1="4" x2="256" y2="4" stroke={dotInner} strokeWidth="2" />
+          <circle cx="296" cy="4" r="2.5" fill={dotInner} />
         </g>
         <g style={{ animation: 'pcCornerBlink 2s ease-in-out 1s infinite' }}>
-          <line x1="0" y1="260" x2="0" y2="284" stroke={dotInner} strokeWidth="2" />
-          <line x1="0" y1="284" x2="40" y2="284" stroke={dotInner} strokeWidth="2" />
-          <circle cx="0" cy="284" r="2.5" fill={dotInner} />
+          <line x1="4" y1="256" x2="4" y2="296" stroke={dotInner} strokeWidth="2" />
+          <line x1="4" y1="296" x2="44" y2="296" stroke={dotInner} strokeWidth="2" />
+          <circle cx="4" cy="296" r="2.5" fill={dotInner} />
         </g>
         <g style={{ animation: 'pcCornerBlink 2s ease-in-out 1.5s infinite' }}>
-          <line x1="300" y1="260" x2="300" y2="284" stroke={dotInner} strokeWidth="2" />
-          <line x1="300" y1="284" x2="260" y2="284" stroke={dotInner} strokeWidth="2" />
-          <circle cx="300" cy="284" r="2.5" fill={dotInner} />
+          <line x1="296" y1="256" x2="296" y2="296" stroke={dotInner} strokeWidth="2" />
+          <line x1="296" y1="296" x2="256" y2="296" stroke={dotInner} strokeWidth="2" />
+          <circle cx="296" cy="296" r="2.5" fill={dotInner} />
         </g>
       </svg>
     </div>

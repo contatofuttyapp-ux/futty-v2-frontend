@@ -5,10 +5,11 @@ import { apiFetch } from '../lib/api';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 
-export default function Reacoes({ targetType, targetId, contagemInicial = {}, minhaReacaoInicial = null }) {
+export default function Reacoes({ targetType, targetId, contagemInicial = {}, minhaReacaoInicial = null, compacto = false }) {
   const [contagem, setContagem] = useState(contagemInicial);
   const [minha, setMinha] = useState(minhaReacaoInicial);
   const [busy, setBusy] = useState(false);
+  const [pickerAberto, setPickerAberto] = useState(false);
 
   async function toggle(emoji) {
     if (busy) return;
@@ -43,6 +44,45 @@ export default function Reacoes({ targetType, targetId, contagemInicial = {}, mi
     } finally {
       setBusy(false);
     }
+  }
+
+  // Modo compacto (estilo Instagram): só o total + ❤️; toca → picker de emojis.
+  if (compacto) {
+    const total = Object.values(contagem).reduce((a, b) => a + (b || 0), 0);
+    return (
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <button
+          type="button"
+          onClick={() => setPickerAberto((v) => !v)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', fontSize: 12, padding: 0 }}
+        >
+          <span>❤️</span>
+          <span>{total > 0 ? `${total} ${total === 1 ? 'reacção' : 'reacções'}` : 'Reagir'}</span>
+        </button>
+        {pickerAberto ? (
+          <div
+            className="reac-picker"
+            style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, display: 'flex', gap: 12, background: '#0d0d12', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '6px 12px', zIndex: 20, boxShadow: '0 6px 20px rgba(0,0,0,0.5)' }}
+          >
+            {EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                className="reac-emoji"
+                aria-label={emoji}
+                onClick={() => {
+                  toggle(emoji);
+                  setPickerAberto(false);
+                }}
+                style={minha === emoji ? { transform: 'scale(1.2)' } : undefined}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   return (

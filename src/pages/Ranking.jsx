@@ -120,7 +120,6 @@ export default function Ranking() {
         </Link>
 
         <h1 className="app-page-title font-premium" style={{ letterSpacing: '0.04em' }}>Ranking</h1>
-        <p className="app-page-sub">Classificação dos jogadores da equipa.</p>
 
         {mostrarBanner ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.3)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>

@@ -1,6 +1,7 @@
 // Futty v2.0 — Resenha (/feed): feed social por equipa.
 // Jogos passados com resultado + posts editoriais. Sem Topbar (título no conteúdo).
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Trophy, Eye, Share2 } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import AdCard from '../components/AdCard';
 import { useAuth } from '../hooks/useAuth';
@@ -70,7 +71,7 @@ function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
       style={{
         width: size,
         height: size,
-        borderRadius: '50%',
+        borderRadius: 6,
         overflow: 'hidden',
         flexShrink: 0,
         display: 'grid',
@@ -114,7 +115,7 @@ function PremioRow({ glow, label, labelColor, nome, sub }) {
 }
 
 // ─── Card de JOGO ──────────────────────────────────────────────────────────────
-function JogoCard({ j, isAdmin, teamSlug, onOpenImage }) {
+function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
   const [detalhes, setDetalhes] = useState(true);
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
   const [contagem, setContagem] = useState(null);
@@ -141,7 +142,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage }) {
   }
 
   return (
-    <div style={CARD}>
+    <div className="anim-slide-in" style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
       {/* A) HEADER */}
       <div style={{ padding: 14, position: 'relative' }}>
         <div style={{ paddingRight: 80 }}>
@@ -153,12 +154,12 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage }) {
             {[j.team_name, j.location].filter(Boolean).join(' · ') || 'Jogo'}
           </div>
         </div>
-        <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 6 }}>
-          <button type="button" aria-label={detalhes ? 'Esconder detalhes' : 'Mostrar detalhes'} onClick={() => setDetalhes((v) => !v)} style={iconBtn}>
-            {detalhes ? '👁️' : '🙈'}
+        <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 10 }}>
+          <button type="button" aria-label={detalhes ? 'Esconder detalhes' : 'Mostrar detalhes'} onClick={() => setDetalhes((v) => !v)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex' }}>
+            <Eye size={16} strokeWidth={1.5} color="rgba(255,255,255,0.25)" />
           </button>
-          <button type="button" aria-label="Partilhar" onClick={partilhar} style={iconBtn}>
-            📤
+          <button type="button" aria-label="Partilhar" onClick={partilhar} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex' }}>
+            <Share2 size={16} strokeWidth={1.5} color="rgba(255,255,255,0.25)" />
           </button>
         </div>
       </div>
@@ -249,7 +250,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage }) {
 
       {/* G) REAÇÕES */}
       <div style={{ padding: '12px 14px', borderTop: '1px solid #222222' }}>
-        <Reacoes targetType="game" targetId={j.id} contagemInicial={j.contagem_reacoes} minhaReacaoInicial={j.minha_reacao} />
+        <Reacoes targetType="game" targetId={j.id} contagemInicial={j.contagem_reacoes} minhaReacaoInicial={j.minha_reacao} compacto />
       </div>
 
       {/* H) COMENTÁRIOS */}
@@ -264,7 +265,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage }) {
 }
 
 // ─── Card de POST editorial ────────────────────────────────────────────────────
-function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImage }) {
+function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImage, index = 0 }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
@@ -275,7 +276,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
   const podeDenunciar = p.author_id !== meId;
 
   return (
-    <div style={CARD}>
+    <div className="anim-slide-in" style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
       {/* A) HEADER */}
       <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <FeedAvatar nome={p.author_nome} avatarUrl={p.author_avatar_url} size={40} />
@@ -352,7 +353,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
 
       {/* C) REAÇÕES */}
       <div style={{ padding: '12px 14px', borderTop: '1px solid #222222' }}>
-        <Reacoes targetType="post" targetId={p.id} contagemInicial={p.contagem_reacoes} minhaReacaoInicial={p.minha_reacao} />
+        <Reacoes targetType="post" targetId={p.id} contagemInicial={p.contagem_reacoes} minhaReacaoInicial={p.minha_reacao} compacto />
       </div>
 
       {/* D) COMENTÁRIOS */}
@@ -615,7 +616,10 @@ export default function Feed() {
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {/* 1. CABEÇALHO */}
-        <h1 style={{ textAlign: 'center', fontWeight: 800, fontSize: 24, color: '#fff', margin: '4px 0 10px' }}>🏆 Resenha 🏆</h1>
+        <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontWeight: 800, fontSize: 24, color: '#fff', margin: '4px 0 10px' }}>
+          <Trophy className="trophy-entrance" size={22} strokeWidth={2} color="#d4a017" />
+          Resenha
+        </h1>
         <div className="app-topbar__line" style={{ marginBottom: 6 }} />
 
         {/* 2. CHIPS DE EQUIPA */}
@@ -661,9 +665,10 @@ export default function Feed() {
                     meId={meId}
                     onDelete={apagarPost}
                     onOpenImage={setImgFull}
+                    index={i}
                   />
                 ) : (
-                  <JogoCard key={`jogo-${item.id}`} j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} />
+                  <JogoCard key={`jogo-${item.id}`} j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} index={i} />
                 );
               // Anúncio nativo entre o 3º e o 4º item do feed.
               if (i === 2) {

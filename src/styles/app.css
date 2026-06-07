@@ -303,7 +303,7 @@
 .member-avatar {
   width: 38px;
   height: 38px;
-  border-radius: 50%;
+  border-radius: 6px;
   background: rgba(124, 58, 237, 0.25);
   display: grid;
   place-items: center;
@@ -753,7 +753,7 @@
 .pavatar {
   width: 52px;
   height: 52px;
-  border-radius: 50%;
+  border-radius: 6px;
   display: grid;
   place-items: center;
   font-weight: 800;
@@ -1239,35 +1239,75 @@
 
 /* Lista de jogos */
 .games-label {
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #d4a017;
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 700;
-  opacity: 0.9;
   margin: 18px 0 10px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-/* Linha decorativa dourada a seguir ao título. */
+/* Linha decorativa dourada muito subtil a seguir ao título. */
 .games-label::after {
   content: '';
   flex: 1;
   height: 1px;
-  opacity: 0.4;
+  opacity: 0.2;
   background: linear-gradient(to right, #d4a017, transparent);
 }
 
 .gcard {
-  background: linear-gradient(135deg, #0d0d12 0%, #0f0f16 100%);
-  border: 1px solid rgba(212, 160, 23, 0.08);
-  border-left: 2px solid rgba(212, 160, 23, 0.6);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, #0d0d12 8%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 2px solid rgba(139, 92, 246, 0.4);
   border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 10px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(212, 160, 23, 0.02);
+  transform: translateY(0);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.gcard:hover,
+.gcard:active {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+/* Picker de reacções (estilo Instagram) */
+@keyframes reacPickerPop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+.reac-picker {
+  animation: reacPickerPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: bottom left;
+}
+.reac-emoji {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.2s ease;
+}
+.reac-emoji:hover,
+.reac-emoji:active {
+  transform: scale(1.4);
+}
+
+/* Entrada do troféu no header da Resenha */
+@keyframes trophyEntrance {
+  0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.trophy-entrance {
+  animation: trophyEntrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .gcard--past {

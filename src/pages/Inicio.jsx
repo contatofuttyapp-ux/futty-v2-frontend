@@ -209,7 +209,7 @@ export default function Inicio() {
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {/* Header: logo FUT. (esquerda) + Início (direita). Sem Topbar. */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-          <FuttyLogo size="lg" showIcon />
+          <FuttyLogo size="lg" />
           <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>
             Início
           </span>
@@ -255,7 +255,7 @@ export default function Inicio() {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '85%', maxWidth: 280 }}>
-              <div style={{ flex: 1, height: 2, borderRadius: 2, transformOrigin: 'left center', backgroundImage: 'linear-gradient(90deg, #d4a017, #f5e070, #d4a017, #8B6508, #d4a017)', backgroundSize: '200% 100%', animation: 'lineReveal 0.8s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 3s linear infinite 0.8s' }} />
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.12)' }} />
               <div
                 style={{
                   fontFamily: "'Rajdhani', sans-serif",
@@ -277,7 +277,7 @@ export default function Inicio() {
               >
                 {nome}
               </div>
-              <div style={{ flex: 1, height: 2, borderRadius: 2, transformOrigin: 'right center', backgroundImage: 'linear-gradient(90deg, #d4a017, #f5e070, #d4a017, #8B6508, #d4a017)', backgroundSize: '200% 100%', animation: 'lineReveal 0.8s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 3s linear infinite 0.8s' }} />
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.12)' }} />
             </div>
           )}
           {teams[0] ? (

@@ -29,7 +29,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = 'estadio', corFrame = 'dourado', mostrarStats = true }) {
+export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = 'estadio', corFrame = 'dourado', mostrarStats = true, mostrarNome = true }) {
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -118,19 +118,21 @@ export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = '
 
   const nota = Number.isFinite(stats?.nota) ? Number(stats.nota).toFixed(1) : '--';
 
-  // 5. NOME
-  const nomeY = mostrarStats ? H - 54 : H - 32;
-  ctx.save();
-  ctx.shadowColor = 'rgba(139,92,246,0.5)';
-  ctx.shadowBlur = 24;
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.font = '900 38px system-ui, "Segoe UI", sans-serif';
-  let nomeUpper = String(nome).toUpperCase();
-  while (ctx.measureText(nomeUpper).width > W - 40 && nomeUpper.length > 3) nomeUpper = nomeUpper.slice(0, -1);
-  ctx.fillText(nomeUpper, W / 2, nomeY);
-  ctx.restore();
+  // 5. NOME (opcional)
+  if (mostrarNome) {
+    const nomeY = mostrarStats ? H - 54 : H - 32;
+    ctx.save();
+    ctx.shadowColor = 'rgba(139,92,246,0.5)';
+    ctx.shadowBlur = 24;
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '900 38px system-ui, "Segoe UI", sans-serif';
+    let nomeUpper = String(nome).toUpperCase();
+    while (ctx.measureText(nomeUpper).width > W - 40 && nomeUpper.length > 3) nomeUpper = nomeUpper.slice(0, -1);
+    ctx.fillText(nomeUpper, W / 2, nomeY);
+    ctx.restore();
+  }
 
   // 6. STATS (opcional)
   if (mostrarStats) {

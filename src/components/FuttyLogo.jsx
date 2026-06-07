@@ -21,12 +21,11 @@ export default function FuttyLogo({ size = 'md', showIcon = false, linkTo = null
           fontWeight: 700,
           fontSize: s.text,
           letterSpacing: '0.18em',
-          color: '#d4a017',
-          textShadow: '0 0 12px rgba(212,160,23,0.4)',
+          color: '#ffffff',
           lineHeight: 1,
         }}
       >
-        FUT<span style={{ color: '#f5e070' }}>.</span>
+        FUTTY
       </span>
     </>
   );
