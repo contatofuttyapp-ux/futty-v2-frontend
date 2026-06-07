@@ -287,7 +287,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 800, color: '#fff', fontSize: 14 }}>{p.author_nome || 'Membro'}</span>
             {p.team_name ? (
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#b69cff', background: 'rgba(124,58,237,0.18)', border: '1px solid var(--purple)', borderRadius: 999, padding: '2px 8px' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#b69cff', background: 'rgba(124,58,237,0.18)', border: '1px solid var(--purple)', borderRadius: 6, padding: '2px 8px' }}>
                 {p.team_name}
               </span>
             ) : null}

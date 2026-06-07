@@ -1331,12 +1331,11 @@
   border-color: rgba(139, 92, 246, 0.5);
 }
 
-/* Cantos em L dourados (AvatarFrame) — pulso tipo cobra/serpente */
-@keyframes cornerSnake {
-  0%, 100% { opacity: 0.6; box-shadow: 0 0 3px rgba(212, 160, 23, 0.3); }
-  25% { opacity: 1; box-shadow: 0 0 8px rgba(212, 160, 23, 0.7); }
-  50% { opacity: 0.7; box-shadow: 0 0 4px rgba(212, 160, 23, 0.4); }
-  75% { opacity: 1; box-shadow: 0 0 10px rgba(212, 160, 23, 0.8); }
+/* Cantos em L dourados (AvatarFrame) — luz a percorrer os 4 cantos em sequência */
+@keyframes snakeGlow {
+  0%, 100% { opacity: 0.15; box-shadow: none; }
+  25% { opacity: 1; box-shadow: 0 0 8px rgba(212, 160, 23, 0.8), 0 0 16px rgba(212, 160, 23, 0.4); }
+  50% { opacity: 0.15; box-shadow: none; }
 }
 
 .gcard--past {

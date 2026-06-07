@@ -271,7 +271,7 @@ export default function Inicio() {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '85%', maxWidth: 280 }}>
-              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.12)' }} />
+              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 0.8s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 2.5s linear infinite 0.8s' }} />
               <div
                 style={{
                   fontFamily: "'Rajdhani', sans-serif",
@@ -293,7 +293,7 @@ export default function Inicio() {
               >
                 {nome}
               </div>
-              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.12)' }} />
+              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 0.8s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 2.5s linear infinite 0.8s' }} />
             </div>
           )}
           {teams[0] ? (

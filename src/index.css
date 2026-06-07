@@ -70,18 +70,18 @@ body::after {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  will-change: opacity, transform;
+  will-change: opacity;
   background:
-    /* Holofote principal centro-topo */
-    radial-gradient(ellipse 60% 35% at 50% -5%, rgba(212, 160, 23, 0.18) 0%, transparent 70%),
-    /* Holofote esquerdo */
-    radial-gradient(ellipse 40% 50% at -5% 20%, rgba(180, 120, 20, 0.1) 0%, transparent 65%),
-    /* Holofote direito */
-    radial-gradient(ellipse 40% 50% at 105% 20%, rgba(180, 120, 20, 0.1) 0%, transparent 65%),
-    /* Clarão subtil no centro */
-    radial-gradient(ellipse 80% 40% at 50% 30%, rgba(212, 160, 23, 0.04) 0%, transparent 80%),
+    /* Holofote principal centro-topo — mais intenso */
+    radial-gradient(ellipse 80% 45% at 50% -5%, rgba(212, 160, 23, 0.3) 0%, rgba(180, 120, 20, 0.15) 40%, transparent 70%),
+    /* Holofote esquerdo — mais visível */
+    radial-gradient(ellipse 50% 60% at -10% 10%, rgba(180, 120, 20, 0.18) 0%, transparent 65%),
+    /* Holofote direito — mais visível */
+    radial-gradient(ellipse 50% 60% at 110% 10%, rgba(180, 120, 20, 0.18) 0%, transparent 65%),
+    /* Clarão central subtil */
+    radial-gradient(ellipse 70% 35% at 50% 25%, rgba(212, 160, 23, 0.07) 0%, transparent 80%),
     /* Escuridão no fundo */
-    radial-gradient(ellipse 100% 60% at 50% 100%, rgba(0, 0, 0, 0.4) 0%, transparent 100%);
+    radial-gradient(ellipse 100% 40% at 50% 100%, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
   animation: stadiumBreath 8s ease-in-out infinite alternate;
 }
 
