@@ -1,200 +1,156 @@
-// Futty v2.0 — Explorar (/explorar): descobrir equipas públicas e pedir entrada.
-// Sem Topbar, mobile-first, dark theme.
+// Futty v2.0 — Explorar (/explorar): lista de equipas públicas + pesquisa local.
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import TeamAvatar from '../components/TeamAvatar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
-const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
+function diasAtras(data) {
+  const dias = Math.floor((Date.now() - new Date(data)) / 86400000);
+  if (dias <= 0) return 'hoje';
+  if (dias === 1) return 'ontem';
+  if (dias < 7) return `há ${dias} dias`;
+  if (dias < 30) return `há ${Math.floor(dias / 7)} sem.`;
+  return `há ${Math.floor(dias / 30)} meses`;
+}
 
+// Card skeleton com shimmer enquanto carrega.
 function SkeletonCard() {
   return (
-    <div style={{ ...CARD, padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
-      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1a1a1a', flexShrink: 0 }} />
-      <div style={{ flex: 1, display: 'grid', gap: 8 }}>
-        <div style={{ height: 14, width: '55%', background: '#1a1a1a', borderRadius: 6 }} />
-        <div style={{ height: 11, width: '35%', background: '#161616', borderRadius: 6 }} />
-      </div>
+    <div style={{ position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', borderRadius: 8, height: 68, marginBottom: 8 }}>
+      <span
+        aria-hidden
+        style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: 'rankShimmer 1.5s ease-in-out infinite' }}
+      />
     </div>
   );
 }
 
 export default function Explorar() {
-  const [q, setQ] = useState('');
-  const [teams, setTeams] = useState(null); // null = a carregar
-  const [erro, setErro] = useState('');
-  const [modalTeam, setModalTeam] = useState(null);
-  const [mensagem, setMensagem] = useState('');
-  const [enviando, setEnviando] = useState(false);
+  const [equipas, setEquipas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pesquisa, setPesquisa] = useState('');
+  const [busy, setBusy] = useState(null); // slug em processamento
   const [toast, setToast] = useState(null);
 
-  // Pesquisa com debounce de 400ms.
   useEffect(() => {
     let ativo = true;
-    const id = setTimeout(() => {
-      setTeams(null);
-      setErro('');
-      const query = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : '';
-      apiFetch(`/api/teams/explorar${query}`)
-        .then((d) => ativo && setTeams(d.teams || []))
-        .catch((e) => {
-          if (!ativo) return;
-          setErro(e.message);
-          setTeams([]);
-        });
-    }, 400);
+    apiFetch('/api/teams/publicas')
+      .then((d) => {
+        if (!ativo) return;
+        setEquipas(d.teams || []);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (!ativo) return;
+        setToast({ tipo: 'error', mensagem: e.message });
+        setLoading(false);
+      });
     return () => {
       ativo = false;
-      clearTimeout(id);
     };
-  }, [q]);
+  }, []);
 
-  function abrirPedido(team) {
-    setModalTeam(team);
-    setMensagem('');
-  }
+  const filtradas = equipas.filter(
+    (e) =>
+      e.nome.toLowerCase().includes(pesquisa.toLowerCase()) ||
+      (e.localizacao || '').toLowerCase().includes(pesquisa.toLowerCase())
+  );
 
-  async function enviarPedido() {
-    if (enviando || !modalTeam) return;
-    setEnviando(true);
+  // Entra (equipa aberta) ou cria pedido (com aprovação) — reutiliza /pedir-entrada.
+  async function pedirEntrada(equipa) {
+    if (busy) return;
+    setBusy(equipa.slug);
     try {
-      const r = await apiFetch(`/api/teams/${modalTeam.slug}/pedir-entrada`, {
-        method: 'POST',
-        body: JSON.stringify({ mensagem: mensagem.trim() || undefined }),
-      });
-      // Equipa aberta → entrou já; com aprovação → pedido pendente.
+      const r = await apiFetch(`/api/teams/${equipa.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
       const entrou = !!r?.entrou;
-      setTeams((cur) =>
-        (cur || []).map((t) => (t.slug === modalTeam.slug ? { ...t, ja_membro: entrou, pedido_pendente: !entrou } : t))
-      );
-      setModalTeam(null);
+      setEquipas((cur) => cur.map((t) => (t.slug === equipa.slug ? { ...t, _estado: entrou ? 'membro' : 'pendente' } : t)));
       setToast({ tipo: 'success', mensagem: entrou ? 'Entraste na equipa!' : 'Pedido enviado!' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {
-      setEnviando(false);
+      setBusy(null);
     }
   }
-
-  const loading = teams === null;
 
   return (
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* 1. CABEÇALHO */}
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: '4px 0 4px' }}>🗺️ Explorar equipas</h1>
-        <p className="app-page-sub" style={{ marginBottom: 14 }}>Encontra a tua próxima pelada</p>
+        {/* CABEÇALHO */}
+        <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 24, fontWeight: 700, color: '#fff', margin: '4px 0 4px' }}>Explorar equipas</h1>
+        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 14 }}>Encontra a tua próxima pelada</p>
 
-        {/* 2. BARRA DE PESQUISA */}
-        <div style={{ ...CARD, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
+        {/* PESQUISA */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 14 }}>
           <span style={{ fontSize: 16 }}>🔍</span>
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={pesquisa}
+            onChange={(e) => setPesquisa(e.target.value)}
             placeholder="Pesquisar por nome ou cidade…"
             style={{ flex: 1, border: 'none', background: 'transparent', color: '#fff', outline: 'none', fontSize: 14 }}
           />
         </div>
 
-        {erro ? <div className="alert alert--error" style={{ marginTop: 12 }}>{erro}</div> : null}
-
-        {/* 3. LISTA */}
-        <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
-          {loading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
-          ) : teams.length === 0 ? (
-            <div className="empty-state" style={{ marginTop: 8 }}>
-              <div className="empty-state__emoji">🗺️</div>
-              <p className="muted">Nenhuma equipa pública encontrada.</p>
-            </div>
-          ) : (
-            teams.map((t) => (
-              <div key={t.id} style={{ ...CARD, padding: 14, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <TeamAvatar team={t} size="md" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>{t.nome}</div>
-                  {t.localizacao ? (
-                    <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-dim)' }}>📍 {t.localizacao}</div>
-                  ) : null}
-                  {t.descricao ? (
-                    <div style={{ marginTop: 4, fontSize: 13, color: 'var(--text-dim)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {t.descricao}
-                    </div>
-                  ) : null}
-                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-dim)' }}>
-                    {t.membro_count} {t.membro_count === 1 ? 'membro' : 'membros'}
-                  </div>
-                </div>
-                <div style={{ flexShrink: 0, alignSelf: 'center' }}>
-                  {t.ja_membro ? (
-                    <span style={chip('var(--neon)')}>Já és membro</span>
-                  ) : t.pedido_pendente ? (
-                    <span style={chip('#b69cff')}>Pedido enviado</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => abrirPedido(t)}
-                      style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid var(--purple)', background: 'rgba(124,58,237,0.14)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    >
-                      {t.modo_visibilidade === 'publico_aberto' ? 'Entrar' : 'Pedir entrada'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </main>
-
-      {/* 4. MODAL DE PEDIDO */}
-      {modalTeam ? (
-        <div className="modal-overlay" role="presentation" onClick={() => !enviando && setModalTeam(null)}>
-          <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <div className="modal-card__inner" style={{ textAlign: 'left' }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, textAlign: 'center' }}>
-                Pedir entrada em {modalTeam.nome}
-              </h2>
-              <textarea
-                value={mensagem}
-                onChange={(e) => setMensagem(e.target.value.slice(0, 300))}
-                placeholder="Apresenta-te (opcional)…"
-                rows={3}
-                style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 10, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 13, resize: 'vertical' }}
-              />
-              <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-                <button type="button" className="btn btn--ghost" style={{ flex: 1 }} disabled={enviando} onClick={() => setModalTeam(null)}>
-                  Cancelar
-                </button>
-                <button type="button" className="btn btn--purple" style={{ flex: 1 }} disabled={enviando} onClick={enviarPedido}>
-                  {enviando ? 'A enviar…' : 'Enviar pedido'}
-                </button>
-              </div>
-            </div>
+        {/* LISTA */}
+        {loading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : filtradas.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 0', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
+            {pesquisa ? 'Nenhuma equipa encontrada.' : 'Ainda não há equipas públicas.'}
           </div>
-        </div>
-      ) : null}
+        ) : (
+          filtradas.map((equipa) => (
+            <div
+              key={equipa.id}
+              style={{
+                background: '#0d0d12',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderLeft: '2px solid rgba(212,160,23,0.25)',
+                borderRadius: 8,
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                marginBottom: 8,
+              }}
+            >
+              <TeamAvatar team={equipa} size="sm" />
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: "'Rajdhani', sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {equipa.nome}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 2 }}>
+                  {equipa.localizacao ? `📍 ${equipa.localizacao} · ` : ''}
+                  {equipa.numero_membros} membros
+                  {equipa.ultimo_jogo ? ` · ${diasAtras(equipa.ultimo_jogo)}` : ''}
+                </div>
+              </div>
+
+              {equipa._estado === 'membro' ? (
+                <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, color: 'var(--neon)' }}>Já és membro</span>
+              ) : equipa._estado === 'pendente' ? (
+                <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, color: '#b69cff' }}>Pedido enviado</span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy === equipa.slug}
+                  onClick={() => pedirEntrada(equipa)}
+                  style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 6, color: '#8b5cf6', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  {equipa.modo_visibilidade === 'publico_aberto' ? 'Entrar' : 'Pedir entrada'}
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </main>
 
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
   );
-}
-
-// Chip de estado (já membro / pedido enviado).
-function chip(cor) {
-  return {
-    display: 'inline-block',
-    padding: '6px 10px',
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 700,
-    color: cor,
-    border: `1px solid ${cor}`,
-    background: 'rgba(255,255,255,0.03)',
-    whiteSpace: 'nowrap',
-  };
 }
