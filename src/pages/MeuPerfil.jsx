@@ -9,7 +9,6 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
 import UploadComCrop from '../components/UploadComCrop';
 import PlayerAvatar from '../components/PlayerAvatar';
-import AvatarFrame from '../components/AvatarFrame';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -22,7 +21,7 @@ const GENERICOS = [
   'bola.png', 'carta_fut.png', 'chuteira.png',
 ];
 
-const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
+const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12 };
 
 function genericoSrc(file) {
   return encodeURI(`/avatares/genericos/${file}`);
@@ -31,7 +30,7 @@ function genericoSrc(file) {
 // Label de secção (uppercase cinzento).
 function SecLabel({ children }) {
   return (
-    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '22px 0 8px' }}>
+    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '1.5px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', margin: '22px 0 8px' }}>
       {children}
     </div>
   );
@@ -144,7 +143,7 @@ export default function MeuPerfil() {
         {erro ? <div className="alert alert--error" style={{ marginBottom: 12 }}>{erro}</div> : null}
 
         {/* 1. HEADER SIMPLES (avatar + nome + email) */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ ...CARD, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
           <div
             role="button"
             tabIndex={0}
@@ -153,9 +152,7 @@ export default function MeuPerfil() {
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setAvatarAberto((v) => !v)}
             style={{ cursor: 'pointer', lineHeight: 0, flexShrink: 0 }}
           >
-            <AvatarFrame size={64}>
-              <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold size={64} />
-            </AvatarFrame>
+            <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold size={64} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeMostrar}</div>
@@ -261,14 +258,14 @@ export default function MeuPerfil() {
             <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Email</span>
             <div style={{ ...inputStyle, color: 'var(--text-dim)' }}>{u.email || user?.email || '—'}</div>
           </label>
-          <button type="button" style={{ width: '100%', padding: 14, background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: 8, color: '#8b5cf6', fontFamily: "'Rajdhani', sans-serif", fontSize: 15, fontWeight: 700, cursor: 'pointer' }} disabled={savingDados} onClick={guardarDados}>
+          <button type="button" className="btn btn--purple" style={{ width: '100%' }} disabled={savingDados} onClick={guardarDados}>
             {savingDados ? 'A guardar…' : 'Guardar dados'}
           </button>
         </div>
 
         {/* 5. SECÇÃO CONTA */}
         <SecLabel>Conta</SecLabel>
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ ...CARD, overflow: 'hidden' }}>
           {pushEstado !== 'nao_suportado' ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>🔔 Notificações push</span>

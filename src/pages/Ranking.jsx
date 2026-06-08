@@ -174,7 +174,7 @@ export default function Ranking() {
                     {p.sou_eu ? (
                       <span className="muted" style={{ fontSize: 11, fontWeight: 800, color: 'var(--neon)', border: '1px solid var(--neon)', borderRadius: 999, padding: '3px 9px' }}>Tu</span>
                     ) : (
-                      <button type="button" className="btn btn--primary btn--sm" onClick={() => openVote(p)}>
+                      <button type="button" className={`btn btn--primary btn--sm ${eu ? '' : 'pulse-active'}`} onClick={() => openVote(p)}>
                         {eu ? 'Alterar' : 'Votar'}
                       </button>
                     )}

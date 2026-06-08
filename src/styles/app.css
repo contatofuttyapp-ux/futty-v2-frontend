@@ -1354,6 +1354,15 @@
   50% { box-shadow: 0 0 20px rgba(212, 160, 23, 0.5), 0 0 40px rgba(212, 160, 23, 0.2); border-color: rgba(212, 160, 23, 0.7); }
 }
 
+/* Classe reutilizável: chama a atenção para uma ação disponível (Votar, Vou…). */
+.pulse-active {
+  animation: heroicPulse 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-active { animation: none; }
+}
+
 .gcard--past {
   opacity: 0.55;
 }

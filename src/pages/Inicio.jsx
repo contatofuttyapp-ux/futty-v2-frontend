@@ -82,7 +82,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
         <div className="gcard__presence">
           <button
             type="button"
-            className={`pbtn pbtn--go ${going ? 'active' : ''}`}
+            className={`pbtn pbtn--go ${going ? 'active' : ''} ${!going && !busy ? 'pulse-active' : ''}`}
             disabled={busy}
             onClick={() => onPresence(game.id, true)}
           >

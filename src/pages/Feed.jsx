@@ -72,8 +72,8 @@ function delayDoNome(nome) {
   return `${(h / 10).toFixed(1)}s`;
 }
 
-// ─── Avatar com glow colorido (artilheiro/destaque/rodada/autor) ───────────────
-function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
+// ─── Avatar (igual aos cards do Ranking: AvatarFrame + cornerBreath) ───────────
+function FeedAvatar({ nome, avatarUrl, size = 48 }) {
   const [falhou, setFalhou] = useState(false);
   const src = avatarUrl ? assetUrl(avatarUrl) : null;
   const inner = (
@@ -86,16 +86,14 @@ function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
         flexShrink: 0,
         display: 'grid',
         placeItems: 'center',
-        background: 'var(--bg-elev)',
+        background: '#15151a',
         color: 'var(--text)',
         fontWeight: 800,
         fontSize: Math.round(size * 0.34),
-        border: `1px solid ${glow || 'var(--border)'}`,
-        boxShadow: glow ? `0 0 14px ${glow}55` : 'none',
       }}
     >
       {src && !falhou ? (
-        <img src={src} alt="" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={src} alt="" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
       ) : (
         iniciaisNome(nome)
       )}
@@ -106,10 +104,10 @@ function FeedAvatar({ nome, avatarUrl, size = 48, glow = null }) {
 }
 
 // ─── Bloco "prémio" (artilheiro / destaque) ────────────────────────────────────
-function PremioRow({ glow, label, labelColor, nome, sub }) {
+function PremioRow({ label, labelColor, nome, sub }) {
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '14px', margin: '12px 14px', borderRadius: 12, border: '1px solid rgba(212,160,23,0.3)', animation: 'heroicPulse 3.9s ease-in-out infinite' }}>
-      <FeedAvatar nome={nome} avatarUrl={sub?.avatarUrl} size={64} glow={glow} />
+      <FeedAvatar nome={nome} avatarUrl={sub?.avatarUrl} size={56} />
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: labelColor, textTransform: 'uppercase' }}>
           {label}
@@ -215,7 +213,6 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
           {/* D) ARTILHEIRO */}
           {j.artilheiro_user_id ? (
             <PremioRow
-              glow={COR_ARTILHEIRO}
               label="⚽ Artilheiro do dia"
               labelColor={COR_ARTILHEIRO}
               nome={j.artilheiro_nome || 'Artilheiro'}
@@ -226,7 +223,6 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
           {/* E) DESTAQUE */}
           {j.destaque_user_id ? (
             <PremioRow
-              glow={COR_DESTAQUE}
               label="⭐ Destaque do dia"
               labelColor={COR_DESTAQUE}
               nome={j.destaque_nome || 'Destaque'}
@@ -238,7 +234,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
           {j.rodada_user_id ? (
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 14, margin: '12px 14px', borderRadius: 12, border: '1px solid rgba(212,160,23,0.3)', background: 'rgba(249,115,22,0.06)', animation: 'heroicPulse 3.9s ease-in-out infinite' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, maxWidth: 120 }}>
-                <FeedAvatar nome={j.rodada_nome} avatarUrl={j.rodada_avatar_url} size={56} glow={COR_RODADA} />
+                <FeedAvatar nome={j.rodada_nome} avatarUrl={j.rodada_avatar_url} size={56} />
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', textAlign: 'center' }}>{j.rodada_nome}</div>
                 <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', color: COR_RODADA, textTransform: 'uppercase', textAlign: 'center' }}>
                   🍺 Pagou rodada de cerveja 🍺
