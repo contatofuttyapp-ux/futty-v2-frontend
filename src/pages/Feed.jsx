@@ -627,11 +627,11 @@ export default function Feed() {
 
         {/* 2. CHIPS DE EQUIPA */}
         <div className="chips-row">
-          <button type="button" className={`chip ${selectedTeam === 'all' ? 'chip--active' : ''}`} onClick={() => setSelectedTeam('all')}>
+          <button type="button" className={`chip ${selectedTeam === 'all' ? 'chip--active tab-shine' : ''}`} onClick={() => setSelectedTeam('all')}>
             Todas
           </button>
           {teams.map((t) => (
-            <button key={t.id} type="button" className={`chip ${selectedTeam === t.id ? 'chip--active' : ''}`} onClick={() => setSelectedTeam(t.id)}>
+            <button key={t.id} type="button" className={`chip ${selectedTeam === t.id ? 'chip--active tab-shine' : ''}`} onClick={() => setSelectedTeam(t.id)}>
               {t.nome}
             </button>
           ))}

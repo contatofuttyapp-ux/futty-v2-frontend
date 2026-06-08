@@ -965,8 +965,8 @@ function TabResultados({ slug, showToast }) {
     <div style={{ display: 'grid', gap: 12 }}>
       {/* Toggle */}
       <div className="chips-row">
-        <button type="button" className={`chip ${modo === 'sem' ? 'chip--active' : ''}`} onClick={() => setModo('sem')}>Sem resultado</button>
-        <button type="button" className={`chip ${modo === 'com' ? 'chip--active' : ''}`} onClick={() => setModo('com')}>Com resultado</button>
+        <button type="button" className={`chip ${modo === 'sem' ? 'chip--active tab-shine' : ''}`} onClick={() => setModo('sem')}>Sem resultado</button>
+        <button type="button" className={`chip ${modo === 'com' ? 'chip--active tab-shine' : ''}`} onClick={() => setModo('com')}>Com resultado</button>
       </div>
 
       {lista.length === 0 ? (

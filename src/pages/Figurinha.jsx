@@ -12,7 +12,7 @@ import PlayerCard from '../components/PlayerCard';
 import Topbar from '../components/Topbar';
 import '../styles/app.css';
 
-const TOGGLE = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 };
+const TOGGLE = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12 };
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
 const FRAMES = ['dourado', 'roxo', 'roxo_escuro', 'prata', 'vermelho', 'verde', 'azul', 'cinza'];
@@ -182,7 +182,9 @@ export default function Figurinha() {
               tabIndex={0}
               onClick={() => setFullscreen(true)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setFullscreen(true)}
-              style={{ cursor: 'pointer' }}
+              // Clipa o glow do card só em cima (não transborda acima do card);
+              // mantém o brilho a sangrar nos lados e em baixo.
+              style={{ cursor: 'pointer', clipPath: 'inset(0 -60px -60px -60px)' }}
               aria-label="Abrir figurinha em ecrã inteiro"
             >
               <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} corUniforme={corUniforme} fotoOverride={fotoLocal} mostrarStats={mostrarStats} mostrarNome={mostrarNome} cantos={false} />
@@ -227,7 +229,7 @@ export default function Figurinha() {
                     gap: 6,
                     padding: '10px 6px',
                     border: `1px solid ${sel ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.06)'}`,
-                    borderRadius: 8,
+                    borderRadius: 12,
                     background: sel ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)',
                     color: cor,
                     cursor: 'pointer',

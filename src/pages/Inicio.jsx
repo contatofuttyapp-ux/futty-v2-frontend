@@ -82,7 +82,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
         <div className="gcard__presence">
           <button
             type="button"
-            className={`pbtn pbtn--go ${going ? 'active' : ''} ${!going && !busy ? 'pulse-active' : ''}`}
+            className={`pbtn pbtn--go ${going ? 'active' : ''} ${!going && !busy ? 'pulse-active tab-shine' : ''}`}
             disabled={busy}
             onClick={() => onPresence(game.id, true)}
           >
@@ -271,7 +271,8 @@ export default function Inicio() {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '85%', maxWidth: 280 }}>
-              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 1.0s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 3.3s linear infinite 0.8s' }} />
+              {/* Linha esquerda: espelho da direita — shimmer invertido (só a 2ª animação). */}
+              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 1.0s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 3.3s linear infinite 0.8s', animationDirection: 'normal, reverse' }} />
               <div
                 style={{
                   fontFamily: "'Rajdhani', sans-serif",
@@ -325,7 +326,7 @@ export default function Inicio() {
             <div className="chips-row">
               <button
                 type="button"
-                className={`chip ${selectedTeam === 'all' ? 'chip--active' : ''}`}
+                className={`chip ${selectedTeam === 'all' ? 'chip--active tab-shine' : ''}`}
                 onClick={() => setSelectedTeam('all')}
               >
                 Todas
@@ -334,7 +335,7 @@ export default function Inicio() {
                 <button
                   key={t.id}
                   type="button"
-                  className={`chip ${selectedTeam === t.id ? 'chip--active' : ''}`}
+                  className={`chip ${selectedTeam === t.id ? 'chip--active tab-shine' : ''}`}
                   onClick={() => setSelectedTeam(t.id)}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
