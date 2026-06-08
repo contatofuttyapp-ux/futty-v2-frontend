@@ -245,8 +245,8 @@ export async function gerarFigurinhaCanvas(opts = {}) {
   return canvasParaBlob(canvas);
 }
 
-// Versão 9:16 (1080×1920) para Instagram Stories. Opção B: #050810 + glow
-// radial dourado/roxo; card 2:3 (720×1080) centrado, wordmark e futty.app.
+// Versão 9:16 (1080×1920) para Instagram Stories. Opção A: fundo escuro sólido
+// #050810; card 2:3 (720×1080) centrado, wordmark e futty.app.
 export async function gerarFigurinhaCanvasStory(opts = {}) {
   const SW = 1080;
   const SH = 1920;
@@ -256,18 +256,8 @@ export async function gerarFigurinhaCanvasStory(opts = {}) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingQuality = 'high';
 
-  // Fundo base + glow radial dourado (topo) e roxo (fundo), opacidade baixa.
+  // Fundo escuro sólido em todo o canvas.
   ctx.fillStyle = '#050810';
-  ctx.fillRect(0, 0, SW, SH);
-  const gOuro = ctx.createRadialGradient(SW * 0.5, SH * 0.28, 0, SW * 0.5, SH * 0.28, SW * 0.95);
-  gOuro.addColorStop(0, 'rgba(212,160,23,0.25)');
-  gOuro.addColorStop(1, 'rgba(212,160,23,0)');
-  ctx.fillStyle = gOuro;
-  ctx.fillRect(0, 0, SW, SH);
-  const gRoxo = ctx.createRadialGradient(SW * 0.5, SH * 0.74, 0, SW * 0.5, SH * 0.74, SW * 0.95);
-  gRoxo.addColorStop(0, 'rgba(139,92,246,0.25)');
-  gRoxo.addColorStop(1, 'rgba(139,92,246,0)');
-  ctx.fillStyle = gRoxo;
   ctx.fillRect(0, 0, SW, SH);
 
   // Card 2:3 (720×1080), centrado horizontalmente, ~40px acima do centro.
