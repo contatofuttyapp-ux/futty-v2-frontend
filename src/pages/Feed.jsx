@@ -17,11 +17,9 @@ import DenunciaModal from '../components/DenunciaModal';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
-// Cores de acento (theme.js): neon, purple, warning (#f59e0b). O laranja da
-// rodada de cerveja (#f97316) é o único valor explícito do briefing fora do theme.
+// Cores de acento (theme.js): neon, purple, warning (#f59e0b).
 const COR_ARTILHEIRO = '#7c3aed';
 const COR_DESTAQUE = '#f59e0b';
-const COR_RODADA = '#f97316';
 const CARD = {
   borderRadius: 12,
   background: '#111111',
@@ -134,7 +132,6 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
   const jogadoresCampeao = campeao?.jogadores || [];
   const nomesCampeao = jogadoresCampeao.map((p) => p.nome).filter(Boolean).join(' · ');
   const foto = j.campeao_foto_url ? assetUrl(j.campeao_foto_url) : null;
-  const rodadaFoto = j.rodada_foto_url ? assetUrl(j.rodada_foto_url) : null;
 
   async function partilhar() {
     const linhas = [
@@ -142,7 +139,6 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
       nomesCampeao ? `🏆 Time campeão: ${nomesCampeao}` : null,
       j.artilheiro_nome ? `⚽ Artilheiro: ${j.artilheiro_nome}${j.artilheiro_gols ? ` · ${j.artilheiro_gols} gols` : ''}` : null,
       j.destaque_nome ? `⭐ Destaque: ${j.destaque_nome}${j.destaque_titulo ? ` – ${j.destaque_titulo}` : ''}` : null,
-      j.rodada_nome ? `🍺 Pagou rodada: ${j.rodada_nome}` : null,
     ].filter(Boolean);
     try {
       if (navigator.share) await navigator.share({ title: 'Futty', text: linhas.join('\n') });
@@ -228,30 +224,6 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
               nome={j.destaque_nome || 'Destaque'}
               sub={{ avatarUrl: j.destaque_avatar_url, titulo: j.destaque_titulo }}
             />
-          ) : null}
-
-          {/* F) PAGOU RODADA DE CERVEJA */}
-          {j.rodada_user_id ? (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 14, margin: '12px 14px', borderRadius: 12, border: '1px solid rgba(212,160,23,0.3)', background: 'rgba(249,115,22,0.06)', animation: 'heroicPulse 3.9s ease-in-out infinite' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, maxWidth: 120 }}>
-                <FeedAvatar nome={j.rodada_nome} avatarUrl={j.rodada_avatar_url} size={56} />
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', textAlign: 'center' }}>{j.rodada_nome}</div>
-                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', color: COR_RODADA, textTransform: 'uppercase', textAlign: 'center' }}>
-                  🍺 Pagou rodada de cerveja 🍺
-                </div>
-              </div>
-              {rodadaFoto ? (
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/\.(mp4|webm|mov)$/i.test(rodadaFoto) ? (
-                    <video src={rodadaFoto} autoPlay loop muted playsInline style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: 12, display: 'block' }} />
-                  ) : (
-                    <button type="button" onClick={() => onOpenImage(rodadaFoto)} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block', width: '100%' }}>
-                      <img src={rodadaFoto} alt="" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: 12, display: 'block' }} />
-                    </button>
-                  )}
-                </div>
-              ) : null}
-            </div>
           ) : null}
         </>
       ) : null}
