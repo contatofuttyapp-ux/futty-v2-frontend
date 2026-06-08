@@ -17,7 +17,7 @@ function diasAtras(data) {
 // Card skeleton com shimmer enquanto carrega.
 function SkeletonCard() {
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', borderRadius: 8, height: 68, marginBottom: 8 }}>
+    <div style={{ position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', borderRadius: 12, height: 68, marginBottom: 8 }}>
       <span
         aria-hidden
         style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: 'rankShimmer 2.0s ease-in-out infinite' }}
@@ -110,7 +110,7 @@ export default function Explorar() {
                 background: '#0d0d12',
                 border: '1px solid rgba(255,255,255,0.06)',
                 borderLeft: '2px solid rgba(212,160,23,0.25)',
-                borderRadius: 8,
+                borderRadius: 12,
                 padding: '12px 14px',
                 display: 'flex',
                 alignItems: 'center',

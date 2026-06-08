@@ -78,7 +78,7 @@ const KEYFRAMES = `
 @keyframes snakeGlow { 0%, 100% { opacity: 0.15; box-shadow: none; } 25% { opacity: 1; box-shadow: 0 0 8px rgba(212,160,23,0.8), 0 0 16px rgba(212,160,23,0.4); } 50% { opacity: 0.15; box-shadow: none; } }
 `;
 
-export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true, fotoOverride = null, corUniforme = null, aspect = '1 / 1' }) {
+export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true, fotoOverride = null, corUniforme = null, aspect = '1 / 1', glowSuave = false }) {
   const [imgFalhou, setImgFalhou] = useState(false);
 
   const nome = nomeJogador(jogador);
@@ -98,8 +98,11 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   // Cor do frame (chave nomeada → hex/glow) para a aura/respiração do card.
   const fc = getFrameColor(corFrame);
   // Glow "respiração" do card (cor segue o frame) — keyframe único por cor.
-  const breathName = `pcCardBreath_${corFrame}`;
-  const breathKeyframes = `@keyframes ${breathName} { 0%,100% { box-shadow: 0 0 20px ${fc.glow}0.35), 0 0 50px ${fc.glow}0.08); } 50% { box-shadow: 0 0 35px ${fc.glow}0.55), 0 0 80px ${fc.glow}0.15); } }`;
+  // glowSuave: glow contido (Figurinha, card grande) para não sangrar na foto.
+  const breathName = `pcCardBreath${glowSuave ? 'Suave' : ''}_${corFrame}`;
+  const breathKeyframes = glowSuave
+    ? `@keyframes ${breathName} { 0%,100% { box-shadow: 0 0 3px ${fc.glow}0.6), 0 0 8px ${fc.glow}0.3); } 50% { box-shadow: 0 0 5px ${fc.glow}0.8), 0 0 14px ${fc.glow}0.4); } }`
+    : `@keyframes ${breathName} { 0%,100% { box-shadow: 0 0 20px ${fc.glow}0.35), 0 0 50px ${fc.glow}0.08); } 50% { box-shadow: 0 0 35px ${fc.glow}0.55), 0 0 80px ${fc.glow}0.15); } }`;
   const fundoCss =
     fundo === 'preto'
       ? '#000000'

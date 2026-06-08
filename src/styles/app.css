@@ -1394,6 +1394,37 @@
   .tab-shine::after { animation: none; }
 }
 
+/* Início — linha vertical roxa decorativa com um brilho a subir devagar. */
+.inicio-vline {
+  position: absolute;
+  left: -12px;
+  top: 0;
+  width: 2px;
+  height: 60vh;
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 999px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.inicio-vline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 30%;
+  background: linear-gradient(to top, transparent, rgba(139, 92, 246, 0.8), transparent);
+  animation: lineUp 4.5s ease-in-out infinite;
+}
+@keyframes lineUp {
+  0% { transform: translateY(110%); opacity: 0; }
+  15% { opacity: 0.85; }
+  85% { opacity: 0.85; }
+  100% { transform: translateY(-110%); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inicio-vline::after { animation: none; }
+}
+
 .gcard--past {
   opacity: 0.55;
 }

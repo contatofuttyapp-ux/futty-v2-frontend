@@ -233,7 +233,7 @@ export default function Inicio() {
 
         {/* Banner discreto para ativar notificações push */}
         {pushEstado === 'suportado' && !pushBannerFechado ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, borderRadius: 10, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>🔔 Ativar notificações para não perderes nenhum jogo</span>
             <button type="button" className="btn btn--primary btn--sm" onClick={() => pushSubscrever()}>Ativar</button>
             <button type="button" aria-label="Fechar" onClick={fecharPushBanner} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
@@ -241,7 +241,8 @@ export default function Inicio() {
         ) : null}
 
         {/* Zona do card premium */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px' }}>
+          <div className="inicio-vline" aria-hidden="true" />
           <div data-tour="player-card" style={{ width: '70%', maxWidth: 280 }}>
             <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} mostrarNome={false} corFrame={corFrame} cantos={false} />
           </div>
@@ -272,7 +273,7 @@ export default function Inicio() {
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '85%', maxWidth: 280 }}>
               {/* Linha esquerda: espelho da direita — shimmer invertido (só a 2ª animação). */}
-              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 1.0s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 3.3s linear infinite 0.8s', animationDirection: 'normal, reverse' }} />
+              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 2.0s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 6.6s linear infinite 0.8s', animationDirection: 'normal, reverse' }} />
               <div
                 style={{
                   fontFamily: "'Rajdhani', sans-serif",
@@ -294,7 +295,7 @@ export default function Inicio() {
               >
                 {nome}
               </div>
-              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 1.0s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 3.3s linear infinite 0.8s' }} />
+              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 2.0s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 6.6s linear infinite 0.8s' }} />
             </div>
           )}
           {teams[0] ? (

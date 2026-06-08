@@ -181,10 +181,8 @@ export default function Figurinha() {
         {/* 1. ZONA DO CARD (2:3, limitado à altura disponível) */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
           <div style={{ position: 'relative', width: 'min(80vw, calc((100dvh - 400px) * 2 / 3))', aspectRatio: '2 / 3' }}>
-            {/* Clipa o glow do card só em cima (não transborda acima do card). */}
-            <div style={{ width: '100%', height: '100%', clipPath: 'inset(0 -60px -60px -60px)' }}>
-              <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" />
-            </div>
+            <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave />
+
 
             {/* Câmara — trocar foto (canto inferior-direito) */}
             <button
