@@ -78,7 +78,7 @@ const KEYFRAMES = `
 @keyframes snakeGlow { 0%, 100% { opacity: 0.15; box-shadow: none; } 25% { opacity: 1; box-shadow: 0 0 8px rgba(212,160,23,0.8), 0 0 16px rgba(212,160,23,0.4); } 50% { opacity: 0.15; box-shadow: none; } }
 `;
 
-export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true, fotoOverride = null, corUniforme = null }) {
+export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true, fotoOverride = null, corUniforme = null, aspect = '1 / 1' }) {
   const [imgFalhou, setImgFalhou] = useState(false);
 
   const nome = nomeJogador(jogador);
@@ -110,7 +110,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   return (
     <div
       aria-label={`Card de ${nome}${equipa?.nome ? ` · ${equipa.nome}` : ''}`}
-      style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 0, overflow: 'hidden', background: fundoCss, animation: `${breathName} 4.6s ease-in-out infinite`, willChange: 'box-shadow' }}
+      style={{ position: 'relative', width: '100%', aspectRatio: aspect, borderRadius: 0, overflow: 'hidden', background: fundoCss, animation: `${breathName} 4.6s ease-in-out infinite`, willChange: 'box-shadow' }}
     >
       <style>{KEYFRAMES + breathKeyframes}</style>
 
