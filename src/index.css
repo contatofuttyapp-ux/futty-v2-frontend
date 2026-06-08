@@ -15,6 +15,10 @@
   --border: #222222;
   --radius: 16px;
 
+  /* Fundo aurora — afináveis aqui. */
+  --aurora-opacity: 0.32; /* opacidade dos blobs */
+  --aurora-po: 0.11;      /* opacidade máxima das partículas */
+
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 
   font-family: var(--sans);
@@ -60,35 +64,80 @@ body {
 .aurora-blob {
   position: absolute;
   filter: blur(161px);
-  opacity: 0.32;
+  opacity: var(--aurora-opacity);
   mix-blend-mode: screen;
   will-change: transform;
-  animation: aurora-float 20s infinite alternate ease-in-out;
 }
 .aurora-blob:nth-child(1) {
   top: -10%; left: -10%; width: 50%; height: 50%;
-  background: #d4a017; border-radius: 50%; animation-delay: 0s;
+  background: #d4a017; border-radius: 62% 38% 46% 54% / 50% 52% 48% 50%;
+  animation: aurora-float-1 32s infinite ease-in-out; animation-delay: 0s;
 }
 .aurora-blob:nth-child(2) {
   top: 40%; right: -20%; width: 60%; height: 60%;
-  background: #8b5cf6; border-radius: 40%; animation-delay: -5s;
+  background: #8b5cf6; border-radius: 50% 50% 38% 62% / 60% 42% 58% 40%;
+  animation: aurora-float-2 28s infinite ease-in-out; animation-delay: -5s;
 }
 .aurora-blob:nth-child(3) {
   bottom: -20%; left: 20%; width: 50%; height: 60%;
-  background: #d4a017; border-radius: 60%; animation-delay: -10s;
+  background: #d4a017; border-radius: 45% 55% 62% 38% / 55% 45% 55% 45%;
+  animation: aurora-float-3 36s infinite ease-in-out; animation-delay: -10s;
 }
 .aurora-blob:nth-child(4) {
   top: 10%; right: 20%; width: 40%; height: 40%;
-  background: #8b5cf6; border-radius: 50%; animation-delay: -15s;
+  background: #8b5cf6; border-radius: 55% 45% 50% 50% / 45% 55% 45% 55%;
+  animation: aurora-float-4 24s infinite ease-in-out; animation-delay: -15s;
 }
-@keyframes aurora-float {
-  0%   { transform: scale(1)    translate(0px,    0px);  }
-  33%  { transform: scale(1.1)  translate(30px,  -50px); }
-  66%  { transform: scale(0.9)  translate(-20px,  20px); }
-  100% { transform: scale(1.05) translate(40px,   40px); }
+@keyframes aurora-float-1 {
+  0%   { transform: translate(0, 0)         scale(1)    rotate(0deg);   }
+  33%  { transform: translate(-52px, 38px)  scale(1.14) rotate(20deg);  }
+  66%  { transform: translate(25px, -20px)  scale(0.94) rotate(-9deg);  }
+  100% { transform: translate(0, 0)         scale(1)    rotate(0deg);   }
 }
+@keyframes aurora-float-2 {
+  0%   { transform: translate(0, 0)         scale(1)    rotate(0deg);   }
+  33%  { transform: translate(40px, -30px)  scale(0.9)  rotate(-16deg); }
+  66%  { transform: translate(-22px, 28px)  scale(1.12) rotate(12deg);  }
+  100% { transform: translate(0, 0)         scale(1)    rotate(0deg);   }
+}
+@keyframes aurora-float-3 {
+  0%   { transform: translate(0, 0)         scale(1)    rotate(0deg);   }
+  33%  { transform: translate(30px, 42px)   scale(1.1)  rotate(14deg);  }
+  66%  { transform: translate(-34px, -18px) scale(0.92) rotate(-20deg); }
+  100% { transform: translate(0, 0)         scale(1)    rotate(0deg);   }
+}
+@keyframes aurora-float-4 {
+  0%   { transform: translate(0, 0)         scale(1)    rotate(0deg);   }
+  33%  { transform: translate(-30px, -40px) scale(1.08) rotate(-12deg); }
+  66%  { transform: translate(26px, 24px)   scale(0.96) rotate(18deg);  }
+  100% { transform: translate(0, 0)         scale(1)    rotate(0deg);   }
+}
+
+/* Camada de partículas: pontos a flutuar para cima e a desvanecer. */
+.aurora-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.aurora-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(0.5px);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: aurora-particle 12s ease-in-out infinite;
+}
+@keyframes aurora-particle {
+  0%   { transform: translate(0, 0) scale(1);              opacity: 0; }
+  12%  { opacity: var(--aurora-po, 0.11); }
+  88%  { opacity: var(--aurora-po, 0.11); }
+  100% { transform: translate(var(--dx, 0), -55px) scale(0.65); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora-blob { animation: none; }
+  .aurora-particle { animation: none; opacity: var(--aurora-po, 0.11); }
 }
 
 /* O conteúdo fica acima da aurora (z0). */
