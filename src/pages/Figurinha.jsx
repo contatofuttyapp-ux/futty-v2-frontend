@@ -1,8 +1,8 @@
-// Futty v2.0 — Figurinha (/figurinha): card premium em fullscreen, personalizar
-// e partilhar. Sem Topbar, mobile-first. Tudo no cliente (canvas), sem IA.
-// As escolhas de frame e fundo guardam-se no perfil e aplicam-se em todo o app.
-import { useEffect, useState } from 'react';
-import { Landmark, Layers, Circle } from 'lucide-react';
+// Futty v2.0 — Figurinha (/figurinha): "card studio". Card grande no topo,
+// câmara para trocar a foto (preview local, sem backend), e controlos a scrollar
+// por baixo (Fundo / Frame / Uniforme / Detalhes). Tudo no cliente (canvas).
+import { useEffect, useRef, useState } from 'react';
+import { Landmark, Layers, Circle, Camera, Download, Share2, X } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador } from '../utils/avatar';
@@ -13,12 +13,22 @@ import Topbar from '../components/Topbar';
 import '../styles/app.css';
 
 const TOGGLE = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 };
+
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
-const FRAMES = ['dourado', 'verde', 'roxo', 'branco'];
+const FRAMES = ['dourado', 'roxo', 'roxo_escuro', 'prata', 'vermelho', 'verde', 'azul', 'cinza'];
 const FUNDOS = [
   { k: 'estadio', label: 'Estádio', Icon: Landmark },
   { k: 'gradiente', label: 'Gradiente', Icon: Layers },
   { k: 'preto', label: 'Neutro', Icon: Circle },
+];
+// Cores de uniforme (camisola) — overlay suave sobre o avatar.
+const UNIFORMES = [
+  { k: 'verde', hex: '#16a34a' },
+  { k: 'azul', hex: '#2563eb' },
+  { k: 'vermelho', hex: '#dc2626' },
+  { k: 'branco', hex: '#f1f5f9' },
+  { k: 'preto', hex: '#0f172a' },
+  { k: 'amarelo', hex: '#ca8a04' },
 ];
 
 // Nome de ficheiro seguro a partir do nome do jogador.
@@ -34,13 +44,13 @@ function ficheiroNome(nome) {
 
 function SecLabel({ children }) {
   return (
-    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '18px 0 8px' }}>
+    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '1.5px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', margin: '18px 0 8px' }}>
       {children}
     </div>
   );
 }
 
-// Cantos em L (snakeGlow) para o frame seleccionado.
+// Cantos em L (snakeGlow) para o swatch de frame seleccionado.
 const CANTOS_FRAME = [
   { top: -2, left: -2, borderTop: '2px solid', borderLeft: '2px solid' },
   { top: -2, right: -2, borderTop: '2px solid', borderRight: '2px solid' },
@@ -54,11 +64,14 @@ export default function Figurinha() {
   const [me, setMe] = useState(null);
   const [fundo, setFundo] = useState('estadio');
   const [corFrame, setCorFrame] = useState('dourado');
+  const [corUniforme, setCorUniforme] = useState(UNIFORMES[0].hex);
   const [mostrarStats, setMostrarStats] = useState(true);
   const [mostrarNome, setMostrarNome] = useState(true);
+  const [fotoLocal, setFotoLocal] = useState(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
+  const fileRef = useRef(null);
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
@@ -88,8 +101,21 @@ export default function Figurinha() {
     return () => window.removeEventListener('keydown', onKey);
   }, [fullscreen]);
 
+  // Liberta o objectURL da foto local (ao trocar/desmontar).
+  useEffect(() => {
+    if (!fotoLocal) return undefined;
+    return () => URL.revokeObjectURL(fotoLocal);
+  }, [fotoLocal]);
+
+  // Trocar foto: preview local, sem upload nem API.
+  function onPickFile(e) {
+    const file = e.target.files?.[0];
+    if (file) setFotoLocal(URL.createObjectURL(file));
+    e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
+  }
+
   async function gerar() {
-    return gerarFigurinhaCanvas({ jogador, stats, fundo, corFrame, mostrarStats, mostrarNome });
+    return gerarFigurinhaCanvas({ jogador, stats, fundo, corFrame, corUniforme, fotoOverride: fotoLocal, mostrarStats, mostrarNome });
   }
 
   async function baixar() {
@@ -148,25 +174,39 @@ export default function Figurinha() {
     <div className="app-shell">
       <Topbar title="Figurinha" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* 1. CABEÇALHO */}
-        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '4px 0 16px' }}>personaliza o teu card</p>
+        {/* 1. ZONA DO CARD (~58vh) */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '58vh', padding: '8px 0 4px' }}>
+          <div style={{ position: 'relative', width: 'min(92vw, 58vh)', maxWidth: 460 }}>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setFullscreen(true)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setFullscreen(true)}
+              style={{ cursor: 'pointer' }}
+              aria-label="Abrir figurinha em ecrã inteiro"
+            >
+              <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} corUniforme={corUniforme} fotoOverride={fotoLocal} mostrarStats={mostrarStats} mostrarNome={mostrarNome} cantos={false} />
+            </div>
 
-        {/* 2. CARD PREMIUM */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => setFullscreen(true)}
-            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setFullscreen(true)}
-            style={{ width: '72%', maxWidth: 300, cursor: 'pointer' }}
-            aria-label="Abrir figurinha em ecrã inteiro"
-          >
-            <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} mostrarStats={mostrarStats} mostrarNome={mostrarNome} />
+            {/* Câmara — trocar foto (canto inferior-direito) */}
+            <div style={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <button
+                type="button"
+                aria-label="Trocar foto"
+                onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
+                style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+              >
+                <Camera size={16} />
+              </button>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>trocar foto</span>
+            </div>
           </div>
         </div>
 
-        {/* 3. PERSONALIZAÇÕES */}
-        <div style={{ maxWidth: 420, margin: '0 auto' }}>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
+
+        {/* 2. CONTROLOS */}
+        <div style={{ maxWidth: 460, margin: '0 auto' }}>
           {/* A) FUNDO */}
           <SecLabel>Fundo</SecLabel>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -200,9 +240,9 @@ export default function Figurinha() {
             })}
           </div>
 
-          {/* B) COR DO FRAME */}
+          {/* B) FRAME (8 cores, scroll horizontal) */}
           <SecLabel>Frame</SecLabel>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
             {FRAMES.map((c) => {
               const sel = corFrame === c;
               const hex = getFrameColor(c).stroke;
@@ -215,6 +255,7 @@ export default function Figurinha() {
                   aria-pressed={sel}
                   style={{
                     position: 'relative',
+                    flex: '0 0 auto',
                     width: 32,
                     height: 32,
                     borderRadius: 6,
@@ -234,8 +275,34 @@ export default function Figurinha() {
             })}
           </div>
 
-          {/* C) MOSTRAR NOME / STATS */}
-          <SecLabel>No card</SecLabel>
+          {/* C) UNIFORME (6 cores) */}
+          <SecLabel>Uniforme</SecLabel>
+          <div style={{ display: 'flex', gap: 12 }}>
+            {UNIFORMES.map((un) => {
+              const sel = corUniforme === un.hex;
+              return (
+                <button
+                  key={un.k}
+                  type="button"
+                  onClick={() => setCorUniforme(un.hex)}
+                  aria-label={`Uniforme ${un.k}`}
+                  aria-pressed={sel}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    background: un.hex,
+                    border: sel ? '2px solid #d4a017' : '2px solid rgba(255,255,255,0.2)',
+                    boxShadow: sel ? '0 0 8px rgba(212,160,23,0.5)' : 'none',
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {/* D) DETALHES (mostrar nome / stats) */}
+          <SecLabel>Detalhes</SecLabel>
           <label style={{ ...TOGGLE, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', cursor: 'pointer', marginBottom: 8 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Mostrar nome</span>
             <input type="checkbox" checked={mostrarNome} onChange={(e) => setMostrarNome(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#8b5cf6' }} />
@@ -247,19 +314,19 @@ export default function Figurinha() {
 
           {erro ? <div className="alert alert--error" style={{ marginTop: 12 }}>{erro}</div> : null}
 
-          {/* 4. BOTÕES */}
-          <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
-            <button type="button" className="btn btn--purple-outline" style={{ width: '100%' }} disabled={busy} onClick={baixar}>
-              {busy ? 'A gerar…' : '✨ Baixar figurinha'}
+          {/* 3. AÇÕES (fim do scroll) */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 18, marginBottom: 8 }}>
+            <button type="button" className="btn btn--purple-outline" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
+              <Download size={16} /> {busy ? 'A gerar…' : 'Baixar'}
             </button>
-            <button type="button" className="btn btn--purple" style={{ width: '100%' }} disabled={busy} onClick={partilhar}>
-              📤 Partilhar
+            <button type="button" className="btn btn--purple" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={partilhar}>
+              <Share2 size={16} /> Partilhar
             </button>
           </div>
         </div>
       </main>
 
-      {/* 5. FULLSCREEN */}
+      {/* FULLSCREEN */}
       {fullscreen ? (
         <div
           role="dialog"
@@ -272,12 +339,12 @@ export default function Figurinha() {
             type="button"
             aria-label="Fechar"
             onClick={(e) => { e.stopPropagation(); setFullscreen(false); }}
-            style={{ position: 'fixed', top: 16, right: 16, zIndex: 201, width: 40, height: 40, borderRadius: 12, border: '1px solid #333', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 18, fontWeight: 900, cursor: 'pointer' }}
+            style={{ position: 'fixed', top: 16, right: 16, zIndex: 201, width: 40, height: 40, borderRadius: 12, border: '1px solid #333', background: 'rgba(255,255,255,0.08)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
           >
-            ✕
+            <X size={18} />
           </button>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '90%', maxWidth: 380 }}>
-            <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} mostrarStats={mostrarStats} mostrarNome={mostrarNome} />
+            <PlayerCard jogador={jogador} stats={stats} equipa={equipa} fundo={fundo} corFrame={corFrame} corUniforme={corUniforme} fotoOverride={fotoLocal} mostrarStats={mostrarStats} mostrarNome={mostrarNome} cantos={false} />
           </div>
         </div>
       ) : null}

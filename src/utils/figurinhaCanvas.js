@@ -29,7 +29,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = 'estadio', corFrame = 'dourado', mostrarStats = true, mostrarNome = true }) {
+export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = 'estadio', corFrame = 'dourado', mostrarStats = true, mostrarNome = true, fotoOverride = null, corUniforme = null }) {
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -73,9 +73,9 @@ export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = '
     ctx.fillRect(0, 0, W, H);
   }
 
-  // 3. AVATAR (ou iniciais)
+  // 3. AVATAR (ou iniciais). fotoOverride (preview local) tem prioridade.
   const nome = nomeJogador(jogador);
-  const avatarUrl = jogador?.avatar_url ? urlAsset(jogador.avatar_url) : null;
+  const avatarUrl = fotoOverride || (jogador?.avatar_url ? urlAsset(jogador.avatar_url) : null);
   const ehAbsoluto = avatarUrl && /^https?:\/\//i.test(avatarUrl);
   const avatar = avatarUrl ? await carregarImagem(avatarUrl, ehAbsoluto) : null;
   if (avatar) {
@@ -107,6 +107,15 @@ export async function gerarFigurinhaCanvas({ jogador = {}, stats = {}, fundo = '
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(iniciaisNome(nome), cx, cy);
+  }
+
+  // 3b. UNIFORME (overlay suave de cor sobre a zona do avatar)
+  if (corUniforme) {
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = corUniforme;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   }
 
   // 4. GRADIENTE INFERIOR

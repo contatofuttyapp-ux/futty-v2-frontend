@@ -78,11 +78,19 @@ const KEYFRAMES = `
 @keyframes snakeGlow { 0%, 100% { opacity: 0.15; box-shadow: none; } 25% { opacity: 1; box-shadow: 0 0 8px rgba(212,160,23,0.8), 0 0 16px rgba(212,160,23,0.4); } 50% { opacity: 0.15; box-shadow: none; } }
 `;
 
-export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true }) {
+export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true, fotoOverride = null, corUniforme = null }) {
   const [imgFalhou, setImgFalhou] = useState(false);
 
   const nome = nomeJogador(jogador);
-  const avatarSrc = jogador?.avatar_url ? urlAsset(jogador.avatar_url) : null;
+  // fotoOverride (preview local da Figurinha) tem prioridade sobre o avatar guardado.
+  const avatarSrc = fotoOverride ?? (jogador?.avatar_url ? urlAsset(jogador.avatar_url) : null);
+
+  // Repõe o estado de erro quando a foto muda (padrão "ajustar estado no render").
+  const [srcAtual, setSrcAtual] = useState(avatarSrc);
+  if (srcAtual !== avatarSrc) {
+    setSrcAtual(avatarSrc);
+    setImgFalhou(false);
+  }
   const corBg = COR_HEX[jogador?.cor_preferida] || '#15151a';
   const nota = Number.isFinite(stats?.nota) ? Number(stats.nota).toFixed(1) : '--';
   const temAvatar = avatarSrc && !imgFalhou;
@@ -208,6 +216,11 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
           {iniciaisNome(nome)}
         </div>
       )}
+
+      {/* z4 — UNIFORME (overlay suave de cor sobre o avatar = camisola colorida) */}
+      {corUniforme ? (
+        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none', background: corUniforme, opacity: 0.28 }} />
+      ) : null}
 
       {/* z4 — REFLEXO DE LUZ (holográfico) */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none', overflow: 'hidden' }}>
