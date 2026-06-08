@@ -40,99 +40,58 @@ body,
 }
 
 html {
-  background: #05080f;
+  background: #050810;
 }
 
 body {
-  background: #05080f;
+  background: #050810;
   color: var(--text);
 }
 
-/* z0 — Céu de estrelas global atrás de todo o conteúdo (sem nebulosa nem
-   holofotes). Cintilação lenta e elegante: 3 grupos com ritmos desencontrados,
-   amplitude baixa (base ~0.12, pico ~0.55). Anima só opacity. */
-@keyframes twinkleA {
-  0%, 100% { opacity: 0.12; }
-  50% { opacity: 0.5; }
-}
-@keyframes twinkleB {
-  0%, 100% { opacity: 0.14; }
-  50% { opacity: 0.55; }
-}
-@keyframes twinkleC {
-  0%, 100% { opacity: 0.18; }
-  50% { opacity: 0.55; }
-}
-
-/* Base comum dos 3 céus: pseudo-elementos fixos e invisíveis — as estrelas são
-   as box-shadows. Base 2px (vs 1px original) → estrelas ~40-60% maiores. */
-body::before,
-html::before,
-html::after {
-  content: '';
+/* z0 — Aurora gradient (dourado + roxo) atrás de todo o conteúdo. */
+.aurora-wrapper {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 2px;
-  height: 2px;
-  z-index: 0;
-  border-radius: 50%;
+  inset: 0;
+  z-index: -1;
   pointer-events: none;
-  background: transparent;
-  will-change: opacity;
+  overflow: hidden;
+  background-color: #050810;
 }
-
-/* Grupo A — estrelas pequenas (ritmo lento A). spread 0.6px → ~3px. */
-body::before {
-  animation: twinkleA 5s ease-in-out infinite;
-  box-shadow:
-    14px 32px 0 0.6px rgba(255, 255, 255, 0.7), 58px 90px 0 0.6px rgba(255, 255, 255, 0.6), 110px 24px 0 0.6px rgba(255, 255, 255, 0.7),
-    160px 140px 0 0.6px rgba(255, 255, 255, 0.55), 210px 60px 0 0.6px rgba(255, 255, 255, 0.75), 250px 200px 0 0.6px rgba(255, 255, 255, 0.6),
-    300px 40px 0 0.6px rgba(255, 255, 255, 0.7), 350px 120px 0 0.6px rgba(255, 255, 255, 0.55), 30px 180px 0 0.6px rgba(255, 255, 255, 0.7),
-    90px 250px 0 0.6px rgba(255, 255, 255, 0.6), 140px 300px 0 0.6px rgba(255, 255, 255, 0.7), 190px 360px 0 0.6px rgba(255, 255, 255, 0.55),
-    240px 280px 0 0.6px rgba(255, 255, 255, 0.75), 290px 340px 0 0.6px rgba(255, 255, 255, 0.6), 340px 250px 0 0.6px rgba(255, 255, 255, 0.7),
-    20px 400px 0 0.6px rgba(255, 255, 255, 0.55), 70px 460px 0 0.6px rgba(255, 255, 255, 0.7), 130px 420px 0 0.6px rgba(255, 255, 255, 0.6);
+.aurora-blob {
+  position: absolute;
+  filter: blur(161px);
+  opacity: 0.32;
+  mix-blend-mode: screen;
+  will-change: transform;
+  animation: aurora-float 20s infinite alternate ease-in-out;
 }
-
-/* Grupo B — estrelas pequenas/médias (ritmo lento B). spread 0.9px → ~3.8px. */
-html::before {
-  animation: twinkleB 6.5s ease-in-out infinite;
-  box-shadow:
-    180px 480px 0 0.9px rgba(255, 255, 255, 0.75), 230px 440px 0 0.9px rgba(255, 255, 255, 0.55), 280px 500px 0 0.9px rgba(255, 255, 255, 0.7),
-    330px 420px 0 0.9px rgba(255, 255, 255, 0.6), 50px 540px 0 0.9px rgba(255, 255, 255, 0.7), 100px 600px 0 0.9px rgba(255, 255, 255, 0.55),
-    150px 560px 0 0.9px rgba(255, 255, 255, 0.7), 200px 620px 0 0.9px rgba(255, 255, 255, 0.6), 260px 580px 0 0.9px rgba(255, 255, 255, 0.75),
-    310px 640px 0 0.9px rgba(255, 255, 255, 0.55), 360px 560px 0 0.9px rgba(255, 255, 255, 0.7), 40px 680px 0 0.9px rgba(255, 255, 255, 0.6),
-    95px 720px 0 0.9px rgba(255, 255, 255, 0.7), 145px 700px 0 0.9px rgba(255, 255, 255, 0.55), 205px 760px 0 0.9px rgba(255, 255, 255, 0.7),
-    255px 700px 0 0.9px rgba(255, 255, 255, 0.6), 305px 740px 0 0.9px rgba(255, 255, 255, 0.7), 355px 690px 0 0.9px rgba(255, 255, 255, 0.55);
+.aurora-blob:nth-child(1) {
+  top: -10%; left: -10%; width: 50%; height: 50%;
+  background: #d4a017; border-radius: 50%; animation-delay: 0s;
 }
-
-/* Grupo C — estrelas médias/grandes e brilhantes, algumas com leve glow
-   (blur 3px). Ritmo lento C. */
-html::after {
-  animation: twinkleC 7s ease-in-out infinite;
-  box-shadow:
-    78px 234px 0 1.4px rgba(255, 255, 255, 0.7), 125px 70px 0 1.4px rgba(255, 255, 255, 0.65),
-    175px 210px 0 1.4px rgba(255, 255, 255, 0.75), 275px 160px 0 1.4px rgba(255, 255, 255, 0.6),
-    10px 250px 0 1.4px rgba(255, 255, 255, 0.7), 215px 330px 0 1.4px rgba(255, 255, 255, 0.65),
-    285px 260px 0 1.4px rgba(255, 255, 255, 0.7), 65px 350px 0 1.4px rgba(255, 255, 255, 0.6),
-    320px 470px 0 1.4px rgba(255, 255, 255, 0.7), 115px 510px 0 1.4px rgba(255, 255, 255, 0.75),
-    145px 67px 3px 1.6px rgba(255, 255, 255, 1), 230px 130px 3px 1.6px rgba(255, 255, 255, 1),
-    55px 300px 3px 1.6px rgba(255, 255, 255, 0.95), 300px 300px 3px 1.6px rgba(255, 255, 255, 0.95),
-    165px 640px 3px 1.6px rgba(255, 255, 255, 0.95), 345px 380px 3px 1.8px rgba(255, 255, 255, 1),
-    25px 600px 3px 1.6px rgba(255, 255, 255, 0.9), 260px 690px 3px 1.6px rgba(255, 255, 255, 0.95);
+.aurora-blob:nth-child(2) {
+  top: 40%; right: -20%; width: 60%; height: 60%;
+  background: #8b5cf6; border-radius: 40%; animation-delay: -5s;
 }
-
-/* Acessibilidade: sem movimento → estrelas estáticas e discretas. */
+.aurora-blob:nth-child(3) {
+  bottom: -20%; left: 20%; width: 50%; height: 60%;
+  background: #d4a017; border-radius: 60%; animation-delay: -10s;
+}
+.aurora-blob:nth-child(4) {
+  top: 10%; right: 20%; width: 40%; height: 40%;
+  background: #8b5cf6; border-radius: 50%; animation-delay: -15s;
+}
+@keyframes aurora-float {
+  0%   { transform: scale(1)    translate(0px,    0px);  }
+  33%  { transform: scale(1.1)  translate(30px,  -50px); }
+  66%  { transform: scale(0.9)  translate(-20px,  20px); }
+  100% { transform: scale(1.05) translate(40px,   40px); }
+}
 @media (prefers-reduced-motion: reduce) {
-  body::before,
-  html::before,
-  html::after {
-    animation: none;
-    opacity: 0.3;
-  }
+  .aurora-blob { animation: none; }
 }
 
-/* O conteúdo fica acima das estrelas (z0). */
+/* O conteúdo fica acima da aurora (z0). */
 #root {
   position: relative;
   z-index: 2;
