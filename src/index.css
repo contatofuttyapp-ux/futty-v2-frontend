@@ -17,7 +17,7 @@
 
   /* Fundo aurora — afináveis aqui. */
   --aurora-opacity: 0.32; /* opacidade dos blobs */
-  --aurora-po: 0.11;      /* opacidade máxima das partículas */
+  --aurora-po: 0.28;      /* opacidade máxima das partículas */
 
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 
