@@ -1,6 +1,6 @@
 // Futty v2.0 — Painel de Admin por equipa (/admin/:slug?tab=...).
 // Só admins. Sidebar (desktop) / drawer (mobile). Tab persistida na URL.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -757,6 +757,177 @@ function TabConvites({ slug, showToast }) {
 }
 
 // ─── TAB: JOGOS ──────────────────────────────────────────────────────────────
+// "até sex, 20 jun · 22:00" para o prazo do RSVP.
+function fmtPrazoAdmin(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const data = d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+  const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `${data} · ${hora}`;
+}
+
+// Lista compacta de jogadores (avatar + nome) com título opcional.
+function ListaUsers({ users, titulo }) {
+  if (!users || users.length === 0) return null;
+  return (
+    <div style={{ marginTop: 8 }}>
+      {titulo ? (
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--label-color)', textTransform: 'uppercase', marginBottom: 4 }}>{titulo}</div>
+      ) : null}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {users.map((u) => (
+          <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#fff' }}>
+            <PlayerAvatar nome={u.nome_jogador || u.nome} avatarUrl={u.avatar_url} sm />
+            <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.nome_jogador || u.nome || 'Jogador'}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Gestão do RSVP de um jogo (admin): abrir / acompanhar / fechar / sortear.
+function RSVPAdmin({ gameId, slug, navigate, showToast }) {
+  const [info, setInfo] = useState(null);
+  const [erro, setErro] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [abrirModal, setAbrirModal] = useState(false);
+  const [prazoInput, setPrazoInput] = useState('');
+  const [confirmarFechar, setConfirmarFechar] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      const d = await apiFetch(`/api/jogos/${gameId}/rsvp`);
+      setInfo(d);
+      setErro('');
+    } catch (e) {
+      setErro(e.message);
+    }
+  }, [gameId]);
+
+  useEffect(() => {
+    let ativo = true;
+    apiFetch(`/api/jogos/${gameId}/rsvp`)
+      .then((d) => {
+        if (!ativo) return;
+        setInfo(d);
+        setErro('');
+      })
+      .catch((e) => ativo && setErro(e.message));
+    return () => {
+      ativo = false;
+    };
+  }, [gameId]);
+
+  // Polling de 30s enquanto o RSVP está aberto (atualização em tempo real).
+  useEffect(() => {
+    if (!info?.rsvp_aberto || info?.rsvp_fechado) return undefined;
+    const t = setInterval(carregar, 30000);
+    return () => clearInterval(t);
+  }, [info?.rsvp_aberto, info?.rsvp_fechado, carregar]);
+
+  async function abrir() {
+    if (!prazoInput) {
+      showToast('Indica o prazo de confirmação.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiFetch(`/api/jogos/${gameId}/rsvp/abrir`, { method: 'POST', body: JSON.stringify({ prazo: new Date(prazoInput).toISOString() }) });
+      setAbrirModal(false);
+      setPrazoInput('');
+      await carregar();
+      showToast('RSVP aberto!');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function fechar() {
+    setConfirmarFechar(false);
+    setBusy(true);
+    try {
+      await apiFetch(`/api/jogos/${gameId}/rsvp/fechar`, { method: 'POST' });
+      await carregar();
+      showToast('RSVP fechado.');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function fazerSorteio() {
+    const ids = (info?.confirmados || []).map((u) => u.id);
+    navigate(`/equipa/${slug}/jogo/${gameId}`, { state: { rsvpConfirmados: ids } });
+  }
+
+  const linha = { marginTop: 12, borderTop: '1px solid #222222', paddingTop: 10 };
+
+  if (!info) {
+    return <div style={{ ...linha, fontSize: 12, color: 'var(--text-dim)' }}>{erro || 'A carregar RSVP…'}</div>;
+  }
+
+  // C) RSVP FECHADO
+  if (info.rsvp_fechado) {
+    return (
+      <div style={linha}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>RSVP fechado — {info.confirmados.length} confirmados</div>
+        <ListaUsers users={info.confirmados} />
+        <button type="button" className="btn btn--primary btn--sm" style={{ marginTop: 10 }} onClick={fazerSorteio}>
+          Fazer sorteio com confirmados
+        </button>
+      </div>
+    );
+  }
+
+  // B) RSVP ABERTO
+  if (info.rsvp_aberto) {
+    return (
+      <div style={linha}>
+        <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700 }}>Aberto até {fmtPrazoAdmin(info.rsvp_prazo)}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+          ✅ {info.confirmados.length} confirmados · ❌ {info.recusados.length} recusados · ⏳ {info.pendentes.length} pendentes
+        </div>
+        <ListaUsers users={info.confirmados} titulo="Confirmados" />
+        <ListaUsers users={info.recusados} titulo="Recusados" />
+        <ListaUsers users={info.pendentes} titulo="Pendentes" />
+        <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 10, borderColor: 'var(--danger)', color: '#fda4af' }} disabled={busy} onClick={() => setConfirmarFechar(true)}>
+          Fechar RSVP
+        </button>
+        {confirmarFechar ? (
+          <ConfirmModal texto="Fechar o RSVP? Os pendentes ficam fora." perigo confirmarLabel="Fechar RSVP" onConfirm={fechar} onCancel={() => setConfirmarFechar(false)} />
+        ) : null}
+      </div>
+    );
+  }
+
+  // A) SEM RSVP ABERTO
+  return (
+    <div style={linha}>
+      {abrirModal ? (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <label style={{ fontSize: 12, color: 'var(--text-dim)' }}>Prazo de confirmação</label>
+          <input
+            type="datetime-local"
+            value={prazoInput}
+            onChange={(e) => setPrazoInput(e.target.value)}
+            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 13 }}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={abrir}>Confirmar</button>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setAbrirModal(false)}>Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="btn btn--purple btn--sm" onClick={() => setAbrirModal(true)}>📋 Abrir RSVP</button>
+      )}
+    </div>
+  );
+}
+
 function TabJogos({ slug, showToast, navigate }) {
   const [games, setGames] = useState(null);
   const [editar, setEditar] = useState(null);
@@ -832,6 +1003,7 @@ function TabJogos({ slug, showToast, navigate }) {
                     <button type="button" className="btn btn--ghost btn--sm" style={{ color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'apagar', jogo: g })}>Apagar</button>
                   ) : null}
                 </div>
+                <RSVPAdmin gameId={g.id} slug={slug} navigate={navigate} showToast={showToast} />
               </div>
             ))}
           </div>

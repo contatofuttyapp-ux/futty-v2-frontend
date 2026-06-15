@@ -7,6 +7,7 @@ import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatDateTime, formatRating } from '../utils/format';
 import PlayerCard from '../components/PlayerCard';
+import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import FuttyLogo from '../components/FuttyLogo';
 import ProductTour from '../components/ProductTour';
@@ -132,6 +133,8 @@ export default function Inicio() {
   const [busyId, setBusyId] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay
+  const [rsvpInfo, setRsvpInfo] = useState(null); // RSVP do próximo jogo (se aberto)
+  const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
 
   // Notificações push: banner discreto (uma vez por sessão).
   const { estado: pushEstado, subscrever: pushSubscrever } = usePushNotifications();
@@ -209,6 +212,32 @@ export default function Inicio() {
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
   // Próximo jogo = o primeiro que não está encerrado (lista vem ordenada por data).
   const nextId = filtered.find((g) => g.status !== 'finished')?.id ?? null;
+
+  // RSVP do próximo jogo: mostra o cartão de confirmação se estiver aberto.
+  // Guarda o gameId no estado para o render ignorar dados de um jogo anterior.
+  useEffect(() => {
+    if (!nextId) return undefined;
+    let ativo = true;
+    apiFetch(`/api/jogos/${nextId}/rsvp`)
+      .then((d) => {
+        if (!ativo) return;
+        setRsvpInfo({ ...d, gameId: nextId });
+        const meuId = me?.user?.id;
+        setMinhaResposta(
+          d.confirmados?.some((u) => u.id === meuId)
+            ? 'confirmado'
+            : d.recusados?.some((u) => u.id === meuId)
+              ? 'recusado'
+              : null
+        );
+      })
+      .catch(() => {
+        if (ativo) setRsvpInfo({ gameId: nextId, rsvp_aberto: false });
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [nextId, me?.user?.id]);
 
   // Anúncio nativo: a seguir ao 2º jogo; se houver ≤1 jogo, no fim.
   const items = [];
@@ -352,6 +381,9 @@ export default function Inicio() {
             {/* Jogos */}
             <div data-tour="jogos-section">
               <div className="games-label">Próximos Jogos</div>
+            {rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado ? (
+              <RSVPCard gameId={nextId} prazo={rsvpInfo.rsvp_prazo} respostaActual={minhaResposta} onResposta={setMinhaResposta} />
+            ) : null}
             {loadingGames ? (
               <Loading text="A carregar jogos…" />
             ) : (
