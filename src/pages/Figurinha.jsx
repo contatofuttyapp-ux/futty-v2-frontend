@@ -3,7 +3,7 @@
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Download, Share2 } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, apiUpload } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
@@ -80,6 +80,7 @@ export default function Figurinha() {
   const [mostrarStats, setMostrarStats] = useState(true);
   const [mostrarNome, setMostrarNome] = useState(true);
   const [fotoLocal, setFotoLocal] = useState(null);
+  const [uploadFoto, setUploadFoto] = useState(false);
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
@@ -114,11 +115,22 @@ export default function Figurinha() {
     return () => URL.revokeObjectURL(fotoLocal);
   }, [fotoLocal]);
 
-  // Trocar foto: preview local, sem upload nem API.
-  function onPickFile(e) {
+  // Trocar foto: preview local imediato + upload para o servidor.
+  async function onPickFile(e) {
     const file = e.target.files?.[0];
-    if (file) setFotoLocal(URL.createObjectURL(file));
     e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
+    if (!file) return;
+    setFotoLocal(URL.createObjectURL(file)); // preview imediato
+    setUploadFoto(true);
+    setErro('');
+    try {
+      const data = await apiUpload('/api/me/avatar', file, 'avatar');
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
+    } catch (err) {
+      setErro(err?.message || 'Não foi possível enviar a foto.');
+    } finally {
+      setUploadFoto(false);
+    }
   }
 
   // Tilt 3D — só em ponteiro fino (rato), não em toque.
@@ -219,7 +231,8 @@ export default function Figurinha() {
                 type="button"
                 aria-label="Trocar foto"
                 onClick={() => fileRef.current?.click()}
-                style={{ position: 'absolute', right: 8, bottom: 8, zIndex: 10, width: 38, height: 38, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                disabled={uploadFoto}
+                style={{ position: 'absolute', right: 8, bottom: 8, zIndex: 10, width: 38, height: 38, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'grid', placeItems: 'center', cursor: uploadFoto ? 'wait' : 'pointer', opacity: uploadFoto ? 0.6 : 1, backdropFilter: 'blur(4px)' }}
               >
                 <Camera size={16} />
               </button>

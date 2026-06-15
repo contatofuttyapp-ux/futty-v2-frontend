@@ -2,7 +2,7 @@
 // utilizador aparece em todo o lado. Sem Topbar, mobile-first, dark theme.
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -113,9 +113,17 @@ export default function MeuPerfil() {
     if (ok) showToast('Avatar atualizado!');
   }
 
-  async function aoEnviarFoto(url) {
-    const ok = await patchMe({ avatar_url: url });
-    if (ok) showToast('Avatar atualizado!');
+  // Envia o ficheiro (já recortado) para o endpoint dedicado de avatar.
+  // O servidor persiste users.avatar_url e devolve o URL público.
+  async function enviarAvatar(file) {
+    const data = await apiUpload('/api/me/avatar', file, 'avatar');
+    return { url: data.avatar_url, media_type: 'image' };
+  }
+
+  // Avatar já guardado no servidor pelo upload — só refresca o estado local.
+  function aoEnviarFoto(url) {
+    setPerfil((p) => (p ? { ...p, user: { ...p.user, avatar_url: url } } : p));
+    showToast('Avatar atualizado!');
   }
 
   if (!perfil) {
@@ -207,7 +215,7 @@ export default function MeuPerfil() {
             {/* B) Enviar foto (crop 2:3) */}
             <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Enviar foto</div>
-              <UploadComCrop onUpload={aoEnviarFoto} accept="image/*" aspect={2 / 3} label="📷 Escolher foto" />
+              <UploadComCrop onUpload={aoEnviarFoto} uploadFn={enviarAvatar} accept="image/*" aspect={2 / 3} label="📷 Escolher foto" />
             </div>
 
             {/* C) Galeria de genéricos */}

@@ -5,7 +5,9 @@ import { useRef, useState } from 'react';
 import { uploadFile } from '../lib/api';
 import CropModal from './CropModal';
 
-export default function UploadComCrop({ onUpload, accept = 'image/*,video/mp4', aspect = 1, disabled = false, label = '＋ Adicionar média' }) {
+// uploadFn opcional: substitui o upload por defeito (uploadFile → /api/feed/upload).
+// Deve receber o ficheiro e devolver { url, media_type }. Usado p.ex. no avatar.
+export default function UploadComCrop({ onUpload, uploadFn = null, accept = 'image/*,video/mp4', aspect = 1, disabled = false, label = '＋ Adicionar média' }) {
   const inputRef = useRef(null);
   const [cropFile, setCropFile] = useState(null); // ficheiro a recortar (imagem)
   const [busy, setBusy] = useState(false);
@@ -38,7 +40,7 @@ export default function UploadComCrop({ onUpload, accept = 'image/*,video/mp4', 
     setBusy(true);
     setErro('');
     try {
-      const res = await uploadFile(file);
+      const res = uploadFn ? await uploadFn(file) : await uploadFile(file);
       onUpload(res.url, res.media_type);
     } catch (err) {
       setErro(err?.message || 'Erro no upload.');
