@@ -2,6 +2,7 @@
 // entrada animada; opções em tabs (Fundo/Frame/Uniforme) + toggles compactos.
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Camera, Download, Share2, Loader2 } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
@@ -83,6 +84,7 @@ export default function Figurinha() {
   const [fotoLocal, setFotoLocal] = useState(null);
   const [uploadFoto, setUploadFoto] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
+  const [limiteIA, setLimiteIA] = useState(false);
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
@@ -92,6 +94,7 @@ export default function Figurinha() {
   const jogador = me?.user || {};
   const stats = me?.stats || {};
   const equipa = teams[0] || null;
+  const plano = me?.user?.plan || 'free';
   const frameHex = getFrameColor(corFrame).stroke;
   const opts = { jogador, stats, fundo, corFrame, corUniforme, fotoOverride: fotoLocal, mostrarStats, mostrarNome };
 
@@ -140,12 +143,14 @@ export default function Figurinha() {
     if (gerandoIA) return;
     setGerandoIA(true);
     setErro('');
+    setLimiteIA(false);
     try {
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST' });
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
     } catch (err) {
-      setErro(err?.message || 'Não foi possível gerar o avatar IA.');
+      if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano
+      else setErro(err?.message || 'Não foi possível gerar o avatar IA.');
     } finally {
       setGerandoIA(false);
     }
@@ -290,6 +295,12 @@ export default function Figurinha() {
             </div>
           )}
 
+          {limiteIA ? (
+            <div className="alert alert--error" style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              Limite atingido. <Link to="/planos" style={{ color: '#fff', textDecoration: 'underline' }}>Ver planos →</Link>
+            </div>
+          ) : null}
+
           {/* Tab strip */}
           <div style={{ display: 'flex', gap: 6 }}>
             {TABS.map((t) => {
@@ -394,11 +405,13 @@ export default function Figurinha() {
               <div style={{ display: 'flex', gap: 8 }}>
                 {KITS.map((kit) => {
                   const sel = corUniforme === kit.id;
+                  // Elite desbloqueia para quem tem plano Elite.
+                  const bloqueado = kit.id === 'kit-elite' ? plano !== 'elite' : kit.locked;
                   return (
                     <button
                       key={kit.id}
                       type="button"
-                      onClick={() => (kit.locked ? setErro('Disponível no plano Elite.') : setCorUniforme(kit.id))}
+                      onClick={() => (bloqueado ? setErro('Disponível no plano Elite.') : setCorUniforme(kit.id))}
                       aria-label={`Kit ${kit.label}`}
                       aria-pressed={sel}
                       style={{
@@ -412,14 +425,14 @@ export default function Figurinha() {
                         background: kitGradientCss(kit),
                         border: sel ? '2px solid #8b5cf6' : '1px solid var(--border-subtle)',
                         boxShadow: sel ? '0 0 12px rgba(139,92,246,0.6)' : 'none',
-                        opacity: kit.locked ? 0.6 : 1,
+                        opacity: bloqueado ? 0.6 : 1,
                       }}
                     >
                       <span style={{ position: 'absolute', top: 3, right: 5, fontSize: 11 }}>{kit.badge}</span>
                       <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '2px 0', fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: '#fff', textAlign: 'center', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }}>
                         {kit.label}
                       </span>
-                      {kit.locked ? (
+                      {bloqueado ? (
                         <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>🔒</span>
                       ) : null}
                     </button>

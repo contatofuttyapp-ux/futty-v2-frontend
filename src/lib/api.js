@@ -30,7 +30,9 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!res.ok) {
-    throw new Error(body?.error || `Erro ${res.status}`);
+    const err = new Error(body?.error || `Erro ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
   return body;
 }

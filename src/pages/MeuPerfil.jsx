@@ -1,7 +1,7 @@
 // Futty v2.0 — Perfil (/perfil): a página mais pessoal — define como o
 // utilizador aparece em todo o lado. Sem Topbar, mobile-first, dark theme.
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
@@ -163,8 +163,18 @@ export default function MeuPerfil() {
             <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold size={64} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeMostrar}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeMostrar}</span>
+              {u.plan === 'pro' || u.plan === 'elite' ? (
+                <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, color: '#d4a017', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', borderRadius: 'var(--radius-pill)', padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                  {u.plan === 'pro' ? '★ Pro' : '👑 Elite'}
+                </span>
+              ) : null}
+            </div>
             <div style={{ fontSize: 13, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email || ''}</div>
+            <Link to="/planos" style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 700, color: 'var(--neon)' }}>
+              Ver planos →
+            </Link>
           </div>
         </div>
 

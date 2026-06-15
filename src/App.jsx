@@ -27,6 +27,7 @@ const AlterarPassword = lazy(() => import('./pages/AlterarPassword'));
 const Feed = lazy(() => import('./pages/Feed'));
 const Figurinha = lazy(() => import('./pages/Figurinha'));
 const MeuPerfil = lazy(() => import('./pages/MeuPerfil'));
+const Planos = lazy(() => import('./pages/Planos'));
 const Explorar = lazy(() => import('./pages/Explorar'));
 
 // "/" → redireciona para /home (se autenticado) ou /login
@@ -162,6 +163,14 @@ export default function App() {
             element={
               <AuthGuard>
                 <MeuPerfil />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/planos"
+            element={
+              <AuthGuard>
+                <Planos />
               </AuthGuard>
             }
           />
