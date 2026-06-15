@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { urlAsset, nomeJogador, iniciaisJogador, gradienteAvatar } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
+import { getKit, kitGradientCss } from '../utils/kits';
 
 // 18 partículas (12 finas + 6 maiores douradas), distribuídas pelo card.
 const PARTICULAS = [
@@ -84,6 +85,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   const nota = Number.isFinite(stats?.nota) ? Number(stats.nota).toFixed(1) : '--';
   const temAvatar = avatarSrc && !imgFalhou;
   const grad = gradienteAvatar(nome); // avatar de iniciais (sem foto)
+  const kitUniforme = getKit(corUniforme); // kit de camisola (ou null = cor simples)
 
   // Cor do frame (chave nomeada → hex/glow) para a aura/respiração do card.
   const fc = getFrameColor(corFrame);
@@ -213,9 +215,19 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
         </div>
       )}
 
-      {/* z4 — UNIFORME (overlay suave de cor sobre o avatar = camisola colorida) */}
+      {/* z4 — UNIFORME (cor simples = tint suave; kit = padrão de camisola) */}
       {corUniforme ? (
-        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none', background: corUniforme, opacity: 0.28 }} />
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 4,
+            pointerEvents: 'none',
+            background: kitUniforme ? kitGradientCss(kitUniforme) : corUniforme,
+            opacity: kitUniforme ? 0.85 : 0.28,
+          }}
+        />
       ) : null}
 
       {/* z4 — REFLEXO DE LUZ (holográfico) */}

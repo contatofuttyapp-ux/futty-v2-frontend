@@ -2,6 +2,7 @@
 // versão Story 9:16 (1080×1920) para o Instagram. Tudo no cliente, sem servidor.
 import { urlAsset, nomeJogador, iniciaisJogador, gradienteAvatar } from './avatar';
 import { getFrameColor } from './frameColors';
+import { getKit } from './kits';
 
 // Carrega uma imagem; devolve null se falhar (evita tainting do canvas).
 function carregarImagem(src, crossOrigin) {
@@ -115,13 +116,32 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, stats 
     ctx.restore();
   }
 
-  // 3b. UNIFORME (overlay suave de cor sobre a zona do avatar)
+  // 3b. UNIFORME — cor simples (tint suave) ou kit de camisola (padrão).
   if (corUniforme) {
-    ctx.save();
-    ctx.globalAlpha = 0.28;
-    ctx.fillStyle = corUniforme;
-    ctx.fillRect(0, 0, W, H);
-    ctx.restore();
+    const kit = getKit(corUniforme);
+    if (kit) {
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = kit.base;
+      ctx.fillRect(0, 0, W, H);
+      // Duas faixas finas de acento a 30% e 70%.
+      ctx.fillStyle = kit.acento;
+      ctx.fillRect(0, H * 0.3, W, 3 * k);
+      ctx.fillRect(0, H * 0.7, W, 3 * k);
+      // "FUTTY" pequeno, centrado, no acento.
+      ctx.globalAlpha = 0.4;
+      ctx.font = `700 ${8 * k}px 'Rajdhani', system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('FUTTY', W / 2, H / 2);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = corUniforme;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
   }
 
   // 4. GRADIENTE INFERIOR

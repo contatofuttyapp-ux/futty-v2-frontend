@@ -7,6 +7,7 @@ import { apiFetch, apiUpload } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
+import { KITS, kitGradientCss } from '../utils/kits';
 import { gerarFigurinhaCanvas, gerarFigurinhaCanvasStory } from '../utils/figurinhaCanvas';
 import { celebrarPartilha } from '../hooks/useConfetti';
 import PlayerCard from '../components/PlayerCard';
@@ -388,28 +389,68 @@ export default function Figurinha() {
               })}
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: 12 }}>
-              {UNIFORMES.map((un) => {
-                const sel = corUniforme === un.hex;
-                return (
-                  <button
-                    key={un.k}
-                    type="button"
-                    onClick={() => setCorUniforme(un.hex)}
-                    aria-label={`Uniforme ${un.k}`}
-                    aria-pressed={sel}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 'var(--radius-pill)',
-                      cursor: 'pointer',
-                      background: un.hex,
-                      border: sel ? '2px solid #d4a017' : '2px solid rgba(255,255,255,0.2)',
-                      boxShadow: sel ? '0 0 8px rgba(212,160,23,0.5)' : 'none',
-                    }}
-                  />
-                );
-              })}
+            <div style={{ display: 'grid', gap: 8 }}>
+              {/* Kits Futty (tiles) */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                {KITS.map((kit) => {
+                  const sel = corUniforme === kit.id;
+                  return (
+                    <button
+                      key={kit.id}
+                      type="button"
+                      onClick={() => (kit.locked ? setErro('Disponível no plano Elite.') : setCorUniforme(kit.id))}
+                      aria-label={`Kit ${kit.label}`}
+                      aria-pressed={sel}
+                      style={{
+                        flex: 1,
+                        height: 52,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        padding: 0,
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer',
+                        background: kitGradientCss(kit),
+                        border: sel ? '2px solid #8b5cf6' : '1px solid var(--border-subtle)',
+                        boxShadow: sel ? '0 0 12px rgba(139,92,246,0.6)' : 'none',
+                        opacity: kit.locked ? 0.6 : 1,
+                      }}
+                    >
+                      <span style={{ position: 'absolute', top: 3, right: 5, fontSize: 11 }}>{kit.badge}</span>
+                      <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '2px 0', fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: '#fff', textAlign: 'center', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }}>
+                        {kit.label}
+                      </span>
+                      {kit.locked ? (
+                        <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>🔒</span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Cores simples */}
+              <div style={{ display: 'flex', gap: 12 }}>
+                {UNIFORMES.map((un) => {
+                  const sel = corUniforme === un.hex;
+                  return (
+                    <button
+                      key={un.k}
+                      type="button"
+                      onClick={() => setCorUniforme(un.hex)}
+                      aria-label={`Uniforme ${un.k}`}
+                      aria-pressed={sel}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 'var(--radius-pill)',
+                        cursor: 'pointer',
+                        background: un.hex,
+                        border: sel ? '2px solid #d4a017' : '2px solid rgba(255,255,255,0.2)',
+                        boxShadow: sel ? '0 0 8px rgba(212,160,23,0.5)' : 'none',
+                      }}
+                    />
+                  );
+                })}
+              </div>
             </div>
           )}
 
