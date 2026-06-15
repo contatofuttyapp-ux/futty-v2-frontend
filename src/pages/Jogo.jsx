@@ -25,6 +25,7 @@ export default function Jogo() {
   const [actionError, setActionError] = useState('');
   const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay do sorteio
   const [editando, setEditando] = useState(false); // modo ajuste manual dos times
+  const [jogadoresPorTime, setJogadoresPorTime] = useState(5); // selector do sorteio
   const [toast, setToast] = useState(null);
 
   // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
@@ -49,9 +50,9 @@ export default function Jogo() {
     setActionError('');
     setBusy(true);
     try {
-      const opcoes = { method: 'POST' };
-      if (rsvpConfirmados) opcoes.body = JSON.stringify({ jogadoresIds: rsvpConfirmados });
-      const res = await apiFetch(`/api/games/${id}/sortear`, opcoes);
+      const body = { jogadoresPorTime };
+      if (rsvpConfirmados) body.jogadoresIds = rsvpConfirmados;
+      const res = await apiFetch(`/api/games/${id}/sortear`, { method: 'POST', body: JSON.stringify(body) });
       // Junta os dados do jogo (local/data) ao resultado fresco (times_resultado).
       // __fresco: true → o overlay corre as 4 fases (confetti incluído).
       setJogoSorteio({ ...(data?.game || {}), ...res.game, __fresco: true });
@@ -217,6 +218,22 @@ export default function Jogo() {
             {!game.sorteio_realizado && (
               <div style={{ marginBottom: 12 }}>
                 <CountdownSorteio jogo={game} />
+              </div>
+            )}
+            {isAdmin && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                <span className="muted" style={{ fontSize: 13 }}>Jogadores por time:</span>
+                {[4, 5, 6, 7, 8].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`btn btn--sm ${jogadoresPorTime === n ? 'btn--primary' : 'btn--ghost'}`}
+                    aria-pressed={jogadoresPorTime === n}
+                    onClick={() => setJogadoresPorTime(n)}
+                  >
+                    {n}
+                  </button>
+                ))}
               </div>
             )}
             <div className="header-actions" style={{ marginTop: 0 }}>
