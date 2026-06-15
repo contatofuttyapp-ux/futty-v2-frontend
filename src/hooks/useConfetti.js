@@ -43,6 +43,16 @@ export function celebrarCerveja(origem = { x: 0.5, y: 0.6 }) {
   });
 }
 
+// D) Partilha de figurinha — explosão com a cor do frame escolhido.
+export function celebrarPartilha(cor = '#d4a017') {
+  confetti({
+    particleCount: 80,
+    spread: 60,
+    origin: { y: 0.7 },
+    colors: [cor, '#8b5cf6', '#ffffff'],
+  });
+}
+
 // C) Top 3 do ranking — intensidade/cor conforme a posição.
 export function celebrarTop3(posicao = 1) {
   if (posicao === 1) {

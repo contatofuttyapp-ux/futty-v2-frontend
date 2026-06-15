@@ -1425,6 +1425,18 @@
   .inicio-vline::after { animation: none; }
 }
 
+/* Figurinha studio — entrada suave do card ao montar. */
+@keyframes figCardIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fig-card-enter {
+  animation: figCardIn 0.45s ease-out 0.1s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fig-card-enter { animation: none; }
+}
+
 .gcard--past {
   opacity: 0.55;
 }

@@ -1,13 +1,14 @@
-// Futty v2.0 — Figurinha (/figurinha): "card studio". Card 2:3 grande no topo,
-// câmara para trocar a foto (preview local, sem backend) e controlos compactos
-// que cabem num ecrã (iPhone 14/15) sem scroll. Tudo no cliente (canvas).
+// Futty v2.0 — Figurinha (/figurinha): "card studio". Card 2:3 com tilt 3D e
+// entrada animada; opções em tabs (Fundo/Frame/Uniforme) + toggles compactos.
+// Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
-import { Landmark, Layers, Circle, Camera, Download, Share2 } from 'lucide-react';
+import { Camera, Download, Share2 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarFigurinhaCanvasStory } from '../utils/figurinhaCanvas';
+import { celebrarPartilha } from '../hooks/useConfetti';
 import PlayerCard from '../components/PlayerCard';
 import Topbar from '../components/Topbar';
 import '../styles/app.css';
@@ -15,10 +16,16 @@ import '../styles/app.css';
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
 const FRAMES = ['dourado', 'roxo', 'roxo_escuro', 'prata', 'vermelho', 'verde', 'azul', 'cinza'];
 const FUNDOS = [
-  { k: 'estadio', label: 'Estádio', Icon: Landmark },
-  { k: 'gradiente', label: 'Gradiente', Icon: Layers },
-  { k: 'preto', label: 'Neutro', Icon: Circle },
+  { k: 'estadio', label: 'Estádio' },
+  { k: 'gradiente', label: 'Gradiente' },
+  { k: 'preto', label: 'Neutro' },
 ];
+// Background real de cada fundo (igual ao do PlayerCard) para os tiles.
+const FUNDO_BG = {
+  estadio: "url('/stadium_bg.png') center / cover no-repeat, #1b2433",
+  gradiente: 'radial-gradient(ellipse 90% 70% at 50% 45%, #0c3a26, #061410 55%, #000 100%)',
+  preto: '#000000',
+};
 // Cores de uniforme (camisola) — overlay suave sobre o avatar.
 const UNIFORMES = [
   { k: 'verde', hex: '#16a34a' },
@@ -27,6 +34,11 @@ const UNIFORMES = [
   { k: 'branco', hex: '#f1f5f9' },
   { k: 'preto', hex: '#0f172a' },
   { k: 'amarelo', hex: '#ca8a04' },
+];
+const TABS = [
+  { k: 'fundo', label: 'Fundo' },
+  { k: 'frame', label: 'Frame' },
+  { k: 'uniforme', label: 'Uniforme' },
 ];
 
 // Nome de ficheiro seguro a partir do nome do jogador.
@@ -38,15 +50,6 @@ function ficheiroNome(nome, sufixo = '') {
     .toLowerCase()
     .replace(/(^-|-$)/g, '');
   return `futty-${base || 'jogador'}${sufixo}.png`;
-}
-
-// Rótulo curto e leve à esquerda de cada linha de controlo.
-function Lbl({ children }) {
-  return (
-    <span style={{ width: 52, flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
-      {children}
-    </span>
-  );
 }
 
 // Cantos em L (snakeGlow) para o swatch de frame seleccionado.
@@ -77,13 +80,16 @@ export default function Figurinha() {
   const [mostrarStats, setMostrarStats] = useState(true);
   const [mostrarNome, setMostrarNome] = useState(true);
   const [fotoLocal, setFotoLocal] = useState(null);
+  const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
   const fileRef = useRef(null);
+  const cardRef = useRef(null);
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
   const equipa = teams[0] || null;
+  const frameHex = getFrameColor(corFrame).stroke;
   const opts = { jogador, stats, fundo, corFrame, corUniforme, fotoOverride: fotoLocal, mostrarStats, mostrarNome };
 
   // Carrega o perfil e pré-selecciona as escolhas guardadas.
@@ -115,6 +121,24 @@ export default function Figurinha() {
     e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
   }
 
+  // Tilt 3D — só em ponteiro fino (rato), não em toque.
+  function onCardMove(e) {
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+    const y = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+    el.style.transition = 'none';
+    el.style.transform = `perspective(900px) rotateX(${(-y * 10).toFixed(2)}deg) rotateY(${(x * 10).toFixed(2)}deg)`;
+  }
+  function onCardLeave() {
+    const el = cardRef.current;
+    if (!el) return;
+    el.style.transition = 'transform 0.4s ease';
+    el.style.transform = 'perspective(900px) rotateX(0deg) rotateY(0deg)';
+  }
+
   async function baixar() {
     if (busy) return;
     setBusy(true);
@@ -135,6 +159,7 @@ export default function Figurinha() {
 
   async function partilhar() {
     if (busy) return;
+    celebrarPartilha(frameHex); // confetti antes da partilha
     setBusy(true);
     setErro('');
     try {
@@ -178,32 +203,69 @@ export default function Figurinha() {
     <div className="app-shell">
       <Topbar title="Figurinha" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* 1. ZONA DO CARD (2:3, limitado à altura disponível) */}
+        {/* 1. ZONA DO CARD (2:3, tilt 3D + entrada animada) */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
-          <div style={{ position: 'relative', width: 'min(80vw, calc((100dvh - 400px) * 2 / 3))', aspectRatio: '2 / 3' }}>
-            <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave />
-
-
-            {/* Câmara — trocar foto (canto inferior-direito) */}
-            <button
-              type="button"
-              aria-label="Trocar foto"
-              onClick={() => fileRef.current?.click()}
-              style={{ position: 'absolute', right: 8, bottom: 8, zIndex: 10, width: 38, height: 38, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+          <div className="fig-card-enter" style={{ width: 'min(80vw, calc((100dvh - 400px) * 2 / 3))', aspectRatio: '2 / 3' }}>
+            <div
+              ref={cardRef}
+              onMouseMove={onCardMove}
+              onMouseLeave={onCardLeave}
+              style={{ position: 'relative', width: '100%', height: '100%', willChange: 'transform' }}
             >
-              <Camera size={16} />
-            </button>
+              <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave />
+
+              {/* Câmara — trocar foto (canto inferior-direito) */}
+              <button
+                type="button"
+                aria-label="Trocar foto"
+                onClick={() => fileRef.current?.click()}
+                style={{ position: 'absolute', right: 8, bottom: 8, zIndex: 10, width: 38, height: 38, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+              >
+                <Camera size={16} />
+              </button>
+            </div>
           </div>
         </div>
 
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
 
-        {/* 2. CONTROLOS compactos (uma linha por secção) */}
+        {/* 2. CONTROLOS — tabs + painel + detalhes */}
         <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 8 }}>
-          {/* FUNDO */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Lbl>Fundo</Lbl>
-            <div style={{ display: 'flex', gap: 8, flex: 1 }}>
+          {/* Tab strip */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {TABS.map((t) => {
+              const on = activeTab === t.k;
+              return (
+                <button
+                  key={t.k}
+                  type="button"
+                  onClick={() => setActiveTab(t.k)}
+                  aria-pressed={on}
+                  style={{
+                    flex: 1,
+                    height: 36,
+                    borderRadius: 'var(--radius-sm)',
+                    border: on ? '1px solid var(--border-accent)' : '1px solid transparent',
+                    background: on ? 'rgba(139,92,246,0.2)' : 'transparent',
+                    color: on ? '#8b5cf6' : 'var(--label-color)',
+                    fontFamily: "'Rajdhani', sans-serif",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Painel da tab activa */}
+          {activeTab === 'fundo' ? (
+            <div style={{ display: 'flex', gap: 8 }}>
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
                 return (
@@ -214,32 +276,28 @@ export default function Figurinha() {
                     aria-pressed={sel}
                     style={{
                       flex: 1,
-                      height: 38,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      border: `1px solid ${sel ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.06)'}`,
-                      borderRadius: 12,
-                      background: sel ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)',
-                      color: sel ? '#d4a017' : 'rgba(255,255,255,0.6)',
-                      fontSize: 12,
-                      fontWeight: 700,
+                      height: 58,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      padding: 0,
+                      borderRadius: 'var(--radius-md)',
                       cursor: 'pointer',
+                      background: FUNDO_BG[f.k],
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      border: sel ? '2px solid #8b5cf6' : '1px solid var(--border-subtle)',
+                      boxShadow: sel ? '0 0 12px rgba(139,92,246,0.6)' : 'none',
                     }}
                   >
-                    <f.Icon size={15} />
-                    {f.label}
+                    <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '3px 0', fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, color: '#fff', textAlign: 'center', background: 'linear-gradient(transparent, rgba(0,0,0,0.75))' }}>
+                      {f.label}
+                    </span>
                   </button>
                 );
               })}
             </div>
-          </div>
-
-          {/* FRAME (8 cores, scroll horizontal) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Lbl>Frame</Lbl>
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2, flex: 1 }}>
+          ) : activeTab === 'frame' ? (
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
               {FRAMES.map((c) => {
                 const sel = corFrame === c;
                 const hex = getFrameColor(c).stroke;
@@ -255,7 +313,7 @@ export default function Figurinha() {
                       flex: '0 0 auto',
                       width: 32,
                       height: 32,
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-xs)',
                       cursor: 'pointer',
                       background: hex,
                       border: sel ? `2px solid ${hex}` : '2px solid rgba(255,255,255,0.2)',
@@ -271,12 +329,8 @@ export default function Figurinha() {
                 );
               })}
             </div>
-          </div>
-
-          {/* UNIFORME (6 cores) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Lbl>Uniforme</Lbl>
-            <div style={{ display: 'flex', gap: 10, flex: 1 }}>
+          ) : (
+            <div style={{ display: 'flex', gap: 12 }}>
               {UNIFORMES.map((un) => {
                 const sel = corUniforme === un.hex;
                 return (
@@ -289,7 +343,7 @@ export default function Figurinha() {
                     style={{
                       width: 28,
                       height: 28,
-                      borderRadius: '50%',
+                      borderRadius: 'var(--radius-pill)',
                       cursor: 'pointer',
                       background: un.hex,
                       border: sel ? '2px solid #d4a017' : '2px solid rgba(255,255,255,0.2)',
@@ -299,37 +353,34 @@ export default function Figurinha() {
                 );
               })}
             </div>
-          </div>
+          )}
 
-          {/* DETALHES (2 toggles numa linha) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Lbl>Detalhes</Lbl>
-            <div style={{ display: 'flex', gap: 8, flex: 1 }}>
-              {[
-                { on: mostrarNome, set: setMostrarNome, label: 'Nome' },
-                { on: mostrarStats, set: setMostrarStats, label: 'Nota · J · G' },
-              ].map((t) => (
-                <button
-                  key={t.label}
-                  type="button"
-                  onClick={() => t.set((v) => !v)}
-                  aria-pressed={t.on}
-                  style={{
-                    flex: 1,
-                    height: 38,
-                    borderRadius: 12,
-                    border: `1px solid ${t.on ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.06)'}`,
-                    background: t.on ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)',
-                    color: t.on ? '#d4a017' : 'rgba(255,255,255,0.5)',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+          {/* Detalhes — linha compacta sempre visível (sem título) */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[
+              { on: mostrarNome, set: setMostrarNome, label: 'Nome' },
+              { on: mostrarStats, set: setMostrarStats, label: 'Nota · J · G' },
+            ].map((t) => (
+              <button
+                key={t.label}
+                type="button"
+                onClick={() => t.set((v) => !v)}
+                aria-pressed={t.on}
+                style={{
+                  flex: 1,
+                  height: 32,
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${t.on ? 'var(--border-accent)' : 'var(--border-subtle)'}`,
+                  background: t.on ? 'rgba(139,92,246,0.2)' : 'var(--surface-1)',
+                  color: t.on ? '#8b5cf6' : 'var(--label-color)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
           {erro ? <div className="alert alert--error" style={{ margin: 0 }}>{erro}</div> : null}
@@ -339,7 +390,13 @@ export default function Figurinha() {
             <button type="button" className="btn btn--purple-outline" style={{ flex: 1, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
               <Download size={16} /> {busy ? 'A gerar…' : 'Baixar'}
             </button>
-            <button type="button" className="btn btn--purple" style={{ flex: 1, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={partilhar}>
+            <button
+              type="button"
+              className="btn"
+              style={{ flex: 1, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', color: '#fff', background: `linear-gradient(135deg, ${frameHex}ee, ${frameHex}99)`, boxShadow: `0 4px 18px ${frameHex}44` }}
+              disabled={busy}
+              onClick={partilhar}
+            >
               <Share2 size={16} /> Partilhar
             </button>
           </div>
