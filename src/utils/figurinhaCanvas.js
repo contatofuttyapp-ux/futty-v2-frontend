@@ -1,9 +1,7 @@
 // Futty v2.0 — Geração da figurinha (PNG via canvas). Card 2:3 (base 400×600) e
 // versão Story 9:16 (1080×1920) para o Instagram. Tudo no cliente, sem servidor.
-import { urlAsset, iniciaisNome, nomeJogador } from './avatar';
+import { urlAsset, nomeJogador, iniciaisJogador, gradienteAvatar } from './avatar';
 import { getFrameColor } from './frameColors';
-
-const COR_HEX = { preto: '#1a1a1a', verde: '#8b5cf6', azul: '#3b82f6', vermelho: '#ef4444', amarelo: '#f59e0b', cinzento: '#888888' };
 
 // Carrega uma imagem; devolve null se falhar (evita tainting do canvas).
 function carregarImagem(src, crossOrigin) {
@@ -98,22 +96,23 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, stats 
     ctx.drawImage(avatar, (W - dw) / 2, H - boxH, dw, dh); // alinhado ao topo da área inferior
     ctx.restore();
   } else {
-    const corBg = COR_HEX[jogador?.cor_preferida] || '#15151a';
-    const cx = W / 2;
-    const cy = H * 0.6;
-    const r = W * 0.32;
-    const g = ctx.createRadialGradient(cx, cy - 20 * k, 10 * k, cx, cy, r);
-    g.addColorStop(0, corBg);
-    g.addColorStop(1, 'rgba(0,0,0,0.2)');
+    // Sem foto → avatar de iniciais: gradiente determinístico + iniciais.
+    const { a, b } = gradienteAvatar(nome);
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, a);
+    g.addColorStop(1, b);
     ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `900 ${90 * k}px system-ui, "Segoe UI", sans-serif`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = `700 ${W * 0.45}px 'Rajdhani', system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(iniciaisNome(nome), cx, cy);
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 12 * k;
+    ctx.shadowOffsetY = 2 * k;
+    ctx.fillText(iniciaisJogador(nome), W / 2, H / 2);
+    ctx.restore();
   }
 
   // 3b. UNIFORME (overlay suave de cor sobre a zona do avatar)

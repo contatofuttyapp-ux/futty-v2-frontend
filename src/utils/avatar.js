@@ -51,6 +51,35 @@ export function iniciaisNome(nome) {
   return n.slice(0, 2).toUpperCase();
 }
 
+// Iniciais "primeiro + último nome" (ex.: "Pedro Borges" → "PB", "João" → "J").
+// Usado no avatar de iniciais da figurinha (card completo sem foto).
+export function iniciaisJogador(nome) {
+  const n = String(nome ?? '').trim();
+  if (!n) return '?';
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Gradiente determinístico (mesmo nome → mesmo gradiente) da paleta Futty.
+// Hash simples: soma dos char codes do nome % 6.
+const AVATAR_GRADS = [
+  ['#1a0a2e', '#0d0812'], // G0 roxo escuro
+  ['#1f1408', '#0d0a04'], // G1 dourado escuro
+  ['#0a1520', '#050d14'], // G2 azul escuro
+  ['#1f0a0a', '#0d0505'], // G3 bordeaux
+  ['#0a1a0a', '#050d05'], // G4 verde escuro
+  ['#1a1a2e', '#0d0d1a'], // G5 índigo
+];
+
+export function gradienteAvatar(nome) {
+  const s = String(nome ?? '');
+  let soma = 0;
+  for (let i = 0; i < s.length; i += 1) soma += s.charCodeAt(i);
+  const [a, b] = AVATAR_GRADS[soma % AVATAR_GRADS.length];
+  return { a, b, css: `linear-gradient(135deg, ${a}, ${b})` };
+}
+
 // ─── Resolução de avatar por cor do time ─────────────────────────────────────
 
 // Devolve o URL do avatar do jogador para uma cor de time.

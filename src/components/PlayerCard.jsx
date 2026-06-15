@@ -1,18 +1,8 @@
 // Futty v2.0 — PlayerCard: card quadrado épico (4 cantos em L dourados).
 // Tudo em CSS puro (zero libs). Usado em Início e Figurinha.
 import { useState } from 'react';
-import { urlAsset, iniciaisNome, nomeJogador } from '../utils/avatar';
+import { urlAsset, nomeJogador, iniciaisJogador, gradienteAvatar } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
-
-// Cores de uniforme (6) para o fundo das iniciais quando não há avatar.
-const COR_HEX = {
-  preto: '#1a1a1a',
-  verde: '#8b5cf6',
-  azul: '#3b82f6',
-  vermelho: '#ef4444',
-  amarelo: '#f59e0b',
-  cinzento: '#888888',
-};
 
 // 18 partículas (12 finas + 6 maiores douradas), distribuídas pelo card.
 const PARTICULAS = [
@@ -91,9 +81,9 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
     setSrcAtual(avatarSrc);
     setImgFalhou(false);
   }
-  const corBg = COR_HEX[jogador?.cor_preferida] || '#15151a';
   const nota = Number.isFinite(stats?.nota) ? Number(stats.nota).toFixed(1) : '--';
   const temAvatar = avatarSrc && !imgFalhou;
+  const grad = gradienteAvatar(nome); // avatar de iniciais (sem foto)
 
   // Cor do frame (chave nomeada → hex/glow) para a aura/respiração do card.
   const fc = getFrameColor(corFrame);
@@ -113,7 +103,7 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   return (
     <div
       aria-label={`Card de ${nome}${equipa?.nome ? ` · ${equipa.nome}` : ''}`}
-      style={{ position: 'relative', width: '100%', aspectRatio: aspect, borderRadius: 0, overflow: 'hidden', background: fundoCss, animation: `${breathName} 4.6s ease-in-out infinite`, willChange: 'box-shadow' }}
+      style={{ position: 'relative', width: '100%', aspectRatio: aspect, borderRadius: 0, overflow: 'hidden', background: fundoCss, animation: `${breathName} 4.6s ease-in-out infinite`, willChange: 'box-shadow', containerType: 'size' }}
     >
       <style>{KEYFRAMES + breathKeyframes}</style>
 
@@ -203,20 +193,23 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
         />
       ) : (
         <div
+          aria-label={`Iniciais de ${nome}`}
           style={{
             position: 'absolute',
             inset: 0,
             zIndex: 4,
             display: 'grid',
             placeItems: 'center',
-            background: `radial-gradient(circle at 50% 38%, ${corBg}, rgba(0,0,0,0.35))`,
-            color: '#fff',
-            fontWeight: 900,
-            fontSize: 'clamp(28px, 16vw, 64px)',
-            textShadow: '0 2px 10px rgba(0,0,0,0.7)',
+            background: grad.css,
+            color: 'rgba(255,255,255,0.92)',
+            fontFamily: "'Rajdhani', sans-serif",
+            fontWeight: 700,
+            fontSize: '45cqmin',
+            lineHeight: 1,
+            textShadow: '0 2px 12px rgba(0,0,0,0.5)',
           }}
         >
-          {iniciaisNome(nome)}
+          {iniciaisJogador(nome)}
         </div>
       )}
 
