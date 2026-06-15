@@ -1,6 +1,6 @@
 // Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
@@ -17,6 +17,9 @@ import '../styles/app.css';
 
 export default function Jogo() {
   const { slug, id } = useParams();
+  const location = useLocation();
+  // IDs dos confirmados via RSVP (passados pelo AdminPanel ao "Fazer sorteio").
+  const rsvpConfirmados = location.state?.rsvpConfirmados || null;
   const { data, loading, error, reload } = useApi(`/api/games/${id}`);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -71,7 +74,11 @@ export default function Jogo() {
 
   const { team, game, players, meuEstado } = data || {};
   const isAdmin = team?.role === 'admin';
-  const confirmados = (players || []).filter((p) => p.confirmado);
+  const confirmadosTodos = (players || []).filter((p) => p.confirmado);
+  // Se vier do RSVP, mostra só os confirmados via RSVP (filtro de UI).
+  const confirmados = rsvpConfirmados
+    ? confirmadosTodos.filter((p) => rsvpConfirmados.includes(p.user_id))
+    : confirmadosTodos;
   const estouConfirmado = !!meuEstado?.confirmado;
   const souGoleiro = !!meuEstado?.goleiro;
 
@@ -85,6 +92,11 @@ export default function Jogo() {
           !error && <p className="muted">Jogo não encontrado.</p>
         ) : (
           <>
+            {rsvpConfirmados ? (
+              <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.08)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
+                📋 Sorteio com {confirmados.length} confirmados via RSVP
+              </div>
+            ) : null}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div>
                 <h1 className="app-page-title" style={{ marginBottom: 4 }}>
