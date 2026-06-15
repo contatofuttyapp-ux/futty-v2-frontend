@@ -2,7 +2,7 @@
 // entrada animada; opções em tabs (Fundo/Frame/Uniforme) + toggles compactos.
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Download, Share2 } from 'lucide-react';
+import { Camera, Download, Share2, Loader2 } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador } from '../utils/avatar';
@@ -81,6 +81,7 @@ export default function Figurinha() {
   const [mostrarNome, setMostrarNome] = useState(true);
   const [fotoLocal, setFotoLocal] = useState(null);
   const [uploadFoto, setUploadFoto] = useState(false);
+  const [gerandoIA, setGerandoIA] = useState(false);
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
@@ -130,6 +131,22 @@ export default function Figurinha() {
       setErro(err?.message || 'Não foi possível enviar a foto.');
     } finally {
       setUploadFoto(false);
+    }
+  }
+
+  // Gerar avatar com IA a partir da foto atual (endpoint usa users.avatar_url).
+  async function gerarAvatarIA() {
+    if (gerandoIA) return;
+    setGerandoIA(true);
+    setErro('');
+    try {
+      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST' });
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
+      setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
+    } catch (err) {
+      setErro(err?.message || 'Não foi possível gerar o avatar IA.');
+    } finally {
+      setGerandoIA(false);
     }
   }
 
@@ -244,6 +261,34 @@ export default function Figurinha() {
 
         {/* 2. CONTROLOS — tabs + painel + detalhes */}
         <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 8 }}>
+          {/* Gerar Avatar IA (precisa de uma foto guardada) */}
+          {jogador.avatar_url ? (
+            <div style={{ display: 'grid', gap: 4 }}>
+              <button
+                type="button"
+                className="btn btn--purple"
+                style={{ width: '100%', height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                disabled={gerandoIA || uploadFoto}
+                onClick={gerarAvatarIA}
+              >
+                {gerandoIA ? (
+                  <>
+                    <Loader2 size={16} className="spin" /> A gerar…
+                  </>
+                ) : (
+                  '✨ Gerar Avatar IA'
+                )}
+              </button>
+              {gerandoIA ? (
+                <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>Pode demorar até 30 segundos</span>
+              ) : null}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: 'var(--label-color)', textAlign: 'center', padding: '6px 0' }}>
+              Adiciona primeiro uma foto para gerar o avatar IA
+            </div>
+          )}
+
           {/* Tab strip */}
           <div style={{ display: 'flex', gap: 6 }}>
             {TABS.map((t) => {

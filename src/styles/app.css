@@ -1437,6 +1437,14 @@
   .fig-card-enter { animation: none; }
 }
 
+/* Spinner reutilizável (botões em loading). */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
 .gcard--past {
   opacity: 0.55;
 }
