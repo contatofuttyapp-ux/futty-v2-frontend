@@ -1,7 +1,8 @@
 // Futty v2.0 — Planos (/planos): Free / Pro / Elite lado a lado.
-// Pagamentos ainda não existem → botões mostram "Em breve".
-import { useState } from 'react';
+// Botões "Assinar" abrem o Checkout do Stripe; ?sucesso=1 confirma o pagamento.
+import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
@@ -32,9 +33,44 @@ const PLANOS = [
 ];
 
 export default function Planos() {
-  const { data: me } = useApi('/api/me');
+  const { data: me, reload } = useApi('/api/me');
   const planoAtual = me?.user?.plan || 'free';
-  const [toast, setToast] = useState(null);
+  const [planoBusy, setPlanoBusy] = useState(null);
+  // Deteta o regresso do checkout (?sucesso=1) já no estado inicial do toast.
+  const [toast, setToast] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('sucesso') === '1'
+      ? { tipo: 'success', mensagem: 'Pagamento confirmado! 🎉 O teu plano será activado em instantes.' }
+      : null;
+  });
+
+  // Após o sucesso: limpa o ?sucesso=1 da URL e refaz o fetch do plano
+  // (o webhook pode demorar uns segundos a processar).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sucesso') !== '1') return undefined;
+    window.history.replaceState({}, '', '/planos');
+    reload();
+    const t = setTimeout(() => reload(), 3000);
+    return () => clearTimeout(t);
+  }, [reload]);
+
+  async function assinar(plan) {
+    if (planoBusy) return;
+    setPlanoBusy(plan);
+    try {
+      // Moeda pelo idioma do browser: pt-BR → BRL; restantes → EUR.
+      const moeda = navigator.language === 'pt-BR' ? 'BRL' : 'EUR';
+      const data = await apiFetch('/api/stripe/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ plan, moeda }),
+      });
+      window.location.assign(data.url); // redireciona para o Stripe
+    } catch (err) {
+      setToast({ tipo: 'error', mensagem: err?.message || 'Não foi possível iniciar o pagamento.' });
+      setPlanoBusy(null);
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -83,15 +119,16 @@ export default function Planos() {
                   ))}
                 </ul>
 
-                {p.botao ? (
+                {/* Botão de checkout — escondido no plano actual (já tem o badge). */}
+                {p.botao && !atual ? (
                   <button
                     type="button"
                     className="btn btn--purple"
                     style={{ width: '100%' }}
-                    disabled={atual}
-                    onClick={() => setToast({ tipo: 'info', mensagem: 'Pagamentos em breve!' })}
+                    disabled={!!planoBusy}
+                    onClick={() => assinar(p.id)}
                   >
-                    {atual ? 'Plano actual' : p.botao}
+                    {planoBusy === p.id ? 'A redirecionar…' : p.botao}
                   </button>
                 ) : null}
               </div>
