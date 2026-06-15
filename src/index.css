@@ -19,6 +19,37 @@
   --aurora-opacity: 0.32; /* opacidade dos blobs */
   --aurora-po: 0.28;      /* opacidade máxima das partículas */
 
+  /* ─── Tokens base (fundação visual) — usar em componentes novos ─── */
+  /* Espaçamento */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Superfícies (--surface-2 reaproveita --bg-elev, que já é #101012) */
+  --surface-1: #0d0d12;
+  --surface-2: var(--bg-elev);
+
+  /* Bordas (--border já existe como #222222 — mantido; subtil sob outro nome) */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-accent: rgba(139, 92, 246, 0.35);
+
+  /* Border-radius (--radius-lg reaproveita --radius, que já é 16px) */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: var(--radius);
+  --radius-pill: 999px;
+
+  /* Tipografia de labels/subtítulos (padrão Ranking) */
+  --label-size: 12px;
+  --label-weight: 700;
+  --label-color: rgba(255, 255, 255, 0.4);
+  --label-spacing: 1.5px;
+  --label-transform: uppercase;
+  --label-font: 'Rajdhani', sans-serif;
+
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 
   font-family: var(--sans);
