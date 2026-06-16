@@ -1056,6 +1056,16 @@ function TabMembros({ slug, meId, showToast }) {
                 )}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: m.nota_media == null ? 'var(--label-color)' : m.nota_media >= 7 ? '#d4a017' : m.nota_media >= 5 ? '#fff' : 'var(--label-color)', border: '1px solid #333', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
+                  ★ {m.nota_media == null ? '—' : m.nota_media.toFixed(1)}
+                </span>
+                {m.plano === 'pro' || m.plano === 'elite' ? (
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#d4a017', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
+                    {m.plano === 'pro' ? '★ Pro' : '👑 Elite'}
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             <button
