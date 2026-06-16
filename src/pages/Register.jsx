@@ -5,10 +5,14 @@ import { supabase } from '../lib/supabase';
 import GoogleIcon from '../components/GoogleIcon';
 import '../styles/auth.css';
 
+// Máximo permitido: ontem (não permite hoje nem datas futuras).
+const MAX_NASCIMENTO = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
 export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [birthdate, setBirthdate] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,12 +30,19 @@ export default function Register() {
       setError('As senhas não coincidem.');
       return;
     }
+    if (!birthdate) {
+      setError('Data de nascimento é obrigatória.');
+      return;
+    }
 
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/home` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/home`,
+        data: { birthdate }, // guardado em user_metadata; o backend persiste em users.birthdate
+      },
     });
     setLoading(false);
 
@@ -111,6 +122,20 @@ export default function Register() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 autoComplete="new-password"
+                required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="birthdate">Data de nascimento *</label>
+              <input
+                id="birthdate"
+                type="date"
+                className="auth-input"
+                value={birthdate}
+                max={MAX_NASCIMENTO}
+                onChange={(e) => setBirthdate(e.target.value)}
+                autoComplete="bday"
                 required
               />
             </div>

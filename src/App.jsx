@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
 import SuperAdminGuard from './components/SuperAdminGuard';
+import CookieBanner from './components/CookieBanner';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -240,6 +241,7 @@ export default function App() {
           <Layout>
             <AnimatedRoutes />
           </Layout>
+          <CookieBanner />
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>
