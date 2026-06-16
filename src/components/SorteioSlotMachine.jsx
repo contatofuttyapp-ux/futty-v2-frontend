@@ -490,7 +490,7 @@ export default function SorteioSlotMachine({ sorteio, meta = {}, reducedMotion =
               {aGerar ? 'A gerar…' : 'Baixar escalação'}
             </button>
             <button type="button" className="btn btn--purple" disabled={aGerar} onClick={handlePartilhar}>
-              Partilhar
+              Compartilhar
             </button>
             <button type="button" className="btn btn--ghost" onClick={onClose}>
               Fechar

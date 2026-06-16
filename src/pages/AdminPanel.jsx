@@ -35,7 +35,7 @@ const VIS_DESC = {
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
 const MENU = [
   { k: 'dashboard', icon: '🏠', label: 'Dashboard' },
-  { k: 'equipa', icon: '⚙️', label: 'Equipa' },
+  { k: 'equipa', icon: '⚙️', label: 'Time' },
   { k: 'membros', icon: '👥', label: 'Membros' },
   { k: 'convites', icon: '🔗', label: 'Convites' },
   { k: 'jogos', icon: '⚽', label: 'Jogos' },
@@ -206,7 +206,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
-          <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve o aviso para a equipa…" style={{ ...inputStyle, resize: 'vertical' }} />
+          <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve o aviso para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
           {busy ? 'A enviar…' : '📣 Enviar para todos'}
@@ -225,7 +225,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({anMensagem.length}/500)</span></span>
-          <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreve o anúncio para a equipa…" style={{ ...inputStyle, resize: 'vertical' }} />
+          <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreve o anúncio para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={anBusy || !anTitulo.trim() || !anMensagem.trim()} onClick={publicarAnuncio}>
           {anBusy ? 'A publicar…' : '📢 Publicar no feed'}
@@ -299,7 +299,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
     }
   }
 
-  if (data === undefined) return <Loading text="A carregar…" />;
+  if (data === undefined) return <Loading text="Carregando…" />;
   const c = data.campeonato;
 
   // C) TERMINADO
@@ -466,7 +466,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
     };
   }, [stats]);
 
-  if (!stats) return <Loading text="A carregar…" />;
+  if (!stats) return <Loading text="Carregando…" />;
   const pj = stats.proximo_jogo;
   const art = stats.artilheiro;
 
@@ -547,7 +547,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
         ) : ultimoJogo === null ? (
           <div style={{ color: 'var(--text-dim)', marginTop: 4 }}>Sem jogos anteriores.</div>
         ) : (
-          <div style={{ color: 'var(--text-dim)', marginTop: 4 }}>A carregar…</div>
+          <div style={{ color: 'var(--text-dim)', marginTop: 4 }}>Carregando…</div>
         )}
       </div>
 
@@ -598,7 +598,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
         <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
           <PlayerAvatar nome={art.nome || 'Jogador'} avatarUrl={art.avatar_url} />
           <div>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>⚽ Artilheiro da equipa</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>⚽ Artilheiro do time</div>
             <div style={{ fontWeight: 800, color: '#fff' }}>{art.nome} <span style={{ color: 'var(--neon)' }}>· {art.gols} gols</span></div>
           </div>
         </div>
@@ -651,7 +651,7 @@ function TabEquipa({ slug, team, showToast }) {
     try {
       const { logo_url } = await apiUpload(`/api/teams/${slug}/logo`, file, 'logo');
       setLogoUrl(logo_url);
-      showToast('Logo actualizado!');
+      showToast('Logo atualizado!');
     } catch (err) {
       setPreviewLogo(null);
       showToast(err.message, 'error');
@@ -676,7 +676,7 @@ function TabEquipa({ slug, team, showToast }) {
     setModo(novoModo);
     try {
       await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ modo_visibilidade: novoModo }) });
-      showToast('Visibilidade actualizada!');
+      showToast('Visibilidade atualizada!');
     } catch (err) {
       setModo(anterior);
       showToast(err.message, 'error');
@@ -702,7 +702,7 @@ function TabEquipa({ slug, team, showToast }) {
         method: 'PATCH',
         body: JSON.stringify({ nome: nome.trim(), cor, localizacao: localizacao.trim(), descricao: descricao.trim() }),
       });
-      showToast('Equipa actualizada!');
+      showToast('Time atualizado!');
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -714,7 +714,7 @@ function TabEquipa({ slug, team, showToast }) {
     <div style={{ display: 'grid', gap: 14 }}>
     <div style={{ ...CARD, padding: 14, display: 'grid', gap: 14 }}>
       <label style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Nome da equipa</span>
+        <span style={lbl}>Nome do time</span>
         <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 60))} style={inputStyle} />
       </label>
 
@@ -758,7 +758,7 @@ function TabEquipa({ slug, team, showToast }) {
               disabled={uploadingLogo}
               onClick={() => logoInputRef.current?.click()}
             >
-              {uploadingLogo ? 'A carregar…' : 'Carregar logo'}
+              {uploadingLogo ? 'Carregando…' : 'Enviar logo'}
             </button>
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>PNG, JPG ou WEBP · máx 2MB</span>
           </div>
@@ -819,7 +819,7 @@ function TabEquipa({ slug, team, showToast }) {
       </div>
 
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
-        {saving ? 'A guardar…' : 'Guardar'}
+        {saving ? 'Salvando…' : 'Salvar'}
       </button>
     </div>
 
@@ -831,13 +831,13 @@ function TabEquipa({ slug, team, showToast }) {
         onClick={() => setZerarStep(1)}
         style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--danger)', background: 'transparent', color: '#fda4af', fontWeight: 700, cursor: 'pointer' }}
       >
-        Zerar todos os votos da equipa
+        Zerar todos os votos do time
       </button>
     </div>
 
     {zerarStep === 1 ? (
       <ConfirmModal
-        texto="Vais apagar TODOS os votos da equipa. Continuar?"
+        texto="Vais excluir TODOS os votos do time. Continuar?"
         perigo
         confirmarLabel="Continuar"
         onConfirm={() => setZerarStep(2)}
@@ -880,7 +880,7 @@ function FormMensagem({ slug, membro, showToast, onClose }) {
       showToast(`Mensagem enviada a ${nome}.`);
       onClose();
     } catch (e) {
-      if (e.status === 404) showToast('Jogador sem notificações activas.', 'error');
+      if (e.status === 404) showToast('Jogador sem notificações ativas.', 'error');
       else showToast(e.message, 'error');
       setBusy(false);
     }
@@ -963,7 +963,7 @@ function TabMembros({ slug, meId, showToast }) {
     setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, ativo } : x)));
     try {
       await apiFetch(`/api/teams/${slug}/membros/${m.user_id}/ativo`, { method: 'PATCH', body: JSON.stringify({ ativo }) });
-      showToast(ativo ? `${m.nome_jogador || m.nome} reactivado.` : `${m.nome_jogador || m.nome} marcado como inactivo.`);
+      showToast(ativo ? `${m.nome_jogador || m.nome} reativado.` : `${m.nome_jogador || m.nome} marcado como inativo.`);
     } catch (e) {
       setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, ativo: !ativo } : x)));
       showToast(e.message, 'error');
@@ -1029,7 +1029,7 @@ function TabMembros({ slug, meId, showToast }) {
     }
   }
 
-  if (membros === null) return <Loading text="A carregar membros…" />;
+  if (membros === null) return <Loading text="Carregando membros…" />;
 
   // Activos primeiro, inactivos no fundo (mantém a ordem do servidor dentro de cada grupo).
   const membrosOrdenados = [...membros].sort((a, b) => (a.ativo === false ? 1 : 0) - (b.ativo === false ? 1 : 0));
@@ -1053,7 +1053,7 @@ function TabMembros({ slug, meId, showToast }) {
                   <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 6px' }}>❌ Ausente</span>
                 )}
                 {inativo && (
-                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', background: 'rgba(255,255,255,0.04)', borderRadius: 999, padding: '2px 6px' }}>Inactivo</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', background: 'rgba(255,255,255,0.04)', borderRadius: 999, padding: '2px 6px' }}>Inativo</span>
                 )}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
@@ -1103,7 +1103,7 @@ function TabMembros({ slug, meId, showToast }) {
                 onClick={() => setMensagemId((c) => (c === m.user_id ? null : m.user_id))}
                 aria-pressed={mensagemId === m.user_id}
                 aria-label={`Enviar mensagem a ${m.nome_jogador || m.nome || 'jogador'}`}
-                title="Enviar mensagem directa"
+                title="Enviar mensagem direta"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 7px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${mensagemId === m.user_id ? 'var(--neon)' : '#333'}`, background: mensagemId === m.user_id ? 'rgba(139,92,246,0.12)' : 'transparent', color: mensagemId === m.user_id ? 'var(--neon)' : 'var(--text-dim)' }}
               >
                 <MessageSquare size={15} strokeWidth={2.2} />
@@ -1114,8 +1114,8 @@ function TabMembros({ slug, meId, showToast }) {
               <button
                 type="button"
                 onClick={() => (inativo ? setAtivo(m, true) : setConfirmacao({ tipo: 'inativar', membro: m }))}
-                aria-label={inativo ? `Reactivar ${m.nome_jogador || m.nome || 'jogador'}` : `Marcar ${m.nome_jogador || m.nome || 'jogador'} como inactivo`}
-                title={inativo ? 'Reactivar jogador' : 'Marcar como inactivo'}
+                aria-label={inativo ? `Reativar ${m.nome_jogador || m.nome || 'jogador'}` : `Marcar ${m.nome_jogador || m.nome || 'jogador'} como inativo`}
+                title={inativo ? 'Reativar jogador' : 'Marcar como inativo'}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 7px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${inativo ? 'var(--neon)' : '#333'}`, background: inativo ? 'rgba(139,92,246,0.12)' : 'transparent', color: inativo ? 'var(--neon)' : 'var(--text-dim)' }}
               >
                 {inativo ? <UserCheck size={15} strokeWidth={2.2} /> : <UserX size={15} strokeWidth={2.2} />}
@@ -1133,7 +1133,7 @@ function TabMembros({ slug, meId, showToast }) {
                       <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'despromover', membro: m }); }} style={menuItem}>Remover de admin</button>
                     )}
                     <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'zerar-votos', membro: m }); }} style={{ ...menuItem, color: '#fda4af' }}>Zerar votos</button>
-                    <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'remover', membro: m }); }} style={{ ...menuItem, color: '#fda4af' }}>Remover da equipa</button>
+                    <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'remover', membro: m }); }} style={{ ...menuItem, color: '#fda4af' }}>Remover do time</button>
                   </div>
                 ) : null}
               </div>
@@ -1209,17 +1209,17 @@ function TabMembros({ slug, meId, showToast }) {
         <ConfirmModal
           texto={
             confirmacao.tipo === 'remover'
-              ? `Remover ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} da equipa?`
+              ? `Remover ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} do time?`
               : confirmacao.tipo === 'promover'
                 ? `Promover ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} a admin?`
                 : confirmacao.tipo === 'zerar-votos'
                   ? `Zerar os votos recebidos por ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
                   : confirmacao.tipo === 'inativar'
-                    ? `Marcar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} como inactivo? Vai ser removido do sorteio e ranking mas o histórico é preservado.`
+                    ? `Marcar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} como inativo? Vai ser removido do sorteio e ranking mas o histórico é preservado.`
                     : `Remover o admin de ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
           }
           perigo={confirmacao.tipo === 'remover' || confirmacao.tipo === 'zerar-votos'}
-          confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : confirmacao.tipo === 'zerar-votos' ? 'Zerar' : confirmacao.tipo === 'inativar' ? 'Marcar inactivo' : 'Confirmar'}
+          confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : confirmacao.tipo === 'zerar-votos' ? 'Zerar' : confirmacao.tipo === 'inativar' ? 'Marcar inativo' : 'Confirmar'}
           onConfirm={() => {
             const { tipo, membro } = confirmacao;
             setConfirmacao(null);
@@ -1299,7 +1299,7 @@ function TabConvites({ slug, showToast }) {
     }
   }
 
-  if (convites === null) return <Loading text="A carregar convites…" />;
+  if (convites === null) return <Loading text="Carregando convites…" />;
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -1318,7 +1318,7 @@ function TabConvites({ slug, showToast }) {
       ) : null}
 
       {convites.length === 0 ? (
-        <div className="empty-state"><div className="empty-state__emoji">🔗</div><p className="muted">Sem convites activos.</p></div>
+        <div className="empty-state"><div className="empty-state__emoji">🔗</div><p className="muted">Sem convites ativos.</p></div>
       ) : (
         convites.map((c) => (
           <div key={c.id} style={{ ...CARD, padding: 12, display: 'grid', gap: 8 }}>
@@ -1461,7 +1461,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
   const linha = { marginTop: 12, borderTop: '1px solid #222222', paddingTop: 10 };
 
   if (!info) {
-    return <div style={{ ...linha, fontSize: 12, color: 'var(--text-dim)' }}>{erro || 'A carregar RSVP…'}</div>;
+    return <div style={{ ...linha, fontSize: 12, color: 'var(--text-dim)' }}>{erro || 'Carregando RSVP…'}</div>;
   }
 
   // C) RSVP FECHADO
@@ -1653,7 +1653,7 @@ function TabJogos({ slug, showToast, navigate }) {
     try {
       await apiFetch(`/api/games/${g.id}`, { method: 'DELETE' });
       setGames((cur) => cur.filter((x) => x.id !== g.id));
-      showToast('Jogo apagado.');
+      showToast('Jogo excluído.');
     } catch (e) {
       showToast(e.message, 'error');
     }
@@ -1662,10 +1662,10 @@ function TabJogos({ slug, showToast, navigate }) {
   function onEditado(updated) {
     setGames((cur) => cur.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
     setEditar(null);
-    showToast('Jogo actualizado!');
+    showToast('Jogo atualizado!');
   }
 
-  if (games === null) return <Loading text="A carregar jogos…" />;
+  if (games === null) return <Loading text="Carregando jogos…" />;
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -1726,7 +1726,7 @@ function TabJogos({ slug, showToast, navigate }) {
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
                     <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>❌ Cancelar jogo</button>
                     {g.confirmados === 0 ? (
-                      <button type="button" className="btn btn--ghost btn--sm" style={{ color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'apagar', jogo: g })}>Apagar</button>
+                      <button type="button" className="btn btn--ghost btn--sm" style={{ color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'apagar', jogo: g })}>Excluir</button>
                     ) : null}
                   </div>
                   <RSVPAdmin gameId={g.id} slug={slug} navigate={navigate} showToast={showToast} />
@@ -1764,10 +1764,10 @@ function TabJogos({ slug, showToast, navigate }) {
           texto={
             confirmacao.tipo === 'cancelar'
               ? `Cancelar o jogo de ${formatDateTime(confirmacao.jogo.data)}? Esta ação envia notificação a todos os membros.`
-              : 'Apagar este jogo? Esta ação é irreversível.'
+              : 'Excluir este jogo? Esta ação é irreversível.'
           }
           perigo
-          confirmarLabel={confirmacao.tipo === 'cancelar' ? 'Cancelar jogo' : 'Apagar'}
+          confirmarLabel={confirmacao.tipo === 'cancelar' ? 'Cancelar jogo' : 'Excluir'}
           onConfirm={() => {
             const { tipo, jogo } = confirmacao;
             const motivo = motivoCancel.trim();
@@ -1836,7 +1836,7 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
             <span style={lbl}>Máximo de jogadores</span>
             <input type="number" min="1" inputMode="numeric" value={maxJog} onChange={(e) => setMaxJog(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Sem limite" style={inputStyle} />
           </label>
-          <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>{saving ? 'A guardar…' : 'Guardar'}</button>
+          <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>{saving ? 'Salvando…' : 'Salvar'}</button>
         </div>
       </div>
     </div>
@@ -1880,10 +1880,10 @@ function TabResultados({ slug, showToast }) {
   async function onGuardado() {
     setRegistar(null);
     await carregar();
-    showToast('Resultado guardado! Aparece na Resenha.');
+    showToast('Resultado salvo! Aparece na Resenha.');
   }
 
-  if (games === null) return <Loading text="A carregar jogos…" />;
+  if (games === null) return <Loading text="Carregando jogos…" />;
   const lista = modo === 'sem' ? semResultado : comResultado;
 
   return (
@@ -2000,7 +2000,7 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
           <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado — {formatDateTime(jogo.data)}</h2>
 
           {!detail ? (
-            <Loading text="A carregar jogo…" />
+            <Loading text="Carregando jogo…" />
           ) : (
             <>
               {/* 1. CAMPEÃO */}
@@ -2043,9 +2043,9 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
               </Seccao>
 
               <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving || campeaoIdx === null} onClick={guardar}>
-                {saving ? 'A guardar…' : 'Guardar resultado'}
+                {saving ? 'Salvando…' : 'Salvar resultado'}
               </button>
-              {campeaoIdx === null ? <div style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center' }}>Escolhe o time campeão para guardar.</div> : null}
+              {campeaoIdx === null ? <div style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center' }}>Escolhe o time campeão para salvar.</div> : null}
             </>
           )}
         </div>
@@ -2102,7 +2102,7 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
     };
   }, [slug, showToast]);
 
-  if (membros === null) return <Loading text="A carregar estatísticas…" />;
+  if (membros === null) return <Loading text="Carregando estatísticas…" />;
 
   const topGols = [...membros].sort((a, b) => (b.gols || 0) - (a.gols || 0)).slice(0, 5);
   const maxGols = topGols[0]?.gols || 0;
@@ -2184,13 +2184,13 @@ function TabDenuncias({ showToast }) {
     try {
       await apiFetch(`/api/feed/denuncias/${d.id}/resolver`, { method: 'PATCH', body: JSON.stringify({ apagar_conteudo: apagar }) });
       setDenuncias((cur) => cur.filter((x) => x.id !== d.id));
-      showToast(apagar ? 'Conteúdo apagado.' : 'Denúncia resolvida.');
+      showToast(apagar ? 'Conteúdo excluído.' : 'Denúncia resolvida.');
     } catch (e) {
       showToast(e.message, 'error');
     }
   }
 
-  if (denuncias === null) return <Loading text="A carregar denúncias…" />;
+  if (denuncias === null) return <Loading text="Carregando denúncias…" />;
   if (denuncias.length === 0) {
     return (
       <div className="empty-state" style={{ borderColor: 'rgba(139,92,246,0.4)' }}>
@@ -2215,16 +2215,16 @@ function TabDenuncias({ showToast }) {
           <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Denunciado por {d.reporter_nome || 'alguém'} · {haQuantoTempo(d.created_at)}</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn btn--ghost btn--sm" onClick={() => resolver(d, false)}>Ignorar</button>
-            <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => setConfirmar(d)}>Apagar conteúdo</button>
+            <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => setConfirmar(d)}>Excluir conteúdo</button>
           </div>
         </div>
       ))}
 
       {confirmar ? (
         <ConfirmModal
-          texto="Apagar o conteúdo denunciado?"
+          texto="Excluir o conteúdo denunciado?"
           perigo
-          confirmarLabel="Apagar"
+          confirmarLabel="Excluir"
           onConfirm={() => { const d = confirmar; setConfirmar(null); resolver(d, true); }}
           onCancel={() => setConfirmar(null)}
         />
@@ -2346,7 +2346,7 @@ export default function AdminPanel() {
       <div className="app-topbar__line" />
 
       {!team ? (
-        <main className="app-main"><Loading text="A carregar…" /></main>
+        <main className="app-main"><Loading text="Carregando…" /></main>
       ) : (
         <div className="admin-layout">
           <aside className="admin-sidebar">

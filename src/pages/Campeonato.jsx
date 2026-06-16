@@ -57,9 +57,9 @@ export default function Campeonato() {
       <Topbar title="Campeonato" back={`/equipa/${slug}`} />
       <main className="app-main">
         {loading ? (
-          <Loading text="A carregar…" />
+          <Loading text="Carregando…" />
         ) : !c ? (
-          <p className="muted">Esta equipa ainda não tem campeonato.</p>
+          <p className="muted">Este time ainda não tem campeonato.</p>
         ) : (
           <>
             {/* Topo */}

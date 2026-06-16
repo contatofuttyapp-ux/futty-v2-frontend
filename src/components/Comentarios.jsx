@@ -447,7 +447,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
                             }}
                             style={{ ...menuItemStyle, color: '#fda4af' }}
                           >
-                            Apagar
+                            Excluir
                           </button>
                         ) : null}
                       </div>
@@ -496,7 +496,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
       {erro ? <div style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 8 }}>{erro}</div> : null}
 
       {loading ? (
-        <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>A carregar comentários…</div>
+        <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>Carregando comentários…</div>
       ) : lista.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>Ainda não há comentários. Sê o primeiro!</div>
       ) : (
@@ -531,9 +531,9 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
         <div className="modal-overlay" role="presentation" onClick={() => setApagarId(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
-              <p style={{ fontSize: 15, marginBottom: 16 }}>Tens a certeza que queres apagar?</p>
+              <p style={{ fontSize: 15, marginBottom: 16 }}>Tens a certeza que queres excluir?</p>
               <button type="button" className="btn btn--primary" style={{ width: '100%', background: 'var(--danger)', color: '#fff' }} onClick={confirmarApagar}>
-                Apagar
+                Excluir
               </button>
               <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} onClick={() => setApagarId(null)}>
                 Cancelar

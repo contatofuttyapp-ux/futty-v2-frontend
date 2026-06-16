@@ -52,7 +52,7 @@ export default function NovoJogo() {
       <Topbar back={`/equipa/${slug}/jogos`} title="Criar jogo" />
       <main className="app-main">
         <h1 className="app-page-title">Criar jogo</h1>
-        <p className="app-page-sub">Agenda um novo jogo para a equipa.</p>
+        <p className="app-page-sub">Agenda um novo jogo para o time.</p>
 
         <form className="form-card" onSubmit={handleSubmit}>
           {error && <div className="alert alert--error">{error}</div>}
@@ -106,7 +106,7 @@ export default function NovoJogo() {
             style={{ width: '100%', marginTop: 8 }}
             disabled={loading}
           >
-            {loading ? 'A criar…' : 'Criar jogo'}
+            {loading ? 'Criando…' : 'Criar jogo'}
           </button>
         </form>
       </main>

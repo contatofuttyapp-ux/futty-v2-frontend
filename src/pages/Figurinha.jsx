@@ -275,7 +275,7 @@ export default function Figurinha() {
               onClick={() => setVerFoto(true)}
               style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#8b5cf6' }}
             >
-              ✨ Avatar IA activo · Ver foto →
+              ✨ Avatar IA ativo · Ver foto →
             </button>
           </div>
         ) : null}
@@ -296,7 +296,7 @@ export default function Figurinha() {
               >
                 {gerandoIA ? (
                   <>
-                    <Loader2 size={16} className="spin" /> A gerar…
+                    <Loader2 size={16} className="spin" /> Gerando…
                   </>
                 ) : (
                   '✨ Gerar Avatar IA'
@@ -517,7 +517,7 @@ export default function Figurinha() {
           {/* 3. AÇÕES */}
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn btn--purple-outline" style={{ flex: 1, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
-              <Download size={16} /> {busy ? 'A gerar…' : 'Baixar'}
+              <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
             </button>
             <button
               type="button"
@@ -526,7 +526,7 @@ export default function Figurinha() {
               disabled={busy}
               onClick={partilhar}
             >
-              <Share2 size={16} /> Partilhar
+              <Share2 size={16} /> Compartilhar
             </button>
           </div>
           <button type="button" className="btn btn--purple-outline" style={{ width: '100%', height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixarStory}>

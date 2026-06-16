@@ -119,7 +119,7 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
       ) : null}
 
       <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 14 }} disabled={busy} onClick={guardar}>
-        {busy ? 'A guardar…' : 'Guardar resultado'}
+        {busy ? 'Salvando…' : 'Salvar resultado'}
       </button>
     </div>
   );

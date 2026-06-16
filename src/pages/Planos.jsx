@@ -40,7 +40,7 @@ export default function Planos() {
   const [toast, setToast] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('sucesso') === '1'
-      ? { tipo: 'success', mensagem: 'Pagamento confirmado! 🎉 O teu plano será activado em instantes.' }
+      ? { tipo: 'success', mensagem: 'Pagamento confirmado! 🎉 O teu plano será ativado em instantes.' }
       : null;
   });
 
@@ -104,7 +104,7 @@ export default function Planos() {
                   <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#fff' }}>{p.nome}</span>
                   {atual ? (
                     <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--neon)', border: '1px solid var(--border-accent)', borderRadius: 'var(--radius-pill)', padding: '3px 8px', whiteSpace: 'nowrap' }}>
-                      Plano actual
+                      Plano atual
                     </span>
                   ) : null}
                 </div>
@@ -128,7 +128,7 @@ export default function Planos() {
                     disabled={!!planoBusy}
                     onClick={() => assinar(p.id)}
                   >
-                    {planoBusy === p.id ? 'A redirecionar…' : p.botao}
+                    {planoBusy === p.id ? 'Redirecionando…' : p.botao}
                   </button>
                 ) : null}
               </div>

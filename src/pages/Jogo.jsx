@@ -83,7 +83,7 @@ export default function Jogo() {
       <div className="app-shell">
         <Topbar back={`/equipa/${slug}/jogos`} />
         <main className="app-main">
-          <Loading text="A carregar jogo…" />
+          <Loading text="Carregando jogo…" />
         </main>
       </div>
     );
@@ -283,7 +283,7 @@ export default function Jogo() {
             <div className="header-actions" style={{ marginTop: 0 }}>
               {isAdmin && (
                 <button type="button" className="btn btn--primary btn--sm" onClick={sortear} disabled={busy}>
-                  {busy ? 'A processar…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
+                  {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
                 </button>
               )}
               {game.sorteio_realizado && (
@@ -325,7 +325,7 @@ export default function Jogo() {
                       </button>
                       {isAdmin ? (
                         <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }} onClick={partilharLink}>
-                          ↗ Partilhar
+                          ↗ Compartilhar
                         </button>
                       ) : null}
                     </div>

@@ -21,7 +21,7 @@ export default function CriarEquipa() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!nome.trim()) {
-      setError('Indica o nome da equipa.');
+      setError('Indica o nome do time.');
       return;
     }
     setError('');
@@ -46,10 +46,10 @@ export default function CriarEquipa() {
 
   return (
     <div className="app-shell">
-      <Topbar back="/home" title="Criar equipa" />
+      <Topbar back="/home" title="Criar time" />
       <main className="app-main">
-        <h1 className="app-page-title">Criar equipa</h1>
-        <p className="app-page-sub">Dá um nome e escolhe a cor da tua equipa.</p>
+        <h1 className="app-page-title">Criar time</h1>
+        <p className="app-page-sub">Dá um nome e escolhe a cor do teu time.</p>
 
         <form className="form-card" onSubmit={handleSubmit}>
           {error && <div className="alert alert--error">{error}</div>}
@@ -63,13 +63,13 @@ export default function CriarEquipa() {
               {initials(nome) || '?'}
             </div>
             <div>
-              <div className="team-card__name">{nome || 'Nome da equipa'}</div>
+              <div className="team-card__name">{nome || 'Nome do time'}</div>
               <div className="team-card__role">{selected.label}</div>
             </div>
           </div>
 
           <div className="field">
-            <label htmlFor="nome">Nome da equipa</label>
+            <label htmlFor="nome">Nome do time</label>
             <input
               id="nome"
               className="input"
@@ -82,7 +82,7 @@ export default function CriarEquipa() {
           </div>
 
           <div className="field">
-            <label>Cor da equipa</label>
+            <label>Cor do time</label>
             <div className="color-picker">
               {COLOR_OPTIONS.map((c) => (
                 <button
@@ -116,7 +116,7 @@ export default function CriarEquipa() {
             <textarea
               id="descricao"
               className="input"
-              placeholder="Conta um pouco sobre a tua equipa…"
+              placeholder="Conta um pouco sobre o teu time…"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value.slice(0, 300))}
               maxLength={300}
@@ -130,7 +130,7 @@ export default function CriarEquipa() {
               htmlFor="publica"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer' }}
             >
-              <span>Equipa pública</span>
+              <span>Time público</span>
               <input
                 id="publica"
                 type="checkbox"
@@ -140,7 +140,7 @@ export default function CriarEquipa() {
               />
             </label>
             <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-              Pública — aparece na pesquisa · Privada — só por convite
+              Público — aparece na pesquisa · Privado — só por convite
             </p>
           </div>
 
@@ -150,7 +150,7 @@ export default function CriarEquipa() {
             style={{ width: '100%', marginTop: 8 }}
             disabled={loading}
           >
-            {loading ? 'A criar…' : 'Criar equipa'}
+            {loading ? 'Criando…' : 'Criar time'}
           </button>
         </form>
       </main>

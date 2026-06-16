@@ -84,7 +84,7 @@ export default function AlterarPassword() {
           <CampoPassword label="Nova password" value={nova} onChange={setNova} />
           <CampoPassword label="Confirmar password" value={confirmar} onChange={setConfirmar} />
           <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={busy} onClick={guardar}>
-            {busy ? 'A guardar…' : 'Guardar nova password'}
+            {busy ? 'Salvando…' : 'Salvar nova password'}
           </button>
         </div>
       </main>

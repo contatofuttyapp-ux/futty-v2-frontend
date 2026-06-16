@@ -16,7 +16,7 @@ export default function AuthGuard({ children }) {
           color: 'var(--text-dim)',
         }}
       >
-        A carregar…
+        Carregando…
       </div>
     );
   }

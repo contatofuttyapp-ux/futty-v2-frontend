@@ -65,7 +65,7 @@ export default function Explorar() {
       const r = await apiFetch(`/api/teams/${equipa.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
       const entrou = !!r?.entrou;
       setEquipas((cur) => cur.map((t) => (t.slug === equipa.slug ? { ...t, _estado: entrou ? 'membro' : 'pendente' } : t)));
-      setToast({ tipo: 'success', mensagem: entrou ? 'Entraste na equipa!' : 'Pedido enviado!' });
+      setToast({ tipo: 'success', mensagem: entrou ? 'Entraste no time!' : 'Pedido enviado!' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {
@@ -77,7 +77,7 @@ export default function Explorar() {
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {/* CABEÇALHO */}
-        <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 24, fontWeight: 700, color: '#fff', margin: '4px 0 4px' }}>Explorar equipas</h1>
+        <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 24, fontWeight: 700, color: '#fff', margin: '4px 0 4px' }}>Explorar times</h1>
         <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 14 }}>Encontra a tua próxima pelada</p>
 
         {/* PESQUISA */}
@@ -100,7 +100,7 @@ export default function Explorar() {
           </>
         ) : filtradas.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0', color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
-            {pesquisa ? 'Nenhuma equipa encontrada.' : 'Ainda não há equipas públicas.'}
+            {pesquisa ? 'Nenhum time encontrado.' : 'Ainda não há times públicos.'}
           </div>
         ) : (
           filtradas.map((equipa) => (

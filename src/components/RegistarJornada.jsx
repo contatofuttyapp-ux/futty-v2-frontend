@@ -51,7 +51,7 @@ export default function RegistarJornada({ campeonato, onSaved, showToast }) {
         <span style={{ fontSize: 13 }}>{campeonato.time_b_nome}</span>
       </div>
       <button type="button" className="btn btn--purple btn--sm" disabled={busy} onClick={guardar}>
-        {busy ? 'A guardar…' : 'Registar resultado'}
+        {busy ? 'Salvando…' : 'Registar resultado'}
       </button>
     </div>
   );

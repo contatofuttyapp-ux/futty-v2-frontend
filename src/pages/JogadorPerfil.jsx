@@ -83,7 +83,7 @@ export default function JogadorPerfil() {
         {error && <div className="alert alert--error">{error}</div>}
 
         {loading ? (
-          <Loading text="A carregar perfil…" />
+          <Loading text="Carregando perfil…" />
         ) : !jogador ? (
           !error && <p className="muted">Jogador não encontrado.</p>
         ) : (

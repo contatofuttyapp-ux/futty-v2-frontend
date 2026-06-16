@@ -164,7 +164,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
           <button type="button" aria-label={detalhes ? 'Esconder detalhes' : 'Mostrar detalhes'} onClick={() => setDetalhes((v) => !v)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex' }}>
             <Eye size={16} strokeWidth={1.5} color="rgba(255,255,255,0.25)" />
           </button>
-          <button type="button" aria-label="Partilhar" onClick={partilhar} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex' }}>
+          <button type="button" aria-label="Compartilhar" onClick={partilhar} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex' }}>
             <Share2 size={16} strokeWidth={1.5} color="rgba(255,255,255,0.25)" />
           </button>
         </div>
@@ -363,7 +363,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
                     }}
                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fda4af', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
                   >
-                    Apagar
+                    Excluir
                   </button>
                 ) : null}
               </div>
@@ -424,7 +424,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
         <div className="modal-overlay" role="presentation" onClick={() => setConfirmar(false)}>
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
-              <p style={{ fontSize: 15, marginBottom: 16 }}>Tens a certeza que queres apagar este post?</p>
+              <p style={{ fontSize: 15, marginBottom: 16 }}>Tens a certeza que queres excluir este post?</p>
               <button
                 type="button"
                 className="btn btn--primary"
@@ -434,7 +434,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
                   onDelete(p.id);
                 }}
               >
-                Apagar
+                Excluir
               </button>
               <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} onClick={() => setConfirmar(false)}>
                 Cancelar
@@ -465,7 +465,7 @@ function NovoPostForm({ teams, onClose, onCreated }) {
   async function publicar() {
     if (busy) return;
     if (!teamId) {
-      setErro('Escolhe uma equipa.');
+      setErro('Escolhe um time.');
       return;
     }
     if (!texto.trim() && media.length === 0) {
@@ -565,7 +565,7 @@ function NovoPostForm({ teams, onClose, onCreated }) {
         {erro ? <div style={{ fontSize: 13, color: 'var(--danger)' }}>{erro}</div> : null}
 
         <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={busy} onClick={publicar}>
-          {busy ? 'A publicar…' : 'Publicar'}
+          {busy ? 'Publicando…' : 'Publicar'}
         </button>
       </div>
     </div>

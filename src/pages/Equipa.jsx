@@ -102,7 +102,7 @@ export default function Equipa() {
       <Topbar />
       <main className="app-main">
         <Link to="/home" className="back-link">
-          ← As tuas equipas
+          ← Os teus times
         </Link>
 
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
@@ -110,7 +110,7 @@ export default function Equipa() {
         {loading ? (
           <Loading />
         ) : !team ? (
-          !error && <p className="muted">Equipa não encontrada.</p>
+          !error && <p className="muted">Time não encontrado.</p>
         ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
@@ -141,7 +141,7 @@ export default function Equipa() {
             </div>
 
             {/* A minha posição nesta equipa */}
-            <h2 className="section-title">A minha posição nesta equipa</h2>
+            <h2 className="section-title">A minha posição neste time</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               {POSICOES.map((p) => (
                 <button
@@ -226,7 +226,7 @@ export default function Equipa() {
 
             <h2 className="section-title">Convidar jogador</h2>
             <p className="muted" style={{ fontSize: 14 }}>
-              Gera um link de convite (válido 7 dias, uso único) para partilhar com novos jogadores.
+              Gera um link de convite (válido 7 dias, uso único) para compartilhar com novos jogadores.
             </p>
             <button
               type="button"
@@ -235,7 +235,7 @@ export default function Equipa() {
               onClick={gerarConvite}
               disabled={generating}
             >
-              {generating ? 'A gerar…' : 'Convidar jogador'}
+              {generating ? 'Gerando…' : 'Convidar jogador'}
             </button>
 
             {inviteLink && (

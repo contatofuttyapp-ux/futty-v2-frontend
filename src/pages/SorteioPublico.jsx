@@ -55,7 +55,7 @@ export default function SorteioPublico() {
   if (loading) {
     return (
       <div style={{ ...wrap, alignItems: 'center', justifyContent: 'center' }}>
-        <Loading text="A carregar…" />
+        <Loading text="Carregando…" />
       </div>
     );
   }

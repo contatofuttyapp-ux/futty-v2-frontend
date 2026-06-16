@@ -105,7 +105,7 @@ export default function MeuPerfil() {
     const u = perfil.user;
     const ok = await patchMe({ nome: u.nome || null, nome_jogador: u.nome_jogador || null, telefone: u.telefone || null });
     setSavingDados(false);
-    if (ok) showToast('Dados guardados!');
+    if (ok) showToast('Dados salvos!');
   }
 
   async function escolherGenerico(file) {
@@ -131,7 +131,7 @@ export default function MeuPerfil() {
       <div className="app-shell">
         <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
           <h1 className="app-page-title">O meu perfil</h1>
-          {erro ? <div className="alert alert--error">{erro}</div> : <p className="muted">A carregar…</p>}
+          {erro ? <div className="alert alert--error">{erro}</div> : <p className="muted">Carregando…</p>}
         </main>
       </div>
     );
@@ -277,7 +277,7 @@ export default function MeuPerfil() {
             <div style={{ ...inputStyle, color: 'var(--text-dim)' }}>{u.email || user?.email || '—'}</div>
           </label>
           <button type="button" className="btn btn--purple" style={{ width: '100%' }} disabled={savingDados} onClick={guardarDados}>
-            {savingDados ? 'A guardar…' : 'Guardar dados'}
+            {savingDados ? 'Salvando…' : 'Salvar dados'}
           </button>
         </div>
 
@@ -296,7 +296,7 @@ export default function MeuPerfil() {
               />
             </div>
           ) : null}
-          <ContaRow onClick={() => navigate('/alterar-password')}>🔑 Alterar password</ContaRow>
+          <ContaRow onClick={() => navigate('/alterar-password')}>🔑 Alterar senha</ContaRow>
           <ContaRow onClick={relatarProblema}>📋 Relatar um problema</ContaRow>
           {adminTeams.length > 0 ? (
             <ContaRow onClick={irParaAdmin} cor="#8b5cf6">🛡️ Painel de administração</ContaRow>
@@ -327,7 +327,7 @@ export default function MeuPerfil() {
         <div className="modal-overlay" role="presentation" onClick={() => setAdminPicker(false)}>
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner" style={{ textAlign: 'left' }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, textAlign: 'center' }}>Escolhe a equipa</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, textAlign: 'center' }}>Escolhe o time</h2>
               <div style={{ display: 'grid', gap: 8 }}>
                 {adminTeams.map((t) => (
                   <button

@@ -114,7 +114,7 @@ function EmptyState() {
       <p className="muted" style={{ marginTop: 6 }}>Começa por aqui.</p>
       <div className="home-empty__actions">
         <Link to="/criar-equipa" className="btn btn--primary">
-          ＋ Criar a minha equipa
+          ＋ Criar o meu time
         </Link>
         <Link to="/explorar" className="btn btn--purple">
           🗺️ Explorar peladas
@@ -447,12 +447,12 @@ export default function Inicio() {
                 </div>
               ) : (
                 <button type="button" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ margin: '8px 0 4px', border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', color: 'var(--text-dim)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', borderRadius: 999, padding: '6px 12px', opacity: ausenciaBusy ? 0.6 : 1 }}>
-                  {ausenciaBusy ? 'A guardar…' : '😴 Não vou ao próximo jogo'}
+                  {ausenciaBusy ? 'Salvando…' : '😴 Não vou ao próximo jogo'}
                 </button>
               )
             ) : null}
             {loadingGames ? (
-              <Loading text="A carregar jogos…" />
+              <Loading text="Carregando jogos…" />
             ) : (
               <>
                 {filtered.length === 0 && <p className="muted">Sem jogos para mostrar.</p>}

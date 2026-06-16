@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const GOLD = '#d4a017';
 const PASSOS = [
-  { sel: '[data-tour="player-card"]', texto: 'Este é o teu card. É como apareces para todos na tua equipa.' },
+  { sel: '[data-tour="player-card"]', texto: 'Este é o teu card. É como apareces para todos no teu time.' },
   { sel: '[data-tour="jogos-section"]', texto: 'Aqui vês os teus jogos e confirmas presença. Nunca percas um jogo!' },
   { sel: '[data-tour="bottom-nav"]', texto: 'Explora o ranking, a resenha e a tua figurinha.' },
 ];
@@ -152,7 +152,7 @@ export default function ProductTour({ onDone }) {
             </button>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={() => irPara('/criar-equipa')} className="btn btn--ghost btn--sm" style={{ flex: 1 }}>
-                ➕ Criar equipa
+                ➕ Criar time
               </button>
               <button type="button" onClick={() => irPara('/explorar')} className="btn btn--ghost btn--sm" style={{ flex: 1 }}>
                 🔍 Explorar

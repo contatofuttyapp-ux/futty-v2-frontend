@@ -94,7 +94,7 @@ export default function Ranking() {
       });
       setVoteModal(null);
       await reload();
-      setToast({ tipo: 'success', mensagem: 'Voto guardado! ⭐' });
+      setToast({ tipo: 'success', mensagem: 'Voto salvo! ⭐' });
     } catch (err) {
       setToast({ tipo: 'error', mensagem: err.message });
     } finally {
@@ -115,7 +115,7 @@ export default function Ranking() {
 
         {mostrarBanner ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.3)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
-            <span style={{ flex: 1 }}>✨ Actualize as suas notas</span>
+            <span style={{ flex: 1 }}>✨ Atualize as suas notas</span>
             <button type="button" aria-label="Fechar" onClick={() => setBannerFechado(true)} style={{ border: 'none', background: 'transparent', color: '#8b5cf6', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}
@@ -207,7 +207,7 @@ export default function Ranking() {
                 )}
               </div>
               <button type="button" className="btn btn--primary" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || !(modalNota >= 0.5)} onClick={confirmVote}>
-                {voteBusy ? 'A guardar…' : 'Guardar voto'}
+                {voteBusy ? 'Salvando…' : 'Salvar voto'}
               </button>
               <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} disabled={voteBusy} onClick={() => setVoteModal(null)}>
                 Cancelar

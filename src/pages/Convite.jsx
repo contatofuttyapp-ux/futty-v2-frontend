@@ -9,7 +9,7 @@ import '../styles/app.css';
 const MOTIVOS = {
   nao_encontrado: 'Este convite não existe.',
   expirado: 'Este convite expirou.',
-  usado: 'Este convite já foi utilizado.',
+  usado: 'Este convite já foi usado.',
 };
 
 export default function Convite() {
@@ -70,7 +70,7 @@ export default function Convite() {
           </div>
 
           {loading ? (
-            <p className="muted">A validar convite…</p>
+            <p className="muted">Validando convite…</p>
           ) : error ? (
             <>
               <h1 className="auth-title">Ups…</h1>
@@ -93,11 +93,11 @@ export default function Convite() {
             </>
           ) : (
             <>
-              <h1 className="auth-title">Convite para uma equipa</h1>
+              <h1 className="auth-title">Convite para um time</h1>
               <p className="auth-subtitle">
                 {info.convidadoPor
-                  ? `${info.convidadoPor} convidou-te para entrar na equipa.`
-                  : 'Foste convidado para entrar nesta equipa.'}
+                  ? `${info.convidadoPor} convidou-te para entrar no time.`
+                  : 'Foste convidado para entrar neste time.'}
               </p>
 
               <div
@@ -123,14 +123,14 @@ export default function Convite() {
               {info.jaMembro ? (
                 <>
                   <div className="alert" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: 'var(--neon)' }}>
-                    Já és membro desta equipa.
+                    Já és membro deste time.
                   </div>
                   <Link
                     to={`/equipa/${team?.slug}`}
                     className="btn btn--primary"
                     style={{ width: '100%', marginTop: 8 }}
                   >
-                    Ir para a equipa
+                    Ir para o time
                   </Link>
                 </>
               ) : (
@@ -142,9 +142,9 @@ export default function Convite() {
                   disabled={accepting}
                 >
                   {accepting
-                    ? 'A entrar…'
+                    ? 'Entrando…'
                     : session
-                      ? 'Entrar na equipa'
+                      ? 'Entrar no time'
                       : 'Inicia sessão para entrar'}
                 </button>
               )}

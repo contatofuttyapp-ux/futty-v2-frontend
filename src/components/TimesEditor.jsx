@@ -201,7 +201,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
       {/* Ações */}
       <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
         <button type="button" className="btn btn--primary btn--sm" style={{ flex: 1 }} disabled={saving} onClick={guardar}>
-          {saving ? 'A guardar…' : 'Guardar ajustes'}
+          {saving ? 'Salvando…' : 'Salvar ajustes'}
         </button>
         <button type="button" className="btn btn--ghost btn--sm" style={{ flex: 1 }} disabled={saving} onClick={onCancel}>
           Cancelar

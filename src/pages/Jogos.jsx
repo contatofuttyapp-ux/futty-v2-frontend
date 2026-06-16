@@ -16,7 +16,7 @@ export default function Jogos() {
       <Topbar />
       <main className="app-main">
         <Link to={`/equipa/${slug}`} className="back-link">
-          ← {team?.nome || 'Equipa'}
+          ← {team?.nome || 'Time'}
         </Link>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
@@ -34,14 +34,14 @@ export default function Jogos() {
 
         {loading ? (
           <div style={{ marginTop: 16 }}>
-            <Loading text="A carregar jogos…" />
+            <Loading text="Carregando jogos…" />
           </div>
         ) : games.length === 0 ? (
           <div className="empty-state" style={{ marginTop: 20 }}>
             <div className="empty-state__emoji">📅</div>
             <h2>Ainda não há jogos</h2>
             <p className="muted">
-              {isAdmin ? 'Cria o primeiro jogo da equipa.' : 'Aguarda que um admin agende um jogo.'}
+              {isAdmin ? 'Cria o primeiro jogo do time.' : 'Aguarda que um admin agende um jogo.'}
             </p>
             {isAdmin && (
               <div className="empty-state__actions">
