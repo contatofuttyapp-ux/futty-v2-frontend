@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
+import { getIdioma, setIdioma } from '../lib/i18n';
 import UploadComCrop from '../components/UploadComCrop';
 import PlayerAvatar from '../components/PlayerAvatar';
 import Toast from '../components/Toast';
@@ -69,6 +70,14 @@ export default function MeuPerfil() {
 
   function showToast(mensagem, tipo = 'success') {
     setToast({ mensagem, tipo });
+  }
+
+  // Idioma (preferência leve em localStorage; aplica via reload).
+  const idiomaActual = getIdioma();
+  function trocarIdioma(idioma) {
+    if (idioma === idiomaActual) return;
+    showToast('Idioma alterado. Recarregando…');
+    setTimeout(() => setIdioma(idioma), 800);
   }
 
   // Abre o cliente de email; se não houver, mostra o email para copiar.
@@ -302,6 +311,38 @@ export default function MeuPerfil() {
             <ContaRow onClick={irParaAdmin} cor="#8b5cf6">🛡️ Painel de administração</ContaRow>
           ) : null}
           <ContaRow onClick={() => setConfirmSignOut(true)} cor="rgba(239,68,68,0.8)" semBorda>Terminar sessão</ContaRow>
+        </div>
+
+        {/* 6. SECÇÃO IDIOMA */}
+        <SecLabel>Idioma / Language</SecLabel>
+        <div style={{ ...CARD, padding: 14, display: 'flex', gap: 8 }}>
+          {[
+            { id: 'pt-BR', label: '🇧🇷 Português BR' },
+            { id: 'pt-PT', label: '🇵🇹 Português PT' },
+          ].map((op) => {
+            const ativo = idiomaActual === op.id;
+            return (
+              <button
+                key={op.id}
+                type="button"
+                onClick={() => trocarIdioma(op.id)}
+                aria-pressed={ativo}
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: `1px solid ${ativo ? '#8b5cf6' : 'rgba(255,255,255,0.12)'}`,
+                  background: ativo ? 'rgba(139,92,246,0.15)' : 'transparent',
+                  color: ativo ? '#b69cff' : 'rgba(255,255,255,0.7)',
+                }}
+              >
+                {op.label}
+              </button>
+            );
+          })}
         </div>
       </main>
 
