@@ -2,7 +2,7 @@
 // Só admins. Sidebar (desktop) / drawer (mobile). Tab persistida na URL.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, UserX, UserCheck } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
@@ -957,6 +957,18 @@ function TabMembros({ slug, meId, showToast }) {
     }
   }
 
+  // Marca/reativa um jogador (optimista). Inactivo = fora do sorteio/ranking.
+  async function setAtivo(m, ativo) {
+    setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, ativo } : x)));
+    try {
+      await apiFetch(`/api/teams/${slug}/membros/${m.user_id}/ativo`, { method: 'PATCH', body: JSON.stringify({ ativo }) });
+      showToast(ativo ? `${m.nome_jogador || m.nome} reactivado.` : `${m.nome_jogador || m.nome} marcado como inactivo.`);
+    } catch (e) {
+      setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, ativo: !ativo } : x)));
+      showToast(e.message, 'error');
+    }
+  }
+
   // Alterna categoria linha <-> GR (optimista).
   async function toggleGR(m) {
     const nova = m.categoria === 'GR' ? 'linha' : 'GR';
@@ -1018,12 +1030,16 @@ function TabMembros({ slug, meId, showToast }) {
 
   if (membros === null) return <Loading text="A carregar membros…" />;
 
+  // Activos primeiro, inactivos no fundo (mantém a ordem do servidor dentro de cada grupo).
+  const membrosOrdenados = [...membros].sort((a, b) => (a.ativo === false ? 1 : 0) - (b.ativo === false ? 1 : 0));
+
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      {membros.map((m) => {
+      {membrosOrdenados.map((m) => {
         const ehProprio = m.user_id === meId;
+        const inativo = m.ativo === false;
         return (
-          <div key={m.user_id} style={{ ...CARD, padding: 12 }}>
+          <div key={m.user_id} style={{ ...CARD, padding: 12, opacity: inativo ? 0.45 : 1 }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <PlayerAvatar nome={m.nome_jogador || m.nome || 'Jogador'} avatarUrl={m.avatar_url} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -1034,6 +1050,9 @@ function TabMembros({ slug, meId, showToast }) {
                 )}
                 {m.ausente_proximo && (
                   <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 6px' }}>❌ Ausente</span>
+                )}
+                {inativo && (
+                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', background: 'rgba(255,255,255,0.04)', borderRadius: 999, padding: '2px 6px' }}>Inactivo</span>
                 )}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
@@ -1077,6 +1096,18 @@ function TabMembros({ slug, meId, showToast }) {
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 7px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${mensagemId === m.user_id ? 'var(--neon)' : '#333'}`, background: mensagemId === m.user_id ? 'rgba(139,92,246,0.12)' : 'transparent', color: mensagemId === m.user_id ? 'var(--neon)' : 'var(--text-dim)' }}
               >
                 <MessageSquare size={15} strokeWidth={2.2} />
+              </button>
+            ) : null}
+
+            {!ehProprio ? (
+              <button
+                type="button"
+                onClick={() => (inativo ? setAtivo(m, true) : setConfirmacao({ tipo: 'inativar', membro: m }))}
+                aria-label={inativo ? `Reactivar ${m.nome_jogador || m.nome || 'jogador'}` : `Marcar ${m.nome_jogador || m.nome || 'jogador'} como inactivo`}
+                title={inativo ? 'Reactivar jogador' : 'Marcar como inactivo'}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 7px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${inativo ? 'var(--neon)' : '#333'}`, background: inativo ? 'rgba(139,92,246,0.12)' : 'transparent', color: inativo ? 'var(--neon)' : 'var(--text-dim)' }}
+              >
+                {inativo ? <UserCheck size={15} strokeWidth={2.2} /> : <UserX size={15} strokeWidth={2.2} />}
               </button>
             ) : null}
 
@@ -1172,15 +1203,18 @@ function TabMembros({ slug, meId, showToast }) {
                 ? `Promover ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} a admin?`
                 : confirmacao.tipo === 'zerar-votos'
                   ? `Zerar os votos recebidos por ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
-                  : `Remover o admin de ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
+                  : confirmacao.tipo === 'inativar'
+                    ? `Marcar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} como inactivo? Vai ser removido do sorteio e ranking mas o histórico é preservado.`
+                    : `Remover o admin de ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
           }
           perigo={confirmacao.tipo === 'remover' || confirmacao.tipo === 'zerar-votos'}
-          confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : confirmacao.tipo === 'zerar-votos' ? 'Zerar' : 'Confirmar'}
+          confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : confirmacao.tipo === 'zerar-votos' ? 'Zerar' : confirmacao.tipo === 'inativar' ? 'Marcar inactivo' : 'Confirmar'}
           onConfirm={() => {
             const { tipo, membro } = confirmacao;
             setConfirmacao(null);
             if (tipo === 'remover') remover(membro);
             else if (tipo === 'zerar-votos') zerarVotos(membro);
+            else if (tipo === 'inativar') setAtivo(membro, false);
             else mudarRole(membro, tipo === 'promover' ? 'admin' : 'member');
           }}
           onCancel={() => setConfirmacao(null)}
