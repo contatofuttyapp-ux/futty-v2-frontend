@@ -2,6 +2,7 @@
 // Só admins. Sidebar (desktop) / drawer (mobile). Tab persistida na URL.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
@@ -856,10 +857,64 @@ function TabEquipa({ slug, team, showToast }) {
 }
 
 // ─── TAB: MEMBROS ────────────────────────────────────────────────────────────
+// Form inline de mensagem push directa a um jogador específico.
+function FormMensagem({ slug, membro, showToast, onClose }) {
+  const [titulo, setTitulo] = useState('');
+  const [mensagem, setMensagem] = useState('');
+  const [busy, setBusy] = useState(false);
+  const nome = membro.nome_jogador || membro.nome || 'jogador';
+
+  async function enviar() {
+    if (busy) return;
+    if (!titulo.trim() || !mensagem.trim()) {
+      showToast('Preenche o título e a mensagem.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiFetch(`/api/push/equipas/${slug}/membros/${membro.user_id}/mensagem`, {
+        method: 'POST',
+        body: JSON.stringify({ titulo: titulo.trim(), mensagem: mensagem.trim() }),
+      });
+      showToast(`Mensagem enviada a ${nome}.`);
+      onClose();
+    } catch (e) {
+      if (e.status === 404) showToast('Jogador sem notificações activas.', 'error');
+      else showToast(e.message, 'error');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 10, padding: 12, borderRadius: 10, border: '1px solid #222222', background: '#0c0c0c', display: 'grid', gap: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#fff' }}>
+        Enviar mensagem a <span style={{ color: 'var(--neon)' }}>{nome}</span>
+      </div>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
+        <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Confirma a tua presença" style={inputStyle} />
+      </label>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
+        <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve a mensagem…" style={{ ...inputStyle, resize: 'vertical' }} />
+      </label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
+          {busy ? 'A enviar…' : 'Enviar'}
+        </button>
+        <button type="button" className="btn btn--ghost btn--sm" disabled={busy} onClick={onClose}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TabMembros({ slug, meId, showToast }) {
   const [membros, setMembros] = useState(null);
   const [menuId, setMenuId] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null);
+  const [mensagemId, setMensagemId] = useState(null);
 
   useEffect(() => {
     let ativo = true;
@@ -1010,6 +1065,19 @@ function TabMembros({ slug, meId, showToast }) {
             </button>
 
             {!ehProprio ? (
+              <button
+                type="button"
+                onClick={() => setMensagemId((c) => (c === m.user_id ? null : m.user_id))}
+                aria-pressed={mensagemId === m.user_id}
+                aria-label={`Enviar mensagem a ${m.nome_jogador || m.nome || 'jogador'}`}
+                title="Enviar mensagem directa"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 7px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${mensagemId === m.user_id ? 'var(--neon)' : '#333'}`, background: mensagemId === m.user_id ? 'rgba(139,92,246,0.12)' : 'transparent', color: mensagemId === m.user_id ? 'var(--neon)' : 'var(--text-dim)' }}
+              >
+                <MessageSquare size={15} strokeWidth={2.2} />
+              </button>
+            ) : null}
+
+            {!ehProprio ? (
               <div style={{ position: 'relative' }} data-menu>
                 <button type="button" aria-label="Opções" onClick={() => setMenuId((c) => (c === m.user_id ? null : m.user_id))} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', fontSize: 18, fontWeight: 900, cursor: 'pointer', padding: '0 4px' }}>⋯</button>
                 {menuId === m.user_id ? (
@@ -1053,6 +1121,15 @@ function TabMembros({ slug, meId, showToast }) {
                 onBlur={() => saveNota(m)}
                 placeholder="Razão (só tu vês)…"
                 style={{ marginTop: 10, width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 13 }}
+              />
+            ) : null}
+
+            {mensagemId === m.user_id ? (
+              <FormMensagem
+                slug={slug}
+                membro={m}
+                showToast={showToast}
+                onClose={() => setMensagemId(null)}
               />
             ) : null}
           </div>
