@@ -1,10 +1,12 @@
 // Futty v2.0 — Início: avatar, chips de equipas, próximos jogos e publicidade.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { celebrarTop3 } from '../hooks/useConfetti';
+import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
 import PlayerCard from '../components/PlayerCard';
 import RSVPCard from '../components/RSVPCard';
@@ -135,6 +137,8 @@ export default function Inicio() {
   const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay
   const [rsvpInfo, setRsvpInfo] = useState(null); // RSVP do próximo jogo (se aberto)
   const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
+  const [campeonato, setCampeonato] = useState(null); // campeonato da equipa principal
+  const celebrouCamp = useRef(false);
 
   // Notificações push: banner discreto (uma vez por sessão).
   const { estado: pushEstado, subscrever: pushSubscrever } = usePushNotifications();
@@ -238,6 +242,27 @@ export default function Inicio() {
       ativo = false;
     };
   }, [nextId, me?.user?.id]);
+
+  // Campeonato da equipa principal (card no Início).
+  const campSlug = teams[0]?.slug || null;
+  useEffect(() => {
+    if (!campSlug) return undefined;
+    let ativo = true;
+    apiFetch(`/api/equipas/${campSlug}/campeonato`)
+      .then((d) => ativo && setCampeonato(d?.campeonato || null))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, [campSlug]);
+
+  // Confetti uma vez quando o campeonato está terminado.
+  useEffect(() => {
+    if (campeonato?.estado === 'terminado' && !celebrouCamp.current) {
+      celebrouCamp.current = true;
+      celebrarTop3(1);
+    }
+  }, [campeonato]);
 
   // Anúncio nativo: a seguir ao 2º jogo; se houver ≤1 jogo, no fim.
   const items = [];
@@ -407,6 +432,30 @@ export default function Inicio() {
               </>
             )}
             </div>
+
+            {/* Card do campeonato (equipa principal) */}
+            {campeonato && campSlug ? (
+              <Link to={`/equipa/${campSlug}/campeonato`} style={{ textDecoration: 'none', display: 'block', marginTop: 14, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-md)' }}>
+                {campeonato.estado === 'terminado' ? (
+                  <>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#d4a017' }}>🏆 {campeonato.nome} — Campeão: {nomeCampeao(campeonato)}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{campeonato.time_a_nome} {campeonato.time_a_pontos} × {campeonato.time_b_pontos} {campeonato.time_b_nome}</div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#fff' }}>⚽ {campeonato.nome}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8, color: '#fff', fontWeight: 700 }}>
+                      <span>{campeonato.time_a_nome}</span>
+                      <span style={{ color: '#d4a017', fontSize: 18 }}>{campeonato.time_a_pontos}</span>
+                      <span style={{ color: 'var(--text-dim)' }}>vs</span>
+                      <span style={{ color: '#d4a017', fontSize: 18 }}>{campeonato.time_b_pontos}</span>
+                      <span>{campeonato.time_b_nome}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center', marginTop: 6 }}>Jornada {campeonato.jornadas_jogadas} de {campeonato.num_jornadas} · clica para ver</div>
+                  </>
+                )}
+              </Link>
+            ) : null}
           </>
         )}
       </main>

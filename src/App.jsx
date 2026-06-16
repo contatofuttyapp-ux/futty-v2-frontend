@@ -21,6 +21,7 @@ const Jogos = lazy(() => import('./pages/Jogos'));
 const NovoJogo = lazy(() => import('./pages/NovoJogo'));
 const Jogo = lazy(() => import('./pages/Jogo'));
 const Ranking = lazy(() => import('./pages/Ranking'));
+const Campeonato = lazy(() => import('./pages/Campeonato'));
 const JogadorPerfil = lazy(() => import('./pages/JogadorPerfil'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const AlterarPassword = lazy(() => import('./pages/AlterarPassword'));
@@ -110,6 +111,14 @@ export default function App() {
             element={
               <AuthGuard>
                 <Ranking />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/equipa/:slug/campeonato"
+            element={
+              <AuthGuard>
+                <Campeonato />
               </AuthGuard>
             }
           />

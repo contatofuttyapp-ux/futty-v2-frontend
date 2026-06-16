@@ -13,6 +13,8 @@ import PlayerAvatar from '../components/PlayerAvatar';
 import TeamAvatar from '../components/TeamAvatar';
 import UploadComCrop from '../components/UploadComCrop';
 import NumberStepper from '../components/NumberStepper';
+import RegistarJornada from '../components/RegistarJornada';
+import { nomeCampeao } from '../utils/campeonato';
 import { celebrarCerveja } from '../hooks/useConfetti';
 import '../styles/app.css';
 
@@ -36,6 +38,7 @@ const MENU = [
   { k: 'membros', icon: '👥', label: 'Membros' },
   { k: 'convites', icon: '🔗', label: 'Convites' },
   { k: 'jogos', icon: '⚽', label: 'Jogos' },
+  { k: 'campeonato', icon: '🏅', label: 'Campeonato' },
   { k: 'resultados', icon: '🏆', label: 'Resultados' },
   { k: 'estatisticas', icon: '📊', label: 'Estatísticas' },
   { k: 'denuncias', icon: '🚩', label: 'Denúncias' },
@@ -129,6 +132,159 @@ function MetricCard({ valor, label, alerta = false }) {
     <div style={{ ...CARD, padding: 14, textAlign: 'center' }}>
       <div style={{ fontSize: 28, fontWeight: 900, color: alerta ? 'var(--danger)' : '#fff' }}>{valor}</div>
       <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+// ─── TAB: CAMPEONATO ─────────────────────────────────────────────────────────
+function TabCampeonato({ slug, navigate, showToast }) {
+  const [data, setData] = useState(undefined); // undefined = loading
+  const [criando, setCriando] = useState(false);
+  const [nome, setNome] = useState('');
+  const [numJornadas, setNumJornadas] = useState(8);
+  const [timeA, setTimeA] = useState('Time A');
+  const [timeB, setTimeB] = useState('Time B');
+  const [busy, setBusy] = useState(false);
+  const [confirmTerminar, setConfirmTerminar] = useState(false);
+
+  useEffect(() => {
+    let ativo = true;
+    apiFetch(`/api/equipas/${slug}/campeonato`)
+      .then((d) => ativo && setData(d))
+      .catch((e) => ativo && (setData({ campeonato: null }), showToast(e.message, 'error')));
+    return () => {
+      ativo = false;
+    };
+  }, [slug, showToast]);
+
+  function recarregar() {
+    return apiFetch(`/api/equipas/${slug}/campeonato`)
+      .then((d) => setData(d))
+      .catch((e) => showToast(e.message, 'error'));
+  }
+
+  async function criar() {
+    if (busy) return;
+    if (!nome.trim()) {
+      showToast('Indica o nome do campeonato.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiFetch(`/api/equipas/${slug}/campeonato`, {
+        method: 'POST',
+        body: JSON.stringify({ nome: nome.trim(), num_jornadas: Number(numJornadas) || 8, time_a_nome: timeA.trim() || 'Time A', time_b_nome: timeB.trim() || 'Time B' }),
+      });
+      setCriando(false);
+      setNome('');
+      await recarregar();
+      showToast('Campeonato criado!');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function terminar() {
+    setConfirmTerminar(false);
+    setBusy(true);
+    try {
+      await apiFetch(`/api/campeonato/${data.campeonato.id}/terminar`, { method: 'POST' });
+      await recarregar();
+      showToast('Campeonato terminado.');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (data === undefined) return <Loading text="A carregar…" />;
+  const c = data.campeonato;
+
+  // C) TERMINADO
+  if (c && c.estado === 'terminado') {
+    return (
+      <div style={{ display: 'grid', gap: 14 }}>
+        <div style={{ ...CARD, padding: 14, textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#d4a017' }}>🏆 {c.nome} terminou</div>
+          <div style={{ color: '#fff', marginTop: 4 }}>Campeão: <b>{nomeCampeao(c)}</b></div>
+        </div>
+        <button type="button" className="btn btn--purple btn--sm" onClick={() => setData({ campeonato: null })}>Criar novo campeonato</button>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/equipa/${slug}/campeonato`)}>Ver detalhes →</button>
+      </div>
+    );
+  }
+
+  // B) ATIVO
+  if (c) {
+    return (
+      <div style={{ display: 'grid', gap: 14 }}>
+        <div style={{ ...CARD, padding: 14 }}>
+          <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#fff' }}>{c.nome}</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8, color: '#fff', fontWeight: 700 }}>
+            <span>{c.time_a_nome}</span>
+            <span style={{ color: '#d4a017', fontSize: 18 }}>{c.time_a_pontos}</span>
+            <span style={{ color: 'var(--text-dim)' }}>pts vs</span>
+            <span style={{ color: '#d4a017', fontSize: 18 }}>{c.time_b_pontos}</span>
+            <span>{c.time_b_nome}</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center', marginTop: 4 }}>Jornada {c.jornadas_jogadas} de {c.num_jornadas}</div>
+        </div>
+
+        {c.jornadas_jogadas < c.num_jornadas ? (
+          <div style={{ ...CARD, padding: 14 }}>
+            <div style={secLbl}>Registar resultado</div>
+            <div style={{ marginTop: 10 }}>
+              <RegistarJornada campeonato={c} onSaved={recarregar} showToast={showToast} />
+            </div>
+          </div>
+        ) : null}
+
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/equipa/${slug}/campeonato`)}>Ver detalhes →</button>
+        <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} disabled={busy} onClick={() => setConfirmTerminar(true)}>
+          Terminar campeonato antecipadamente
+        </button>
+
+        {confirmTerminar ? (
+          <ConfirmModal texto="Terminar o campeonato agora? O campeão é decidido pelos pontos atuais." perigo confirmarLabel="Terminar" onConfirm={terminar} onCancel={() => setConfirmTerminar(false)} />
+        ) : null}
+      </div>
+    );
+  }
+
+  // A) SEM CAMPEONATO
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      {criando ? (
+        <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
+          <label style={{ display: 'grid', gap: 6 }}>
+            <span style={lbl}>Nome do campeonato</span>
+            <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 80))} placeholder="Ex.: Liga de Verão" style={inputStyle} />
+          </label>
+          <label style={{ display: 'grid', gap: 6 }}>
+            <span style={lbl}>Nº de jornadas</span>
+            <input type="number" min="1" value={numJornadas} onChange={(e) => setNumJornadas(e.target.value)} style={inputStyle} />
+          </label>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <label style={{ display: 'grid', gap: 6, flex: 1 }}>
+              <span style={lbl}>Nome do Time A</span>
+              <input value={timeA} onChange={(e) => setTimeA(e.target.value.slice(0, 40))} style={inputStyle} />
+            </label>
+            <label style={{ display: 'grid', gap: 6, flex: 1 }}>
+              <span style={lbl}>Nome do Time B</span>
+              <input value={timeB} onChange={(e) => setTimeB(e.target.value.slice(0, 40))} style={inputStyle} />
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={criar}>Criar</button>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setCriando(false)}>Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="btn btn--purple btn--sm" onClick={() => setCriando(true)}>🏆 Criar Campeonato</button>
+      )}
     </div>
   );
 }
@@ -1799,6 +1955,7 @@ export default function AdminPanel() {
               {tab === 'membros' && <TabMembros slug={slug} meId={meId} showToast={showToast} />}
               {tab === 'convites' && <TabConvites slug={slug} showToast={showToast} />}
               {tab === 'jogos' && <TabJogos slug={slug} showToast={showToast} navigate={navigate} />}
+              {tab === 'campeonato' && <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} />}
               {tab === 'resultados' && <TabResultados slug={slug} showToast={showToast} />}
               {tab === 'estatisticas' && <TabEstatisticas slug={slug} membrosBasicos={membrosBasicos} showToast={showToast} />}
               {tab === 'denuncias' && <TabDenuncias showToast={showToast} />}
