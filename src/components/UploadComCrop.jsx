@@ -77,7 +77,7 @@ export default function UploadComCrop({ onUpload, uploadFn = null, accept = 'ima
           cursor: busy || disabled ? 'wait' : 'pointer',
         }}
       >
-        {busy ? 'A enviar…' : label}
+        {busy ? 'Enviando…' : label}
       </button>
       {erro ? <div style={{ marginTop: 6, fontSize: 12, color: 'var(--danger)' }}>{erro}</div> : null}
 

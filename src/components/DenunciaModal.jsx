@@ -68,7 +68,7 @@ export default function DenunciaModal({ targetType, targetId, onClose, onResult 
               Cancelar
             </button>
             <button type="button" className="btn btn--purple" style={{ flex: 1 }} disabled={busy} onClick={enviar}>
-              {busy ? 'A enviar…' : 'Enviar denúncia'}
+              {busy ? 'Enviando…' : 'Enviar denúncia'}
             </button>
           </div>
         </div>

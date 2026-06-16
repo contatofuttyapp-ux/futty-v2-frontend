@@ -35,9 +35,9 @@ export default function ForgotPassword() {
           <div className="auth-brand">
             Futty<span className="auth-brand__dot">.</span>
           </div>
-          <h1 className="auth-title">Recuperar password</h1>
+          <h1 className="auth-title">Recuperar senha</h1>
           <p className="auth-subtitle">
-            Indica o teu email e enviamos-te um link para repor a password.
+            Indica o teu email e enviamos-te um link para repor a senha.
           </p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
@@ -65,7 +65,7 @@ export default function ForgotPassword() {
               className="auth-btn auth-btn--primary"
               disabled={loading}
             >
-              {loading ? 'A enviar…' : 'Enviar link de recuperação'}
+              {loading ? 'Enviando…' : 'Enviar link de recuperação'}
             </button>
           </form>
 

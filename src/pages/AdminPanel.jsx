@@ -209,7 +209,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
           <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve o aviso para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
-          {busy ? 'A enviar…' : '📣 Enviar para todos'}
+          {busy ? 'Enviando…' : '📣 Enviar para todos'}
         </button>
       </div>
 
@@ -228,7 +228,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
           <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreve o anúncio para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={anBusy || !anTitulo.trim() || !anMensagem.trim()} onClick={publicarAnuncio}>
-          {anBusy ? 'A publicar…' : '📢 Publicar no feed'}
+          {anBusy ? 'Publicando…' : '📢 Publicar no feed'}
         </button>
       </div>
     </div>
@@ -901,7 +901,7 @@ function FormMensagem({ slug, membro, showToast, onClose }) {
       </label>
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
-          {busy ? 'A enviar…' : 'Enviar'}
+          {busy ? 'Enviando…' : 'Enviar'}
         </button>
         <button type="button" className="btn btn--ghost btn--sm" disabled={busy} onClick={onClose}>
           Cancelar
@@ -1304,7 +1304,7 @@ function TabConvites({ slug, showToast }) {
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={gerando} onClick={gerar}>
-        {gerando ? 'A gerar…' : '＋ Gerar novo convite'}
+        {gerando ? 'Gerando…' : '＋ Gerar novo convite'}
       </button>
 
       {novoLink ? (
@@ -1595,7 +1595,7 @@ function FormRecorrentes({ slug, showToast, onClose, onCriado }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" className="btn btn--purple btn--sm" disabled={busy} onClick={criar}>{busy ? 'A criar…' : 'Criar jogos'}</button>
+        <button type="button" className="btn btn--purple btn--sm" disabled={busy} onClick={criar}>{busy ? 'Criando…' : 'Criar jogos'}</button>
         <button type="button" className="btn btn--ghost btn--sm" disabled={busy} onClick={onClose}>Cancelar</button>
       </div>
     </div>

@@ -67,7 +67,7 @@ export default function Login() {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">Senha</label>
               <input
                 id="password"
                 type="password"
@@ -82,7 +82,7 @@ export default function Login() {
 
             <div className="auth-links">
               <span />
-              <Link to="/forgot-password">Esqueceste a password?</Link>
+              <Link to="/forgot-password">Esqueceste a senha?</Link>
             </div>
 
             <button
@@ -90,7 +90,7 @@ export default function Login() {
               className="auth-btn auth-btn--primary"
               disabled={loading}
             >
-              {loading ? 'A entrar…' : 'Entrar'}
+              {loading ? 'Entrando…' : 'Entrar'}
             </button>
           </form>
 

@@ -228,7 +228,7 @@ function ComentarioForm({ membros, placeholder = 'Escreve um comentário…', av
               </button>
             ) : null}
             <button type="button" className="btn btn--primary btn--sm" disabled={!podeEnviar} onClick={submeter}>
-              {busy ? 'A enviar…' : 'Enviar'}
+              {busy ? 'Enviando…' : 'Enviar'}
             </button>
           </div>
         </div>

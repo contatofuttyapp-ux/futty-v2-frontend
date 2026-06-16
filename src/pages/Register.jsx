@@ -19,11 +19,11 @@ export default function Register() {
     setSuccess('');
 
     if (password.length < 6) {
-      setError('A password deve ter pelo menos 6 caracteres.');
+      setError('A senha deve ter pelo menos 6 caracteres.');
       return;
     }
     if (password !== confirm) {
-      setError('As passwords não coincidem.');
+      setError('As senhas não coincidem.');
       return;
     }
 
@@ -88,7 +88,7 @@ export default function Register() {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">Senha</label>
               <input
                 id="password"
                 type="password"
@@ -102,7 +102,7 @@ export default function Register() {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="confirm">Confirmar password</label>
+              <label htmlFor="confirm">Confirmar senha</label>
               <input
                 id="confirm"
                 type="password"
@@ -120,7 +120,7 @@ export default function Register() {
               className="auth-btn auth-btn--primary"
               disabled={loading}
             >
-              {loading ? 'A criar conta…' : 'Criar conta'}
+              {loading ? 'Criando conta…' : 'Criar conta'}
             </button>
           </form>
 

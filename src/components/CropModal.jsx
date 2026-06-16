@@ -144,7 +144,7 @@ export default function CropModal({ file, aspect = 1, onConfirm, onCancel }) {
             disabled={busy || !areaPx}
             onClick={confirmar}
           >
-            {busy ? 'A recortar…' : 'Confirmar'}
+            {busy ? 'Recortando…' : 'Confirmar'}
           </button>
         </div>
       </div>

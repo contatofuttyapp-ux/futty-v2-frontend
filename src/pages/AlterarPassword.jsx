@@ -33,7 +33,7 @@ function CampoPassword({ label, value, onChange }) {
         />
         <button
           type="button"
-          aria-label={mostrar ? 'Esconder password' : 'Mostrar password'}
+          aria-label={mostrar ? 'Esconder senha' : 'Mostrar senha'}
           onClick={() => setMostrar((v) => !v)}
           style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16 }}
         >
@@ -54,37 +54,37 @@ export default function AlterarPassword() {
   async function guardar() {
     if (busy) return;
     if (nova.length < 6) {
-      setToast({ tipo: 'error', mensagem: 'A password tem de ter pelo menos 6 caracteres.' });
+      setToast({ tipo: 'error', mensagem: 'A senha tem de ter pelo menos 6 caracteres.' });
       return;
     }
     if (nova !== confirmar) {
-      setToast({ tipo: 'error', mensagem: 'As passwords não coincidem.' });
+      setToast({ tipo: 'error', mensagem: 'As senhas não coincidem.' });
       return;
     }
     setBusy(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: nova });
       if (error) throw error;
-      setToast({ tipo: 'success', mensagem: 'Password alterada com sucesso!' });
+      setToast({ tipo: 'success', mensagem: 'Senha alterada com sucesso!' });
       setTimeout(() => navigate('/perfil'), 1500);
     } catch (e) {
-      setToast({ tipo: 'error', mensagem: e?.message || 'Erro ao alterar a password.' });
+      setToast({ tipo: 'error', mensagem: e?.message || 'Erro ao alterar a senha.' });
       setBusy(false);
     }
   }
 
   return (
     <div className="app-shell">
-      <Topbar back="/perfil" title="ALTERAR PASSWORD" />
+      <Topbar back="/perfil" title="ALTERAR SENHA" />
       <main className="app-main">
-        <h1 className="app-page-title">Alterar password</h1>
-        <p className="app-page-sub">Escolhe uma nova password (mínimo 6 caracteres).</p>
+        <h1 className="app-page-title">Alterar senha</h1>
+        <p className="app-page-sub">Escolhe uma nova senha (mínimo 6 caracteres).</p>
 
         <div style={{ display: 'grid', gap: 14, maxWidth: 420 }}>
-          <CampoPassword label="Nova password" value={nova} onChange={setNova} />
-          <CampoPassword label="Confirmar password" value={confirmar} onChange={setConfirmar} />
+          <CampoPassword label="Nova senha" value={nova} onChange={setNova} />
+          <CampoPassword label="Confirmar senha" value={confirmar} onChange={setConfirmar} />
           <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={busy} onClick={guardar}>
-            {busy ? 'Salvando…' : 'Salvar nova password'}
+            {busy ? 'Salvando…' : 'Salvar nova senha'}
           </button>
         </div>
       </main>
