@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import GoogleIcon from '../components/GoogleIcon';
+import FuttyLogo from '../components/FuttyLogo';
 import '../styles/auth.css';
 
 // Máximo permitido: ontem (não permite hoje nem datas futuras).
@@ -73,7 +74,7 @@ export default function Register() {
       <div className="auth-card">
         <div className="auth-card__inner">
           <div className="auth-brand">
-            Futty<span className="auth-brand__dot">.</span>
+<FuttyLogo variant="flat" size={28} />
           </div>
           <h1 className="auth-title">Cria a tua conta</h1>
           <p className="auth-subtitle">Junta-te ao Futty em segundos.</p>

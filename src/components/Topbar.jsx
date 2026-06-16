@@ -13,7 +13,9 @@ export default function Topbar({ title = null, back = null }) {
             <ChevronLeft size={22} />
           </Link>
         ) : (
-          <FuttyLogo size="md" linkTo="/home" />
+          <Link to="/home" aria-label="Início" style={{ display: 'flex', alignItems: 'center' }}>
+            <FuttyLogo variant="flat" size={32} />
+          </Link>
         )}
         {title && <span className="topbar-title">{title}</span>}
       </header>

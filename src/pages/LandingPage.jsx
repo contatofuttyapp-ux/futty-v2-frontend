@@ -36,8 +36,8 @@ export default function LandingPage() {
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 40px' }}>
       {/* 1. HERO */}
       <section style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 18, padding: '32px 0' }}>
-        <div style={{ transform: 'scale(1.6)', marginBottom: 12 }}>
-          <FuttyLogo size="lg" showIcon linkTo="/register" />
+        <div style={{ marginBottom: 'var(--space-lg)' }}>
+          <FuttyLogo variant="metallic" size={120} />
         </div>
         <h1 style={{ ...H, fontSize: 34, lineHeight: 1.1, margin: 0 }}>O seu time.<br />A sua figurinha.</h1>
         <p style={{ fontSize: 15, lineHeight: 1.55, color: 'rgba(255,255,255,0.8)', margin: 0, maxWidth: 360 }}>

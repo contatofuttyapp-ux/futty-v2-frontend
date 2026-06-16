@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import FuttyLogo from '../components/FuttyLogo';
 import '../styles/auth.css';
 
 export default function ForgotPassword() {
@@ -33,7 +34,7 @@ export default function ForgotPassword() {
       <div className="auth-card">
         <div className="auth-card__inner">
           <div className="auth-brand">
-            Futty<span className="auth-brand__dot">.</span>
+<FuttyLogo variant="flat" size={28} />
           </div>
           <h1 className="auth-title">Recuperar senha</h1>
           <p className="auth-subtitle">

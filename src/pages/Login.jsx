@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import GoogleIcon from '../components/GoogleIcon';
+import FuttyLogo from '../components/FuttyLogo';
 import '../styles/auth.css';
 
 export default function Login() {
@@ -44,7 +45,7 @@ export default function Login() {
       <div className="auth-card">
         <div className="auth-card__inner">
           <div className="auth-brand">
-            Futty<span className="auth-brand__dot">.</span>
+<FuttyLogo variant="flat" size={28} />
           </div>
           <h1 className="auth-title">Bem-vindo de volta</h1>
           <p className="auth-subtitle">Entra na tua conta para continuar.</p>

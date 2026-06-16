@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import FuttyLogo from '../components/FuttyLogo';
 import { colorOf, initials } from '../utils/teamColors';
 import '../styles/app.css';
 
@@ -66,7 +67,7 @@ export default function Convite() {
       <div className="auth-card">
         <div className="auth-card__inner">
           <div className="auth-brand">
-            Futty<span className="auth-brand__dot">.</span>
+<FuttyLogo variant="flat" size={28} />
           </div>
 
           {loading ? (
