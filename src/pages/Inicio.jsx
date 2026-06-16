@@ -16,6 +16,7 @@ import ProductTour from '../components/ProductTour';
 import Loading from '../components/Loading';
 import SorteioOverlay from '../components/SorteioOverlay';
 import AdCard from '../components/AdCard';
+import Toast from '../components/Toast';
 import '../styles/app.css';
 
 function isToday(iso) {
@@ -138,6 +139,8 @@ export default function Inicio() {
   const [rsvpInfo, setRsvpInfo] = useState(null); // RSVP do próximo jogo (se aberto)
   const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
   const [campeonato, setCampeonato] = useState(null); // campeonato da equipa principal
+  const [ausenciaBusy, setAusenciaBusy] = useState(false);
+  const [toast, setToast] = useState(null); // { msg, tipo }
   const celebrouCamp = useRef(false);
 
   // Notificações push: banner discreto (uma vez por sessão).
@@ -215,7 +218,30 @@ export default function Inicio() {
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
   // Próximo jogo = o primeiro que não está encerrado (lista vem ordenada por data).
-  const nextId = filtered.find((g) => g.status !== 'finished')?.id ?? null;
+  const proximoJogo = filtered.find((g) => g.status !== 'finished') || null;
+  const nextId = proximoJogo?.id ?? null;
+
+  // Ausência antecipada ao próximo jogo (declaração proactiva, sem RSVP).
+  async function toggleAusencia() {
+    if (!proximoJogo?.team_slug || ausenciaBusy) return;
+    const novo = !proximoJogo.ausente_proximo;
+    const teamId = proximoJogo.team_id;
+    setAusenciaBusy(true);
+    // Optimista: a flag é por equipa → atualiza todos os jogos dessa equipa.
+    setGames((prev) => (prev || []).map((g) => (g.team_id === teamId ? { ...g, ausente_proximo: novo } : g)));
+    try {
+      await apiFetch(`/api/teams/${proximoJogo.team_slug}/membros/ausencia`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ausente: novo }),
+      });
+      setToast({ msg: novo ? 'Marcaste ausência ao próximo jogo.' : 'Boa, contamos contigo!', tipo: 'success' });
+    } catch (err) {
+      setGames((prev) => (prev || []).map((g) => (g.team_id === teamId ? { ...g, ausente_proximo: !novo } : g)));
+      setToast({ msg: err.message, tipo: 'error' });
+    } finally {
+      setAusenciaBusy(false);
+    }
+  }
 
   // RSVP do próximo jogo: mostra o cartão de confirmação se estiver aberto.
   // Guarda o gameId no estado para o render ignorar dados de um jogo anterior.
@@ -409,6 +435,22 @@ export default function Inicio() {
             {rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado ? (
               <RSVPCard gameId={nextId} prazo={rsvpInfo.rsvp_prazo} respostaActual={minhaResposta} onResposta={setMinhaResposta} />
             ) : null}
+            {proximoJogo && proximoJogo.team_slug ? (
+              proximoJogo.ausente_proximo ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '8px 0 4px' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 800, color: 'var(--danger)', background: 'rgba(248,113,113,0.12)', border: '1px solid var(--danger)', borderRadius: 999, padding: '4px 10px' }}>
+                    ❌ Ausente declarado
+                  </span>
+                  <button type="button" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ border: 'none', background: 'transparent', color: 'var(--neon)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', padding: 0, opacity: ausenciaBusy ? 0.6 : 1 }}>
+                    {ausenciaBusy ? '…' : 'Afinal vou'}
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ margin: '8px 0 4px', border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', color: 'var(--text-dim)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', borderRadius: 999, padding: '6px 12px', opacity: ausenciaBusy ? 0.6 : 1 }}>
+                  {ausenciaBusy ? 'A guardar…' : '😴 Não vou ao próximo jogo'}
+                </button>
+              )
+            ) : null}
             {loadingGames ? (
               <Loading text="A carregar jogos…" />
             ) : (
@@ -462,6 +504,8 @@ export default function Inicio() {
 
       {/* Overlay do sorteio */}
       <SorteioOverlay jogo={jogoSorteio} onClose={() => setJogoSorteio(null)} />
+
+      {toast ? <Toast mensagem={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
       {/* Onboarding (primeira visita) */}
       {!tourDone && (

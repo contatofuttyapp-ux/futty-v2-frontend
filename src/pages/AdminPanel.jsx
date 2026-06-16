@@ -1032,6 +1032,9 @@ function TabMembros({ slug, meId, showToast }) {
                 {m.role === 'admin' && (
                   <span style={{ fontSize: 10, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '2px 6px' }}>ADMIN</span>
                 )}
+                {m.ausente_proximo && (
+                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 6px' }}>❌ Ausente</span>
+                )}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
             </div>
