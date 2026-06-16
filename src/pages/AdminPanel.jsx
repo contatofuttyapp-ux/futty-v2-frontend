@@ -80,6 +80,25 @@ function diasAte(iso) {
   return Math.max(0, Math.ceil(ms / 86400000));
 }
 
+// "dom, 22 jun · 19h00"
+function fmtJogoCompleto(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const data = d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+  const hora = `${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${data} · ${hora}`;
+}
+// "dom, 15 jun"
+function fmtDiaCurto(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+// Tokens dos cards do dashboard.
+const cardDash = { background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-md)' };
+const cardDashLbl = { fontFamily: "'Rajdhani', sans-serif", fontSize: 'var(--label-size)', fontWeight: 700, color: 'var(--label-color)', textTransform: 'uppercase', letterSpacing: '1px' };
+
 // Pequeno modal de confirmação reutilizável.
 function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, onConfirm, onCancel }) {
   return (
@@ -120,6 +139,11 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
   const [denuncias, setDenuncias] = useState(0);
   const [confirmRevotar, setConfirmRevotar] = useState(false);
   const [revotarBusy, setRevotarBusy] = useState(false);
+  // Dashboard de acesso rápido.
+  const [proximoRsvp, setProximoRsvp] = useState(null); // rsvp do próximo jogo
+  const [ultimoJogo, setUltimoJogo] = useState(undefined); // GET do último jogo (undefined=loading, null=nenhum)
+  const [semFoto, setSemFoto] = useState(0);
+  const [semPosicao, setSemPosicao] = useState(0);
 
   async function pedirRevotacao() {
     setRevotarBusy(true);
@@ -141,17 +165,153 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
       .catch((e) => ativo && (setStats({}), showToast(e.message, 'error')));
     apiFetch(`/api/teams/${slug}/pedidos`).then((d) => ativo && setPedidos((d.pedidos || []).length)).catch(() => {});
     apiFetch('/api/feed/denuncias').then((d) => ativo && setDenuncias((d.denuncias || []).length)).catch(() => {});
+
+    // Membros sem foto / sem posição.
+    apiFetch(`/api/teams/${slug}/membros`)
+      .then((d) => {
+        if (!ativo) return;
+        const ms = d.membros || [];
+        setSemFoto(ms.filter((m) => !m.avatar_url).length);
+        setSemPosicao(ms.filter((m) => !m.posicao).length);
+      })
+      .catch(() => {});
+
+    // Último jogo (mais recente já sorteado / passado) + o seu detalhe.
+    apiFetch(`/api/teams/${slug}/games`)
+      .then((d) => {
+        if (!ativo) return;
+        const games = d.games || [];
+        const passados = games.filter((g) => g.sorteio_realizado || (g.data && new Date(g.data).getTime() < Date.now()));
+        const ultimo = passados.slice().sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
+        if (!ultimo) {
+          setUltimoJogo(null);
+          return;
+        }
+        apiFetch(`/api/games/${ultimo.id}`)
+          .then((gd) => ativo && setUltimoJogo(gd))
+          .catch(() => ativo && setUltimoJogo(null));
+      })
+      .catch(() => ativo && setUltimoJogo(null));
+
     return () => {
       ativo = false;
     };
   }, [slug, showToast]);
 
+  // RSVP do próximo jogo (depende do stats já carregado).
+  useEffect(() => {
+    const pjId = stats?.proximo_jogo?.id;
+    if (!pjId) return undefined;
+    let ativo = true;
+    apiFetch(`/api/jogos/${pjId}/rsvp`)
+      .then((d) => ativo && setProximoRsvp(d))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, [stats]);
+
   if (!stats) return <Loading text="A carregar…" />;
   const pj = stats.proximo_jogo;
   const art = stats.artilheiro;
 
+  // Resumo do RSVP do próximo jogo.
+  const rsvpAtivo = !!proximoRsvp && (proximoRsvp.rsvp_aberto || proximoRsvp.rsvp_fechado);
+  const rsvpAberto = !!proximoRsvp?.rsvp_aberto && !proximoRsvp?.rsvp_fechado;
+  const rsvpConf = proximoRsvp ? proximoRsvp.confirmados.length : 0;
+  const rsvpTotal = proximoRsvp ? proximoRsvp.confirmados.length + proximoRsvp.recusados.length + proximoRsvp.pendentes.length : 0;
+  const naoResponderam = rsvpAberto ? proximoRsvp.pendentes.length : 0;
+
+  // Último jogo + resultado/artilheiro/destaque.
+  const uGame = ultimoJogo && ultimoJogo.game ? ultimoJogo.game : null;
+  const uTimes = uGame?.times_resultado?.times || [];
+  const uNomeA = uTimes[0]?.nome || 'Time A';
+  const uNomeB = uTimes[1]?.nome || 'Time B';
+  const uArtilheiro = (ultimoJogo?.gols || []).reduce((m, g) => (g.gols > (m?.gols || 0) ? g : m), null);
+  const uDestaque = (ultimoJogo?.players || []).filter((p) => p.confirmado).sort((a, b) => (b.rating || 0) - (a.rating || 0))[0] || null;
+
+  // Alertas accionáveis.
+  const alertas = [];
+  if (semFoto > 0) alertas.push({ txt: `${semFoto} ${semFoto === 1 ? 'jogador sem foto' : 'jogadores sem foto'}`, acao: () => onGoTab('membros') });
+  if (naoResponderam > 0) alertas.push({ txt: `${naoResponderam} ${naoResponderam === 1 ? 'jogador não respondeu' : 'jogadores não responderam'} ao RSVP`, acao: () => onGoTab('jogos') });
+  if (uGame && (uGame.resultado_nivel || 0) === 0) alertas.push({ txt: 'Resultado do último jogo não registado', acao: () => navigate(`/equipa/${slug}/jogo/${uGame.id}`) });
+  if (semPosicao > 0) alertas.push({ txt: `${semPosicao} ${semPosicao === 1 ? 'jogador sem posição' : 'jogadores sem posição'}`, acao: () => onGoTab('membros') });
+
   return (
     <div style={{ display: 'grid', gap: 14 }}>
+      {/* Dashboard de acesso rápido (próximo jogo / último jogo / alertas) */}
+      <div style={cardDash}>
+        <div style={cardDashLbl}>Próximo jogo</div>
+        {pj ? (
+          <>
+            <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>{fmtJogoCompleto(pj.date)}</div>
+            {rsvpAtivo ? (
+              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>✅ {rsvpConf} confirmados / {rsvpTotal} membros</div>
+            ) : null}
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Fazer sorteio</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => onGoTab('jogos')}>{rsvpAtivo ? 'Ver RSVP' : 'Abrir RSVP'}</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem jogo agendado</div>
+            <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/equipa/${slug}/jogo/novo`)}>Criar jogo</button>
+          </>
+        )}
+      </div>
+
+      <div style={cardDash}>
+        <div style={cardDashLbl}>Último jogo</div>
+        {uGame ? (
+          <>
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{fmtDiaCurto(uGame.data)}</div>
+            {(uGame.resultado_nivel || 0) === 0 ? (
+              <>
+                <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem resultado registado</div>
+                <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/equipa/${slug}/jogo/${uGame.id}`)}>Registar resultado</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>
+                  {uGame.resultado_nivel >= 2
+                    ? `${uNomeA} ${uGame.placar_a} × ${uGame.placar_b} ${uNomeB}`
+                    : uGame.time_vencedor === 'empate'
+                      ? 'Empate'
+                      : `${uGame.time_vencedor === 'A' ? uNomeA : uNomeB} venceu`}
+                </div>
+                {uGame.resultado_nivel === 3 && uArtilheiro && uArtilheiro.gols > 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>⚽ {uArtilheiro.nome} · {uArtilheiro.gols} {uArtilheiro.gols === 1 ? 'gol' : 'gols'}</div>
+                ) : null}
+                {uDestaque ? (
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>⭐ Destaque: {uDestaque.nome}</div>
+                ) : null}
+              </>
+            )}
+          </>
+        ) : ultimoJogo === null ? (
+          <div style={{ color: 'var(--text-dim)', marginTop: 4 }}>Sem jogos anteriores.</div>
+        ) : (
+          <div style={{ color: 'var(--text-dim)', marginTop: 4 }}>A carregar…</div>
+        )}
+      </div>
+
+      <div style={cardDash}>
+        <div style={cardDashLbl}>Alertas</div>
+        {alertas.length === 0 ? (
+          <div style={{ color: '#fff', fontWeight: 700, marginTop: 6 }}>✅ Tudo em ordem</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+            {alertas.map((a) => (
+              <button key={a.txt} type="button" onClick={a.acao} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#f5e070', fontSize: 13, cursor: 'pointer', padding: '4px 0' }}>
+                ⚠ {a.txt}
+                <span style={{ marginLeft: 'auto', color: 'var(--text-dim)' }}>→</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <MetricCard valor={stats.total_jogos ?? 0} label="jogos" />
         <MetricCard valor={stats.total_membros ?? 0} label="membros" />
