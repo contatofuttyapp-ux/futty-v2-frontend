@@ -3,10 +3,10 @@
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Download, Share2, Loader2 } from 'lucide-react';
+import { Camera, Download, Share2, Loader2, X } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
-import { nomeJogador } from '../utils/avatar';
+import { nomeJogador, urlAsset } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
 import { KITS, kitGradientCss } from '../utils/kits';
 import { gerarFigurinhaCanvas, gerarFigurinhaCanvasStory } from '../utils/figurinhaCanvas';
@@ -85,6 +85,7 @@ export default function Figurinha() {
   const [uploadFoto, setUploadFoto] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
   const [limiteIA, setLimiteIA] = useState(false);
+  const [verFoto, setVerFoto] = useState(false); // overlay da foto original
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
@@ -97,6 +98,9 @@ export default function Figurinha() {
   const plano = me?.user?.plan || 'free';
   const frameHex = getFrameColor(corFrame).stroke;
   const opts = { jogador, stats, fundo, corFrame, corUniforme, fotoOverride: fotoLocal, mostrarStats, mostrarNome };
+  // Foto original (foto_url) vs avatar mostrado (avatar_url). Diferentes = avatar IA activo.
+  const fotoOriginal = me?.user?.foto_url || null;
+  const iaActivo = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
 
   // Carrega o perfil e pré-selecciona as escolhas guardadas.
   useEffect(() => {
@@ -262,6 +266,19 @@ export default function Figurinha() {
             </div>
           </div>
         </div>
+
+        {/* Indicador de avatar IA activo (a foto real fica guardada em foto_url) */}
+        {iaActivo && !fotoLocal ? (
+          <div style={{ textAlign: 'center', marginTop: -2, marginBottom: 6 }}>
+            <button
+              type="button"
+              onClick={() => setVerFoto(true)}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#8b5cf6' }}
+            >
+              ✨ Avatar IA activo · Ver foto →
+            </button>
+          </div>
+        ) : null}
 
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
 
@@ -517,6 +534,27 @@ export default function Figurinha() {
           </button>
         </div>
       </main>
+
+      {/* Overlay da foto original */}
+      {verFoto && fotoOriginal ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Foto original"
+          onClick={() => setVerFoto(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <button
+            type="button"
+            aria-label="Fechar"
+            onClick={(e) => { e.stopPropagation(); setVerFoto(false); }}
+            style={{ position: 'fixed', top: 16, right: 16, zIndex: 201, width: 40, height: 40, borderRadius: 12, border: '1px solid #333', background: 'rgba(255,255,255,0.08)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
+          >
+            <X size={18} />
+          </button>
+          <img src={urlAsset(fotoOriginal)} alt="Foto original" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '85%', objectFit: 'contain', borderRadius: 12 }} />
+        </div>
+      ) : null}
     </div>
   );
 }
