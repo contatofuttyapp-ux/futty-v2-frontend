@@ -138,10 +138,15 @@ function MetricCard({ valor, label, alerta = false }) {
 }
 
 // ─── TAB: COMUNICAÇÃO ────────────────────────────────────────────────────────
-function TabComunicacao({ slug, showToast }) {
+function TabComunicacao({ slug, navigate, showToast }) {
   const [titulo, setTitulo] = useState('');
   const [mensagem, setMensagem] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Anúncio no feed (post oficial permanente).
+  const [anTitulo, setAnTitulo] = useState('');
+  const [anMensagem, setAnMensagem] = useState('');
+  const [anBusy, setAnBusy] = useState(false);
 
   async function enviar() {
     if (busy) return;
@@ -165,19 +170,65 @@ function TabComunicacao({ slug, showToast }) {
     }
   }
 
+  async function publicarAnuncio() {
+    if (anBusy) return;
+    if (!anTitulo.trim() || !anMensagem.trim()) {
+      showToast('Preenche o título e a mensagem do anúncio.', 'error');
+      return;
+    }
+    setAnBusy(true);
+    try {
+      await apiFetch(`/api/feed/equipas/${slug}/anuncio`, {
+        method: 'POST',
+        body: JSON.stringify({ titulo: anTitulo.trim(), mensagem: anMensagem.trim() }),
+      });
+      setAnTitulo('');
+      setAnMensagem('');
+      showToast('Anúncio publicado no feed.');
+      navigate('/feed');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setAnBusy(false);
+    }
+  }
+
   return (
-    <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
-      <label style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
-        <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Jogo confirmado!" style={inputStyle} />
-      </label>
-      <label style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
-        <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve o aviso para a equipa…" style={{ ...inputStyle, resize: 'vertical' }} />
-      </label>
-      <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
-        {busy ? 'A enviar…' : '📣 Enviar para todos'}
-      </button>
+    <div style={{ display: 'grid', gap: 14 }}>
+      {/* Notificação push */}
+      <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
+        <div style={secLbl}>📣 Notificação push</div>
+        <label style={{ display: 'grid', gap: 6 }}>
+          <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
+          <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Jogo confirmado!" style={inputStyle} />
+        </label>
+        <label style={{ display: 'grid', gap: 6 }}>
+          <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
+          <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve o aviso para a equipa…" style={{ ...inputStyle, resize: 'vertical' }} />
+        </label>
+        <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
+          {busy ? 'A enviar…' : '📣 Enviar para todos'}
+        </button>
+      </div>
+
+      {/* Anúncio no feed */}
+      <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
+        <div style={secLbl}>📢 Anúncio no feed</div>
+        <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+          Fica fixado na Resenha como post oficial, visível a todos os membros.
+        </p>
+        <label style={{ display: 'grid', gap: 6 }}>
+          <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({anTitulo.length}/80)</span></span>
+          <input value={anTitulo} onChange={(e) => setAnTitulo(e.target.value.slice(0, 80))} placeholder="Ex.: Nova época começa em julho" style={inputStyle} />
+        </label>
+        <label style={{ display: 'grid', gap: 6 }}>
+          <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({anMensagem.length}/500)</span></span>
+          <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreve o anúncio para a equipa…" style={{ ...inputStyle, resize: 'vertical' }} />
+        </label>
+        <button type="button" className="btn btn--purple btn--sm" disabled={anBusy || !anTitulo.trim() || !anMensagem.trim()} onClick={publicarAnuncio}>
+          {anBusy ? 'A publicar…' : '📢 Publicar no feed'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -2004,7 +2055,7 @@ export default function AdminPanel() {
               {tab === 'campeonato' && <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} />}
               {tab === 'resultados' && <TabResultados slug={slug} showToast={showToast} />}
               {tab === 'estatisticas' && <TabEstatisticas slug={slug} membrosBasicos={membrosBasicos} showToast={showToast} />}
-              {tab === 'comunicacao' && <TabComunicacao slug={slug} showToast={showToast} />}
+              {tab === 'comunicacao' && <TabComunicacao slug={slug} navigate={navigate} showToast={showToast} />}
               {tab === 'denuncias' && <TabDenuncias showToast={showToast} />}
             </div>
           </main>
