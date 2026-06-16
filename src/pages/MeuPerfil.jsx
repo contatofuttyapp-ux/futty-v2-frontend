@@ -57,6 +57,7 @@ export default function MeuPerfil() {
   const [avatarAberto, setAvatarAberto] = useState(false);
   const [savingDados, setSavingDados] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -118,15 +119,22 @@ export default function MeuPerfil() {
   }
 
   async function escolherGenerico(file) {
+    setAvatarBusy(true);
     const ok = await patchMe({ avatar_url: `/avatares/genericos/${file}` });
+    setAvatarBusy(false);
     if (ok) showToast('Avatar atualizado!');
   }
 
   // Envia o ficheiro (já recortado) para o endpoint dedicado de avatar.
   // O servidor persiste users.avatar_url e devolve o URL público.
   async function enviarAvatar(file) {
-    const data = await apiUpload('/api/me/avatar', file, 'avatar');
-    return { url: data.avatar_url, media_type: 'image' };
+    try {
+      const data = await apiUpload('/api/me/avatar', file, 'avatar');
+      return { url: data.avatar_url, media_type: 'image' };
+    } catch (e) {
+      showToast(e.message || 'Falha ao enviar a imagem.', 'error');
+      throw e; // deixa o uploader saber que falhou
+    }
   }
 
   // Avatar já guardado no servidor pelo upload — só refresca o estado local.
@@ -249,8 +257,9 @@ export default function MeuPerfil() {
                       key={file}
                       type="button"
                       onClick={() => escolherGenerico(file)}
+                      disabled={avatarBusy}
                       title={file.replace(/\.png$/, '')}
-                      style={{ padding: 0, border: `2px solid ${sel ? 'var(--neon)' : 'transparent'}`, borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: 'var(--bg-elev)', lineHeight: 0 }}
+                      style={{ padding: 0, border: `2px solid ${sel ? 'var(--neon)' : 'transparent'}`, borderRadius: 10, overflow: 'hidden', cursor: avatarBusy ? 'wait' : 'pointer', opacity: avatarBusy ? 0.6 : 1, background: 'var(--bg-elev)', lineHeight: 0 }}
                     >
                       <img src={genericoSrc(file)} alt="" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' }} />
                     </button>

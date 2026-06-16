@@ -242,6 +242,9 @@ export default function Equipa() {
                   <span className={`badge badge--${m.role === 'admin' ? 'admin' : 'member'}`}>{m.role}</span>
                 </div>
               ))}
+              {members.length === 0 && (
+                <p className="muted" style={{ padding: '6px 2px' }}>Nenhum membro ainda.</p>
+              )}
             </div>
 
             <h2 className="section-title">Convidar jogador</h2>

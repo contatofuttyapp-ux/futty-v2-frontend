@@ -7,6 +7,7 @@ import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
 import SuperAdminGuard from './components/SuperAdminGuard';
 import CookieBanner from './components/CookieBanner';
+import RouteTitle from './components/RouteTitle';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -238,6 +239,7 @@ export default function App() {
       {loading && <LoadingScreen onDone={() => setLoading(false)} />}
       <AuthProvider>
         <BrowserRouter>
+          <RouteTitle />
           <Layout>
             <AnimatedRoutes />
           </Layout>
