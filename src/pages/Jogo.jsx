@@ -8,6 +8,7 @@ import { initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import DrawnTeams from '../components/DrawnTeams';
+import CampoSorteio from '../components/CampoSorteio';
 import TimesEditor from '../components/TimesEditor';
 import SorteioOverlay from '../components/SorteioOverlay';
 import CountdownSorteio from '../components/CountdownSorteio';
@@ -26,6 +27,7 @@ export default function Jogo() {
   const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay do sorteio
   const [editando, setEditando] = useState(false); // modo ajuste manual dos times
   const [jogadoresPorTime, setJogadoresPorTime] = useState(5); // selector do sorteio
+  const [vistaCampo, setVistaCampo] = useState(false); // resultado: lista (false) | campo (true)
   const [toast, setToast] = useState(null);
 
   // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
@@ -270,7 +272,35 @@ export default function Jogo() {
                     }}
                   />
                 ) : (
-                  <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} />
+                  <>
+                    {/* Toggle Lista | Campo */}
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                      <button type="button" className={`btn btn--sm ${!vistaCampo ? 'btn--primary' : 'btn--ghost'}`} aria-pressed={!vistaCampo} onClick={() => setVistaCampo(false)}>
+                        ≡ Lista
+                      </button>
+                      <button type="button" className={`btn btn--sm ${vistaCampo ? 'btn--primary' : 'btn--ghost'}`} aria-pressed={vistaCampo} onClick={() => setVistaCampo(true)}>
+                        ⬜ Campo
+                      </button>
+                    </div>
+
+                    {vistaCampo ? (
+                      <>
+                        <CampoSorteio
+                          timeA={game.times_resultado.times?.[0]?.jogadores || []}
+                          timeB={game.times_resultado.times?.[1]?.jogadores || []}
+                          nomeA={game.times_resultado.times?.[0]?.nome || 'Time A'}
+                          nomeB={game.times_resultado.times?.[1]?.nome || 'Time B'}
+                        />
+                        {(game.times_resultado.times?.length || 0) > 2 ? (
+                          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                            A vista de campo mostra os 2 primeiros times. Vê todos na Lista.
+                          </p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} />
+                    )}
+                  </>
                 )}
               </div>
             )}
