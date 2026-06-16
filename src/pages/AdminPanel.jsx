@@ -1530,11 +1530,84 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
   );
 }
 
+// Form inline para agendar N jogos semanais de uma vez.
+const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+function FormRecorrentes({ slug, showToast, onClose, onCriado }) {
+  const [dia, setDia] = useState(1); // segunda por defeito
+  const [hora, setHora] = useState('19:00');
+  const [local, setLocal] = useState('');
+  const [semanas, setSemanas] = useState(8);
+  const [busy, setBusy] = useState(false);
+
+  async function criar() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await apiFetch(`/api/teams/${slug}/jogos/recorrentes`, {
+        method: 'POST',
+        body: JSON.stringify({ dia_semana: dia, hora, local: local.trim() || undefined, semanas }),
+      });
+      const datas = (r.datas || []).map((iso) => new Date(iso).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })).join(', ');
+      showToast(`${r.criados} jogos criados para as próximas ${semanas} semanas${r.ignorados ? ` (${r.ignorados} ignorados por conflito)` : ''}.${datas ? ` Datas: ${datas}` : ''}`);
+      await onCriado();
+      onClose();
+    } catch (e) {
+      showToast(e.message, 'error');
+      setBusy(false);
+    }
+  }
+
+  const toggleStyle = (ativo) => ({
+    padding: '6px 10px',
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: 'pointer',
+    border: `1px solid ${ativo ? 'var(--neon)' : '#333'}`,
+    background: ativo ? 'rgba(139,92,246,0.12)' : 'transparent',
+    color: ativo ? 'var(--neon)' : 'var(--text-dim)',
+  });
+
+  return (
+    <div style={{ ...CARD, padding: 14, marginTop: 10, display: 'grid', gap: 12 }}>
+      <div>
+        <span style={lbl}>Dia da semana</span>
+        <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+          {DIAS_SEMANA.map((d, i) => (
+            <button key={d} type="button" onClick={() => setDia(i)} aria-pressed={dia === i} style={toggleStyle(dia === i)}>{d}</button>
+          ))}
+        </div>
+      </div>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Hora</span>
+        <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} style={inputStyle} />
+      </label>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Local (opcional)</span>
+        <input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Ex.: Campo da Vila" style={inputStyle} />
+      </label>
+      <div>
+        <span style={lbl}>Criar para as próximas</span>
+        <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+          {[4, 8, 12].map((n) => (
+            <button key={n} type="button" onClick={() => setSemanas(n)} aria-pressed={semanas === n} style={toggleStyle(semanas === n)}>{n} semanas</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className="btn btn--purple btn--sm" disabled={busy} onClick={criar}>{busy ? 'A criar…' : 'Criar jogos'}</button>
+        <button type="button" className="btn btn--ghost btn--sm" disabled={busy} onClick={onClose}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 function TabJogos({ slug, showToast, navigate }) {
   const [games, setGames] = useState(null);
   const [editar, setEditar] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null);
   const [motivoCancel, setMotivoCancel] = useState('');
+  const [recorrenteAberto, setRecorrenteAberto] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -1545,6 +1618,14 @@ function TabJogos({ slug, showToast, navigate }) {
       ativo = false;
     };
   }, [slug, showToast]);
+
+  const recarregar = useCallback(
+    () =>
+      apiFetch(`/api/teams/${slug}/games`)
+        .then((d) => setGames(d.games || []))
+        .catch((e) => showToast(e.message, 'error')),
+    [slug, showToast]
+  );
 
   const [now] = useState(() => Date.now());
   const { futuros, passados } = useMemo(() => {
@@ -1589,9 +1670,20 @@ function TabJogos({ slug, showToast, navigate }) {
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <div>
-        <div className="games-label">Futuros</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div className="games-label" style={{ margin: 0 }}>Futuros</div>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => setRecorrenteAberto((v) => !v)}>🔄 Criar jogos recorrentes</button>
+        </div>
+        {recorrenteAberto ? (
+          <FormRecorrentes
+            slug={slug}
+            showToast={showToast}
+            onClose={() => setRecorrenteAberto(false)}
+            onCriado={recarregar}
+          />
+        ) : null}
         {futuros.length === 0 ? (
-          <p className="muted" style={{ fontSize: 13 }}>Sem jogos futuros.</p>
+          <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>Sem jogos futuros.</p>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {futuros.map((g) => {
