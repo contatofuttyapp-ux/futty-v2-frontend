@@ -1116,6 +1116,30 @@ function TabMembros({ slug, meId, showToast }) {
               })}
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Presenças:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                {Array.from({ length: 5 }).map((_, idx) => {
+                  const p = (m.presencas_recentes || [])[idx];
+                  const cor = !p ? 'transparent' : p.presente ? '#10b981' : '#ef4444';
+                  const dataFmt = p?.data ? new Date(p.data).toLocaleDateString('pt-PT') : null;
+                  const label = p ? `Jogo de ${dataFmt || 'data desconhecida'}: ${p.presente ? 'presente' : 'ausente'}` : 'Sem dados (jogo não aconteceu)';
+                  return (
+                    <span
+                      key={idx}
+                      role="img"
+                      aria-label={label}
+                      title={label}
+                      style={{ width: 10, height: 10, borderRadius: '50%', background: cor, border: p ? 'none' : '1px solid #444', boxSizing: 'border-box', display: 'inline-block' }}
+                    />
+                  );
+                })}
+              </div>
+              {m.taxa_presenca ? (
+                <span style={{ fontSize: 'var(--label-size)', color: 'var(--label-color)', fontWeight: 700 }}>{m.taxa_presenca}</span>
+              ) : null}
+            </div>
+
             {!ehProprio && m.visivel_ranking === false ? (
               <input
                 type="text"
