@@ -105,12 +105,13 @@ const cardDash = { background: 'var(--surface-1)', border: '1px solid var(--bord
 const cardDashLbl = { fontFamily: "'Rajdhani', sans-serif", fontSize: 'var(--label-size)', fontWeight: 700, color: 'var(--label-color)', textTransform: 'uppercase', letterSpacing: '1px' };
 
 // Pequeno modal de confirmação reutilizável.
-function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, onConfirm, onCancel }) {
+function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, onConfirm, onCancel, children = null }) {
   return (
     <div className="modal-overlay" role="presentation" onClick={onCancel}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-card__inner">
-          <p style={{ fontSize: 15, marginBottom: 16 }}>{texto}</p>
+          <p style={{ fontSize: 15, marginBottom: children ? 12 : 16 }}>{texto}</p>
+          {children ? <div style={{ marginBottom: 16 }}>{children}</div> : null}
           <button
             type="button"
             className="btn btn--primary"
@@ -1525,6 +1526,7 @@ function TabJogos({ slug, showToast, navigate }) {
   const [games, setGames] = useState(null);
   const [editar, setEditar] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null);
+  const [motivoCancel, setMotivoCancel] = useState('');
 
   useEffect(() => {
     let ativo = true;
@@ -1541,17 +1543,18 @@ function TabJogos({ slug, showToast, navigate }) {
     const f = [];
     const p = [];
     for (const g of games || []) {
-      const fut = g.data && new Date(g.data).getTime() > now && g.status !== 'cancelado' && g.status !== 'terminado';
+      // Cancelados futuros continuam na lista "Futuros" (com visual distinto).
+      const fut = g.data && new Date(g.data).getTime() > now && g.status !== 'terminado';
       (fut ? f : p).push(g);
     }
     return { futuros: f, passados: p };
   }, [games, now]);
 
-  async function cancelar(g) {
+  async function cancelar(g, motivo) {
     try {
-      await apiFetch(`/api/games/${g.id}/cancelar`, { method: 'PATCH' });
-      setGames((cur) => cur.map((x) => (x.id === g.id ? { ...x, status: 'cancelado' } : x)));
-      showToast('Jogo cancelado.');
+      await apiFetch(`/api/games/${g.id}/cancelar`, { method: 'POST', body: JSON.stringify({ motivo: motivo || undefined }) });
+      setGames((cur) => cur.map((x) => (x.id === g.id ? { ...x, status: 'cancelado', cancelado: true, motivo_cancelamento: motivo || null } : x)));
+      showToast('Jogo cancelado. Notificação enviada.');
     } catch (e) {
       showToast(e.message, 'error');
     }
@@ -1583,22 +1586,39 @@ function TabJogos({ slug, showToast, navigate }) {
           <p className="muted" style={{ fontSize: 13 }}>Sem jogos futuros.</p>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            {futuros.map((g) => (
-              <div key={g.id} style={{ ...CARD, padding: 12 }}>
-                <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-                  {formatDateTime(g.data)} · {g.confirmados} confirmados
+            {futuros.map((g) => {
+              const cancelado = g.cancelado || g.status === 'cancelado';
+              if (cancelado) {
+                return (
+                  <div key={g.id} style={{ ...CARD, padding: 12, opacity: 0.55 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 8px' }}>❌ Cancelado</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data)}</div>
+                    {g.motivo_cancelamento ? (
+                      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>Motivo: {g.motivo_cancelamento}</div>
+                    ) : null}
+                  </div>
+                );
+              }
+              return (
+                <div key={g.id} style={{ ...CARD, padding: 12 }}>
+                  <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
+                    {formatDateTime(g.data)} · {g.confirmados} confirmados
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
+                    <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>❌ Cancelar jogo</button>
+                    {g.confirmados === 0 ? (
+                      <button type="button" className="btn btn--ghost btn--sm" style={{ color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'apagar', jogo: g })}>Apagar</button>
+                    ) : null}
+                  </div>
+                  <RSVPAdmin gameId={g.id} slug={slug} navigate={navigate} showToast={showToast} />
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
-                  <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'cancelar', jogo: g })}>Cancelar jogo</button>
-                  {g.confirmados === 0 ? (
-                    <button type="button" className="btn btn--ghost btn--sm" style={{ color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'apagar', jogo: g })}>Apagar</button>
-                  ) : null}
-                </div>
-                <RSVPAdmin gameId={g.id} slug={slug} navigate={navigate} showToast={showToast} />
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -1627,17 +1647,32 @@ function TabJogos({ slug, showToast, navigate }) {
 
       {confirmacao ? (
         <ConfirmModal
-          texto={confirmacao.tipo === 'cancelar' ? 'Cancelar este jogo?' : 'Apagar este jogo? Esta ação é irreversível.'}
+          texto={
+            confirmacao.tipo === 'cancelar'
+              ? `Cancelar o jogo de ${formatDateTime(confirmacao.jogo.data)}? Esta ação envia notificação a todos os membros.`
+              : 'Apagar este jogo? Esta ação é irreversível.'
+          }
           perigo
           confirmarLabel={confirmacao.tipo === 'cancelar' ? 'Cancelar jogo' : 'Apagar'}
           onConfirm={() => {
             const { tipo, jogo } = confirmacao;
+            const motivo = motivoCancel.trim();
             setConfirmacao(null);
-            if (tipo === 'cancelar') cancelar(jogo);
+            if (tipo === 'cancelar') cancelar(jogo, motivo);
             else apagar(jogo);
           }}
           onCancel={() => setConfirmacao(null)}
-        />
+        >
+          {confirmacao.tipo === 'cancelar' ? (
+            <input
+              type="text"
+              value={motivoCancel}
+              onChange={(e) => setMotivoCancel(e.target.value.slice(0, 300))}
+              placeholder="Motivo (opcional)"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 13 }}
+            />
+          ) : null}
+        </ConfirmModal>
       ) : null}
     </div>
   );
