@@ -1,6 +1,7 @@
 // Futty v2.0 — Router principal
 import { lazy, Suspense, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
@@ -8,6 +9,7 @@ import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage';
+import PageTransition from './components/PageTransition';
 
 // Páginas em lazy loading (cada uma no seu chunk).
 const Login = lazy(() => import('./pages/Login'));
@@ -57,16 +59,15 @@ function JogoRoute() {
   return <Jogo key={id} />;
 }
 
-export default function App() {
-  const [loading, setLoading] = useState(true);
+// Rotas animadas: AnimatePresence deteta a mudança de rota pela location e
+// o PageTransition (keyed pelo pathname) faz o fade/deslize de saída/entrada.
+function AnimatedRoutes() {
+  const location = useLocation();
   return (
-    <ErrorBoundary>
-      {loading && <LoadingScreen onDone={() => setLoading(false)} />}
-      <AuthProvider>
-        <BrowserRouter>
-        <Layout>
-          <Suspense fallback={<LoadingScreen />}>
-          <Routes>
+    <Suspense fallback={<LoadingScreen />}>
+      <AnimatePresence mode="wait">
+        <PageTransition key={location.pathname}>
+          <Routes location={location}>
           <Route path="/" element={<IndexRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -205,9 +206,23 @@ export default function App() {
           {/* fallback — página inexistente */}
           <Route path="*" element={<ErrorPage mensagem="Esta página não existe." />} />
           </Routes>
-          </Suspense>
-        </Layout>
-      </BrowserRouter>
+        </PageTransition>
+      </AnimatePresence>
+    </Suspense>
+  );
+}
+
+export default function App() {
+  const [loading, setLoading] = useState(true);
+  return (
+    <ErrorBoundary>
+      {loading && <LoadingScreen onDone={() => setLoading(false)} />}
+      <AuthProvider>
+        <BrowserRouter>
+          <Layout>
+            <AnimatedRoutes />
+          </Layout>
+        </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>
   );
