@@ -53,6 +53,18 @@ export function celebrarPartilha(cor = '#d4a017') {
   });
 }
 
+// E) Cromo pronto (estreia da Figurinha) — o momento épico.
+export function celebrarCromoPronto() {
+  confetti({
+    particleCount: 120,
+    spread: 80,
+    origin: { y: 0.5 },
+    colors: ['#d4a017', '#8b5cf6', '#ffffff'],
+    startVelocity: 40,
+    scalar: 1.1,
+  });
+}
+
 // C) Top 3 do ranking — intensidade/cor conforme a posição.
 export function celebrarTop3(posicao = 1) {
   if (posicao === 1) {

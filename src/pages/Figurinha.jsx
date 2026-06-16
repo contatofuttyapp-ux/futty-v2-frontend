@@ -10,7 +10,7 @@ import { nomeJogador, urlAsset } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
 import { KITS, kitGradientCss } from '../utils/kits';
 import { gerarFigurinhaCanvas, gerarFigurinhaCanvasStory } from '../utils/figurinhaCanvas';
-import { celebrarPartilha } from '../hooks/useConfetti';
+import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import PlayerCard from '../components/PlayerCard';
 import Topbar from '../components/Topbar';
 import '../styles/app.css';
@@ -89,6 +89,9 @@ export default function Figurinha() {
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
+  // Flow de estreia (1ª visita sem foto/avatar): null = a decidir, 'foto' |
+  // 'gerando' | 'pronto' = ecrãs A/B/C, 'fim' = studio normal.
+  const [estreiaFase, setEstreiaFase] = useState(() => (localStorage.getItem('futty_figurinha_estreia') ? 'fim' : null));
   const fileRef = useRef(null);
   const cardRef = useRef(null);
 
@@ -111,6 +114,10 @@ export default function Figurinha() {
         setMe(d);
         if (d?.user?.fundo_figurinha) setFundo(d.user.fundo_figurinha);
         if (d?.user?.cor_frame) setCorFrame(d.user.cor_frame);
+        // Decisão da estreia (só quando ainda não foi vista): sem avatar → flow.
+        if (!localStorage.getItem('futty_figurinha_estreia')) {
+          setEstreiaFase(d?.user?.avatar_url ? 'fim' : 'foto');
+        }
       })
       .catch((e) => ativo && setErro(e.message));
     return () => {
@@ -124,21 +131,76 @@ export default function Figurinha() {
     return () => URL.revokeObjectURL(fotoLocal);
   }, [fotoLocal]);
 
+  // Confetti ao chegar ao momento épico (estado C da estreia).
+  useEffect(() => {
+    if (estreiaFase === 'pronto') celebrarCromoPronto();
+  }, [estreiaFase]);
+
+  // Marca a estreia como concluída e passa ao studio normal.
+  function concluirEstreia() {
+    localStorage.setItem('futty_figurinha_estreia', '1');
+    setEstreiaFase('fim');
+  }
+
   // Trocar foto: preview local imediato + upload para o servidor.
+  // Na estreia, dispara automaticamente a geração do avatar IA.
   async function onPickFile(e) {
     const file = e.target.files?.[0];
     e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
     if (!file) return;
+    const emEstreia = estreiaFase === 'foto';
     setFotoLocal(URL.createObjectURL(file)); // preview imediato
+    if (emEstreia) setEstreiaFase('gerando');
     setUploadFoto(true);
     setErro('');
     try {
       const data = await apiUpload('/api/me/avatar', file, 'avatar');
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
+      setUploadFoto(false);
+      if (emEstreia) await gerarAvatarIAEstreia(); // auto-trigger
     } catch (err) {
       setErro(err?.message || 'Não foi possível enviar a foto.');
-    } finally {
       setUploadFoto(false);
+      if (emEstreia) setEstreiaFase('foto'); // volta ao estado A
+    }
+  }
+
+  // Geração IA durante a estreia: ao concluir (ou falhar), revela o cromo.
+  async function gerarAvatarIAEstreia() {
+    setGerandoIA(true);
+    setErro('');
+    setLimiteIA(false);
+    try {
+      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST' });
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
+      setFotoLocal(null);
+    } catch (err) {
+      if (err?.status === 403) setLimiteIA(true);
+      else setErro(err?.message || 'Não foi possível gerar o avatar IA.');
+    } finally {
+      setGerandoIA(false);
+      setEstreiaFase('pronto'); // mostra o cromo (com avatar IA ou a foto)
+    }
+  }
+
+  // Partilha do cromo no momento da estreia (imagem do card + texto viral).
+  async function partilharCromo() {
+    celebrarPartilha(frameHex);
+    try {
+      const blob = await gerarFigurinhaCanvas(opts);
+      const file = blob ? new File([blob], ficheiroNome(nomeJogador(jogador)), { type: 'image/png' }) : null;
+      const payload = { title: 'O meu cromo Futty', text: 'Vê o meu cartão de jogador no Futty ⚽' };
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ ...payload, files: [file] });
+      } else if (navigator.share) {
+        await navigator.share(payload);
+      } else if (blob) {
+        baixarBlob(blob, file.name);
+      }
+    } catch (e) {
+      if (e?.name !== 'AbortError') setErro(e?.message || 'Não foi possível compartilhar.');
+    } finally {
+      concluirEstreia();
     }
   }
 
@@ -236,6 +298,71 @@ export default function Figurinha() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Enquanto a fase de estreia não está decidida (perfil a carregar), espera.
+  if (estreiaFase === null) {
+    return (
+      <div className="app-shell">
+        <Topbar title="Figurinha" />
+        <main className="app-main" style={{ display: 'grid', placeItems: 'center', minHeight: '40vh' }}>
+          <Loader2 size={28} className="spin" color="#8b5cf6" />
+        </main>
+      </div>
+    );
+  }
+
+  // ── ECRÃ DE ESTREIA (1ª visita): substitui o studio até partilhar/saltar ──
+  if (estreiaFase === 'foto' || estreiaFase === 'gerando' || estreiaFase === 'pronto') {
+    return (
+      <div className="app-shell">
+        <Topbar title="Figurinha" />
+        <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
+          {/* Card */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
+            <div className="fig-card-enter" style={{ position: 'relative', width: 'min(74vw, 300px)', aspectRatio: '2 / 3' }}>
+              <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
+              {estreiaFase === 'gerando' ? (
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'rgba(0,0,0,0.55)', display: 'grid', placeItems: 'center', animation: 'heroicPulse 1.8s ease-in-out infinite' }}>
+                  <Loader2 size={30} className="spin" color="#fff" />
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
+
+          <div style={{ maxWidth: 420, margin: '0 auto', textAlign: 'center', display: 'grid', gap: 12 }}>
+            {estreiaFase === 'foto' ? (
+              <>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>O teu cromo está quase pronto ✨</h2>
+                <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: 0 }}>Adiciona uma foto para personalizar o teu cartão de jogador</p>
+                <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={() => fileRef.current?.click()}>📷 Adicionar foto</button>
+                <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Saltar por agora →</button>
+              </>
+            ) : estreiaFase === 'gerando' ? (
+              <>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando o teu avatar Panini… ✨</h2>
+                <p style={{ fontSize: 13, color: 'var(--label-color)', margin: 0 }}>Pode demorar até 30 segundos</p>
+              </>
+            ) : (
+              <>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: '#fff', margin: 0 }}>O teu cromo está pronto! 🎉</h2>
+                {limiteIA ? (
+                  <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Limite de gerações IA atingido — mostramos o cromo com a tua foto.</p>
+                ) : null}
+                <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={partilharCromo}>
+                  <Share2 size={18} /> Compartilhar agora
+                </button>
+                <button type="button" className="btn btn--purple-outline" style={{ width: '100%', height: 44 }} onClick={concluirEstreia}>🎨 Personalizar</button>
+                <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Saltar →</button>
+              </>
+            )}
+            {erro ? <div className="alert alert--error" style={{ margin: 0 }}>{erro}</div> : null}
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
