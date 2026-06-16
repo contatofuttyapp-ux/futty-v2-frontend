@@ -9,6 +9,7 @@ import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import DrawnTeams from '../components/DrawnTeams';
 import CampoSorteio from '../components/CampoSorteio';
+import ResultadoEditor from '../components/ResultadoEditor';
 import TimesEditor from '../components/TimesEditor';
 import SorteioOverlay from '../components/SorteioOverlay';
 import CountdownSorteio from '../components/CountdownSorteio';
@@ -79,6 +80,16 @@ export default function Jogo() {
 
   const { team, game, players, meuEstado } = data || {};
   const isAdmin = team?.role === 'admin';
+  const golsResultado = data?.gols || [];
+  // Times do sorteio (para nomes, jogadores do resultado e artilheiro).
+  const timesSorteio = game?.times_resultado?.times || [];
+  const nomeTimeA = timesSorteio[0]?.nome || 'Time A';
+  const nomeTimeB = timesSorteio[1]?.nome || 'Time B';
+  const jogadoresResultado = [
+    ...(timesSorteio[0]?.jogadores || []).map((j) => ({ ...j, time: 'A' })),
+    ...(timesSorteio[1]?.jogadores || []).map((j) => ({ ...j, time: 'B' })),
+  ];
+  const artilheiro = golsResultado.reduce((max, g) => (g.gols > (max?.gols || 0) ? g : max), null);
   const confirmadosTodos = (players || []).filter((p) => p.confirmado);
   // Se vier do RSVP, mostra só os confirmados via RSVP (filtro de UI).
   const confirmados = rsvpConfirmados
@@ -115,6 +126,26 @@ export default function Jogo() {
               </div>
               <span className={`badge badge--${game.status}`}>{STATUS_LABELS[game.status] || game.status}</span>
             </div>
+
+            {/* Resultado (visível a todos) */}
+            {game.resultado_nivel > 0 ? (
+              <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.3)', textAlign: 'center' }}>
+                {game.resultado_nivel >= 2 ? (
+                  <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 800, color: '#fff' }}>
+                    {nomeTimeA} <span style={{ color: '#d4a017' }}>{game.placar_a} × {game.placar_b}</span> {nomeTimeB}
+                  </div>
+                ) : (
+                  <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff' }}>
+                    {game.time_vencedor === 'empate' ? 'Empate' : `${game.time_vencedor === 'A' ? nomeTimeA : nomeTimeB} venceu`}
+                  </div>
+                )}
+                {game.resultado_nivel === 3 && artilheiro && artilheiro.gols > 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
+                    ⚽ Artilheiro: {artilheiro.nome} ({artilheiro.gols} {artilheiro.gols === 1 ? 'gol' : 'gols'})
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="header-actions">
               <Link to={`/equipa/${slug}/ranking`} className="btn btn--ghost btn--sm">
@@ -304,6 +335,23 @@ export default function Jogo() {
                 )}
               </div>
             )}
+
+            {/* Resultado — edição (só admin, após sorteio) */}
+            {isAdmin && game.times_resultado ? (
+              <>
+                <h2 className="section-title">Resultado</h2>
+                <ResultadoEditor
+                  gameId={id}
+                  game={game}
+                  gols={golsResultado}
+                  jogadores={jogadoresResultado}
+                  nomeA={nomeTimeA}
+                  nomeB={nomeTimeB}
+                  onSaved={reload}
+                  showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })}
+                />
+              </>
+            ) : null}
 
             {/* A votação está na página de ranking */}
             {game.sorteio_realizado && (game.status === 'em_curso' || game.status === 'terminado') && (
