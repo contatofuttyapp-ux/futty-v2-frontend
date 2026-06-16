@@ -41,6 +41,7 @@ const MENU = [
   { k: 'campeonato', icon: '🏅', label: 'Campeonato' },
   { k: 'resultados', icon: '🏆', label: 'Resultados' },
   { k: 'estatisticas', icon: '📊', label: 'Estatísticas' },
+  { k: 'comunicacao', icon: '📣', label: 'Comunicação' },
   { k: 'denuncias', icon: '🚩', label: 'Denúncias' },
 ];
 const inputStyle = {
@@ -132,6 +133,51 @@ function MetricCard({ valor, label, alerta = false }) {
     <div style={{ ...CARD, padding: 14, textAlign: 'center' }}>
       <div style={{ fontSize: 28, fontWeight: 900, color: alerta ? 'var(--danger)' : '#fff' }}>{valor}</div>
       <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+// ─── TAB: COMUNICAÇÃO ────────────────────────────────────────────────────────
+function TabComunicacao({ slug, showToast }) {
+  const [titulo, setTitulo] = useState('');
+  const [mensagem, setMensagem] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function enviar() {
+    if (busy) return;
+    if (!titulo.trim() || !mensagem.trim()) {
+      showToast('Preenche o título e a mensagem.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await apiFetch(`/api/push/equipas/${slug}/broadcast`, {
+        method: 'POST',
+        body: JSON.stringify({ titulo: titulo.trim(), mensagem: mensagem.trim() }),
+      });
+      showToast(`Notificação enviada para ${r.enviadas} ${r.enviadas === 1 ? 'membro' : 'membros'}.`);
+      setTitulo('');
+      setMensagem('');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
+        <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Jogo confirmado!" style={inputStyle} />
+      </label>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
+        <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve o aviso para a equipa…" style={{ ...inputStyle, resize: 'vertical' }} />
+      </label>
+      <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
+        {busy ? 'A enviar…' : '📣 Enviar para todos'}
+      </button>
     </div>
   );
 }
@@ -1958,6 +2004,7 @@ export default function AdminPanel() {
               {tab === 'campeonato' && <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} />}
               {tab === 'resultados' && <TabResultados slug={slug} showToast={showToast} />}
               {tab === 'estatisticas' && <TabEstatisticas slug={slug} membrosBasicos={membrosBasicos} showToast={showToast} />}
+              {tab === 'comunicacao' && <TabComunicacao slug={slug} showToast={showToast} />}
               {tab === 'denuncias' && <TabDenuncias showToast={showToast} />}
             </div>
           </main>
