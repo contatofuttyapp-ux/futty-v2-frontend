@@ -45,6 +45,17 @@ export default function Jogo() {
     }
   }
 
+  // Copia o link público do sorteio (para WhatsApp / telão).
+  async function partilharLink() {
+    const url = `${window.location.origin}/p/${slug}/${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setToast({ tipo: 'success', mensagem: 'Link copiado!' });
+    } catch {
+      setToast({ tipo: 'error', mensagem: 'Não foi possível copiar o link.' });
+    }
+  }
+
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
   const marcar = (userId, patch) => runAction(`/api/games/${id}/jogador`, { user_id: userId, ...patch });
 
@@ -312,6 +323,11 @@ export default function Jogo() {
                       <button type="button" className={`btn btn--sm ${vistaCampo ? 'btn--primary' : 'btn--ghost'}`} aria-pressed={vistaCampo} onClick={() => setVistaCampo(true)}>
                         ⬜ Campo
                       </button>
+                      {isAdmin ? (
+                        <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }} onClick={partilharLink}>
+                          ↗ Partilhar
+                        </button>
+                      ) : null}
                     </div>
 
                     {vistaCampo ? (

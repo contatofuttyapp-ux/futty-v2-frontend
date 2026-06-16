@@ -10,6 +10,7 @@ const HIDE_NAV_PATTERNS = [
   /^\/register/,
   /^\/forgot-password/,
   /^\/convite\//,
+  /^\/p\//, // vista pública do sorteio (fullscreen)
   /^\/criar-equipa/,
   /^\/equipa\/[^/]+\/jogo\//, // jogo/:id e jogo/novo
   /^\/equipa\/[^/]+\/jogador\//,

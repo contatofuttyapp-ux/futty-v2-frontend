@@ -28,6 +28,7 @@ const Feed = lazy(() => import('./pages/Feed'));
 const Figurinha = lazy(() => import('./pages/Figurinha'));
 const MeuPerfil = lazy(() => import('./pages/MeuPerfil'));
 const Planos = lazy(() => import('./pages/Planos'));
+const SorteioPublico = lazy(() => import('./pages/SorteioPublico'));
 const Explorar = lazy(() => import('./pages/Explorar'));
 
 // "/" → redireciona para /home (se autenticado) ou /login
@@ -70,6 +71,8 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/convite/:token" element={<ConviteRoute />} />
+          {/* Vista pública do sorteio (sem login) */}
+          <Route path="/p/:slug/:gameId" element={<SorteioPublico />} />
           <Route
             path="/home"
             element={
