@@ -1608,6 +1608,20 @@ function TabJogos({ slug, showToast, navigate }) {
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
                     {formatDateTime(g.data)} · {g.confirmados} confirmados
                   </div>
+                  {g.max_jogadores != null ? (() => {
+                    const cheio = g.confirmados >= g.max_jogadores;
+                    const pct = Math.min(100, Math.round((g.confirmados / g.max_jogadores) * 100));
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: cheio ? 'var(--neon)' : 'var(--text-dim)' }}>
+                          {g.confirmados} / {g.max_jogadores} lugares{cheio ? ' · cheio' : ''}
+                        </div>
+                        <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.08)', marginTop: 4, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: cheio ? 'var(--neon)' : 'rgba(255,255,255,0.35)', transition: 'width 0.3s ease' }} />
+                        </div>
+                      </div>
+                    );
+                  })() : null}
                   <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
                     <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>❌ Cancelar jogo</button>
@@ -1685,6 +1699,7 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
   const [time, setTime] = useState(`${pad(d0.getHours())}:${pad(d0.getMinutes())}`);
   const [local, setLocal] = useState(jogo.local || '');
   const [porTime, setPorTime] = useState(jogo.jogadores_por_time || 5);
+  const [maxJog, setMaxJog] = useState(jogo.max_jogadores != null ? String(jogo.max_jogadores) : '');
   const [saving, setSaving] = useState(false);
 
   async function guardar() {
@@ -1695,7 +1710,13 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
         method: 'PATCH',
         body: JSON.stringify({ date, time, location: local.trim(), players_per_team: Number(porTime) }),
       });
-      onSaved(game);
+      // Capacidade (endpoint dedicado). Vazio = sem limite.
+      const maxValor = maxJog.trim() === '' ? null : Number(maxJog);
+      const { max_jogadores } = await apiFetch(`/api/games/${jogo.id}/capacidade`, {
+        method: 'PATCH',
+        body: JSON.stringify({ max_jogadores: maxValor }),
+      });
+      onSaved({ ...game, max_jogadores });
     } catch (e) {
       showToast(e.message, 'error');
       setSaving(false);
@@ -1711,6 +1732,10 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Hora</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inputStyle} /></label>
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Local</span><input value={local} onChange={(e) => setLocal(e.target.value)} style={inputStyle} /></label>
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Jogadores por time</span><NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} /></label>
+          <label style={{ display: 'grid', gap: 6 }}>
+            <span style={lbl}>Máximo de jogadores</span>
+            <input type="number" min="1" inputMode="numeric" value={maxJog} onChange={(e) => setMaxJog(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Sem limite" style={inputStyle} />
+          </label>
           <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>{saving ? 'A guardar…' : 'Guardar'}</button>
         </div>
       </div>

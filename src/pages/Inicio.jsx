@@ -433,7 +433,7 @@ export default function Inicio() {
             <div data-tour="jogos-section">
               <div className="games-label">Próximos Jogos</div>
             {rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado ? (
-              <RSVPCard gameId={nextId} prazo={rsvpInfo.rsvp_prazo} respostaActual={minhaResposta} onResposta={setMinhaResposta} />
+              <RSVPCard gameId={nextId} prazo={rsvpInfo.rsvp_prazo} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} />
             ) : null}
             {proximoJogo && proximoJogo.team_slug ? (
               proximoJogo.ausente_proximo ? (

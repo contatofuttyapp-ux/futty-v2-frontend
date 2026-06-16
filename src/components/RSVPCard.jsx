@@ -25,9 +25,12 @@ function botaoStyle(sel, cor) {
   };
 }
 
-export default function RSVPCard({ gameId, prazo, respostaActual, onResposta }) {
+export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, cheio = false }) {
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
+
+  // Sem vaga e ainda não confirmado → não pode confirmar (lista de espera).
+  const bloqueadoCheio = cheio && respostaActual !== 'confirmado';
 
   async function responder(status) {
     if (busy) return;
@@ -49,7 +52,7 @@ export default function RSVPCard({ gameId, prazo, respostaActual, onResposta }) 
       <div style={{ fontSize: 12, color: 'var(--label-color)', marginTop: 2 }}>até {formatarPrazo(prazo)}</div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={botaoStyle(respostaActual === 'confirmado', '#16a34a')}>
+        <button type="button" disabled={busy || bloqueadoCheio} onClick={() => responder('confirmado')} style={{ ...botaoStyle(respostaActual === 'confirmado', '#16a34a'), opacity: bloqueadoCheio ? 0.5 : 1, cursor: bloqueadoCheio ? 'not-allowed' : 'pointer' }}>
           ✅ Vou
         </button>
         <button type="button" disabled={busy} onClick={() => responder('recusado')} style={botaoStyle(respostaActual === 'recusado', '#dc2626')}>
@@ -57,7 +60,9 @@ export default function RSVPCard({ gameId, prazo, respostaActual, onResposta }) 
         </button>
       </div>
 
-      {respostaActual ? (
+      {bloqueadoCheio ? (
+        <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700, textAlign: 'center', marginTop: 8 }}>Jogo cheio — lista de espera em breve</div>
+      ) : respostaActual ? (
         <div style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center', marginTop: 6 }}>Mudar resposta</div>
       ) : null}
       {erro ? <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 6 }}>{erro}</div> : null}
