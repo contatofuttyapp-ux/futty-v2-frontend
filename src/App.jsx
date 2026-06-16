@@ -33,12 +33,14 @@ const MeuPerfil = lazy(() => import('./pages/MeuPerfil'));
 const Planos = lazy(() => import('./pages/Planos'));
 const SorteioPublico = lazy(() => import('./pages/SorteioPublico'));
 const Explorar = lazy(() => import('./pages/Explorar'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 
-// "/" → redireciona para /home (se autenticado) ou /login
+// "/" → /home se autenticado; senão a landing page (visitante).
 function IndexRedirect() {
   const { session, loading } = useAuth();
   if (loading) return null;
-  return <Navigate to={session ? '/home' : '/login'} replace />;
+  if (session) return <Navigate to="/home" replace />;
+  return <LandingPage />;
 }
 
 // Remonta a página da equipa quando o slug muda (reinicia o estado de loading)
