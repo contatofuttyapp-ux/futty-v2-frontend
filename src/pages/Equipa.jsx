@@ -11,6 +11,7 @@ import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
 import TeamAvatar from '../components/TeamAvatar';
 import Toast from '../components/Toast';
+import OnboardingModal from '../components/OnboardingModal';
 import '../styles/app.css';
 
 export default function Equipa() {
@@ -30,6 +31,25 @@ export default function Equipa() {
 
   const meuId = me?.user?.id;
   const minhaPosicao = members.find((m) => m.id === meuId)?.posicao || null;
+
+  // Onboarding: 1ª vez de um jogador que não fundou a equipa (não-admin, sem
+  // avatar ainda) e que nunca o dispensou (localStorage por equipa).
+  const [onboardingDispensado, setOnboardingDispensado] = useState(false);
+  const onboardingKey = team ? `futty_onboarding_${team.id}` : null;
+  const mostrarOnboarding =
+    !!team &&
+    !!me &&
+    team.role !== 'admin' &&
+    !me?.user?.avatar_url &&
+    !onboardingDispensado &&
+    !(onboardingKey && localStorage.getItem(onboardingKey));
+
+  function fecharOnboarding() {
+    if (onboardingKey) localStorage.setItem(onboardingKey, '1');
+    setOnboardingDispensado(true);
+    // Ativa o banner CTA da figurinha no Início (mostra uma vez).
+    localStorage.setItem('futty_cta_figurinha', '1');
+  }
 
   // Define a minha posição na equipa (null = sem posição).
   async function escolherPosicao(pos) {
@@ -253,6 +273,7 @@ export default function Equipa() {
         )}
       </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
+      {mostrarOnboarding ? <OnboardingModal teamNome={team.nome} onClose={fecharOnboarding} /> : null}
     </div>
   );
 }

@@ -151,6 +151,13 @@ export default function Inicio() {
     sessionStorage.setItem('futty_push_dismiss', '1');
   }
 
+  // CTA pós-onboarding: criar figurinha (ativado ao fechar o onboarding da equipa).
+  const [ctaFigurinha, setCtaFigurinha] = useState(() => localStorage.getItem('futty_cta_figurinha') === '1');
+  function dispensarCtaFigurinha() {
+    localStorage.removeItem('futty_cta_figurinha');
+    setCtaFigurinha(false);
+  }
+
   // Onboarding (product tour) — só na primeira vez.
   const [tourDone, setTourDone] = useState(() => !!localStorage.getItem('futty_tour_done'));
 
@@ -317,6 +324,15 @@ export default function Inicio() {
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>🔔 Ativar notificações para não perderes nenhum jogo</span>
             <button type="button" className="btn btn--primary btn--sm" onClick={() => pushSubscrever()}>Ativar</button>
             <button type="button" aria-label="Fechar" onClick={fecharPushBanner} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+          </div>
+        ) : null}
+
+        {/* CTA pós-onboarding: criar a figurinha */}
+        {ctaFigurinha ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>👤 Cria a tua figurinha</span>
+            <Link to="/figurinha" className="btn btn--purple btn--sm" onClick={dispensarCtaFigurinha}>Ir para Figurinha</Link>
+            <button type="button" aria-label="Fechar" onClick={dispensarCtaFigurinha} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}
 
