@@ -1488,6 +1488,14 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
         <ListaUsers users={info.confirmados} titulo="Confirmados" />
         <ListaUsers users={info.recusados} titulo="Recusados" />
         <ListaUsers users={info.pendentes} titulo="Pendentes" />
+        {info.espera?.length ? (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--neon)' }}>⏳ Lista de espera</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+              {info.espera.map((e) => `${e.posicao}. ${e.nome || 'Jogador'}`).join(' · ')}
+            </div>
+          </div>
+        ) : null}
         <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 10, borderColor: 'var(--danger)', color: '#fda4af' }} disabled={busy} onClick={() => setConfirmarFechar(true)}>
           Fechar RSVP
         </button>

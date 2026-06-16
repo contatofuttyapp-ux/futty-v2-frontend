@@ -25,22 +25,39 @@ function botaoStyle(sel, cor) {
   };
 }
 
-export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, cheio = false }) {
+export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, cheio = false, minhaPosicaoEspera = null }) {
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
+  // Posição na fila: seed do servidor, atualizada localmente nas ações.
+  const [posEspera, setPosEspera] = useState(() => minhaPosicaoEspera);
 
-  // Sem vaga e ainda não confirmado → não pode confirmar (lista de espera).
-  const bloqueadoCheio = cheio && respostaActual !== 'confirmado';
+  // Jogo cheio e ainda não confirmado → fluxo de lista de espera.
+  const modoEspera = cheio && respostaActual !== 'confirmado';
 
   async function responder(status) {
     if (busy) return;
     setBusy(true);
     setErro('');
     try {
-      await apiFetch(`/api/jogos/${gameId}/rsvp/responder`, { method: 'POST', body: JSON.stringify({ status }) });
-      onResposta(status);
+      const r = await apiFetch(`/api/jogos/${gameId}/rsvp/responder`, { method: 'POST', body: JSON.stringify({ status }) });
+      if (r?.espera) setPosEspera(r.posicao);
+      else onResposta(status);
     } catch (e) {
       setErro(e?.message || 'Não foi possível responder.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sairEspera() {
+    if (busy) return;
+    setBusy(true);
+    setErro('');
+    try {
+      await apiFetch(`/api/jogos/${gameId}/rsvp/sair-espera`, { method: 'POST' });
+      setPosEspera(null);
+    } catch (e) {
+      setErro(e?.message || 'Não foi possível sair da lista.');
     } finally {
       setBusy(false);
     }
@@ -51,20 +68,34 @@ export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, ch
       <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>📋 Confirma presença</div>
       <div style={{ fontSize: 12, color: 'var(--label-color)', marginTop: 2 }}>até {formatarPrazo(prazo)}</div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <button type="button" disabled={busy || bloqueadoCheio} onClick={() => responder('confirmado')} style={{ ...botaoStyle(respostaActual === 'confirmado', '#16a34a'), opacity: bloqueadoCheio ? 0.5 : 1, cursor: bloqueadoCheio ? 'not-allowed' : 'pointer' }}>
-          ✅ Vou
-        </button>
-        <button type="button" disabled={busy} onClick={() => responder('recusado')} style={botaoStyle(respostaActual === 'recusado', '#dc2626')}>
-          ❌ Não vou
-        </button>
-      </div>
-
-      {bloqueadoCheio ? (
-        <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700, textAlign: 'center', marginTop: 8 }}>Jogo cheio — lista de espera em breve</div>
-      ) : respostaActual ? (
-        <div style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center', marginTop: 6 }}>Mudar resposta</div>
-      ) : null}
+      {modoEspera ? (
+        posEspera != null ? (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neon)' }}>⏳ Estás em {posEspera}º na lista de espera</div>
+            <button type="button" disabled={busy} onClick={sairEspera} style={{ marginTop: 8, border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 12, cursor: busy ? 'default' : 'pointer', padding: 0 }}>
+              Sair da lista
+            </button>
+          </div>
+        ) : (
+          <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={{ ...botaoStyle(false, '#16a34a'), width: '100%', marginTop: 10, opacity: busy ? 0.6 : 1 }}>
+            ⏳ Entrar na lista de espera
+          </button>
+        )
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={botaoStyle(respostaActual === 'confirmado', '#16a34a')}>
+              ✅ Vou
+            </button>
+            <button type="button" disabled={busy} onClick={() => responder('recusado')} style={botaoStyle(respostaActual === 'recusado', '#dc2626')}>
+              ❌ Não vou
+            </button>
+          </div>
+          {respostaActual ? (
+            <div style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center', marginTop: 6 }}>Mudar resposta</div>
+          ) : null}
+        </>
+      )}
       {erro ? <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 6 }}>{erro}</div> : null}
     </div>
   );
