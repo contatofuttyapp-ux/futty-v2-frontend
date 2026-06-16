@@ -36,6 +36,8 @@ const SorteioPublico = lazy(() => import('./pages/SorteioPublico'));
 const Explorar = lazy(() => import('./pages/Explorar'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Super = lazy(() => import('./pages/Super'));
+const Termos = lazy(() => import('./pages/Termos'));
+const Privacidade = lazy(() => import('./pages/Privacidade'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
 function IndexRedirect() {
@@ -76,6 +78,8 @@ function AnimatedRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/termos" element={<Termos />} />
+          <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/convite/:token" element={<ConviteRoute />} />
           {/* Vista pública do sorteio (sem login) */}
           <Route path="/p/:slug/:gameId" element={<SorteioPublico />} />

@@ -143,9 +143,9 @@ export default function LandingPage() {
       <footer style={{ textAlign: 'center', padding: '24px 0 0', fontSize: 12, color: 'var(--label-color)' }}>
         <div>Futty © 2025 · Feito para quem joga de verdade</div>
         <div style={{ marginTop: 8, display: 'flex', gap: 14, justifyContent: 'center' }}>
-          <Link to="/register" style={{ color: 'var(--label-color)' }}>Termos</Link>
+          <Link to="/termos" style={{ color: 'var(--label-color)' }}>Termos</Link>
           <span>·</span>
-          <Link to="/register" style={{ color: 'var(--label-color)' }}>Privacidade</Link>
+          <Link to="/privacidade" style={{ color: 'var(--label-color)' }}>Privacidade</Link>
         </div>
       </footer>
     </div>
