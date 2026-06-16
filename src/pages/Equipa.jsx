@@ -2,8 +2,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { useApi } from '../hooks/useApi';
 import { useTeam } from '../hooks/useTeam';
 import { initials } from '../utils/teamColors';
+import { POSICOES, labelPosicao } from '../utils/posicoes';
 import Topbar from '../components/Topbar';
 import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
@@ -14,7 +16,9 @@ import '../styles/app.css';
 export default function Equipa() {
   const { slug } = useParams();
   const { team, members, loading, error, reload } = useTeam(slug);
+  const { data: me } = useApi('/api/me');
 
+  const [posBusy, setPosBusy] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -23,6 +27,23 @@ export default function Equipa() {
   const [pedidos, setPedidos] = useState([]);
   const [busyPedido, setBusyPedido] = useState(null);
   const [toast, setToast] = useState(null);
+
+  const meuId = me?.user?.id;
+  const minhaPosicao = members.find((m) => m.id === meuId)?.posicao || null;
+
+  // Define a minha posição na equipa (null = sem posição).
+  async function escolherPosicao(pos) {
+    if (posBusy || pos === minhaPosicao) return;
+    setPosBusy(true);
+    try {
+      await apiFetch(`/api/equipas/${slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ posicao: pos }) });
+      await reload();
+    } catch (e) {
+      setToast({ tipo: 'error', mensagem: e.message });
+    } finally {
+      setPosBusy(false);
+    }
+  }
 
   // Carrega os pedidos pendentes (só se for admin).
   useEffect(() => {
@@ -119,6 +140,35 @@ export default function Equipa() {
               )}
             </div>
 
+            {/* A minha posição nesta equipa */}
+            <h2 className="section-title">A minha posição nesta equipa</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {POSICOES.map((p) => (
+                <button
+                  key={p.k}
+                  type="button"
+                  title={p.label}
+                  className={`btn btn--sm ${minhaPosicao === p.k ? 'btn--purple' : 'btn--ghost'}`}
+                  disabled={posBusy}
+                  onClick={() => escolherPosicao(p.k)}
+                >
+                  {p.k}
+                </button>
+              ))}
+              <button
+                type="button"
+                title="Sem posição"
+                className={`btn btn--sm ${minhaPosicao === null ? 'btn--purple' : 'btn--ghost'}`}
+                disabled={posBusy}
+                onClick={() => escolherPosicao(null)}
+              >
+                —
+              </button>
+            </div>
+            {minhaPosicao ? (
+              <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{labelPosicao(minhaPosicao)}</p>
+            ) : null}
+
             {team.role === 'admin' && pedidos.length > 0 && (
               <>
                 <h2 className="section-title">Pedidos de entrada</h2>
@@ -166,6 +216,9 @@ export default function Equipa() {
                     <div className="member-name">{m.nome || m.email}</div>
                     {m.nome && <div className="member-email">{m.email}</div>}
                   </div>
+                  {m.posicao ? (
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#d4a017', border: '1px solid rgba(212,160,23,0.4)', borderRadius: 999, padding: '2px 7px' }}>{m.posicao}</span>
+                  ) : null}
                   <span className={`badge badge--${m.role === 'admin' ? 'admin' : 'member'}`}>{m.role}</span>
                 </div>
               ))}

@@ -69,7 +69,7 @@ const KEYFRAMES = `
 @keyframes snakeGlow { 0%, 100% { opacity: 0.15; box-shadow: none; } 25% { opacity: 1; box-shadow: 0 0 8px rgba(212,160,23,0.8), 0 0 16px rgba(212,160,23,0.4); } 50% { opacity: 0.15; box-shadow: none; } }
 `;
 
-export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true, fotoOverride = null, corUniforme = null, aspect = '1 / 1', glowSuave = false }) {
+export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fundo = 'estadio', corFrame = 'dourado', mostrarStats = false, mostrarNome = true, cantos = true, fotoOverride = null, corUniforme = null, aspect = '1 / 1', glowSuave = false, posicao = null }) {
   const [imgFalhou, setImgFalhou] = useState(false);
 
   const nome = nomeJogador(jogador);
@@ -320,6 +320,16 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
               <span>{stats?.gols ?? 0}G</span>
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* z7 — POSIÇÃO (badge dourado, canto inferior-esquerdo, junto ao nome) */}
+      {posicao ? (
+        <div
+          aria-hidden
+          style={{ position: 'absolute', left: 10, bottom: 12, zIndex: 7, fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: '#d4a017', background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(212,160,23,0.5)', borderRadius: 6, padding: '2px 6px' }}
+        >
+          {posicao}
         </div>
       ) : null}
 

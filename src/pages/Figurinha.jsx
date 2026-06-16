@@ -247,7 +247,7 @@ export default function Figurinha() {
               onMouseLeave={onCardLeave}
               style={{ position: 'relative', width: '100%', height: '100%', willChange: 'transform' }}
             >
-              <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave />
+              <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
 
               {/* Câmara — trocar foto (canto inferior-direito) */}
               <button

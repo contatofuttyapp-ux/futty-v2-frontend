@@ -6,6 +6,7 @@ import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
+import { POSICOES } from '../utils/posicoes';
 import Loading from '../components/Loading';
 import Toast from '../components/Toast';
 import PlayerAvatar from '../components/PlayerAvatar';
@@ -522,6 +523,19 @@ function TabMembros({ slug, meId, showToast }) {
     }
   }
 
+  // Altera a posição de um membro (optimista) via endpoint dedicado.
+  async function setPosicao(m, pos) {
+    if ((m.posicao || null) === pos) return;
+    const anterior = m.posicao || null;
+    setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, posicao: pos } : x)));
+    try {
+      await apiFetch(`/api/equipas/${slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ posicao: pos, user_id: m.user_id }) });
+    } catch (e) {
+      setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, posicao: anterior } : x)));
+      showToast(e.message, 'error');
+    }
+  }
+
   // Edita a nota interna localmente; grava ao sair do input.
   function setNotaLocal(m, value) {
     setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, nota_interna: value } : x)));
@@ -598,6 +612,24 @@ function TabMembros({ slug, meId, showToast }) {
                 ) : null}
               </div>
             ) : null}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Posição:</span>
+              {[...POSICOES.map((p) => p.k), null].map((k) => {
+                const ativo = (m.posicao || null) === k;
+                return (
+                  <button
+                    key={k || 'none'}
+                    type="button"
+                    onClick={() => setPosicao(m, k)}
+                    aria-pressed={ativo}
+                    style={{ padding: '4px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${ativo ? '#d4a017' : '#333'}`, background: ativo ? 'rgba(212,160,23,0.15)' : 'transparent', color: ativo ? '#d4a017' : 'var(--text-dim)' }}
+                  >
+                    {k || '—'}
+                  </button>
+                );
+              })}
             </div>
 
             {!ehProprio && m.visivel_ranking === false ? (
