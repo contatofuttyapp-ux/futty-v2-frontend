@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
+import SuperAdminGuard from './components/SuperAdminGuard';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -34,6 +35,7 @@ const Planos = lazy(() => import('./pages/Planos'));
 const SorteioPublico = lazy(() => import('./pages/SorteioPublico'));
 const Explorar = lazy(() => import('./pages/Explorar'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Super = lazy(() => import('./pages/Super'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
 function IndexRedirect() {
@@ -202,6 +204,16 @@ function AnimatedRoutes() {
             element={
               <AuthGuard>
                 <Explorar />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/super"
+            element={
+              <AuthGuard>
+                <SuperAdminGuard>
+                  <Super />
+                </SuperAdminGuard>
               </AuthGuard>
             }
           />
