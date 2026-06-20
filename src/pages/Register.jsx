@@ -74,7 +74,7 @@ export default function Register() {
       <div className="auth-card">
         <div className="auth-card__inner">
           <div className="auth-brand">
-<FuttyLogo variant="flat" size={28} />
+<FuttyLogo variant="wordmark" size={28} color="#8b5cf6" />
           </div>
           <h1 className="auth-title">Cria a tua conta</h1>
           <p className="auth-subtitle">Junta-te ao Futty em segundos.</p>

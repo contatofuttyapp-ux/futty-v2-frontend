@@ -64,7 +64,7 @@ export default function SorteioPublico() {
   if (!tr || !tr.times?.length) {
     return (
       <div style={{ ...wrap, alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-        <FuttyLogo variant="flat" size={32} />
+        <FuttyLogo variant="wordmark" size={32} color="#8b5cf6" />
         <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 16 }}>Sorteio ainda não realizado.</p>
       </div>
     );
@@ -79,7 +79,7 @@ export default function SorteioPublico() {
     <div style={wrap}>
       {/* Topo: marca + equipa */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginBottom: 18 }}>
-        <FuttyLogo variant="flat" size={32} />
+        <FuttyLogo variant="wordmark" size={32} color="#8b5cf6" />
         <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {data.equipa?.nome}
         </span>

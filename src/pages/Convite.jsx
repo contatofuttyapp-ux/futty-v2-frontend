@@ -67,7 +67,7 @@ export default function Convite() {
       <div className="auth-card">
         <div className="auth-card__inner">
           <div className="auth-brand">
-<FuttyLogo variant="flat" size={28} />
+<FuttyLogo variant="wordmark" size={28} color="#8b5cf6" />
           </div>
 
           {loading ? (

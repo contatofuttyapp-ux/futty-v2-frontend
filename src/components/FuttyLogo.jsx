@@ -4,11 +4,14 @@ export default function FuttyLogo({ size = 32, variant = 'flat', color = '#d4a01
   if (variant === 'wordmark') {
     // O SVG tem os paths a preto por defeito; o filtro CSS recolore conforme `color`.
     const isWhite = color === '#ffffff' || color === 'white';
+    const isPurple = color === '#8b5cf6' || color === 'purple';
     const filter = isWhite
       ? 'invert(1)' // preto → branco
-      : color === '#d4a017'
-        ? 'invert(67%) sepia(55%) saturate(700%) hue-rotate(5deg) brightness(95%) contrast(95%)' // preto → dourado
-        : 'none';
+      : isPurple
+        ? 'invert(51%) sepia(96%) saturate(2344%) hue-rotate(234deg) brightness(103%) contrast(94%)' // preto → #8b5cf6
+        : color === '#d4a017'
+          ? 'invert(67%) sepia(55%) saturate(700%) hue-rotate(5deg) brightness(95%) contrast(95%)' // preto → dourado
+          : 'none';
     return (
       <img
         src="/futty-wordmark.svg"
