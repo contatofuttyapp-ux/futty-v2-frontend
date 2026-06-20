@@ -310,9 +310,9 @@ export default function Inicio() {
   return (
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* Header: wordmark centrado, ocupando toda a largura. Sem Topbar, sem título. */}
+        {/* Header: logo F flat centrado, ocupando toda a largura. Sem Topbar, sem título. */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '8px 0' }}>
-          <FuttyLogo variant="wordmark" size={36} color="#8b5cf6" />
+          <FuttyLogo variant="flat" size={36} />
         </div>
 
         {/* Banner discreto para ativar notificações push */}
