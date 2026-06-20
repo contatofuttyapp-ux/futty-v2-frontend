@@ -213,7 +213,7 @@ export default function Inicio() {
 
   const user = me?.user;
   const stats = me?.stats;
-  const nome = user?.nome || user?.email?.split('@')[0] || 'Jogador';
+  const nome = user?.nome_jogador || user?.nome || user?.email?.split('@')[0] || 'Jogador';
   // Fallback premium: se o utilizador ainda não tem avatar, mostra o Jefin (demo).
   const avatarParaMostrar = user?.avatar_url || '/avatares/verde/Jefin.png';
   // Cor do frame escolhida na Figurinha (aplica-se ao card e à aura).

@@ -143,16 +143,17 @@ export default function Ranking() {
               const medalColor = top === 1 ? '#d4a017' : top === 2 ? '#aaaaaa' : top === 3 ? '#cd7f32' : null;
               const medalDelay = top === 1 ? 0 : top === 2 ? 0.5 : 1;
               const shimmerDelay = top === 1 ? 0 : top === 2 ? 1.3 : top === 3 ? 2.6 : idx % 2 ? 0.5 : 0;
+              const nomeShow = p.nome_jogador || p.nome;
               return (
                 <div className={`rank-row ${p.posicao <= 3 ? 'rank-row--top' : ''}`} key={p.user_id} style={{ position: 'relative', overflow: 'hidden', ...podioStyle }}>
                   <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: `rankShimmer 5.2s ease-in-out ${shimmerDelay}s infinite` }} />
                   <div className="rank-pos" style={top <= 3 ? { color: medalColor, display: 'inline-block', animation: `medalGlow 3.9s ease-in-out ${medalDelay}s infinite` } : undefined}>{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
-                  <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${p.nome}`} style={{ lineHeight: 0 }}>
-                    <RankingAvatar nome={p.nome} avatarUrl={p.avatar_url} delay={`${(idx % 5) * 0.9}s`} />
+                  <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${nomeShow}`} style={{ lineHeight: 0 }}>
+                    <RankingAvatar nome={nomeShow} avatarUrl={p.avatar_url} delay={`${(idx % 5) * 0.9}s`} />
                   </Link>
                   <div className="rank-info">
                     <div className="rank-name" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {p.nome}
+                      {nomeShow}
                       {p.categoria === 'GR' ? (
                         <span style={{ fontSize: 9, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '1px 5px' }}>GR</span>
                       ) : null}
@@ -195,9 +196,9 @@ export default function Ranking() {
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                <PlayerAvatar nome={voteModal.nome} avatarUrl={voteModal.avatar_url} />
+                <PlayerAvatar nome={voteModal.nome_jogador || voteModal.nome} avatarUrl={voteModal.avatar_url} />
               </div>
-              <h2 style={{ fontSize: 18, marginBottom: 14 }}>{voteModal.nome}</h2>
+              <h2 style={{ fontSize: 18, marginBottom: 14 }}>{voteModal.nome_jogador || voteModal.nome}</h2>
               <MeiaEstrelas value={modalNota} onChange={setModalNota} />
               <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)' }}>
                 {modalNota >= 0.5 ? (

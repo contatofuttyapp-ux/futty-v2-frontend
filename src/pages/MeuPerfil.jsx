@@ -114,7 +114,7 @@ export default function MeuPerfil() {
     if (savingDados) return;
     setSavingDados(true);
     const u = perfil.user;
-    const ok = await patchMe({ nome: u.nome || null, nome_jogador: u.nome_jogador || null, telefone: u.telefone || null });
+    const ok = await patchMe({ nome: u.nome || null, nome_jogador: u.nome_jogador || null });
     setSavingDados(false);
     if (ok) showToast('Dados salvos!');
   }
@@ -284,12 +284,8 @@ export default function MeuPerfil() {
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Nome completo</span>
+            <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Nome completo (privado)</span>
             <input value={u.nome || ''} onChange={(e) => setField('nome', e.target.value.slice(0, 60))} placeholder="Nome completo" style={inputStyle} />
-          </label>
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Telefone</span>
-            <input type="tel" value={u.telefone || ''} onChange={(e) => setField('telefone', e.target.value.slice(0, 20))} placeholder="+351 912 345 678" style={inputStyle} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Email</span>
