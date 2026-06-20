@@ -14,7 +14,7 @@ export default function Topbar({ title = null, back = null }) {
           </Link>
         ) : (
           <Link to="/home" aria-label="Início" style={{ display: 'flex', alignItems: 'center' }}>
-            <FuttyLogo variant="flat" size={32} />
+            <FuttyLogo variant="wordmark" size={28} />
           </Link>
         )}
         {title && <span className="topbar-title">{title}</span>}
