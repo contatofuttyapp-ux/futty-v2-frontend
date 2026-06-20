@@ -11,6 +11,7 @@ import Loading from '../components/Loading';
 import PlayerAvatar from '../components/PlayerAvatar';
 import TeamAvatar from '../components/TeamAvatar';
 import Toast from '../components/Toast';
+import Icon from '../components/Icon';
 import OnboardingModal from '../components/OnboardingModal';
 import '../styles/app.css';
 
@@ -148,10 +149,16 @@ export default function Equipa() {
 
             <div className="header-actions">
               <Link to={`/equipa/${slug}/jogos`} className="btn btn--primary btn--sm">
-                ⚽ Jogos
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="bola" size={16} />
+                  Jogos
+                </span>
               </Link>
               <Link to={`/equipa/${slug}/ranking`} className="btn btn--ghost btn--sm">
-                🏆 Ranking
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="medalha" size={16} />
+                  Ranking
+                </span>
               </Link>
               {team.role === 'admin' && (
                 <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--ghost btn--sm">

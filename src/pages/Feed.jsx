@@ -5,6 +5,7 @@ import { Eye, Share2 } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import AdCard from '../components/AdCard';
 import AvatarFrame from '../components/AvatarFrame';
+import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
@@ -193,7 +194,10 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', color: 'var(--neon)', textTransform: 'uppercase' }}>
-                🏆 Time campeão
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="medalha" size={14} />
+                  Time campeão
+                </span>
               </div>
               <div style={{ marginTop: 8, fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.45 }}>{nomesCampeao}</div>
               <div style={{ marginTop: 12, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
@@ -273,7 +277,10 @@ function AnuncioCard({ p, index = 0 }) {
             color: '#d4a017',
           }}
         >
-          📢 Anúncio oficial
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="anuncio" size={14} />
+            Anúncio oficial
+          </span>
         </span>
 
         {/* Título em destaque */}

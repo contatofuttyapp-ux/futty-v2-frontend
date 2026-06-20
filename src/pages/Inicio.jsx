@@ -12,6 +12,7 @@ import PlayerCard from '../components/PlayerCard';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import FuttyLogo from '../components/FuttyLogo';
+import Icon from '../components/Icon';
 import ProductTour from '../components/ProductTour';
 import Loading from '../components/Loading';
 import SorteioOverlay from '../components/SorteioOverlay';
@@ -120,7 +121,10 @@ function EmptyState() {
           🗺️ Explorar peladas
         </Link>
         <Link to="/figurinha" className="btn btn--purple-outline">
-          ⭐ Criar a minha figurinha
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="estrela" size={16} />
+            Criar a minha figurinha
+          </span>
         </Link>
       </div>
     </div>
@@ -460,7 +464,12 @@ export default function Inicio() {
                 </div>
               ) : (
                 <button type="button" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ margin: '8px 0 4px', border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', color: 'var(--text-dim)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', borderRadius: 999, padding: '6px 12px', opacity: ausenciaBusy ? 0.6 : 1 }}>
-                  {ausenciaBusy ? 'Salvando…' : '😴 Não vou ao próximo jogo'}
+                  {ausenciaBusy ? 'Salvando…' : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Icon name="ausente" size={16} color="grey" />
+                      Não vou ao próximo jogo
+                    </span>
+                  )}
                 </button>
               )
             ) : null}
