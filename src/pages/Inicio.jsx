@@ -11,7 +11,6 @@ import { formatDateTime, formatRating } from '../utils/format';
 import PlayerCard from '../components/PlayerCard';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
-import FuttyLogo from '../components/FuttyLogo';
 import Icon from '../components/Icon';
 import ProductTour from '../components/ProductTour';
 import Loading from '../components/Loading';
@@ -314,10 +313,7 @@ export default function Inicio() {
   return (
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* Header: wordmark centrado (o F já está no nav em baixo). Sem Topbar, sem título. */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '8px 0' }}>
-          <FuttyLogo variant="wordmark" size={36} color="#d4a017" />
-        </div>
+        {/* Sem logo no topo — a marca (F) vive no nav inferior. */}
 
         {/* Banner discreto para ativar notificações push */}
         {pushEstado === 'suportado' && !pushBannerFechado ? (
