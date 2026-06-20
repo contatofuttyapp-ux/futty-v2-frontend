@@ -33,7 +33,7 @@ export default function BottomNav() {
           <Link key={key} to={to} className={`bottom-nav__tab bottom-nav__tab--${key} ${active ? 'bottom-nav__tab--active' : ''}`}>
             <span className="bottom-nav__icon">
               <span className={`bottom-nav__glyph ${active ? 'tab-shine' : ''}`}>
-                <Icon name={icon} size={24} color={active ? '#d4a017' : '#555566'} className={cls} />
+                <Icon name={icon} size={24} color="#d4a017" className={cls} style={{ opacity: active ? 1 : 0.3 }} />
               </span>
               {badge && <span className="bottom-nav__badge" aria-label="Votos pendentes" />}
             </span>

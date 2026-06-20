@@ -1,6 +1,6 @@
 // Futty v2.0 — Ícone SVG custom (de /public/icons). Os SVGs têm os paths a preto
 // por defeito; o filtro CSS recolore conforme `color` (dourado, branco ou cinzento).
-export default function Icon({ name, size = 24, color = '#d4a017', className = '' }) {
+export default function Icon({ name, size = 24, color = '#d4a017', className = '', style = {} }) {
   const filter =
     color === '#d4a017'
       ? 'invert(67%) sepia(55%) saturate(700%) hue-rotate(5deg) brightness(95%) contrast(95%)'
@@ -14,7 +14,7 @@ export default function Icon({ name, size = 24, color = '#d4a017', className = '
     <img
       src={`/icons/${name}.svg`}
       alt={name}
-      style={{ width: size, height: size, display: 'block', filter }}
+      style={{ width: size, height: size, display: 'block', filter, ...style }}
       className={className}
     />
   );
