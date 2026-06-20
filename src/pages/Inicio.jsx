@@ -310,12 +310,9 @@ export default function Inicio() {
   return (
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* Header: logo FUT. (esquerda) + Início (direita). Sem Topbar. */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-          <FuttyLogo variant="wordmark" size={32} color="#8b5cf6" />
-          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Início
-          </span>
+        {/* Header: wordmark centrado, ocupando toda a largura. Sem Topbar, sem título. */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '8px 0' }}>
+          <FuttyLogo variant="wordmark" size={36} color="#8b5cf6" />
         </div>
 
         {/* Banner discreto para ativar notificações push */}
