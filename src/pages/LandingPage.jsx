@@ -37,7 +37,7 @@ export default function LandingPage() {
       {/* 1. HERO */}
       <section style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 18, padding: '32px 0' }}>
         <div style={{ marginBottom: 'var(--space-lg)' }}>
-          <FuttyLogo variant="wordmark" size={56} />
+          <FuttyLogo variant="wordmark" size={56} color="white" />
         </div>
         <h1 style={{ ...H, fontSize: 34, lineHeight: 1.1, margin: 0 }}>O seu time.<br />A sua figurinha.</h1>
         <p style={{ fontSize: 15, lineHeight: 1.55, color: 'rgba(255,255,255,0.8)', margin: 0, maxWidth: 360 }}>
