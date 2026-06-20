@@ -10,6 +10,7 @@ import { formatRating } from '../utils/format';
 import { getIdioma, setIdioma } from '../lib/i18n';
 import UploadComCrop from '../components/UploadComCrop';
 import PlayerAvatar from '../components/PlayerAvatar';
+import Icon from '../components/Icon';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -304,7 +305,10 @@ export default function MeuPerfil() {
         <div style={{ ...CARD, overflow: 'hidden' }}>
           {pushEstado !== 'nao_suportado' ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>🔔 Notificações push</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>
+                <Icon name="sino" size={20} color="#d4a017" />
+                Notificações push
+              </span>
               <input
                 type="checkbox"
                 checked={pushEstado === 'subscrito'}
@@ -314,16 +318,33 @@ export default function MeuPerfil() {
               />
             </div>
           ) : null}
-          <ContaRow onClick={() => navigate('/alterar-password')}>🔑 Alterar senha</ContaRow>
-          <ContaRow onClick={relatarProblema}>📋 Relatar um problema</ContaRow>
+          <ContaRow onClick={() => navigate('/alterar-password')}>
+            <Icon name="cadeado" size={20} color="#d4a017" />
+            Alterar senha
+          </ContaRow>
+          <ContaRow onClick={relatarProblema}>
+            <Icon name="bandeira" size={20} color="#d4a017" />
+            Relatar um problema
+          </ContaRow>
           {adminTeams.length > 0 ? (
-            <ContaRow onClick={irParaAdmin} cor="#8b5cf6">🛡️ Painel de administração</ContaRow>
+            <ContaRow onClick={irParaAdmin} cor="#8b5cf6">
+              <Icon name="definicoes" size={20} color="#d4a017" />
+              Painel de administração
+            </ContaRow>
           ) : null}
-          <ContaRow onClick={() => setConfirmSignOut(true)} cor="rgba(239,68,68,0.8)" semBorda>Terminar sessão</ContaRow>
+          <ContaRow onClick={() => setConfirmSignOut(true)} cor="rgba(239,68,68,0.8)" semBorda>
+            <Icon name="sair" size={20} color="#d4a017" />
+            Terminar sessão
+          </ContaRow>
         </div>
 
         {/* 6. SECÇÃO IDIOMA */}
-        <SecLabel>Idioma / Language</SecLabel>
+        <SecLabel>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="idioma" size={20} color="#d4a017" />
+            Idioma / Language
+          </span>
+        </SecLabel>
         <div style={{ ...CARD, padding: 14, display: 'flex', gap: 8 }}>
           {[
             { id: 'pt-BR', label: '🇧🇷 Português BR' },
