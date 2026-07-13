@@ -22,6 +22,15 @@
   box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
 }
 
+/* Variante HUD (Figurinha): wordmark dourado + linha com degrau na base. */
+.app-topbar--hud {
+  height: 44px;
+  padding: 0 12px;
+  justify-content: flex-start;
+  gap: 10px;
+  border-bottom: none;
+}
+
 /* Marca "FUT" (logótipo) */
 .app-brand {
   font-family: 'Rajdhani', var(--sans);
@@ -1435,6 +1444,152 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .fig-card-enter { animation: none; }
+}
+
+/* Contrato do 1º ecrã: card + botões visíveis, topo das tabs a espreitar. A
+   reserva (230px) é o espaço abaixo do card (header+faixa+botões+teaser tabs). */
+.fig-studio-card {
+  width: min(86vw, calc((100dvh - 230px) * 2 / 3));
+  aspect-ratio: 2 / 3;
+}
+.fig-io-btn { height: 40px; }
+/* Ecrãs muito curtos: reserva menor (card cresce) e botões mais baixos. */
+@media (max-height: 660px) {
+  .fig-studio-card { width: min(86vw, calc((100dvh - 190px) * 2 / 3)); }
+  .fig-io-btn { height: 36px; }
+}
+
+/* Figurinha studio — card vivo (levitação orgânica: bob + sway dessincronizados)
+   + fundos vivos. Só transform/filter/opacity animados (compositor, sem jank). */
+@keyframes futtyBob {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes futtySway {
+  0%, 100% { transform: rotateX(0.8deg) rotateY(-0.9deg); }
+  50%      { transform: rotateX(-0.8deg) rotateY(0.9deg); }
+}
+@keyframes futtyShadowBob {
+  0%, 100% { transform: scaleX(1); opacity: 0.5; }
+  50%      { transform: scaleX(0.88); opacity: 0.38; }
+}
+@keyframes futtyAura {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(212,160,23,0.25)); }
+  50%      { filter: drop-shadow(0 0 16px rgba(212,160,23,0.5)); }
+}
+@keyframes futtyNameGlow {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.9; }
+}
+@keyframes futtyFall {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  10%  { opacity: 0.75; }
+  85%  { opacity: 0.6; }
+  100% { transform: translateY(105cqh) scale(0.6); opacity: 0; }
+}
+/* Luz direccional sincronizada com o sway (mesma 9.3s / cubic-bezier) → volume 3D. */
+@keyframes futtyLight {
+  0%, 100% { opacity: 0.9; transform: translateX(-3%); }
+  50%      { opacity: 0.5; transform: translateX(3%); }
+}
+/* Névoa dourada viva (fundo gradiente): camadas com durações primas (13/17/21),
+   deriva de amplitude maior (±9%) para presença. */
+@keyframes futtyFog1 {
+  0%   { transform: translateX(-8%) translateY(4%) scale(1); }
+  100% { transform: translateX(9%) translateY(-5%) scale(1.14); }
+}
+@keyframes futtyFog2 {
+  0%   { transform: translateX(8%) scale(1); }
+  100% { transform: translateX(-9%) scale(1.12); }
+}
+@keyframes futtyFog3 {
+  0%   { transform: translateX(-6%) scale(1); }
+  100% { transform: translateX(7%) scale(1.1); }
+}
+.fig-bob {
+  perspective: 900px;
+  will-change: transform;
+  animation: futtyBob 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.fig-sway {
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: futtySway 9.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.fig-shadow {
+  animation: futtyShadowBob 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.fig-aura {
+  animation: futtyAura 6.5s ease-in-out infinite;
+}
+.fig-name-glow {
+  animation: futtyNameGlow 4.8s ease-in-out infinite;
+}
+.fig-particle {
+  animation: futtyFall linear infinite;
+}
+.fig-light {
+  animation: futtyLight 9.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.fig-fog-1 {
+  filter: blur(14px);
+  animation: futtyFog1 13s ease-in-out infinite alternate;
+}
+.fig-fog-2 {
+  filter: blur(14px);
+  animation: futtyFog2 17s ease-in-out infinite alternate;
+  animation-delay: 2s;
+}
+.fig-fog-3 {
+  filter: blur(14px);
+  animation: futtyFog3 21s ease-in-out infinite alternate;
+}
+@keyframes futtyBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+.fig-breathe {
+  animation: futtyBreathe 2.4s ease-in-out infinite;
+}
+/* Botão do controlo de zoom (estilo Futty, dourado). */
+.fig-zoom-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #d4a017;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease;
+}
+.fig-zoom-btn:hover:not(:disabled),
+.fig-zoom-btn:active:not(:disabled) { background: rgba(212, 160, 23, 0.15); }
+.fig-zoom-btn:disabled { opacity: 0.35; cursor: default; }
+/* Linha de brilho a percorrer o frame ocasionalmente (cromo a apanhar luz). */
+@keyframes futtyFrameShine {
+  0%        { transform: translateX(-150%); }
+  45%       { transform: translateX(100%); }
+  55%, 100% { transform: translateX(100%); }
+}
+.fig-frame-shine {
+  animation: futtyFrameShine 8s ease-in-out infinite;
+}
+/* Losangos dos cantos a cintilar intercalados (rotate fixo 45° + opacity/scale). */
+@keyframes futtyDotTwinkle {
+  0%, 100% { opacity: 0; transform: rotate(45deg) scale(1); }
+  50%      { opacity: 0.9; transform: rotate(45deg) scale(1.4); }
+}
+.fig-dot-twinkle {
+  animation: futtyDotTwinkle 5.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fig-bob, .fig-sway, .fig-shadow, .fig-aura, .fig-name-glow,
+  .fig-particle, .fig-light, .fig-fog-1, .fig-fog-2, .fig-fog-3, .fig-breathe,
+  .fig-frame-shine, .fig-dot-twinkle { animation: none; }
 }
 
 /* Spinner reutilizável (botões em loading). */

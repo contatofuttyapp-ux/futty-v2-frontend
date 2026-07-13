@@ -2,21 +2,19 @@
 // entrada animada; opções em tabs (Fundo/Frame/Uniforme) + toggles compactos.
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Camera, Download, Share2, Loader2, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Camera, Download, Share2, Loader2, X, Lock, Check, Plus, Minus } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador, urlAsset } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
-import { KITS, kitGradientCss } from '../utils/kits';
-import { gerarFigurinhaCanvas, gerarFigurinhaCanvasStory } from '../utils/figurinhaCanvas';
+import { gerarFigurinhaCanvas, gerarCamadasFigurinha } from '../utils/figurinhaCanvas';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import PlayerCard from '../components/PlayerCard';
 import Topbar from '../components/Topbar';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
-const FRAMES = ['dourado', 'roxo', 'roxo_escuro', 'prata', 'vermelho', 'verde', 'azul', 'cinza'];
 const FUNDOS = [
   { k: 'estadio', label: 'Estádio' },
   { k: 'gradiente', label: 'Gradiente' },
@@ -25,23 +23,46 @@ const FUNDOS = [
 // Background real de cada fundo (igual ao do PlayerCard) para os tiles.
 const FUNDO_BG = {
   estadio: "url('/stadium_bg.png') center / cover no-repeat, #1b2433",
-  gradiente: 'radial-gradient(ellipse 90% 70% at 50% 45%, #0c3a26, #061410 55%, #000 100%)',
+  gradiente: 'radial-gradient(ellipse 90% 70% at 50% 45%, #3d2f0a, #141004 55%, #000 100%)',
   preto: '#000000',
 };
-// Cores de uniforme (camisola) — overlay suave sobre o avatar.
-const UNIFORMES = [
-  { k: 'verde', hex: '#16a34a' },
-  { k: 'azul', hex: '#2563eb' },
-  { k: 'vermelho', hex: '#dc2626' },
-  { k: 'branco', hex: '#f1f5f9' },
-  { k: 'preto', hex: '#0f172a' },
-  { k: 'amarelo', hex: '#ca8a04' },
-];
 const TABS = [
   { k: 'fundo', label: 'Fundo' },
-  { k: 'frame', label: 'Frame' },
   { k: 'uniforme', label: 'Uniforme' },
 ];
+
+// Kits do card. 'dark-gold' é o único vestido/seleccionável por agora; os
+// restantes são placeholders (em breve) ou trancados por plano (pro).
+const KIT_DARK_GOLD_IMG = 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/avatars/Kits/kit1-dark-gold.png';
+const KITS_FIGURINHA = [
+  { id: 'dark-gold', nome: 'Dark Gold', base: '#0d0d12', acento: '#d4a017', estado: 'ativo' },
+  { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'breve' },
+  { id: 'white-gold', nome: 'White Gold', base: '#f8f5f0', acento: '#d4a017', estado: 'breve' },
+  { id: 'elite-gold', nome: 'Elite Gold', base: '#d4a017', acento: '#0d0d12', estado: 'pro' },
+];
+
+// Partículas de luz do fundo "estádio" (valores fixos por partícula → o
+// movimento nunca sincroniza). left/size fixos, cores alternadas, dur/delay variados.
+const FUTTY_PARTICULAS = [
+  { left: 8, size: 3, cor: '#f5e070', dur: 7.5, delay: 0 },
+  { left: 15, size: 2, cor: '#d4a017', dur: 9.2, delay: 2.4 },
+  { left: 23, size: 4, cor: '#ffffff', dur: 6.3, delay: 5.1 },
+  { left: 31, size: 2, cor: '#f5e070', dur: 10.4, delay: 1.2 },
+  { left: 38, size: 3, cor: '#d4a017', dur: 8.1, delay: 6.7 },
+  { left: 45, size: 2, cor: '#ffffff', dur: 6.9, delay: 3.3 },
+  { left: 52, size: 4, cor: '#f5e070', dur: 9.8, delay: 0.6 },
+  { left: 59, size: 3, cor: '#d4a017', dur: 7.2, delay: 4.5 },
+  { left: 66, size: 2, cor: '#ffffff', dur: 11, delay: 7.8 },
+  { left: 72, size: 3, cor: '#f5e070', dur: 6.6, delay: 2 },
+  { left: 79, size: 4, cor: '#d4a017', dur: 8.7, delay: 5.9 },
+  { left: 85, size: 2, cor: '#ffffff', dur: 10.1, delay: 1.7 },
+  { left: 90, size: 3, cor: '#f5e070', dur: 7.9, delay: 4 },
+  { left: 92, size: 2, cor: '#d4a017', dur: 9.5, delay: 6.2 },
+];
+
+// Recorte octogonal do card (cut/W = 32/400 = 8%; cut/H = 32/600 ≈ 5.3%). Usado
+// nos overlays de card inteiro para os cantos coincidirem com o PNG octogonal.
+const CLIP_OCTOGONO = 'polygon(8% 0, 92% 0, 100% 5.3%, 100% 94.7%, 92% 100%, 8% 100%, 0 94.7%, 0 5.3%)';
 
 // Nome de ficheiro seguro a partir do nome do jogador.
 function ficheiroNome(nome, sufixo = '') {
@@ -54,14 +75,6 @@ function ficheiroNome(nome, sufixo = '') {
   return `futty-${base || 'jogador'}${sufixo}.png`;
 }
 
-// Cantos em L (snakeGlow) para o swatch de frame seleccionado.
-const CANTOS_FRAME = [
-  { top: -2, left: -2, borderTop: '2px solid', borderLeft: '2px solid' },
-  { top: -2, right: -2, borderTop: '2px solid', borderRight: '2px solid' },
-  { bottom: -2, right: -2, borderBottom: '2px solid', borderRight: '2px solid' },
-  { bottom: -2, left: -2, borderBottom: '2px solid', borderLeft: '2px solid' },
-];
-
 // Baixa um blob como ficheiro.
 function baixarBlob(blob, nomeFicheiro) {
   const url = URL.createObjectURL(blob);
@@ -72,15 +85,41 @@ function baixarBlob(blob, nomeFicheiro) {
   URL.revokeObjectURL(url);
 }
 
+// Estrela de 4 pontas custom (celebracao.svg) tingida por CSS mask. O padrão do
+// app tinge SVGs pretos por filtro (components/Icon.jsx), mas esse só cobre 3
+// cores fixas; a máscara permite QUALQUER cor exacta (branco/roxo/dourado).
+function EstrelaIA({ size = 16, color = '#d4a017', style }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block',
+        width: size,
+        height: size,
+        flex: 'none',
+        backgroundColor: color,
+        WebkitMaskImage: 'url(/icons/celebracao.svg)',
+        maskImage: 'url(/icons/celebracao.svg)',
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskPosition: 'center',
+        WebkitMaskSize: 'contain',
+        maskSize: 'contain',
+        verticalAlign: 'middle',
+        ...style,
+      }}
+    />
+  );
+}
+
 export default function Figurinha() {
   const { teams } = useTeams();
+  const navigate = useNavigate();
 
   const [me, setMe] = useState(null);
   const [fundo, setFundo] = useState('estadio');
-  const [corFrame, setCorFrame] = useState('dourado');
-  const [corUniforme, setCorUniforme] = useState(UNIFORMES[0].hex);
-  const [mostrarStats, setMostrarStats] = useState(true);
-  const [mostrarNome, setMostrarNome] = useState(true);
+  const corFrame = 'dourado';
   const [fotoLocal, setFotoLocal] = useState(null);
   const [uploadFoto, setUploadFoto] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
@@ -89,21 +128,29 @@ export default function Figurinha() {
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
+  // Zoom do avatar no card. Escala interna 0.88–1.43 (passo 0.11); exibida ÷1.1
+  // → 80/90/100/110/120/130%. Base 1.1 = 100% exibido. Reinicia sempre a 110%.
+  const [avatarZoom, setAvatarZoom] = useState(1.1);
   // Flow de estreia (1ª visita sem foto/avatar): null = a decidir, 'foto' |
   // 'gerando' | 'pronto' = ecrãs A/B/C, 'fim' = studio normal.
   const [estreiaFase, setEstreiaFase] = useState(() => (localStorage.getItem('futty_figurinha_estreia') ? 'fim' : null));
+  const [previewUrl, setPreviewUrl] = useState(null); // composto (estreia)
+  const [fundoUrl, setFundoUrl] = useState(null); // camada de fundo (studio, sem jogador)
+  const [jogadorUrl, setJogadorUrl] = useState(null); // camada do jogador (studio)
   const fileRef = useRef(null);
-  const cardRef = useRef(null);
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
   const equipa = teams[0] || null;
-  const plano = me?.user?.plan || 'free';
   const frameHex = getFrameColor(corFrame).stroke;
-  const opts = { jogador, stats, fundo, corFrame, corUniforme, fotoOverride: fotoLocal, mostrarStats, mostrarNome };
-  // Foto original (foto_url) vs avatar mostrado (avatar_url). Diferentes = avatar IA activo.
+  // Regra única: a foto CRUA nunca entra no card. Só entra o avatar quando é
+  // um avatar IA confirmado (foto_url e avatar_url existem e são diferentes —
+  // logo após o upload o backend grava a foto crua em ambos, então é igual).
   const fotoOriginal = me?.user?.foto_url || null;
-  const iaActivo = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
+  const avatarEhIA = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
+  // Jogador "de card": só leva avatar_url se for avatar IA; caso contrário, sem avatar.
+  const jogadorCard = avatarEhIA ? jogador : { ...jogador, avatar_url: null };
+  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom };
 
   // Carrega o perfil e pré-selecciona as escolhas guardadas.
   useEffect(() => {
@@ -113,7 +160,6 @@ export default function Figurinha() {
         if (!ativo) return;
         setMe(d);
         if (d?.user?.fundo_figurinha) setFundo(d.user.fundo_figurinha);
-        if (d?.user?.cor_frame) setCorFrame(d.user.cor_frame);
         // Decisão da estreia (só quando ainda não foi vista): sem avatar → flow.
         if (!localStorage.getItem('futty_figurinha_estreia')) {
           setEstreiaFase(d?.user?.avatar_url ? 'fim' : 'foto');
@@ -135,6 +181,39 @@ export default function Figurinha() {
   useEffect(() => {
     if (estreiaFase === 'pronto') celebrarCromoPronto();
   }, [estreiaFase]);
+
+  useEffect(() => {
+    let vivo = true;
+    const trocar = (setter) => (blob) => setter((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return blob ? URL.createObjectURL(blob) : null;
+    });
+    const gerar = async () => {
+      if (!jogador) return;
+      try {
+        if (estreiaFase === 'fim') {
+          // Studio: duas camadas (partículas entre fundo e jogador).
+          const { fundoBlob, jogadorBlob } = await gerarCamadasFigurinha(opts);
+          if (!vivo) return;
+          trocar(setFundoUrl)(fundoBlob);
+          trocar(setJogadorUrl)(jogadorBlob);
+        } else {
+          // Estreia: imagem composta única.
+          const blob = await gerarFigurinhaCanvas(opts);
+          if (!vivo) return;
+          trocar(setPreviewUrl)(blob);
+        }
+      } catch (e) {
+        console.error('[preview]', e);
+      }
+    };
+    gerar();
+    return () => { vivo = false; };
+  }, [fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, estreiaFase]);
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  useEffect(() => () => { if (fundoUrl) URL.revokeObjectURL(fundoUrl); }, [fundoUrl]);
+  useEffect(() => () => { if (jogadorUrl) URL.revokeObjectURL(jogadorUrl); }, [jogadorUrl]);
 
   // Marca a estreia como concluída e passa ao studio normal.
   function concluirEstreia() {
@@ -171,7 +250,7 @@ export default function Figurinha() {
     setErro('');
     setLimiteIA(false);
     try {
-      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST' });
+      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold' }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
       setFotoLocal(null);
     } catch (err) {
@@ -211,7 +290,7 @@ export default function Figurinha() {
     setErro('');
     setLimiteIA(false);
     try {
-      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST' });
+      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold' }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
     } catch (err) {
@@ -220,24 +299,6 @@ export default function Figurinha() {
     } finally {
       setGerandoIA(false);
     }
-  }
-
-  // Tilt 3D — só em ponteiro fino (rato), não em toque.
-  function onCardMove(e) {
-    if (window.matchMedia('(pointer: coarse)').matches) return;
-    const el = cardRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const x = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
-    const y = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
-    el.style.transition = 'none';
-    el.style.transform = `perspective(900px) rotateX(${(-y * 10).toFixed(2)}deg) rotateY(${(x * 10).toFixed(2)}deg)`;
-  }
-  function onCardLeave() {
-    const el = cardRef.current;
-    if (!el) return;
-    el.style.transition = 'transform 0.4s ease';
-    el.style.transform = 'perspective(900px) rotateX(0deg) rotateY(0deg)';
   }
 
   async function baixar() {
@@ -282,29 +343,22 @@ export default function Figurinha() {
     }
   }
 
-  async function baixarStory() {
-    if (busy) return;
-    setBusy(true);
-    setErro('');
-    try {
-      const blob = await gerarFigurinhaCanvasStory(opts);
-      if (!blob) {
-        setErro('Não foi possível gerar a imagem.');
-        return;
-      }
-      baixarBlob(blob, ficheiroNome(nomeJogador(jogador), '-story'));
-    } catch (e) {
-      setErro(e?.message || 'Erro ao gerar.');
-    } finally {
-      setBusy(false);
-    }
-  }
+  // Overlay digno para o estado "a gerar" (sobre o card, tanto na estreia como
+  // no studio). Logo Futty metálico a respirar + texto.
+  const overlayGerando = (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 8, clipPath: CLIP_OCTOGONO, background: 'rgba(5,8,16,0.75)', backdropFilter: 'blur(6px)', display: 'grid', placeItems: 'center' }}>
+      <div style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
+        <img src="/futty-logo-metallic.png" alt="" className="fig-breathe" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>A criar o teu avatar…</span>
+      </div>
+    </div>
+  );
 
   // Enquanto a fase de estreia não está decidida (perfil a carregar), espera.
   if (estreiaFase === null) {
     return (
       <div className="app-shell">
-        <Topbar title="Figurinha" />
+        <Topbar hud="FIGURINHA" />
         <main className="app-main" style={{ display: 'grid', placeItems: 'center', minHeight: '40vh' }}>
           <Loader2 size={28} className="spin" color="#8b5cf6" />
         </main>
@@ -316,17 +370,20 @@ export default function Figurinha() {
   if (estreiaFase === 'foto' || estreiaFase === 'gerando' || estreiaFase === 'pronto') {
     return (
       <div className="app-shell">
-        <Topbar title="Figurinha" />
+        <Topbar hud="FIGURINHA" />
         <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
           {/* Card */}
           <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
             <div className="fig-card-enter" style={{ position: 'relative', width: 'min(74vw, 300px)', aspectRatio: '2 / 3' }}>
-              <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
-              {estreiaFase === 'gerando' ? (
-                <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'rgba(0,0,0,0.55)', display: 'grid', placeItems: 'center', animation: 'heroicPulse 1.8s ease-in-out infinite' }}>
-                  <Loader2 size={30} className="spin" color="#fff" />
-                </div>
-              ) : null}
+              {previewUrl
+                ? <img
+                    src={previewUrl}
+                    alt="figurinha"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                : <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
+              }
+              {estreiaFase === 'gerando' ? overlayGerando : null}
             </div>
           </div>
 
@@ -335,14 +392,14 @@ export default function Figurinha() {
           <div style={{ maxWidth: 420, margin: '0 auto', textAlign: 'center', display: 'grid', gap: 12 }}>
             {estreiaFase === 'foto' ? (
               <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>O teu cromo está quase pronto ✨</h2>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>O teu cromo está quase pronto <EstrelaIA size={14} color="#fff" /></h2>
                 <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: 0 }}>Adiciona uma foto para personalizar o teu cartão de jogador</p>
                 <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={() => fileRef.current?.click()}>📷 Adicionar foto</button>
                 <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Saltar por agora →</button>
               </>
             ) : estreiaFase === 'gerando' ? (
               <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando o teu avatar Panini… ✨</h2>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando o teu avatar Panini… <EstrelaIA size={14} color="#fff" /></h2>
                 <p style={{ fontSize: 13, color: 'var(--label-color)', margin: 0 }}>Pode demorar até 30 segundos</p>
               </>
             ) : (
@@ -367,77 +424,192 @@ export default function Figurinha() {
 
   return (
     <div className="app-shell">
-      <Topbar title="Figurinha" />
-      <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* 1. ZONA DO CARD (2:3, tilt 3D + entrada animada) */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
-          <div className="fig-card-enter" style={{ width: 'min(80vw, calc((100dvh - 400px) * 2 / 3))', aspectRatio: '2 / 3' }}>
+      <Topbar hud="FIGURINHA" />
+      <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 24 }}>
+        {/* 1. ZONA DO CARD (2:3, levitação Star Fox + entrada animada) */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 10px' }}>
+          <div className="fig-card-enter fig-studio-card" style={{ position: 'relative' }}>
+            {/* Sombra viva no chão (contra-fase com a levitação) */}
             <div
-              ref={cardRef}
-              onMouseMove={onCardMove}
-              onMouseLeave={onCardLeave}
-              style={{ position: 'relative', width: '100%', height: '100%', willChange: 'transform' }}
-            >
-              <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
+              className="fig-shadow"
+              style={{ position: 'absolute', left: '15%', bottom: -18, width: '70%', height: 14, background: 'radial-gradient(ellipse, rgba(212,160,23,0.35), rgba(0,0,0,0.5) 60%, transparent)', filter: 'blur(8px)', pointerEvents: 'none', zIndex: 0 }}
+            />
+            {/* Bob (translateY) exterior → Sway (rotate 3D) interior */}
+            <div className="fig-bob" style={{ position: 'relative', width: '100%', height: '100%', zIndex: 1 }}>
+              <div className="fig-sway" style={{ position: 'relative', width: '100%', height: '100%' }}>
+                {fundoUrl ? (
+                  <>
+                    {/* Camada de fundo — card completo SEM jogador */}
+                    <img
+                      src={fundoUrl}
+                      alt="figurinha"
+                      className="fig-aura"
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }}
+                    />
 
-              {/* Câmara — trocar foto (canto inferior-direito) */}
-              <button
-                type="button"
-                aria-label="Trocar foto"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploadFoto}
-                style={{ position: 'absolute', right: 8, bottom: 8, zIndex: 10, width: 38, height: 38, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'grid', placeItems: 'center', cursor: uploadFoto ? 'wait' : 'pointer', opacity: uploadFoto ? 0.6 : 1, backdropFilter: 'blur(4px)' }}
-              >
-                <Camera size={16} />
-              </button>
+                    {/* Fundo vivo — partículas ENTRE o fundo e o jogador (caem atrás dele) */}
+                    {fundo === 'estadio' ? (
+                      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 3, containerType: 'size', mixBlendMode: 'screen', clipPath: CLIP_OCTOGONO }}>
+                        {FUTTY_PARTICULAS.map((p, i) => (
+                          <span
+                            key={i}
+                            className="fig-particle"
+                            style={{ position: 'absolute', left: `${p.left}%`, top: '-5%', width: p.size, height: p.size, borderRadius: '50%', background: p.cor, boxShadow: `0 0 6px ${p.cor}`, animationDuration: `${p.dur * 1.25}s`, animationDelay: `${p.delay}s` }}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    {fundo === 'gradiente' ? (
+                      // Névoa dourada viva: 2 camadas de bruma (blur), derivas com
+                      // durações primas (13/17). Wrapper estático recorta o octógono
+                      // (o clip não deve derivar com a animação das névoas).
+                      <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none', overflow: 'hidden', clipPath: CLIP_OCTOGONO }}>
+                        <div className="fig-fog-1" style={{ position: 'absolute', inset: '-15%', background: 'radial-gradient(ellipse 70% 50% at 30% 60%, rgba(212,160,23,0.30), transparent 70%)', mixBlendMode: 'screen' }} />
+                        <div className="fig-fog-2" style={{ position: 'absolute', inset: '-15%', background: 'radial-gradient(ellipse 60% 45% at 70% 45%, rgba(245,224,112,0.22), transparent 65%)', mixBlendMode: 'screen' }} />
+                        {/* Bruma rente à base — integra o fade do avatar (jogador a emergir da névoa) */}
+                        <div className="fig-fog-3" style={{ position: 'absolute', inset: '-15%', background: 'radial-gradient(ellipse 90% 25% at 50% 85%, rgba(212,160,23,0.12), transparent 70%)', mixBlendMode: 'screen' }} />
+                      </div>
+                    ) : null}
+
+                    {/* Camada do jogador — só o avatar, por cima das partículas */}
+                    {jogadorUrl ? (
+                      <img
+                        src={jogadorUrl}
+                        alt=""
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', zIndex: 4 }}
+                      />
+                    ) : null}
+
+                    {/* Glow pulsante fixo sobre a zona do nome (nada a atravessá-lo) */}
+                    <div className="fig-name-glow" style={{ position: 'absolute', left: 0, bottom: '8%', width: '100%', height: '20%', pointerEvents: 'none', zIndex: 5, background: 'radial-gradient(ellipse 55% 70% at 50% 55%, rgba(245,224,112,0.20), transparent 70%)', mixBlendMode: 'screen', WebkitMaskImage: 'linear-gradient(to top, black 0%, black 55%, transparent 100%)', maskImage: 'linear-gradient(to top, black 0%, black 55%, transparent 100%)' }} />
+
+                    {/* Luz direccional sincronizada com o sway (desloca-se → volume 3D).
+                        Wrapper estático recorta o octógono; o interior desliza. */}
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 6, pointerEvents: 'none', overflow: 'hidden', clipPath: CLIP_OCTOGONO }}>
+                      <div className="fig-light" style={{ position: 'absolute', inset: '-5%', background: 'linear-gradient(105deg, rgba(255,245,200,0.08) 0%, transparent 35%, transparent 65%, rgba(0,0,0,0.12) 100%)', mixBlendMode: 'soft-light', WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 45%, transparent 75%)', maskImage: 'linear-gradient(to bottom, black 0%, black 45%, transparent 75%)' }} />
+                    </div>
+
+                    {/* Linha de brilho a percorrer o frame (cromo a apanhar luz) */}
+                    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 7, clipPath: CLIP_OCTOGONO }}>
+                      <div className="fig-frame-shine" style={{ position: 'absolute', top: 0, left: 0, width: '250%', height: '100%', background: 'linear-gradient(115deg, transparent 44%, rgba(255,240,180,0.35) 50%, transparent 56%)', mixBlendMode: 'screen' }} />
+                    </div>
+
+                    {/* Dots dos cantos a cintilar intercalados (sobre os dots do canvas:
+                        19*k → 4.75% na horizontal, 3.17% na vertical num card 2:3) */}
+                    {[
+                      { pos: { top: '3.17%', left: '4.75%', marginTop: -5, marginLeft: -5 }, delay: 0 },
+                      { pos: { top: '3.17%', right: '4.75%', marginTop: -5, marginRight: -5 }, delay: 2.1 },
+                      { pos: { bottom: '3.17%', left: '4.75%', marginBottom: -5, marginLeft: -5 }, delay: 4.3 },
+                      { pos: { bottom: '3.17%', right: '4.75%', marginBottom: -5, marginRight: -5 }, delay: 6.2 },
+                    ].map((d, i) => (
+                      <span
+                        key={i}
+                        className="fig-dot-twinkle"
+                        style={{ position: 'absolute', ...d.pos, width: 10, height: 10, borderRadius: 1, background: 'linear-gradient(135deg, #f5e070, #d4a017)', mixBlendMode: 'screen', pointerEvents: 'none', zIndex: 7, animationDelay: `${d.delay}s` }}
+                      />
+                    ))}
+                  </>
+                ) : (
+                  <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
+                )}
+
+              {/* Zoom do avatar — controlo compacto à direita, abaixo do canto (só com avatar IA) */}
+              {avatarEhIA && !fotoLocal ? (
+                <div style={{ position: 'absolute', top: '18%', right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'rgba(13,13,18,0.7)', backdropFilter: 'blur(4px)', borderRadius: 16, padding: '5px 4px', border: '1px solid rgba(212,160,23,0.45)' }}>
+                  <button
+                    type="button"
+                    aria-label="Aumentar zoom"
+                    className="fig-zoom-btn"
+                    onClick={() => setAvatarZoom((z) => Math.min(1.43, +(z + 0.11).toFixed(2)))}
+                    disabled={avatarZoom >= 1.43}
+                  >
+                    <Plus size={13} />
+                  </button>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#f5e070' }}>
+                    {Math.round((avatarZoom / 1.1) * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Reduzir zoom"
+                    className="fig-zoom-btn"
+                    onClick={() => setAvatarZoom((z) => Math.max(0.88, +(z - 0.11).toFixed(2)))}
+                    disabled={avatarZoom <= 0.88}
+                  >
+                    <Minus size={13} />
+                  </button>
+                </div>
+              ) : null}
+              </div>
             </div>
+            {/* Estado "a gerar" — cobre a zona do card */}
+            {gerandoIA ? overlayGerando : null}
           </div>
         </div>
 
         {/* Indicador de avatar IA activo (a foto real fica guardada em foto_url) */}
-        {iaActivo && !fotoLocal ? (
-          <div style={{ textAlign: 'center', marginTop: -2, marginBottom: 6 }}>
+        {avatarEhIA && !fotoLocal ? (
+          <div style={{ textAlign: 'center', padding: '4px 0' }}>
             <button
               type="button"
               onClick={() => setVerFoto(true)}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#8b5cf6' }}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#8b5cf6', display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              ✨ Avatar IA ativo · Ver foto →
+              <EstrelaIA size={14} color="#8b5cf6" /> Avatar IA ativo · Ver foto →
             </button>
+          </div>
+        ) : null}
+
+        {/* Foto subida mas ainda sem avatar IA gerado (a foto não entra no card). */}
+        {fotoLocal ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', fontSize: 11, color: '#d4a017' }}>
+            <Check size={14} /> Foto carregada — gera o teu avatar
           </div>
         ) : null}
 
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
 
         {/* 2. CONTROLOS — tabs + painel + detalhes */}
-        <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 8 }}>
-          {/* Gerar Avatar IA (precisa de uma foto guardada) */}
-          {jogador.avatar_url ? (
-            <div style={{ display: 'grid', gap: 4 }}>
+        <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
+          {/* Trocar foto + Gerar Avatar IA (na mesma linha) */}
+          <div style={{ display: 'grid', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
               <button
                 type="button"
-                className="btn btn--purple"
-                style={{ width: '100%', height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                disabled={gerandoIA || uploadFoto}
-                onClick={gerarAvatarIA}
+                className="btn btn--purple-outline fig-io-btn"
+                style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, paddingLeft: 12, paddingRight: 12 }}
+                disabled={uploadFoto || gerandoIA}
+                onClick={() => fileRef.current?.click()}
               >
-                {gerandoIA ? (
-                  <>
-                    <Loader2 size={16} className="spin" /> Gerando…
-                  </>
-                ) : (
-                  '✨ Gerar Avatar IA'
-                )}
+                <Camera size={16} /> {jogador.avatar_url ? 'Trocar foto' : 'Adicionar foto'}
               </button>
-              {gerandoIA ? (
-                <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>Pode demorar até 30 segundos</span>
-              ) : null}
+              {jogador.avatar_url ? (
+                <button
+                  type="button"
+                  className="btn btn--purple fig-io-btn"
+                  style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  disabled={gerandoIA || uploadFoto}
+                  onClick={gerarAvatarIA}
+                >
+                  {gerandoIA ? (
+                    <>
+                      <Loader2 size={16} className="spin" /> Gerando…
+                    </>
+                  ) : (
+                    <>
+                      <EstrelaIA size={16} color="#ffffff" /> Gerar Avatar IA
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div style={{ flex: 1, fontSize: 12, color: 'var(--label-color)', textAlign: 'center', alignSelf: 'center' }}>
+                  Adiciona uma foto para gerar o avatar IA
+                </div>
+              )}
             </div>
-          ) : (
-            <div style={{ fontSize: 12, color: 'var(--label-color)', textAlign: 'center', padding: '6px 0' }}>
-              Adiciona primeiro uma foto para gerar o avatar IA
-            </div>
-          )}
+            {gerandoIA ? (
+              <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>Pode demorar até 30 segundos</span>
+            ) : null}
+          </div>
 
           {limiteIA ? (
             <div className="alert alert--error" style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -479,7 +651,8 @@ export default function Figurinha() {
 
           {/* Painel da tab activa */}
           {activeTab === 'fundo' ? (
-            <div style={{ display: 'flex', gap: 8 }}>
+            // Tiles do mesmo tamanho dos kits (¼ da largura); linha de 3 centrada.
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
                 return (
@@ -489,160 +662,101 @@ export default function Figurinha() {
                     onClick={() => setFundo(f.k)}
                     aria-pressed={sel}
                     style={{
-                      flex: 1,
-                      height: 58,
-                      position: 'relative',
-                      overflow: 'hidden',
+                      flex: '0 0 calc((100% - 24px) / 4)',
+                      display: 'grid',
+                      gap: 4,
                       padding: 0,
-                      borderRadius: 'var(--radius-md)',
+                      background: 'transparent',
+                      border: 'none',
                       cursor: 'pointer',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {/* Thumbnail quadrado */}
+                    <div style={{
+                      width: '100%',
+                      aspectRatio: '1 / 1',
+                      borderRadius: 'var(--radius-s, 8px)',
                       background: FUNDO_BG[f.k],
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
-                      border: sel ? '2px solid #8b5cf6' : '1px solid var(--border-subtle)',
-                      boxShadow: sel ? '0 0 12px rgba(139,92,246,0.6)' : 'none',
-                    }}
-                  >
-                    <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '3px 0', fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, color: '#fff', textAlign: 'center', background: 'linear-gradient(transparent, rgba(0,0,0,0.75))' }}>
+                      border: sel ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
+                      boxShadow: sel ? '0 0 12px rgba(212,160,23,0.5)' : 'none',
+                    }} />
+                    {/* Nome */}
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: sel ? '#fff' : 'var(--label-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {f.label}
                     </span>
                   </button>
                 );
               })}
             </div>
-          ) : activeTab === 'frame' ? (
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-              {FRAMES.map((c) => {
-                const sel = corFrame === c;
-                const hex = getFrameColor(c).stroke;
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+              {KITS_FIGURINHA.map((kit) => {
+                const ativo = kit.estado === 'ativo';
+                const pro = kit.estado === 'pro';
+                const bloqueado = kit.estado === 'breve' || pro;
                 return (
                   <button
-                    key={c}
+                    key={kit.id}
                     type="button"
-                    onClick={() => setCorFrame(c)}
-                    aria-label={`Frame ${c}`}
-                    aria-pressed={sel}
+                    onClick={pro ? () => navigate('/planos') : undefined}
+                    aria-label={kit.nome}
+                    aria-pressed={ativo}
+                    disabled={kit.estado === 'breve'}
                     style={{
-                      position: 'relative',
-                      flex: '0 0 auto',
-                      width: 32,
-                      height: 32,
-                      borderRadius: 'var(--radius-xs)',
-                      cursor: 'pointer',
-                      background: hex,
-                      border: sel ? `2px solid ${hex}` : '2px solid rgba(255,255,255,0.2)',
-                      opacity: sel ? 1 : 0.5,
+                      flex: '0 0 calc((100% - 24px) / 4)',
+                      display: 'grid',
+                      gap: 4,
+                      padding: 0,
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: pro ? 'pointer' : 'default',
+                      textAlign: 'center',
                     }}
                   >
-                    {sel
-                      ? CANTOS_FRAME.map((ct, i) => (
-                          <span key={i} aria-hidden style={{ position: 'absolute', width: 10, height: 10, pointerEvents: 'none', borderColor: hex, animation: `snakeGlow 2.6s ease-in-out ${i * 0.5}s infinite`, ...ct }} />
-                        ))
-                      : null}
+                    {/* Thumbnail quadrado */}
+                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 'var(--radius-s, 8px)', overflow: 'hidden', background: kit.id === 'dark-gold' ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: ativo ? '2px solid #d4a017' : '1px solid var(--border-subtle)', boxShadow: ativo ? '0 0 12px rgba(212,160,23,0.5)' : 'none' }}>
+                      {kit.id === 'dark-gold' ? (
+                        <img src={KIT_DARK_GOLD_IMG} alt={kit.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : null}
+                      {ativo ? (
+                        <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: '#d4a017', color: '#0d0d12', display: 'grid', placeItems: 'center' }}>
+                          <Check size={10} strokeWidth={3} />
+                        </span>
+                      ) : null}
+                      {pro ? (
+                        <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#fff' }}>
+                          <Lock size={14} />
+                        </span>
+                      ) : null}
+                      {/* Badges de estado */}
+                      {kit.estado === 'breve' ? (
+                        <span style={{ position: 'absolute', top: 3, left: '50%', transform: 'translateX(-50%)', padding: '1px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.75)', color: '#fff', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                          EM BREVE
+                        </span>
+                      ) : null}
+                      {pro ? (
+                        <span style={{ position: 'absolute', top: 3, right: 3, padding: '1px 4px', borderRadius: 5, background: '#d4a017', color: '#0d0d12', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 800, letterSpacing: '0.05em' }}>
+                          PRO
+                        </span>
+                      ) : null}
+                    </div>
+                    {/* Nome */}
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: bloqueado ? 'var(--label-color)' : '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {kit.nome}
+                    </span>
                   </button>
                 );
               })}
             </div>
-          ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {/* Kits Futty (tiles) */}
-              <div style={{ display: 'flex', gap: 8 }}>
-                {KITS.map((kit) => {
-                  const sel = corUniforme === kit.id;
-                  // Elite desbloqueia para quem tem plano Elite.
-                  const bloqueado = kit.id === 'kit-elite' ? plano !== 'elite' : kit.locked;
-                  return (
-                    <button
-                      key={kit.id}
-                      type="button"
-                      onClick={() => (bloqueado ? setErro('Disponível no plano Elite.') : setCorUniforme(kit.id))}
-                      aria-label={`Kit ${kit.label}`}
-                      aria-pressed={sel}
-                      style={{
-                        flex: 1,
-                        height: 52,
-                        position: 'relative',
-                        overflow: 'hidden',
-                        padding: 0,
-                        borderRadius: 'var(--radius-md)',
-                        cursor: 'pointer',
-                        background: kitGradientCss(kit),
-                        border: sel ? '2px solid #8b5cf6' : '1px solid var(--border-subtle)',
-                        boxShadow: sel ? '0 0 12px rgba(139,92,246,0.6)' : 'none',
-                        opacity: bloqueado ? 0.6 : 1,
-                      }}
-                    >
-                      <span style={{ position: 'absolute', top: 3, right: 5, fontSize: 11 }}>{kit.badge}</span>
-                      <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '2px 0', fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: '#fff', textAlign: 'center', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }}>
-                        {kit.label}
-                      </span>
-                      {bloqueado ? (
-                        <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>🔒</span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Cores simples */}
-              <div style={{ display: 'flex', gap: 12 }}>
-                {UNIFORMES.map((un) => {
-                  const sel = corUniforme === un.hex;
-                  return (
-                    <button
-                      key={un.k}
-                      type="button"
-                      onClick={() => setCorUniforme(un.hex)}
-                      aria-label={`Uniforme ${un.k}`}
-                      aria-pressed={sel}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 'var(--radius-pill)',
-                        cursor: 'pointer',
-                        background: un.hex,
-                        border: sel ? '2px solid #d4a017' : '2px solid rgba(255,255,255,0.2)',
-                        boxShadow: sel ? '0 0 8px rgba(212,160,23,0.5)' : 'none',
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            </div>
           )}
-
-          {/* Detalhes — linha compacta sempre visível (sem título) */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              { on: mostrarNome, set: setMostrarNome, label: 'Nome' },
-              { on: mostrarStats, set: setMostrarStats, label: 'Nota · J · G' },
-            ].map((t) => (
-              <button
-                key={t.label}
-                type="button"
-                onClick={() => t.set((v) => !v)}
-                aria-pressed={t.on}
-                style={{
-                  flex: 1,
-                  height: 32,
-                  borderRadius: 'var(--radius-sm)',
-                  border: `1px solid ${t.on ? 'var(--border-accent)' : 'var(--border-subtle)'}`,
-                  background: t.on ? 'rgba(139,92,246,0.2)' : 'var(--surface-1)',
-                  color: t.on ? '#8b5cf6' : 'var(--label-color)',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
 
           {erro ? <div className="alert alert--error" style={{ margin: 0 }}>{erro}</div> : null}
 
-          {/* 3. AÇÕES */}
-          <div style={{ display: 'flex', gap: 8 }}>
+          {/* 3. AÇÕES — logo abaixo do painel de tiles */}
+          <div style={{ display: 'flex', gap: 12 }}>
             <button type="button" className="btn btn--purple-outline" style={{ flex: 1, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
               <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
             </button>
@@ -656,9 +770,6 @@ export default function Figurinha() {
               <Share2 size={16} /> Compartilhar
             </button>
           </div>
-          <button type="button" className="btn btn--purple-outline" style={{ width: '100%', height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixarStory}>
-            <Share2 size={16} /> Story 9:16
-          </button>
         </div>
       </main>
 
