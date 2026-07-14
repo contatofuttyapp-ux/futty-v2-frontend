@@ -7,7 +7,7 @@ import { useApi } from '../hooks/useApi';
 import { urlAsset, iniciaisNome } from '../utils/avatar';
 import FuttyLogo from '../components/FuttyLogo';
 import CampoSorteio from '../components/CampoSorteio';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 
 const COR_A = '#3b82f6'; // azul
 const COR_B = '#ef4444'; // vermelho
@@ -55,7 +55,7 @@ export default function SorteioPublico() {
   if (loading) {
     return (
       <div style={{ ...wrap, alignItems: 'center', justifyContent: 'center' }}>
-        <Loading text="Carregando…" />
+        <LoadingFutty />
       </div>
     );
   }

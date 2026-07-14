@@ -13,7 +13,7 @@ import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
 import ProductTour from '../components/ProductTour';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 import SorteioOverlay from '../components/SorteioOverlay';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
@@ -470,7 +470,7 @@ export default function Inicio() {
               )
             ) : null}
             {loadingGames ? (
-              <Loading text="Carregando jogos…" />
+              <LoadingFutty />
             ) : (
               <>
                 {filtered.length === 0 && <p className="muted">Sem jogos para mostrar.</p>}

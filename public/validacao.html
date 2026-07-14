@@ -1,0 +1,222 @@
+<!doctype html>
+<!-- VALIDAÇÃO FINAL — fases 3.49 a 3.53. Não apagar até o utilizador aprovar. -->
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <title>Futty — validação final (3.49 → 3.55)</title>
+  <link rel="stylesheet" href="/src/index.css" />
+  <link rel="stylesheet" href="/src/styles/app.css" />
+  <style>
+    body { margin: 0; background: #08080c; color: #fff; font: 13px/1.6 monospace; padding: 24px 28px; }
+    h1 { font-size: 17px; color: #d4a017; margin: 0 0 6px; }
+    .lead { color: #8a94a6; margin: 0 0 26px; max-width: 1000px; }
+    section { border-top: 1px solid #1e2634; padding: 18px 0 26px; }
+    h2 { font-size: 13px; color: #5cf; margin: 0 0 4px; letter-spacing: 0.08em; }
+    .sub { color: #667a8c; font-size: 11px; margin: 0 0 14px; }
+    .row { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; }
+    .cell { text-align: center; }
+    .cap { color: #99a; font-size: 11px; margin-top: 7px; }
+    canvas, img { display: block; border: 1px solid #263040; }
+    .tile { width: 120px; height: 120px; border: 1px solid #263040; }
+    .box { width: 300px; }
+    .ok { color: #6f6; }
+  </style>
+</head>
+<body>
+  <h1>Futty — validação final · fases 3.49 → 3.55</h1>
+  <p class="lead">
+    Tudo aqui é renderizado AO VIVO a partir do código real (<code>app.css</code>,
+    <code>figurinhaCanvas.js</code>, <code>FuttyLoader.jsx</code>) — não são imagens
+    congeladas. Nada disto está commitado.
+  </p>
+
+  <section>
+    <h2>1 · CTAs GÉMEOS (3.50)</h2>
+    <p class="sub">Mesma classe .cta-gold. Zero diferenças nos 11 valores computados. Fundo rgba(30,24,8,0.9) · borda #d4a017 · texto #f0c94a · glow 0 0 9px/0.22 · glint 9s.</p>
+    <div class="row">
+      <div class="cell box">
+        <div class="cta-gold-glow" style="display:flex"><button class="btn hud-corners cta-gold" style="width:100%">↗ Compartilhar</button></div>
+        <div class="cap">Figurinha</div>
+      </div>
+      <div class="cell box">
+        <div class="cta-gold-glow" style="display:flex"><button class="btn hud-corners cta-gold" style="width:100%">Assinar Pro</button></div>
+        <div class="cap">Planos — idêntico</div>
+      </div>
+      <div class="cell box" id="congelado">
+        <div class="cta-gold-glow" style="display:flex"><button class="btn hud-corners cta-gold" style="width:100%">glint congelado</button></div>
+        <div class="cap">o varrimento, parado a meio</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 · BADGE "PLANO ATUAL" — cantos 45° (3.49)</h2>
+    <p class="sub">.hud-corners-s · border-radius: 0 (era var(--radius-pill)).</p>
+    <span class="hud-corners-s" style="display:inline-block;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.06em;color:#d4a017;border:1px solid rgba(212,160,23,0.5);padding:3px 8px">Plano atual</span>
+  </section>
+
+  <section>
+    <h2>3 · PLANOS TRANSLÚCIDOS — 0.60 (3.49)</h2>
+    <p class="sub">rgba(13,13,18,0.60) + blur(8px). Contraste no pior caso: features 9.54 · nome 15.33 · preço 6.45 (AA mín. 4.5). <span class="ok">Passa.</span></p>
+    <div style="position:relative;width:460px;padding:26px;background:radial-gradient(circle at 30% 40%, #6b5410, #1a1636 70%)">
+      <div class="hud-corners" style="padding:16px;background:rgba(13,13,18,0.6);backdrop-filter:blur(8px);border:1px solid var(--border-subtle)">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700">Pro</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:#d4a017">R$9,90/mês</div>
+        <ul style="list-style:none;margin:8px 0 0;padding:0;display:grid;gap:5px;font-size:13px;color:rgba(255,255,255,0.8)">
+          <li>✓ Tudo do Free</li><li>✓ 50 avatares IA/mês</li><li>✓ Sem anúncios</li>
+        </ul>
+      </div>
+      <div class="cap">a atmosfera atravessa o card</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4 · ÉPICO DOURADO + TILE (3.51)</h2>
+    <p class="sub">Arestas passivas: brancas 0.022 → douradas 0.065 (3.55). Vivas (12%): 0.115. Tile a intensidade 3.0 para se ler a 120px.</p>
+    <div class="row">
+      <div class="cell"><canvas id="epico" width="200" height="300"></canvas><div class="cap">card épico (intensidade 1)</div></div>
+      <div class="cell"><canvas id="tileE" class="tile" width="120" height="120"></canvas><div class="cap">tile épico (intensidade 3.0)</div></div>
+      <div class="cell"><canvas id="tileE1" class="tile" width="120" height="120"></canvas><div class="cap">tile a intensidade 1 — ilegível (comparação)</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5 · NEUTRO RE-BASEADO (3.51)</h2>
+    <p class="sub">Era #000 puro. Agora: mesma base escura do épico (desenharBaseEscura) + vinheta. Sem honeycomb, sem F, sem luz.</p>
+    <div class="row">
+      <div class="cell"><canvas id="neutro" width="200" height="300"></canvas><div class="cap">card neutro</div></div>
+      <div class="cell"><div class="tile" style="background:linear-gradient(180deg,#16161c 0%,#1d1d24 50%,#101014 100%)"></div><div class="cap">tile neutro (gradiente liso)</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>6 · LOADING ÚNICO — F a 129 (3.52 / 3.53)</h2>
+    <p class="sub">&lt;LoadingFutty /&gt; = F 129, centrado, sem texto. Os três sítios usam o MESMO componente — a transição já não muda de tamanho nem ganha legenda.</p>
+    <div class="row">
+      <div class="cell"><div id="l1" style="width:260px;height:200px;background:#050810;display:grid;place-items:center"></div><div class="cap">arranque / Suspense (LoadingScreen)</div></div>
+      <div class="cell"><div id="l2" style="width:260px;height:200px;background:linear-gradient(160deg,#1b2433,#0a0d14);display:grid;place-items:center"></div><div class="cap">Perfil — era "branco + Carregando…"</div></div>
+      <div class="cell"><div id="l3" style="width:260px;height:200px;background:rgba(5,8,16,0.9);display:grid;place-items:center"></div><div class="cap">overlay de geração do avatar</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>7 · LOCKUP DA LANDING — F em metal + wordmark (3.54)</h2>
+    <p class="sub">F 124 com gradiente metálico no fill · sombra dura 0 2px 0 (corpo 3D) + difusa 0 8px 24px · glint 6s/1s/0.35 · glow a respirar 0.3↔0.45 em 5s · entrada 0.92→1. Wordmark 44 dourado liso, sem animação. Recarrega a página para ver a entrada.</p>
+    <div class="row">
+      <div class="cell" style="background:radial-gradient(circle at 50% 40%, #14142a, #08080c 70%);padding:34px 60px">
+        <div id="lockup"></div>
+        <div class="cap">o lockup real, ao vivo</div>
+      </div>
+      <div class="cell" style="padding:34px 20px">
+        <div id="lockupRM"></div>
+        <div class="cap">o mesmo com prefers-reduced-motion<br>(material + sombras ficam, movimento morre)</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>8 · F 3D MULTI-CAMADA — antes vs depois (3.56)</h2>
+    <p class="sub">ANTES (3.54): fill de gradiente + sombra dura. DEPOIS (3.56): 5 cópias de extrusão (#2e1f02→#5a3c05) + face com gradiente de curvatura 135° + bisel de dois strokes opostos + especular difuso na haste. A sombra dura saiu — a extrusão substitui-a.</p>
+    <div class="row" style="background:radial-gradient(circle at 50% 40%, #14142a, #08080c 70%);padding:34px 40px">
+      <div class="cell"><svg id="fAntes" width="150" height="150" viewBox="0 0 1080 1080"></svg><div class="cap">ANTES — fill + sombra</div></div>
+      <div class="cell"><div id="fDepois"></div><div class="cap">DEPOIS — multi-camada, ao vivo</div></div>
+      <div class="cell"><svg id="fCamadas" width="150" height="150" viewBox="0 0 1080 1080"></svg><div class="cap">só a extrusão (o "corpo")</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>9 · PLANOS — VIDRO 0.45 + blur 4px (3.57)</h2>
+    <p class="sub">rgba(13,13,18,0.45) + <b>blur(4px)</b> · 12 partículas, tamanho +50%, tecto 0.75, durações ×1.45 (10.3s → 15.0s ≈ 59 px/s). O blur(10px) da 3.56 APAGAVA as partículas — ver A/B abaixo. Contraste no pior caso: features 7.58 · nome 12.18 · preço 5.13. <span class="ok">Passa AA.</span></p>
+    <div id="vidro" style="position:relative;width:480px;height:230px;overflow:hidden;background:radial-gradient(circle at 30% 40%, #6b5410, #1a1636 70%)">
+      <div id="parts" style="position:absolute;inset:0"></div>
+      <div class="hud-corners" style="position:absolute;left:24px;right:24px;top:30px;padding:16px;background:rgba(13,13,18,0.45);backdrop-filter:blur(4px);border:1px solid var(--border-subtle)">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700">Pro</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:#d4a017">R$9,90/mês</div>
+        <ul style="list-style:none;margin:8px 0 0;padding:0;display:grid;gap:5px;font-size:13px;color:rgba(255,255,255,0.8)">
+          <li>✓ Tudo do Free</li><li>✓ 50 avatares IA/mês</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cap" style="text-align:left">as partículas passam ATRAVÉS do card</div>
+  </section>
+
+  <script type="module">
+    import RefreshRuntime from '/@react-refresh';
+    RefreshRuntime.injectIntoGlobalHook(window);
+    window.$RefreshReg$ = () => {};
+    window.$RefreshSig$ = () => (type) => type;
+    window.__vite_plugin_react_preamble_installed__ = true;
+  </script>
+  <script type="module">
+    const st = document.createElement('style');
+    st.textContent = '#congelado .cta-gold::after { animation-delay: -0.35s !important; animation-play-state: paused !important; }';
+    document.head.appendChild(st);
+
+    const { desenharFundoEpico, desenharFundoNeutro } = await import('/src/utils/figurinhaCanvas.js');
+    await desenharFundoEpico(document.getElementById('epico').getContext('2d'), 200, 300);
+    await desenharFundoEpico(document.getElementById('tileE').getContext('2d'), 120, 120, { intensidade: 3.0 });
+    await desenharFundoEpico(document.getElementById('tileE1').getContext('2d'), 120, 120, { intensidade: 1 });
+    desenharFundoNeutro(document.getElementById('neutro').getContext('2d'), 200, 300);
+
+    const reactMod = await import('/node_modules/.vite/deps/react.js');
+    const React = reactMod.default?.createElement ? reactMod.default : reactMod;
+    const rdm = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const createRoot = rdm.createRoot || rdm.default?.createRoot;
+    const { default: LoadingFutty } = await import('/src/components/LoadingFutty.jsx');
+    for (const id of ['l1', 'l2', 'l3']) {
+      createRoot(document.getElementById(id)).render(React.createElement(LoadingFutty));
+    }
+
+    const { default: FuttyLockup } = await import('/src/components/FuttyLockup.jsx');
+    createRoot(document.getElementById('lockup')).render(
+      React.createElement(FuttyLockup, { size: 124, wordmarkSize: 44 })
+    );
+    createRoot(document.getElementById('lockupRM')).render(
+      React.createElement(FuttyLockup, { size: 124, wordmarkSize: 44 })
+    );
+    // simula reduced-motion no 2º: aplica as mesmas regras do @media à mão
+    const rm = document.createElement('style');
+    rm.textContent = `
+      #lockupRM .futty-lockup-f { animation: none !important;
+        filter: drop-shadow(0 8px 24px rgba(0,0,0,0.5)) drop-shadow(0 0 18px rgba(212,160,23,0.375)) !important; }
+      #lockupRM .futty-lockup-glint { animation: none !important; display: none !important; }`;
+    document.head.appendChild(rm);
+
+    // ── secção 8: o F ANTES (a receita da 3.54) e só a extrusão ──
+    const { F_CONTORNO } = await import('/src/utils/futtyMonograma.js');
+    const NS = 'http://www.w3.org/2000/svg';
+    const svgAntes = document.getElementById('fAntes');
+    svgAntes.innerHTML = `<defs><linearGradient id="mAntes" gradientTransform="rotate(70 0.5 0.5)">
+        <stop offset="0" stop-color="#f7e08a"/><stop offset="0.45" stop-color="#d4a017"/><stop offset="1" stop-color="#8a6508"/>
+      </linearGradient></defs>
+      <path d="${F_CONTORNO}" fill="url(#mAntes)"/>`;
+    svgAntes.style.filter = 'drop-shadow(0 2px 0 rgba(90,60,5,0.8)) drop-shadow(0 8px 24px rgba(0,0,0,0.5)) drop-shadow(0 0 18px rgba(212,160,23,0.375))';
+    svgAntes.style.overflow = 'visible';
+
+    const cores = ['#2e1f02', '#3a2703', '#463004', '#503705', '#5a3c05'];
+    document.getElementById('fCamadas').innerHTML = cores.map((c, i) => {
+      const d = (5 - i) * 9;
+      return `<path d="${F_CONTORNO}" fill="${c}" transform="translate(${d} ${d})"/>`;
+    }).join('');
+
+    createRoot(document.getElementById('fDepois')).render(
+      React.createElement(FuttyLockup, { size: 150, wordmarkSize: 0 })
+    );
+
+    // ── secção 9: partículas reais (mesma classe .fig-particle da app) ──
+    const PARTS = [
+      { left: 6, size: 4, cor: '#f5e070', dur: 9.5, delay: 0 }, { left: 14, size: 3, cor: '#d4a017', dur: 11.2, delay: 2.6 },
+      { left: 23, size: 5, cor: '#f5e070', dur: 8.8, delay: 5.4 }, { left: 31, size: 3, cor: '#f5e070', dur: 12.1, delay: 1.4 },
+      { left: 40, size: 4, cor: '#d4a017', dur: 10.3, delay: 4.2 }, { left: 48, size: 3, cor: '#f5e070', dur: 9.1, delay: 6.8 },
+      { left: 57, size: 5, cor: '#f5e070', dur: 10.9, delay: 3.1 }, { left: 65, size: 3, cor: '#d4a017', dur: 8.4, delay: 7.5 },
+      { left: 74, size: 4, cor: '#f5e070', dur: 11.7, delay: 1.9 }, { left: 82, size: 3, cor: '#f5e070', dur: 9.8, delay: 5.9 },
+      { left: 89, size: 5, cor: '#d4a017', dur: 12.4, delay: 0.8 }, { left: 95, size: 3, cor: '#f5e070', dur: 10.1, delay: 4.7 },
+    ];
+    const cont = document.getElementById('parts');
+    cont.style.containerType = 'size';
+    cont.innerHTML = PARTS.map(p =>
+      `<span class="fig-particle" style="position:absolute;left:${p.left}%;top:-5%;width:${p.size}px;height:${p.size}px;border-radius:50%;background:${p.cor};box-shadow:0 0 6px ${p.cor};animation-duration:${p.dur}s;animation-delay:${p.delay}s"></span>`
+    ).join('');
+  </script>
+</body>
+</html>

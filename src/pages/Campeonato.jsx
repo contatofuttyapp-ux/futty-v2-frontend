@@ -8,7 +8,7 @@ import { useTeam } from '../hooks/useTeam';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao, textoJornada } from '../utils/campeonato';
 import Topbar from '../components/Topbar';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 import CampeonatoStandings from '../components/CampeonatoStandings';
 import RegistarJornada from '../components/RegistarJornada';
@@ -57,7 +57,7 @@ export default function Campeonato() {
       <Topbar title="Campeonato" back={`/equipa/${slug}`} />
       <main className="app-main">
         {loading ? (
-          <Loading text="Carregando…" />
+          <LoadingFutty />
         ) : !c ? (
           <p className="muted">Este time ainda não tem campeonato.</p>
         ) : (

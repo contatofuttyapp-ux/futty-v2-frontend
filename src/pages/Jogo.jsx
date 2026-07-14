@@ -6,7 +6,7 @@ import { useApi } from '../hooks/useApi';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
 import { initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 import DrawnTeams from '../components/DrawnTeams';
 import CampoSorteio from '../components/CampoSorteio';
 import ResultadoEditor from '../components/ResultadoEditor';
@@ -83,7 +83,7 @@ export default function Jogo() {
       <div className="app-shell">
         <Topbar back={`/equipa/${slug}/jogos`} />
         <main className="app-main">
-          <Loading text="Carregando jogo…" />
+          <LoadingFutty />
         </main>
       </div>
     );

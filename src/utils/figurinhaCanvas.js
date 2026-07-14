@@ -19,20 +19,52 @@ function canvasParaBlob(canvas) {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
 }
 
-// Fundo "Épico" — honeycomb alinhado ao ângulo do F + monograma como marca de água,
-// placa 3D (pseudo-perspectiva), luz central e vinheta. EXPORTADO para o tile da UI
-// renderizar o FUNDO REAL em miniatura (em vez de uma imitação em CSS/SVG).
-// Ordem: base → [hexágonos + F, DESFOCADOS] → luz central → vinheta.
-export async function desenharFundoEpico(ctx, W, H) {
-  const k = W / 400; // mesma convenção do card: os valores fixos escalam com a largura
-
-  // a) Base: vertical muito escuro, quase monocromático (nítida).
+// FASE 3.51 — BASE ESCURA partilhada: fonte de verdade única do gradiente vertical.
+// O 'épico' constrói-se por cima dela; o 'neutro' é ela + vinheta, e nada mais. Antes
+// o neutro era preto puro (#000) e destoava — agora os dois fundos partem do mesmo
+// sítio e mudam só no que se lhes acrescenta.
+function desenharBaseEscura(ctx, W, H) {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#16161c');
   g.addColorStop(0.5, '#1d1d24');
   g.addColorStop(1, '#101014');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
+}
+
+// FASE 3.51 — VINHETA partilhada (elíptica, só nas margens), pelo mesmo motivo.
+function desenharVinheta(ctx, W, H) {
+  ctx.save();
+  ctx.translate(W / 2, H * 0.45);
+  ctx.scale(1, H / W);
+  const vin = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.62);
+  vin.addColorStop(0, 'rgba(20,12,0,0)');
+  vin.addColorStop(0.6, 'rgba(20,12,0,0)');
+  vin.addColorStop(1, 'rgba(20,12,0,0.55)');
+  ctx.fillStyle = vin;
+  ctx.fillRect(-W, -H, W * 2, H * 2);
+  ctx.restore();
+}
+
+// Fundo "Neutro" — a base partilhada + vinheta. Sem honeycomb, sem F, sem luz radial.
+export function desenharFundoNeutro(ctx, W, H) {
+  desenharBaseEscura(ctx, W, H);
+  desenharVinheta(ctx, W, H);
+}
+
+// Fundo "Épico" — honeycomb alinhado ao ângulo do F + monograma como marca de água,
+// placa 3D (pseudo-perspectiva), luz central e vinheta. EXPORTADO para o tile da UI
+// renderizar o FUNDO REAL em miniatura (em vez de uma imitação em CSS/SVG).
+// Ordem: base → [hexágonos + F, DESFOCADOS] → luz central → vinheta.
+//
+// `intensidade` multiplica SÓ o alpha das arestas do honeycomb. O card usa 1 (a
+// discrição desenhada); o tile de 120×120 usa 3.0, senão o padrão desaparece na
+// miniatura — a mesma geometria, legível à escala a que é vista.
+export async function desenharFundoEpico(ctx, W, H, { intensidade = 1 } = {}) {
+  const k = W / 400; // mesma convenção do card: os valores fixos escalam com a largura
+
+  // a) Base: vertical muito escuro, quase monocromático (nítida).
+  desenharBaseEscura(ctx, W, H);
 
   // b) PADRÃO num canvas OFFSCREEN → transferido com blur (só o padrão desfoca;
   //    base, luz e vinheta ficam nítidas). Seed FIXA → determinístico.
@@ -76,7 +108,15 @@ export async function desenharFundoEpico(ctx, W, H) {
         else octx.lineTo(px, py);
       }
       octx.closePath();
-      octx.strokeStyle = rnd() < 0.12 ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.022)';
+      // FASE 3.51 — as arestas passivas eram brancas (0.022); passaram a DOURADAS
+      // (o dourado sobre esta base tem menos contraste que o branco, daí o alpha
+      // subir). FASE 3.55 — mais dourado: 0.045 → 0.065 e 0.08 → 0.115. As "vivas"
+      // são 12% das células. `intensidade` só existe para o tile (ver assinatura).
+      const aPassiva = 0.065 * intensidade;
+      const aViva = 0.115 * intensidade;
+      octx.strokeStyle = rnd() < 0.12
+        ? `rgba(212,160,23,${Math.min(aViva, 1)})`
+        : `rgba(212,160,23,${Math.min(aPassiva, 1)})`;
       octx.stroke();
       // Monograma F: contra-rodado → haste PARALELA às linhas da grelha.
       if (fLogo && rnd() < 0.08) {
@@ -107,22 +147,13 @@ export async function desenharFundoEpico(ctx, W, H) {
   ctx.fillStyle = luz;
   ctx.fillRect(0, 0, W, H);
 
-  // d) Vinheta radial escura só nas margens (elíptica, via scale).
-  ctx.save();
-  ctx.translate(W / 2, H * 0.45);
-  ctx.scale(1, H / W);
-  const vin = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.62);
-  vin.addColorStop(0, 'rgba(20,12,0,0)');
-  vin.addColorStop(0.6, 'rgba(20,12,0,0)');
-  vin.addColorStop(1, 'rgba(20,12,0,0.55)');
-  ctx.fillStyle = vin;
-  ctx.fillRect(-W, -H, W * 2, H * 2);
-  ctx.restore();
+  // d) Vinheta — a partilhada com o neutro (ver desenharVinheta).
+  desenharVinheta(ctx, W, H);
 }
 
 // Desenha o card 2:3 num canvas próprio (largura×altura). `k` escala os valores
 // fixos (fontes, badge, frame) para render nativo a qualquer resolução.
-async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, incluirAvatar = true, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false }) {
+async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false }) {
   const W = largura;
   const H = altura;
   const k = largura / 400;
@@ -422,8 +453,9 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
 
   // 1. FUNDO
   if (fundo === 'preto') {
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, W, H);
+    // FASE 3.51 — 'preto' (label "Neutro") era #000 puro e destoava do épico. Passa a
+    // partilhar a base escura: mesmo gradiente + vinheta, sem honeycomb/F/luz.
+    desenharFundoNeutro(ctx, W, H);
   } else if (fundo === 'gradiente') {
     await desenharFundoEpico(ctx, W, H);
   } else {
@@ -457,7 +489,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   if (apenasMoldura) {
     // moldura: sem avatar nem iniciais de fallback.
   } else if (avatar) {
-    if (incluirAvatar) desenharAvatar();
+    desenharAvatar();
   } else {
     const { a, b } = gradienteAvatar(nome);
     const grd = ctx.createLinearGradient(0, H * 0.3, 0, H);

@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
 import { POSICOES } from '../utils/posicoes';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 import PlayerAvatar from '../components/PlayerAvatar';
 import TeamAvatar from '../components/TeamAvatar';
@@ -299,7 +299,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
     }
   }
 
-  if (data === undefined) return <Loading text="Carregando…" />;
+  if (data === undefined) return <LoadingFutty />;
   const c = data.campeonato;
 
   // C) TERMINADO
@@ -466,7 +466,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
     };
   }, [stats]);
 
-  if (!stats) return <Loading text="Carregando…" />;
+  if (!stats) return <LoadingFutty />;
   const pj = stats.proximo_jogo;
   const art = stats.artilheiro;
 
@@ -1029,7 +1029,7 @@ function TabMembros({ slug, meId, showToast }) {
     }
   }
 
-  if (membros === null) return <Loading text="Carregando membros…" />;
+  if (membros === null) return <LoadingFutty />;
 
   // Activos primeiro, inactivos no fundo (mantém a ordem do servidor dentro de cada grupo).
   const membrosOrdenados = [...membros].sort((a, b) => (a.ativo === false ? 1 : 0) - (b.ativo === false ? 1 : 0));
@@ -1299,7 +1299,7 @@ function TabConvites({ slug, showToast }) {
     }
   }
 
-  if (convites === null) return <Loading text="Carregando convites…" />;
+  if (convites === null) return <LoadingFutty />;
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -1665,7 +1665,7 @@ function TabJogos({ slug, showToast, navigate }) {
     showToast('Jogo atualizado!');
   }
 
-  if (games === null) return <Loading text="Carregando jogos…" />;
+  if (games === null) return <LoadingFutty />;
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -1883,7 +1883,7 @@ function TabResultados({ slug, showToast }) {
     showToast('Resultado salvo! Aparece na Resenha.');
   }
 
-  if (games === null) return <Loading text="Carregando jogos…" />;
+  if (games === null) return <LoadingFutty />;
   const lista = modo === 'sem' ? semResultado : comResultado;
 
   return (
@@ -2000,7 +2000,7 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
           <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado — {formatDateTime(jogo.data)}</h2>
 
           {!detail ? (
-            <Loading text="Carregando jogo…" />
+            <LoadingFutty />
           ) : (
             <>
               {/* 1. CAMPEÃO */}
@@ -2102,7 +2102,7 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
     };
   }, [slug, showToast]);
 
-  if (membros === null) return <Loading text="Carregando estatísticas…" />;
+  if (membros === null) return <LoadingFutty />;
 
   const topGols = [...membros].sort((a, b) => (b.gols || 0) - (a.gols || 0)).slice(0, 5);
   const maxGols = topGols[0]?.gols || 0;
@@ -2190,7 +2190,7 @@ function TabDenuncias({ showToast }) {
     }
   }
 
-  if (denuncias === null) return <Loading text="Carregando denúncias…" />;
+  if (denuncias === null) return <LoadingFutty />;
   if (denuncias.length === 0) {
     return (
       <div className="empty-state" style={{ borderColor: 'rgba(139,92,246,0.4)' }}>
@@ -2346,7 +2346,7 @@ export default function AdminPanel() {
       <div className="app-topbar__line" />
 
       {!team ? (
-        <main className="app-main"><Loading text="Carregando…" /></main>
+        <main className="app-main"><LoadingFutty /></main>
       ) : (
         <div className="admin-layout">
           <aside className="admin-sidebar">

@@ -7,7 +7,7 @@ import { useApi } from '../hooks/useApi';
 import { useRanking } from '../hooks/useRanking';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset, iniciaisNome } from '../utils/avatar';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 import PlayerAvatar from '../components/PlayerAvatar';
 import AvatarFrame from '../components/AvatarFrame';
 import Topbar from '../components/Topbar';
@@ -123,7 +123,7 @@ export default function Ranking() {
         {error && <div className="alert alert--error">{error}</div>}
 
         {loading && ranking.length === 0 ? (
-          <Loading />
+          <LoadingFutty />
         ) : ranking.length === 0 ? (
           <p className="muted">Ainda não há jogadores.</p>
         ) : (

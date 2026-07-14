@@ -12,6 +12,7 @@ import UploadComCrop from '../components/UploadComCrop';
 import PlayerAvatar from '../components/PlayerAvatar';
 import Icon from '../components/Icon';
 import Toast from '../components/Toast';
+import LoadingFutty from '../components/LoadingFutty';
 import '../styles/app.css';
 
 // Avatares genéricos existentes em /public/avatares/genericos (frontend).
@@ -146,11 +147,20 @@ export default function MeuPerfil() {
   }
 
   if (!perfil) {
+    // FASE 3.53 — era o shell da página com o título + <p>Carregando…</p>, e lia-se
+    // como "branco + texto". Passa ao padrão único: só o F, sem título nem legenda.
+    // O ramo de ERRO mantém a página com título — aí o utilizador precisa do contexto.
     return (
       <div className="app-shell">
         <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-          <h1 className="app-page-title">O meu perfil</h1>
-          {erro ? <div className="alert alert--error">{erro}</div> : <p className="muted">Carregando…</p>}
+          {erro ? (
+            <>
+              <h1 className="app-page-title">O meu perfil</h1>
+              <div className="alert alert--error">{erro}</div>
+            </>
+          ) : (
+            <LoadingFutty />
+          )}
         </main>
       </div>
     );

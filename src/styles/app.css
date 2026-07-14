@@ -38,19 +38,7 @@
 }
 
 /* Marca "FUT" (logótipo) */
-.app-brand {
-  font-family: 'Rajdhani', var(--sans);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: var(--neon);
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
-  text-decoration: none;
-}
 
-.app-brand__dot {
-  color: #d4a017;
-}
 
 /* Micro-glow dourado nos avatares (top 3 do ranking, perfil) */
 .pavatar--gold {
@@ -58,9 +46,6 @@
   box-shadow: 0 0 6px rgba(212, 160, 23, 0.4);
 }
 
-.app-brand:hover {
-  text-decoration: none;
-}
 
 /* Botão voltar (ícone ChevronLeft) */
 .topbar-back {
@@ -193,11 +178,6 @@
 }
 
 /* Grelha de equipas */
-.team-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-}
 
 .team-card {
   display: flex;
@@ -648,22 +628,7 @@
 }
 
 /* Votação — estrelas */
-.vote-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  margin-bottom: 8px;
-}
 
-.vote-row__name {
-  flex: 1;
-  font-weight: 600;
-  min-width: 0;
-}
 
 .stars {
   display: inline-flex;
@@ -735,48 +700,13 @@
   color: var(--text-dim);
 }
 
-.rank-score {
-  font-weight: 800;
-  font-size: 18px;
-  color: var(--neon);
-}
-
-.rank-score--none {
-  color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 600;
-}
 
 /* ===== Ranking completo (v1) ===== */
 
 /* Tabs de período */
-.rank-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin: 4px 0 16px;
-}
 
 /* Inativos: roxo com borda. Ativo: verde (estado ativo). */
-.rank-tab {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(124, 58, 237, 0.5);
-  background: transparent;
-  color: #b69cff;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  letter-spacing: 0.02em;
-  transition: all 0.12s;
-}
 
-.rank-tab--active {
-  border-color: rgba(139, 92, 246, 0.45);
-  background: rgba(139, 92, 246, 0.1);
-  color: var(--neon);
-}
 
 /* Avatar com glow neon */
 .pavatar {
@@ -821,12 +751,6 @@
 }
 
 /* Etiquetas roxas (cabeça de chave / goleiro) */
-.player-tag {
-  font-size: 12px;
-  font-weight: 700;
-  color: #b69cff;
-  margin-top: 2px;
-}
 
 /* Botões de ação por linha (Votar / Ver perfil) */
 .rank-actions {
@@ -886,111 +810,12 @@
 }
 
 /* Perfil do jogador */
-.profile-stats {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 14px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-dim);
-  margin: 12px 0;
-  text-align: center;
-}
 
-.profile-stats b {
-  font-weight: 800;
-}
-
-.profile-card {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 16px;
-  margin-top: 16px;
-}
-
-.profile-photos {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.profile-photos img {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  display: block;
-}
-
-.gallery-item {
-  position: relative;
-  margin: 0;
-}
-
-.gallery-tag {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(8, 8, 8, 0.78);
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-
-.gallery-tag--vitoria {
-  color: #d4a017;
-}
-.gallery-tag--artilharia {
-  color: var(--neon);
-}
-.gallery-tag--destaque {
-  color: #b69cff;
-}
-
-.radar-title {
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--purple);
-  text-align: center;
-  letter-spacing: 0.04em;
-  margin: 8px 0 0;
-}
 
 /* Aproxima o gráfico radar do título (remove o espaço em branco do SVG) */
-.radar-wrap {
-  margin-top: -26px;
-}
 
 /* ===== Perfil do jogador ===== */
-.profile-name {
-  text-align: center;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 16px 0 2px;
-}
 
-.profile-sub {
-  text-align: center;
-  font-size: 13px;
-  color: var(--text-dim);
-  margin-bottom: 6px;
-}
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin: 18px 0 10px;
-}
 
 @media (max-width: 480px) {
   .stat-grid {
@@ -998,39 +823,6 @@
   }
 }
 
-.stat-chip {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 6px;
-  text-align: center;
-}
-
-.stat-chip__val {
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.stat-chip__lbl {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-dim);
-  margin-top: 6px;
-}
-
-.profile-media {
-  display: flex;
-  justify-content: center;
-  margin: 6px 0 4px;
-}
-
-.profile-rank-pos {
-  text-align: center;
-  font-size: 14px;
-  margin: 0 0 14px;
-}
 
 /* ===== BottomNav ===== */
 .bottom-nav {
@@ -1165,21 +957,6 @@
   transform: scale(0.95);
 }
 
-.inicio-avatar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-top: 8px;
-}
-
-.inicio-name {
-  font-weight: 800;
-  font-size: 18px;
-}
 
 .inicio-stats {
   font-size: 13px;
@@ -1344,9 +1121,6 @@
   60% { transform: scale(1.2) rotate(5deg); opacity: 1; }
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
-.trophy-entrance {
-  animation: trophyEntrance 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
 
 /* Foco dos inputs do perfil */
 .perfil-form input:focus {
@@ -1355,11 +1129,6 @@
 }
 
 /* Cantos em L dourados (AvatarFrame) — luz a percorrer os 4 cantos em sequência */
-@keyframes snakeGlow {
-  0%, 100% { opacity: 0.15; box-shadow: none; }
-  25% { opacity: 1; box-shadow: 0 0 8px rgba(212, 160, 23, 0.8), 0 0 16px rgba(212, 160, 23, 0.4); }
-  50% { opacity: 0.15; box-shadow: none; }
-}
 
 /* Cantos em L (AvatarFrame) — respiração lenta e elegante (só opacity). */
 @keyframes cornerBreath {
@@ -1481,14 +1250,20 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   FASE 3.47 — LEI DOS GÉMEOS: o CTA dourado é UM só. "Compartilhar" (Figurinha) e
-   "Assinar Pro" (Planos) partilham estas classes; mexer aqui mexe nos dois.
+   LEI DOS GÉMEOS (3.47 → suspensa na 3.49 → RESTAURADA na 3.50): o CTA dourado é UM
+   só. "Compartilhar" (Figurinha) e "Assinar Pro" (Planos) usam estas classes e são
+   agora IDÊNTICOS — zero excepções. Mexer aqui mexe nos dois.
+
+   A receita é a escura da 3.49 (era gradiente dourado cheio até à 3.48): a identidade
+   dourada fica na borda e no texto, o brilho recua. A variante .cta-gold--outline que
+   a 3.49 criou para o Compartilhar desapareceu — colapsou nesta classe quando o Pro
+   adoptou a mesma receita, e com ela o keyframe ctaGoldSweep (4s), sem utilizadores.
 
    São DUAS classes e não uma por uma razão de render: o glow tem de ficar num
    wrapper SEM clip. A ordem de composição do CSS é filter → clip-path, por isso um
    drop-shadow no próprio botão seria cortado pelo clip-path a 45° do .hud-corners.
      .cta-gold-glow → wrapper (só o glow)
-     .cta-gold      → botão (gradiente, texto, altura, cantos, shine)
+     .cta-gold      → botão (fundo, borda, texto, altura, cantos, shine)
    ───────────────────────────────────────────────────────────────────────────── */
 .cta-gold-glow {
   filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 9px rgba(212, 160, 23, 0.22));
@@ -1497,27 +1272,25 @@
   position: relative;
   overflow: hidden;
   height: 46px;
-  border: none;
+  background: rgba(30, 24, 8, 0.9);
+  border: 1.5px solid #d4a017;
   font-weight: 800;
-  color: #0d0d12;
-  background: linear-gradient(135deg, #f0c94a, #d4a017, #b8860b);
+  color: #f0c94a;
 }
-/* Shine — o VARRIMENTO tem a mesma velocidade do brilho do card (futtyFrameShine:
-   3.6s de passagem), mas passa o dobro das vezes: período 4s em vez de 8s. Como o
-   sweep continua a durar 3.6s absolutos, ocupa agora 90% do ciclo e a pausa encolhe
-   de 4.4s para 0.4s — ou seja, quase encadeado. Mexer aqui mexe nos DOIS CTAs. */
+/* Um GLINT, não um farol: passa raro (9s), varre depressa (0.7s = 7.8% do ciclo) e
+   com alpha baixo (0.18). */
 .cta-gold::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(105deg, transparent 34%, rgba(255, 250, 225, 0.5) 50%, transparent 66%);
+  background: linear-gradient(105deg, transparent 34%, rgba(255, 250, 225, 0.18) 50%, transparent 66%);
   transform: translateX(-100%);
-  animation: ctaGoldSweep 4s ease-in-out infinite;
+  animation: ctaGlint 9s ease-in-out infinite;
 }
-@keyframes ctaGoldSweep {
-  0%        { transform: translateX(-100%); }
-  90%, 100% { transform: translateX(200%); }
+@keyframes ctaGlint {
+  0%          { transform: translateX(-100%); }
+  7.8%, 100%  { transform: translateX(200%); }
 }
 @media (prefers-reduced-motion: reduce) {
   .cta-gold::after { animation: none; }
@@ -1569,18 +1342,6 @@
 }
 /* Névoa dourada viva (fundo gradiente): camadas com durações primas (13/17/21),
    deriva de amplitude maior (±9%) para presença. */
-@keyframes futtyFog1 {
-  0%   { transform: translateX(-8%) translateY(4%) scale(1); }
-  100% { transform: translateX(9%) translateY(-5%) scale(1.14); }
-}
-@keyframes futtyFog2 {
-  0%   { transform: translateX(8%) scale(1); }
-  100% { transform: translateX(-9%) scale(1.12); }
-}
-@keyframes futtyFog3 {
-  0%   { transform: translateX(-6%) scale(1); }
-  100% { transform: translateX(7%) scale(1.1); }
-}
 .fig-bob {
   perspective: 900px;
   will-change: transform;
@@ -1605,26 +1366,6 @@
 }
 .fig-light {
   animation: futtyLight 9.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-.fig-fog-1 {
-  filter: blur(14px);
-  animation: futtyFog1 13s ease-in-out infinite alternate;
-}
-.fig-fog-2 {
-  filter: blur(14px);
-  animation: futtyFog2 17s ease-in-out infinite alternate;
-  animation-delay: 2s;
-}
-.fig-fog-3 {
-  filter: blur(14px);
-  animation: futtyFog3 21s ease-in-out infinite alternate;
-}
-@keyframes futtyBreathe {
-  0%, 100% { transform: scale(1); opacity: 0.7; }
-  50%      { transform: scale(1.06); opacity: 1; }
-}
-.fig-breathe {
-  animation: futtyBreathe 2.4s ease-in-out infinite;
 }
 /* Botão do controlo de zoom (estilo Futty, dourado). */
 .fig-zoom-btn {
@@ -1709,7 +1450,7 @@
    classe partilhada .cta-gold, agora ao ritmo do card (8s/45%). Ver "LEI DOS GÉMEOS". */
 @media (prefers-reduced-motion: reduce) {
   .fig-bob, .fig-sway, .fig-shadow, .fig-aura, .fig-name-glow,
-  .fig-particle, .fig-light, .fig-fog-1, .fig-fog-2, .fig-fog-3, .fig-breathe,
+  .fig-particle, .fig-light,
   .fig-frame-shine, .fig-dot-twinkle { animation: none; }
 }
 
@@ -1737,6 +1478,56 @@
 @media (prefers-reduced-motion: reduce) {
   .futty-loader-draw { animation: none; stroke-dashoffset: 0; }
   .futty-loader-shine { animation: none; display: none; }
+}
+
+/* FASE 3.54 — LOCKUP DA LANDING: o F em metal, com corpo e vida.
+   Três animações independentes na mesma <svg>, cada uma na sua propriedade para não
+   se atropelarem: transform+opacity (entrada), filter (sombras + glow a respirar) e,
+   dentro do SVG, um rect recortado pelo F (glint).
+   Sombras: a dura e curta (0 2px 0) dá o "corpo" 3D — é ela que faz o F parecer uma
+   peça e não um decalque; a difusa (0 8px 24px) levanta-o do fundo. Só o alpha do
+   glow respira; as duas sombras ficam fixas, senão o objecto parece flutuar. */
+@keyframes futtyLockupIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* FASE 3.56 — a sombra dura (0 2px 0) SAIU: a extrusão multi-camada do SVG passou a
+   ser o corpo 3D de verdade, e a sombra dura por cima dela só sujava a silhueta.
+   Ficam a difusa (elevação) e o glow que respira. */
+@keyframes futtyLockupGlow {
+  0%, 100% {
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5))
+            drop-shadow(0 0 18px rgba(212, 160, 23, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5))
+            drop-shadow(0 0 18px rgba(212, 160, 23, 0.45));
+  }
+}
+.futty-lockup-f {
+  will-change: transform, filter;
+  animation:
+    futtyLockupIn 0.6s ease-out both,
+    futtyLockupGlow 5s ease-in-out 0.6s infinite;
+}
+/* Glint: mais notório que o dos CTAs (alpha 0.35 vs 0.18) e mais raro (6s). O
+   varrimento dura 1s = 16.7% do ciclo. */
+@keyframes futtyLockupGlint {
+  0%           { transform: translateX(-100%); }
+  16.7%, 100%  { transform: translateX(200%); }
+}
+.futty-lockup-glint {
+  animation: futtyLockupGlint 6s ease-in-out 0.6s infinite;
+}
+/* Material e sombras ficam; morre o que se mexe. O filter passa a estático com o glow
+   no valor médio (0.375) — sem ele o F perdia as sombras todas. */
+@media (prefers-reduced-motion: reduce) {
+  .futty-lockup-f {
+    animation: none;
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5))
+            drop-shadow(0 0 18px rgba(212, 160, 23, 0.375));
+  }
+  .futty-lockup-glint { animation: none; display: none; }
 }
 
 /* Spinner reutilizável (botões em loading). */
@@ -1883,38 +1674,7 @@
 }
 
 /* Card de publicidade — 16:9, integrado no scroll */
-.ad-card {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  background: #080808;
-  border: 1px solid #141414;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 10px;
-}
 
-.ad-card__badge {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  z-index: 1;
-  font-size: 8px;
-  color: #222222;
-}
-
-.ad-card__video {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.ad-card__text {
-  text-align: center;
-  color: var(--text-dim);
-  font-weight: 600;
-  padding: 20px 0;
-}
 
 /* Estado vazio (sem equipas) */
 .home-empty {
@@ -1937,155 +1697,14 @@
 }
 
 /* ===== Slot machine do sorteio ===== */
-.slot-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  background: rgba(5, 8, 16, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  overflow-y: auto;
-}
 
-.slot-modal {
-  width: 100%;
-  max-width: 520px;
-  text-align: center;
-}
-
-.slot-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--neon);
-  margin-bottom: 18px;
-  letter-spacing: 0.02em;
-}
 
 /* Reels de ruído */
-.slot-reels {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
 
-.slot-cell {
-  flex: 0 0 auto;
-  width: 64px;
-  aspect-ratio: 2 / 3; /* proporção 2:3 */
-  border-radius: 10px;
-  background: #111111;
-  border: 1px solid var(--border);
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-}
-
-.slot-cell img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.slot-cell__ini {
-  font-weight: 800;
-  font-size: 20px;
-  color: var(--text-dim);
-}
 
 /* Resultado final */
-.slot-result {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-}
 
-.slot-team {
-  background: #0f0f0f;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px;
-}
-
-.slot-team__head {
-  font-weight: 800;
-  font-size: 14px;
-  margin-bottom: 8px;
-  text-align: left;
-}
-
-.slot-team__cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 
 /* Carta final do jogador (proporção 2:3, cor do time) */
-.slot-pcard {
-  position: relative;
-  width: 64px;
-  aspect-ratio: 2 / 3;
-  border-radius: 10px;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-}
 
-.slot-pcard--reserva {
-  background: #1c1c20;
-  border: 1px solid var(--border);
-}
 
-.slot-pcard__ini {
-  font-weight: 800;
-  font-size: 22px;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.slot-pcard__photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.slot-pcard__badges {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  display: flex;
-  gap: 3px;
-}
-
-.slot-badge {
-  font-size: 9px;
-  font-weight: 800;
-  padding: 1px 5px;
-  border-radius: 5px;
-}
-
-.slot-badge--gr {
-  background: var(--neon);
-  color: #04140d;
-}
-
-.slot-badge--c {
-  background: var(--purple);
-  color: #fff;
-}
-
-.slot-pcard__name {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 10px 4px 4px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  text-align: center;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}

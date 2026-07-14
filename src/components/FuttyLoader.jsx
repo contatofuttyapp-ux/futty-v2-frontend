@@ -17,19 +17,7 @@
 // As duas pontas são prolongadas 70 para lá da borda — o clip corta-as rente, dando
 // remates rectos perfeitos sem depender do strokeLinecap.
 import { useId } from 'react';
-
-// Contorno do F (public/favicon.svg) — usado como clip e como trilho ténue.
-const F_CONTORNO =
-  'M392.28 576.53 L648.8 576.5 L659.27 541.52 L398.39 541.46 L472.99 285.11 L828.3 195.25 ' +
-  'L839.06 152.39 L440.51 257.5 L210.76 1049.58 L110.36 1049.52 L360.67 177.16 L983.79 16.94 ' +
-  'L913.11 270.83 L548.68 369.73 L532.74 441.62 L798.55 441.67 L732.82 676.38 L462.77 676.38 ' +
-  'L354.76 1049.56 L249.78 1049.53 Z';
-
-// Espinha do F: extremidade inferior esquerda → haste → barra de topo (gancho) →
-// barra do meio (gancho) → extremidade inferior direita.
-const F_ESQUELETO =
-  'M141.16 1116.85 L400.59 217.33 L911.43 84.67 L870.71 233.04 L510.84 327.42 ' +
-  'L465.57 491.54 L728.91 491.60 L690.81 626.44 L427.53 626.46 L282.40 1116.65';
+import { F_CONTORNO, F_ESQUELETO } from '../utils/futtyMonograma';
 
 // FASE 3.48 — +35% em todos os tamanhos (default 44 → 59; overlay 64 → 86; botão 16 → 22).
 export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {

@@ -2,7 +2,7 @@
 // Página única com secções: hero, figurinha, como funciona, planos, CTA, footer.
 // Mobile-first, max-width 480px, tokens CSS + AuroraBg (global via Layout).
 import { Link } from 'react-router-dom';
-import FuttyLogo from '../components/FuttyLogo';
+import FuttyLockup from '../components/FuttyLockup';
 import PlayerCard from '../components/PlayerCard';
 import '../styles/app.css';
 
@@ -37,7 +37,7 @@ export default function LandingPage() {
       {/* 1. HERO */}
       <section style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 18, padding: '32px 0' }}>
         <div style={{ marginBottom: 'var(--space-lg)' }}>
-          <FuttyLogo variant="wordmark" size={72} color="#d4a017" />
+          <FuttyLockup size={124} wordmarkSize={44} />
         </div>
         <h1 style={{ ...H, fontSize: 34, lineHeight: 1.1, margin: 0 }}>O seu time.<br />A sua figurinha.</h1>
         <p style={{ fontSize: 15, lineHeight: 1.55, color: 'rgba(255,255,255,0.8)', margin: 0, maxWidth: 360 }}>

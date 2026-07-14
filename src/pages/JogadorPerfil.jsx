@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useApi } from '../hooks/useApi';
 import PlayerAvatar from '../components/PlayerAvatar';
 import TeamAvatar from '../components/TeamAvatar';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 import '../styles/app.css';
 
 const GOLD = '#d4a017';
@@ -83,7 +83,7 @@ export default function JogadorPerfil() {
         {error && <div className="alert alert--error">{error}</div>}
 
         {loading ? (
-          <Loading text="Carregando perfil…" />
+          <LoadingFutty />
         ) : !jogador ? (
           !error && <p className="muted">Jogador não encontrado.</p>
         ) : (

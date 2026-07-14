@@ -1,8 +1,10 @@
-// Futty v2.0 — Ecrã de carregamento inicial (logo + barra dourada).
+// Futty v2.0 — Ecrã de carregamento inicial (fallback do Suspense em App.jsx).
+// FASE 3.49 — era logo metálico + barra dourada de progresso; aparecia ANTES de
+// qualquer FuttyLoader e lia-se como um segundo loading, de outra marca. Agora é o
+// mesmo F que todo o resto do app usa: um só loading, do primeiro ms ao fim.
+// O contrato mantém-se (onDone, fade de saída, zIndex) — o App.jsx não muda.
 import { useEffect, useState } from 'react';
-import FuttyLogo from './FuttyLogo';
-
-const CSS = `@keyframes loadBar { from { width: 20%; opacity: 0.5; } to { width: 80%; opacity: 1; } }`;
+import LoadingFutty from './LoadingFutty';
 
 export default function LoadingScreen({ onDone }) {
   const [visible, setVisible] = useState(true);
@@ -22,21 +24,14 @@ export default function LoadingScreen({ onDone }) {
         inset: 0,
         zIndex: 9999,
         background: '#050810',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 22,
+        display: 'grid',
+        placeItems: 'center',
         opacity: visible ? 1 : 0,
         transition: 'opacity 0.4s ease',
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
-      <style>{CSS}</style>
-      <FuttyLogo variant="metallic" size={80} />
-      <div style={{ width: 180, height: 2, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-        <div style={{ height: '100%', background: '#d4a017', borderRadius: 2, animation: 'loadBar 2.0s ease-in-out infinite alternate' }} />
-      </div>
+      <LoadingFutty />
     </div>
   );
 }

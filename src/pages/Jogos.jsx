@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTeamGames } from '../hooks/useTeam';
 import { dayMonth, formatDateTime, STATUS_LABELS } from '../utils/format';
 import Topbar from '../components/Topbar';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 import '../styles/app.css';
 
 export default function Jogos() {
@@ -33,9 +33,7 @@ export default function Jogos() {
         {error && <div className="alert alert--error" style={{ marginTop: 16 }}>{error}</div>}
 
         {loading ? (
-          <div style={{ marginTop: 16 }}>
-            <Loading text="Carregando jogos…" />
-          </div>
+          <LoadingFutty />
         ) : games.length === 0 ? (
           <div className="empty-state" style={{ marginTop: 20 }}>
             <div className="empty-state__emoji">📅</div>

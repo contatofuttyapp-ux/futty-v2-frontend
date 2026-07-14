@@ -13,6 +13,7 @@ import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import PlayerCard from '../components/PlayerCard';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
+import LoadingFutty from '../components/LoadingFutty';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
@@ -28,7 +29,9 @@ const FUNDO_BG = {
   // Este valor é só o FALLBACK (base escura) até o render real do fundo ficar pronto
   // — o tile passa a mostrar o fundo verdadeiro em miniatura (ver `epicoTile`).
   gradiente: 'linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
-  preto: '#000000',
+  // FASE 3.51 — 'preto' (label "Neutro") re-baseado: mesma base escura do épico, sem
+  // padrão. O tile é o gradiente liso, condizente com o card real.
+  preto: 'linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
 };
 const TABS = [
   { k: 'fundo', label: 'Fundo' },
@@ -256,7 +259,9 @@ export default function Figurinha() {
         const cv = document.createElement('canvas');
         cv.width = 120;
         cv.height = 120;
-        await desenharFundoEpico(cv.getContext('2d'), 120, 120);
+        // FASE 3.51/3.55 — intensidade 3.0: a 120×120 as arestas a alpha do card (0.065)
+        // desapareciam. Mesma geometria, alpha subido só para a miniatura se ler.
+        await desenharFundoEpico(cv.getContext('2d'), 120, 120, { intensidade: 3.0 });
         if (vivo) setEpicoTile(cv.toDataURL('image/png'));
       } catch { /* fallback: fica o gradiente base do FUNDO_BG */ }
     })();
@@ -425,10 +430,13 @@ export default function Figurinha() {
     }
   }
 
-  // Overlay digno para o estado "a gerar" (sobre o card, tanto na estreia como
-  // no studio). Logo Futty metálico a respirar + texto.
   // Overlay do card: "a gerar" OU, se a geração falhou (≠403), estado de ERRO com
-  // retry. No erro o logo fica ESTÁTICO (sem respiração) — sinal de que parou.
+  // retry. No erro o logo fica ESTÁTICO — sinal de que parou.
+  //
+  // FASE 3.57 — usa o FuttyLoader DIRECTO, não o <LoadingFutty />. O LoadingFutty é o
+  // padrão de ECRÃ e traz minHeight: calc(100dvh - 120px) (~724px); dentro deste card
+  // de ~450px transbordava e empurrava o F para baixo. Aqui o centro é o do CARD, e
+  // quem o dá é o placeItems:center do próprio overlay.
   const overlayGerando = (
     <div style={{ position: 'absolute', inset: 0, zIndex: 8, clipPath: CLIP_OCTOGONO, background: 'rgba(5,8,16,0.75)', backdropFilter: 'blur(6px)', display: 'grid', placeItems: 'center' }}>
       {erroIA ? (
@@ -440,7 +448,7 @@ export default function Figurinha() {
           </button>
         </div>
       ) : (
-        <FuttyLoader size={86} label="A criar o teu avatar…" />
+        <FuttyLoader size={129} label={null} />
       )}
     </div>
   );
@@ -450,8 +458,8 @@ export default function Figurinha() {
     return (
       <div className="app-shell">
         <Topbar hud="FIGURINHA" />
-        <main className="app-main" style={{ display: 'grid', placeItems: 'center', minHeight: '40vh' }}>
-          <FuttyLoader />
+        <main className="app-main">
+          <LoadingFutty />
         </main>
       </div>
     );

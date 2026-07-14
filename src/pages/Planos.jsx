@@ -38,14 +38,22 @@ const PLANOS = [
   },
 ];
 
-// Atmosfera: partículas douradas de fundo. Densidade METADE da figurinha (6 vs 14).
+// Atmosfera: partículas douradas de fundo. FASE 3.56 — o vidro (0.45) só vale a pena
+// se houver o que ver por trás: 6 → 12 partículas, tamanho +50% (2-3 → 3-5) e
+// #f5e070 dominante (2 em cada 3). Valores fixos por partícula → nunca sincronizam.
 const PLANOS_PARTICULAS = [
-  { left: 10, size: 3, cor: '#f5e070', dur: 9.5, delay: 0 },
-  { left: 27, size: 2, cor: '#d4a017', dur: 11.2, delay: 2.6 },
-  { left: 44, size: 3, cor: '#f5e070', dur: 8.8, delay: 5.4 },
-  { left: 62, size: 2, cor: '#d4a017', dur: 12.1, delay: 1.4 },
-  { left: 79, size: 3, cor: '#f5e070', dur: 10.3, delay: 4.2 },
-  { left: 92, size: 2, cor: '#d4a017', dur: 9.1, delay: 6.8 },
+  { left: 6, size: 4, cor: '#f5e070', dur: 13.8, delay: 0 },
+  { left: 14, size: 3, cor: '#d4a017', dur: 16.2, delay: 2.6 },
+  { left: 23, size: 5, cor: '#f5e070', dur: 12.8, delay: 5.4 },
+  { left: 31, size: 3, cor: '#f5e070', dur: 17.5, delay: 1.4 },
+  { left: 40, size: 4, cor: '#d4a017', dur: 14.9, delay: 4.2 },
+  { left: 48, size: 3, cor: '#f5e070', dur: 13.2, delay: 6.8 },
+  { left: 57, size: 5, cor: '#f5e070', dur: 15.8, delay: 3.1 },
+  { left: 65, size: 3, cor: '#d4a017', dur: 12.2, delay: 7.5 },
+  { left: 74, size: 4, cor: '#f5e070', dur: 17, delay: 1.9 },
+  { left: 82, size: 3, cor: '#f5e070', dur: 14.2, delay: 5.9 },
+  { left: 89, size: 5, cor: '#d4a017', dur: 18, delay: 0.8 },
+  { left: 95, size: 3, cor: '#f5e070', dur: 14.6, delay: 4.7 },
 ];
 
 export default function Planos() {
@@ -99,11 +107,14 @@ export default function Planos() {
           cards + CTAs passam a caber sem scroll em 390×844 e 430×932. O padding
           inferior mantém folga para a bottom nav fixa (75px). */}
       {/* ATMOSFERA — partículas douradas atrás dos cards. Reusa .fig-particle/futtyFall
-          da figurinha; o container leva containerType:size (o keyframe usa cqh) e
-          opacity 0.66 → tecto real de ~0.5 (o keyframe chega a 0.75). */}
+          da figurinha; o container leva containerType:size (o keyframe usa cqh).
+          FASE 3.57 — durações ×1.45 (média 10.3s → 15.0s, ~86 → ~59 px/s): com o dobro
+          das partículas e +50% de tamanho, a mesma velocidade lia-se agitada. */}
       <div
         aria-hidden="true"
-        style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none', containerType: 'size', opacity: 0.66 }}
+        // FASE 3.56 — opacity 0.66 → 1: o keyframe futtyFall chega a 0.75, por isso o
+        // tecto real de opacidade das partículas passa de ~0.5 para 0.75.
+        style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none', containerType: 'size', opacity: 1 }}
       >
         {PLANOS_PARTICULAS.map((p, i) => (
           <span
@@ -131,10 +142,15 @@ export default function Planos() {
                   padding: 16,
                   // FASE 3.43 — Elevação por translucidez: o card deixa passar a
                   // atmosfera (partículas + gradiente do shell) em vez de a tapar.
-                  // 0.74 do --surface-1 (#0d0d12) + blur do que fica por trás.
-                  background: 'rgba(13, 13, 18, 0.74)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
+                  // Vidro: 0.45 do --surface-1 (#0d0d12) + blur.
+                  // FASE 3.57 — o blur é 4px e não os 10px da 3.56. Medido em A/B com a
+                  // mesma partícula (4px) atrás do mesmo card: a 0 e a 4px lê-se; a 6px
+                  // fica ténue; a 10px DESAPARECE. Um Gaussiano de 10px espalha um ponto
+                  // de 4px por ~24px e mata-lhe o pico. Blur alto e partículas pequenas
+                  // legíveis através são requisitos incompatíveis — ganha a legibilidade.
+                  background: 'rgba(13, 13, 18, 0.45)',
+                  backdropFilter: 'blur(4px)',
+                  WebkitBackdropFilter: 'blur(4px)',
                   // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da figurinha.
                   border: atual ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
                   boxShadow: atual ? '0 0 14px rgba(212,160,23,0.45)' : 'none',
@@ -155,7 +171,9 @@ export default function Planos() {
                     ) : null}
                   </span>
                   {atual ? (
-                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#d4a017', border: '1px solid rgba(212,160,23,0.5)', borderRadius: 'var(--radius-pill)', padding: '3px 8px', whiteSpace: 'nowrap' }}>
+                    // FASE 3.49 — cantos 45° (.hud-corners-s) em vez do radius-pill:
+                    // era o último elemento redondo órfão da linguagem HUD.
+                    <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#d4a017', border: '1px solid rgba(212,160,23,0.5)', padding: '3px 8px', whiteSpace: 'nowrap' }}>
                       Plano atual
                     </span>
                   ) : null}

@@ -7,7 +7,7 @@ import { useTeam } from '../hooks/useTeam';
 import { initials } from '../utils/teamColors';
 import { POSICOES, labelPosicao } from '../utils/posicoes';
 import Topbar from '../components/Topbar';
-import Loading from '../components/Loading';
+import LoadingFutty from '../components/LoadingFutty';
 import PlayerAvatar from '../components/PlayerAvatar';
 import TeamAvatar from '../components/TeamAvatar';
 import Toast from '../components/Toast';
@@ -129,7 +129,7 @@ export default function Equipa() {
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
         {loading ? (
-          <Loading />
+          <LoadingFutty />
         ) : !team ? (
           !error && <p className="muted">Time não encontrado.</p>
         ) : (
