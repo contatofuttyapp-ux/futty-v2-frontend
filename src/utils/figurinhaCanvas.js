@@ -79,19 +79,21 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     const dw = avatar.naturalWidth * scale;
     const dh = avatar.naturalHeight * scale;
     const dx = (W - dw) / 2;
-    // Topo do avatar a 16% da altura — a cabeça ganha respiro sob o frame.
-    const dy = H * 0.16;
+    // FASE 3.28 — Topo do avatar a 12% da altura (era 16%): o jogador sobe ~24px
+    // para os olhos caírem no terço superior (medido: ~29% da altura do card, dentro
+    // da faixa 28–36%). Com 0.10 os olhos ficavam a ~27%, acima da faixa. Seguro
+    // porque a coroa vem completa e o clip octogonal (3.26) protege topo/laterais.
+    const dy = H * 0.12;
 
-    // FASE 3.22 — Clip de TOPO: nada do avatar é desenhado acima de `limiteTopo`,
-    // seja qual for dy/boxW/zoom → a linha dourada fina do frame fica sempre limpa.
-    // limiteTopo = inset do highlight interior no topo (8.5*k, ver passo 6) + metade
-    // do seu lineWidth (1.2*k / 2 = 0.6*k) + 4*k de respiro. NÃO corta a base — a
-    // placa do nome é que cobre a parte de baixo do avatar. Mesma regra em todos os
-    // caminhos (preview E Baixar), por consistência.
-    const limiteTopo = 8.5 * k + 0.6 * k + 4 * k; // = 13.1*k
+    // FASE 3.26 — Clip OCTOGONAL inset: o avatar nunca é desenhado sobre as linhas
+    // do frame em NENHUM lado (topo, base, laterais E diagonais). Reutiliza o helper
+    // `octagono` (mesma geometria do frame), encolhido para dentro da linha interna
+    // fina do frame (borda a 7.9–9.1*k) + 4*k de respiro. Substitui o clip rectangular
+    // de topo da 3.22; a base fecha também pelo octógono (a placa cobre-a de qualquer
+    // forma). Vale para preview E download, por consistência.
+    const insetClip = 8.5 * k + 0.6 * k + 4 * k; // = 13.1*k (= antigo limiteTopo, agora em todos os lados)
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, limiteTopo, W, H - limiteTopo);
+    octagono(insetClip);
     ctx.clip();
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 24 * k;
@@ -209,12 +211,88 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, W, H);
   } else if (fundo === 'gradiente') {
-    const g = ctx.createRadialGradient(W / 2, H * 0.45, 40 * k, W / 2, H * 0.45, H * 0.7);
-    g.addColorStop(0, '#3d2f0a');
-    g.addColorStop(0.55, '#141004');
-    g.addColorStop(1, '#000000');
+    // CARTA ÉPICA — honeycomb (o padrão da bola) + monograma F como marca de água.
+    // Chave interna 'gradiente' (evita refactor de estado); na UI chama-se "Épico".
+    // Ordem: base → [hexágonos + F, DESFOCADOS] → luz central → vinheta.
+
+    // a) Base: vertical muito escuro, quase monocromático (nítida).
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#16161c');
+    g.addColorStop(0.5, '#1d1d24');
+    g.addColorStop(1, '#101014');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+
+    // b) PADRÃO num canvas OFFSCREEN → transferido com blur (só o padrão desfoca;
+    //    base, luz e vinheta ficam nítidas). Seed FIXA → determinístico.
+    const fLogo = await carregarImagem('/futty-logo-flat.png', false);
+    const off = document.createElement('canvas');
+    off.width = W;
+    off.height = H;
+    const octx = off.getContext('2d');
+    octx.lineWidth = 1 * k;
+    let seed = 20240;
+    const rnd = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    // Hexágonos regulares "pointy-top": diagonal (vértice a vértice) = W*0.16 = 2R.
+    const R = (W * 0.16) / 2; // circunraio
+    const passoX = Math.sqrt(3) * R; // espaçamento horizontal (flat-to-flat)
+    const passoY = 1.5 * R; // espaçamento vertical do honeycomb
+    for (let row = -1; row * passoY <= H + R; row++) {
+      for (let col = -1; col * passoX <= W + passoX; col++) {
+        // offset clássico de meia célula nas linhas ímpares
+        const cx = col * passoX + (Math.abs(row % 2) ? passoX / 2 : 0);
+        const cy = row * passoY;
+        octx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i - Math.PI / 2; // primeiro vértice no topo
+          const px = cx + R * Math.cos(a);
+          const py = cy + R * Math.sin(a);
+          if (i === 0) octx.moveTo(px, py);
+          else octx.lineTo(px, py);
+        }
+        octx.closePath();
+        // ~12% das arestas com brilho dourado — as facetas que apanham luz.
+        octx.strokeStyle = rnd() < 0.12 ? 'rgba(212,160,23,0.12)' : 'rgba(255,255,255,0.035)';
+        octx.stroke();
+        // Monograma F em ~8% das células, ~60% do tamanho da célula, alpha 0.04.
+        if (fLogo && rnd() < 0.08) {
+          const s = 2 * R * 0.6;
+          octx.save();
+          octx.globalAlpha = 0.04;
+          octx.drawImage(fLogo, cx - s / 2, cy - s / 2, s, s);
+          octx.restore();
+        }
+      }
+    }
+    // transfere o padrão desfocado
+    ctx.save();
+    ctx.filter = `blur(${1.2 * k}px)`;
+    ctx.drawImage(off, 0, 0);
+    ctx.restore();
+
+    // c) Luz radial central suave atrás do peito/rosto — destaca o jogador sem spotlight.
+    const luz = ctx.createRadialGradient(W / 2, H * 0.38, 0, W / 2, H * 0.38, H * 0.5);
+    luz.addColorStop(0, 'rgba(255,255,255,0.05)');
+    luz.addColorStop(0.55, 'rgba(255,255,255,0)');
+    luz.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = luz;
+    ctx.fillRect(0, 0, W, H);
+
+    // b) Vinheta radial escura só nas margens (elíptica, via scale) — transparente
+    //    no centro (~60%) → rgba(20,12,0,0.55) nas bordas. Profundidade sem matar o ouro.
+    ctx.save();
+    ctx.translate(W / 2, H * 0.45);
+    ctx.scale(1, H / W); // círculo → elipse com o aspecto do card
+    const vin = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.62);
+    vin.addColorStop(0, 'rgba(20,12,0,0)');
+    vin.addColorStop(0.6, 'rgba(20,12,0,0)');
+    vin.addColorStop(1, 'rgba(20,12,0,0.55)');
+    ctx.fillStyle = vin;
+    ctx.fillRect(-W, -H, W * 2, H * 2);
+    ctx.restore();
   } else {
     const bg = await carregarImagem('/stadium_bg.png', false);
     if (bg) {

@@ -1462,6 +1462,23 @@
   aspect-ratio: 2 / 3;
 }
 .fig-io-btn { height: 40px; }
+
+/* FASE 3.29 — Cantos a 45° (identidade HUD), partilhados pelos controlos.
+   O clip-path MANDA: qualquer border-radius existente deixa de ter efeito.
+   ATENÇÃO: clip-path corta box-shadows → para glow, pôr o shadow num wrapper
+   SEM clip e o clip só no elemento interior (ver botão Compartilhar). */
+.hud-corners {
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+  );
+}
+.hud-corners-s {
+  clip-path: polygon(
+    5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px),
+    calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px
+  );
+}
 /* Tier ecrãs pequenos (SE e similares, <700px): reserva menor (~300) → card com
    tamanho decente, aceitando scroll ligeiro até Baixar/Compartilhar só aqui.
    Vem ANTES do bloco <620px para este último (mais restritivo) vencer. */

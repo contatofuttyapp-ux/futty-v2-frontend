@@ -17,13 +17,17 @@ import '../styles/app.css';
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
 const FUNDOS = [
   { k: 'estadio', label: 'Estádio' },
-  { k: 'gradiente', label: 'Gradiente' },
+  { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label novo
   { k: 'preto', label: 'Neutro' },
 ];
 // Background real de cada fundo (igual ao do PlayerCard) para os tiles.
 const FUNDO_BG = {
   estadio: "url('/stadium_bg.png') center / cover no-repeat, #1b2433",
-  gradiente: 'radial-gradient(ellipse 90% 70% at 50% 45%, #3d2f0a, #141004 55%, #000 100%)',
+  // 'gradiente' = Carta Épica (honeycomb escuro). Chave interna mantida para não
+  // refactorizar estado. Preview: base escura + arestas de hexágono sugeridas
+  // (as 3 direcções do honeycomb: 60°, 120° e vertical).
+  gradiente:
+    'linear-gradient(60deg, transparent 46%, rgba(255,255,255,0.08) 50%, transparent 54%), linear-gradient(120deg, transparent 46%, rgba(212,160,23,0.14) 50%, transparent 54%), linear-gradient(0deg, transparent 46%, rgba(255,255,255,0.06) 50%, transparent 54%), linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
   preto: '#000000',
 };
 const TABS = [
@@ -63,6 +67,11 @@ const FUTTY_PARTICULAS = [
 // Recorte octogonal do card (cut/W = 32/400 = 8%; cut/H = 32/600 ≈ 5.3%). Usado
 // nos overlays de card inteiro para os cantos coincidirem com o PNG octogonal.
 const CLIP_OCTOGONO = 'polygon(8% 0, 92% 0, 100% 5.3%, 100% 94.7%, 92% 100%, 8% 100%, 0 94.7%, 0 5.3%)';
+
+// Limites do zoom do avatar. ZOOM_MIN subiu de 0.88 (80% exibido) para 0.99 (90%):
+// o degrau de 80% deixou de existir. Qualquer valor abaixo é normalizado no arranque.
+const ZOOM_MIN = 0.99;
+const ZOOM_MAX = 1.43;
 
 // Nome de ficheiro seguro a partir do nome do jogador.
 function ficheiroNome(nome, sufixo = '') {
@@ -130,7 +139,9 @@ export default function Figurinha() {
   const [erro, setErro] = useState('');
   // Zoom do avatar no card. Escala interna 0.88–1.43 (passo 0.11); exibida ÷1.1
   // → 80/90/100/110/120/130%. Base 1.1 = 100% exibido. Reinicia sempre a 110%.
-  const [avatarZoom, setAvatarZoom] = useState(1.1);
+  // Clamp defensivo no arranque: normaliza qualquer valor fora de [ZOOM_MIN, ZOOM_MAX]
+  // (ex.: um 0.88 herdado) para dentro dos limites novos.
+  const [avatarZoom, setAvatarZoom] = useState(() => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, 1.1)));
   // Flow de estreia (1ª visita sem foto/avatar): null = a decidir, 'foto' |
   // 'gerando' | 'pronto' = ecrãs A/B/C, 'fim' = studio normal.
   const [estreiaFase, setEstreiaFase] = useState(() => (localStorage.getItem('futty_figurinha_estreia') ? 'fim' : null));
@@ -454,29 +465,27 @@ export default function Figurinha() {
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }}
                     />
 
-                    {/* Fundo vivo — partículas ENTRE o fundo e o jogador (caem atrás dele) */}
-                    {fundo === 'estadio' ? (
+                    {/* Fundo vivo — partículas ENTRE o fundo e o jogador (caem atrás dele).
+                        Estádio E Gradiente (chuva dourada sobre a carta gold). */}
+                    {fundo === 'estadio' || fundo === 'gradiente' ? (
                       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 3, containerType: 'size', mixBlendMode: 'screen', clipPath: CLIP_OCTOGONO }}>
-                        {FUTTY_PARTICULAS.map((p, i) => (
-                          <span
-                            key={i}
-                            className="fig-particle"
-                            style={{ position: 'absolute', left: `${p.left}%`, top: '-5%', width: p.size, height: p.size, borderRadius: '50%', background: p.cor, boxShadow: `0 0 6px ${p.cor}`, animationDuration: `${p.dur * 1.25}s`, animationDelay: `${p.delay}s` }}
-                          />
-                        ))}
+                        {FUTTY_PARTICULAS.map((p, i) => {
+                          // Sobre o facetado escuro: brancas → branco-quente; douradas
+                          // mantêm-se (a chuva é o "premium discreto").
+                          const cor = fundo === 'gradiente' && p.cor === '#ffffff' ? '#fff8dc' : p.cor;
+                          return (
+                            <span
+                              key={i}
+                              className="fig-particle"
+                              style={{ position: 'absolute', left: `${p.left}%`, top: '-5%', width: p.size, height: p.size, borderRadius: '50%', background: cor, boxShadow: `0 0 6px ${cor}`, animationDuration: `${p.dur * 1.25}s`, animationDelay: `${p.delay}s` }}
+                            />
+                          );
+                        })}
                       </div>
                     ) : null}
-                    {fundo === 'gradiente' ? (
-                      // Névoa dourada viva: 2 camadas de bruma (blur), derivas com
-                      // durações primas (13/17). Wrapper estático recorta o octógono
-                      // (o clip não deve derivar com a animação das névoas).
-                      <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none', overflow: 'hidden', clipPath: CLIP_OCTOGONO }}>
-                        <div className="fig-fog-1" style={{ position: 'absolute', inset: '-15%', background: 'radial-gradient(ellipse 70% 50% at 30% 60%, rgba(212,160,23,0.30), transparent 70%)', mixBlendMode: 'screen' }} />
-                        <div className="fig-fog-2" style={{ position: 'absolute', inset: '-15%', background: 'radial-gradient(ellipse 60% 45% at 70% 45%, rgba(245,224,112,0.22), transparent 65%)', mixBlendMode: 'screen' }} />
-                        {/* Bruma rente à base — integra o fade do avatar (jogador a emergir da névoa) */}
-                        <div className="fig-fog-3" style={{ position: 'absolute', inset: '-15%', background: 'radial-gradient(ellipse 90% 25% at 50% 85%, rgba(212,160,23,0.12), transparent 70%)', mixBlendMode: 'screen' }} />
-                      </div>
-                    ) : null}
+                    {/* FASE 3.31 — Névoa REMOVIDA no fundo Épico: o facetado é gráfico,
+                        não atmosférico; a bruma por cima embaçava o lapidado. As
+                        partículas (chuva) ficam — dão o "premium discreto" sem embaçar. */}
 
                     {/* Camada do jogador — só o avatar, por cima das partículas */}
                     {jogadorUrl ? (
@@ -531,13 +540,13 @@ export default function Figurinha() {
 
               {/* Zoom do avatar — controlo compacto à direita, abaixo do canto (só com avatar IA) */}
               {avatarEhIA && !fotoLocal ? (
-                <div style={{ position: 'absolute', top: '18%', right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'rgba(13,13,18,0.7)', backdropFilter: 'blur(4px)', borderRadius: 16, padding: '5px 4px', border: '1px solid rgba(212,160,23,0.45)' }}>
+                <div className="hud-corners-s" style={{ position: 'absolute', top: '30%', right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'rgba(13,13,18,0.7)', backdropFilter: 'blur(4px)', padding: '5px 4px', border: '1px solid rgba(212,160,23,0.45)' }}>
                   <button
                     type="button"
                     aria-label="Aumentar zoom"
                     className="fig-zoom-btn"
-                    onClick={() => setAvatarZoom((z) => Math.min(1.43, +(z + 0.11).toFixed(2)))}
-                    disabled={avatarZoom >= 1.43}
+                    onClick={() => setAvatarZoom((z) => Math.min(ZOOM_MAX, +(z + 0.11).toFixed(2)))}
+                    disabled={avatarZoom >= ZOOM_MAX}
                   >
                     <Plus size={13} />
                   </button>
@@ -545,8 +554,8 @@ export default function Figurinha() {
                     type="button"
                     aria-label="Reduzir zoom"
                     className="fig-zoom-btn"
-                    onClick={() => setAvatarZoom((z) => Math.max(0.88, +(z - 0.11).toFixed(2)))}
-                    disabled={avatarZoom <= 0.88}
+                    onClick={() => setAvatarZoom((z) => Math.max(ZOOM_MIN, +(z - 0.11).toFixed(2)))}
+                    disabled={avatarZoom <= ZOOM_MIN}
                   >
                     <Minus size={13} />
                   </button>
@@ -578,7 +587,7 @@ export default function Figurinha() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 type="button"
-                className="btn btn--purple-outline fig-io-btn"
+                className="btn btn--purple-outline fig-io-btn hud-corners"
                 style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, paddingLeft: 12, paddingRight: 12 }}
                 disabled={uploadFoto || gerandoIA}
                 onClick={() => setModalFoto(true)}
@@ -588,7 +597,7 @@ export default function Figurinha() {
               {jogador.avatar_url ? (
                 <button
                   type="button"
-                  className="btn btn--purple fig-io-btn"
+                  className="btn btn--purple fig-io-btn hud-corners"
                   style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   disabled={gerandoIA || uploadFoto}
                   onClick={gerarAvatarIA}
@@ -628,12 +637,12 @@ export default function Figurinha() {
                 <button
                   key={t.k}
                   type="button"
+                  className="hud-corners-s"
                   onClick={() => setActiveTab(t.k)}
                   aria-pressed={on}
                   style={{
                     flex: 1,
                     height: 36,
-                    borderRadius: 'var(--radius-sm)',
                     border: on ? '1px solid var(--border-accent)' : '1px solid transparent',
                     background: on ? 'rgba(139,92,246,0.2)' : 'transparent',
                     color: on ? '#8b5cf6' : 'var(--label-color)',
@@ -675,18 +684,19 @@ export default function Figurinha() {
                       cursor: 'pointer',
                       textAlign: 'center',
                       opacity: sel ? 1 : 0.55, // não-seleccionado mais discreto
+                      // glow da selecção no PAI (drop-shadow segue o recorte a 45°;
+                      // um box-shadow no thumb seria cortado pelo clip-path).
+                      filter: sel ? 'drop-shadow(0 0 7px rgba(212,160,23,0.55))' : 'none',
                     }}
                   >
-                    {/* Thumbnail quadrado */}
-                    <div style={{
+                    {/* Thumbnail quadrado (cantos 45° — identidade HUD) */}
+                    <div className="hud-corners-s" style={{
                       width: '100%',
                       aspectRatio: '1 / 1',
-                      borderRadius: 'var(--radius-s, 8px)',
                       background: FUNDO_BG[f.k],
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       border: sel ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
-                      boxShadow: sel ? '0 0 12px rgba(212,160,23,0.5)' : 'none',
                       filter: sel ? 'none' : 'saturate(0.7) brightness(0.85)',
                     }} />
                     {/* Nome */}
@@ -724,7 +734,7 @@ export default function Figurinha() {
                     }}
                   >
                     {/* Thumbnail quadrado */}
-                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 'var(--radius-s, 8px)', overflow: 'hidden', background: kit.id === 'dark-gold' ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: ativo ? '2px solid #d4a017' : '1px solid var(--border-subtle)', boxShadow: ativo ? '0 0 12px rgba(212,160,23,0.5)' : 'none', filter: ativo ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
+                    <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: kit.id === 'dark-gold' ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: ativo ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: ativo ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
                       {kit.id === 'dark-gold' ? (
                         <img src={KIT_DARK_GOLD_IMG} alt={kit.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : null}
@@ -765,18 +775,24 @@ export default function Figurinha() {
           {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os
               botões do topo (40px) → hierarquia: topo = configurar, fundo = agir. */}
           <div style={{ display: 'flex', gap: 12 }}>
-            <button type="button" className="btn btn--purple-outline" style={{ flex: 1, height: 46, borderWidth: '1.5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
+            <button type="button" className="btn btn--purple-outline hud-corners" style={{ flex: 1, height: 46, borderWidth: '1.5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
               <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
             </button>
-            <button
-              type="button"
-              className="btn"
-              style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', color: '#fff', background: `linear-gradient(135deg, ${frameHex}ee, ${frameHex}99)`, boxShadow: `0 4px 18px ${frameHex}44, 0 0 16px rgba(212,160,23,0.35)` }}
-              disabled={busy}
-              onClick={partilhar}
-            >
-              <Share2 size={16} /> Compartilhar
-            </button>
+            {/* Glow do Compartilhar: o clip-path corta box-shadows. O wrapper (SEM clip)
+                carrega o glow via drop-shadow — que segue a forma RECORTADA do botão
+                interior (um box-shadow no wrapper daria um glow rectangular à volta de
+                um botão octogonal). O clip fica só no botão. */}
+            <div style={{ flex: 1, display: 'flex', filter: `drop-shadow(0 4px 10px ${frameHex}55) drop-shadow(0 0 7px rgba(212,160,23,0.45))` }}>
+              <button
+                type="button"
+                className="btn hud-corners"
+                style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', color: '#fff', background: `linear-gradient(135deg, ${frameHex}ee, ${frameHex}99)` }}
+                disabled={busy}
+                onClick={partilhar}
+              >
+                <Share2 size={16} /> Compartilhar
+              </button>
+            </div>
           </div>
         </div>
       </main>
@@ -792,7 +808,8 @@ export default function Figurinha() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ position: 'relative', width: '100%', maxWidth: 360, background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', clipPath: 'polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px)', padding: '22px 20px 20px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}
+            className="hud-corners"
+            style={{ position: 'relative', width: '100%', maxWidth: 360, background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '22px 20px 20px' }}
           >
             <button
               type="button"
@@ -808,7 +825,7 @@ export default function Figurinha() {
             {/* Preview da foto actual (cantos 45° coerentes com o sistema visual) */}
             {fotoOriginal ? (
               // contain + fundo escuro sólido → mostra a pessoa INTEIRA, sem cortar topo/base.
-              <div style={{ width: '100%', height: 260, background: '#0d0d12', clipPath: 'polygon(13px 0, calc(100% - 13px) 0, 100% 13px, 100% calc(100% - 13px), calc(100% - 13px) 100%, 13px 100%, 0 calc(100% - 13px), 0 13px)', display: 'grid', placeItems: 'center' }}>
+              <div className="hud-corners" style={{ width: '100%', height: 260, background: '#0d0d12', display: 'grid', placeItems: 'center' }}>
                 <img
                   src={urlAsset(fotoOriginal)}
                   alt="A tua foto"
