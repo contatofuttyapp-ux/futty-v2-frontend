@@ -226,9 +226,13 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // b) PADRÃO num canvas OFFSCREEN → transferido com blur (só o padrão desfoca;
     //    base, luz e vinheta ficam nítidas). Seed FIXA → determinístico.
     const fLogo = await carregarImagem('/futty-logo-flat.png', false);
+    // Offscreen 25% MAIOR que o card: a pseudo-perspectiva (skew) desloca as bordas
+    // e, sem esta folga, ficariam faixas sem padrão nos limites do card.
     const off = document.createElement('canvas');
-    off.width = W;
-    off.height = H;
+    const OW = Math.ceil(W * 1.25);
+    const OH = Math.ceil(H * 1.25);
+    off.width = OW;
+    off.height = OH;
     const octx = off.getContext('2d');
     octx.lineWidth = 1 * k;
     let seed = 20240;
@@ -236,12 +240,28 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
       seed = (seed * 1664525 + 1013904223) >>> 0;
       return seed / 4294967296;
     };
-    // Hexágonos regulares "pointy-top": diagonal (vértice a vértice) = W*0.16 = 2R.
-    const R = (W * 0.16) / 2; // circunraio
-    const passoX = Math.sqrt(3) * R; // espaçamento horizontal (flat-to-flat)
-    const passoY = 1.5 * R; // espaçamento vertical do honeycomb
-    for (let row = -1; row * passoY <= H + R; row++) {
-      for (let col = -1; col * passoX <= W + passoX; col++) {
+    // Hexágonos "pointy-top": diagonal (vértice a vértice) = W*0.32 = 2R → R=64
+    // (o dobro da 3.32). A grelha honeycomb recalcula os passos a partir do R.
+    const R = (W * 0.32) / 2;
+    const passoX = Math.sqrt(3) * R;
+    const passoY = 1.5 * R;
+
+    // ROTAÇÃO: ANGULO_F = 14.52° — medido na haste principal do F de
+    // futty-logo-flat.png (declive dx/dy = -0.259 → inclina p/ a esquerda ao descer).
+    // Sentido horário: no canvas, rotate(+θ) faz uma vertical inclinar-se para a
+    // esquerda ao descer — exactamente como a haste do F.
+    const ANGULO_F = (14.52 * Math.PI) / 180;
+    // Alinhamento fino: o vértice superior de uma célula central cai no terço
+    // superior do card (onde a barra do F vive proporcionalmente no monograma).
+    const alvoY = H / 3 - H / 2;
+    octx.save();
+    octx.translate(OW / 2, OH / 2); // centro do offscreen = centro do card na transferência
+    octx.rotate(ANGULO_F);
+    octx.translate(0, alvoY + R);
+    // Grelha sobre a diagonal do OFFSCREEN + margem → a rotação não deixa cantos vazios.
+    const M = Math.hypot(OW, OH) / 2 + 2 * R;
+    for (let row = -Math.ceil(M / passoY); row * passoY <= M; row++) {
+      for (let col = -Math.ceil(M / passoX); col * passoX <= M; col++) {
         // offset clássico de meia célula nas linhas ímpares
         const cx = col * passoX + (Math.abs(row % 2) ? passoX / 2 : 0);
         const cy = row * passoY;
@@ -255,22 +275,34 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
         }
         octx.closePath();
         // ~12% das arestas com brilho dourado — as facetas que apanham luz.
-        octx.strokeStyle = rnd() < 0.12 ? 'rgba(212,160,23,0.12)' : 'rgba(255,255,255,0.035)';
+        octx.strokeStyle = rnd() < 0.12 ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.022)';
         octx.stroke();
-        // Monograma F em ~8% das células, ~60% do tamanho da célula, alpha 0.04.
+        // Monograma F em ~8% das células, 60% do tamanho da célula, alpha 0.03.
+        // CONTRA-ROTAÇÃO: o F fica no seu ângulo NATURAL. Como a grelha já foi rodada
+        // para o ângulo da haste, o F por rodar tem a haste PARALELA às linhas da
+        // grelha — que é o objectivo desta fase. (Rodá-lo também poria a haste a
+        // ~29°, desalinhada da própria grelha.)
         if (fLogo && rnd() < 0.08) {
           const s = 2 * R * 0.6;
           octx.save();
-          octx.globalAlpha = 0.04;
-          octx.drawImage(fLogo, cx - s / 2, cy - s / 2, s, s);
+          octx.translate(cx, cy);
+          octx.rotate(-ANGULO_F);
+          octx.globalAlpha = 0.03;
+          octx.drawImage(fLogo, -s / 2, -s / 2, s, s);
           octx.restore();
         }
       }
     }
-    // transfere o padrão desfocado
+    octx.restore();
+    // Transfere o padrão: blur + PSEUDO-PERSPECTIVA (canto sup-direito "para trás").
+    // Pivô no centro do card. b=-0.06 (skewY ≈ 3.4°) e c=0.05 (skewX ≈ 2.9°) com
+    // scale(1.02, 0.98) → a placa inclina ~3-4° percebidos, não tomba.
+    // Usa transform() (não setTransform) para compor com o pivô já aplicado.
     ctx.save();
     ctx.filter = `blur(${1.2 * k}px)`;
-    ctx.drawImage(off, 0, 0);
+    ctx.translate(W / 2, H / 2);
+    ctx.transform(1.02, -0.06, 0.05, 0.98, 0, 0);
+    ctx.drawImage(off, -OW / 2, -OH / 2);
     ctx.restore();
 
     // c) Luz radial central suave atrás do peito/rosto — destaca o jogador sem spotlight.

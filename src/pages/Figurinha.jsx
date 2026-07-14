@@ -24,10 +24,11 @@ const FUNDOS = [
 const FUNDO_BG = {
   estadio: "url('/stadium_bg.png') center / cover no-repeat, #1b2433",
   // 'gradiente' = Carta Épica (honeycomb escuro). Chave interna mantida para não
-  // refactorizar estado. Preview: base escura + arestas de hexágono sugeridas
-  // (as 3 direcções do honeycomb: 60°, 120° e vertical).
-  gradiente:
-    'linear-gradient(60deg, transparent 46%, rgba(255,255,255,0.08) 50%, transparent 54%), linear-gradient(120deg, transparent 46%, rgba(212,160,23,0.14) 50%, transparent 54%), linear-gradient(0deg, transparent 46%, rgba(255,255,255,0.06) 50%, transparent 54%), linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
+  // refactorizar estado. Preview = mini-render fiel via SVG inline: gradiente escuro
+  // (#1d1d24 → #101014) + UM hexágono subtil, rodado ao mesmo ANGULO_F (14.52°) do
+  // fundo real. SVG (e não gradientes CSS) porque um hexágono limpo não se faz com
+  // linear-gradients; viewBox quadrado num tile quadrado → 'cover' preenche exacto.
+  gradiente: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%231d1d24'/%3E%3Cstop offset='1' stop-color='%23101014'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23g)'/%3E%3Cpolygon points='50,18 77.7,34 77.7,66 50,82 22.3,66 22.3,34' fill='none' stroke='%23d4a017' stroke-opacity='0.15' stroke-width='2' transform='rotate(14.52 50 50)'/%3E%3C/svg%3E")`,
   preto: '#000000',
 };
 const TABS = [
