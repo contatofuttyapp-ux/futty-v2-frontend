@@ -132,6 +132,7 @@ export default function Figurinha() {
   const [uploadFoto, setUploadFoto] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
   const [limiteIA, setLimiteIA] = useState(false);
+  const [erroIA, setErroIA] = useState(false); // falha da geração (≠ 403) → estado de erro no overlay
   const [modalFoto, setModalFoto] = useState(false); // modal "A tua foto" (foto actual + estado IA + carregar nova)
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
@@ -163,6 +164,15 @@ export default function Figurinha() {
   const avatarEhIA = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
   // Jogador "de card": só leva avatar_url se for avatar IA; caso contrário, sem avatar.
   const jogadorCard = avatarEhIA ? jogador : { ...jogador, avatar_url: null };
+  // (l) Dias até a quota renovar. O backend zera a contagem quando o MÊS muda
+  // (avatar_ia_reset < início do mês corrente) → a renovação é o dia 1 do mês seguinte.
+  // O cálculo de datas é impuro (Date), por isso corre UMA vez no initializer do
+  // useState, não no corpo do render. A contagem só aparece se o /api/me trouxer
+  // avatar_ia_reset; senão omite-se.
+  const [diasAteRenovar] = useState(() =>
+    Math.max(1, Math.ceil((Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1) - Date.now()) / 86400000)),
+  );
+  const diasParaRenovar = me?.user?.avatar_ia_reset ? diasAteRenovar : null;
   const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom };
 
   // Carrega o perfil e pré-selecciona as escolhas guardadas.
@@ -324,13 +334,14 @@ export default function Figurinha() {
     setGerandoIA(true);
     setErro('');
     setLimiteIA(false);
+    setErroIA(false);
     try {
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold' }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
     } catch (err) {
-      if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano
-      else setErro(err?.message || 'Não foi possível gerar o avatar IA.');
+      if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano → card de quota
+      else setErroIA(true); // qualquer outra falha → estado de erro com retry no overlay
     } finally {
       setGerandoIA(false);
     }
@@ -380,12 +391,24 @@ export default function Figurinha() {
 
   // Overlay digno para o estado "a gerar" (sobre o card, tanto na estreia como
   // no studio). Logo Futty metálico a respirar + texto.
+  // Overlay do card: "a gerar" OU, se a geração falhou (≠403), estado de ERRO com
+  // retry. No erro o logo fica ESTÁTICO (sem respiração) — sinal de que parou.
   const overlayGerando = (
     <div style={{ position: 'absolute', inset: 0, zIndex: 8, clipPath: CLIP_OCTOGONO, background: 'rgba(5,8,16,0.75)', backdropFilter: 'blur(6px)', display: 'grid', placeItems: 'center' }}>
-      <div style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
-        <img src="/futty-logo-metallic.png" alt="" className="fig-breathe" style={{ width: 64, height: 64, objectFit: 'contain' }} />
-        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>A criar o teu avatar…</span>
-      </div>
+      {erroIA ? (
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
+          <img src="/futty-logo-metallic.png" alt="" style={{ width: 64, height: 64, objectFit: 'contain', opacity: 0.55 }} />
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Não deu desta vez. Tenta de novo.</span>
+          <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={gerarAvatarIA}>
+            Tentar novamente
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
+          <img src="/futty-logo-metallic.png" alt="" className="fig-breathe" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>A criar o teu avatar…</span>
+        </div>
+      )}
     </div>
   );
 
@@ -555,33 +578,25 @@ export default function Figurinha() {
                   <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
                 )}
 
-              {/* Zoom do avatar — controlo compacto à direita, abaixo do canto (só com avatar IA) */}
-              {avatarEhIA && !fotoLocal ? (
-                <div className="hud-corners-s" style={{ position: 'absolute', top: '30%', right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'rgba(13,13,18,0.7)', backdropFilter: 'blur(4px)', padding: '5px 4px', border: '1px solid rgba(212,160,23,0.45)' }}>
-                  <button
-                    type="button"
-                    aria-label="Aumentar zoom"
-                    className="fig-zoom-btn"
-                    onClick={() => setAvatarZoom((z) => Math.min(ZOOM_MAX, +(z + 0.11).toFixed(2)))}
-                    disabled={avatarZoom >= ZOOM_MAX}
-                  >
-                    <Plus size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Reduzir zoom"
-                    className="fig-zoom-btn"
-                    onClick={() => setAvatarZoom((z) => Math.max(ZOOM_MIN, +(z - 0.11).toFixed(2)))}
-                    disabled={avatarZoom <= ZOOM_MIN}
-                  >
-                    <Minus size={13} />
-                  </button>
-                </div>
-              ) : null}
               </div>
             </div>
             {/* Estado "a gerar" — cobre a zona do card */}
-            {gerandoIA ? overlayGerando : null}
+            {/* (m) EMPTY STATE — sem avatar válido: silhueta tracejada dourada sobre o
+                fundo escolhido. Não bloqueia cliques (pointerEvents none). */}
+            {!avatarEhIA && !fotoLocal && !gerandoIA && !erroIA ? (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 6, clipPath: CLIP_OCTOGONO, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
+                <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
+                  <svg width="86" height="104" viewBox="0 0 86 104" fill="none" stroke="#d4a017" strokeWidth="2" strokeDasharray="5 4" style={{ opacity: 0.35 }} aria-hidden="true">
+                    <circle cx="43" cy="26" r="19" />
+                    <path d="M6 102 C6 70 23 55 43 55 C63 55 80 70 80 102" />
+                  </svg>
+                  <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,160,23,0.75)' }}>
+                    O teu cromo espera por ti
+                  </span>
+                </div>
+              </div>
+            ) : null}
+            {gerandoIA || erroIA ? overlayGerando : null}
           </div>
         </div>
 
@@ -599,6 +614,31 @@ export default function Figurinha() {
 
         {/* 2. CONTROLOS — tabs + painel + detalhes */}
         <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
+          {/* FASE 3.36 — Zoom saiu de cima do card: linha discreta ABAIXO, à direita.
+              Mesma família visual das tabs. Limites e função iguais (90–130%). */}
+          {avatarEhIA && !fotoLocal ? (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, height: 26, marginTop: -4, marginBottom: -6 }}>
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)', marginRight: 2 }}>Tamanho</span>
+              <button
+                type="button"
+                aria-label="Reduzir tamanho do avatar"
+                className="fig-zoom-btn hud-corners-s"
+                onClick={() => setAvatarZoom((z) => Math.max(ZOOM_MIN, +(z - 0.11).toFixed(2)))}
+                disabled={avatarZoom <= ZOOM_MIN}
+              >
+                <Minus size={14} />
+              </button>
+              <button
+                type="button"
+                aria-label="Aumentar tamanho do avatar"
+                className="fig-zoom-btn hud-corners-s"
+                onClick={() => setAvatarZoom((z) => Math.min(ZOOM_MAX, +(z + 0.11).toFixed(2)))}
+                disabled={avatarZoom >= ZOOM_MAX}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+          ) : null}
           {/* Trocar foto + Gerar Avatar IA (na mesma linha) */}
           <div style={{ display: 'grid', gap: 4 }}>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -640,9 +680,17 @@ export default function Figurinha() {
             ) : null}
           </div>
 
+          {/* (l) QUOTA (403) — card da família HUD, não um banner de erro. */}
           {limiteIA ? (
-            <div className="alert alert--error" style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              Limite atingido. <Link to="/planos" style={{ color: '#fff', textDecoration: 'underline' }}>Ver planos →</Link>
+            <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
+              <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Atingiste o limite deste mês</span>
+              {diasParaRenovar != null ? (
+                <span style={{ fontSize: 12, color: 'var(--label-color)' }}>Renova em {diasParaRenovar} {diasParaRenovar === 1 ? 'dia' : 'dias'}</span>
+              ) : null}
+              <Link to="/planos" className="btn btn--purple hud-corners" style={{ marginTop: 4, height: 38, paddingLeft: 18, paddingRight: 18, fontSize: 13, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+                Ver planos
+              </Link>
             </div>
           ) : null}
 
@@ -793,18 +841,17 @@ export default function Figurinha() {
           {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os
               botões do topo (40px) → hierarquia: topo = configurar, fundo = agir. */}
           <div style={{ display: 'flex', gap: 12 }}>
-            <button type="button" className="btn btn--purple-outline hud-corners" style={{ flex: 1, height: 46, borderWidth: '1.5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
+            {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente. */}
+            <button type="button" className="btn btn--purple-outline hud-corners" style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
               <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
             </button>
-            {/* Glow do Compartilhar: o clip-path corta box-shadows. O wrapper (SEM clip)
-                carrega o glow via drop-shadow — que segue a forma RECORTADA do botão
-                interior (um box-shadow no wrapper daria um glow rectangular à volta de
-                um botão octogonal). O clip fica só no botão. */}
-            <div style={{ flex: 1, display: 'flex', filter: `drop-shadow(0 4px 10px ${frameHex}55) drop-shadow(0 0 7px rgba(212,160,23,0.45))` }}>
+            {/* Glow do Compartilhar no wrapper SEM clip (o clip-path cortaria a sombra),
+                via drop-shadow para seguir a forma recortada do botão. Pulso: .fig-share-glow */}
+            <div className="fig-share-glow" style={{ flex: 1, display: 'flex' }}>
               <button
                 type="button"
                 className="btn hud-corners"
-                style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', color: '#fff', background: `linear-gradient(135deg, ${frameHex}ee, ${frameHex}99)` }}
+                style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', fontWeight: 800, color: '#0d0d12', background: 'linear-gradient(135deg, #f0c94a, #d4a017, #b8860b)' }}
                 disabled={busy}
                 onClick={partilhar}
               >
@@ -838,7 +885,24 @@ export default function Figurinha() {
               <X size={16} />
             </button>
 
-            <h3 style={{ margin: '0 0 16px', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '0.04em', color: '#fff', textAlign: 'center' }}>A tua foto</h3>
+            {/* (i) Losango decorativo no canto sup. direito, com o twinkle existente. */}
+            <span
+              className="fig-dot-twinkle"
+              aria-hidden="true"
+              style={{ position: 'absolute', top: 18, right: 52, width: 8, height: 8, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)', pointerEvents: 'none' }}
+            />
+            <h3 style={{ margin: '0 0 6px', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '0.04em', color: '#fff', textAlign: 'center' }}>A tua foto</h3>
+            {/* (h) Linha HUD dourada com degrau — mesma linguagem do header, escala menor. */}
+            <svg width="100%" height="6" viewBox="0 0 200 6" preserveAspectRatio="none" aria-hidden="true" style={{ display: 'block', marginBottom: 14 }}>
+              <defs>
+                <linearGradient id="modalhudline" x1="0" x2="1">
+                  <stop offset="0" stopColor="#d4a017" stopOpacity="0.9" />
+                  <stop offset="0.6" stopColor="#d4a017" stopOpacity="0.4" />
+                  <stop offset="1" stopColor="#d4a017" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d="M0 5 H70 L75 1 H200" stroke="url(#modalhudline)" strokeWidth="1" fill="none" />
+            </svg>
 
             {/* Preview da foto actual (cantos 45° coerentes com o sistema visual) */}
             {fotoOriginal ? (
@@ -860,7 +924,8 @@ export default function Figurinha() {
             {/* Estado do avatar IA (reaproveita avatarEhIA) */}
             <div style={{ marginTop: 14 }}>
               {avatarEhIA ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'linear-gradient(90deg, rgba(139,92,246,0.18), rgba(212,160,23,0.12))', border: '1px solid rgba(139,92,246,0.4)' }}>
+                /* (j) Badge com glow dourado suave — mesma família dos dots. */
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'linear-gradient(90deg, rgba(139,92,246,0.18), rgba(212,160,23,0.12))', border: '1px solid rgba(139,92,246,0.4)', boxShadow: '0 0 12px rgba(212,160,23,0.22)' }}>
                   <img
                     src={urlAsset(me?.user?.avatar_url)}
                     alt="Avatar IA"

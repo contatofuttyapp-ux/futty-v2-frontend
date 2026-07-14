@@ -1479,6 +1479,18 @@
     calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px
   );
 }
+
+/* FASE 3.36 — Glow do Compartilhar com pulso de respiração (0.4↔0.6, 3.5s). É o
+   ÚNICO elemento com pulso permanente da página → o olho vai lá. drop-shadow (e não
+   box-shadow) porque o botão interior é recortado a 45° e o glow tem de seguir a forma. */
+@keyframes fig-share-pulse {
+  0%, 100% { filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 11px rgba(212, 160, 23, 0.4)); }
+  50%      { filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 13px rgba(212, 160, 23, 0.6)); }
+}
+.fig-share-glow { animation: fig-share-pulse 3.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .fig-share-glow { animation: none; filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 12px rgba(212, 160, 23, 0.5)); }
+}
 /* Tier ecrãs pequenos (SE e similares, <700px): reserva menor (~300) → card com
    tamanho decente, aceitando scroll ligeiro até Baixar/Compartilhar só aqui.
    Vem ANTES do bloco <620px para este último (mais restritivo) vencer. */

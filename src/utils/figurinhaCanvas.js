@@ -168,7 +168,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // Geometria do NOME (fonte única): baseline + tamanho da fonte + topo da placa.
   // O corte do avatar deriva daqui, por isso descer o nome desce o palco inteiro.
   const nomeY = H - 42 * k; // baseline do nome
-  const nomeFonte = 52 * k; // tamanho da fonte do nome
+  const nomeFonte = 46 * k; // tamanho base da fonte do nome (FASE 3.36: era 52*k)
   const placaTopo = nomeY - 42 * k; // topo da placa = linha de corte do avatar
 
   // Desenha o avatar real com enquadramento/zoom/posição fixos. Corte LIMPO (sem
@@ -249,7 +249,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
       // caber na largura da placa menos padding, ou atingir o mínimo de 28*k.
       let nomeUpper = String(nome).toUpperCase();
       const larguraMax = placaW - 24 * k; // largura da placa menos padding
-      const fonteMin = 28 * k;
+      const fonteMin = 36 * k; // FASE 3.36: intervalo apertado (era 28*k)
       const lsPara = (f) => (3 * k) * (f / nomeFonte); // 3*k na base, proporcional
       let fonte = nomeFonte;
       const aplicarFonte = () => {
