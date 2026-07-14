@@ -6,6 +6,7 @@ import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
+import Icon from '../components/Icon';
 import '../styles/app.css';
 
 const PLANOS = [
@@ -18,14 +19,16 @@ const PLANOS = [
   },
   {
     id: 'pro',
-    nome: 'Pro ★',
+    nome: 'Pro',
+    icone: 'estrela', // asset da casa — substitui o ★ do texto
     preco: 'R$9,90/mês · €2,99/mês',
     features: ['Tudo do Free', '50 avatares IA/mês', 'Sem anúncios', 'Frames exclusivos', 'Badge dourado'],
     botao: 'Assinar Pro',
   },
   {
     id: 'elite',
-    nome: 'Elite 👑',
+    nome: 'Elite',
+    icone: 'coroa', // asset da casa (/icons/coroa.svg), tingido a dourado — substitui o emoji 👑
     preco: 'R$24,90/mês · €7,99/mês',
     features: ['Tudo do Pro', '100 avatares IA/mês', 'Kit Elite dourado', 'Figurinha animada (em breve)'],
     botao: 'Assinar Elite',
@@ -74,62 +77,88 @@ export default function Planos() {
 
   return (
     <div className="app-shell">
-      <Topbar title="Planos" back="/perfil" />
-      <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        <p style={{ textAlign: 'center', color: 'var(--label-color)', fontSize: 13, margin: '4px 0 16px' }}>
-          Escolhe o teu plano Futty.
-        </p>
-
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollSnapType: 'x mandatory' }}>
+      {/* Linguagem da Figurinha: topbar HUD (wordmark dourado + linha com degrau 45°).
+          `back` mantido — esta página não está na bottom nav. */}
+      <Topbar hud="PLANOS" back="/perfil" />
+      {/* paddings do .app-main apertados (default 32/64 = 96px de espaço morto): os 3
+          cards + CTAs passam a caber sem scroll em 390×844 e 430×932. O padding
+          inferior mantém folga para a bottom nav fixa (75px). */}
+      <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 12 }}>
+        {/* Topbar → cards, directo. Cards EMPILHADOS, ordem Free → Pro → Elite.
+            Layout compacto para caber sem scroll em viewports normais. */}
+        <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
           {PLANOS.map((p) => {
             const atual = planoAtual === p.id;
             return (
               <div
                 key={p.id}
+                className="hud-corners"
                 style={{
-                  flex: '0 0 auto',
-                  width: 'min(78vw, 280px)',
-                  scrollSnapAlign: 'center',
+                  position: 'relative',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 12,
-                  padding: 18,
-                  borderRadius: 'var(--radius-lg)',
+                  gap: 10,
+                  padding: 16,
                   background: 'var(--surface-1)',
-                  border: atual ? '2px solid var(--neon)' : '1px solid var(--border-subtle)',
-                  boxShadow: atual ? '0 0 16px rgba(139,92,246,0.35)' : 'none',
+                  // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da figurinha.
+                  border: atual ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
+                  boxShadow: atual ? '0 0 14px rgba(212,160,23,0.45)' : 'none',
                 }}
               >
+                {/* Losango decorativo discreto no card destacado. */}
+                {atual ? (
+                  <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 9, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
+                ) : null}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#fff' }}>{p.nome}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#fff' }}>{p.nome}</span>
+                    {p.icone ? <Icon name={p.icone} size={19} color="#d4a017" /> : null}
+                  </span>
                   {atual ? (
-                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--neon)', border: '1px solid var(--border-accent)', borderRadius: 'var(--radius-pill)', padding: '3px 8px', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#d4a017', border: '1px solid rgba(212,160,23,0.5)', borderRadius: 'var(--radius-pill)', padding: '3px 8px', whiteSpace: 'nowrap' }}>
                       Plano atual
                     </span>
                   ) : null}
                 </div>
 
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#d4a017' }}>{p.preco}</div>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017' }}>{p.preco}</div>
 
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8, flex: 1 }}>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 5, flex: 1 }}>
                   {p.features.map((f) => (
-                    <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>
+                    <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, lineHeight: 1.25, color: 'rgba(255,255,255,0.8)' }}>
                       <Check size={15} color="#8b5cf6" style={{ flexShrink: 0 }} /> {f}
                     </li>
                   ))}
                 </ul>
 
-                {/* Botão de checkout — escondido no plano actual (já tem o badge). */}
+                {/* Botão de checkout — escondido no plano actual (já tem o badge).
+                    Hierarquia da Figurinha: o CTA principal (Pro, o do ★) leva o
+                    gradiente dourado + texto escuro; os restantes ficam em outline
+                    roxo recuado. Lógica de checkout inalterada. */}
                 {p.botao && !atual ? (
-                  <button
-                    type="button"
-                    className="btn btn--purple"
-                    style={{ width: '100%' }}
-                    disabled={!!planoBusy}
-                    onClick={() => assinar(p.id)}
-                  >
-                    {planoBusy === p.id ? 'Redirecionando…' : p.botao}
-                  </button>
+                  p.id === 'pro' ? (
+                    <div style={{ display: 'flex', filter: 'drop-shadow(0 0 9px rgba(212,160,23,0.4))' }}>
+                      <button
+                        type="button"
+                        className="btn hud-corners"
+                        style={{ width: '100%', border: 'none', fontWeight: 800, color: '#0d0d12', background: 'linear-gradient(135deg, #f0c94a, #d4a017, #b8860b)' }}
+                        disabled={!!planoBusy}
+                        onClick={() => assinar(p.id)}
+                      >
+                        {planoBusy === p.id ? 'Redirecionando…' : p.botao}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn--purple-outline hud-corners"
+                      style={{ width: '100%', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)' }}
+                      disabled={!!planoBusy}
+                      onClick={() => assinar(p.id)}
+                    >
+                      {planoBusy === p.id ? 'Redirecionando…' : p.botao}
+                    </button>
+                  )
                 ) : null}
               </div>
             );

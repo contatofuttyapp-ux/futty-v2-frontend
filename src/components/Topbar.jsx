@@ -12,7 +12,7 @@ import FuttyLogo from './FuttyLogo';
 // O FUNDO PRETO é recortado com a MESMA geometria da linha → a linha é a fronteira
 // real entre o preto (acima) e o que está atrás (abaixo). Recalcula em resize e
 // quando as fontes carregam. Robusto a qualquer título (não só "FIGURINHA").
-function HudTopbar({ hud }) {
+function HudTopbar({ hud, back }) {
   const svgRef = useRef(null);
   const textRef = useRef(null);
   const [stepX, setStepX] = useState(128); // unidades do viewBox (default até medir)
@@ -56,6 +56,14 @@ function HudTopbar({ hud }) {
             clipPath: stepClip,
           }}
         />
+        {/* `back` opcional: páginas fora da bottom nav (ex. /planos) precisam de saída.
+            O degrau é medido a partir do fim do wordmark, por isso continua a colar-se
+            ao título mesmo com o chevron a empurrá-lo para a direita. */}
+        {back ? (
+          <Link to={back} className="topbar-back" aria-label="Voltar" style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', marginRight: 4 }}>
+            <ChevronLeft size={20} />
+          </Link>
+        ) : null}
         <span
           ref={textRef}
           style={{
@@ -96,7 +104,7 @@ function HudTopbar({ hud }) {
 }
 
 export default function Topbar({ title = null, back = null, hud = null }) {
-  if (hud) return <HudTopbar hud={hud} />;
+  if (hud) return <HudTopbar hud={hud} back={back} />;
 
   return (
     <div className="app-topbar-wrap">
