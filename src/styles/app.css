@@ -1455,24 +1455,33 @@
 }
 
 /* FASE 3.42/3.46 — Loader oficial: o monograma F é PINTADO por uma escova que corre
-   a sua espinha (ver FuttyLoader.jsx). Ciclo único de 1.6s: a escova pinta (0→70%) e
-   o shine varre no fim (66→100%). O traço usa pathLength="1" no SVG, daí o
-   dasharray/offset serem 1 e não o comprimento real do esqueleto. */
+   a sua espinha (ver FuttyLoader.jsx). O traço usa pathLength="1" no SVG, daí o
+   dasharray/offset serem 1 e não o comprimento real do esqueleto.
+
+   FASE 3.61 — CICLO DE 3 TEMPOS (2.7s), em vez do corte seco a 1.6s:
+     desenho  0 → 59.3%  (1.6s — inalterado)
+     respiro  59.3 → 77.8%  (0.5s: o F inteiro segura, e é AQUI que o glint passa)
+     fade-out 77.8 → 100%   (0.6s, ease-out: dissolve-se)
+   O fade vive na ESCOVA e não no <svg>: assim o trilho ténue do F fica sempre, e no
+   reinício a escova volta a opacity 1 já com dashoffset 1 (nada pintado) — sem flash.
+   Fazer o fade no svg inteiro faria o trilho piscar na emenda do loop. */
 @keyframes futtyLoaderDraw {
-  0%   { stroke-dashoffset: 1; }
-  70%  { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: 0; }
+  0%     { stroke-dashoffset: 1; opacity: 1; }
+  59.3%  { stroke-dashoffset: 0; opacity: 1; }
+  77.8%  { stroke-dashoffset: 0; opacity: 1; animation-timing-function: ease-out; }
+  100%   { stroke-dashoffset: 0; opacity: 0; }
 }
+/* O glint varre exactamente na janela do respiro (59.3 → 77.8%). */
 @keyframes futtyLoaderShine {
-  0%, 66%  { transform: translateX(0); }
-  100%     { transform: translateX(2160px); }
+  0%, 59.3%   { transform: translateX(0); }
+  77.8%, 100% { transform: translateX(2160px); }
 }
 .futty-loader-draw {
   stroke-dasharray: 1;
-  animation: futtyLoaderDraw 1.6s ease-in-out infinite;
+  animation: futtyLoaderDraw 2.7s ease-in-out infinite;
 }
 .futty-loader-shine {
-  animation: futtyLoaderShine 1.6s ease-in-out infinite;
+  animation: futtyLoaderShine 2.7s ease-in-out infinite;
 }
 /* Estático: o F fica pintado por inteiro, sem escova a correr nem shine. */
 @media (prefers-reduced-motion: reduce) {

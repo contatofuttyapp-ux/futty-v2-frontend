@@ -5,12 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Camera, Download, Share2, X, Lock, Check, Plus, Minus } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
-import { useTeams } from '../hooks/useTeam';
 import { nomeJogador, urlAsset } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico } from '../utils/figurinhaCanvas';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
-import PlayerCard from '../components/PlayerCard';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
 import LoadingFutty from '../components/LoadingFutty';
@@ -129,7 +127,6 @@ function EstrelaIA({ size = 16, color = '#d4a017', style }) {
 }
 
 export default function Figurinha() {
-  const { teams } = useTeams();
   const navigate = useNavigate();
 
   const [me, setMe] = useState(null);
@@ -162,7 +159,7 @@ export default function Figurinha() {
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
-  const equipa = teams[0] || null;
+  // GRUPO B 6a — `equipa` existia só para alimentar o PlayerCard, que saiu daqui.
   const frameHex = getFrameColor(corFrame).stroke;
   // Regra única: a foto CRUA nunca entra no card. Só entra o avatar quando é
   // um avatar IA confirmado (foto_url e avatar_url existem e são diferentes —
@@ -480,7 +477,15 @@ export default function Figurinha() {
                     alt="figurinha"
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
-                : <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
+                : /* GRUPO B 6a — enquanto o preview não gera, mostra o F a carregar e
+                     não o PlayerCard. O PlayerCard é a geração ANTERIOR do cromo (DOM,
+                     sem octógono, sem placa, sem o enquadramento das fases 3.2x–3.4x):
+                     usá-lo aqui fazia o utilizador ver, por instantes, um cromo
+                     visivelmente diferente do final — um salto, não um carregamento.
+                     O PlayerCard continua intocado no Início e na LandingPage. */
+                  <div style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%' }}>
+                    <FuttyLoader size={96} label={null} />
+                  </div>
               }
               {estreiaFase === 'gerando' ? overlayGerando : null}
             </div>
@@ -616,7 +621,11 @@ export default function Figurinha() {
                     ))}
                   </>
                 ) : (
-                  <PlayerCard {...opts} equipa={equipa} cantos={false} aspect="2 / 3" glowSuave posicao={jogador?.posicao || null} />
+                  // GRUPO B 6a — ver nota no fallback da estreia: o F a carregar em vez
+                  // do PlayerCard (a geração anterior do cromo).
+                  <div style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%' }}>
+                    <FuttyLoader size={96} label={null} />
+                  </div>
                 )}
 
               </div>
