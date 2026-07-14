@@ -31,7 +31,8 @@ const F_ESQUELETO =
   'M141.16 1116.85 L400.59 217.33 L911.43 84.67 L870.71 233.04 L510.84 327.42 ' +
   'L465.57 491.54 L728.91 491.60 L690.81 626.44 L427.53 626.46 L282.40 1116.65';
 
-export default function FuttyLoader({ size = 44, label = 'Carregando…' }) {
+// FASE 3.48 — +35% em todos os tamanhos (default 44 → 59; overlay 64 → 86; botão 16 → 22).
+export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
   // ids únicos por instância: podem coexistir dois loaders no mesmo ecrã.
   const uid = useId().replace(/:/g, '');
   const clipId = `futty-loader-clip-${uid}`;

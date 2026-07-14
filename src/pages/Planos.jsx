@@ -131,8 +131,8 @@ export default function Planos() {
                   padding: 16,
                   // FASE 3.43 — Elevação por translucidez: o card deixa passar a
                   // atmosfera (partículas + gradiente do shell) em vez de a tapar.
-                  // 0.85 do --surface-1 (#0d0d12) + blur do que fica por trás.
-                  background: 'rgba(13, 13, 18, 0.85)',
+                  // 0.74 do --surface-1 (#0d0d12) + blur do que fica por trás.
+                  background: 'rgba(13, 13, 18, 0.74)',
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
                   // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da figurinha.
@@ -177,12 +177,15 @@ export default function Planos() {
                     roxo recuado. Lógica de checkout inalterada. */}
                 {p.botao && !atual ? (
                   p.id === 'pro' ? (
-                    // Glow com respiração — reusa a classe do Compartilhar (0.4↔0.6, 3.5s).
-                    <div className="fig-share-glow" style={{ display: 'flex' }}>
+                    // FASE 3.47 — CTA dourado partilhado com o "Compartilhar" da
+                    // Figurinha: gradiente, texto, altura, glow e shine vivem em
+                    // .cta-gold/.cta-gold-glow (app.css). O glow deixou de pulsar; o
+                    // card herói mantém o bob+sway, que continuam a dar-lhe hierarquia.
+                    <div className="cta-gold-glow" style={{ display: 'flex' }}>
                       <button
                         type="button"
-                        className="btn hud-corners planos-cta-shine"
-                        style={{ width: '100%', border: 'none', fontWeight: 800, color: '#0d0d12', background: 'linear-gradient(135deg, #f0c94a, #d4a017, #b8860b)' }}
+                        className="btn hud-corners cta-gold"
+                        style={{ width: '100%' }}
                         disabled={!!planoBusy}
                         onClick={() => assinar(p.id)}
                       >

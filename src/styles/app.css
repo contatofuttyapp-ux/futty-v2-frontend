@@ -1480,23 +1480,47 @@
   );
 }
 
-/* FASE 3.36 — Glow do Compartilhar com pulso de respiração (0.4↔0.6, 3.5s). É o
-   ÚNICO elemento com pulso permanente da página → o olho vai lá. drop-shadow (e não
-   box-shadow) porque o botão interior é recortado a 45° e o glow tem de seguir a forma. */
-@keyframes fig-share-pulse {
-  0%, 100% { filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 11px rgba(212, 160, 23, 0.4)); }
-  50%      { filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 13px rgba(212, 160, 23, 0.6)); }
+/* ─────────────────────────────────────────────────────────────────────────────
+   FASE 3.47 — LEI DOS GÉMEOS: o CTA dourado é UM só. "Compartilhar" (Figurinha) e
+   "Assinar Pro" (Planos) partilham estas classes; mexer aqui mexe nos dois.
+
+   São DUAS classes e não uma por uma razão de render: o glow tem de ficar num
+   wrapper SEM clip. A ordem de composição do CSS é filter → clip-path, por isso um
+   drop-shadow no próprio botão seria cortado pelo clip-path a 45° do .hud-corners.
+     .cta-gold-glow → wrapper (só o glow)
+     .cta-gold      → botão (gradiente, texto, altura, cantos, shine)
+   ───────────────────────────────────────────────────────────────────────────── */
+.cta-gold-glow {
+  filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 9px rgba(212, 160, 23, 0.22));
 }
-.fig-share-glow { animation: fig-share-pulse 3.5s ease-in-out infinite; }
+.cta-gold {
+  position: relative;
+  overflow: hidden;
+  height: 46px;
+  border: none;
+  font-weight: 800;
+  color: #0d0d12;
+  background: linear-gradient(135deg, #f0c94a, #d4a017, #b8860b);
+}
+/* Shine — o VARRIMENTO tem a mesma velocidade do brilho do card (futtyFrameShine:
+   3.6s de passagem), mas passa o dobro das vezes: período 4s em vez de 8s. Como o
+   sweep continua a durar 3.6s absolutos, ocupa agora 90% do ciclo e a pausa encolhe
+   de 4.4s para 0.4s — ou seja, quase encadeado. Mexer aqui mexe nos DOIS CTAs. */
+.cta-gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 34%, rgba(255, 250, 225, 0.5) 50%, transparent 66%);
+  transform: translateX(-100%);
+  animation: ctaGoldSweep 4s ease-in-out infinite;
+}
+@keyframes ctaGoldSweep {
+  0%        { transform: translateX(-100%); }
+  90%, 100% { transform: translateX(200%); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .fig-share-glow { animation: none; filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 12px rgba(212, 160, 23, 0.5)); }
-}
-/* Variante ESTÁTICA (sem pulso) — Compartilhar da Figurinha. Classe à parte porque
-   .fig-share-glow continua a pulsar no CTA "Assinar Pro" dos Planos, onde é o herói
-   da página. Continua em drop-shadow (e não box-shadow) pelo mesmo motivo: o botão
-   interior é recortado a 45° e o glow tem de seguir a forma recortada. */
-.fig-share-glow-fixo {
-  filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 22px rgba(212, 160, 23, 0.5));
+  .cta-gold::after { animation: none; }
 }
 /* Tier ecrãs pequenos (SE e similares, <700px): reserva menor (~300) → card com
    tamanho decente, aceitando scroll ligeiro até Baixar/Compartilhar só aqui.
@@ -1681,31 +1705,8 @@
   .planos-bob, .planos-sway, .planos-shadow, .planos-coroa-twinkle { animation: none; }
 }
 
-/* FASE 3.43 — Shine sweep SÓ no CTA "Assinar Pro". Mesmo idioma do .tab-shine, mas
-   mais quente e mais forte: sobre o gradiente dourado o branco a 0.14 do tab-shine
-   não se lê. Ciclo mais lento (4.2s) que o das tabs para não competir com o bob do
-   card herói. O clip-path do .hud-corners recorta o ::after junto com o botão. */
-.planos-cta-shine {
-  position: relative;
-  overflow: hidden;
-}
-.planos-cta-shine::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(105deg, transparent 34%, rgba(255, 250, 225, 0.5) 50%, transparent 66%);
-  transform: translateX(-100%);
-  animation: planosCtaSweep 4.2s ease-in-out infinite;
-}
-@keyframes planosCtaSweep {
-  0%   { transform: translateX(-100%); }
-  16%  { transform: translateX(200%); }
-  100% { transform: translateX(200%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .planos-cta-shine::after { animation: none; }
-}
+/* FASE 3.47 — o shine do CTA Pro (era .planos-cta-shine, 4.2s/16%) foi absorvido pela
+   classe partilhada .cta-gold, agora ao ritmo do card (8s/45%). Ver "LEI DOS GÉMEOS". */
 @media (prefers-reduced-motion: reduce) {
   .fig-bob, .fig-sway, .fig-shadow, .fig-aura, .fig-name-glow,
   .fig-particle, .fig-light, .fig-fog-1, .fig-fog-2, .fig-fog-3, .fig-breathe,

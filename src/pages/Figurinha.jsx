@@ -440,7 +440,7 @@ export default function Figurinha() {
           </button>
         </div>
       ) : (
-        <FuttyLoader size={64} label="A criar o teu avatar…" />
+        <FuttyLoader size={86} label="A criar o teu avatar…" />
       )}
     </div>
   );
@@ -694,7 +694,7 @@ export default function Figurinha() {
                 >
                   {gerandoIA ? (
                     <>
-                      <FuttyLoader size={16} label={null} /> Gerando…
+                      <FuttyLoader size={22} label={null} /> Gerando…
                     </>
                   ) : (
                     <>
@@ -891,14 +891,15 @@ export default function Figurinha() {
             <button type="button" className="btn btn--purple-outline hud-corners" style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
               <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
             </button>
-            {/* Glow do Compartilhar no wrapper SEM clip (o clip-path cortaria a sombra),
-                via drop-shadow para seguir a forma recortada do botão. Glow ESTÁTICO:
-                o pulso de respiração da 3.36 foi removido. */}
-            <div className="fig-share-glow-fixo" style={{ flex: 1, display: 'flex' }}>
+            {/* FASE 3.47 — CTA dourado partilhado com o "Assinar Pro" dos Planos:
+                gradiente, texto, altura, glow e shine vivem em .cta-gold/.cta-gold-glow
+                (app.css). O glow fica no wrapper SEM clip porque o clip-path do botão
+                cortaria a sombra. */}
+            <div className="cta-gold-glow" style={{ flex: 1, display: 'flex' }}>
               <button
                 type="button"
-                className="btn hud-corners"
-                style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', fontWeight: 800, color: '#0d0d12', background: 'linear-gradient(135deg, #f0c94a, #d4a017, #b8860b)' }}
+                className="btn hud-corners cta-gold"
+                style={{ flex: 1 }}
                 disabled={busy}
                 onClick={partilhar}
               >
