@@ -140,19 +140,19 @@ export default function Planos() {
                   flexDirection: 'column',
                   gap: 10,
                   padding: 16,
-                  // FASE 3.43 — Elevação por translucidez: o card deixa passar a
-                  // atmosfera (partículas + gradiente do shell) em vez de a tapar.
-                  // Vidro: 0.45 do --surface-1 (#0d0d12) + blur.
-                  // FASE 3.57 — o blur é 4px e não os 10px da 3.56. Medido em A/B com a
-                  // mesma partícula (4px) atrás do mesmo card: a 0 e a 4px lê-se; a 6px
-                  // fica ténue; a 10px DESAPARECE. Um Gaussiano de 10px espalha um ponto
-                  // de 4px por ~24px e mata-lhe o pico. Blur alto e partículas pequenas
-                  // legíveis através são requisitos incompatíveis — ganha a legibilidade.
-                  background: 'rgba(13, 13, 18, 0.45)',
-                  backdropFilter: 'blur(4px)',
-                  WebkitBackdropFilter: 'blur(4px)',
-                  // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da figurinha.
-                  border: atual ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
+                  // FASE 3.63 — MATERIAL DE CARD DO CÂNONE: o véu do Perfil, extraído
+                  // dos valores computados reais dessa página. Não é escuro translúcido
+                  // (era rgba(13,13,18,0.45) + blur 4px até à 3.57) — é um VÉU BRANCO a
+                  // 3%, sem blur nenhum: o card não tapa o fundo, tinge-o. As partículas
+                  // passam a ver-se mais, não menos.
+                  // O radius 12px do Perfil NÃO vem junto: os cantos são os 45° do
+                  // .hud-corners. O Perfil é candidato a vaga; o que se herda dele é o
+                  // material, não o que nele viola o cânone.
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da
+                  // figurinha. INTOCADO pela 3.63: a borda/glow do plano actual é
+                  // hierarquia, não material. Só a borda NEUTRA adopta a do Perfil.
+                  border: atual ? '2px solid #d4a017' : '1.2px solid rgba(255, 255, 255, 0.06)',
                   boxShadow: atual ? '0 0 14px rgba(212,160,23,0.45)' : 'none',
                 }}
               >
@@ -179,7 +179,13 @@ export default function Planos() {
                   ) : null}
                 </div>
 
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017' }}>{p.preco[moeda]}</div>
+                {/* FASE 3.63 — text-shadow SÓ no preço. O véu de 3% quase não escurece,
+                    por isso o texto assenta no fundo variável da página. Medido: features
+                    (branco 0.8) e nome passam em todos os cenários (mín. 5.88); o preço
+                    #d4a017 sobre o pico do blob DOURADO cai a 3.42 — dourado sobre
+                    dourado, abaixo do AA 4.5. A sombra devolve-lhe a leitura sem mexer na
+                    opacidade do card. */}
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{p.preco[moeda]}</div>
 
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 5, flex: 1 }}>
                   {p.features.map((f) => (

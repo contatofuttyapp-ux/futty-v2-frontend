@@ -33,7 +33,10 @@ export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
         height={size}
         viewBox="0 0 1080 1080"
         aria-hidden="true"
-        style={{ display: 'block', filter: 'drop-shadow(0 0 9px rgba(212, 160, 23, 0.55))' }}
+        // FASE 3.63 — glow externo FORA (era drop-shadow(0 0 9px rgba(212,160,23,0.55))).
+        // O loader não tem face para calibrar: é um traço, e o traço já é #d4a017, o tom
+        // exacto do título. O que o desviava do tom era só este halo dourado à volta.
+        style={{ display: 'block' }}
       >
         <defs>
           <clipPath id={clipId}>

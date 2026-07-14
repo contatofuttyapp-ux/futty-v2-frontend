@@ -43,15 +43,18 @@ export default function FuttyLockup({ size = 120, wordmarkSize = 44 }) {
         style={{ display: 'block', overflow: 'visible' }}
       >
         <defs>
-          {/* FACE — gradiente de curvatura, luz de cima-esquerda. O SVG mede em
-              objectBoundingBox e o eixo por omissão é oeste→este (= 90deg em CSS),
-              por isso os 135deg da receita pedem rotate(45). */}
+          {/* FACE — FASE 3.63: quase CHAPADA no tom do título "FIGURINHA".
+              O gradiente largo (#fdf0b0 → #6b4e06) dava média 221,175,43 contra os
+              212,160,23 do título: Δ 20, e lia-se amarelo. Qualquer gradiente que
+              termine em escuro puxa a média para longe do alvo — medido, as variantes
+              testadas davam −18 a −39. A única forma de chegar a Δ<8 é colapsar a banda:
+              ±5% de luminosidade à volta de rgb(212,160,23). A curvatura fica residual;
+              o volume passa a viver na GEOMETRIA (extrusão + bisel), não na cor.
+              O eixo por omissão do SVG é oeste→este (= 90deg em CSS) → rotate(45). */}
           <linearGradient id={metalId} gradientTransform="rotate(45 0.5 0.5)">
-            <stop offset="0" stopColor="#fdf0b0" />
-            <stop offset="0.30" stopColor="#f0c94a" />
-            <stop offset="0.55" stopColor="#d4a017" />
-            <stop offset="0.85" stopColor="#9a7208" />
-            <stop offset="1" stopColor="#6b4e06" />
+            <stop offset="0" stopColor="#dfa818" />
+            <stop offset="0.5" stopColor="#d4a017" />
+            <stop offset="1" stopColor="#c99816" />
           </linearGradient>
           <clipPath id={clipId}>
             <path d={F_CONTORNO} />
@@ -84,10 +87,11 @@ export default function FuttyLockup({ size = 120, wordmarkSize = 44 }) {
               O clip corta metade de cada um, e é isso que faz o chanfro. */}
           <path d={F_CONTORNO} fill="none" stroke="rgba(60,40,0,0.7)" strokeWidth="10" transform="translate(5 5)" />
           <path d={F_CONTORNO} fill="none" stroke="rgba(255,244,190,0.9)" strokeWidth="10" transform="translate(-5 -5)" />
-          {/* Especular: a luz "molhada" no terço superior da haste. */}
+          {/* Especular: a luz "molhada" no terço superior da haste. FASE 3.63 — 0.35 →
+              0.10: a 0.35 clareava a face e puxava a média para longe do tom do título. */}
           <ellipse
             cx="392" cy="420" rx="78" ry="190"
-            fill="#ffffff" opacity="0.35"
+            fill="#ffffff" opacity="0.10"
             filter={`url(#${especularId})`}
             transform="rotate(-15 392 420)"
           />

@@ -1500,24 +1500,16 @@
   from { opacity: 0; transform: scale(0.92); }
   to   { opacity: 1; transform: scale(1); }
 }
-/* FASE 3.56 — a sombra dura (0 2px 0) SAIU: a extrusão multi-camada do SVG passou a
-   ser o corpo 3D de verdade, e a sombra dura por cima dela só sujava a silhueta.
-   Ficam a difusa (elevação) e o glow que respira. */
-@keyframes futtyLockupGlow {
-  0%, 100% {
-    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5))
-            drop-shadow(0 0 18px rgba(212, 160, 23, 0.3));
-  }
-  50% {
-    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5))
-            drop-shadow(0 0 18px rgba(212, 160, 23, 0.45));
-  }
-}
+/* FASE 3.56 — a sombra dura (0 2px 0) saiu: a extrusão multi-camada do SVG passou a ser
+   o corpo 3D de verdade, e a sombra dura por cima dela só sujava a silhueta.
+   FASE 3.63 — o GLOW DOURADO externo saiu também: era ele que envolvia o F num halo
+   amarelo e o afastava do tom do título. Com ele fora, a respiração (futtyLockupGlow,
+   que só animava o alpha desse halo) deixou de ter o que animar e foi removida. Fica a
+   sombra difusa — a elevação — agora estática, e a entrada. */
 .futty-lockup-f {
-  will-change: transform, filter;
-  animation:
-    futtyLockupIn 0.6s ease-out both,
-    futtyLockupGlow 5s ease-in-out 0.6s infinite;
+  will-change: transform;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5));
+  animation: futtyLockupIn 0.6s ease-out both;
 }
 /* Glint: mais notório que o dos CTAs (alpha 0.35 vs 0.18) e mais raro (6s). O
    varrimento dura 1s = 16.7% do ciclo. */
@@ -1528,14 +1520,10 @@
 .futty-lockup-glint {
   animation: futtyLockupGlint 6s ease-in-out 0.6s infinite;
 }
-/* Material e sombras ficam; morre o que se mexe. O filter passa a estático com o glow
-   no valor médio (0.375) — sem ele o F perdia as sombras todas. */
+/* Material e sombras ficam; morre o que se mexe. Desde a 3.63 o filter já é estático,
+   por isso aqui só se desliga a entrada e o glint. */
 @media (prefers-reduced-motion: reduce) {
-  .futty-lockup-f {
-    animation: none;
-    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5))
-            drop-shadow(0 0 18px rgba(212, 160, 23, 0.375));
-  }
+  .futty-lockup-f { animation: none; }
   .futty-lockup-glint { animation: none; display: none; }
 }
 
