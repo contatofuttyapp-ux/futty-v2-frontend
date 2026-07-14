@@ -19,6 +19,107 @@ function canvasParaBlob(canvas) {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
 }
 
+// Fundo "Épico" — honeycomb alinhado ao ângulo do F + monograma como marca de água,
+// placa 3D (pseudo-perspectiva), luz central e vinheta. EXPORTADO para o tile da UI
+// renderizar o FUNDO REAL em miniatura (em vez de uma imitação em CSS/SVG).
+// Ordem: base → [hexágonos + F, DESFOCADOS] → luz central → vinheta.
+export async function desenharFundoEpico(ctx, W, H) {
+  const k = W / 400; // mesma convenção do card: os valores fixos escalam com a largura
+
+  // a) Base: vertical muito escuro, quase monocromático (nítida).
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#16161c');
+  g.addColorStop(0.5, '#1d1d24');
+  g.addColorStop(1, '#101014');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // b) PADRÃO num canvas OFFSCREEN → transferido com blur (só o padrão desfoca;
+  //    base, luz e vinheta ficam nítidas). Seed FIXA → determinístico.
+  const fLogo = await carregarImagem('/futty-logo-flat.png', false);
+  // Offscreen 25% MAIOR que o card: a pseudo-perspectiva (skew) desloca as bordas
+  // e, sem esta folga, ficariam faixas sem padrão nos limites do card.
+  const off = document.createElement('canvas');
+  const OW = Math.ceil(W * 1.25);
+  const OH = Math.ceil(H * 1.25);
+  off.width = OW;
+  off.height = OH;
+  const octx = off.getContext('2d');
+  octx.lineWidth = 1 * k;
+  let seed = 20240;
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  // Hexágonos "pointy-top": diagonal (vértice a vértice) = W*0.32 = 2R.
+  const R = (W * 0.32) / 2;
+  const passoX = Math.sqrt(3) * R;
+  const passoY = 1.5 * R;
+  // ROTAÇÃO: ANGULO_F = 14.52° — medido na haste principal do F de futty-logo-flat.png.
+  const ANGULO_F = (14.52 * Math.PI) / 180;
+  const alvoY = H / 3 - H / 2; // alinhamento fino ao terço superior
+  octx.save();
+  octx.translate(OW / 2, OH / 2);
+  octx.rotate(ANGULO_F);
+  octx.translate(0, alvoY + R);
+  const M = Math.hypot(OW, OH) / 2 + 2 * R;
+  for (let row = -Math.ceil(M / passoY); row * passoY <= M; row++) {
+    for (let col = -Math.ceil(M / passoX); col * passoX <= M; col++) {
+      const cx = col * passoX + (Math.abs(row % 2) ? passoX / 2 : 0);
+      const cy = row * passoY;
+      octx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 2;
+        const px = cx + R * Math.cos(a);
+        const py = cy + R * Math.sin(a);
+        if (i === 0) octx.moveTo(px, py);
+        else octx.lineTo(px, py);
+      }
+      octx.closePath();
+      octx.strokeStyle = rnd() < 0.12 ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.022)';
+      octx.stroke();
+      // Monograma F: contra-rodado → haste PARALELA às linhas da grelha.
+      if (fLogo && rnd() < 0.08) {
+        const s = 2 * R * 0.6;
+        octx.save();
+        octx.translate(cx, cy);
+        octx.rotate(-ANGULO_F);
+        octx.globalAlpha = 0.03;
+        octx.drawImage(fLogo, -s / 2, -s / 2, s, s);
+        octx.restore();
+      }
+    }
+  }
+  octx.restore();
+  // Transfere: blur + PSEUDO-PERSPECTIVA (canto sup-direito "para trás"), pivô no centro.
+  ctx.save();
+  ctx.filter = `blur(${1.2 * k}px)`;
+  ctx.translate(W / 2, H / 2);
+  ctx.transform(1.02, -0.06, 0.05, 0.98, 0, 0);
+  ctx.drawImage(off, -OW / 2, -OH / 2);
+  ctx.restore();
+
+  // c) Luz radial central suave atrás do peito/rosto.
+  const luz = ctx.createRadialGradient(W / 2, H * 0.38, 0, W / 2, H * 0.38, H * 0.5);
+  luz.addColorStop(0, 'rgba(255,255,255,0.05)');
+  luz.addColorStop(0.55, 'rgba(255,255,255,0)');
+  luz.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = luz;
+  ctx.fillRect(0, 0, W, H);
+
+  // d) Vinheta radial escura só nas margens (elíptica, via scale).
+  ctx.save();
+  ctx.translate(W / 2, H * 0.45);
+  ctx.scale(1, H / W);
+  const vin = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.62);
+  vin.addColorStop(0, 'rgba(20,12,0,0)');
+  vin.addColorStop(0.6, 'rgba(20,12,0,0)');
+  vin.addColorStop(1, 'rgba(20,12,0,0.55)');
+  ctx.fillStyle = vin;
+  ctx.fillRect(-W, -H, W * 2, H * 2);
+  ctx.restore();
+}
+
 // Desenha o card 2:3 num canvas próprio (largura×altura). `k` escala os valores
 // fixos (fontes, badge, frame) para render nativo a qualquer resolução.
 async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, incluirAvatar = true, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false }) {
@@ -211,120 +312,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, W, H);
   } else if (fundo === 'gradiente') {
-    // CARTA ÉPICA — honeycomb (o padrão da bola) + monograma F como marca de água.
-    // Chave interna 'gradiente' (evita refactor de estado); na UI chama-se "Épico".
-    // Ordem: base → [hexágonos + F, DESFOCADOS] → luz central → vinheta.
-
-    // a) Base: vertical muito escuro, quase monocromático (nítida).
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#16161c');
-    g.addColorStop(0.5, '#1d1d24');
-    g.addColorStop(1, '#101014');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-
-    // b) PADRÃO num canvas OFFSCREEN → transferido com blur (só o padrão desfoca;
-    //    base, luz e vinheta ficam nítidas). Seed FIXA → determinístico.
-    const fLogo = await carregarImagem('/futty-logo-flat.png', false);
-    // Offscreen 25% MAIOR que o card: a pseudo-perspectiva (skew) desloca as bordas
-    // e, sem esta folga, ficariam faixas sem padrão nos limites do card.
-    const off = document.createElement('canvas');
-    const OW = Math.ceil(W * 1.25);
-    const OH = Math.ceil(H * 1.25);
-    off.width = OW;
-    off.height = OH;
-    const octx = off.getContext('2d');
-    octx.lineWidth = 1 * k;
-    let seed = 20240;
-    const rnd = () => {
-      seed = (seed * 1664525 + 1013904223) >>> 0;
-      return seed / 4294967296;
-    };
-    // Hexágonos "pointy-top": diagonal (vértice a vértice) = W*0.32 = 2R → R=64
-    // (o dobro da 3.32). A grelha honeycomb recalcula os passos a partir do R.
-    const R = (W * 0.32) / 2;
-    const passoX = Math.sqrt(3) * R;
-    const passoY = 1.5 * R;
-
-    // ROTAÇÃO: ANGULO_F = 14.52° — medido na haste principal do F de
-    // futty-logo-flat.png (declive dx/dy = -0.259 → inclina p/ a esquerda ao descer).
-    // Sentido horário: no canvas, rotate(+θ) faz uma vertical inclinar-se para a
-    // esquerda ao descer — exactamente como a haste do F.
-    const ANGULO_F = (14.52 * Math.PI) / 180;
-    // Alinhamento fino: o vértice superior de uma célula central cai no terço
-    // superior do card (onde a barra do F vive proporcionalmente no monograma).
-    const alvoY = H / 3 - H / 2;
-    octx.save();
-    octx.translate(OW / 2, OH / 2); // centro do offscreen = centro do card na transferência
-    octx.rotate(ANGULO_F);
-    octx.translate(0, alvoY + R);
-    // Grelha sobre a diagonal do OFFSCREEN + margem → a rotação não deixa cantos vazios.
-    const M = Math.hypot(OW, OH) / 2 + 2 * R;
-    for (let row = -Math.ceil(M / passoY); row * passoY <= M; row++) {
-      for (let col = -Math.ceil(M / passoX); col * passoX <= M; col++) {
-        // offset clássico de meia célula nas linhas ímpares
-        const cx = col * passoX + (Math.abs(row % 2) ? passoX / 2 : 0);
-        const cy = row * passoY;
-        octx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const a = (Math.PI / 3) * i - Math.PI / 2; // primeiro vértice no topo
-          const px = cx + R * Math.cos(a);
-          const py = cy + R * Math.sin(a);
-          if (i === 0) octx.moveTo(px, py);
-          else octx.lineTo(px, py);
-        }
-        octx.closePath();
-        // ~12% das arestas com brilho dourado — as facetas que apanham luz.
-        octx.strokeStyle = rnd() < 0.12 ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.022)';
-        octx.stroke();
-        // Monograma F em ~8% das células, 60% do tamanho da célula, alpha 0.03.
-        // CONTRA-ROTAÇÃO: o F fica no seu ângulo NATURAL. Como a grelha já foi rodada
-        // para o ângulo da haste, o F por rodar tem a haste PARALELA às linhas da
-        // grelha — que é o objectivo desta fase. (Rodá-lo também poria a haste a
-        // ~29°, desalinhada da própria grelha.)
-        if (fLogo && rnd() < 0.08) {
-          const s = 2 * R * 0.6;
-          octx.save();
-          octx.translate(cx, cy);
-          octx.rotate(-ANGULO_F);
-          octx.globalAlpha = 0.03;
-          octx.drawImage(fLogo, -s / 2, -s / 2, s, s);
-          octx.restore();
-        }
-      }
-    }
-    octx.restore();
-    // Transfere o padrão: blur + PSEUDO-PERSPECTIVA (canto sup-direito "para trás").
-    // Pivô no centro do card. b=-0.06 (skewY ≈ 3.4°) e c=0.05 (skewX ≈ 2.9°) com
-    // scale(1.02, 0.98) → a placa inclina ~3-4° percebidos, não tomba.
-    // Usa transform() (não setTransform) para compor com o pivô já aplicado.
-    ctx.save();
-    ctx.filter = `blur(${1.2 * k}px)`;
-    ctx.translate(W / 2, H / 2);
-    ctx.transform(1.02, -0.06, 0.05, 0.98, 0, 0);
-    ctx.drawImage(off, -OW / 2, -OH / 2);
-    ctx.restore();
-
-    // c) Luz radial central suave atrás do peito/rosto — destaca o jogador sem spotlight.
-    const luz = ctx.createRadialGradient(W / 2, H * 0.38, 0, W / 2, H * 0.38, H * 0.5);
-    luz.addColorStop(0, 'rgba(255,255,255,0.05)');
-    luz.addColorStop(0.55, 'rgba(255,255,255,0)');
-    luz.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = luz;
-    ctx.fillRect(0, 0, W, H);
-
-    // b) Vinheta radial escura só nas margens (elíptica, via scale) — transparente
-    //    no centro (~60%) → rgba(20,12,0,0.55) nas bordas. Profundidade sem matar o ouro.
-    ctx.save();
-    ctx.translate(W / 2, H * 0.45);
-    ctx.scale(1, H / W); // círculo → elipse com o aspecto do card
-    const vin = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.62);
-    vin.addColorStop(0, 'rgba(20,12,0,0)');
-    vin.addColorStop(0.6, 'rgba(20,12,0,0)');
-    vin.addColorStop(1, 'rgba(20,12,0,0.55)');
-    ctx.fillStyle = vin;
-    ctx.fillRect(-W, -H, W * 2, H * 2);
-    ctx.restore();
+    await desenharFundoEpico(ctx, W, H);
   } else {
     const bg = await carregarImagem('/stadium_bg.png', false);
     if (bg) {
