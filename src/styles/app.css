@@ -1491,6 +1491,13 @@
 @media (prefers-reduced-motion: reduce) {
   .fig-share-glow { animation: none; filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 12px rgba(212, 160, 23, 0.5)); }
 }
+/* Variante ESTÁTICA (sem pulso) — Compartilhar da Figurinha. Classe à parte porque
+   .fig-share-glow continua a pulsar no CTA "Assinar Pro" dos Planos, onde é o herói
+   da página. Continua em drop-shadow (e não box-shadow) pelo mesmo motivo: o botão
+   interior é recortado a 45° e o glow tem de seguir a forma recortada. */
+.fig-share-glow-fixo {
+  filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35)) drop-shadow(0 0 22px rgba(212, 160, 23, 0.5));
+}
 /* Tier ecrãs pequenos (SE e similares, <700px): reserva menor (~300) → card com
    tamanho decente, aceitando scroll ligeiro até Baixar/Compartilhar só aqui.
    Vem ANTES do bloco <620px para este último (mais restritivo) vencer. */
@@ -1673,10 +1680,62 @@
 @media (prefers-reduced-motion: reduce) {
   .planos-bob, .planos-sway, .planos-shadow, .planos-coroa-twinkle { animation: none; }
 }
+
+/* FASE 3.43 — Shine sweep SÓ no CTA "Assinar Pro". Mesmo idioma do .tab-shine, mas
+   mais quente e mais forte: sobre o gradiente dourado o branco a 0.14 do tab-shine
+   não se lê. Ciclo mais lento (4.2s) que o das tabs para não competir com o bob do
+   card herói. O clip-path do .hud-corners recorta o ::after junto com o botão. */
+.planos-cta-shine {
+  position: relative;
+  overflow: hidden;
+}
+.planos-cta-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 34%, rgba(255, 250, 225, 0.5) 50%, transparent 66%);
+  transform: translateX(-100%);
+  animation: planosCtaSweep 4.2s ease-in-out infinite;
+}
+@keyframes planosCtaSweep {
+  0%   { transform: translateX(-100%); }
+  16%  { transform: translateX(200%); }
+  100% { transform: translateX(200%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .planos-cta-shine::after { animation: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .fig-bob, .fig-sway, .fig-shadow, .fig-aura, .fig-name-glow,
   .fig-particle, .fig-light, .fig-fog-1, .fig-fog-2, .fig-fog-3, .fig-breathe,
   .fig-frame-shine, .fig-dot-twinkle { animation: none; }
+}
+
+/* FASE 3.42/3.46 — Loader oficial: o monograma F é PINTADO por uma escova que corre
+   a sua espinha (ver FuttyLoader.jsx). Ciclo único de 1.6s: a escova pinta (0→70%) e
+   o shine varre no fim (66→100%). O traço usa pathLength="1" no SVG, daí o
+   dasharray/offset serem 1 e não o comprimento real do esqueleto. */
+@keyframes futtyLoaderDraw {
+  0%   { stroke-dashoffset: 1; }
+  70%  { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes futtyLoaderShine {
+  0%, 66%  { transform: translateX(0); }
+  100%     { transform: translateX(2160px); }
+}
+.futty-loader-draw {
+  stroke-dasharray: 1;
+  animation: futtyLoaderDraw 1.6s ease-in-out infinite;
+}
+.futty-loader-shine {
+  animation: futtyLoaderShine 1.6s ease-in-out infinite;
+}
+/* Estático: o F fica pintado por inteiro, sem escova a correr nem shine. */
+@media (prefers-reduced-motion: reduce) {
+  .futty-loader-draw { animation: none; stroke-dashoffset: 0; }
+  .futty-loader-shine { animation: none; display: none; }
 }
 
 /* Spinner reutilizável (botões em loading). */

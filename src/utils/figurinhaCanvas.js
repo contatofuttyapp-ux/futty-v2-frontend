@@ -151,6 +151,20 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.lineTo(m, m + cut);
     ctx.closePath();
   };
+  // FASE 3.45 — Variante com inset POR-LADO. O `cut` é o mesmo nos quatro cantos, por
+  // isso as diagonais continuam a 45° mesmo com insets diferentes (dx = dy = cut).
+  const octagonoLados = (t, r, b, l) => {
+    ctx.beginPath();
+    ctx.moveTo(l + cut, t);
+    ctx.lineTo(W - r - cut, t);
+    ctx.lineTo(W - r, t + cut);
+    ctx.lineTo(W - r, H - b - cut);
+    ctx.lineTo(W - r - cut, H - b);
+    ctx.lineTo(l + cut, H - b);
+    ctx.lineTo(l, H - b - cut);
+    ctx.lineTo(l, t + cut);
+    ctx.closePath();
+  };
 
   // RECORTE OCTOGONAL do CONTEÚDO (num save/restore): fundo, avatar, nome e
   // gradientes ficam dentro do octógono → cantos TRANSPARENTES. O restore antes do
@@ -180,21 +194,31 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     const dw = avatar.naturalWidth * scale;
     const dh = avatar.naturalHeight * scale;
     const dx = (W - dw) / 2;
-    // FASE 3.28 — Topo do avatar a 12% da altura (era 16%): o jogador sobe ~24px
-    // para os olhos caírem no terço superior (medido: ~29% da altura do card, dentro
-    // da faixa 28–36%). Com 0.10 os olhos ficavam a ~27%, acima da faixa. Seguro
-    // porque a coroa vem completa e o clip octogonal (3.26) protege topo/laterais.
-    const dy = H * 0.12;
+    // FASE 3.44 — Zoom ANCORADO AOS OLHOS. Antes fixava-se o topo (dy = H*0.12) e,
+    // como dh cresce com avatarZoom, o olhar descia ao ampliar. Agora ancora-se o
+    // ponto dos olhos: dy = EYE_Y - dh*EYE_FRAC. Como dh já inclui o zoom, os olhos
+    // ficam sempre em EYE_Y e o corpo cresce à volta desse ponto.
+    // EYE_FRAC medido no avatar gerado (445x680, já com trim+extend): pupila esquerda
+    // a 20.9% e direita a 22.2% da altura do PNG (cabeça inclinada) → média 21.5%.
+    // Confirma-se por retro-cálculo da 3.28: com dy=H*0.12 os olhos davam 29.2% do
+    // card, o ~29% que essa fase mediu. (A 30% do PNG fica a BOCA, não os olhos.)
+    const EYE_FRAC = 0.215;
+    const EYE_Y = H * 0.30; // régua do terço superior da 3.28 (antes: 29.2% a 100%)
+    const dy = EYE_Y - dh * EYE_FRAC;
 
-    // FASE 3.26 — Clip OCTOGONAL inset: o avatar nunca é desenhado sobre as linhas
-    // do frame em NENHUM lado (topo, base, laterais E diagonais). Reutiliza o helper
-    // `octagono` (mesma geometria do frame), encolhido para dentro da linha interna
-    // fina do frame (borda a 7.9–9.1*k) + 4*k de respiro. Substitui o clip rectangular
-    // de topo da 3.22; a base fecha também pelo octógono (a placa cobre-a de qualquer
-    // forma). Vale para preview E download, por consistência.
-    const insetClip = 8.5 * k + 0.6 * k + 4 * k; // = 13.1*k (= antigo limiteTopo, agora em todos os lados)
+    // FASE 3.26/3.45 — Clip OCTOGONAL: o avatar nunca é desenhado sobre o CORPO
+    // dourado grosso do frame, em nenhum lado. Geometria medida do próprio frame:
+    //   corpo grosso : path a 3.5*k, lineWidth 7*k  → ocupa [0, 7*k] de cada borda
+    //   linha fina   : path a 8.5*k, lineWidth 1.2*k → ocupa [7.9*k, 9.1*k]
+    // 3.45 — as LATERAIS deixam de parar na linha fina e vão até à borda interior do
+    // corpo grosso (7*k) + 1*k de respiro = 8*k. A linha fina deixa de ser fronteira
+    // lateral: o braço pode sobrepô-la na faixa [8, 9.1]*k (1.1*k). Topo e base ficam
+    // nos 11.1*k da 3.26 — irrelevantes na prática (a 130% a cabeça está a y=84, com
+    // 73px de folga, e a placa cobre a base).
+    const insetTopo = 11.1 * k;
+    const insetLado = 7 * k + 1 * k; // = 8*k
     ctx.save();
-    octagono(insetClip);
+    octagonoLados(insetTopo, insetLado, insetTopo, insetLado);
     ctx.clip();
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 24 * k;
@@ -292,6 +316,93 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     }
   };
 
+  // FASE 3.46 — FRAME extraído para função. Antes vivia solto no fim (passo 6) e só
+  // o card completo e a moldura o desenhavam; agora a camada de topo do preview
+  // também o pede, para o preview ter a MESMA ordem de desenho do download
+  // (frame por cima do avatar). Deve ser chamado SEMPRE depois do ctx.restore()
+  // que remove o clip octogonal — o frame é inset e não quer recorte.
+  const desenharFrame = () => {
+    // 6. FRAME OCTOGONAL "linha dupla" — corpo dourado CONTÍNUO (7*k, gradiente) +
+    // linha interna fina (1.2*k, #f5e070) que abre um travessão centrado em cada canto.
+    const fc = getFrameColor(corFrame);
+    const ehDourado = corFrame === 'dourado';
+    const d = 3.5 * k; // inset do corpo (metade da largura do traço)
+
+    // a) Corpo dourado contínuo (não mexer).
+    octagono(d);
+    ctx.lineJoin = 'miter';
+    ctx.miterLimit = 10;
+    if (ehDourado) {
+      const fg = ctx.createLinearGradient(0, 0, W, H);
+      fg.addColorStop(0, '#f7e08a');
+      fg.addColorStop(0.3, '#c8940f');
+      fg.addColorStop(0.55, '#f5d060');
+      fg.addColorStop(0.8, '#8a6508');
+      fg.addColorStop(1, '#e8c04a');
+      ctx.strokeStyle = fg;
+    } else {
+      ctx.strokeStyle = fc.stroke;
+    }
+    ctx.lineWidth = 7 * k;
+    ctx.stroke();
+
+    // b) LINHA INTERNA FINA — 1.2*k, #f5e070. Contínua nos 4 lados; em CADA uma das 4
+    // diagonais de corte abre um travessão (interrupção) de 8*k EXACTAMENTE centrado.
+    // Por segmentos explícitos (sem setLineDash), com pontos por interpolação linear.
+    const mi = 8.5 * k; // inset da linha interna (segunda linha do "duplo")
+    const V = [
+      [mi + cut, mi], // V0 topo-esq
+      [W - mi - cut, mi], // V1 topo-dir
+      [W - mi, mi + cut], // V2
+      [W - mi, H - mi - cut], // V3
+      [W - mi - cut, H - mi], // V4
+      [mi + cut, H - mi], // V5
+      [mi, H - mi - cut], // V6
+      [mi, mi + cut], // V7
+    ];
+    // Arestas [i, j, ehDiagonal]: 4 lados rectos (contínuos) + 4 diagonais (com travessão).
+    const arestas = [
+      [0, 1, false], [1, 2, true], [2, 3, false], [3, 4, true],
+      [4, 5, false], [5, 6, true], [6, 7, false], [7, 0, true],
+    ];
+    const lerp = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+    const seg = (p, q) => { ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); };
+    ctx.strokeStyle = '#f5e070';
+    ctx.lineWidth = 1.2 * k;
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
+    for (const [i, j, diag] of arestas) {
+      const P = V[i];
+      const Q = V[j];
+      if (!diag) { seg(P, Q); continue; }
+      const L = Math.hypot(Q[0] - P[0], Q[1] - P[1]); // comprimento da diagonal (= cut*√2)
+      const half = (4 * k) / L; // metade do travessão de 8*k, em t
+      seg(P, lerp(P, Q, 0.5 - half));
+      seg(lerp(P, Q, 0.5 + half), Q);
+    }
+
+    // Losangos dos cantos (quadrado rodado 45°): exterior + interior menor.
+    const losOuter = ehDourado ? '#d4a017' : fc.stroke;
+    const losInner = ehDourado ? '#f5e070' : fc.dot;
+    // r = meia-diagonal = lado/√2 (lado 7*k exterior, 3.5*k interior).
+    const rOut = (7 * k) / Math.SQRT2;
+    const rIn = (3.5 * k) / Math.SQRT2;
+    const losango = (cx, cy, r, cor) => {
+      ctx.fillStyle = cor;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r); // cima
+      ctx.lineTo(cx + r, cy); // direita
+      ctx.lineTo(cx, cy + r); // baixo
+      ctx.lineTo(cx - r, cy); // esquerda
+      ctx.closePath();
+      ctx.fill();
+    };
+    for (const [cx, cy] of [[19 * k, 19 * k], [W - 19 * k, 19 * k], [19 * k, H - 19 * k], [W - 19 * k, H - 19 * k]]) {
+      losango(cx, cy, rOut, losOuter);
+      losango(cx, cy, rIn, losInner);
+    }
+  };
+
   // MODO CAMADA SÓ-AVATAR: canvas transparente, desenha só o avatar real.
   if (apenasAvatar) {
     if (avatar) desenharAvatar();
@@ -299,11 +410,13 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     return canvas;
   }
 
-  // MODO CAMADA SÓ-PLACA+NOME: canvas transparente, só placa e nome (sem fundo,
-  // sem avatar, sem frame) — a camada de topo do preview, sempre visível.
+  // MODO CAMADA SÓ-PLACA+NOME+FRAME: camada de TOPO do preview. FASE 3.46 — passa a
+  // incluir o frame, para o braço (que agora chega ao corpo grosso) ficar por baixo
+  // da linha fina, tal como no card único do download.
   if (apenasPlacaNome) {
     desenharPlacaNome();
-    ctx.restore();
+    ctx.restore(); // sai do clip octogonal ANTES do frame, como no card completo
+    desenharFrame();
     return canvas;
   }
 
@@ -377,85 +490,10 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // faíscas ficam soltas por cima, sem recorte.
   ctx.restore();
 
-  // 6. FRAME OCTOGONAL "linha dupla" — corpo dourado CONTÍNUO (7*k, gradiente) +
-  // linha interna fina (1.2*k, #f5e070) que abre um travessão centrado em cada canto.
-  const fc = getFrameColor(corFrame);
-  const ehDourado = corFrame === 'dourado';
-  const d = 3.5 * k; // inset do corpo (metade da largura do traço)
-
-  // a) Corpo dourado contínuo (não mexer).
-  octagono(d);
-  ctx.lineJoin = 'miter';
-  ctx.miterLimit = 10;
-  if (ehDourado) {
-    const fg = ctx.createLinearGradient(0, 0, W, H);
-    fg.addColorStop(0, '#f7e08a');
-    fg.addColorStop(0.3, '#c8940f');
-    fg.addColorStop(0.55, '#f5d060');
-    fg.addColorStop(0.8, '#8a6508');
-    fg.addColorStop(1, '#e8c04a');
-    ctx.strokeStyle = fg;
-  } else {
-    ctx.strokeStyle = fc.stroke;
-  }
-  ctx.lineWidth = 7 * k;
-  ctx.stroke();
-
-  // b) LINHA INTERNA FINA — 1.2*k, #f5e070. Contínua nos 4 lados; em CADA uma das 4
-  // diagonais de corte abre um travessão (interrupção) de 8*k EXACTAMENTE centrado.
-  // Por segmentos explícitos (sem setLineDash), com pontos por interpolação linear.
-  const mi = 8.5 * k; // inset da linha interna (segunda linha do "duplo")
-  const V = [
-    [mi + cut, mi], // V0 topo-esq
-    [W - mi - cut, mi], // V1 topo-dir
-    [W - mi, mi + cut], // V2
-    [W - mi, H - mi - cut], // V3
-    [W - mi - cut, H - mi], // V4
-    [mi + cut, H - mi], // V5
-    [mi, H - mi - cut], // V6
-    [mi, mi + cut], // V7
-  ];
-  // Arestas [i, j, ehDiagonal]: 4 lados rectos (contínuos) + 4 diagonais (com travessão).
-  const arestas = [
-    [0, 1, false], [1, 2, true], [2, 3, false], [3, 4, true],
-    [4, 5, false], [5, 6, true], [6, 7, false], [7, 0, true],
-  ];
-  const lerp = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
-  const seg = (p, q) => { ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); };
-  ctx.strokeStyle = '#f5e070';
-  ctx.lineWidth = 1.2 * k;
-  ctx.lineCap = 'butt';
-  ctx.lineJoin = 'miter';
-  for (const [i, j, diag] of arestas) {
-    const P = V[i];
-    const Q = V[j];
-    if (!diag) { seg(P, Q); continue; }
-    const L = Math.hypot(Q[0] - P[0], Q[1] - P[1]); // comprimento da diagonal (= cut*√2)
-    const half = (4 * k) / L; // metade do travessão de 8*k, em t
-    seg(P, lerp(P, Q, 0.5 - half));
-    seg(lerp(P, Q, 0.5 + half), Q);
-  }
-
-  // Losangos dos cantos (quadrado rodado 45°): exterior + interior menor.
-  const losOuter = ehDourado ? '#d4a017' : fc.stroke;
-  const losInner = ehDourado ? '#f5e070' : fc.dot;
-  // r = meia-diagonal = lado/√2 (lado 7*k exterior, 3.5*k interior).
-  const rOut = (7 * k) / Math.SQRT2;
-  const rIn = (3.5 * k) / Math.SQRT2;
-  const losango = (cx, cy, r, cor) => {
-    ctx.fillStyle = cor;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - r); // cima
-    ctx.lineTo(cx + r, cy); // direita
-    ctx.lineTo(cx, cy + r); // baixo
-    ctx.lineTo(cx - r, cy); // esquerda
-    ctx.closePath();
-    ctx.fill();
-  };
-  for (const [cx, cy] of [[19 * k, 19 * k], [W - 19 * k, 19 * k], [19 * k, H - 19 * k], [W - 19 * k, H - 19 * k]]) {
-    losango(cx, cy, rOut, losOuter);
-    losango(cx, cy, rIn, losInner);
-  }
+  // 6. FRAME — FASE 3.46: no card completo continua a desenhar-se aqui (depois do
+  // avatar). Na camada `apenasMoldura` deixa de o ser: passou para a camada de topo
+  // do preview (apenasPlacaNome), para o preview e o download ficarem idênticos.
+  if (!apenasMoldura) desenharFrame();
 
   return canvas;
 }
@@ -468,10 +506,13 @@ export async function gerarFigurinhaCanvas(opts = {}) {
 }
 
 // Três camadas para o preview do studio, para o avatar inteiro não tapar nada:
-//   fundoBlob   = moldura (fundo+holofotes+gradiente+frame, SEM avatar/placa/nome)
+//   fundoBlob   = fundo+holofotes+gradiente, SEM avatar/placa/nome E SEM FRAME
 //   jogadorBlob = só o avatar (transparente) — vai por cima das partículas
-//   placaBlob   = só placa+nome (transparente) — camada de topo, sempre visível
-// Partículas entram entre fundo e jogador; a placa fica acima do jogador.
+//   placaBlob   = placa+nome+FRAME (transparente) — camada de topo, sempre visível
+// Partículas entram entre fundo e jogador; placa+frame ficam acima do jogador.
+// FASE 3.46 — o frame saiu do fundo para o topo: o braço encosta ao corpo dourado e
+// a linha fina desenha-se POR CIMA dele, exactamente como no card único do download.
+// Ordem no preview: fundo (z2) → partículas (z3) → jogador (z4) → placa+frame (z5).
 export async function gerarCamadasFigurinha(opts = {}) {
   const [molduraCanvas, jogadorCanvas, placaCanvas] = await Promise.all([
     construirCard({ ...opts, largura: 400, altura: 600, apenasMoldura: true }),

@@ -129,7 +129,12 @@ export default function Planos() {
                   flexDirection: 'column',
                   gap: 10,
                   padding: 16,
-                  background: 'var(--surface-1)',
+                  // FASE 3.43 — Elevação por translucidez: o card deixa passar a
+                  // atmosfera (partículas + gradiente do shell) em vez de a tapar.
+                  // 0.85 do --surface-1 (#0d0d12) + blur do que fica por trás.
+                  background: 'rgba(13, 13, 18, 0.85)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da figurinha.
                   border: atual ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
                   boxShadow: atual ? '0 0 14px rgba(212,160,23,0.45)' : 'none',
@@ -176,7 +181,7 @@ export default function Planos() {
                     <div className="fig-share-glow" style={{ display: 'flex' }}>
                       <button
                         type="button"
-                        className="btn hud-corners"
+                        className="btn hud-corners planos-cta-shine"
                         style={{ width: '100%', border: 'none', fontWeight: 800, color: '#0d0d12', background: 'linear-gradient(135deg, #f0c94a, #d4a017, #b8860b)' }}
                         disabled={!!planoBusy}
                         onClick={() => assinar(p.id)}

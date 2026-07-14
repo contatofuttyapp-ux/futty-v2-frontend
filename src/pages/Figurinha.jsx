@@ -3,7 +3,7 @@
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, Download, Share2, Loader2, X, Lock, Check, Plus, Minus } from 'lucide-react';
+import { Camera, Download, Share2, X, Lock, Check, Plus, Minus } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useTeams } from '../hooks/useTeam';
 import { nomeJogador, urlAsset } from '../utils/avatar';
@@ -12,6 +12,7 @@ import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico } from 
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import PlayerCard from '../components/PlayerCard';
 import Topbar from '../components/Topbar';
+import FuttyLoader from '../components/FuttyLoader';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
@@ -33,6 +34,9 @@ const TABS = [
   { k: 'fundo', label: 'Fundo' },
   { k: 'uniforme', label: 'Uniforme' },
 ];
+
+// Planos que destrancam os kits 'pro'. Qualquer outro (free, null, futuros) vê cadeado.
+const PLANOS_COM_KITS = ['pro', 'elite'];
 
 // Kits do card. 'dark-gold' é o único vestido/seleccionável por agora; os
 // restantes são placeholders (em breve) ou trancados por plano (pro).
@@ -164,6 +168,9 @@ export default function Figurinha() {
   const avatarEhIA = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
   // Jogador "de card": só leva avatar_url se for avatar IA; caso contrário, sem avatar.
   const jogadorCard = avatarEhIA ? jogador : { ...jogador, avatar_url: null };
+  // A2 — kit vestido + kits já gerados (slots). Vindos do GET /api/me.
+  const kitAtivo = me?.user?.kit_ativo || 'dark-gold';
+  const slotsKits = me?.slots || [];
   // (l) Dias até a quota renovar. O backend zera a contagem quando o MÊS muda
   // (avatar_ia_reset < início do mês corrente) → a renovação é o dia 1 do mês seguinte.
   // O cálculo de datas é impuro (Date), por isso corre UMA vez no initializer do
@@ -329,15 +336,22 @@ export default function Figurinha() {
   }
 
   // Gerar avatar com IA a partir da foto atual (endpoint usa users.avatar_url).
-  async function gerarAvatarIA() {
+  // `kitId` opcional: quando vem de um onClick recebe o evento → cai no kit vestido.
+  async function gerarAvatarIA(kitId) {
     if (gerandoIA) return;
+    const kit = typeof kitId === 'string' ? kitId : kitAtivo;
     setGerandoIA(true);
     setErro('');
     setLimiteIA(false);
     setErroIA(false);
     try {
-      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold' }) });
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
+      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit }) });
+      // Guarda o avatar, o kit vestido e regista o slot novo (sem duplicar).
+      setMe((m) => (m ? {
+        ...m,
+        user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit },
+        slots: [...new Set([...(m.slots || []), data.kit])],
+      } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
     } catch (err) {
       if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano → card de quota
@@ -345,6 +359,29 @@ export default function Figurinha() {
     } finally {
       setGerandoIA(false);
     }
+  }
+
+  // A2 — toque num kit da grelha. Três caminhos: trancado por plano → /planos;
+  // já gerado (slot) → VESTE via PUT (não gasta quota); sem slot → confirma e gera.
+  async function escolherKit(kit) {
+    if (kit.estado === 'breve' || kit.id === kitAtivo || gerandoIA) return;
+    // O cadeado segue a REGRA DE PLANO pura, sem excepção para is_super_admin: a conta
+    // de teste é super-admin, e queremos que o UI mostre exactamente o que um free vê.
+    // O backend continua a isentar o super-admin — gerar via API mantém-se possível.
+    const planoUser = me?.user?.plan || 'free';
+    if (kit.estado === 'pro' && !PLANOS_COM_KITS.includes(planoUser)) return navigate('/planos');
+    if (slotsKits.includes(kit.id)) {
+      try {
+        const data = await apiFetch('/api/me/kit', { method: 'PUT', body: JSON.stringify({ kit: kit.id }) });
+        setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit } } : m));
+      } catch {
+        setErroIA(true);
+      }
+      return;
+    }
+    // Sem slot → gastar 1 geração é irreversível: pede confirmação primeiro.
+    if (!window.confirm(`Gerar o kit ${kit.nome}? Usa 1 das tuas gerações IA.`)) return;
+    await gerarAvatarIA(kit.id);
   }
 
   async function baixar() {
@@ -367,7 +404,6 @@ export default function Figurinha() {
 
   async function partilhar() {
     if (busy) return;
-    celebrarPartilha(frameHex); // confetti antes da partilha
     setBusy(true);
     setErro('');
     try {
@@ -404,10 +440,7 @@ export default function Figurinha() {
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
-          <img src="/futty-logo-metallic.png" alt="" className="fig-breathe" style={{ width: 64, height: 64, objectFit: 'contain' }} />
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>A criar o teu avatar…</span>
-        </div>
+        <FuttyLoader size={64} label="A criar o teu avatar…" />
       )}
     </div>
   );
@@ -418,7 +451,7 @@ export default function Figurinha() {
       <div className="app-shell">
         <Topbar hud="FIGURINHA" />
         <main className="app-main" style={{ display: 'grid', placeItems: 'center', minHeight: '40vh' }}>
-          <Loader2 size={28} className="spin" color="#8b5cf6" />
+          <FuttyLoader />
         </main>
       </div>
     );
@@ -661,7 +694,7 @@ export default function Figurinha() {
                 >
                   {gerandoIA ? (
                     <>
-                      <Loader2 size={16} className="spin" /> Gerando…
+                      <FuttyLoader size={16} label={null} /> Gerando…
                     </>
                   ) : (
                     <>
@@ -777,17 +810,24 @@ export default function Figurinha() {
             // Container a 85% → tiles ~15% mais pequenos, 4 numa linha centrada.
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, width: '85%', margin: '0 auto' }}>
               {KITS_FIGURINHA.map((kit) => {
-                const ativo = kit.estado === 'ativo';
-                const pro = kit.estado === 'pro';
-                const bloqueado = kit.estado === 'breve' || pro;
+                // A2 — estados reais: VESTIDO (kit_ativo) | GERADO (tem slot, 1 toque veste)
+                // | GERÁVEL (activo sem slot → custa 1 geração) | BREVE | trancado por plano.
+                const vestido = kit.id === kitAtivo;
+                const gerado = slotsKits.includes(kit.id);
+                const planoUser = me?.user?.plan || 'free';
+                // Cadeado pela regra de plano pura — ver nota em escolherKit().
+                const pro = kit.estado === 'pro' && !PLANOS_COM_KITS.includes(planoUser);
+                const breve = kit.estado === 'breve';
+                const geravel = !breve && !pro && !gerado;
+                const bloqueado = breve || pro;
                 return (
                   <button
                     key={kit.id}
                     type="button"
-                    onClick={pro ? () => navigate('/planos') : undefined}
+                    onClick={() => escolherKit(kit)}
                     aria-label={kit.nome}
-                    aria-pressed={ativo}
-                    disabled={kit.estado === 'breve'}
+                    aria-pressed={vestido}
+                    disabled={breve || gerandoIA}
                     style={{
                       flex: '0 0 calc((100% - 24px) / 4)',
                       display: 'grid',
@@ -795,18 +835,24 @@ export default function Figurinha() {
                       padding: 0,
                       background: 'transparent',
                       border: 'none',
-                      cursor: pro ? 'pointer' : 'default',
+                      cursor: breve ? 'default' : 'pointer',
                       textAlign: 'center',
                     }}
                   >
                     {/* Thumbnail quadrado */}
-                    <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: kit.id === 'dark-gold' ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: ativo ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: ativo ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
+                    <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: kit.id === 'dark-gold' ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: vestido ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: vestido ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
                       {kit.id === 'dark-gold' ? (
                         <img src={KIT_DARK_GOLD_IMG} alt={kit.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : null}
-                      {ativo ? (
+                      {vestido ? (
                         <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: '#d4a017', color: '#0d0d12', display: 'grid', placeItems: 'center' }}>
                           <Check size={10} strokeWidth={3} />
+                        </span>
+                      ) : null}
+                      {/* Gerável (activo, sem slot): avisa que custa 1 geração. */}
+                      {geravel ? (
+                        <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.75)', color: '#d4a017', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          <EstrelaIA size={7} color="#d4a017" /> 1 geração
                         </span>
                       ) : null}
                       {pro ? (
@@ -846,8 +892,9 @@ export default function Figurinha() {
               <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
             </button>
             {/* Glow do Compartilhar no wrapper SEM clip (o clip-path cortaria a sombra),
-                via drop-shadow para seguir a forma recortada do botão. Pulso: .fig-share-glow */}
-            <div className="fig-share-glow" style={{ flex: 1, display: 'flex' }}>
+                via drop-shadow para seguir a forma recortada do botão. Glow ESTÁTICO:
+                o pulso de respiração da 3.36 foi removido. */}
+            <div className="fig-share-glow-fixo" style={{ flex: 1, display: 'flex' }}>
               <button
                 type="button"
                 className="btn hud-corners"
