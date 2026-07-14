@@ -124,7 +124,7 @@ export default function Figurinha() {
   const [uploadFoto, setUploadFoto] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
   const [limiteIA, setLimiteIA] = useState(false);
-  const [verFoto, setVerFoto] = useState(false); // overlay da foto original
+  const [modalFoto, setModalFoto] = useState(false); // modal "A tua foto" (foto actual + estado IA + carregar nova)
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
@@ -137,6 +137,7 @@ export default function Figurinha() {
   const [previewUrl, setPreviewUrl] = useState(null); // composto (estreia)
   const [fundoUrl, setFundoUrl] = useState(null); // camada de fundo (studio, sem jogador)
   const [jogadorUrl, setJogadorUrl] = useState(null); // camada do jogador (studio)
+  const [placaUrl, setPlacaUrl] = useState(null); // camada placa+nome (studio, topo)
   const fileRef = useRef(null);
 
   const jogador = me?.user || {};
@@ -193,10 +194,11 @@ export default function Figurinha() {
       try {
         if (estreiaFase === 'fim') {
           // Studio: duas camadas (partículas entre fundo e jogador).
-          const { fundoBlob, jogadorBlob } = await gerarCamadasFigurinha(opts);
+          const { fundoBlob, jogadorBlob, placaBlob } = await gerarCamadasFigurinha(opts);
           if (!vivo) return;
           trocar(setFundoUrl)(fundoBlob);
           trocar(setJogadorUrl)(jogadorBlob);
+          trocar(setPlacaUrl)(placaBlob);
         } else {
           // Estreia: imagem composta única.
           const blob = await gerarFigurinhaCanvas(opts);
@@ -214,6 +216,7 @@ export default function Figurinha() {
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => () => { if (fundoUrl) URL.revokeObjectURL(fundoUrl); }, [fundoUrl]);
   useEffect(() => () => { if (jogadorUrl) URL.revokeObjectURL(jogadorUrl); }, [jogadorUrl]);
+  useEffect(() => () => { if (placaUrl) URL.revokeObjectURL(placaUrl); }, [placaUrl]);
 
   // Marca a estreia como concluída e passa ao studio normal.
   function concluirEstreia() {
@@ -227,6 +230,7 @@ export default function Figurinha() {
     const file = e.target.files?.[0];
     e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
     if (!file) return;
+    setModalFoto(false); // fecha o modal "A tua foto" ao escolher — revela o fluxo upload→gerar
     const emEstreia = estreiaFase === 'foto';
     setFotoLocal(URL.createObjectURL(file)); // preview imediato
     if (emEstreia) setEstreiaFase('gerando');
@@ -234,7 +238,10 @@ export default function Figurinha() {
     setErro('');
     try {
       const data = await apiUpload('/api/me/avatar', file, 'avatar');
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
+      // foto_url = a nova foto (fonte da próxima geração). avatar_url = o que o card
+      // mostra: o backend PRESERVA o avatar IA antigo se existir (senão espelha a foto),
+      // por isso o card mantém o avatar antigo até o utilizador gerar de novo.
+      setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url ?? data.avatar_url, avatar_url: data.avatar_url } } : m));
       setUploadFoto(false);
       if (emEstreia) await gerarAvatarIAEstreia(); // auto-trigger
     } catch (err) {
@@ -427,7 +434,7 @@ export default function Figurinha() {
       <Topbar hud="FIGURINHA" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 24 }}>
         {/* 1. ZONA DO CARD (2:3, levitação Star Fox + entrada animada) */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 16px' }}>
           <div className="fig-card-enter fig-studio-card" style={{ position: 'relative' }}>
             {/* Sombra viva no chão (contra-fase com a levitação) */}
             <div
@@ -480,6 +487,15 @@ export default function Figurinha() {
                       />
                     ) : null}
 
+                    {/* Camada placa+nome — POR CIMA do jogador (nunca tapada por ele) */}
+                    {placaUrl ? (
+                      <img
+                        src={placaUrl}
+                        alt=""
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', zIndex: 5 }}
+                      />
+                    ) : null}
+
                     {/* Glow pulsante fixo sobre a zona do nome (nada a atravessá-lo) */}
                     <div className="fig-name-glow" style={{ position: 'absolute', left: 0, bottom: '8%', width: '100%', height: '20%', pointerEvents: 'none', zIndex: 5, background: 'radial-gradient(ellipse 55% 70% at 50% 55%, rgba(245,224,112,0.20), transparent 70%)', mixBlendMode: 'screen', WebkitMaskImage: 'linear-gradient(to top, black 0%, black 55%, transparent 100%)', maskImage: 'linear-gradient(to top, black 0%, black 55%, transparent 100%)' }} />
 
@@ -515,7 +531,7 @@ export default function Figurinha() {
 
               {/* Zoom do avatar — controlo compacto à direita, abaixo do canto (só com avatar IA) */}
               {avatarEhIA && !fotoLocal ? (
-                <div style={{ position: 'absolute', top: '18%', right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'rgba(13,13,18,0.7)', backdropFilter: 'blur(4px)', borderRadius: 16, padding: '5px 4px', border: '1px solid rgba(212,160,23,0.45)' }}>
+                <div style={{ position: 'absolute', top: '18%', right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'rgba(13,13,18,0.7)', backdropFilter: 'blur(4px)', borderRadius: 16, padding: '5px 4px', border: '1px solid rgba(212,160,23,0.45)' }}>
                   <button
                     type="button"
                     aria-label="Aumentar zoom"
@@ -525,9 +541,6 @@ export default function Figurinha() {
                   >
                     <Plus size={13} />
                   </button>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#f5e070' }}>
-                    {Math.round((avatarZoom / 1.1) * 100)}%
-                  </span>
                   <button
                     type="button"
                     aria-label="Reduzir zoom"
@@ -546,22 +559,12 @@ export default function Figurinha() {
           </div>
         </div>
 
-        {/* Indicador de avatar IA activo (a foto real fica guardada em foto_url) */}
-        {avatarEhIA && !fotoLocal ? (
-          <div style={{ textAlign: 'center', padding: '4px 0' }}>
-            <button
-              type="button"
-              onClick={() => setVerFoto(true)}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#8b5cf6', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            >
-              <EstrelaIA size={14} color="#8b5cf6" /> Avatar IA ativo · Ver foto →
-            </button>
-          </div>
-        ) : null}
+        {/* (Faixa "Avatar IA ativo · Ver foto" removida na FASE 3.21 — a informação
+            passou toda para o modal "A tua foto", aberto pelo botão Trocar foto.) */}
 
         {/* Foto subida mas ainda sem avatar IA gerado (a foto não entra no card). */}
         {fotoLocal ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', fontSize: 11, color: '#d4a017' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
             <Check size={14} /> Foto carregada — gera o teu avatar
           </div>
         ) : null}
@@ -578,7 +581,7 @@ export default function Figurinha() {
                 className="btn btn--purple-outline fig-io-btn"
                 style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, paddingLeft: 12, paddingRight: 12 }}
                 disabled={uploadFoto || gerandoIA}
-                onClick={() => fileRef.current?.click()}
+                onClick={() => setModalFoto(true)}
               >
                 <Camera size={16} /> {jogador.avatar_url ? 'Trocar foto' : 'Adicionar foto'}
               </button>
@@ -652,7 +655,8 @@ export default function Figurinha() {
           {/* Painel da tab activa */}
           {activeTab === 'fundo' ? (
             // Tiles do mesmo tamanho dos kits (¼ da largura); linha de 3 centrada.
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+            // Container a 85% → tiles ~15% mais pequenos, centrados.
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, width: '85%', margin: '0 auto' }}>
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
                 return (
@@ -670,6 +674,7 @@ export default function Figurinha() {
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'center',
+                      opacity: sel ? 1 : 0.55, // não-seleccionado mais discreto
                     }}
                   >
                     {/* Thumbnail quadrado */}
@@ -682,6 +687,7 @@ export default function Figurinha() {
                       backgroundPosition: 'center',
                       border: sel ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
                       boxShadow: sel ? '0 0 12px rgba(212,160,23,0.5)' : 'none',
+                      filter: sel ? 'none' : 'saturate(0.7) brightness(0.85)',
                     }} />
                     {/* Nome */}
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: sel ? '#fff' : 'var(--label-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -692,7 +698,8 @@ export default function Figurinha() {
               })}
             </div>
           ) : (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+            // Container a 85% → tiles ~15% mais pequenos, 4 numa linha centrada.
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, width: '85%', margin: '0 auto' }}>
               {KITS_FIGURINHA.map((kit) => {
                 const ativo = kit.estado === 'ativo';
                 const pro = kit.estado === 'pro';
@@ -717,7 +724,7 @@ export default function Figurinha() {
                     }}
                   >
                     {/* Thumbnail quadrado */}
-                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 'var(--radius-s, 8px)', overflow: 'hidden', background: kit.id === 'dark-gold' ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: ativo ? '2px solid #d4a017' : '1px solid var(--border-subtle)', boxShadow: ativo ? '0 0 12px rgba(212,160,23,0.5)' : 'none' }}>
+                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 'var(--radius-s, 8px)', overflow: 'hidden', background: kit.id === 'dark-gold' ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: ativo ? '2px solid #d4a017' : '1px solid var(--border-subtle)', boxShadow: ativo ? '0 0 12px rgba(212,160,23,0.5)' : 'none', filter: ativo ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
                       {kit.id === 'dark-gold' ? (
                         <img src={KIT_DARK_GOLD_IMG} alt={kit.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : null}
@@ -755,15 +762,16 @@ export default function Figurinha() {
 
           {erro ? <div className="alert alert--error" style={{ margin: 0 }}>{erro}</div> : null}
 
-          {/* 3. AÇÕES — logo abaixo do painel de tiles */}
+          {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os
+              botões do topo (40px) → hierarquia: topo = configurar, fundo = agir. */}
           <div style={{ display: 'flex', gap: 12 }}>
-            <button type="button" className="btn btn--purple-outline" style={{ flex: 1, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
+            <button type="button" className="btn btn--purple-outline" style={{ flex: 1, height: 46, borderWidth: '1.5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
               <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
             </button>
             <button
               type="button"
               className="btn"
-              style={{ flex: 1, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', color: '#fff', background: `linear-gradient(135deg, ${frameHex}ee, ${frameHex}99)`, boxShadow: `0 4px 18px ${frameHex}44` }}
+              style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', color: '#fff', background: `linear-gradient(135deg, ${frameHex}ee, ${frameHex}99)`, boxShadow: `0 4px 18px ${frameHex}44, 0 0 16px rgba(212,160,23,0.35)` }}
               disabled={busy}
               onClick={partilhar}
             >
@@ -773,24 +781,76 @@ export default function Figurinha() {
         </div>
       </main>
 
-      {/* Overlay da foto original */}
-      {verFoto && fotoOriginal ? (
+      {/* Modal "A tua foto" — foto actual + estado do avatar IA + carregar nova */}
+      {modalFoto ? (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Foto original"
-          onClick={() => setVerFoto(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          aria-label="A tua foto"
+          onClick={() => setModalFoto(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
         >
-          <button
-            type="button"
-            aria-label="Fechar"
-            onClick={(e) => { e.stopPropagation(); setVerFoto(false); }}
-            style={{ position: 'fixed', top: 16, right: 16, zIndex: 201, width: 40, height: 40, borderRadius: 12, border: '1px solid #333', background: 'rgba(255,255,255,0.08)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ position: 'relative', width: '100%', maxWidth: 360, background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', clipPath: 'polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px)', padding: '22px 20px 20px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}
           >
-            <X size={18} />
-          </button>
-          <img src={urlAsset(fotoOriginal)} alt="Foto original" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '85%', objectFit: 'contain', borderRadius: 12 }} />
+            <button
+              type="button"
+              aria-label="Fechar"
+              onClick={() => setModalFoto(false)}
+              style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: 10, border: '1px solid #333', background: 'rgba(255,255,255,0.06)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer', zIndex: 1 }}
+            >
+              <X size={16} />
+            </button>
+
+            <h3 style={{ margin: '0 0 16px', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '0.04em', color: '#fff', textAlign: 'center' }}>A tua foto</h3>
+
+            {/* Preview da foto actual (cantos 45° coerentes com o sistema visual) */}
+            {fotoOriginal ? (
+              // contain + fundo escuro sólido → mostra a pessoa INTEIRA, sem cortar topo/base.
+              <div style={{ width: '100%', height: 260, background: '#0d0d12', clipPath: 'polygon(13px 0, calc(100% - 13px) 0, 100% 13px, 100% calc(100% - 13px), calc(100% - 13px) 100%, 13px 100%, 0 calc(100% - 13px), 0 13px)', display: 'grid', placeItems: 'center' }}>
+                <img
+                  src={urlAsset(fotoOriginal)}
+                  alt="A tua foto"
+                  style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              </div>
+            ) : (
+              <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--label-color)', fontSize: 13 }}>Ainda não tens foto.</div>
+            )}
+
+            {/* Estado do avatar IA (reaproveita avatarEhIA) */}
+            <div style={{ marginTop: 14 }}>
+              {avatarEhIA ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'linear-gradient(90deg, rgba(139,92,246,0.18), rgba(212,160,23,0.12))', border: '1px solid rgba(139,92,246,0.4)' }}>
+                  <img
+                    src={urlAsset(me?.user?.avatar_url)}
+                    alt="Avatar IA"
+                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid rgba(212,160,23,0.5)', flex: 'none', background: '#0d0d12' }}
+                  />
+                  <div style={{ display: 'grid', gap: 3 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#d4a017' }}>
+                      <EstrelaIA size={14} color="#d4a017" /> Avatar IA activo
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--label-color)' }}>Gerado a partir desta foto</span>
+                  </div>
+                </div>
+              ) : (
+                <p style={{ margin: 0, textAlign: 'center', fontSize: 12, color: 'var(--label-color)' }}>Ainda não geraste o teu avatar IA.</p>
+              )}
+            </div>
+
+            {/* Carregar nova foto — dispara o input file real (fecha o modal em onPickFile) */}
+            <button
+              type="button"
+              className="btn btn--purple"
+              style={{ width: '100%', height: 46, marginTop: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14 }}
+              disabled={uploadFoto || gerandoIA}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Camera size={16} /> Carregar nova foto
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

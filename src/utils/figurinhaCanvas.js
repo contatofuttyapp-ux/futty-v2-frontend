@@ -21,7 +21,7 @@ function canvasParaBlob(canvas) {
 
 // Desenha o card 2:3 num canvas próprio (largura×altura). `k` escala os valores
 // fixos (fontes, badge, frame) para render nativo a qualquer resolução.
-async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, incluirAvatar = true, apenasAvatar = false }) {
+async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, incluirAvatar = true, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false }) {
   const W = largura;
   const H = altura;
   const k = largura / 400;
@@ -64,7 +64,14 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   const ehAbsoluto = avatarUrl && /^https?:\/\//i.test(avatarUrl);
   const avatar = avatarUrl ? await carregarImagem(avatarUrl, ehAbsoluto) : null;
 
-  // Desenha o avatar real com enquadramento/zoom/posição fixos + fade suave na base.
+  // Geometria do NOME (fonte única): baseline + tamanho da fonte + topo da placa.
+  // O corte do avatar deriva daqui, por isso descer o nome desce o palco inteiro.
+  const nomeY = H - 42 * k; // baseline do nome
+  const nomeFonte = 52 * k; // tamanho da fonte do nome
+  const placaTopo = nomeY - 42 * k; // topo da placa = linha de corte do avatar
+
+  // Desenha o avatar real com enquadramento/zoom/posição fixos. Corte LIMPO (sem
+  // fade) exactamente na linha onde a placa começa — a placa cobre a linha de corte.
   const desenharAvatar = () => {
     const boxW = W * 0.80;
     const boxH = H * 0.80;
@@ -72,58 +79,127 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     const dw = avatar.naturalWidth * scale;
     const dh = avatar.naturalHeight * scale;
     const dx = (W - dw) / 2;
-    // Topo do avatar a 12% da altura — o corpo mostra-se mais.
-    const dy = H * 0.12;
+    // Topo do avatar a 16% da altura — a cabeça ganha respiro sob o frame.
+    const dy = H * 0.16;
 
-    // Limite do avatar (fonte única): clip de segurança + âncora do fade.
-    // Definido pela GEOMETRIA DO NOME — o dissolve completa-se 6px ACIMA do topo
-    // das maiúsculas, garantindo ZERO pixels do avatar sobre o texto. (O nome usa
-    // baseline nomeY = H - 38*k e fonte 56*k.)
-    const nomeTopo = (H - 38 * k) - 52 * k; // baseline − altura da fonte (52*k)
-    const limiteAvatar = nomeTopo - 2 * k; // margem de respiro apertada (+corpo)
-
-    // Fade na base num canvas OFFSCREEN (máscara destination-out). ANCORO o fade
-    // à linha do limite (em coords do offscreen) — a imagem chega já transparente
-    // ao limite e derrete no gradiente, em vez de cortar.
-    const off = document.createElement('canvas');
-    off.width = Math.ceil(dw);
-    off.height = Math.ceil(dh);
-    const offCtx = off.getContext('2d');
-    offCtx.imageSmoothingQuality = 'high';
-    offCtx.drawImage(avatar, 0, 0, dw, dh);
-    // O fade chega a 0 alpha 10px ANTES da linha do clip → o clip nunca corta
-    // pixels visíveis (a linha desaparece). Dissolve longo (64px) com ease-in.
-    const fadeEnd = Math.min(dh, (limiteAvatar - dy) - 10 * k);
-    const fadeStart = Math.max(0, fadeEnd - 64 * k);
-    offCtx.globalCompositeOperation = 'destination-out';
-    const fade = offCtx.createLinearGradient(0, fadeStart, 0, fadeEnd);
-    fade.addColorStop(0, 'rgba(0,0,0,0)'); // opaco
-    fade.addColorStop(0.5, 'rgba(0,0,0,0.35)'); // curva ease-in (não linear)
-    fade.addColorStop(1, 'rgba(0,0,0,1)'); // totalmente transparente antes do corte
-    offCtx.fillStyle = fade;
-    // Preenche até à BASE do offscreen: abaixo de fadeEnd o gradiente fica no
-    // último stop (alpha 1) → tudo o que está abaixo do fade é removido. Sem isto,
-    // o corpo abaixo de fadeEnd ficaria opaco e o clip voltaria a cortar em linha.
-    offCtx.fillRect(0, fadeStart, off.width, off.height - fadeStart);
-    offCtx.globalCompositeOperation = 'source-over';
-
-    // Clip no limite = guarda de segurança (zoom alto). O fade acontece antes e
-    // já chega a 0 antes do limite, por isso o corte não é visível.
+    // FASE 3.22 — Clip de TOPO: nada do avatar é desenhado acima de `limiteTopo`,
+    // seja qual for dy/boxW/zoom → a linha dourada fina do frame fica sempre limpa.
+    // limiteTopo = inset do highlight interior no topo (8.5*k, ver passo 6) + metade
+    // do seu lineWidth (1.2*k / 2 = 0.6*k) + 4*k de respiro. NÃO corta a base — a
+    // placa do nome é que cobre a parte de baixo do avatar. Mesma regra em todos os
+    // caminhos (preview E Baixar), por consistência.
+    const limiteTopo = 8.5 * k + 0.6 * k + 4 * k; // = 13.1*k
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, 0, W, limiteAvatar);
+    ctx.rect(0, limiteTopo, W, H - limiteTopo);
     ctx.clip();
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 24 * k;
     ctx.shadowOffsetY = 4 * k;
     ctx.shadowOffsetX = 0;
-    ctx.drawImage(off, dx, dy, dw, dh);
+    ctx.drawImage(avatar, dx, dy, dw, dh);
     ctx.restore();
+  };
+
+  // Placa do nome + nome. Usada no card completo (Baixar) E, isolada com fundo
+  // transparente, na camada `apenasPlacaNome` do preview de 3 camadas.
+  const desenharPlacaNome = () => {
+    // FONTE DE VERDADE da geometria da placa — usada para DESENHAR a placa E para
+    // posicionar o texto (centrado nos dois eixos). Centro horizontal = W/2.
+    const placaW = W * 0.74;
+    const placaX = (W - placaW) / 2; // centrada em W/2
+    const placaY = placaTopo;
+    const placaH = nomeY + 12 * k - placaTopo; // = 54*k
+    const pc = 8 * k; // corte a 45° dos cantos
+
+    // 4b. PLACA DO NOME — banner com cantos a 45°, borda dourada fina.
+    {
+      ctx.beginPath();
+      ctx.moveTo(placaX + pc, placaY);
+      ctx.lineTo(placaX + placaW - pc, placaY);
+      ctx.lineTo(placaX + placaW, placaY + pc);
+      ctx.lineTo(placaX + placaW, placaY + placaH - pc);
+      ctx.lineTo(placaX + placaW - pc, placaY + placaH);
+      ctx.lineTo(placaX + pc, placaY + placaH);
+      ctx.lineTo(placaX, placaY + placaH - pc);
+      ctx.lineTo(placaX, placaY + pc);
+      ctx.closePath();
+      const pg = ctx.createLinearGradient(0, placaY, 0, placaY + placaH);
+      pg.addColorStop(0, 'rgba(5,8,16,0.88)');
+      pg.addColorStop(1, 'rgba(5,8,16,0.82)');
+      ctx.fillStyle = pg;
+      ctx.fill();
+      ctx.lineWidth = 1 * k;
+      ctx.lineJoin = 'miter';
+      ctx.miterLimit = 10;
+      ctx.strokeStyle = 'rgba(212,160,23,0.5)';
+      ctx.stroke();
+    }
+    // 5. NOME — centrado nos DOIS eixos da placa. Horizontal: textAlign center em
+    // W/2 (= placaX + placaW/2). Vertical: baseline 'middle' no centro óptico da
+    // placa + correcção óptica p/ maiúsculas (o 'middle' pesa ligeiramente p/ baixo).
+    {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Fit-to-width (FASE 3.24): começa em nomeFonte e reduz em passos de 2*k até
+      // caber na largura da placa menos padding, ou atingir o mínimo de 28*k.
+      let nomeUpper = String(nome).toUpperCase();
+      const larguraMax = placaW - 24 * k; // largura da placa menos padding
+      const fonteMin = 28 * k;
+      const lsPara = (f) => (3 * k) * (f / nomeFonte); // 3*k na base, proporcional
+      let fonte = nomeFonte;
+      const aplicarFonte = () => {
+        ctx.font = `700 ${fonte}px 'Rajdhani', system-ui, sans-serif`;
+        ctx.letterSpacing = `${lsPara(fonte)}px`;
+      };
+      aplicarFonte();
+      while (ctx.measureText(nomeUpper).width > larguraMax && fonte > fonteMin) {
+        fonte = Math.max(fonteMin, fonte - 2 * k);
+        aplicarFonte();
+      }
+      // Defesa extra: nome absurdamente longo que nem a 28*k cabe → reticências.
+      if (ctx.measureText(nomeUpper).width > larguraMax) {
+        while (nomeUpper.length > 1 && ctx.measureText(nomeUpper + '…').width > larguraMax) nomeUpper = nomeUpper.slice(0, -1);
+        nomeUpper += '…';
+      }
+      // Centro vertical da placa + correcção óptica das maiúsculas. Com baseline
+      // 'middle' o centro visual das caps fica ~acima do meto → desce-se por medição:
+      // factor 0.105 iguala o espaço acima/abaixo (±0.3px) em GUI (52) e CHAVO (30).
+      const textoY = placaY + placaH / 2 + fonte * 0.105;
+      ctx.lineWidth = 6 * k;
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineJoin = 'round';
+      ctx.strokeText(nomeUpper, W / 2, textoY);
+      ctx.shadowColor = 'rgba(212,160,23,0.85)';
+      ctx.shadowBlur = 24 * k;
+      ctx.shadowOffsetY = 0;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(nomeUpper, W / 2, textoY);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      const tg = ctx.createLinearGradient(W * 0.2, 0, W * 0.8, 0);
+      tg.addColorStop(0, '#ffffff');
+      tg.addColorStop(0.5, '#f5e070');
+      tg.addColorStop(1, '#ffffff');
+      ctx.fillStyle = tg;
+      ctx.fillText(nomeUpper, W / 2, textoY);
+      ctx.letterSpacing = '0px';
+      ctx.restore();
+    }
   };
 
   // MODO CAMADA SÓ-AVATAR: canvas transparente, desenha só o avatar real.
   if (apenasAvatar) {
     if (avatar) desenharAvatar();
+    ctx.restore();
+    return canvas;
+  }
+
+  // MODO CAMADA SÓ-PLACA+NOME: canvas transparente, só placa e nome (sem fundo,
+  // sem avatar, sem frame) — a camada de topo do preview, sempre visível.
+  if (apenasPlacaNome) {
+    desenharPlacaNome();
     ctx.restore();
     return canvas;
   }
@@ -165,10 +241,11 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.fillRect(0, 0, W, H);
   }
 
-  // 3. AVATAR — o avatar real só entra se incluirAvatar (na camada de fundo é
-  // omitido, para o jogador ficar numa camada separada por cima das partículas).
-  // As iniciais de fallback (sem avatar) ficam sempre na base.
-  if (avatar) {
+  // 3. AVATAR — só no card completo. Na camada apenasMoldura é omitido (o jogador
+  // é uma camada à parte por cima das partículas); as iniciais de fallback idem.
+  if (apenasMoldura) {
+    // moldura: sem avatar nem iniciais de fallback.
+  } else if (avatar) {
     if (incluirAvatar) desenharAvatar();
   } else {
     const { a, b } = gradienteAvatar(nome);
@@ -184,48 +261,19 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.fillText(nome.slice(0, 2).toUpperCase(), W / 2, H * 0.62);
   }
 
-  // 4. GRADIENTE INFERIOR (depois do avatar → garante legibilidade do nome).
-  // Reforçado (início H*0.74, stop 0.94) para compensar o corpo mais presente
-  // atrás do nome, que agora desce até rente ao texto.
+  // 4. GRADIENTE INFERIOR (depois do avatar). Suavizado (stop 0.72) porque a placa
+  // do nome passou a dar o contraste — este gradiente só ajuda a zona do dissolve
+  // por cima da placa.
   const gb = ctx.createLinearGradient(0, H * 0.74, 0, H);
   gb.addColorStop(0, 'rgba(0,0,0,0)');
-  gb.addColorStop(1, 'rgba(0,0,0,0.94)');
+  gb.addColorStop(1, 'rgba(0,0,0,0.72)');
   ctx.fillStyle = gb;
   ctx.fillRect(0, H * 0.74, W, H * 0.26);
 
-  // 5. NOME — sempre desenhado. Palco total, ocupa o espaço das antigas stats.
-  {
-    const nomeY = H - 38 * k;
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.font = `700 ${52 * k}px 'Rajdhani', system-ui, sans-serif`;
-    ctx.letterSpacing = `${3 * k}px`;
-    let nomeUpper = String(nome).toUpperCase();
-    while (ctx.measureText(nomeUpper).width > W - 40 * k && nomeUpper.length > 3) nomeUpper = nomeUpper.slice(0, -1);
-    // Contorno escuro duro para separar do fundo.
-    ctx.lineWidth = 6 * k;
-    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-    ctx.lineJoin = 'round';
-    ctx.strokeText(nomeUpper, W / 2, nomeY);
-    // 1º passe: branco com glow dourado quente.
-    ctx.shadowColor = 'rgba(212,160,23,0.85)';
-    ctx.shadowBlur = 24 * k;
-    ctx.shadowOffsetY = 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(nomeUpper, W / 2, nomeY);
-    // 2º passe: shimmer dourado estático (branco→dourado→branco) sem sombra.
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    const tg = ctx.createLinearGradient(W * 0.2, 0, W * 0.8, 0);
-    tg.addColorStop(0, '#ffffff');
-    tg.addColorStop(0.5, '#f5e070');
-    tg.addColorStop(1, '#ffffff');
-    ctx.fillStyle = tg;
-    ctx.fillText(nomeUpper, W / 2, nomeY);
-    ctx.letterSpacing = '0px';
-    ctx.restore();
-  }
+  // 4b + 5. PLACA + NOME — no card completo desenham-se aqui (depois do avatar,
+  // antes do frame). No preview são a camada de topo (apenasPlacaNome), por isso
+  // na moldura são omitidos aqui.
+  if (!apenasMoldura) desenharPlacaNome();
 
   // Fim do conteúdo recortado → remove o clip octogonal. O frame já é inset e as
   // faíscas ficam soltas por cima, sem recorte.
@@ -321,16 +369,21 @@ export async function gerarFigurinhaCanvas(opts = {}) {
   return canvasParaBlob(canvas);
 }
 
-// Duas camadas para o preview do studio: o fundo (card completo SEM avatar) e o
-// jogador (só o avatar transparente). Permite meter partículas ENTRE eles.
+// Três camadas para o preview do studio, para o avatar inteiro não tapar nada:
+//   fundoBlob   = moldura (fundo+holofotes+gradiente+frame, SEM avatar/placa/nome)
+//   jogadorBlob = só o avatar (transparente) — vai por cima das partículas
+//   placaBlob   = só placa+nome (transparente) — camada de topo, sempre visível
+// Partículas entram entre fundo e jogador; a placa fica acima do jogador.
 export async function gerarCamadasFigurinha(opts = {}) {
-  const [fundoCanvas, jogadorCanvas] = await Promise.all([
-    construirCard({ ...opts, largura: 400, altura: 600, incluirAvatar: false }),
+  const [molduraCanvas, jogadorCanvas, placaCanvas] = await Promise.all([
+    construirCard({ ...opts, largura: 400, altura: 600, apenasMoldura: true }),
     construirCard({ ...opts, largura: 400, altura: 600, apenasAvatar: true }),
+    construirCard({ ...opts, largura: 400, altura: 600, apenasPlacaNome: true }),
   ]);
-  const [fundoBlob, jogadorBlob] = await Promise.all([
-    canvasParaBlob(fundoCanvas),
+  const [fundoBlob, jogadorBlob, placaBlob] = await Promise.all([
+    canvasParaBlob(molduraCanvas),
     canvasParaBlob(jogadorCanvas),
+    canvasParaBlob(placaCanvas),
   ]);
-  return { fundoBlob, jogadorBlob };
+  return { fundoBlob, jogadorBlob, placaBlob };
 }

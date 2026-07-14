@@ -59,6 +59,7 @@ export default function MeuPerfil() {
   const [savingDados, setSavingDados] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [nomeJogFocus, setNomeJogFocus] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -275,10 +276,18 @@ export default function MeuPerfil() {
         <SecLabel>Dados</SecLabel>
         <div className="perfil-form" style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Nome de jogador</span>
+            <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
+              <span>Nome de jogador</span>
+              {nomeJogFocus ? (
+                <span style={{ letterSpacing: 0, color: (u.nome_jogador || '').length >= 18 ? '#d4a017' : 'rgba(255,255,255,0.35)' }}>{(u.nome_jogador || '').length}/18</span>
+              ) : null}
+            </span>
             <input
               value={u.nome_jogador || ''}
-              onChange={(e) => setField('nome_jogador', e.target.value.slice(0, 30))}
+              onChange={(e) => setField('nome_jogador', e.target.value.slice(0, 18))}
+              onFocus={() => setNomeJogFocus(true)}
+              onBlur={() => setNomeJogFocus(false)}
+              maxLength={18}
               placeholder="Como te chamam no campo?"
               style={inputStyle}
             />
