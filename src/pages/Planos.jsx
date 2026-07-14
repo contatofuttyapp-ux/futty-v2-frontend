@@ -9,11 +9,14 @@ import Toast from '../components/Toast';
 import Icon from '../components/Icon';
 import '../styles/app.css';
 
+// Preço por MOEDA — nunca as duas em simultâneo. A escolha segue a mesma regra do
+// checkout (pt-BR → BRL, restantes → EUR). Os valores BRL mostram-se na UI mesmo que
+// o price ID do Stripe ainda seja placeholder; só o checkout precisa do ID real.
 const PLANOS = [
   {
     id: 'free',
     nome: 'Free',
-    preco: 'Grátis',
+    preco: { BRL: 'Grátis', EUR: 'Grátis' },
     features: ['Sorteio', 'Ranking', 'Resenha', '3 avatares IA'],
     botao: null,
   },
@@ -21,7 +24,7 @@ const PLANOS = [
     id: 'pro',
     nome: 'Pro',
     icone: 'estrela', // asset da casa — substitui o ★ do texto
-    preco: 'R$9,90/mês · €2,99/mês',
+    preco: { BRL: 'R$9,90/mês', EUR: '€2,99/mês' },
     features: ['Tudo do Free', '50 avatares IA/mês', 'Sem anúncios', 'Frames exclusivos', 'Badge dourado'],
     botao: 'Assinar Pro',
   },
@@ -29,16 +32,29 @@ const PLANOS = [
     id: 'elite',
     nome: 'Elite',
     icone: 'coroa', // asset da casa (/icons/coroa.svg), tingido a dourado — substitui o emoji 👑
-    preco: 'R$24,90/mês · €7,99/mês',
+    preco: { BRL: 'R$24,90/mês', EUR: '€7,99/mês' },
     features: ['Tudo do Pro', '100 avatares IA/mês', 'Kit Elite dourado', 'Figurinha animada (em breve)'],
     botao: 'Assinar Elite',
   },
+];
+
+// Atmosfera: partículas douradas de fundo. Densidade METADE da figurinha (6 vs 14).
+const PLANOS_PARTICULAS = [
+  { left: 10, size: 3, cor: '#f5e070', dur: 9.5, delay: 0 },
+  { left: 27, size: 2, cor: '#d4a017', dur: 11.2, delay: 2.6 },
+  { left: 44, size: 3, cor: '#f5e070', dur: 8.8, delay: 5.4 },
+  { left: 62, size: 2, cor: '#d4a017', dur: 12.1, delay: 1.4 },
+  { left: 79, size: 3, cor: '#f5e070', dur: 10.3, delay: 4.2 },
+  { left: 92, size: 2, cor: '#d4a017', dur: 9.1, delay: 6.8 },
 ];
 
 export default function Planos() {
   const { data: me, reload } = useApi('/api/me');
   const planoAtual = me?.user?.plan || 'free';
   const [planoBusy, setPlanoBusy] = useState(null);
+  // Moeda única, decidida uma vez. Ler navigator durante o render é impuro → initializer.
+  // Mesma regra usada no checkout, para o preço mostrado e o cobrado nunca divergirem.
+  const [moeda] = useState(() => (navigator.language === 'pt-BR' ? 'BRL' : 'EUR'));
   // Deteta o regresso do checkout (?sucesso=1) já no estado inicial do toast.
   const [toast, setToast] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -62,8 +78,7 @@ export default function Planos() {
     if (planoBusy) return;
     setPlanoBusy(plan);
     try {
-      // Moeda pelo idioma do browser: pt-BR → BRL; restantes → EUR.
-      const moeda = navigator.language === 'pt-BR' ? 'BRL' : 'EUR';
+      // Mesma `moeda` que o UI mostra → preço exibido == preço cobrado.
       const data = await apiFetch('/api/stripe/checkout', {
         method: 'POST',
         body: JSON.stringify({ plan, moeda }),
@@ -83,15 +98,30 @@ export default function Planos() {
       {/* paddings do .app-main apertados (default 32/64 = 96px de espaço morto): os 3
           cards + CTAs passam a caber sem scroll em 390×844 e 430×932. O padding
           inferior mantém folga para a bottom nav fixa (75px). */}
-      <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 12 }}>
+      {/* ATMOSFERA — partículas douradas atrás dos cards. Reusa .fig-particle/futtyFall
+          da figurinha; o container leva containerType:size (o keyframe usa cqh) e
+          opacity 0.66 → tecto real de ~0.5 (o keyframe chega a 0.75). */}
+      <div
+        aria-hidden="true"
+        style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none', containerType: 'size', opacity: 0.66 }}
+      >
+        {PLANOS_PARTICULAS.map((p, i) => (
+          <span
+            key={i}
+            className="fig-particle"
+            style={{ position: 'absolute', left: `${p.left}%`, top: '-5%', width: p.size, height: p.size, borderRadius: '50%', background: p.cor, boxShadow: `0 0 6px ${p.cor}`, animationDuration: `${p.dur}s`, animationDelay: `${p.delay}s` }}
+          />
+        ))}
+      </div>
+      <main className="app-main" style={{ position: 'relative', zIndex: 1, paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 12 }}>
         {/* Topbar → cards, directo. Cards EMPILHADOS, ordem Free → Pro → Elite.
             Layout compacto para caber sem scroll em viewports normais. */}
         <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
           {PLANOS.map((p) => {
             const atual = planoAtual === p.id;
-            return (
+            const heroi = p.id === 'pro'; // herói da página → levitação subtil
+            const card = (
               <div
-                key={p.id}
                 className="hud-corners"
                 style={{
                   position: 'relative',
@@ -112,7 +142,12 @@ export default function Planos() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#fff' }}>{p.nome}</span>
-                    {p.icone ? <Icon name={p.icone} size={19} color="#d4a017" /> : null}
+                    {/* Elite: a coroa cintila raro (1.2s a cada ~7s). Pro: ícone estático. */}
+                    {p.icone ? (
+                      <span className={p.id === 'elite' ? 'planos-coroa-twinkle' : undefined}>
+                        <Icon name={p.icone} size={19} color="#d4a017" />
+                      </span>
+                    ) : null}
                   </span>
                   {atual ? (
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#d4a017', border: '1px solid rgba(212,160,23,0.5)', borderRadius: 'var(--radius-pill)', padding: '3px 8px', whiteSpace: 'nowrap' }}>
@@ -121,7 +156,7 @@ export default function Planos() {
                   ) : null}
                 </div>
 
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017' }}>{p.preco}</div>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017' }}>{p.preco[moeda]}</div>
 
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 5, flex: 1 }}>
                   {p.features.map((f) => (
@@ -137,7 +172,8 @@ export default function Planos() {
                     roxo recuado. Lógica de checkout inalterada. */}
                 {p.botao && !atual ? (
                   p.id === 'pro' ? (
-                    <div style={{ display: 'flex', filter: 'drop-shadow(0 0 9px rgba(212,160,23,0.4))' }}>
+                    // Glow com respiração — reusa a classe do Compartilhar (0.4↔0.6, 3.5s).
+                    <div className="fig-share-glow" style={{ display: 'flex' }}>
                       <button
                         type="button"
                         className="btn hud-corners"
@@ -161,6 +197,20 @@ export default function Planos() {
                   )
                 ) : null}
               </div>
+            );
+            // FREE e ELITE: estáticos (zero movimento). PRO: bob + sway, com a sombra
+            // elíptica em CONTRA-FASE por baixo — mesma linguagem do cromo, amplitude menor.
+            return heroi ? (
+              <div key={p.id} className="planos-bob" style={{ position: 'relative' }}>
+                <div
+                  className="planos-shadow"
+                  aria-hidden="true"
+                  style={{ position: 'absolute', left: '14%', bottom: -7, width: '72%', height: 10, background: 'radial-gradient(ellipse, rgba(212,160,23,0.3), rgba(0,0,0,0.4) 60%, transparent)', filter: 'blur(6px)', pointerEvents: 'none', zIndex: 0 }}
+                />
+                <div className="planos-sway" style={{ position: 'relative', zIndex: 1 }}>{card}</div>
+              </div>
+            ) : (
+              <div key={p.id}>{card}</div>
             );
           })}
         </div>

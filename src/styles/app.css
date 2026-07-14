@@ -1630,6 +1630,49 @@
 .fig-dot-twinkle {
   animation: futtyDotTwinkle 5.5s ease-in-out infinite;
 }
+
+/* FASE 3.40 — PLANOS: hierarquia de movimento. Mesmas curvas/durações da figurinha,
+   mas com amplitude REDUZIDA: o card Pro é herói da página sem competir com o cromo.
+   Free = zero movimento (não tem classe). Elite = estático, só a coroa cintila. */
+@keyframes planosBob {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-3px); }
+}
+@keyframes planosSway {
+  0%, 100% { transform: rotateX(0.4deg) rotateY(-0.4deg); }
+  50%      { transform: rotateX(-0.4deg) rotateY(0.4deg); }
+}
+@keyframes planosShadowBob {
+  0%, 100% { transform: scaleX(1); opacity: 0.45; }
+  50%      { transform: scaleX(0.9); opacity: 0.32; }
+}
+.planos-bob {
+  perspective: 900px;
+  will-change: transform;
+  animation: planosBob 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.planos-sway {
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: planosSway 9.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.planos-shadow {
+  animation: planosShadowBob 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+/* Coroa do Elite: cintila RARO — o brilho dura 1.2s e repete a cada ~7.2s
+   (ciclo 8.4s; o pulso ocupa só ~14% dele). */
+@keyframes planosCoroaTwinkle {
+  0%, 85.7%, 100% { opacity: 0.6; transform: scale(1); }
+  92.8%           { opacity: 1; transform: scale(1.15); }
+}
+.planos-coroa-twinkle {
+  display: inline-flex;
+  will-change: transform;
+  animation: planosCoroaTwinkle 8.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .planos-bob, .planos-sway, .planos-shadow, .planos-coroa-twinkle { animation: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .fig-bob, .fig-sway, .fig-shadow, .fig-aura, .fig-name-glow,
   .fig-particle, .fig-light, .fig-fog-1, .fig-fog-2, .fig-fog-3, .fig-breathe,
