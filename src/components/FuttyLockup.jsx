@@ -33,6 +33,17 @@ export default function FuttyLockup({ size = 120, wordmarkSize = 44 }) {
 
   return (
     <div style={{ display: 'grid', justifyItems: 'center', gap: 14 }}>
+      {/* FASE B — a MESMA flutuação do FuttyLoader: sombra no chão → bob → sway → svg.
+          O svg mantém a sua entrada (scale 0.92→1), que é `transform` e por isso não
+          pode partilhar elemento com o bob/sway. Ver ".futty-f-bob" no app.css. */}
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <span
+          className="futty-f-shadow"
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '15%', bottom: -6, width: '70%', height: 8, background: 'radial-gradient(ellipse, rgba(0,0,0,0.55), transparent 70%)', filter: 'blur(6px)', pointerEvents: 'none' }}
+        />
+        <div className="futty-f-bob">
+          <div className="futty-f-sway">
       <svg
         className="futty-lockup-f"
         width={size}
@@ -98,6 +109,9 @@ export default function FuttyLockup({ size = 120, wordmarkSize = 44 }) {
           <rect className="futty-lockup-glint" x="-1080" y="0" width="1080" height="1080" fill={`url(#${glintId})`} />
         </g>
       </svg>
+          </div>
+        </div>
+      </div>
       <span
         aria-hidden="true"
         style={{

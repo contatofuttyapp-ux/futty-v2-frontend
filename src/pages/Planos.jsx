@@ -38,6 +38,10 @@ const PLANOS = [
   },
 ];
 
+// FASE A — durações do sway por card. Não partilham divisores comuns úteis, por isso as
+// três oscilações nunca caem em fase: a página respira em vez de pulsar em bloco.
+const SWAY_DUR = { free: '7.1s', pro: '8.3s', elite: '9.7s' };
+
 // Atmosfera: partículas douradas de fundo. FASE 3.56 — o vidro (0.45) só vale a pena
 // se houver o que ver por trás: 6 → 12 partículas, tamanho +50% (2-3 → 3-5) e
 // #f5e070 dominante (2 em cada 3). Valores fixos por partícula → nunca sincronizam.
@@ -230,19 +234,24 @@ export default function Planos() {
                 ) : null}
               </div>
             );
-            // FREE e ELITE: estáticos (zero movimento). PRO: bob + sway, com a sombra
-            // elíptica em CONTRA-FASE por baixo — mesma linguagem do cromo, amplitude menor.
-            return heroi ? (
-              <div key={p.id} className="planos-bob" style={{ position: 'relative' }}>
+            // FASE A — SUSPENSÃO. Os três cards ganham sombra no chão + sway; só o Pro
+            // faz bob, e só a sombra dele responde em contra-fase.
+            //
+            // A ordem das camadas mudou face à 3.40, por física: antes a sombra vivia
+            // DENTRO do .planos-bob e subia com o card — uma sombra que acompanha o
+            // objecto não é sombra, é decalque. Agora o wrapper exterior é estático, a
+            // sombra fica no chão, e só o card sobe por cima dela.
+            return (
+              <div key={p.id} style={{ position: 'relative' }}>
                 <div
-                  className="planos-shadow"
+                  className={heroi ? 'planos-shadow' : undefined}
                   aria-hidden="true"
-                  style={{ position: 'absolute', left: '14%', bottom: -7, width: '72%', height: 10, background: 'radial-gradient(ellipse, rgba(212,160,23,0.3), rgba(0,0,0,0.4) 60%, transparent)', filter: 'blur(6px)', pointerEvents: 'none', zIndex: 0 }}
+                  style={{ position: 'absolute', left: '14%', bottom: -7, width: '72%', height: 10, background: 'radial-gradient(ellipse, rgba(0,0,0,0.4), transparent 70%)', filter: 'blur(10px)', pointerEvents: 'none', zIndex: 0 }}
                 />
-                <div className="planos-sway" style={{ position: 'relative', zIndex: 1 }}>{card}</div>
+                <div className={heroi ? 'planos-bob' : undefined} style={{ position: 'relative', zIndex: 1 }}>
+                  <div className="planos-sway" style={{ animationDuration: SWAY_DUR[p.id] }}>{card}</div>
+                </div>
               </div>
-            ) : (
-              <div key={p.id}>{card}</div>
             );
           })}
         </div>

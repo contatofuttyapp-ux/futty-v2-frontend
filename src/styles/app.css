@@ -1405,29 +1405,35 @@
 
 /* FASE 3.40 — PLANOS: hierarquia de movimento. Mesmas curvas/durações da figurinha,
    mas com amplitude REDUZIDA: o card Pro é herói da página sem competir com o cromo.
-   Free = zero movimento (não tem classe). Elite = estático, só a coroa cintila. */
+   FASE A — SUSPENSÃO: os TRÊS cards passam a ter sombra no chão + sway (durações
+   7.1/8.3/9.7s, definidas por card no JSX → nunca sincronizam). Só o Pro tem bob
+   vertical, e só a sombra DELE responde em contra-fase. É isso que mantém a
+   hierarquia: todos flutuam, um só respira. */
 @keyframes planosBob {
   0%, 100% { transform: translateY(0px); }
-  50%      { transform: translateY(-3px); }
+  50%      { transform: translateY(-4px); }
 }
 @keyframes planosSway {
-  0%, 100% { transform: rotateX(0.4deg) rotateY(-0.4deg); }
-  50%      { transform: rotateX(-0.4deg) rotateY(0.4deg); }
+  0%, 100% { transform: rotateX(0.3deg) rotateY(-0.3deg); }
+  50%      { transform: rotateX(-0.3deg) rotateY(0.3deg); }
 }
 @keyframes planosShadowBob {
   0%, 100% { transform: scaleX(1); opacity: 0.45; }
-  50%      { transform: scaleX(0.9); opacity: 0.32; }
+  50%      { transform: scaleX(0.86); opacity: 0.32; }
 }
 .planos-bob {
   perspective: 900px;
   will-change: transform;
   animation: planosBob 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
+/* A duração vem do JSX (7.1/8.3/9.7s) — aqui só a curva e a amplitude. */
 .planos-sway {
   transform-style: preserve-3d;
   will-change: transform;
-  animation: planosSway 9.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: planosSway 8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
+/* Só o Pro leva esta classe: a sombra que encolhe quando o card sobe. As dos outros
+   dois ficam estáticas — eles não sobem, logo a sombra deles não tem porque mudar. */
 .planos-shadow {
   animation: planosShadowBob 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
@@ -1525,6 +1531,48 @@
 @media (prefers-reduced-motion: reduce) {
   .futty-lockup-f { animation: none; }
   .futty-lockup-glint { animation: none; display: none; }
+}
+
+/* FASE B — FLUTUAÇÃO DOS DOIS F. Classes partilhadas pelo FuttyLoader e pelo
+   FuttyLockup: mesma física, não duas imitações uma da outra.
+
+   Porque são TRÊS wrappers e não tudo no <svg>: cada camada anima uma propriedade
+   diferente e o CSS só deixa uma animação por propriedade num elemento. O bob mexe
+   translateY, o sway mexe rotate — ambos são `transform`, logo teriam de competir.
+   E no lockup o próprio <svg> já anima transform (a entrada, scale 0.92→1). Separados,
+   compõem-se; juntos, a última ganhava e as outras desapareciam.
+
+   A sombra fica FORA do bob — no chão. Se subisse com o F não era sombra, era decalque
+   (o mesmo erro que a Fase A corrigiu nos Planos). */
+@keyframes futtyFBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+@keyframes futtyFSway {
+  0%, 100% { transform: rotate(-0.8deg); }
+  50%      { transform: rotate(0.8deg); }
+}
+/* Contra-fase: o F em cima (50% do bob) → sombra menor e mais clara. */
+@keyframes futtyFShadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.5; }
+  50%      { transform: scaleX(0.82); opacity: 0.3; }
+}
+.futty-f-bob {
+  will-change: transform;
+  animation: futtyFBob 4.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.futty-f-sway {
+  will-change: transform;
+  animation: futtyFSway 6.7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.futty-f-shadow {
+  will-change: transform, opacity;
+  animation: futtyFShadow 4.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .futty-f-bob, .futty-f-sway { animation: none; }
+  /* A sombra fica — é material, não movimento. Parada no estado "pousado". */
+  .futty-f-shadow { animation: none; opacity: 0.5; }
 }
 
 /* Spinner reutilizável (botões em loading). */

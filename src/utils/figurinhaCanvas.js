@@ -135,7 +135,13 @@ export async function desenharFundoEpico(ctx, W, H, { intensidade = 1 } = {}) {
   ctx.save();
   ctx.filter = `blur(${1.2 * k}px)`;
   ctx.translate(W / 2, H / 2);
-  ctx.transform(1.02, -0.06, 0.05, 0.98, 0, 0);
+  // FASE C — pseudo-perspectiva mais assumida: skews b -0.06 → -0.085 e c 0.05 → 0.07
+  // (~+40%). A ROTAÇÃO do padrão fica nos 14.52° do futty-logo-flat.png (fase 3.33) —
+  // a fonte canónica. Medi fresco o F do kit fotografado e deu 15.52°, mas o Δ de 1° é
+  // ruído: o logo no kit tem 51x61px, está impresso em tecido curvo e com sombra. Um
+  // grau, num padrão com blur 1.2px e alpha 0.065, ninguém vê — e alinhar a marca pela
+  // fotografia do produto em vez do vector seria ancorá-la no derivado.
+  ctx.transform(1.02, -0.085, 0.07, 0.98, 0, 0);
   ctx.drawImage(off, -OW / 2, -OH / 2);
   ctx.restore();
 

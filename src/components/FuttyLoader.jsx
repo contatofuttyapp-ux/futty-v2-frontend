@@ -28,6 +28,17 @@ export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
 
   return (
     <div role="status" aria-live="polite" style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
+      {/* FASE B — flutuação. As camadas (sombra no chão → bob → sway → svg) e o porquê
+          de serem separadas estão explicados no app.css, em ".futty-f-bob". A mesma
+          estrutura vive no FuttyLockup: mesma física nos dois F. */}
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <span
+          className="futty-f-shadow"
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '15%', bottom: -6, width: '70%', height: 8, background: 'radial-gradient(ellipse, rgba(0,0,0,0.55), transparent 70%)', filter: 'blur(6px)', pointerEvents: 'none' }}
+        />
+        <div className="futty-f-bob">
+          <div className="futty-f-sway">
       <svg
         width={size}
         height={size}
@@ -67,6 +78,9 @@ export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
           <rect className="futty-loader-shine" x="-1080" y="0" width="1080" height="1080" fill={`url(#${shineId})`} />
         </g>
       </svg>
+          </div>
+        </div>
+      </div>
       {label ? (
         <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-dim)' }}>
           {label}
