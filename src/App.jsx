@@ -10,6 +10,7 @@ import CookieBanner from './components/CookieBanner';
 import RouteTitle from './components/RouteTitle';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
+import LoadingFutty from './components/LoadingFutty';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage';
 import PageTransition from './components/PageTransition';
@@ -42,9 +43,18 @@ const Termos = lazy(() => import('./pages/Termos'));
 const Privacidade = lazy(() => import('./pages/Privacidade'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
+//
+// VAGA 1 (B2) — o `loading` aqui é o do AuthProvider: dura o que o getSession() do
+// Supabase demorar, e isso não tem prazo. O LoadingScreen do arranque, esse, sai a
+// horas fixas (1200ms + 400ms de fade). Quando a rede é lenta o overlay desaparece
+// primeiro e este `return null` deixava o visitante a olhar para o vazio — o branco
+// do arranque. Agora o F continua a desenhar-se até haver resposta.
+// Os dois são fixed/inset:0 centrados com o mesmo <FuttyLoader size={129}>, por isso
+// a passagem de um para o outro é invisível: o F não salta, não muda de tamanho.
+// A lógica é a mesma — só o null deu lugar a um componente.
 function IndexRedirect() {
   const { session, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <LoadingFutty />;
   if (session) return <Navigate to="/home" replace />;
   return <LandingPage />;
 }

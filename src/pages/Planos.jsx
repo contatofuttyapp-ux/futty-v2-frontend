@@ -42,22 +42,25 @@ const PLANOS = [
 // três oscilações nunca caem em fase: a página respira em vez de pulsar em bloco.
 const SWAY_DUR = { free: '7.1s', pro: '8.3s', elite: '9.7s' };
 
-// Atmosfera: partículas douradas de fundo. FASE 3.56 — o vidro (0.45) só vale a pena
-// se houver o que ver por trás: 6 → 12 partículas, tamanho +50% (2-3 → 3-5) e
-// #f5e070 dominante (2 em cada 3). Valores fixos por partícula → nunca sincronizam.
+// Atmosfera: partículas douradas de fundo. Valores fixos por partícula → nunca sincronizam.
+//
+// A 3.56 inflou isto (6 → 12, tamanho +50%, #f5e070 dominante, tecto de opacidade
+// ~0.5 → 0.75) porque os cards eram opacos e a chuva não se via por trás. Com o véu
+// a 3% o pressuposto caiu: o que era compensação passou a grito. AFINAÇÃO — volta ao
+// base da Figurinha: 6 partículas, tamanhos 2-4, rotação equilibrada das três cores
+// (dourado-claro / dourado / branco-quente, 2+2+2 — sem dominante) e o tecto de volta
+// a ~0.5 (ver o opacity do container).
+// A FÍSICA NÃO MEXE: os dur/delay são os mesmos que a 3.57 recalibrou (as 6 que ficam
+// mantêm os seus valores ao centésimo) e os `left` também — as que sobram são uma sim,
+// uma não, para a largura continuar coberta por igual.
+// Régua: sentir-se através dos cards, nunca disputar com preços/CTAs.
 const PLANOS_PARTICULAS = [
-  { left: 6, size: 4, cor: '#f5e070', dur: 13.8, delay: 0 },
-  { left: 14, size: 3, cor: '#d4a017', dur: 16.2, delay: 2.6 },
-  { left: 23, size: 5, cor: '#f5e070', dur: 12.8, delay: 5.4 },
-  { left: 31, size: 3, cor: '#f5e070', dur: 17.5, delay: 1.4 },
-  { left: 40, size: 4, cor: '#d4a017', dur: 14.9, delay: 4.2 },
-  { left: 48, size: 3, cor: '#f5e070', dur: 13.2, delay: 6.8 },
-  { left: 57, size: 5, cor: '#f5e070', dur: 15.8, delay: 3.1 },
-  { left: 65, size: 3, cor: '#d4a017', dur: 12.2, delay: 7.5 },
-  { left: 74, size: 4, cor: '#f5e070', dur: 17, delay: 1.9 },
-  { left: 82, size: 3, cor: '#f5e070', dur: 14.2, delay: 5.9 },
-  { left: 89, size: 5, cor: '#d4a017', dur: 18, delay: 0.8 },
-  { left: 95, size: 3, cor: '#f5e070', dur: 14.6, delay: 4.7 },
+  { left: 6, size: 3, cor: '#f5e070', dur: 13.8, delay: 0 },
+  { left: 23, size: 2, cor: '#d4a017', dur: 12.8, delay: 5.4 },
+  { left: 40, size: 4, cor: '#fff8dc', dur: 14.9, delay: 4.2 },
+  { left: 57, size: 2, cor: '#f5e070', dur: 15.8, delay: 3.1 },
+  { left: 74, size: 3, cor: '#d4a017', dur: 17, delay: 1.9 },
+  { left: 89, size: 2, cor: '#fff8dc', dur: 18, delay: 0.8 },
 ];
 
 export default function Planos() {
@@ -113,12 +116,16 @@ export default function Planos() {
       {/* ATMOSFERA — partículas douradas atrás dos cards. Reusa .fig-particle/futtyFall
           da figurinha; o container leva containerType:size (o keyframe usa cqh).
           FASE 3.57 — durações ×1.45 (média 10.3s → 15.0s, ~86 → ~59 px/s): com o dobro
-          das partículas e +50% de tamanho, a mesma velocidade lia-se agitada. */}
+          das partículas e +50% de tamanho, a mesma velocidade lia-se agitada.
+          AFINAÇÃO — a contagem e o tamanho recuaram, mas as durações FICAM: a queda
+          lenta é o que faz isto ler-se como atmosfera e não como confete. */}
       <div
         aria-hidden="true"
-        // FASE 3.56 — opacity 0.66 → 1: o keyframe futtyFall chega a 0.75, por isso o
-        // tecto real de opacidade das partículas passa de ~0.5 para 0.75.
-        style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none', containerType: 'size', opacity: 1 }}
+        // AFINAÇÃO — opacity 1 → 0.66, desfazendo a subida da 3.56. O keyframe futtyFall
+        // faz pico a 0.75, por isso o tecto real das partículas é o produto dos dois:
+        // 0.66 × 0.75 ≈ 0.5. O tecto vive aqui e não no keyframe porque o futtyFall é
+        // partilhado com a Figurinha — mexer lá mexia na carta.
+        style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none', containerType: 'size', opacity: 0.66 }}
       >
         {PLANOS_PARTICULAS.map((p, i) => (
           <span

@@ -1,4 +1,17 @@
-/* Futty v2.0 — Estilos partilhados das páginas de autenticação */
+/* Futty v2.0 — Estilos partilhados das páginas de autenticação
+ *
+ * VAGA 1 (B2) — a porta de entrada ganha o cânone.
+ *
+ * Porque é que estas páginas tinham deriva própria: são as ÚNICAS do app que não
+ * importam o app.css (todas as outras fazem `import '../styles/app.css'`). Sem ele
+ * não havia .hud-corners-s, não havia .cta-gold — o vocabulário da casa não chegava
+ * cá, e o que cresceu no vazio foi um dialecto: roxo neon, cantos redondos, azul de
+ * focus do browser. O Login e o Registo passam a importar o app.css como toda a
+ * gente; este ficheiro é só a camada por cima.
+ *
+ * O trio fecha completo: Login, Registo e ForgotPassword. Os três importam o app.css,
+ * os três usam o CTA dourado da casa. Não sobra porta com dialecto.
+ */
 
 .auth-shell {
   min-height: 100svh;
@@ -8,27 +21,42 @@
   padding: 24px;
   position: relative;
   overflow: hidden;
+  /* O fundo do cânone, explícito. Antes o .auth-shell era transparente e o #050810
+     chegava por baixo, do .aurora-wrapper — o que também deixava passar os 4 blobs e
+     as 22 partículas do AuroraBg (que o Layout monta em TODAS as rotas, login
+     incluído). Opaco aqui = as partículas globais ficam a zero por trás do
+     formulário, sem tocar no AuroraBg nem em rotas. A atmosfera desta página passa a
+     ser só a de baixo: dois halos, dela, medidos. */
+  background: #050810;
 }
 
-/* Halo de fundo (neon + roxo) */
+/* Atmosfera — densidade baixa por construção: dois halos parados, não partículas.
+   Cores do cânone da aurora (dourado + roxo) na mesma arrumação dos blobs
+   (dourado em cima à esquerda, roxo em baixo à direita). Alfas baixos: se se
+   notarem a olhar, é demais. Isto sente-se, não se vê. */
 .auth-shell::before {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(60% 60% at 20% 10%, rgba(139, 92, 246, 0.12), transparent 70%),
-    radial-gradient(60% 60% at 85% 90%, rgba(124, 58, 237, 0.16), transparent 70%);
+    radial-gradient(60% 60% at 20% 10%, rgba(212, 160, 23, 0.1), transparent 70%),
+    radial-gradient(60% 60% at 85% 90%, rgba(139, 92, 246, 0.1), transparent 70%);
   pointer-events: none;
 }
 
-/* Card com borda gradient */
+/* Card com borda gradient.
+   FORA DA LISTA, assinalado: a moldura era o --neon → --purple cheios e, depois de
+   tudo à volta recuar, passou a ser a coisa mais gritante da página — um rectângulo
+   roxo saturado a competir com o único dourado. A regra do item 4 ("roxo recuado")
+   não falava da moldura, mas era ela quem a quebrava. Mesma gradient, alfas baixos:
+   a moldura continua a ler-se, deixa de gritar. Reverter = repor var(--neon)/var(--purple). */
 .auth-card {
   position: relative;
   width: 100%;
   max-width: 420px;
   padding: 2px; /* espessura da borda gradient */
   border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--neon), var(--purple));
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(124, 58, 237, 0.16));
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
 }
 
@@ -38,28 +66,61 @@
   padding: 36px 32px;
 }
 
+/* ─── Header: marca + título dourado seco + linha com degrau 45° ─────────────
+   REGRA DO CÂNONE (nova, específica das páginas de auth): marca e título COEXISTEM.
+   O XOR "título OU lockup" vale nas páginas de dentro, onde a marca já está dada e
+   repeti-la é ruído. Aqui não: esta é a porta da rua — quem chega tem de ver em que
+   casa está a entrar antes de escrever a senha. A marca vem ACIMA do título.
+   O que sai não é o wordmark, é o roxo dele: estava #8b5cf6 à mão, e o cânone da
+   marca é dourado. */
+
+/* A marca, discreta: é assinatura, não cabeçalho. Pequena e a meia opacidade, para
+   entregar o dourado do título sem lhe disputar o olho — a ordem de leitura é
+   marca → título → linha. */
 .auth-brand {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  margin-bottom: 4px;
+  margin-bottom: 12px;
+  opacity: 0.55;
 }
 
-.auth-brand__dot {
-  color: var(--neon);
-}
-
+/* "Seco": Rajdhani 700 em maiúsculas, tracking largo, dourado chapado. Sem glow,
+   sem gradiente, sem sombra — a linha por baixo é que faz o trabalho. */
 .auth-title {
-  font-size: 24px;
-  margin-bottom: 6px;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #d4a017;
+  margin-bottom: 0;
+}
+
+/* A linha com o degrau, em CSS puro.
+   O original (HudTopbar) é um SVG que MEDE o wordmark com ResizeObserver para o
+   degrau nascer a 6px do fim do texto — precisão que ali se justifica porque o
+   "FIGURINHA"/"PLANOS" muda de largura. Aqui os títulos são dois e conhecidos, por
+   isso segue-se o precedente do modal da Figurinha (Figurinha.jsx:960): uma
+   miniatura da régua com o degrau fixo. Sem SVG, sem medição, sem JS.
+   Geometria: linha de 1.5px que corre a y=7.5..9, sobe 45° (7.5px de subida em 8px
+   de avanço) e continua a y=0..1.5. O gradiente é o do cânone: 0.9 → 0.4 aos 60% → 0. */
+.auth-rule {
+  height: 10px;
+  margin-top: 7px;
+  background: linear-gradient(
+    to right,
+    rgba(212, 160, 23, 0.9),
+    rgba(212, 160, 23, 0.4) 60%,
+    rgba(212, 160, 23, 0) 100%
+  );
+  clip-path: polygon(
+    0 7.5px, 52% 7.5px, calc(52% + 8px) 0, 100% 0,
+    100% 1.5px, calc(52% + 8px) 1.5px, 52% 9px, 0 9px
+  );
 }
 
 .auth-subtitle {
   color: var(--text-dim);
   font-size: 14px;
+  margin-top: 14px;
   margin-bottom: 28px;
 }
 
@@ -75,33 +136,77 @@
   gap: 6px;
 }
 
+/* Label = estrutura → Rajdhani 600. O valor que se escreve no input é leitura e
+   fica no --sans: a régua da Vaga 1 é "Rajdhani estrutural, leitura no resto". */
 .auth-field label {
+  font-family: 'Rajdhani', var(--sans);
   font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-dim);
 }
 
+/* Inputs — cantos HUD (.hud-corners-s no JSX), fundo escuro translúcido, borda
+   subtil. O border-radius foi-se: com clip-path a mandar, arredondar não fazia nada
+   além de mentir a quem lê o CSS. */
 .auth-input {
   width: 100%;
   padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text);
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, background-color 0.15s;
 }
 
 .auth-input::placeholder {
   color: #4d4d57;
 }
 
+/* Focus dourado. O azul do browser morre aqui — e o box-shadow que fazia o anel
+   também: o clip-path do .hud-corners-s cortava-o (compõe-se filter → clip-path, o
+   mesmo motivo por que o .cta-gold-glow vive num wrapper à parte). Sem anel, o sinal
+   de foco é a própria borda a acender a dourado sobre um fundo que sobe. */
 .auth-input:focus {
-  border-color: var(--purple);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+  border-color: #d4a017;
+  background: rgba(212, 160, 23, 0.06);
 }
 
-/* Botão primário (verde neon) */
+/* O AZUL ÓRFÃO. Ele existe, e não está em stylesheet nenhum: é o autofill do
+   Chrome, que pinta os campos guardados com rgba(70,90,126,0.4) — um azul-ardósia
+   — por cima do que aqui se declarar. Sobre o #101012 do card dá ~rgb(38,46,61).
+   Por isso não se encontrava a grep: não é código nosso, é o browser. Atropelava
+   duas regras da Vaga 1 ao mesmo tempo (fundo escuro translúcido, zero azul).
+   O background-color não o vence — o UA ganha sempre. O que o vence é um
+   box-shadow inset opaco, que o autofill não sobrepõe. Sendo opaco, não pode ser
+   translúcido: leva o valor JÁ COMPOSTO do design sobre o card (rgba(255,255,255,
+   0.03) sobre #101012 = rgb(23,23,25)), portanto o olho vê exactamente o mesmo.
+   O inset não briga com o clip-path do .hud-corners-s: pinta dentro da caixa e é
+   recortado com o resto — ao contrário de uma sombra exterior, que seria cortada.
+   O -webkit-text-fill-color é preciso à parte: o autofill também força a cor do
+   texto (escuro), e o `color` não lhe toca. */
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover {
+  -webkit-box-shadow: 0 0 0 1000px rgb(23, 23, 25) inset;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+}
+
+/* Autofill + focus: o dourado continua a mandar (rgba(212,160,23,0.06) sobre
+   #101012 = rgb(28,25,18)). */
+.auth-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px rgb(28, 25, 18) inset;
+  -webkit-text-fill-color: var(--text);
+}
+
+/* Data de nascimento: o ícone do date picker nasce preto sobre fundo escuro. */
+.auth-input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.45;
+  cursor: pointer;
+}
+
 .auth-btn {
   width: 100%;
   padding: 13px 16px;
@@ -121,30 +226,51 @@
   cursor: not-allowed;
 }
 
-.auth-btn--primary {
-  background: var(--neon);
-  color: #04140d;
-  box-shadow: 0 8px 24px -8px rgba(139, 92, 246, 0.6);
+/* CTA principal — a receita do Compartilhar, sem cópia.
+   O Login e o Registo usam as classes .cta-gold-glow + .cta-gold do app.css, as
+   mesmas do Compartilhar (Figurinha) e do Assinar Pro (Planos). A LEI DOS GÉMEOS
+   ganha um terceiro irmão em vez de um sósia: o dourado continua a viver num sítio
+   só. Aqui em baixo está apenas o que a auth acrescenta — largura e o estado
+   desligado; fundo, borda, texto, cantos e o glint vêm todos de lá.
+   NOTA: .cta-gold traz height: 46px, que ganha ao padding do .auth-btn. É o que se
+   quer — a altura do CTA dourado é a mesma em toda a casa. */
+.auth-cta {
+  width: 100%;
+  cursor: pointer;
+  transition: transform 0.08s, opacity 0.15s;
 }
 
-.auth-btn--primary:hover:not(:disabled) {
-  box-shadow: 0 10px 30px -8px rgba(139, 92, 246, 0.8);
+.auth-cta:active {
+  transform: translateY(1px);
 }
 
-/* Botão Google (outline) */
+.auth-cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Botão Google — secundário: roxo recuado. Não compete com o dourado. */
 .auth-btn--google {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(139, 92, 246, 0.07);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 15px;
+  letter-spacing: 0.06em;
 }
 
 .auth-btn--google:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(139, 92, 246, 0.13);
+  border-color: rgba(139, 92, 246, 0.45);
 }
+
+/* O .auth-btn--primary (roxo neon cheio) foi-se: com o ForgotPassword a adoptar a
+   receita, ficou sem um único utilizador. Regra da casa — classe sem quem a use é
+   classe que mente ao próximo que ler este ficheiro. */
 
 .auth-divider {
   display: flex;
@@ -177,22 +303,34 @@
   font-size: 13px;
 }
 
+/* Links — roxo recuado (o <a> global já é var(--purple)); aqui só se garante que
+   não puxam o olho antes do CTA. */
+.auth-links a,
+.auth-footer a {
+  color: #a78bfa;
+}
+
 /* Mensagens */
 .auth-alert {
   padding: 11px 14px;
-  border-radius: 10px;
   font-size: 13px;
   line-height: 1.4;
 }
 
+/* Erro — âmbar (--warning: #f59e0b), não o vermelho default.
+   O #ff4d6d que aqui estava não existe em lado nenhum do resto do app: era uma cor
+   que só a auth conhecia. Numa paleta de dourado + roxo, o vermelho é o único tom
+   que não tem parente — o âmbar avisa com a mesma força e é da família do dourado,
+   mais quente e mais baixo, para se ler como "atenção" e não como "erro do sistema".
+   Fica claramente ABAIXO do CTA na hierarquia: alfas baixos, sem glow. */
 .auth-alert--error {
-  background: rgba(255, 77, 109, 0.12);
-  border: 1px solid rgba(255, 77, 109, 0.3);
-  color: #ff8095;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  color: #f5c563;
 }
 
 .auth-alert--success {
   background: rgba(139, 92, 246, 0.1);
   border: 1px solid rgba(139, 92, 246, 0.3);
-  color: var(--neon);
+  color: #c4b5fd;
 }
