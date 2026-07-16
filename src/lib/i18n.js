@@ -28,6 +28,23 @@ const TRADUCOES = {
 
 export const IDIOMA_PADRAO = 'pt-BR';
 
+// Catálogo do selector. `nome` é o idioma NA PRÓPRIA LÍNGUA — quem procura o seu
+// idioma numa lista procura a palavra que conhece, não a tradução dela.
+// `traduzido` diz a verdade: só o par PT tem dicionário (ver TRADUCOES). Os outros
+// gravam a escolha e ficam com o texto em PT — o sheet diz isso em vez de fingir.
+export const IDIOMAS = [
+  { id: 'pt-BR', bandeira: '🇧🇷', nome: 'Português (Brasil)', traduzido: true },
+  { id: 'pt-PT', bandeira: '🇵🇹', nome: 'Português (Portugal)', traduzido: true },
+  { id: 'en', bandeira: '🇺🇸', nome: 'English', traduzido: false },
+  { id: 'es', bandeira: '🇪🇸', nome: 'Español', traduzido: false },
+  { id: 'ko', bandeira: '🇰🇷', nome: '한국어', traduzido: false },
+  { id: 'fr', bandeira: '🇫🇷', nome: 'Français', traduzido: false },
+];
+
+export function nomeIdioma(id) {
+  return IDIOMAS.find((i) => i.id === id)?.nome || IDIOMAS[0].nome;
+}
+
 export function getIdioma() {
   return localStorage.getItem('futty_idioma') || IDIOMA_PADRAO;
 }
@@ -37,7 +54,14 @@ export function setIdioma(idioma) {
   window.location.reload(); // reload para aplicar
 }
 
+// O fallback é para o PT-BR e NÃO para a chave crua. Antes era `|| chave`, e isso
+// bastava enquanto só existiam os dois PT — qualquer idioma guardado tinha
+// dicionário. Com o selector a aceitar en/es/ko/fr, o `|| chave` passaria a
+// devolver o identificador em vez do texto: t('salvar') dava "salvar" em minúscula,
+// t('carregando') dava "carregando". Ou seja, escolher 한국어 não deixava o texto em
+// PT — estragava-o. Com o fallback no padrão, a promessa do sheet ("o texto continua
+// em PT até haver tradução") passa a ser verdade.
 export function t(chave) {
   const idioma = getIdioma();
-  return TRADUCOES[idioma]?.[chave] || chave;
+  return TRADUCOES[idioma]?.[chave] ?? TRADUCOES[IDIOMA_PADRAO]?.[chave] ?? chave;
 }

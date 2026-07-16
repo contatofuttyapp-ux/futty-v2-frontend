@@ -1122,10 +1122,74 @@
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
-/* Foco dos inputs do perfil */
+/* ─── NOME DE JOGADOR (Perfil): o hero. Vivo, não gordo. ─────────────────────
+   Estas regras vivem em CSS e não inline por um motivo mecânico: o :focus-within
+   tem de poder mexer na borda e no glow, e estilo inline ganha a qualquer selector
+   (foi o que matou, em silêncio, o focus roxo que aqui esteve anos — ver abaixo).
+
+   Em repouso quase dorme: borda a 0.35, glow nenhum. O olho vai lá pelo SHINE que
+   passa de 7 em 7 segundos, não por ser o elemento mais pesado da página. */
+.perfil-nome-glow {
+  transition: filter 0.3s ease;
+}
+.perfil-nome-campo {
+  background: rgba(212, 160, 23, 0.06);
+  border: 1.5px solid rgba(212, 160, 23, 0.35);
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+/* Acende ao editar. O glow vai no WRAPPER porque o campo leva .hud-corners-s e
+   clip-path corta box-shadow exterior (testado). drop-shadow(7px) ≈ box-shadow(14px):
+   o blur do filtro é ~metade. O :focus-within sobe do input até aqui sozinho. */
+.perfil-nome-glow:focus-within {
+  filter: drop-shadow(0 0 7px rgba(212, 160, 23, 0.25));
+}
+.perfil-nome-glow:focus-within .perfil-nome-campo {
+  border-color: rgba(212, 160, 23, 0.65);
+  background: rgba(212, 160, 23, 0.09);
+}
+
+/* O SHINE. Não pode ser um ::after do input — <input> é elemento substituído e não
+   tem pseudo-elementos fiáveis. Logo: irmão sobreposto, pointer-events none, com o
+   mesmo clip do campo. Varre a CAIXA, não os glifos: recortar às letras exigia
+   background-clip:text sobre o texto do input, que um overlay não consegue ler.
+   Ciclo 7s, varrimento 0.9s (12.9% do ciclo) — passa raro e sai depressa. */
+.perfil-nome-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 34%, rgba(255, 250, 225, 0.22) 50%, transparent 66%);
+  transform: translateX(-100%);
+  animation: nomeShine 7s ease-in-out infinite;
+}
+@keyframes nomeShine {
+  0%           { transform: translateX(-100%); }
+  12.9%, 100%  { transform: translateX(200%); }
+}
+/* Editar é concentração, não espectáculo: com o campo focado o shine sai de cena e
+   fica só o glow. Os dois ao mesmo tempo davam duas coisas a acontecer no mesmo
+   sítio, e o glow é o que informa (estás a editar) — o shine é só encanto. */
+.perfil-nome-glow:focus-within .perfil-nome-shine {
+  animation-play-state: paused;
+  opacity: 0;
+}
+/* Movimento reduzido: o shine desliga (é decoração); o glow do focus FICA, porque
+   é feedback funcional e não enfeite. */
+@media (prefers-reduced-motion: reduce) {
+  .perfil-nome-shine { animation: none; opacity: 0; }
+}
+
+/* Foco dos inputs do perfil — dourado (lei da Vaga 1: nada de azul do browser,
+   nada de roxo a fazer de selecção; o dourado é que marca o foco).
+   O !important não é preguiça, é a única saída: os inputs desta página levam o
+   `border` e o `background` em estilo INLINE (é o idioma do MeuPerfil), e inline
+   ganha a qualquer selector. Sem isto a regra não pinta nada — e era exactamente
+   esse o estado anterior: o roxo daqui NUNCA chegou ao ecrã, era código morto a
+   fingir-se vivo. Alternativa era migrar os inputs todos para CSS; fica para quem
+   reescrever a página. Âmbito: só o .perfil-form, que só o MeuPerfil usa. */
 .perfil-form input:focus {
   outline: none;
-  border-color: rgba(139, 92, 246, 0.5);
+  border-color: #d4a017 !important;
+  background: rgba(212, 160, 23, 0.06) !important;
 }
 
 /* Cantos em L dourados (AvatarFrame) — luz a percorrer os 4 cantos em sequência */
@@ -1247,6 +1311,13 @@
     5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px),
     calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px
   );
+}
+/* Variante para painéis colados a um bordo: corta SÓ os dois cantos de cima. Um
+   bottom sheet nasce fora do ecrã e encosta em baixo — cortar-lhe os cantos
+   inferiores abria duas fatias de overlay por baixo dele, e o 45° passava a
+   defeito em vez de identidade. Mesma aresta de 8px do .hud-corners. */
+.hud-corners-topo {
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

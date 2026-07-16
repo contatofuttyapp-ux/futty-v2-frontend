@@ -15,7 +15,16 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
+    <!-- O Inter passou a ser CARREGADO. Estava declarado no --sans (index.css) desde
+         sempre, mas nunca houve @font-face nenhum para ele: quem tivesse o Inter
+         instalado na máquina via Inter, quem não tivesse caía em silêncio para o
+         system-ui. Ou seja, o tipo de letra de leitura do app dependia da máquina de
+         quem olhava — e ninguém dava por isso, porque os dois são grotescas.
+         Vai na MESMA requisição do Rajdhani (o css2 aceita famílias múltiplas), para
+         não acrescentar um round-trip ao arranque. 400/500/600: o app usa 400 para
+         texto corrido e 600 para o que é semi-destacado; o 700+ é território do
+         Rajdhani, que é a fonte estrutural. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
