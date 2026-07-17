@@ -231,23 +231,6 @@ button {
   animation: notifSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-/* Linha decorativa do nome (Início): revela + shimmer dourado. */
-@keyframes lineReveal {
-  from {
-    transform: scaleX(0);
-    opacity: 0;
-  }
-  to {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-}
-
-@keyframes lineShimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
+/* VAGA 3 — lineReveal/lineShimmer removidos: eram as linhas decorativas do nome do
+   Início, que saiu quando o cromo real (com a placa do nome) passou a ser o
+   destaque. Zero consumidores. */

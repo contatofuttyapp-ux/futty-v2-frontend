@@ -1,5 +1,5 @@
-// Futty v2.0 — Início: avatar, chips de equipas, próximos jogos e publicidade.
-import { useEffect, useRef, useState } from 'react';
+// Futty v2.0 — Início: o cromo, chips de equipas, próximos jogos e publicidade.
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
@@ -8,10 +8,11 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
-import PlayerCard from '../components/PlayerCard';
+import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
+import Topbar from '../components/Topbar';
 import ProductTour from '../components/ProductTour';
 import LoadingFutty from '../components/LoadingFutty';
 import SorteioOverlay from '../components/SorteioOverlay';
@@ -26,6 +27,134 @@ function isToday(iso) {
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 }
 
+// ----- O cromo do Início -----
+// É a figurinha REAL (o mesmo canvas da /figurinha), reduzida e clicável — não o
+// PlayerCard, que era a geração anterior do cromo e mostrava outra coisa.
+//
+// COMPOSTO, nunca em camadas: o teatro do studio (partículas entre o fundo e o
+// jogador, luz direccional, glint a percorrer o frame) é exclusivo da /figurinha.
+// Aqui o cromo é um OBJECTO, não um palco — por cima dele só a física da casa:
+// bob e sway dessincronizados (7.2s/9.3s) e a sombra no chão em contra-fase. São
+// as .fig-* do studio, partilhadas de propósito: já trazem o prefers-reduced-motion.
+//
+// FORMATO: retrato QUADRADO nativo (600×600, sem placa nem nome) — não o card 2:3.
+// O quadrado é mais baixo, deixa a página respirar e o nome vive em texto livre por
+// baixo. O card 2:3 com placa continua canónico na Figurinha e no download.
+//
+// CACHE: cada geração é um canvas 600×600 mais a descodificação do avatar e do
+// stadium_bg, e o Início remonta a cada volta da bottom nav. O dataURL fica em
+// módulo (sobrevive ao unmount, ao contrário de um estado) com chave = tudo o que
+// mexe nos pixéis. Mudar o fundo na Figurinha muda a chave e regenera sozinho:
+// não há invalidação manual para alguém se esquecer de chamar.
+const cromoCache = new Map();
+
+async function gerarCromoDataURL(opts, chave) {
+  const cached = cromoCache.get(chave);
+  if (cached) return cached;
+  const blob = await gerarFigurinhaCanvas(opts);
+  if (!blob) return null;
+  // dataURL e não objectURL: sem ciclo de vida para gerir, o cache pode
+  // atravessar montagens sem ficar a apontar para um URL já revogado.
+  const dataURL = await new Promise((resolve) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = () => resolve(null);
+    fr.readAsDataURL(blob);
+  });
+  if (dataURL) cromoCache.set(chave, dataURL);
+  return dataURL;
+}
+
+// Presentacional: recebe o cromo JÁ gerado (dataURL) do Início. Não gera nem mostra
+// placeholder — quando este componente monta, a página já revelou com o cromo pronto
+// (ver `pageReady`), por isso nunca se vê um F aqui. `avatarEhIA` decide só o overlay
+// de convite (o canvas desenha as iniciais quando não há avatar IA).
+function CromoInicio({ cromo, avatarEhIA, nome }) {
+  return (
+    <Link to="/figurinha" data-tour="player-card" className="cromo-inicio" aria-label="Ver e personalizar a minha figurinha">
+      {/* Sombra no chão — contra-fase com o bob: encolhe quando o cromo sobe. */}
+      <div
+        className="fig-shadow"
+        aria-hidden="true"
+        style={{ position: 'absolute', left: '15%', bottom: -10, width: '70%', height: 10, background: 'radial-gradient(ellipse, rgba(212,160,23,0.35), rgba(0,0,0,0.5) 60%, transparent)', filter: 'blur(6px)', pointerEvents: 'none' }}
+      />
+      <div className="fig-bob" style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div className="fig-sway" style={{ position: 'relative', width: '100%', height: '100%' }}>
+          {cromo ? (
+            <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+          ) : null}
+          {/* Sem avatar IA o canvas desenha as iniciais. O empty state do studio
+              (silhueta tracejada + convite) explica porquê, e o clique leva lá —
+              o estado fraco passa a ser o convite, em vez de um cromo baço. */}
+          {cromo && !avatarEhIA ? (
+            <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
+              <div style={{ display: 'grid', justifyItems: 'center', gap: 8 }}>
+                <svg width="62" height="74" viewBox="0 0 86 104" fill="none" stroke="#d4a017" strokeWidth="2" strokeDasharray="5 4" style={{ opacity: 0.35 }} aria-hidden="true">
+                  <circle cx="43" cy="26" r="19" />
+                  <path d="M6 102 C6 70 23 55 43 55 C63 55 80 70 80 102" />
+                </svg>
+                <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,160,23,0.75)', textAlign: 'center' }}>
+                  O teu cromo espera por ti
+                </span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// Nome por baixo do cromo, em texto livre grande (o quadrado não o traz baked). Base
+// 44px; encolhe até caber numa linha (mínimo 28px, sem quebrar), como o fit-to-width
+// da placa do card. A medição é impura (scrollWidth) → useLayoutEffect, antes do paint,
+// para o utilizador não ver um salto de tamanho. Reajusta em resize e quando as fontes
+// carregam (a Rajdhani mede diferente da fallback).
+function NomeCromo({ nome }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const ajustar = () => {
+      let f = 44;
+      el.style.fontSize = `${f}px`;
+      // scrollWidth = largura do texto (nowrap); clientWidth = largura disponível
+      // (o div é bloco → ocupa a coluna). Reduz até caber ou atingir o mínimo.
+      while (el.scrollWidth > el.clientWidth && f > 28) {
+        f -= 1;
+        el.style.fontSize = `${f}px`;
+      }
+    };
+    ajustar();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(ajustar) : null;
+    if (ro) ro.observe(el);
+    if (document.fonts?.ready) document.fonts.ready.then(ajustar).catch(() => {});
+    return () => ro && ro.disconnect();
+  }, [nome]);
+  return (
+    <div
+      ref={ref}
+      style={{
+        fontFamily: "'Rajdhani', sans-serif",
+        fontWeight: 700,
+        fontSize: 44,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        color: '#f0c94a',
+        textAlign: 'center',
+        lineHeight: 1.05,
+        width: '100%',
+        maxWidth: 360,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}
+    >
+      {nome}
+    </div>
+  );
+}
+
 // ----- Card de jogo -----
 function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
   const today = isToday(game.date);
@@ -35,8 +164,14 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
   const notGoing = game.user_status === 'not_going';
 
   return (
+    // Wrapper e card separados porque o card passou a levar cantos a 45°: a ordem
+    // de composição do CSS é filter → clip-path, por isso QUALQUER sombra exterior
+    // posta no elemento recortado (box-shadow ou drop-shadow) é cortada com ele.
+    // No wrapper, o drop-shadow lê a silhueta já recortada e a sombra ganha também
+    // os 45°. É o mesmo par do .cta-gold-glow/.cta-gold. O tilt e a entrada mudam-se
+    // para cá com ele; a lógica do jogo não muda uma linha.
     <div
-      className={`gcard anim-slide-in ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`}
+      className={`gcard-lift anim-slide-in ${isNext ? 'gcard-lift--next' : ''}`}
       style={{ animationDelay: `${index * 0.08}s` }}
       onMouseMove={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -44,82 +179,98 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
         const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
         e.currentTarget.style.transform = `perspective(800px) translateY(-4px) scale(1.01) rotateX(${-dy * 3}deg) rotateY(${dx * 3}deg)`;
         e.currentTarget.style.transition = 'none';
-        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(212,160,23,0.08)';
+        // Blur de drop-shadow ≈ metade do de box-shadow: 32px → 16px, 20px → 10px.
+        e.currentTarget.style.filter = 'drop-shadow(0 12px 16px rgba(0,0,0,0.5)) drop-shadow(0 0 10px rgba(212,160,23,0.08))';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = '';
         e.currentTarget.style.transition = '';
-        e.currentTarget.style.boxShadow = '';
+        e.currentTarget.style.filter = '';
       }}
     >
-      {isNext ? <div className="gcard__next-badge">PRÓXIMO</div> : null}
-      <div className="gcard__top">
-        <span className="gcard__title">{game.name}</span>
-        {game.team_name && <span className="gcard__team">{game.team_name}</span>}
-      </div>
-
-      <div className="gcard__meta">
-        <span className={`gcard__date ${today ? 'gcard__date--today' : ''}`}>
-          {game.date ? formatDateTime(game.date) : 'Data por definir'}
-        </span>
-        {` · ${game.confirmed_count} confirmados`}
-      </div>
-
-      {isPast ? (
-        <div className="gcard__drawn">
-          <span className="badge badge--encerrado">Encerrado</span>
-          {going && <span className="muted" style={{ fontSize: 13 }}>Estiveste presente</span>}
+      <div className={`gcard hud-corners ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`}>
+        {isNext ? <div className="gcard__next-badge hud-corners-s">PRÓXIMO</div> : null}
+        <div className="gcard__top">
+          <span className="gcard__title">{game.name}</span>
+          {game.team_name && <span className="gcard__team">{game.team_name}</span>}
         </div>
-      ) : isDrawn ? (
-        <div className="gcard__drawn">
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="badge badge--sorteado">Sorteado</span>
-            <span className="muted" style={{ fontSize: 13 }}>
-              {going ? 'Vais jogar' : notGoing ? 'Não vais' : 'Sem resposta'}
-            </span>
+
+        <div className="gcard__meta">
+          <span className={`gcard__date ${today ? 'gcard__date--today' : ''}`}>
+            {game.date ? formatDateTime(game.date) : 'Data por definir'}
           </span>
-          <button type="button" className="btn btn--purple btn--sm" onClick={() => onVerSorteio(game)}>
-            Ver sorteio
-          </button>
+          {` · ${game.confirmed_count} confirmados`}
         </div>
-      ) : (
-        <div className="gcard__presence">
-          <button
-            type="button"
-            className={`pbtn pbtn--go ${going ? 'active' : ''} ${!going && !busy ? 'pulse-active tab-shine' : ''}`}
-            disabled={busy}
-            onClick={() => onPresence(game.id, true)}
-          >
-            Vou
-          </button>
-          <button
-            type="button"
-            className={`pbtn pbtn--no ${notGoing ? 'active' : ''}`}
-            disabled={busy}
-            onClick={() => onPresence(game.id, false)}
-          >
-            Não vou
-          </button>
-        </div>
-      )}
+
+        {isPast ? (
+          <div className="gcard__drawn">
+            <span className="badge badge--encerrado hud-corners-s">Encerrado</span>
+            {going && <span className="muted" style={{ fontSize: 13 }}>Estiveste presente</span>}
+          </div>
+        ) : isDrawn ? (
+          <div className="gcard__drawn">
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="badge badge--sorteado hud-corners-s">Sorteado</span>
+              <span className="muted" style={{ fontSize: 13 }}>
+                {going ? 'Vais jogar' : notGoing ? 'Não vais' : 'Sem resposta'}
+              </span>
+            </span>
+            <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => onVerSorteio(game)}>
+              Ver sorteio
+            </button>
+          </div>
+        ) : (
+          <div className="gcard__presence">
+            {/* O pulso do "Vou" é funcional (marca a acção disponível) e o
+                .pulse-active fá-lo com box-shadow — que os 45° do botão cortariam.
+                Vai para o wrapper em drop-shadow; o .pulse-active fica no botão
+                porque a metade dele que anima a BORDA sobrevive ao recorte. */}
+            <span className={`pbtn-slot ${!going && !busy ? 'pbtn-pulse' : ''}`}>
+              <button
+                type="button"
+                className={`pbtn pbtn--go hud-corners-s ${going ? 'active' : ''} ${!going && !busy ? 'pulse-active tab-shine' : ''}`}
+                disabled={busy}
+                onClick={() => onPresence(game.id, true)}
+              >
+                Vou
+              </button>
+            </span>
+            <button
+              type="button"
+              className={`pbtn pbtn--no hud-corners-s ${notGoing ? 'active' : ''}`}
+              disabled={busy}
+              onClick={() => onPresence(game.id, false)}
+            >
+              Não vou
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 // ----- Estado vazio (sem equipas) -----
+// O único sítio do Início onde o dourado entra. A regra do cânone é "dourado só se
+// houver acção principal de PÁGINA": no Início cheio não há (é um hub — o cromo, o
+// feed, os chips, e as acções vivem dentro de cada card), mas aqui há uma e só uma
+// — criar o time. Sem ela a página não existe. As outras duas recuam para roxo.
 function EmptyState() {
   return (
     <div className="home-empty">
-      <h2 style={{ fontSize: 20 }}>Bem-vindo ao Futty.</h2>
+      <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: '0.02em' }}>Bem-vindo ao Futty.</h2>
       <p className="muted" style={{ marginTop: 6 }}>Começa por aqui.</p>
       <div className="home-empty__actions">
-        <Link to="/criar-equipa" className="btn btn--primary">
-          ＋ Criar o meu time
-        </Link>
-        <Link to="/explorar" className="btn btn--purple">
+        {/* Glow no wrapper, recorte no botão — clip-path corta sombras (ver .cta-gold). */}
+        <div className="cta-gold-glow" style={{ display: 'flex' }}>
+          <Link to="/criar-equipa" className="btn hud-corners cta-gold" style={{ flex: 1 }}>
+            ＋ Criar o meu time
+          </Link>
+        </div>
+        <Link to="/explorar" className="btn btn--purple hud-corners">
           🗺️ Explorar peladas
         </Link>
-        <Link to="/figurinha" className="btn btn--purple-outline">
+        <Link to="/figurinha" className="btn btn--purple-outline hud-corners">
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="estrela" size={16} />
             Criar a minha figurinha
@@ -131,8 +282,13 @@ function EmptyState() {
 }
 
 export default function Inicio() {
-  const { data: me } = useApi('/api/me');
+  const { data: me, loading: meLoading } = useApi('/api/me');
   const { teams, loading: teamsLoading } = useTeams();
+
+  // O cromo é gerado AQUI (não dentro do CromoInicio) para que a geração corra
+  // durante o gate de carregamento, antes de a página aparecer — ver `pageReady`.
+  const [cromo, setCromo] = useState(null);
+  const [cromoTentado, setCromoTentado] = useState(false);
 
   const [games, setGames] = useState(null); // null = a carregar
   const [error, setError] = useState('');
@@ -214,16 +370,23 @@ export default function Inicio() {
   const user = me?.user;
   const stats = me?.stats;
   const nome = user?.nome_jogador || user?.nome || user?.email?.split('@')[0] || 'Jogador';
-  // Fallback premium: se o utilizador ainda não tem avatar, mostra o Jefin (demo).
-  const avatarParaMostrar = user?.avatar_url || '/avatares/verde/Jefin.png';
-  // Cor do frame escolhida na Figurinha (aplica-se ao card e à aura).
-  const corFrame = user?.cor_frame || 'dourado';
 
-  // Proteção de layout para o nome (tamanho/espaçamento conforme o comprimento).
-  const nomeLen = nome?.length || 0;
-  const nomeComposto = (nome || '').trim().includes(' ') && nomeLen > 12;
-  const nomeFontSize = nomeComposto ? 18 : nomeLen <= 10 ? 26 : nomeLen <= 15 ? 20 : 16;
-  const nomeSpacing = nomeLen <= 10 ? '0.28em' : nomeLen <= 15 ? '0.16em' : '0.08em';
+  // Avatar IA confirmado (mesma regra da Figurinha): a foto CRUA nunca entra no cromo.
+  const cromoAvatarEhIA = !!user?.foto_url && !!user?.avatar_url && user.foto_url !== user.avatar_url;
+  const cromoFundo = user?.fundo_figurinha || 'estadio';
+
+  // Gera o cromo assim que o user existe. corFrame/zoom são os defaults FIXOS da
+  // Figurinha — divergir dava dois cromos diferentes para o mesmo utilizador.
+  useEffect(() => {
+    if (!user) return undefined;
+    let vivo = true;
+    const jogadorCard = cromoAvatarEhIA ? user : { ...user, avatar_url: null };
+    const opts = { jogador: jogadorCard, fundo: cromoFundo, corFrame: 'dourado', avatarZoom: 1.1, formato: 'quadrado' };
+    gerarCromoDataURL(opts, `q|${jogadorCard.avatar_url || '-'}|${cromoFundo}|${nome}`)
+      .then((url) => { if (vivo) { setCromo(url); setCromoTentado(true); } })
+      .catch((e) => { console.error('[cromo]', e); if (vivo) setCromoTentado(true); });
+    return () => { vivo = false; };
+  }, [user, cromoAvatarEhIA, cromoFundo, nome]);
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
@@ -310,87 +473,47 @@ export default function Inicio() {
 
   const noTeams = !teamsLoading && teams.length === 0;
 
-  return (
-    <div className="app-shell">
-      <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-        {/* Sem logo no topo — a marca (F) vive no nav inferior. */}
+  // REVELAÇÃO: o LoadingFutty (F grande, sozinho, centrado) segura o ecrã até o cromo
+  // estar DESENHADO (dataURL pronto). Antes, o F do loader e o F-placeholder do cromo
+  // apareciam sobrepostos no arranque; agora só há um F, e a página só aparece com o
+  // cromo já pronto. Se o /api/me terminar sem user (erro), revela na mesma — não há
+  // cromo para esperar. O feed/jogos continua a carregar por baixo (não bloqueia isto).
+  const pageReady = cromoTentado || (!meLoading && !user);
+  if (!pageReady) return <LoadingFutty />;
 
+  return (
+    <div className="app-shell inicio-reveal">
+      <Topbar hud="INÍCIO" />
+      <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10 }}>
         {/* Banner discreto para ativar notificações push */}
         {pushEstado === 'suportado' && !pushBannerFechado ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
+          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>🔔 Ativar notificações para não perderes nenhum jogo</span>
-            <button type="button" className="btn btn--primary btn--sm" onClick={() => pushSubscrever()}>Ativar</button>
+            {/* Secundário: o cânone tira o verde daqui — activar notificações não é
+                a acção principal da página (o Início não tem uma; ver EmptyState). */}
+            <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => pushSubscrever()}>Ativar</button>
             <button type="button" aria-label="Fechar" onClick={fecharPushBanner} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}
 
         {/* CTA pós-onboarding: criar a figurinha */}
         {ctaFigurinha ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
+          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>👤 Cria a tua figurinha</span>
-            <Link to="/figurinha" className="btn btn--purple btn--sm" onClick={dispensarCtaFigurinha}>Ir para Figurinha</Link>
+            <Link to="/figurinha" className="btn btn--purple btn--sm hud-corners-s" onClick={dispensarCtaFigurinha}>Ir para Figurinha</Link>
             <button type="button" aria-label="Fechar" onClick={dispensarCtaFigurinha} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}
 
-        {/* Zona do card premium */}
+        {/* O CROMO — o destaque do topo, agora RETRATO QUADRADO sem placa. O nome
+            vem por baixo em texto livre (o quadrado não o traz baked, ao contrário
+            do card 2:3). Ordem: cromo → nome → equipa → stats — cada um diz o que o
+            cromo não diz. Sem o nome herói com shimmer da versão 2:3: aqui é texto
+            seco, dourado, sem palco. */}
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px', paddingTop: 'var(--space-lg)' }}>
           <div className="inicio-vline" aria-hidden="true" />
-          <div data-tour="player-card" style={{ width: '70%', maxWidth: 280 }}>
-            <PlayerCard jogador={{ ...(user || { nome }), avatar_url: avatarParaMostrar }} stats={stats} equipa={teams[0] || null} mostrarNome={false} corFrame={corFrame} cantos={false} />
-          </div>
-          {/* Nome por baixo do card — gradiente dourado + linhas decorativas */}
-          {nomeComposto ? (
-            // Nome composto e longo: quebra em 2 linhas, sem linhas decorativas.
-            <div
-              style={{
-                fontFamily: "'Rajdhani', sans-serif",
-                fontSize: 18,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: nomeSpacing,
-                background: 'linear-gradient(90deg, #d4a017 0%, #fff 40%, #f5e070 60%, #d4a017 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                textShadow: 'none',
-                maxWidth: '85%',
-                textAlign: 'center',
-                whiteSpace: 'normal',
-                wordBreak: 'break-word',
-                lineHeight: 1.1,
-              }}
-            >
-              {nome}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '85%', maxWidth: 280 }}>
-              {/* Linha esquerda: espelho da direita — shimmer invertido (só a 2ª animação). */}
-              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 2.0s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 6.6s linear infinite 0.8s', animationDirection: 'normal, reverse' }} />
-              <div
-                style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontSize: nomeFontSize,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: nomeSpacing,
-                  background: 'linear-gradient(90deg, #d4a017 0%, #fff 40%, #f5e070 60%, #d4a017 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  textShadow: 'none',
-                  textAlign: 'center',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  lineHeight: 1.1,
-                }}
-              >
-                {nome}
-              </div>
-              <div style={{ flex: 1, height: 2, borderRadius: 1, background: 'linear-gradient(90deg, rgba(212,160,23,0.6), rgba(245,224,112,0.9), rgba(212,160,23,0.6), rgba(139,101,8,0.4), rgba(212,160,23,0.6))', backgroundSize: '300% 100%', animation: 'lineReveal 2.0s cubic-bezier(0.34,1.56,0.64,1) both, lineShimmer 6.6s linear infinite 0.8s' }} />
-            </div>
-          )}
+          <CromoInicio cromo={cromo} avatarEhIA={cromoAvatarEhIA} nome={nome} />
+          <NomeCromo nome={nome} />
           {teams[0] ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neon)' }} />
@@ -410,17 +533,22 @@ export default function Inicio() {
           </div>
         </div>
 
-        {error && <div className="alert alert--error" style={{ marginTop: 12 }}>{error}</div>}
+        {error && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error}</div>}
 
         {noTeams ? (
           <EmptyState />
         ) : (
           <>
-            {/* Chips de equipas */}
+            {/* Chips de equipas. O 45° entra pelo USE SITE e não pela classe .chip:
+                ela é partilhada com o Feed e o AdminPanel, que ainda não passaram
+                pelo cânone — varrer a classe mudava-lhes o desenho sem os rever.
+                A .chip--active traz uma "serpente" dourada a percorrer o contorno;
+                sob o recorte ela abre-se nas 4 diagonais, o que ecoa o travessão
+                que o frame do cromo abre exactamente nos mesmos cantos. */}
             <div className="chips-row">
               <button
                 type="button"
-                className={`chip ${selectedTeam === 'all' ? 'chip--active tab-shine' : ''}`}
+                className={`chip hud-corners-s ${selectedTeam === 'all' ? 'chip--active tab-shine' : ''}`}
                 onClick={() => setSelectedTeam('all')}
               >
                 Todas
@@ -429,7 +557,7 @@ export default function Inicio() {
                 <button
                   key={t.id}
                   type="button"
-                  className={`chip ${selectedTeam === t.id ? 'chip--active tab-shine' : ''}`}
+                  className={`chip hud-corners-s ${selectedTeam === t.id ? 'chip--active tab-shine' : ''}`}
                   onClick={() => setSelectedTeam(t.id)}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
@@ -437,7 +565,7 @@ export default function Inicio() {
                   {t.nome}
                 </button>
               ))}
-              <Link to="/explorar" className="chip chip--explore">
+              <Link to="/explorar" className="chip chip--explore hud-corners-s">
                 ＋ Explorar
               </Link>
             </div>
@@ -451,7 +579,7 @@ export default function Inicio() {
             {proximoJogo && proximoJogo.team_slug ? (
               proximoJogo.ausente_proximo ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '8px 0 4px' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 800, color: 'var(--danger)', background: 'rgba(248,113,113,0.12)', border: '1px solid var(--danger)', borderRadius: 999, padding: '4px 10px' }}>
+                  <span className="hud-corners-s" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--danger)', background: 'rgba(248,113,113,0.12)', border: '1px solid var(--danger)', padding: '4px 10px' }}>
                     ❌ Ausente declarado
                   </span>
                   <button type="button" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ border: 'none', background: 'transparent', color: 'var(--neon)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', padding: 0, opacity: ausenciaBusy ? 0.6 : 1 }}>
@@ -459,7 +587,7 @@ export default function Inicio() {
                   </button>
                 </div>
               ) : (
-                <button type="button" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ margin: '8px 0 4px', border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', color: 'var(--text-dim)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', borderRadius: 999, padding: '6px 12px', opacity: ausenciaBusy ? 0.6 : 1 }}>
+                <button type="button" className="hud-corners-s" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ margin: '8px 0 4px', border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', color: 'var(--text-dim)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', padding: '6px 12px', opacity: ausenciaBusy ? 0.6 : 1 }}>
                   {ausenciaBusy ? 'Salvando…' : (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <Icon name="ausente" size={16} color="grey" />
@@ -495,7 +623,7 @@ export default function Inicio() {
 
             {/* Card do campeonato (equipa principal) */}
             {campeonato && campSlug ? (
-              <Link to={`/equipa/${campSlug}/campeonato`} style={{ textDecoration: 'none', display: 'block', marginTop: 14, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-md)' }}>
+              <Link to={`/equipa/${campSlug}/campeonato`} className="hud-corners" style={{ textDecoration: 'none', display: 'block', marginTop: 14, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', padding: 'var(--space-md)' }}>
                 {campeonato.estado === 'terminado' ? (
                   <>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#d4a017' }}>🏆 {campeonato.nome} — Campeão: {nomeCampeao(campeonato)}</div>

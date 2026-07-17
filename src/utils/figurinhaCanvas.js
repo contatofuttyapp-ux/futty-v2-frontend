@@ -159,10 +159,15 @@ export async function desenharFundoEpico(ctx, W, H, { intensidade = 1 } = {}) {
 
 // Desenha o card 2:3 num canvas próprio (largura×altura). `k` escala os valores
 // fixos (fontes, badge, frame) para render nativo a qualquer resolução.
-async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false }) {
+async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card' }) {
   const W = largura;
   const H = altura;
   const k = largura / 400;
+  // 'quadrado' (600×600): retrato nativo SEM placa nem nome, para o Início. Toda a
+  // restante geometria é comandada por W/H e pelo octógono (mesmo `cut` nos 4 cantos,
+  // logo as diagonais ficam a 45° mesmo com H=W) — só muda o enquadramento do avatar
+  // e o gradiente inferior. O 'card' 2:3 fica pixel-igual (nenhum ramo o toca).
+  const ehQuadrado = formato === 'quadrado';
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -225,8 +230,11 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // Desenha o avatar real com enquadramento/zoom/posição fixos. Corte LIMPO (sem
   // fade) exactamente na linha onde a placa começa — a placa cobre a linha de corte.
   const desenharAvatar = () => {
-    const boxW = W * 0.80;
-    const boxH = H * 0.80;
+    // Retrato quadrado: o jogador DOMINA o retrato (box +20%: 0.80 → 0.96). O card
+    // 2:3 fica nos 0.80 de sempre.
+    const boxFrac = ehQuadrado ? 0.96 : 0.80;
+    const boxW = W * boxFrac;
+    const boxH = H * boxFrac;
     const scale = Math.min(boxW / avatar.naturalWidth, boxH / avatar.naturalHeight) * avatarZoom;
     const dw = avatar.naturalWidth * scale;
     const dh = avatar.naturalHeight * scale;
@@ -240,7 +248,11 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // Confirma-se por retro-cálculo da 3.28: com dy=H*0.12 os olhos davam 29.2% do
     // card, o ~29% que essa fase mediu. (A 30% do PNG fica a BOCA, não os olhos.)
     const EYE_FRAC = 0.215;
-    const EYE_Y = H * 0.30; // régua do terço superior da 3.28 (antes: 29.2% a 100%)
+    // Card 2:3: olhos no terço superior (0.30). Retrato QUADRADO: com o avatar maior
+    // (box 0.96) o rosto sobe para 0.34 — dá presença ao jogador sem cortar a coroa.
+    // Calculado com o avatar real (445×680, olhos a 21.5%): a dh≈634, dy = 0.34·600 −
+    // 634·0.215 ≈ 68px, e o topo do clip está a 16.65px → ~51px de folga na coroa.
+    const EYE_Y = H * (ehQuadrado ? 0.34 : 0.30);
     const dy = EYE_Y - dh * EYE_FRAC;
 
     // FASE 3.26/3.45 — Clip OCTOGONAL: o avatar nunca é desenhado sobre o CORPO
@@ -254,8 +266,13 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // 73px de folga, e a placa cobre a base).
     const insetTopo = 11.1 * k;
     const insetLado = 7 * k + 1 * k; // = 8*k
+    // No card a placa cobre a base → o avatar pára nos 11.1*k inferiores. No quadrado
+    // NÃO há placa: a base segue a regra 3.45 das laterais (8*k) — o avatar desce até
+    // à linha grossa inferior e o frame desenha-se por cima, exactamente como faz nos
+    // lados. Sem isto ficava uma faixa de fundo entre o peito e a moldura de baixo.
+    const insetBaixo = ehQuadrado ? insetLado : insetTopo;
     ctx.save();
-    octagonoLados(insetTopo, insetLado, insetTopo, insetLado);
+    octagonoLados(insetTopo, insetLado, insetBaixo, insetLado);
     ctx.clip();
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 24 * k;
@@ -470,7 +487,14 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
       const scale = Math.max(W / bg.naturalWidth, H / bg.naturalHeight);
       const sw = bg.naturalWidth * scale;
       const sh = bg.naturalHeight * scale;
-      ctx.drawImage(bg, (W - sw) / 2, (H - sh) / 2, sw, sh);
+      // O card 2:3 tem o MESMO rácio do stadium_bg (832×1248 = 2:3) → cover exacto,
+      // sem excedente, refletores no topo visíveis. O QUADRADO gera 300px de excedente
+      // vertical; centrar (0.5) cortava os refletores. Ancora ao topo (corta só 0.22 do
+      // excedente em cima, 0.78 em baixo) para os DOIS refletores ficarem atrás/ao lado
+      // da cabeça — a relva perdida em baixo fica tapada pelo corpo do jogador.
+      // Para o card, biasTopo=0.5 e o excedente é 0 → −(sh−H)·0.5 = (H−sh)/2, idêntico.
+      const biasTopo = ehQuadrado ? 0.22 : 0.5;
+      ctx.drawImage(bg, (W - sw) / 2, -(sh - H) * biasTopo, sw, sh);
     } else {
       const g = ctx.createRadialGradient(W / 2, 0, 40 * k, W / 2, 0, H);
       g.addColorStop(0, '#1b2433');
@@ -510,19 +534,28 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.fillText(nome.slice(0, 2).toUpperCase(), W / 2, H * 0.62);
   }
 
-  // 4. GRADIENTE INFERIOR (depois do avatar). Suavizado (stop 0.72) porque a placa
-  // do nome passou a dar o contraste — este gradiente só ajuda a zona do dissolve
-  // por cima da placa.
-  const gb = ctx.createLinearGradient(0, H * 0.74, 0, H);
-  gb.addColorStop(0, 'rgba(0,0,0,0)');
-  gb.addColorStop(1, 'rgba(0,0,0,0.72)');
-  ctx.fillStyle = gb;
-  ctx.fillRect(0, H * 0.74, W, H * 0.26);
+  // 4. GRADIENTE INFERIOR (depois do avatar). No card é suave (0.72) porque a placa
+  // dá o contraste. No QUADRADO não há placa: um gradiente curto (0.84→H) e de alpha
+  // moderada (0.55) só assenta o avatar na base, sem escurecer o peito.
+  if (ehQuadrado) {
+    const gb = ctx.createLinearGradient(0, H * 0.84, 0, H);
+    gb.addColorStop(0, 'rgba(0,0,0,0)');
+    gb.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = gb;
+    ctx.fillRect(0, H * 0.84, W, H * 0.16);
+  } else {
+    const gb = ctx.createLinearGradient(0, H * 0.74, 0, H);
+    gb.addColorStop(0, 'rgba(0,0,0,0)');
+    gb.addColorStop(1, 'rgba(0,0,0,0.72)');
+    ctx.fillStyle = gb;
+    ctx.fillRect(0, H * 0.74, W, H * 0.26);
+  }
 
   // 4b + 5. PLACA + NOME — no card completo desenham-se aqui (depois do avatar,
   // antes do frame). No preview são a camada de topo (apenasPlacaNome), por isso
-  // na moldura são omitidos aqui.
-  if (!apenasMoldura) desenharPlacaNome();
+  // na moldura são omitidos aqui. No QUADRADO não há placa nem nome no PNG: o nome
+  // vive em texto livre no Início, por baixo do cromo.
+  if (!apenasMoldura && !ehQuadrado) desenharPlacaNome();
 
   // Fim do conteúdo recortado → remove o clip octogonal. O frame já é inset e as
   // faíscas ficam soltas por cima, sem recorte.
@@ -537,9 +570,12 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
 }
 
 // Figurinha normal: card 2:3 a 400×600 → PNG completo (com jogador). Usado no
-// Baixar/Compartilhar (uma imagem só).
+// Baixar/Compartilhar (uma imagem só). Com formato:'quadrado' devolve o RETRATO
+// quadrado 600×600 (sem placa/nome) que o Início mostra — mesma moldura e fundos.
 export async function gerarFigurinhaCanvas(opts = {}) {
-  const canvas = await construirCard({ ...opts, largura: 400, altura: 600 });
+  const quadrado = opts.formato === 'quadrado';
+  const dim = quadrado ? { largura: 600, altura: 600 } : { largura: 400, altura: 600 };
+  const canvas = await construirCard({ ...opts, ...dim });
   return canvasParaBlob(canvas);
 }
 

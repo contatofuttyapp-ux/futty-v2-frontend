@@ -1,5 +1,16 @@
 // Futty v2.0 — PlayerCard: card quadrado épico (4 cantos em L dourados).
-// Tudo em CSS puro (zero libs). Usado em Início e Figurinha.
+// Tudo em CSS puro (zero libs).
+//
+// ⚠️ CANDIDATO A MORTE NA LIMPEZA FINAL (registado na VAGA 3 do B2).
+// É a geração ANTERIOR do cromo — DOM, sem octógono, sem placa de nome, sem o
+// enquadramento das fases 3.2x–3.4x. O cromo verdadeiro é o canvas em
+// utils/figurinhaCanvas.js, e já é ele que a /figurinha e o /início mostram.
+// Consumidores: só a LandingPage (era Início + Figurinha + LandingPage).
+// Morre quando a LandingPage passar pelo cânone — e com ele devem cair, se não
+// aparecerem outros consumidores: os seus bugs conhecidos de `fundo`/`corFrame`
+// (que NÃO se corrigiram de propósito: morrem com ele) e a prop `cantos`.
+// Ver também `users.cor_frame`: nenhum UI a escreve desde que a Figurinha fixou o
+// frame em 'dourado'; sobrevive só porque o Ranking a lê.
 import { useState } from 'react';
 import { urlAsset, nomeJogador, iniciaisJogador, gradienteAvatar } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';

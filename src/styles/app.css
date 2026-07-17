@@ -338,8 +338,11 @@
   color: var(--text-dim);
 }
 
+/* Fonte na classe, cantos no use site — ver a nota do .chip. O border-radius fica
+   a servir quem ainda não passou pelo cânone. */
 .badge {
-  font-size: 11px;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 12px;
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 999px;
@@ -958,8 +961,11 @@
 }
 
 
+/* Números: estruturais, logo Rajdhani (é a fonte da nota no cromo e no ranking). */
 .inicio-stats {
-  font-size: 13px;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 15px;
+  letter-spacing: 0.03em;
   color: var(--text-dim);
   margin-top: 5px;
   display: flex;
@@ -991,11 +997,19 @@
   display: none;
 }
 
+/* A FONTE vai na classe (Rajdhani é lei tipográfica do app e um chip é uma etiqueta
+   HUD, família das tabs da Figurinha); os CANTOS a 45° vão no use site do Início.
+   A distinção não é capricho: .chip é partilhada com o Feed, o AdminPanel e o
+   Layout, e trocar-lhes a fonte de uma etiqueta é adopção antecipada do cânone —
+   recortar-lhes a forma sem os rever seria mudar-lhes o desenho às escondidas.
+   O border-radius FICA, por isso mesmo: ainda é ele que serve esses três. */
 .chip {
   flex: 0 0 auto;
   padding: 7px 14px;
   border-radius: 6px;
-  font-size: 13px;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.03em;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -1053,7 +1067,8 @@
 
 /* Lista de jogos */
 .games-label {
-  font-size: 10px;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 11px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.5);
@@ -1073,23 +1088,45 @@
   background: linear-gradient(to right, #d4a017, transparent);
 }
 
+/* VAGA 3 — o card do jogo passou a levar cantos a 45° (.hud-corners, no use site).
+   Como clip-path corta TUDO o que o elemento pinta para fora da caixa, a elevação
+   mudou-se para o wrapper .gcard-lift e aqui fica só o que o recorte respeita:
+   fundo, bordas, padding e o inset (pintado DENTRO da caixa — esse sobrevive). */
 .gcard {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, #0d0d12 8%);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-left: 2px solid rgba(139, 92, 246, 0.4);
-  border-radius: 12px;
   padding: 14px 16px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+/* O wrapper leva a elevação, o tilt e a entrada. Tem de ser drop-shadow e não
+   box-shadow: o drop-shadow lê a silhueta JÁ recortada do filho e ganha os 45°,
+   enquanto um box-shadow desenharia o rectângulo e deixaria quatro bicos a
+   espreitar por trás dos cantos cortados. Blur ≈ metade do que substitui
+   (16px → 8px, 24px → 12px), pela mesma medição da .perfil-nome-glow. */
+.gcard-lift {
   margin-bottom: 10px;
   transform: translateY(0);
   transform-style: preserve-3d;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
 }
 
-.gcard:hover,
-.gcard:active {
+.gcard-lift:hover,
+.gcard-lift:active {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+}
+
+/* O glow do próximo jogo emigrou do .gcard--next para cá pela mesma razão. */
+.gcard-lift--next {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 6px rgba(139, 92, 246, 0.18));
+}
+
+.gcard-lift--next:hover,
+.gcard-lift--next:active {
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(139, 92, 246, 0.24));
 }
 
 /* Picker de reacções (estilo Instagram) */
@@ -1295,6 +1332,62 @@
   aspect-ratio: 2 / 3;
 }
 .fig-io-btn { height: 40px; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CROMO DO INÍCIO. O retrato QUADRADO da /figurinha (600×600, sem placa), reduzido
+   e clicável.
+
+   A MEDIDA: 78% da largura do card da Figurinha POR CONSTRUÇÃO — a mesma fórmula do
+   .fig-studio-card (acima), vezes 0.78. Como agora é QUADRADO (não 2:3), é mais baixo
+   à mesma largura, por isso pode ser mais largo sem afogar o feed. Ancorar à fórmula
+   e não a um valor fixo é deliberado: um px fixo dava rácios diferentes conforme a
+   altura do ecrã (medido na versão anterior: 49–70%). Assim segue sempre o card.
+
+   SEM .hud-corners: o octógono a 45° já vem desenhado no PNG do canvas — recortar
+   por cima só arriscava desalinhar dois octógonos.
+
+   O feedback (press/hover/focus) vive AQUI e não no .fig-bob/.fig-sway: aqueles
+   dois têm transform animado, e um transform de :active no mesmo elemento
+   substituiria o keyframe em vez de se somar a ele. Em camadas separadas, compõem.
+   ───────────────────────────────────────────────────────────────────────────── */
+/* Revelação do Início: a página só aparece com o cromo já desenhado (ver pageReady),
+   e entra com um fade suave. Antes disto, o LoadingFutty segura o ecrã sozinho — um só
+   F, nunca o do loader + o placeholder do cromo sobrepostos. */
+@keyframes inicioReveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.inicio-reveal {
+  animation: inicioReveal 0.3s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inicio-reveal { animation: none; }
+}
+
+.cromo-inicio {
+  position: relative;
+  display: block;
+  width: calc(min(78vw, (100dvh - 441px) * 2 / 3) * 0.78);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  transition: transform 0.18s ease, filter 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cromo-inicio:active {
+  transform: scale(0.97);
+}
+
+.cromo-inicio:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 8px;
+}
+
+@media (hover: hover) {
+  .cromo-inicio:hover {
+    filter: drop-shadow(0 0 16px rgba(212, 160, 23, 0.45));
+  }
+}
 
 /* FASE 3.29 — Cantos a 45° (identidade HUD), partilhados pelos controlos.
    O clip-path MANDA: qualquer border-radius existente deixa de ter efeito.
@@ -1658,21 +1751,22 @@
   opacity: 0.55;
 }
 
-/* Próximo jogo — destaque com borda e glow verde + badge */
+/* Próximo jogo — destaque com borda + badge. O glow exterior foi para o
+   .gcard-lift--next (clip-path cortava-o); aqui fica a borda e o inset. */
 .gcard--next {
   border-left: 2px solid var(--neon);
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.08), inset 0 0 20px rgba(139, 92, 246, 0.02);
+  box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.02);
 }
 
 .gcard__next-badge {
   display: inline-block;
-  font-size: 9px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--neon);
   background: rgba(139, 92, 246, 0.08);
   border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 999px;
   padding: 2px 8px;
   margin-bottom: 8px;
 }
@@ -1740,10 +1834,42 @@
   margin-top: 12px;
 }
 
+/* O pulso do "Vou". O .pulse-active anima box-shadow + border-color; com os 45°
+   no botão, a metade do box-shadow morria recortada e sobrava um piscar de borda.
+   O glow muda-se para este wrapper em drop-shadow (blur ≈ metade: 8→4, 20→10) e
+   volta a seguir a silhueta do botão. O .pulse-active FICA no botão: a parte dele
+   que anima a borda atravessa o recorte sem problema, e as duas somam-se como
+   antes. O .pbtn-slot existe para o botão continuar a esticar dentro da linha. */
+.pbtn-slot {
+  flex: 1;
+  display: flex;
+}
+
+.pbtn-slot > .pbtn {
+  flex: 1;
+}
+
+.pbtn-pulse {
+  animation: pbtnPulseGlow 2.6s ease-in-out infinite;
+}
+
+@keyframes pbtnPulseGlow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(212, 160, 23, 0.2)); }
+  50%      { filter: drop-shadow(0 0 10px rgba(212, 160, 23, 0.5)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pbtn-pulse { animation: none; }
+}
+
+/* Vou / Não vou. Sem border-radius: levam .hud-corners-s no use site e o
+   clip-path mandaria nele de qualquer forma — ficava código morto a fingir-se
+   vivo. A FONTE não muda: no cânone os rótulos de botão são Inter (o .cta-gold e
+   o "Gerar Avatar IA" da Figurinha também são) — Rajdhani é para títulos,
+   labels, badges e números, não para o texto que se carrega. */
 .pbtn {
   flex: 1;
   padding: 9px;
-  border-radius: 10px;
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;

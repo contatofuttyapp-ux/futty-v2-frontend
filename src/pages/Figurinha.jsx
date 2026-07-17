@@ -386,6 +386,22 @@ export default function Figurinha() {
     await gerarAvatarIA(kit.id);
   }
 
+  // O fundo é uma PREFERÊNCIA PERSISTIDA, e faltava-lhe metade do laço: a coluna
+  // users.fundo_figurinha existe (migração 018), o GET /api/me devolve-a e esta
+  // página já a LIA no arranque — mas ninguém a escrevia, por isso a escolha
+  // morria ao sair. Agora o Início mostra este mesmo cromo e precisa de saber qual
+  // é o fundo, o que torna a escrita obrigatória: é a fonte de verdade dos dois.
+  // Optimista — o studio responde já e o PATCH segue atrás; se falhar, a escolha
+  // vale para esta sessão e não se estraga o ecrã por causa de uma preferência.
+  async function escolherFundo(k) {
+    if (k === fundo) return;
+    setFundo(k);
+    try {
+      await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ fundo_figurinha: k }) });
+      setMe((m) => (m ? { ...m, user: { ...m.user, fundo_figurinha: k } } : m));
+    } catch { /* preferência: não vale um erro no ecrã */ }
+  }
+
   async function baixar() {
     if (busy) return;
     setBusy(true);
@@ -482,7 +498,8 @@ export default function Figurinha() {
                      sem octógono, sem placa, sem o enquadramento das fases 3.2x–3.4x):
                      usá-lo aqui fazia o utilizador ver, por instantes, um cromo
                      visivelmente diferente do final — um salto, não um carregamento.
-                     O PlayerCard continua intocado no Início e na LandingPage. */
+                     VAGA 3 — o Início deixou de o usar (mostra este mesmo cromo,
+                     composto); o PlayerCard só sobrevive na LandingPage. */
                   <div style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%' }}>
                     <FuttyLoader size={96} label={null} />
                   </div>
@@ -787,7 +804,7 @@ export default function Figurinha() {
                   <button
                     key={f.k}
                     type="button"
-                    onClick={() => setFundo(f.k)}
+                    onClick={() => escolherFundo(f.k)}
                     aria-pressed={sel}
                     style={{
                       flex: '0 0 calc((100% - 24px) / 4)',
