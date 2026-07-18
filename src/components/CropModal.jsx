@@ -1,6 +1,7 @@
 // Futty v2.0 — Modal de recorte de imagem (react-easy-crop).
 // Zoom + arrastar + escolha de proporção; "Confirmar" gera um blob recortado.
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Cropper from 'react-easy-crop';
 
 const ASPECTS = [
@@ -19,28 +20,44 @@ function createImage(url) {
   });
 }
 
-// Recorta a área (em pixels) para um blob JPEG via canvas.
+// Recorta a área (em pixels) para um blob JPEG via canvas, com tecto de dimensão:
+// o lado maior nunca ultrapassa MAX_LADO (poupa storage/banda sem perder qualidade
+// visível). Saída sempre JPEG 0.9.
+const MAX_LADO = 1600;
 async function gerarBlobRecortado(src, area) {
   const img = await createImage(src);
+  const escala = Math.min(1, MAX_LADO / Math.max(area.width, area.height));
+  const w = Math.max(1, Math.round(area.width * escala));
+  const h = Math.max(1, Math.round(area.height * escala));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(area.width);
-  canvas.height = Math.round(area.height);
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, area.width, area.height);
+  ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, w, h);
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9));
 }
 
-export default function CropModal({ file, aspect = 1, onConfirm, onCancel }) {
-  // Object URL criado uma única vez (inicializador lazy — sem setState em efeito).
-  const [src] = useState(() => URL.createObjectURL(file));
+export default function CropModal({ file, aspect = 1, aspectos = ASPECTS, onConfirm, onCancel }) {
+  const [src, setSrc] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [aspectAtual, setAspectAtual] = useState(aspect);
   const [areaPx, setAreaPx] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // Revoga o object URL ao desmontar.
-  useEffect(() => () => URL.revokeObjectURL(src), [src]);
+  // Cria o object URL DENTRO do efeito, emparelhado com o revoke. Sob React
+  // StrictMode (dev) os efeitos são duplo-invocados (setup→cleanup→setup): um URL
+  // criado em useState seria revogado pelo cleanup do meio e ficaria morto apesar
+  // do componente continuar montado (imagem invisível no cropper). Criando-o aqui,
+  // o último setup produz sempre um URL válido.
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    // Sync legítimo com um sistema externo (ciclo de vida de um object URL, tal como
+    // a doc do React documenta); o setState é intencional e corre uma vez por file.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   const onCropComplete = useCallback((_area, areaPixels) => setAreaPx(areaPixels), []);
 
@@ -55,7 +72,9 @@ export default function CropModal({ file, aspect = 1, onConfirm, onCancel }) {
     }
   }
 
-  return (
+  // Portal para o body: escapa a ancestrais com clip-path/transform (o sheet do
+  // Novo post usa .hud-corners-topo → recortaria este overlay fixed a uma faixa).
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -76,7 +95,7 @@ export default function CropModal({ file, aspect = 1, onConfirm, onCancel }) {
             image={src}
             crop={crop}
             zoom={zoom}
-            aspect={aspectAtual}
+            aspect={aspectAtual || undefined}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
@@ -88,7 +107,7 @@ export default function CropModal({ file, aspect = 1, onConfirm, onCancel }) {
       <div style={{ padding: '16px', background: '#0c0c0c', display: 'grid', gap: 14 }}>
         {/* Proporções */}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          {ASPECTS.map(({ k, v }) => {
+          {aspectos.map(({ k, v }) => {
             const on = Math.abs(aspectAtual - v) < 0.001;
             return (
               <button
@@ -148,6 +167,7 @@ export default function CropModal({ file, aspect = 1, onConfirm, onCancel }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

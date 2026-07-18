@@ -7,7 +7,7 @@ import CropModal from './CropModal';
 
 // uploadFn opcional: substitui o upload por defeito (uploadFile → /api/feed/upload).
 // Deve receber o ficheiro e devolver { url, media_type }. Usado p.ex. no avatar.
-export default function UploadComCrop({ onUpload, uploadFn = null, accept = 'image/*,video/mp4', aspect = 1, disabled = false, label = '＋ Adicionar média' }) {
+export default function UploadComCrop({ onUpload, uploadFn = null, accept = 'image/*,video/mp4', aspect = 1, aspectos = undefined, disabled = false, label = '＋ Adicionar média' }) {
   const inputRef = useRef(null);
   const [cropFile, setCropFile] = useState(null); // ficheiro a recortar (imagem)
   const [busy, setBusy] = useState(false);
@@ -85,6 +85,7 @@ export default function UploadComCrop({ onUpload, uploadFn = null, accept = 'ima
         <CropModal
           file={cropFile}
           aspect={aspect}
+          {...(aspectos ? { aspectos } : {})}
           onConfirm={aoConfirmarCrop}
           onCancel={() => setCropFile(null)}
         />

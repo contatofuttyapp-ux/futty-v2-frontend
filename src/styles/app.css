@@ -288,6 +288,19 @@
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
 }
 
+/* (Régua: no feed, a FAMÍLIA da celebração respira como o cromo da Figurinha —
+   campeão, artilheiro e destaque com bob+sway aninhados (.feed-cromo-bob/-sway),
+   delays desfasados; posts comuns NUNCA flutuam. O antigo .feed-campeao-lift de
+   ~3px foi substituído por esta respiração mais viva.) */
+
+/* Input em modo HUD: focus DOURADO (com .hud-corners-s no mesmo elemento para o 45°).
+   Opt-in, como o .btn--hud — estreado na Resenha; propagar aos inputs das outras
+   páginas na vaga transversal. */
+.input--hud:focus {
+  border-color: #d4a017;
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.18);
+}
+
 /* Seletor de cor */
 .color-picker {
   display: flex;
@@ -1736,6 +1749,23 @@
 }
 .fig-aura {
   animation: futtyAura 6.5s ease-in-out infinite;
+}
+
+/* Feed — a família da celebração (campeão, artilheiro, destaque) respira COMO o
+   cromo da Figurinha: bob (translateY −6px, 7.2s) + sway (rotate ±0.8°, 9.3s),
+   aninhados e dessincronizados por delays. Posts comuns nunca flutuam. */
+.feed-cromo-bob {
+  perspective: 900px;
+  will-change: transform;
+  animation: futtyBob 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.feed-cromo-sway {
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: futtySway 9.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-cromo-bob, .feed-cromo-sway { animation: none; }
 }
 .fig-name-glow {
   animation: futtyNameGlow 4.8s ease-in-out infinite;

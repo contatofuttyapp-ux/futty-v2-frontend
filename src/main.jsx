@@ -4,6 +4,11 @@ import * as Sentry from '@sentry/react'
 import './index.css'
 import App from './App.jsx'
 
+// Marca de versão do bundle — permite confirmar na consola que o tab serve o
+// código novo (stale check). Bump manual quando importa distinguir uma sessão.
+const FUTTY_BUILD = 'resenha-embed-inline-v3';
+console.log(`[Futty] build: ${FUTTY_BUILD}`);
+
 // Error tracking (só em produção; DSN via VITE_SENTRY_DSN).
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,

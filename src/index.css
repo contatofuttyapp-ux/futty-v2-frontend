@@ -227,8 +227,13 @@ button {
   }
 }
 
+/* fill-mode BACKWARDS (não `both`): mostra o estado inicial durante o delay
+   escalonado, mas NÃO persiste `transform: translateX(0)` (identidade) no fim —
+   reverte para `transform: none`. Um transform identidade persistido criava uma
+   camada de composição que, no Chrome, MATA os cliques dentro de iframes
+   cross-origin (o embed do YouTube). Visual idêntico (translateX(0) === none). */
 .anim-slide-in {
-  animation: notifSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: notifSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 
 /* VAGA 3 — lineReveal/lineShimmer removidos: eram as linhas decorativas do nome do
