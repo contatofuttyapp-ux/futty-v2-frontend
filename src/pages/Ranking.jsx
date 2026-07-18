@@ -8,27 +8,103 @@ import { useRanking } from '../hooks/useRanking';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset, iniciaisNome } from '../utils/avatar';
 import LoadingFutty from '../components/LoadingFutty';
-import PlayerAvatar from '../components/PlayerAvatar';
-import AvatarFrame from '../components/AvatarFrame';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
-const MEDALS = ['🥇', '🥈', '🥉'];
-
-// Avatar quadrado (48px) com cantos em L dourados (AvatarFrame).
-function RankingAvatar({ nome, avatarUrl, delay = '0s' }) {
+// Moldura de avatar do cânone (V1): quadrado + cantos-L dourados + interior no material
+// da casa + véu. Moldura única da página — rows, pódio e modal partilham-na.
+function FrameAvatar({ nome, avatarUrl, size = 48 }) {
   const src = avatarUrl ? urlAsset(avatarUrl) : null;
   return (
-    <AvatarFrame size={48} active dur="4.5s" delay={delay}>
-      <div style={{ width: 48, height: 48, borderRadius: 6, overflow: 'hidden', background: '#15151a', display: 'grid', placeItems: 'center' }}>
-        {src ? (
-          <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
-        ) : (
-          <span style={{ color: '#fff', fontWeight: 900, fontSize: 16 }}>{iniciaisNome(nome)}</span>
-        )}
+    <span className="avatar-frame" style={{ width: size, height: size }}>
+      <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
+        {src ? <img src={src} alt="" /> : iniciaisNome(nome)}
+      </span>
+      <span className="avatar-frame__veil" />
+      <span className="avatar-frame__lc avatar-frame__lc--tl" />
+      <span className="avatar-frame__lc avatar-frame__lc--tr" />
+      <span className="avatar-frame__lc avatar-frame__lc--br" />
+      <span className="avatar-frame__lc avatar-frame__lc--bl" />
+    </span>
+  );
+}
+
+// Estado do voto: por votar → CTA dourado vivo (pulse + shine); já votado → discreto
+// (outline roxo). Não aparece no próprio jogador (não se vota em si).
+function VoteButton({ jaVotou, onClick }) {
+  return jaVotou ? (
+    <button type="button" className="btn btn--sm btn--hud btn--outline hud-corners-s" onClick={onClick}>Alterar</button>
+  ) : (
+    <button type="button" className="btn btn--sm btn--hud btn--gold hud-corners-s pulse-active tab-shine" onClick={onClick}>Votar</button>
+  );
+}
+
+// Cor do lugar do pódio (ouro/prata/bronze).
+function corDoLugar(pos) {
+  return pos === 1 ? '#d4a017' : pos === 2 ? '#aaaaaa' : '#cd7f32';
+}
+
+// Uma linha do ranking. O top-3 destaca-se DENTRO da lista por ESCALA (linha de herói):
+// mais alta, avatar/nome/nota maiores em degradé 1>2>3, com borda + glow + medalha na
+// cor do lugar. As linhas normais (#4+) levam o shimmer. O top-3 FLUTUA (assinatura de
+// herói da casa, dosada abaixo do cromo — rankRowFloat no wrapper, delays desfasados).
+function RankRow({ p, idx, slug, onVote }) {
+  const pos = p.posicao;
+  const top = pos <= 3;
+  const cor = top ? corDoLugar(pos) : null;
+  const delay = pos === 1 ? 0 : pos === 2 ? 0.6 : 1.2;
+  const jaVotou = p.minha_nota != null;
+  const nomeShow = p.nome_jogador || p.nome;
+  const avSize = pos === 1 ? 60 : pos <= 3 ? 56 : 48;
+  const nomeFs = pos === 1 ? 17 : pos === 2 ? 15 : pos === 3 ? 14 : undefined;
+  const notaFs = pos === 1 ? 20 : pos === 2 ? 18 : pos === 3 ? 17 : 16;
+  return (
+    <div className={`rank-row-lift ${top ? 'rank-row-lift--podio' : ''}`} style={top ? { '--podio-cor': cor, '--podio-delay': `${delay}s` } : undefined}>
+      <div className={`rank-row ${top ? 'rank-row--top rank-row--hero' : ''}`} style={{ position: 'relative', overflow: 'hidden', ...(top ? { border: `1px solid ${cor}` } : {}) }}>
+        {!top ? <span aria-hidden className="rank-shimmer" style={{ '--shimmer-delay': `${idx % 2 ? 0.5 : 0}s` }} /> : null}
+        <div className="rank-pos">
+          {top ? (
+            <span className="rank-medal" style={{ '--medal-cor': cor }}>{pos}</span>
+          ) : (
+            pos
+          )}
+        </div>
+        <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${nomeShow}`} style={{ lineHeight: 0 }}>
+          <FrameAvatar nome={nomeShow} avatarUrl={p.avatar_url} size={avSize} />
+        </Link>
+        <div className="rank-info">
+          <div className="rank-name" style={nomeFs ? { fontSize: nomeFs } : undefined}>
+            {nomeShow}
+            {p.categoria === 'GR' ? (
+              <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: '#b69cff', border: '1px solid var(--purple)', padding: '1px 6px' }}>GR</span>
+            ) : null}
+          </div>
+          <div className="rank-votes" style={{ marginTop: 4, fontSize: 12 }}>
+            {p.nota != null ? (
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", color: '#d4a017', fontWeight: 700, fontSize: notaFs }}>{p.nota.toFixed(1)}</span>
+            ) : (
+              <span style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">--</span>
+            )}
+            {jaVotou ? (
+              <span className="muted" style={{ marginLeft: 8 }}>★ deste {p.minha_nota}</span>
+            ) : (
+              <span className="muted" style={{ marginLeft: 8 }}>☆ por votar</span>
+            )}
+          </div>
+        </div>
+        <div className="rank-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          {p.sou_eu ? (
+            <span className="muted hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--neon)', border: '1px solid var(--neon)', padding: '3px 9px' }}>Tu</span>
+          ) : (
+            <VoteButton jaVotou={jaVotou} onClick={() => onVote(p)} />
+          )}
+          <Link to={`/equipa/${slug}/jogador/${p.user_id}`} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: 11, textDecoration: 'none', cursor: 'pointer' }}>
+            Ver perfil
+          </Link>
+        </div>
       </div>
-    </AvatarFrame>
+    </div>
   );
 }
 
@@ -105,18 +181,13 @@ export default function Ranking() {
   const mostrarBanner = status?.pedido_revotacao && !bannerFechado;
 
   return (
-    <div className="app-shell">
-      <Topbar title="Ranking" back={`/equipa/${slug}`} />
+    <div className="app-shell page-reveal">
+      <Topbar hud="RANKING" back={`/equipa/${slug}`} />
       <main className="app-main">
-        <style>{`
-@keyframes rankShimmer { 0% { transform: translateX(-100%) skewX(-15deg); } 100% { transform: translateX(300%) skewX(-15deg); } }
-@keyframes medalGlow { 0%,100% { filter: brightness(1) drop-shadow(0 0 3px currentColor); transform: scale(1); } 50% { filter: brightness(1.5) drop-shadow(0 0 10px currentColor) drop-shadow(0 0 20px currentColor); transform: scale(1.2); } }
-`}</style>
-
         {mostrarBanner ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 12, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.3)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
+          <div className="rank-banner hud-corners">
             <span style={{ flex: 1 }}>✨ Atualize as suas notas</span>
-            <button type="button" aria-label="Fechar" onClick={() => setBannerFechado(true)} style={{ border: 'none', background: 'transparent', color: '#8b5cf6', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+            <button type="button" className="rank-banner__close" aria-label="Fechar" onClick={() => setBannerFechado(true)}>✕</button>
           </div>
         ) : null}
 
@@ -128,64 +199,9 @@ export default function Ranking() {
           <p className="muted">Ainda não há jogadores.</p>
         ) : (
           <div className="rank-list">
-            {ranking.map((p, idx) => {
-              const eu = p.minha_nota != null;
-              const top = p.posicao;
-              // Borda + glow especiais para o pódio.
-              const podioStyle =
-                top === 1
-                  ? { border: '1px solid #d4a017', animation: 'heroicPulse 3.9s ease-in-out 0s infinite' }
-                  : top === 2
-                    ? { border: '1px solid #aaaaaa', animation: 'heroicPulse 3.9s ease-in-out 0.6s infinite' }
-                    : top === 3
-                      ? { border: '1px solid #cd7f32', animation: 'heroicPulse 3.9s ease-in-out 1.2s infinite' }
-                      : {};
-              const medalColor = top === 1 ? '#d4a017' : top === 2 ? '#aaaaaa' : top === 3 ? '#cd7f32' : null;
-              const medalDelay = top === 1 ? 0 : top === 2 ? 0.5 : 1;
-              const shimmerDelay = top === 1 ? 0 : top === 2 ? 1.3 : top === 3 ? 2.6 : idx % 2 ? 0.5 : 0;
-              const nomeShow = p.nome_jogador || p.nome;
-              return (
-                <div className={`rank-row ${p.posicao <= 3 ? 'rank-row--top' : ''}`} key={p.user_id} style={{ position: 'relative', overflow: 'hidden', ...podioStyle }}>
-                  <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: '40%', pointerEvents: 'none', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: `rankShimmer 5.2s ease-in-out ${shimmerDelay}s infinite` }} />
-                  <div className="rank-pos" style={top <= 3 ? { color: medalColor, display: 'inline-block', animation: `medalGlow 3.9s ease-in-out ${medalDelay}s infinite` } : undefined}>{p.posicao <= 3 ? MEDALS[p.posicao - 1] : `#${p.posicao}`}</div>
-                  <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${nomeShow}`} style={{ lineHeight: 0 }}>
-                    <RankingAvatar nome={nomeShow} avatarUrl={p.avatar_url} delay={`${(idx % 5) * 0.9}s`} />
-                  </Link>
-                  <div className="rank-info">
-                    <div className="rank-name" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {nomeShow}
-                      {p.categoria === 'GR' ? (
-                        <span style={{ fontSize: 9, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '1px 5px' }}>GR</span>
-                      ) : null}
-                    </div>
-                    <div className="rank-votes" style={{ marginTop: 4, fontSize: 12 }}>
-                      {p.nota != null ? (
-                        <span style={{ color: '#d4a017', fontWeight: 800, fontSize: 15 }}>{p.nota.toFixed(1)}</span>
-                      ) : (
-                        <span style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">--</span>
-                      )}
-                      {eu ? (
-                        <span className="muted" style={{ marginLeft: 8 }}>★ deste {p.minha_nota}</span>
-                      ) : (
-                        <span className="muted" style={{ marginLeft: 8 }}>☆ por votar</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="rank-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                    {p.sou_eu ? (
-                      <span className="muted" style={{ fontSize: 11, fontWeight: 800, color: 'var(--neon)', border: '1px solid var(--neon)', borderRadius: 999, padding: '3px 9px' }}>Tu</span>
-                    ) : (
-                      <button type="button" className={`btn btn--primary btn--sm ${eu ? '' : 'pulse-active tab-shine'}`} onClick={() => openVote(p)}>
-                        {eu ? 'Alterar' : 'Votar'}
-                      </button>
-                    )}
-                    <Link to={`/equipa/${slug}/jogador/${p.user_id}`} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: 11, textDecoration: 'none', cursor: 'pointer' }}>
-                      Ver perfil
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+            {ranking.map((p, idx) => (
+              <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
+            ))}
           </div>
         )}
       </main>
@@ -193,24 +209,24 @@ export default function Ranking() {
       {/* Modal de votação (meias estrelas) */}
       {voteModal && (
         <div className="modal-overlay" role="presentation" onClick={() => !voteBusy && setVoteModal(null)}>
-          <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card modal-card--hud" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                <PlayerAvatar nome={voteModal.nome_jogador || voteModal.nome} avatarUrl={voteModal.avatar_url} />
+                <FrameAvatar nome={voteModal.nome_jogador || voteModal.nome} avatarUrl={voteModal.avatar_url} size={64} />
               </div>
               <h2 style={{ fontSize: 18, marginBottom: 14 }}>{voteModal.nome_jogador || voteModal.nome}</h2>
               <MeiaEstrelas value={modalNota} onChange={setModalNota} />
               <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)' }}>
                 {modalNota >= 0.5 ? (
-                  <>A tua nota: <b style={{ color: 'var(--neon)' }}>{notaParaExibir(modalNota).toFixed(1)}</b></>
+                  <>A tua nota: <b style={{ fontFamily: "'Rajdhani', sans-serif", color: 'var(--neon)', fontSize: 16 }}>{notaParaExibir(modalNota).toFixed(1)}</b></>
                 ) : (
                   'Escolhe de 0.5 a 5 estrelas'
                 )}
               </div>
-              <button type="button" className="btn btn--primary" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || !(modalNota >= 0.5)} onClick={confirmVote}>
+              <button type="button" className="btn btn--primary btn--hud hud-corners-s" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || !(modalNota >= 0.5)} onClick={confirmVote}>
                 {voteBusy ? 'Salvando…' : 'Salvar voto'}
               </button>
-              <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} disabled={voteBusy} onClick={() => setVoteModal(null)}>
+              <button type="button" className="btn btn--ghost btn--sm btn--hud hud-corners-s" style={{ width: '100%', marginTop: 10 }} disabled={voteBusy} onClick={() => setVoteModal(null)}>
                 Cancelar
               </button>
             </div>

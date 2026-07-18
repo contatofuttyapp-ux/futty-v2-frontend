@@ -1,5 +1,12 @@
-// Futty v2.0 — Mapa de cores do frame do jogador (fonte única).
-// A chave é guardada em users.cor_frame e aplica-se no PlayerCard, Figurinha e Ranking.
+// Futty v2.0 — Mapa de cores do frame do jogador (fonte única do getFrameColor).
+// ⚠️ users.cor_frame é MORTO CONFIRMADO (vaga 4 do B2): nenhum UI o escreve e NADA o
+// lê de forma viva. getFrameColor é sempre chamado com 'dourado' fixo (Figurinha,
+// figurinhaCanvas) ou com um valor de DEMO (PlayerCard na LandingPage). O Ranking —
+// que se assumia ser o último leitor — nunca leu a coluna: pinta ouro hardcoded
+// (AvatarFrame) e o pódio por posição. O backend ainda faz SELECT/retorna a coluna
+// (auth.js, ranking.js) mas o valor é ignorado. Candidato a morte na limpeza final:
+// coluna users.cor_frame + os dois SELECT + esta tabela (fica só se um kit colorido
+// voltar a usar frames não-dourados). Ver [[playercard-candidato-a-morte]].
 
 export const FRAME_COLORS = {
   dourado: { stroke: '#d4a017', glow: 'rgba(212,160,23,', dot: '#f5e070' },

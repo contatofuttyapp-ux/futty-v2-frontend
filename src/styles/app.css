@@ -155,6 +155,29 @@
   font-size: 13px;
 }
 
+/* Botão em modo HUD: rótulo em Rajdhani (os cantos a 45° entram via .hud-corners-s no
+   mesmo elemento). Estreado no Ranking. ATENÇÃO: os botões das outras páginas ainda são
+   Inter de cantos 10px — propagar .btn--hud + .hud-corners-s na vaga transversal dos
+   controlos, para não ficar o Ranking sozinho no novo desenho. */
+.btn--hud {
+  font-family: 'Rajdhani', var(--sans);
+  letter-spacing: 0.02em;
+}
+
+/* Estado do voto (Ranking). Votar = CTA dourado vivo (a receita escura da .cta-gold,
+   mais pulse + tab-shine no use site). Alterar = discreto, outline roxo (o padrão do
+   "Salvar dados" do Perfil). Propagar aos outros CTAs de linha na vaga transversal. */
+.btn--gold {
+  background: rgba(30, 24, 8, 0.9);
+  border: 1.5px solid #d4a017;
+  color: #f0c94a;
+}
+.btn--outline {
+  background: transparent;
+  border: 1.5px solid rgba(167, 139, 250, 0.45);
+  color: #a78bfa;
+}
+
 /* Estado vazio (sem equipas) */
 .empty-state {
   text-align: center;
@@ -658,6 +681,17 @@
 }
 
 /* Ranking */
+/* Linha de herói: o top-3 destaca-se DENTRO da lista por ESCALA — a linha cresce. O
+   avatar/nome/nota sobem em degradé (1>2>3) via inline no use site; aqui fica só a
+   altura extra. A borda + glow (.rank-row-lift--podio) + medalha (.rank-medal) na cor
+   do lugar mantêm-se. FLUTUAÇÃO = assinatura de herói da casa: o top-3 do Ranking são
+   LINHAS DE HERÓI por decisão do utilizador — flutuam (rankRowFloat no wrapper), dosadas
+   ABAIXO do cromo. (Substituiu o pódio-bloco, descartado pelo utilizador.) */
+.rank-row--hero {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
 .rank-list {
   display: flex;
   flex-direction: column;
@@ -665,21 +699,127 @@
   margin-top: 12px;
 }
 
+/* Aviso de revotação: material do cânone (véu branco 3% sobre o tom roxo, como a
+   .rank-row põe sobre --bg-elev) + etiqueta HUD (Rajdhani). Cantos a 45° via
+   .hud-corners no use site, a mesma aresta de 8px das linhas por baixo. */
+.rank-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #b69cff;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)), rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.rank-banner__close {
+  border: none;
+  background: transparent;
+  color: #b69cff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Cartão da linha do ranking. Cantos a 45° (identidade HUD) + o véu do cânone (branco
+   3% sobre a superfície elevada). O border-radius saiu — o clip-path manda. Classe
+   exclusiva do Ranking, por isso a varredura é ao nível da classe. */
 .rank-row {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 12px 16px;
-  border-radius: 12px;
-  background: var(--bg-elev);
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)), var(--bg-elev);
   border: 1px solid var(--border);
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+  );
+}
+
+/* Wrapper de cada linha: leva o glow do pódio. clip-path (na linha) corta box-shadow,
+   por isso o glow do heroicPulse migrou para cá em drop-shadow, tingido pela cor do
+   lugar (--podio-cor) e desfasado por lugar (--podio-delay). Só as linhas do pódio o
+   recebem (.rank-row-lift--podio). Mesmo par que o .gcard-lift do Início. */
+.rank-row-lift--podio {
+  animation: rankPodioGlow 3.9s ease-in-out var(--podio-delay, 0s) infinite,
+             rankRowFloat 5.5s ease-in-out var(--podio-delay, 0s) infinite;
+  will-change: transform;
+}
+@keyframes rankPodioGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--podio-cor)); }
+  50%      { filter: drop-shadow(0 0 12px var(--podio-cor)); }
+}
+/* Flutuação da LINHA DE HERÓI (assinatura de herói da casa, dosada ABAIXO do cromo:
+   translateY 2.5px vs 4px do cromo, período 5.5s, só vertical — um row não roda). Usa o
+   mesmo --podio-delay do glow para desfasar por lugar → os três nunca sincronizam. O glow
+   (drop-shadow neste mesmo wrapper) viaja com o movimento; o gap de 10px da .rank-list é
+   >> amplitude, as linhas vizinhas não se tocam. */
+@keyframes rankRowFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2.5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rank-row-lift--podio { animation: none; }
+}
+
+/* Reflexo que varre cada linha e pulso das medalhas do pódio. Migrados de um <style>
+   inline no Ranking.jsx — o cânone não tem CSS solto dentro da página, e em classe o
+   reduced-motion consegue silenciá-los. Atraso/cor por linha via custom property. */
+.rank-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: rankShimmer 5.2s ease-in-out var(--shimmer-delay, 0s) infinite;
+}
+@keyframes rankShimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(300%) skewX(-15deg); }
+}
+/* Medalha própria: os emojis 🥇🥈🥉 morreram (impadronizáveis — cada OS desenha o seu).
+   Placa a 45° (corte à escala, 5px) na cor do lugar, número 1-2-3 em Rajdhani. Glow
+   ESTÁTICO (drop-shadow fixo): com a linha a flutuar + o glow do wrapper a pulsar, um
+   terceiro pulso na medalha somava ruído — aquietou-se. drop-shadow é filtro (após o
+   clip-path), por isso o brilho não é cortado pela própria placa. */
+.rank-medal {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto;
+  font-family: 'Rajdhani', var(--sans);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--medal-cor);
+  background: var(--bg-elev);
+  border: 1px solid var(--medal-cor);
+  filter: drop-shadow(0 0 4px var(--medal-cor));
+  clip-path: polygon(
+    5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px),
+    calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .rank-shimmer { animation: none; }
 }
 
 .rank-pos {
   width: 30px;
   text-align: center;
-  font-weight: 800;
+  font-family: 'Rajdhani', var(--sans);
+  font-weight: 700;
   font-size: 16px;
+  font-variant-numeric: tabular-nums;
   color: var(--text-dim);
   flex-shrink: 0;
 }
@@ -695,6 +835,10 @@
 }
 
 .rank-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Rajdhani', var(--sans);
   font-weight: 700;
 }
 
@@ -753,6 +897,55 @@
   box-shadow: 0 0 32px rgba(139, 92, 246, 0.5), inset 0 0 18px rgba(139, 92, 246, 0.18);
 }
 
+/* Moldura de avatar do CÂNONE (V1, escolhida pelo utilizador): quadrado + cantos-L
+   dourados (linguagem .hud-corners à escala do avatar) + interior no material da casa
+   (véu branco 3% sobre --bg-elev, não #15151a sólido) + borda dourada subtil (0.25) +
+   véu translúcido por cima. Primitiva partilhável (.avatar-frame), estreada no Ranking
+   (rows/pódio/modal). As outras molduras (.pavatar, AvatarFrame) migram uma a uma na
+   vaga transversal — Feed guarda o glow roxo, Perfil selado a decidir. Tamanho via
+   width/height no use site; o L escala a 30% do lado. */
+.avatar-frame {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.avatar-frame__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)), var(--bg-elev);
+  border: 1px solid rgba(212, 160, 23, 0.25);
+  color: #fff;
+  font-weight: 800;
+}
+.avatar-frame__fill img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+.avatar-frame__veil {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.28));
+}
+.avatar-frame__lc {
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  pointer-events: none;
+  z-index: 2;
+}
+.avatar-frame__lc--tl { top: -1px; left: -1px; border-top: 2px solid #d4a017; border-left: 2px solid #d4a017; border-radius: 2px 0 0 0; }
+.avatar-frame__lc--tr { top: -1px; right: -1px; border-top: 2px solid #d4a017; border-right: 2px solid #d4a017; border-radius: 0 2px 0 0; }
+.avatar-frame__lc--br { bottom: -1px; right: -1px; border-bottom: 2px solid #d4a017; border-right: 2px solid #d4a017; border-radius: 0 0 2px 0; }
+.avatar-frame__lc--bl { bottom: -1px; left: -1px; border-bottom: 2px solid #d4a017; border-left: 2px solid #d4a017; border-radius: 0 0 0 2px; }
+
 /* Etiquetas roxas (cabeça de chave / goleiro) */
 
 /* Botões de ação por linha (Votar / Ver perfil) */
@@ -810,6 +1003,18 @@
   border-radius: calc(var(--radius) - 2px);
   padding: 24px 20px;
   text-align: center;
+}
+
+/* Modal em modo HUD: corte cheio 8px (escala de card). Opt-in — só a instância que leva
+   a classe; o .modal-card base (radius) fica INTACTO, que outras páginas ainda o usam.
+   O clip corta tanto a moldura-gradiente como o miolo, o radius fica inerte por baixo.
+   ATENÇÃO: propagar aos modais das outras páginas na vaga transversal (ver .btn--hud). */
+.modal-card--hud,
+.modal-card--hud .modal-card__inner {
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+  );
 }
 
 /* Perfil do jogador */
@@ -1362,6 +1567,16 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .inicio-reveal { animation: none; }
+}
+
+/* Fade de entrada da casa, agora numa 2ª página (Ranking) além do Início. Alias sobre
+   o MESMO keyframe (inicioReveal) — não se toca no .inicio-reveal, que está selado.
+   3ª página a adoptar → generalizar para .page-reveal na vaga transversal. */
+.page-reveal {
+  animation: inicioReveal 0.3s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-reveal { animation: none; }
 }
 
 .cromo-inicio {
