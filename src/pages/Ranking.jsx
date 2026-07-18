@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
+import { useTeams } from '../hooks/useTeam';
 import { useRanking } from '../hooks/useRanking';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset, iniciaisNome } from '../utils/avatar';
 import LoadingFutty from '../components/LoadingFutty';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
+import EscudoEquipa from '../components/EscudoEquipa';
 import '../styles/app.css';
 
 // Moldura de avatar do cânone (V1): quadrado + cantos-L dourados + interior no material
@@ -137,6 +139,8 @@ export default function Ranking() {
   const { slug } = useParams();
   const { ranking, loading, error, reload } = useRanking(slug);
   const { data: status } = useApi(slug ? `/api/teams/${slug}/votacao-status` : null);
+  const { teams } = useTeams();
+  const equipaAtual = teams.find((t) => t.slug === slug) || null;
 
   const [voteModal, setVoteModal] = useState(null); // jogador a votar
   const [modalNota, setModalNota] = useState(0);
@@ -184,6 +188,32 @@ export default function Ranking() {
     <div className="app-shell page-reveal">
       <Topbar hud="RANKING" back={`/equipa/${slug}`} />
       <main className="app-main">
+        {/* Cabeçalho: escudo + nome da equipa actual. */}
+        {equipaAtual ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <EscudoEquipa team={equipaAtual} size={40} />
+            <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: '0.04em' }}>{equipaAtual.nome}</span>
+          </div>
+        ) : null}
+
+        {/* Chips das equipas do utilizador (sem "Todas"); trocar chip troca o ranking.
+            Com 1 equipa só, escondidos (não há escolha). */}
+        {teams.length > 1 ? (
+          <div className="chips-row" style={{ marginBottom: 12 }}>
+            {teams.map((t) => (
+              <Link
+                key={t.id}
+                to={`/equipa/${t.slug}/ranking`}
+                className={`chip ${t.slug === slug ? 'chip--active tab-shine' : ''}`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none' }}
+              >
+                <EscudoEquipa team={t} size={20} />
+                {t.nome}
+              </Link>
+            ))}
+          </div>
+        ) : null}
+
         {mostrarBanner ? (
           <div className="rank-banner hud-corners">
             <span style={{ flex: 1 }}>✨ Atualize as suas notas</span>

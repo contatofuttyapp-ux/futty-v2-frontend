@@ -44,10 +44,10 @@ export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
         height={size}
         viewBox="0 0 1080 1080"
         aria-hidden="true"
-        // FASE 3.63 — glow externo FORA (era drop-shadow(0 0 9px rgba(212,160,23,0.55))).
-        // O loader não tem face para calibrar: é um traço, e o traço já é #d4a017, o tom
-        // exacto do título. O que o desviava do tom era só este halo dourado à volta.
-        style={{ display: 'block' }}
+        // Pele C (intermédia, aprovada): núcleo quente + aura dourada mais cheia que o
+        // simples halo — três camadas de drop-shadow (brasa clara perto, dourado a
+        // afastar). Identidade da marca; a 3.63 tinha tirado o glow, o look repõe-no.
+        style={{ display: 'block', filter: 'drop-shadow(0 0 5px #ffe9a8) drop-shadow(0 0 15px rgba(212,160,23,0.6)) drop-shadow(0 0 30px rgba(212,160,23,0.35))' }}
       >
         <defs>
           <clipPath id={clipId}>
@@ -59,8 +59,9 @@ export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
             <stop offset="1" stopColor="#fff6d0" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* Trilho: o F fica legível no instante 0, antes da escova o pintar. */}
-        <path d={F_CONTORNO} fill="rgba(212, 160, 23, 0.16)" />
+        {/* Trilho: o F fica legível no instante 0, antes da escova o pintar. Pele C:
+            tom levemente mais quente que o dourado neutro. */}
+        <path d={F_CONTORNO} fill="rgba(230, 190, 90, 0.18)" />
         <g clipPath={`url(#${clipId})`}>
           {/* A escova. O clip dá-lhe a forma exacta do F. */}
           <path

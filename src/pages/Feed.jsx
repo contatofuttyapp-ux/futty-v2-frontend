@@ -14,6 +14,7 @@ import { iniciaisNome } from '../utils/avatar';
 import Reacoes from '../components/Reacoes';
 import Comentarios from '../components/Comentarios';
 import UploadComCrop from '../components/UploadComCrop';
+import EscudoEquipa from '../components/EscudoEquipa';
 import DenunciaModal from '../components/DenunciaModal';
 import Toast from '../components/Toast';
 import '../styles/app.css';
@@ -888,7 +889,8 @@ export default function Feed() {
             Todas
           </button>
           {teams.map((t) => (
-            <button key={t.id} type="button" className={`chip ${selectedTeam === t.id ? 'chip--active tab-shine' : ''}`} onClick={() => setSelectedTeam(t.id)}>
+            <button key={t.id} type="button" className={`chip ${selectedTeam === t.id ? 'chip--active tab-shine' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }} onClick={() => setSelectedTeam(t.id)}>
+              <EscudoEquipa team={t} size={20} />
               {t.nome}
             </button>
           ))}

@@ -26,7 +26,8 @@ export default function FuttyLogo({ size = 32, variant = 'flat', color = '#d4a01
     <img
       src={src}
       alt="Futty"
-      style={{ height: size, width: 'auto', display: 'block' }}
+      // Pele C (intermédia, aprovada): núcleo quente + aura dourada mais cheia.
+      style={{ height: size, width: 'auto', display: 'block', filter: 'drop-shadow(0 0 5px #ffe9a8) drop-shadow(0 0 15px rgba(212,160,23,0.6)) drop-shadow(0 0 30px rgba(212,160,23,0.35))' }}
     />
   );
 }
