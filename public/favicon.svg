@@ -1,14 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+<svg id="Camada_1" data-name="Camada 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+  <!-- F de sempre (mesma forma do polygon original) com a pele metálica v4:
+       gradiente ouro escuro→claro + bisel specular. -->
   <defs>
-    <linearGradient id="m" gradientUnits="objectBoundingBox" x1="0.28" y1="0" x2="0.56" y2="1">
-      <stop offset="0" stop-color="#f6e6ac"/>
-      <stop offset="0.12" stop-color="#c69a2e"/>
-      <stop offset="0.32" stop-color="#8f6415"/>
-      <stop offset="0.56" stop-color="#62430d"/>
-      <stop offset="0.8" stop-color="#452e07"/>
-      <stop offset="1" stop-color="#2c1c05"/>
+    <linearGradient id="favMetal" gradientUnits="objectBoundingBox" x1="0.28" y1="0" x2="0.56" y2="1">
+      <stop offset="0" stop-color="#d69512"/>
+      <stop offset="0.35" stop-color="#a86808"/>
+      <stop offset="0.62" stop-color="#8a5304"/>
+      <stop offset="0.82" stop-color="#5a3703"/>
+      <stop offset="1" stop-color="#341a02"/>
     </linearGradient>
+    <filter id="favBisel" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="b"/>
+      <feSpecularLighting in="b" surfaceScale="6" specularConstant="1.1" specularExponent="20" lighting-color="#e8b83a" result="s">
+        <feDistantLight azimuth="228" elevation="55"/>
+      </feSpecularLighting>
+      <feComposite in="s" in2="SourceAlpha" operator="in" result="sc"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="sc"/></feMerge>
+    </filter>
+    <filter id="favGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
   </defs>
-  <path fill-rule="evenodd" fill="url(#m)" stroke="#d9b45a" stroke-width="4" d="M962.5 16.9L360.4 161.4L223.2 676.2L130.6 1048.5L206.5 1049.5L423.9 221.8L814.9 127.1L842.9 116.7L830.5 144.8L822.1 172.9L823.2 179.1L467.5 263.4L404.1 493.2L665.1 493.2L656.8 508.8L647.4 542.0L390.6 544.1L255.4 1046.4L261.7 1049.5L351.1 1048.5L462.3 632.5L727.5 630.4L791.0 412.1L793.0 402.7L785.8 401.7L519.5 402.7L538.3 334.1L899.1 242.6L963.6 23.1L962.5 16.9Z M664.1 168.7L604.8 179.1L576.7 188.5L485.2 210.3L475.9 212.4L484.2 208.2L479.0 209.3L469.6 212.4L472.7 212.4L470.7 214.5L458.2 214.5L467.5 214.5L456.1 218.6L462.3 217.6L663.0 169.8Z"/>
+  <!-- Glow = cópia do próprio F desfocada (herda o metal). -->
+  <polygon points="392.28 576.53 648.8 576.5 659.27 541.52 398.39 541.46 472.99 285.11 828.3 195.25 839.06 152.39 440.51 257.5 210.76 1049.58 110.36 1049.52 360.67 177.16 983.79 16.94 913.11 270.83 548.68 369.73 532.74 441.62 798.55 441.67 732.82 676.38 462.77 676.38 354.76 1049.56 249.78 1049.53 392.28 576.53" fill="url(#favMetal)" filter="url(#favGlow)" opacity="0.5"/>
+  <polygon points="392.28 576.53 648.8 576.5 659.27 541.52 398.39 541.46 472.99 285.11 828.3 195.25 839.06 152.39 440.51 257.5 210.76 1049.58 110.36 1049.52 360.67 177.16 983.79 16.94 913.11 270.83 548.68 369.73 532.74 441.62 798.55 441.67 732.82 676.38 462.77 676.38 354.76 1049.56 249.78 1049.53 392.28 576.53" fill="url(#favMetal)" filter="url(#favBisel)" stroke="#d69512" stroke-width="1"/>
 </svg>

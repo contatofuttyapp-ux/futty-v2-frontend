@@ -2292,9 +2292,3 @@
   .perfil-tile { opacity:1; transform:none; animation: none; }
   .perfil-num { animation: none; background: none; -webkit-text-fill-color: currentColor; }
 }
-
-/* FuttyLoader v4 — o efeito de "desenhar" é um fade suave em loop (a máscara de
-   revelação foi removida por alterar o aspecto exacto do harness aprovado). */
-.futty-metal-fade { animation: futtyMetalFade 2.7s ease-in-out infinite; }
-@keyframes futtyMetalFade { 0% { opacity: 0; } 26% { opacity: 1; } 74% { opacity: 1; } 100% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .futty-metal-fade { animation: none; opacity: 1; } }

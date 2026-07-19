@@ -68,7 +68,7 @@ export default function FuttyLockup({ size = 120, wordmarkSize = 44 }) {
             <stop offset="1" stopColor="#c99816" />
           </linearGradient>
           <clipPath id={clipId}>
-            <path d={F_CONTORNO} clipRule="evenodd" />
+            <path d={F_CONTORNO} />
           </clipPath>
           <filter id={especularId} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="34" />
@@ -83,11 +83,11 @@ export default function FuttyLockup({ size = 120, wordmarkSize = 44 }) {
         {/* a) EXTRUSÃO — o corpo sólido, atrás. Da mais funda para a mais próxima. */}
         {EXTRUSAO_CORES.map((cor, i) => {
           const d = (EXTRUSAO_CAMADAS - i) * EXTRUSAO_PASSO;
-          return <path key={i} d={F_CONTORNO} fillRule="evenodd" fill={cor} transform={`translate(${d} ${d})`} />;
+          return <path key={i} d={F_CONTORNO} fill={cor} transform={`translate(${d} ${d})`} />;
         })}
 
         {/* b) FACE */}
-        <path d={F_CONTORNO} fillRule="evenodd" fill={`url(#${metalId})`} />
+        <path d={F_CONTORNO} fill={`url(#${metalId})`} />
 
         {/* c) BISEL + d) ESPECULAR + glint — tudo recortado pela face, para não
             transbordarem para a extrusão. */}
