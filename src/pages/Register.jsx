@@ -58,9 +58,11 @@ export default function Register() {
       return;
     }
 
-    // Se a confirmação por email estiver ativa, não há sessão imediata
+    // Se a confirmação por email estiver ativa, não há sessão imediata.
+    // O onboarding fica à espera no servidor (flag onboarding_completo): venhas
+    // pelo link do email ou por login, entras sempre por ele.
     if (data.user && !data.session) {
-      setSuccess('Conta criada! Confirma o teu email para ativar a conta.');
+      setSuccess('Conta criada! Confirma o teu email — depois preparamos o teu perfil (leva 30s).');
     } else {
       // Sessão imediata → onboarding dia-1.
       navigate('/onboarding', { replace: true });

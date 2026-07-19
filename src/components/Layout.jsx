@@ -1,10 +1,38 @@
 // Futty v2.0 — Layout: envolve o conteúdo e mostra a BottomNav nas rotas certas.
 // Swipe lateral (react-swipeable) navega entre os tabs principais da BottomNav.
+import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import { useTeams } from '../hooks/useTeam';
+import { useApi } from '../hooks/useApi';
+import { useAuth } from '../hooks/useAuth';
 import BottomNav from './BottomNav';
 import AuroraBg from './AuroraBg';
+
+// P1-1 — rotas onde a gate do onboarding NÃO actua (públicas, auth e o próprio
+// onboarding — para não fazer loop).
+const ROTAS_SEM_ONBOARDING = [
+  /^\/$/, /^\/login/, /^\/register/, /^\/forgot-password/,
+  /^\/convite\//, /^\/p\//, /^\/termos/, /^\/privacidade/, /^\/onboarding/,
+];
+
+// Gate do onboarding dia-1: se a conta ainda não o concluiu (flag no servidor),
+// qualquer entrada autenticada reencaminha 1x para /onboarding — resistente ao
+// caminho de entrada (confirmação de email noutro dispositivo, login fresco,
+// deep-link). Não renderiza nada.
+function OnboardingGate({ pathname }) {
+  const navigate = useNavigate();
+  const { session } = useAuth();
+  const ativa = !!session && !ROTAS_SEM_ONBOARDING.some((re) => re.test(pathname));
+  const { data } = useApi(ativa ? '/api/me' : null);
+  const incompleto = data?.user?.onboarding_completo === false;
+
+  useEffect(() => {
+    if (ativa && incompleto) navigate('/onboarding', { replace: true });
+  }, [ativa, incompleto, navigate]);
+
+  return null;
+}
 
 // Rotas onde a BottomNav NÃO aparece.
 const HIDE_NAV_PATTERNS = [
@@ -83,6 +111,7 @@ export default function Layout({ children }) {
   return (
     <div style={{ paddingBottom: showNav ? 70 : 0 }} {...swipeProps}>
       <AuroraBg />
+      <OnboardingGate pathname={pathname} />
       {children}
       {showNav && <BottomNav />}
     </div>

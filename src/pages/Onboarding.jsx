@@ -4,9 +4,9 @@
 // Foto: selfie (capture="user") OU galeria → CropModal da casa (1:1) → POST /api/me/avatar.
 // "Deixar para depois" só aparece aos ~4s; quem salta leva o card persistente no Início.
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset } from '../utils/avatar';
+import { mensagemUploadFoto } from '../utils/uploadErro';
 import FuttyLogo from '../components/FuttyLogo';
 import CropModal from '../components/CropModal';
 import Toast from '../components/Toast';
@@ -67,11 +67,12 @@ function MolduraFoto({ src, size = 170 }) {
 }
 
 export default function Onboarding() {
-  const navigate = useNavigate();
   const [passo, setPasso] = useState(1);
   const [cropFile, setCropFile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null); // preenchida após upload
   const [enviando, setEnviando] = useState(false);
+  const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
+  const ultimoBlob = useRef(null); // retém o blob p/ "tentar de novo" sem recortar
   const [nome, setNome] = useState('');
   const [gr, setGr] = useState(null); // 'GL' | 'linha' | null (opcional)
   const [salvando, setSalvando] = useState(false);
@@ -86,15 +87,22 @@ export default function Onboarding() {
   }
 
   // Crop confirmado → sobe já (POST /api/me/avatar) e a foto CAI na moldura.
+  // P1-5 — em vez de um toast cru e passageiro, o erro fica INLINE na moldura com
+  // uma mensagem accionável e "tentar de novo" (repete o mesmo blob, sem recortar).
   async function subirRecorte(blob) {
+    if (blob) ultimoBlob.current = blob;
+    const alvo = blob || ultimoBlob.current;
+    if (!alvo) return;
     setCropFile(null);
+    setUploadErro(null);
     setEnviando(true);
     try {
-      const file = new File([blob], 'onboarding.jpg', { type: 'image/jpeg' });
+      const file = new File([alvo], 'onboarding.jpg', { type: 'image/jpeg' });
       const res = await apiUpload('/api/me/avatar', file, 'avatar');
       setAvatarUrl(res.avatar_url || res.foto_url || null);
+      ultimoBlob.current = null;
     } catch (e) {
-      setToast({ tipo: 'error', mensagem: e.message });
+      setUploadErro(mensagemUploadFoto(e));
     } finally {
       setEnviando(false);
     }
@@ -106,7 +114,13 @@ export default function Onboarding() {
     try {
       if (nome.trim()) await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ nome_jogador: nome.trim().slice(0, 18) }) });
       if (gr === 'GL') localStorage.setItem('futty_pref_gr', 'GL');
-      navigate('/home', { replace: true });
+      // P1-1 — sela o onboarding no servidor ANTES de entrar. Entrada por
+      // navegação DURA (window.location): remonta o Layout e a sua gate, que
+      // volta a ler o /api/me fresco (onboarding_completo:true) em vez do valor
+      // `false` que ficou em cache na gate durante o redireccionamento. Evita o
+      // bounce de volta ao onboarding — sem flags de cliente persistentes.
+      await apiFetch('/api/me/onboarding-completo', { method: 'POST' });
+      window.location.assign('/home');
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
       setSalvando(false);
@@ -148,6 +162,17 @@ export default function Onboarding() {
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
               É esta cara que entra no cromo, no ranking e no sorteio. A foto cai aqui, ao vivo, mal fizeres o crop.
             </p>
+            {/* P1-5 — erro de upload INLINE (accionável), não um toast que foge. */}
+            {uploadErro ? (
+              <div className="hud-corners-s" style={{ width: '100%', maxWidth: 290, margin: '0 0 16px', padding: '12px 14px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.5)', display: 'grid', gap: 10, textAlign: 'center' }}>
+                <span style={{ fontSize: 13, color: '#f8b4b4', lineHeight: 1.45 }}>{uploadErro.texto}</span>
+                {uploadErro.podeRepetir ? (
+                  <button type="button" onClick={() => subirRecorte()} disabled={enviando} style={{ justifySelf: 'center', border: '1.5px solid #d4a017', background: 'rgba(30,24,8,0.9)', color: '#f0c94a', fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '9px 16px', clipPath: CLIP_S, cursor: enviando ? 'default' : 'pointer' }}>
+                    {enviando ? 'A enviar…' : 'Tentar de novo'}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             {avatarUrl ? (
               <div style={{ width: '100%', maxWidth: 290, display: 'grid', gap: 10 }}>
                 <Cta cheio onClick={() => setPasso(3)}>Continuar</Cta>

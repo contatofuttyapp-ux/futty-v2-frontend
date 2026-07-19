@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Camera, Download, Share2, X, Lock, Check, Plus, Minus } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { nomeJogador, urlAsset } from '../utils/avatar';
+import { mensagemUploadFoto } from '../utils/uploadErro';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico } from '../utils/figurinhaCanvas';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
@@ -141,6 +142,8 @@ export default function Figurinha() {
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
+  const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
+  const ultimoFicheiro = useRef(null); // retém a foto p/ "tentar de novo"
   // Zoom do avatar no card. Escala interna 0.88–1.43 (passo 0.11); exibida ÷1.1
   // → 80/90/100/110/120/130%. Base 1.1 = 100% exibido. Reinicia sempre a 110%.
   // Clamp defensivo no arranque: normaliza qualquer valor fora de [ZOOM_MIN, ZOOM_MAX]
@@ -271,34 +274,8 @@ export default function Figurinha() {
     setEstreiaFase('fim');
   }
 
-  // Trocar foto: preview local imediato + upload para o servidor.
-  // Na estreia, dispara automaticamente a geração do avatar IA.
-  async function onPickFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
-    if (!file) return;
-    setModalFoto(false); // fecha o modal "A tua foto" ao escolher — revela o fluxo upload→gerar
-    const emEstreia = estreiaFase === 'foto';
-    setFotoLocal(URL.createObjectURL(file)); // preview imediato
-    if (emEstreia) setEstreiaFase('gerando');
-    setUploadFoto(true);
-    setErro('');
-    try {
-      const data = await apiUpload('/api/me/avatar', file, 'avatar');
-      // foto_url = a nova foto (fonte da próxima geração). avatar_url = o que o card
-      // mostra: o backend PRESERVA o avatar IA antigo se existir (senão espelha a foto),
-      // por isso o card mantém o avatar antigo até o utilizador gerar de novo.
-      setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url ?? data.avatar_url, avatar_url: data.avatar_url } } : m));
-      setUploadFoto(false);
-      if (emEstreia) await gerarAvatarIAEstreia(); // auto-trigger
-    } catch (err) {
-      setErro(err?.message || 'Não foi possível enviar a foto.');
-      setUploadFoto(false);
-      if (emEstreia) setEstreiaFase('foto'); // volta ao estado A
-    }
-  }
-
   // Geração IA durante a estreia: ao concluir (ou falhar), revela o cromo.
+  // Declarada antes de subirFoto porque este chama-a no auto-trigger da estreia.
   async function gerarAvatarIAEstreia() {
     setGerandoIA(true);
     setErro('');
@@ -315,6 +292,62 @@ export default function Figurinha() {
       setEstreiaFase('pronto'); // mostra o cromo (com avatar IA ou a foto)
     }
   }
+
+  // Trocar foto: preview local imediato + upload para o servidor.
+  // Na estreia, dispara automaticamente a geração do avatar IA.
+  // Núcleo do upload, reutilizado pelo "tentar de novo" (P1-5). `emEstreia` decide
+  // se dispara a geração IA automática a seguir.
+  async function subirFoto(file, emEstreia) {
+    setFotoLocal(URL.createObjectURL(file)); // preview imediato
+    if (emEstreia) setEstreiaFase('gerando');
+    setUploadFoto(true);
+    setErro('');
+    setUploadErro(null);
+    try {
+      const data = await apiUpload('/api/me/avatar', file, 'avatar');
+      // foto_url = a nova foto (fonte da próxima geração). avatar_url = o que o card
+      // mostra: o backend PRESERVA o avatar IA antigo se existir (senão espelha a foto),
+      // por isso o card mantém o avatar antigo até o utilizador gerar de novo.
+      setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url ?? data.avatar_url, avatar_url: data.avatar_url } } : m));
+      setUploadFoto(false);
+      ultimoFicheiro.current = null;
+      if (emEstreia) await gerarAvatarIAEstreia(); // auto-trigger
+    } catch (err) {
+      // P1-5 — mensagem accionável (rede/tamanho/formato) + retry inline, não um erro cru.
+      setUploadErro(mensagemUploadFoto(err));
+      setUploadFoto(false);
+      if (emEstreia) setEstreiaFase('foto'); // volta ao estado A
+    }
+  }
+
+  async function onPickFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
+    if (!file) return;
+    setModalFoto(false); // fecha o modal "A tua foto" ao escolher — revela o fluxo upload→gerar
+    ultimoFicheiro.current = file;
+    await subirFoto(file, estreiaFase === 'foto');
+  }
+
+  // "Tentar de novo" (P1-5): repete o upload com a MESMA foto, sem re-seleccionar.
+  function repetirUpload() {
+    if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto');
+  }
+
+  // Aviso de erro partilhado (P1-5): erro de upload com mensagem accionável +
+  // "tentar de novo" inline; senão, o erro genérico da página.
+  const avisoErro = uploadErro ? (
+    <div className="alert alert--error" style={{ margin: 0, display: 'grid', gap: 8, justifyItems: 'start' }}>
+      <span>{uploadErro.texto}</span>
+      {uploadErro.podeRepetir ? (
+        <button type="button" onClick={repetirUpload} disabled={uploadFoto} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }}>
+          {uploadFoto ? 'A enviar…' : 'Tentar de novo'}
+        </button>
+      ) : null}
+    </div>
+  ) : erro ? (
+    <div className="alert alert--error" style={{ margin: 0 }}>{erro}</div>
+  ) : null;
 
   // Partilha do cromo no momento da estreia (imagem do card + texto viral).
   async function partilharCromo() {
@@ -536,7 +569,7 @@ export default function Figurinha() {
                 <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Saltar →</button>
               </>
             )}
-            {erro ? <div className="alert alert--error" style={{ margin: 0 }}>{erro}</div> : null}
+            {avisoErro}
           </div>
         </main>
       </div>
@@ -916,7 +949,7 @@ export default function Figurinha() {
             </div>
           )}
 
-          {erro ? <div className="alert alert--error" style={{ margin: 0 }}>{erro}</div> : null}
+          {avisoErro}
 
           {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os
               botões do topo (40px) → hierarquia: topo = configurar, fundo = agir. */}

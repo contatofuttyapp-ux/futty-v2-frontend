@@ -22,6 +22,9 @@ export default function Convite() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [accepting, setAccepting] = useState(false);
+  // P1-2 — saída do beco: pedir entrada na equipa que o token identifica.
+  const [pedindo, setPedindo] = useState(false);
+  const [pedidoEnviado, setPedidoEnviado] = useState(false);
 
   useEffect(() => {
     // Espera a sessão resolver para que o pedido vá autenticado (saber se já é membro)
@@ -59,8 +62,58 @@ export default function Convite() {
     }
   }
 
+  // P1-2 — convite morto mas o token diz-nos a equipa: em vez de beco, pede
+  // entrada (o admin decide, o desfecho aparece no Início). Sem sessão → login
+  // e volta a este convite.
+  async function pedirEntrada() {
+    const alvo = info?.team;
+    if (!alvo) return;
+    if (!session) {
+      navigate('/login', { state: { from: { pathname: `/convite/${token}` } } });
+      return;
+    }
+    setError('');
+    setPedindo(true);
+    try {
+      const r = await apiFetch(`/api/teams/${alvo.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
+      if (r?.entrou) {
+        navigate(`/equipa/${alvo.slug}`, { replace: true });
+        return;
+      }
+      setPedidoEnviado(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPedindo(false);
+    }
+  }
+
   const team = info?.team;
   const c = colorOf(team?.cor);
+
+  // Saídas partilhadas pelos estados de convite morto (P1-2): pedir entrada (se
+  // conhecemos a equipa) e/ou procurar no Explorar.
+  const saidas = (alvo) => (
+    <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
+      {alvo ? (
+        pedidoEnviado ? (
+          <div className="alert" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: 'var(--neon)' }}>
+            Pedido enviado a {alvo.nome}. O admin decide — vês o desfecho no Início.
+          </div>
+        ) : (
+          <button type="button" className="btn btn--primary" style={{ width: '100%' }} onClick={pedirEntrada} disabled={pedindo}>
+            {pedindo ? 'A enviar…' : session ? `Pedir entrada em ${alvo.nome}` : `Inicia sessão para entrar em ${alvo.nome}`}
+          </button>
+        )
+      ) : null}
+      <Link to="/explorar" className="btn" style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.22)', color: 'var(--text-dim)' }}>
+        Procurar equipas no Explorar
+      </Link>
+      <Link to="/home" className="auth-footer" style={{ textAlign: 'center' }}>
+        Ir para a página inicial
+      </Link>
+    </div>
+  );
 
   return (
     <div className="auth-shell">
@@ -75,22 +128,19 @@ export default function Convite() {
           ) : error ? (
             <>
               <h1 className="auth-title">Ups…</h1>
-              <div className="alert alert--error" style={{ marginTop: 12 }}>
+              <div className="alert alert--error" style={{ marginTop: 12, marginBottom: 4 }}>
                 {error}
               </div>
-              <p className="auth-footer">
-                <Link to="/home">Ir para a página inicial</Link>
-              </p>
+              {saidas(info?.team)}
             </>
           ) : !info?.valido ? (
             <>
               <h1 className="auth-title">Convite inválido</h1>
               <p className="auth-subtitle">
                 {MOTIVOS[info?.motivo] || 'Este convite não está disponível.'}
+                {info?.team ? ' Mas ainda podes entrar na equipa:' : ''}
               </p>
-              <p className="auth-footer">
-                <Link to="/home">Ir para a página inicial</Link>
-              </p>
+              {saidas(info?.team)}
             </>
           ) : (
             <>

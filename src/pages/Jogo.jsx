@@ -14,6 +14,7 @@ import TimesEditor from '../components/TimesEditor';
 import CountdownSorteio from '../components/CountdownSorteio';
 import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
+import Icon from '../components/Icon';
 import { urlAsset } from '../utils/avatar';
 import '../styles/app.css';
 
@@ -437,12 +438,22 @@ export default function Jogo() {
               </>
             ) : null}
 
-            {/* A votação está na página de ranking */}
+            {/* P1-3 — a votação era texto morto. Agora é uma acção visível: leva
+                direto ao Ranking, onde se avaliam os companheiros. */}
             {game.sorteio_realizado && (game.status === 'em_curso' || game.status === 'terminado') && (
-              <p className="muted" style={{ marginTop: 20, fontSize: 14 }}>
-                A votação deste jogo está disponível na{' '}
-                <Link to={`/equipa/${slug}/ranking`}>página de ranking</Link>.
-              </p>
+              <div style={{ marginTop: 20 }}>
+                <div className="cta-gold-glow" style={{ display: 'flex' }}>
+                  <Link to={`/equipa/${slug}/ranking`} className="btn hud-corners cta-gold" style={{ flex: 1, textDecoration: 'none' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <Icon name="estrela" size={16} />
+                      Avaliar os jogadores
+                    </span>
+                  </Link>
+                </div>
+                <p className="muted" style={{ marginTop: 8, fontSize: 12, textAlign: 'center' }}>
+                  Dá a tua nota — conta para o ranking da equipa.
+                </p>
+              </div>
             )}
           </>
         )}

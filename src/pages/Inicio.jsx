@@ -481,6 +481,34 @@ export default function Inicio() {
     setDesfechos((cur) => cur.filter((p) => p.id !== id));
     apiFetch(`/api/me/pedidos/${id}`, { method: 'DELETE' }).catch(() => {});
   }
+  // P1-4 — o pedido PENDENTE era invisível fora do Explorar. Separa-se do desfecho
+  // e ganha um card discreto com cancelar (DELETE do próprio pedido).
+  const pedidosPendentes = desfechos.filter((p) => p.status === 'pending');
+  const desfechosResolvidos = desfechos.filter((p) => p.status !== 'pending');
+  function cancelarPedidoPendente(p) {
+    if (!p.team?.slug) return;
+    setDesfechos((cur) => cur.filter((x) => x.id !== p.id));
+    apiFetch(`/api/teams/${p.team.slug}/pedir-entrada`, { method: 'DELETE' }).catch(() => {});
+  }
+
+  // P1-3 — a votação era invisível fora do Ranking. Banner no Início quando há
+  // avaliações por dar (agregado de todas as equipas); dispensável por sessão.
+  const [votacoes, setVotacoes] = useState([]);
+  const [votacaoFechada, setVotacaoFechada] = useState(() => sessionStorage.getItem('futty_votacao_dismiss') === '1');
+  useEffect(() => {
+    let ativo = true;
+    apiFetch('/api/me/votacoes-pendentes')
+      .then((d) => ativo && setVotacoes(d.pendentes || []))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
+  const votacaoTop = !votacaoFechada ? votacoes[0] : null;
+  function fecharVotacao() {
+    setVotacaoFechada(true);
+    sessionStorage.setItem('futty_votacao_dismiss', '1');
+  }
 
   // REVELAÇÃO: o LoadingFutty (F grande, sozinho, centrado) segura o ecrã até o cromo
   // estar DESENHADO (dataURL pronto). Antes, o F do loader e o F-placeholder do cromo
@@ -505,9 +533,31 @@ export default function Inicio() {
           </div>
         ) : null}
 
+        {/* P1-4 — PEDIDOS PENDENTES: enquanto o admin não decide, o candidato vê
+            aqui "pedido pendente na {equipa} · cancelar" (antes só existia no
+            Explorar). Card discreto, roxo — é espera, não desfecho. */}
+        {pedidosPendentes.map((p) => (
+          <div key={p.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.28)' }}>
+            <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+              <Icon name="espera" size={18} color="#b69cff" />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#c9c2d6' }}>
+                Pedido pendente na {p.team?.nome}
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                À espera de aprovação do admin — avisamos-te aqui quando decidir.
+              </span>
+            </span>
+            <button type="button" onClick={() => cancelarPedidoPendente(p)} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '6px 12px', flexShrink: 0, borderRadius: 2 }}>
+              Cancelar
+            </button>
+          </div>
+        ))}
+
         {/* DESFECHOS dos meus pedidos de entrada (ciclo v1, sem push): aceite →
             destaque + link para a equipa; recusado → aviso digno. Dispensar apaga. */}
-        {desfechos.map((p) => (
+        {desfechosResolvidos.map((p) => (
           <div key={p.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: p.status === 'approved' ? 'rgba(123,216,143,0.08)' : 'rgba(255,255,255,0.03)', border: p.status === 'approved' ? '1px solid rgba(123,216,143,0.5)' : '1px solid rgba(255,255,255,0.14)' }}>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: p.status === 'approved' ? '#7bd88f' : '#c9c2d6' }}>
@@ -525,6 +575,30 @@ export default function Inicio() {
             <button type="button" aria-label="Dispensar" onClick={() => dispensarDesfecho(p.id)} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
           </div>
         ))}
+
+        {/* P1-3 — VOTAÇÃO VISÍVEL: sinal no Início de que há colegas por avaliar.
+            Dourado porque é uma acção do utilizador (leva ao Ranking, onde se vota). */}
+        {votacaoTop ? (
+          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.07)', border: '1px solid rgba(212,160,23,0.45)' }}>
+            <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+              <Icon name="estrela" size={20} color="#f0c94a" />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#f0c94a' }}>
+                {votacaoTop.pedido_revotacao ? `A ${votacaoTop.nome} pediu nova avaliação` : 'Tens colegas por avaliar'}
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                {votacaoTop.pedido_revotacao
+                  ? 'Dá a tua nota aos companheiros do último jogo.'
+                  : `Faltam ${votacaoTop.faltam} na ${votacaoTop.nome} — a tua nota conta para o ranking.`}
+              </span>
+            </span>
+            <Link to={`/equipa/${votacaoTop.slug}/ranking`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={fecharVotacao}>
+              Avaliar
+            </Link>
+            <button type="button" aria-label="Dispensar" onClick={fecharVotacao} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
+          </div>
+        ) : null}
 
         {/* CARD PERSISTENTE — sem foto não há cromo: moldura V1 vazia + convite.
             Sem X: persiste até haver foto (a estratégia "quase-obrigatória" do
