@@ -636,6 +636,7 @@ function TabEquipa({ slug, team, showToast }) {
   const [previewLogo, setPreviewLogo] = useState(null);
   const [corFundo, setCorFundo] = useState(team.cor_fundo || '#1a1a2e');
   const [modo, setModo] = useState(team.modo_visibilidade || 'privado');
+  const [mostrarGols, setMostrarGols] = useState(team.mostrar_gols !== false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
@@ -679,6 +680,19 @@ function TabEquipa({ slug, team, showToast }) {
       showToast('Visibilidade atualizada!');
     } catch (err) {
       setModo(anterior);
+      showToast(err.message, 'error');
+    }
+  }
+
+  // "Mostrar gols" — equipa casual pode esconder gols/artilharia (radar, tiles, perfil).
+  async function guardarMostrarGols(v) {
+    const anterior = mostrarGols;
+    setMostrarGols(v);
+    try {
+      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ mostrar_gols: v }) });
+      showToast(v ? 'Gols visíveis.' : 'Gols escondidos.');
+    } catch (err) {
+      setMostrarGols(anterior);
       showToast(err.message, 'error');
     }
   }
@@ -816,6 +830,24 @@ function TabEquipa({ slug, team, showToast }) {
           })}
         </div>
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{VIS_DESC[modo]}</span>
+      </div>
+
+      {/* MOSTRAR GOLS */}
+      <div style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Mostrar gols</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={mostrarGols}
+          onClick={() => guardarMostrarGols(!mostrarGols)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${mostrarGols ? 'var(--neon)' : '#1a1a1a'}`, background: mostrarGols ? 'rgba(139,92,246,0.08)' : '#080808', color: '#fff' }}
+        >
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{mostrarGols ? 'Gols visíveis' : 'Gols escondidos'}</span>
+          <span style={{ width: 40, height: 22, borderRadius: 999, background: mostrarGols ? 'var(--neon)' : '#333', position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
+            <span style={{ position: 'absolute', top: 2, left: mostrarGols ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+          </span>
+        </button>
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Off: esconde gols e artilharia (radar, perfil, tiles). Para futebol casual.</span>
       </div>
 
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>

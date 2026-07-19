@@ -2195,3 +2195,106 @@
 /* Carta final do jogador (proporção 2:3, cor do time) */
 
 
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   VAGA 6 — VITRINE DO JOGADOR (/equipa/:slug/jogador/:id)
+   Herói = recorte puro com aura + respiração; stats-espectáculo (anel/radar/
+   sparkline/tiles em cascata). Namespace .perfil-*, aditivo. reduced-motion estático.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@keyframes perfilBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes perfilSway { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+.perfil-bob { display:inline-block; position:relative; z-index:1; will-change:transform; animation: perfilBob 4.8s cubic-bezier(.45,0,.55,1) infinite; }
+.perfil-sway { display:inline-block; will-change:transform; animation: perfilSway 6.7s cubic-bezier(.45,0,.55,1) infinite; }
+
+/* Herói — recorte MAIOR, focado em cima (rosto/braços; short fora via cover+top).
+   Aura ATRÁS elíptica e difusa (não bola). Cor da aura = inline (--vitrine no JS). */
+/* Aura MAIOR que a foto (envolve-a), fade radial completo nas 4 direcções → sem aresta. */
+/* SÓ o glow desvanece (o avatar renderiza inteiro/nítido). Caixa GRANDE + a aura (AURA
+   inline) morre bem dentro dela → sobra folga a toda a volta para o blur nunca ser
+   cortado por nenhuma borda (topo incluído). overflow visível por garantia. */
+.perfil-glow { position:absolute; left:50%; top:168px; transform:translate(-50%,-50%); width:480px; height:520px; z-index:0; pointer-events:none; overflow:visible; filter: blur(28px); }
+/* Avatar herói — CENTRADO (margin auto + o pai é text-align:center), recorte à cintura
+   (cover + object-position topo). Sem scale (era o que criava o gap gigante até ao nome). */
+.perfil-cutout { width:300px; height:340px; max-width:88vw; object-fit:cover; object-position:50% 6%; display:block; margin:0 auto;
+  /* Fade SÓ na borda inferior (últimos ~12%). Topo e lados nítidos, inteiros. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+  filter: drop-shadow(0 10px 16px rgba(0,0,0,.55)) drop-shadow(0 0 20px rgba(212,160,23,.5)); }
+/* O avatar NUNCA leva fade/máscara — renderiza inteiro e nítido (como aprovado no
+   original). Quem desvanece é só o .perfil-glow atrás. */
+.perfil-faded { width:300px; height:340px; max-width:88vw; object-fit:cover; object-position:50% 12%; display:block; margin:0 auto;
+  /* Fade SÓ na borda inferior (últimos ~12%). Topo e lados nítidos, inteiros. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
+
+/* Anel da nota (count-up acompanha por JS). Cor via --vitrine (A/B). */
+.perfil-ringval { fill:none; stroke: var(--vitrine, #d4a017); stroke-width:9; stroke-linecap:round; stroke-dasharray:326; stroke-dashoffset:326;
+  filter: drop-shadow(0 0 5px var(--vitrine, #d4a017)); animation: perfilRing 1.4s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes perfilRing { to { stroke-dashoffset: var(--ring-off, 326); } }
+
+/* Radar FIFA — DOSE v2 (nota-se em 3s à distância de braço). O crescer (transform) fica
+   no polígono; a RESPIRAÇÃO DE ESCALA vai num WRAPPER <g> (perfil-radarbreath) para não
+   conflitar com o transform do crescer; o glow ondula no polígono (filter). */
+.perfil-radarshape { transform-origin:center; transform:scale(0); fill-opacity:.18; filter: drop-shadow(0 0 5px var(--vitrine, #d4a017));
+  animation: perfilRadar 1s cubic-bezier(.2,.8,.3,1) forwards, perfilRadarLife 4s ease-in-out 1s infinite; }
+@keyframes perfilRadar { to { transform: scale(1); } }
+/* VIDA = o brilho a PREENCHER e o fill a respirar (não um traço a viajar). */
+@keyframes perfilRadarLife {
+  0%,100% { fill-opacity:.15; filter: drop-shadow(0 0 4px var(--vitrine, #d4a017)); }
+  50%     { fill-opacity:.34; filter: drop-shadow(0 0 14px var(--vitrine, #d4a017)); }
+}
+/* Respiração de ESCALA de verdade (1 ↔ 1.06) no wrapper — a linha pulsa. */
+.perfil-radarbreath { transform-box: view-box; transform-origin: 100px 100px;
+  animation: perfilRadarPulse 4.5s ease-in-out 1s infinite; }
+@keyframes perfilRadarPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+/* Vértices — pulsam opacity 0.5↔1 E raio 2.5↔4 (CSS anima `r` no Chrome). */
+.perfil-radardot { animation: perfilDotTwinkle 3s ease-in-out infinite; }
+@keyframes perfilDotTwinkle {
+  0%,100% { opacity: .5; r: 2.5; }
+  50%     { opacity: 1; r: 4; filter: drop-shadow(0 0 5px var(--vitrine, #d4a017)); }
+}
+
+/* Ponto de luz a ORBITAR o anel da nota, contínuo (após o fill). */
+.perfil-ringorbit { transform-box: view-box; transform-origin: 59px 59px; animation: perfilRingOrbit 3s linear 1.4s infinite; }
+@keyframes perfilRingOrbit { to { transform: rotate(360deg); } }
+
+/* Números vivos — shimmer a cada 4s, highlight mais largo/brilhante. */
+.perfil-num {
+  background: linear-gradient(100deg, currentColor 32%, #fff8dc 50%, currentColor 68%);
+  background-size: 250% 100%; background-position: 150% 0;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: perfilNumShimmer 4s ease-in-out infinite;
+}
+@keyframes perfilNumShimmer { 0%,72%,100% { background-position: 150% 0; } 88% { background-position: -70% 0; } }
+
+/* Sparkline self-draw + glow a pulsar (mesma vida do radar: brilho, não traço). */
+.perfil-spark { fill:none; stroke: var(--vitrine, #d4a017); stroke-width:2; stroke-dasharray:600; stroke-dashoffset:600;
+  animation: perfilSpark 1.6s ease-out .3s forwards, perfilSparkGlow 4s ease-in-out 2s infinite; }
+@keyframes perfilSpark { to { stroke-dashoffset:0; } }
+@keyframes perfilSparkGlow {
+  0%,100% { filter: drop-shadow(0 0 2px var(--vitrine, #d4a017)); }
+  50%     { filter: drop-shadow(0 0 8px var(--vitrine, #d4a017)); }
+}
+
+/* Tiles em cascata */
+.perfil-tile { opacity:0; transform:translateY(10px); animation: perfilTile .5s ease forwards; }
+@keyframes perfilTile { to { opacity:1; transform:translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .perfil-bob, .perfil-sway { animation: none; }
+  .perfil-ringval { stroke-dashoffset: var(--ring-off, 326); animation: none; }
+  .perfil-radarshape { transform: scale(1); fill-opacity: .22; filter: drop-shadow(0 0 5px var(--vitrine, #d4a017)); animation: none; }
+  .perfil-radarbreath { animation: none; transform: none; }
+  .perfil-radardot { animation: none; opacity: 1; }
+  .perfil-ringorbit { animation: none; display: none; }
+  .perfil-spark { stroke-dashoffset: 0; animation: none; }
+  .perfil-tile { opacity:1; transform:none; animation: none; }
+  .perfil-num { animation: none; background: none; -webkit-text-fill-color: currentColor; }
+}
+
+/* FuttyLoader v4 — o efeito de "desenhar" é um fade suave em loop (a máscara de
+   revelação foi removida por alterar o aspecto exacto do harness aprovado). */
+.futty-metal-fade { animation: futtyMetalFade 2.7s ease-in-out infinite; }
+@keyframes futtyMetalFade { 0% { opacity: 0; } 26% { opacity: 1; } 74% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .futty-metal-fade { animation: none; opacity: 1; } }

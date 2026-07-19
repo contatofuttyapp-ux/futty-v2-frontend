@@ -17,14 +17,14 @@
 // As duas pontas são prolongadas 70 para lá da borda — o clip corta-as rente, dando
 // remates rectos perfeitos sem depender do strokeLinecap.
 import { useId } from 'react';
-import { F_CONTORNO, F_ESQUELETO } from '../utils/futtyMonograma';
+import { F_METAL_PATH } from '../utils/futtyMonograma';
 
 // FASE 3.48 — +35% em todos os tamanhos (default 44 → 59; overlay 64 → 86; botão 16 → 22).
 export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
   // ids únicos por instância: podem coexistir dois loaders no mesmo ecrã.
   const uid = useId().replace(/:/g, '');
-  const clipId = `futty-loader-clip-${uid}`;
-  const shineId = `futty-loader-shine-${uid}`;
+  const metalId = `futty-loader-metal-${uid}`;
+  const biselId = `futty-loader-bisel-${uid}`;
 
   return (
     <div role="status" aria-live="polite" style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
@@ -39,45 +39,36 @@ export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
         />
         <div className="futty-f-bob">
           <div className="futty-f-sway">
+      {/* TRANSPLANTE EXACTO do harness f-metalico-v4 (byte a byte): viewBox 1024,
+          F_METAL_PATH, o MESMO gradiente e filtro-bisel, stroke #d9b45a 0.8, glow igual.
+          O efeito de "desenhar" é um fade simples (a máscara de revelação alterava o
+          aspecto por o esqueleto viver noutra grelha, por isso morreu). */}
       <svg
         width={size}
         height={size}
-        viewBox="0 0 1080 1080"
+        viewBox="0 0 1024 1024"
         aria-hidden="true"
-        // Pele C (intermédia, aprovada): núcleo quente + aura dourada mais cheia que o
-        // simples halo — três camadas de drop-shadow (brasa clara perto, dourado a
-        // afastar). Identidade da marca; a 3.63 tinha tirado o glow, o look repõe-no.
-        style={{ display: 'block', filter: 'drop-shadow(0 0 5px #ffe9a8) drop-shadow(0 0 15px rgba(212,160,23,0.6)) drop-shadow(0 0 30px rgba(212,160,23,0.35))' }}
+        style={{ display: 'block', filter: 'drop-shadow(0 0 10px rgba(212,160,23,0.38))' }}
       >
         <defs>
-          <clipPath id={clipId}>
-            <path d={F_CONTORNO} />
-          </clipPath>
-          <linearGradient id={shineId} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#fff6d0" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#fff6d0" stopOpacity="0.9" />
-            <stop offset="1" stopColor="#fff6d0" stopOpacity="0" />
+          <linearGradient id={metalId} gradientUnits="objectBoundingBox" x1="0.28" y1="0" x2="0.56" y2="1">
+            <stop offset="0" stopColor="#f6e6ac" />
+            <stop offset="0.12" stopColor="#c69a2e" />
+            <stop offset="0.32" stopColor="#8f6415" />
+            <stop offset="0.56" stopColor="#62430d" />
+            <stop offset="0.8" stopColor="#452e07" />
+            <stop offset="1" stopColor="#2c1c05" />
           </linearGradient>
+          <filter id={biselId} x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b" />
+            <feSpecularLighting in="b" surfaceScale="4" specularConstant="0.85" specularExponent="22" lightingColor="#fff2c4" result="s">
+              <feDistantLight azimuth="228" elevation="56" />
+            </feSpecularLighting>
+            <feComposite in="s" in2="SourceAlpha" operator="in" result="sc" />
+            <feMerge><feMergeNode in="SourceGraphic" /><feMergeNode in="sc" /></feMerge>
+          </filter>
         </defs>
-        {/* Trilho: o F fica legível no instante 0, antes da escova o pintar. Pele C:
-            tom levemente mais quente que o dourado neutro. */}
-        <path d={F_CONTORNO} fill="rgba(230, 190, 90, 0.18)" />
-        <g clipPath={`url(#${clipId})`}>
-          {/* A escova. O clip dá-lhe a forma exacta do F. */}
-          <path
-            className="futty-loader-draw"
-            d={F_ESQUELETO}
-            pathLength="1"
-            fill="none"
-            stroke="#d4a017"
-            strokeWidth="110"
-            strokeLinejoin="miter"
-            strokeMiterlimit="20"
-            strokeLinecap="butt"
-          />
-          {/* Shine: varre a letra no fim de cada ciclo. */}
-          <rect className="futty-loader-shine" x="-1080" y="0" width="1080" height="1080" fill={`url(#${shineId})`} />
-        </g>
+        <path className="futty-metal-fade" d={F_METAL_PATH} fillRule="evenodd" fill={`url(#${metalId})`} filter={`url(#${biselId})`} stroke="#d9b45a" strokeWidth="0.8" />
       </svg>
           </div>
         </div>
