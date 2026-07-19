@@ -15,7 +15,6 @@ import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
 import ProductTour from '../components/ProductTour';
 import LoadingFutty from '../components/LoadingFutty';
-import SorteioOverlay from '../components/SorteioOverlay';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
 import '../styles/app.css';
@@ -294,7 +293,6 @@ export default function Inicio() {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState('all');
-  const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay
   const [rsvpInfo, setRsvpInfo] = useState(null); // RSVP do próximo jogo (se aberto)
   const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
   const [campeonato, setCampeonato] = useState(null); // campeonato da equipa principal
@@ -320,14 +318,9 @@ export default function Inicio() {
   // Onboarding (product tour) — só na primeira vez.
   const [tourDone, setTourDone] = useState(() => !!localStorage.getItem('futty_tour_done'));
 
-  // "Ver sorteio": busca o jogo completo (my-invites não traz times_resultado) e abre o overlay.
-  async function verSorteio(game) {
-    try {
-      const res = await apiFetch(`/api/games/${game.id}`);
-      setJogoSorteio(res?.game || null);
-    } catch (err) {
-      setError(err.message);
-    }
+  // "Ver sorteio": a cerimónia corre na PÁGINA do sorteio (SPEC-SORTEIO §13d).
+  function verSorteio(game) {
+    window.location.assign(`/equipa/${game.team_slug}/jogo/${game.id}/sorteio`);
   }
 
   useEffect(() => {
@@ -699,9 +692,6 @@ export default function Inicio() {
           </>
         )}
       </main>
-
-      {/* Overlay do sorteio */}
-      <SorteioOverlay jogo={jogoSorteio} onClose={() => setJogoSorteio(null)} />
 
       {toast ? <Toast mensagem={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 

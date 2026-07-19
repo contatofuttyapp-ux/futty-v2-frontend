@@ -2311,3 +2311,87 @@
   .sil-corpo, .sil-halo { animation: none; }
   .sil-corpo { stroke-opacity: 0.7; fill-opacity: 0.14; }
 }
+
+/* ===== Cerimónia do Sorteio (slot v8 real) ===== */
+.cer-maq { position: relative; margin: 0 0 12px; background: #07060c; border: 1px solid rgba(212,160,23,0.4);
+  box-shadow: inset 0 8px 24px rgba(0,0,0,0.8), inset 0 -8px 24px rgba(0,0,0,0.8), 0 0 24px rgba(212,160,23,0.15);
+  padding: 10px 8px; clip-path: polygon(4% 0,96% 0,100% 6%,100% 94%,96% 100%,4% 100%,0 94%,0 6%); }
+.cer-luzes { display: flex; justify-content: center; gap: 8px; margin: 2px 0 8px; }
+.cer-luz { width: 6px; height: 6px; border-radius: 50%; background: #f0c94a; opacity: .16;
+  box-shadow: 0 0 8px rgba(240,201,74,0.9); animation: cerLuz 1.3s linear infinite; }
+@keyframes cerLuz { 0%, 18% { opacity: 1; } 30%, 100% { opacity: .16; } }
+.cer-janela { position: relative; background: #07060c; padding: 4px 2px; }
+.cer-rolos { display: grid; gap: 5px; }
+.cer-rolo { position: relative; overflow: hidden; background: #0a0812; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; height: 100px; }
+.cer-rolo.won { border-color: var(--tc); box-shadow: 0 0 12px var(--tcg60); }
+.cer-strip { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; }
+.cer-cel { position: relative; width: 100%; height: 100px; overflow: hidden; background: #0d0b14; }
+.cer-cel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.cer-cel--simb img { object-fit: contain; padding: 14%; background: radial-gradient(circle at 50% 40%, #17141f, #0a0812); }
+.cer-sil { position: absolute; inset: 0; display: grid; place-items: center; }
+.cer-n { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.88));
+  padding: 9px 2px 3px; text-align: center; font-family: 'Rajdhani', sans-serif; font-weight: 800; font-size: 9px; color: #fff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cer-rolo.gira .cer-strip { filter: blur(2px) brightness(.8); }
+.cer-masc { position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: linear-gradient(180deg, rgba(5,6,10,0.7), transparent 30%, transparent 70%, rgba(5,6,10,0.7)); }
+.cer-payline { position: absolute; left: 6px; right: 6px; top: 50%; border-top: 1px dashed rgba(212,160,23,0.4); z-index: 3; pointer-events: none; }
+.cer-rolo.clunk { animation: cerClunk .26s cubic-bezier(.2,2.4,.4,1); }
+@keyframes cerClunk { 0% { transform: translateY(-5px); } 60% { transform: translateY(2px); } 100% { transform: translateY(0); } }
+.cer-flash { position: absolute; inset: 0; background: #fff6d0; opacity: 0; z-index: 4; pointer-events: none; }
+.cer-rolo.clunk .cer-flash { animation: cerFlash .3s ease-out; }
+@keyframes cerFlash { 0% { opacity: .85; } 100% { opacity: 0; } }
+/* frame B: chase SÓ no aro (máscara-anel) + anel metálico do F */
+.cer-chasebox { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 2;
+  clip-path: polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);
+  -webkit-mask-image: linear-gradient(#000,#000), linear-gradient(#000,#000);
+  -webkit-mask-size: 100% 100%, calc(100% - 14px) calc(100% - 14px);
+  -webkit-mask-position: 0 0, 7px 7px; -webkit-mask-repeat: no-repeat; -webkit-mask-composite: xor;
+  mask-image: linear-gradient(#000,#000), linear-gradient(#000,#000);
+  mask-size: 100% 100%, calc(100% - 14px) calc(100% - 14px);
+  mask-position: 0 0, 7px 7px; mask-repeat: no-repeat; mask-composite: exclude; }
+.cer-chase { position: absolute; left: 50%; top: 50%; width: 220%; aspect-ratio: 1; margin: -110% 0 0 -110%;
+  will-change: transform; animation: cerChase 3.2s linear infinite;
+  background: conic-gradient(transparent 0deg 288deg, rgba(255,233,168,0.15) 306deg, #ffe9a8 330deg, #fff6d0 342deg, transparent 360deg); }
+@keyframes cerChase { to { transform: rotate(360deg); } }
+.cer-metal { position: absolute; inset: 3px; z-index: 1;
+  clip-path: polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);
+  background: linear-gradient(160deg,#d69512 0%,#a86808 30%,#8a5304 55%,#5a3703 80%,#341a02 100%);
+  -webkit-mask-image: linear-gradient(#000,#000), linear-gradient(#000,#000);
+  -webkit-mask-size: 100% 100%, calc(100% - 6px) calc(100% - 6px);
+  -webkit-mask-position: 0 0, 3px 3px; -webkit-mask-repeat: no-repeat; -webkit-mask-composite: xor;
+  mask-image: linear-gradient(#000,#000), linear-gradient(#000,#000);
+  mask-size: 100% 100%, calc(100% - 6px) calc(100% - 6px);
+  mask-position: 0 0, 3px 3px; mask-repeat: no-repeat; mask-composite: exclude; }
+.cer-float { animation: cerBob 4.8s ease-in-out infinite; will-change: transform; }
+@keyframes cerBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+/* jackpot roxo em cinema */
+.cer-jack { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; pointer-events: none;
+  opacity: 0; transition: opacity .4s; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+.cer-jack.on { opacity: 1; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65);
+  background: rgba(10,8,18,0.35); }
+.cer-jack__t { font-family: 'Rajdhani', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: .18em; text-align: center;
+  transform: scale(.75); transition: transform .5s cubic-bezier(.2,2,.4,1); }
+.cer-jack.on .cer-jack__t { transform: scale(1); }
+.cer-seg { color: #3a2f55; opacity: .35; }
+.cer-jack.on .cer-seg { animation: cerSeg .18s steps(1) forwards; animation-delay: var(--sd); }
+@keyframes cerSeg { to { opacity: 1; color: #e4d9ff;
+  text-shadow: 0 0 10px rgba(139,92,246,1), 0 0 30px rgba(124,58,237,0.85), 0 0 60px rgba(139,92,246,0.5), 0 0 4px rgba(240,201,74,0.55); } }
+.cer-coin { position: absolute; left: 50%; bottom: 14%; width: var(--cs,14px); height: var(--cs,14px); border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle at 34% 30%, #fff2c4 0%, #f0c94a 34%, #d4a017 62%, #8a5304 100%);
+  box-shadow: inset 0 0 0 2px rgba(138,83,4,.65), 0 0 8px rgba(240,201,74,.8); will-change: transform; }
+.cer-coin--roxa { background: radial-gradient(circle at 34% 30%, #e4d9ff 0%, #b69cff 34%, #8b5cf6 62%, #4c2a8f 100%);
+  box-shadow: inset 0 0 0 2px rgba(76,42,143,.65), 0 0 8px rgba(139,92,246,.8); }
+.cer-jack.on .cer-coin { animation: cerCoin var(--cd) cubic-bezier(.22,.9,.4,1) var(--cdl) forwards; }
+@keyframes cerCoin {
+  0% { opacity: 0; transform: translate(0,0) rotate(0) scale(.6); }
+  8% { opacity: 1; }
+  45% { transform: translate(var(--cx),var(--cyu)) rotate(var(--cr)) scale(1); }
+  100% { opacity: 0; transform: translate(calc(var(--cx)*1.5),120px) rotate(calc(var(--cr)*2)) scale(.9); } }
+@media (prefers-reduced-motion: reduce) {
+  .cer-luz, .cer-chase, .cer-float { animation: none; }
+  .cer-rolo.gira .cer-strip { filter: none; }
+  .cer-jack.on { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10,8,18,0.7); }
+  .cer-jack.on .cer-coin { animation: none; opacity: 0; }
+  .cer-jack.on .cer-seg { animation: none; opacity: 1; color: #e4d9ff; }
+}

@@ -1,6 +1,6 @@
 // Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
 import { useState } from 'react';
-import { Link, useParams, useLocation } from 'react-router-dom';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
@@ -11,7 +11,6 @@ import DrawnTeams from '../components/DrawnTeams';
 import CampoSorteio from '../components/CampoSorteio';
 import ResultadoEditor from '../components/ResultadoEditor';
 import TimesEditor from '../components/TimesEditor';
-import SorteioOverlay from '../components/SorteioOverlay';
 import CountdownSorteio from '../components/CountdownSorteio';
 import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
@@ -50,15 +49,17 @@ function SecLabel({ children }) {
 
 export default function Jogo() {
   const { slug, id } = useParams();
+  const navigate = useNavigate();
   const location = useLocation();
   // IDs dos confirmados via RSVP (passados pelo AdminPanel ao "Fazer sorteio").
   const rsvpConfirmados = location.state?.rsvpConfirmados || null;
   const { data, loading, error, reload } = useApi(`/api/games/${id}`);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
-  const [jogoSorteio, setJogoSorteio] = useState(null); // jogo a mostrar no overlay do sorteio
   const [editando, setEditando] = useState(false); // modo ajuste manual dos times
-  const [jogadoresPorTime, setJogadoresPorTime] = useState(5); // selector do sorteio
+  const [jogadoresPorTime, setJogadoresPorTime] = useState(null); // selector do sorteio (null = usa o do jogo)
+  const [convidados, setConvidados] = useState([]); // SPEC-SORTEIO §11: nomes sem app
+  const [novoConvidado, setNovoConvidado] = useState('');
   const [vistaCampo, setVistaCampo] = useState(false); // resultado: lista (false) | campo (true)
   const [toast, setToast] = useState(null);
 
@@ -95,13 +96,14 @@ export default function Jogo() {
     setActionError('');
     setBusy(true);
     try {
-      const body = { jogadoresPorTime };
+      const body = { jogadoresPorTime: porTimeEfectivo };
       if (rsvpConfirmados) body.jogadoresIds = rsvpConfirmados;
-      const res = await apiFetch(`/api/games/${id}/sortear`, { method: 'POST', body: JSON.stringify(body) });
+      if (convidados.length) body.convidados = convidados;
+      await apiFetch(`/api/games/${id}/sortear`, { method: 'POST', body: JSON.stringify(body) });
       // Junta os dados do jogo (local/data) ao resultado fresco (times_resultado).
-      // __fresco: true → o overlay corre as 4 fases (confetti incluído).
-      setJogoSorteio({ ...(data?.game || {}), ...res.game, __fresco: true });
       await reload();
+      // A cerimónia corre na PÁGINA do sorteio (SPEC §13d)
+      navigate(`/equipa/${slug}/jogo/${id}/sorteio`);
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -137,6 +139,7 @@ export default function Jogo() {
   const confirmados = rsvpConfirmados
     ? confirmadosTodos.filter((p) => rsvpConfirmados.includes(p.user_id))
     : confirmadosTodos;
+  const porTimeEfectivo = jogadoresPorTime ?? game?.jogadores_por_time ?? 5;
   const estouConfirmado = !!meuEstado?.confirmado;
   const souGoleiro = !!meuEstado?.goleiro;
 
@@ -297,12 +300,12 @@ export default function Jogo() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                 <span className="muted" style={{ fontSize: 13 }}>Jogadores por time:</span>
                 <div className="chips-row" style={{ margin: 0 }}>
-                  {[4, 5, 6, 7, 8].map((n) => (
+                  {[2, 3, 4, 5, 6, 7, 8].map((n) => (
                     <button
                       key={n}
                       type="button"
                       className={`chip ${jogadoresPorTime === n ? 'chip--active' : ''}`}
-                      aria-pressed={jogadoresPorTime === n}
+                      aria-pressed={porTimeEfectivo === n}
                       onClick={() => setJogadoresPorTime(n)}
                     >
                       {n}
@@ -311,6 +314,40 @@ export default function Jogo() {
                 </div>
               </div>
             )}
+            {/* CONVIDADOS SEM APP (SPEC-SORTEIO §11): só nome; entram no sorteio,
+                nunca em users/ranking. */}
+            {isAdmin ? (
+              <div style={{ ...VIDRO, clipPath: CLIP, padding: '10px 12px', marginBottom: 10 }}>
+                <div style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#9a8fc0', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Convidados sem app <span style={{ color: '#6f6a80', textTransform: 'none', letterSpacing: 0 }}>(só o nome — não entram no ranking)</span>
+                </div>
+                {convidados.length ? (
+                  <div className="chips-row" style={{ marginBottom: 8 }}>
+                    {convidados.map((n, i) => (
+                      <span key={i} className="chip" style={{ gap: 6 }}>
+                        {n}
+                        <button type="button" aria-label={`Remover ${n}`} onClick={() => setConvidados((c) => c.filter((_, x) => x !== i))} style={{ border: 'none', background: 'none', color: 'inherit', cursor: 'pointer', padding: 0, fontSize: 12, lineHeight: 1 }}>✕</button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="input input--hud"
+                    value={novoConvidado}
+                    maxLength={24}
+                    placeholder="Nome do convidado…"
+                    onChange={(e) => setNovoConvidado(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && novoConvidado.trim()) { setConvidados((c) => [...c, novoConvidado.trim()]); setNovoConvidado(''); } }}
+                    style={{ flex: 1, minWidth: 0, fontFamily: RAJ }}
+                  />
+                  <button type="button" className="btn btn--sm btn--outline hud-corners-s" disabled={!novoConvidado.trim()} onClick={() => { setConvidados((c) => [...c, novoConvidado.trim()]); setNovoConvidado(''); }}>
+                    + Convidado
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {isAdmin && (
                 <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={sortear} disabled={busy}>
@@ -318,7 +355,7 @@ export default function Jogo() {
                 </button>
               )}
               {game.sorteio_realizado && (
-                <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setJogoSorteio(data.game)}>
+                <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => navigate(`/equipa/${slug}/jogo/${id}/sorteio`)}>
                   Ver sorteio
                 </button>
               )}
@@ -410,9 +447,6 @@ export default function Jogo() {
           </>
         )}
       </main>
-
-      {/* Overlay do sorteio (slot machine) */}
-      <SorteioOverlay jogo={jogoSorteio} onClose={() => setJogoSorteio(null)} />
 
       {/* Banner fixo de publicidade quando há sorteio */}
       {game?.times_resultado ? (
