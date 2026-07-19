@@ -1,8 +1,9 @@
 // Futty v2.0 — Painel de Admin por equipa (/admin/:slug?tab=...).
 // Só admins. Sidebar (desktop) / drawer (mobile). Tab persistida na URL.
+import Icon from '../components/Icon';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { MessageSquare, UserX, UserCheck } from 'lucide-react';
+import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, House, Settings, Users, Link2, CircleDot, Medal, Trophy, ChartColumn, Megaphone, Flag } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
@@ -22,9 +23,9 @@ import '../styles/app.css';
 // Opções de cor de fundo do avatar da equipa (sem logo) e de visibilidade.
 const CORES_FUNDO = ['#1a1a2e', '#0d1f0d', '#1f0d0d', '#1f1a0d', '#0d0d1f', '#111111'];
 const VIS_OPCOES = [
-  { k: 'privado', icon: '🔒', label: 'Privada' },
-  { k: 'publico_aprovacao', icon: '🔓', label: 'Com aprovação' },
-  { k: 'publico_aberto', icon: '🌐', label: 'Aberta' },
+  { k: 'privado', icon: Lock, label: 'Privada' },
+  { k: 'publico_aprovacao', icon: LockOpen, label: 'Com aprovação' },
+  { k: 'publico_aberto', icon: Globe, label: 'Aberta' },
 ];
 const VIS_DESC = {
   privado: 'Só por convite — não aparece no Explorar.',
@@ -32,18 +33,18 @@ const VIS_DESC = {
   publico_aberto: 'Aparece no Explorar; qualquer pessoa entra logo.',
 };
 
-const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
+const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12 };
 const MENU = [
-  { k: 'dashboard', icon: '🏠', label: 'Dashboard' },
-  { k: 'equipa', icon: '⚙️', label: 'Time' },
-  { k: 'membros', icon: '👥', label: 'Membros' },
-  { k: 'convites', icon: '🔗', label: 'Convites' },
-  { k: 'jogos', icon: '⚽', label: 'Jogos' },
-  { k: 'campeonato', icon: '🏅', label: 'Campeonato' },
-  { k: 'resultados', icon: '🏆', label: 'Resultados' },
-  { k: 'estatisticas', icon: '📊', label: 'Estatísticas' },
-  { k: 'comunicacao', icon: '📣', label: 'Comunicação' },
-  { k: 'denuncias', icon: '🚩', label: 'Denúncias' },
+  { k: 'dashboard', icon: House, label: 'Dashboard' },
+  { k: 'equipa', icon: Settings, label: 'Time' },
+  { k: 'membros', icon: Users, label: 'Membros' },
+  { k: 'convites', icon: Link2, label: 'Convites' },
+  { k: 'jogos', icon: CircleDot, label: 'Jogos' },
+  { k: 'campeonato', icon: Medal, label: 'Campeonato' },
+  { k: 'resultados', icon: Trophy, label: 'Resultados' },
+  { k: 'estatisticas', icon: ChartColumn, label: 'Estatísticas' },
+  { k: 'comunicacao', icon: Megaphone, label: 'Comunicação' },
+  { k: 'denuncias', icon: Flag, label: 'Denúncias' },
 ];
 const inputStyle = {
   width: '100%',
@@ -199,7 +200,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
     <div style={{ display: 'grid', gap: 14 }}>
       {/* Notificação push */}
       <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
-        <div style={secLbl}>📣 Notificação push</div>
+        <div style={secLbl}>Notificação push</div>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
           <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Jogo confirmado!" style={inputStyle} />
@@ -209,13 +210,13 @@ function TabComunicacao({ slug, navigate, showToast }) {
           <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve o aviso para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
-          {busy ? 'Enviando…' : '📣 Enviar para todos'}
+          {busy ? 'Enviando…' : 'Enviar para todos'}
         </button>
       </div>
 
       {/* Anúncio no feed */}
       <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
-        <div style={secLbl}>📢 Anúncio no feed</div>
+        <div style={secLbl}>Anúncio no feed</div>
         <p className="muted" style={{ margin: 0, fontSize: 12 }}>
           Fica fixado na Resenha como post oficial, visível a todos os membros.
         </p>
@@ -228,7 +229,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
           <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreve o anúncio para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={anBusy || !anTitulo.trim() || !anMensagem.trim()} onClick={publicarAnuncio}>
-          {anBusy ? 'Publicando…' : '📢 Publicar no feed'}
+          {anBusy ? 'Publicando…' : 'Publicar no feed'}
         </button>
       </div>
     </div>
@@ -307,7 +308,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
     return (
       <div style={{ display: 'grid', gap: 14 }}>
         <div style={{ ...CARD, padding: 14, textAlign: 'center' }}>
-          <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#d4a017' }}>🏆 {c.nome} terminou</div>
+          <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#d4a017' }}>{c.nome} terminou</div>
           <div style={{ color: '#fff', marginTop: 4 }}>Campeão: <b>{nomeCampeao(c)}</b></div>
         </div>
         <button type="button" className="btn btn--purple btn--sm" onClick={() => setData({ campeonato: null })}>Criar novo campeonato</button>
@@ -382,7 +383,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
           </div>
         </div>
       ) : (
-        <button type="button" className="btn btn--purple btn--sm" onClick={() => setCriando(true)}>🏆 Criar Campeonato</button>
+        <button type="button" className="btn btn--purple btn--sm" onClick={() => setCriando(true)}>Criar Campeonato</button>
       )}
     </div>
   );
@@ -501,7 +502,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
           <>
             <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>{fmtJogoCompleto(pj.date)}</div>
             {rsvpAtivo ? (
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>✅ {rsvpConf} confirmados / {rsvpTotal} membros</div>
+              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{rsvpConf} confirmados / {rsvpTotal} membros</div>
             ) : null}
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Fazer sorteio</button>
@@ -536,10 +537,10 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
                       : `${uGame.time_vencedor === 'A' ? uNomeA : uNomeB} venceu`}
                 </div>
                 {uGame.resultado_nivel === 3 && uArtilheiro && uArtilheiro.gols > 0 ? (
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>⚽ {uArtilheiro.nome} · {uArtilheiro.gols} {uArtilheiro.gols === 1 ? 'gol' : 'gols'}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{uArtilheiro.nome} · {uArtilheiro.gols} {uArtilheiro.gols === 1 ? 'gol' : 'gols'}</div>
                 ) : null}
                 {uDestaque ? (
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>⭐ Destaque: {uDestaque.nome}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>Destaque: {uDestaque.nome}</div>
                 ) : null}
               </>
             )}
@@ -554,12 +555,12 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
       <div style={cardDash}>
         <div style={cardDashLbl}>Alertas</div>
         {alertas.length === 0 ? (
-          <div style={{ color: '#fff', fontWeight: 700, marginTop: 6 }}>✅ Tudo em ordem</div>
+          <div style={{ color: '#fff', fontWeight: 700, marginTop: 6 }}>Tudo em ordem</div>
         ) : (
           <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
             {alertas.map((a) => (
               <button key={a.txt} type="button" onClick={a.acao} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#f5e070', fontSize: 13, cursor: 'pointer', padding: '4px 0' }}>
-                ⚠ {a.txt}
+                {a.txt}
                 <span style={{ marginLeft: 'auto', color: 'var(--text-dim)' }}>→</span>
               </button>
             ))}
@@ -598,7 +599,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
         <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
           <PlayerAvatar nome={art.nome || 'Jogador'} avatarUrl={art.avatar_url} />
           <div>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>⚽ Artilheiro do time</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Artilheiro do time</div>
             <div style={{ fontWeight: 800, color: '#fff' }}>{art.nome} <span style={{ color: 'var(--neon)' }}>· {art.gols} gols</span></div>
           </div>
         </div>
@@ -611,7 +612,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
         onClick={() => setConfirmRevotar(true)}
         style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #d4a017', background: 'rgba(212,160,23,0.08)', color: '#f5e070', fontWeight: 700, cursor: 'pointer' }}
       >
-        ✨ Pedir revotação a todos
+        Pedir revotação a todos
       </button>
 
       {confirmRevotar ? (
@@ -823,7 +824,7 @@ function TabEquipa({ slug, team, showToast }) {
                   color: '#fff',
                 }}
               >
-                <span style={{ fontSize: 16, lineHeight: 1 }}>{o.icon}</span>
+                <o.icon size={15} style={{ flexShrink: 0 }} />
                 <span style={{ fontSize: 11, fontWeight: 700 }}>{o.label}</span>
               </button>
             );
@@ -1082,7 +1083,7 @@ function TabMembros({ slug, meId, showToast }) {
                   <span style={{ fontSize: 10, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '2px 6px' }}>ADMIN</span>
                 )}
                 {m.ausente_proximo && (
-                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 6px' }}>❌ Ausente</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 6px' }}>Ausente</span>
                 )}
                 {inativo && (
                   <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', background: 'rgba(255,255,255,0.04)', borderRadius: 999, padding: '2px 6px' }}>Inativo</span>
@@ -1095,7 +1096,7 @@ function TabMembros({ slug, meId, showToast }) {
                 </span>
                 {m.plano === 'pro' || m.plano === 'elite' ? (
                   <span style={{ fontSize: 10, fontWeight: 800, color: '#d4a017', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
-                    {m.plano === 'pro' ? '★ Pro' : '👑 Elite'}
+                    {m.plano === 'pro' ? '★ Pro' : '♛ Elite'}
                   </span>
                 ) : null}
               </div>
@@ -1350,7 +1351,7 @@ function TabConvites({ slug, showToast }) {
       ) : null}
 
       {convites.length === 0 ? (
-        <div className="empty-state"><div className="empty-state__emoji">🔗</div><p className="muted">Sem convites ativos.</p></div>
+        <div className="empty-state"><div className="empty-state__emoji"><Icon name="partilhar" size={36} /></div><p className="muted">Sem convites ativos.</p></div>
       ) : (
         convites.map((c) => (
           <div key={c.id} style={{ ...CARD, padding: 12, display: 'grid', gap: 8 }}>
@@ -1515,14 +1516,14 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
       <div style={linha}>
         <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700 }}>Aberto até {fmtPrazoAdmin(info.rsvp_prazo)}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
-          ✅ {info.confirmados.length} confirmados · ❌ {info.recusados.length} recusados · ⏳ {info.pendentes.length} pendentes
+          {info.confirmados.length} confirmados · {info.recusados.length} recusados · {info.pendentes.length} pendentes
         </div>
         <ListaUsers users={info.confirmados} titulo="Confirmados" />
         <ListaUsers users={info.recusados} titulo="Recusados" />
         <ListaUsers users={info.pendentes} titulo="Pendentes" />
         {info.espera?.length ? (
           <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--neon)' }}>⏳ Lista de espera</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--neon)' }}>Lista de espera</div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
               {info.espera.map((e) => `${e.posicao}. ${e.nome || 'Jogador'}`).join(' · ')}
             </div>
@@ -1556,7 +1557,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
           </div>
         </div>
       ) : (
-        <button type="button" className="btn btn--purple btn--sm" onClick={() => setAbrirModal(true)}>📋 Abrir RSVP</button>
+        <button type="button" className="btn btn--purple btn--sm" onClick={() => setAbrirModal(true)}>Abrir RSVP</button>
       )}
     </div>
   );
@@ -1704,7 +1705,7 @@ function TabJogos({ slug, showToast, navigate }) {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div className="games-label" style={{ margin: 0 }}>Futuros</div>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => setRecorrenteAberto((v) => !v)}>🔄 Criar jogos recorrentes</button>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => setRecorrenteAberto((v) => !v)}>Criar jogos recorrentes</button>
         </div>
         {recorrenteAberto ? (
           <FormRecorrentes
@@ -1725,7 +1726,7 @@ function TabJogos({ slug, showToast, navigate }) {
                   <div key={g.id} style={{ ...CARD, padding: 12, opacity: 0.55 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 8px' }}>❌ Cancelado</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 8px' }}>Cancelado</span>
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data)}</div>
                     {g.motivo_cancelamento ? (
@@ -1756,7 +1757,7 @@ function TabJogos({ slug, showToast, navigate }) {
                   })() : null}
                   <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
-                    <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>❌ Cancelar jogo</button>
+                    <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>Cancelar jogo</button>
                     {g.confirmados === 0 ? (
                       <button type="button" className="btn btn--ghost btn--sm" style={{ color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'apagar', jogo: g })}>Excluir</button>
                     ) : null}
@@ -1928,7 +1929,7 @@ function TabResultados({ slug, showToast }) {
 
       {lista.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state__emoji">🏆</div>
+          <div className="empty-state__emoji"><Icon name="medalha" size={36} /></div>
           <p className="muted">{modo === 'sem' ? 'Nenhum jogo à espera de resultado.' : 'Nenhum jogo com resultado.'}</p>
         </div>
       ) : (
@@ -2037,7 +2038,7 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
             <>
               {/* 1. CAMPEÃO */}
               <div style={{ display: 'grid', gap: 8 }}>
-                <span style={secLbl}>🏆 Campeão</span>
+                <span style={secLbl}>Campeão</span>
                 {times.length === 0 ? (
                   <p className="muted" style={{ fontSize: 12 }}>Este jogo não tem times sorteados.</p>
                 ) : (
@@ -2053,25 +2054,25 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
                     </button>
                   ))
                 )}
-                <UploadComCrop onUpload={(url) => setCampeaoFoto(url)} accept="image/*" aspect={4 / 3} label={campeaoFoto ? '✓ Foto do campeão' : '📷 Foto do campeão'} />
+                <UploadComCrop onUpload={(url) => setCampeaoFoto(url)} accept="image/*" aspect={4 / 3} label={campeaoFoto ? '✓ Foto do campeão' : 'Foto do campeão'} />
               </div>
 
               {/* 2. ARTILHEIRO */}
-              <Seccao titulo="⚽ Artilheiro" ligado={temArt} onToggle={setTemArt}>
+              <Seccao titulo="Artilheiro" ligado={temArt} onToggle={setTemArt}>
                 <SelectJogador value={artId} onChange={setArtId} confirmados={confirmados} />
                 <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Nº de gols</span><input type="number" min={1} value={artGols} onChange={(e) => setArtGols(e.target.value)} style={inputStyle} /></label>
               </Seccao>
 
               {/* 3. DESTAQUE */}
-              <Seccao titulo="⭐ Destaque" ligado={temDest} onToggle={setTemDest}>
+              <Seccao titulo="Destaque" ligado={temDest} onToggle={setTemDest}>
                 <SelectJogador value={destId} onChange={setDestId} confirmados={confirmados} />
                 <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Título</span><input value={destTitulo} onChange={(e) => setDestTitulo(e.target.value.slice(0, 60))} placeholder="Ex: Melhor em campo" style={inputStyle} /></label>
               </Seccao>
 
               {/* 4. RODADA DE CERVEJA */}
-              <Seccao titulo="🍺 Rodada de cerveja" ligado={temRodada} onToggle={setTemRodada}>
+              <Seccao titulo="Rodada de cerveja" ligado={temRodada} onToggle={setTemRodada}>
                 <SelectJogador value={rodadaId} onChange={setRodadaId} confirmados={confirmados} />
-                <UploadComCrop onUpload={(url) => setRodadaFoto(url)} accept="image/*" aspect={1} label={rodadaFoto ? '✓ Foto da rodada' : '📷 Foto da rodada'} />
+                <UploadComCrop onUpload={(url) => setRodadaFoto(url)} accept="image/*" aspect={1} label={rodadaFoto ? '✓ Foto da rodada' : 'Foto da rodada'} />
               </Seccao>
 
               <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving || campeaoIdx === null} onClick={guardar}>
@@ -2226,7 +2227,7 @@ function TabDenuncias({ showToast }) {
   if (denuncias.length === 0) {
     return (
       <div className="empty-state" style={{ borderColor: 'rgba(139,92,246,0.4)' }}>
-        <div className="empty-state__emoji">✅</div>
+        <div className="empty-state__emoji"><Icon name="estrela" size={36} /></div>
         <p className="muted">Sem denúncias pendentes.</p>
       </div>
     );
@@ -2292,7 +2293,7 @@ function MenuItems({ tab, onPick }) {
               cursor: 'pointer',
             }}
           >
-            <span style={{ fontSize: 16 }}>{m.icon}</span>
+            <m.icon size={15} style={{ flexShrink: 0 }} />
             {m.label}
           </button>
         );

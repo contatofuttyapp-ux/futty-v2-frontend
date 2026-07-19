@@ -65,30 +65,30 @@ export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, ch
 
   return (
     <div style={{ border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.06)', borderRadius: 'var(--radius-md)', padding: 14, marginBottom: 12 }}>
-      <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>📋 Confirma presença</div>
+      <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Confirma presença</div>
       <div style={{ fontSize: 12, color: 'var(--label-color)', marginTop: 2 }}>até {formatarPrazo(prazo)}</div>
 
       {modoEspera ? (
         posEspera != null ? (
           <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neon)' }}>⏳ Estás em {posEspera}º na lista de espera</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neon)' }}>Estás em {posEspera}º na lista de espera</div>
             <button type="button" disabled={busy} onClick={sairEspera} style={{ marginTop: 8, border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 12, cursor: busy ? 'default' : 'pointer', padding: 0 }}>
               Sair da lista
             </button>
           </div>
         ) : (
           <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={{ ...botaoStyle(false, '#16a34a'), width: '100%', marginTop: 10, opacity: busy ? 0.6 : 1 }}>
-            ⏳ Entrar na lista de espera
+            Entrar na lista de espera
           </button>
         )
       ) : (
         <>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={botaoStyle(respostaActual === 'confirmado', '#16a34a')}>
-              ✅ Vou
+              Vou
             </button>
             <button type="button" disabled={busy} onClick={() => responder('recusado')} style={botaoStyle(respostaActual === 'recusado', '#dc2626')}>
-              ❌ Não vou
+              Não vou
             </button>
           </div>
           {respostaActual ? (

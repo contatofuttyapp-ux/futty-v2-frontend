@@ -1,4 +1,5 @@
 // Futty v2.0 — Card de publicidade nativo (puramente frontend, sem backend).
+import Icon from './Icon';
 // Variants: 'native' (feed/início) e 'banner' (fixo no sorteio).
 
 const BASE = {
@@ -32,7 +33,7 @@ export default function AdCard({ imageUrl, linkUrl = '#', label = 'Pub.', varian
         borderRadius: 'inherit',
       }}
     >
-      <span style={{ fontSize: 22 }}>📢</span>
+      <Icon name="anuncio" size={22} />
       <div>
         <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, color: '#d4a017' }}>Parceiros Futty</div>
         <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)' }}>espaço publicitário</div>

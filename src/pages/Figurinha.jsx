@@ -515,7 +515,7 @@ export default function Figurinha() {
               <>
                 <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>O teu cromo está quase pronto <EstrelaIA size={14} color="#fff" /></h2>
                 <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: 0 }}>Adiciona uma foto para personalizar o teu cartão de jogador</p>
-                <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={() => fileRef.current?.click()}>📷 Adicionar foto</button>
+                <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={() => fileRef.current?.click()}>Adicionar foto</button>
                 <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Saltar por agora →</button>
               </>
             ) : estreiaFase === 'gerando' ? (
@@ -525,14 +525,14 @@ export default function Figurinha() {
               </>
             ) : (
               <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: '#fff', margin: 0 }}>O teu cromo está pronto! 🎉</h2>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: '#fff', margin: 0 }}>O teu cromo está pronto!</h2>
                 {limiteIA ? (
                   <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Limite de gerações IA atingido — mostramos o cromo com a tua foto.</p>
                 ) : null}
                 <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={partilharCromo}>
                   <Share2 size={18} /> Compartilhar agora
                 </button>
-                <button type="button" className="btn btn--purple-outline" style={{ width: '100%', height: 44 }} onClick={concluirEstreia}>🎨 Personalizar</button>
+                <button type="button" className="btn btn--purple-outline" style={{ width: '100%', height: 44 }} onClick={concluirEstreia}>Personalizar</button>
                 <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Saltar →</button>
               </>
             )}

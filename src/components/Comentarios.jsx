@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, assetUrl } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { iniciaisNome } from '../utils/avatar';
+import SilhuetaJogador from './SilhuetaJogador';
 import Reacoes from './Reacoes';
 import UploadComCrop from './UploadComCrop';
 import DenunciaModal from './DenunciaModal';
@@ -35,7 +35,7 @@ function haQuantoTempo(iso) {
   return `há ${Math.floor(dias / 30)} meses`;
 }
 
-function Avatar({ nome, avatarUrl, size = 40 }) {
+function Avatar({ avatarUrl, size = 40 }) {
   const [falhou, setFalhou] = useState(false);
   const src = avatarUrl ? assetUrl(avatarUrl) : null;
   return (
@@ -58,7 +58,7 @@ function Avatar({ nome, avatarUrl, size = 40 }) {
       {src && !falhou ? (
         <img src={src} alt="" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        iniciaisNome(nome)
+        <SilhuetaJogador size="76%" />
       )}
     </div>
   );
@@ -217,7 +217,7 @@ function ComentarioForm({ membros, placeholder = 'Escreve um comentário…', av
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
           {anexos.length < 4 ? (
-            <UploadComCrop onUpload={addAnexo} accept="image/*" aspect={1} label="📎 Anexo" />
+            <UploadComCrop onUpload={addAnexo} accept="image/*" aspect={1} label="Anexo" />
           ) : (
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Máximo 4 anexos</span>
           )}

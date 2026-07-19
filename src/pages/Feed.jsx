@@ -10,7 +10,7 @@ import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams } from '../hooks/useTeam';
-import { iniciaisNome } from '../utils/avatar';
+import SilhuetaJogador from '../components/SilhuetaJogador';
 import Reacoes from '../components/Reacoes';
 import Comentarios from '../components/Comentarios';
 import UploadComCrop from '../components/UploadComCrop';
@@ -71,13 +71,13 @@ function timeCampeao(j) {
 }
 
 // ─── Avatar — moldura V1 do cânone (.avatar-frame), única na página ────────────
-function FeedAvatar({ nome, avatarUrl, size = 48 }) {
+function FeedAvatar({ avatarUrl, size = 48 }) {
   const [falhou, setFalhou] = useState(false);
   const src = avatarUrl ? assetUrl(avatarUrl) : null;
   return (
     <span className="avatar-frame" style={{ width: size, height: size, flexShrink: 0 }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src && !falhou ? <img src={src} alt="" onError={() => setFalhou(true)} /> : iniciaisNome(nome)}
+        {src && !falhou ? <img src={src} alt="" onError={() => setFalhou(true)} /> : <SilhuetaJogador size="76%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />
@@ -229,7 +229,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
             <div className="feed-cromo-bob" style={{ animationDelay: '-2.4s' }}>
               <div className="feed-cromo-sway" style={{ animationDelay: '-3.1s' }}>
                 <PremioRow
-                  label="⚽ Artilheiro do dia"
+                  label="Artilheiro do dia"
                   labelColor={COR_ARTILHEIRO}
                   nome={j.artilheiro_nome || 'Artilheiro'}
                   sub={{ avatarUrl: j.artilheiro_avatar_url, gols: j.artilheiro_gols }}
@@ -243,7 +243,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
             <div className="feed-cromo-bob" style={{ animationDelay: '-4.8s' }}>
               <div className="feed-cromo-sway" style={{ animationDelay: '-6.2s' }}>
                 <PremioRow
-                  label="⭐ Destaque do dia"
+                  label="Destaque do dia"
                   labelColor={COR_DESTAQUE}
                   nome={j.destaque_nome || 'Destaque'}
                   sub={{ avatarUrl: j.destaque_avatar_url, titulo: j.destaque_titulo }}
@@ -909,7 +909,7 @@ export default function Feed() {
             <LoadingFutty />
           ) : filtrados.length === 0 ? (
             <div className="empty-state" style={{ marginTop: 8 }}>
-              <div className="empty-state__emoji">📰</div>
+              <div className="empty-state__emoji"><Icon name="resenha" size={40} /></div>
               <p className="muted">Ainda não há jogos na resenha.</p>
             </div>
           ) : (

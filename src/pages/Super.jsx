@@ -90,7 +90,7 @@ function TabUsers({ showMsg }) {
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
-                <td style={td}>{u.nome || '—'}{u.is_super_admin ? ' 👑' : ''}</td>
+                <td style={td}>{u.nome || '—'}{u.is_super_admin ? ' (super)' : ''}</td>
                 <td style={td}>{u.email}</td>
                 <td style={td}>
                   <select value={u.plan || 'free'} onChange={(e) => mudarPlano(u.id, e.target.value)} style={{ ...btn, padding: '5px 8px' }}>

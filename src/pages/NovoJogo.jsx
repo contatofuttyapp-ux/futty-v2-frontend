@@ -49,12 +49,11 @@ export default function NovoJogo() {
 
   return (
     <div className="app-shell">
-      <Topbar back={`/equipa/${slug}/jogos`} title="Criar jogo" />
-      <main className="app-main">
-        <h1 className="app-page-title">Criar jogo</h1>
-        <p className="app-page-sub">Agenda um novo jogo para o time.</p>
+      <Topbar hud="NOVO JOGO" back={`/equipa/${slug}/jogos`} />
+      <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
+        <p className="muted" style={{ fontSize: 13, margin: '4px 0 14px' }}>Agenda um novo jogo para o time.</p>
 
-        <form className="form-card" onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', padding: '16px 16px 18px', display: 'grid', gap: 14 }}>
           {error && <div className="alert alert--error">{error}</div>}
 
           <div style={{ display: 'flex', gap: 12 }}>
@@ -63,7 +62,7 @@ export default function NovoJogo() {
               <input
                 id="data"
                 type="date"
-                className="input"
+                className="input input--hud"
                 value={data}
                 onChange={(e) => setData(e.target.value)}
               />
@@ -73,7 +72,7 @@ export default function NovoJogo() {
               <input
                 id="hora"
                 type="time"
-                className="input"
+                className="input input--hud"
                 value={hora}
                 onChange={(e) => setHora(e.target.value)}
               />
@@ -84,7 +83,7 @@ export default function NovoJogo() {
             <label htmlFor="local">Local</label>
             <input
               id="local"
-              className="input"
+              className="input input--hud"
               placeholder="Ex.: Campo Municipal"
               value={local}
               onChange={(e) => setLocal(e.target.value)}
@@ -102,8 +101,8 @@ export default function NovoJogo() {
 
           <button
             type="submit"
-            className="btn btn--primary"
-            style={{ width: '100%', marginTop: 8 }}
+            className="btn hud-corners-s cta-gold"
+            style={{ width: '100%', marginTop: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase' }}
             disabled={loading}
           >
             {loading ? 'Criando…' : 'Criar jogo'}

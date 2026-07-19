@@ -54,12 +54,12 @@ export default function Campeonato() {
 
   return (
     <div className="app-shell">
-      <Topbar title="Campeonato" back={`/equipa/${slug}`} />
-      <main className="app-main">
+      <Topbar hud="CAMPEONATO" back={`/equipa/${slug}`} />
+      <main className="app-main page-reveal">
         {loading ? (
           <LoadingFutty />
         ) : !c ? (
-          <p className="muted">Este time ainda não tem campeonato.</p>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', textAlign: 'center', padding: '30px 16px' }}><div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16 }}>Este time ainda não tem campeonato</div><p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>Os campeonatos internos chegam depois do sorteio novo (formatos: pontos corridos e mata-mata).</p></div>
         ) : (
           <>
             {/* Topo */}
@@ -68,15 +68,15 @@ export default function Campeonato() {
 
             {/* Banner do campeão */}
             {terminado ? (
-              <div style={{ marginTop: 12, padding: '14px', borderRadius: 'var(--radius-md)', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', textAlign: 'center' }}>
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, fontWeight: 800, color: '#d4a017' }}>🏆 Campeão: {nomeCampeao(c)}</div>
-                <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 8 }} onClick={() => celebrarTop3(1)}>🎉 Celebrar</button>
+              <div style={{ marginTop: 12, padding: '14px', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, fontWeight: 800, color: '#d4a017' }}>Campeão: {nomeCampeao(c)}</div>
+                <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 8 }} onClick={() => celebrarTop3(1)}>Celebrar</button>
               </div>
             ) : null}
 
             {/* Classificação */}
             <h2 className="section-title">Classificação</h2>
-            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-sm)' }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', padding: '10px' }}>
               <CampeonatoStandings campeonato={c} />
             </div>
 
@@ -95,7 +95,7 @@ export default function Campeonato() {
             ) : (
               <div style={{ display: 'grid', gap: 8 }}>
                 {jornadas.map((j) => (
-                  <div key={j.id} style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '10px 12px', fontSize: 13, color: '#fff' }}>
+                  <div key={j.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', padding: '10px 12px', fontSize: 13, color: '#fff' }}>
                     <span style={{ color: 'var(--label-color)', fontWeight: 700 }}>Jornada {j.numero}</span> · {textoJornada(j, c)}
                   </div>
                 ))}

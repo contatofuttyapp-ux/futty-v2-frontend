@@ -7,8 +7,9 @@ import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
 import { useRanking } from '../hooks/useRanking';
 import { celebrarTop3 } from '../hooks/useConfetti';
-import { urlAsset, iniciaisNome } from '../utils/avatar';
+import { urlAsset } from '../utils/avatar';
 import LoadingFutty from '../components/LoadingFutty';
+import SilhuetaJogador from '../components/SilhuetaJogador';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import EscudoEquipa from '../components/EscudoEquipa';
@@ -16,12 +17,12 @@ import '../styles/app.css';
 
 // Moldura de avatar do cânone (V1): quadrado + cantos-L dourados + interior no material
 // da casa + véu. Moldura única da página — rows, pódio e modal partilham-na.
-function FrameAvatar({ nome, avatarUrl, size = 48 }) {
+function FrameAvatar({ avatarUrl, size = 48 }) {
   const src = avatarUrl ? urlAsset(avatarUrl) : null;
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src ? <img src={src} alt="" /> : iniciaisNome(nome)}
+        {src ? <img src={src} alt="" /> : <SilhuetaJogador size="74%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />
@@ -174,7 +175,7 @@ export default function Ranking() {
       });
       setVoteModal(null);
       await reload();
-      setToast({ tipo: 'success', mensagem: 'Voto salvo! ⭐' });
+      setToast({ tipo: 'success', mensagem: 'Voto salvo!' });
     } catch (err) {
       setToast({ tipo: 'error', mensagem: err.message });
     } finally {
@@ -216,7 +217,7 @@ export default function Ranking() {
 
         {mostrarBanner ? (
           <div className="rank-banner hud-corners">
-            <span style={{ flex: 1 }}>✨ Atualize as suas notas</span>
+            <span style={{ flex: 1 }}>Atualize as suas notas</span>
             <button type="button" className="rank-banner__close" aria-label="Fechar" onClick={() => setBannerFechado(true)}>✕</button>
           </div>
         ) : null}

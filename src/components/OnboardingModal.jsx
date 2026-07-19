@@ -1,4 +1,5 @@
 // Futty v2.0 — Onboarding (3 passos) para quem entra numa equipa pela 1ª vez.
+import Icon from './Icon';
 // Slide entre passos via AnimatePresence + PageTransition. X fecha em qualquer passo.
 import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
@@ -7,19 +8,19 @@ import PageTransition from './PageTransition';
 export default function OnboardingModal({ teamNome, onClose }) {
   const passos = [
     {
-      icon: '⚽',
+      icon: 'bola',
       titulo: `Bem-vindo ao ${teamNome || 'time'}!`,
       texto: 'Aqui organizamos os sorteios, registamos os resultados e acompanhamos o ranking.',
       botao: 'Próximo →',
     },
     {
-      icon: '🃏',
+      icon: 'figurinha',
       titulo: 'A tua figurinha',
       texto: 'Cria a tua figurinha personalizada. Adiciona uma foto e gera o teu avatar IA estilo cromo Panini.',
       botao: 'Próximo →',
     },
     {
-      icon: '📋',
+      icon: 'resenha',
       titulo: 'Confirma a tua presença',
       texto: 'Antes de cada jogo, confirma se vais. O admin sorteia os times só com quem confirmou.',
       botao: 'Entrar →',
@@ -63,7 +64,7 @@ export default function OnboardingModal({ teamNome, onClose }) {
 
         <AnimatePresence mode="wait">
           <PageTransition key={passo}>
-            <div style={{ fontSize: 48, lineHeight: 1 }}>{atual.icon}</div>
+            <Icon name={atual.icon} size={48} />
             <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', marginTop: 14 }}>
               {atual.titulo}
             </h2>

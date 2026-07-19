@@ -20,6 +20,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const Inicio = lazy(() => import('./pages/Inicio'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
 const CriarEquipa = lazy(() => import('./pages/CriarEquipa'));
 const Equipa = lazy(() => import('./pages/Equipa'));
 const Convite = lazy(() => import('./pages/Convite'));
@@ -100,6 +101,14 @@ function AnimatedRoutes() {
             element={
               <AuthGuard>
                 <Inicio />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <AuthGuard>
+                <Onboarding />
               </AuthGuard>
             }
           />

@@ -77,7 +77,7 @@ export default function CountdownSorteio({ jogo, style }) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0', ...style }} aria-live="polite">
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 8, padding: '10px 16px', color: '#a78bfa', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-          <span aria-hidden>⚡</span> A sortear…
+          A sortear…
         </span>
       </div>
     );

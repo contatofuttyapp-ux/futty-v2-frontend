@@ -1,4 +1,5 @@
 // Futty v2.0 — Mostra os times resultantes do sorteio + avisos + banco de reservas.
+import { TriangleAlert } from 'lucide-react';
 import { colorOf } from '../utils/teamColors';
 import PlayerAvatar from './PlayerAvatar';
 
@@ -14,7 +15,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
     <>
       {avisos.map((aviso, i) => (
         <div className="aviso" key={i}>
-          ⚠️ {aviso}
+          <TriangleAlert size={14} style={{ verticalAlign: '-2px' }} /> {aviso}
         </div>
       ))}
       <div className="sorteio-grid">

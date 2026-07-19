@@ -1,4 +1,5 @@
 // Futty v2.0 — Alterar password (/alterar-password).
+import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -9,12 +10,13 @@ import '../styles/app.css';
 const inputStyle = {
   width: '100%',
   boxSizing: 'border-box',
-  padding: '10px 44px 10px 12px',
-  borderRadius: 10,
-  border: '1px solid #222222',
-  background: '#0c0c0c',
+  padding: '12px 44px 12px 14px',
+  border: '1px solid rgba(255,255,255,0.14)',
+  background: 'rgba(255,255,255,0.03)',
   color: '#fff',
   fontSize: 14,
+  fontFamily: "'Rajdhani', sans-serif",
+  clipPath: 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)',
 };
 
 // Campo de password com toggle mostrar/esconder.
@@ -37,7 +39,7 @@ function CampoPassword({ label, value, onChange }) {
           onClick={() => setMostrar((v) => !v)}
           style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16 }}
         >
-          {mostrar ? '🙈' : '👁️'}
+          {mostrar ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
     </label>
@@ -75,15 +77,14 @@ export default function AlterarPassword() {
 
   return (
     <div className="app-shell">
-      <Topbar back="/perfil" title="ALTERAR SENHA" />
-      <main className="app-main">
-        <h1 className="app-page-title">Alterar senha</h1>
-        <p className="app-page-sub">Escolhe uma nova senha (mínimo 6 caracteres).</p>
+      <Topbar hud="ALTERAR SENHA" back="/perfil" />
+      <main className="app-main page-reveal">
+        <p className="muted" style={{ fontSize: 13, margin: '4px 0 16px' }}>Escolhe uma nova senha (mínimo 6 caracteres).</p>
 
         <div style={{ display: 'grid', gap: 14, maxWidth: 420 }}>
           <CampoPassword label="Nova senha" value={nova} onChange={setNova} />
           <CampoPassword label="Confirmar senha" value={confirmar} onChange={setConfirmar} />
-          <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={busy} onClick={guardar}>
+          <button type="button" className="btn hud-corners-s cta-gold" style={{ width: '100%', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase' }} disabled={busy} onClick={guardar}>
             {busy ? 'Salvando…' : 'Salvar nova senha'}
           </button>
         </div>

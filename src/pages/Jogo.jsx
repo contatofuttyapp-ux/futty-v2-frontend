@@ -4,9 +4,9 @@ import { Link, useParams, useLocation } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
-import { initials } from '../utils/teamColors';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
+import SilhuetaJogador from '../components/SilhuetaJogador';
 import DrawnTeams from '../components/DrawnTeams';
 import CampoSorteio from '../components/CampoSorteio';
 import ResultadoEditor from '../components/ResultadoEditor';
@@ -15,7 +15,38 @@ import SorteioOverlay from '../components/SorteioOverlay';
 import CountdownSorteio from '../components/CountdownSorteio';
 import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
+import { urlAsset } from '../utils/avatar';
 import '../styles/app.css';
+
+const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
+const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
+const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)';
+const RAJ = "'Rajdhani', sans-serif";
+
+// Moldura V1 (família do Ranking/Equipa).
+function FrameAvatar({ avatarUrl, size = 36 }) {
+  const src = avatarUrl ? urlAsset(avatarUrl) : null;
+  return (
+    <span className="avatar-frame" style={{ width: size, height: size }}>
+      <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
+        {src ? <img src={src} alt="" /> : <SilhuetaJogador size="74%" />}
+      </span>
+      <span className="avatar-frame__veil" />
+      <span className="avatar-frame__lc avatar-frame__lc--tl" />
+      <span className="avatar-frame__lc avatar-frame__lc--tr" />
+      <span className="avatar-frame__lc avatar-frame__lc--br" />
+      <span className="avatar-frame__lc avatar-frame__lc--bl" />
+    </span>
+  );
+}
+
+function SecLabel({ children }) {
+  return (
+    <div style={{ fontFamily: RAJ, fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '24px 0 10px' }}>
+      {children}
+    </div>
+  );
+}
 
 export default function Jogo() {
   const { slug, id } = useParams();
@@ -81,7 +112,7 @@ export default function Jogo() {
   if (loading) {
     return (
       <div className="app-shell">
-        <Topbar back={`/equipa/${slug}/jogos`} />
+        <Topbar hud="JOGO" back={`/equipa/${slug}/jogos`} />
         <main className="app-main">
           <LoadingFutty />
         </main>
@@ -111,8 +142,8 @@ export default function Jogo() {
 
   return (
     <div className="app-shell">
-      <Topbar back={`/equipa/${slug}/jogos`} title={game?.local || 'Jogo'} />
-      <main className="app-main" style={game?.times_resultado ? { paddingBottom: 140 } : undefined}>
+      <Topbar hud="JOGO" back={`/equipa/${slug}/jogos`} />
+      <main className="app-main page-reveal" style={game?.times_resultado ? { paddingBottom: 140 } : undefined}>
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
         {!game ? (
@@ -121,26 +152,28 @@ export default function Jogo() {
           <>
             {rsvpConfirmados ? (
               <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.08)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
-                📋 Sorteio com {confirmados.length} confirmados via RSVP
+                Sorteio com {confirmados.length} confirmados via RSVP
               </div>
             ) : null}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div>
-                <h1 className="app-page-title" style={{ marginBottom: 4 }}>
-                  {game.local || 'Jogo'}
-                </h1>
-                <span className="muted">
+            <div className="hud-corners" style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+              <div style={{ display: 'grid', placeItems: 'center', width: 52, height: 56, flexShrink: 0, background: 'rgba(212,160,23,0.10)', border: '1px solid rgba(212,160,23,0.45)', clipPath: CLIP_S }}>
+                <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, color: '#f0c94a', lineHeight: 1 }}>{new Date(game.data).getDate()}</div>
+                <div style={{ fontFamily: RAJ, fontSize: 10, color: '#c9a24a', textTransform: 'uppercase' }}>{new Date(game.data).toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '')}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 18, lineHeight: 1.15 }}>{game.local || 'Jogo'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                   {formatDateTime(game.data)}
                   {game.jogadores_por_time ? ` · ${game.jogadores_por_time} por time` : ''}
                   {game.sorteio_realizado && game.num_times ? ` · ${game.num_times} times` : ''}
-                </span>
+                </div>
               </div>
-              <span className={`badge badge--${game.status}`}>{STATUS_LABELS[game.status] || game.status}</span>
+              <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 9px', clipPath: CLIP_S, flexShrink: 0, color: game.status === 'em_curso' ? '#7bd88f' : game.status === 'cancelado' ? '#fda4af' : '#8ab4ff', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.04)' }}>{STATUS_LABELS[game.status] || game.status}</span>
             </div>
 
             {/* Resultado (visível a todos) */}
             {game.resultado_nivel > 0 ? (
-              <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.3)', textAlign: 'center' }}>
+              <div style={{ marginTop: 12, padding: '12px 14px', clipPath: CLIP, background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.3)', textAlign: 'center' }}>
                 {game.resultado_nivel >= 2 ? (
                   <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 800, color: '#fff' }}>
                     {nomeTimeA} <span style={{ color: '#d4a017' }}>{game.placar_a} × {game.placar_b}</span> {nomeTimeB}
@@ -152,7 +185,7 @@ export default function Jogo() {
                 )}
                 {game.resultado_nivel === 3 && artilheiro && artilheiro.gols > 0 ? (
                   <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
-                    ⚽ Artilheiro: {artilheiro.nome} ({artilheiro.gols} {artilheiro.gols === 1 ? 'gol' : 'gols'})
+                    Artilheiro: {artilheiro.nome} ({artilheiro.gols} {artilheiro.gols === 1 ? 'gol' : 'gols'})
                   </div>
                 ) : null}
               </div>
@@ -160,28 +193,28 @@ export default function Jogo() {
 
             <div className="header-actions">
               <Link to={`/equipa/${slug}/ranking`} className="btn btn--ghost btn--sm">
-                🏆 Ranking
+                Ranking
               </Link>
             </div>
 
             {/* Confirmação de presença */}
-            <h2 className="section-title">A tua presença</h2>
-            <div className="confirm-bar">
+            <SecLabel>A tua presença</SecLabel>
+            <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', flexWrap: 'wrap' }}>
               {estouConfirmado ? (
                 <>
-                  <span style={{ color: 'var(--neon)', fontWeight: 700 }}>✓ Estás confirmado</span>
-                  <label className="check-inline">
+                  <span style={{ fontFamily: RAJ, color: '#7bd88f', fontWeight: 800, letterSpacing: '0.04em' }}>✓ Estás confirmado</span>
+                  <label className="check-inline" style={{ fontFamily: RAJ }}>
                     <input
                       type="checkbox"
                       checked={souGoleiro}
                       disabled={busy}
                       onChange={(e) => confirmar(true, e.target.checked)}
                     />
-                    Sou goleiro
+                    Sou goleiro (GR)
                   </label>
                   <button
                     type="button"
-                    className="btn btn--ghost btn--sm"
+                    className="btn btn--sm btn--outline hud-corners-s"
                     style={{ marginLeft: 'auto' }}
                     onClick={() => confirmar(false, false)}
                     disabled={busy}
@@ -194,8 +227,8 @@ export default function Jogo() {
                   <span className="muted">Ainda não confirmaste presença.</span>
                   <button
                     type="button"
-                    className="btn btn--primary btn--sm"
-                    style={{ marginLeft: 'auto' }}
+                    className="btn btn--sm hud-corners-s cta-gold"
+                    style={{ marginLeft: 'auto', fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }}
                     onClick={() => confirmar(true, false)}
                     disabled={busy}
                   >
@@ -206,9 +239,7 @@ export default function Jogo() {
             </div>
 
             {/* Confirmados */}
-            <h2 className="section-title">
-              Confirmados <span className="muted">({confirmados.length})</span>
-            </h2>
+            <SecLabel>Confirmados · {confirmados.length}</SecLabel>
             {isAdmin && confirmados.length > 0 && (
               <p className="muted" style={{ fontSize: 13 }}>
                 Marca jogadores como goleiro (GR) ou cabeça de chave (C) antes de sortear.
@@ -217,13 +248,11 @@ export default function Jogo() {
             {confirmados.length === 0 ? (
               <p className="muted">Ainda ninguém confirmou.</p>
             ) : (
-              <div className="member-list">
-                {confirmados.map((p) => (
-                  <div className="member-row" key={p.user_id}>
-                    <div className="member-avatar">{initials(p.nome) || '?'}</div>
-                    <div className="member-info">
-                      <div className="member-name">{p.nome}</div>
-                    </div>
+              <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>
+                {confirmados.map((p, pi) => (
+                  <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: pi === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
+                    <FrameAvatar nome={p.nome} avatarUrl={p.avatar_url} />
+                    <div style={{ flex: 1, minWidth: 0, fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>{p.nome}</div>
                     {isAdmin ? (
                       <>
                         <button
@@ -258,7 +287,7 @@ export default function Jogo() {
             )}
 
             {/* Sorteio */}
-            <h2 className="section-title">Sorteio</h2>
+            <SecLabel>Sorteio</SecLabel>
             {!game.sorteio_realizado && (
               <div style={{ marginBottom: 12 }}>
                 <CountdownSorteio jogo={game} />
@@ -267,33 +296,35 @@ export default function Jogo() {
             {isAdmin && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                 <span className="muted" style={{ fontSize: 13 }}>Jogadores por time:</span>
-                {[4, 5, 6, 7, 8].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`btn btn--sm ${jogadoresPorTime === n ? 'btn--primary' : 'btn--ghost'}`}
-                    aria-pressed={jogadoresPorTime === n}
-                    onClick={() => setJogadoresPorTime(n)}
-                  >
-                    {n}
-                  </button>
-                ))}
+                <div className="chips-row" style={{ margin: 0 }}>
+                  {[4, 5, 6, 7, 8].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`chip ${jogadoresPorTime === n ? 'chip--active' : ''}`}
+                      aria-pressed={jogadoresPorTime === n}
+                      onClick={() => setJogadoresPorTime(n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
-            <div className="header-actions" style={{ marginTop: 0 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {isAdmin && (
-                <button type="button" className="btn btn--primary btn--sm" onClick={sortear} disabled={busy}>
+                <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={sortear} disabled={busy}>
                   {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
                 </button>
               )}
               {game.sorteio_realizado && (
-                <button type="button" className="btn btn--purple btn--sm" onClick={() => setJogoSorteio(data.game)}>
+                <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setJogoSorteio(data.game)}>
                   Ver sorteio
                 </button>
               )}
               {isAdmin && game.sorteio_realizado && !editando && (
-                <button type="button" className="btn btn--purple-outline btn--sm" onClick={() => setEditando(true)}>
-                  ✏️ Ajustar times
+                <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setEditando(true)}>
+                  Ajustar times
                 </button>
               )}
             </div>
@@ -321,11 +352,11 @@ export default function Jogo() {
                         ≡ Lista
                       </button>
                       <button type="button" className={`btn btn--sm ${vistaCampo ? 'btn--primary' : 'btn--ghost'}`} aria-pressed={vistaCampo} onClick={() => setVistaCampo(true)}>
-                        ⬜ Campo
+                        Campo
                       </button>
                       {isAdmin ? (
                         <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }} onClick={partilharLink}>
-                          ↗ Compartilhar
+                          Compartilhar
                         </button>
                       ) : null}
                     </div>
@@ -355,7 +386,7 @@ export default function Jogo() {
             {/* Resultado — edição (só admin, após sorteio) */}
             {isAdmin && game.times_resultado ? (
               <>
-                <h2 className="section-title">Resultado</h2>
+                <SecLabel>Resultado</SecLabel>
                 <ResultadoEditor
                   gameId={id}
                   game={game}
@@ -372,7 +403,7 @@ export default function Jogo() {
             {/* A votação está na página de ranking */}
             {game.sorteio_realizado && (game.status === 'em_curso' || game.status === 'terminado') && (
               <p className="muted" style={{ marginTop: 20, fontSize: 14 }}>
-                🗳️ A votação deste jogo está disponível na{' '}
+                A votação deste jogo está disponível na{' '}
                 <Link to={`/equipa/${slug}/ranking`}>página de ranking</Link>.
               </p>
             )}

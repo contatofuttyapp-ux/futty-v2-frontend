@@ -1,4 +1,5 @@
 // Futty v2.0 — Vista pública do sorteio (/p/:slug/:gameId), sem login.
+import Icon from '../components/Icon';
 // Optimizada para partilha (WhatsApp) e telão. O fundo aurora vem do Layout
 // global (este ecrã é transparente por cima dele).
 import { useState } from 'react';
@@ -38,7 +39,7 @@ function TimeColuna({ nome, jogadores, cor, vencedor }) {
     <div style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.03)', border: `1px solid ${cor}55`, borderRadius: 'var(--radius-md)', padding: 'var(--space-md)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, letterSpacing: '0.06em', color: cor, textTransform: 'uppercase' }}>{nome}</span>
-        {vencedor ? <span style={{ fontSize: 18 }}>🏆</span> : null}
+        {vencedor ? <Icon name="medalha" size={18} /> : null}
       </div>
       {jogadores.map((j, i) => (
         <Jogador key={j.user_id || i} j={j} />
@@ -102,7 +103,7 @@ export default function SorteioPublico() {
       {/* Rodapé: toggle + branding */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 18 }}>
         <button type="button" className="btn btn--ghost btn--sm" onClick={() => setCampo((v) => !v)}>
-          ⬜ {campo ? 'Vista de lista' : 'Vista de campo'}
+          {campo ? 'Vista de lista' : 'Vista de campo'}
         </button>
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>gerado com Futty</span>
       </div>

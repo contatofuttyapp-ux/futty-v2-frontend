@@ -2,7 +2,8 @@
 // Mostra "ruído" (avatares temáticos + confirmados) a rolar e revela o resultado.
 // Avatares resolvidos SEMPRE por avatarParaCor() (fonte única).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { avatarParaCor, nomeJogador, iniciaisNome } from '../utils/avatar.js';
+import { avatarParaCor, nomeJogador } from '../utils/avatar.js';
+import SilhuetaJogador from './SilhuetaJogador';
 import { gerarImagemSorteio } from '../utils/sorteioCanvas.js';
 
 // ─── 1. CONSTANTES ────────────────────────────────────────────────────────────
@@ -252,7 +253,7 @@ function SlotCell({ corTime, winner, noiseUrls, durationMs, skipAll, onStopped }
                 color: '#fff',
               }}
             >
-              {iniciaisNome(nomeJogador(winner))}
+              <SilhuetaJogador size="64%" color="rgba(255,255,255,0.7)" />
             </div>
           )}
         </div>

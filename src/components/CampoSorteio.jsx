@@ -1,7 +1,8 @@
 // Futty v2.0 — Vista de campo (estilo FIFA) do resultado do sorteio.
 // Campo vertical: Time A (azul) no topo, Time B (vermelho) em baixo.
 import { useState } from 'react';
-import { urlAsset, iniciaisNome } from '../utils/avatar';
+import { urlAsset } from '../utils/avatar';
+import SilhuetaJogador from './SilhuetaJogador';
 
 const COR_A = '#3b82f6'; // azul
 const COR_B = '#ef4444'; // vermelho
@@ -69,7 +70,7 @@ function ChipJogador({ jogador, cor }) {
         {src && !falhou ? (
           <img src={src} alt="" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
         ) : (
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>{iniciaisNome(jogador.nome)}</span>
+          <SilhuetaJogador size="70%" color="rgba(255,255,255,0.65)" />
         )}
       </div>
       <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: '#fff', maxWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}>

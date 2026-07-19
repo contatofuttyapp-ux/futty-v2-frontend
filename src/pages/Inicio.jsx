@@ -69,9 +69,9 @@ async function gerarCromoDataURL(opts, chave) {
 // placeholder — quando este componente monta, a página já revelou com o cromo pronto
 // (ver `pageReady`), por isso nunca se vê um F aqui. `avatarEhIA` decide só o overlay
 // de convite (o canvas desenha as iniciais quando não há avatar IA).
-function CromoInicio({ cromo, avatarEhIA, nome }) {
+function CromoInicio({ cromo, avatarEhIA, nome, destino = '/figurinha', destinoLabel = 'Ver e personalizar a minha figurinha' }) {
   return (
-    <Link to="/figurinha" data-tour="player-card" className="cromo-inicio" aria-label="Ver e personalizar a minha figurinha">
+    <Link to={destino} data-tour="player-card" className="cromo-inicio" aria-label={destinoLabel}>
       {/* Sombra no chão — contra-fase com o bob: encolhe quando o cromo sobe. */}
       <div
         className="fig-shadow"
@@ -268,7 +268,7 @@ function EmptyState() {
           </Link>
         </div>
         <Link to="/explorar" className="btn btn--purple hud-corners">
-          🗺️ Explorar peladas
+          Explorar peladas
         </Link>
         <Link to="/figurinha" className="btn btn--purple-outline hud-corners">
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -473,6 +473,22 @@ export default function Inicio() {
 
   const noTeams = !teamsLoading && teams.length === 0;
 
+  // Desfechos dos meus pedidos de entrada (aceite/recusado) — ciclo v1 sem push.
+  const [desfechos, setDesfechos] = useState([]);
+  useEffect(() => {
+    let ativo = true;
+    apiFetch('/api/me/pedidos')
+      .then((d) => ativo && setDesfechos(d.pedidos || []))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
+  function dispensarDesfecho(id) {
+    setDesfechos((cur) => cur.filter((p) => p.id !== id));
+    apiFetch(`/api/me/pedidos/${id}`, { method: 'DELETE' }).catch(() => {});
+  }
+
   // REVELAÇÃO: o LoadingFutty (F grande, sozinho, centrado) segura o ecrã até o cromo
   // estar DESENHADO (dataURL pronto). Antes, o F do loader e o F-placeholder do cromo
   // apareciam sobrepostos no arranque; agora só há um F, e a página só aparece com o
@@ -488,7 +504,7 @@ export default function Inicio() {
         {/* Banner discreto para ativar notificações push */}
         {pushEstado === 'suportado' && !pushBannerFechado ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
-            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>🔔 Ativar notificações para não perderes nenhum jogo</span>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Ativar notificações para não perderes nenhum jogo</span>
             {/* Secundário: o cânone tira o verde daqui — activar notificações não é
                 a acção principal da página (o Início não tem uma; ver EmptyState). */}
             <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => pushSubscrever()}>Ativar</button>
@@ -496,10 +512,46 @@ export default function Inicio() {
           </div>
         ) : null}
 
-        {/* CTA pós-onboarding: criar a figurinha */}
-        {ctaFigurinha ? (
+        {/* DESFECHOS dos meus pedidos de entrada (ciclo v1, sem push): aceite →
+            destaque + link para a equipa; recusado → aviso digno. Dispensar apaga. */}
+        {desfechos.map((p) => (
+          <div key={p.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: p.status === 'approved' ? 'rgba(123,216,143,0.08)' : 'rgba(255,255,255,0.03)', border: p.status === 'approved' ? '1px solid rgba(123,216,143,0.5)' : '1px solid rgba(255,255,255,0.14)' }}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: p.status === 'approved' ? '#7bd88f' : '#c9c2d6' }}>
+                {p.status === 'approved' ? `Entraste na ${p.team?.nome}!` : `O pedido à ${p.team?.nome} não seguiu`}
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                {p.status === 'approved' ? 'O admin aceitou o teu pedido — bem-vindo.' : 'Sem drama: há mais peladas no Explorar.'}
+              </span>
+            </span>
+            {p.status === 'approved' && p.team?.slug ? (
+              <Link to={`/equipa/${p.team.slug}`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={() => dispensarDesfecho(p.id)}>
+                Ir à equipa
+              </Link>
+            ) : null}
+            <button type="button" aria-label="Dispensar" onClick={() => dispensarDesfecho(p.id)} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
+          </div>
+        ))}
+
+        {/* CARD PERSISTENTE — sem foto não há cromo: moldura V1 vazia + convite.
+            Sem X: persiste até haver foto (a estratégia "quase-obrigatória" do
+            onboarding dia-1). Substitui o antigo CTA dispensável quando não há avatar. */}
+        {!meLoading && user && !user.avatar_url ? (
+          <Link to="/perfil" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,160,23,0.4)', textDecoration: 'none', color: 'inherit' }}>
+            <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
+              <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: '#101012', border: '1.5px solid rgba(212,160,23,0.5)', clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(212,160,23,0.65)" strokeWidth="1.6"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
+              </span>
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Completa a tua figurinha</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>O teu cromo continua sem cara — 30 segundos e fica pronto.</span>
+            </span>
+            <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 11, color: '#f0c94a', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>Adicionar →</span>
+          </Link>
+        ) : ctaFigurinha ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
-            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>👤 Cria a tua figurinha</span>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Cria a tua figurinha</span>
             <Link to="/figurinha" className="btn btn--purple btn--sm hud-corners-s" onClick={dispensarCtaFigurinha}>Ir para Figurinha</Link>
             <button type="button" aria-label="Fechar" onClick={dispensarCtaFigurinha} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
@@ -512,7 +564,7 @@ export default function Inicio() {
             seco, dourado, sem palco. */}
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px', paddingTop: 'var(--space-lg)' }}>
           <div className="inicio-vline" aria-hidden="true" />
-          <CromoInicio cromo={cromo} avatarEhIA={cromoAvatarEhIA} nome={nome} />
+          <CromoInicio cromo={cromo} avatarEhIA={cromoAvatarEhIA} nome={nome} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar o meu time' : 'Ver e personalizar a minha figurinha'} />
           <NomeCromo nome={nome} />
           {teams[0] ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
@@ -580,7 +632,7 @@ export default function Inicio() {
               proximoJogo.ausente_proximo ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '8px 0 4px' }}>
                   <span className="hud-corners-s" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--danger)', background: 'rgba(248,113,113,0.12)', border: '1px solid var(--danger)', padding: '4px 10px' }}>
-                    ❌ Ausente declarado
+                    Ausente declarado
                   </span>
                   <button type="button" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ border: 'none', background: 'transparent', color: 'var(--neon)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', padding: 0, opacity: ausenciaBusy ? 0.6 : 1 }}>
                     {ausenciaBusy ? '…' : 'Afinal vou'}
@@ -626,12 +678,12 @@ export default function Inicio() {
               <Link to={`/equipa/${campSlug}/campeonato`} className="hud-corners" style={{ textDecoration: 'none', display: 'block', marginTop: 14, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', padding: 'var(--space-md)' }}>
                 {campeonato.estado === 'terminado' ? (
                   <>
-                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#d4a017' }}>🏆 {campeonato.nome} — Campeão: {nomeCampeao(campeonato)}</div>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#d4a017' }}>{campeonato.nome} — Campeão: {nomeCampeao(campeonato)}</div>
                     <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{campeonato.time_a_nome} {campeonato.time_a_pontos} × {campeonato.time_b_pontos} {campeonato.time_b_nome}</div>
                   </>
                 ) : (
                   <>
-                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#fff' }}>⚽ {campeonato.nome}</div>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#fff' }}>{campeonato.nome}</div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8, color: '#fff', fontWeight: 700 }}>
                       <span>{campeonato.time_a_nome}</span>
                       <span style={{ color: '#d4a017', fontSize: 18 }}>{campeonato.time_a_pontos}</span>

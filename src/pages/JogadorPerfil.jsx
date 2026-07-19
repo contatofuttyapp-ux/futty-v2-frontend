@@ -6,10 +6,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
-import { urlAsset, iniciaisNome } from '../utils/avatar';
+import { urlAsset } from '../utils/avatar';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import EscudoEquipa from '../components/EscudoEquipa';
+import SilhuetaJogador from '../components/SilhuetaJogador';
 import Icon from '../components/Icon';
 import '../styles/app.css';
 
@@ -205,7 +206,7 @@ export default function JogadorPerfil() {
                     <img className={ehRecorte ? 'perfil-cutout' : 'perfil-faded'} src={imgSrc} alt="" />
                   ) : (
                     <span style={{ display: 'grid', placeItems: 'center', width: 180, height: 180, margin: '40px auto', clipPath: CLIP, background: 'rgba(212,160,23,0.1)', border: `1px solid ${OURO}`, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 56, color: OURO }}>
-                      {iniciaisNome(nomeShow)}
+                      <SilhuetaJogador size="64%" color="rgba(212,160,23,0.75)" />
                     </span>
                   )}
                 </div></div>
@@ -336,7 +337,7 @@ export default function JogadorPerfil() {
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, flex: 1, color: 'rgba(255,255,255,0.78)' }}>
                       {fmtLongo(j.data)}
                       <span style={{ display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-                        {j.foi_artilheiro ? '⚽ artilheiro ' : ''}{j.foi_destaque ? '✨ destaque' : ''}{!j.foi_artilheiro && !j.foi_destaque ? '—' : ''}
+                        {j.foi_artilheiro ? 'artilheiro ' : ''}{j.foi_destaque ? 'destaque' : ''}{!j.foi_artilheiro && !j.foi_destaque ? '—' : ''}
                       </span>
                     </span>
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 12, padding: '2px 8px', clipPath: CLIP_S, color: r.cor, border: `1px solid ${r.bd}` }}>{r.txt}</span>

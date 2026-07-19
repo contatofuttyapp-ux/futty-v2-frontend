@@ -152,10 +152,10 @@ export default function ProductTour({ onDone }) {
             </button>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={() => irPara('/criar-equipa')} className="btn btn--ghost btn--sm" style={{ flex: 1 }}>
-                ➕ Criar time
+                Criar time
               </button>
               <button type="button" onClick={() => irPara('/explorar')} className="btn btn--ghost btn--sm" style={{ flex: 1 }}>
-                🔍 Explorar
+                Explorar
               </button>
             </div>
           </div>

@@ -2292,3 +2292,22 @@
   .perfil-tile { opacity:1; transform:none; animation: none; }
   .perfil-num { animation: none; background: none; -webkit-text-fill-color: currentColor; }
 }
+
+/* Onboarding dia-1 — "deixar para depois" só aparece aos ~4s (quase-obrigatória). */
+@keyframes onbAparece { to { opacity: 1; } }
+
+/* Silhueta-jogador v4 — respiração do traço (como o radar da vitrine). */
+.sil-corpo { stroke-opacity: 0.55; fill-opacity: 0.12; animation: silRespira 5.5s ease-in-out infinite; }
+.sil-halo { stroke-opacity: 0; animation: silHalo 5.5s ease-in-out infinite; }
+@keyframes silRespira {
+  0%, 100% { stroke-opacity: 0.55; fill-opacity: 0.12; }
+  50%      { stroke-opacity: 1;    fill-opacity: 0.2; }
+}
+@keyframes silHalo {
+  0%, 100% { stroke-opacity: 0; }
+  50%      { stroke-opacity: 0.3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sil-corpo, .sil-halo { animation: none; }
+  .sil-corpo { stroke-opacity: 0.7; fill-opacity: 0.14; }
+}

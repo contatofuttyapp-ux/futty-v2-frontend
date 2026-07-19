@@ -1,6 +1,6 @@
 // Futty v2.0 — Registo (email/password)
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import GoogleIcon from '../components/GoogleIcon';
 import FuttyLogo from '../components/FuttyLogo';
@@ -13,6 +13,7 @@ import '../styles/auth.css';
 const MAX_NASCIMENTO = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
 export default function Register() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -44,7 +45,9 @@ export default function Register() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/home`,
+        // Registos NOVOS aterram no onboarding dia-1 (boas-vindas → foto → identidade);
+        // contas antigas nunca passam por lá.
+        emailRedirectTo: `${window.location.origin}/onboarding`,
         data: { birthdate }, // guardado em user_metadata; o backend persiste em users.birthdate
       },
     });
@@ -59,7 +62,8 @@ export default function Register() {
     if (data.user && !data.session) {
       setSuccess('Conta criada! Confirma o teu email para ativar a conta.');
     } else {
-      setSuccess('Conta criada com sucesso!');
+      // Sessão imediata → onboarding dia-1.
+      navigate('/onboarding', { replace: true });
     }
   }
 

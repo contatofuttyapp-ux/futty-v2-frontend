@@ -3,15 +3,15 @@
 //  - avatarUrl: foto direta (uso geral)
 //  - jogador + cor: resolve via avatarParaCor() (fonte única) com fallback a iniciais
 import { useState } from 'react';
-import { initials } from '../utils/teamColors';
-import { avatarParaCor, nomeJogador, urlAsset } from '../utils/avatar';
+import SilhuetaJogador from './SilhuetaJogador';
+import { avatarParaCor, urlAsset } from '../utils/avatar';
 
-export default function PlayerAvatar({ nome, avatarUrl, jogador = null, cor = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null }) {
+export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null }) {
   const [falhou, setFalhou] = useState(false);
 
   // Fonte da imagem: avatarUrl resolvido (frontend/backend/absoluto) OU por cor do time.
   const src = avatarUrl ? urlAsset(avatarUrl) : (jogador && cor ? avatarParaCor(jogador, cor) : null);
-  const nomeFinal = nome || (jogador ? nomeJogador(jogador) : '');
+
 
   const cls = [
     'pavatar',
@@ -33,7 +33,7 @@ export default function PlayerAvatar({ nome, avatarUrl, jogador = null, cor = nu
       {src && !falhou ? (
         <img src={src} alt="" onError={() => setFalhou(true)} />
       ) : (
-        initials(nomeFinal) || '?'
+        <SilhuetaJogador size="78%" />
       )}
     </div>
   );

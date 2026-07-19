@@ -14,7 +14,7 @@ export default function CampeonatoStandings({ campeonato }) {
     const venceu = venc === lado;
     return (
       <tr style={{ background: venceu ? 'rgba(212,160,23,0.12)' : 'transparent' }}>
-        <td style={{ ...td, textAlign: 'left', fontWeight: 800, color: venceu ? '#d4a017' : '#fff' }}>{venceu ? '🏆 ' : ''}{p.nome}</td>
+        <td style={{ ...td, textAlign: 'left', fontWeight: 800, color: venceu ? '#d4a017' : '#fff' }}>{venceu ? '★ ' : ''}{p.nome}</td>
         <td style={td}>{c.jornadas_jogadas}</td>
         <td style={td}>{p.v}</td>
         <td style={td}>{p.e}</td>

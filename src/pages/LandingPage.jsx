@@ -1,4 +1,5 @@
 // Futty v2.0 — Landing page (rota "/") para visitantes não autenticados.
+import Icon from '../components/Icon';
 // Página única com secções: hero, figurinha, como funciona, planos, CTA, footer.
 // Mobile-first, max-width 480px, tokens CSS + AuroraBg (global via Layout).
 import { Link } from 'react-router-dom';
@@ -14,15 +15,15 @@ const EXEMPLOS = [
 ];
 
 const PASSOS = [
-  { icon: '⚽', titulo: 'Sorteia os times', texto: 'Confirma presença, sorteia com quem confirmou. Vista em lista ou campo estilo FIFA.' },
-  { icon: '🏆', titulo: 'Acompanha o ranking', texto: 'Artilheiro, destaque do jogo, nota média. Campeonato com tabela classificativa.' },
-  { icon: '🃏', titulo: 'Cria a tua figurinha', texto: 'Avatar IA personalizado. Compartilha e mostra quem és dentro do campo.' },
+  { icon: 'bola', titulo: 'Sorteia os times', texto: 'Confirma presença, sorteia com quem confirmou. Vista em lista ou campo estilo FIFA.' },
+  { icon: 'ranking', titulo: 'Acompanha o ranking', texto: 'Artilheiro, destaque do jogo, nota média. Campeonato com tabela classificativa.' },
+  { icon: 'figurinha', titulo: 'Cria a tua figurinha', texto: 'Avatar IA personalizado. Compartilha e mostra quem és dentro do campo.' },
 ];
 
 const PLANOS = [
   { id: 'free', nome: 'Free', preco: 'Grátis', bullets: ['Sorteio e ranking', 'Resenha do grupo', '3 avatares IA'], cta: 'Começar grátis' },
   { id: 'pro', nome: 'Pro ★', preco: 'R$9,90/mês', bullets: ['Tudo do Free', '50 avatares IA/mês', 'Sem anúncios'], cta: 'Assinar Pro', destaque: true },
-  { id: 'elite', nome: 'Elite 👑', preco: 'R$24,90/mês', bullets: ['Tudo do Pro', '100 avatares IA/mês', 'Kit Elite dourado'], cta: 'Assinar Elite' },
+  { id: 'elite', nome: 'Elite', preco: 'R$24,90/mês', bullets: ['Tudo do Pro', '100 avatares IA/mês', 'Kit Elite dourado'], cta: 'Assinar Elite' },
 ];
 
 const H = { fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, color: '#fff' };
@@ -83,7 +84,7 @@ export default function LandingPage() {
         <div style={{ display: 'grid', gap: 12 }}>
           {PASSOS.map((p) => (
             <div key={p.titulo} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: 16, borderRadius: 'var(--radius-lg)', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
-              <span style={{ fontSize: 30, lineHeight: 1, flexShrink: 0 }}>{p.icon}</span>
+              <Icon name={p.icon} size={30} style={{ flexShrink: 0 }} />
               <div>
                 <div style={{ ...H, fontSize: 17 }}>{p.titulo}</div>
                 <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '4px 0 0', lineHeight: 1.5 }}>{p.texto}</p>
