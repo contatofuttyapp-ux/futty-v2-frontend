@@ -112,9 +112,6 @@ export default function JogadorPerfil() {
   // (aura, nota, valores das stats, conquistas activas, escudos/nomes).
   const OURO = GOLD;
   const ROXO = '#8b5cf6';
-  // Aura morre (transparente) a ~64% do raio → sobra margem grande na caixa (480×520)
-  // para o blur nunca chegar a nenhuma borda. Fade completo e simétrico nas 4 direcções.
-  const AURA = 'radial-gradient(ellipse 54% 50% at 50% 48%, rgba(212,160,23,0.5) 0%, rgba(212,160,23,0.15) 42%, transparent 64%)';
 
   const jogador = data?.jogador;
   const radar = data?.radar;
@@ -198,24 +195,24 @@ export default function JogadorPerfil() {
           <p className="muted">Jogador não encontrado.</p>
         ) : (
           <>
-            {/* 1. HERÓI — recorte puro, aura atrás, respiração do cromo */}
-            <div style={{ position: 'relative', textAlign: 'center', padding: '6px 0 4px' }}>
-              <div className="perfil-glow" style={{ background: AURA }} />
-              {/* Bloco próprio para o avatar → o nome/meta/escudos ficam nas LINHAS abaixo
-                  (senão o nome inline-block fluía à direita do avatar inline-block). */}
-              <div style={{ display: 'block', lineHeight: 0 }}>
-                <div className="perfil-bob"><div className="perfil-sway">
-                  {imgSrc ? (
-                    <img className={ehRecorte ? 'perfil-cutout' : 'perfil-faded'} src={imgSrc} alt="" />
-                  ) : (
-                    <span style={{ display: 'grid', placeItems: 'center', width: 180, height: 180, margin: '40px auto', clipPath: CLIP, background: 'rgba(212,160,23,0.1)', border: `1px solid ${OURO}`, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 56, color: OURO }}>
-                      <SilhuetaJogador size="64%" color="rgba(212,160,23,0.75)" />
-                    </span>
-                  )}
-                </div></div>
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <span style={{ display: 'inline-block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 30, lineHeight: 1, background: nomeGrad, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{nomeShow}</span>
+            {/* 1. HERÓI — TRANSPLANTE DIRETO do harness glow-organico.html, VARIANTE A.
+                Estrutura/valores byte a byte da bancada: palco 330×470 → glow 300×344
+                (respiraA no PRÓPRIO glow) → cutout 250×284 (máscara 86%, zero drop-shadow)
+                → nome absoluto (bottom:34px). Só o src do cutout é o real do jogador.
+                Meta + escudos fluem ABAIXO do palco (conteúdo do app, não do palco). */}
+            <div style={{ position: 'relative', textAlign: 'center' }}>
+              <div className="perfil-palco">
+                <div className="perfil-glow" />
+                {imgSrc ? (
+                  <img className={ehRecorte ? 'perfil-cutout' : 'perfil-faded'} src={imgSrc} alt="" />
+                ) : (
+                  <span style={{ position: 'absolute', left: '50%', bottom: 96, transform: 'translateX(-50%)', zIndex: 1, display: 'grid', placeItems: 'center', width: 180, height: 180, clipPath: CLIP, background: 'rgba(212,160,23,0.1)', border: `1px solid ${OURO}` }}>
+                    <SilhuetaJogador size="64%" color="rgba(212,160,23,0.75)" />
+                  </span>
+                )}
+                <div className="perfil-nome-wrap">
+                  <span style={{ display: 'inline-block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 42, lineHeight: 1, background: nomeGrad, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{nomeShow}</span>
+                </div>
               </div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, fontFamily: "'Rajdhani', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
                 {jogador.posicao != null ? <span>{jogador.posicao}º de {jogador.total_com_nota}</span> : <span>Sem nota ainda</span>}

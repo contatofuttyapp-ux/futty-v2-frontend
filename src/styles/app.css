@@ -2201,32 +2201,36 @@
    Herói = recorte puro com aura + respiração; stats-espectáculo (anel/radar/
    sparkline/tiles em cascata). Namespace .perfil-*, aditivo. reduced-motion estático.
    ═══════════════════════════════════════════════════════════════════════════════ */
-@keyframes perfilBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-@keyframes perfilSway { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
-.perfil-bob { display:inline-block; position:relative; z-index:1; will-change:transform; animation: perfilBob 4.8s cubic-bezier(.45,0,.55,1) infinite; }
-.perfil-sway { display:inline-block; will-change:transform; animation: perfilSway 6.7s cubic-bezier(.45,0,.55,1) infinite; }
+/* HERÓI — TRANSPLANTE DIRETO do harness glow-organico.html, VARIANTE A (byte a byte).
+   NADA reescalado: o harness É a resposta. Palco 330×470; glow 300×344 (blur 46, a
+   respiração respiraA vai no PRÓPRIO glow — o cutout fica estático); cutout 250×284 com
+   máscara 86% e ZERO drop-shadow; nome absoluto a bottom:34px. */
+.perfil-palco { position:relative; width:330px; height:470px; max-width:100%; margin:14px auto 0; overflow:visible; }
 
-/* Herói — recorte MAIOR, focado em cima (rosto/braços; short fora via cover+top).
-   Aura ATRÁS elíptica e difusa (não bola). Cor da aura = inline (--vitrine no JS). */
-/* Aura MAIOR que a foto (envolve-a), fade radial completo nas 4 direcções → sem aresta. */
-/* SÓ o glow desvanece (o avatar renderiza inteiro/nítido). Caixa GRANDE + a aura (AURA
-   inline) morre bem dentro dela → sobra folga a toda a volta para o blur nunca ser
-   cortado por nenhuma borda (topo incluído). overflow visível por garantia. */
-.perfil-glow { position:absolute; left:50%; top:168px; transform:translate(-50%,-50%); width:480px; height:520px; z-index:0; pointer-events:none; overflow:visible; filter: blur(28px); }
-/* Avatar herói — CENTRADO (margin auto + o pai é text-align:center), recorte à cintura
-   (cover + object-position topo). Sem scale (era o que criava o gap gigante até ao nome). */
-.perfil-cutout { width:300px; height:340px; max-width:88vw; object-fit:cover; object-position:50% 6%; display:block; margin:0 auto;
-  /* Fade SÓ na borda inferior (últimos ~12%). Topo e lados nítidos, inteiros. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
-  filter: drop-shadow(0 10px 16px rgba(0,0,0,.55)) drop-shadow(0 0 20px rgba(212,160,23,.5)); }
-/* O avatar NUNCA leva fade/máscara — renderiza inteiro e nítido (como aprovado no
-   original). Quem desvanece é só o .perfil-glow atrás. */
-.perfil-faded { width:300px; height:340px; max-width:88vw; object-fit:cover; object-position:50% 12%; display:block; margin:0 auto;
-  /* Fade SÓ na borda inferior (últimos ~12%). Topo e lados nítidos, inteiros. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
-  filter: drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
+.perfil-glow { position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
+  z-index:0; pointer-events:none;
+  width:300px; height:344px;
+  background: radial-gradient(ellipse 50% 48% at 50% 45%,
+    rgba(212,160,23,.55) 0%, rgba(212,160,23,.24) 34%,
+    rgba(212,160,23,.07) 56%, transparent 78%);
+  filter: blur(46px);
+  animation: respiraA 7s ease-in-out infinite; }
+@keyframes respiraA { 0%,100% { transform:translate(-50%,-50%) scale(1);    opacity:.92; }
+                      50%      { transform:translate(-50%,-50%) scale(1.06); opacity:1; } }
+
+.perfil-cutout { position:absolute; left:50%; bottom:108px; transform:translateX(-50%);
+  width:250px; height:284px; object-fit:cover; object-position:50% 6%; z-index:1;
+  -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  filter: none; }        /* <-- zero drop-shadow no avatar (lei do harness) */
+/* Fallback foto (não-recorte): mesma caixa do harness, foco um nada mais baixo. */
+.perfil-faded { position:absolute; left:50%; bottom:96px; transform:translateX(-50%);
+  width:250px; height:284px; object-fit:cover; object-position:50% 12%; z-index:1;
+  -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  filter: none; }
+
+.perfil-nome-wrap { position:absolute; left:0; right:0; bottom:34px; text-align:center; z-index:2; }
 
 /* Anel da nota (count-up acompanha por JS). Cor via --vitrine (A/B). */
 .perfil-ringval { fill:none; stroke: var(--vitrine, #d4a017); stroke-width:9; stroke-linecap:round; stroke-dasharray:326; stroke-dashoffset:326;
@@ -2282,7 +2286,7 @@
 @keyframes perfilTile { to { opacity:1; transform:translateY(0); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .perfil-bob, .perfil-sway { animation: none; }
+  .perfil-glow { animation: none; }
   .perfil-ringval { stroke-dashoffset: var(--ring-off, 326); animation: none; }
   .perfil-radarshape { transform: scale(1); fill-opacity: .22; filter: drop-shadow(0 0 5px var(--vitrine, #d4a017)); animation: none; }
   .perfil-radarbreath { animation: none; transform: none; }

@@ -26,6 +26,10 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
   pele ouro amostrada da referência — zero branco no metal/glow.
 - **Ícones = lucide/Icon da casa (`/icons/*.svg`); emoji SÓ como conteúdo (reações).**
 - Loading: `LoadingFutty`/`FuttyLoader` (o F pinta-se); `.page-reveal` na entrada.
+- **Vitrine (herói): glow SELADO** — transplante byte-a-byte do harness variante A
+  (palco 330×470, glow 300×344 blur46 `respiraA` no PRÓPRIO glow, cutout 250×284 sem
+  drop-shadow). Ref: `docs/looks/vitrine-glow-aprovado.png`. Nunca reescalar "para o
+  app"; alterações requerem NOVA aprovação visual.
 
 ## Regras de produto vivas
 - Posição (GL/DEF/MEI/ATA) = decisão do PRÓPRIO jogador (hub da equipa); admin corrige.

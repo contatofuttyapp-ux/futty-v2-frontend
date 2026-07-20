@@ -999,12 +999,13 @@ export default function Figurinha() {
                 <Share2 size={16} /> Compartilhar
               </button>
             </div>
+          </div>
 
-            {/* SELOS DE HONRA (Vaga 11C) — olhinho: mostra/oculta cada selo do cromo.
-                Máx 2 no cromo (prioridade campeonato > ranking); a honra fica sempre
-                na vitrine. */}
-            {selos.length ? (
-              <div style={{ marginTop: 20 }}>
+          {/* SELOS DE HONRA (Vaga 11C) — SECÇÃO PRÓPRIA full-width, ABAIXO da linha
+              Baixar/Compartilhar; alcançável só por scroll (nunca empurra a 1ª dobra).
+              Olhinho: mostra/oculta cada selo do cromo (máx 2; a honra fica na vitrine). */}
+          {selos.length ? (
+              <div style={{ marginTop: 22 }}>
                 <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: '.06em', color: '#f0c94a', textTransform: 'uppercase', marginBottom: 4 }}>Selos de honra</div>
                 <p className="muted" style={{ fontSize: 11, margin: '0 0 12px', lineHeight: 1.4 }}>Toca no olho para mostrar/ocultar no cromo (máx 2). A honra fica sempre na tua vitrine.</p>
                 <div style={{ display: 'grid', gap: 10 }}>
@@ -1029,8 +1030,7 @@ export default function Figurinha() {
                   })}
                 </div>
               </div>
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </main>
 
