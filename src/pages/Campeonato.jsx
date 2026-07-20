@@ -1,129 +1,382 @@
-// Futty v2.0 — Campeonato (/equipa/:slug/campeonato): classificação, jornadas
-// e gestão (admin). Confetti ao ver o campeão.
-import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+// Futty v2.0 — Campeonato (Vaga 11B): hub (lista + criar) e detalhe (tabela/
+// bracket + lançar resultado + celebração). Modelo N times, Storage no backend.
+// A cerimónia do sorteio é REUTILIZADA para montar os times.
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { useApi } from '../hooks/useApi';
 import { useTeam } from '../hooks/useTeam';
-import { celebrarTop3 } from '../hooks/useConfetti';
-import { nomeCampeao, textoJornada } from '../utils/campeonato';
+import { urlAsset } from '../utils/avatar';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
-import CampeonatoStandings from '../components/CampeonatoStandings';
-import RegistarJornada from '../components/RegistarJornada';
+import Icon from '../components/Icon';
+import CerimoniaSorteio from '../components/CerimoniaSorteio';
+import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
 import '../styles/app.css';
 
+const RAJ = "'Rajdhani', sans-serif";
+
+// Avatar pequeno (foto ou iniciais) para chips de jogador.
+function MiniAvatar({ p, size = 20 }) {
+  const inic = (p.nome || '?').trim().slice(0, 1).toUpperCase();
+  if (p.avatar_url) return <img src={urlAsset(p.avatar_url)} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top' }} />;
+  return <span style={{ width: size, height: size, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(139,92,246,0.25)', color: '#c9b6ff', fontFamily: RAJ, fontWeight: 800, fontSize: size * 0.5 }}>{inic}</span>;
+}
+
 export default function Campeonato() {
-  const { slug } = useParams();
+  const { slug, id } = useParams();
+  return id ? <Detalhe slug={slug} id={id} /> : <Hub slug={slug} />;
+}
+
+// ============ HUB (lista + criar) ============
+function Hub({ slug }) {
+  const navigate = useNavigate();
   const { team } = useTeam(slug);
-  const { data, loading, reload } = useApi(`/api/equipas/${slug}/campeonato`);
-  const [toast, setToast] = useState(null);
-  const [confirmTerminar, setConfirmTerminar] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const celebrou = useRef(false);
-
   const isAdmin = team?.role === 'admin';
-  const c = data?.campeonato || null;
-  const jornadas = data?.jornadas || [];
-  const terminado = c?.estado === 'terminado';
+  const [lista, setLista] = useState(null);
+  const [criar, setCriar] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  // Confetti ao primeiro render do campeonato terminado.
   useEffect(() => {
-    if (terminado && !celebrou.current) {
-      celebrou.current = true;
-      celebrarTop3(1);
-    }
-  }, [terminado]);
+    let ativo = true;
+    apiFetch(`/api/equipas/${slug}/campeonatos`)
+      .then((d) => ativo && setLista(d.campeonatos || []))
+      .catch((e) => ativo && setToast({ tipo: 'error', mensagem: e.message }));
+    return () => { ativo = false; };
+  }, [slug]);
 
-  async function terminar() {
-    setConfirmTerminar(false);
-    setBusy(true);
-    try {
-      await apiFetch(`/api/campeonato/${c.id}/terminar`, { method: 'POST' });
-      await reload();
-      setToast({ tipo: 'success', mensagem: 'Campeonato terminado.' });
-    } catch (e) {
-      setToast({ tipo: 'error', mensagem: e.message });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const podeRegistar = isAdmin && c && c.estado === 'ativo' && (c.jornadas_jogadas || 0) < c.num_jornadas;
+  if (criar) return <Wizard slug={slug} onCancel={() => setCriar(false)} onCriado={(c) => navigate(`/equipa/${slug}/campeonato/${c.id}`, { state: { cerimonia: !!c.seed } })} />;
 
   return (
     <div className="app-shell">
       <Topbar hud="CAMPEONATO" back={`/equipa/${slug}`} />
-      <main className="app-main page-reveal">
-        {loading ? (
-          <LoadingFutty />
-        ) : !c ? (
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', textAlign: 'center', padding: '30px 16px' }}><div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16 }}>Este time ainda não tem campeonato</div><p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>Os campeonatos internos chegam depois do sorteio novo (formatos: pontos corridos e mata-mata).</p></div>
+      <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
+        <h1 className="camp-title" style={{ fontSize: 22 }}>Campeonatos</h1>
+        <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Torneios internos da equipa — o ranking fica intocado.</p>
+
+        {lista === null ? <LoadingFutty /> : lista.length === 0 ? (
+          <div className="camp-card" style={{ textAlign: 'center', padding: '26px 14px' }}>
+            <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 16 }}>Ainda sem campeonatos</div>
+            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{isAdmin ? 'Cria o primeiro — pontos corridos ou mata-mata.' : 'O admin cria o primeiro torneio da equipa.'}</p>
+          </div>
         ) : (
-          <>
-            {/* Topo */}
-            <h1 className="app-page-title" style={{ marginBottom: 4 }}>{c.nome}</h1>
-            <span className={`badge badge--${terminado ? 'terminado' : 'sorteado'}`}>{terminado ? 'Terminado' : 'Em curso'}</span>
-
-            {/* Banner do campeão */}
-            {terminado ? (
-              <div style={{ marginTop: 12, padding: '14px', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', textAlign: 'center' }}>
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 20, fontWeight: 800, color: '#d4a017' }}>Campeão: {nomeCampeao(c)}</div>
-                <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 8 }} onClick={() => celebrarTop3(1)}>Celebrar</button>
+          lista.map((c) => (
+            <button key={c.id} type="button" className="camp-card" onClick={() => navigate(`/equipa/${slug}/campeonato/${c.id}`)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}>
+              <div className="camp-card__n">{c.nome}</div>
+              <div className="row" style={{ marginTop: 6 }}>
+                <span className={`camp-chip ${c.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{c.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
+                <span className={`camp-chip ${c.estado === 'terminado' ? 'camp-chip--gold' : 'camp-chip--live'}`}>{c.estado === 'terminado' ? 'Terminado' : 'Em curso'}</span>
+                <span className="camp-chip">{c.n_times} times</span>
               </div>
-            ) : null}
+              {c.campeao ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#f0c94a', marginTop: 8, fontFamily: RAJ, fontWeight: 700 }}><Icon name="trofeu" size={14} color="#d4a017" /> {c.campeao}</div> : null}
+            </button>
+          ))
+        )}
 
-            {/* Classificação */}
-            <h2 className="section-title">Classificação</h2>
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', padding: '10px' }}>
-              <CampeonatoStandings campeonato={c} />
+        {isAdmin ? (
+          <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 16 }}>
+            <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} onClick={() => setCriar(true)}>＋ Criar campeonato</button>
+          </div>
+        ) : null}
+      </main>
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
+    </div>
+  );
+}
+
+// ============ WIZARD (criar) ============
+function Wizard({ slug, onCancel, onCriado }) {
+  const { members } = useTeam(slug);
+  const [passo, setPasso] = useState(1);
+  const [nome, setNome] = useState('');
+  const [formato, setFormato] = useState('pontos');
+  const [nomes, setNomes] = useState(['', '', '', '']);
+  const [convidados, setConvidados] = useState([]);
+  const [convInput, setConvInput] = useState('');
+  const [atrib, setAtrib] = useState([]); // Vaga 11C — plantel por time (chaves)
+  const [timeSel, setTimeSel] = useState(0);
+  const [criando, setCriando] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const KITN = ['Ouro', 'Roxo', 'Prata', 'Bronze', 'Ciano', 'Rosa', 'Verde', 'Âmbar'];
+  const CORES = ['#d4a017', '#8b5cf6', '#aab4c8', '#c2652e', '#35b6a8', '#d1689e', '#6fae52', '#e08a2e'];
+
+  // Pool de jogadores atribuíveis: membros da equipa + convidados (chips).
+  const pool = [
+    ...(members || []).map((m) => ({ key: `u:${m.id}`, user_id: m.id, nome: m.nome || (m.email ? m.email.split('@')[0] : 'Jogador'), avatar_url: m.avatar_url || null, convidado: false })),
+    ...convidados.map((c, i) => ({ key: `g:${i}:${c}`, user_id: null, nome: c, avatar_url: null, convidado: true })),
+  ];
+  const poolByKey = Object.fromEntries(pool.map((p) => [p.key, p]));
+  const atribSafe = nomes.map((_, i) => atrib[i] || []);
+  const atribuidos = new Set(atribSafe.flat());
+  const livres = pool.filter((p) => !atribuidos.has(p.key));
+  const totalAtrib = atribuidos.size;
+
+  function setNomeT(i, v) { setNomes((cur) => cur.map((x, k) => (k === i ? v : x))); }
+  function addTime() { if (nomes.length < 8) setNomes((c) => [...c, '']); }
+  function delTime(i) { if (nomes.length > 2) { setNomes((c) => c.filter((_, k) => k !== i)); setAtrib((c) => c.filter((_, k) => k !== i)); } }
+  function addConv() { const v = convInput.trim(); if (v) { setConvidados((c) => [...c, v]); setConvInput(''); } }
+  function porNoTime(key) { setAtrib(() => atribSafe.map((arr, i) => (i === timeSel ? [...arr, key] : arr))); }
+  function tiraDoTime(key) { setAtrib(() => atribSafe.map((arr) => arr.filter((k) => k !== key))); }
+
+  async function criar(modo) {
+    setCriando(true);
+    try {
+      const nomesLimpos = nomes.map((x, i) => x.trim() || `Time ${i + 1}`);
+      let body;
+      if (modo === 'sorteio') {
+        body = { nome: nome.trim(), formato, modo: 'sorteio', num_times: nomes.length, nomes: nomesLimpos, convidados };
+      } else {
+        body = { nome: nome.trim(), formato, modo: 'manual', nomes: nomesLimpos };
+        if (totalAtrib > 0) {
+          body.plantel = atribSafe.map((arr) => arr.map((k) => poolByKey[k]).filter(Boolean).map((p) => ({ user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url, convidado: p.convidado })));
+        }
+      }
+      const r = await apiFetch(`/api/equipas/${slug}/campeonatos`, { method: 'POST', body: JSON.stringify(body) });
+      onCriado(r.campeonato);
+    } catch (e) {
+      setToast({ tipo: 'error', mensagem: e.message });
+      setCriando(false);
+    }
+  }
+
+  const dots = [1, 2, 3, 4].map((s) => <i key={s} className={s <= passo ? 'on' : ''} />);
+
+  return (
+    <div className="app-shell">
+      <Topbar hud="CRIAR CAMPEONATO" back={`/equipa/${slug}`} />
+      <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
+        <div className="camp-steps">{dots}</div>
+
+        {passo === 1 && (
+          <>
+            <div className="camp-title" style={{ fontSize: 20, textAlign: 'center' }}>NOVO CAMPEONATO</div>
+            <p className="muted" style={{ fontSize: 12, textAlign: 'center', margin: '0 0 18px' }}>Um torneio interno — os times são do campeonato; o ranking da equipa fica intocado.</p>
+            <label className="lbl-hud" style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Nome do campeonato</label>
+            <input className="input input--hud" value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Copa da Resenha" style={{ width: '100%', fontFamily: RAJ, fontSize: 16, fontWeight: 700 }} />
+            <div style={{ marginTop: 22, display: 'grid', gap: 9 }}>
+              <button type="button" className="btn hud-corners cta-gold" disabled={!nome.trim()} onClick={() => setPasso(2)}>Continuar</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={onCancel}>Cancelar</button>
+            </div>
+          </>
+        )}
+
+        {passo === 2 && (
+          <>
+            <div className="section-title" style={{ marginTop: 2 }}>Escolhe o formato</div>
+            <div className={`camp-fopt ${formato === 'pontos' ? 'on' : ''}`} onClick={() => setFormato('pontos')} role="button" tabIndex={0}>
+              <div><div className="camp-fopt__t">Pontos corridos</div><div className="camp-fopt__d">Todos contra todos. Vence quem somar mais pontos na tabela.</div></div>
+            </div>
+            <div className={`camp-fopt ${formato === 'mata' ? 'on' : ''}`} onClick={() => setFormato('mata')} role="button" tabIndex={0}>
+              <div><div className="camp-fopt__t">Mata-mata</div><div className="camp-fopt__d">Eliminatória direta. Quem perde sai; o vencedor avança até à final.</div></div>
+            </div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Fase de grupos chega na v2.</div>
+            <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
+              <button type="button" className="btn hud-corners cta-gold" onClick={() => setPasso(3)}>Continuar</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(1)}>Voltar</button>
+            </div>
+          </>
+        )}
+
+        {passo === 3 && (
+          <>
+            <div className="section-title" style={{ marginTop: 2 }}>Os times do campeonato</div>
+            {nomes.map((n, i) => (
+              <div key={i} className="camp-slot">
+                <span className="camp-tab__dot" style={{ background: ['#d4a017', '#8b5cf6', '#aab4c8', '#c2652e', '#35b6a8', '#d1689e', '#6fae52', '#e08a2e'][i], borderRadius: 2, boxShadow: 'none' }} />
+                <input value={n} maxLength={40} onChange={(e) => setNomeT(i, e.target.value)} placeholder={`Time ${i + 1}`} />
+                <span className="camp-slot__c">{KITN[i]}</span>
+                {nomes.length > 2 ? <button type="button" aria-label="Remover" onClick={() => delTime(i)} style={{ border: 'none', background: 'transparent', color: '#6f6a80', cursor: 'pointer', fontSize: 15 }}>✕</button> : null}
+              </div>
+            ))}
+            {nomes.length < 8 ? <button type="button" onClick={addTime} style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.06em', color: '#f0c94a', background: 'rgba(212,160,23,.08)', border: '1px dashed rgba(212,160,23,.5)', padding: '7px 12px', cursor: 'pointer', clipPath: 'polygon(8% 0,92% 0,100% 28%,100% 72%,92% 100%,8% 100%,0 72%,0 28%)' }}>＋ Time</button> : null}
+
+            <div className="section-title" style={{ fontSize: 13 }}>Convidados sem app <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(só o nome — entram no sorteio)</span></div>
+            <div className="row" style={{ marginBottom: 8 }}>
+              {convidados.map((c, i) => (
+                <span key={i} className="camp-chip camp-chip--roxo" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{c}<span onClick={() => setConvidados((cur) => cur.filter((_, k) => k !== i))} style={{ cursor: 'pointer' }}>✕</span></span>
+              ))}
+            </div>
+            <div className="row">
+              <input className="input input--hud" value={convInput} onChange={(e) => setConvInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addConv())} placeholder="Nome do convidado…" style={{ flex: 1, fontFamily: RAJ }} />
+              <button type="button" className="btn btn--purple btn--sm" onClick={addConv}>＋</button>
             </div>
 
-            {/* Registar jornada (admin) */}
-            {podeRegistar ? (
-              <>
-                <h2 className="section-title">Registar jornada {(c.jornadas_jogadas || 0) + 1} de {c.num_jornadas}</h2>
-                <RegistarJornada campeonato={c} onSaved={reload} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} />
-              </>
-            ) : null}
+            <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 16 }}>
+              <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} disabled={criando} onClick={() => criar('sorteio')}>⚡ Sortear pela cerimónia</button>
+            </div>
+            <div className="muted" style={{ fontSize: 11, margin: '8px 0 0' }}>…ou monta à mão (nomes acima) e cria direto.</div>
+            <div style={{ marginTop: 12, display: 'grid', gap: 9 }}>
+              <button type="button" className="btn hud-corners" style={{ border: '1.5px solid rgba(255,255,255,.22)', color: '#c9c2d6', background: 'rgba(255,255,255,.03)' }} disabled={criando} onClick={() => setPasso(4)}>Montar à mão →</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(2)}>Voltar</button>
+            </div>
+          </>
+        )}
 
-            {/* Jornadas jogadas */}
-            <h2 className="section-title">Jornadas</h2>
-            {jornadas.length === 0 ? (
-              <p className="muted" style={{ fontSize: 13 }}>Ainda não há jornadas registadas.</p>
+        {passo === 4 && (
+          <>
+            <div className="hud-corners" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', padding: '10px 12px', marginBottom: 12 }}>
+              <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 16, color: '#f0c94a' }}>{nome.trim() || 'Campeonato'}</div>
+              <div className="row" style={{ marginTop: 6 }}>
+                <span className={`camp-chip ${formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
+                <span className="camp-chip">{nomes.length} times</span>
+                <span className="camp-chip">{totalAtrib > 0 ? `${totalAtrib} jogadores` : 'só nomes'}</span>
+              </div>
+            </div>
+
+            <div className="section-title" style={{ marginTop: 2 }}>Monta os times <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(opcional)</span></div>
+            <p className="muted" style={{ fontSize: 11, margin: '0 0 10px', lineHeight: 1.5 }}>Toca num jogador para o pôr no time selecionado. Quem sobra não joga (não é reserva). Podes deixar tudo vazio — times só com nome (ex.: 5º A vs 5º B).</p>
+
+            {/* separador de times (toca para selecionar) */}
+            <div className="row" style={{ marginBottom: 10 }}>
+              {nomes.map((n, i) => (
+                <button key={i} type="button" onClick={() => setTimeSel(i)} className={`camp-chip ${i === timeSel ? 'camp-chip--gold' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', borderColor: i === timeSel ? undefined : CORES[i] }}>
+                  <span className="camp-tab__dot" style={{ background: CORES[i], boxShadow: 'none', width: 9, height: 9 }} />
+                  {n.trim() || `Time ${i + 1}`} · {atribSafe[i].length}
+                </button>
+              ))}
+            </div>
+
+            {/* plantel do time selecionado */}
+            <div className="hud-corners" style={{ background: 'rgba(212,160,23,0.05)', border: `1px solid ${CORES[timeSel]}55`, padding: '8px 10px', marginBottom: 12, minHeight: 44 }}>
+              <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.06em', color: CORES[timeSel], textTransform: 'uppercase', marginBottom: 6 }}>{nomes[timeSel]?.trim() || `Time ${timeSel + 1}`}</div>
+              {atribSafe[timeSel].length ? (
+                <div className="row">
+                  {atribSafe[timeSel].map((k) => { const p = poolByKey[k]; if (!p) return null; return (
+                    <button key={k} type="button" onClick={() => tiraDoTime(k)} className="camp-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', paddingLeft: 4 }}>
+                      <MiniAvatar p={p} /> {p.nome} <span style={{ color: '#6f6a80' }}>✕</span>
+                    </button>
+                  ); })}
+                </div>
+              ) : <span className="muted" style={{ fontSize: 12 }}>Vazio — toca nos jogadores abaixo.</span>}
+            </div>
+
+            {/* pool disponível */}
+            <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.1em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', margin: '0 0 6px' }}>Disponíveis · {livres.length}</div>
+            {pool.length === 0 ? (
+              <p className="muted" style={{ fontSize: 12 }}>Sem jogadores — volta atrás para juntar convidados, ou cria só com os nomes.</p>
+            ) : livres.length === 0 ? (
+              <p className="muted" style={{ fontSize: 12 }}>Todos colocados.</p>
             ) : (
-              <div style={{ display: 'grid', gap: 8 }}>
-                {jornadas.map((j) => (
-                  <div key={j.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', padding: '10px 12px', fontSize: 13, color: '#fff' }}>
-                    <span style={{ color: 'var(--label-color)', fontWeight: 700 }}>Jornada {j.numero}</span> · {textoJornada(j, c)}
-                  </div>
+              <div className="row">
+                {livres.map((p) => (
+                  <button key={p.key} type="button" onClick={() => porNoTime(p.key)} className="camp-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', paddingLeft: 4, borderColor: p.convidado ? 'rgba(139,92,246,.4)' : undefined }}>
+                    <MiniAvatar p={p} /> {p.nome}{p.convidado ? <span style={{ color: '#8b5cf6', fontSize: 9 }}>conv.</span> : ''} <span style={{ color: CORES[timeSel] }}>＋</span>
+                  </button>
                 ))}
               </div>
             )}
 
-            {/* Terminar (admin) */}
-            {isAdmin && c.estado === 'ativo' ? (
-              <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 16, borderColor: 'var(--danger)', color: '#fda4af' }} disabled={busy} onClick={() => setConfirmTerminar(true)}>
-                Terminar campeonato antecipadamente
-              </button>
-            ) : null}
+            <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
+              <button type="button" className="btn hud-corners cta-gold" disabled={criando} onClick={() => criar('manual')}>{criando ? 'A criar…' : 'Criar campeonato'}</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(3)}>Voltar</button>
+            </div>
           </>
         )}
       </main>
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
+    </div>
+  );
+}
 
-      {confirmTerminar ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setConfirmTerminar(false)}>
-          <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-card__inner">
-              <p style={{ fontSize: 15, marginBottom: 16 }}>Terminar o campeonato agora? O campeão é decidido pelos pontos atuais.</p>
-              <button type="button" className="btn btn--primary" style={{ width: '100%', background: 'var(--danger)', color: '#fff' }} onClick={terminar}>Terminar</button>
-              <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} onClick={() => setConfirmTerminar(false)}>Cancelar</button>
-            </div>
-          </div>
+// Secção "Times & plantéis" — só aparece se algum time tiver jogadores.
+function PlanteisSection({ campeonato }) {
+  const tem = (campeonato.times || []).some((t) => (t.jogadores || []).length);
+  if (!tem) return null;
+  return (
+    <>
+      <div className="section-title">Times &amp; plantéis</div>
+      <CampeonatoPlanteis campeonato={campeonato} />
+    </>
+  );
+}
+
+// ============ DETALHE ============
+function Detalhe({ slug, id }) {
+  const location = useLocation();
+  const { team } = useTeam(slug);
+  const isAdmin = team?.role === 'admin';
+  const [camp, setCamp] = useState(null);
+  const [erro, setErro] = useState('');
+  const [toast, setToast] = useState(null);
+  const [revelar, setRevelar] = useState(() => !!location.state?.cerimonia);
+
+  useEffect(() => {
+    let ativo = true;
+    apiFetch(`/api/equipas/${slug}/campeonatos/${id}`)
+      .then((d) => ativo && setCamp(d.campeonato))
+      .catch((e) => ativo && setErro(e.message));
+    return () => { ativo = false; };
+  }, [slug, id]);
+
+  async function onResultado(cid, pa, pb) {
+    try {
+      const r = await apiFetch(`/api/equipas/${slug}/campeonatos/${id}/confrontos/${cid}/resultado`, { method: 'POST', body: JSON.stringify({ placar_a: pa, placar_b: pb }) });
+      setCamp(r.campeonato);
+      if (r.campeonato.estado === 'terminado') setToast({ tipo: 'success', mensagem: 'Temos campeão!' });
+    } catch (e) {
+      setToast({ tipo: 'error', mensagem: e.message });
+    }
+  }
+
+  async function terminar() {
+    try {
+      const r = await apiFetch(`/api/equipas/${slug}/campeonatos/${id}/terminar`, { method: 'POST' });
+      setCamp(r.campeonato);
+      setToast({ tipo: 'success', mensagem: 'Campeonato terminado.' });
+    } catch (e) { setToast({ tipo: 'error', mensagem: e.message }); }
+  }
+
+  if (erro) return <div className="app-shell"><Topbar hud="CAMPEONATO" back={`/equipa/${slug}/campeonato`} /><main className="app-main"><div className="alert alert--error hud-corners">{erro}</div></main></div>;
+  if (!camp) return <div className="app-shell"><Topbar hud="CAMPEONATO" back={`/equipa/${slug}/campeonato`} /><main className="app-main"><LoadingFutty /></main></div>;
+
+  // Reveal da cerimónia (times sorteados) antes de mostrar o campeonato.
+  if (revelar && camp.seed) {
+    const resultado = { numTimes: camp.times.length, times: camp.times.map((t) => ({ nome: t.nome, jogadores: t.jogadores })), reservas: [], seed: camp.seed };
+    return (
+      <div className="app-shell">
+        <Topbar hud="SORTEIO DOS TIMES" back={`/equipa/${slug}/campeonato`} />
+        <main className="app-main" style={{ padding: 0 }}>
+          <CerimoniaSorteio resultado={resultado} aoTerminar={() => setRevelar(false)} />
+          <div style={{ textAlign: 'center', padding: 12 }}><button type="button" className="btn btn--ghost btn--sm" onClick={() => setRevelar(false)}>Ver o campeonato →</button></div>
+        </main>
+      </div>
+    );
+  }
+
+  const terminado = camp.estado === 'terminado';
+  return (
+    <div className="app-shell">
+      <Topbar hud="CAMPEONATO" back={`/equipa/${slug}/campeonato`} />
+      <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
+        <div className="camp-title">{camp.nome}</div>
+        <div className="row" style={{ margin: '4px 0 14px' }}>
+          <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{camp.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
+          <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em curso'}</span>
+          <span className="camp-chip">{camp.times.length} times</span>
         </div>
-      ) : null}
 
+        {terminado ? <CampeonatoCelebracao campeonato={camp} slug={slug} /> : null}
+
+        {camp.formato === 'pontos' ? (
+          <>
+            <div className="section-title">{terminado ? 'Classificação final' : 'Classificação'}</div>
+            <CampeonatoTabela campeonato={camp} />
+            <div className="section-title">Jogos</div>
+            <CampeonatoJogos campeonato={camp} admin={isAdmin && !terminado} onResultado={onResultado} />
+            {isAdmin && !terminado ? (
+              <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 16, borderColor: 'var(--danger)', color: '#fda4af' }} onClick={terminar}>Terminar agora (coroa o líder)</button>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <div className="section-title">Chaveamento</div>
+            <CampeonatoBracket campeonato={camp} admin={isAdmin && !terminado} onResultado={onResultado} />
+          </>
+        )}
+
+        <PlanteisSection campeonato={camp} />
+      </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
   );

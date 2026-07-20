@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
+import SeloHonra from '../components/SeloHonra';
 import { urlAsset } from '../utils/avatar';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
@@ -99,6 +100,8 @@ export default function JogadorPerfil() {
   const { slug, userId } = useParams();
   const [searchParams] = useSearchParams();
   const { data, loading, error } = useApi(`/api/teams/${slug}/jogador/${userId}`);
+  const { data: selosData } = useApi(`/api/equipas/${slug}/jogador/${userId}/selos`);
+  const selos = selosData?.selos || [];
   // Nome dourado — 2 variantes p/ o look (?nome=b). A: ouro-heavy c/ bordas quentes;
   // B: ouro quase pleno com pico claro no centro.
   const nomeGrad = searchParams.get('nome') === 'b'
@@ -242,6 +245,24 @@ export default function JogadorPerfil() {
                 );
               })}
             </div>
+
+            {/* 2b. SELOS DE HONRA (Vaga 11C) — todas as honras (ativas + históricas). */}
+            {selos.length ? (
+              <>
+                <SecLabel>Selos de honra</SecLabel>
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                  {selos.map((s) => (
+                    <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 76 }}>
+                      <SeloHonra tier={s.tier} label={s.label} size={64} />
+                      <span style={{ fontSize: 10, color: 'var(--text-dim)', textAlign: 'center', lineHeight: 1.3 }}>{s.sub}</span>
+                      <span style={{ fontSize: 9, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, letterSpacing: '.04em', color: s.fonte === 'ranking' ? '#7bd88f' : s.ativa ? '#f0c94a' : '#7a7a86' }}>
+                        {s.fonte === 'ranking' ? 'VIVO' : s.ativa ? 'ATIVO' : 'HISTÓRICO'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
 
             {/* 3. DESEMPENHO — anel + radar + sparkline + tiles */}
             <SecLabel>Desempenho</SecLabel>

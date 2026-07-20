@@ -38,6 +38,7 @@ const Figurinha = lazy(() => import('./pages/Figurinha'));
 const MeuPerfil = lazy(() => import('./pages/MeuPerfil'));
 const Planos = lazy(() => import('./pages/Planos'));
 const SorteioPublico = lazy(() => import('./pages/SorteioPublico'));
+const CampeonatoPublico = lazy(() => import('./pages/CampeonatoPublico'));
 const Explorar = lazy(() => import('./pages/Explorar'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Super = lazy(() => import('./pages/Super'));
@@ -96,6 +97,7 @@ function AnimatedRoutes() {
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/convite/:token" element={<ConviteRoute />} />
           {/* Vista pública do sorteio (sem login) */}
+          <Route path="/p/campeonato/:slug/:id" element={<CampeonatoPublico />} />
           <Route path="/p/:slug/:gameId" element={<SorteioPublico />} />
           <Route
             path="/home"
@@ -147,6 +149,14 @@ function AnimatedRoutes() {
           />
           <Route
             path="/equipa/:slug/campeonato"
+            element={
+              <AuthGuard>
+                <Campeonato />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/equipa/:slug/campeonato/:id"
             element={
               <AuthGuard>
                 <Campeonato />

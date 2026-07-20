@@ -1,3 +1,4 @@
+// Futty v2.0 — Figurinha (/figurinha): selos de honra (Vaga 11C) no cromo + olhinho.
 // Futty v2.0 — Figurinha (/figurinha): "card studio". Card 2:3 com tilt 3D e
 // entrada animada; opções em tabs (Fundo/Frame/Uniforme) + toggles compactos.
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
@@ -13,6 +14,7 @@ import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
 import LoadingFutty from '../components/LoadingFutty';
+import SeloHonra from '../components/SeloHonra';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
@@ -183,7 +185,29 @@ export default function Figurinha() {
     Math.max(1, Math.ceil((Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1) - Date.now()) / 86400000)),
   );
   const diasParaRenovar = me?.user?.avatar_ia_reset ? diasAteRenovar : null;
-  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom };
+  // SELOS DE HONRA (Vaga 11C): busca os selos do utilizador; mostra no cromo os 2
+  // de maior prioridade que NÃO estejam ocultos (olhinho, persistido). Vêm já
+  // ordenados por prioridade (campeonato > ranking) do backend.
+  const [selos, setSelos] = useState([]);
+  const [selosOcultos, setSelosOcultos] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('futty_selos_ocultos') || '[]')); } catch { return new Set(); }
+  });
+  useEffect(() => {
+    let ativo = true;
+    apiFetch('/api/me/selos').then((d) => { if (ativo) setSelos(d.selos || []); }).catch(() => {});
+    return () => { ativo = false; };
+  }, []);
+  function toggleSelo(id) {
+    setSelosOcultos((cur) => {
+      const n = new Set(cur);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      localStorage.setItem('futty_selos_ocultos', JSON.stringify([...n]));
+      return n;
+    });
+  }
+  const selosVisiveis = selos.filter((s) => !selosOcultos.has(s.id)).slice(0, 2);
+  const selosKey = selosVisiveis.map((s) => `${s.id}:${s.tier}`).join('|');
+  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom, selos: selosVisiveis.map((s) => ({ tier: s.tier, label: s.label })) };
 
   // Carrega o perfil e pré-selecciona as escolhas guardadas.
   useEffect(() => {
@@ -243,7 +267,9 @@ export default function Figurinha() {
     };
     gerar();
     return () => { vivo = false; };
-  }, [fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, estreiaFase]);
+    // selosKey: regenera o cromo quando os selos visíveis mudam (chegam da API ou
+    // o utilizador oculta/mostra no olhinho).
+  }, [fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, estreiaFase, selosKey]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => () => { if (fundoUrl) URL.revokeObjectURL(fundoUrl); }, [fundoUrl]);
@@ -973,6 +999,37 @@ export default function Figurinha() {
                 <Share2 size={16} /> Compartilhar
               </button>
             </div>
+
+            {/* SELOS DE HONRA (Vaga 11C) — olhinho: mostra/oculta cada selo do cromo.
+                Máx 2 no cromo (prioridade campeonato > ranking); a honra fica sempre
+                na vitrine. */}
+            {selos.length ? (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: '.06em', color: '#f0c94a', textTransform: 'uppercase', marginBottom: 4 }}>Selos de honra</div>
+                <p className="muted" style={{ fontSize: 11, margin: '0 0 12px', lineHeight: 1.4 }}>Toca no olho para mostrar/ocultar no cromo (máx 2). A honra fica sempre na tua vitrine.</p>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {selos.map((s) => {
+                    const oculto = selosOcultos.has(s.id);
+                    const visivel = selosVisiveis.some((v) => v.id === s.id);
+                    return (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', opacity: oculto ? 0.5 : 1, clipPath: 'polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)' }}>
+                        <SeloHonra tier={s.tier} label={s.label} size={54} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, color: '#fff' }}>{s.label}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{s.sub}{s.fonte === 'ranking' ? ' · vivo' : s.historico ? ' · histórico' : s.ativa ? ` · ${s.dias_restantes}d no cromo` : ''}</div>
+                        </div>
+                        {!visivel && !oculto ? <span style={{ fontSize: 10, color: '#6f6a80' }}>só vitrine</span> : null}
+                        <button type="button" aria-label={oculto ? 'Mostrar' : 'Ocultar'} onClick={() => toggleSelo(s.id)} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: oculto ? '#6f6a80' : '#f0c94a', cursor: 'pointer', borderRadius: 6, padding: '6px 8px', display: 'grid', placeItems: 'center' }}>
+                          {oculto
+                            ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.526 13.526 0 0 0 2 12s3 8 10 8a9.74 9.74 0 0 0 5.39-1.61M2 2l20 20M9.88 9.88a3 3 0 1 0 4.24 4.24" /></svg>
+                            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8Z" /><circle cx="12" cy="12" r="3" /></svg>}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </main>

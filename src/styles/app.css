@@ -2395,3 +2395,147 @@
   .cer-jack.on .cer-coin { animation: none; opacity: 0; }
   .cer-jack.on .cer-seg { animation: none; opacity: 1; color: #e4d9ff; }
 }
+
+/* ===================================================================
+   CAMPEONATO (Vaga 11B) — tabela, bracket, celebracao e wizard.
+   Canone: vidro 45, lider dourado, campeao familia jackpot ouro/roxo.
+   =================================================================== */
+.camp-title{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:24px;letter-spacing:.02em;margin:2px 0 6px;
+  background:linear-gradient(90deg,#fff2cc,#f0c94a 40%,#d4a017 55%,#f0c94a 70%,#fff2cc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.camp-chip{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 10px;color:#c9c2d6;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.14);
+  clip-path:polygon(8% 0,92% 0,100% 28%,100% 72%,92% 100%,8% 100%,0 72%,0 28%)}
+.camp-chip--gold{color:#f0c94a;border-color:rgba(212,160,23,.5);background:rgba(212,160,23,.09)}
+.camp-chip--roxo{color:#c9b6ff;border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.1)}
+.camp-chip--live{color:#7bd88f;border-color:rgba(123,216,143,.45);background:rgba(123,216,143,.08)}
+
+.camp-tab{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.10);padding:6px 2px;
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-tab__hd,.camp-tab__r{display:grid;grid-template-columns:16px 1fr 20px 18px 18px 18px 40px 26px 26px;gap:2px;align-items:center;padding:0 8px}
+.camp-tab__hd{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:9px;letter-spacing:.04em;color:#8a8a98;text-transform:uppercase;height:22px;border-bottom:1px solid rgba(255,255,255,.08)}
+.camp-tab__hd span{text-align:center}
+.camp-tab__r{height:28px;font-size:11px;border-bottom:1px solid rgba(255,255,255,.05)}
+.camp-tab__r:last-child{border-bottom:none}
+.camp-tab__r .nm{display:flex;align-items:center;gap:7px;min-width:0}
+.camp-tab__r .nm span{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.camp-tab__r .pos{font-family:'Rajdhani',sans-serif;font-weight:800;color:#8a8a98}
+.camp-tab__r .p{font-family:'Rajdhani',sans-serif;font-weight:800;color:#f0c94a;text-align:center}
+.camp-tab__r .c{text-align:center;color:#c9c2d6}
+.camp-tab__r .gpgc{text-align:center;color:#8a8a98;font-size:10px}
+.camp-tab__dot{width:10px;height:10px;flex:0 0 auto;border-radius:2px}
+.camp-tab__r--lider{background:linear-gradient(90deg,rgba(212,160,23,.16),transparent);box-shadow:inset 3px 0 0 #d4a017}
+.camp-tab__r--lider .pos{color:#f0c94a}
+
+.camp-bkt{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 8px}
+.camp-br{display:flex;flex-direction:column;justify-content:space-around;gap:12px;flex:0 0 auto;min-width:120px}
+.camp-br__t{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:10px;letter-spacing:.1em;color:#8a8a98;text-transform:uppercase;text-align:center;margin-bottom:2px}
+.camp-conf{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,.14);overflow:hidden;
+  clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px)}
+.camp-bt{display:flex;align-items:center;gap:6px;padding:6px 8px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px}
+.camp-bt+.camp-bt{border-top:1px solid rgba(255,255,255,.08)}
+.camp-bt .bn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9a9aa8}
+.camp-bt .bg{font-weight:800;color:#c9c2d6;font-size:12px;min-width:14px;text-align:right}
+.camp-bt.win .bn{color:#fff}
+.camp-bt.win .bg{color:#f0c94a}
+.camp-bt .bdot{width:9px;height:9px;flex:0 0 auto;border-radius:2px}
+.camp-bt.bye .bn{color:#5a5a68;font-style:italic}
+.camp-bt.tbd .bn{color:#5a5a68}
+.camp-champcol{align-self:center;text-align:center}
+.camp-champbox{position:relative;padding:12px 14px;background:rgba(212,160,23,.1);border:1px solid #d4a017;box-shadow:0 0 22px rgba(212,160,23,.35);
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-champbox .nm{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px;color:#fff;display:flex;align-items:center;gap:8px;justify-content:center}
+
+.camp-res{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.camp-res input{width:44px;text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);color:#fff;
+  font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px;padding:6px 0;
+  clip-path:polygon(12% 0,88% 0,100% 26%,100% 74%,88% 100%,12% 100%,0 74%,0 26%)}
+.camp-res .x{color:#6f6a80;font-weight:700}
+
+.camp-cel{position:relative;padding:24px 16px 18px;overflow:hidden;text-align:center;
+  background:radial-gradient(120% 90% at 50% 0%,rgba(139,92,246,.35),rgba(10,8,20,.6) 60%),#0a0812;border:1px solid rgba(212,160,23,.5);
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
+.camp-cel__k{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12px;letter-spacing:.3em;color:#c9b6ff;text-transform:uppercase}
+.camp-cel__heroi{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:2px;margin:8px 0 4px;
+  animation:campHeroiBob 4.6s ease-in-out infinite;will-change:transform}
+/* v6: flutuação a METADE (-4px) + RESPIRAÇÃO de escala (1↔1.03) sincronizada —
+   vivo e imponente, não saltitante. */
+@keyframes campHeroiBob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-4px) scale(1.03)}}
+/* NOME DO CAMPEAO = HEROI: gradiente dourado da casa + glow + escala grande. */
+.camp-cel__n{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:48px;letter-spacing:.02em;margin:4px 0 2px;line-height:1.02;
+  background:linear-gradient(90deg,#fff2cc,#f0c94a 36%,#d4a017 52%,#f0c94a 66%,#fff2cc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 20px rgba(212,160,23,.6))}
+@media (prefers-reduced-motion: reduce){.camp-cel__heroi{animation:none}}
+.camp-cel__s{font-size:12px;color:#c9c2d6;margin-bottom:14px}
+.camp-cel__coins{position:absolute;inset:0;pointer-events:none;z-index:0}
+.camp-cel__coins b{position:absolute;width:7px;height:7px;border-radius:50%;opacity:.85;animation:campCoin 2.6s ease-in-out infinite}
+@keyframes campCoin{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-6px);opacity:1}}
+.camp-cel__row{position:relative;z-index:1;display:flex;gap:8px;margin-top:4px}
+
+.camp-steps{display:flex;justify-content:center;gap:8px;margin:2px 0 12px}
+.camp-steps i{width:26px;height:3px;background:rgba(255,255,255,.12)}
+.camp-steps i.on{background:linear-gradient(90deg,#d4a017,#f0c94a);box-shadow:0 0 8px rgba(212,160,23,.5)}
+.camp-fopt{cursor:pointer;display:flex;gap:12px;align-items:flex-start;padding:13px 14px;margin-bottom:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,.14);
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-fopt.on{border-color:#d4a017;background:rgba(212,160,23,.08);box-shadow:0 0 16px rgba(212,160,23,.15)}
+.camp-fopt__t{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px}
+.camp-fopt__d{font-size:11px;color:#9a9aa8;margin-top:2px;line-height:1.4}
+.camp-slot{display:flex;align-items:center;gap:10px;padding:9px 11px;margin-bottom:7px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,.12);
+  clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px)}
+.camp-slot input{flex:1;min-width:0;background:transparent;border:none;color:#fff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;outline:none}
+.camp-slot__c{font-size:10px;color:#8a8a98;font-family:'Rajdhani',sans-serif;letter-spacing:.04em}
+
+.camp-card{display:block;text-decoration:none;color:inherit;padding:12px 14px;margin-bottom:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.10);
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-card__n{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px}
+
+/* PODIO (Vaga 11C) — degraus 2 · 1 · 3, escudo por cima, 1o ouro maior+glow */
+.camp-podio{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin:4px 0 2px;position:relative;z-index:1}
+.camp-podio__col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:33%}
+.camp-podio__crest{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-weight:700;color:#fff;text-align:center;padding:5px 6px;border:1px solid;border-radius:6px;background:rgba(255,255,255,0.04);min-height:38px;justify-content:center;width:100%}
+.camp-podio__step{width:100%;display:grid;place-items:center;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:18px;color:var(--pc);border:1px solid var(--pc);border-bottom:none;background:rgba(255,255,255,0.04)}
+.camp-podio__step--1{height:76px;box-shadow:0 -6px 26px -6px var(--pc);font-size:22px}
+.camp-podio__step--2{height:54px}
+.camp-podio__step--3{height:40px}
+
+/* CHUVA DE CONFETE (Vaga 11C celebracao v3) — ambiente, nao protagonista.
+   Duas camadas (tras desfocada .3 / frente nitida .5), TODAS nascem acima do
+   ecra (top:-8%) e caem para baixo de 100%; loop recomeca sempre no topo, nada
+   aparece/some no meio. Atras do escudo/nome (z-index). reduced-motion = estatico.
+   (O jackpot do SORTEIO mantem as moedas — .cer-* nao se toca.) */
+.camp-cel__confete{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.camp-cel__confete i{position:absolute;top:-8%;border-radius:1px;will-change:transform;
+  animation-name:campConfete;animation-timing-function:linear;animation-iteration-count:infinite}
+.camp-cel__confete i.camp-conf--tras{filter:blur(1.8px);opacity:.3}
+.camp-cel__confete i.camp-conf--frente{opacity:.5}
+@keyframes campConfete{
+  0%{transform:translate(0,0) rotate(0deg)}
+  25%{transform:translate(10px,190px) rotate(210deg)}
+  50%{transform:translate(-8px,380px) rotate(430deg)}
+  75%{transform:translate(9px,545px) rotate(650deg)}
+  100%{transform:translate(-5px,730px) rotate(880deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  .camp-cel__confete i{top:var(--st);animation:none;transform:none}
+}
+
+/* SELO DE HONRA (Vaga 11C) — forma A postal denteado + varrimento de vidro. */
+.seloh{position:relative;aspect-ratio:5/6;flex:0 0 auto;
+  clip-path:polygon(22% 0,78% 0,100% 22%,100% 78%,78% 100%,22% 100%,0 78%,0 22%);
+  display:grid;grid-template-rows:1fr auto;place-items:center;overflow:hidden;
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.5)) drop-shadow(0 0 6px var(--sg))}
+.seloh__m{position:absolute;inset:0;background:linear-gradient(135deg,var(--m1),var(--m2) 30%,var(--m3) 55%,var(--m2) 70%,var(--m4))}
+.seloh__rim{position:absolute;inset:9%;clip-path:inherit;border:1px solid var(--m1);opacity:.55}
+.seloh__t{position:relative;z-index:2;color:var(--sink);margin-top:14%;filter:drop-shadow(0 1px 0 var(--m1))}
+.seloh__f{position:relative;z-index:2;width:88%;margin-bottom:12%;background:linear-gradient(180deg,rgba(20,14,4,.92),rgba(8,6,2,.95));
+  border-top:1px solid var(--m2);border-bottom:1px solid var(--m4);padding:2px 1px;text-align:center;
+  clip-path:polygon(6% 0,94% 0,100% 32%,100% 68%,94% 100%,6% 100%,0 68%,0 32%)}
+.seloh__f span{font-family:'Rajdhani',sans-serif;font-weight:800;letter-spacing:.06em;color:var(--m1);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.seloh__sw{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;clip-path:inherit}
+.seloh__sw::before{content:'';position:absolute;top:-25%;bottom:-25%;width:34%;left:-45%;transform:skewX(-12deg);
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.72),transparent);animation:selohSweep 6s ease-in-out infinite}
+@keyframes selohSweep{0%,58%{left:-45%}100%{left:125%}}
+@media (prefers-reduced-motion: reduce){.seloh__sw::before{animation:none;opacity:0}}
+.seloh--ouro{--m1:#fff2cc;--m2:#f0c94a;--m3:#d4a017;--m4:#8a6a10;--sg:rgba(212,160,23,.6);--sink:#3a2c08}
+.seloh--prata{--m1:#f4f8fd;--m2:#cbd5e2;--m3:#aab4c8;--m4:#69717e;--sg:rgba(180,190,210,.5);--sink:#333a45}
+.seloh--bronze{--m1:#f3d0b0;--m2:#d98a52;--m3:#c2652e;--m4:#763a18;--sg:rgba(210,120,60,.5);--sink:#3d1e0c}
