@@ -38,6 +38,16 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
 - Flag `teams.mostrar_gols` (admin) esconde gols/artilharia (radar 5↔3).
 - Onboarding dia-1 pede SÓ o que o dia-1 usa (foto quase-obrigatória, nome, GR opcional).
 
+## Conector Supabase (ferramentas)
+- **ATIVO em READ-ONLY** (por desenho — segurança). Leituras SQL diretas: SIM.
+- DDL/escrita: DESLIGADO. Liga-se por ordem expressa do utilizador editando o
+  `.mcp.json` (remover `--read-only`) para corrida pontual, depois volta a fechar.
+- Migrações continuam **"DDL à mão"** no Supabase até essa ordem. A `039` = vaga OPCIONAL.
+
+## Higiene (limpeza futura, NUNCA automática)
+- `teams` tem 2 "Teste 1" duplicados de 3 jun (`teste-1-ktbig`, `teste-1-0a2ej`) —
+  limpar na vaga de higiene pré-lançamento, só com ordem expressa. Nunca apagar sozinho.
+
 ## Specs e bancada
 SPECs (papel) e mockups vivem no scratchpad da sessão (servidos em 8791):
 SPEC-SORTEIO / SPEC-EQUIPAS / SPEC-CAMPEONATOS / SPEC-SEGURANCA / SPEC-REDE-SOCIAL.
