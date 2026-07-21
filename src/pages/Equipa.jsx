@@ -16,6 +16,7 @@ import EscudoEquipa from '../components/EscudoEquipa';
 import Toast from '../components/Toast';
 import Icon from '../components/Icon';
 import OnboardingModal from '../components/OnboardingModal';
+import ModeracaoFila from '../components/ModeracaoFila';
 import '../styles/app.css';
 
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
@@ -286,6 +287,14 @@ export default function Equipa() {
                     </div>
                   ))}
                 </div>
+              </>
+            )}
+
+            {/* Tijolo 3 — moderação: só casos ambíguos (a IA resolve os óbvios). */}
+            {team.role === 'admin' && (
+              <>
+                <SecLabel>Moderação</SecLabel>
+                <ModeracaoFila slug={slug} />
               </>
             )}
 

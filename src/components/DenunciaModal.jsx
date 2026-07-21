@@ -1,76 +1,85 @@
-// Futty v2.0 — Modal de denúncia (comentário ou post). POST /api/feed/denuncias.
+// Futty v2.0 — Modal de denúncia (Tijolo 3). 6 categorias, 1 toque, confirmação
+// digna "recebido — vamos analisar" (nunca veredicto). POST /api/denuncias.
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 
-const MOTIVOS = [
-  { v: 'linguagem_inapropriada', l: 'Linguagem inapropriada' },
-  { v: 'spam', l: 'Spam' },
-  { v: 'conteudo_ofensivo', l: 'Conteúdo ofensivo' },
+// As 6 categorias da SPEC-DENUNCIAS. "menor" com marca própria (regra dura).
+const CATEGORIAS = [
+  { v: 'nudez', l: 'Nudez / sexual' },
+  { v: 'violencia', l: 'Violência / ódio' },
+  { v: 'assedio', l: 'Assédio / bullying' },
+  { v: 'spam', l: 'Spam / golpe' },
+  { v: 'menor', l: 'Perigo a menor', menor: true },
   { v: 'outro', l: 'Outro' },
 ];
 
 export default function DenunciaModal({ targetType, targetId, onClose, onResult }) {
-  const [motivo, setMotivo] = useState('linguagem_inapropriada');
-  const [descricao, setDescricao] = useState('');
   const [busy, setBusy] = useState(false);
+  const [feito, setFeito] = useState(false);
 
-  async function enviar() {
-    if (busy) return;
+  async function denunciar(categoria) {
+    if (busy || feito) return;
     setBusy(true);
     try {
-      await apiFetch('/api/feed/denuncias', {
+      await apiFetch('/api/denuncias', {
         method: 'POST',
-        body: JSON.stringify({
-          target_type: targetType,
-          target_id: targetId,
-          motivo,
-          descricao: motivo === 'outro' ? descricao.trim().slice(0, 500) : undefined,
-        }),
+        body: JSON.stringify({ target_type: targetType, target_id: targetId, categoria }),
       });
-      onResult?.({ tipo: 'success', mensagem: 'Denúncia enviada. Obrigado.' });
+      setFeito(true); // confirmação digna, sem veredicto
     } catch (err) {
-      // O backend atual é idempotente (200); este ramo cobre erros reais
-      // (e um eventual 409 caso o backend passe a distinguir duplicados).
-      const dup = /409|já denunci|duplic/i.test(err?.message || '');
-      onResult?.({ tipo: dup ? 'info' : 'error', mensagem: dup ? 'Já denunciaste este conteúdo.' : err?.message || 'Erro ao denunciar.' });
+      const lim = /429|de hoje/i.test(err?.message || '');
+      onResult?.({ tipo: lim ? 'info' : 'error', mensagem: lim ? 'Já recebemos as tuas denúncias de hoje.' : err?.message || 'Erro ao denunciar.' });
+      onClose?.();
     } finally {
       setBusy(false);
-      onClose?.();
     }
   }
 
-  const titulo = targetType === 'post' ? 'Denunciar post' : 'Denunciar comentário';
-
   return (
     <div className="modal-overlay" role="presentation" onClick={() => !busy && onClose?.()}>
-      <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-card__inner" style={{ textAlign: 'left' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, textAlign: 'center' }}>{titulo}</h2>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {MOTIVOS.map((m) => (
-              <label key={m.v} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' }}>
-                <input type="radio" name="motivo-denuncia" value={m.v} checked={motivo === m.v} onChange={() => setMotivo(m.v)} style={{ accentColor: '#7c3aed' }} />
-                {m.l}
-              </label>
-            ))}
-          </div>
-          {motivo === 'outro' ? (
-            <textarea
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value.slice(0, 500))}
-              placeholder="Descreve (opcional)…"
-              rows={3}
-              style={{ width: '100%', boxSizing: 'border-box', marginTop: 10, padding: 10, borderRadius: 10, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 13, resize: 'vertical' }}
-            />
-          ) : null}
-          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            <button type="button" className="btn btn--ghost" style={{ flex: 1 }} disabled={busy} onClick={onClose}>
-              Cancelar
-            </button>
-            <button type="button" className="btn btn--purple" style={{ flex: 1 }} disabled={busy} onClick={enviar}>
-              {busy ? 'Enviando…' : 'Enviar denúncia'}
-            </button>
-          </div>
+      <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: 390 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-card__inner" style={{ textAlign: 'center' }}>
+          {feito ? (
+            <div style={{ padding: '18px 8px 6px' }}>
+              <div style={{ width: 72, height: 72, margin: '0 auto 14px', display: 'grid', placeItems: 'center', borderRadius: '50%', background: 'rgba(123,216,143,0.1)', border: '1.5px solid rgba(123,216,143,0.55)', color: '#7bd88f' }}>
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </div>
+              <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22 }}>Recebido</h2>
+              <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: '8px auto 16px', maxWidth: 280, lineHeight: 1.6 }}>
+                Vamos analisar. Obrigado por cuidares da casa — a tua denúncia é anónima.
+              </p>
+              <button type="button" className="btn btn--sm cta-gold hud-corners-s" style={{ minWidth: 120 }} onClick={onClose}>Fechar</button>
+            </div>
+          ) : (
+            <>
+              <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 17, marginBottom: 3 }}>O que se passa com este conteúdo?</h2>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Escolhe um — a análise é anónima.</p>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {CATEGORIAS.map((c) => (
+                  <button
+                    key={c.v}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => denunciar(c.v)}
+                    className="hud-corners-s"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 11, padding: '12px 13px', textAlign: 'left', cursor: busy ? 'default' : 'pointer',
+                      fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14,
+                      background: c.menor ? 'rgba(253,164,175,0.06)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${c.menor ? 'rgba(253,164,175,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                      color: c.menor ? '#fecdd3' : '#e6e6ee', opacity: busy ? 0.6 : 1,
+                    }}
+                  >
+                    <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: c.menor ? '#fda4af' : '#8b5cf6' }} />
+                    {c.l}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 12, width: '100%' }} disabled={busy} onClick={onClose}>
+                Cancelar
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

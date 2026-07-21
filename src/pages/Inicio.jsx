@@ -510,6 +510,19 @@ export default function Inicio() {
     sessionStorage.setItem('futty_votacao_dismiss', '1');
   }
 
+  // Tijolo 3 — desfecho das MINHAS denúncias (nº, sem veredicto). Banner discreto.
+  const [denunciaDesfechos, setDenunciaDesfechos] = useState(0);
+  const [desfechoFechado, setDesfechoFechado] = useState(() => sessionStorage.getItem('futty_denuncia_desfecho') === '1');
+  useEffect(() => {
+    let ativo = true;
+    apiFetch('/api/denuncias/meus-desfechos').then((d) => ativo && setDenunciaDesfechos(d.total || 0)).catch(() => {});
+    return () => { ativo = false; };
+  }, []);
+  function fecharDesfecho() {
+    setDesfechoFechado(true);
+    sessionStorage.setItem('futty_denuncia_desfecho', '1');
+  }
+
   // REVELAÇÃO: o LoadingFutty (F grande, sozinho, centrado) segura o ecrã até o cromo
   // estar DESENHADO (dataURL pronto). Antes, o F do loader e o F-placeholder do cromo
   // apareciam sobrepostos no arranque; agora só há um F, e a página só aparece com o
@@ -530,6 +543,15 @@ export default function Inicio() {
                 a acção principal da página (o Início não tem uma; ver EmptyState). */}
             <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => pushSubscrever()}>Ativar</button>
             <button type="button" aria-label="Fechar" onClick={fecharPushBanner} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+          </div>
+        ) : null}
+
+        {/* Tijolo 3 — DESFECHO discreto ao denunciante (sem veredicto: protege alvo e
+            denunciante). Uma linha no Início, dispensável. */}
+        {denunciaDesfechos > 0 && !desfechoFechado ? (
+          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(123,216,143,0.05)', border: '1px solid rgba(123,216,143,0.25)' }}>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>A tua denúncia foi analisada. <b style={{ color: '#9fd8a8' }}>Obrigado por cuidares da casa.</b></span>
+            <button type="button" aria-label="Fechar" onClick={fecharDesfecho} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}
 
