@@ -836,6 +836,7 @@ export default function Feed() {
   const [erro, setErro] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [imgFull, setImgFull] = useState(null);
+  const [novoPostId, setNovoPostId] = useState(null); // P2-11: post acabado de criar
 
   // Carrega o feed uma vez; o filtro por chip é local (sem nova chamada).
   useEffect(() => {
@@ -870,7 +871,19 @@ export default function Feed() {
   function aoCriarPost(post) {
     if (!post) return;
     setItems((cur) => [{ ...post, kind: 'post' }, ...(cur || [])]);
+    // P2-11: em feeds longos o post novo entrava sem se ver. Marca-o para o
+    // efeito o rolar até à vista e piscar dourado 2s.
+    setNovoPostId(post.id);
   }
+
+  // P2-11: quando há post novo, rola até ele e limpa o destaque após 2s.
+  useEffect(() => {
+    if (!novoPostId) return;
+    const el = document.getElementById(`feed-item-${novoPostId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const t = setTimeout(() => setNovoPostId(null), 2000);
+    return () => clearTimeout(t);
+  }, [novoPostId]);
 
   const loading = items === null;
   const meId = user?.id;
@@ -917,12 +930,11 @@ export default function Feed() {
               const equipa = teams.find((t) => t.id === item.team_id);
               const ehAdmin = equipa?.role === 'admin';
               const slug = equipa?.slug || item.team_slug || null;
-              const card =
+              const inner =
                 item.kind === 'post' && item.tipo === 'anuncio' ? (
-                  <AnuncioCard key={`anuncio-${item.id}`} p={item} index={i} />
+                  <AnuncioCard p={item} index={i} />
                 ) : item.kind === 'post' ? (
                   <PostCard
-                    key={`post-${item.id}`}
                     p={item}
                     podeApagar={item.author_id === meId || ehAdmin}
                     isAdmin={ehAdmin}
@@ -933,8 +945,18 @@ export default function Feed() {
                     index={i}
                   />
                 ) : (
-                  <JogoCard key={`jogo-${item.id}`} j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} index={i} />
+                  <JogoCard j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} index={i} />
                 );
+              // P2-11: âncora de scroll + destaque dourado no post recém-criado.
+              const card = (
+                <div
+                  key={`item-${item.kind}-${item.id}`}
+                  id={`feed-item-${item.id}`}
+                  className={item.kind === 'post' && item.id === novoPostId ? 'post-recem' : undefined}
+                >
+                  {inner}
+                </div>
+              );
               // Anúncio nativo entre o 3º e o 4º item do feed.
               if (i === 2) {
                 return (

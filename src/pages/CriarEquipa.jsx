@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
+import { copiarTexto } from '../utils/clipboard';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -85,10 +86,19 @@ export default function CriarEquipa() {
       // Sem cor no body: o backend cai para o fallback interno ('verde'); muda-se
       // depois nas definições do admin (decisão: cor despromovida, SPEC-EQUIPAS).
       const { team: t } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify({ nome: nome.trim() }) });
+      // P2-12: a equipa já existe aqui. Se o PATCH das definições falhar, NÃO
+      // dizer "erro a criar" — a equipa nasceu; segue-se para convites e avisa-se
+      // que a definição ficou por aplicar (ajusta-se no admin).
       const patch = {};
       if (!mostrarGols) patch.mostrar_gols = false;
       if (modo !== 'privado') patch.modo_visibilidade = modo;
-      if (Object.keys(patch).length) await apiFetch(`/api/teams/${t.slug}`, { method: 'PATCH', body: JSON.stringify(patch) });
+      if (Object.keys(patch).length) {
+        try {
+          await apiFetch(`/api/teams/${t.slug}`, { method: 'PATCH', body: JSON.stringify(patch) });
+        } catch {
+          setToast({ tipo: 'error', mensagem: 'Equipa criada — mas a definição (gols/visibilidade) falhou. Ajusta no admin.' });
+        }
+      }
       setTeam(t);
       setPasso(4);
     } catch (e) {
@@ -112,12 +122,9 @@ export default function CriarEquipa() {
   }
 
   async function copiar() {
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
+    const ok = await copiarTexto(inviteLink);
+    setCopied(ok);
+    if (!ok) setToast({ tipo: 'error', mensagem: 'Não deu para copiar — copia o link à mão.' });
   }
 
   const waHref = inviteLink ? `https://wa.me/?text=${encodeURIComponent(`Entra na minha equipa ${nome.trim()} no Futty: ${inviteLink}`)}` : null;

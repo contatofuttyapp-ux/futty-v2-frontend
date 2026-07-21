@@ -682,6 +682,12 @@ export default function Inicio() {
                 >
                   <TeamAvatar team={t} size="sm" />
                   {t.nome}
+                  {/* P2-6: pedidos de entrada por resolver (só admin) — badge dourado. */}
+                  {t.pedidos_pendentes > 0 ? (
+                    <span className="chip-badge" aria-label={`${t.pedidos_pendentes} pedidos por resolver`}>
+                      {t.pedidos_pendentes}
+                    </span>
+                  ) : null}
                 </button>
               ))}
               <Link to="/explorar" className="chip chip--explore hud-corners-s">

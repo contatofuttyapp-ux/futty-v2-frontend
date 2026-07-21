@@ -2543,3 +2543,18 @@
 .seloh--ouro{--m1:#fff2cc;--m2:#f0c94a;--m3:#d4a017;--m4:#8a6a10;--sg:rgba(212,160,23,.6);--sink:#3a2c08}
 .seloh--prata{--m1:#f4f8fd;--m2:#cbd5e2;--m3:#aab4c8;--m4:#69717e;--sg:rgba(180,190,210,.5);--sink:#333a45}
 .seloh--bronze{--m1:#f3d0b0;--m2:#d98a52;--m3:#c2652e;--m4:#763a18;--sg:rgba(210,120,60,.5);--sink:#3d1e0c}
+
+/* P2-11 — post recém-publicado: brilho dourado que se apaga em 2s (não mexe no layout,
+   só box-shadow em anel). Respeita reduce-motion. */
+.post-recem{border-radius:12px;animation:postRecem 2s ease-out 1}
+@keyframes postRecem{
+  0%{box-shadow:0 0 0 2px rgba(212,160,23,.85), 0 0 26px 4px rgba(212,160,23,.45)}
+  70%{box-shadow:0 0 0 2px rgba(212,160,23,.5), 0 0 18px 2px rgba(212,160,23,.22)}
+  100%{box-shadow:0 0 0 0 rgba(212,160,23,0), 0 0 0 0 rgba(212,160,23,0)}
+}
+@media (prefers-reduced-motion: reduce){.post-recem{animation:none}}
+
+/* P2-6 — badge de pedidos pendentes no chip da equipa (Início, admin). */
+.chip-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+  padding:0 5px;border-radius:9px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11px;line-height:1;
+  color:#1a1408;background:#f0c94a;border:1px solid #d4a017;box-shadow:0 0 8px rgba(212,160,23,.5)}

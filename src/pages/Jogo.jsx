@@ -16,6 +16,7 @@ import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
 import { urlAsset } from '../utils/avatar';
+import { copiarTexto } from '../utils/clipboard';
 import '../styles/app.css';
 
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
@@ -63,6 +64,7 @@ export default function Jogo() {
   const [novoConvidado, setNovoConvidado] = useState('');
   const [vistaCampo, setVistaCampo] = useState(false); // resultado: lista (false) | campo (true)
   const [toast, setToast] = useState(null);
+  const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'cancelar-presenca' | null
 
   // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
   async function runAction(path, body) {
@@ -81,12 +83,10 @@ export default function Jogo() {
   // Copia o link público do sorteio (para WhatsApp / telão).
   async function partilharLink() {
     const url = `${window.location.origin}/p/${slug}/${id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setToast({ tipo: 'success', mensagem: 'Link copiado!' });
-    } catch {
-      setToast({ tipo: 'error', mensagem: 'Não foi possível copiar o link.' });
-    }
+    const ok = await copiarTexto(url);
+    setToast(ok
+      ? { tipo: 'success', mensagem: 'Link copiado!' }
+      : { tipo: 'error', mensagem: 'Não deu para copiar — copia o link à mão.' });
   }
 
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
@@ -216,15 +216,28 @@ export default function Jogo() {
                     />
                     Sou goleiro (GR)
                   </label>
-                  <button
-                    type="button"
-                    className="btn btn--sm btn--outline hud-corners-s"
-                    style={{ marginLeft: 'auto' }}
-                    onClick={() => confirmar(false, false)}
-                    disabled={busy}
-                  >
-                    Cancelar presença
-                  </button>
+                  {/* P2-8: sem confirmação, um dedo mal posto tirava-te do jogo. */}
+                  {confirmacao === 'cancelar-presenca' ? (
+                    <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Cancelar mesmo?</span>
+                      <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ borderColor: 'rgba(253,164,175,0.5)', color: '#fda4af' }} onClick={() => { setConfirmacao(null); confirmar(false, false); }} disabled={busy}>
+                        Sim, sair
+                      </button>
+                      <button type="button" className="btn btn--sm btn--ghost" onClick={() => setConfirmacao(null)} disabled={busy}>
+                        Não
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn--sm btn--outline hud-corners-s"
+                      style={{ marginLeft: 'auto' }}
+                      onClick={() => setConfirmacao('cancelar-presenca')}
+                      disabled={busy}
+                    >
+                      Cancelar presença
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
@@ -349,9 +362,26 @@ export default function Jogo() {
               </div>
             ) : null}
 
+            {/* P2-7: re-sortear apaga o sorteio actual (e o replay) — confirmação
+                inline, no mesmo padrão de "sair da equipa". */}
+            {isAdmin && game.sorteio_realizado && confirmacao === 're-sorteio' && (
+              <div style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginBottom: 10, borderColor: 'rgba(240,201,74,0.4)' }}>
+                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: '#f0c94a' }}>Sortear de novo?</div>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>Isto substitui o sorteio actual — perde-se o resultado e o replay deste.</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => { setConfirmacao(null); sortear(); }} disabled={busy}>
+                    {busy ? 'Processando…' : 'Substituir sorteio'}
+                  </button>
+                  <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setConfirmacao(null)} disabled={busy}>
+                    Manter
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {isAdmin && (
-                <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={sortear} disabled={busy}>
+              {isAdmin && confirmacao !== 're-sorteio' && (
+                <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => game.sorteio_realizado ? setConfirmacao('re-sorteio') : sortear()} disabled={busy}>
                   {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
                 </button>
               )}

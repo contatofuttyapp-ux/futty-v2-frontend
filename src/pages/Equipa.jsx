@@ -8,6 +8,7 @@ import { useApi } from '../hooks/useApi';
 import { useTeam } from '../hooks/useTeam';
 import { urlAsset } from '../utils/avatar';
 import { POSICOES, labelPosicao } from '../utils/posicoes';
+import { copiarTexto } from '../utils/clipboard';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -181,12 +182,9 @@ export default function Equipa() {
   }
 
   async function copiar() {
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
+    const ok = await copiarTexto(inviteLink);
+    setCopied(ok);
+    if (!ok) setActionError('Não deu para copiar — copia o link à mão.');
   }
 
   return (
