@@ -44,11 +44,23 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
   `.mcp.json` (remover `--read-only`) para corrida pontual, depois volta a fechar.
 - Migrações continuam **"DDL à mão"** no Supabase até essa ordem. A `039` = vaga OPCIONAL.
 
+## Segurança — média (tijolo 1)
+- **Buckets `avatars` e `resenha` são PRIVADOS.** Os URLs de média são **assinados
+  na fronteira da API** (middleware `mediaUrls`, validade 1h); o frontend renderiza
+  sem mudança (`urlAsset` passa URLs http tal-qual). Páginas públicas `/api/p/`
+  **despublicam** os avatares → silhueta (privacidade; sem expiração).
+- **Tradeoff conhecido:** um URL assinado deixado no DOM > 1h sem refetch expira
+  (imagem parte até re-render). Fix robusto sem expiração = **proxy de imagem**
+  (candidato ao tijolo 2). Não commitar "solução" sem essa ordem.
+- **Filtro NSFWJS** corre em TODOS os uploads de imagem (avatar/onboarding/resenha);
+  explícito → 403; falha aberta em avaria. **Apagar post apaga o ficheiro no Storage.**
+
 ## Higiene (limpeza futura, NUNCA automática)
 - `teams` tem 2 "Teste 1" duplicados de 3 jun (`teste-1-ktbig`, `teste-1-0a2ej`) —
   limpar na vaga de higiene pré-lançamento, só com ordem expressa. Nunca apagar sozinho.
 
 ## Specs e bancada
 SPECs (papel) e mockups vivem no scratchpad da sessão (servidos em 8791):
-SPEC-SORTEIO / SPEC-EQUIPAS / SPEC-CAMPEONATOS / SPEC-SEGURANCA / SPEC-REDE-SOCIAL.
+SPEC-SORTEIO / SPEC-EQUIPAS / SPEC-CAMPEONATOS / SPEC-SEGURANCA / SPEC-REDE-SOCIAL /
+SPEC-GABINETE (Gabinete do Dono, `/gabinete` super-admin — última peça da Segurança).
 Dev: frontend 5173 (+5174 conta de teste), backend 3001, bancada 8791.
