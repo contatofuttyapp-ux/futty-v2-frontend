@@ -1,7 +1,8 @@
 // Futty v2.0 — A CERIMÓNIA DO SORTEIO (slot v8 aprovado, com dados REAIS).
 // SPEC-SORTEIO é a lei: rolos com os símbolos do utilizador intercalados entre
-// MEMBROS DA EQUIPA (§12; trava SEMPRE num jogador), kits da CASA por ordem
-// OURO/ROXO/PRATA/BRONZE, travagens quase simultâneas + voos ágeis (v7), grelhas
+// MEMBROS DA EQUIPA (§12; trava SEMPRE num jogador), marcação de time SELADA
+// (TIME OURO/ROXO; 3º-4º PRATA/BRONZE — os metais dos selos; a identidade veste o
+// palco, nunca a camisa), travagens quase simultâneas + voos ágeis (v7), grelhas
 // inteligentes 3→11 por time (v4), reservas com avatar + nº de ordem, jackpot ROXO
 // em cinema (backdrop-blur) com moedas 70/30 e letreiro por segmentos (v8).
 // REPLAY EXACTO (§10): toda a aleatoriedade visual sai de mulberry32(seed) — a
@@ -14,13 +15,16 @@ import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
 const SIMBOLOS = ['/sorteio-assets/bola-ficha.png', '/sorteio-assets/carta-fut.png', '/sorteio-assets/chuteira.png'];
-// Kits da casa por ordem de time (§12) — o azul/verde da V1 nunca volta.
+// MARCAÇÃO DE TIME por índice — DECISÃO SELADA (vaga cassino, 23-24 jul): as cores
+// de time da casa são os METAIS DOS SELOS: TIME OURO vs TIME ROXO; 3º = PRATA,
+// 4º = BRONZE. O azul/vermelho da ronda de contraste morreu — a identidade veste o
+// PALCO (anel + rótulo + tinte da silhueta), nunca a pele/camisa do jogador.
 // eslint-disable-next-line react-refresh/only-export-components -- constante partilhada com as páginas do sorteio
-export const KITS = [
-  { n: 'OURO', c: '#d4a017' },
-  { n: 'ROXO', c: '#8b5cf6' },
-  { n: 'PRATA', c: '#aab4c8' },
-  { n: 'BRONZE', c: '#c2652e' },
+export const MARCA_TIME = [
+  { n: 'OURO', nome: 'Time Ouro', c: '#d4a017' },
+  { n: 'ROXO', nome: 'Time Roxo', c: '#8b5cf6' },
+  { n: 'PRATA', nome: 'Time Prata', c: '#aab4c8' },
+  { n: 'BRONZE', nome: 'Time Bronze', c: '#c2652e' },
 ];
 // Grelhas inteligentes (v4): linhas por tamanho — nunca fila única.
 const LINHAS = { 1: [1], 2: [2], 3: [3], 4: [2, 2], 5: [3, 2], 6: [3, 3], 7: [4, 3], 8: [4, 4], 9: [3, 3, 3], 10: [4, 3, 3], 11: [4, 4, 3] };
@@ -161,7 +165,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         });
         // silhuetas nas células sem foto (React fora do innerHTML → SVG simples inline)
         el.querySelectorAll('.cer-sil').forEach((s) => {
-          s.innerHTML = `<svg viewBox="0 0 96 96" fill="none" style="width:64%;height:64%;color:${KITS[t % 4].c}"><g stroke="currentColor" stroke-width="3" stroke-linejoin="miter" stroke-opacity="0.7" fill="currentColor" fill-opacity="0.13"><polygon points="40,12 56,12 64,20 64,36 56,44 40,44 32,36 32,20"/><path d="M14 88 L14 70 L24 58 L40 52 L56 52 L72 58 L82 70 L82 88 Z"/></g></svg>`;
+          s.innerHTML = `<svg viewBox="0 0 96 96" fill="none" style="width:64%;height:64%;color:${MARCA_TIME[t % MARCA_TIME.length].c}"><g stroke="currentColor" stroke-width="3" stroke-linejoin="miter" stroke-opacity="0.7" fill="currentColor" fill-opacity="0.13"><polygon points="40,12 56,12 64,20 64,36 56,44 40,44 32,36 32,20"/><path d="M14 88 L14 70 L24 58 L40 52 L56 52 L72 58 L82 70 L82 88 Z"/></g></svg>`;
         });
         await sleep(30);
         // arranque simultâneo, travagens quase simultâneas (stagger ~160ms)
@@ -169,8 +173,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         const travas = rolos.map(async (rolo, r) => {
           const st = rolo.querySelector('.cer-strip');
           rolo.classList.add('gira');
-          rolo.style.setProperty('--tc', KITS[t % 4].c);
-          rolo.style.setProperty('--tcg60', rgba(KITS[t % 4].c, 0.6));
+          rolo.style.setProperty('--tc', MARCA_TIME[t % MARCA_TIME.length].c);
+          rolo.style.setProperty('--tcg60', rgba(MARCA_TIME[t % MARCA_TIME.length].c, 0.6));
           st.style.transition = 'none';
           st.style.transform = 'translateY(0)';
           void st.offsetHeight;
@@ -226,8 +230,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       {fase === 'girar' ? (
         <div className="cer-maq">
           <div className="cer-luzes">{Array.from({ length: 15 }, (_, i) => <span key={i} className="cer-luz" style={{ animationDelay: `${(i * 0.09).toFixed(2)}s` }} />)}</div>
-          <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', textAlign: 'center', color: KITS[timeAtual % 4].c, marginBottom: 8 }}>
-            a sortear · {times[timeAtual]?.nome || `Time ${timeAtual + 1}`}
+          <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', textAlign: 'center', color: MARCA_TIME[timeAtual % MARCA_TIME.length].c, marginBottom: 8 }}>
+            a sortear · {MARCA_TIME[timeAtual % MARCA_TIME.length].nome}
           </div>
           <div className="cer-janela">
             <div ref={rolosRef} className="cer-rolos" />
@@ -239,14 +243,14 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       {/* grelhas dos times (enchem ao vivo) */}
       <div style={{ padding: '4px 2px 0' }}>
         {times.map((t, ti) => {
-          const kit = KITS[ti % 4];
+          const marca = MARCA_TIME[ti % MARCA_TIME.length];
           const cheios = grelha[ti] || [];
           let i = 0;
           return (
-            <div key={ti} style={kitVars(kit)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 2px 6px', fontFamily: RAJ, fontWeight: 800, letterSpacing: '0.1em', fontSize: 13, color: kit.c, textTransform: 'uppercase', textShadow: `0 0 12px ${rgba(kit.c, 0.45)}` }}>
-                {t.nome} <span style={{ fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.04em' }}>· kit {kit.n.toLowerCase()}</span>
-                <span style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${rgba(kit.c, 0.45)}, transparent)` }} />
+            <div key={ti} style={kitVars(marca)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 2px 6px', fontFamily: RAJ, fontWeight: 800, letterSpacing: '0.1em', fontSize: 13, color: marca.c, textTransform: 'uppercase', textShadow: `0 0 12px ${rgba(marca.c, 0.45)}` }}>
+                {marca.nome}
+                <span style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${rgba(marca.c, 0.45)}, transparent)` }} />
               </div>
               {linhas.map((c, li) => {
                 const slots = t.jogadores.slice(i, i + c);
@@ -257,7 +261,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
                       const idx = linhas.slice(0, li).reduce((s, x) => s + x, 0) + si;
                       const cheio = idx < cheios.length;
                       return cheio ? (
-                        <QuadroB key={si} j={j} kit={kit} w={qw} delayBob={ti * 0.8 + idx * 0.3} />
+                        <QuadroB key={si} j={j} kit={marca} w={qw} delayBob={ti * 0.8 + idx * 0.3} />
                       ) : (
                         <div key={si} style={{ width: qw, aspectRatio: '3/4', border: '1.5px dashed rgba(255,255,255,0.18)', clipPath: 'polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)' }} />
                       );

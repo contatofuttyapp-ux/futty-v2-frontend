@@ -8,7 +8,7 @@ import { useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
-import CerimoniaSorteio, { KITS } from '../components/CerimoniaSorteio';
+import CerimoniaSorteio, { MARCA_TIME } from '../components/CerimoniaSorteio';
 import { gerarCartao916 } from '../utils/sorteioCartao';
 import Toast from '../components/Toast';
 import '../styles/app.css';
@@ -71,7 +71,7 @@ export default function SorteioShow() {
               </button>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {(resultado.times || []).map((t, ti) => (
-                  <button key={ti} type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ flex: 1, color: KITS[ti % 4].c, borderColor: KITS[ti % 4].c }} onClick={() => baixarCartao(ti)}>
+                  <button key={ti} type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ flex: 1, color: MARCA_TIME[ti % MARCA_TIME.length].c, borderColor: MARCA_TIME[ti % MARCA_TIME.length].c }} onClick={() => baixarCartao(ti)}>
                     9:16 · {t.nome}
                   </button>
                 ))}
