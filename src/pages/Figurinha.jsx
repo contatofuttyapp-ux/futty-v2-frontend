@@ -9,10 +9,11 @@ import { apiFetch, apiUpload } from '../lib/api';
 import { nomeJogador, urlAsset } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { getFrameColor } from '../utils/frameColors';
-import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico } from '../utils/figurinhaCanvas';
+import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden } from '../utils/figurinhaCanvas';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
+import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import SeloHonra from '../components/SeloHonra';
 import '../styles/app.css';
@@ -20,8 +21,10 @@ import '../styles/app.css';
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
 const FUNDOS = [
   { k: 'estadio', label: 'Estádio' },
+  { k: 'aura', label: 'Aura' }, // glow SELADO da vitrine como fundo do cromo — ANTES do Épico
   { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label novo
   { k: 'preto', label: 'Neutro' },
+  { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
 ];
 // Background real de cada fundo (igual ao do PlayerCard) para os tiles.
 const FUNDO_BG = {
@@ -33,6 +36,11 @@ const FUNDO_BG = {
   // FASE 3.51 — 'preto' (label "Neutro") re-baseado: mesma base escura do épico, sem
   // padrão. O tile é o gradiente liso, condizente com o card real.
   preto: 'linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
+  // 'aura' — tile fiel ao glow selado: elipse dourada (mesmos stops) sobre o escuro
+  // da casa. O card real desenha o glow com blur no canvas; aqui a elipse já é suave.
+  aura: 'radial-gradient(ellipse 70% 56% at 50% 44%, rgba(212,160,23,0.95) 0%, rgba(212,160,23,0.48) 40%, rgba(212,160,23,0.16) 64%, transparent 92%), linear-gradient(180deg, #0a0a12 0%, #070812 55%, #050609 100%)',
+  // 'golden' — FALLBACK (foil dourado) até o render real da chapa ficar pronto (ver `goldenTile`).
+  golden: 'linear-gradient(160deg, #b8860b 0%, #e6bd52 28%, #a9760f 54%, #dcab3a 76%, #855a0b 100%)',
 };
 const TABS = [
   { k: 'fundo', label: 'Fundo' },
@@ -42,12 +50,15 @@ const TABS = [
 // Planos que destrancam os kits 'pro'. Qualquer outro (free, null, futuros) vê cadeado.
 const PLANOS_COM_KITS = ['pro', 'elite'];
 
-// Kits do card. 'dark-gold' é o único vestido/seleccionável por agora; os
-// restantes são placeholders (em breve) ou trancados por plano (pro).
-const KIT_DARK_GOLD_IMG = 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/avatars/Kits/kit1-dark-gold.png';
+// Kits do card. Assets em bucket PÚBLICO 'kits' (app assets, não PII — o tijolo 1C
+// privatizou avatars e partia estas thumbnails). dark-gold e dark-purple ativos/livres.
+const KIT_IMG = {
+  'dark-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit1-dark-gold.png',
+  'dark-purple': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit2-dark-purple.png',
+};
 const KITS_FIGURINHA = [
   { id: 'dark-gold', nome: 'Dark Gold', base: '#0d0d12', acento: '#d4a017', estado: 'ativo' },
-  { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'breve' },
+  { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'ativo' },
   { id: 'white-gold', nome: 'White Gold', base: '#f8f5f0', acento: '#d4a017', estado: 'breve' },
   { id: 'elite-gold', nome: 'Elite Gold', base: '#d4a017', acento: '#0d0d12', estado: 'pro' },
 ];
@@ -69,6 +80,20 @@ const FUTTY_PARTICULAS = [
   { left: 85, size: 2, cor: '#ffffff', dur: 10.1, delay: 1.7 },
   { left: 90, size: 3, cor: '#f5e070', dur: 7.9, delay: 4 },
   { left: 92, size: 2, cor: '#d4a017', dur: 9.5, delay: 6.2 },
+];
+
+// Glints do fundo GOLDEN no PREVIEW (a "mina encantada" viva). Mesmas posições do
+// canvas (desenharFundoGolden) — [x%, y%, d(px), delay(s), dur(s)]. Densos fora do
+// centro (o avatar tapa o meio). z3: entram ATRÁS do jogador (lei do brilho do cromo).
+// No PNG de download o brilho é estático no pico (canvas); aqui vive.
+const GOLDEN_GLINTS_UI = [
+  { x: 10, y: 12, d: 3, dl: 0.0, dur: 7.6 }, { x: 23, y: 8, d: 2, dl: 4.1, dur: 8.3 },
+  { x: 50, y: 6, d: 3, dl: 1.7, dur: 7.1 }, { x: 72, y: 9, d: 2, dl: 5.6, dur: 8.7 },
+  { x: 89, y: 14, d: 4, dl: 2.6, dur: 7.9 }, { x: 7, y: 32, d: 3, dl: 6.3, dur: 9.0 },
+  { x: 93, y: 37, d: 2, dl: 0.9, dur: 8.4 }, { x: 11, y: 55, d: 2, dl: 3.4, dur: 7.5 },
+  { x: 91, y: 60, d: 3, dl: 5.1, dur: 8.9 }, { x: 14, y: 82, d: 3, dl: 1.2, dur: 7.4 },
+  { x: 85, y: 85, d: 4, dl: 4.6, dur: 8.1 }, { x: 50, y: 91, d: 3, dl: 2.9, dur: 8.6 },
+  { x: 31, y: 19, d: 2, dl: 6.9, dur: 7.8 }, { x: 70, y: 21, d: 3, dl: 3.8, dur: 8.2 },
 ];
 
 // Recorte octogonal do card (cut/W = 32/400 = 8%; cut/H = 32/600 ≈ 5.3%). Usado
@@ -160,6 +185,7 @@ export default function Figurinha() {
   const [placaUrl, setPlacaUrl] = useState(null); // camada placa+nome (studio, topo)
   // Tile do Épico = render REAL do fundo em miniatura (não uma imitação CSS/SVG).
   const [epicoTile, setEpicoTile] = useState(null);
+  const [goldenTile, setGoldenTile] = useState(null); // render real do fundo Golden p/ o tile
   const fileRef = useRef(null);
 
   const jogador = me?.user || {};
@@ -290,6 +316,21 @@ export default function Figurinha() {
         await desenharFundoEpico(cv.getContext('2d'), 120, 120, { intensidade: 3.0 });
         if (vivo) setEpicoTile(cv.toDataURL('image/png'));
       } catch { /* fallback: fica o gradiente base do FUNDO_BG */ }
+    })();
+    return () => { vivo = false; };
+  }, []);
+
+  // Render ÚNICO do tile do Golden (chapa foil + glints no pico), como o Épico.
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const cv = document.createElement('canvas');
+        cv.width = 120;
+        cv.height = 120;
+        await desenharFundoGolden(cv.getContext('2d'), 120, 120);
+        if (vivo) setGoldenTile(cv.toDataURL('image/png'));
+      } catch { /* fallback: fica o gradiente foil do FUNDO_BG */ }
     })();
     return () => { vivo = false; };
   }, []);
@@ -454,6 +495,12 @@ export default function Figurinha() {
   // vale para esta sessão e não se estraga o ecrã por causa de uma preferência.
   async function escolherFundo(k) {
     if (k === fundo) return;
+    // GATE PREMIUM (mesmo padrão dos kits): fundo premium exige plano pago (ou super).
+    // O backend é a verdade (barra o PATCH); aqui só encaminhamos para /planos.
+    const def = FUNDOS.find((f) => f.k === k);
+    const planoUser = me?.user?.plan || 'free';
+    const ehSuper = !!me?.user?.is_super_admin;
+    if (def?.premium && !ehSuper && !PLANOS_COM_KITS.includes(planoUser)) return navigate('/planos');
     setFundo(k);
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ fundo_figurinha: k }) });
@@ -513,7 +560,9 @@ export default function Figurinha() {
     <div style={{ position: 'absolute', inset: 0, zIndex: 8, clipPath: CLIP_OCTOGONO, background: 'rgba(5,8,16,0.75)', backdropFilter: 'blur(6px)', display: 'grid', placeItems: 'center' }}>
       {erroIA ? (
         <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
-          <img src="/futty-logo-metallic.png" alt="" style={{ width: 64, height: 64, objectFit: 'contain', opacity: 0.55 }} />
+          {/* LEI DO F: logo oficial transparente (FuttyLogo SVG), estático no erro.
+              O antigo /futty-logo-metallic.png (fundo preto sólido) está BANIDO. */}
+          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Não deu desta vez. Tenta de novo.</span>
           <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={gerarAvatarIA}>
             Tentar novamente
@@ -648,6 +697,20 @@ export default function Figurinha() {
                     {/* FASE 3.31 — Névoa REMOVIDA no fundo Épico: o facetado é gráfico,
                         não atmosférico; a bruma por cima embaçava o lapidado. As
                         partículas (chuva) ficam — dão o "premium discreto" sem embaçar. */}
+
+                    {/* GOLDEN — mina encantada VIVA no preview: poeira de diamante a z3,
+                        ATRÁS do jogador (lei do brilho do cromo). O download leva o pico
+                        estático (canvas). reduced-motion → pontos ténues sem flash. */}
+                    {fundo === 'golden' ? (
+                      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 3, clipPath: CLIP_OCTOGONO }}>
+                        {GOLDEN_GLINTS_UI.map((g, i) => (
+                          <span key={i} className="fig-glint" style={{ left: `${g.x}%`, top: `${g.y}%`, '--gd': `${g.d}px`, '--gdl': `${g.dl}s`, '--gdur': `${g.dur}s` }}>
+                            <span className="fig-glint__dot" />
+                            <span className="fig-glint__cross" />
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
 
                     {/* Camada do jogador — só o avatar, por cima das partículas */}
                     {jogadorUrl ? (
@@ -856,9 +919,12 @@ export default function Figurinha() {
           {activeTab === 'fundo' ? (
             // Tiles do mesmo tamanho dos kits (¼ da largura); linha de 3 centrada.
             // Container a 85% → tiles ~15% mais pequenos, centrados.
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, width: '85%', margin: '0 auto' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, rowGap: 10, width: '85%', margin: '0 auto' }}>
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
+                // Cadeado premium (mesma regra dos kits): fundo premium + plano não pago.
+                const planoUser = me?.user?.plan || 'free';
+                const bloqueado = f.premium && !me?.user?.is_super_admin && !PLANOS_COM_KITS.includes(planoUser);
                 return (
                   <button
                     key={f.k}
@@ -882,15 +948,30 @@ export default function Figurinha() {
                   >
                     {/* Thumbnail quadrado (cantos 45° — identidade HUD) */}
                     <div className="hud-corners-s" style={{
+                      position: 'relative',
                       width: '100%',
                       aspectRatio: '1 / 1',
-                      // Épico: mostra o FUNDO REAL renderizado (fallback = base escura).
-                      background: f.k === 'gradiente' && epicoTile ? `url(${epicoTile})` : FUNDO_BG[f.k],
+                      // Épico e Golden mostram o FUNDO REAL renderizado (fallback = gradiente base).
+                      background: f.k === 'golden' && goldenTile
+                        ? `url(${goldenTile})`
+                        : f.k === 'gradiente' && epicoTile ? `url(${epicoTile})` : FUNDO_BG[f.k],
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       border: sel ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
                       filter: sel ? 'none' : 'saturate(0.7) brightness(0.85)',
-                    }} />
+                    }}>
+                      {/* Cadeado + PRO no fundo premium para quem não assina (o desejo vende). */}
+                      {bloqueado ? (
+                        <>
+                          <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#fff', background: 'rgba(0,0,0,0.34)' }}>
+                            <Lock size={14} />
+                          </span>
+                          <span style={{ position: 'absolute', top: 3, right: 3, padding: '1px 4px', borderRadius: 5, background: '#d4a017', color: '#0d0d12', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 800, letterSpacing: '0.05em' }}>
+                            PRO
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
                     {/* Nome */}
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: sel ? '#fff' : 'var(--label-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {f.label}
@@ -933,9 +1014,16 @@ export default function Figurinha() {
                     }}
                   >
                     {/* Thumbnail quadrado */}
-                    <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: kit.id === 'dark-gold' ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: vestido ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: vestido ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
-                      {kit.id === 'dark-gold' ? (
-                        <img src={KIT_DARK_GOLD_IMG} alt={kit.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: vestido ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: vestido ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
+                      {KIT_IMG[kit.id] ? (
+                        // Enquadramento (reparo do look): o cover cortava a camisa a meio.
+                        // Ancora ao topo + desce + reduz a escala → vê-se o corte da gola e
+                        // o padrão da manga de relance, com a maior parte da camisa visível.
+                        <img
+                          src={KIT_IMG[kit.id]}
+                          alt={kit.nome}
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 10%', transform: 'scale(0.82) translateY(7%)', transformOrigin: '50% 0%' }}
+                        />
                       ) : null}
                       {vestido ? (
                         <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: '#d4a017', color: '#0d0d12', display: 'grid', placeItems: 'center' }}>

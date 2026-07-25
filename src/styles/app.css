@@ -1776,6 +1776,37 @@
 .fig-light {
   animation: futtyLight 9.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
+
+/* GOLDEN — poeira de diamante (mina encantada). Glint = ponto redondo + halo que, no
+   pico do fade, ganha uma micro-cruz de 4 raios. Desfasados e lentos: 2-4 acesos por
+   vez, nunca todos. Vive na camada do fundo (z3), atrás do jogador. */
+.fig-glint { position: absolute; transform: translate(-50%, -50%); }
+.fig-glint__dot {
+  position: absolute; left: 50%; top: 50%;
+  width: var(--gd); height: var(--gd); border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.6); opacity: 0.05; mix-blend-mode: screen;
+  background: radial-gradient(circle, rgba(255,251,235,1) 0%, rgba(255,236,188,0.75) 38%, rgba(255,220,150,0) 74%);
+  box-shadow: 0 0 5px 1.5px rgba(255,236,180,0.55);
+  animation: figGlintDot var(--gdur) ease-in-out infinite var(--gdl);
+}
+.fig-glint__cross {
+  position: absolute; left: 50%; top: 50%;
+  --gr: calc(var(--gd) * 2.6); width: var(--gr); height: var(--gr);
+  transform: translate(-50%, -50%) scale(0.3); opacity: 0; mix-blend-mode: screen; filter: blur(0.4px);
+  background:
+    linear-gradient(90deg, transparent 43%, rgba(255,255,250,0.95) 50%, transparent 57%),
+    linear-gradient(0deg, transparent 43%, rgba(255,255,250,0.95) 50%, transparent 57%);
+  animation: figGlintCross var(--gdur) ease-in-out infinite var(--gdl);
+}
+@keyframes figGlintDot {
+  0%, 72%, 100% { opacity: 0.05; transform: translate(-50%, -50%) scale(0.6); }
+  84% { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes figGlintCross {
+  0%, 79%, 89%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  84% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+}
+
 /* Botão do controlo de zoom (estilo Futty, dourado). */
 .fig-zoom-btn {
   width: 24px;
@@ -1867,6 +1898,9 @@
   .fig-bob, .fig-sway, .fig-shadow, .fig-aura, .fig-name-glow,
   .fig-particle, .fig-light,
   .fig-frame-shine, .fig-dot-twinkle { animation: none; }
+  /* GOLDEN reduced-motion: pontos ténues estáticos, sem cintilar nem flash. */
+  .fig-glint__dot { animation: none; opacity: 0.26; transform: translate(-50%, -50%) scale(1); }
+  .fig-glint__cross { animation: none; opacity: 0; }
 }
 
 /* FASE 3.42/3.46 — Loader oficial: o monograma F é PINTADO por uma escova que corre
@@ -2210,9 +2244,10 @@
 .perfil-glow { position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
   z-index:0; pointer-events:none;
   width:300px; height:344px;
+  /* DOSE +25% (isolado: só este glow muda; ref oficial atualiza após o look). */
   background: radial-gradient(ellipse 50% 48% at 50% 45%,
-    rgba(212,160,23,.55) 0%, rgba(212,160,23,.24) 34%,
-    rgba(212,160,23,.07) 56%, transparent 78%);
+    rgba(212,160,23,.69) 0%, rgba(212,160,23,.30) 34%,
+    rgba(212,160,23,.09) 56%, transparent 78%);
   filter: blur(46px);
   animation: respiraA 7s ease-in-out infinite; }
 @keyframes respiraA { 0%,100% { transform:translate(-50%,-50%) scale(1);    opacity:.92; }

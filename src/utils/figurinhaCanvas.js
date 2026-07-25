@@ -52,6 +52,106 @@ export function desenharFundoNeutro(ctx, W, H) {
   desenharVinheta(ctx, W, H);
 }
 
+// Fundo "Aura" — réplica FIEL do glow SELADO da vitrine (variante A, app.css .perfil-glow):
+// base escura da casa + aura dourada elíptica ATRÁS do jogador. Valores COPIADOS do palco
+// selado (330×470; glow box 300×344; ellipse 50%×48% @ 50%,45%; stops .55/.24/.07/0 @
+// 0/34/56/78%; blur 46) e só reescalados ao 2:3 do cromo. NÃO toca no palco selado.
+export function desenharFundoAura(ctx, W, H, ehQuadrado = false) {
+  // a) base escura da casa (#050810), gradiente vertical subtil.
+  const base = ctx.createLinearGradient(0, 0, 0, H);
+  base.addColorStop(0, '#0a0a12');
+  base.addColorStop(0.55, '#070812');
+  base.addColorStop(1, '#050609');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, H);
+
+  // b) glow desenhado num offscreen do tamanho do "glow box" (300/330 × 344/470 do palco).
+  const gw = Math.max(2, Math.round(W * (300 / 330)));
+  const gh = Math.max(2, Math.round(H * (344 / 470)));
+  const off = document.createElement('canvas');
+  off.width = gw; off.height = gh;
+  const octx = off.getContext('2d');
+  octx.save();
+  octx.translate(gw * 0.5, gh * 0.45);     // centro da elipse @ 50%,45% do box
+  octx.scale(gw * 0.5, gh * 0.48);          // raios 50%×48% do box
+  // DOSE glow ×2 (mesmo desenho, dobra opacity/spread): alphas dobrados (clamp) e
+  // stops empurrados para fora (mais alcance). Base seladas: .55/.24/.07 @ 0/34/56/78.
+  const g = octx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  g.addColorStop(0, 'rgba(212,160,23,0.95)');
+  g.addColorStop(0.40, 'rgba(212,160,23,0.48)');
+  g.addColorStop(0.64, 'rgba(212,160,23,0.16)');
+  g.addColorStop(0.92, 'rgba(212,160,23,0)');
+  octx.fillStyle = g;
+  octx.beginPath(); octx.arc(0, 0, 1, 0, Math.PI * 2); octx.fill();
+  octx.restore();
+
+  // c) transfere com o MESMO blur (46 no palco de 330 → 46/330 da largura do card). O
+  //    centro do box senta a 44% (translate(-50%,-50%) top:44% do glow selado).
+  const cy = (ehQuadrado ? 0.42 : 0.44) * H;
+  ctx.save();
+  ctx.filter = `blur(${W * (46 / 330)}px)`;
+  ctx.drawImage(off, W * 0.5 - gw / 2, cy - gh / 2);
+  ctx.restore();
+}
+
+// Fundo "GOLDEN" (1º fundo PREMIUM, gated no plano) — a "mina encantada" aprovada
+// (v5): chapa foil dourada (golden-plate.jpg, edição da ref Panini) + poeira de
+// diamante. LEI DO BRILHO DO CROMO: os glints vivem SÓ aqui, na camada do fundo, por
+// isso ficam SEMPRE atrás do avatar (o passo AVATAR é desenhado depois). No PNG estático
+// (download) os glints saem no PICO (frame mais rico) — a animação da mina vive no
+// preview (overlay CSS em Figurinha), nunca por cima do jogador.
+// GLINTS: [xFrac, yFrac, r(px@400)] — densos fora do centro (o avatar tapa o meio).
+const GOLDEN_GLINTS = [
+  [0.10, 0.12, 3.4], [0.23, 0.08, 2.4], [0.50, 0.06, 3.2], [0.72, 0.09, 2.4], [0.89, 0.14, 4.2],
+  [0.07, 0.32, 3.2], [0.93, 0.37, 2.4], [0.11, 0.55, 2.4], [0.91, 0.60, 3.2],
+  [0.14, 0.82, 3.2], [0.85, 0.85, 4.2], [0.50, 0.91, 3.2], [0.31, 0.19, 2.4], [0.70, 0.21, 3.2],
+];
+
+// Um glint de diamante NO PICO: ponto redondo com halo + micro-cruz de 4 raios.
+function desenharGlintPico(ctx, cx, cy, r, k) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  // ponto + halo
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.9);
+  g.addColorStop(0, 'rgba(255,252,236,0.95)');
+  g.addColorStop(0.34, 'rgba(255,236,188,0.6)');
+  g.addColorStop(1, 'rgba(255,220,150,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, r * 1.9, 0, Math.PI * 2); ctx.fill();
+  // micro-cruz (raios ~2.6× o diâmetro): 4 raios com centro brilhante
+  const L = r * 2.6 * 2; // meia-envergadura × 2 = raios 2.6× diâmetro
+  const w = Math.max(0.7 * k, r * 0.22);
+  const gh = ctx.createLinearGradient(cx - L, cy, cx + L, cy);
+  gh.addColorStop(0, 'rgba(255,255,250,0)'); gh.addColorStop(0.5, 'rgba(255,255,250,0.9)'); gh.addColorStop(1, 'rgba(255,255,250,0)');
+  ctx.fillStyle = gh; ctx.fillRect(cx - L, cy - w / 2, L * 2, w);
+  const gv = ctx.createLinearGradient(cx, cy - L, cx, cy + L);
+  gv.addColorStop(0, 'rgba(255,255,250,0)'); gv.addColorStop(0.5, 'rgba(255,255,250,0.9)'); gv.addColorStop(1, 'rgba(255,255,250,0)');
+  ctx.fillStyle = gv; ctx.fillRect(cx - w / 2, cy - L, w, L * 2);
+  ctx.restore();
+}
+
+// Desenha a chapa GOLDEN + (opcional) os glints NO PICO. `glints:false` deixa só a
+// chapa — usado na camada de fundo do PREVIEW (apenasMoldura), onde a "mina" vive num
+// overlay CSS animado (2-4 acesos). No card completo (download) `glints:true` baka o
+// pico (frame mais rico). O tile do catálogo usa o default (pico). Assíncrono.
+export async function desenharFundoGolden(ctx, W, H, { glints = true } = {}) {
+  const k = W / 400;
+  // base escura por baixo, caso a chapa falhe a carregar (nunca fica buraco).
+  const base = ctx.createLinearGradient(0, 0, 0, H);
+  base.addColorStop(0, '#2a1c05'); base.addColorStop(1, '#140d02');
+  ctx.fillStyle = base; ctx.fillRect(0, 0, W, H);
+  // a) chapa foil (cover).
+  const chapa = await carregarImagem('/golden-plate.jpg', false);
+  if (chapa) {
+    const s = Math.max(W / chapa.naturalWidth, H / chapa.naturalHeight);
+    const dw = chapa.naturalWidth * s, dh = chapa.naturalHeight * s;
+    ctx.drawImage(chapa, (W - dw) / 2, (H - dh) / 2, dw, dh);
+  }
+  // b) poeira de diamante NO PICO (estática no PNG; no preview, glints:false → a
+  //    animação vive no overlay CSS, sem duplicar aqui).
+  if (glints) for (const [xf, yf, r] of GOLDEN_GLINTS) desenharGlintPico(ctx, xf * W, yf * H, r * k, k);
+}
+
 // Fundo "Épico" — honeycomb alinhado ao ângulo do F + monograma como marca de água,
 // placa 3D (pseudo-perspectiva), luz central e vinheta. EXPORTADO para o tile da UI
 // renderizar o FUNDO REAL em miniatura (em vez de uma imitação em CSS/SVG).
@@ -543,6 +643,15 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     desenharFundoNeutro(ctx, W, H);
   } else if (fundo === 'gradiente') {
     await desenharFundoEpico(ctx, W, H);
+  } else if (fundo === 'aura') {
+    // Aura da vitrine (glow selado replicado). Sem holofotes de estádio (o palco
+    // selado não os tem) — guardado no passo 2.
+    desenharFundoAura(ctx, W, H, ehQuadrado);
+  } else if (fundo === 'golden') {
+    // GOLDEN premium — chapa foil + poeira de diamante (atrás do avatar). No PREVIEW
+    // (apenasMoldura) a chapa entra SEM glints baked → a "mina" vive no overlay animado
+    // (z3); no card completo (download) os glints saem NO PICO (frame mais rico).
+    await desenharFundoGolden(ctx, W, H, { glints: !apenasMoldura });
   } else {
     const bg = await carregarImagem('/stadium_bg.png', false);
     if (bg) {
@@ -567,13 +676,16 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     }
   }
 
-  // 2. HOLOFOTES
-  for (const cx of [W * 0.25, W * 0.75]) {
-    const g = ctx.createRadialGradient(cx, 0, 0, cx, 0, W * 0.5);
-    g.addColorStop(0, 'rgba(255,255,220,0.12)');
-    g.addColorStop(1, 'rgba(255,255,220,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+  // 2. HOLOFOTES — só nos fundos de estádio; Aura e Golden são luz própria (glow /
+  // foil), sem holofotes por cima.
+  if (fundo !== 'aura' && fundo !== 'golden') {
+    for (const cx of [W * 0.25, W * 0.75]) {
+      const g = ctx.createRadialGradient(cx, 0, 0, cx, 0, W * 0.5);
+      g.addColorStop(0, 'rgba(255,255,220,0.12)');
+      g.addColorStop(1, 'rgba(255,255,220,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
   // 3. AVATAR — só no card completo. Na camada apenasMoldura é omitido (o jogador

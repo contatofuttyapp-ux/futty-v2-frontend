@@ -25,13 +25,35 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
 - F metálico: forma original (F_CONTORNO/F_ESQUELETO em `utils/futtyMonograma.js`) +
   pele ouro amostrada da referência — zero branco no metal/glow.
 - **Ícones = lucide/Icon da casa (`/icons/*.svg`); emoji SÓ como conteúdo (reações).**
+- **LEI DO F:** logo = **SÓ o asset oficial transparente** (`FuttyLogo`/`FuttyLoader` SVG,
+  ou `futty-logo-flat.png` RGBA; estático onde não cabe animação). O F de **fundo preto
+  sólido** (`futty-logo-metallic.png`, RGB) está **BANIDO** em qualquer estado novo.
 - Loading: `LoadingFutty`/`FuttyLoader` (o F pinta-se); `.page-reveal` na entrada.
 - **Vitrine (herói): glow SELADO** — transplante byte-a-byte do harness variante A
   (palco 330×470, glow 300×344 blur46 `respiraA` no PRÓPRIO glow, cutout 250×284 sem
   drop-shadow). Ref: `docs/looks/vitrine-glow-aprovado.png`. Nunca reescalar "para o
   app"; alterações requerem NOVA aprovação visual.
 
+## Figurinha — fundos do cromo
+- Catálogo: Estádio · Épico · **Aura** (glow SELADO da vitrine replicado no canvas —
+  base escura + aura dourada elíptica atrás do jogador; valores copiados de
+  `.perfil-glow`, nunca reescala o palco selado) · Neutro.
+- **GOLDEN = 1º fundo PREMIUM** (instalado, à espera do look de selo): chapa foil única
+  (`golden-plate.jpg`, edição da ref Panini) + poeira de diamante "mina encantada" (v5) —
+  glints minúsculos com micro-flash de cruz, **atrás do avatar**. Ordem no catálogo:
+  Estádio → Aura → Épico → Neutro → **Golden**. **Gate no backend** (`FUNDOS_PREMIUM`,
+  planos `['pro','elite']`; super-admin passa) — o cadeado no frontend é só o desejo a
+  vender, a verdade é servidor. Preview animado; download leva o pico estático.
+- **LEI DO BRILHO DO CROMO:** todo o brilho/vida de um fundo vive **SEMPRE na camada do
+  fundo, ATRÁS do avatar** — nada cintila à frente do jogador. Sem varrimento de vidro
+  sobre a cara, sem sparkles/cruzes por cima. "Joia na penumbra": glints bokeh, facetas
+  de luz ou pulso do próprio gradiente, todos por trás; `reduced-motion` → estático.
+
 ## Regras de produto vivas
+- **RANKING = onde a escolha do jogador aparece** (fundo + kit da Figurinha = a
+  identidade dele). **SORTEIO = palco de evento**; visual próprio (potencial gatilho de
+  aposta/suspense) é conversa **FUTURA**, só por ordem expressa do utilizador e com custo
+  discutido. **Ambos selados/aprovados — não mexer em nenhum sem ordem.**
 - Posição (GL/DEF/MEI/ATA) = decisão do PRÓPRIO jogador (hub da equipa); admin corrige.
 - Post nasce/vive na equipa (team_id); alcance global nunca.
 - v1 sem upload de vídeo (link embed YouTube/TikTok/IG); partilha = LINK + imagem 9:16.
