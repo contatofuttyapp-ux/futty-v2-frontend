@@ -343,6 +343,31 @@ export default function MeuPerfil() {
           </button>
         </div>
 
+        {/* SECÇÃO PRIVACIDADE (Opção B): o rosto entra por omissão para MAIORES; aqui
+            desliga-se para silhueta. No servidor a IDADE manda sempre (menores/sem data
+            de nascimento nunca revelam, mesmo com isto ligado). */}
+        <SecLabel>Privacidade</SecLabel>
+        <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px' }}>
+            <span style={{ display: 'grid', gap: 3, minWidth: 0 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>
+                <Icon name="cadeado" size={20} color="#d4a017" />
+                Mostrar o meu rosto em links públicos
+              </span>
+              <span style={{ fontSize: 12, lineHeight: 1.45, color: 'rgba(255,255,255,0.4)', paddingLeft: 32 }}>
+                O teu rosto aparece em links públicos de sorteio. Desliga aqui se preferires silhueta.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={perfil.user.mostrar_rosto_publico !== false}
+              onChange={(e) => patchMe({ mostrar_rosto_publico: e.target.checked })}
+              style={{ width: 20, height: 20, accentColor: '#8b5cf6', flex: 'none' }}
+              aria-label="Mostrar o meu rosto em links públicos de sorteio"
+            />
+          </div>
+        </div>
+
         {/* 6. SECÇÃO CONTA — no fim: é a zona de sessão, e o "Terminar sessão" é a
             última coisa que se quer encontrar por acidente. As notificações push são
             a primeira LINHA deste card (não secção própria), por isso vêm com ele. */}

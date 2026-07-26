@@ -300,6 +300,33 @@ export default function Inicio() {
   const [toast, setToast] = useState(null); // { msg, tipo }
   const celebrouCamp = useRef(false);
 
+  // Pedido ÚNICO de data de nascimento (Opção B): sem ela, o /p/ cai em silhueta
+  // (proteção de menores — a idade manda). Banner não-bloqueante e dispensável.
+  const [dobInput, setDobInput] = useState('');
+  const [dobBusy, setDobBusy] = useState(false);
+  const [dobFeito, setDobFeito] = useState(false);
+  const [dobDispensado, setDobDispensado] = useState(() => {
+    try { return localStorage.getItem('futty_dob_dispensado') === '1'; } catch { return false; }
+  });
+  const precisaDob = !!me?.user && !me.user.birthdate && !dobFeito && !dobDispensado;
+  async function guardarDob() {
+    if (dobBusy || !dobInput) return;
+    setDobBusy(true);
+    try {
+      await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ birthdate: dobInput }) });
+      setDobFeito(true);
+      setToast({ msg: 'Obrigado! Data guardada.', tipo: 'success' });
+    } catch (e) {
+      setToast({ msg: e.message || 'Não deu para guardar.', tipo: 'error' });
+    } finally {
+      setDobBusy(false);
+    }
+  }
+  function dispensarDob() {
+    setDobDispensado(true);
+    try { localStorage.setItem('futty_dob_dispensado', '1'); } catch { /* priv */ }
+  }
+
   // Notificações push: banner discreto (uma vez por sessão).
   const { estado: pushEstado, subscrever: pushSubscrever } = usePushNotifications();
   const [pushBannerFechado, setPushBannerFechado] = useState(() => sessionStorage.getItem('futty_push_dismiss') === '1');
@@ -543,6 +570,30 @@ export default function Inicio() {
                 a acção principal da página (o Início não tem uma; ver EmptyState). */}
             <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => pushSubscrever()}>Ativar</button>
             <button type="button" aria-label="Fechar" onClick={fecharPushBanner} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+          </div>
+        ) : null}
+
+        {/* Pedido único de data de nascimento (Opção B) — para proteger menores nos
+            links públicos de sorteio. Não-bloqueante; dispensável. */}
+        {precisaDob ? (
+          <div className="hud-corners" style={{ display: 'grid', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.25)' }}>
+            <span style={{ fontSize: 13, color: '#fff', lineHeight: 1.45 }}>
+              Indica a tua <b>data de nascimento</b> — é para sabermos proteger menores nos links públicos de sorteio.
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                type="date"
+                value={dobInput}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setDobInput(e.target.value)}
+                style={{ flex: '1 1 150px', padding: '8px 10px', borderRadius: 2, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: 14 }}
+                aria-label="Data de nascimento"
+              />
+              <button type="button" className="btn btn--purple btn--sm hud-corners-s" disabled={!dobInput || dobBusy} onClick={guardarDob}>
+                {dobBusy ? 'A guardar…' : 'Guardar'}
+              </button>
+              <button type="button" aria-label="Agora não" onClick={dispensarDob} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 13 }}>Agora não</button>
+            </div>
           </div>
         ) : null}
 
