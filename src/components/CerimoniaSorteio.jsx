@@ -7,8 +7,9 @@
 // A máquina: raios 24.5°, letreiro SORTEIO, Joia lateral (arrasto+tap), baralho oficial
 // selado no giro, véu re-escopado ao interior + cartão fit-to-width, lock-in + molduras vivas
 // na Victory, som selado (somSorteio.js, opt-in off), reserva neutro, X de saída, botões C3.
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { urlAsset } from '../utils/avatar';
+import { apiFetch } from '../lib/api';
 import { gerarCartazEscalacao } from '../utils/sorteioCartao';
 import SomSorteio from './somSorteio';
 import '../styles/app.css';
@@ -68,6 +69,33 @@ function silhuetaURI(cor) {
   )}`;
 }
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// BannerAd do sorteio — agora SERVIDO a valer (/api/ads?pagina=sorteio): respeita o
+// toggle do dono (default OFF) e o filtro etário fail-closed no servidor. Mantém o look
+// selado da .faixaAd; conta impressão/clique. Sem campanha OU página OFF → não aparece.
+function BannerSorteio() {
+  const [ad, setAd] = useState(null);
+  const [pronto, setPronto] = useState(false);
+  const impRef = useRef(null);
+  useEffect(() => {
+    let vivo = true;
+    apiFetch('/api/ads?pagina=sorteio').then((r) => { if (vivo) { setAd(r?.ad || null); setPronto(true); } }).catch(() => { if (vivo) setPronto(true); });
+    return () => { vivo = false; };
+  }, []);
+  useEffect(() => {
+    if (ad && ad.id && impRef.current !== ad.id) { impRef.current = ad.id; apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'imp' }) }).catch(() => {}); }
+  }, [ad]);
+  if (!pronto || !ad) return null;
+  const clicar = () => { apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'cli' }) }).catch(() => {}); if (ad.link) window.open(ad.link, '_blank', 'noopener'); };
+  return (
+    <div className="faixaAd" role="button" tabIndex={0} onClick={clicar} style={{ cursor: 'pointer' }}>
+      <span className="publab">Pub.</span>
+      <img src={ad.imagem_url || '/futty-logo-flat.png'} alt="" />
+      <div className="col"><div className="adtit">{ad.texto}</div><div className="adsub">{ad.sub}</div></div>
+      <span className="adcta">{ad.cta || 'Ver'}</span>
+    </div>
+  );
+}
 
 export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data }) {
   const rootRef = useRef(null);
@@ -412,13 +440,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         <button type="button" className="pbtn btGuardar" title="Guardar a imagem 9:16 (cartaz)"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>Guardar</button>
         <button type="button" className="pbtn btComp" title="Compartilhar o link da cerimónia (/p/)"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg>Compartilhar</button>
       </div>
-      {/* BannerAd da casa (house ad) — default OFF no produto (toggle do dono, menores
-          fail-closed); ligado nesta prova para o look. */}
-      <div className="faixaAd"><span className="publab">Pub.</span>
-        <img src="/futty-logo-flat.png" alt="" />
-        <div className="col"><div className="adtit">Desbloqueia o fundo GOLDEN ✨</div><div className="adsub">cromo premium + kits exclusivos · Futty PRO</div></div>
-        <span className="adcta">Ver planos</span>
-      </div>
+      {/* BannerAd — servido a valer (/api/ads?pagina=sorteio); toggle do dono + menores
+          fail-closed no servidor. Sem campanha/OFF → não aparece. */}
+      <BannerSorteio />
       <div className="saltar"><button type="button">» concluir já</button></div>
       <div className="toast" />
     </div>

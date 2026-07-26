@@ -1,70 +1,67 @@
-// Futty v2.0 — Card de publicidade nativo (puramente frontend, sem backend).
+// Futty v2.0 — Card de publicidade REAL: consome /api/ads?pagina=X (serving do Gabinete,
+// com filtro etário fail-closed + toggle por página no servidor). Conta impressão (ao
+// aparecer) e clique (ao tocar) via /api/ads/evento. Sem campanha elegível OU página OFF
+// → não renderiza nada. Variants: 'native' (Início/feed) e 'banner' (sorteio).
+import { useEffect, useRef, useState } from 'react';
+import { apiFetch } from '../lib/api';
 import Icon from './Icon';
-// Variants: 'native' (feed/início) e 'banner' (fixo no sorteio).
 
 const BASE = {
-  position: 'relative',
-  width: '100%',
-  overflow: 'hidden',
-  background: '#0d0d12',
-  border: '1px solid rgba(212,160,23,0.06)',
-  borderLeft: '2px solid rgba(212,160,23,0.3)',
+  position: 'relative', width: '100%', overflow: 'hidden', background: '#0d0d12',
+  border: '1px solid rgba(212,160,23,0.06)', borderLeft: '2px solid rgba(212,160,23,0.3)',
 };
 
-export default function AdCard({ imageUrl, linkUrl = '#', label = 'Pub.', variant = 'native' }) {
-  const box =
-    variant === 'banner'
-      ? { ...BASE, height: 72, borderRadius: 10, boxShadow: '0 -4px 20px rgba(0,0,0,0.6)' }
-      : { ...BASE, height: 100, borderRadius: 8 };
+export default function AdCard({ pagina = 'inicio', variant = 'native' }) {
+  const [ad, setAd] = useState(null);
+  const [pronto, setPronto] = useState(false);
+  const impRef = useRef(null);
 
-  const conteudo = imageUrl ? (
-    <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+  useEffect(() => {
+    let vivo = true;
+    apiFetch(`/api/ads?pagina=${encodeURIComponent(pagina)}`)
+      .then((r) => { if (vivo) { setAd(r?.ad || null); setPronto(true); } })
+      .catch(() => { if (vivo) setPronto(true); });
+    return () => { vivo = false; };
+  }, [pagina]);
+
+  useEffect(() => {
+    if (ad && ad.id && impRef.current !== ad.id) {
+      impRef.current = ad.id; // conta 1 impressão por anúncio servido
+      apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'imp' }) }).catch(() => {});
+    }
+  }, [ad]);
+
+  if (!pronto || !ad) return null; // página OFF ou sem campanha → nada
+
+  const box = variant === 'banner'
+    ? { ...BASE, height: 72, borderRadius: 10, boxShadow: '0 -4px 20px rgba(0,0,0,0.6)' }
+    : { ...BASE, height: 100, borderRadius: 8 };
+
+  const clicar = () => {
+    apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'cli' }) }).catch(() => {});
+    if (ad.link) window.open(ad.link, '_blank', 'noopener');
+  };
+
+  const conteudo = ad.imagem_url ? (
+    <img src={ad.imagem_url} alt={ad.texto || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
   ) : (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        width: '100%',
-        height: '100%',
-        boxSizing: 'border-box',
-        border: '1px dashed rgba(212,160,23,0.12)',
-        borderRadius: 'inherit',
-      }}
-    >
-      <Icon name="anuncio" size={22} />
-      <div>
-        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, color: '#d4a017' }}>Parceiros Futty</div>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)' }}>espaço publicitário</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', height: '100%', padding: '0 14px', boxSizing: 'border-box' }}>
+      <Icon name="anuncio" size={22} color="#d4a017" />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#f0e6c8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ad.texto}</div>
+        <div style={{ fontSize: 11, color: '#8a8a98', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ad.sub}</div>
       </div>
+      {ad.cta ? <span style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, color: '#f0c94a', border: '1px solid rgba(212,160,23,.5)', padding: '6px 11px', borderRadius: 6 }}>{ad.cta}</span> : null}
     </div>
-  );
-
-  const corpo = linkUrl ? (
-    <a href={linkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', height: '100%' }}>
-      {conteudo}
-    </a>
-  ) : (
-    conteudo
   );
 
   return (
     <div style={box}>
-      {corpo}
-      <span
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          fontSize: 8,
-          color: 'rgba(255,255,255,0.2)',
-          background: 'rgba(0,0,0,0.5)',
-          padding: '2px 5px',
-          borderRadius: '0 8px 0 4px',
-        }}
-      >
-        {label}
+      <button type="button" onClick={clicar} style={{ display: 'block', width: '100%', height: '100%', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
+        {conteudo}
+      </button>
+      <span style={{ position: 'absolute', top: 0, right: 0, fontSize: 8, letterSpacing: '.08em', color: 'rgba(255,255,255,0.4)', background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '0 8px 0 4px', textTransform: 'uppercase' }}>
+        Publicidade
       </span>
     </div>
   );

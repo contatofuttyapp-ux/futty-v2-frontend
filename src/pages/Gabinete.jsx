@@ -57,27 +57,42 @@ export default function Gabinete() {
   const [dados, setDados] = useState(null);
   const [op, setOp] = useState(null);
   const [seg, setSeg] = useState(null);
+  const [pub, setPub] = useState(null);
   const [erro, setErro] = useState('');
   const [toast, setToast] = useState(null);
   const [novoCusto, setNovoCusto] = useState({ nome: '', valor: '', ciclo: 'mês', renova: '' });
   const [novoReg, setNovoReg] = useState({ nome: '', tipo: '', renova: '' });
+  const [novaCamp, setNovaCamp] = useState({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
 
+  async function recarregarPub() { try { setPub(await apiFetch('/api/super/gabinete/publicidade')); } catch { /* */ } }
   useEffect(() => {
     let vivo = true;
     Promise.all([
       apiFetch('/api/super/gabinete'),
       apiFetch('/api/super/gabinete/operacao'),
       apiFetch('/api/denuncias/agregados').catch(() => null),
-    ]).then(([g, o, s]) => { if (!vivo) return; setDados(g); setOp(o); setSeg(s); })
+      apiFetch('/api/super/gabinete/publicidade').catch(() => null),
+    ]).then(([g, o, s, pb]) => { if (!vivo) return; setDados(g); setOp(o); setSeg(s); setPub(pb); })
       .catch((e) => vivo && setErro(e.message));
     return () => { vivo = false; };
   }, []);
 
   async function guardarOp(next) {
     const anterior = op; setOp(next);
-    try { const salvo = await apiFetch('/api/super/gabinete/operacao', { method: 'PUT', body: JSON.stringify(next) }); setOp(salvo); setToast({ tipo: 'success', mensagem: 'Guardado.' }); }
+    try { const salvo = await apiFetch('/api/super/gabinete/operacao', { method: 'PUT', body: JSON.stringify(next) }); setOp(salvo); setToast({ tipo: 'success', mensagem: 'Guardado.' }); recarregarPub(); }
     catch (e) { setOp(anterior); setToast({ tipo: 'error', mensagem: e.message }); }
   }
+  const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `c${Date.now()}`);
+  function addCampanha() {
+    if (!novaCamp.nome.trim()) return;
+    const paginas = Object.entries(novaCamp.paginas).filter(([, v]) => v).map(([k]) => k);
+    const c = { id: uid(), nome: novaCamp.nome.trim(), anunciante: novaCamp.anunciante.trim(), texto: novaCamp.texto.trim() || novaCamp.nome.trim(), sub: novaCamp.anunciante.trim(), cta: 'Ver', link: novaCamp.link.trim(), cls: novaCamp.cls, inicio: '', fim: novaCamp.fim.trim(), paginas, estado: 'ativa' };
+    guardarOp({ ...op, campanhas: [...(op.campanhas || []), c] });
+    setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
+  }
+  const setEstadoCamp = (id, estado) => guardarOp({ ...op, campanhas: op.campanhas.map((c) => (c.id === id ? { ...c, estado } : c)) });
+  const delCamp = (id) => guardarOp({ ...op, campanhas: op.campanhas.filter((c) => c.id !== id) });
+  const setToggle = (pag, on) => guardarOp({ ...op, toggles: { ...(op.toggles || {}), [pag]: on } });
   const addCusto = () => { if (!novoCusto.nome.trim()) return; guardarOp({ ...op, custos: [...(op.custos || []), { nome: novoCusto.nome.trim(), desc: '', valor: Number(novoCusto.valor) || 0, ciclo: novoCusto.ciclo, renova: novoCusto.renova.trim(), estado: (Number(novoCusto.valor) || 0) === 0 ? 'free' : 'ativo' }] }); setNovoCusto({ nome: '', valor: '', ciclo: 'mês', renova: '' }); };
   const delCusto = (i) => guardarOp({ ...op, custos: op.custos.filter((_, k) => k !== i) });
   const addReg = () => { if (!novoReg.nome.trim()) return; guardarOp({ ...op, registos: [...(op.registos || []), { nome: novoReg.nome.trim(), tipo: novoReg.tipo.trim(), renova: novoReg.renova.trim(), dias: null }] }); setNovoReg({ nome: '', tipo: '', renova: '' }); };
@@ -127,9 +142,56 @@ export default function Gabinete() {
         <Hud h2="Receita" breve="Stripe por ligar" />
         <Vazio>A receita acende quando ligares o <b>Stripe</b>. Até lá, MRR, assinantes e entradas ficam <b>em breve</b> — sem números inventados.</Vazio>
 
-        {/* PUBLICIDADE — em breve (medição de ads por construir) */}
-        <Hud h2="Publicidade" breve="motor por ligar" />
-        <Vazio>Sem campanhas ativas. O slot existe nas páginas (interruptores <b>OFF</b>); a medição (impressão/clique) e a 1ª campanha nascem aqui quando o motor de ads entrar.</Vazio>
+        {/* PUBLICIDADE — a valer: campanhas + medição + toggles por página */}
+        <Hud h2="Publicidade" n="campanhas · medição nossa (impressão/clique) · lei de menores no motor" />
+        {(pub?.alertas || []).length ? (
+          <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(253,164,175,.35)' }}>
+            {pub.alertas.map((a, i) => <div key={i} className="gab-osub" style={{ color: '#fda4af', padding: '2px 0' }}>⚠ {a}</div>)}
+          </div>
+        ) : null}
+        <div className="gab-cards c2">
+          <div className="gab-card">
+            <h3>Campanhas</h3>
+            {(pub?.campanhas || []).length === 0 ? <div className="gab-osub" style={{ padding: '8px 0' }}>Sem campanhas. Cria a 1ª abaixo.</div>
+              : pub.campanhas.map((c) => {
+                const ctr = c.imp ? (c.cli / c.imp * 100).toFixed(1) : '0.0';
+                return (
+                  <div key={c.id} className="gab-oprow" style={{ gridTemplateColumns: '1.4fr .9fr auto auto' }}>
+                    <div><div className="gab-nm">{c.nome}</div><div className="gab-osub">{c.anunciante || '—'} · {(c.paginas || []).join(', ') || 'sem página'} · <span style={{ color: c.cls === 'livre' ? '#7bd88f' : '#fda4af' }}>{c.cls === 'livre' ? 'livre' : '18+'}</span></div></div>
+                    <div className="gab-osub">{c.imp} imp · {c.cli} cli · CTR {ctr}%{c.dias_restantes != null ? ` · ${c.dias_restantes}d` : ''}</div>
+                    <span className={`gab-chip ${c.estado === 'ativa' ? 'gab-ok' : c.estado === 'pausada' ? 'gab-uso' : 'gab-warn'}`} style={{ cursor: 'pointer' }} onClick={() => setEstadoCamp(c.id, c.estado === 'ativa' ? 'pausada' : 'ativa')}>{c.estado === 'ativa' ? 'ativa' : c.estado === 'pausada' ? 'pausada ▸' : 'terminada'}</span>
+                    <div className="gab-del" title="remover" onClick={() => delCamp(c.id)}>✕</div>
+                  </div>
+                );
+              })}
+            <div className="gab-form">
+              <input placeholder="Nome da campanha" style={{ flex: '1.3 1 110px' }} value={novaCamp.nome} onChange={(e) => setNovaCamp({ ...novaCamp, nome: e.target.value })} />
+              <input placeholder="Anunciante" style={{ flex: '1 1 90px' }} value={novaCamp.anunciante} onChange={(e) => setNovaCamp({ ...novaCamp, anunciante: e.target.value })} />
+              <input placeholder="Texto do banner" style={{ flex: '1.3 1 110px' }} value={novaCamp.texto} onChange={(e) => setNovaCamp({ ...novaCamp, texto: e.target.value })} />
+              <input placeholder="Link" style={{ flex: '1 1 90px' }} value={novaCamp.link} onChange={(e) => setNovaCamp({ ...novaCamp, link: e.target.value })} />
+              <select value={novaCamp.cls} onChange={(e) => setNovaCamp({ ...novaCamp, cls: e.target.value })}><option value="livre">livre</option><option value="18+">18+</option></select>
+              <input placeholder="fim (YYYY-MM-DD)" style={{ width: 120 }} value={novaCamp.fim} onChange={(e) => setNovaCamp({ ...novaCamp, fim: e.target.value })} />
+              {['inicio', 'sorteio', 'p'].map((pg) => (
+                <label key={pg} style={{ fontSize: 11, color: '#c9c2d6', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <input type="checkbox" checked={!!novaCamp.paginas[pg]} onChange={(e) => setNovaCamp({ ...novaCamp, paginas: { ...novaCamp.paginas, [pg]: e.target.checked } })} />{pg}
+                </label>
+              ))}
+              <button type="button" className="gab-add" onClick={addCampanha}>+ Criar campanha</button>
+              <span style={{ flexBasis: '100%', fontSize: 10.5, color: '#7a7a86' }}>classificação por campanha (livre/18+ · sem cls = 18+ fail-closed); menor/anónimo só recebe "livre".</span>
+            </div>
+          </div>
+          <div className="gab-card">
+            <h3>Interruptores por página <span style={{ fontWeight: 400, color: '#8a8a98', textTransform: 'none' }}>(default OFF)</span></h3>
+            {['inicio', 'sorteio', 'p'].map((pg) => (
+              <div key={pg} className="gab-planrow">
+                <span style={{ flex: 1, fontSize: 13, color: '#c9c2d6' }}>{pg === 'inicio' ? 'Início' : pg === 'sorteio' ? 'Sorteio in-app' : 'Pública /p/'}</span>
+                <input type="checkbox" checked={!!op.toggles?.[pg]} onChange={(e) => setToggle(pg, e.target.checked)} style={{ width: 20, height: 20, accentColor: '#8b5cf6' }} />
+                <span className={`gab-chip ${op.toggles?.[pg] ? 'gab-ok' : 'gab-warn'}`}>{op.toggles?.[pg] ? 'ON' : 'OFF'}</span>
+              </div>
+            ))}
+            <p className="gab-muted" style={{ marginTop: 12 }}>Página desligada → nenhum anúncio aí, mesmo com campanha. A lei de menores corre no servidor a cada pedido.</p>
+          </div>
+        </div>
 
         {/* OPERAÇÃO — a secção que administra (editável) */}
         <Hud h2="Operação" n="finanças & infra · a secção que administra" />
