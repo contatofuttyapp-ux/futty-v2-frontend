@@ -42,6 +42,7 @@ const CampeonatoPublico = lazy(() => import('./pages/CampeonatoPublico'));
 const Explorar = lazy(() => import('./pages/Explorar'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Super = lazy(() => import('./pages/Super'));
+const Gabinete = lazy(() => import('./pages/Gabinete'));
 const Termos = lazy(() => import('./pages/Termos'));
 const Privacidade = lazy(() => import('./pages/Privacidade'));
 
@@ -257,6 +258,16 @@ function AnimatedRoutes() {
               <AuthGuard>
                 <SuperAdminGuard>
                   <Super />
+                </SuperAdminGuard>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/gabinete"
+            element={
+              <AuthGuard>
+                <SuperAdminGuard>
+                  <Gabinete />
                 </SuperAdminGuard>
               </AuthGuard>
             }
