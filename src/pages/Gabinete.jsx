@@ -108,6 +108,11 @@ export default function Gabinete() {
   const estLbl = { ativo: 'ativo', free: 'grátis', uso: 'por uso' };
   const perMes = (x) => (x.estado === 'free' ? 0 : x.ciclo === 'ano' ? x.valor / 12 : x.valor);
   const burn = Math.round((op.custos || []).reduce((s, x) => s + perMes(x), 0));
+  // Proteção de dados (LGPD) — do store; helpers para o bloco editável.
+  const pd = op.protecao_dados || { dpas: [], politica_privacidade: {}, termos_uso: {}, canal_titular: {} };
+  const hoje = () => new Date().toISOString().slice(0, 10);
+  const selBase = { fontSize: 11, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, padding: '4px 8px', borderRadius: 20, cursor: 'pointer', background: 'transparent' };
+  const selDpa = (estado) => (estado === 'aceite' ? { ...selBase, color: '#7bd88f', border: '1px solid rgba(123,216,143,.4)' } : estado === 'n.a.' ? { ...selBase, color: '#8ab4ff', border: '1px solid rgba(138,180,255,.4)' } : { ...selBase, color: '#fda4af', border: '1px solid rgba(253,164,175,.5)' });
 
   return (
     <div className="app-shell gab">
@@ -251,6 +256,47 @@ export default function Gabinete() {
             <div className="gab-muted" style={{ marginTop: 10 }}>Onde ainda não</div>
             <div className="gab-cov">{(op.cobertura?.bloqueado || []).map((x, i) => <span key={i} className="off">{x}</span>)}</div>
             <p className="gab-muted" style={{ marginTop: 10 }}>Informativo — à mão + o que o Stripe expõe.</p>
+          </div>
+        </div>
+
+        {/* PROTEÇÃO DE DADOS (LGPD) — mesma família "papéis da casa" que Registos & Prazos */}
+        <Hud h2="Proteção de dados" n="LGPD · DPAs, política, termos, canal do titular (editável à mão)" />
+        {pd.politica_privacidade?.estado !== 'publicada' ? (
+          <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(253,164,175,.4)' }}>
+            <span className="gab-osub" style={{ color: '#fda4af' }}>⚠ Política de privacidade <b>por publicar</b> — bloqueia a submissão às lojas (App Store / Play Store) e o compliance LGPD.</span>
+          </div>
+        ) : null}
+        <div className="gab-cards c2">
+          <div className="gab-card">
+            <h3>DPAs por operador</h3>
+            {(pd.dpas || []).map((d, i) => (
+              <div key={i} className="gab-oprow" style={{ gridTemplateColumns: '0.8fr auto 1.1fr' }}>
+                <div className="gab-nm">{d.nome}</div>
+                <select value={d.estado} onChange={(e) => guardarOp({ ...op, protecao_dados: { ...pd, dpas: pd.dpas.map((x, k) => (k === i ? { ...x, estado: e.target.value } : x)) } })} style={selDpa(d.estado)}>
+                  <option>por tratar</option><option>aceite</option><option>n.a.</option>
+                </select>
+                <input placeholder="link do DPA" defaultValue={d.link} onBlur={(e) => guardarOp({ ...op, protecao_dados: { ...pd, dpas: pd.dpas.map((x, k) => (k === i ? { ...x, link: e.target.value, data: e.target.value && !x.data ? hoje() : x.data } : x)) } })} style={{ fontSize: 11, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '5px 7px', borderRadius: 6, minWidth: 0 }} />
+              </div>
+            ))}
+          </div>
+          <div className="gab-card">
+            <h3>Documentos & canal do titular</h3>
+            {[['politica_privacidade', 'Política de privacidade'], ['termos_uso', 'Termos de uso']].map(([k, label]) => (
+              <div key={k} className="gab-oprow" style={{ gridTemplateColumns: '1fr auto 1.1fr' }}>
+                <div className="gab-nm" style={{ fontSize: 12 }}>{label}</div>
+                <select value={pd[k]?.estado || 'por publicar'} onChange={(e) => guardarOp({ ...op, protecao_dados: { ...pd, [k]: { ...(pd[k] || {}), estado: e.target.value, data: e.target.value === 'publicada' && !pd[k]?.data ? hoje() : pd[k]?.data } } })} style={selDpa(pd[k]?.estado === 'publicada' ? 'aceite' : 'por tratar')}>
+                  <option>por publicar</option><option>publicada</option>
+                </select>
+                <input placeholder="URL" defaultValue={pd[k]?.url} onBlur={(e) => guardarOp({ ...op, protecao_dados: { ...pd, [k]: { ...(pd[k] || {}), url: e.target.value } } })} style={{ fontSize: 11, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '5px 7px', borderRadius: 6, minWidth: 0 }} />
+              </div>
+            ))}
+            <div className="gab-oprow" style={{ gridTemplateColumns: '1fr auto 1.1fr' }}>
+              <div className="gab-nm" style={{ fontSize: 12 }}>Canal do titular <span className="gab-osub">(direitos LGPD)</span></div>
+              <select value={pd.canal_titular?.estado || 'por definir'} onChange={(e) => guardarOp({ ...op, protecao_dados: { ...pd, canal_titular: { ...(pd.canal_titular || {}), estado: e.target.value } } })} style={selDpa(pd.canal_titular?.estado === 'ativo' ? 'aceite' : 'por tratar')}>
+                <option>por definir</option><option>ativo</option>
+              </select>
+              <input placeholder="email / formulário" defaultValue={pd.canal_titular?.destino} onBlur={(e) => guardarOp({ ...op, protecao_dados: { ...pd, canal_titular: { ...(pd.canal_titular || {}), destino: e.target.value } } })} style={{ fontSize: 11, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '5px 7px', borderRadius: 6, minWidth: 0 }} />
+            </div>
           </div>
         </div>
 
