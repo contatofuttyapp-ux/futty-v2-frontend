@@ -227,7 +227,17 @@ export default function Ranking() {
         {loading && ranking.length === 0 ? (
           <LoadingFutty />
         ) : ranking.length === 0 ? (
-          <p className="muted">Ainda não há jogadores.</p>
+          /* P3-18 — vazio DIGNO com próximo passo (antes: só "Ainda não há jogadores"). */
+          <div style={{ textAlign: 'center', padding: '30px 16px', display: 'grid', gap: 14, justifyItems: 'center' }}>
+            <p className="muted" style={{ margin: 0, fontSize: 14, color: '#c9c2d6' }}>O ranking nasce do 1º jogo.</p>
+            {equipaAtual?.role === 'admin' ? (
+              <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--sm hud-corners-s cta-gold" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 18px', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
+                Criar o 1º jogo
+              </Link>
+            ) : (
+              <p className="muted" style={{ margin: 0, fontSize: 12 }}>Assim que houver jogo e votos, aparece aqui.</p>
+            )}
+          </div>
         ) : (
           <div className="rank-list">
             {ranking.map((p, idx) => (

@@ -16,9 +16,18 @@
 //
 // Excepção: micro-loadings dentro de botões e o overlay de geração (que é relativo ao
 // CARD, não ao viewport) usam o <FuttyLoader> directo e não este componente.
+import { useEffect, useState } from 'react';
 import FuttyLoader from './FuttyLoader';
 
-export default function LoadingFutty() {
+// P3-14 — se o carregamento passar dos 3s, uma legenda discreta aparece por baixo do F
+// (contexto: "não travou, ainda estamos a puxar"). `legenda` é opcional — cada página
+// pode passar a sua ("A carregar o perfil…"); por omissão, uma linha reconfortante.
+export default function LoadingFutty({ legenda = 'A demorar mais do que o costume…' }) {
+  const [mostrarLegenda, setMostrarLegenda] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMostrarLegenda(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
   return (
     <div
       style={{
@@ -26,12 +35,19 @@ export default function LoadingFutty() {
         inset: 0,
         zIndex: 40,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 16,
         pointerEvents: 'none',
       }}
     >
       <FuttyLoader size={129} label={null} />
+      {mostrarLegenda ? (
+        <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, letterSpacing: '0.06em', color: 'var(--text-dim)', opacity: 0.85, transition: 'opacity 0.4s ease' }}>
+          {legenda}
+        </span>
+      ) : null}
     </div>
   );
 }

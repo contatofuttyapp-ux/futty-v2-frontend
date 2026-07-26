@@ -180,7 +180,8 @@ export default function Explorar() {
               ) : equipa.pedido_pendente ? (
                 <div style={{ display: 'grid', gap: 4, justifyItems: 'end', flexShrink: 0 }}>
                   <span style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 800, color: '#b69cff', letterSpacing: '0.06em' }}>Pedido enviado ✓</span>
-                  <button type="button" disabled={busy === equipa.slug} onClick={() => cancelarPedido(equipa)} style={{ background: 'none', border: 'none', color: '#8a8398', fontFamily: RAJ, fontSize: 10, letterSpacing: '0.06em', cursor: 'pointer', padding: 0 }}>
+                  {/* P3-16 — alvo mínimo 44px para o polegar (antes 10px sem padding). */}
+                  <button type="button" disabled={busy === equipa.slug} onClick={() => cancelarPedido(equipa)} style={{ background: 'none', border: 'none', color: '#8a8398', fontFamily: RAJ, fontSize: 11, letterSpacing: '0.06em', cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center', padding: '0 6px', margin: '-6px -6px -6px 0' }}>
                     cancelar
                   </button>
                 </div>

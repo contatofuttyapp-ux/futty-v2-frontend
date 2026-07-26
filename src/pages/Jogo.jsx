@@ -56,6 +56,10 @@ export default function Jogo() {
   // IDs dos confirmados via RSVP (passados pelo AdminPanel ao "Fazer sorteio").
   const rsvpConfirmados = location.state?.rsvpConfirmados || null;
   const { data, loading, error, reload } = useApi(`/api/games/${id}`);
+  // P2-10: integração SÓ DE LEITURA com o sistema de espera (rsvp_espera). Mostra a
+  // posição na fila dentro do Jogo; NÃO toca na capacidade do /confirmar (vaga futura).
+  const { data: rsvpEstado } = useApi(`/api/jogos/${id}/rsvp`);
+  const posEspera = rsvpEstado?.minha_posicao_espera ?? null;
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [editando, setEditando] = useState(false); // modo ajuste manual dos times
@@ -204,6 +208,11 @@ export default function Jogo() {
             {/* Confirmação de presença */}
             <SecLabel>A tua presença</SecLabel>
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', flexWrap: 'wrap' }}>
+              {posEspera != null && !estouConfirmado ? (
+                <span style={{ width: '100%', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: RAJ, color: 'var(--neon)', fontWeight: 700, fontSize: 13, letterSpacing: '0.03em' }}>
+                  ⏳ Estás em {posEspera}º na lista de espera
+                </span>
+              ) : null}
               {estouConfirmado ? (
                 <>
                   <span style={{ fontFamily: RAJ, color: '#7bd88f', fontWeight: 800, letterSpacing: '0.04em' }}>✓ Estás confirmado</span>

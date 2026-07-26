@@ -1687,6 +1687,14 @@
 @media (prefers-reduced-motion: reduce) {
   .cta-gold::after { animation: none; }
 }
+/* P3-13 — feedback de toque CONSISTENTE em toda a .cta-gold (antes só alguns usos
+   tinham translateY). Afunda de leve + brilho ao premir; reduce-motion mantém só o brilho. */
+.cta-gold { transition: transform 0.08s ease, filter 0.12s ease; }
+.cta-gold:active { transform: scale(0.98); filter: brightness(1.12); }
+@media (prefers-reduced-motion: reduce) {
+  .cta-gold { transition: filter 0.12s ease; }
+  .cta-gold:active { transform: none; }
+}
 /* Tier ecrãs pequenos (SE e similares, <700px): reserva menor (~300) → card com
    tamanho decente, aceitando scroll ligeiro até Baixar/Compartilhar só aqui.
    Vem ANTES do bloco <620px para este último (mais restritivo) vencer. */

@@ -424,6 +424,11 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
   const [contagem, setContagem] = useState(null);
   const [denunciaAberta, setDenunciaAberta] = useState(false);
+  // P3-17 — memória da denúncia: sem isto, o post não ficava marcado e dava para repetir
+  // sem saber. Estado local persistido por post (sobrevive a refresh).
+  const [denunciado, setDenunciado] = useState(() => {
+    try { return localStorage.getItem(`futty_denunciado_${p.id}`) === '1'; } catch { return false; }
+  });
   const [toast, setToast] = useState(null);
   const media = Array.isArray(p.media) ? p.media : [];
   const podeDenunciar = p.author_id !== meId;
@@ -452,16 +457,22 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
             {menuAberto ? (
               <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, minWidth: 150, background: 'rgba(12, 12, 18, 0.98)', border: BORDA_VIDRO, clipPath: 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)', overflow: 'hidden', zIndex: 5 }}>
                 {podeDenunciar ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuAberto(false);
-                      setDenunciaAberta(true);
-                    }}
-                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-                  >
-                    Denunciar
-                  </button>
+                  denunciado ? (
+                    <span style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', color: '#7bd88f', fontWeight: 700, fontSize: 13 }}>
+                      Denunciado ✓
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuAberto(false);
+                        setDenunciaAberta(true);
+                      }}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                    >
+                      Denunciar
+                    </button>
+                  )
                 ) : null}
                 {podeApagar ? (
                   <button
@@ -539,7 +550,13 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
           targetType="post"
           targetId={p.id}
           onClose={() => setDenunciaAberta(false)}
-          onResult={(r) => setToast({ tipo: r.tipo, mensagem: r.mensagem })}
+          onResult={(r) => {
+            setToast({ tipo: r.tipo, mensagem: r.mensagem });
+            if (r.tipo === 'success') {
+              setDenunciado(true);
+              try { localStorage.setItem(`futty_denunciado_${p.id}`, '1'); } catch { /* priv */ }
+            }
+          }}
         />
       ) : null}
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}

@@ -10,6 +10,15 @@ const CORES = {
 export default function Toast({ mensagem, tipo = 'info', onClose }) {
   const [saindo, setSaindo] = useState(false);
 
+  // P3-15 — mensagens sucessivas atropelavam-se: a 2ª herdava o fade da 1ª e sumia
+  // depressa. Ao mudar a mensagem, reinicia a visibilidade (padrão React: ajustar estado
+  // durante o render) e o timer reinicia → cada toast recebe o tempo completo.
+  const [msgAnterior, setMsgAnterior] = useState(mensagem);
+  if (mensagem !== msgAnterior) {
+    setMsgAnterior(mensagem);
+    setSaindo(false);
+  }
+
   useEffect(() => {
     const t1 = setTimeout(() => setSaindo(true), 2600); // inicia o fade
     const t2 = setTimeout(() => onClose?.(), 3000); // remove
@@ -17,7 +26,7 @@ export default function Toast({ mensagem, tipo = 'info', onClose }) {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [onClose]);
+  }, [mensagem, tipo, onClose]);
 
   if (!mensagem) return null;
   const cor = CORES[tipo] || CORES.info;
