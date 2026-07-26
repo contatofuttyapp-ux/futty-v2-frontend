@@ -87,7 +87,9 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
   limpar na vaga de higiene pré-lançamento, só com ordem expressa. Nunca apagar sozinho.
 
 ## Specs e bancada
-SPECs (papel) e mockups vivem no scratchpad da sessão (servidos em 8791):
-SPEC-SORTEIO / SPEC-EQUIPAS / SPEC-CAMPEONATOS / SPEC-SEGURANCA / SPEC-REDE-SOCIAL /
-SPEC-GABINETE (Gabinete do Dono, `/gabinete` super-admin — última peça da Segurança).
+**As SPECs (a constituição em papel) vivem no GIT: `frontend/docs/specs/`** — fonte da verdade,
+versionada. 13 specs: SPEC-SORTEIO / EQUIPAS / CAMPEONATOS / SEGURANCA / REDE-SOCIAL / GABINETE /
+DENUNCIAS / INFRA / UNIFORMES / JOGO-MANUAL / JOGO-RETROATIVO / GEOLOCALIZACAO / PRIVACIDADE.
+Guias leigos em `frontend/docs/` (ex.: COMO-FUNCIONA-O-SORTEIO.md). Ao editar uma spec, edita
+a do repo (o scratchpad é só working-copy). O harness 8791 continua a servir cópias do scratchpad.
 Dev: frontend 5173 (+5174 conta de teste), backend 3001, bancada 8791.
