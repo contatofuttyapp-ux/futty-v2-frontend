@@ -394,7 +394,9 @@ export default function Jogo() {
                   {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
                 </button>
               )}
-              {game.sorteio_realizado && (
+              {/* LEI: jogo manual/histórico (times à mão → sem seed) NÃO abre cerimónia.
+                  Só o sorteio (com seed) tem replay/"Ver sorteio". */}
+              {game.sorteio_realizado && game.times_resultado?.seed != null && (
                 <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => navigate(`/equipa/${slug}/jogo/${id}/sorteio`)}>
                   Ver sorteio
                 </button>
