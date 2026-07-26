@@ -716,8 +716,8 @@ function TabEquipa({ slug, team, showToast }) {
     try {
       // cidade só vai no corpo se foi ESCRITA (senão preservava-se '' e apagava a geo
       // sem querer — o texto não se guarda, só o ponto arredondado).
-      const corpo = { nome: nome.trim(), cor, localizacao: localizacao.trim(), descricao: descricao.trim() };
-      if (cidade.trim()) corpo.cidade = cidade.trim();
+      // cidade guarda-se e round-trips; enviar sempre (vazio = sair da busca por distância).
+      const corpo = { nome: nome.trim(), cor, localizacao: localizacao.trim(), cidade: cidade.trim(), descricao: descricao.trim() };
       await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify(corpo) });
       showToast('Time atualizado!');
     } catch (e) {
@@ -759,13 +759,10 @@ function TabEquipa({ slug, team, showToast }) {
       </label>
 
       {/* GEO — opt-in implícito (preencher = consentir). Texto obrigatório junto ao campo.
-          O texto da cidade não se guarda (só o ponto arredondado); se já há zona, di-lo. */}
+          O nome da cidade é guardado + mostrado; do ponto guarda-se só o arredondado. */}
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Cidade <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· busca por proximidade</span></span>
-        {team.geo_lat != null && !cidade ? (
-          <span style={{ fontSize: 12, color: '#7bd88f', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>Zona definida ✓ <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>(altera escrevendo outra cidade · <button type="button" onClick={() => { setCidade(''); apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ cidade: '' }) }).then(() => showToast('Zona removida')).catch(() => {}); }} style={{ background: 'none', border: 'none', color: '#fda4af', cursor: 'pointer', padding: 0, font: 'inherit' }}>remover</button>)</span></span>
-        ) : null}
-        <input value={cidade} onChange={(e) => setCidade(e.target.value.slice(0, 100))} placeholder={team.geo_lat != null ? 'Escreve para alterar a zona' : 'Ex: Lisboa'} style={inputStyle} />
+        <input value={cidade} onChange={(e) => setCidade(e.target.value.slice(0, 100))} placeholder="Ex: Brasília" style={inputStyle} />
         <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>
           Aparece na busca por proximidade. A morada exacta nunca é mostrada — só a zona aproximada. Apaga para sair da busca por distância.
         </span>

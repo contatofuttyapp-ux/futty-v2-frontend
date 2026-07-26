@@ -217,7 +217,7 @@ export default function Explorar() {
                 <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{equipa.nome}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                   {equipa.dist != null ? <b style={{ color: '#b69cff' }}>a {equipa.dist < 1 ? '<1' : Math.round(equipa.dist)} km · </b> : ''}
-                  {equipa.localizacao ? `${equipa.localizacao} · ` : ''}
+                  {equipa.cidade ? `${equipa.cidade} · ` : equipa.localizacao ? `${equipa.localizacao} · ` : ''}
                   {equipa.membro_count} membros · {equipa.modo_visibilidade === 'publico_aberto' ? 'aberta' : 'com aprovação'}
                 </div>
               </div>
