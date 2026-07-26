@@ -25,11 +25,23 @@ function SkeletonCard() {
   );
 }
 
+const RAIOS = [5, 10, 25, 50];
+// Distância aproximada entre 2 pontos (Haversine), em km. Corre no CLIENTE — a posição
+// do utilizador nunca é enviada ao servidor.
+function distanciaKm(a, b) {
+  const R = 6371; const toR = (d) => (d * Math.PI) / 180;
+  const dLat = toR(b.lat - a.lat); const dLng = toR(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
 export default function Explorar() {
   const [equipas, setEquipas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pesquisa, setPesquisa] = useState('');
   const [geoPedida, setGeoPedida] = useState(false);
+  const [posUser, setPosUser] = useState(null); // {lat,lng} SÓ em memória — nunca enviada/guardada
+  const [raio, setRaio] = useState(null); // km (null = sem filtro de distância)
   const [busy, setBusy] = useState(null); // slug em processamento
   const [toast, setToast] = useState(null);
 
@@ -52,11 +64,20 @@ export default function Explorar() {
     };
   }, []);
 
-  const filtradas = equipas.filter(
+  const filtradasTexto = equipas.filter(
     (e) =>
       e.nome.toLowerCase().includes(pesquisa.toLowerCase()) ||
       (e.localizacao || '').toLowerCase().includes(pesquisa.toLowerCase())
   );
+  // Camada de distância (client-side): só entra se houver posição do utilizador + raio.
+  // Equipas sem geo ficam de FORA da busca por distância, mas visíveis no modo normal.
+  const comDist = filtradasTexto.map((e) => ({
+    ...e,
+    dist: posUser && e.geo_lat != null && e.geo_lng != null ? distanciaKm(posUser, { lat: e.geo_lat, lng: e.geo_lng }) : null,
+  }));
+  const filtradas = posUser && raio
+    ? comDist.filter((e) => e.dist != null && e.dist <= raio).sort((a, b) => a.dist - b.dist)
+    : comDist;
 
   // Geolocalização OPT-IN: pede permissão no momento do toque; a posição fica no
   // dispositivo (não é enviada) — só servirá para ORDENAR quando houver pontos
@@ -67,12 +88,32 @@ export default function Explorar() {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      () => {
+      (p) => {
+        // A posição fica SÓ em memória (React state) — nunca é enviada ao servidor nem guardada.
+        setPosUser({ lat: p.coords.latitude, lng: p.coords.longitude });
         setGeoPedida(true);
-        setToast({ tipo: 'success', mensagem: 'Obrigado! As distâncias chegam quando as equipas declararem o campo.' });
+        if (!raio) setRaio(10);
+        setToast({ tipo: 'success', mensagem: 'Localização activa (só neste telefone).' });
       },
-      () => setToast({ tipo: 'info', mensagem: 'Sem problema — a busca por cidade chega.' })
+      () => setToast({ tipo: 'info', mensagem: 'Sem problema — escreve a tua cidade em baixo.' })
     );
+  }
+
+  // Alternativa: a cidade do UTILIZADOR, geocodificada NO BROWSER (não passa pelo nosso
+  // servidor). A posição resultante fica só em memória.
+  async function usarCidade() {
+    const cidade = pesquisa.trim();
+    if (!cidade) { setToast({ tipo: 'info', mensagem: 'Escreve a tua cidade na busca acima.' }); return; }
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cidade)}`, { headers: { Accept: 'application/json' } });
+      const arr = await r.json();
+      if (Array.isArray(arr) && arr[0]) {
+        setPosUser({ lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon) });
+        setGeoPedida(true);
+        if (!raio) setRaio(10);
+        setToast({ tipo: 'success', mensagem: `A tua zona: ${cidade}` });
+      } else setToast({ tipo: 'info', mensagem: 'Cidade não encontrada.' });
+    } catch { setToast({ tipo: 'error', mensagem: 'Não deu para localizar a cidade.' }); }
   }
 
   // Entrar (aberta) / pedir (aprovação) — o estado PENDENTE fica visível.
@@ -132,8 +173,26 @@ export default function Explorar() {
           </span>
         </button>
 
-        {/* Raio de busca por distância = removido até a geolocalização existir (atrás da
-            Segurança). Ver SPEC-REDE-SOCIAL. Não se promete o que não há. */}
+        {/* Alternativa à permissão do browser: usar a cidade escrita (geocodificada NO
+            browser, nunca no nosso servidor). */}
+        <button type="button" onClick={usarCidade} style={{ width: '100%', marginTop: 8, padding: '9px 12px', border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', clipPath: CLIP_S, color: '#c9c2d6', fontFamily: RAJ, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em' }}>
+          …ou usar a cidade escrita acima como a minha zona
+        </button>
+
+        {/* Raio real — só aparece quando há posição (do browser ou da cidade). */}
+        {posUser ? (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: RAJ, fontSize: 11, letterSpacing: '0.1em', color: '#9a8fc0', textTransform: 'uppercase', marginBottom: 8 }}>
+              <span>Raio de busca</span>
+              <b style={{ color: '#f0c94a', cursor: 'pointer' }} onClick={() => setRaio(null)}>{raio ? `${raio} km · limpar ✕` : 'sem filtro'}</b>
+            </div>
+            <div className="chips-row">
+              {RAIOS.map((r) => (
+                <button key={r} type="button" className={`chip ${raio === r ? 'chip--active' : ''}`} onClick={() => setRaio(r)}>{r} km</button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', color: '#9a8fc0', textTransform: 'uppercase', margin: '20px 2px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
           Equipas abertas · {filtradas.length}
@@ -157,6 +216,7 @@ export default function Explorar() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{equipa.nome}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                  {equipa.dist != null ? <b style={{ color: '#b69cff' }}>a {equipa.dist < 1 ? '<1' : Math.round(equipa.dist)} km · </b> : ''}
                   {equipa.localizacao ? `${equipa.localizacao} · ` : ''}
                   {equipa.membro_count} membros · {equipa.modo_visibilidade === 'publico_aberto' ? 'aberta' : 'com aprovação'}
                 </div>
