@@ -1,36 +1,45 @@
-// Futty v2.0 — A CERIMÓNIA DO SORTEIO (slot v8 aprovado, com dados REAIS).
-// SPEC-SORTEIO é a lei: rolos com os símbolos do utilizador intercalados entre
-// MEMBROS DA EQUIPA (§12; trava SEMPRE num jogador), marcação de time SELADA
-// (TIME OURO/ROXO; 3º-4º PRATA/BRONZE — os metais dos selos; a identidade veste o
-// palco, nunca a camisa), travagens quase simultâneas + voos ágeis (v7), grelhas
-// inteligentes 3→11 por time (v4), reservas com avatar + nº de ordem, jackpot ROXO
-// em cinema (backdrop-blur) com moedas 70/30 e letreiro por segmentos (v8).
-// REPLAY EXACTO (§10): toda a aleatoriedade visual sai de mulberry32(seed) — a
-// mesma seed (persistida no resultado) reproduz a MESMA cerimónia em qualquer conta.
-// Convidados sem app (§11) e quem não tem foto usam a Silhueta v4.
-import { useEffect, useRef, useState } from 'react';
+// Futty v2.0 — A CERIMÓNIA DO SORTEIO (máquina v8.25, transplante byte-a-fiel da bancada).
+// TRANSPLANTAR, NÃO REPRODUZIR: o CSS vive em styles/sorteio-maquina.css (scoped .smaq); a
+// lógica imperativa da bancada corre num useEffect sobre o DOM do componente (refs scoped —
+// instance-safe, sobrevive ao StrictMode). Dados REAIS: resultado.times/reservas/seed.
+// CONTRATOS (lei): default export {resultado, autoStart, aoTerminar} · MARCA_TIME exportado ·
+// avatar_url-falsy → SILHUETA (privacidade automática no /p/) · mulberry32(seed) = replay.
+// A máquina: raios 24.5°, letreiro SORTEIO, Joia lateral (arrasto+tap), baralho oficial
+// selado no giro, véu re-escopado ao interior + cartão fit-to-width, lock-in + molduras vivas
+// na Victory, som selado (somSorteio.js, opt-in off), reserva neutro, X de saída, botões C3.
+import { useEffect, useRef } from 'react';
 import { urlAsset } from '../utils/avatar';
-import SilhuetaJogador from './SilhuetaJogador';
+import { gerarCartazEscalacao } from '../utils/sorteioCartao';
+import SomSorteio from './somSorteio';
 import '../styles/app.css';
+import '../styles/sorteio-maquina.css';
 
-const RAJ = "'Rajdhani', sans-serif";
-const SIMBOLOS = ['/sorteio-assets/bola-ficha.png', '/sorteio-assets/carta-fut.png', '/sorteio-assets/chuteira.png'];
-// MARCAÇÃO DE TIME por índice — DECISÃO SELADA (vaga cassino, 23-24 jul): as cores
-// de time da casa são os METAIS DOS SELOS: TIME OURO vs TIME ROXO; 3º = PRATA,
-// 4º = BRONZE. O azul/vermelho da ronda de contraste morreu — a identidade veste o
-// PALCO (anel + rótulo + tinte da silhueta), nunca a pele/camisa do jogador.
-// eslint-disable-next-line react-refresh/only-export-components -- constante partilhada com as páginas do sorteio
+// MARCAÇÃO DE TIME — DECISÃO SELADA (vaga cassino): os metais dos selos OURO/ROXO/PRATA/BRONZE.
+// A cor veste o PALCO (anel + rótulo + tinte da silhueta), nunca a camisa.
+// eslint-disable-next-line react-refresh/only-export-components -- constante partilhada com SorteioShow
 export const MARCA_TIME = [
-  { n: 'OURO', nome: 'Time Ouro', c: '#d4a017' },
-  { n: 'ROXO', nome: 'Time Roxo', c: '#8b5cf6' },
-  { n: 'PRATA', nome: 'Time Prata', c: '#aab4c8' },
-  { n: 'BRONZE', nome: 'Time Bronze', c: '#c2652e' },
+  { n: 'OURO', nome: 'Time Ouro', c: '#d4a017', g: 'rgba(212,160,23,.55)' },
+  { n: 'ROXO', nome: 'Time Roxo', c: '#8b5cf6', g: 'rgba(139,92,246,.55)' },
+  { n: 'PRATA', nome: 'Time Prata', c: '#aab4c8', g: 'rgba(170,180,200,.55)' },
+  { n: 'BRONZE', nome: 'Time Bronze', c: '#c2652e', g: 'rgba(194,101,46,.55)' },
 ];
-// Grelhas inteligentes (v4): linhas por tamanho — nunca fila única.
-const LINHAS = { 1: [1], 2: [2], 3: [3], 4: [2, 2], 5: [3, 2], 6: [3, 3], 7: [4, 3], 8: [4, 4], 9: [3, 3, 3], 10: [4, 3, 3], 11: [4, 4, 3] };
-const CEL = 100; // altura da célula do rolo
+const marca = (i) => MARCA_TIME[i % MARCA_TIME.length];
+// LEI: RESERVA nunca veste cor de time — cinza-aço apagado, "à espera, sem dono".
+const RES_MARCA = { n: 'RESERVA', nome: 'Reserva', c: '#8a90a0', g: 'rgba(138,144,160,.32)' };
+// Grelhas inteligentes: linhas por tamanho de time — nunca fila única.
+const LINHAS = { 0: [], 1: [1], 2: [2], 3: [3], 4: [2, 2], 5: [3, 2], 6: [3, 3], 7: [4, 3], 8: [4, 4], 9: [3, 3, 3], 10: [4, 3, 3], 11: [4, 4, 3] };
+const ASSET = '/sorteio-assets/';
+// LEI v8.24 — SÓ O BARALHO OFICIAL SELADO gira nos rolos (5 bichos v9 + 4 cartas da casa).
+const SIMB = [
+  { t: 'av', src: `${ASSET}v9-jacare.png` }, { t: 'cd', src: `${ASSET}vf-ouro-c.png` },
+  { t: 'av', src: `${ASSET}v9-et.png` }, { t: 'cd', src: `${ASSET}v94-trofeu-c.png` },
+  { t: 'av', src: `${ASSET}v9-onca.png` }, { t: 'cd', src: `${ASSET}vf-roxa-c2.png` },
+  { t: 'av', src: `${ASSET}v9-tigre.png` }, { t: 'cd', src: `${ASSET}v94-bola.png` },
+  { t: 'av', src: `${ASSET}v9-astronauta.png` },
+];
+const MBPOS = [[20, 2], [80, 2], [2, 40], [97, 40], [2, 72], [97, 72]];
 
-// O MESMO RNG do backend (utils/sorteio.js) — a seed partilhada é o contrato.
+// O MESMO RNG do backend (utils/sorteio.js) — a seed partilhada é o contrato do replay.
 function mulberry32(seed) {
   let a = seed >>> 0;
   return function rng() {
@@ -40,283 +49,378 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-
-const rgba = (hex, a) => {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
-};
-const kitVars = (k) => ({ '--tc': k.c, '--tcg45': rgba(k.c, 0.45), '--tcg60': rgba(k.c, 0.6) });
-
-// Retrato de um jogador (foto real, ou Silhueta v4 para convidados/sem foto).
-function Retrato({ j, corSil }) {
-  if (j?.avatar_url) {
-    return <img src={urlAsset(j.avatar_url)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />;
-  }
-  return (
-    <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-      <SilhuetaJogador size="70%" color={corSil || 'rgba(255,255,255,0.55)'} />
-    </span>
-  );
+// SILHUETA DA CASA (angular, 45°) — MESMA geometria do SilhuetaJogador (cabeça octógono +
+// ombros em rectas com cortes 45°), aqui inline como data-uri (os rolos usam innerHTML).
+// LEI: círculos genéricos BANIDOS; placeholder de pessoa = SÓ esta silhueta. Fundo escuro
+// com o gradiente subtil da casa + brilho discreto do traço (a pele metálica apagada), tinte
+// do time. Usada quando avatar_url é falsy (o /p/ despublica → privacidade automática).
+const SIL_HEAD = '40,12 56,12 64,20 64,36 56,44 40,44 32,36 32,20';
+const SIL_BODY = 'M14 92 L14 70 L24 58 L40 52 L56 52 L72 58 L82 70 L82 92 Z';
+function silhuetaURI(cor) {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 100'>`
+    + `<defs><linearGradient id='sg' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#15131d'/><stop offset='1' stop-color='#0a0810'/></linearGradient></defs>`
+    + `<rect width='96' height='100' fill='url(#sg)'/>`
+    + `<g stroke='${cor}' stroke-linejoin='miter'>`
+    + `<g stroke-opacity='0.34' stroke-width='5' fill='none'><polygon points='${SIL_HEAD}'/><path d='${SIL_BODY}'/></g>`
+    + `<g stroke-width='2.4' stroke-opacity='0.72' fill='${cor}' fill-opacity='0.15'><polygon points='${SIL_HEAD}'/><path d='${SIL_BODY}'/></g>`
+    + `</g></svg>`,
+  )}`;
 }
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function PlacaNome({ nome, convidado, fs = 9 }) {
-  return (
-    <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.88))', padding: '9px 2px 3px', textAlign: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: fs, color: '#fff', zIndex: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-      {convidado ? '· ' : ''}{nome}
-    </span>
-  );
-}
+export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data }) {
+  const rootRef = useRef(null);
+  // props estáveis para o efeito (que corre 1x); um re-sorteio remonta via key no consumidor.
+  const cbRef = useRef(aoTerminar);
+  useEffect(() => { cbRef.current = aoTerminar; });
+  // info do cartaz (equipa/data) — lida no clique do "Guardar", sempre a mais recente.
+  const infoRef = useRef({ equipa, data });
+  useEffect(() => { infoRef.current = { equipa, data }; });
 
-// Quadro FRAME B (v5/v8): anel metálico do F + chase no aro + miolo VIDRO.
-function QuadroB({ j, kit, w, delayBob = 0 }) {
-  return (
-    <div className="cer-float" style={{ ...kitVars(kit), width: w, animationDelay: `${delayBob}s`, position: 'relative', aspectRatio: '3/4', clipPath: 'polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)', filter: 'drop-shadow(0 0 10px var(--tcg45))' }}>
-      <div className="cer-chasebox"><div className="cer-chase" /></div>
-      <div className="cer-metal" />
-      <div style={{ position: 'absolute', inset: 6, background: 'rgba(255,255,255,0.03)', overflow: 'hidden', clipPath: 'polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)' }}>
-        <Retrato j={j} corSil={kit.c} />
-        <PlacaNome nome={j.nome} convidado={j.convidado} />
-      </div>
-    </div>
-  );
-}
-
-export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar }) {
-  const times = resultado?.times || [];
-  const reservas = resultado?.reservas || [];
-  const seed = Number.isInteger(resultado?.seed) ? resultado.seed : 1;
-  const porTime = times[0]?.jogadores?.length || 0;
-  const nRolos = Math.min(porTime || 1, 11);
-
-  // Pool de ruído dos rolos = SÓ participantes desta equipa (§12).
-  const pool = times.flatMap((t) => t.jogadores).concat(reservas);
-
-  const [fase, setFase] = useState('pronto'); // pronto | girar | fim
-  const [timeAtual, setTimeAtual] = useState(0);
-  const [grelha, setGrelha] = useState(() => times.map(() => []));
-  const [reservasVis, setReservasVis] = useState(false);
-  const [jack, setJack] = useState(false);
-  const lockRef = useRef(false); // lock por ref: sobrevive limpo ao double-mount do StrictMode
-  const rolosRef = useRef(null);
-  const vivo = useRef(true);
-  // StrictMode monta→desmonta→monta preservando refs: repor `vivo` no corpo,
-  // senão o cleanup do 1º mount mata a cerimónia do 2º.
   useEffect(() => {
-    vivo.current = true;
-    return () => { vivo.current = false; };
-  }, []);
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const times = resultado?.times || [];
+    const reservas = resultado?.reservas || [];
+    const seed = Number.isInteger(resultado?.seed) ? resultado.seed : 1;
+    if (!times.length) return undefined;
 
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    let vivo = true;
+    const timers = new Set();
+    const clones = new Set();
+    const sleep = (ms) => new Promise((r) => { const id = setTimeout(r, ms); timers.add(id); });
+    const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const q = (sel) => root.querySelector(sel);
+    const qa = (sel) => [...root.querySelectorAll(sel)];
+    const maq = q('.maq');
+    let aCorrer = false; let saltarFlag = false;
 
-  // Strips determinísticas: mulberry32(seed + rolo) escolhe o ruído — replay EXACTO.
-  function stripDe(rngLocal) {
-    const seq = [];
-    for (let i = 0; i < 7; i += 1) {
-      const j = pool[Math.floor(rngLocal() * pool.length)] || { nome: '?' };
-      seq.push({ tipo: 'j', j });
-      seq.push({ tipo: 's', src: SIMBOLOS[Math.floor(rngLocal() * SIMBOLOS.length)] });
+    // — visual de um jogador real: foto (urlAsset) ou silhueta da cor (privacidade).
+    //   ti < 0 → RESERVA (silhueta cinza-aço).
+    const vis = (j, ti) => ({
+      nome: (j.convidado ? '· ' : '') + (j.nome || '?'),
+      img: j.avatar_url ? urlAsset(j.avatar_url) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
+    });
+
+    // — moldura de um jogador (innerHTML; corre dentro de .smaq → estilos aplicam).
+    //   res=true → RESERVA: cinza-aço + micro-lâmpadas apagadas (LEI: nunca cor de time).
+    function mmoldHTML(j, ti, res) {
+      const k = res ? RES_MARCA : marca(ti);
+      const mbs = MBPOS.map(([x, y], i) => `<span class="mb" style="--i:${i};left:${x}%;top:${y}%"></span>`).join('');
+      const v = vis(j, res ? -1 : ti);
+      return `<div class="mmold${res ? ' res' : ''}" style="--tc:${k.c};--tg:${k.g}"><div class="fr"><img src="${esc(v.img)}"></div>${mbs}<span class="nm">${esc(v.nome)}</span></div>`;
     }
-    return seq;
-  }
+    function encher(slotEl, j, ti, res) { slotEl.classList.add('cheio'); slotEl.innerHTML = mmoldHTML(j, ti, res); }
+    function voar(rolo, j, ti, slotEl) {
+      const a = rolo.getBoundingClientRect(); const b = slotEl.getBoundingClientRect();
+      const cl = document.createElement('div');
+      cl.style.cssText = `position:fixed;z-index:99;left:${a.left}px;top:${a.top}px;width:${a.width}px;height:${a.height}px;pointer-events:none`;
+      cl.innerHTML = mmoldHTML(j, ti);
+      root.appendChild(cl); clones.add(cl);
+      const dx = b.left - a.left; const dy = b.top - a.top; const s = b.width / a.width;
+      const an = cl.animate(
+        [{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${dx}px,${dy}px) scale(${s})` }],
+        { duration: reduzido ? 1 : 420, easing: 'cubic-bezier(.4,.1,.3,1)' },
+      );
+      return Promise.race([an.finished.catch(() => {}), sleep(reduzido ? 10 : 500)]).then(() => { cl.remove(); clones.delete(cl); if (vivo) encher(slotEl, j, ti); });
+    }
 
-  async function correr() {
-    if (lockRef.current || !times.length) return;
-    lockRef.current = true;
-    try {
-    setGrelha(times.map(() => []));
-    setReservasVis(false);
-    setJack(false);
-    setFase('girar');
-    const rng = mulberry32(seed);
+    // — grelhas dos times (a partir dos dados reais)
+    function montarGrupos() {
+      q('.grupos').innerHTML = times.map((t, gi) => {
+        const k = marca(gi); const linhas = LINHAS[Math.min(t.jogadores.length, 11)] || [t.jogadores.length];
+        let n = 0; let rows = '';
+        for (const c of linhas) rows += `<div class="srow">${Array.from({ length: c }, () => `<div class="slot" data-g="${gi}" data-i="${n++}"></div>`).join('')}</div>`;
+        return `<div class="grupo" data-gi="${gi}" style="--tc:${k.c};--tg:${k.g}"><div class="ghead">${esc(k.nome)}</div>${rows}</div>`;
+      }).join('');
+      q('.resv').classList.toggle('on', reservas.length > 0);
+      q('.rrow').innerHTML = reservas.map((j, i) => `<div class="rslot" data-r="${i}"><span class="badge">${esc(j.posicao || i + 1)}</span><div class="slot" style="width:100%;height:100%"></div></div>`).join('');
+    }
 
-    for (let t = 0; t < times.length; t += 1) {
-      if (!vivo.current) return;
-      setTimeAtual(t);
-      const jogs = times[t].jogadores;
-      // por "vagas" — blocos de nRolos (porTime>11 nunca acontece com o stepper)
-      for (let base = 0; base < jogs.length; base += nRolos) {
-        const lote = jogs.slice(base, base + nRolos);
-        // prepara strips + alvos — o React monta a janela DEPOIS do setFase('girar'),
-        // por isso esperamos o ref (até ~1s) em vez de abortar em silêncio.
-        let el = rolosRef.current;
-        for (let tent = 0; !el && tent < 20; tent += 1) {
-          await sleep(50);
-          el = rolosRef.current;
-        }
-        if (!el || !vivo.current) return;
-        el.innerHTML = '';
-        el.style.gridTemplateColumns = `repeat(${lote.length},1fr)`;
-        const strips = lote.map((alvo, r) => {
-          const rngRolo = mulberry32(seed + t * 1000 + base + r + 1);
-          const seq = stripDe(rngRolo);
-          seq[8] = { tipo: 'j', j: alvo }; // o rolo trava SEMPRE num jogador (§12)
-          return seq;
-        });
-        // render dos rolos
-        strips.forEach((seq) => {
-          const rolo = document.createElement('div');
-          rolo.className = 'cer-rolo';
-          rolo.innerHTML = `<div class="cer-strip">${seq.concat(seq).map((c) =>
-            c.tipo === 'j'
-              ? `<div class="cer-cel">${c.j.avatar_url ? `<img src="${urlAsset(c.j.avatar_url)}">` : '<span class="cer-sil"></span>'}<span class="cer-n">${c.j.nome || ''}</span></div>`
-              : `<div class="cer-cel cer-cel--simb"><img src="${c.src}"></div>`
-          ).join('')}</div><div class="cer-masc"></div><div class="cer-flash"></div>`;
-          el.appendChild(rolo);
-        });
-        // silhuetas nas células sem foto (React fora do innerHTML → SVG simples inline)
-        el.querySelectorAll('.cer-sil').forEach((s) => {
-          s.innerHTML = `<svg viewBox="0 0 96 96" fill="none" style="width:64%;height:64%;color:${MARCA_TIME[t % MARCA_TIME.length].c}"><g stroke="currentColor" stroke-width="3" stroke-linejoin="miter" stroke-opacity="0.7" fill="currentColor" fill-opacity="0.13"><polygon points="40,12 56,12 64,20 64,36 56,44 40,44 32,36 32,20"/><path d="M14 88 L14 70 L24 58 L40 52 L56 52 L72 58 L82 70 L82 88 Z"/></g></svg>`;
-        });
-        await sleep(30);
-        // arranque simultâneo, travagens quase simultâneas (stagger ~160ms)
-        const rolos = [...el.children];
-        const travas = rolos.map(async (rolo, r) => {
-          const st = rolo.querySelector('.cer-strip');
-          rolo.classList.add('gira');
-          rolo.style.setProperty('--tc', MARCA_TIME[t % MARCA_TIME.length].c);
-          rolo.style.setProperty('--tcg60', rgba(MARCA_TIME[t % MARCA_TIME.length].c, 0.6));
-          st.style.transition = 'none';
-          st.style.transform = 'translateY(0)';
-          void st.offsetHeight;
-          const dur = 750 + r * 160 + Math.floor(rng() * 120);
-          st.style.transition = `transform ${dur}ms cubic-bezier(.15,.6,.35,1)`;
-          st.style.transform = `translateY(${-(8 * CEL) - 14 * CEL}px)`;
-          await sleep(dur);
-          rolo.classList.remove('gira');
-          rolo.classList.add('clunk', 'won');
-          await sleep(240);
-          rolo.classList.remove('clunk');
-        });
-        await Promise.all(travas);
-        if (!vivo.current) return;
-        // voos ágeis: os quadros entram na grelha do time (staggered)
-        for (let r = 0; r < lote.length; r += 1) {
-          setGrelha((cur) => cur.map((g, gi) => (gi === t ? [...g, lote[r]] : g)));
-          await sleep(90);
-        }
-        await sleep(200);
+    // — strip do baralho (seed → determinístico p/ replay)
+    function stripHTML(off) {
+      let cels = '';
+      for (let i = 0; i < 6; i += 1) {
+        const s = SIMB[(off + i * 3) % SIMB.length];
+        cels += `<div class="scel"><img class="${s.t === 'cd' ? 'cd' : 'av'}" src="${s.src}"></div>`;
+      }
+      return cels + cels;
+    }
+
+    // — uma vaga de rolos: gira o baralho, revela os jogadores reais, voa p/ as slots do time
+    async function vagaRolos(ti, jogs, offset) {
+      const rolosEl = q('.rolos'); const flash = q('.flashfx'); const n = jogs.length;
+      rolosEl.innerHTML = jogs.map((_, r) => {
+        const off = Math.floor(mulberry32(seed + ti * 100 + offset + r + 1)() * SIMB.length);
+        return `<div class="rolo" style="--sd:${(0.34 + r * 0.03).toFixed(2)}s"><div class="strip">${stripHTML(off)}</div><div class="rev" data-r="${r}"></div></div>`;
+      }).join('');
+      const rolos = [...rolosEl.children];
+      maq.classList.add('giroOn'); maq.classList.remove('accel', 'burst');
+      SomSorteio.girar();
+      if (saltarFlag || !vivo) { SomSorteio.pararGiro(); return; }
+      await sleep(1200); if (!vivo) return;
+      maq.classList.remove('giroOn'); maq.classList.add('accel');
+      rolos.forEach((r) => r.classList.add('slow'));
+      SomSorteio.girarLento();
+      if (saltarFlag || !vivo) { SomSorteio.pararGiro(); return; }
+      await sleep(600); if (!vivo) return;
+      SomSorteio.pararGiro();
+      maq.classList.remove('accel'); maq.classList.add('burst');
+      flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
+      for (let r = 0; r < n; r += 1) {
+        const v = vis(jogs[r], ti); rolos[r].classList.add('stop');
+        const rev = rolos[r].querySelector('.rev');
+        rev.innerHTML = `<img src="${esc(v.img)}"><span class="nm">${esc(v.nome)}</span>`;
+        rev.classList.add('on'); SomSorteio.toque(0.22);
+        if (!saltarFlag) await sleep(130);
+      }
+      if (!saltarFlag) await sleep(430);
+      if (!vivo) return;
+      const voos = [];
+      for (let r = 0; r < n; r += 1) {
+        const slotEl = q(`.slot[data-g="${ti}"][data-i="${offset + r}"]`);
+        if (slotEl) voos.push(voar(rolos[r], jogs[r], ti, slotEl));
+        if (!saltarFlag) await sleep(85);
+      }
+      await Promise.all(voos);
+      maq.classList.remove('burst'); rolosEl.innerHTML = '';
+    }
+    async function girarTime(ti) {
+      const jogs = times[ti].jogadores; const k = marca(ti);
+      const quem = q('.quem'); quem.textContent = `a girar · ${k.nome}`;
+      quem.style.setProperty('--qc', k.c); quem.style.setProperty('--qg', k.g);
+      const vagas = jogs.length > 7 ? [Math.ceil(jogs.length / 2), jogs.length - Math.ceil(jogs.length / 2)] : [jogs.length];
+      let off = 0;
+      for (const nv of vagas) {
+        if (saltarFlag || !vivo) return;
+        await vagaRolos(ti, jogs.slice(off, off + nv), off); off += nv;
+        if (vagas.length > 1 && !saltarFlag) await sleep(200);
       }
     }
 
-    if (reservas.length) {
-      setReservasVis(true);
-      await sleep(400);
+    // — o final: cartão (véu no interior) + Victory + lock-in + molduras vivas
+    async function finalLockIn() {
+      const quem = q('.quem'); quem.textContent = '';
+      maq.classList.remove('giroOn', 'accel', 'burst', 'dim');
+      const ft = q('.fimtxt');
+      const letras = 'TIMES SORTEADOS'.split('').map((ch, i) => (ch === ' ' ? '<span style="display:inline-block;width:11px"></span>' : `<span class="seg" style="--sd:${(i * 0.07).toFixed(2)}s">${ch}</span>`)).join('');
+      const lampas = [[9, 0], [50, 0], [91, 0], [100, 50], [91, 100], [50, 100], [9, 100], [0, 50]]
+        .map(([x, y], i) => `<span class="fimlamp" style="left:${x}%;top:${y}%;--l:${i}"></span>`).join('');
+      ft.innerHTML = `<span class="fimcaixa">${lampas}${letras}</span>`;
+      { // FIT-TO-WIDTH: nunca quebra em 2 linhas
+        const caixa = ft.querySelector('.fimcaixa'); const alvo = q('.interior').clientWidth - 24;
+        let fs = 26; caixa.style.setProperty('--fs', `${fs}px`);
+        while (caixa.offsetWidth > alvo && fs > 13) { fs -= 1; caixa.style.setProperty('--fs', `${fs}px`); }
+      }
+      q('.palcoStage').classList.add('veuTotal'); ft.classList.add('on');
+      SomSorteio.cartaoVeu(); SomSorteio.vitoria();
+      await sleep(1700); if (!vivo) return;
+      ft.classList.remove('on'); q('.palcoStage').classList.remove('veuTotal');
+      await sleep(200); ft.innerHTML = ''; await sleep(220); if (!vivo) return;
+      const molds = qa('.grupos .mmold');
+      for (const m of molds) { m.classList.add('lock'); await sleep(70); if (!vivo) return; }
+      molds.forEach((m, i) => {
+        m.style.setProperty('--vr', `${(2.3 + ((i * 29) % 4) * 0.28).toFixed(2)}s`);
+        m.style.setProperty('--vg', `${(1.2 + ((i * 17) % 3) * 0.32).toFixed(2)}s`);
+        m.style.setProperty('--vd', `${(((i * 53) % 9) * 0.10).toFixed(2)}s`);
+        m.style.setProperty('--bd', `${(0.42 + ((i * 37) % 5) * 0.09).toFixed(2)}s`);
+        m.style.setProperty('--bdl', `${(((i * 53) % 9) * 0.06).toFixed(2)}s`);
+        m.classList.add('vivo');
+      });
+      const t0 = Date.now();
+      if (SomSorteio.ligado) { await sleep(320); while (vivo && SomSorteio.vitoriaTocando() && Date.now() - t0 < 30000) await sleep(120); } else { await sleep(4000); }
+      molds.forEach((m) => m.classList.remove('vivo'));
     }
-    // JACKPOT ROXO em cinema (v8): letreiro por segmentos + moedas 70/30.
-    setJack(true);
-    await sleep(2600);
-    if (!vivo.current) return;
-    setJack(false);
-    setFase('fim');
-    aoTerminar?.();
-    } finally {
-      lockRef.current = false;
-    }
-  }
 
-  useEffect(() => {
-    if (autoStart && times.length) correr();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- cerimónia arranca 1x ao montar
+    function preencherTudo() {
+      q('.rolos').innerHTML = ''; q('.quem').textContent = '';
+      maq.classList.remove('giroOn', 'accel', 'burst', 'dim', 'pulseall');
+      times.forEach((t, gi) => t.jogadores.forEach((j, i) => {
+        const s = q(`.slot[data-g="${gi}"][data-i="${i}"]`);
+        if (s && !s.classList.contains('cheio')) encher(s, j, gi);
+      }));
+      reservas.forEach((j, r) => { const s = q(`.rslot[data-r="${r}"] .slot`); if (s) encher(s, j, 0, true); });
+    }
+    async function corpo() {
+      const lv = q('.lever'); lv.classList.remove('pull'); void lv.offsetWidth; lv.classList.add('pull');
+      SomSorteio.toque(0.32); SomSorteio.iniciar();
+      q('.palcoStage').classList.remove('veuTotal'); montarGrupos(); q('.fimtxt').classList.remove('on');
+      if (reduzido) { preencherTudo(); return; }
+      q('.saltar').classList.add('on');
+      for (let t = 0; t < times.length; t += 1) {
+        await girarTime(t); if (saltarFlag) { preencherTudo(); return; } if (!vivo) return;
+        if (t < times.length - 1) await sleep(220);
+      }
+      for (let r = 0; r < reservas.length; r += 1) { const s = q(`.rslot[data-r="${r}"] .slot`); if (s) encher(s, reservas[r], 0, true); await sleep(180); }
+      if (saltarFlag) { preencherTudo(); return; }
+      await finalLockIn();
+    }
+    async function cerimonia() {
+      if (aCorrer || !vivo) return;
+      aCorrer = true; saltarFlag = false;
+      q('.lever').classList.add('girando'); q('.partilha').classList.remove('on');
+      try { await corpo(); } finally {
+        aCorrer = false; q('.saltar')?.classList.remove('on');
+        q('.lever').classList.remove('girando'); q('.partilha').classList.add('on');
+        if (vivo) cbRef.current?.();
+      }
+    }
+
+    // ── réguas de luzes + marquee da fachada ──
+    q('.luzes1').innerHTML = Array.from({ length: 22 }, (_, i) => `<span class="luz" style="--i:${i}"></span>`).join('');
+    q('.luzes2').innerHTML = Array.from({ length: 22 }, (_, i) => `<span class="luz" style="--i:${21 - i}"></span>`).join('');
+    q('.base1').innerHTML = Array.from({ length: 22 }, (_, i) => `<span class="luz" style="--i:${i}"></span>`).join('');
+    q('.base2').innerHTML = Array.from({ length: 22 }, (_, i) => `<span class="luz" style="--i:${21 - i};--lc:#a78bfa;--lg:rgba(139,92,246,.75)"></span>`).join('');
+    const idFrame = setTimeout(() => {
+      if (!vivo) return;
+      const W = maq.offsetWidth; const H = maq.offsetHeight; const passo = 27; let k = 0; let d = '';
+      for (let x = 8; x < W - 6; x += passo) d += `<span class="mq" style="--i:${k++};left:${x}px;top:-4px"></span>`;
+      for (let y = 8; y < H - 6; y += passo) d += `<span class="mq" style="--i:${k++};right:-4px;top:${y}px"></span>`;
+      for (let x = W - 14; x > 6; x -= passo) d += `<span class="mq" style="--i:${k++};left:${x}px;bottom:-4px"></span>`;
+      for (let y = H - 14; y > 6; y -= passo) d += `<span class="mq" style="--i:${k++};left:-4px;top:${y}px"></span>`;
+      maq.insertAdjacentHTML('beforeend', d);
+    }, 80); timers.add(idFrame);
+
+    // ── som (opt-in, lembrado) ──
+    const somBtn = q('.somBtn');
+    const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clica p/ ligar)'; };
+    const onSom = () => { const on = SomSorteio.toggle(); if (on) { SomSorteio.toque(0.2); SomSorteio.iniciar(); } pintarSom(); };
+    somBtn.addEventListener('click', onSom); pintarSom(); SomSorteio.autoTeste();
+
+    // ── ALAVANCA: arrasto (mola) + tap + teclado ──
+    const lever = q('.lever'); const grip = lever.querySelector('.l6-grip');
+    const MAX = 46; const LIMIAR = 0.60; const easeOut = (t) => 1 - Math.pow(1 - t, 2.2);
+    let arrasto = false; let y0 = 0; let prog = 0; let pid = null; let movido = 0;
+    const setProg = (p) => {
+      prog = Math.max(0, Math.min(1, p));
+      grip.style.transform = `translateX(-50%) translateY(${(MAX * easeOut(prog)).toFixed(1)}px)`;
+      lever.style.setProperty('--drag', prog.toFixed(3));
+      lever.classList.toggle('arrastando', prog > 0.02); lever.classList.toggle('armado', prog >= LIMIAR);
+    };
+    const repor = () => { grip.style.transform = ''; lever.style.setProperty('--drag', '0'); lever.classList.remove('arrastando', 'armado'); prog = 0; };
+    const disparar = () => { repor(); if (!aCorrer) cerimonia(); };
+    const voltaElastica = () => { lever.classList.add('voltando'); repor(); const id = setTimeout(() => lever.classList.remove('voltando'), 360); timers.add(id); };
+    const onDown = (e) => { if (aCorrer) return; arrasto = true; movido = 0; y0 = e.clientY; pid = e.pointerId; lever.classList.remove('voltando'); try { lever.setPointerCapture(pid); } catch { /* */ } e.preventDefault(); };
+    const onMove = (e) => { if (!arrasto) return; const dy = e.clientY - y0; movido = Math.max(movido, Math.abs(dy)); if (!reduzido && dy > 0) setProg(dy / MAX); e.preventDefault(); };
+    const onUp = () => { if (!arrasto) return; arrasto = false; try { lever.releasePointerCapture(pid); } catch { /* */ } if (reduzido || movido < 6) { disparar(); return; } if (prog >= LIMIAR) disparar(); else voltaElastica(); };
+    const onKey = (e) => { if ((e.key === 'Enter' || e.key === ' ') && !aCorrer) { e.preventDefault(); cerimonia(); } };
+    lever.addEventListener('pointerdown', onDown); lever.addEventListener('pointermove', onMove);
+    lever.addEventListener('pointerup', onUp); lever.addEventListener('pointercancel', onUp);
+    lever.addEventListener('keydown', onKey);
+    const saltarBtn = q('.saltar button'); const onSaltar = () => { saltarFlag = true; }; saltarBtn.addEventListener('click', onSaltar);
+
+    // ── X de saída (volta à página do jogo) ──
+    const sairX = q('.sairX'); const onSair = () => { SomSorteio.toque(0.2); if (window.history.length > 1) window.history.back(); }; sairX.addEventListener('click', onSair);
+
+    // ── botões C3: Guardar (cartaz) + Compartilhar (link /p/) ──
+    let toastT = null;
+    const mostrarToast = (msg) => { const el = q('.toast'); el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>${esc(msg)}`; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 1900); timers.add(toastT); };
+    // link /p/ a partir do URL do jogo (/equipa/:slug/jogo/:id/... → /p/:slug/:id)
+    const m = window.location.pathname.match(/\/equipa\/([^/]+)\/jogo\/([^/]+)/);
+    const linkP = m ? `${window.location.origin}/p/${m[1]}/${m[2]}` : `${window.location.origin}${window.location.pathname}`;
+    let aGuardar = false;
+    const onGuardar = async () => {
+      if (aGuardar) return;
+      aGuardar = true; SomSorteio.toque(0.24); mostrarToast('A gerar o cartaz…');
+      try {
+        await gerarCartazEscalacao(resultado, { equipa: infoRef.current.equipa, data: infoRef.current.data });
+        mostrarToast('Cartaz guardado');
+      } catch {
+        mostrarToast('Não deu para gerar o cartaz');
+      } finally { aGuardar = false; }
+    };
+    const onComp = async () => {
+      SomSorteio.toque(0.24);
+      try { await navigator.clipboard.writeText(linkP); } catch {
+        const t = document.createElement('textarea'); t.value = linkP; document.body.appendChild(t); t.select();
+        try { document.execCommand('copy'); } catch { /* */ } t.remove();
+      }
+      mostrarToast('Link copiado');
+    };
+    const bg = q('.btGuardar'); const bc = q('.btComp');
+    bg.addEventListener('click', onGuardar); bc.addEventListener('click', onComp);
+
+    // ── arranque ──
+    montarGrupos();
+    if (autoStart) { const id = setTimeout(() => { if (vivo) cerimonia(); }, reduzido ? 0 : 700); timers.add(id); }
+
+    // ── cleanup (StrictMode / desmontagem): pára tudo, limpa clones e listeners ──
+    return () => {
+      vivo = true; vivo = false;
+      timers.forEach((id) => clearTimeout(id)); clones.forEach((c) => c.remove());
+      SomSorteio.silenciar();
+      somBtn.removeEventListener('click', onSom);
+      lever.removeEventListener('pointerdown', onDown); lever.removeEventListener('pointermove', onMove);
+      lever.removeEventListener('pointerup', onUp); lever.removeEventListener('pointercancel', onUp);
+      lever.removeEventListener('keydown', onKey);
+      saltarBtn.removeEventListener('click', onSaltar); sairX.removeEventListener('click', onSair);
+      bg.removeEventListener('click', onGuardar); bc.removeEventListener('click', onComp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a cerimónia monta 1x; re-sorteio remonta via key
   }, []);
 
-  // largura dos quadros pela linha mais cheia (v4)
-  const linhas = LINHAS[Math.min(porTime, 11)] || [4];
-  const maxCols = Math.max(...linhas);
-  const qw = Math.min(80, Math.floor((330 - (maxCols - 1) * 8) / maxCols));
+  if (!resultado?.times?.length) {
+    return <div style={{ padding: 24, textAlign: 'center', color: '#8a8a98' }}>Sem resultado para mostrar.</div>;
+  }
 
   return (
-    <div style={{ position: 'relative' }}>
-      {/* a máquina: janela dos rolos (só durante o giro) */}
-      {fase === 'girar' ? (
-        <div className="cer-maq">
-          <div className="cer-luzes">{Array.from({ length: 15 }, (_, i) => <span key={i} className="cer-luz" style={{ animationDelay: `${(i * 0.09).toFixed(2)}s` }} />)}</div>
-          <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', textAlign: 'center', color: MARCA_TIME[timeAtual % MARCA_TIME.length].c, marginBottom: 8 }}>
-            a sortear · {MARCA_TIME[timeAtual % MARCA_TIME.length].nome}
-          </div>
-          <div className="cer-janela">
-            <div ref={rolosRef} className="cer-rolos" />
-            <div className="cer-payline" />
-          </div>
-        </div>
-      ) : null}
-
-      {/* grelhas dos times (enchem ao vivo) */}
-      <div style={{ padding: '4px 2px 0' }}>
-        {times.map((t, ti) => {
-          const marca = MARCA_TIME[ti % MARCA_TIME.length];
-          const cheios = grelha[ti] || [];
-          let i = 0;
-          return (
-            <div key={ti} style={kitVars(marca)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 2px 6px', fontFamily: RAJ, fontWeight: 800, letterSpacing: '0.1em', fontSize: 13, color: marca.c, textTransform: 'uppercase', textShadow: `0 0 12px ${rgba(marca.c, 0.45)}` }}>
-                {marca.nome}
-                <span style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${rgba(marca.c, 0.45)}, transparent)` }} />
-              </div>
-              {linhas.map((c, li) => {
-                const slots = t.jogadores.slice(i, i + c);
-                i += c;
-                return (
-                  <div key={li} style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-                    {slots.map((j, si) => {
-                      const idx = linhas.slice(0, li).reduce((s, x) => s + x, 0) + si;
-                      const cheio = idx < cheios.length;
-                      return cheio ? (
-                        <QuadroB key={si} j={j} kit={marca} w={qw} delayBob={ti * 0.8 + idx * 0.3} />
-                      ) : (
-                        <div key={si} style={{ width: qw, aspectRatio: '3/4', border: '1.5px dashed rgba(255,255,255,0.18)', clipPath: 'polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)' }} />
-                      );
-                    })}
-                  </div>
-                );
-              })}
+    <div className="smaq" ref={rootRef}>
+      <div className="palcoStage">
+        <button type="button" className="sairX" title="Sair para a página do jogo" aria-label="Sair do sorteio">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+        <div className="fx raios" />
+        <div className="palco"><div className="maqbox">
+          <div className="maq clip8">
+            <div className="somBtn" title="Som (desligado por defeito)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+                <path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" stroke="none" />
+                <g className="waves"><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 6a9 9 0 0 1 0 12" /></g>
+              </svg>
             </div>
-          );
-        })}
-      </div>
-
-      {/* reservas com CARA + nº de ordem (v8) */}
-      {reservas.length ? (
-        <div style={{ margin: '12px 2px 0', border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.03)', padding: '10px 12px', clipPath: 'polygon(4% 0,96% 0,100% 10%,100% 90%,96% 100%,4% 100%,0 90%,0 10%)', opacity: reservasVis || fase === 'fim' ? 1 : 0.25, transition: 'opacity .4s' }}>
-          <div style={{ fontFamily: RAJ, fontWeight: 800, letterSpacing: '0.1em', fontSize: 11, color: '#d4a017', textTransform: 'uppercase', marginBottom: 8 }}>
-            Reservas · ordem do banco
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {reservas.map((j, i) => (
-              <div key={i} style={{ position: 'relative', width: 56, aspectRatio: '3/4' }}>
-                <span style={{ position: 'absolute', top: -6, left: -6, zIndex: 3, width: 16, height: 16, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 10, color: '#1a1408', background: 'linear-gradient(180deg,#f0c94a,#d4a017)', clipPath: 'polygon(25% 0,75% 0,100% 25%,100% 75%,75% 100%,25% 100%,0 75%,0 25%)' }}>{j.posicao || i + 1}</span>
-                <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'rgba(255,255,255,0.03)', border: '1.5px solid rgba(212,160,23,0.55)', clipPath: 'polygon(12% 0,88% 0,100% 8%,100% 92%,88% 100%,12% 100%,0 92%,0 8%)' }}>
-                  <Retrato j={j} />
-                  <PlacaNome nome={j.nome} convidado={j.convidado} fs={8} />
+            <div className="topo"><div className="topocol">
+              <div className="luzes luzes1" />
+              <div className="luzes roxa luzes2" />
+              <div className="letreiro"><span>Sorteio</span></div>
+            </div></div>
+            <div className="interior">
+              <div className="interiorConteudo">
+                <div className="janela">
+                  <span className="quem" />
+                  <div className="rolos" />
+                  <div className="flashfx" />
+                </div>
+                <div className="gruposWrap">
+                  <div className="grupos" />
+                  <div className="resv"><div className="rhead">Reserva · ordem do banco</div><div className="rrow" /></div>
                 </div>
               </div>
-            ))}
+              <div className="fimtxt" />
+            </div>
+            <div className="baseluz"><div className="fila base1" /><div className="fila base2" /></div>
+            <span className="placaFutty">Futty</span>
+            <div className="maqveu" />
           </div>
-        </div>
-      ) : null}
-
-      {fase === 'fim' ? (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
-          <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.08em', textTransform: 'uppercase' }} onClick={correr}>
-            Repetir a cerimónia
-          </button>
-        </div>
-      ) : null}
-
-      {/* JACKPOT — roxo da casa, cinema, moedas 70/30, letreiro por segmentos */}
-      <div className={`cer-jack ${jack ? 'on' : ''}`}>
-        <div className="cer-jack__t">
-          {'SORTEIO'.split('').map((ch, i) => <span key={i} className="cer-seg" style={{ '--sd': `${(i * 0.09).toFixed(2)}s` }}>{ch}</span>)}
-          <br />
-          {'COMPLETO'.split('').map((ch, i) => <span key={i} className="cer-seg" style={{ '--sd': `${((i + 7) * 0.09).toFixed(2)}s` }}>{ch}</span>)}
-        </div>
-        {Array.from({ length: 52 }, (_, i) => (
-          <span
-            key={i}
-            className={`cer-coin ${i % 10 < 3 ? 'cer-coin--roxa' : ''}`}
-            style={{ '--cs': `${8 + ((i * 7) % 14)}px`, '--cx': `${(i % 2 ? 1 : -1) * (14 + ((i * 23) % 168))}px`, '--cyu': `${-(100 + ((i * 29) % 220))}px`, '--cr': `${(i % 2 ? 1 : -1) * (140 + ((i * 53) % 320))}deg`, '--cd': `${(1.0 + ((i * 11) % 7) * 0.18).toFixed(2)}s`, '--cdl': `${(((i * 5) % 12) * 0.09).toFixed(2)}s` }}
-          />
-        ))}
+          <div className="lever6 lever" title="Puxar o F = repetir a cerimónia">
+            <div className="l6-grip"><div className="l6-knob"><img src="/futty-logo-flat.png" alt="F" /></div></div>
+            <span className="setas"><i /><i /><i /></span>
+          </div>
+        </div></div>
       </div>
+      <div className="partilha">
+        <button type="button" className="pbtn btGuardar" title="Guardar a imagem 9:16 (cartaz)"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>Guardar</button>
+        <button type="button" className="pbtn btComp" title="Compartilhar o link da cerimónia (/p/)"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg>Compartilhar</button>
+      </div>
+      {/* BannerAd da casa (house ad) — default OFF no produto (toggle do dono, menores
+          fail-closed); ligado nesta prova para o look. */}
+      <div className="faixaAd"><span className="publab">Pub.</span>
+        <img src="/futty-logo-flat.png" alt="" />
+        <div className="col"><div className="adtit">Desbloqueia o fundo GOLDEN ✨</div><div className="adsub">cromo premium + kits exclusivos · Futty PRO</div></div>
+        <span className="adcta">Ver planos</span>
+      </div>
+      <div className="saltar"><button type="button">» concluir já</button></div>
+      <div className="toast" />
     </div>
   );
 }

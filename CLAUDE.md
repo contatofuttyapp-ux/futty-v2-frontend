@@ -28,6 +28,11 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
 - **LEI DO F:** logo = **SÓ o asset oficial transparente** (`FuttyLogo`/`FuttyLoader` SVG,
   ou `futty-logo-flat.png` RGBA; estático onde não cabe animação). O F de **fundo preto
   sólido** (`futty-logo-metallic.png`, RGB) está **BANIDO** em qualquer estado novo.
+- **LEI DA SILHUETA:** placeholder de PESSOA sem foto = **SÓ a silhueta-casa angulosa**
+  (`SilhuetaJogador` — cabeça octógono 45° + ombros em rectas com cortes 45°, `currentColor`
+  veste a cor do contexto; no sorteio inline como data-uri com o mesmo traço). **Círculos
+  genéricos / bustos redondos BANIDOS** — um asset banido morre em TODO o lado, não caso a
+  caso. (EscudoEquipa/iniciais de EQUIPA são outra coisa e mantêm-se.)
 - Loading: `LoadingFutty`/`FuttyLoader` (o F pinta-se); `.page-reveal` na entrada.
 - **Vitrine (herói): glow SELADO** — transplante byte-a-byte do harness variante A
   (palco 330×470, glow 300×344 blur46 `respiraA` no PRÓPRIO glow, cutout 250×284 sem

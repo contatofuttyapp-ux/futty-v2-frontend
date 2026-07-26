@@ -6,7 +6,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
-import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio, { MARCA_TIME } from '../components/CerimoniaSorteio';
 import { gerarCartao916 } from '../utils/sorteioCartao';
@@ -21,6 +20,9 @@ export default function SorteioShow() {
   const [toast, setToast] = useState(null);
   const game = data?.game;
   const resultado = game?.times_resultado;
+  const dataCartaz = game?.data
+    ? new Date(game.data).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ de /g, ' ').replace(/\./g, '')
+    : '';
 
   async function copiarLink() {
     const url = `${window.location.origin}/p/${slug}/${id}`;
@@ -54,7 +56,7 @@ export default function SorteioShow() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="SORTEIO" back={`/equipa/${slug}/jogo/${id}`} />
+      {/* LEI: página do sorteio = IMERSIVA, SEM Topbar; a saída faz-se pelo X da máquina. */}
       <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
         {loading ? (
           <LoadingFutty />
@@ -62,7 +64,7 @@ export default function SorteioShow() {
           <p className="muted">O sorteio ainda não foi realizado.</p>
         ) : (
           <>
-            <CerimoniaSorteio resultado={resultado} />
+            <CerimoniaSorteio resultado={resultado} equipa={data?.team?.nome || ''} data={dataCartaz} />
 
             {/* partilha (§9): link + imagem 9:16 — vídeo morto */}
             <div style={{ marginTop: 18, display: 'grid', gap: 8 }}>
