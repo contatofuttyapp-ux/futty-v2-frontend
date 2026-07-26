@@ -130,3 +130,13 @@ Rota `/super` (guard super-admin), 3 tabs:
   (empilhado); (e) alertas: campanha a expirar <7d · banner sem cliques.
 - **Toggles por página** (sorteio in-app · /p/ · futuras) vivem aqui; default DESLIGADO.
 - Estado vazio digno: "sem campanhas ativas".
+
+## TENDÊNCIA SOCIAL + LEI DO VOTO ANÓNIMO (registada 26 jul 2026)
+- **LEI (invocável):** *"o histórico individual de votos NÃO se guarda — o anonimato é o que
+  torna o voto honesto."* A tabela `votes` é **upsert** (1 linha por votante→votado→equipa,
+  atualizada no lugar): existe só o **voto ATUAL**, nunca o histórico de quem votou o quê.
+- **Tendência social (média de notas da casa por semana) — FUTURO, não barato:** mostrar a
+  evolução da média exige **snapshots agregados semanais** (um número por semana, zero
+  identificação) — porque o histórico individual **não existe por lei**. Precisa de um job
+  semanal + tabelinha de snapshots do agregado. Fica registada como **feature futura sem data**;
+  **não implementada agora** (não é barata e não se fabrica a partir de dados que não guardamos).
