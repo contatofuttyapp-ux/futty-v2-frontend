@@ -16,7 +16,6 @@ const RAJ = "'Rajdhani', sans-serif";
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
 const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)';
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)' };
-const RAIOS = [5, 10, 25, 50];
 
 function SkeletonCard() {
   return (
@@ -30,7 +29,6 @@ export default function Explorar() {
   const [equipas, setEquipas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pesquisa, setPesquisa] = useState('');
-  const [raio, setRaio] = useState(10);
   const [geoPedida, setGeoPedida] = useState(false);
   const [busy, setBusy] = useState(null); // slug em processamento
   const [toast, setToast] = useState(null);
@@ -134,20 +132,8 @@ export default function Explorar() {
           </span>
         </button>
 
-        {/* RAIO (dormente até haver pontos das equipas) */}
-        <div style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: RAJ, fontSize: 11, letterSpacing: '0.1em', color: '#9a8fc0', textTransform: 'uppercase', marginBottom: 8 }}>
-            <span>Raio de busca <em style={{ color: '#6f6a80', textTransform: 'none', fontStyle: 'normal' }}>· distâncias em breve</em></span>
-            <b style={{ color: '#f0c94a' }}>{raio} km</b>
-          </div>
-          <div className="chips-row">
-            {RAIOS.map((r) => (
-              <button key={r} type="button" className={`chip ${raio === r ? 'chip--active' : ''}`} onClick={() => setRaio(r)}>
-                {r} km
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Raio de busca por distância = removido até a geolocalização existir (atrás da
+            Segurança). Ver SPEC-REDE-SOCIAL. Não se promete o que não há. */}
 
         <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', color: '#9a8fc0', textTransform: 'uppercase', margin: '20px 2px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
           Equipas abertas · {filtradas.length}

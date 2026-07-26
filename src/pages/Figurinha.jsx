@@ -56,11 +56,12 @@ const KIT_IMG = {
   'dark-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit1-dark-gold.png',
   'dark-purple': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit2-dark-purple.png',
 };
+// Só os kits REAIS (geráveis). White Gold e Elite Gold saíram do seletor — eram
+// promessas (breve/locked), não se vende o que não existe. Ver SPEC-REDE-SOCIAL
+// (features futuras: kits White/Elite + figurinha animada, sem data).
 const KITS_FIGURINHA = [
   { id: 'dark-gold', nome: 'Dark Gold', base: '#0d0d12', acento: '#d4a017', estado: 'ativo' },
   { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'ativo' },
-  { id: 'white-gold', nome: 'White Gold', base: '#f8f5f0', acento: '#d4a017', estado: 'breve' },
-  { id: 'elite-gold', nome: 'Elite Gold', base: '#d4a017', acento: '#0d0d12', estado: 'pro' },
 ];
 
 // Partículas de luz do fundo "estádio" (valores fixos por partícula → o

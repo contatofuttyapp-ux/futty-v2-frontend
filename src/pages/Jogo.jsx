@@ -191,11 +191,25 @@ export default function Jogo() {
                     {game.time_vencedor === 'empate' ? 'Empate' : `${game.time_vencedor === 'A' ? nomeTimeA : nomeTimeB} venceu`}
                   </div>
                 )}
-                {game.resultado_nivel === 3 && artilheiro && artilheiro.gols > 0 ? (
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
-                    Artilheiro: {artilheiro.nome} ({artilheiro.gols} {artilheiro.gols === 1 ? 'gol' : 'gols'})
-                  </div>
-                ) : null}
+                {/* Artilheiro do dia (marcado pelo admin, senão o melhor marcador) + Destaque
+                    do dia (MVP marcado) — chips dignos. Os IDs vêm do game; nomes do resultado. */}
+                {game.resultado_nivel === 3 ? (() => {
+                  const todosJ = timesSorteio.flatMap((t) => t.jogadores || []);
+                  const nomeDe = (uid) => todosJ.find((j) => j.user_id === uid)?.nome || null;
+                  const artNome = game.artilheiro_user_id ? nomeDe(game.artilheiro_user_id) : (artilheiro && artilheiro.gols > 0 ? artilheiro.nome : null);
+                  const artGols = game.artilheiro_user_id ? game.artilheiro_gols : (artilheiro && artilheiro.gols);
+                  const destNome = game.destaque_user_id ? nomeDe(game.destaque_user_id) : null;
+                  if (!artNome && !destNome) return null;
+                  const chip = (ic, txt, cor) => (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: RAJ, fontWeight: 700, fontSize: 12, color: cor, border: `1px solid ${cor}55`, background: `${cor}14`, borderRadius: 20, padding: '4px 11px' }}>{ic} {txt}</span>
+                  );
+                  return (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                      {artNome ? chip('🏆', `Artilheiro: ${artNome}${artGols ? ` (${artGols})` : ''}`, '#d4a017') : null}
+                      {destNome ? chip('⭐', `Destaque: ${destNome}`, '#8b5cf6') : null}
+                    </div>
+                  );
+                })() : null}
               </div>
             ) : null}
 

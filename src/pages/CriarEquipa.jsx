@@ -151,7 +151,7 @@ export default function CriarEquipa() {
               {iniciais(nome)}
             </div>
             <p className="muted" style={{ fontSize: 11, textAlign: 'center', maxWidth: 290, margin: '0 auto', lineHeight: 1.5 }}>
-              o teu escudo — <b style={{ color: '#c9a24a' }}>o logo real chega em breve</b> (com moderação); até lá, as iniciais são a tua marca.
+              o teu escudo — as iniciais são a tua marca; carrega o <b style={{ color: '#c9a24a' }}>logo da equipa</b> no painel de admin (com moderação).
             </p>
             <div style={{ marginTop: 24 }}>
               <Cta cheio disabled={!nome.trim()} onClick={() => setPasso(2)}>Continuar</Cta>
@@ -175,14 +175,14 @@ export default function CriarEquipa() {
             </div>
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Artilheiro do dia <span style={{ fontSize: 9, color: '#9a8fc0' }}>· em breve</span></div>
+                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Artilheiro do dia</div>
                 <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>troféu no fim de cada jogo</div>
               </div>
               <Toggle on disabled />
             </div>
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Destaque do dia <span style={{ fontSize: 9, color: '#9a8fc0' }}>· em breve</span></div>
+                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Destaque do dia</div>
                 <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>o MVP votado pela equipa</div>
               </div>
               <Toggle on disabled />

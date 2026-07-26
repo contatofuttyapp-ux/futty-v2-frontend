@@ -33,7 +33,7 @@ const PLANOS = [
     nome: 'Elite',
     icone: 'coroa', // asset da casa (/icons/coroa.svg), tingido a dourado — substitui o emoji 👑
     preco: { BRL: 'R$24,90/mês', EUR: '€7,99/mês' },
-    features: ['Tudo do Pro', '100 avatares IA/mês', 'Kit Elite dourado', 'Figurinha animada (em breve)'],
+    features: ['Tudo do Pro', '100 avatares IA/mês', 'Kit Elite dourado'],
     botao: 'Assinar Elite',
   },
 ];
