@@ -10,6 +10,7 @@ import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset } from '../utils/avatar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
+import EstadoErroRede from '../components/EstadoErroRede';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import EscudoEquipa from '../components/EscudoEquipa';
@@ -222,7 +223,7 @@ export default function Ranking() {
           </div>
         ) : null}
 
-        {error && <div className="alert alert--error">{error}</div>}
+        {error && ranking.length === 0 ? <EstadoErroRede onRepetir={reload} /> : null}
 
         {loading && ranking.length === 0 ? (
           <LoadingFutty />

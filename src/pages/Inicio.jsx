@@ -341,8 +341,10 @@ export default function Inicio() {
     setCtaFigurinha(false);
   }
 
-  // Onboarding (product tour) — só na primeira vez.
-  const [tourDone, setTourDone] = useState(() => !!localStorage.getItem('futty_tour_done'));
+  // Onboarding (product tour) — só na primeira vez. O "já vi" definitivo vive no
+  // USER (server, via /api/me → tour_inicio_visto); o localStorage é só um atalho
+  // local. Assim o tour NÃO reaparece noutro dispositivo nem ao limpar o localStorage.
+  const [tourDoneLocal, setTourDone] = useState(() => !!localStorage.getItem('futty_tour_done'));
 
   // "Ver sorteio": a cerimónia corre na PÁGINA do sorteio (SPEC-SORTEIO §13d).
   function verSorteio(game) {
@@ -847,12 +849,14 @@ export default function Inicio() {
 
       {toast ? <Toast mensagem={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
-      {/* Onboarding (primeira visita) */}
-      {!tourDone && (
+      {/* Onboarding (primeira visita) — só se NEM o server NEM o local o dão como visto. */}
+      {!tourDoneLocal && user && !user.tour_inicio_visto && (
         <ProductTour
           onDone={() => {
             localStorage.setItem('futty_tour_done', '1');
             setTourDone(true);
+            // Persiste no user (server) — não volta a aparecer noutro dispositivo.
+            apiFetch('/api/me/tour-visto', { method: 'POST' }).catch(() => {});
           }}
         />
       )}
