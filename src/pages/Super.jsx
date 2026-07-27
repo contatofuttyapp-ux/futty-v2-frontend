@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
+import EstadoErroRede from '../components/EstadoErroRede';
 import '../styles/app.css';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -11,6 +12,7 @@ const PLANOS = ['free', 'pro', 'elite'];
 const TABS = [
   { k: 'users', label: 'Utilizadores' },
   { k: 'teams', label: 'Equipas' },
+  { k: 'denuncias', label: 'Denúncias' },
   { k: 'stats', label: 'Stats' },
 ];
 const PAGE_SIZE = 50;
@@ -217,6 +219,55 @@ function TabTeams({ showMsg }) {
   );
 }
 
+// ─── TAB: DENÚNCIAS (fila acionável global) ──────────────────────────────────
+// LEI: a Super vê o conteúdo denunciado SÓ aqui (alguém pediu revisão); nunca navega
+// conteúdo por vontade própria. Cada decisão entra no log append-only do caso.
+function TabDenuncias({ showMsg }) {
+  const { data, loading, error, reload } = useApi('/api/super/denuncias/fila');
+  const fila = data?.fila || [];
+
+  async function decidir(c, acao) {
+    const rotulo = { manter: 'MANTER o conteúdo', remover: 'REMOVER o conteúdo', suspender_autor: 'REMOVER e SUSPENDER o autor' }[acao];
+    // Confirmação antes de agir (ação + alvo bem visíveis). Nada ao 1º toque.
+    if (!window.confirm(`Denúncia «${c.categoria}» (${c.target_type}).\n\nConfirmas: ${rotulo}?`)) return;
+    try {
+      await apiFetch(`/api/super/denuncias/${c.id}/decidir`, { method: 'POST', body: JSON.stringify({ team_id: c.team_id, acao }) });
+      showMsg('Decisão registada no log.');
+      reload();
+    } catch (err) {
+      showMsg(err.message, true);
+    }
+  }
+
+  if (error) return <EstadoErroRede onRepetir={reload} />;
+
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <p style={{ fontSize: 12, color: 'var(--text-dim)', margin: 0 }}>
+        A IA subiu estes casos (não os resolveu sozinha). O conteúdo aparece porque alguém pediu revisão. Menores no topo.
+      </p>
+      {fila.map((c) => (
+        <div key={c.id} style={{ ...CARD, padding: 14, borderColor: c.prioritaria ? 'var(--danger)' : '#222' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+            {c.prioritaria ? <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: 6, padding: '2px 7px' }}>MENOR · PRIORITÁRIO</span> : null}
+            <span style={{ fontWeight: 700 }}>{c.categoria}</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>· {c.target_type} · {fmtData(c.criado_em)}</span>
+          </div>
+          {c.preview_texto ? <p style={{ margin: '0 0 8px', fontSize: 13, color: '#ddd', wordBreak: 'break-word' }}>{c.preview_texto}</p> : null}
+          {c.preview_media ? <img src={c.preview_media} alt="conteúdo denunciado" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, border: '1px solid #333', display: 'block', marginBottom: 8 }} /> : null}
+          {c.descricao ? <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-dim)' }}>Nota do denunciante: {c.descricao}</p> : null}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button type="button" style={btn} onClick={() => decidir(c, 'manter')}>Manter</button>
+            <button type="button" style={{ ...btn, borderColor: '#f0a35a', color: '#f0a35a' }} onClick={() => decidir(c, 'remover')}>Remover</button>
+            <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => decidir(c, 'suspender_autor')}>Remover + suspender autor</button>
+          </div>
+        </div>
+      ))}
+      {!fila.length && !loading ? <div style={{ ...CARD, padding: 14, color: 'var(--text-dim)', fontSize: 13 }}>Fila vazia — nada por rever.</div> : null}
+    </div>
+  );
+}
+
 // ─── TAB: STATS ──────────────────────────────────────────────────────────────
 function TabStats() {
   const { data: s, error } = useApi('/api/super/stats');
@@ -283,6 +334,7 @@ export default function Super() {
 
         {tab === 'users' && <TabUsers showMsg={showMsg} />}
         {tab === 'teams' && <TabTeams showMsg={showMsg} />}
+        {tab === 'denuncias' && <TabDenuncias showMsg={showMsg} />}
         {tab === 'stats' && <TabStats />}
       </main>
     </div>
