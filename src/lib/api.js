@@ -32,6 +32,7 @@ export async function apiFetch(path, options = {}) {
   if (!res.ok) {
     const err = new Error(body?.error || `Erro ${res.status}`);
     err.status = res.status;
+    err.code = body?.code || null; // ex.: 'CONTA_SUSPENSA' → o AuthGuard distingue
     throw err;
   }
   return body;

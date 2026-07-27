@@ -50,22 +50,31 @@ function TabUsers({ showMsg }) {
   const users = data?.users || [];
   const total = data?.total || 0;
 
-  async function mudarPlano(id, plano) {
+  async function mudarPlano(u, plano) {
+    const atual = u.plan || 'free';
+    if (plano === atual) return;
+    // Confirmação antes de agir (nome do alvo + ação bem visíveis). Nada ao 1º toque.
+    if (!window.confirm(`Mudar o plano de ${u.email} de "${atual}" para "${plano}"?`)) {
+      reload(); // cancelado → resync o select ao plano real
+      return;
+    }
     try {
-      await apiFetch(`/api/super/users/${id}/plano`, { method: 'PATCH', body: JSON.stringify({ plano }) });
+      await apiFetch(`/api/super/users/${u.id}/plano`, { method: 'PATCH', body: JSON.stringify({ plano }) });
       showMsg('Plano atualizado.');
       reload();
     } catch (err) {
       showMsg(err.message, true);
+      reload();
     }
   }
 
-  async function definirBan(u, banned) {
-    const verbo = banned ? 'suspender' : 'reativar';
+  async function definirSuspensao(u, suspenso) {
+    const verbo = suspenso ? 'suspender' : 'reativar';
     if (!window.confirm(`Confirmas ${verbo} a conta de ${u.email}?`)) return;
     try {
-      await apiFetch(`/api/super/users/${u.id}/ban`, { method: 'PATCH', body: JSON.stringify({ banned }) });
-      showMsg(banned ? 'Conta suspensa.' : 'Conta reativada.');
+      await apiFetch(`/api/super/users/${u.id}/suspender`, { method: 'PATCH', body: JSON.stringify({ suspenso }) });
+      showMsg(suspenso ? 'Conta suspensa.' : 'Conta reativada.');
+      reload();
     } catch (err) {
       showMsg(err.message, true);
     }
@@ -84,29 +93,34 @@ function TabUsers({ showMsg }) {
               <th style={th}>Nome</th>
               <th style={th}>Email</th>
               <th style={th}>Plano</th>
+              <th style={th}>Estado</th>
               <th style={th}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id}>
+              <tr key={u.id} style={u.suspenso ? { opacity: 0.6 } : undefined}>
                 <td style={td}>{u.nome || '—'}{u.is_super_admin ? ' (super)' : ''}</td>
                 <td style={td}>{u.email}</td>
                 <td style={td}>
-                  <select value={u.plan || 'free'} onChange={(e) => mudarPlano(u.id, e.target.value)} style={{ ...btn, padding: '5px 8px' }}>
+                  <select value={u.plan || 'free'} onChange={(e) => mudarPlano(u, e.target.value)} style={{ ...btn, padding: '5px 8px' }}>
                     {PLANOS.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </td>
                 <td style={td}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => definirBan(u, true)}>Suspender</button>
-                    <button type="button" style={btn} onClick={() => definirBan(u, false)}>Reativar</button>
-                  </div>
+                  {u.suspenso
+                    ? <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 12 }}>Suspensa</span>
+                    : <span style={{ color: '#7bd88f', fontSize: 12 }}>Ativa</span>}
+                </td>
+                <td style={td}>
+                  {u.suspenso
+                    ? <button type="button" style={btn} onClick={() => definirSuspensao(u, false)}>Reativar</button>
+                    : <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => definirSuspensao(u, true)}>Suspender</button>}
                 </td>
               </tr>
             ))}
             {!users.length && !loading && (
-              <tr><td style={td} colSpan={4}>Sem utilizadores.</td></tr>
+              <tr><td style={td} colSpan={5}>Sem utilizadores.</td></tr>
             )}
           </tbody>
         </table>
@@ -145,6 +159,18 @@ function TabTeams({ showMsg }) {
     }
   }
 
+  async function definirSuspensao(t, suspensa) {
+    const verbo = suspensa ? 'suspender' : 'reativar';
+    if (!window.confirm(`Confirmas ${verbo} a equipa "${t.nome}"?`)) return;
+    try {
+      await apiFetch(`/api/super/teams/${t.id}/suspender`, { method: 'PATCH', body: JSON.stringify({ suspensa }) });
+      showMsg(suspensa ? 'Equipa suspensa (invisível e inativa).' : 'Equipa reativada.');
+      reload();
+    } catch (err) {
+      showMsg(err.message, true);
+    }
+  }
+
   if (error) return <div style={{ ...CARD, padding: 14, color: 'var(--danger)' }}>{error}</div>;
 
   return (
@@ -156,23 +182,34 @@ function TabTeams({ showMsg }) {
             <th style={th}>Slug</th>
             <th style={th}>Membros</th>
             <th style={th}>Criada</th>
+            <th style={th}>Estado</th>
             <th style={th}>Ações</th>
           </tr>
         </thead>
         <tbody>
           {teams.map((t) => (
-            <tr key={t.id}>
+            <tr key={t.id} style={t.suspensa ? { opacity: 0.6 } : undefined}>
               <td style={td}>{t.nome}</td>
               <td style={td}><code style={{ color: 'var(--text-dim)' }}>{t.slug}</code></td>
               <td style={td}>{t.nr_membros}</td>
               <td style={td}>{fmtData(t.created_at)}</td>
               <td style={td}>
-                <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => apagar(t)}>Apagar</button>
+                {t.suspensa
+                  ? <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 12 }}>Suspensa</span>
+                  : <span style={{ color: '#7bd88f', fontSize: 12 }}>Ativa</span>}
+              </td>
+              <td style={td}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {t.suspensa
+                    ? <button type="button" style={btn} onClick={() => definirSuspensao(t, false)}>Reativar</button>
+                    : <button type="button" style={{ ...btn, borderColor: '#f0a35a', color: '#f0a35a' }} onClick={() => definirSuspensao(t, true)}>Suspender</button>}
+                  <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => apagar(t)}>Apagar</button>
+                </div>
               </td>
             </tr>
           ))}
           {!teams.length && !loading && (
-            <tr><td style={td} colSpan={5}>Sem equipas.</td></tr>
+            <tr><td style={td} colSpan={6}>Sem equipas.</td></tr>
           )}
         </tbody>
       </table>

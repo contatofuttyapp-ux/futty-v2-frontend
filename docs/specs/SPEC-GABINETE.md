@@ -140,3 +140,32 @@ Rota `/super` (guard super-admin), 3 tabs:
   identificação) — porque o histórico individual **não existe por lei**. Precisa de um job
   semanal + tabelinha de snapshots do agregado. Fica registada como **feature futura sem data**;
   **não implementada agora** (não é barata e não se fabrica a partir de dados que não guardamos).
+
+## PODERES DA SUPER — LEI DO DONO (registada 27 jul 2026)
+- **LEI (invocável, no código em `routes/superadmin.js`):** *"A Super age sobre a
+  PLATAFORMA (contas, planos, suspensão), NUNCA sobre o CONTEÚDO (notas, votos, fotos).
+  Moderação de conteúdo = SÓ pelo caminho registado (denúncia → triagem → decisão em
+  log append-only)."* O dono continua **cego ao conteúdo** — só números no Gabinete.
+- **Implementado (vaga 27 jul, sem DDL — store `_plataforma/suspensoes.json` no bucket
+  privado, mesmo padrão do gabinete/denúncias):**
+  - **Suspender/reativar UTILIZADOR** — flag de plataforma; conta suspensa não entra
+    (gate em `requireAuth` → 403 `CONTA_SUSPENSA`, ecrã digno "Conta suspensa"). Não
+    apaga nada, não vê o conteúdo. A Super não se pode auto-suspender.
+  - **Suspender/reativar EQUIPA** — flag; equipa suspensa fica **invisível** (fora da
+    descoberta `explorar`/`publicas`) e **inativa** (`getTeamBySlug` devolve 404 → todas
+    as rotas de equipa congelam), sem editar o interior.
+  - **Mudar plano** — já existia (`PATCH /users/:id/plano`).
+- **NÃO se adicionou (proibido por lei):** ver notas individuais, ver fotos privadas,
+  editar equipas por dentro, ver quem votou o quê.
+- **VAGA REGISTADA (não inventada) — fila de denúncias acionável na Super:** hoje a fila
+  acionável (`/api/denuncias/fila` + `/decidir`) é do **admin da EQUIPA**; os casos
+  escalados (ex.: perigo a menor) sobem para esse admin, não para a Super. Uma fila
+  acionável ao nível da plataforma **colidiria com a lei do dono cego** se mostrasse
+  conteúdo. Forma proposta (a decidir, não implementada): os escalados chegam à Super
+  como **sinais de plataforma** (quem/que equipa/categoria — SEM conteúdo) que permitem
+  **suspender** conta/equipa; a decisão sobre o conteúdo em si continua no caminho
+  registado do admin da equipa. Fica como vaga até ordem.
+- **VAGA REGISTADA — log append-only das decisões da Super:** as ações fortes (suspender/
+  reativar utilizador e equipa, mudar plano) ainda **não escrevem** um registo append-only
+  (só executam). Vaga a construir a seguir: log de plataforma (quem/ação/alvo/quando — SÓ
+  plataforma, ZERO conteúdo), na linha do log das denúncias. Registada, não implementada.
