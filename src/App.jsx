@@ -273,7 +273,7 @@ function AnimatedRoutes() {
             }
           />
           {/* fallback — página inexistente */}
-          <Route path="*" element={<ErrorPage mensagem="Esta página não existe." />} />
+          <Route path="*" element={<ErrorPage titulo="Página não encontrada" mensagem="Esta página não existe." />} />
           </Routes>
         </PageTransition>
       </AnimatePresence>

@@ -72,13 +72,14 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
 - Migrações continuam **"DDL à mão"** no Supabase até essa ordem. A `039` = vaga OPCIONAL.
 
 ## Segurança — média (tijolo 1)
-- **Buckets `avatars` e `resenha` são PRIVADOS.** Os URLs de média são **assinados
-  na fronteira da API** (middleware `mediaUrls`, validade 1h); o frontend renderiza
-  sem mudança (`urlAsset` passa URLs http tal-qual). Páginas públicas `/api/p/`
-  **despublicam** os avatares → silhueta (privacidade; sem expiração).
-- **Tradeoff conhecido:** um URL assinado deixado no DOM > 1h sem refetch expira
-  (imagem parte até re-render). Fix robusto sem expiração = **proxy de imagem**
-  (candidato ao tijolo 2). Não commitar "solução" sem essa ordem.
+- **Buckets `avatars` e `resenha` são PRIVADOS.** As rotas autenticadas emitem URLs
+  do **proxy de imagem** (middleware `mediaUrls` → `proxificarPayload` → `/api/media/:token`),
+  **estáveis 7 dias** no DOM; o proxy (`routes/media.js`) assina a Supabase de vida curta
+  (60s) e faz 302 a cada pedido. O frontend renderiza sem mudança (`urlAsset` passa URLs
+  http tal-qual). Páginas públicas `/api/p/` **despublicam** os avatares → silhueta.
+- **Tijolo 2 FEITO (resolve o antigo tradeoff do 1h):** já não há URL assinado de 1h no
+  DOM a expirar — o token do proxy vive 7 dias e o bucket continua privado. (O 1h era a
+  fase Tijolo 1; foi substituído.)
 - **Filtro NSFWJS** corre em TODOS os uploads de imagem (avatar/onboarding/resenha);
   explícito → 403; falha aberta em avaria. **Apagar post apaga o ficheiro no Storage.**
 

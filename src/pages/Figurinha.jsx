@@ -16,6 +16,7 @@ import FuttyLoader from '../components/FuttyLoader';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import SeloHonra from '../components/SeloHonra';
+import SilhuetaJogador from '../components/SilhuetaJogador';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
@@ -776,10 +777,8 @@ export default function Figurinha() {
             {!avatarEhIA && !fotoLocal && !gerandoIA && !erroIA ? (
               <div style={{ position: 'absolute', inset: 0, zIndex: 6, clipPath: CLIP_OCTOGONO, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
                 <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
-                  <svg width="86" height="104" viewBox="0 0 86 104" fill="none" stroke="#d4a017" strokeWidth="2" strokeDasharray="5 4" style={{ opacity: 0.35 }} aria-hidden="true">
-                    <circle cx="43" cy="26" r="19" />
-                    <path d="M6 102 C6 70 23 55 43 55 C63 55 80 70 80 102" />
-                  </svg>
+                  {/* LEI DA SILHUETA: placeholder de pessoa = silhueta-casa angulosa (nunca círculo). */}
+                  <SilhuetaJogador size={86} color="rgba(212,160,23,0.5)" />
                   <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,160,23,0.75)' }}>
                     O teu cromo espera por ti
                   </span>

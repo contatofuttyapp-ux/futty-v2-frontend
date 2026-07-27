@@ -12,7 +12,7 @@
 // asset, e a página de erro passa a falar a linguagem do resto.
 import FuttyLoader from './FuttyLoader';
 
-export default function ErrorPage({ onRetry, mensagem }) {
+export default function ErrorPage({ onRetry, mensagem, titulo }) {
   return (
     <div
       style={{
@@ -30,30 +30,43 @@ export default function ErrorPage({ onRetry, mensagem }) {
       <FuttyLoader size={110} label={null} />
 
       <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 24, fontWeight: 700, letterSpacing: '0.06em', color: '#fff', margin: 0 }}>
-        Algo correu mal
+        {titulo || 'Algo correu mal'}
       </h1>
       <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, maxWidth: 280, lineHeight: 1.5, margin: 0 }}>
         {mensagem || 'O servidor está a descansar. Tenta de novo daqui a pouco.'}
       </p>
 
+      {/* A acção primária (ouro) tira o utilizador do beco: se há como repetir, repete;
+          senão, leva ao Início (onde vivem os próximos jogos). O 2º elo é uma porta
+          alternativa real — descobrir peladas — para o 404 nunca ser um fim de linha. */}
       <div style={{ display: 'grid', justifyItems: 'center', gap: 12, marginTop: 4, width: '100%', maxWidth: 260 }}>
+        <div className="cta-gold-glow" style={{ display: 'flex', width: '100%' }}>
+          <button
+            type="button"
+            className="btn hud-corners cta-gold"
+            style={{ width: '100%' }}
+            onClick={onRetry ? onRetry : () => { window.location.href = '/home'; }}
+          >
+            {onRetry ? 'Tentar novamente' : 'Voltar ao início'}
+          </button>
+        </div>
         {onRetry ? (
-          <div className="cta-gold-glow" style={{ display: 'flex', width: '100%' }}>
-            <button type="button" className="btn hud-corners cta-gold" style={{ width: '100%' }} onClick={onRetry}>
-              Tentar novamente
-            </button>
-          </div>
-        ) : null}
-        <button
-          type="button"
-          className="btn btn--purple-outline hud-corners"
-          style={{ width: '100%', height: 42, fontSize: 14 }}
-          onClick={() => {
-            window.location.href = '/home';
-          }}
-        >
-          Voltar ao início
-        </button>
+          <button
+            type="button"
+            className="btn btn--purple-outline hud-corners"
+            style={{ width: '100%', height: 42, fontSize: 14 }}
+            onClick={() => { window.location.href = '/home'; }}
+          >
+            Voltar ao início
+          </button>
+        ) : (
+          <a
+            href="/explorar"
+            style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 3 }}
+          >
+            Ou descobre peladas perto de ti
+          </a>
+        )}
       </div>
     </div>
   );

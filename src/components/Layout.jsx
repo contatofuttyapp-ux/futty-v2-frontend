@@ -47,7 +47,7 @@ const HIDE_NAV_PATTERNS = [
   /^\/equipa\/[^/]+\/jogador\//,
 ];
 
-function shouldShowNav(pathname) {
+export function shouldShowNav(pathname) {
   return !HIDE_NAV_PATTERNS.some((re) => re.test(pathname));
 }
 

@@ -5,16 +5,17 @@
 // Estado da seleção (timeSel) é interno; o plantel (atrib) é do pai, via onChangeAtrib.
 import { useState } from 'react';
 import { urlAsset } from '../utils/avatar';
+import SilhuetaJogador from './SilhuetaJogador';
 
 const RAJ = "'Rajdhani', sans-serif";
 // Paleta SELADA da casa (OURO/ROXO/PRATA/BRONZE + extras) — idêntica à do wizard.
 const CORES_PADRAO = ['#d4a017', '#8b5cf6', '#aab4c8', '#c2652e', '#35b6a8', '#d1689e', '#6fae52', '#e08a2e'];
 
-// Avatar pequeno (foto ou iniciais) para chips de jogador.
+// Avatar pequeno (foto ou silhueta-casa) para chips de jogador.
 function MiniAvatar({ p, size = 20 }) {
-  const inic = (p.nome || '?').trim().slice(0, 1).toUpperCase();
   if (p.avatar_url) return <img src={urlAsset(p.avatar_url)} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top' }} />;
-  return <span style={{ width: size, height: size, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(139,92,246,0.25)', color: '#c9b6ff', fontFamily: RAJ, fontWeight: 800, fontSize: size * 0.5 }}>{inic}</span>;
+  // LEI DA SILHUETA: pessoa sem foto = silhueta-casa angulosa (nunca círculo com inicial).
+  return <span style={{ width: size, height: size, display: 'grid', placeItems: 'center', color: 'rgba(201,182,255,0.9)' }}><SilhuetaJogador size="92%" interrogacao={false} /></span>;
 }
 
 export default function ComporTimes({ nomes, pool, atrib, onChangeAtrib, cores }) {

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { gerarCartaoCampeao, gerarCartaoPodio } from '../utils/campeonatoCartao';
 import { podioDe } from '../utils/campeonatoPodio';
 import { urlAsset } from '../utils/avatar';
+import SilhuetaJogador from './SilhuetaJogador';
 
 const RAJ = "'Rajdhani', sans-serif";
 const Crown = ({ size = 14, color = '#f0c94a' }) => (
@@ -223,7 +224,8 @@ export function CampeonatoPodio({ campeonato }) {
 // ---- Plantéis dos times (toque expande) ----
 function RetratoMini({ j }) {
   if (j.avatar_url) return <img src={urlAsset(j.avatar_url)} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top' }} />;
-  return <span style={{ width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(139,92,246,0.22)', color: '#c9b6ff', fontFamily: RAJ, fontWeight: 800, fontSize: 12 }}>{(j.nome || '?').slice(0, 1).toUpperCase()}</span>;
+  // LEI DA SILHUETA: pessoa sem foto = silhueta-casa angulosa (nunca círculo com inicial).
+  return <span style={{ width: 26, height: 26, display: 'grid', placeItems: 'center', color: 'rgba(201,182,255,0.9)' }}><SilhuetaJogador size="92%" interrogacao={false} /></span>;
 }
 
 export function CampeonatoPlanteis({ campeonato }) {

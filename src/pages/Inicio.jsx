@@ -17,6 +17,7 @@ import ProductTour from '../components/ProductTour';
 import LoadingFutty from '../components/LoadingFutty';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
+import SilhuetaJogador from '../components/SilhuetaJogador';
 import '../styles/app.css';
 
 function isToday(iso) {
@@ -88,10 +89,8 @@ function CromoInicio({ cromo, avatarEhIA, nome, destino = '/figurinha', destinoL
           {cromo && !avatarEhIA ? (
             <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
               <div style={{ display: 'grid', justifyItems: 'center', gap: 8 }}>
-                <svg width="62" height="74" viewBox="0 0 86 104" fill="none" stroke="#d4a017" strokeWidth="2" strokeDasharray="5 4" style={{ opacity: 0.35 }} aria-hidden="true">
-                  <circle cx="43" cy="26" r="19" />
-                  <path d="M6 102 C6 70 23 55 43 55 C63 55 80 70 80 102" />
-                </svg>
+                {/* LEI DA SILHUETA: placeholder de pessoa = silhueta-casa angulosa (nunca círculo). */}
+                <SilhuetaJogador size={62} color="rgba(212,160,23,0.5)" />
                 <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,160,23,0.75)', textAlign: 'center' }}>
                   O teu cromo espera por ti
                 </span>
