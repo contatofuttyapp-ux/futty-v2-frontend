@@ -31,7 +31,7 @@ export default function EstadoErroRede({ onRepetir, mensagem, compacto = false }
         <line x1="12" y1="20" x2="12.01" y2="20" />
       </svg>
       <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, maxWidth: 280 }}>
-        {mensagem || 'Sem ligação. Verifica a internet e tenta de novo.'}
+        {mensagem || 'Sem conexão. Verifique a internet e tente de novo.'}
       </p>
       {onRepetir ? (
         <button

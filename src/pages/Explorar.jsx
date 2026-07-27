@@ -84,7 +84,7 @@ export default function Explorar() {
   // aproximados das equipas (fase Segurança).
   function pedirGeo() {
     if (!navigator.geolocation) {
-      setToast({ tipo: 'info', mensagem: 'O teu dispositivo não expõe localização.' });
+      setToast({ tipo: 'info', mensagem: 'Seu dispositivo não expõe localização.' });
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -93,9 +93,9 @@ export default function Explorar() {
         setPosUser({ lat: p.coords.latitude, lng: p.coords.longitude });
         setGeoPedida(true);
         if (!raio) setRaio(10);
-        setToast({ tipo: 'success', mensagem: 'Localização activa (só neste telefone).' });
+        setToast({ tipo: 'success', mensagem: 'Localização ativa (só neste celular).' });
       },
-      () => setToast({ tipo: 'info', mensagem: 'Sem problema — escreve a tua cidade em baixo.' })
+      () => setToast({ tipo: 'info', mensagem: 'Sem problema — escreva sua cidade abaixo.' })
     );
   }
 
@@ -103,7 +103,7 @@ export default function Explorar() {
   // servidor). A posição resultante fica só em memória.
   async function usarCidade() {
     const cidade = pesquisa.trim();
-    if (!cidade) { setToast({ tipo: 'info', mensagem: 'Escreve a tua cidade na busca acima.' }); return; }
+    if (!cidade) { setToast({ tipo: 'info', mensagem: 'Escreva sua cidade na busca acima.' }); return; }
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cidade)}`, { headers: { Accept: 'application/json' } });
       const arr = await r.json();
@@ -111,7 +111,7 @@ export default function Explorar() {
         setPosUser({ lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon) });
         setGeoPedida(true);
         if (!raio) setRaio(10);
-        setToast({ tipo: 'success', mensagem: `A tua zona: ${cidade}` });
+        setToast({ tipo: 'success', mensagem: `Sua zona: ${cidade}` });
       } else setToast({ tipo: 'info', mensagem: 'Cidade não encontrada.' });
     } catch { setToast({ tipo: 'error', mensagem: 'Não deu para localizar a cidade.' }); }
   }
@@ -124,7 +124,7 @@ export default function Explorar() {
       const r = await apiFetch(`/api/teams/${equipa.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
       const entrou = !!r?.entrou;
       setEquipas((cur) => cur.map((t) => (t.slug === equipa.slug ? { ...t, ja_membro: entrou || t.ja_membro, pedido_pendente: !entrou } : t)));
-      setToast({ tipo: 'success', mensagem: entrou ? 'Entraste no time!' : 'Pedido enviado! O admin vai decidir — vês o desfecho no Início.' });
+      setToast({ tipo: 'success', mensagem: entrou ? 'Você entrou no time!' : 'Pedido enviado! O admin vai decidir — você vê o desfecho no Início.' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {
@@ -157,7 +157,7 @@ export default function Explorar() {
           <input
             value={pesquisa}
             onChange={(e) => setPesquisa(e.target.value)}
-            placeholder="Cidade ou nome da equipa…"
+            placeholder="Cidade ou nome do time…"
             style={{ flex: 1, border: 'none', background: 'transparent', color: '#fff', outline: 'none', fontFamily: RAJ, fontSize: 15, fontWeight: 600 }}
           />
         </div>
@@ -167,16 +167,16 @@ export default function Explorar() {
           <MapPin size={16} color="#b69cff" />
           <span style={{ flex: 1 }}>
             <b style={{ fontFamily: RAJ, fontSize: 13, color: '#e4d9ff', letterSpacing: '0.04em', display: 'block' }}>
-              {geoPedida ? 'Localização activa' : 'Usar a minha localização'}
+              {geoPedida ? 'Localização ativa' : 'Usar minha localização'}
             </b>
-            <span style={{ fontSize: 10, color: '#9a8fc0' }}>opt-in — se recusares, a busca por cidade chega; a tua posição nunca sai do telefone</span>
+            <span style={{ fontSize: 10, color: '#9a8fc0' }}>opt-in — se recusar, a busca por cidade chega; sua posição nunca sai do celular</span>
           </span>
         </button>
 
         {/* Alternativa à permissão do browser: usar a cidade escrita (geocodificada NO
             browser, nunca no nosso servidor). */}
         <button type="button" onClick={usarCidade} style={{ width: '100%', marginTop: 8, padding: '9px 12px', border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', clipPath: CLIP_S, color: '#c9c2d6', fontFamily: RAJ, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em' }}>
-          …ou usar a cidade escrita acima como a minha zona
+          …ou usar a cidade escrita acima como minha zona
         </button>
 
         {/* Raio real — só aparece quando há posição (do browser ou da cidade). */}
@@ -195,7 +195,7 @@ export default function Explorar() {
         ) : null}
 
         <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', color: '#9a8fc0', textTransform: 'uppercase', margin: '20px 2px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          Equipas abertas · {filtradas.length}
+          Times abertos · {filtradas.length}
           <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(139,92,246,0.4), transparent)' }} />
         </div>
 
@@ -207,7 +207,7 @@ export default function Explorar() {
           </>
         ) : filtradas.length === 0 ? (
           <div style={{ ...VIDRO, clipPath: CLIP, textAlign: 'center', padding: '32px 16px', color: 'var(--text-dim)', fontSize: 13 }}>
-            {pesquisa ? 'Nenhuma equipa encontrada.' : 'Ainda não há equipas públicas.'}
+            {pesquisa ? 'Nenhum time encontrado.' : 'Ainda não há times públicos.'}
           </div>
         ) : (
           filtradas.map((equipa) => (
@@ -218,11 +218,11 @@ export default function Explorar() {
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                   {equipa.dist != null ? <b style={{ color: '#b69cff' }}>a {equipa.dist < 1 ? '<1' : Math.round(equipa.dist)} km · </b> : ''}
                   {equipa.cidade ? `${equipa.cidade} · ` : equipa.localizacao ? `${equipa.localizacao} · ` : ''}
-                  {equipa.membro_count} membros · {equipa.modo_visibilidade === 'publico_aberto' ? 'aberta' : 'com aprovação'}
+                  {equipa.membro_count} membros · {equipa.modo_visibilidade === 'publico_aberto' ? 'aberto' : 'com aprovação'}
                 </div>
               </div>
               {equipa.ja_membro ? (
-                <span style={{ flexShrink: 0, fontFamily: RAJ, fontSize: 11, fontWeight: 800, color: '#7bd88f', letterSpacing: '0.06em' }}>Já és membro</span>
+                <span style={{ flexShrink: 0, fontFamily: RAJ, fontSize: 11, fontWeight: 800, color: '#7bd88f', letterSpacing: '0.06em' }}>Você já é membro</span>
               ) : equipa.pedido_pendente ? (
                 <div style={{ display: 'grid', gap: 4, justifyItems: 'end', flexShrink: 0 }}>
                   <span style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 800, color: '#b69cff', letterSpacing: '0.06em' }}>Pedido enviado ✓</span>
@@ -246,7 +246,7 @@ export default function Explorar() {
         )}
 
         <p style={{ fontSize: 10, color: '#8a8a98', textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>
-          a distância será sempre da EQUIPA (ponto aproximado declarado pelo admin) — nunca de pessoas
+          a distância será sempre do TIME (ponto aproximado declarado pelo admin) — nunca de pessoas
         </p>
       </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}

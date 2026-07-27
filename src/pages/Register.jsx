@@ -62,7 +62,7 @@ export default function Register() {
     // O onboarding fica à espera no servidor (flag onboarding_completo): venhas
     // pelo link do email ou por login, entras sempre por ele.
     if (data.user && !data.session) {
-      setSuccess('Conta criada! Confirma o teu email — depois preparamos o teu perfil (leva 30s).');
+      setSuccess('Conta criada! Confirme seu e-mail — depois preparamos seu perfil (leva 30s).');
     } else {
       // Sessão imediata → onboarding dia-1.
       navigate('/onboarding', { replace: true });
@@ -87,9 +87,9 @@ export default function Register() {
           <div className="auth-brand">
             <FuttyLogo variant="wordmark" size={20} color="#d4a017" />
           </div>
-          <h1 className="auth-title">Cria a tua conta</h1>
+          <h1 className="auth-title">Crie a sua conta</h1>
           <div className="auth-rule" aria-hidden="true" />
-          <p className="auth-subtitle">Junta-te ao Futty em segundos.</p>
+          <p className="auth-subtitle">Junte-se ao Futty em segundos.</p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
             {error && (
@@ -100,12 +100,12 @@ export default function Register() {
             )}
 
             <div className="auth-field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">E-mail</label>
               <input
                 id="email"
                 type="email"
                 className="auth-input hud-corners-s"
-                placeholder="tu@email.com"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -180,7 +180,7 @@ export default function Register() {
           </button>
 
           <p className="auth-footer">
-            Já tens conta? <Link to="/login">Entra aqui</Link>
+            Já tem conta? <Link to="/login">Entre aqui</Link>
           </p>
         </div>
       </div>

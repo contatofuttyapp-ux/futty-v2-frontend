@@ -33,8 +33,8 @@ export default function ComporTimes({ nomes, pool, atrib, onChangeAtrib, cores }
 
   return (
     <>
-      <div className="section-title" style={{ marginTop: 2 }}>Monta os times <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(opcional)</span></div>
-      <p className="muted" style={{ fontSize: 11, margin: '0 0 10px', lineHeight: 1.5 }}>Toca num jogador para o pôr no time selecionado. Quem sobra não joga (não é reserva). Podes deixar tudo vazio — times só com nome (ex.: 5º A vs 5º B).</p>
+      <div className="section-title" style={{ marginTop: 2 }}>Monte os times <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(opcional)</span></div>
+      <p className="muted" style={{ fontSize: 11, margin: '0 0 10px', lineHeight: 1.5 }}>Toque em um jogador para colocá-lo no time selecionado. Quem sobra não joga (não é reserva). Você pode deixar tudo vazio — times só com nome (ex.: 5º A vs 5º B).</p>
 
       {/* separador de times (toca para selecionar) */}
       <div className="row" style={{ marginBottom: 10 }}>
@@ -57,13 +57,13 @@ export default function ComporTimes({ nomes, pool, atrib, onChangeAtrib, cores }
               </button>
             ); })}
           </div>
-        ) : <span className="muted" style={{ fontSize: 12 }}>Vazio — toca nos jogadores abaixo.</span>}
+        ) : <span className="muted" style={{ fontSize: 12 }}>Vazio — toque nos jogadores abaixo.</span>}
       </div>
 
       {/* pool disponível */}
       <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.1em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', margin: '0 0 6px' }}>Disponíveis · {livres.length}</div>
       {pool.length === 0 ? (
-        <p className="muted" style={{ fontSize: 12 }}>Sem jogadores — volta atrás para juntar convidados, ou cria só com os nomes.</p>
+        <p className="muted" style={{ fontSize: 12 }}>Sem jogadores — volte atrás para juntar convidados, ou crie só com os nomes.</p>
       ) : livres.length === 0 ? (
         <p className="muted" style={{ fontSize: 12 }}>Todos colocados.</p>
       ) : (

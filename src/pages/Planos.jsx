@@ -74,7 +74,7 @@ export default function Planos() {
   const [toast, setToast] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('sucesso') === '1'
-      ? { tipo: 'success', mensagem: 'Pagamento confirmado! O teu plano será ativado em instantes.' }
+      ? { tipo: 'success', mensagem: 'Pagamento confirmado! Seu plano será ativado em instantes.' }
       : null;
   });
 

@@ -65,13 +65,13 @@ export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, ch
 
   return (
     <div style={{ border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.06)', borderRadius: 'var(--radius-md)', padding: 14, marginBottom: 12 }}>
-      <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Confirma presença</div>
+      <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Confirme presença</div>
       <div style={{ fontSize: 12, color: 'var(--label-color)', marginTop: 2 }}>até {formatarPrazo(prazo)}</div>
 
       {modoEspera ? (
         posEspera != null ? (
           <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neon)' }}>Estás em {posEspera}º na lista de espera</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neon)' }}>Você está em {posEspera}º na lista de espera</div>
             <button type="button" disabled={busy} onClick={sairEspera} style={{ marginTop: 8, border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 12, cursor: busy ? 'default' : 'pointer', padding: 0 }}>
               Sair da lista
             </button>

@@ -216,7 +216,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     }
     async function girarTime(ti) {
       const jogs = times[ti].jogadores; const k = marca(ti);
-      const quem = q('.quem'); quem.textContent = `a girar · ${k.nome}`;
+      const quem = q('.quem'); quem.textContent = `Girando · ${k.nome}`;
       quem.style.setProperty('--qc', k.c); quem.style.setProperty('--qg', k.g);
       const vagas = jogs.length > 7 ? [Math.ceil(jogs.length / 2), jogs.length - Math.ceil(jogs.length / 2)] : [jogs.length];
       let off = 0;
@@ -312,7 +312,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
 
     // ── som (opt-in, lembrado) ──
     const somBtn = q('.somBtn');
-    const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clica p/ ligar)'; };
+    const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clique p/ ligar)'; };
     const onSom = () => { const on = SomSorteio.toggle(); if (on) { SomSorteio.toque(0.2); SomSorteio.iniciar(); } pintarSom(); };
     somBtn.addEventListener('click', onSom); pintarSom(); SomSorteio.autoTeste();
 
@@ -350,10 +350,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     let aGuardar = false;
     const onGuardar = async () => {
       if (aGuardar) return;
-      aGuardar = true; SomSorteio.toque(0.24); mostrarToast('A gerar o cartaz…');
+      aGuardar = true; SomSorteio.toque(0.24); mostrarToast('Gerando o cartaz…');
       try {
         await gerarCartazEscalacao(resultado, { equipa: infoRef.current.equipa, data: infoRef.current.data });
-        mostrarToast('Cartaz guardado');
+        mostrarToast('Cartaz salvo');
       } catch {
         mostrarToast('Não deu para gerar o cartaz');
       } finally { aGuardar = false; }
@@ -401,7 +401,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         <div className="fx raios" />
         <div className="palco"><div className="maqbox">
           <div className="maq clip8">
-            <div className="somBtn" title="Som (desligado por defeito)">
+            <div className="somBtn" title="Som (desligado por padrão)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
                 <path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" stroke="none" />
                 <g className="waves"><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 6a9 9 0 0 1 0 12" /></g>
@@ -430,15 +430,15 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
             <span className="placaFutty">Futty</span>
             <div className="maqveu" />
           </div>
-          <div className="lever6 lever" title="Puxar o F = repetir a cerimónia">
+          <div className="lever6 lever" title="Puxar o F = repetir a cerimônia">
             <div className="l6-grip"><div className="l6-knob"><img src="/futty-logo-flat.png" alt="F" /></div></div>
             <span className="setas"><i /><i /><i /></span>
           </div>
         </div></div>
       </div>
       <div className="partilha">
-        <button type="button" className="pbtn btGuardar" title="Guardar a imagem 9:16 (cartaz)"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>Guardar</button>
-        <button type="button" className="pbtn btComp" title="Compartilhar o link da cerimónia (/p/)"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg>Compartilhar</button>
+        <button type="button" className="pbtn btGuardar" title="Salvar a imagem 9:16 (cartaz)"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>Salvar</button>
+        <button type="button" className="pbtn btComp" title="Compartilhar o link da cerimônia (/p/)"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg>Compartilhar</button>
       </div>
       {/* BannerAd — servido a valer (/api/ads?pagina=sorteio); toggle do dono + menores
           fail-closed no servidor. Sem campanha/OFF → não aparece. */}

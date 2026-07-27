@@ -10,8 +10,8 @@ import '../styles/app.css';
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
 const PLANOS = ['free', 'pro', 'elite'];
 const TABS = [
-  { k: 'users', label: 'Utilizadores' },
-  { k: 'teams', label: 'Equipas' },
+  { k: 'users', label: 'Usuários' },
+  { k: 'teams', label: 'Times' },
   { k: 'denuncias', label: 'Denúncias' },
   { k: 'stats', label: 'Stats' },
 ];
@@ -33,7 +33,7 @@ const td = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid #1a1a1a
 function fmtData(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function MetricCard({ valor, label }) {
@@ -72,7 +72,7 @@ function TabUsers({ showMsg }) {
 
   async function definirSuspensao(u, suspenso) {
     const verbo = suspenso ? 'suspender' : 'reativar';
-    if (!window.confirm(`Confirmas ${verbo} a conta de ${u.email}?`)) return;
+    if (!window.confirm(`Confirma ${verbo} a conta de ${u.email}?`)) return;
     try {
       await apiFetch(`/api/super/users/${u.id}/suspender`, { method: 'PATCH', body: JSON.stringify({ suspenso }) });
       showMsg(suspenso ? 'Conta suspensa.' : 'Conta reativada.');
@@ -122,7 +122,7 @@ function TabUsers({ showMsg }) {
               </tr>
             ))}
             {!users.length && !loading && (
-              <tr><td style={td} colSpan={5}>Sem utilizadores.</td></tr>
+              <tr><td style={td} colSpan={5}>Sem usuários.</td></tr>
             )}
           </tbody>
         </table>
@@ -130,11 +130,11 @@ function TabUsers({ showMsg }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          {total} utilizadores · página {page}/{totalPaginas}
+          {total} usuários · página {page}/{totalPaginas}
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" style={btn} disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>← Anterior</button>
-          <button type="button" style={btn} disabled={page >= totalPaginas || loading} onClick={() => setPage((p) => p + 1)}>Seguinte →</button>
+          <button type="button" style={btn} disabled={page >= totalPaginas || loading} onClick={() => setPage((p) => p + 1)}>Próxima →</button>
         </div>
       </div>
     </div>
@@ -147,14 +147,14 @@ function TabTeams({ showMsg }) {
   const teams = data?.teams || [];
 
   async function apagar(t) {
-    const resp = window.prompt(`Vais APAGAR a equipa "${t.nome}" e todos os seus dados (jogos, membros, votos…). Isto é irreversível.\n\nEscreve APAGAR para confirmar:`);
+    const resp = window.prompt(`Você vai APAGAR o time "${t.nome}" e todos os seus dados (jogos, membros, votos…). Isso é irreversível.\n\nEscreva APAGAR para confirmar:`);
     if (resp !== 'APAGAR') {
       if (resp !== null) showMsg('Confirmação incorreta — nada apagado.', true);
       return;
     }
     try {
       await apiFetch(`/api/super/teams/${t.id}`, { method: 'DELETE', body: JSON.stringify({ confirmar: 'APAGAR' }) });
-      showMsg('Equipa apagada.');
+      showMsg('Time apagado.');
       reload();
     } catch (err) {
       showMsg(err.message, true);
@@ -163,10 +163,10 @@ function TabTeams({ showMsg }) {
 
   async function definirSuspensao(t, suspensa) {
     const verbo = suspensa ? 'suspender' : 'reativar';
-    if (!window.confirm(`Confirmas ${verbo} a equipa "${t.nome}"?`)) return;
+    if (!window.confirm(`Confirma ${verbo} o time "${t.nome}"?`)) return;
     try {
       await apiFetch(`/api/super/teams/${t.id}/suspender`, { method: 'PATCH', body: JSON.stringify({ suspensa }) });
-      showMsg(suspensa ? 'Equipa suspensa (invisível e inativa).' : 'Equipa reativada.');
+      showMsg(suspensa ? 'Time suspenso (invisível e inativo).' : 'Time reativado.');
       reload();
     } catch (err) {
       showMsg(err.message, true);
@@ -183,7 +183,7 @@ function TabTeams({ showMsg }) {
             <th style={th}>Nome</th>
             <th style={th}>Slug</th>
             <th style={th}>Membros</th>
-            <th style={th}>Criada</th>
+            <th style={th}>Criado</th>
             <th style={th}>Estado</th>
             <th style={th}>Ações</th>
           </tr>
@@ -197,8 +197,8 @@ function TabTeams({ showMsg }) {
               <td style={td}>{fmtData(t.created_at)}</td>
               <td style={td}>
                 {t.suspensa
-                  ? <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 12 }}>Suspensa</span>
-                  : <span style={{ color: '#7bd88f', fontSize: 12 }}>Ativa</span>}
+                  ? <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 12 }}>Suspenso</span>
+                  : <span style={{ color: '#7bd88f', fontSize: 12 }}>Ativo</span>}
               </td>
               <td style={td}>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -211,7 +211,7 @@ function TabTeams({ showMsg }) {
             </tr>
           ))}
           {!teams.length && !loading && (
-            <tr><td style={td} colSpan={6}>Sem equipas.</td></tr>
+            <tr><td style={td} colSpan={6}>Sem times.</td></tr>
           )}
         </tbody>
       </table>
@@ -229,10 +229,10 @@ function TabDenuncias({ showMsg }) {
   async function decidir(c, acao) {
     const rotulo = { manter: 'MANTER o conteúdo', remover: 'REMOVER o conteúdo', suspender_autor: 'REMOVER e SUSPENDER o autor' }[acao];
     // Confirmação antes de agir (ação + alvo bem visíveis). Nada ao 1º toque.
-    if (!window.confirm(`Denúncia «${c.categoria}» (${c.target_type}).\n\nConfirmas: ${rotulo}?`)) return;
+    if (!window.confirm(`Denúncia «${c.categoria}» (${c.target_type}).\n\nConfirma: ${rotulo}?`)) return;
     try {
       await apiFetch(`/api/super/denuncias/${c.id}/decidir`, { method: 'POST', body: JSON.stringify({ team_id: c.team_id, acao }) });
-      showMsg('Decisão registada no log.');
+      showMsg('Decisão registrada no log.');
       reload();
     } catch (err) {
       showMsg(err.message, true);
@@ -263,7 +263,7 @@ function TabDenuncias({ showMsg }) {
           </div>
         </div>
       ))}
-      {!fila.length && !loading ? <div style={{ ...CARD, padding: 14, color: 'var(--text-dim)', fontSize: 13 }}>Fila vazia — nada por rever.</div> : null}
+      {!fila.length && !loading ? <div style={{ ...CARD, padding: 14, color: 'var(--text-dim)', fontSize: 13 }}>Fila vazia — nada para revisar.</div> : null}
     </div>
   );
 }
@@ -273,16 +273,16 @@ function TabStats() {
   const { data: s, error } = useApi('/api/super/stats');
 
   if (error) return <div style={{ ...CARD, padding: 14, color: 'var(--danger)' }}>{error}</div>;
-  if (!s) return <p style={{ color: 'var(--text-dim)' }}>A carregar métricas…</p>;
+  if (!s) return <p style={{ color: 'var(--text-dim)' }}>Carregando métricas…</p>;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-      <MetricCard valor={s.total_users} label="Utilizadores" />
-      <MetricCard valor={s.total_teams} label="Equipas" />
+      <MetricCard valor={s.total_users} label="Usuários" />
+      <MetricCard valor={s.total_teams} label="Times" />
       <MetricCard valor={s.users_pro} label="Plano Pro" />
       <MetricCard valor={s.users_elite} label="Plano Elite" />
-      <MetricCard valor={s.users_hoje} label="Users hoje" />
-      <MetricCard valor={s.teams_hoje} label="Equipas hoje" />
+      <MetricCard valor={s.users_hoje} label="Usuários hoje" />
+      <MetricCard valor={s.teams_hoje} label="Times hoje" />
     </div>
   );
 }
@@ -311,7 +311,7 @@ export default function Super() {
     <div className="app-shell">
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         <h1 className="app-page-title">Super-Admin</h1>
-        <p className="app-page-sub">Gestão global de utilizadores e equipas.</p>
+        <p className="app-page-sub">Gestão global de usuários e times.</p>
 
         <div style={{ display: 'flex', gap: 8, margin: '12px 0 16px' }}>
           {TABS.map((t) => (

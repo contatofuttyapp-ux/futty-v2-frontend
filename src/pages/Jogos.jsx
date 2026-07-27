@@ -55,7 +55,7 @@ export default function Jogos() {
             <Icon name="bola" size={40} />
             <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, marginTop: 10 }}>Ainda não há jogos</div>
             <p className="muted" style={{ fontSize: 13, margin: '6px 0 14px' }}>
-              {isAdmin ? 'Marca o primeiro e chama a equipa.' : 'Aguarda que um admin agende um jogo.'}
+              {isAdmin ? 'Marque o primeiro e chame o time.' : 'Espere um admin agendar um jogo.'}
             </p>
             {isAdmin && (
               <Link to={`/equipa/${slug}/jogo/novo`} className="btn hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>

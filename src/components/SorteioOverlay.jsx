@@ -36,7 +36,7 @@ function Fase1() {
     <div className="so-center" style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 40%, rgba(212,160,23,0.08), transparent 70%)' }}>
       <div className="so-logo">FUTTY</div>
       <div className="so-sub">
-        A sortear os times
+        Sorteando os times
         <span className="so-dot" style={{ animationDelay: '0s' }}>.</span>
         <span className="so-dot" style={{ animationDelay: '0.2s' }}>.</span>
         <span className="so-dot" style={{ animationDelay: '0.4s' }}>.</span>

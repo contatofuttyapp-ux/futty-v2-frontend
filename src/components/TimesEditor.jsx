@@ -90,7 +90,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
         method: 'PATCH',
         body: JSON.stringify({ times_resultado: tr }),
       });
-      showToast?.('Times actualizados!');
+      showToast?.('Times atualizados!');
       onSaved?.(times_resultado);
     } catch (e) {
       showToast?.(e.message, 'error');
@@ -170,7 +170,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
           Reservas
         </div>
         {reservas.length === 0 ? (
-          <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Arrasta jogadores para aqui</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Arraste jogadores para aqui</div>
         ) : (
           reservas.map((j) => <Jogador key={j.user_id} j={j} />)
         )}

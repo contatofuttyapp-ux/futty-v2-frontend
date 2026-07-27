@@ -15,22 +15,22 @@ export default function Termos() {
         <h1 style={{ ...H, fontSize: 30, margin: '16px 0 4px' }}>Termos de Uso</h1>
 
         <h2 style={h2}>1. Aceitação</h2>
-        <p style={p}>Ao usar o Futty, concordas com estes termos.</p>
+        <p style={p}>Ao usar o Futty, você concorda com estes termos.</p>
 
         <h2 style={h2}>2. O serviço</h2>
         <p style={p}>
           O Futty é uma plataforma de gestão de peladas amadoras — sorteio de times, rankings e
-          figurinhas. Não nos responsabilizamos por actividades físicas realizadas durante os jogos.
+          figurinhas. Não nos responsabilizamos por atividades físicas realizadas durante os jogos.
         </p>
 
         <h2 style={h2}>3. Contas</h2>
         <p style={p}>
-          Deves ter pelo menos 18 anos para criar conta. És responsável pela segurança da tua conta.
+          Você deve ter pelo menos 18 anos para criar conta. Você é responsável pela segurança da sua conta.
         </p>
 
         <h2 style={h2}>4. Conteúdo</h2>
         <p style={p}>
-          Podes fazer upload de fotos pessoais. Não é permitido conteúdo ilegal, ofensivo ou que
+          Você pode fazer upload de fotos pessoais. Não é permitido conteúdo ilegal, ofensivo ou que
           viole direitos de terceiros.
         </p>
 
@@ -43,11 +43,11 @@ export default function Termos() {
         <h2 style={h2}>6. Encerramento</h2>
         <p style={p}>Podemos suspender contas que violem estes termos.</p>
 
-        <h2 style={h2}>7. Contacto</h2>
+        <h2 style={h2}>7. Contato</h2>
         <p style={p}>suporte@futty.app</p>
 
         <p style={{ ...p, fontSize: 13, marginTop: 32, color: 'var(--label-color)' }}>
-          Última actualização: Janeiro 2025
+          Última atualização: Janeiro 2025
         </p>
       </div>
     </div>

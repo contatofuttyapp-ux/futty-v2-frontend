@@ -263,7 +263,7 @@ export default function MeuPerfil() {
             {/* Hint discreto: fecha o circuito perfil → cromo. Leitura, não estrutura
                 → fica no --sans (var(--sans)), como manda a régua. */}
             <span style={{ fontFamily: 'var(--sans)', fontSize: 11, lineHeight: 1.3, color: 'rgba(255,255,255,0.4)' }}>
-              É este o nome que aparece na tua figurinha.
+              É esse o nome que aparece na sua figurinha.
             </span>
           </label>
           </div>
@@ -352,10 +352,10 @@ export default function MeuPerfil() {
             <span style={{ display: 'grid', gap: 3, minWidth: 0 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>
                 <Icon name="cadeado" size={20} color="#d4a017" />
-                Mostrar o meu rosto em links públicos
+                Mostrar meu rosto em links públicos
               </span>
               <span style={{ fontSize: 12, lineHeight: 1.45, color: 'rgba(255,255,255,0.4)', paddingLeft: 32 }}>
-                O teu rosto aparece em links públicos de sorteio. Desliga aqui se preferires silhueta.
+                Seu rosto aparece em links públicos de sorteio. Desligue aqui se preferir silhueta.
               </span>
             </span>
             <input
@@ -363,7 +363,7 @@ export default function MeuPerfil() {
               checked={perfil.user.mostrar_rosto_publico !== false}
               onChange={(e) => patchMe({ mostrar_rosto_publico: e.target.checked })}
               style={{ width: 20, height: 20, accentColor: '#8b5cf6', flex: 'none' }}
-              aria-label="Mostrar o meu rosto em links públicos de sorteio"
+              aria-label="Mostrar meu rosto em links públicos de sorteio"
             />
           </div>
         </div>
@@ -404,7 +404,7 @@ export default function MeuPerfil() {
           ) : null}
           <ContaRow onClick={() => setConfirmSignOut(true)} cor="rgba(239,68,68,0.8)" semBorda>
             <Icon name="sair" size={20} color="#d4a017" />
-            Terminar sessão
+            Sair da conta
           </ContaRow>
         </div>
       </main>
@@ -421,9 +421,9 @@ export default function MeuPerfil() {
         <div className="modal-overlay" role="presentation" onClick={() => setConfirmSignOut(false)}>
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
-              <p style={{ fontSize: 15, marginBottom: 16 }}>Tens a certeza que queres terminar sessão?</p>
+              <p style={{ fontSize: 15, marginBottom: 16 }}>Tem certeza que quer sair da conta?</p>
               <button type="button" className="btn btn--primary" style={{ width: '100%', background: 'var(--danger)', color: '#fff' }} onClick={() => signOut()}>
-                Terminar sessão
+                Sair da conta
               </button>
               <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} onClick={() => setConfirmSignOut(false)}>
                 Cancelar
@@ -439,7 +439,7 @@ export default function MeuPerfil() {
         <div className="modal-overlay" role="presentation" onClick={() => setAdminPicker(false)}>
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner" style={{ textAlign: 'left' }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, textAlign: 'center' }}>Escolhe o time</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, textAlign: 'center' }}>Escolha o time</h2>
               <div style={{ display: 'grid', gap: 8 }}>
                 {adminTeams.map((t) => (
                   <button

@@ -29,7 +29,7 @@ export default function ForgotPassword() {
       setError(error.message);
       return;
     }
-    setSuccess('Se existir uma conta com este email, enviámos um link de recuperação.');
+    setSuccess('Se existir uma conta com este e-mail, enviamos um link de recuperação.');
   }
 
   return (
@@ -44,7 +44,7 @@ export default function ForgotPassword() {
           <h1 className="auth-title">Recuperar senha</h1>
           <div className="auth-rule" aria-hidden="true" />
           <p className="auth-subtitle">
-            Indica o teu email e enviamos-te um link para repor a senha.
+            Informe seu e-mail e enviamos um link para redefinir a senha.
           </p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
@@ -56,12 +56,12 @@ export default function ForgotPassword() {
             )}
 
             <div className="auth-field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">E-mail</label>
               <input
                 id="email"
                 type="email"
                 className="auth-input hud-corners-s"
-                placeholder="tu@email.com"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -83,7 +83,7 @@ export default function ForgotPassword() {
           </form>
 
           <p className="auth-footer">
-            Lembraste-te? <Link to="/login">Voltar ao login</Link>
+            Lembrou? <Link to="/login">Voltar ao login</Link>
           </p>
         </div>
       </div>

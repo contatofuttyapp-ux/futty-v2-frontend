@@ -187,7 +187,7 @@ export default function JogadorPerfil() {
         {error ? (
           <div className="glass" style={{ ...VIDRO, clipPath: CLIP, padding: '22px 16px', textAlign: 'center', marginTop: 16, color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.6 }}>
             <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, color: '#fff' }}>Perfil só entre companheiros</div>
-            Não partilham nenhuma equipa — este perfil não está acessível.
+            Não compartilham nenhum time — este perfil não está acessível.
           </div>
         ) : loading ? (
           <LoadingFutty />
@@ -322,7 +322,7 @@ export default function JogadorPerfil() {
             </div>
 
             {/* 4. ACTIVIDADE (equipas partilhadas — gated por membership no endpoint) */}
-            <SecLabel>Actividade</SecLabel>
+            <SecLabel>Atividade</SecLabel>
             {atividade.map((p) => (
               <div key={p.id} style={{ padding: '12px 13px', marginBottom: 7, clipPath: CLIP, ...VIDRO }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, color: 'rgba(212,160,23,0.7)', marginBottom: p.body ? 6 : 0 }}>
@@ -346,7 +346,7 @@ export default function JogadorPerfil() {
 
             {atividade.length && historico.length ? <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', margin: '14px 0 8px' }}>Jogos</div> : null}
             {historico.length === 0 && atividade.length === 0 ? (
-              <p className="muted" style={{ fontSize: 13 }}>Ainda sem actividade.</p>
+              <p className="muted" style={{ fontSize: 13 }}>Ainda sem atividade.</p>
             ) : historico.length === 0 ? null : (
               historico.map((j) => {
                 const r = RES[j.resultado] || RES.empate;

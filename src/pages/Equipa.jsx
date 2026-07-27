@@ -185,12 +185,12 @@ export default function Equipa() {
   async function copiar() {
     const ok = await copiarTexto(inviteLink);
     setCopied(ok);
-    if (!ok) setActionError('Não deu para copiar — copia o link à mão.');
+    if (!ok) setActionError('Não deu para copiar — copie o link à mão.');
   }
 
   return (
     <div className="app-shell">
-      <Topbar hud="EQUIPA" back="/home" />
+      <Topbar hud="TIME" back="/home" />
       <main className="app-main page-reveal">
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
@@ -230,7 +230,7 @@ export default function Equipa() {
             )}
 
             {/* A minha posição — DESTAQUE (regra: o próprio jogador decide; GR no roxo) */}
-            <SecLabel>A minha posição neste time — tu decides</SecLabel>
+            <SecLabel>Minha posição neste time — você decide</SecLabel>
             <div style={{ ...VIDRO, clipPath: CLIP, padding: '14px 12px' }}>
               <div className="chips-row" style={{ justifyContent: 'center' }}>
                 {POSICOES.map((p) => {
@@ -261,7 +261,7 @@ export default function Equipa() {
                 </button>
               </div>
               <p style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', margin: '10px 0 0' }}>
-                {minhaPosicao ? labelPosicao(minhaPosicao) : 'A tua posição alimenta o sorteio (GR na baliza) e o teu chip no ranking.'}
+                {minhaPosicao ? labelPosicao(minhaPosicao) : 'Sua posição alimenta o sorteio (GR no gol) e seu chip no ranking.'}
               </p>
             </div>
 
@@ -316,7 +316,7 @@ export default function Equipa() {
 
             <SecLabel>Convidar jogador</SecLabel>
             <p className="muted" style={{ fontSize: 13, margin: '0 0 10px' }}>
-              Gera um link de convite (válido 7 dias, uso único) para compartilhar com novos jogadores.
+              Gere um link de convite (válido 7 dias, uso único) para compartilhar com novos jogadores.
             </p>
             <button
               type="button"
@@ -345,13 +345,13 @@ export default function Equipa() {
             <div style={{ marginTop: 36, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
               {confirmarSaida ? (
                 <div style={{ ...VIDRO, clipPath: CLIP, padding: '14px 16px', borderColor: 'rgba(248,113,113,0.35)' }}>
-                  <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#fda4af' }}>Vais sair de {team.nome}</div>
+                  <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#fda4af' }}>Você vai sair de {team.nome}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-dim)', margin: '6px 0 12px', lineHeight: 1.5 }}>
-                    A tua história (jogos, notas, prémios) fica; sais do ranking e dos próximos jogos. Para voltar, pedes entrada de novo.
+                    Sua história (jogos, notas, prêmios) fica; você sai do ranking e dos próximos jogos. Para voltar, pede entrada de novo.
                   </div>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                     <button type="button" className="btn btn--sm hud-corners-s" style={{ color: '#fda4af', border: '1.5px solid rgba(248,113,113,0.5)', background: 'rgba(248,113,113,0.08)', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }} disabled={saindo} onClick={sairDaEquipa}>
-                      {saindo ? 'A sair…' : 'Sair mesmo'}
+                      {saindo ? 'Saindo…' : 'Sair mesmo'}
                     </button>
                     <button type="button" className="btn btn--sm btn--outline hud-corners-s" disabled={saindo} onClick={() => setConfirmarSaida(false)}>
                       Ficar
@@ -360,7 +360,7 @@ export default function Equipa() {
                 </div>
               ) : (
                 <button type="button" onClick={() => setConfirmarSaida(true)} style={{ background: 'none', border: 'none', color: '#6f6a80', fontFamily: "'Rajdhani', sans-serif", fontSize: 12, letterSpacing: '0.06em', cursor: 'pointer' }}>
-                  Sair desta equipa
+                  Sair deste time
                 </button>
               )}
             </div>

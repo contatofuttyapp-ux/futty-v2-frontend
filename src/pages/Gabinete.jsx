@@ -79,7 +79,7 @@ export default function Gabinete() {
 
   async function guardarOp(next) {
     const anterior = op; setOp(next);
-    try { const salvo = await apiFetch('/api/super/gabinete/operacao', { method: 'PUT', body: JSON.stringify(next) }); setOp(salvo); setToast({ tipo: 'success', mensagem: 'Guardado.' }); recarregarPub(); }
+    try { const salvo = await apiFetch('/api/super/gabinete/operacao', { method: 'PUT', body: JSON.stringify(next) }); setOp(salvo); setToast({ tipo: 'success', mensagem: 'Salvo.' }); recarregarPub(); }
     catch (e) { setOp(anterior); setToast({ tipo: 'error', mensagem: e.message }); }
   }
   const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `c${Date.now()}`);
@@ -99,7 +99,7 @@ export default function Gabinete() {
   const delReg = (i) => guardarOp({ ...op, registos: op.registos.filter((_, k) => k !== i) });
 
   if (erro) return <div className="app-shell"><main className="app-main" style={{ padding: 24 }}><p className="muted">{erro}</p><Link to="/home" className="muted">← Início</Link></main></div>;
-  if (!dados || !op) return <LoadingFutty legenda="A carregar o Gabinete…" />;
+  if (!dados || !op) return <LoadingFutty legenda="Carregando o Gabinete…" />;
 
   const p = dados.pulso;
   const c = dados.crescimento;
@@ -128,7 +128,7 @@ export default function Gabinete() {
         <div className="gab-card gab-head">
           <div className="gab-g">Pulso do dia</div>
           <div className="gab-pulse">
-            <Kpi v={p.users_hoje} l="users hoje" cls="up" />
+            <Kpi v={p.users_hoje} l="usuários hoje" cls="up" />
             <Kpi v={p.jogos_hoje} l="jogos hoje" />
             <Kpi v={p.denuncias_abertas} l="denúncias abertas" />
             <Kpi v={p.mrr ?? '—'} l="MRR" />
@@ -138,14 +138,14 @@ export default function Gabinete() {
         {/* CRESCIMENTO */}
         <Hud h2="Crescimento" n="por semana · últimas 8" />
         <div className="gab-cards c3">
-          <div className="gab-card"><h3>Utilizadores</h3><div className="gab-big">{c.users.at(-1)}</div>{SVG(lineChart(c.users, OURO2, 260, 92))}</div>
-          <div className="gab-card"><h3>Equipas</h3><div className="gab-big">{c.equipas.at(-1)}</div>{SVG(barChart(c.equipas, OURO, 260, 92))}</div>
+          <div className="gab-card"><h3>Usuários</h3><div className="gab-big">{c.users.at(-1)}</div>{SVG(lineChart(c.users, OURO2, 260, 92))}</div>
+          <div className="gab-card"><h3>Times</h3><div className="gab-big">{c.equipas.at(-1)}</div>{SVG(barChart(c.equipas, OURO, 260, 92))}</div>
           <div className="gab-card"><h3>Campeonatos</h3><div className="gab-big">{c.camp.at(-1)}</div>{SVG(lineChart(c.camp, ROXO, 260, 92))}</div>
         </div>
 
         {/* RECEITA — em breve (Stripe por ligar) */}
-        <Hud h2="Receita" breve="Stripe por ligar" />
-        <Vazio>A receita acende quando ligares o <b>Stripe</b>. Até lá, MRR, assinantes e entradas ficam <b>em breve</b> — sem números inventados.</Vazio>
+        <Hud h2="Receita" breve="Falta ligar o Stripe" />
+        <Vazio>A receita acende quando você ligar o <b>Stripe</b>. Até lá, MRR, assinantes e entradas ficam <b>em breve</b> — sem números inventados.</Vazio>
 
         {/* PUBLICIDADE — a valer: campanhas + medição + toggles por página */}
         <Hud h2="Publicidade" n="campanhas · medição nossa (impressão/clique) · lei de menores no motor" />
@@ -157,7 +157,7 @@ export default function Gabinete() {
         <div className="gab-cards c2">
           <div className="gab-card">
             <h3>Campanhas</h3>
-            {(pub?.campanhas || []).length === 0 ? <div className="gab-osub" style={{ padding: '8px 0' }}>Sem campanhas. Cria a 1ª abaixo.</div>
+            {(pub?.campanhas || []).length === 0 ? <div className="gab-osub" style={{ padding: '8px 0' }}>Sem campanhas. Crie a 1ª abaixo.</div>
               : pub.campanhas.map((c) => {
                 const ctr = c.imp ? (c.cli / c.imp * 100).toFixed(1) : '0.0';
                 return (
@@ -182,7 +182,7 @@ export default function Gabinete() {
                 </label>
               ))}
               <button type="button" className="gab-add" onClick={addCampanha}>+ Criar campanha</button>
-              <span style={{ flexBasis: '100%', fontSize: 10.5, color: '#7a7a86' }}>classificação por campanha (livre/18+ · sem cls = 18+ fail-closed); menor/anónimo só recebe "livre".</span>
+              <span style={{ flexBasis: '100%', fontSize: 10.5, color: '#7a7a86' }}>classificação por campanha (livre/18+ · sem cls = 18+ fail-closed); menor/anônimo só recebe "livre".</span>
             </div>
           </div>
           <div className="gab-card">
@@ -194,12 +194,12 @@ export default function Gabinete() {
                 <span className={`gab-chip ${op.toggles?.[pg] ? 'gab-ok' : 'gab-warn'}`}>{op.toggles?.[pg] ? 'ON' : 'OFF'}</span>
               </div>
             ))}
-            <p className="gab-muted" style={{ marginTop: 12 }}>Página desligada → nenhum anúncio aí, mesmo com campanha. A lei de menores corre no servidor a cada pedido.</p>
+            <p className="gab-muted" style={{ marginTop: 12 }}>Página desligada → nenhum anúncio aí, mesmo com campanha. A lei de menores roda no servidor a cada pedido.</p>
           </div>
         </div>
 
         {/* OPERAÇÃO — a secção que administra (editável) */}
-        <Hud h2="Operação" n="finanças & infra · a secção que administra" />
+        <Hud h2="Operação" n="finanças & infra · a seção que administra" />
         <div className="gab-cards c2">
           <div className="gab-card">
             <h3>Custos fixos da casa</h3>
@@ -228,12 +228,12 @@ export default function Gabinete() {
               <div><div className="gab-big">—</div><span className="gab-muted">margem líquida</span></div>
             </div>
             <div className="gab-burnbar"><i style={{ width: '100%', background: '#fda4af' }} /></div>
-            <p className="gab-muted" style={{ marginTop: 10 }}>Liga o <b>Stripe</b> para a margem e o "paga-se?". Por agora, só o <b>burn</b> (€{burn}/mês).</p>
+            <p className="gab-muted" style={{ marginTop: 10 }}>Ligue o <b>Stripe</b> para a margem e o "paga-se?". Por agora, só o <b>burn</b> (€{burn}/mês).</p>
           </div>
         </div>
         <div className="gab-cards c2" style={{ marginTop: 12 }}>
           <div className="gab-card">
-            <h3>Registos & prazos</h3>
+            <h3>Registros & prazos</h3>
             {(op.registos || []).map((r, i) => (
               <div key={i} className="gab-oprow gab-regs">
                 <div><div className="gab-nm">{r.nome}</div><div className="gab-osub">{r.tipo}</div></div>
@@ -243,10 +243,10 @@ export default function Gabinete() {
               </div>
             ))}
             <div className="gab-form">
-              <input placeholder="Registo (marca, licença…)" style={{ flex: '1.4 1 110px' }} value={novoReg.nome} onChange={(e) => setNovoReg({ ...novoReg, nome: e.target.value })} />
+              <input placeholder="Registro (marca, licença…)" style={{ flex: '1.4 1 110px' }} value={novoReg.nome} onChange={(e) => setNovoReg({ ...novoReg, nome: e.target.value })} />
               <input placeholder="tipo / entidade" style={{ flex: '1 1 90px' }} value={novoReg.tipo} onChange={(e) => setNovoReg({ ...novoReg, tipo: e.target.value })} />
               <input placeholder="data de renovação" style={{ flex: '1 1 90px' }} value={novoReg.renova} onChange={(e) => setNovoReg({ ...novoReg, renova: e.target.value })} />
-              <button type="button" className="gab-add" onClick={addReg}>+ Adicionar registo</button>
+              <button type="button" className="gab-add" onClick={addReg}>+ Adicionar registro</button>
             </div>
           </div>
           <div className="gab-card">
@@ -263,7 +263,7 @@ export default function Gabinete() {
         <Hud h2="Proteção de dados" n="LGPD · DPAs, política, termos, canal do titular (editável à mão)" />
         {pd.politica_privacidade?.estado !== 'publicada' ? (
           <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(253,164,175,.4)' }}>
-            <span className="gab-osub" style={{ color: '#fda4af' }}>⚠ Política de privacidade <b>por publicar</b> — bloqueia a submissão às lojas (App Store / Play Store) e o compliance LGPD.</span>
+            <span className="gab-osub" style={{ color: '#fda4af' }}>⚠ Política de privacidade <b>ainda não publicada</b> — bloqueia o envio às lojas (App Store / Play Store) e o compliance LGPD.</span>
           </div>
         ) : null}
         <div className="gab-cards c2">
@@ -333,7 +333,7 @@ export default function Gabinete() {
           <div className="gab-card">{dados.marcos.map((m, i) => (
             <div key={i} className="gab-marco"><span className="gab-dot">{m.ic}</span><div><div className="gab-mt">{m.t}</div><div className="gab-md">{m.d}</div></div></div>
           ))}</div>
-        ) : <Vazio>O 1º marco chega com o 1º campeão. Vais querer ver isto.</Vazio>}
+        ) : <Vazio>O 1º marco chega com o 1º campeão. Você vai querer ver isso.</Vazio>}
       </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>

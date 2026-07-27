@@ -30,7 +30,7 @@ const VIS_OPCOES = [
 const VIS_DESC = {
   privado: 'Só por convite — não aparece no Explorar.',
   publico_aprovacao: 'Aparece no Explorar; a entrada precisa de aprovação.',
-  publico_aberto: 'Aparece no Explorar; qualquer pessoa entra logo.',
+  publico_aberto: 'Aparece no Explorar; qualquer pessoa entra na hora.',
 };
 
 const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12 };
@@ -154,7 +154,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
   async function enviar() {
     if (busy) return;
     if (!titulo.trim() || !mensagem.trim()) {
-      showToast('Preenche o título e a mensagem.', 'error');
+      showToast('Preencha o título e a mensagem.', 'error');
       return;
     }
     setBusy(true);
@@ -176,7 +176,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
   async function publicarAnuncio() {
     if (anBusy) return;
     if (!anTitulo.trim() || !anMensagem.trim()) {
-      showToast('Preenche o título e a mensagem do anúncio.', 'error');
+      showToast('Preencha o título e a mensagem do anúncio.', 'error');
       return;
     }
     setAnBusy(true);
@@ -207,7 +207,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
-          <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve o aviso para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
+          <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreva o aviso para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
           {busy ? 'Enviando…' : 'Enviar para todos'}
@@ -222,11 +222,11 @@ function TabComunicacao({ slug, navigate, showToast }) {
         </p>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({anTitulo.length}/80)</span></span>
-          <input value={anTitulo} onChange={(e) => setAnTitulo(e.target.value.slice(0, 80))} placeholder="Ex.: Nova época começa em julho" style={inputStyle} />
+          <input value={anTitulo} onChange={(e) => setAnTitulo(e.target.value.slice(0, 80))} placeholder="Ex.: Nova temporada começa em julho" style={inputStyle} />
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({anMensagem.length}/500)</span></span>
-          <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreve o anúncio para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
+          <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreva o anúncio para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={anBusy || !anTitulo.trim() || !anMensagem.trim()} onClick={publicarAnuncio}>
           {anBusy ? 'Publicando…' : 'Publicar no feed'}
@@ -266,7 +266,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
   async function criar() {
     if (busy) return;
     if (!nome.trim()) {
-      showToast('Indica o nome do campeonato.', 'error');
+      showToast('Informe o nome do campeonato.', 'error');
       return;
     }
     setBusy(true);
@@ -335,7 +335,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
 
         {c.jornadas_jogadas < c.num_jornadas ? (
           <div style={{ ...CARD, padding: 14 }}>
-            <div style={secLbl}>Registar resultado</div>
+            <div style={secLbl}>Registrar resultado</div>
             <div style={{ marginTop: 10 }}>
               <RegistarJornada campeonato={c} onSaved={recarregar} showToast={showToast} />
             </div>
@@ -490,7 +490,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
   const alertas = [];
   if (semFoto > 0) alertas.push({ txt: `${semFoto} ${semFoto === 1 ? 'jogador sem foto' : 'jogadores sem foto'}`, acao: () => onGoTab('membros') });
   if (naoResponderam > 0) alertas.push({ txt: `${naoResponderam} ${naoResponderam === 1 ? 'jogador não respondeu' : 'jogadores não responderam'} ao RSVP`, acao: () => onGoTab('jogos') });
-  if (uGame && (uGame.resultado_nivel || 0) === 0) alertas.push({ txt: 'Resultado do último jogo não registado', acao: () => navigate(`/equipa/${slug}/jogo/${uGame.id}`) });
+  if (uGame && (uGame.resultado_nivel || 0) === 0) alertas.push({ txt: 'Resultado do último jogo não registrado', acao: () => navigate(`/equipa/${slug}/jogo/${uGame.id}`) });
   if (semPosicao > 0) alertas.push({ txt: `${semPosicao} ${semPosicao === 1 ? 'jogador sem posição' : 'jogadores sem posição'}`, acao: () => onGoTab('membros') });
 
   return (
@@ -524,8 +524,8 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
             <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{fmtDiaCurto(uGame.data)}</div>
             {(uGame.resultado_nivel || 0) === 0 ? (
               <>
-                <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem resultado registado</div>
-                <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/equipa/${slug}/jogo/${uGame.id}`)}>Registar resultado</button>
+                <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem resultado registrado</div>
+                <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/equipa/${slug}/jogo/${uGame.id}`)}>Registrar resultado</button>
               </>
             ) : (
               <>
@@ -612,13 +612,13 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
         onClick={() => setConfirmRevotar(true)}
         style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #d4a017', background: 'rgba(212,160,23,0.08)', color: '#f5e070', fontWeight: 700, cursor: 'pointer' }}
       >
-        Pedir revotação a todos
+        Pedir para votar de novo
       </button>
 
       {confirmRevotar ? (
         <ConfirmModal
-          texto="Pedir a todos os membros para atualizarem as suas notas?"
-          confirmarLabel="Pedir revotação"
+          texto="Pedir a todos os membros para atualizarem suas notas?"
+          confirmarLabel="Pedir para votar de novo"
           onConfirm={pedirRevotacao}
           onCancel={() => setConfirmRevotar(false)}
         />
@@ -755,7 +755,7 @@ function TabEquipa({ slug, team, showToast }) {
 
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Localização</span>
-        <input value={localizacao} onChange={(e) => setLocalizacao(e.target.value.slice(0, 100))} placeholder="Ex: Lisboa · Campo do Ze" style={inputStyle} />
+        <input value={localizacao} onChange={(e) => setLocalizacao(e.target.value.slice(0, 100))} placeholder="Ex: São Paulo · Campo do Zé" style={inputStyle} />
       </label>
 
       {/* GEO — opt-in implícito (preencher = consentir). Texto obrigatório junto ao campo.
@@ -764,7 +764,7 @@ function TabEquipa({ slug, team, showToast }) {
         <span style={lbl}>Cidade <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· busca por proximidade</span></span>
         <input value={cidade} onChange={(e) => setCidade(e.target.value.slice(0, 100))} placeholder="Ex: Brasília" style={inputStyle} />
         <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>
-          Aparece na busca por proximidade. A morada exacta nunca é mostrada — só a zona aproximada. Apaga para sair da busca por distância.
+          Aparece na busca por proximidade. O endereço exato nunca é mostrado — só a zona aproximada. Apague para sair da busca por distância.
         </span>
       </label>
 
@@ -882,7 +882,7 @@ function TabEquipa({ slug, team, showToast }) {
 
     {zerarStep === 1 ? (
       <ConfirmModal
-        texto="Vais excluir TODOS os votos do time. Continuar?"
+        texto="Você vai excluir TODOS os votos do time. Continuar?"
         perigo
         confirmarLabel="Continuar"
         onConfirm={() => setZerarStep(2)}
@@ -891,7 +891,7 @@ function TabEquipa({ slug, team, showToast }) {
     ) : null}
     {zerarStep === 2 ? (
       <ConfirmModal
-        texto="Tens mesmo a certeza? Esta ação é irreversível."
+        texto="Tem mesmo certeza? Esta ação é irreversível."
         perigo
         confirmarLabel="Zerar tudo"
         onConfirm={zerarTodosVotos}
@@ -913,7 +913,7 @@ function FormMensagem({ slug, membro, showToast, onClose }) {
   async function enviar() {
     if (busy) return;
     if (!titulo.trim() || !mensagem.trim()) {
-      showToast('Preenche o título e a mensagem.', 'error');
+      showToast('Preencha o título e a mensagem.', 'error');
       return;
     }
     setBusy(true);
@@ -938,11 +938,11 @@ function FormMensagem({ slug, membro, showToast, onClose }) {
       </div>
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
-        <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Confirma a tua presença" style={inputStyle} />
+        <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Confirme sua presença" style={inputStyle} />
       </label>
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
-        <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreve a mensagem…" style={{ ...inputStyle, resize: 'vertical' }} />
+        <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreva a mensagem…" style={{ ...inputStyle, resize: 'vertical' }} />
       </label>
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
@@ -1209,7 +1209,7 @@ function TabMembros({ slug, meId, showToast }) {
                 {Array.from({ length: 5 }).map((_, idx) => {
                   const p = (m.presencas_recentes || [])[idx];
                   const cor = !p ? 'transparent' : p.presente ? '#10b981' : '#ef4444';
-                  const dataFmt = p?.data ? new Date(p.data).toLocaleDateString('pt-PT') : null;
+                  const dataFmt = p?.data ? new Date(p.data).toLocaleDateString('pt-BR') : null;
                   const label = p ? `Jogo de ${dataFmt || 'data desconhecida'}: ${p.presente ? 'presente' : 'ausente'}` : 'Sem dados (jogo não aconteceu)';
                   return (
                     <span
@@ -1233,7 +1233,7 @@ function TabMembros({ slug, meId, showToast }) {
                 value={m.nota_interna || ''}
                 onChange={(e) => setNotaLocal(m, e.target.value.slice(0, 200))}
                 onBlur={() => saveNota(m)}
-                placeholder="Razão (só tu vês)…"
+                placeholder="Razão (só você vê)…"
                 style={{ marginTop: 10, width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 13 }}
               />
             ) : null}
@@ -1467,7 +1467,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
 
   async function abrir() {
     if (!prazoInput) {
-      showToast('Indica o prazo de confirmação.', 'error');
+      showToast('Informe o prazo de confirmação.', 'error');
       return;
     }
     setBusy(true);
@@ -1592,7 +1592,7 @@ function FormRecorrentes({ slug, showToast, onClose, onCriado }) {
         method: 'POST',
         body: JSON.stringify({ dia_semana: dia, hora, local: local.trim() || undefined, semanas }),
       });
-      const datas = (r.datas || []).map((iso) => new Date(iso).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })).join(', ');
+      const datas = (r.datas || []).map((iso) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })).join(', ');
       showToast(`${r.criados} jogos criados para as próximas ${semanas} semanas${r.ignorados ? ` (${r.ignorados} ignorados por conflito)` : ''}.${datas ? ` Datas: ${datas}` : ''}`);
       await onCriado();
       onClose();
@@ -1951,11 +1951,11 @@ function TabResultados({ slug, showToast }) {
               <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
                 {formatDateTime(g.data)}
-                {modo === 'com' ? ` · Time ${(g.campeao_time_index ?? 0) + 1} venceu` : ' · Sem resultado registado'}
+                {modo === 'com' ? ` · Time ${(g.campeao_time_index ?? 0) + 1} venceu` : ' · Sem resultado registrado'}
               </div>
             </div>
             <button type="button" className={`btn btn--sm ${modo === 'sem' ? 'btn--primary' : 'btn--ghost'}`} onClick={() => setRegistar(g)}>
-              {modo === 'sem' ? 'Registar resultado' : 'Editar resultado'}
+              {modo === 'sem' ? 'Registrar resultado' : 'Editar resultado'}
             </button>
           </div>
         ))
@@ -2090,7 +2090,7 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
               <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving || campeaoIdx === null} onClick={guardar}>
                 {saving ? 'Salvando…' : 'Salvar resultado'}
               </button>
-              {campeaoIdx === null ? <div style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center' }}>Escolhe o time campeão para salvar.</div> : null}
+              {campeaoIdx === null ? <div style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center' }}>Escolha o time campeão para salvar.</div> : null}
             </>
           )}
         </div>

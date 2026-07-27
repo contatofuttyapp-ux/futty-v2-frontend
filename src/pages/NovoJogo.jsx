@@ -60,9 +60,9 @@ export default function NovoJogo() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!data) { setError('Indica a data do jogo.'); return; }
-    if (modo === 'sortear' && !hora) { setError('Indica a hora do jogo.'); return; }
-    if (modo === 'sortear' && (!porTime || Number(porTime) < 2)) { setError('Indica quantos jogadores por time (mínimo 2).'); return; }
+    if (!data) { setError('Informe a data do jogo.'); return; }
+    if (modo === 'sortear' && !hora) { setError('Informe a hora do jogo.'); return; }
+    if (modo === 'sortear' && (!porTime || Number(porTime) < 2)) { setError('Informe quantos jogadores por time (mínimo 2).'); return; }
     setError('');
     setLoading(true);
     try {
@@ -118,9 +118,9 @@ export default function NovoJogo() {
               <button type="button" className={`chip ${modo === 'retro' ? 'chip--active' : ''}`} onClick={() => setModo('retro')}>Já aconteceu</button>
             </div>
             <p className="muted" style={{ fontSize: 12, margin: '0 0 14px', lineHeight: 1.5 }}>
-              {modo === 'sortear' ? 'Agenda um jogo — os times saem do sorteio.'
-                : modo === 'manual' ? 'Define tu os times à mão. Sem sorteio, sem cerimónia.'
-                  : 'Carrega um jogo que já aconteceu (data passada). Silencioso — não notifica ninguém.'}
+              {modo === 'sortear' ? 'Agende um jogo — os times saem do sorteio.'
+                : modo === 'manual' ? 'Você define os times à mão. Sem sorteio, sem cerimônia.'
+                  : 'Cadastre um jogo que já aconteceu (data passada). Silencioso — não notifica ninguém.'}
             </p>
 
             <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', padding: '16px 16px 18px', display: 'grid', gap: 14 }}>
@@ -159,7 +159,7 @@ export default function NovoJogo() {
           <>
             {/* FASE COMPOR (manual/retro) */}
             <p className="muted" style={{ fontSize: 12, margin: '4px 0 12px', lineHeight: 1.5 }}>
-              {modo === 'retro' ? 'Jogo histórico' : 'Jogo manual'} · marca quem jogou e monta os times à mão.
+              {modo === 'retro' ? 'Jogo histórico' : 'Jogo manual'} · marque quem jogou e monte os times à mão.
             </p>
 
             {/* Quem jogou (checklist dos membros, marcada pelo admin) */}
@@ -181,7 +181,7 @@ export default function NovoJogo() {
                   </div>
                 );
               })}
-              {(members || []).length === 0 ? <p className="muted" style={{ fontSize: 12 }}>Sem membros na equipa.</p> : null}
+              {(members || []).length === 0 ? <p className="muted" style={{ fontSize: 12 }}>Sem membros no time.</p> : null}
             </div>
 
             {/* Convidados sem app (nome solto) */}
@@ -215,7 +215,7 @@ export default function NovoJogo() {
 
             <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
               <button type="button" className="btn hud-corners cta-gold" disabled={!podeGuardar || loading} onClick={guardarManual}>
-                {loading ? 'A guardar…' : 'Guardar jogo'}
+                {loading ? 'Salvando…' : 'Salvar jogo'}
               </button>
               {!podeGuardar ? <span className="muted" style={{ fontSize: 11, textAlign: 'center' }}>Cada time precisa de pelo menos 1 jogador.</span> : null}
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setFase('form')}>← Voltar</button>

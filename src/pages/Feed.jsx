@@ -566,7 +566,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
         <div className="modal-overlay" role="presentation" onClick={() => setConfirmar(false)}>
           <div className="modal-card modal-card--hud" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
-              <p style={{ fontSize: 15, marginBottom: 16 }}>Tens a certeza que queres excluir este post?</p>
+              <p style={{ fontSize: 15, marginBottom: 16 }}>Tem certeza que quer excluir este post?</p>
               <button
                 type="button"
                 className="btn btn--hud hud-corners-s"
@@ -648,13 +648,13 @@ function ComposerInline({ teams, user, nome, onCreated }) {
   async function publicar() {
     if (busy) return;
     if (!teamId) {
-      setErro('Escolhe um time.');
+      setErro('Escolha um time.');
       return;
     }
     // O link entra no body (mecânica actual: o VideoLinkCard deteta-o no feed).
     const bodyFinal = [texto.trim(), linkUrl].filter(Boolean).join('\n\n');
     if (!bodyFinal && media.length === 0) {
-      setErro('Escreve algo, adiciona média ou um link.');
+      setErro('Escreva algo, adicione mídia ou um link.');
       return;
     }
     setBusy(true);
@@ -726,7 +726,7 @@ function ComposerInline({ teams, user, nome, onCreated }) {
           ref={taRef}
           value={texto}
           onChange={(e) => setTexto(e.target.value.slice(0, 2000))}
-          placeholder="Escreve a tua resenha…"
+          placeholder="Escreva sua resenha…"
           rows={4}
           className="input input--hud hud-corners-s"
           style={{ fontSize: 14, resize: 'vertical' }}
@@ -782,7 +782,7 @@ function ComposerInline({ teams, user, nome, onCreated }) {
               autoFocus
               onChange={(e) => { setLinkInput(e.target.value); setLinkAviso(''); }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmarLink(); } }}
-              placeholder="Cola o link (YouTube, TikTok ou Instagram)"
+              placeholder="Cole o link (YouTube, TikTok ou Instagram)"
               className="input input--hud hud-corners-s"
               style={{ flex: 1, fontSize: 14 }}
             />

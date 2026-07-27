@@ -55,7 +55,7 @@ function MolduraFoto({ src, size = 170 }) {
         ) : (
           <div style={{ display: 'grid', placeItems: 'center', gap: 8, color: 'rgba(255,255,255,0.35)' }}>
             <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="rgba(212,160,23,0.65)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
-            <span style={{ fontFamily: RAJ, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}>o teu lugar</span>
+            <span style={{ fontFamily: RAJ, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}>seu lugar</span>
           </div>
         )}
       </div>
@@ -158,9 +158,9 @@ export default function Onboarding() {
         {passo === 2 && (
           <>
             <MolduraFoto src={avatarUrl ? urlAsset(avatarUrl) : null} />
-            <Titulo size={24}>A TUA FIGURINHA<br />COMEÇA AQUI</Titulo>
+            <Titulo size={24}>SUA FIGURINHA<br />COMEÇA AQUI</Titulo>
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
-              É esta cara que entra no cromo, no ranking e no sorteio. A foto cai aqui, ao vivo, mal fizeres o crop.
+              É esta cara que entra no card, no ranking e no sorteio. A foto cai aqui, ao vivo, assim que você fizer o corte.
             </p>
             {/* P1-5 — erro de upload INLINE (accionável), não um toast que foge. */}
             {uploadErro ? (
@@ -168,7 +168,7 @@ export default function Onboarding() {
                 <span style={{ fontSize: 13, color: '#f8b4b4', lineHeight: 1.45 }}>{uploadErro.texto}</span>
                 {uploadErro.podeRepetir ? (
                   <button type="button" onClick={() => subirRecorte()} disabled={enviando} style={{ justifySelf: 'center', border: '1.5px solid #d4a017', background: 'rgba(30,24,8,0.9)', color: '#f0c94a', fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '9px 16px', clipPath: CLIP_S, cursor: enviando ? 'default' : 'pointer' }}>
-                    {enviando ? 'A enviar…' : 'Tentar de novo'}
+                    {enviando ? 'Enviando…' : 'Tentar de novo'}
                   </button>
                 ) : null}
               </div>
@@ -183,7 +183,7 @@ export default function Onboarding() {
                 <div style={{ width: '100%', maxWidth: 290, display: 'grid', gap: 10 }}>
                   <Cta onClick={() => selfieRef.current?.click()} disabled={enviando}>
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
-                    {enviando ? 'A enviar…' : 'Tirar foto agora'}
+                    {enviando ? 'Enviando…' : 'Tirar foto agora'}
                   </Cta>
                   <Cta sec onClick={() => galeriaRef.current?.click()} disabled={enviando}>
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>
@@ -209,7 +209,7 @@ export default function Onboarding() {
           <>
             <Titulo size={24}>COMO TE CHAMAM<br />EM CAMPO?</Titulo>
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
-              É o nome que aparece no cromo e no ranking — o teu nome de guerra.
+              É o nome que aparece no card e no ranking — seu nome de guerra.
             </p>
             <div style={{ width: '100%', maxWidth: 290 }}>
               <label style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Nome de jogador</label>
@@ -222,21 +222,21 @@ export default function Onboarding() {
                 style={{ width: '100%', fontFamily: RAJ, fontSize: 17, fontWeight: 700, textAlign: 'center' }}
               />
               <label style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '20px 0 6px' }}>
-                És guarda-redes? <em style={{ color: '#6f6a80', textTransform: 'none', letterSpacing: 0, fontStyle: 'normal' }}>(opcional)</em>
+                Você é goleiro? <em style={{ color: '#6f6a80', textTransform: 'none', letterSpacing: 0, fontStyle: 'normal' }}>(opcional)</em>
               </label>
               <div className="chips-row" style={{ justifyContent: 'center' }}>
                 <button type="button" className={`chip ${gr === 'GL' ? 'chip--active' : ''}`} onClick={() => setGr(gr === 'GL' ? null : 'GL')} style={gr !== 'GL' ? { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' } : undefined}>
-                  GR — sou guarda-redes
+                  GR — sou goleiro
                 </button>
                 <button type="button" className={`chip ${gr === 'linha' ? 'chip--active' : ''}`} onClick={() => setGr(gr === 'linha' ? null : 'linha')}>
                   Jogo na linha
                 </button>
               </div>
               <div style={{ marginTop: 30 }}>
-                <Cta cheio onClick={concluir} disabled={salvando}>{salvando ? 'A entrar…' : 'Entrar'}</Cta>
+                <Cta cheio onClick={concluir} disabled={salvando}>{salvando ? 'Entrando…' : 'Entrar'}</Cta>
               </div>
               <div style={{ fontSize: 10, color: '#6f6a80', textAlign: 'center', marginTop: 10 }}>
-                a posição fina (DEF/MEI/ATA) escolhes na tua equipa — aqui só o que o dia-1 usa
+                a posição certa (DEF/MEI/ATA) você escolhe no seu time — aqui só o que o dia-1 usa
               </div>
             </div>
           </>

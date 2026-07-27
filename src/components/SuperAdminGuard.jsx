@@ -33,7 +33,7 @@ export default function SuperAdminGuard({ children }) {
           Sem permissão
         </h1>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, maxWidth: 280, lineHeight: 1.5, margin: 0 }}>
-          Esta área é reservada à administração do Futty. A tua conta não tem acesso.
+          Esta área é reservada à administração do Futty. A sua conta não tem acesso.
         </p>
         <div className="cta-gold-glow" style={{ display: 'flex', width: '100%', maxWidth: 260, marginTop: 4 }}>
           <button

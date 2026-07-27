@@ -30,10 +30,10 @@ export default function ErrorPage({ onRetry, mensagem, titulo }) {
       <FuttyLoader size={110} label={null} />
 
       <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 24, fontWeight: 700, letterSpacing: '0.06em', color: '#fff', margin: 0 }}>
-        {titulo || 'Algo correu mal'}
+        {titulo || 'Algo deu errado'}
       </h1>
       <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, maxWidth: 280, lineHeight: 1.5, margin: 0 }}>
-        {mensagem || 'O servidor está a descansar. Tenta de novo daqui a pouco.'}
+        {mensagem || 'O servidor está descansando. Tente de novo daqui a pouco.'}
       </p>
 
       {/* A acção primária (ouro) tira o utilizador do beco: se há como repetir, repete;
@@ -64,7 +64,7 @@ export default function ErrorPage({ onRetry, mensagem, titulo }) {
             href="/explorar"
             style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 3 }}
           >
-            Ou descobre peladas perto de ti
+            Ou descubra peladas perto de você
           </a>
         )}
       </div>

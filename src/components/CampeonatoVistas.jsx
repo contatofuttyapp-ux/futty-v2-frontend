@@ -111,7 +111,7 @@ function ResultadoEditor({ confronto, onResultado }) {
       <span className="x">×</span>
       <input inputMode="numeric" value={b} onChange={(e) => setB(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="0" />
       <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '.06em' }} disabled={busy || a === '' || b === ''} onClick={salvar}>
-        {busy ? '…' : 'Guardar'}
+        {busy ? '…' : 'Salvar'}
       </button>
     </div>
   );
@@ -134,7 +134,7 @@ export function CampeonatoJogos({ campeonato, admin, onResultado }) {
             <span style={{ flex: 1, textAlign: 'right' }}>{nome(c.time_b_id)}</span>
             <span className="camp-tab__dot" style={{ background: cor(c.time_b_id) }} />
           </div>
-          <div style={{ fontSize: 10, color: '#6f6a80', marginTop: 4 }}>Jornada {c.ronda}</div>
+          <div style={{ fontSize: 10, color: '#6f6a80', marginTop: 4 }}>Rodada {c.ronda}</div>
           {admin && !c.jogado ? <ResultadoEditor confronto={c} onResultado={onResultado} /> : null}
         </div>
       ))}
@@ -148,7 +148,7 @@ export function CampeonatoBracket({ campeonato, admin, onResultado }) {
   const rondas = {};
   (campeonato.confrontos || []).forEach((c) => { (rondas[c.ronda] = rondas[c.ronda] || []).push(c); });
   const nums = Object.keys(rondas).map(Number).sort((a, b) => a - b);
-  const nomeRonda = (size) => ({ 2: 'Final', 4: 'Semis', 8: 'Quartas', 16: 'Oitavas' }[size] || 'Ronda');
+  const nomeRonda = (size) => ({ 2: 'Final', 4: 'Semis', 8: 'Quartas', 16: 'Oitavas' }[size] || 'Fase');
   const linhaTime = (id, placar, isWin, isBye, isTbd) => {
     const t = tm[id];
     const cls = isBye ? 'bye' : isTbd ? 'tbd' : isWin ? 'win' : '';

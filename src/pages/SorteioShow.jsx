@@ -59,7 +59,7 @@ export default function SorteioShow() {
         document.execCommand('copy');
         setToast({ tipo: 'success', mensagem: 'Link do sorteio copiado!' });
       } catch {
-        setToast({ tipo: 'error', mensagem: `Copia à mão: ${url}` });
+        setToast({ tipo: 'error', mensagem: `Copie à mão: ${url}` });
       }
       inp.remove();
     }
@@ -99,7 +99,7 @@ export default function SorteioShow() {
                 ))}
               </div>
               <p className="muted" style={{ fontSize: 11, textAlign: 'center', margin: 0 }}>
-                o link reproduz esta MESMA cerimónia (semente {resultado.seed ?? '—'}) a quem o abrir — sem app
+                o link reproduz esta MESMA cerimônia (semente {resultado.seed ?? '—'}) para quem abrir — sem app
               </p>
             </div>
           </>
@@ -113,7 +113,7 @@ export default function SorteioShow() {
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner" style={{ textAlign: 'left' }}>
               <p style={{ fontSize: 15, lineHeight: 1.5, marginBottom: 8 }}>
-                <b>Declaro que posso partilhar este sorteio.</b>
+                <b>Declaro que posso compartilhar este sorteio.</b>
               </p>
               <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-dim)', marginBottom: 16 }}>
                 Os jogadores autorizaram ou são maiores de idade. Os rostos de menores aparecem

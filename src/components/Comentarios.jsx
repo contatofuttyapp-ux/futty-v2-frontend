@@ -99,7 +99,7 @@ function Anexos({ anexos, onOpenImage }) {
 // ─── Formulário reutilizável (comentário principal e respostas) ────────────────
 // Trata texto, contador, anexos e o autocomplete de menções. Converte @Nome em
 // @<uuid> no envio (o backend extrai mentioned_user_ids do corpo por uuid).
-function ComentarioForm({ membros, placeholder = 'Escreve um comentário…', avatarNode = null, onSubmit, onCancel }) {
+function ComentarioForm({ membros, placeholder = 'Escreva um comentário…', avatarNode = null, onSubmit, onCancel }) {
   const [texto, setTexto] = useState('');
   const [anexos, setAnexos] = useState([]); // { url, media_type }
   const [mentions, setMentions] = useState([]); // { id, nome }
@@ -478,7 +478,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
           <div style={{ marginTop: 10, marginLeft: 50 }}>
             <ComentarioForm
               membros={membros}
-              placeholder={`A responder a @${c.author_nome || 'membro'}…`}
+              placeholder={`Respondendo a @${c.author_nome || 'membro'}…`}
               onSubmit={async (body, anexos) => {
                 await postComentario({ body, anexos, replyTo: c.id });
                 setReplyOpenId(null);
@@ -498,7 +498,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
       {loading ? (
         <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>Carregando comentários…</div>
       ) : lista.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>Ainda não há comentários. Sê o primeiro!</div>
+        <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>Ainda não há comentários. Seja o primeiro!</div>
       ) : (
         <div style={{ display: 'grid', gap: 14 }}>
           {topLevel.map((c) => (
@@ -518,7 +518,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
       <div style={{ marginTop: 14 }}>
         <ComentarioForm
           membros={membros}
-          placeholder="Escreve um comentário…"
+          placeholder="Escreva um comentário…"
           avatarNode={<Avatar nome={meuNome} avatarUrl={meuAvatar} size={32} />}
           onSubmit={async (body, anexos) => {
             await postComentario({ body, anexos });
@@ -531,7 +531,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
         <div className="modal-overlay" role="presentation" onClick={() => setApagarId(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
-              <p style={{ fontSize: 15, marginBottom: 16 }}>Tens a certeza que queres excluir?</p>
+              <p style={{ fontSize: 15, marginBottom: 16 }}>Tem certeza que quer excluir?</p>
               <button type="button" className="btn btn--primary" style={{ width: '100%', background: 'var(--danger)', color: '#fff' }} onClick={confirmarApagar}>
                 Excluir
               </button>

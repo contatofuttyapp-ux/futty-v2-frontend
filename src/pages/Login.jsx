@@ -54,7 +54,7 @@ export default function Login() {
           </div>
           <h1 className="auth-title">Bem-vindo de volta</h1>
           <div className="auth-rule" aria-hidden="true" />
-          <p className="auth-subtitle">Entra na tua conta para continuar.</p>
+          <p className="auth-subtitle">Entre na sua conta para continuar.</p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
             {error && (
@@ -62,12 +62,12 @@ export default function Login() {
             )}
 
             <div className="auth-field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">E-mail</label>
               <input
                 id="email"
                 type="email"
                 className="auth-input hud-corners-s"
-                placeholder="tu@email.com"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -91,7 +91,7 @@ export default function Login() {
 
             <div className="auth-links">
               <span />
-              <Link to="/forgot-password">Esqueceste a senha?</Link>
+              <Link to="/forgot-password">Esqueceu a senha?</Link>
             </div>
 
             {/* CTA — receita Compartilhar (Lei dos Gémeos). O glow tem de ficar no
@@ -119,7 +119,7 @@ export default function Login() {
           </button>
 
           <p className="auth-footer">
-            Ainda não tens conta? <Link to="/register">Cria uma</Link>
+            Ainda não tem conta? <Link to="/register">Crie uma</Link>
           </p>
         </div>
       </div>

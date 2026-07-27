@@ -90,7 +90,7 @@ export default function Jogo() {
     const ok = await copiarTexto(url);
     setToast(ok
       ? { tipo: 'success', mensagem: 'Link copiado!' }
-      : { tipo: 'error', mensagem: 'Não deu para copiar — copia o link à mão.' });
+      : { tipo: 'error', mensagem: 'Não deu para copiar — copie o link à mão.' });
   }
 
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
@@ -220,16 +220,16 @@ export default function Jogo() {
             </div>
 
             {/* Confirmação de presença */}
-            <SecLabel>A tua presença</SecLabel>
+            <SecLabel>Sua presença</SecLabel>
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', flexWrap: 'wrap' }}>
               {posEspera != null && !estouConfirmado ? (
                 <span style={{ width: '100%', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: RAJ, color: 'var(--neon)', fontWeight: 700, fontSize: 13, letterSpacing: '0.03em' }}>
-                  ⏳ Estás em {posEspera}º na lista de espera
+                  ⏳ Você está em {posEspera}º na lista de espera
                 </span>
               ) : null}
               {estouConfirmado ? (
                 <>
-                  <span style={{ fontFamily: RAJ, color: '#7bd88f', fontWeight: 800, letterSpacing: '0.04em' }}>✓ Estás confirmado</span>
+                  <span style={{ fontFamily: RAJ, color: '#7bd88f', fontWeight: 800, letterSpacing: '0.04em' }}>✓ Você está confirmado</span>
                   <label className="check-inline" style={{ fontFamily: RAJ }}>
                     <input
                       type="checkbox"
@@ -264,7 +264,7 @@ export default function Jogo() {
                 </>
               ) : (
                 <>
-                  <span className="muted">Ainda não confirmaste presença.</span>
+                  <span className="muted">Você ainda não confirmou presença.</span>
                   <button
                     type="button"
                     className="btn btn--sm hud-corners-s cta-gold"
@@ -282,7 +282,7 @@ export default function Jogo() {
             <SecLabel>Confirmados · {confirmados.length}</SecLabel>
             {isAdmin && confirmados.length > 0 && (
               <p className="muted" style={{ fontSize: 13 }}>
-                Marca jogadores como goleiro (GR) ou cabeça de chave (C) antes de sortear.
+                Marque jogadores como goleiro (GR) ou cabeça de chave (C) antes de sortear.
               </p>
             )}
             {confirmados.length === 0 ? (
@@ -390,7 +390,7 @@ export default function Jogo() {
             {isAdmin && game.sorteio_realizado && confirmacao === 're-sorteio' && (
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginBottom: 10, borderColor: 'rgba(240,201,74,0.4)' }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: '#f0c94a' }}>Sortear de novo?</div>
-                <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>Isto substitui o sorteio actual — perde-se o resultado e o replay deste.</div>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>Isto substitui o sorteio atual — perde-se o resultado e o replay deste.</div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => { setConfirmacao(null); sortear(); }} disabled={busy}>
                     {busy ? 'Processando…' : 'Substituir sorteio'}
@@ -464,7 +464,7 @@ export default function Jogo() {
                         />
                         {(game.times_resultado.times?.length || 0) > 2 ? (
                           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                            A vista de campo mostra os 2 primeiros times. Vê todos na Lista.
+                            A visão de campo mostra os 2 primeiros times. Veja todos na Lista.
                           </p>
                         ) : null}
                       </>
@@ -506,7 +506,7 @@ export default function Jogo() {
                   </Link>
                 </div>
                 <p className="muted" style={{ marginTop: 8, fontSize: 12, textAlign: 'center' }}>
-                  Dá a tua nota — conta para o ranking da equipa.
+                  Dê sua nota — conta para o ranking do time.
                 </p>
               </div>
             )}

@@ -410,7 +410,7 @@ export default function Figurinha() {
       <span>{uploadErro.texto}</span>
       {uploadErro.podeRepetir ? (
         <button type="button" onClick={repetirUpload} disabled={uploadFoto} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }}>
-          {uploadFoto ? 'A enviar…' : 'Tentar de novo'}
+          {uploadFoto ? 'Enviando…' : 'Tentar de novo'}
         </button>
       ) : null}
     </div>
@@ -424,7 +424,7 @@ export default function Figurinha() {
     try {
       const blob = await gerarFigurinhaCanvas(opts);
       const file = blob ? new File([blob], ficheiroNome(nomeJogador(jogador)), { type: 'image/png' }) : null;
-      const payload = { title: 'O meu cromo Futty', text: 'Vê o meu cartão de jogador no Futty ⚽' };
+      const payload = { title: 'Meu card Futty', text: 'Veja meu cartão de jogador no Futty ⚽' };
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ ...payload, files: [file] });
       } else if (navigator.share) {
@@ -484,7 +484,7 @@ export default function Figurinha() {
       return;
     }
     // Sem slot → gastar 1 geração é irreversível: pede confirmação primeiro.
-    if (!window.confirm(`Gerar o kit ${kit.nome}? Usa 1 das tuas gerações IA.`)) return;
+    if (!window.confirm(`Gerar o kit ${kit.nome}? Usa 1 das suas gerações IA.`)) return;
     await gerarAvatarIA(kit.id);
   }
 
@@ -540,12 +540,12 @@ export default function Figurinha() {
       }
       const file = new File([blob], ficheiroNome(nomeJogador(jogador)), { type: 'image/png' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'A minha figurinha Futty' });
+        await navigator.share({ files: [file], title: 'Minha figurinha Futty' });
       } else {
         baixarBlob(blob, file.name);
       }
     } catch (e) {
-      if (e?.name !== 'AbortError') setErro(e?.message || 'Não foi possível partilhar.');
+      if (e?.name !== 'AbortError') setErro(e?.message || 'Não foi possível compartilhar.');
     } finally {
       setBusy(false);
     }
@@ -565,7 +565,7 @@ export default function Figurinha() {
           {/* LEI DO F: logo oficial transparente (FuttyLogo SVG), estático no erro.
               O antigo /futty-logo-metallic.png (fundo preto sólido) está BANIDO. */}
           <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Não deu desta vez. Tenta de novo.</span>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Não deu desta vez. Tente de novo.</span>
           <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={gerarAvatarIA}>
             Tentar novamente
           </button>
@@ -623,27 +623,27 @@ export default function Figurinha() {
           <div style={{ maxWidth: 420, margin: '0 auto', textAlign: 'center', display: 'grid', gap: 12 }}>
             {estreiaFase === 'foto' ? (
               <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>O teu cromo está quase pronto <EstrelaIA size={14} color="#fff" /></h2>
-                <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: 0 }}>Adiciona uma foto para personalizar o teu cartão de jogador</p>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>Seu card está quase pronto <EstrelaIA size={14} color="#fff" /></h2>
+                <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: 0 }}>Adicione uma foto para personalizar seu cartão de jogador</p>
                 <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={() => fileRef.current?.click()}>Adicionar foto</button>
-                <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Saltar por agora →</button>
+                <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Pular por agora →</button>
               </>
             ) : estreiaFase === 'gerando' ? (
               <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando o teu avatar Panini… <EstrelaIA size={14} color="#fff" /></h2>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando seu avatar Panini… <EstrelaIA size={14} color="#fff" /></h2>
                 <p style={{ fontSize: 13, color: 'var(--label-color)', margin: 0 }}>Pode demorar até 30 segundos</p>
               </>
             ) : (
               <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: '#fff', margin: 0 }}>O teu cromo está pronto!</h2>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: '#fff', margin: 0 }}>Seu card está pronto!</h2>
                 {limiteIA ? (
-                  <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Limite de gerações IA atingido — mostramos o cromo com a tua foto.</p>
+                  <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Limite de gerações IA atingido — mostramos o card com sua foto.</p>
                 ) : null}
                 <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={partilharCromo}>
                   <Share2 size={18} /> Compartilhar agora
                 </button>
                 <button type="button" className="btn btn--purple-outline" style={{ width: '100%', height: 44 }} onClick={concluirEstreia}>Personalizar</button>
-                <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Saltar →</button>
+                <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Pular →</button>
               </>
             )}
             {avisoErro}
@@ -795,7 +795,7 @@ export default function Figurinha() {
         {/* Foto subida mas ainda sem avatar IA gerado (a foto não entra no card). */}
         {fotoLocal ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <Check size={14} /> Foto carregada — gera o teu avatar
+            <Check size={14} /> Foto carregada — gere seu avatar
           </div>
         ) : null}
 
@@ -860,7 +860,7 @@ export default function Figurinha() {
                 </button>
               ) : (
                 <div style={{ flex: 1, fontSize: 12, color: 'var(--label-color)', textAlign: 'center', alignSelf: 'center' }}>
-                  Adiciona uma foto para gerar o avatar IA
+                  Adicione uma foto para gerar o avatar IA
                 </div>
               )}
             </div>
@@ -873,7 +873,7 @@ export default function Figurinha() {
           {limiteIA ? (
             <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Atingiste o limite deste mês</span>
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Você atingiu o limite deste mês</span>
               {diasParaRenovar != null ? (
                 <span style={{ fontSize: 12, color: 'var(--label-color)' }}>Renova em {diasParaRenovar} {diasParaRenovar === 1 ? 'dia' : 'dias'}</span>
               ) : null}
@@ -1095,7 +1095,7 @@ export default function Figurinha() {
           {selos.length ? (
               <div style={{ marginTop: 22 }}>
                 <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: '.06em', color: '#f0c94a', textTransform: 'uppercase', marginBottom: 4 }}>Selos de honra</div>
-                <p className="muted" style={{ fontSize: 11, margin: '0 0 12px', lineHeight: 1.4 }}>Toca no olho para mostrar/ocultar no cromo (máx 2). A honra fica sempre na tua vitrine.</p>
+                <p className="muted" style={{ fontSize: 11, margin: '0 0 12px', lineHeight: 1.4 }}>Toque no olho para mostrar/ocultar no card (máx 2). A honra fica sempre na sua vitrine.</p>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {selos.map((s) => {
                     const oculto = selosOcultos.has(s.id);
@@ -1105,7 +1105,7 @@ export default function Figurinha() {
                         <SeloHonra tier={s.tier} label={s.label} size={54} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, color: '#fff' }}>{s.label}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{s.sub}{s.fonte === 'ranking' ? ' · vivo' : s.historico ? ' · histórico' : s.ativa ? ` · ${s.dias_restantes}d no cromo` : ''}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{s.sub}{s.fonte === 'ranking' ? ' · vivo' : s.historico ? ' · histórico' : s.ativa ? ` · ${s.dias_restantes}d no card` : ''}</div>
                         </div>
                         {!visivel && !oculto ? <span style={{ fontSize: 10, color: '#6f6a80' }}>só vitrine</span> : null}
                         <button type="button" aria-label={oculto ? 'Mostrar' : 'Ocultar'} onClick={() => toggleSelo(s.id)} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: oculto ? '#6f6a80' : '#f0c94a', cursor: 'pointer', borderRadius: 6, padding: '6px 8px', display: 'grid', placeItems: 'center' }}>
@@ -1127,7 +1127,7 @@ export default function Figurinha() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="A tua foto"
+          aria-label="Sua foto"
           onClick={() => setModalFoto(false)}
           style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
         >
@@ -1151,7 +1151,7 @@ export default function Figurinha() {
               aria-hidden="true"
               style={{ position: 'absolute', top: 18, right: 52, width: 8, height: 8, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)', pointerEvents: 'none' }}
             />
-            <h3 style={{ margin: '0 0 6px', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '0.04em', color: '#fff', textAlign: 'center' }}>A tua foto</h3>
+            <h3 style={{ margin: '0 0 6px', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '0.04em', color: '#fff', textAlign: 'center' }}>Sua foto</h3>
             {/* (h) Linha HUD dourada com degrau — mesma linguagem do header, escala menor. */}
             <svg width="100%" height="6" viewBox="0 0 200 6" preserveAspectRatio="none" aria-hidden="true" style={{ display: 'block', marginBottom: 14 }}>
               <defs>
@@ -1173,12 +1173,12 @@ export default function Figurinha() {
               <div className="hud-corners" style={{ width: '100%', background: '#0d0d12' }}>
                 <img
                   src={urlAsset(fotoOriginal)}
-                  alt="A tua foto"
+                  alt="Sua foto"
                   style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '46vh', objectFit: 'contain', display: 'block', margin: '0 auto' }}
                 />
               </div>
             ) : (
-              <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--label-color)', fontSize: 13 }}>Ainda não tens foto.</div>
+              <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--label-color)', fontSize: 13 }}>Você ainda não tem foto.</div>
             )}
 
             {/* Estado do avatar IA (reaproveita avatarEhIA) */}
@@ -1193,13 +1193,13 @@ export default function Figurinha() {
                   />
                   <div style={{ display: 'grid', gap: 3 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#d4a017' }}>
-                      <EstrelaIA size={14} color="#d4a017" /> Avatar IA activo
+                      <EstrelaIA size={14} color="#d4a017" /> Avatar IA ativo
                     </span>
                     <span style={{ fontSize: 11, color: 'var(--label-color)' }}>Gerado a partir desta foto</span>
                   </div>
                 </div>
               ) : (
-                <p style={{ margin: 0, textAlign: 'center', fontSize: 12, color: 'var(--label-color)' }}>Ainda não geraste o teu avatar IA.</p>
+                <p style={{ margin: 0, textAlign: 'center', fontSize: 12, color: 'var(--label-color)' }}>Você ainda não gerou seu avatar IA.</p>
               )}
             </div>
 

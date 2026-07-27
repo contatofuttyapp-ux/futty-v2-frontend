@@ -91,7 +91,7 @@ function RankRow({ p, idx, slug, onVote }) {
               <span style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">--</span>
             )}
             {jaVotou ? (
-              <span className="muted" style={{ marginLeft: 8 }}>★ deste {p.minha_nota}</span>
+              <span className="muted" style={{ marginLeft: 8 }}>★ você deu {p.minha_nota}</span>
             ) : (
               <span className="muted" style={{ marginLeft: 8 }}>☆ por votar</span>
             )}
@@ -99,7 +99,7 @@ function RankRow({ p, idx, slug, onVote }) {
         </div>
         <div className="rank-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           {p.sou_eu ? (
-            <span className="muted hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--neon)', border: '1px solid var(--neon)', padding: '3px 9px' }}>Tu</span>
+            <span className="muted hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--neon)', border: '1px solid var(--neon)', padding: '3px 9px' }}>Você</span>
           ) : (
             <VoteButton jaVotou={jaVotou} onClick={() => onVote(p)} />
           )}
@@ -218,7 +218,7 @@ export default function Ranking() {
 
         {mostrarBanner ? (
           <div className="rank-banner hud-corners">
-            <span style={{ flex: 1 }}>Atualize as suas notas</span>
+            <span style={{ flex: 1 }}>Atualize suas notas</span>
             <button type="button" className="rank-banner__close" aria-label="Fechar" onClick={() => setBannerFechado(true)}>✕</button>
           </div>
         ) : null}
@@ -260,9 +260,9 @@ export default function Ranking() {
               <MeiaEstrelas value={modalNota} onChange={setModalNota} />
               <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)' }}>
                 {modalNota >= 0.5 ? (
-                  <>A tua nota: <b style={{ fontFamily: "'Rajdhani', sans-serif", color: 'var(--neon)', fontSize: 16 }}>{notaParaExibir(modalNota).toFixed(1)}</b></>
+                  <>Sua nota: <b style={{ fontFamily: "'Rajdhani', sans-serif", color: 'var(--neon)', fontSize: 16 }}>{notaParaExibir(modalNota).toFixed(1)}</b></>
                 ) : (
-                  'Escolhe de 0.5 a 5 estrelas'
+                  'Escolha de 0.5 a 5 estrelas'
                 )}
               </div>
               <button type="button" className="btn btn--primary btn--hud hud-corners-s" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || !(modalNota >= 0.5)} onClick={confirmVote}>

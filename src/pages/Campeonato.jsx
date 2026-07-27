@@ -45,12 +45,12 @@ function Hub({ slug }) {
       <Topbar hud="CAMPEONATO" back={`/equipa/${slug}`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <h1 className="camp-title" style={{ fontSize: 22 }}>Campeonatos</h1>
-        <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Torneios internos da equipa — o ranking fica intocado.</p>
+        <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Torneios internos do time — o ranking fica intocado.</p>
 
         {lista === null ? <LoadingFutty /> : lista.length === 0 ? (
           <div className="camp-card" style={{ textAlign: 'center', padding: '26px 14px' }}>
             <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 16 }}>Ainda sem campeonatos</div>
-            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{isAdmin ? 'Cria o primeiro — pontos corridos ou mata-mata.' : 'O admin cria o primeiro torneio da equipa.'}</p>
+            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{isAdmin ? 'Crie o primeiro — pontos corridos ou mata-mata.' : 'O admin cria o primeiro torneio do time.'}</p>
           </div>
         ) : (
           lista.map((c) => (
@@ -58,7 +58,7 @@ function Hub({ slug }) {
               <div className="camp-card__n">{c.nome}</div>
               <div className="row" style={{ marginTop: 6 }}>
                 <span className={`camp-chip ${c.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{c.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
-                <span className={`camp-chip ${c.estado === 'terminado' ? 'camp-chip--gold' : 'camp-chip--live'}`}>{c.estado === 'terminado' ? 'Terminado' : 'Em curso'}</span>
+                <span className={`camp-chip ${c.estado === 'terminado' ? 'camp-chip--gold' : 'camp-chip--live'}`}>{c.estado === 'terminado' ? 'Terminado' : 'Em andamento'}</span>
                 <span className="camp-chip">{c.n_times} times</span>
               </div>
               {c.campeao ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#f0c94a', marginTop: 8, fontFamily: RAJ, fontWeight: 700 }}><Icon name="trofeu" size={14} color="#d4a017" /> {c.campeao}</div> : null}
@@ -138,7 +138,7 @@ function Wizard({ slug, onCancel, onCriado }) {
         {passo === 1 && (
           <>
             <div className="camp-title" style={{ fontSize: 20, textAlign: 'center' }}>NOVO CAMPEONATO</div>
-            <p className="muted" style={{ fontSize: 12, textAlign: 'center', margin: '0 0 18px' }}>Um torneio interno — os times são do campeonato; o ranking da equipa fica intocado.</p>
+            <p className="muted" style={{ fontSize: 12, textAlign: 'center', margin: '0 0 18px' }}>Um torneio interno — os times são do campeonato; o ranking do time fica intocado.</p>
             <label className="lbl-hud" style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Nome do campeonato</label>
             <input className="input input--hud" value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Copa da Resenha" style={{ width: '100%', fontFamily: RAJ, fontSize: 16, fontWeight: 700 }} />
             <div style={{ marginTop: 22, display: 'grid', gap: 9 }}>
@@ -150,12 +150,12 @@ function Wizard({ slug, onCancel, onCriado }) {
 
         {passo === 2 && (
           <>
-            <div className="section-title" style={{ marginTop: 2 }}>Escolhe o formato</div>
+            <div className="section-title" style={{ marginTop: 2 }}>Escolha o formato</div>
             <div className={`camp-fopt ${formato === 'pontos' ? 'on' : ''}`} onClick={() => setFormato('pontos')} role="button" tabIndex={0}>
               <div><div className="camp-fopt__t">Pontos corridos</div><div className="camp-fopt__d">Todos contra todos. Vence quem somar mais pontos na tabela.</div></div>
             </div>
             <div className={`camp-fopt ${formato === 'mata' ? 'on' : ''}`} onClick={() => setFormato('mata')} role="button" tabIndex={0}>
-              <div><div className="camp-fopt__t">Mata-mata</div><div className="camp-fopt__d">Eliminatória direta. Quem perde sai; o vencedor avança até à final.</div></div>
+              <div><div className="camp-fopt__t">Mata-mata</div><div className="camp-fopt__d">Eliminatória direta. Quem perde sai; o vencedor avança até a final.</div></div>
             </div>
             <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Fase de grupos chega na v2.</div>
             <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
@@ -190,9 +190,9 @@ function Wizard({ slug, onCancel, onCriado }) {
             </div>
 
             <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 16 }}>
-              <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} disabled={criando} onClick={() => criar('sorteio')}>⚡ Sortear pela cerimónia</button>
+              <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} disabled={criando} onClick={() => criar('sorteio')}>⚡ Sortear pela cerimônia</button>
             </div>
-            <div className="muted" style={{ fontSize: 11, margin: '8px 0 0' }}>…ou monta à mão (nomes acima) e cria direto.</div>
+            <div className="muted" style={{ fontSize: 11, margin: '8px 0 0' }}>…ou monte à mão (nomes acima) e crie direto.</div>
             <div style={{ marginTop: 12, display: 'grid', gap: 9 }}>
               <button type="button" className="btn hud-corners" style={{ border: '1.5px solid rgba(255,255,255,.22)', color: '#c9c2d6', background: 'rgba(255,255,255,.03)' }} disabled={criando} onClick={() => setPasso(4)}>Montar à mão →</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(2)}>Voltar</button>
@@ -214,7 +214,7 @@ function Wizard({ slug, onCancel, onCriado }) {
             <ComporTimes nomes={nomes} pool={pool} atrib={atrib} onChangeAtrib={setAtrib} />
 
             <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
-              <button type="button" className="btn hud-corners cta-gold" disabled={criando} onClick={() => criar('manual')}>{criando ? 'A criar…' : 'Criar campeonato'}</button>
+              <button type="button" className="btn hud-corners cta-gold" disabled={criando} onClick={() => criar('manual')}>{criando ? 'Criando…' : 'Criar campeonato'}</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(3)}>Voltar</button>
             </div>
           </>
@@ -298,7 +298,7 @@ function Detalhe({ slug, id }) {
         <div className="camp-title">{camp.nome}</div>
         <div className="row" style={{ margin: '4px 0 14px' }}>
           <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{camp.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
-          <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em curso'}</span>
+          <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
           <span className="camp-chip">{camp.times.length} times</span>
         </div>
 

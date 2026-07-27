@@ -96,7 +96,7 @@ export default function CriarEquipa() {
         try {
           await apiFetch(`/api/teams/${t.slug}`, { method: 'PATCH', body: JSON.stringify(patch) });
         } catch {
-          setToast({ tipo: 'error', mensagem: 'Equipa criada — mas a definição (gols/visibilidade) falhou. Ajusta no admin.' });
+          setToast({ tipo: 'error', mensagem: 'Time criado — mas a definição (gols/visibilidade) falhou. Ajuste no admin.' });
         }
       }
       setTeam(t);
@@ -124,14 +124,14 @@ export default function CriarEquipa() {
   async function copiar() {
     const ok = await copiarTexto(inviteLink);
     setCopied(ok);
-    if (!ok) setToast({ tipo: 'error', mensagem: 'Não deu para copiar — copia o link à mão.' });
+    if (!ok) setToast({ tipo: 'error', mensagem: 'Não deu para copiar — copie o link à mão.' });
   }
 
-  const waHref = inviteLink ? `https://wa.me/?text=${encodeURIComponent(`Entra na minha equipa ${nome.trim()} no Futty: ${inviteLink}`)}` : null;
+  const waHref = inviteLink ? `https://wa.me/?text=${encodeURIComponent(`Entre no meu time ${nome.trim()} no Futty: ${inviteLink}`)}` : null;
 
   return (
     <div className="app-shell">
-      <Topbar hud="CRIAR EQUIPA" back="/home" />
+      <Topbar hud="CRIAR TIME" back="/home" />
       <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
         {/* barra de progresso 1-4 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '4px 0 20px' }}>
@@ -143,15 +143,15 @@ export default function CriarEquipa() {
 
         {passo === 1 && (
           <>
-            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Dá nome à tua equipa</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O escudo nasce das iniciais — vê-o formar-se enquanto escreves.</p>
-            <Lbl>Nome da equipa</Lbl>
+            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Dê nome ao seu time</h1>
+            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O escudo nasce das iniciais — veja-o se formar enquanto você escreve.</p>
+            <Lbl>Nome do time</Lbl>
             <input className="input input--hud" value={nome} maxLength={40} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 15 }} />
             <div style={{ width: 110, height: 110, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 38, color: '#fff', background: 'rgba(255,255,255,0.04)', border: '2.5px solid #8b5cf6', margin: '22px auto 6px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
               {iniciais(nome)}
             </div>
             <p className="muted" style={{ fontSize: 11, textAlign: 'center', maxWidth: 290, margin: '0 auto', lineHeight: 1.5 }}>
-              o teu escudo — as iniciais são a tua marca; carrega o <b style={{ color: '#c9a24a' }}>logo da equipa</b> no painel de admin (com moderação).
+              seu escudo — as iniciais são sua marca; carregue o <b style={{ color: '#c9a24a' }}>logo do time</b> no painel de admin (com moderação).
             </p>
             <div style={{ marginTop: 24 }}>
               <Cta cheio disabled={!nome.trim()} onClick={() => setPasso(2)}>Continuar</Cta>
@@ -161,8 +161,8 @@ export default function CriarEquipa() {
 
         {passo === 2 && (
           <>
-            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Como funciona a tua equipa?</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Cada escolha mostra o efeito. Podes mudar tudo depois no painel de admin.</p>
+            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Como funciona o seu time?</h1>
+            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Cada escolha mostra o efeito. Você pode mudar tudo depois no painel de admin.</p>
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
               <MiniRadar n={mostrarGols ? 5 : 3} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -183,7 +183,7 @@ export default function CriarEquipa() {
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Destaque do dia</div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>o MVP votado pela equipa</div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>o MVP votado pelo time</div>
               </div>
               <Toggle on disabled />
             </div>
@@ -196,11 +196,11 @@ export default function CriarEquipa() {
 
         {passo === 3 && (
           <>
-            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Aceitas novos membros?</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Como é que se entra na tua equipa.</p>
+            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Aceita novos membros?</h1>
+            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Como se entra no seu time.</p>
             {[
               { k: 'privado', t: 'Fechada', d: 'só por convite do admin' },
-              { k: 'publico_aprovacao', t: 'Com aprovação', d: 'pedem no Explorar, tu aprovas' },
+              { k: 'publico_aprovacao', t: 'Com aprovação', d: 'pedem no Explorar, você aprova' },
               { k: 'publico_aberto', t: 'Aberta', d: 'qualquer um entra pelo Explorar' },
             ].map((o) => (
               <button key={o.k} type="button" onClick={() => setModo(o.k)} style={{ ...VIDRO, clipPath: CLIP, display: 'block', width: '100%', textAlign: 'left', padding: '12px 14px', marginBottom: 8, cursor: 'pointer', borderColor: modo === o.k ? 'rgba(212,160,23,0.65)' : 'rgba(255,255,255,0.10)', background: modo === o.k ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)', color: 'inherit' }}>
@@ -209,7 +209,7 @@ export default function CriarEquipa() {
               </button>
             ))}
             <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
-              <Cta cheio onClick={criarESeguir} disabled={busy}>{busy ? 'A criar…' : 'Criar a equipa'}</Cta>
+              <Cta cheio onClick={criarESeguir} disabled={busy}>{busy ? 'Criando…' : 'Criar o time'}</Cta>
               <Cta sec onClick={() => setPasso(2)} disabled={busy}>← voltar</Cta>
             </div>
           </>
@@ -217,8 +217,8 @@ export default function CriarEquipa() {
 
         {passo === 4 && team && (
           <>
-            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Chama a tua equipa</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>A <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criada. O link é válido 7 dias — e podes saltar este passo.</p>
+            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Chame o seu time</h1>
+            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. O link é válido 7 dias — e você pode pular este passo.</p>
             {inviteLink ? (
               <>
                 <Lbl>Link de convite</Lbl>
@@ -226,15 +226,15 @@ export default function CriarEquipa() {
                 <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
                   <Cta onClick={copiar}>{copied ? 'Copiado!' : 'Copiar link'}</Cta>
                   <a href={waHref} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
-                    <Cta sec style={{ color: '#7bd88f', borderColor: 'rgba(123,216,143,0.45)', background: 'rgba(123,216,143,0.06)' }}>Partilhar no WhatsApp</Cta>
+                    <Cta sec style={{ color: '#7bd88f', borderColor: 'rgba(123,216,143,0.45)', background: 'rgba(123,216,143,0.06)' }}>Compartilhar no WhatsApp</Cta>
                   </a>
                 </div>
               </>
             ) : (
-              <Cta onClick={gerarConvite} disabled={busy}>{busy ? 'A gerar…' : 'Gerar link de convite'}</Cta>
+              <Cta onClick={gerarConvite} disabled={busy}>{busy ? 'Gerando…' : 'Gerar link de convite'}</Cta>
             )}
             <div style={{ marginTop: 22 }}>
-              <Cta cheio onClick={() => navigate(`/equipa/${team.slug}`)}>Ir para a equipa</Cta>
+              <Cta cheio onClick={() => navigate(`/equipa/${team.slug}`)}>Ir para o time</Cta>
             </div>
           </>
         )}

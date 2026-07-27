@@ -69,7 +69,7 @@ async function gerarCromoDataURL(opts, chave) {
 // placeholder — quando este componente monta, a página já revelou com o cromo pronto
 // (ver `pageReady`), por isso nunca se vê um F aqui. `avatarEhIA` decide só o overlay
 // de convite (o canvas desenha as iniciais quando não há avatar IA).
-function CromoInicio({ cromo, avatarEhIA, nome, destino = '/figurinha', destinoLabel = 'Ver e personalizar a minha figurinha' }) {
+function CromoInicio({ cromo, avatarEhIA, nome, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
   return (
     <Link to={destino} data-tour="player-card" className="cromo-inicio" aria-label={destinoLabel}>
       {/* Sombra no chão — contra-fase com o bob: encolhe quando o cromo sobe. */}
@@ -92,7 +92,7 @@ function CromoInicio({ cromo, avatarEhIA, nome, destino = '/figurinha', destinoL
                 {/* LEI DA SILHUETA: placeholder de pessoa = silhueta-casa angulosa (nunca círculo). */}
                 <SilhuetaJogador size={62} color="rgba(212,160,23,0.5)" />
                 <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,160,23,0.75)', textAlign: 'center' }}>
-                  O teu cromo espera por ti
+                  Seu card espera por você
                 </span>
               </div>
             </div>
@@ -195,7 +195,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
 
         <div className="gcard__meta">
           <span className={`gcard__date ${today ? 'gcard__date--today' : ''}`}>
-            {game.date ? formatDateTime(game.date) : 'Data por definir'}
+            {game.date ? formatDateTime(game.date) : 'Data a definir'}
           </span>
           {` · ${game.confirmed_count} confirmados`}
         </div>
@@ -203,14 +203,14 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
         {isPast ? (
           <div className="gcard__drawn">
             <span className="badge badge--encerrado hud-corners-s">Encerrado</span>
-            {going && <span className="muted" style={{ fontSize: 13 }}>Estiveste presente</span>}
+            {going && <span className="muted" style={{ fontSize: 13 }}>Você esteve presente</span>}
           </div>
         ) : isDrawn ? (
           <div className="gcard__drawn">
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className="badge badge--sorteado hud-corners-s">Sorteado</span>
               <span className="muted" style={{ fontSize: 13 }}>
-                {going ? 'Vais jogar' : notGoing ? 'Não vais' : 'Sem resposta'}
+                {going ? 'Vai jogar' : notGoing ? 'Não vai' : 'Sem resposta'}
               </span>
             </span>
             <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => onVerSorteio(game)}>
@@ -257,12 +257,12 @@ function EmptyState() {
   return (
     <div className="home-empty">
       <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: '0.02em' }}>Bem-vindo ao Futty.</h2>
-      <p className="muted" style={{ marginTop: 6 }}>Começa por aqui.</p>
+      <p className="muted" style={{ marginTop: 6 }}>Comece por aqui.</p>
       <div className="home-empty__actions">
         {/* Glow no wrapper, recorte no botão — clip-path corta sombras (ver .cta-gold). */}
         <div className="cta-gold-glow" style={{ display: 'flex' }}>
           <Link to="/criar-equipa" className="btn hud-corners cta-gold" style={{ flex: 1 }}>
-            ＋ Criar o meu time
+            ＋ Criar meu time
           </Link>
         </div>
         <Link to="/explorar" className="btn btn--purple hud-corners">
@@ -271,7 +271,7 @@ function EmptyState() {
         <Link to="/figurinha" className="btn btn--purple-outline hud-corners">
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="estrela" size={16} />
-            Criar a minha figurinha
+            Criar minha figurinha
           </span>
         </Link>
       </div>
@@ -314,9 +314,9 @@ export default function Inicio() {
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ birthdate: dobInput }) });
       setDobFeito(true);
-      setToast({ msg: 'Obrigado! Data guardada.', tipo: 'success' });
+      setToast({ msg: 'Obrigado! Data salva.', tipo: 'success' });
     } catch (e) {
-      setToast({ msg: e.message || 'Não deu para guardar.', tipo: 'error' });
+      setToast({ msg: e.message || 'Não deu para salvar.', tipo: 'error' });
     } finally {
       setDobBusy(false);
     }
@@ -428,7 +428,7 @@ export default function Inicio() {
         method: 'PATCH',
         body: JSON.stringify({ ausente: novo }),
       });
-      setToast({ msg: novo ? 'Marcaste ausência ao próximo jogo.' : 'Boa, contamos contigo!', tipo: 'success' });
+      setToast({ msg: novo ? 'Você marcou ausência no próximo jogo.' : 'Boa, contamos com você!', tipo: 'success' });
     } catch (err) {
       setGames((prev) => (prev || []).map((g) => (g.team_id === teamId ? { ...g, ausente_proximo: !novo } : g)));
       setToast({ msg: err.message, tipo: 'error' });
@@ -566,7 +566,7 @@ export default function Inicio() {
         {/* Banner discreto para ativar notificações push */}
         {pushEstado === 'suportado' && !pushBannerFechado ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
-            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Ativar notificações para não perderes nenhum jogo</span>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Ativar notificações para não perder nenhum jogo</span>
             {/* Secundário: o cânone tira o verde daqui — activar notificações não é
                 a acção principal da página (o Início não tem uma; ver EmptyState). */}
             <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => pushSubscrever()}>Ativar</button>
@@ -579,7 +579,7 @@ export default function Inicio() {
         {precisaDob ? (
           <div className="hud-corners" style={{ display: 'grid', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.25)' }}>
             <span style={{ fontSize: 13, color: '#fff', lineHeight: 1.45 }}>
-              Indica a tua <b>data de nascimento</b> — é para sabermos proteger menores nos links públicos de sorteio.
+              Informe sua <b>data de nascimento</b> — é para sabermos proteger menores nos links públicos de sorteio.
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <input
@@ -591,7 +591,7 @@ export default function Inicio() {
                 aria-label="Data de nascimento"
               />
               <button type="button" className="btn btn--purple btn--sm hud-corners-s" disabled={!dobInput || dobBusy} onClick={guardarDob}>
-                {dobBusy ? 'A guardar…' : 'Guardar'}
+                {dobBusy ? 'Salvando…' : 'Salvar'}
               </button>
               <button type="button" aria-label="Agora não" onClick={dispensarDob} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 13 }}>Agora não</button>
             </div>
@@ -602,7 +602,7 @@ export default function Inicio() {
             denunciante). Uma linha no Início, dispensável. */}
         {denunciaDesfechos > 0 && !desfechoFechado ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(123,216,143,0.05)', border: '1px solid rgba(123,216,143,0.25)' }}>
-            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>A tua denúncia foi analisada. <b style={{ color: '#9fd8a8' }}>Obrigado por cuidares da casa.</b></span>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Sua denúncia foi analisada. <b style={{ color: '#9fd8a8' }}>Obrigado por cuidar da casa.</b></span>
             <button type="button" aria-label="Fechar" onClick={fecharDesfecho} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}
@@ -620,7 +620,7 @@ export default function Inicio() {
                 Pedido pendente na {p.team?.nome}
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                À espera de aprovação do admin — avisamos-te aqui quando decidir.
+                À espera de aprovação do admin — avisamos você aqui quando decidir.
               </span>
             </span>
             <button type="button" onClick={() => cancelarPedidoPendente(p)} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '6px 12px', flexShrink: 0, borderRadius: 2 }}>
@@ -635,15 +635,15 @@ export default function Inicio() {
           <div key={p.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: p.status === 'approved' ? 'rgba(123,216,143,0.08)' : 'rgba(255,255,255,0.03)', border: p.status === 'approved' ? '1px solid rgba(123,216,143,0.5)' : '1px solid rgba(255,255,255,0.14)' }}>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: p.status === 'approved' ? '#7bd88f' : '#c9c2d6' }}>
-                {p.status === 'approved' ? `Entraste na ${p.team?.nome}!` : `O pedido à ${p.team?.nome} não seguiu`}
+                {p.status === 'approved' ? `Você entrou na ${p.team?.nome}!` : `O pedido para ${p.team?.nome} não seguiu`}
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                {p.status === 'approved' ? 'O admin aceitou o teu pedido — bem-vindo.' : 'Sem drama: há mais peladas no Explorar.'}
+                {p.status === 'approved' ? 'O admin aceitou seu pedido — bem-vindo.' : 'Sem drama: há mais peladas no Explorar.'}
               </span>
             </span>
             {p.status === 'approved' && p.team?.slug ? (
               <Link to={`/equipa/${p.team.slug}`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={() => dispensarDesfecho(p.id)}>
-                Ir à equipa
+                Ir ao time
               </Link>
             ) : null}
             <button type="button" aria-label="Dispensar" onClick={() => dispensarDesfecho(p.id)} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
@@ -659,12 +659,12 @@ export default function Inicio() {
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#f0c94a' }}>
-                {votacaoTop.pedido_revotacao ? `A ${votacaoTop.nome} pediu nova avaliação` : 'Tens colegas por avaliar'}
+                {votacaoTop.pedido_revotacao ? `A ${votacaoTop.nome} pediu nova avaliação` : 'Você tem colegas para avaliar'}
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                 {votacaoTop.pedido_revotacao
-                  ? 'Dá a tua nota aos companheiros do último jogo.'
-                  : `Faltam ${votacaoTop.faltam} na ${votacaoTop.nome} — a tua nota conta para o ranking.`}
+                  ? 'Dê sua nota aos companheiros do último jogo.'
+                  : `Faltam ${votacaoTop.faltam} na ${votacaoTop.nome} — sua nota conta para o ranking.`}
               </span>
             </span>
             <Link to={`/equipa/${votacaoTop.slug}/ranking`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={fecharVotacao}>
@@ -685,14 +685,14 @@ export default function Inicio() {
               </span>
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Completa a tua figurinha</span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>O teu cromo continua sem cara — 30 segundos e fica pronto.</span>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Complete sua figurinha</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Seu card continua sem cara — 30 segundos e fica pronto.</span>
             </span>
             <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 11, color: '#f0c94a', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>Adicionar →</span>
           </Link>
         ) : ctaFigurinha ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
-            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Cria a tua figurinha</span>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Crie sua figurinha</span>
             <Link to="/figurinha" className="btn btn--purple btn--sm hud-corners-s" onClick={dispensarCtaFigurinha}>Ir para Figurinha</Link>
             <button type="button" aria-label="Fechar" onClick={dispensarCtaFigurinha} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
@@ -705,7 +705,7 @@ export default function Inicio() {
             seco, dourado, sem palco. */}
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px', paddingTop: 'var(--space-lg)' }}>
           <div className="inicio-vline" aria-hidden="true" />
-          <CromoInicio cromo={cromo} avatarEhIA={cromoAvatarEhIA} nome={nome} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar o meu time' : 'Ver e personalizar a minha figurinha'} />
+          <CromoInicio cromo={cromo} avatarEhIA={cromoAvatarEhIA} nome={nome} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar meu time' : 'Ver e personalizar minha figurinha'} />
           <NomeCromo nome={nome} />
           {teams[0] ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
@@ -758,7 +758,7 @@ export default function Inicio() {
                   {t.nome}
                   {/* P2-6: pedidos de entrada por resolver (só admin) — badge dourado. */}
                   {t.pedidos_pendentes > 0 ? (
-                    <span className="chip-badge" aria-label={`${t.pedidos_pendentes} pedidos por resolver`}>
+                    <span className="chip-badge" aria-label={`${t.pedidos_pendentes} pedidos para resolver`}>
                       {t.pedidos_pendentes}
                     </span>
                   ) : null}
@@ -838,7 +838,7 @@ export default function Inicio() {
                       <span style={{ color: '#d4a017', fontSize: 18 }}>{campeonato.time_b_pontos}</span>
                       <span>{campeonato.time_b_nome}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center', marginTop: 6 }}>Jornada {campeonato.jornadas_jogadas} de {campeonato.num_jornadas} · clica para ver</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center', marginTop: 6 }}>Jornada {campeonato.jornadas_jogadas} de {campeonato.num_jornadas} · clique para ver</div>
                   </>
                 )}
               </Link>

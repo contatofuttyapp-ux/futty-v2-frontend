@@ -15,10 +15,10 @@ export default function Privacidade() {
 
         <h1 style={{ ...H, fontSize: 30, margin: '16px 0 4px' }}>Política de Privacidade</h1>
 
-        <h2 style={h2}>1. Dados que recolhemos</h2>
+        <h2 style={h2}>1. Dados que coletamos</h2>
         <ul style={ul}>
-          <li>Email e nome (registo)</li>
-          <li>Foto de perfil (opcional, upload do utilizador)</li>
+          <li>E-mail e nome (cadastro)</li>
+          <li>Foto de perfil (opcional, upload do usuário)</li>
           <li>Dados de jogo (presenças, votos, resultados)</li>
           <li>Dados de pagamento (processados pelo Stripe — não guardamos dados de cartão)</li>
         </ul>
@@ -26,21 +26,21 @@ export default function Privacidade() {
         <h2 style={h2}>2. Como usamos os dados</h2>
         <ul style={ul}>
           <li>Operar e melhorar o serviço</li>
-          <li>Enviar notificações sobre os teus jogos</li>
+          <li>Enviar notificações sobre os seus jogos</li>
           <li>Processar pagamentos dos planos</li>
         </ul>
 
-        <h2 style={h2}>3. Partilha de dados</h2>
-        <p style={p}>Não vendemos os teus dados. Partilhamos apenas com:</p>
+        <h2 style={h2}>3. Compartilhamento de dados</h2>
+        <p style={p}>Não vendemos os seus dados. Compartilhamos apenas com:</p>
         <ul style={ul}>
-          <li>Supabase (base de dados e autenticação)</li>
+          <li>Supabase (banco de dados e autenticação)</li>
           <li>Stripe (pagamentos)</li>
-          <li>fal.ai (geração de avatar IA, só a tua foto)</li>
+          <li>fal.ai (geração de avatar IA, só a sua foto)</li>
         </ul>
 
-        <h2 style={h2}>4. Os teus direitos</h2>
+        <h2 style={h2}>4. Os seus direitos</h2>
         <p style={p}>
-          Podes pedir a eliminação da tua conta e dados a qualquer momento através de
+          Você pode pedir a exclusão da sua conta e dados a qualquer momento através de
           suporte@futty.app.
         </p>
 
@@ -50,11 +50,11 @@ export default function Privacidade() {
           terceiros.
         </p>
 
-        <h2 style={h2}>6. Contacto</h2>
+        <h2 style={h2}>6. Contato</h2>
         <p style={p}>suporte@futty.app</p>
 
         <p style={{ ...p, fontSize: 13, marginTop: 32, color: 'var(--label-color)' }}>
-          Última actualização: Janeiro 2025
+          Última atualização: Janeiro 2025
         </p>
       </div>
     </div>
