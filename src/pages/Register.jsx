@@ -18,6 +18,7 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [birthdate, setBirthdate] = useState('');
+  const [aceite, setAceite] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,6 +38,10 @@ export default function Register() {
     }
     if (!birthdate) {
       setError('Data de nascimento é obrigatória.');
+      return;
+    }
+    if (!aceite) {
+      setError('Você precisa concordar com os Termos de Uso e a Política de Privacidade para continuar.');
       return;
     }
 
@@ -155,13 +160,27 @@ export default function Register() {
               />
             </div>
 
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5, cursor: 'pointer', margin: '4px 0 0' }}>
+              <input
+                type="checkbox"
+                checked={aceite}
+                onChange={(e) => setAceite(e.target.checked)}
+                style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: '#d4a017' }}
+              />
+              <span>
+                Li e concordo com os{' '}
+                <Link to="/termos" style={{ color: 'var(--neon)' }}>Termos de Uso</Link> e a{' '}
+                <Link to="/privacidade" style={{ color: 'var(--neon)' }}>Política de Privacidade</Link>.
+              </span>
+            </label>
+
             {/* CTA — receita Compartilhar (Lei dos Gémeos). O glow tem de ficar no
                 wrapper: o clip-path a 45° do botão cortaria o drop-shadow. */}
             <div className="cta-gold-glow">
               <button
                 type="submit"
                 className="auth-cta cta-gold hud-corners"
-                disabled={loading}
+                disabled={loading || !aceite}
               >
                 {loading ? 'Criando conta…' : 'Criar conta'}
               </button>

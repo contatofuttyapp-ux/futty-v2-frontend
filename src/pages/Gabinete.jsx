@@ -1,7 +1,7 @@
 // Futty v2.0 — Gabinete do Dono (/gabinete). Rota super-admin (guard no servidor E no
 // cliente). Linha do tempo scrollável no cânone (vidro/aurora/45°/Rajdhani) — transplante
 // do gabinete-mockup.html. Lei: o dono é CEGO ao conteúdo (só números). Receita/Publicidade
-// = "em breve" digno enquanto a fonte real (Stripe / medição de ads) não existir.
+// = "em breve" digno enquanto a fonte real (IAP das lojas / medição de ads) não existir.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -9,6 +9,8 @@ import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 
 const OURO = '#d4a017'; const OURO2 = '#f0c94a'; const ROXO = '#8b5cf6'; const PRATA = '#aab4c8'; const VERDE = '#7bd88f';
+// Política/termos: "publicada" simples OU publicada-mas-em-revisão contam como publicados.
+const ESTADOS_PUBLICADOS = ['publicada', 'publicada (revisão jurídica pendente)'];
 
 // ── mini-gráficos SVG (cânone: dourado sobre vidro) — portados do mockup ──
 function lineChart(vals, cor, w, h) {
@@ -143,9 +145,9 @@ export default function Gabinete() {
           <div className="gab-card"><h3>Campeonatos</h3><div className="gab-big">{c.camp.at(-1)}</div>{SVG(lineChart(c.camp, ROXO, 260, 92))}</div>
         </div>
 
-        {/* RECEITA — em breve (Stripe por ligar) */}
-        <Hud h2="Receita" breve="Falta ligar o Stripe" />
-        <Vazio>A receita acende quando você ligar o <b>Stripe</b>. Até lá, MRR, assinantes e entradas ficam <b>em breve</b> — sem números inventados.</Vazio>
+        {/* RECEITA — em breve (IAP das lojas por ligar; Stripe pausado — SPEC-INFRA) */}
+        <Hud h2="Receita" breve="Falta ligar o IAP das lojas" />
+        <Vazio>A receita acende quando a vaga <b>App nas lojas</b> ligar o <b>IAP</b> (Apple/Google). Até lá, MRR, assinantes e entradas ficam <b>em breve</b> — sem números inventados.</Vazio>
 
         {/* PUBLICIDADE — a valer: campanhas + medição + toggles por página */}
         <Hud h2="Publicidade" n="campanhas · medição nossa (impressão/clique) · lei de menores no motor" />
@@ -224,11 +226,11 @@ export default function Gabinete() {
             <h3>Burn & margem</h3>
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div><div className="gab-big" style={{ color: '#fda4af' }}>€{burn}</div><span className="gab-muted">custos / mês</span></div>
-              <div><div className="gab-big">—</div><span className="gab-muted">MRR (Stripe)</span></div>
+              <div><div className="gab-big">—</div><span className="gab-muted">MRR (IAP)</span></div>
               <div><div className="gab-big">—</div><span className="gab-muted">margem líquida</span></div>
             </div>
             <div className="gab-burnbar"><i style={{ width: '100%', background: '#fda4af' }} /></div>
-            <p className="gab-muted" style={{ marginTop: 10 }}>Ligue o <b>Stripe</b> para a margem e o "paga-se?". Por agora, só o <b>burn</b> (€{burn}/mês).</p>
+            <p className="gab-muted" style={{ marginTop: 10 }}>Ligue o <b>IAP das lojas</b> para a margem e o "paga-se?" (comissão da loja incluída). Por agora, só o <b>burn</b> (€{burn}/mês).</p>
           </div>
         </div>
         <div className="gab-cards c2" style={{ marginTop: 12 }}>
@@ -255,15 +257,19 @@ export default function Gabinete() {
             <div className="gab-cov">{(op.cobertura?.vende || []).map((x, i) => <span key={i} className="on">{x}</span>)}</div>
             <div className="gab-muted" style={{ marginTop: 10 }}>Onde ainda não</div>
             <div className="gab-cov">{(op.cobertura?.bloqueado || []).map((x, i) => <span key={i} className="off">{x}</span>)}</div>
-            <p className="gab-muted" style={{ marginTop: 10 }}>Informativo — à mão + o que o Stripe expõe.</p>
+            <p className="gab-muted" style={{ marginTop: 10 }}>Informativo — à mão + o que a loja expõe (IAP).</p>
           </div>
         </div>
 
         {/* PROTEÇÃO DE DADOS (LGPD) — mesma família "papéis da casa" que Registos & Prazos */}
         <Hud h2="Proteção de dados" n="LGPD · DPAs, política, termos, canal do titular (editável à mão)" />
-        {pd.politica_privacidade?.estado !== 'publicada' ? (
+        {!ESTADOS_PUBLICADOS.includes(pd.politica_privacidade?.estado) ? (
           <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(253,164,175,.4)' }}>
             <span className="gab-osub" style={{ color: '#fda4af' }}>⚠ Política de privacidade <b>ainda não publicada</b> — bloqueia o envio às lojas (App Store / Play Store) e o compliance LGPD.</span>
+          </div>
+        ) : pd.politica_privacidade?.estado === 'publicada (revisão jurídica pendente)' ? (
+          <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(240,201,74,.35)' }}>
+            <span className="gab-osub" style={{ color: '#f0c94a' }}>ℹ Política e termos <b>publicados</b> (<Link to="/privacidade" style={{ color: '#f0c94a' }}>/privacidade</Link> · <Link to="/termos" style={{ color: '#f0c94a' }}>/termos</Link>) — ainda em <b>revisão jurídica</b> antes do envio às lojas.</span>
           </div>
         ) : null}
         <div className="gab-cards c2">
@@ -284,8 +290,8 @@ export default function Gabinete() {
             {[['politica_privacidade', 'Política de privacidade'], ['termos_uso', 'Termos de uso']].map(([k, label]) => (
               <div key={k} className="gab-oprow" style={{ gridTemplateColumns: '1fr auto 1.1fr' }}>
                 <div className="gab-nm" style={{ fontSize: 12 }}>{label}</div>
-                <select value={pd[k]?.estado || 'por publicar'} onChange={(e) => guardarOp({ ...op, protecao_dados: { ...pd, [k]: { ...(pd[k] || {}), estado: e.target.value, data: e.target.value === 'publicada' && !pd[k]?.data ? hoje() : pd[k]?.data } } })} style={selDpa(pd[k]?.estado === 'publicada' ? 'aceite' : 'por tratar')}>
-                  <option>por publicar</option><option>publicada</option>
+                <select value={pd[k]?.estado || 'por publicar'} onChange={(e) => guardarOp({ ...op, protecao_dados: { ...pd, [k]: { ...(pd[k] || {}), estado: e.target.value, data: ESTADOS_PUBLICADOS.includes(e.target.value) && !pd[k]?.data ? hoje() : pd[k]?.data } } })} style={selDpa(ESTADOS_PUBLICADOS.includes(pd[k]?.estado) ? 'aceite' : 'por tratar')}>
+                  <option>por publicar</option><option>publicada</option><option>publicada (revisão jurídica pendente)</option>
                 </select>
                 <input placeholder="URL" defaultValue={pd[k]?.url} onBlur={(e) => guardarOp({ ...op, protecao_dados: { ...pd, [k]: { ...(pd[k] || {}), url: e.target.value } } })} style={{ fontSize: 11, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '5px 7px', borderRadius: 6, minWidth: 0 }} />
               </div>
