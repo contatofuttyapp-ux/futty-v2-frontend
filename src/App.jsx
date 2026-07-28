@@ -3,6 +3,7 @@ import { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
+import { I18nProvider } from './context/I18nContext';
 import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
 import SuperAdminGuard from './components/SuperAdminGuard';
@@ -286,15 +287,17 @@ export default function App() {
   return (
     <ErrorBoundary>
       {loading && <LoadingScreen onDone={() => setLoading(false)} />}
-      <AuthProvider>
-        <BrowserRouter>
-          <RouteTitle />
-          <Layout>
-            <AnimatedRoutes />
-          </Layout>
-          <CookieBanner />
-        </BrowserRouter>
-      </AuthProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <RouteTitle />
+            <Layout>
+              <AnimatedRoutes />
+            </Layout>
+            <CookieBanner />
+          </BrowserRouter>
+        </AuthProvider>
+      </I18nProvider>
     </ErrorBoundary>
   );
 }

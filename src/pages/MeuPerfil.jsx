@@ -8,10 +8,12 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
-import { getIdioma, setIdioma, IDIOMAS, nomeIdioma } from '../lib/i18n';
+import { useI18n } from '../context/I18nContext';
+import { nomeIdioma } from '../lib/i18n';
 // O UploadComCrop saiu com a secção de personalizar (o upload de foto vive na
 // Figurinha, que já o tinha). O PlayerAvatar fica: o cabeçalho de identidade mostra
 // o avatar — só não o deixa clicar.
@@ -58,6 +60,9 @@ export default function MeuPerfil() {
   const { user, signOut } = useAuth();
   const { teams } = useTeams();
   const navigate = useNavigate();
+  // Gabinete no menu: verdade do SERVIDOR (/api/me), nunca do cliente.
+  const { data: me } = useApi('/api/me');
+  const souSuperAdmin = me?.user?.is_super_admin === true;
   const { estado: pushEstado, subscrever: pushSubscrever, dessubscrever: pushDessubscrever } = usePushNotifications();
   const adminTeams = teams.filter((t) => t.role === 'admin');
   const [adminPicker, setAdminPicker] = useState(false);
@@ -92,12 +97,12 @@ export default function MeuPerfil() {
     setToast({ mensagem, tipo });
   }
 
-  // Idioma (preferência leve em localStorage; aplica via reload).
-  const idiomaActual = getIdioma();
+  // Idioma — reativo (I18nContext): troca SEM reload, guarda a preferência.
+  const { idioma: idiomaActual, setIdioma: trocarIdiomaCtx, idiomas: IDIOMAS } = useI18n();
   function trocarIdioma(idioma) {
     if (idioma === idiomaActual) return;
-    showToast('Idioma alterado. Recarregando…');
-    setTimeout(() => setIdioma(idioma), 800);
+    trocarIdiomaCtx(idioma);
+    showToast('Idioma alterado.');
   }
 
   // Abre o cliente de email; se não houver, mostra o email para copiar.
@@ -402,11 +407,23 @@ export default function MeuPerfil() {
               Painel de administração
             </ContaRow>
           ) : null}
+          {souSuperAdmin ? (
+            <ContaRow onClick={() => navigate('/gabinete')} cor="#8b5cf6">
+              <Icon name="definicoes" size={20} color="#d4a017" />
+              Gabinete
+            </ContaRow>
+          ) : null}
           <ContaRow onClick={() => setConfirmSignOut(true)} cor="rgba(239,68,68,0.8)" semBorda>
             <Icon name="sair" size={20} color="#d4a017" />
             Sair da conta
           </ContaRow>
         </div>
+
+        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-dim)', margin: '16px 0 0' }}>
+          <Link to="/termos" style={{ color: 'var(--text-dim)' }}>Termos de Uso</Link>
+          {' · '}
+          <Link to="/privacidade" style={{ color: 'var(--text-dim)' }}>Privacidade</Link>
+        </p>
       </main>
 
       {/* Modal confirmar sign out.

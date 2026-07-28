@@ -7,6 +7,7 @@ import { useApi } from '../hooks/useApi';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
+import SeletorIdiomaDiscreto from '../components/SeletorIdiomaDiscreto';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -19,7 +20,8 @@ export default function SorteioPublico() {
 
   return (
     <div className="app-shell">
-      <main className="app-main page-reveal" style={{ maxWidth: 480, paddingTop: 18 }}>
+      <main className="app-main page-reveal" style={{ maxWidth: 480, paddingTop: 18, position: 'relative' }}>
+        <SeletorIdiomaDiscreto style={{ position: 'absolute', top: 0, right: 16 }} />
         {/* marca no topo — isto é a montra */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 4 }}>
           <FuttyLogo variant="flat" size={30} />

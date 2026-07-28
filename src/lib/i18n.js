@@ -1,67 +1,106 @@
-// Futty v2.0 — i18n leve (PT-BR / PT-PT) para os ~15 termos que diferem.
-// Sem react-i18next: só um dicionário + helper t(). A preferência fica em
-// localStorage e a troca faz reload. Usar t() nas novas funcionalidades; os
-// textos existentes já estão em PT-BR hardcoded (não refactorizar agora).
-
-const TRADUCOES = {
-  'pt-BR': {
-    time: 'time', times: 'times',
-    usuario: 'usuário', senha: 'senha',
-    salvar: 'Salvar', excluir: 'Excluir',
-    compartilhar: 'Compartilhar',
-    ativo: 'ativo', inativo: 'inativo',
-    celular: 'celular', arquivo: 'arquivo',
-    carregando: 'Carregando', gerando: 'Gerando',
-    criando: 'Criando', enviando: 'Enviando',
-  },
-  'pt-PT': {
-    time: 'equipa', times: 'equipas',
-    usuario: 'utilizador', senha: 'palavra-passe',
-    salvar: 'Guardar', excluir: 'Apagar',
-    compartilhar: 'Partilhar',
-    ativo: 'activo', inativo: 'inactivo',
-    celular: 'telemóvel', arquivo: 'ficheiro',
-    carregando: 'A carregar', gerando: 'A gerar',
-    criando: 'A criar', enviando: 'A enviar',
-  },
-};
+// Futty v2.0 — i18n (6 idiomas). LEI: o TEXTO-BASE é PT-BR (selado) e É a própria
+// CHAVE (string-as-key) — o catálogo guarda só as OUTRAS 5 línguas. O fallback de
+// qualquer língua é o PT-BR (nunca uma chave crua). Deteção pela língua do
+// dispositivo; a escolha do utilizador (com conta) fixa a preferência.
+//
+// Este ficheiro é a CAMADA SEM-REACT (deteção, catálogo, traduzir). A reatividade
+// (troca SEM reload) vive no I18nContext; os componentes usam `useI18n().t`.
+import CATALOGO from './i18n-catalogo';
 
 export const IDIOMA_PADRAO = 'pt-BR';
 
-// Catálogo do selector. `nome` é o idioma NA PRÓPRIA LÍNGUA — quem procura o seu
-// idioma numa lista procura a palavra que conhece, não a tradução dela.
-// `traduzido` diz a verdade: só o par PT tem dicionário (ver TRADUCOES). Os outros
-// gravam a escolha e ficam com o texto em PT — o sheet diz isso em vez de fingir.
+// As 6 línguas. `nome` = o idioma NA PRÓPRIA LÍNGUA (quem procura o seu idioma
+// procura a palavra que conhece). Bandeira do Reino Unido para o inglês; Chéquia (cs).
 export const IDIOMAS = [
-  { id: 'pt-BR', bandeira: '🇧🇷', nome: 'Português (Brasil)', traduzido: true },
-  { id: 'pt-PT', bandeira: '🇵🇹', nome: 'Português (Portugal)', traduzido: true },
-  { id: 'en', bandeira: '🇺🇸', nome: 'English', traduzido: false },
-  { id: 'es', bandeira: '🇪🇸', nome: 'Español', traduzido: false },
-  { id: 'ko', bandeira: '🇰🇷', nome: '한국어', traduzido: false },
-  { id: 'fr', bandeira: '🇫🇷', nome: 'Français', traduzido: false },
+  { id: 'pt-BR', bandeira: '🇧🇷', nome: 'Português (Brasil)' },
+  { id: 'pt-PT', bandeira: '🇵🇹', nome: 'Português (Portugal)' },
+  { id: 'en', bandeira: '🇬🇧', nome: 'English' },
+  { id: 'es', bandeira: '🇪🇸', nome: 'Español' },
+  { id: 'ko', bandeira: '🇰🇷', nome: '한국어' },
+  { id: 'cs', bandeira: '🇨🇿', nome: 'Čeština' },
 ];
+const IDS = IDIOMAS.map((i) => i.id);
+const CHAVE_LS = 'futty_idioma';
 
 export function nomeIdioma(id) {
   return IDIOMAS.find((i) => i.id === id)?.nome || IDIOMAS[0].nome;
 }
 
-export function getIdioma() {
-  return localStorage.getItem('futty_idioma') || IDIOMA_PADRAO;
+// Deteção pela língua do dispositivo (navigator.languages, em ordem de preferência).
+// pt-BR e pt-PT distinguem-se; qualquer outra variante de pt cai em pt-PT. Fora das 6 → PT-BR.
+export function detectarIdioma() {
+  try {
+    const navs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]) || [];
+    for (const raw of navs) {
+      const l = String(raw || '').toLowerCase();
+      if (l === 'pt-br' || l.startsWith('pt-br')) return 'pt-BR';
+      if (l.startsWith('pt')) return 'pt-PT';
+      if (l.startsWith('en')) return 'en';
+      if (l.startsWith('es')) return 'es';
+      if (l.startsWith('ko')) return 'ko';
+      if (l.startsWith('cs')) return 'cs';
+    }
+  } catch { /* SSR/sem navigator */ }
+  return IDIOMA_PADRAO;
 }
 
-export function setIdioma(idioma) {
-  localStorage.setItem('futty_idioma', idioma);
-  window.location.reload(); // reload para aplicar
+// Preferência guardada localmente (o servidor sobrepõe quando há conta — ver I18nContext).
+export function idiomaGuardado() {
+  try { const s = localStorage.getItem(CHAVE_LS); if (s && IDS.includes(s)) return s; } catch { /* */ }
+  return null;
+}
+export function guardarIdiomaLocal(id) {
+  try { if (IDS.includes(id)) localStorage.setItem(CHAVE_LS, id); } catch { /* */ }
 }
 
-// O fallback é para o PT-BR e NÃO para a chave crua. Antes era `|| chave`, e isso
-// bastava enquanto só existiam os dois PT — qualquer idioma guardado tinha
-// dicionário. Com o selector a aceitar en/es/ko/fr, o `|| chave` passaria a
-// devolver o identificador em vez do texto: t('salvar') dava "salvar" em minúscula,
-// t('carregando') dava "carregando". Ou seja, escolher 한국어 não deixava o texto em
-// PT — estragava-o. Com o fallback no padrão, a promessa do sheet ("o texto continua
-// em PT até haver tradução") passa a ser verdade.
-export function t(chave) {
-  const idioma = getIdioma();
-  return TRADUCOES[idioma]?.[chave] ?? TRADUCOES[IDIOMA_PADRAO]?.[chave] ?? chave;
+// Idioma inicial: guardado (utilizador escolheu) → senão deteção → senão PT-BR.
+export function idiomaInicial() {
+  return idiomaGuardado() || detectarIdioma();
+}
+
+// Termos GENÉRICOS legados (retrocompatível com o t('salvar') antigo). Resolvem em
+// TODAS as línguas; para pt-BR devolvem o texto correto (não a chave curta).
+const GENERICO = {
+  'pt-BR': { time: 'time', times: 'times', usuario: 'usuário', senha: 'senha', salvar: 'Salvar', excluir: 'Excluir', compartilhar: 'Compartilhar', ativo: 'ativo', inativo: 'inativo', celular: 'celular', arquivo: 'arquivo', carregando: 'Carregando', gerando: 'Gerando', criando: 'Criando', enviando: 'Enviando' },
+  'pt-PT': { time: 'equipa', times: 'equipas', usuario: 'utilizador', senha: 'palavra-passe', salvar: 'Guardar', excluir: 'Apagar', compartilhar: 'Partilhar', ativo: 'activo', inativo: 'inactivo', celular: 'telemóvel', arquivo: 'ficheiro', carregando: 'A carregar', gerando: 'A gerar', criando: 'A criar', enviando: 'A enviar' },
+  en: { time: 'team', times: 'teams', usuario: 'user', senha: 'password', salvar: 'Save', excluir: 'Delete', compartilhar: 'Share', ativo: 'active', inativo: 'inactive', celular: 'phone', arquivo: 'file', carregando: 'Loading', gerando: 'Generating', criando: 'Creating', enviando: 'Sending' },
+  es: { time: 'equipo', times: 'equipos', usuario: 'usuario', senha: 'contraseña', salvar: 'Guardar', excluir: 'Eliminar', compartilhar: 'Compartir', ativo: 'activo', inativo: 'inactivo', celular: 'móvil', arquivo: 'archivo', carregando: 'Cargando', gerando: 'Generando', criando: 'Creando', enviando: 'Enviando' },
+  ko: { time: '팀', times: '팀', usuario: '사용자', senha: '비밀번호', salvar: '저장', excluir: '삭제', compartilhar: '공유', ativo: '활성', inativo: '비활성', celular: '휴대폰', arquivo: '파일', carregando: '불러오는 중', gerando: '생성 중', criando: '만드는 중', enviando: '보내는 중' },
+  cs: { time: 'tým', times: 'týmy', usuario: 'uživatel', senha: 'heslo', salvar: 'Uložit', excluir: 'Smazat', compartilhar: 'Sdílet', ativo: 'aktivní', inativo: 'neaktivní', celular: 'telefon', arquivo: 'soubor', carregando: 'Načítání', gerando: 'Generování', criando: 'Vytváření', enviando: 'Odesílání' },
+};
+
+// Interpola {var} e escolhe plural via `vars.count` quando a chave traz `|` (sing|plural).
+function aplicar(str, vars) {
+  if (str == null) return str;
+  let out = str;
+  if (out.includes('|') && vars && typeof vars.count === 'number') {
+    const partes = out.split('|');
+    out = vars.count === 1 ? partes[0] : (partes[1] ?? partes[0]);
+  }
+  if (vars) out = out.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : `{${k}}`));
+  return out;
+}
+
+// O tradutor puro. `chave` = a string PT-BR (string-as-key) OU um termo genérico legado.
+export function traduzir(idioma, chave, vars) {
+  const g = GENERICO[idioma]?.[chave] ?? GENERICO[IDIOMA_PADRAO]?.[chave];
+  if (g != null) return aplicar(g, vars);
+  if (idioma === IDIOMA_PADRAO) return aplicar(chave, vars);
+  const val = CATALOGO[idioma]?.[chave];
+  return aplicar(val != null && val !== '' ? val : chave, vars); // fallback = PT-BR (a chave)
+}
+
+// t() NÃO-reactivo (para código fora de componentes React). Lê o idioma guardado.
+export function tGlobal(chave, vars) {
+  return traduzir(idiomaInicial(), chave, vars);
+}
+
+// ── Retrocompatibilidade com o i18n antigo (não quebrar o que já importa) ──
+export function getIdioma() { return idiomaInicial(); }
+export function t(chave, vars) { return tGlobal(chave, vars); }
+// setIdioma legado: guarda + reload. O I18nContext oferece a troca SEM reload
+// (useI18n().setIdioma); este export é a ponte até os ecrãs passarem a usá-lo.
+export function setIdioma(id) {
+  guardarIdiomaLocal(id);
+  try { window.location.reload(); } catch { /* */ }
 }

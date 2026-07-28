@@ -6,6 +6,7 @@ import { apiFetch } from '../lib/api';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import { CampeonatoTabela, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
+import SeletorIdiomaDiscreto from '../components/SeletorIdiomaDiscreto';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -24,7 +25,8 @@ export default function CampeonatoPublico() {
   }, [slug, id]);
 
   return (
-    <div className="app-shell" style={{ minHeight: '100svh' }}>
+    <div className="app-shell" style={{ minHeight: '100svh', position: 'relative' }}>
+      <SeletorIdiomaDiscreto style={{ position: 'absolute', top: 10, right: 14, zIndex: 5 }} />
       <AuroraHeader nome={data?.equipa?.nome} />
       <main className="app-main" style={{ padding: '10px 14px 40px', maxWidth: 460, margin: '0 auto' }}>
         {erro ? (
