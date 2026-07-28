@@ -316,3 +316,10 @@ sempre sobre o resultado persistido (a SEQUÊNCIA não era reproduzível — Mat
     `#device` (reservada no browser desktop) a comer o espaço à direita. Fix: esconder a barra
     (telemóvel real usa overlay). Cotas (borda-luzes-esq → ponta-alavanca): **ANTES esq 12 /
     dir 25 (desvio 13 à direita) → DEPOIS esq 19 / dir 17 (centrado)**. Conjunto = 318px.
+
+## MODO CAMPO — REMOVIDO (registado 28 jul 2026, ordem do dono)
+O toggle "Lista | Campo" na página do Jogo (e o componente `CampoSorteio.jsx`) era o
+**protótipo de cartaz abortado** de uma fase antiga do sorteio — sobreviveu no app depois
+de o resto ter mudado para a máquina v8.25 selada. **Removido**: fica SÓ a vista oficial
+(`DrawnTeams`, a lista). **Modelos alternativos de cartaz (campo etc.) = FUTUROS**,
+desenhados pelo Fable quando o dono pedir — não é para reintroduzir sem essa ordem.

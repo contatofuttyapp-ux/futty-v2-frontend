@@ -8,7 +8,6 @@ import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import DrawnTeams from '../components/DrawnTeams';
-import CampoSorteio from '../components/CampoSorteio';
 import ResultadoEditor from '../components/ResultadoEditor';
 import TimesEditor from '../components/TimesEditor';
 import CountdownSorteio from '../components/CountdownSorteio';
@@ -66,7 +65,6 @@ export default function Jogo() {
   const [jogadoresPorTime, setJogadoresPorTime] = useState(null); // selector do sorteio (null = usa o do jogo)
   const [convidados, setConvidados] = useState([]); // SPEC-SORTEIO §11: nomes sem app
   const [novoConvidado, setNovoConvidado] = useState('');
-  const [vistaCampo, setVistaCampo] = useState(false); // resultado: lista (false) | campo (true)
   const [toast, setToast] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'cancelar-presenca' | 'campeonato' | null
   const [criandoCamp, setCriandoCamp] = useState(false);
@@ -483,38 +481,17 @@ export default function Jogo() {
                   />
                 ) : (
                   <>
-                    {/* Toggle Lista | Campo */}
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                      <button type="button" className={`btn btn--sm ${!vistaCampo ? 'btn--primary' : 'btn--ghost'}`} aria-pressed={!vistaCampo} onClick={() => setVistaCampo(false)}>
-                        ≡ Lista
-                      </button>
-                      <button type="button" className={`btn btn--sm ${vistaCampo ? 'btn--primary' : 'btn--ghost'}`} aria-pressed={vistaCampo} onClick={() => setVistaCampo(true)}>
-                        Campo
-                      </button>
-                      {isAdmin ? (
+                    {isAdmin ? (
+                      <div style={{ display: 'flex', marginBottom: 12 }}>
                         <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }} onClick={partilharLink}>
                           Compartilhar
                         </button>
-                      ) : null}
-                    </div>
-
-                    {vistaCampo ? (
-                      <>
-                        <CampoSorteio
-                          timeA={game.times_resultado.times?.[0]?.jogadores || []}
-                          timeB={game.times_resultado.times?.[1]?.jogadores || []}
-                          nomeA={game.times_resultado.times?.[0]?.nome || 'Time A'}
-                          nomeB={game.times_resultado.times?.[1]?.nome || 'Time B'}
-                        />
-                        {(game.times_resultado.times?.length || 0) > 2 ? (
-                          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                            A visão de campo mostra os 2 primeiros times. Veja todos na Lista.
-                          </p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} />
-                    )}
+                      </div>
+                    ) : null}
+                    {/* Vista oficial (a única) — o modo Campo era protótipo abortado de
+                        cartaz alternativo; morreu aqui. Modelos alternativos futuros =
+                        SPEC-SORTEIO, desenhados pelo Fable quando o dono pedir. */}
+                    <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} />
                   </>
                 )}
               </div>
