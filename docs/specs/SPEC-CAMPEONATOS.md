@@ -100,3 +100,55 @@
 - A página actual migra na transversal (lote 5) e torna-se a casa disto:
   header do campeonato → tabela/bracket (vidro 45°) → rodadas → registo de resultado
   (admin) → celebração do campeão.
+
+## CAMPEONATO A PARTIR DE TIMES SORTEADOS (spec registada 27 jul 2026 — vaga de funcionalidade, não design)
+**Pergunta:** dá para criar um campeonato reusando os times que saíram de um sorteio?
+
+**Estado HOJE (medido no código):**
+- (a) **Não há caminho de reuso.** O `times_resultado` de um sorteio é usado no Jogo/Sorteio/
+  Admin (mostrar/editar/partilhar), mas **nunca** alimenta a criação de campeonato. Não existe
+  botão nem endpoint "criar campeonato com os times deste sorteio".
+- (b) **A porta de times pré-formados JÁ EXISTE, mas é preenchida à mão.** O `POST
+  /api/equipas/:slug/campeonatos` no modo `manual` aceita `plantel[i]` (jogadores por time);
+  o wizard (`Campeonato.jsx` + `ComporTimes`) envia esse `plantel` — mas composto **à mão** pelo
+  admin, não importado de um sorteio.
+- (c) **Estruturas COMPATÍVEIS (não idênticas).** Sorteio: `times[i] = [{user_id, nome, rating,
+  goleiro, cabeca_chave, avatar_url, convidado}]`. Campeonato: `{id, nome, cor, jogadores:
+  [{user_id, nome, avatar_url, convidado}]}`. O jogador do campeonato é um **subconjunto** do do
+  sorteio (larga rating/goleiro/cabeça). As **cores do campeonato já são a paleta selada**
+  (`ouro #d4a017 · roxo #8b5cf6 · prata #aab4c8 · bronze #c2652e`, por índice) — a mesma identidade
+  do sorteio. Logo, **não é preciso formato novo**: um adaptador pequeno mapeia time-de-sorteio → plantel.
+
+**FLUXO A CONSTRUIR — "Criar campeonato com os times deste sorteio":**
+1. Num Jogo com **3+ times sorteados** (`times_resultado.numTimes >= 3`), um botão **"Criar
+   campeonato com estes times"** (admin) leva ao wizard do campeonato **com os times JÁ PREENCHIDOS**:
+   nomes + jogadores + cores ouro/roxo/prata/bronze (por índice, a paleta selada).
+2. O admin **só escolhe o formato** (pontos corridos / mata-mata) e **confirma**. Nada de montar de raiz.
+3. **Reuso:** o adaptador converte `times_resultado.times` → `nomes[]` (MARCA_TIME do sorteio) +
+   `plantel[]` (map dos jogadores, largando os campos extra) → `POST …/campeonatos {modo:'manual',
+   formato, nomes, plantel}`. Reaproveita `ComporTimes`/estrutura existente (times já preenchidos,
+   editáveis antes de confirmar).
+4. **Limites:** campeonato aceita **2–8 times** (`MIN_TIMES`/`MAX_TIMES`). Se o sorteio tiver >8,
+   avisar/cortar. Botão só aparece com 3+ (com 2 é um jogo único, não um campeonato).
+5. **Identidade = paleta selada** (não reescala nem inventa cores). Ranking da equipa intocado.
+
+**Fase:** vaga de FUNCIONALIDADE (não design). Implementar quando o PT-BR e as vagas em curso
+fecharem — ou antes, por ordem expressa. Não agora.
+
+## CONFIG DE STATS POR CAMPEONATO (spec registada 28 jul 2026 — vaga futura)
+Hoje o campeonato só regista **placar** (P/J/V/E/D/GP:GC/SG). Vaga futura: o admin liga/
+desliga, **por campeonato**, os eixos extra — golos por jogador, artilharia, destaque —
+**herdando o default da equipa** (a flag `teams.mostrar_gols` já existe; o campeonato ganha
+o seu próprio toggle, começando igual ao da equipa mas podível de divergir — ex.: liga
+artilharia só na final). Sem isto, o campeonato não tem "artilheiro do campeonato" nem
+"melhor em campo" — só quem ganhou o confronto.
+
+## CAMPEONATO HISTÓRICO / RETROATIVO (spec registada 28 jul 2026 — ordem expressa do dono, vaga futura)
+Espelha o **Jogo manual/retroativo** (SPEC-JOGO-RETROATIVO): permitir lançar um campeonato
+que já aconteceu **antes do Futty existir** — datas passadas, confrontos e resultados
+digitados à mão, sem sorteio nem cerimónia. Serve para o **mural de campeões antigos**: uma
+pelada que já teve 5 campeonatos ao longo dos anos consegue trazer essa história para o app,
+não só o que nasce daqui para a frente. Reusa `store.criar()` no modo manual (já suporta
+plantel à mão) — falta só a UI de "criar no passado" (datas retroativas, sem cerimónia) e o
+selo de "histórico" (como o jogo manual/histórico já tem, silencioso). **Não implementar sem
+ordem** — registado para quando a vaga for priorizada.

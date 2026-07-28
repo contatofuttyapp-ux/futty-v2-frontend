@@ -68,7 +68,25 @@ export default function Jogo() {
   const [novoConvidado, setNovoConvidado] = useState('');
   const [vistaCampo, setVistaCampo] = useState(false); // resultado: lista (false) | campo (true)
   const [toast, setToast] = useState(null);
-  const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'cancelar-presenca' | null
+  const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'cancelar-presenca' | 'campeonato' | null
+  const [criandoCamp, setCriandoCamp] = useState(false);
+
+  // Campeonato a partir dos times sorteados (SPEC-CAMPEONATOS): o admin só escolhe
+  // o formato — nomes/plantéis vêm do adaptador no servidor (times_resultado → campeonato).
+  async function criarCampeonatoDeSorteio(formato) {
+    setCriandoCamp(true);
+    try {
+      const data = await apiFetch(`/api/equipas/${slug}/campeonatos/de-sorteio`, {
+        method: 'POST',
+        body: JSON.stringify({ game_id: id, formato }),
+      });
+      navigate(`/equipa/${slug}/campeonato/${data.campeonato.id}`);
+    } catch (err) {
+      setToast({ tipo: 'error', mensagem: err.message });
+      setCriandoCamp(false);
+      setConfirmacao(null);
+    }
+  }
 
   // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
   async function runAction(path, body) {
@@ -420,7 +438,33 @@ export default function Jogo() {
                   Ajustar times
                 </button>
               )}
+              {isAdmin && timesSorteio.length >= 3 && confirmacao !== 'campeonato' && (
+                <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setConfirmacao('campeonato')}>
+                  Criar campeonato com estes times
+                </button>
+              )}
             </div>
+
+            {/* Campeonato a partir do sorteio: só o formato — plantéis já vêm prontos. */}
+            {isAdmin && confirmacao === 'campeonato' && (
+              <div style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginTop: 10, borderColor: 'rgba(139,92,246,0.4)' }}>
+                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: '#c9b6ff' }}>Criar campeonato com estes times</div>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>
+                  Os {Math.min(timesSorteio.length, 8)} times e jogadores deste sorteio entram já preenchidos. Escolha o formato:
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => criarCampeonatoDeSorteio('pontos')} disabled={criandoCamp}>
+                    {criandoCamp ? 'Criando…' : 'Pontos corridos'}
+                  </button>
+                  <button type="button" className="btn btn--sm hud-corners-s" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase', borderColor: 'rgba(139,92,246,0.5)', color: '#c9b6ff' }} onClick={() => criarCampeonatoDeSorteio('mata')} disabled={criandoCamp}>
+                    {criandoCamp ? 'Criando…' : 'Mata-mata'}
+                  </button>
+                  <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setConfirmacao(null)} disabled={criandoCamp}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
             {!isAdmin && !game.sorteio_realizado && <p className="muted">O sorteio ainda não foi realizado.</p>}
 
             {game.times_resultado && (
