@@ -5,9 +5,10 @@
 
 ## (a) Papéis (LGPD)
 - **O dono do Futty é o CONTROLADOR** — decide o quê e porquê se tratam os dados.
-- **Operadores (subcontratantes):** Supabase, Railway, Vercel, fal.ai, Stripe, Anthropic. Tratam
-  dados **por ordem** do controlador. **Alojar noutro sítio NÃO transfere a responsabilidade** —
-  o controlador responde sempre perante o utilizador.
+- **Operadores (subcontratantes):** Supabase, Railway, Vercel, fal.ai, Anthropic, e as **lojas**
+  (Apple/Google, via IAP — ver SPEC-INFRA). Tratam dados **por ordem** do controlador. **Alojar
+  noutro sítio NÃO transfere a responsabilidade** — o controlador responde sempre perante o
+  utilizador. (Stripe foi **removido** — pagamentos passam a ser só IAP das lojas.)
 
 ## (b) Acesso real de cada operador (princípio do mínimo)
 | Operador | O que vê | O que NÃO vê |
@@ -15,7 +16,7 @@
 | **Supabase** | **Tudo** (é a base de dados + auth + storage) | — (é a fonte; protege-se com RLS/buckets privados) |
 | **fal.ai** | Só a **foto enviada no momento** da geração de avatar | Resto do perfil, jogos, mensagens |
 | **Anthropic** | Só o **conteúdo denunciado** em triagem | Identidade do denunciante/alvo, resto da app |
-| **Stripe** | **Pagamentos** (cartão fica no Stripe) | O **dono NUNCA vê cartões**; a app só recebe estado |
+| **Apple / Google (IAP)** | **Pagamentos da assinatura** (cartão fica na loja) | O **dono NUNCA vê cartões**; a app só recebe o estado do plano |
 | **Railway / Vercel** | **Execução e tráfego** (logs técnicos) | Não é destino de dados de negócio |
 | **O DONO (Gabinete)** | Só **agregados** (números/gráficos) | **Lei do dono cego:** zero conteúdo/identidade |
 

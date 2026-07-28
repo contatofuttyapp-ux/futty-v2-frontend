@@ -1,17 +1,15 @@
 // Futty v2.0 — Planos (/planos): Free / Pro / Elite lado a lado.
-// Botões "Assinar" abrem o Checkout do Stripe; ?sucesso=1 confirma o pagamento.
-import { useEffect, useState } from 'react';
+// Pagamentos = SÓ via IAP das lojas (Apple/Google) — decisão final do dono (SPEC-INFRA).
+// Stripe foi removido; os botões mostram um lugar digno "em breve" até a vaga "App nas lojas".
+import { useState } from 'react';
 import { Check } from 'lucide-react';
-import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import Topbar from '../components/Topbar';
-import Toast from '../components/Toast';
 import Icon from '../components/Icon';
 import '../styles/app.css';
 
-// Preço por MOEDA — nunca as duas em simultâneo. A escolha segue a mesma regra do
-// checkout (pt-BR → BRL, restantes → EUR). Os valores BRL mostram-se na UI mesmo que
-// o price ID do Stripe ainda seja placeholder; só o checkout precisa do ID real.
+// Preço por MOEDA — nunca as duas em simultâneo. Os valores mostram o preço-alvo;
+// a cobrança real será via IAP da loja (App Store/Play), a definir na vaga "App nas lojas".
 const PLANOS = [
   {
     id: 'free',
@@ -64,46 +62,10 @@ const PLANOS_PARTICULAS = [
 ];
 
 export default function Planos() {
-  const { data: me, reload } = useApi('/api/me');
+  const { data: me } = useApi('/api/me');
   const planoAtual = me?.user?.plan || 'free';
-  const [planoBusy, setPlanoBusy] = useState(null);
   // Moeda única, decidida uma vez. Ler navigator durante o render é impuro → initializer.
-  // Mesma regra usada no checkout, para o preço mostrado e o cobrado nunca divergirem.
   const [moeda] = useState(() => (navigator.language === 'pt-BR' ? 'BRL' : 'EUR'));
-  // Deteta o regresso do checkout (?sucesso=1) já no estado inicial do toast.
-  const [toast, setToast] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('sucesso') === '1'
-      ? { tipo: 'success', mensagem: 'Pagamento confirmado! Seu plano será ativado em instantes.' }
-      : null;
-  });
-
-  // Após o sucesso: limpa o ?sucesso=1 da URL e refaz o fetch do plano
-  // (o webhook pode demorar uns segundos a processar).
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('sucesso') !== '1') return undefined;
-    window.history.replaceState({}, '', '/planos');
-    reload();
-    const t = setTimeout(() => reload(), 3000);
-    return () => clearTimeout(t);
-  }, [reload]);
-
-  async function assinar(plan) {
-    if (planoBusy) return;
-    setPlanoBusy(plan);
-    try {
-      // Mesma `moeda` que o UI mostra → preço exibido == preço cobrado.
-      const data = await apiFetch('/api/stripe/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ plan, moeda }),
-      });
-      window.location.assign(data.url); // redireciona para o Stripe
-    } catch (err) {
-      setToast({ tipo: 'error', mensagem: err?.message || 'Não foi possível iniciar o pagamento.' });
-      setPlanoBusy(null);
-    }
-  }
 
   return (
     <div className="app-shell">
@@ -206,38 +168,25 @@ export default function Planos() {
                   ))}
                 </ul>
 
-                {/* Botão de checkout — escondido no plano actual (já tem o badge).
-                    Hierarquia da Figurinha: o CTA principal (Pro, o do ★) leva o
-                    gradiente dourado + texto escuro; os restantes ficam em outline
-                    roxo recuado. Lógica de checkout inalterada. */}
+                {/* Pagamentos = só via IAP das lojas (decisão do dono, SPEC-INFRA).
+                    Lugar digno em vez de botão morto — sem CTA clicável até a vaga
+                    "App nas lojas" ligar o IAP real. Escondido no plano actual. */}
                 {p.botao && !atual ? (
-                  p.id === 'pro' ? (
-                    // FASE 3.47 — CTA dourado partilhado com o "Compartilhar" da
-                    // Figurinha: gradiente, texto, altura, glow e shine vivem em
-                    // .cta-gold/.cta-gold-glow (app.css). O glow deixou de pulsar; o
-                    // card herói mantém o bob+sway, que continuam a dar-lhe hierarquia.
-                    <div className="cta-gold-glow" style={{ display: 'flex' }}>
-                      <button
-                        type="button"
-                        className="btn hud-corners cta-gold"
-                        style={{ width: '100%' }}
-                        disabled={!!planoBusy}
-                        onClick={() => assinar(p.id)}
-                      >
-                        {planoBusy === p.id ? 'Redirecionando…' : p.botao}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn--purple-outline hud-corners"
-                      style={{ width: '100%', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)' }}
-                      disabled={!!planoBusy}
-                      onClick={() => assinar(p.id)}
-                    >
-                      {planoBusy === p.id ? 'Redirecionando…' : p.botao}
-                    </button>
-                  )
+                  <div
+                    className="hud-corners"
+                    style={{
+                      width: '100%',
+                      textAlign: 'center',
+                      padding: '10px 12px',
+                      fontSize: 12.5,
+                      lineHeight: 1.4,
+                      color: 'rgba(255,255,255,0.55)',
+                      border: '1.2px dashed rgba(255,255,255,0.18)',
+                      background: 'rgba(255,255,255,0.02)',
+                    }}
+                  >
+                    Assinatura disponível no app das lojas <b style={{ color: 'rgba(255,255,255,0.7)' }}>(em breve)</b>
+                  </div>
                 ) : null}
               </div>
             );
@@ -263,8 +212,6 @@ export default function Planos() {
           })}
         </div>
       </main>
-
-      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
   );
 }

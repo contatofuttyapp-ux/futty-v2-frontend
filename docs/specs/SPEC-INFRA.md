@@ -66,3 +66,22 @@ a uma origem e a um plano (grátis).
 ## Ganho
 - Railway €/mês → **€0** (dentro do free tier da Vercel), uma só plataforma,
   um só deploy. Sem alterar a lógica de negócio — só o invólucro de arranque.
+
+## PAGAMENTOS — decisão final do dono (registada 28 jul 2026)
+**Pagamentos = exclusivamente IAP Apple/Google (App Store / Play Store).** Decisão
+final do dono; Stripe foi **removido** do código (checkout + webhook), não pausado —
+não há intenção de voltar a ligá-lo. A comissão das lojas (15% small-business tier,
+30% acima do limiar) é **aceite** como custo de fazer negócio nessas plataformas.
+
+- **O que sai:** `routes/stripe.js` (checkout + webhook), montagem no `server.js`,
+  dependência `stripe` no `package.json`, botão "Assinar" em `/planos`.
+- **O que fica intocado:** o sistema de **Planos** (Free/Pro/Elite), a coluna
+  `users.plan`, os gates premium (`FUNDOS_PREMIUM`, limites de avatar IA por plano) —
+  é exactamente isso que o IAP vai vender. `/planos` mostra os 3 planos com um lugar
+  digno "assinatura disponível no app das lojas (em breve)" em vez de botão morto.
+- **Nota (lojas secundárias):** existe a alternativa de lojas Android secundárias
+  (fora da Play Store, em alguns mercados) — **ignorada por decisão do dono**; as duas
+  lojas principais (Apple + Google) cobrem o mercado-alvo.
+- **Vaga futura "App nas lojas":** é onde o IAP real se liga (StoreKit/Billing,
+  webhook de servidor→servidor de cada loja a atualizar `users.plan`), o Gabinete→
+  Receita ganha números reais, e o botão de `/planos` passa a fazer algo.
