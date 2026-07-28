@@ -917,9 +917,10 @@ export default function Figurinha() {
 
           {/* Painel da tab activa */}
           {activeTab === 'fundo' ? (
-            // Tiles do mesmo tamanho dos kits (¼ da largura); linha de 3 centrada.
-            // Container a 85% → tiles ~15% mais pequenos, centrados.
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, rowGap: 10, width: '85%', margin: '0 auto' }}>
+            // UMA linha só, scroll horizontal (nunca 2 linhas — ordem do dono). Tiles
+            // com largura FIXA (não fração do container) para não encolher/quebrar;
+            // scroll-snap para o gesto de arrastar assentar num tile de cada vez.
+            <div style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: 10, padding: '2px 6px 8px', margin: '0 auto', maxWidth: '100%', scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
                 // Cadeado premium (mesma regra dos kits): fundo premium + plano não pago.
@@ -932,7 +933,8 @@ export default function Figurinha() {
                     onClick={() => escolherFundo(f.k)}
                     aria-pressed={sel}
                     style={{
-                      flex: '0 0 calc((100% - 24px) / 4)',
+                      flex: '0 0 76px',
+                      scrollSnapAlign: 'center',
                       display: 'grid',
                       gap: 4,
                       padding: 0,
