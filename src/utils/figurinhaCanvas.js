@@ -1,6 +1,6 @@
 // Futty v2.0 — Geração da figurinha (PNG via canvas). Card 2:3 (base 400×600) e
 // versão Story 9:16 (1080×1920) para o Instagram. Tudo no cliente, sem servidor.
-import { urlAsset, nomeJogador, gradienteAvatar } from './avatar';
+import { urlAsset, nomeJogador } from './avatar';
 import { getFrameColor } from './frameColors';
 
 // Carrega uma imagem; devolve null se falhar (evita tainting do canvas).
@@ -695,17 +695,19 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   } else if (avatar) {
     desenharAvatar();
   } else {
-    const { a, b } = gradienteAvatar(nome);
-    const grd = ctx.createLinearGradient(0, H * 0.3, 0, H);
-    grd.addColorStop(0, a);
-    grd.addColorStop(1, b);
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, H * 0.3, W, H * 0.7);
+    // Sem foto: NÃO tapar o fundo escolhido (dourado/aura/épico…) com um retângulo
+    // opaco — a Figurinha mostra o fundo premium por inteiro nesta situação; o
+    // card do Início tem de bater certo (mesmo render/asset). Só as iniciais, com
+    // sombra para legibilidade em qualquer fundo — sem pintar por cima dele.
+    ctx.save();
     ctx.font = `bold ${72 * k}px Rajdhani, sans-serif`;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 14 * k;
     ctx.fillText(nome.slice(0, 2).toUpperCase(), W / 2, H * 0.62);
+    ctx.restore();
   }
 
   // 4. GRADIENTE INFERIOR (depois do avatar). No card é suave (0.72) porque a placa
