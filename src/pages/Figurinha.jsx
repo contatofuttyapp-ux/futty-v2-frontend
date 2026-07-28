@@ -167,6 +167,7 @@ export default function Figurinha() {
   const [gerandoIA, setGerandoIA] = useState(false);
   const [limiteIA, setLimiteIA] = useState(false);
   const [erroIA, setErroIA] = useState(false); // falha da geração (≠ 403) → estado de erro no overlay
+  const [erroIAmsg, setErroIAmsg] = useState(''); // mensagem específica (ex.: foto inválida); vazio = texto genérico
   const [modalFoto, setModalFoto] = useState(false); // modal "A tua foto" (foto actual + estado IA + carregar nova)
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
@@ -448,6 +449,7 @@ export default function Figurinha() {
     setErro('');
     setLimiteIA(false);
     setErroIA(false);
+    setErroIAmsg('');
     try {
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit }) });
       // Guarda o avatar, o kit vestido e regista o slot novo (sem duplicar).
@@ -459,7 +461,13 @@ export default function Figurinha() {
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
     } catch (err) {
       if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano → card de quota
-      else setErroIA(true); // qualquer outra falha → estado de erro com retry no overlay
+      else {
+        // FOTO_INVALIDA: causa acionável (a foto guardada não pôde ser processada) —
+        // mensagem digna em vez do genérico "não deu desta vez". Resto (fal fora do
+        // ar, etc.) mantém o genérico com retry, que já cobre bem o transitório.
+        if (err?.code === 'FOTO_INVALIDA') setErroIAmsg(err.message);
+        setErroIA(true); // qualquer falha → estado de erro com retry no overlay
+      }
     } finally {
       setGerandoIA(false);
     }
@@ -565,7 +573,7 @@ export default function Figurinha() {
           {/* LEI DO F: logo oficial transparente (FuttyLogo SVG), estático no erro.
               O antigo /futty-logo-metallic.png (fundo preto sólido) está BANIDO. */}
           <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Não deu desta vez. Tente de novo.</span>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{erroIAmsg || 'Não deu desta vez. Tente de novo.'}</span>
           <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={gerarAvatarIA}>
             Tentar novamente
           </button>
