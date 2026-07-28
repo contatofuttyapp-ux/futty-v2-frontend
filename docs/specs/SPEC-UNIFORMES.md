@@ -80,3 +80,15 @@
   **filtro** + **termo de 1 clique**) → a IA converte → vira o **"Kit da equipa"** para
   todos os membros. **Gating premium.** No nível **individual**, só o **catálogo da casa**
   — **zero marcas de terceiros** no cromo individual.
+
+## UNIFORME DA EQUIPA — QUEM PAGA E A VALIDAÇÃO (spec registada 28 jul 2026)
+- **Quem paga:** o uniforme próprio da equipa (item c acima) é pago pelo **admin**, em
+  **créditos por geração**, à razão de **~1 crédito por jogador** da equipa (o kit tem de
+  vestir todo mundo — o custo escala com quem o usa, não é um preço fixo). O admin vê o
+  custo em créditos ANTES de confirmar o upload.
+- **Validação por IA da foto ANTES de gastar créditos:** a foto da camisa real sobe primeiro
+  a um passo de **validação** (é uma camisa? dá para reconhecer padrão/cores? não é uma foto
+  de outra coisa por engano?) — só se passar é que a geração real corre e os créditos são
+  debitados. Foto fraca/irreconhecível → mensagem digna **"Manda outra foto"** (na linguagem
+  da recusa NSFW: fala da IMAGEM, nunca da pessoa) — **sem cobrar** nada nessa tentativa.
+  Isto evita o pior cenário: admin gasta créditos numa geração ruim porque a foto não prestava.
