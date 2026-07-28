@@ -6,6 +6,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
+import { useAuth } from '../hooks/useAuth';
+import { apiFetch } from '../lib/api';
 import SeloHonra from '../components/SeloHonra';
 import { urlAsset } from '../utils/avatar';
 import Topbar from '../components/Topbar';
@@ -99,6 +101,8 @@ function CountUp({ end, decimals = 0, prefix = '', className, style }) {
 export default function JogadorPerfil() {
   const { slug, userId } = useParams();
   const [searchParams] = useSearchParams();
+  const { user: eu } = useAuth();
+  const [bloqueado, setBloqueado] = useState(false);
   const { data, loading, error } = useApi(`/api/teams/${slug}/jogador/${userId}`);
   const { data: selosData } = useApi(`/api/equipas/${slug}/jogador/${userId}/selos`);
   const selos = selosData?.selos || [];
@@ -179,9 +183,31 @@ export default function JogadorPerfil() {
     { label: 'Notas', value: radar.notas },
   ].filter((e) => e.value != null) : [];
 
+  async function bloquear() {
+    if (!window.confirm(`Bloquear ${nomeShow}? Você deixa de ver o conteúdo dele/a, e ele/a deixa de ver o seu.`)) return;
+    await apiFetch('/api/blocks', { method: 'POST', body: JSON.stringify({ blocked_id: userId }) });
+    setBloqueado(true);
+  }
+
   return (
     <div className="app-shell page-reveal" style={{ '--vitrine': ROXO }}>
       <Topbar hud="PERFIL" back={`/equipa/${slug}/ranking`} />
+
+      {eu && eu.id !== userId ? (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 16px 0' }}>
+          {bloqueado ? (
+            <span style={{ fontSize: 12, color: '#7bd88f', fontWeight: 700 }}>Bloqueado ✓</span>
+          ) : (
+            <button
+              type="button"
+              onClick={bloquear}
+              style={{ background: 'none', border: 'none', color: '#fda4af', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '4px 6px' }}
+            >
+              Bloquear jogador
+            </button>
+          )}
+        </div>
+      ) : null}
 
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {error ? (

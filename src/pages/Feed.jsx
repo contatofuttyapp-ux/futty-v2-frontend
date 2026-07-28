@@ -414,7 +414,7 @@ function VideoLinkCard({ video }) {
   );
 }
 
-function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImage, index = 0 }) {
+function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImage, onBloquear, index = 0 }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const videoLink = detectarVideoLink(p.body);
   // Com card de vídeo, o URL não aparece no corpo (strip só na EXIBIÇÃO; body
@@ -473,6 +473,19 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
                       Denunciar
                     </button>
                   )
+                ) : null}
+                {podeDenunciar ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuAberto(false);
+                      if (!window.confirm(`Bloquear ${p.author_nome || 'este jogador'}? Você deixa de ver o conteúdo dele/a, e ele/a deixa de ver o seu.`)) return;
+                      onBloquear?.(p.author_id);
+                    }}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fda4af', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                  >
+                    Bloquear jogador
+                  </button>
                 ) : null}
                 {podeApagar ? (
                   <button
@@ -866,6 +879,13 @@ export default function Feed() {
     };
   }, []);
 
+  // Bloqueio entre jogadores (Apple UGC 1.2): remove localmente todo o conteúdo
+  // dessa pessoa (o servidor já filtra desde já para pedidos futuros).
+  async function bloquear(userId) {
+    await apiFetch('/api/blocks', { method: 'POST', body: JSON.stringify({ blocked_id: userId }) });
+    setItems((prev) => (prev || []).filter((i) => i.author_id !== userId));
+  }
+
   // Equipas onde o utilizador pode publicar (admin OU pode_postar).
   const equipasParaPostar = useMemo(() => teams.filter((t) => t.role === 'admin' || t.pode_postar), [teams]);
   const podeCriar = equipasParaPostar.length > 0;
@@ -959,6 +979,7 @@ export default function Feed() {
                     meId={meId}
                     onDelete={apagarPost}
                     onOpenImage={setImgFull}
+                    onBloquear={bloquear}
                     index={i}
                   />
                 ) : (

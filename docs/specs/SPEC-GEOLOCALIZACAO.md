@@ -42,10 +42,10 @@
 - Posição de utilizadores · morada exata de equipas · histórico de localizações · coordenadas
   finas (só o arredondado ~1 km).
 
-## (d) SQL da migração — 041 (correr à mão)
+## (d) SQL da migração — 042 (correr à mão)
 ```sql
 -- =====================================================================
--- Futty v2.0 — Migração 041: geolocalização de EQUIPAS (busca por distância).
+-- Futty v2.0 — Migração 042: geolocalização de EQUIPAS (busca por distância).
 -- Só a EQUIPA tem localização, OPT-IN pelo admin, coordenadas ARREDONDADAS ~1 km
 -- (o servidor arredonda antes de gravar — a morada real nunca entra). Só equipas
 -- PÚBLICAS com geo entram na busca. ZERO localização de pessoas.

@@ -76,6 +76,10 @@ export default function MeuPerfil() {
   const [perfil, setPerfil] = useState(null); // { user, stats }
   const [erro, setErro] = useState('');
   const [toast, setToast] = useState(null);
+  // Bloqueio entre jogadores (Apple UGC 1.2): lista de quem EU bloqueei.
+  const { data: blocksData, reload: reloadBlocks } = useApi('/api/blocks');
+  const bloqueados = blocksData?.bloqueados || [];
+  const [desbloqueandoId, setDesbloqueandoId] = useState(null);
   // avatarAberto e avatarBusy saíram com a galeria: o primeiro era o disclosure que
   // a escondia, o segundo o "wait" das miniaturas enquanto o PATCH corria.
   const [savingDados, setSavingDados] = useState(false);
@@ -95,6 +99,20 @@ export default function MeuPerfil() {
 
   function showToast(mensagem, tipo = 'success') {
     setToast({ mensagem, tipo });
+  }
+
+  // Desbloquear: o conteúdo dessa pessoa volta a aparecer na Resenha (dos dois lados).
+  async function desbloquear(id) {
+    setDesbloqueandoId(id);
+    try {
+      await apiFetch(`/api/blocks/${id}`, { method: 'DELETE' });
+      await reloadBlocks();
+      showToast('Jogador desbloqueado.');
+    } catch (e) {
+      showToast(e.message || 'Não foi possível desbloquear.', 'error');
+    } finally {
+      setDesbloqueandoId(null);
+    }
   }
 
   // Idioma — reativo (I18nContext): troca SEM reload, guarda a preferência.
@@ -372,6 +390,37 @@ export default function MeuPerfil() {
             />
           </div>
         </div>
+
+        {/* Jogadores bloqueados (Apple UGC 1.2): lista de quem EU bloqueei, com
+            desbloquear. Bloquear em si vive no menu do post (Resenha) e no perfil
+            público do jogador — aqui é só a gestão da lista já feita. */}
+        {bloqueados.length > 0 ? (
+          <div className="hud-corners" style={{ ...CARD, overflow: 'hidden', marginTop: 10 }}>
+            {bloqueados.map((b, i) => (
+              <div
+                key={b.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  padding: '12px 16px',
+                  borderBottom: i < bloqueados.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>{b.nome}</span>
+                <button
+                  type="button"
+                  disabled={desbloqueandoId === b.id}
+                  onClick={() => desbloquear(b.id)}
+                  style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: 12, fontWeight: 700, cursor: desbloqueandoId === b.id ? 'wait' : 'pointer', padding: '4px 6px' }}
+                >
+                  {desbloqueandoId === b.id ? 'A desbloquear…' : 'Desbloquear'}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         {/* 6. SECÇÃO CONTA — no fim: é a zona de sessão, e o "Terminar sessão" é a
             última coisa que se quer encontrar por acidente. As notificações push são
