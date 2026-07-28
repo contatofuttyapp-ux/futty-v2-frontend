@@ -130,11 +130,20 @@ function desenharGlintPico(ctx, cx, cy, r, k) {
   ctx.restore();
 }
 
-// Desenha a chapa GOLDEN + (opcional) os glints NO PICO. `glints:false` deixa só a
-// chapa — usado na camada de fundo do PREVIEW (apenasMoldura), onde a "mina" vive num
-// overlay CSS animado (2-4 acesos). No card completo (download) `glints:true` baka o
-// pico (frame mais rico). O tile do catálogo usa o default (pico). Assíncrono.
-export async function desenharFundoGolden(ctx, W, H, { glints = true } = {}) {
+// Desenha a chapa GOLDEN + poeira de diamante. `glints`:
+//  - 'pico' (default) — os 14 pontos, no pico. Usado no card completo (download):
+//    é um keepsake estático, merece o frame mais rico.
+//  - 'discreto' — 3 pontos fixos (densidade de repouso, como um still da "mina"
+//    viva do studio). Usado no cromo do Início: é um OBJECTO estático (nunca em
+//    camadas, nunca animado — ver Inicio.jsx), mas não pode copiar o pico do
+//    download nem a vitrine do tile; esta é a densidade "a chapa como fica no
+//    card real", nem apagada nem em exibição de montra.
+//  - 'vitrine' — os 14 pontos, boost de tamanho. SÓ o tile do seletor de fundos:
+//    é montra a propósito (ordem do dono), pode exagerar mais que o card real.
+//  - false — nenhum (camada de fundo do PREVIEW da Figurinha; a "mina" vive num
+//    overlay CSS animado ali, 2-4 acesos de cada vez).
+const GOLDEN_GLINTS_DISCRETO = [GOLDEN_GLINTS[2], GOLDEN_GLINTS[7], GOLDEN_GLINTS[10]];
+export async function desenharFundoGolden(ctx, W, H, { glints = 'pico' } = {}) {
   const k = W / 400;
   // base escura por baixo, caso a chapa falhe a carregar (nunca fica buraco).
   const base = ctx.createLinearGradient(0, 0, 0, H);
@@ -147,9 +156,12 @@ export async function desenharFundoGolden(ctx, W, H, { glints = true } = {}) {
     const dw = chapa.naturalWidth * s, dh = chapa.naturalHeight * s;
     ctx.drawImage(chapa, (W - dw) / 2, (H - dh) / 2, dw, dh);
   }
-  // b) poeira de diamante NO PICO (estática no PNG; no preview, glints:false → a
-  //    animação vive no overlay CSS, sem duplicar aqui).
-  if (glints) for (const [xf, yf, r] of GOLDEN_GLINTS) desenharGlintPico(ctx, xf * W, yf * H, r * k, k);
+  // b) poeira de diamante.
+  if (glints) {
+    const pontos = glints === 'discreto' ? GOLDEN_GLINTS_DISCRETO : GOLDEN_GLINTS;
+    const boost = glints === 'vitrine' ? 1.7 : 1;
+    for (const [xf, yf, r] of pontos) desenharGlintPico(ctx, xf * W, yf * H, r * k * boost, k);
+  }
 }
 
 // Fundo "Épico" — honeycomb alinhado ao ângulo do F + monograma como marca de água,
@@ -306,7 +318,7 @@ function desenharUmSelo(cx, x, y, w, tier, label) {
   cx.restore();
 }
 
-async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [] }) {
+async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [], fundoGlints = 'pico' }) {
   const W = largura;
   const H = altura;
   const k = largura / 400;
@@ -651,7 +663,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // GOLDEN premium — chapa foil + poeira de diamante (atrás do avatar). No PREVIEW
     // (apenasMoldura) a chapa entra SEM glints baked → a "mina" vive no overlay animado
     // (z3); no card completo (download) os glints saem NO PICO (frame mais rico).
-    await desenharFundoGolden(ctx, W, H, { glints: !apenasMoldura });
+    await desenharFundoGolden(ctx, W, H, { glints: apenasMoldura ? false : fundoGlints });
   } else {
     const bg = await carregarImagem('/stadium_bg.png', false);
     if (bg) {

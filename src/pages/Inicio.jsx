@@ -402,7 +402,10 @@ export default function Inicio() {
     if (!user) return undefined;
     let vivo = true;
     const jogadorCard = cromoAvatarEhIA ? user : { ...user, avatar_url: null };
-    const opts = { jogador: jogadorCard, fundo: cromoFundo, corFrame: 'dourado', avatarZoom: 1.1, formato: 'quadrado' };
+    // fundoGlints:'discreto' — o cromo do Início é um OBJECTO estático (nunca em
+    // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
+    // download nem a montra do tile do seletor — densidade de repouso própria.
+    const opts = { jogador: jogadorCard, fundo: cromoFundo, corFrame: 'dourado', avatarZoom: 1.1, formato: 'quadrado', fundoGlints: 'discreto' };
     gerarCromoDataURL(opts, `q|${jogadorCard.avatar_url || '-'}|${cromoFundo}|${nome}`)
       .then((url) => { if (vivo) { setCromo(url); setCromoTentado(true); } })
       .catch((e) => { console.error('[cromo]', e); if (vivo) setCromoTentado(true); });

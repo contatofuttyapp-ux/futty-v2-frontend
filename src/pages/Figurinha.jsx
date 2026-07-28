@@ -331,7 +331,8 @@ export default function Figurinha() {
         const cv = document.createElement('canvas');
         cv.width = 120;
         cv.height = 120;
-        await desenharFundoGolden(cv.getContext('2d'), 120, 120);
+        // 'vitrine': montra a propósito (ordem do dono) — mais rica que o card real.
+        await desenharFundoGolden(cv.getContext('2d'), 120, 120, { glints: 'vitrine' });
         if (vivo) setGoldenTile(cv.toDataURL('image/png'));
       } catch { /* fallback: fica o gradiente foil do FUNDO_BG */ }
     })();
