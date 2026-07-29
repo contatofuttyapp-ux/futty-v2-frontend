@@ -35,6 +35,10 @@ function manualChunks(id) {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // host:true = escuta em 0.0.0.0 (além de localhost) — inofensivo pro uso normal
+  // (localhost continua a funcionar igual); é o que deixa o telemóvel na mesma
+  // wifi alcançar o dev server pelo IP da máquina (vaga do celular).
+  server: { host: true },
   build: {
     rollupOptions: {
       output: { manualChunks },
