@@ -30,11 +30,14 @@ const RES_MARCA = { n: 'RESERVA', nome: 'Reserva', c: '#8a90a0', g: 'rgba(138,14
 // Grelhas inteligentes: linhas por tamanho de time — nunca fila única.
 const LINHAS = { 0: [], 1: [1], 2: [2], 3: [3], 4: [2, 2], 5: [3, 2], 6: [3, 3], 7: [4, 3], 8: [4, 4], 9: [3, 3, 3], 10: [4, 3, 3], 11: [4, 4, 3] };
 const ASSET = '/sorteio-assets/';
-// LEI v8.24 — SÓ O BARALHO OFICIAL SELADO gira nos rolos (5 bichos v9 + 4 cartas da casa).
+// LEI v8.25 — SÓ O BARALHO OFICIAL SELADO gira nos rolos: 5 bichos v9 + 4 cartas
+// da casa (baralho final, registado em SPEC-SORTEIO). As 2 cartas-F antigas
+// (dourada C / roxa C especular) morreram — a HÍBRIDA (palco ouro + F ametista)
+// ficou aprovada mas arquivada, não entra aqui (correção do dono).
 const SIMB = [
-  { t: 'av', src: `${ASSET}v9-jacare.png` }, { t: 'cd', src: `${ASSET}vf-ouro-c.png` },
+  { t: 'av', src: `${ASSET}v9-jacare.png` }, { t: 'cd', src: `${ASSET}777-seta-ouro.png` },
   { t: 'av', src: `${ASSET}v9-et.png` }, { t: 'cd', src: `${ASSET}v94-trofeu-c.png` },
-  { t: 'av', src: `${ASSET}v9-onca.png` }, { t: 'cd', src: `${ASSET}vf-roxa-c2.png` },
+  { t: 'av', src: `${ASSET}v9-onca.png` }, { t: 'cd', src: `${ASSET}f-roxa-media.png` },
   { t: 'av', src: `${ASSET}v9-tigre.png` }, { t: 'cd', src: `${ASSET}v94-bola.png` },
   { t: 'av', src: `${ASSET}v9-astronauta.png` },
 ];

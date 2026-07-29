@@ -285,6 +285,17 @@ sempre sobre o resultado persistido (a SEQUÊNCIA não era reproduzível — Mat
 - **LEI (v8.22): página do sorteio = IMERSIVA, SEM Topbar; identidade = F na alavanca +
   placa FUTTY + X de saída.** Não adicionar chrome do app à página sem ordem expressa.
 
+- **v8.25 — baralho final (transplante, 29 jul, ordem do dono):** as 2 cartas-F antigas
+  (dourada C / roxa C especular) **morreram** dos rolos e dos assets. **Baralho oficial
+  selado, 9 símbolos**: 5 bichos v9 (jacaré/ET/onça/tigre/astronauta, intocados) + **troféu
+  ouro** e **bola ouro** (`v94-trofeu-c.png`/`v94-bola.png`, os já selados, sem retoque) +
+  **777 seta ↗ ouro** (`777-seta-ouro.png` — três 7s desenhados à mão no traço do F, fundidos
+  no palco dourado, diagonal em voo/decolagem: 1º baixo/pequeno → 3º alto/grande) + **F-roxa
+  média** (`f-roxa-media.png` — o F oficial fundido no palco roxo aprovado, intensidade
+  média). A **HÍBRIDA** (palco ouro + F em ametista, intensidade intensa) ficou **aprovada
+  mas arquivada** — não entra no baralho por esta correção do dono, guardada pra servir
+  noutro lugar do app no futuro. `roxa-no-ouro` (777 preenchida com material roxo) também
+  fica de fora desta vaga — só entra se o dono pedir "roxa" explicitamente.
 - **v8.24 — cartaz + baralho:** o giro passou a usar **SÓ o baralho oficial selado** (5 bichos
   v9 + 4 cartas F-ouro/F-roxa/troféu/bola); morreram os símbolos antigos (gladiador, ninja,
   "7", "♦", F chapado, troféu-SVG). **Cartaz do sorteio = modelo ÚNICO "Máquina"** (`cartaz.html`):
