@@ -20,11 +20,16 @@ import SilhuetaJogador from '../components/SilhuetaJogador';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
+// GATES CONFIRMADOS (ordem do dono): Aura e Épico viram PREMIUM (mesmo padrão do
+// Golden — verdade no servidor, ver FUNDOS_PREMIUM em backend/routes/auth.js; o
+// `premium: true` aqui é só o cadeado do desejo). Neutro passa a vir ANTES do
+// Épico (o único livre a seguir ao Estádio/Aura). LEI DA REGRA JUSTA: quem já
+// tinha Aura/Épico equipado mantém — o gate só corre ao TROCAR (ver escolherFundo).
 const FUNDOS = [
   { k: 'estadio', label: 'Estádio' },
-  { k: 'aura', label: 'Aura' }, // glow SELADO da vitrine como fundo do cromo — ANTES do Épico
-  { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label novo
+  { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
   { k: 'preto', label: 'Neutro' },
+  { k: 'gradiente', label: 'Épico', premium: true }, // chave interna 'gradiente' (estado), label novo
   { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
 ];
 // Background real de cada fundo (igual ao do PlayerCard) para os tiles.
@@ -933,8 +938,12 @@ export default function Figurinha() {
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
                 // Cadeado premium (mesma regra dos kits): fundo premium + plano não pago.
+                // `!sel` — LEI DA REGRA JUSTA: quem já está equipado neste fundo (ficou de
+                // antes do gate) não vê cadeado no que já é seu; o cadeado é só para quem
+                // tentaria EQUIPAR agora. O gate real (escolherFundo) não muda: ao trocar
+                // pra outro fundo e tentar voltar, sel vira false e o cadeado aparece.
                 const planoUser = me?.user?.plan || 'free';
-                const bloqueado = f.premium && !me?.user?.is_super_admin && !PLANOS_COM_KITS.includes(planoUser);
+                const bloqueado = f.premium && !sel && !me?.user?.is_super_admin && !PLANOS_COM_KITS.includes(planoUser);
                 return (
                   <button
                     key={f.k}
