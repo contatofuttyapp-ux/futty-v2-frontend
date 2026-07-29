@@ -9,7 +9,7 @@ import { apiFetch, apiUpload } from '../lib/api';
 import { nomeJogador, urlAsset } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { getFrameColor } from '../utils/frameColors';
-import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden } from '../utils/figurinhaCanvas';
+import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal } from '../utils/figurinhaCanvas';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
@@ -31,6 +31,7 @@ const FUNDOS = [
   { k: 'preto', label: 'Neutro' },
   { k: 'gradiente', label: 'Épico', premium: true }, // chave interna 'gradiente' (estado), label novo
   { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
+  { k: 'royal', label: 'Royal', premium: true }, // par de luxo do Golden — chapa roxa da casa
 ];
 // Background real de cada fundo (igual ao do PlayerCard) para os tiles.
 const FUNDO_BG = {
@@ -47,6 +48,8 @@ const FUNDO_BG = {
   aura: 'radial-gradient(ellipse 70% 56% at 50% 44%, rgba(212,160,23,0.95) 0%, rgba(212,160,23,0.48) 40%, rgba(212,160,23,0.16) 64%, transparent 92%), linear-gradient(180deg, #0a0a12 0%, #070812 55%, #050609 100%)',
   // 'golden' — FALLBACK (foil dourado) até o render real da chapa ficar pronto (ver `goldenTile`).
   golden: 'linear-gradient(160deg, #b8860b 0%, #e6bd52 28%, #a9760f 54%, #dcab3a 76%, #855a0b 100%)',
+  // 'royal' — FALLBACK (foil roxo) até o render real da chapa ficar pronto (ver `royalTile`).
+  royal: 'linear-gradient(160deg, #4a2f8a 0%, #6f47c9 28%, #3d2670 54%, #5c3aa8 76%, #2a1a4d 100%)',
 };
 const TABS = [
   { k: 'fundo', label: 'Fundo' },
@@ -194,6 +197,7 @@ export default function Figurinha() {
   // Tile do Épico = render REAL do fundo em miniatura (não uma imitação CSS/SVG).
   const [epicoTile, setEpicoTile] = useState(null);
   const [goldenTile, setGoldenTile] = useState(null); // render real do fundo Golden p/ o tile
+  const [royalTile, setRoyalTile] = useState(null); // render real do fundo Royal p/ o tile
   const fileRef = useRef(null);
 
   const jogador = me?.user || {};
@@ -339,6 +343,22 @@ export default function Figurinha() {
         // 'vitrine': montra a propósito (ordem do dono) — mais rica que o card real.
         await desenharFundoGolden(cv.getContext('2d'), 120, 120, { glints: 'vitrine' });
         if (vivo) setGoldenTile(cv.toDataURL('image/png'));
+      } catch { /* fallback: fica o gradiente foil do FUNDO_BG */ }
+    })();
+    return () => { vivo = false; };
+  }, []);
+
+  // Render ÚNICO do tile do Royal (chapa roxa + glints no pico), MESMO pipeline do Golden.
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const cv = document.createElement('canvas');
+        cv.width = 120;
+        cv.height = 120;
+        // 'vitrine': montra a propósito (ordem do dono) — mais rica que o card real.
+        await desenharFundoRoyal(cv.getContext('2d'), 120, 120, { glints: 'vitrine' });
+        if (vivo) setRoyalTile(cv.toDataURL('image/png'));
       } catch { /* fallback: fica o gradiente foil do FUNDO_BG */ }
     })();
     return () => { vivo = false; };
@@ -971,10 +991,12 @@ export default function Figurinha() {
                       position: 'relative',
                       width: '100%',
                       aspectRatio: '1 / 1',
-                      // Épico e Golden mostram o FUNDO REAL renderizado (fallback = gradiente base).
+                      // Épico, Golden e Royal mostram o FUNDO REAL renderizado (fallback = gradiente base).
                       background: f.k === 'golden' && goldenTile
                         ? `url(${goldenTile})`
-                        : f.k === 'gradiente' && epicoTile ? `url(${epicoTile})` : FUNDO_BG[f.k],
+                        : f.k === 'royal' && royalTile
+                          ? `url(${royalTile})`
+                          : f.k === 'gradiente' && epicoTile ? `url(${epicoTile})` : FUNDO_BG[f.k],
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       border: sel ? '2px solid #d4a017' : '1px solid var(--border-subtle)',

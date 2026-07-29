@@ -94,31 +94,42 @@ export function desenharFundoAura(ctx, W, H, ehQuadrado = false) {
   ctx.restore();
 }
 
-// Fundo "GOLDEN" (1º fundo PREMIUM, gated no plano) — a "mina encantada" aprovada
-// (v5): chapa foil dourada (golden-plate.jpg, edição da ref Panini) + poeira de
-// diamante. LEI DO BRILHO DO CROMO: os glints vivem SÓ aqui, na camada do fundo, por
-// isso ficam SEMPRE atrás do avatar (o passo AVATAR é desenhado depois). No PNG estático
-// (download) os glints saem no PICO (frame mais rico) — a animação da mina vive no
-// preview (overlay CSS em Figurinha), nunca por cima do jogador.
+// Fundos PREMIUM em chapa foil (GOLDEN, ROYAL, ...) — MESMO pipeline partilhado
+// (desenharFundoPremium), só muda a chapa/paleta. "mina encantada" aprovada (v5):
+// chapa foil + poeira de diamante/cristal. LEI DO BRILHO DO CROMO: os glints
+// vivem SÓ aqui, na camada do fundo, por isso ficam SEMPRE atrás do avatar (o
+// passo AVATAR é desenhado depois). No PNG estático (download) os glints saem no
+// PICO (frame mais rico) — a animação da mina vive no preview (overlay CSS em
+// Figurinha), nunca por cima do jogador.
 // GLINTS: [xFrac, yFrac, r(px@400)] — densos fora do centro (o avatar tapa o meio).
-const GOLDEN_GLINTS = [
+// Mesmas 14 posições para todas as chapas premium (a "mina" é a mesma; só a cor muda).
+const PREMIUM_GLINTS = [
   [0.10, 0.12, 3.4], [0.23, 0.08, 2.4], [0.50, 0.06, 3.2], [0.72, 0.09, 2.4], [0.89, 0.14, 4.2],
   [0.07, 0.32, 3.2], [0.93, 0.37, 2.4], [0.11, 0.55, 2.4], [0.91, 0.60, 3.2],
   [0.14, 0.82, 3.2], [0.85, 0.85, 4.2], [0.50, 0.91, 3.2], [0.31, 0.19, 2.4], [0.70, 0.21, 3.2],
 ];
+const PREMIUM_GLINTS_DISCRETO = [PREMIUM_GLINTS[2], PREMIUM_GLINTS[7], PREMIUM_GLINTS[10]];
 
-// Um glint de diamante NO PICO: ponto redondo com halo + micro-cruz de 4 raios.
-function desenharGlintPico(ctx, cx, cy, r, k) {
+// Paletas dos fundos premium: chapa (asset em /public), base de fallback (caso a
+// chapa falhe a carregar — nunca fica buraco) e as 3 cores do glint (centro/halo/cauda).
+const PALETAS_PREMIUM = {
+  golden: { chapa: '/golden-plate.jpg', base0: '#2a1c05', base1: '#140d02', glintHi: '255,252,236', glintMid: '255,236,188', glintLo: '255,220,150' },
+  royal: { chapa: '/royal-plate.jpg', base0: '#1c1030', base1: '#0c0818', glintHi: '238,230,255', glintMid: '196,166,255', glintLo: '139,92,246' },
+};
+
+// Um glint de diamante/cristal NO PICO: ponto redondo com halo + micro-cruz de 4 raios.
+function desenharGlintPico(ctx, cx, cy, r, k, pal) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   // ponto + halo
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.9);
-  g.addColorStop(0, 'rgba(255,252,236,0.95)');
-  g.addColorStop(0.34, 'rgba(255,236,188,0.6)');
-  g.addColorStop(1, 'rgba(255,220,150,0)');
+  g.addColorStop(0, `rgba(${pal.glintHi},0.95)`);
+  g.addColorStop(0.34, `rgba(${pal.glintMid},0.6)`);
+  g.addColorStop(1, `rgba(${pal.glintLo},0)`);
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(cx, cy, r * 1.9, 0, Math.PI * 2); ctx.fill();
-  // micro-cruz (raios ~2.6× o diâmetro): 4 raios com centro brilhante
+  // micro-cruz (raios ~2.6× o diâmetro): 4 raios com centro brilhante (sempre branco —
+  // é o flash da luz, não a cor da chapa).
   const L = r * 2.6 * 2; // meia-envergadura × 2 = raios 2.6× diâmetro
   const w = Math.max(0.7 * k, r * 0.22);
   const gh = ctx.createLinearGradient(cx - L, cy, cx + L, cy);
@@ -130,7 +141,7 @@ function desenharGlintPico(ctx, cx, cy, r, k) {
   ctx.restore();
 }
 
-// Desenha a chapa GOLDEN + poeira de diamante. `glints`:
+// Desenha a chapa premium (cor = 'golden' | 'royal') + poeira de cristal. `glints`:
 //  - 'pico' (default) — os 14 pontos, no pico. Usado no card completo (download):
 //    é um keepsake estático, merece o frame mais rico.
 //  - 'discreto' — 3 pontos fixos (densidade de repouso, como um still da "mina"
@@ -142,27 +153,31 @@ function desenharGlintPico(ctx, cx, cy, r, k) {
 //    é montra a propósito (ordem do dono), pode exagerar mais que o card real.
 //  - false — nenhum (camada de fundo do PREVIEW da Figurinha; a "mina" vive num
 //    overlay CSS animado ali, 2-4 acesos de cada vez).
-const GOLDEN_GLINTS_DISCRETO = [GOLDEN_GLINTS[2], GOLDEN_GLINTS[7], GOLDEN_GLINTS[10]];
-export async function desenharFundoGolden(ctx, W, H, { glints = 'pico' } = {}) {
+export async function desenharFundoPremium(ctx, W, H, cor, { glints = 'pico' } = {}) {
+  const pal = PALETAS_PREMIUM[cor];
   const k = W / 400;
   // base escura por baixo, caso a chapa falhe a carregar (nunca fica buraco).
   const base = ctx.createLinearGradient(0, 0, 0, H);
-  base.addColorStop(0, '#2a1c05'); base.addColorStop(1, '#140d02');
+  base.addColorStop(0, pal.base0); base.addColorStop(1, pal.base1);
   ctx.fillStyle = base; ctx.fillRect(0, 0, W, H);
   // a) chapa foil (cover).
-  const chapa = await carregarImagem('/golden-plate.jpg', false);
+  const chapa = await carregarImagem(pal.chapa, false);
   if (chapa) {
     const s = Math.max(W / chapa.naturalWidth, H / chapa.naturalHeight);
     const dw = chapa.naturalWidth * s, dh = chapa.naturalHeight * s;
     ctx.drawImage(chapa, (W - dw) / 2, (H - dh) / 2, dw, dh);
   }
-  // b) poeira de diamante.
+  // b) poeira de cristal.
   if (glints) {
-    const pontos = glints === 'discreto' ? GOLDEN_GLINTS_DISCRETO : GOLDEN_GLINTS;
+    const pontos = glints === 'discreto' ? PREMIUM_GLINTS_DISCRETO : PREMIUM_GLINTS;
     const boost = glints === 'vitrine' ? 1.7 : 1;
-    for (const [xf, yf, r] of pontos) desenharGlintPico(ctx, xf * W, yf * H, r * k * boost, k);
+    for (const [xf, yf, r] of pontos) desenharGlintPico(ctx, xf * W, yf * H, r * k * boost, k, pal);
   }
 }
+// Wrappers finos — GOLDEN (1º fundo premium) e ROYAL (o par de luxo, roxo #8b5cf6 +
+// prata fria) só passam a cor; o pipeline é o mesmo, código partilhado.
+export const desenharFundoGolden = (ctx, W, H, opts) => desenharFundoPremium(ctx, W, H, 'golden', opts);
+export const desenharFundoRoyal = (ctx, W, H, opts) => desenharFundoPremium(ctx, W, H, 'royal', opts);
 
 // Fundo "Épico" — honeycomb alinhado ao ângulo do F + monograma como marca de água,
 // placa 3D (pseudo-perspectiva), luz central e vinheta. EXPORTADO para o tile da UI
@@ -659,11 +674,13 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // Aura da vitrine (glow selado replicado). Sem holofotes de estádio (o palco
     // selado não os tem) — guardado no passo 2.
     desenharFundoAura(ctx, W, H, ehQuadrado);
-  } else if (fundo === 'golden') {
-    // GOLDEN premium — chapa foil + poeira de diamante (atrás do avatar). No PREVIEW
-    // (apenasMoldura) a chapa entra SEM glints baked → a "mina" vive no overlay animado
-    // (z3); no card completo (download) os glints saem NO PICO (frame mais rico).
-    await desenharFundoGolden(ctx, W, H, { glints: apenasMoldura ? false : fundoGlints });
+  } else if (fundo === 'golden' || fundo === 'royal') {
+    // GOLDEN/ROYAL premium — chapa foil + poeira de cristal (atrás do avatar), MESMO
+    // pipeline (desenharFundoPremium). No PREVIEW (apenasMoldura) a chapa entra SEM
+    // glints baked → a "mina" vive no overlay animado (z3); no card completo
+    // (download) os glints saem NO PICO (frame mais rico).
+    const desenhar = fundo === 'golden' ? desenharFundoGolden : desenharFundoRoyal;
+    await desenhar(ctx, W, H, { glints: apenasMoldura ? false : fundoGlints });
   } else {
     const bg = await carregarImagem('/stadium_bg.png', false);
     if (bg) {
@@ -688,9 +705,9 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     }
   }
 
-  // 2. HOLOFOTES — só nos fundos de estádio; Aura e Golden são luz própria (glow /
-  // foil), sem holofotes por cima.
-  if (fundo !== 'aura' && fundo !== 'golden') {
+  // 2. HOLOFOTES — só nos fundos de estádio; Aura e as chapas premium (Golden/Royal)
+  // são luz própria (glow / foil), sem holofotes por cima.
+  if (fundo !== 'aura' && fundo !== 'golden' && fundo !== 'royal') {
     for (const cx of [W * 0.25, W * 0.75]) {
       const g = ctx.createRadialGradient(cx, 0, 0, cx, 0, W * 0.5);
       g.addColorStop(0, 'rgba(255,255,220,0.12)');
