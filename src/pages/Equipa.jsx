@@ -128,7 +128,6 @@ export default function Equipa() {
   // 1ª equipa em que o jogador entra sem posição definida (e a pref morre).
   // (set-state-in-effect justificado: é uma acção one-shot pós-onboarding — dispara
   // o MESMO fluxo do clique no chip, uma única vez, e a pref morre.)
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!team || !meuId || posBusy) return;
     if (minhaPosicao === null && localStorage.getItem('futty_pref_gr') === 'GL') {

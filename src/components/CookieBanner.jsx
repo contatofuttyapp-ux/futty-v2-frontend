@@ -45,7 +45,6 @@ export default function CookieBanner() {
       window.removeEventListener('wheel', fechar, opts);
       window.removeEventListener('touchmove', fechar, opts);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visivel]);
 
   if (!visivel) return null;
