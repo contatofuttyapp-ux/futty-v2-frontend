@@ -58,7 +58,12 @@ export async function apiUpload(path, file, field = 'file') {
   } catch {
     // sem corpo JSON
   }
-  if (!res.ok) throw new Error(body?.error || `Erro ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(body?.error || `Erro ${res.status}`);
+    err.status = res.status;
+    err.code = body?.code || null; // ex.: 'FOTO_FRACA' → mensagemUploadFoto distingue
+    throw err;
+  }
   return body;
 }
 

@@ -2,6 +2,11 @@
 // diz ao utilizador o que fazer (repetir por rede, ou trocar/cortar a foto).
 // Usado no Onboarding e no Perfil, ao lado de um botão "tentar de novo".
 export function mensagemUploadFoto(err) {
+  // FOTO_FRACA (olheiro de entrada, 11-ago): foto pequena/corrompida/preta/estourada
+  // — reprovada ANTES de guardar, sem gastar nada. Mensagem do backend já é a certa.
+  if (err?.code === 'FOTO_FRACA') {
+    return { texto: err.message, podeRepetir: true };
+  }
   const m = String(err?.message || '').toLowerCase();
   // Falha de rede: o fetch rejeita antes de haver resposta.
   if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed') || m.includes('sem ligação')) {
