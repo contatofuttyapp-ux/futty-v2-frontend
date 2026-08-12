@@ -2601,3 +2601,45 @@
 .chip-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
   padding:0 5px;border-radius:9px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11px;line-height:1;
   color:#1a1408;background:#f0c94a;border:1px solid #d4a017;box-shadow:0 0 8px rgba(212,160,23,.5)}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   BOAS-VINDAS (31-jul) — tela única. Namespace .landing-*, aditivo.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+/* Aura atrás do F: a receita do glow selado da vitrine REPLICADA (valores copiados
+   de .perfil-glow, padrão Aura — copiar, nunca reescalar o selado). Reusa respiraA. */
+.landing-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  pointer-events: none;
+  width: 300px;
+  height: 344px;
+  background: radial-gradient(ellipse 50% 48% at 50% 45%,
+    rgba(212, 160, 23, 0.69) 0%, rgba(212, 160, 23, 0.30) 34%,
+    rgba(212, 160, 23, 0.09) 56%, transparent 78%);
+  filter: blur(46px);
+  animation: respiraA 7s ease-in-out infinite;
+}
+/* Deriva de fundo: um véu de gradientes (ouro + roxo da casa, alpha baixo) que
+   desliza devagar. Só transform — barato, é a primeira tela que carrega. */
+.landing-drift {
+  position: fixed;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 22% 28%, rgba(212, 160, 23, 0.05), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 78% 72%, rgba(139, 92, 246, 0.07), transparent 70%);
+  animation: landingDrift 26s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes landingDrift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to   { transform: translate3d(2%, 1.5%, 0) scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-glow { animation: none; }
+  .landing-drift { animation: none; }
+}

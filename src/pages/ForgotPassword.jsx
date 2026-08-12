@@ -38,8 +38,8 @@ export default function ForgotPassword() {
         <div className="auth-card__inner">
           {/* Header do cânone: marca + título dourado seco + linha com degrau 45°.
               Nas páginas de auth marca e título coexistem — esta é a porta da rua. */}
-          <div className="auth-brand">
-            <FuttyLogo variant="wordmark" size={20} color="#d4a017" />
+          <div className="auth-brand" style={{ opacity: 1, display: 'flex', justifyContent: 'flex-start' }}>
+            <FuttyLogo variant="metallic" size={40} />
           </div>
           <h1 className="auth-title">Recuperar senha</h1>
           <div className="auth-rule" aria-hidden="true" />

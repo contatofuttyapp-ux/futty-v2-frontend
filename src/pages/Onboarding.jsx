@@ -55,7 +55,7 @@ function MolduraFoto({ src, size = 170 }) {
         ) : (
           <div style={{ display: 'grid', placeItems: 'center', gap: 8, color: 'rgba(255,255,255,0.35)' }}>
             <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="rgba(212,160,23,0.65)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
-            <span style={{ fontFamily: RAJ, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}>seu lugar</span>
+            <span style={{ fontFamily: RAJ, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}>sua foto</span>
           </div>
         )}
       </div>
@@ -159,8 +159,9 @@ export default function Onboarding() {
           <>
             <MolduraFoto src={avatarUrl ? urlAsset(avatarUrl) : null} />
             <Titulo size={24}>SUA FIGURINHA<br />COMEÇA AQUI</Titulo>
+            {/* 31-jul (dono): metade do texto, sem "cara" (no BR é rude — usa-se rosto). */}
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
-              É esta cara que entra no card, no ranking e no sorteio. A foto cai aqui, ao vivo, assim que você fizer o corte.
+              Sua foto vira seu card, no time inteiro.
             </p>
             {/* P1-5 — erro de upload INLINE (accionável), não um toast que foge. */}
             {uploadErro ? (

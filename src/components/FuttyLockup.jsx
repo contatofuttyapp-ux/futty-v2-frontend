@@ -24,7 +24,9 @@ const EXTRUSAO_CAMADAS = 5;
 // Da mais funda (escura) para a mais próxima da face: o gradiente do "corpo" da letra.
 const EXTRUSAO_CORES = ['#2e1f02', '#3a2703', '#463004', '#503705', '#5a3c05'];
 
-export default function FuttyLockup({ size = 120, wordmarkSize = 44 }) {
+// `wordmark:false` → só o F (tela de boas-vindas 31-jul: o wordmark tem F próprio
+// e o lockup completo duplicava a letra na mesma tela).
+export default function FuttyLockup({ size = 120, wordmarkSize = 44, wordmark = true }) {
   const uid = useId().replace(/:/g, '');
   const metalId = `futty-metal-${uid}`;
   const glintId = `futty-lockup-glint-${uid}`;
@@ -112,23 +114,25 @@ export default function FuttyLockup({ size = 120, wordmarkSize = 44 }) {
           </div>
         </div>
       </div>
-      <span
-        aria-hidden="true"
-        style={{
-          display: 'block',
-          height: wordmarkSize,
-          width: wordmarkSize * WORDMARK_RACIO,
-          backgroundColor: '#d4a017',
-          WebkitMaskImage: 'url(/futty-wordmark.svg)',
-          maskImage: 'url(/futty-wordmark.svg)',
-          WebkitMaskRepeat: 'no-repeat',
-          maskRepeat: 'no-repeat',
-          WebkitMaskPosition: 'center',
-          maskPosition: 'center',
-          WebkitMaskSize: 'contain',
-          maskSize: 'contain',
-        }}
-      />
+      {wordmark && (
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'block',
+            height: wordmarkSize,
+            width: wordmarkSize * WORDMARK_RACIO,
+            backgroundColor: '#d4a017',
+            WebkitMaskImage: 'url(/futty-wordmark.svg)',
+            maskImage: 'url(/futty-wordmark.svg)',
+            WebkitMaskRepeat: 'no-repeat',
+            maskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskPosition: 'center',
+            WebkitMaskSize: 'contain',
+            maskSize: 'contain',
+          }}
+        />
+      )}
     </div>
   );
 }
