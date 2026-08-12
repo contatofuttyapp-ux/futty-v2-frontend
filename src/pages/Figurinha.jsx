@@ -4,19 +4,21 @@
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, Download, Share2, X, Lock, Check, Plus, Minus } from 'lucide-react';
+import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { nomeJogador, urlAsset } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal } from '../utils/figurinhaCanvas';
+import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import SeloHonra from '../components/SeloHonra';
-import SilhuetaJogador from '../components/SilhuetaJogador';
+import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
@@ -169,6 +171,8 @@ export default function Figurinha() {
 
   const [me, setMe] = useState(null);
   const [fundo, setFundo] = useState('estadio');
+  const [avatarGenericoEscolha, setAvatarGenericoEscolha] = useState(null);
+  const [sheetAvatarAberto, setSheetAvatarAberto] = useState(false);
   const corFrame = 'dourado';
   const [fotoLocal, setFotoLocal] = useState(null);
   const [uploadFoto, setUploadFoto] = useState(false);
@@ -209,8 +213,9 @@ export default function Figurinha() {
   // logo após o upload o backend grava a foto crua em ambos, então é igual).
   const fotoOriginal = me?.user?.foto_url || null;
   const avatarEhIA = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
-  // Jogador "de card": só leva avatar_url se for avatar IA; caso contrário, sem avatar.
-  const jogadorCard = avatarEhIA ? jogador : { ...jogador, avatar_url: null };
+  // Jogador "de card": leva avatar_url se for avatar IA; caso contrário, veste o
+  // genérico da casa (escolhido ou rodízio por id, 31-jul) em vez de ficar sem avatar.
+  const jogadorCard = avatarEhIA ? jogador : { ...jogador, avatar_url: avatarGenericoUrl(jogador.id, avatarGenericoEscolha) };
   // A2 — kit vestido + kits já gerados (slots). Vindos do GET /api/me.
   const kitAtivo = me?.user?.kit_ativo || 'dark-gold';
   const slotsKits = me?.slots || [];
@@ -255,6 +260,7 @@ export default function Figurinha() {
         if (!ativo) return;
         setMe(d);
         if (d?.user?.fundo_figurinha) setFundo(d.user.fundo_figurinha);
+        if (d?.user?.avatar_generico) setAvatarGenericoEscolha(d.user.avatar_generico);
         // Decisão da estreia (só quando ainda não foi vista): sem avatar → flow.
         if (!localStorage.getItem('futty_figurinha_estreia')) {
           setEstreiaFase(d?.user?.avatar_url ? 'fim' : 'foto');
@@ -307,7 +313,7 @@ export default function Figurinha() {
     return () => { vivo = false; };
     // selosKey: regenera o cromo quando os selos visíveis mudam (chegam da API ou
     // o utilizador oculta/mostra no olhinho).
-  }, [fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, estreiaFase, selosKey]);
+  }, [fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, avatarGenericoEscolha, estreiaFase, selosKey]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => () => { if (fundoUrl) URL.revokeObjectURL(fundoUrl); }, [fundoUrl]);
@@ -541,6 +547,15 @@ export default function Figurinha() {
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ fundo_figurinha: k }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, fundo_figurinha: k } } : m));
+    } catch { /* preferência: não vale um erro no ecrã */ }
+  }
+
+  // Escolha do avatar genérico (31-jul) — mesmo padrão optimista do fundo.
+  async function escolherAvatarGenerico(k) {
+    setAvatarGenericoEscolha(k);
+    try {
+      await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ avatar_generico: k }) });
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_generico: k } } : m));
     } catch { /* preferência: não vale um erro no ecrã */ }
   }
 
@@ -806,20 +821,21 @@ export default function Figurinha() {
               </div>
             </div>
             {/* Estado "a gerar" — cobre a zona do card */}
-            {/* (m) EMPTY STATE — sem avatar válido: silhueta tracejada dourada sobre o
-                fundo escolhido. Não bloqueia cliques (pointerEvents none). */}
-            {!avatarEhIA && !fotoLocal && !gerandoIA && !erroIA ? (
-              <div style={{ position: 'absolute', inset: 0, zIndex: 6, clipPath: CLIP_OCTOGONO, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
-                <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
-                  {/* LEI DA SILHUETA: placeholder de pessoa = silhueta-casa angulosa (nunca círculo). */}
-                  <SilhuetaJogador size={86} color="rgba(212,160,23,0.5)" />
-                  <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,160,23,0.75)' }}>
-                    O teu cromo espera por ti
-                  </span>
-                </div>
-              </div>
-            ) : null}
+            {/* Sem avatar IA o card já veste o genérico da casa (ver `jogadorCard`
+                acima) — não há mais empty state de silhueta a desenhar aqui. */}
             {gerandoIA || erroIA ? overlayGerando : null}
+            {/* Trocar visual — só quando o card veste o genérico (sem avatar IA). */}
+            {!avatarEhIA && !fotoLocal && !gerandoIA && !erroIA ? (
+              <button
+                type="button"
+                className="hud-corners-s"
+                aria-label="Trocar visual do card"
+                onClick={() => setSheetAvatarAberto(true)}
+                style={{ position: 'absolute', top: 10, right: 10, zIndex: 8, width: 32, height: 32, display: 'grid', placeItems: 'center', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.72)', color: '#d4a017', cursor: 'pointer' }}
+              >
+                <RefreshCw size={16} />
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -1163,6 +1179,13 @@ export default function Figurinha() {
           ) : null}
         </div>
       </main>
+
+      <AvatarGenericoSheet
+        aberto={sheetAvatarAberto}
+        onClose={() => setSheetAvatarAberto(false)}
+        escolhaActual={avatarGenericoEscolha}
+        onEscolher={escolherAvatarGenerico}
+      />
 
       {/* Modal "A tua foto" — foto actual + estado do avatar IA + carregar nova */}
       {modalFoto ? (

@@ -1,6 +1,7 @@
 // Futty v2.0 — Início: o cromo, chips de equipas, próximos jogos e publicidade.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
@@ -17,7 +18,8 @@ import ProductTour from '../components/ProductTour';
 import LoadingFutty from '../components/LoadingFutty';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
-import SilhuetaJogador from '../components/SilhuetaJogador';
+import { avatarGenericoUrl } from '../utils/avatarGenerico';
+import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
 import '../styles/app.css';
 
 function isToday(iso) {
@@ -67,9 +69,10 @@ async function gerarCromoDataURL(opts, chave) {
 
 // Presentacional: recebe o cromo JÁ gerado (dataURL) do Início. Não gera nem mostra
 // placeholder — quando este componente monta, a página já revelou com o cromo pronto
-// (ver `pageReady`), por isso nunca se vê um F aqui. `avatarEhIA` decide só o overlay
-// de convite (o canvas desenha as iniciais quando não há avatar IA).
-function CromoInicio({ cromo, avatarEhIA, nome, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
+// (ver `pageReady`), por isso nunca se vê um F aqui. Sem avatar IA o canvas já veio
+// com o genérico da casa desenhado (ver `jogadorCard` em Inicio()) — não há overlay
+// de convite: o card em si é o convite (rodízio 31-jul).
+function CromoInicio({ cromo, nome, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
   return (
     <Link to={destino} data-tour="player-card" className="cromo-inicio" aria-label={destinoLabel}>
       {/* Sombra no chão — contra-fase com o bob: encolhe quando o cromo sobe. */}
@@ -82,20 +85,6 @@ function CromoInicio({ cromo, avatarEhIA, nome, destino = '/figurinha', destinoL
         <div className="fig-sway" style={{ position: 'relative', width: '100%', height: '100%' }}>
           {cromo ? (
             <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
-          ) : null}
-          {/* Sem avatar IA o canvas desenha as iniciais. O empty state do studio
-              (silhueta tracejada + convite) explica porquê, e o clique leva lá —
-              o estado fraco passa a ser o convite, em vez de um cromo baço. */}
-          {cromo && !avatarEhIA ? (
-            <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
-              <div style={{ display: 'grid', justifyItems: 'center', gap: 8 }}>
-                {/* LEI DA SILHUETA: placeholder de pessoa = silhueta-casa angulosa (nunca círculo). */}
-                <SilhuetaJogador size={62} color="rgba(212,160,23,0.5)" />
-                <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(212,160,23,0.75)', textAlign: 'center' }}>
-                  Seu card espera por você
-                </span>
-              </div>
-            </div>
           ) : null}
         </div>
       </div>
@@ -396,12 +385,29 @@ export default function Inicio() {
   const cromoAvatarEhIA = !!user?.foto_url && !!user?.avatar_url && user.foto_url !== user.avatar_url;
   const cromoFundo = user?.fundo_figurinha || 'estadio';
 
+  // Escolha do avatar genérico (31-jul): undefined = usa o que veio do servidor;
+  // definido = override otimista local (PATCH em curso ou já confirmado).
+  const [sheetAvatarAberto, setSheetAvatarAberto] = useState(false);
+  const [avatarGenericoOverride, setAvatarGenericoOverride] = useState(undefined);
+  const avatarGenericoEscolha = avatarGenericoOverride !== undefined ? avatarGenericoOverride : user?.avatar_generico ?? null;
+  async function escolherAvatarGenerico(key) {
+    const anterior = avatarGenericoEscolha;
+    setAvatarGenericoOverride(key);
+    try {
+      await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ avatar_generico: key }) });
+    } catch (e) {
+      setAvatarGenericoOverride(anterior);
+      setToast({ msg: e.message || 'Não deu para salvar.', tipo: 'error' });
+    }
+  }
+
   // Gera o cromo assim que o user existe. corFrame/zoom são os defaults FIXOS da
   // Figurinha — divergir dava dois cromos diferentes para o mesmo utilizador.
   useEffect(() => {
     if (!user) return undefined;
     let vivo = true;
-    const jogadorCard = cromoAvatarEhIA ? user : { ...user, avatar_url: null };
+    // Sem avatar IA: veste o genérico da casa (escolhido ou rodízio por id).
+    const jogadorCard = cromoAvatarEhIA ? user : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha) };
     // fundoGlints:'discreto' — o cromo do Início é um OBJECTO estático (nunca em
     // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
     // download nem a montra do tile do seletor — densidade de repouso própria.
@@ -410,7 +416,7 @@ export default function Inicio() {
       .then((url) => { if (vivo) { setCromo(url); setCromoTentado(true); } })
       .catch((e) => { console.error('[cromo]', e); if (vivo) setCromoTentado(true); });
     return () => { vivo = false; };
-  }, [user, cromoAvatarEhIA, cromoFundo, nome]);
+  }, [user, cromoAvatarEhIA, cromoFundo, avatarGenericoEscolha, nome]);
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
@@ -689,7 +695,7 @@ export default function Inicio() {
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Complete sua figurinha</span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Seu card continua sem cara — 30 segundos e fica pronto.</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>30 segundos e seu card fica pronto.</span>
             </span>
             <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 11, color: '#f0c94a', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>Adicionar →</span>
           </Link>
@@ -708,7 +714,21 @@ export default function Inicio() {
             seco, dourado, sem palco. */}
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px', paddingTop: 'var(--space-lg)' }}>
           <div className="inicio-vline" aria-hidden="true" />
-          <CromoInicio cromo={cromo} avatarEhIA={cromoAvatarEhIA} nome={nome} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar meu time' : 'Ver e personalizar minha figurinha'} />
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <CromoInicio cromo={cromo} nome={nome} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar meu time' : 'Ver e personalizar minha figurinha'} />
+            {/* Trocar visual — só quando o card veste o genérico (sem avatar IA). */}
+            {!cromoAvatarEhIA ? (
+              <button
+                type="button"
+                className="hud-corners-s"
+                aria-label="Trocar visual do card"
+                onClick={() => setSheetAvatarAberto(true)}
+                style={{ position: 'absolute', top: 6, right: 6, zIndex: 2, width: 30, height: 30, display: 'grid', placeItems: 'center', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.72)', color: '#d4a017', cursor: 'pointer' }}
+              >
+                <RefreshCw size={15} />
+              </button>
+            ) : null}
+          </div>
           <NomeCromo nome={nome} />
           {teams[0] ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
@@ -851,6 +871,13 @@ export default function Inicio() {
       </main>
 
       {toast ? <Toast mensagem={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
+
+      <AvatarGenericoSheet
+        aberto={sheetAvatarAberto}
+        onClose={() => setSheetAvatarAberto(false)}
+        escolhaActual={avatarGenericoEscolha}
+        onEscolher={escolherAvatarGenerico}
+      />
 
       {/* Onboarding (primeira visita) — só se NEM o server NEM o local o dão como visto. */}
       {!tourDoneLocal && user && !user.tour_inicio_visto && (
