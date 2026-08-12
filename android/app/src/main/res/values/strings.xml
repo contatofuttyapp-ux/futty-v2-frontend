@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Futty</string>
+    <string name="title_activity_main">Futty</string>
+    <string name="package_name">com.futty.app</string>
+    <string name="custom_url_scheme">com.futty.app</string>
+</resources>
