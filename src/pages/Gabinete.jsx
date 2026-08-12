@@ -124,7 +124,7 @@ export default function Gabinete() {
           <h1 className="gab-h1">Gabinete <span style={{ color: OURO2 }}>do Dono</span></h1>
           <Link to="/home" className="gab-n" style={{ textDecoration: 'none' }}>← Início</Link>
         </div>
-        <p className="gab-sub">Rota super-admin. A história do produto de relance — o dono é <b>cego ao conteúdo</b>, só números.</p>
+        <p className="gab-sub">Rota super-admin. A história do produto de relance: o dono é <b>cego ao conteúdo</b>, só números.</p>
 
         {/* PULSO DO DIA */}
         <div className="gab-card gab-head">
@@ -133,7 +133,7 @@ export default function Gabinete() {
             <Kpi v={p.users_hoje} l="usuários hoje" cls="up" />
             <Kpi v={p.jogos_hoje} l="jogos hoje" />
             <Kpi v={p.denuncias_abertas} l="denúncias abertas" />
-            <Kpi v={p.mrr ?? '—'} l="MRR" />
+            <Kpi v={p.mrr ?? '-'} l="MRR" />
           </div>
         </div>
 
@@ -147,7 +147,7 @@ export default function Gabinete() {
 
         {/* RECEITA — em breve (IAP das lojas por ligar; Stripe pausado — SPEC-INFRA) */}
         <Hud h2="Receita" breve="Falta ligar o IAP das lojas" />
-        <Vazio>A receita acende quando a vaga <b>App nas lojas</b> ligar o <b>IAP</b> (Apple/Google). Até lá, MRR, assinantes e entradas ficam <b>em breve</b> — sem números inventados.</Vazio>
+        <Vazio>A receita acende quando a vaga <b>App nas lojas</b> ligar o <b>IAP</b> (Apple/Google). Até lá, MRR, assinantes e entradas ficam <b>em breve</b>, sem números inventados.</Vazio>
 
         {/* PUBLICIDADE — a valer: campanhas + medição + toggles por página */}
         <Hud h2="Publicidade" n="campanhas · medição nossa (impressão/clique) · lei de menores no motor" />
@@ -164,7 +164,7 @@ export default function Gabinete() {
                 const ctr = c.imp ? (c.cli / c.imp * 100).toFixed(1) : '0.0';
                 return (
                   <div key={c.id} className="gab-oprow" style={{ gridTemplateColumns: '1.4fr .9fr auto auto' }}>
-                    <div><div className="gab-nm">{c.nome}</div><div className="gab-osub">{c.anunciante || '—'} · {(c.paginas || []).join(', ') || 'sem página'} · <span style={{ color: c.cls === 'livre' ? '#7bd88f' : '#fda4af' }}>{c.cls === 'livre' ? 'livre' : '18+'}</span></div></div>
+                    <div><div className="gab-nm">{c.nome}</div><div className="gab-osub">{c.anunciante || '-'} · {(c.paginas || []).join(', ') || 'sem página'} · <span style={{ color: c.cls === 'livre' ? '#7bd88f' : '#fda4af' }}>{c.cls === 'livre' ? 'livre' : '18+'}</span></div></div>
                     <div className="gab-osub">{c.imp} imp · {c.cli} cli · CTR {ctr}%{c.dias_restantes != null ? ` · ${c.dias_restantes}d` : ''}</div>
                     <span className={`gab-chip ${c.estado === 'ativa' ? 'gab-ok' : c.estado === 'pausada' ? 'gab-uso' : 'gab-warn'}`} style={{ cursor: 'pointer' }} onClick={() => setEstadoCamp(c.id, c.estado === 'ativa' ? 'pausada' : 'ativa')}>{c.estado === 'ativa' ? 'ativa' : c.estado === 'pausada' ? 'pausada ▸' : 'terminada'}</span>
                     <div className="gab-del" title="remover" onClick={() => delCamp(c.id)}>✕</div>
@@ -226,8 +226,8 @@ export default function Gabinete() {
             <h3>Burn & margem</h3>
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div><div className="gab-big" style={{ color: '#fda4af' }}>€{burn}</div><span className="gab-muted">custos / mês</span></div>
-              <div><div className="gab-big">—</div><span className="gab-muted">MRR (IAP)</span></div>
-              <div><div className="gab-big">—</div><span className="gab-muted">margem líquida</span></div>
+              <div><div className="gab-big">-</div><span className="gab-muted">MRR (IAP)</span></div>
+              <div><div className="gab-big">-</div><span className="gab-muted">margem líquida</span></div>
             </div>
             <div className="gab-burnbar"><i style={{ width: '100%', background: '#fda4af' }} /></div>
             <p className="gab-muted" style={{ marginTop: 10 }}>Ligue o <b>IAP das lojas</b> para a margem e o "paga-se?" (comissão da loja incluída). Por agora, só o <b>burn</b> (€{burn}/mês).</p>
@@ -257,7 +257,7 @@ export default function Gabinete() {
             <div className="gab-cov">{(op.cobertura?.vende || []).map((x, i) => <span key={i} className="on">{x}</span>)}</div>
             <div className="gab-muted" style={{ marginTop: 10 }}>Onde ainda não</div>
             <div className="gab-cov">{(op.cobertura?.bloqueado || []).map((x, i) => <span key={i} className="off">{x}</span>)}</div>
-            <p className="gab-muted" style={{ marginTop: 10 }}>Informativo — à mão + o que a loja expõe (IAP).</p>
+            <p className="gab-muted" style={{ marginTop: 10 }}>Informativo: à mão + o que a loja expõe (IAP).</p>
           </div>
         </div>
 
@@ -265,11 +265,11 @@ export default function Gabinete() {
         <Hud h2="Proteção de dados" n="LGPD · DPAs, política, termos, canal do titular (editável à mão)" />
         {!ESTADOS_PUBLICADOS.includes(pd.politica_privacidade?.estado) ? (
           <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(253,164,175,.4)' }}>
-            <span className="gab-osub" style={{ color: '#fda4af' }}>⚠ Política de privacidade <b>ainda não publicada</b> — bloqueia o envio às lojas (App Store / Play Store) e o compliance LGPD.</span>
+            <span className="gab-osub" style={{ color: '#fda4af' }}>⚠ Política de privacidade <b>ainda não publicada</b>, bloqueia o envio às lojas (App Store / Play Store) e o compliance LGPD.</span>
           </div>
         ) : pd.politica_privacidade?.estado === 'publicada (revisão jurídica pendente)' ? (
           <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(240,201,74,.35)' }}>
-            <span className="gab-osub" style={{ color: '#f0c94a' }}>ℹ Política e termos <b>publicados</b> (<Link to="/privacidade" style={{ color: '#f0c94a' }}>/privacidade</Link> · <Link to="/termos" style={{ color: '#f0c94a' }}>/termos</Link>) — ainda em <b>revisão jurídica</b> antes do envio às lojas.</span>
+            <span className="gab-osub" style={{ color: '#f0c94a' }}>ℹ Política e termos <b>publicados</b> (<Link to="/privacidade" style={{ color: '#f0c94a' }}>/privacidade</Link> · <Link to="/termos" style={{ color: '#f0c94a' }}>/termos</Link>), ainda em <b>revisão jurídica</b> antes do envio às lojas.</span>
           </div>
         ) : null}
         <div className="gab-cards c2">
@@ -325,10 +325,10 @@ export default function Gabinete() {
             <div className="gab-card">
               <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
                 <div><div className="gab-big" style={{ color: VERDE }}>{seg.pct_auto_resolvida}%</div><span className="gab-muted">auto-resolvida pela IA</span></div>
-                <div><div className="gab-big">{seg.tempo_medio_ms != null ? `${Math.round(seg.tempo_medio_ms / 60000)}min` : '—'}</div><span className="gab-muted">tempo médio</span></div>
+                <div><div className="gab-big">{seg.tempo_medio_ms != null ? `${Math.round(seg.tempo_medio_ms / 60000)}min` : '-'}</div><span className="gab-muted">tempo médio</span></div>
                 <div><div className="gab-big">{seg.total}</div><span className="gab-muted">total (histórico)</span></div>
               </div>
-              <p className="gab-muted" style={{ marginTop: 12 }}>Lei do dono cego: <b>zero conteúdo, zero identidade</b> — só contagens.</p>
+              <p className="gab-muted" style={{ marginTop: 12 }}>Lei do dono cego: <b>zero conteúdo, zero identidade</b>. Só contagens.</p>
             </div>
           </div>
         ) : <Vazio>Zero denúncias. Casa tranquila.</Vazio>}

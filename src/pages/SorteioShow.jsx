@@ -99,7 +99,7 @@ export default function SorteioShow() {
                 ))}
               </div>
               <p className="muted" style={{ fontSize: 11, textAlign: 'center', margin: 0 }}>
-                o link reproduz esta MESMA cerimônia (semente {resultado.seed ?? '—'}) para quem abrir — sem app
+                o link reproduz esta MESMA cerimônia (semente {resultado.seed ?? '—'}) para quem abrir, sem app
               </p>
             </div>
           </>

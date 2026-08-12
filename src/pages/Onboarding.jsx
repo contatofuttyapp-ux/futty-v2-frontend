@@ -210,7 +210,7 @@ export default function Onboarding() {
           <>
             <Titulo size={24}>COMO TE CHAMAM<br />EM CAMPO?</Titulo>
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
-              É o nome que aparece no card e no ranking — seu nome de guerra.
+              É o nome que aparece no card e no ranking: seu nome de guerra.
             </p>
             <div style={{ width: '100%', maxWidth: 290 }}>
               <label style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Nome de jogador</label>
@@ -227,7 +227,7 @@ export default function Onboarding() {
               </label>
               <div className="chips-row" style={{ justifyContent: 'center' }}>
                 <button type="button" className={`chip ${gr === 'GL' ? 'chip--active' : ''}`} onClick={() => setGr(gr === 'GL' ? null : 'GL')} style={gr !== 'GL' ? { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' } : undefined}>
-                  GR — sou goleiro
+                  GR: sou goleiro
                 </button>
                 <button type="button" className={`chip ${gr === 'linha' ? 'chip--active' : ''}`} onClick={() => setGr(gr === 'linha' ? null : 'linha')}>
                   Jogo na linha
@@ -237,7 +237,7 @@ export default function Onboarding() {
                 <Cta cheio onClick={concluir} disabled={salvando}>{salvando ? 'Entrando…' : 'Entrar'}</Cta>
               </div>
               <div style={{ fontSize: 10, color: '#6f6a80', textAlign: 'center', marginTop: 10 }}>
-                a posição certa (DEF/MEI/ATA) você escolhe no seu time — aqui só o que o dia-1 usa
+                a posição certa (DEF/MEI/ATA) você escolhe no seu time, aqui só o que o dia-1 usa
               </div>
             </div>
           </>

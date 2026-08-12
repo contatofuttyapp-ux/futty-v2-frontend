@@ -185,7 +185,7 @@ export default function Equipa() {
   async function copiar() {
     const ok = await copiarTexto(inviteLink);
     setCopied(ok);
-    if (!ok) setActionError('Não deu para copiar — copie o link à mão.');
+    if (!ok) setActionError('Não deu para copiar. Copie o link à mão.');
   }
 
   return (
@@ -230,7 +230,7 @@ export default function Equipa() {
             )}
 
             {/* A minha posição — DESTAQUE (regra: o próprio jogador decide; GR no roxo) */}
-            <SecLabel>Minha posição neste time — você decide</SecLabel>
+            <SecLabel>Minha posição neste time: você decide</SecLabel>
             <div style={{ ...VIDRO, clipPath: CLIP, padding: '14px 12px' }}>
               <div className="chips-row" style={{ justifyContent: 'center' }}>
                 {POSICOES.map((p) => {
@@ -257,7 +257,7 @@ export default function Equipa() {
                   disabled={posBusy}
                   onClick={() => escolherPosicao(null)}
                 >
-                  —
+                  -
                 </button>
               </div>
               <p style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', margin: '10px 0 0' }}>

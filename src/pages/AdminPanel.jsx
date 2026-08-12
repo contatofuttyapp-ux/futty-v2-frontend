@@ -28,7 +28,7 @@ const VIS_OPCOES = [
   { k: 'publico_aberto', icon: Globe, label: 'Aberta' },
 ];
 const VIS_DESC = {
-  privado: 'Só por convite — não aparece no Explorar.',
+  privado: 'Só por convite, não aparece no Explorar.',
   publico_aprovacao: 'Aparece no Explorar; a entrada precisa de aprovação.',
   publico_aberto: 'Aparece no Explorar; qualquer pessoa entra na hora.',
 };
@@ -764,7 +764,7 @@ function TabEquipa({ slug, team, showToast }) {
         <span style={lbl}>Cidade <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· busca por proximidade</span></span>
         <input value={cidade} onChange={(e) => setCidade(e.target.value.slice(0, 100))} placeholder="Ex: Brasília" style={inputStyle} />
         <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>
-          Aparece na busca por proximidade. O endereço exato nunca é mostrado — só a zona aproximada. Apague para sair da busca por distância.
+          Aparece na busca por proximidade. O endereço exato nunca é mostrado, só a zona aproximada. Apague para sair da busca por distância.
         </span>
       </label>
 
@@ -1104,7 +1104,7 @@ function TabMembros({ slug, meId, showToast }) {
               <div style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, fontWeight: 800, color: m.nota_media == null ? 'var(--label-color)' : m.nota_media >= 7 ? '#d4a017' : m.nota_media >= 5 ? '#fff' : 'var(--label-color)', border: '1px solid #333', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
-                  ★ {m.nota_media == null ? '—' : m.nota_media.toFixed(1)}
+                  ★ {m.nota_media == null ? '-' : m.nota_media.toFixed(1)}
                 </span>
                 {m.plano === 'pro' || m.plano === 'elite' ? (
                   <span style={{ fontSize: 10, fontWeight: 800, color: '#d4a017', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
@@ -1197,7 +1197,7 @@ function TabMembros({ slug, meId, showToast }) {
                     aria-pressed={ativo}
                     style={{ padding: '4px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${ativo ? '#d4a017' : '#333'}`, background: ativo ? 'rgba(212,160,23,0.15)' : 'transparent', color: ativo ? '#d4a017' : 'var(--text-dim)' }}
                   >
-                    {k || '—'}
+                    {k || '-'}
                   </button>
                 );
               })}
@@ -1513,7 +1513,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
   if (info.rsvp_fechado) {
     return (
       <div style={linha}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>RSVP fechado — {info.confirmados.length} confirmados</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>RSVP fechado: {info.confirmados.length} confirmados</div>
         <ListaUsers users={info.confirmados} />
         <button type="button" className="btn btn--primary btn--sm" style={{ marginTop: 10 }} onClick={fazerSorteio}>
           Fazer sorteio com confirmados
@@ -2042,7 +2042,7 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
     <div className="modal-overlay" role="presentation" onClick={() => !saving && onClose()}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 16, maxHeight: '82vh', overflowY: 'auto' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado — {formatDateTime(jogo.data)}</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado: {formatDateTime(jogo.data)}</h2>
 
           {!detail ? (
             <LoadingFutty />
@@ -2114,7 +2114,7 @@ function Seccao({ titulo, ligado, onToggle, children }) {
 function SelectJogador({ value, onChange, confirmados }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
-      <option value="">— Escolher jogador —</option>
+      <option value="">Escolher jogador</option>
       {confirmados.map((p) => (
         <option key={p.user_id} value={p.user_id}>{p.nome}</option>
       ))}
@@ -2198,11 +2198,11 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
           <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={lbl}>Total de gols</span><b style={{ color: '#fff' }}>{totalGols}</b></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
             <span style={lbl}>Jogo com mais confirmações</span>
-            <b style={{ color: '#fff', textAlign: 'right' }}>{jogoMaisConf ? `${jogoMaisConf.local || 'Jogo'} (${jogoMaisConf.confirmados || 0})` : '—'}</b>
+            <b style={{ color: '#fff', textAlign: 'right' }}>{jogoMaisConf ? `${jogoMaisConf.local || 'Jogo'} (${jogoMaisConf.confirmados || 0})` : '-'}</b>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
             <span style={lbl}>Membro mais antigo</span>
-            <b style={{ color: '#fff', textAlign: 'right' }}>{maisAntigo ? maisAntigo.nome || maisAntigo.email : '—'}</b>
+            <b style={{ color: '#fff', textAlign: 'right' }}>{maisAntigo ? maisAntigo.nome || maisAntigo.email : '-'}</b>
           </div>
         </div>
       </div>

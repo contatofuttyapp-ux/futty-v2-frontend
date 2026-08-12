@@ -45,12 +45,12 @@ function Hub({ slug }) {
       <Topbar hud="CAMPEONATO" back={`/equipa/${slug}`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <h1 className="camp-title" style={{ fontSize: 22 }}>Campeonatos</h1>
-        <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Torneios internos do time — o ranking fica intocado.</p>
+        <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Torneios internos do time: o ranking fica intocado.</p>
 
         {lista === null ? <LoadingFutty /> : lista.length === 0 ? (
           <div className="camp-card" style={{ textAlign: 'center', padding: '26px 14px' }}>
             <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 16 }}>Ainda sem campeonatos</div>
-            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{isAdmin ? 'Crie o primeiro — pontos corridos ou mata-mata.' : 'O admin cria o primeiro torneio do time.'}</p>
+            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{isAdmin ? 'Crie o primeiro: pontos corridos ou mata-mata.' : 'O admin cria o primeiro torneio do time.'}</p>
           </div>
         ) : (
           lista.map((c) => (
@@ -138,7 +138,7 @@ function Wizard({ slug, onCancel, onCriado }) {
         {passo === 1 && (
           <>
             <div className="camp-title" style={{ fontSize: 20, textAlign: 'center' }}>NOVO CAMPEONATO</div>
-            <p className="muted" style={{ fontSize: 12, textAlign: 'center', margin: '0 0 18px' }}>Um torneio interno — os times são do campeonato; o ranking do time fica intocado.</p>
+            <p className="muted" style={{ fontSize: 12, textAlign: 'center', margin: '0 0 18px' }}>Um torneio interno: os times são do campeonato; o ranking do time fica intocado.</p>
             <label className="lbl-hud" style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Nome do campeonato</label>
             <input className="input input--hud" value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Copa da Resenha" style={{ width: '100%', fontFamily: RAJ, fontSize: 16, fontWeight: 700 }} />
             <div style={{ marginTop: 22, display: 'grid', gap: 9 }}>
@@ -178,7 +178,7 @@ function Wizard({ slug, onCancel, onCriado }) {
             ))}
             {nomes.length < 8 ? <button type="button" onClick={addTime} style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.06em', color: '#f0c94a', background: 'rgba(212,160,23,.08)', border: '1px dashed rgba(212,160,23,.5)', padding: '7px 12px', cursor: 'pointer', clipPath: 'polygon(8% 0,92% 0,100% 28%,100% 72%,92% 100%,8% 100%,0 72%,0 28%)' }}>＋ Time</button> : null}
 
-            <div className="section-title" style={{ fontSize: 13 }}>Convidados sem app <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(só o nome — entram no sorteio)</span></div>
+            <div className="section-title" style={{ fontSize: 13 }}>Convidados sem app <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(só o nome, entram no sorteio)</span></div>
             <div className="row" style={{ marginBottom: 8 }}>
               {convidados.map((c, i) => (
                 <span key={i} className="camp-chip camp-chip--roxo" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{c}<span onClick={() => setConvidados((cur) => cur.filter((_, k) => k !== i))} style={{ cursor: 'pointer' }}>✕</span></span>

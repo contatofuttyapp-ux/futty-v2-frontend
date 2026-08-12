@@ -96,7 +96,7 @@ export default function CriarEquipa() {
         try {
           await apiFetch(`/api/teams/${t.slug}`, { method: 'PATCH', body: JSON.stringify(patch) });
         } catch {
-          setToast({ tipo: 'error', mensagem: 'Time criado — mas a definição (gols/visibilidade) falhou. Ajuste no admin.' });
+          setToast({ tipo: 'error', mensagem: 'Time criado, mas a definição (gols/visibilidade) falhou. Ajuste no admin.' });
         }
       }
       setTeam(t);
@@ -124,7 +124,7 @@ export default function CriarEquipa() {
   async function copiar() {
     const ok = await copiarTexto(inviteLink);
     setCopied(ok);
-    if (!ok) setToast({ tipo: 'error', mensagem: 'Não deu para copiar — copie o link à mão.' });
+    if (!ok) setToast({ tipo: 'error', mensagem: 'Não deu para copiar. Copie o link à mão.' });
   }
 
   const waHref = inviteLink ? `https://wa.me/?text=${encodeURIComponent(`Entre no meu time ${nome.trim()} no Futty: ${inviteLink}`)}` : null;
@@ -144,14 +144,14 @@ export default function CriarEquipa() {
         {passo === 1 && (
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Dê nome ao seu time</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O escudo nasce das iniciais — veja-o se formar enquanto você escreve.</p>
+            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O escudo nasce das iniciais. Veja-o se formar enquanto você escreve.</p>
             <Lbl>Nome do time</Lbl>
             <input className="input input--hud" value={nome} maxLength={40} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 15 }} />
             <div style={{ width: 110, height: 110, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 38, color: '#fff', background: 'rgba(255,255,255,0.04)', border: '2.5px solid #8b5cf6', margin: '22px auto 6px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
               {iniciais(nome)}
             </div>
             <p className="muted" style={{ fontSize: 11, textAlign: 'center', maxWidth: 290, margin: '0 auto', lineHeight: 1.5 }}>
-              seu escudo — as iniciais são sua marca; carregue o <b style={{ color: '#c9a24a' }}>logo do time</b> no painel de admin (com moderação).
+              seu escudo: as iniciais são sua marca; carregue o <b style={{ color: '#c9a24a' }}>logo do time</b> no painel de admin (com moderação).
             </p>
             <div style={{ marginTop: 24 }}>
               <Cta cheio disabled={!nome.trim()} onClick={() => setPasso(2)}>Continuar</Cta>
@@ -168,7 +168,7 @@ export default function CriarEquipa() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Mostrar gols</div>
                 <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
-                  {mostrarGols ? 'radar de 5 eixos + tile Gols e troféu Artilheiro' : 'radar cai para 3 — presença · vitórias · destaque'}
+                  {mostrarGols ? 'radar de 5 eixos + tile Gols e troféu Artilheiro' : 'radar cai para 3: presença · vitórias · destaque'}
                 </div>
               </div>
               <Toggle on={mostrarGols} onClick={() => setMostrarGols(!mostrarGols)} />
@@ -218,7 +218,7 @@ export default function CriarEquipa() {
         {passo === 4 && team && (
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Chame o seu time</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. O link é válido 7 dias — e você pode pular este passo.</p>
+            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. O link é válido 7 dias. Você pode pular este passo.</p>
             {inviteLink ? (
               <>
                 <Lbl>Link de convite</Lbl>

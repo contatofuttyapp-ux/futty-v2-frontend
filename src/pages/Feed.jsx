@@ -701,7 +701,7 @@ function ComposerInline({ teams, user, nome, onCreated }) {
       >
         <FeedAvatar nome={nome} avatarUrl={user?.avatar_url} size={40} />
         <span style={{ flex: 1, minWidth: 0, color: 'rgba(255,255,255,0.72)', fontSize: 14 }}>
-          Solta a resenha, {nome}…
+          Solte a resenha, {nome}…
         </span>
       </button>
     );

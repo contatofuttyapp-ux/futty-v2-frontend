@@ -32,7 +32,7 @@ const td = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid #1a1a1a
 
 function fmtData(iso) {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
@@ -102,7 +102,7 @@ function TabUsers({ showMsg }) {
           <tbody>
             {users.map((u) => (
               <tr key={u.id} style={u.suspenso ? { opacity: 0.6 } : undefined}>
-                <td style={td}>{u.nome || '—'}{u.is_super_admin ? ' (super)' : ''}</td>
+                <td style={td}>{u.nome || '-'}{u.is_super_admin ? ' (super)' : ''}</td>
                 <td style={td}>{u.email}</td>
                 <td style={td}>
                   <select value={u.plan || 'free'} onChange={(e) => mudarPlano(u, e.target.value)} style={{ ...btn, padding: '5px 8px' }}>
@@ -149,12 +149,12 @@ function TabTeams({ showMsg }) {
   async function apagar(t) {
     const resp = window.prompt(`Você vai APAGAR o time "${t.nome}" e todos os seus dados (jogos, membros, votos…). Isso é irreversível.\n\nEscreva APAGAR para confirmar:`);
     if (resp !== 'APAGAR') {
-      if (resp !== null) showMsg('Confirmação incorreta — nada apagado.', true);
+      if (resp !== null) showMsg('Confirmação incorreta: nada foi excluído.', true);
       return;
     }
     try {
       await apiFetch(`/api/super/teams/${t.id}`, { method: 'DELETE', body: JSON.stringify({ confirmar: 'APAGAR' }) });
-      showMsg('Time apagado.');
+      showMsg('Time excluído.');
       reload();
     } catch (err) {
       showMsg(err.message, true);
@@ -205,7 +205,7 @@ function TabTeams({ showMsg }) {
                   {t.suspensa
                     ? <button type="button" style={btn} onClick={() => definirSuspensao(t, false)}>Reativar</button>
                     : <button type="button" style={{ ...btn, borderColor: '#f0a35a', color: '#f0a35a' }} onClick={() => definirSuspensao(t, true)}>Suspender</button>}
-                  <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => apagar(t)}>Apagar</button>
+                  <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => apagar(t)}>Excluir</button>
                 </div>
               </td>
             </tr>
@@ -263,7 +263,7 @@ function TabDenuncias({ showMsg }) {
           </div>
         </div>
       ))}
-      {!fila.length && !loading ? <div style={{ ...CARD, padding: 14, color: 'var(--text-dim)', fontSize: 13 }}>Fila vazia — nada para revisar.</div> : null}
+      {!fila.length && !loading ? <div style={{ ...CARD, padding: 14, color: 'var(--text-dim)', fontSize: 13 }}>Fila vazia, nada para revisar.</div> : null}
     </div>
   );
 }

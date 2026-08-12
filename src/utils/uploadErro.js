@@ -13,7 +13,7 @@ export function mensagemUploadFoto(err) {
   }
   // Formato não suportado.
   if (m.includes('jpeg') || m.includes('png') || m.includes('webp') || m.includes('formato') || m.includes('suportad')) {
-    return { texto: 'Formato não suportado — use JPEG, PNG ou WebP.', podeRepetir: false };
+    return { texto: 'Formato não suportado: use JPEG, PNG ou WebP.', podeRepetir: false };
   }
   // Genérico: mantém a pista do backend se houver, mas em tom acionável.
   return { texto: 'Não consegui enviar a foto. Tente de novo.', podeRepetir: true };

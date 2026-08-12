@@ -79,7 +79,7 @@ export default function ModeracaoFila({ slug }) {
   if (!fila.length) {
     return (
       <div style={{ marginTop: 8, textAlign: 'center', color: '#7f7a8e', fontSize: 12.5, padding: '18px 10px', lineHeight: 1.6 }}>
-        <b style={{ color: '#9fd8a8' }}>Tudo tranquilo por aqui.</b><br />A IA já resolveu os óbvios — só chega o que precisa do seu olho.
+        <b style={{ color: '#9fd8a8' }}>Tudo tranquilo por aqui.</b><br />A IA já resolveu os óbvios: só chega o que precisa do seu olho.
       </div>
     );
   }

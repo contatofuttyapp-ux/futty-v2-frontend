@@ -106,7 +106,7 @@ export default function Jogo() {
     const ok = await copiarTexto(url);
     setToast(ok
       ? { tipo: 'success', mensagem: 'Link copiado!' }
-      : { tipo: 'error', mensagem: 'Não deu para copiar — copie o link à mão.' });
+      : { tipo: 'error', mensagem: 'Não deu para copiar, copie o link à mão.' });
   }
 
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
@@ -372,7 +372,7 @@ export default function Jogo() {
             {isAdmin ? (
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '10px 12px', marginBottom: 10 }}>
                 <div style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#9a8fc0', textTransform: 'uppercase', marginBottom: 6 }}>
-                  Convidados sem app <span style={{ color: '#6f6a80', textTransform: 'none', letterSpacing: 0 }}>(só o nome — não entram no ranking)</span>
+                  Convidados sem app <span style={{ color: '#6f6a80', textTransform: 'none', letterSpacing: 0 }}>(só o nome, não entram no ranking)</span>
                 </div>
                 {convidados.length ? (
                   <div className="chips-row" style={{ marginBottom: 8 }}>
@@ -406,7 +406,7 @@ export default function Jogo() {
             {isAdmin && game.sorteio_realizado && confirmacao === 're-sorteio' && (
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginBottom: 10, borderColor: 'rgba(240,201,74,0.4)' }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: '#f0c94a' }}>Sortear de novo?</div>
-                <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>Isto substitui o sorteio atual — perde-se o resultado e o replay deste.</div>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>Isto substitui o sorteio atual: perde-se o resultado e o replay deste.</div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => { setConfirmacao(null); sortear(); }} disabled={busy}>
                     {busy ? 'Processando…' : 'Substituir sorteio'}
@@ -527,7 +527,7 @@ export default function Jogo() {
                   </Link>
                 </div>
                 <p className="muted" style={{ marginTop: 8, fontSize: 12, textAlign: 'center' }}>
-                  Dê sua nota — conta para o ranking do time.
+                  Dê sua nota, conta para o ranking do time.
                 </p>
               </div>
             )}

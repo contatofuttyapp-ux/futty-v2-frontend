@@ -98,7 +98,7 @@ export default function Convite() {
       {alvo ? (
         pedidoEnviado ? (
           <div className="alert" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: 'var(--neon)' }}>
-            Pedido enviado a {alvo.nome}. O admin decide — você vê o desfecho no Início.
+            Pedido enviado a {alvo.nome}. O admin decide, você vê o desfecho no Início.
           </div>
         ) : (
           <button type="button" className="btn btn--primary" style={{ width: '100%' }} onClick={pedirEntrada} disabled={pedindo}>

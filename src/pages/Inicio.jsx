@@ -588,7 +588,7 @@ export default function Inicio() {
         {precisaDob ? (
           <div className="hud-corners" style={{ display: 'grid', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.25)' }}>
             <span style={{ fontSize: 13, color: '#fff', lineHeight: 1.45 }}>
-              Informe sua <b>data de nascimento</b> — é para sabermos proteger menores nos links públicos de sorteio.
+              Informe sua <b>data de nascimento</b>: é para sabermos proteger menores nos links públicos de sorteio.
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <input
@@ -629,7 +629,7 @@ export default function Inicio() {
                 Pedido pendente na {p.team?.nome}
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                À espera de aprovação do admin — avisamos você aqui quando decidir.
+                À espera de aprovação do admin, avisamos você aqui quando decidir.
               </span>
             </span>
             <button type="button" onClick={() => cancelarPedidoPendente(p)} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '6px 12px', flexShrink: 0, borderRadius: 2 }}>
@@ -647,7 +647,7 @@ export default function Inicio() {
                 {p.status === 'approved' ? `Você entrou na ${p.team?.nome}!` : `O pedido para ${p.team?.nome} não seguiu`}
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                {p.status === 'approved' ? 'O admin aceitou seu pedido — bem-vindo.' : 'Sem drama: há mais peladas no Explorar.'}
+                {p.status === 'approved' ? 'O admin aceitou seu pedido, bem-vindo.' : 'Sem drama: há mais peladas no Explorar.'}
               </span>
             </span>
             {p.status === 'approved' && p.team?.slug ? (
@@ -673,7 +673,7 @@ export default function Inicio() {
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                 {votacaoTop.pedido_revotacao
                   ? 'Dê sua nota aos companheiros do último jogo.'
-                  : `Faltam ${votacaoTop.faltam} na ${votacaoTop.nome} — sua nota conta para o ranking.`}
+                  : `Faltam ${votacaoTop.faltam} na ${votacaoTop.nome}: sua nota conta para o ranking.`}
               </span>
             </span>
             <Link to={`/equipa/${votacaoTop.slug}/ranking`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={fecharVotacao}>
@@ -848,7 +848,7 @@ export default function Inicio() {
               <Link to={`/equipa/${campSlug}/campeonato`} className="hud-corners" style={{ textDecoration: 'none', display: 'block', marginTop: 14, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', padding: 'var(--space-md)' }}>
                 {campeonato.estado === 'terminado' ? (
                   <>
-                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#d4a017' }}>{campeonato.nome} — Campeão: {nomeCampeao(campeonato)}</div>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#d4a017' }}>{campeonato.nome} · Campeão: {nomeCampeao(campeonato)}</div>
                     <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{campeonato.time_a_nome} {campeonato.time_a_pontos} × {campeonato.time_b_pontos} {campeonato.time_b_nome}</div>
                   </>
                 ) : (

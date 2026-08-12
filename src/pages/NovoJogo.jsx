@@ -118,9 +118,9 @@ export default function NovoJogo() {
               <button type="button" className={`chip ${modo === 'retro' ? 'chip--active' : ''}`} onClick={() => setModo('retro')}>Já aconteceu</button>
             </div>
             <p className="muted" style={{ fontSize: 12, margin: '0 0 14px', lineHeight: 1.5 }}>
-              {modo === 'sortear' ? 'Agende um jogo — os times saem do sorteio.'
+              {modo === 'sortear' ? 'Agende um jogo. Os times saem do sorteio.'
                 : modo === 'manual' ? 'Você define os times à mão. Sem sorteio, sem cerimônia.'
-                  : 'Cadastre um jogo que já aconteceu (data passada). Silencioso — não notifica ninguém.'}
+                  : 'Cadastre um jogo que já aconteceu (data passada). Silencioso: não notifica ninguém.'}
             </p>
 
             <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', padding: '16px 16px 18px', display: 'grid', gap: 14 }}>
@@ -185,7 +185,7 @@ export default function NovoJogo() {
             </div>
 
             {/* Convidados sem app (nome solto) */}
-            <div className="section-title">Convidados <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(sem app — só nome)</span></div>
+            <div className="section-title">Convidados <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(sem app, só nome)</span></div>
             <div className="hud-corners" style={{ padding: '10px 12px', marginBottom: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)' }}>
               {convidados.length ? (
                 <div className="chips-row" style={{ marginBottom: 8 }}>

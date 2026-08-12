@@ -716,7 +716,7 @@ export default function Figurinha() {
               <>
                 <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: '#fff', margin: 0 }}>Seu card está pronto!</h2>
                 {limiteIA ? (
-                  <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Limite de gerações IA atingido — mostramos o card com sua foto.</p>
+                  <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Limite de gerações IA atingido: mostramos o card com sua foto.</p>
                 ) : null}
                 <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={partilharCromo}>
                   <Share2 size={18} /> Compartilhar agora
@@ -875,7 +875,7 @@ export default function Figurinha() {
         {/* Foto subida mas ainda sem avatar IA gerado (a foto não entra no card). */}
         {fotoLocal ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <Check size={14} /> Foto carregada — gere seu avatar
+            <Check size={14} /> Foto carregada, gere seu avatar
           </div>
         ) : null}
 
@@ -970,7 +970,7 @@ export default function Figurinha() {
               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Confirme seu e-mail para gerar</span>
               <span style={{ fontSize: 12, color: 'var(--label-color)' }}>Enviamos um link de confirmação quando você criou a conta.</span>
               {reenviarFeito ? (
-                <span style={{ fontSize: 12, color: '#7bd88f' }}>E-mail reenviado — confira sua caixa de entrada.</span>
+                <span style={{ fontSize: 12, color: '#7bd88f' }}>E-mail reenviado, confira sua caixa de entrada.</span>
               ) : (
                 <button
                   type="button"

@@ -213,7 +213,7 @@ export default function JogadorPerfil() {
         {error ? (
           <div className="glass" style={{ ...VIDRO, clipPath: CLIP, padding: '22px 16px', textAlign: 'center', marginTop: 16, color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.6 }}>
             <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, color: '#fff' }}>Perfil só entre companheiros</div>
-            Não compartilham nenhum time — este perfil não está acessível.
+            Não compartilham nenhum time: este perfil não está acessível.
           </div>
         ) : loading ? (
           <LoadingFutty />

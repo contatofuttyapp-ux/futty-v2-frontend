@@ -95,7 +95,7 @@ export default function Explorar() {
         if (!raio) setRaio(10);
         setToast({ tipo: 'success', mensagem: 'Localização ativa (só neste celular).' });
       },
-      () => setToast({ tipo: 'info', mensagem: 'Sem problema — escreva sua cidade abaixo.' })
+      () => setToast({ tipo: 'info', mensagem: 'Sem problema, escreva sua cidade abaixo.' })
     );
   }
 
@@ -124,7 +124,7 @@ export default function Explorar() {
       const r = await apiFetch(`/api/teams/${equipa.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
       const entrou = !!r?.entrou;
       setEquipas((cur) => cur.map((t) => (t.slug === equipa.slug ? { ...t, ja_membro: entrou || t.ja_membro, pedido_pendente: !entrou } : t)));
-      setToast({ tipo: 'success', mensagem: entrou ? 'Você entrou no time!' : 'Pedido enviado! O admin vai decidir — você vê o desfecho no Início.' });
+      setToast({ tipo: 'success', mensagem: entrou ? 'Você entrou no time!' : 'Pedido enviado! O admin vai decidir e você vê o desfecho no Início.' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {
@@ -169,7 +169,7 @@ export default function Explorar() {
             <b style={{ fontFamily: RAJ, fontSize: 13, color: '#e4d9ff', letterSpacing: '0.04em', display: 'block' }}>
               {geoPedida ? 'Localização ativa' : 'Usar minha localização'}
             </b>
-            <span style={{ fontSize: 10, color: '#9a8fc0' }}>opt-in — se recusar, a busca por cidade chega; sua posição nunca sai do celular</span>
+            <span style={{ fontSize: 10, color: '#9a8fc0' }}>opt-in: se recusar, a busca por cidade chega; sua posição nunca sai do celular</span>
           </span>
         </button>
 
@@ -246,7 +246,7 @@ export default function Explorar() {
         )}
 
         <p style={{ fontSize: 10, color: '#8a8a98', textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>
-          a distância será sempre do TIME (ponto aproximado declarado pelo admin) — nunca de pessoas
+          a distância será sempre do TIME (ponto aproximado declarado pelo admin), nunca de pessoas
         </p>
       </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
