@@ -50,9 +50,9 @@ export default function SorteioPublico() {
 
         {/* CTA — a razão de esta página existir */}
         <div style={{ marginTop: 22, textAlign: 'center' }}>
-          <p style={{ fontSize: 12, color: 'var(--text-dim)', margin: '0 0 10px' }}>A tua pelada também merece isto.</p>
+          <p style={{ fontSize: 12, color: 'var(--text-dim)', margin: '0 0 10px' }}>Sua pelada também merece isto.</p>
           <Link to="/register" className="btn hud-corners-s cta-gold" style={{ display: 'inline-flex', fontFamily: RAJ, letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', padding: '13px 26px' }}>
-            Cria o teu grupo no Futty
+            Crie seu grupo no Futty
           </Link>
         </div>
       </main>

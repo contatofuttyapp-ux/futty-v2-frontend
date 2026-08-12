@@ -98,16 +98,16 @@ export default function Convite() {
       {alvo ? (
         pedidoEnviado ? (
           <div className="alert" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: 'var(--neon)' }}>
-            Pedido enviado a {alvo.nome}. O admin decide — vês o desfecho no Início.
+            Pedido enviado a {alvo.nome}. O admin decide — você vê o desfecho no Início.
           </div>
         ) : (
           <button type="button" className="btn btn--primary" style={{ width: '100%' }} onClick={pedirEntrada} disabled={pedindo}>
-            {pedindo ? 'A enviar…' : session ? `Pedir entrada em ${alvo.nome}` : `Inicia sessão para entrar em ${alvo.nome}`}
+            {pedindo ? 'Enviando…' : session ? `Pedir entrada em ${alvo.nome}` : `Faça login para entrar em ${alvo.nome}`}
           </button>
         )
       ) : null}
       <Link to="/explorar" className="btn" style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.22)', color: 'var(--text-dim)' }}>
-        Procurar equipas no Explorar
+        Procurar times no Explorar
       </Link>
       <Link to="/home" className="auth-footer" style={{ textAlign: 'center' }}>
         Ir para a página inicial
@@ -138,7 +138,7 @@ export default function Convite() {
               <h1 className="auth-title">Convite inválido</h1>
               <p className="auth-subtitle">
                 {MOTIVOS[info?.motivo] || 'Este convite não está disponível.'}
-                {info?.team ? ' Mas ainda podes entrar na equipa:' : ''}
+                {info?.team ? ' Mas você ainda pode entrar no time:' : ''}
               </p>
               {saidas(info?.team)}
             </>
@@ -147,8 +147,8 @@ export default function Convite() {
               <h1 className="auth-title">Convite para um time</h1>
               <p className="auth-subtitle">
                 {info.convidadoPor
-                  ? `${info.convidadoPor} convidou-te para entrar no time.`
-                  : 'Foste convidado para entrar neste time.'}
+                  ? `${info.convidadoPor} convidou você para entrar no time.`
+                  : 'Você foi convidado para entrar neste time.'}
               </p>
 
               <div
@@ -174,7 +174,7 @@ export default function Convite() {
               {info.jaMembro ? (
                 <>
                   <div className="alert" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: 'var(--neon)' }}>
-                    Já és membro deste time.
+                    Você já é membro deste time.
                   </div>
                   <Link
                     to={`/equipa/${team?.slug}`}
@@ -196,7 +196,7 @@ export default function Convite() {
                     ? 'Entrando…'
                     : session
                       ? 'Entrar no time'
-                      : 'Inicia sessão para entrar'}
+                      : 'Faça login para entrar'}
                 </button>
               )}
             </>

@@ -58,7 +58,7 @@ export default function CampeonatoPublico() {
                 </>
               );
             })()}
-            <Link to="/register" className="btn hud-corners cta-gold" style={{ display: 'flex', marginTop: 24, textDecoration: 'none' }}>Cria o teu grupo no Futty</Link>
+            <Link to="/register" className="btn hud-corners cta-gold" style={{ display: 'flex', marginTop: 24, textDecoration: 'none' }}>Crie seu grupo no Futty</Link>
           </>
         )}
       </main>

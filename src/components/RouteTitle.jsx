@@ -10,7 +10,7 @@ const TITULOS = [
   ['/forgot-password', 'Recuperar senha'],
   ['/alterar-password', 'Alterar senha'],
   ['/home', 'Início'],
-  ['/criar-equipa', 'Criar equipa'],
+  ['/criar-equipa', 'Criar time'],
   ['/feed', 'Feed'],
   ['/figurinha', 'Figurinha'],
   ['/perfil', 'Perfil'],
@@ -28,7 +28,7 @@ const TITULOS = [
   ['/equipa/:slug/jogo/novo', 'Novo jogo'],
   ['/equipa/:slug/jogo/:id', 'Jogo'],
   ['/admin/:slug', 'Admin'],
-  ['/equipa/:slug', 'Equipa'],
+  ['/equipa/:slug', 'Time'],
 ];
 
 export default function RouteTitle() {

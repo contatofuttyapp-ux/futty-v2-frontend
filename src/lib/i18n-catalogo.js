@@ -2,49 +2,13 @@
 // (o texto-base selado); aqui vivem só as OUTRAS 5 línguas. Chave em falta numa
 // língua → cai no PT-BR (a própria chave). Preencher por LOTES (ver i18n-checkpoint).
 //
-// QUALIDADE: pt-PT / en / es são cuidadas (termos de futebol corretos, tom natural).
+// QUALIDADE: en / es / fr são cuidadas (termos de futebol corretos, tom natural).
 // ko / cs são AUTOMÁTICAS — marcadas com o sufixo lógico "‹auto›" no comentário do
 // bloco; a refinar por nativo. Marca NUNCA se traduz: Futty · pelada · Resenha · Figurinha.
 //
 // LOTE 1 — Entrada (Login · Register · ForgotPassword · Onboarding).
 
 const CATALOGO = {
-  'pt-PT': {
-    'Bem-vindo de volta': 'Bem-vindo de volta',
-    'Entre na sua conta para continuar.': 'Entra na tua conta para continuar.',
-    'E-mail': 'Email',
-    'Senha': 'Palavra-passe',
-    'Esqueceu a senha?': 'Esqueceste-te da palavra-passe?',
-    'Entrando…': 'A entrar…',
-    'Entrar': 'Entrar',
-    'Continuar com Google': 'Continuar com Google',
-    'Ainda não tem conta?': 'Ainda não tens conta?',
-    'Crie uma': 'Cria uma',
-    'Crie a sua conta': 'Cria a tua conta',
-    'Junte-se ao Futty em segundos.': 'Junta-te ao Futty em segundos.',
-    'Confirmar senha': 'Confirmar palavra-passe',
-    'Criando conta…': 'A criar conta…',
-    'Criar conta': 'Criar conta',
-    'Já tem conta?': 'Já tens conta?',
-    'Entre aqui': 'Entra aqui',
-    'A senha deve ter pelo menos 6 caracteres.': 'A palavra-passe tem de ter pelo menos 6 caracteres.',
-    'As senhas não coincidem.': 'As palavras-passe não coincidem.',
-    'Data de nascimento é obrigatória.': 'A data de nascimento é obrigatória.',
-    'Recuperar senha': 'Recuperar palavra-passe',
-    'Informe seu e-mail e enviamos um link para redefinir a senha.': 'Indica o teu email e enviamos-te um link para repor a palavra-passe.',
-    'Enviando…': 'A enviar…',
-    'Voltar ao login': 'Voltar ao login',
-    'Continuar': 'Continuar',
-    'Trocar a foto': 'Trocar a foto',
-    'Tirar foto agora': 'Tirar foto agora',
-    'Escolher da galeria': 'Escolher da galeria',
-    'deixar para depois': 'deixar para depois',
-    'Nome de jogador': 'Nome de jogador',
-    'Você é goleiro?': 'És guarda-redes?',
-    'GR — sou goleiro': 'GR — sou guarda-redes',
-    'Jogo na linha': 'Jogo na linha',
-    'Começar': 'Começar',
-  },
   en: {
     'Bem-vindo de volta': 'Welcome back',
     'Entre na sua conta para continuar.': 'Sign in to your account to continue.',
@@ -80,6 +44,7 @@ const CATALOGO = {
     'GR — sou goleiro': 'GK — I play in goal',
     'Jogo na linha': 'I play outfield',
     'Começar': 'Get started',
+    'Bola parada…\nO servidor tá demorando mais que o normal': 'Set piece…\nThe server is taking longer than usual',
   },
   es: {
     'Bem-vindo de volta': 'Bienvenido de vuelta',
@@ -116,6 +81,45 @@ const CATALOGO = {
     'GR — sou goleiro': 'POR — soy portero',
     'Jogo na linha': 'Juego de campo',
     'Começar': 'Empezar',
+    'Bola parada…\nO servidor tá demorando mais que o normal': 'Balón parado…\nEl servidor está tardando más de lo normal',
+  },
+  // Francês (entrou 31-jul no lugar do pt-PT). LOTE 1 cuidado; restantes lotes a preencher.
+  fr: {
+    'Bem-vindo de volta': 'Bon retour',
+    'Entre na sua conta para continuar.': 'Connectez-vous à votre compte pour continuer.',
+    'E-mail': 'E-mail',
+    'Senha': 'Mot de passe',
+    'Esqueceu a senha?': 'Mot de passe oublié ?',
+    'Entrando…': 'Connexion…',
+    'Entrar': 'Se connecter',
+    'Continuar com Google': 'Continuer avec Google',
+    'Ainda não tem conta?': 'Pas encore de compte ?',
+    'Crie uma': 'Créez-en un',
+    'Crie a sua conta': 'Créez votre compte',
+    'Junte-se ao Futty em segundos.': 'Rejoignez Futty en quelques secondes.',
+    'Confirmar senha': 'Confirmer le mot de passe',
+    'Criando conta…': 'Création du compte…',
+    'Criar conta': 'Créer un compte',
+    'Já tem conta?': 'Vous avez déjà un compte ?',
+    'Entre aqui': 'Connectez-vous ici',
+    'A senha deve ter pelo menos 6 caracteres.': 'Le mot de passe doit contenir au moins 6 caractères.',
+    'As senhas não coincidem.': 'Les mots de passe ne correspondent pas.',
+    'Data de nascimento é obrigatória.': 'La date de naissance est obligatoire.',
+    'Recuperar senha': 'Réinitialiser le mot de passe',
+    'Informe seu e-mail e enviamos um link para redefinir a senha.': 'Saisissez votre e-mail et nous vous enverrons un lien de réinitialisation.',
+    'Enviando…': 'Envoi…',
+    'Voltar ao login': 'Retour à la connexion',
+    'Continuar': 'Continuer',
+    'Trocar a foto': 'Changer la photo',
+    'Tirar foto agora': 'Prendre une photo',
+    'Escolher da galeria': 'Choisir dans la galerie',
+    'deixar para depois': 'plus tard',
+    'Nome de jogador': 'Nom de joueur',
+    'Você é goleiro?': 'Êtes-vous gardien ?',
+    'GR — sou goleiro': 'GB — je suis gardien',
+    'Jogo na linha': 'Je joue dans le champ',
+    'Começar': 'Commencer',
+    'Bola parada…\nO servidor tá demorando mais que o normal': 'Coup arrêté…\nLe serveur met plus de temps que d\'habitude',
   },
   // ‹auto› — coreano automático, a refinar por nativo. Marca preservada.
   ko: {
@@ -145,6 +149,7 @@ const CATALOGO = {
     'GR — sou goleiro': 'GK — 골키퍼입니다',
     'Jogo na linha': '필드 플레이어',
     'Começar': '시작하기',
+    'Bola parada…\nO servidor tá demorando mais que o normal': '세트피스…\n서버가 평소보다 오래 걸리고 있어요',
   },
   // ‹auto› — checo automático, a refinar por nativo. Marca preservada.
   cs: {
@@ -174,6 +179,7 @@ const CATALOGO = {
     'GR — sou goleiro': 'BR — jsem brankář',
     'Jogo na linha': 'Hraji v poli',
     'Começar': 'Začít',
+    'Bola parada…\nO servidor tá demorando mais que o normal': 'Standardka…\nServeru to trvá déle než obvykle',
   },
 };
 

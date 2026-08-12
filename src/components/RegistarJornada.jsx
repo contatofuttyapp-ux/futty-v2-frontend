@@ -13,7 +13,7 @@ export default function RegistarJornada({ campeonato, onSaved, showToast }) {
   async function guardar() {
     if (busy) return;
     if (!vencedor) {
-      showToast('Indica o vencedor da jornada.', 'error');
+      showToast('Indique o vencedor da jornada.', 'error');
       return;
     }
     setBusy(true);
@@ -25,7 +25,7 @@ export default function RegistarJornada({ campeonato, onSaved, showToast }) {
       setVencedor(null);
       setPlacarA('');
       setPlacarB('');
-      showToast('Jornada registada!');
+      showToast('Jornada registrada!');
       onSaved();
     } catch (e) {
       showToast(e.message, 'error');
@@ -51,7 +51,7 @@ export default function RegistarJornada({ campeonato, onSaved, showToast }) {
         <span style={{ fontSize: 13 }}>{campeonato.time_b_nome}</span>
       </div>
       <button type="button" className="btn btn--purple btn--sm" disabled={busy} onClick={guardar}>
-        {busy ? 'Salvando…' : 'Registar resultado'}
+        {busy ? 'Salvando…' : 'Registrar resultado'}
       </button>
     </div>
   );

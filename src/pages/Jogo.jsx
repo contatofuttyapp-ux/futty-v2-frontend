@@ -182,7 +182,7 @@ export default function Jogo() {
             <div className="hud-corners" style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
               <div style={{ display: 'grid', placeItems: 'center', width: 52, height: 56, flexShrink: 0, background: 'rgba(212,160,23,0.10)', border: '1px solid rgba(212,160,23,0.45)', clipPath: CLIP_S }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, color: '#f0c94a', lineHeight: 1 }}>{new Date(game.data).getDate()}</div>
-                <div style={{ fontFamily: RAJ, fontSize: 10, color: '#c9a24a', textTransform: 'uppercase' }}>{new Date(game.data).toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '')}</div>
+                <div style={{ fontFamily: RAJ, fontSize: 10, color: '#c9a24a', textTransform: 'uppercase' }}>{new Date(game.data).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</div>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 18, lineHeight: 1.15 }}>{game.local || 'Jogo'}</div>

@@ -56,7 +56,7 @@ export default function AlterarPassword() {
   async function guardar() {
     if (busy) return;
     if (nova.length < 6) {
-      setToast({ tipo: 'error', mensagem: 'A senha tem de ter pelo menos 6 caracteres.' });
+      setToast({ tipo: 'error', mensagem: 'A senha precisa ter pelo menos 6 caracteres.' });
       return;
     }
     if (nova !== confirmar) {
@@ -79,7 +79,7 @@ export default function AlterarPassword() {
     <div className="app-shell">
       <Topbar hud="ALTERAR SENHA" back="/perfil" />
       <main className="app-main page-reveal">
-        <p className="muted" style={{ fontSize: 13, margin: '4px 0 16px' }}>Escolhe uma nova senha (mínimo 6 caracteres).</p>
+        <p className="muted" style={{ fontSize: 13, margin: '4px 0 16px' }}>Escolha uma nova senha (mínimo 6 caracteres).</p>
 
         <div style={{ display: 'grid', gap: 14, maxWidth: 420 }}>
           <CampoPassword label="Nova senha" value={nova} onChange={setNova} />

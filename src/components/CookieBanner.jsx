@@ -83,7 +83,7 @@ export default function CookieBanner() {
           textOverflow: 'ellipsis',
         }}
       >
-        Cookies para manter a sua sessão.{' '}
+        Cookies para manter sua sessão.{' '}
         <Link to="/privacidade" style={{ color: 'var(--neon)' }}>Saiba mais</Link>
       </p>
       <button type="button" className="btn btn--sm btn--primary" style={{ flexShrink: 0 }} onClick={aceitar}>

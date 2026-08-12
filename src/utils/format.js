@@ -25,7 +25,7 @@ export function dayMonth(iso) {
   const d = new Date(iso);
   return {
     day: String(d.getDate()).padStart(2, '0'),
-    month: d.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', ''),
+    month: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
   };
 }
 

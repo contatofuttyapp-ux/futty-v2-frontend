@@ -24,7 +24,7 @@ export default function SorteioShow() {
   const game = data?.game;
   const resultado = game?.times_resultado;
   const dataCartaz = game?.data
-    ? new Date(game.data).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ de /g, ' ').replace(/\./g, '')
+    ? new Date(game.data).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ de /g, ' ').replace(/\./g, '')
     : '';
 
   // TERMO de quem partilha (1-clique, uma vez por jogo). Ao primeiro "Copiar link"

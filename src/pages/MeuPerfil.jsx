@@ -415,7 +415,7 @@ export default function MeuPerfil() {
                   onClick={() => desbloquear(b.id)}
                   style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: 12, fontWeight: 700, cursor: desbloqueandoId === b.id ? 'wait' : 'pointer', padding: '4px 6px' }}
                 >
-                  {desbloqueandoId === b.id ? 'A desbloquear…' : 'Desbloquear'}
+                  {desbloqueandoId === b.id ? 'Desbloqueando…' : 'Desbloquear'}
                 </button>
               </div>
             ))}

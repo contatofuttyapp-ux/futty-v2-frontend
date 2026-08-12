@@ -17,7 +17,7 @@ function ContaSuspensa({ onSair }) {
         Conta suspensa
       </h1>
       <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, maxWidth: 300, lineHeight: 1.5, margin: 0 }}>
-        A tua conta está suspensa. Se achas que é engano, fala connosco.
+        Sua conta está suspensa. Se você acha que é engano, fale conosco.
       </p>
       <div className="cta-gold-glow" style={{ display: 'flex', width: '100%', maxWidth: 260, marginTop: 4 }}>
         <button type="button" className="btn hud-corners cta-gold" style={{ width: '100%' }} onClick={onSair}>

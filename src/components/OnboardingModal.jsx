@@ -10,19 +10,19 @@ export default function OnboardingModal({ teamNome, onClose }) {
     {
       icon: 'bola',
       titulo: `Bem-vindo ao ${teamNome || 'time'}!`,
-      texto: 'Aqui organizamos os sorteios, registamos os resultados e acompanhamos o ranking.',
+      texto: 'Aqui organizamos os sorteios, registramos os resultados e acompanhamos o ranking.',
       botao: 'Próximo →',
     },
     {
       icon: 'figurinha',
-      titulo: 'A tua figurinha',
-      texto: 'Cria a tua figurinha personalizada. Adiciona uma foto e gera o teu avatar IA estilo cromo Panini.',
+      titulo: 'Sua figurinha',
+      texto: 'Crie sua figurinha personalizada. Adicione uma foto e gere seu avatar IA estilo cromo Panini.',
       botao: 'Próximo →',
     },
     {
       icon: 'resenha',
-      titulo: 'Confirma a tua presença',
-      texto: 'Antes de cada jogo, confirma se vais. O admin sorteia os times só com quem confirmou.',
+      titulo: 'Confirme sua presença',
+      texto: 'Antes de cada jogo, confirme se vai. O admin sorteia os times só com quem confirmou.',
       botao: 'Entrar →',
     },
   ];

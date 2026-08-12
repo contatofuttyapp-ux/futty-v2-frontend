@@ -39,12 +39,12 @@ const CARD = {
 function dataExtensa(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 function horaDe(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 function haQuantoTempo(iso) {
   const ts = new Date(iso).getTime();

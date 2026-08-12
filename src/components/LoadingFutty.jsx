@@ -18,11 +18,15 @@
 // CARD, não ao viewport) usam o <FuttyLoader> directo e não este componente.
 import { useEffect, useState } from 'react';
 import FuttyLoader from './FuttyLoader';
+// tGlobal (não-reactivo): este ecrã também é usado FORA do I18nProvider
+// (guarda de auth no arranque) — hook aqui rebenta; tGlobal lê o idioma guardado.
+import { tGlobal } from '../lib/i18n';
 
 // P3-14 — se o carregamento passar dos 3s, uma legenda discreta aparece por baixo do F
 // (contexto: "não travou, ainda estamos a puxar"). `legenda` é opcional — cada página
-// pode passar a sua ("A carregar o perfil…"); por omissão, uma linha reconfortante.
-export default function LoadingFutty({ legenda = 'A demorar mais do que o costume…' }) {
+// pode passar a sua; por omissão, a linha da casa em PT-BR (texto-base = chave i18n),
+// com tom de jogo — escolhida pelo dono a 31-jul.
+export default function LoadingFutty({ legenda = 'Bola parada…\nO servidor tá demorando mais que o normal' }) {
   const [mostrarLegenda, setMostrarLegenda] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setMostrarLegenda(true), 3000);
@@ -44,8 +48,8 @@ export default function LoadingFutty({ legenda = 'A demorar mais do que o costum
     >
       <FuttyLoader size={129} label={null} />
       {mostrarLegenda ? (
-        <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, letterSpacing: '0.06em', color: 'var(--text-dim)', opacity: 0.85, transition: 'opacity 0.4s ease' }}>
-          {legenda}
+        <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, letterSpacing: '0.06em', whiteSpace: 'pre-line', textAlign: 'center', color: 'var(--text-dim)', opacity: 0.85, transition: 'opacity 0.4s ease' }}>
+          {tGlobal(legenda)}
         </span>
       ) : null}
     </div>

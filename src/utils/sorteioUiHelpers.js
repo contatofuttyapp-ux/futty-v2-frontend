@@ -23,7 +23,7 @@ export function jogoParaSorteioSlot(jogo) {
 export function formatarDataJogo(jogo) {
   const d = new Date(jogo?.date || jogo?.data_jogo || jogo?.data);
   if (Number.isNaN(d.getTime())) return '';
-  const data = d.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
+  const data = d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
   // Hora: dos campos V1 se existirem, senão da própria timestamp.
   const horaV1 = String(jogo?.time || jogo?.hora || '').trim();
   const hora = horaV1 || d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
