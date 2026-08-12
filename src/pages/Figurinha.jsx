@@ -28,9 +28,10 @@ import '../styles/app.css';
 // Épico (o único livre a seguir ao Estádio/Aura). LEI DA REGRA JUSTA: quem já
 // tinha Aura/Épico equipado mantém — o gate só corre ao TROCAR (ver escolherFundo).
 const FUNDOS = [
+  // ORDEM (dono, 31-jul): os GRÁTIS primeiro, os pagos depois — Neutro antes do Aura.
   { k: 'estadio', label: 'Estádio' },
-  { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
   { k: 'preto', label: 'Neutro' },
+  { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
   { k: 'gradiente', label: 'Épico', premium: true }, // chave interna 'gradiente' (estado), label novo
   { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
   { k: 'royal', label: 'Royal', premium: true }, // par de luxo do Golden — chapa roxa da casa
@@ -66,13 +67,19 @@ const PLANOS_COM_KITS = ['pro', 'elite'];
 const KIT_IMG = {
   'dark-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit1-dark-gold.png',
   'dark-purple': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit2-dark-purple.png',
+  'white-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit3-white-gold.png',
+  'elite-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit4-elite-gold.png',
+  'royal-purple': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit5-royal-purple.png',
 };
-// Só os kits REAIS (geráveis). White Gold e Elite Gold saíram do seletor — eram
-// promessas (breve/locked), não se vende o que não existe. Ver SPEC-REDE-SOCIAL
-// (features futuras: kits White/Elite + figurinha animada, sem data).
+// Os 4 kits do lançamento (31-jul, dono): mesmo design, cores diferentes.
+// GRÁTIS = só o Dark Gold (a identidade da casa em todo card compartilhado).
+// Os outros 3 são pagos (estado 'pro' → cadeado para free, mesma régua do backend).
 const KITS_FIGURINHA = [
   { id: 'dark-gold', nome: 'Dark Gold', base: '#0d0d12', acento: '#d4a017', estado: 'ativo' },
-  { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'ativo' },
+  { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'pro' },
+  { id: 'white-gold', nome: 'White Gold', base: '#f8f5f0', acento: '#d4a017', estado: 'pro' },
+  { id: 'elite-gold', nome: 'Elite Gold', base: '#d4a017', acento: '#0d0d12', estado: 'pro' },
+  { id: 'royal-purple', nome: 'Royal Purple', base: '#8b5cf6', acento: '#0d0d12', estado: 'pro' },
 ];
 
 // Partículas de luz do fundo "estádio" (valores fixos por partícula → o
@@ -180,6 +187,9 @@ export default function Figurinha() {
   const [limiteIA, setLimiteIA] = useState(false);
   const [erroIA, setErroIA] = useState(false); // falha da geração (≠ 403) → estado de erro no overlay
   const [erroIAmsg, setErroIAmsg] = useState(''); // mensagem específica (ex.: foto inválida); vazio = texto genérico
+  const [emailNaoConfirmado, setEmailNaoConfirmado] = useState(false); // gate anti-abuso (11-ago): geração exige e-mail confirmado
+  const [reenviarBusy, setReenviarBusy] = useState(false);
+  const [reenviarFeito, setReenviarFeito] = useState(false);
   const [modalFoto, setModalFoto] = useState(false); // modal "A tua foto" (foto actual + estado IA + carregar nova)
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
@@ -482,6 +492,7 @@ export default function Figurinha() {
     setLimiteIA(false);
     setErroIA(false);
     setErroIAmsg('');
+    setEmailNaoConfirmado(false);
     try {
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit }) });
       // Guarda o avatar, o kit vestido e regista o slot novo (sem duplicar).
@@ -492,16 +503,35 @@ export default function Figurinha() {
       } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
     } catch (err) {
-      if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano → card de quota
+      // EMAIL_NAO_CONFIRMADO: gate anti-abuso (11-ago) — mesmo status 403 do limite
+      // de quota, por isso tem de ser verificado PRIMEIRO (código distingue os dois).
+      if (err?.code === 'EMAIL_NAO_CONFIRMADO') setEmailNaoConfirmado(true);
+      else if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano → card de quota
       else {
-        // FOTO_INVALIDA: causa acionável (a foto guardada não pôde ser processada) —
-        // mensagem digna em vez do genérico "não deu desta vez". Resto (fal fora do
-        // ar, etc.) mantém o genérico com retry, que já cobre bem o transitório.
-        if (err?.code === 'FOTO_INVALIDA') setErroIAmsg(err.message);
+        // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO: causas acionáveis com mensagem digna
+        // própria, em vez do genérico "não deu desta vez". Resto (fal fora do ar,
+        // etc.) mantém o genérico com retry, que já cobre bem o transitório.
+        if (err?.code === 'FOTO_INVALIDA' || err?.code === 'TETO_DIARIO_ATINGIDO') setErroIAmsg(err.message);
         setErroIA(true); // qualquer falha → estado de erro com retry no overlay
       }
     } finally {
       setGerandoIA(false);
+    }
+  }
+
+  // Reenvia o e-mail de confirmação (gate anti-abuso, 11-ago) — supabase.auth.resend
+  // usa a MESMA sessão activa, não precisa senha nem novo login.
+  async function reenviarEmailConfirmacao() {
+    if (reenviarBusy || !me?.user?.email) return;
+    setReenviarBusy(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email: me.user.email });
+      if (error) throw error;
+      setReenviarFeito(true);
+    } catch (e) {
+      setErro(e?.message || 'Não foi possível reenviar o e-mail.');
+    } finally {
+      setReenviarBusy(false);
     }
   }
 
@@ -930,6 +960,28 @@ export default function Figurinha() {
               <Link to="/planos" className="btn btn--purple hud-corners" style={{ marginTop: 4, height: 38, paddingLeft: 18, paddingRight: 18, fontSize: 13, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
                 Ver planos
               </Link>
+            </div>
+          ) : null}
+
+          {/* (m) E-MAIL NÃO CONFIRMADO — gate anti-abuso (11-ago), mesma família HUD. */}
+          {emailNaoConfirmado ? (
+            <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
+              <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Confirme seu e-mail para gerar</span>
+              <span style={{ fontSize: 12, color: 'var(--label-color)' }}>Enviamos um link de confirmação quando você criou a conta.</span>
+              {reenviarFeito ? (
+                <span style={{ fontSize: 12, color: '#7bd88f' }}>E-mail reenviado — confira sua caixa de entrada.</span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn--purple hud-corners"
+                  style={{ marginTop: 4, height: 38, paddingLeft: 18, paddingRight: 18, fontSize: 13 }}
+                  disabled={reenviarBusy}
+                  onClick={reenviarEmailConfirmacao}
+                >
+                  {reenviarBusy ? 'Reenviando…' : 'Reenviar e-mail'}
+                </button>
+              )}
             </div>
           ) : null}
 
