@@ -22,14 +22,16 @@ import FuttyLoader from './FuttyLoader';
 // (guarda de auth no arranque) — hook aqui rebenta; tGlobal lê o idioma guardado.
 import { tGlobal } from '../lib/i18n';
 
-// P3-14 — se o carregamento passar dos 3s, uma legenda discreta aparece por baixo do F
+// P3-14 — se o carregamento passar dos 4s, uma legenda discreta aparece por baixo do F
 // (contexto: "não travou, ainda estamos a puxar"). `legenda` é opcional — cada página
 // pode passar a sua; por omissão, a linha da casa em PT-BR (texto-base = chave i18n),
 // com tom de jogo — escolhida pelo dono a 31-jul.
+// Achado 3/23 (roteiro 10-set): a 3s a legenda aparecia em quase toda navegação —
+// subiu para 4s enquanto o backend não fica consistentemente mais rápido.
 export default function LoadingFutty({ legenda = 'Bola parada…\nO servidor tá demorando mais que o normal' }) {
   const [mostrarLegenda, setMostrarLegenda] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setMostrarLegenda(true), 3000);
+    const t = setTimeout(() => setMostrarLegenda(true), 4000);
     return () => clearTimeout(t);
   }, []);
   return (
