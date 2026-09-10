@@ -1,7 +1,7 @@
 // Futty v2.0 — Gabinete do Dono (/gabinete). Rota super-admin (guard no servidor E no
 // cliente). Linha do tempo scrollável no cânone (vidro/aurora/45°/Rajdhani) — transplante
-// do gabinete-mockup.html. Lei: o dono é CEGO ao conteúdo (só números). Receita/Publicidade
-// = "em breve" digno enquanto a fonte real (IAP das lojas / medição de ads) não existir.
+// do gabinete-mockup.html. Lei: o dono é CEGO ao conteúdo (só números). Receita: sem dados
+// enquanto a fonte real (IAP das lojas) não existir — nada de "em breve" na tela (10-set).
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -145,9 +145,9 @@ export default function Gabinete() {
           <div className="gab-card"><h3>Campeonatos</h3><div className="gab-big">{c.camp.at(-1)}</div>{SVG(lineChart(c.camp, ROXO, 260, 92))}</div>
         </div>
 
-        {/* RECEITA — em breve (IAP das lojas por ligar; Stripe pausado — SPEC-INFRA) */}
+        {/* RECEITA — sem dados (IAP das lojas por ligar; Stripe pausado — SPEC-INFRA) */}
         <Hud h2="Receita" breve="Falta ligar o IAP das lojas" />
-        <Vazio>A receita acende quando a vaga <b>App nas lojas</b> ligar o <b>IAP</b> (Apple/Google). Até lá, MRR, assinantes e entradas ficam <b>em breve</b>, sem números inventados.</Vazio>
+        <Vazio>Sem dados de receita ainda.</Vazio>
 
         {/* PUBLICIDADE — a valer: campanhas + medição + toggles por página */}
         <Hud h2="Publicidade" n="campanhas · medição nossa (impressão/clique) · lei de menores no motor" />
