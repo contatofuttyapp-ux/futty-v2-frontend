@@ -3,7 +3,7 @@
 // Stripe foi removido; o botão diz a verdade: pagamento ainda não existe nesta versão.
 import { useState } from 'react';
 import { Check } from 'lucide-react';
-import { useApi } from '../hooks/useApi';
+import { usePerfil } from '../context/PerfilContext';
 import Topbar from '../components/Topbar';
 import Icon from '../components/Icon';
 import { LIMITES_IA } from '../lib/planos';
@@ -63,7 +63,7 @@ const PLANOS_PARTICULAS = [
 ];
 
 export default function Planos() {
-  const { data: me } = useApi('/api/me');
+  const { perfil: me } = usePerfil();
   const planoAtual = me?.user?.plan || 'free';
   // Moeda única, decidida uma vez. Ler navigator durante o render é impuro → initializer.
   const [moeda] = useState(() => (navigator.language === 'pt-BR' ? 'BRL' : 'EUR'));

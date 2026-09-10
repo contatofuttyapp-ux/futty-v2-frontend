@@ -3,12 +3,13 @@
 //
 // VAGA 2 (B2) — a página entra no cânone: topbar HUD (a mesma da Figurinha e dos
 // Planos), cantos a 45° em vez do radius 12, Rajdhani no que é estrutura.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useApi } from '../hooks/useApi';
+import { usePerfil } from '../context/PerfilContext';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
@@ -61,9 +62,9 @@ export default function MeuPerfil() {
   const { user, signOut } = useAuth();
   const { teams } = useTeams();
   const navigate = useNavigate();
-  // Gabinete no menu: verdade do SERVIDOR (/api/me), nunca do cliente.
-  const { data: me } = useApi('/api/me');
-  const souSuperAdmin = me?.user?.is_super_admin === true;
+  // Achado 4 (roteiro 10-set): /api/me vem do PerfilContext partilhado — carregado
+  // 1x por sessão, em vez desta página o pedir 2x por conta própria (como fazia).
+  const { perfil: perfilCtx, carregando: perfilCarregando, erro: erroCtx, recarregar: recarregarPerfil } = usePerfil();
   const { estado: pushEstado, subscrever: pushSubscrever, dessubscrever: pushDessubscrever } = usePushNotifications();
   const adminTeams = teams.filter((t) => t.role === 'admin');
   const [adminPicker, setAdminPicker] = useState(false);
@@ -74,9 +75,20 @@ export default function MeuPerfil() {
     else if (adminTeams.length > 1) setAdminPicker(true);
   }
 
-  const [perfil, setPerfil] = useState(null); // { user, stats }
-  const [erro, setErro] = useState('');
+  // Rascunho local { user, stats }: espelha o contexto, mas a edição dos campos
+  // (setField/patchMe) precisa de mutação optimista própria — não faz sentido
+  // escrever a cada tecla no estado partilhado. Depois de guardar, recarregarPerfil()
+  // actualiza o contexto para as outras páginas.
+  // Sincronizado DURANTE o render (padrão React de "ajustar estado quando uma prop
+  // muda"), não num efeito — evita o roundtrip extra e o lint react-hooks/set-state-in-effect.
+  const [perfil, setPerfil] = useState(perfilCtx);
+  const [perfilCtxAnterior, setPerfilCtxAnterior] = useState(perfilCtx);
+  if (perfilCtx !== perfilCtxAnterior) {
+    setPerfilCtxAnterior(perfilCtx);
+    if (perfilCtx) setPerfil(perfilCtx);
+  }
   const [toast, setToast] = useState(null);
+  const souSuperAdmin = perfil?.user?.is_super_admin === true;
   // Bloqueio entre jogadores (Apple UGC 1.2): lista de quem EU bloqueei.
   const { data: blocksData, reload: reloadBlocks } = useApi('/api/blocks');
   const bloqueados = blocksData?.bloqueados || [];
@@ -87,16 +99,6 @@ export default function MeuPerfil() {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [nomeJogFocus, setNomeJogFocus] = useState(false);
   const [sheetIdioma, setSheetIdioma] = useState(false);
-
-  useEffect(() => {
-    let ativo = true;
-    apiFetch('/api/me')
-      .then((d) => ativo && setPerfil(d))
-      .catch((e) => ativo && setErro(e.message));
-    return () => {
-      ativo = false;
-    };
-  }, []);
 
   function showToast(mensagem, tipo = 'success') {
     setToast({ mensagem, tipo });
@@ -144,6 +146,9 @@ export default function MeuPerfil() {
     try {
       const res = await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify(patch) });
       setPerfil((p) => (p ? { ...p, user: { ...p.user, ...res.user } } : p));
+      // Achado 4: invalida o PerfilContext partilhado depois de salvar — as outras
+      // páginas (Início, Figurinha, guards) deixam de ver dados velhos.
+      recarregarPerfil();
       return true;
     } catch (e) {
       setPerfil(prev);
@@ -174,7 +179,7 @@ export default function MeuPerfil() {
       <div className="app-shell">
         <Topbar hud="PERFIL" />
         <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-          {erro ? <div className="alert alert--error">{erro}</div> : <LoadingFutty />}
+          {erroCtx && !perfilCarregando ? <div className="alert alert--error">{erroCtx}</div> : <LoadingFutty />}
         </main>
       </div>
     );
@@ -195,8 +200,6 @@ export default function MeuPerfil() {
           não tinha onde encostar — a Figurinha e os Planos também não têm legenda
           por baixo da faixa. O título seco não precisa de quem lho explique. */}
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 12 }}>
-        {erro ? <div className="alert alert--error" style={{ marginBottom: 12 }}>{erro}</div> : null}
-
         {/* 1. HEADER DE IDENTIDADE (avatar + nome + email + Ver planos)
             O avatar FICA — é identidade: mostra quem tu és. O que se foi foi o
             handler: já não tem role="button", tabIndex, onClick nem onKeyDown, e não

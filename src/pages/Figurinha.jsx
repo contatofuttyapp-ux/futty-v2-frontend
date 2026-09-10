@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { supabase } from '../lib/supabase';
+import { usePerfil } from '../context/PerfilContext';
 import { nomeJogador, urlAsset } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { getFrameColor } from '../utils/frameColors';
@@ -175,6 +176,11 @@ function EstrelaIA({ size = 16, color = '#d4a017', style }) {
 
 export default function Figurinha() {
   const navigate = useNavigate();
+  // Achado 4 (roteiro 10-set): esta página tem o seu próprio /api/me local (`me`,
+  // fora do escopo do PerfilContext — precisa de efeitos de inicialização que um
+  // simples espelho de leitura não cobre). Só usa o contexto para AVISAR as outras
+  // páginas depois de mudar avatar genérico ou gerar avatar IA.
+  const { recarregar: recarregarPerfilGlobal } = usePerfil();
 
   const [me, setMe] = useState(null);
   const [fundo, setFundo] = useState('estadio');
@@ -396,6 +402,7 @@ export default function Figurinha() {
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold' }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
       setFotoLocal(null);
+      recarregarPerfilGlobal();
     } catch (err) {
       if (err?.status === 403) setLimiteIA(true);
       else setErro(err?.message || 'Não foi possível gerar o avatar IA.');
@@ -502,6 +509,7 @@ export default function Figurinha() {
         slots: [...new Set([...(m.slots || []), data.kit])],
       } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
+      recarregarPerfilGlobal();
     } catch (err) {
       // EMAIL_NAO_CONFIRMADO: gate anti-abuso (11-ago) — mesmo status 403 do limite
       // de quota, por isso tem de ser verificado PRIMEIRO (código distingue os dois).
@@ -586,6 +594,7 @@ export default function Figurinha() {
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ avatar_generico: k }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_generico: k } } : m));
+      recarregarPerfilGlobal();
     } catch { /* preferência: não vale um erro no ecrã */ }
   }
 

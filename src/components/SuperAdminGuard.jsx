@@ -3,11 +3,11 @@
 // mostra um estado "sem permissão" digno, na linguagem da casa, com saída para o
 // Início — o utilizador percebe porque não entrou. Sem revelar o que a área contém.
 import FuttyLoader from './FuttyLoader';
-import { useApi } from '../hooks/useApi';
+import { usePerfil } from '../context/PerfilContext';
 import LoadingFutty from './LoadingFutty';
 
 export default function SuperAdminGuard({ children }) {
-  const { data: me, loading } = useApi('/api/me');
+  const { perfil: me, carregando: loading } = usePerfil();
 
   if (loading) {
     return <LoadingFutty />;

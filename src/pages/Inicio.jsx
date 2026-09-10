@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { apiFetch } from '../lib/api';
-import { useApi } from '../hooks/useApi';
+import { usePerfil } from '../context/PerfilContext';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { celebrarTop3 } from '../hooks/useConfetti';
@@ -270,7 +270,7 @@ function EmptyState() {
 }
 
 export default function Inicio() {
-  const { data: me, loading: meLoading } = useApi('/api/me');
+  const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil } = usePerfil();
   const { teams, loading: teamsLoading } = useTeams();
 
   // O cromo é gerado AQUI (não dentro do CromoInicio) para que a geração corra
@@ -396,6 +396,9 @@ export default function Inicio() {
     setAvatarGenericoOverride(key);
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ avatar_generico: key }) });
+      // Achado 4: invalida o PerfilContext partilhado — outras páginas (Perfil,
+      // Figurinha) que leem o avatar genérico sem override próprio ficam frescas.
+      recarregarPerfil();
     } catch (e) {
       setAvatarGenericoOverride(anterior);
       setToast({ msg: e.message || 'Não deu para salvar.', tipo: 'error' });

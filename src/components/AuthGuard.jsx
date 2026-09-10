@@ -1,11 +1,12 @@
 // Futty v2.0 — Protege rotas privadas: redireciona para /login se não autenticado.
-// Também sela a conta SUSPENSA: sonda /api/me e, se o servidor devolver o código
+// Também sela a conta SUSPENSA: se o PerfilContext (/api/me) devolver o código
 // CONTA_SUSPENSA (gate em requireAuth), mostra um ecrã digno em vez do app — a
 // conta não entra, sem apagar nada. A Super age sobre a plataforma, nunca o conteúdo.
-import { useEffect, useReducer } from 'react';
+// Achado 3/23: o perfil já vem do PerfilContext (carregado 1x por sessão) — este
+// guard deixou de sondar /api/me por conta própria.
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { apiFetch } from '../lib/api';
+import { usePerfil } from '../context/PerfilContext';
 import LoadingFutty from './LoadingFutty';
 import FuttyLoader from './FuttyLoader';
 
@@ -28,28 +29,10 @@ function ContaSuspensa({ onSair }) {
   );
 }
 
-// Cache do veredicto por access_token → só a 1ª rota protegida sonda; as navegações
-// seguintes reutilizam (sem flash de loader nem sonda repetida). Token novo (refresh
-// ~1h ou re-login) volta a verificar.
-const _veredito = new Map();
-
 export default function AuthGuard({ children }) {
   const { session, loading, signOut } = useAuth();
   const location = useLocation();
-  const token = session?.access_token || null;
-  const [, forcar] = useReducer((x) => x + 1, 0); // re-render quando a sonda resolve
-
-  useEffect(() => {
-    if (!token || _veredito.has(token)) return undefined; // já se sabe → sem sonda
-    let ativo = true;
-    apiFetch('/api/me')
-      .then(() => { _veredito.set(token, false); if (ativo) forcar(); })
-      .catch((err) => { _veredito.set(token, err?.code === 'CONTA_SUSPENSA'); if (ativo) forcar(); });
-    return () => { ativo = false; };
-  }, [token]);
-
-  // Derivado (não em estado): null = ainda a sondar; true/false = veredicto cacheado.
-  const suspenso = token && _veredito.has(token) ? _veredito.get(token) : null;
+  const { carregando: perfilCarregando, suspenso } = usePerfil();
 
   if (loading) return <LoadingFutty />;
 
@@ -58,7 +41,7 @@ export default function AuthGuard({ children }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (suspenso === null) return <LoadingFutty />; // a confirmar o estado da conta
+  if (perfilCarregando) return <LoadingFutty />; // a confirmar o estado da conta
   if (suspenso) return <ContaSuspensa onSair={() => signOut()} />;
 
   return children;

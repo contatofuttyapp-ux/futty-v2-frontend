@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import { useTeams } from '../hooks/useTeam';
-import { useApi } from '../hooks/useApi';
+import { usePerfil } from '../context/PerfilContext';
 import { useAuth } from '../hooks/useAuth';
 import BottomNav from './BottomNav';
 import AuroraBg from './AuroraBg';
@@ -24,12 +24,15 @@ function OnboardingGate({ pathname }) {
   const navigate = useNavigate();
   const { session } = useAuth();
   const ativa = !!session && !ROTAS_SEM_ONBOARDING.some((re) => re.test(pathname));
-  const { data } = useApi(ativa ? '/api/me' : null);
-  const incompleto = data?.user?.onboarding_completo === false;
+  // Achado 4 (roteiro 10-set): usava o seu próprio useApi('/api/me') — como o
+  // Layout envolve TODAS as rotas, era um pedido extra em toda sessão nova. Agora
+  // lê do PerfilContext partilhado.
+  const { perfil } = usePerfil();
+  const incompleto = ativa && perfil?.user?.onboarding_completo === false;
 
   useEffect(() => {
-    if (ativa && incompleto) navigate('/onboarding', { replace: true });
-  }, [ativa, incompleto, navigate]);
+    if (incompleto) navigate('/onboarding', { replace: true });
+  }, [incompleto, navigate]);
 
   return null;
 }

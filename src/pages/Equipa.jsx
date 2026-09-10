@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { useApi } from '../hooks/useApi';
+import { usePerfil } from '../context/PerfilContext';
 import { useTeam } from '../hooks/useTeam';
 import { urlAsset } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
@@ -66,7 +66,7 @@ export default function Equipa() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { team, members, loading, error, reload } = useTeam(slug);
-  const { data: me } = useApi('/api/me');
+  const { perfil: me } = usePerfil();
   const [confirmarSaida, setConfirmarSaida] = useState(false);
   const [saindo, setSaindo] = useState(false);
 
