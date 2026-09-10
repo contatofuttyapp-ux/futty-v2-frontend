@@ -1093,17 +1093,18 @@ export default function Figurinha() {
           ) : (
             // Container a 85% → tiles ~15% mais pequenos, 4 numa linha centrada.
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, width: '85%', margin: '0 auto' }}>
-              {KITS_FIGURINHA.map((kit) => {
+              {/* Achado 1 (roteiro 10-set): kit ainda não lançado nem aparece — nada de
+                  "em breve" na tela. */}
+              {KITS_FIGURINHA.filter((kit) => kit.estado !== 'breve').map((kit) => {
                 // A2 — estados reais: VESTIDO (kit_ativo) | GERADO (tem slot, 1 toque veste)
-                // | GERÁVEL (activo sem slot → custa 1 geração) | BREVE | trancado por plano.
+                // | GERÁVEL (activo sem slot → custa 1 geração) | trancado por plano.
                 const vestido = kit.id === kitAtivo;
                 const gerado = slotsKits.includes(kit.id);
                 const planoUser = me?.user?.plan || 'free';
                 // Cadeado pela regra de plano pura — ver nota em escolherKit().
                 const pro = kit.estado === 'pro' && !PLANOS_COM_KITS.includes(planoUser);
-                const breve = kit.estado === 'breve';
-                const geravel = !breve && !pro && !gerado;
-                const bloqueado = breve || pro;
+                const geravel = !pro && !gerado;
+                const bloqueado = pro;
                 return (
                   <button
                     key={kit.id}
@@ -1111,7 +1112,7 @@ export default function Figurinha() {
                     onClick={() => escolherKit(kit)}
                     aria-label={kit.nome}
                     aria-pressed={vestido}
-                    disabled={breve || gerandoIA}
+                    disabled={gerandoIA}
                     style={{
                       flex: '0 0 calc((100% - 24px) / 4)',
                       display: 'grid',
@@ -1119,7 +1120,7 @@ export default function Figurinha() {
                       padding: 0,
                       background: 'transparent',
                       border: 'none',
-                      cursor: breve ? 'default' : 'pointer',
+                      cursor: 'pointer',
                       textAlign: 'center',
                     }}
                   >
@@ -1149,12 +1150,6 @@ export default function Figurinha() {
                       {pro ? (
                         <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#fff' }}>
                           <Lock size={14} />
-                        </span>
-                      ) : null}
-                      {/* Badges de estado */}
-                      {kit.estado === 'breve' ? (
-                        <span style={{ position: 'absolute', top: 3, left: '50%', transform: 'translateX(-50%)', padding: '1px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.75)', color: '#fff', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                          EM BREVE
                         </span>
                       ) : null}
                       {pro ? (
