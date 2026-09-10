@@ -1,16 +1,22 @@
 // Futty v2.0 — Avatar do jogador.
-// Dois modos:
+// Três modos, nesta ordem de prioridade:
 //  - avatarUrl: foto direta (uso geral)
 //  - jogador + cor: resolve via avatarParaCor() (fonte única) com fallback a iniciais
+//  - userId (+ avatarGenerico): sem foto, mostra o avatar genérico da casa — nunca
+//    a silhueta "?" — usado nas listas de pessoas identificadas (membros, perfil).
 import { useState } from 'react';
 import SilhuetaJogador from './SilhuetaJogador';
 import { avatarParaCor, urlAsset } from '../utils/avatar';
+import { avatarGenericoUrl } from '../utils/avatarGenerico';
 
-export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null }) {
+export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, userId = null, avatarGenerico = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null }) {
   const [falhou, setFalhou] = useState(false);
 
-  // Fonte da imagem: avatarUrl resolvido (frontend/backend/absoluto) OU por cor do time.
-  const src = avatarUrl ? urlAsset(avatarUrl) : (jogador && cor ? avatarParaCor(jogador, cor) : null);
+  // Fonte da imagem: avatarUrl resolvido (frontend/backend/absoluto) OU por cor do
+  // time OU (sem foto, mas com identidade) o genérico da casa.
+  const src = avatarUrl
+    ? urlAsset(avatarUrl)
+    : (jogador && cor ? avatarParaCor(jogador, cor) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null));
 
 
   const cls = [

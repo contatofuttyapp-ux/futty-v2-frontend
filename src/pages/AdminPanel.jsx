@@ -10,6 +10,7 @@ import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
 import { POSICOES } from '../utils/posicoes';
 import { plural } from '../utils/plural';
+import { nomeExibicao } from '../utils/nomeExibicao';
 import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 import PlayerAvatar from '../components/PlayerAvatar';
@@ -1088,10 +1089,10 @@ function TabMembros({ slug, meId, showToast }) {
         return (
           <div key={m.user_id} style={{ ...CARD, padding: 12, opacity: inativo ? 0.45 : 1 }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <PlayerAvatar nome={m.nome_jogador || m.nome || 'Jogador'} avatarUrl={m.avatar_url} />
+            <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 700, color: '#fff' }}>{m.nome_jogador || m.nome || 'Jogador'}</span>
+                <span style={{ fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</span>
                 {m.role === 'admin' && (
                   <span style={{ fontSize: 10, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '2px 6px' }}>ADMIN</span>
                 )}
@@ -1417,8 +1418,8 @@ function ListaUsers({ users, titulo }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {users.map((u) => (
           <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#fff' }}>
-            <PlayerAvatar nome={u.nome_jogador || u.nome} avatarUrl={u.avatar_url} sm />
-            <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.nome_jogador || u.nome || 'Jogador'}</span>
+            <PlayerAvatar nome={nomeExibicao(u)} avatarUrl={u.avatar_url} userId={u.id} avatarGenerico={u.avatar_generico} sm />
+            <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeExibicao(u)}</span>
           </div>
         ))}
       </div>
@@ -2165,9 +2166,9 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
         <div style={{ display: 'grid', gap: 10 }}>
           {topGols.map((m) => (
             <div key={m.user_id} style={{ ...CARD, padding: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
-              <PlayerAvatar nome={m.nome_jogador || m.nome || 'Jogador'} avatarUrl={m.avatar_url} />
+              <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, color: '#fff' }}>{m.nome_jogador || m.nome || 'Jogador'}</div>
+                <div style={{ fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</div>
                 <BarraProgresso valor={m.gols || 0} max={maxGols} />
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
                   <b style={{ color: 'var(--neon)' }}>{m.gols || 0}</b> gols · {m.vitorias || 0} vitórias · {m.artilharia || 0} artilharia
@@ -2184,8 +2185,8 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
         <div style={{ display: 'grid', gap: 8 }}>
           {topVitorias.map((m) => (
             <div key={m.user_id} style={{ ...CARD, padding: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
-              <PlayerAvatar nome={m.nome_jogador || m.nome || 'Jogador'} avatarUrl={m.avatar_url} />
-              <div style={{ flex: 1, fontWeight: 700, color: '#fff' }}>{m.nome_jogador || m.nome || 'Jogador'}</div>
+              <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} />
+              <div style={{ flex: 1, fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</div>
               <div style={{ fontSize: 13, color: 'var(--neon)', fontWeight: 800 }}>{m.vitorias || 0} vitórias</div>
             </div>
           ))}

@@ -16,6 +16,7 @@ import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
 import { urlAsset } from '../utils/avatar';
+import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
 import '../styles/app.css';
 
@@ -25,8 +26,10 @@ const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5p
 const RAJ = "'Rajdhani', sans-serif";
 
 // Moldura V1 (família do Ranking/Equipa).
-function FrameAvatar({ avatarUrl, size = 36 }) {
-  const src = avatarUrl ? urlAsset(avatarUrl) : null;
+// Sem foto, mas com identidade (userId), mostra o avatar genérico da casa — nunca
+// a silhueta "?".
+function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 36 }) {
+  const src = avatarUrl ? urlAsset(avatarUrl) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
@@ -308,7 +311,7 @@ export default function Jogo() {
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>
                 {confirmados.map((p, pi) => (
                   <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: pi === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
-                    <FrameAvatar nome={p.nome} avatarUrl={p.avatar_url} />
+                    <FrameAvatar avatarUrl={p.avatar_url} userId={p.user_id} avatarGenerico={p.avatar_generico} />
                     <div style={{ flex: 1, minWidth: 0, fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>{p.nome}</div>
                     {isAdmin ? (
                       <>

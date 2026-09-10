@@ -7,9 +7,11 @@ import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { useTeam } from '../hooks/useTeam';
 import { urlAsset } from '../utils/avatar';
+import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { POSICOES, labelPosicao } from '../utils/posicoes';
 import { copiarTexto } from '../utils/clipboard';
 import { plural } from '../utils/plural';
+import { nomeExibicao } from '../utils/nomeExibicao';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -25,8 +27,10 @@ const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px)
 const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)';
 
 // Moldura V1 (a mesma família do Ranking).
-function FrameAvatar({ avatarUrl, size = 40 }) {
-  const src = avatarUrl ? urlAsset(avatarUrl) : null;
+// Sem foto, mas com identidade (userId), mostra o avatar genérico da casa — nunca
+// a silhueta "?".
+function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 40 }) {
+  const src = avatarUrl ? urlAsset(avatarUrl) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
@@ -301,11 +305,10 @@ export default function Equipa() {
             <SecLabel>Membros · {members.length}</SecLabel>
             <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>
               {members.map((m, i) => (
-                <div key={m.id || m.email} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
-                  <FrameAvatar nome={m.nome || m.email || '?'} avatarUrl={m.avatar_url} />
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
+                  <FrameAvatar avatarUrl={m.avatar_url} userId={m.id} avatarGenerico={m.avatar_generico} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{m.nome || m.email}</div>
-                    {m.nome && <div style={{ fontSize: 10, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>}
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{nomeExibicao(m)}</div>
                   </div>
                   {m.posicao ? <Badge45 gold>{m.posicao === 'GL' ? 'GR' : m.posicao}</Badge45> : null}
                   <Badge45 gold={m.role === 'admin'}>{m.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45>

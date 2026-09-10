@@ -12,6 +12,7 @@ import { useApi } from '../hooks/useApi';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
+import { nomeExibicao } from '../utils/nomeExibicao';
 import { useI18n } from '../context/I18nContext';
 import { nomeIdioma } from '../lib/i18n';
 // O UploadComCrop saiu com a secção de personalizar (o upload de foto vive na
@@ -181,7 +182,7 @@ export default function MeuPerfil() {
 
   const u = perfil.user;
   const stats = perfil.stats || {};
-  const nomeMostrar = u.nome_jogador || u.nome || (u.email || '').split('@')[0] || 'Jogador';
+  const nomeMostrar = nomeExibicao(u);
   // O `creditos` (avatar_ia_creditos) saiu com o teaser de IA — só ele o lia.
 
   return (
@@ -205,7 +206,7 @@ export default function MeuPerfil() {
             O que saiu foi a secção DE BAIXO, a de trocar/personalizar (ver abaixo). */}
         <div className="hud-corners" style={{ ...CARD, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ lineHeight: 0, flexShrink: 0 }}>
-            <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} gold size={64} />
+            <PlayerAvatar nome={nomeMostrar} avatarUrl={u.avatar_url} userId={u.id} avatarGenerico={u.avatar_generico} gold size={64} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>

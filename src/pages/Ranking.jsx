@@ -8,6 +8,7 @@ import { useTeams } from '../hooks/useTeam';
 import { useRanking } from '../hooks/useRanking';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset } from '../utils/avatar';
+import { nomeExibicao } from '../utils/nomeExibicao';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import EstadoErroRede from '../components/EstadoErroRede';
@@ -59,7 +60,7 @@ function RankRow({ p, idx, slug, onVote }) {
   const cor = top ? corDoLugar(pos) : null;
   const delay = pos === 1 ? 0 : pos === 2 ? 0.6 : 1.2;
   const jaVotou = p.minha_nota != null;
-  const nomeShow = p.nome_jogador || p.nome;
+  const nomeShow = nomeExibicao(p);
   const avSize = pos === 1 ? 60 : pos <= 3 ? 56 : 48;
   const nomeFs = pos === 1 ? 17 : pos === 2 ? 15 : pos === 3 ? 14 : undefined;
   const notaFs = pos === 1 ? 20 : pos === 2 ? 18 : pos === 3 ? 17 : 16;
@@ -254,9 +255,9 @@ export default function Ranking() {
           <div className="modal-card modal-card--hud" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                <FrameAvatar nome={voteModal.nome_jogador || voteModal.nome} avatarUrl={voteModal.avatar_url} size={64} />
+                <FrameAvatar nome={nomeExibicao(voteModal)} avatarUrl={voteModal.avatar_url} size={64} />
               </div>
-              <h2 style={{ fontSize: 18, marginBottom: 14 }}>{voteModal.nome_jogador || voteModal.nome}</h2>
+              <h2 style={{ fontSize: 18, marginBottom: 14 }}>{nomeExibicao(voteModal)}</h2>
               <MeiaEstrelas value={modalNota} onChange={setModalNota} />
               <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)' }}>
                 {modalNota >= 0.5 ? (
