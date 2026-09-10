@@ -1,7 +1,7 @@
 // Futty v2.0 — Cliente da API backend (com JWT do utilizador)
 import { supabase } from './supabase';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Resolução de assets: fonte única em utils/avatar.js (re-exportado como assetUrl).
 export { urlAsset as assetUrl } from '../utils/avatar';

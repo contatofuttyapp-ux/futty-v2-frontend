@@ -7,7 +7,7 @@
 // URL base do backend (onde estão fotos servidas pelo backend, ex.: /uploads).
 function backendBase() {
   const v = import.meta.env.VITE_API_URL;
-  return String(v || 'http://localhost:3001').trim().replace(/\/+$/, '');
+  return String(v || '').trim().replace(/\/+$/, '');
 }
 
 // Ordem das cores por índice de time (0=verde, 1=azul, 2=vermelho, 3=preto).
