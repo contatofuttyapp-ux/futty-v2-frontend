@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin
+Disallow: /super
+Disallow: /gabinete
+Disallow: /api
+Allow: /
