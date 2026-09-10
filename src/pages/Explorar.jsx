@@ -6,6 +6,7 @@
 // do utilizador nunca sai do dispositivo). Regra na SPEC-EQUIPAS §b.
 import { Search, MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import Topbar from '../components/Topbar';
 import EscudoEquipa from '../components/EscudoEquipa';
@@ -37,6 +38,7 @@ function distanciaKm(a, b) {
 }
 
 export default function Explorar() {
+  const navigate = useNavigate();
   const [equipas, setEquipas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pesquisa, setPesquisa] = useState('');
@@ -212,7 +214,11 @@ export default function Explorar() {
           </div>
         ) : (
           filtradas.map((equipa) => (
-            <div key={equipa.id} style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 8 }}>
+            <div
+              key={equipa.id}
+              style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 8, cursor: equipa.ja_membro ? 'pointer' : undefined }}
+              onClick={equipa.ja_membro ? () => navigate(`/equipa/${equipa.slug}`) : undefined}
+            >
               <EscudoEquipa team={equipa} size={44} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{equipa.nome}</div>

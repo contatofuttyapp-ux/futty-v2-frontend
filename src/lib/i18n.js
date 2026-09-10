@@ -9,6 +9,11 @@ import CATALOGO from './i18n-catalogo';
 
 export const IDIOMA_PADRAO = 'pt-BR';
 
+// Achado 7 (roteiro 10-set): trocar de idioma só muda o rótulo do seletor — nav,
+// Início e Perfil continuam em pt-BR. Enquanto o i18n não estiver completo, o
+// seletor fica escondido (o catálogo e a lógica ficam intactos, só a UI some).
+export const MOSTRAR_IDIOMA = false;
+
 // As 6 línguas. `nome` = o idioma NA PRÓPRIA LÍNGUA (quem procura o seu idioma
 // procura a palavra que conhece). Bandeira do Reino Unido para o inglês; Chéquia (cs).
 // 31-jul (ordem do dono): pt-PT REMOVIDO (o português do app é um só, BR);

@@ -421,8 +421,13 @@ export default function Inicio() {
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
+  // Achado 8: "Próximos Jogos" só mostra o que ainda vai acontecer (nem encerrado
+  // nem cancelado); o que já passou vai para "Últimos jogos" (máx. 3, mais recente
+  // primeiro — a lista vem ordenada por data ascendente).
+  const proximosJogos = filtered.filter((g) => g.status !== 'finished');
+  const ultimosJogos = filtered.filter((g) => g.status === 'finished' && !g.cancelado).slice(-3).reverse();
   // Próximo jogo = o primeiro que não está encerrado (lista vem ordenada por data).
-  const proximoJogo = filtered.find((g) => g.status !== 'finished') || null;
+  const proximoJogo = proximosJogos[0] || null;
   const nextId = proximoJogo?.id ?? null;
 
   // Ausência antecipada ao próximo jogo (declaração proactiva, sem RSVP).
@@ -496,11 +501,11 @@ export default function Inicio() {
 
   // Anúncio nativo: a seguir ao 2º jogo; se houver ≤1 jogo, no fim.
   const items = [];
-  filtered.forEach((g, i) => {
+  proximosJogos.forEach((g, i) => {
     items.push({ type: 'game', game: g });
     if (i === 1) items.push({ type: 'ad', key: 'ad-inicio' });
   });
-  if (filtered.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
+  if (proximosJogos.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
 
   const noTeams = !teamsLoading && teams.length === 0;
 
@@ -824,7 +829,7 @@ export default function Inicio() {
               <LoadingFutty />
             ) : (
               <>
-                {filtered.length === 0 && <p className="muted">Sem jogos para mostrar.</p>}
+                {proximosJogos.length === 0 && <p className="muted">Sem jogos para mostrar.</p>}
                 {items.map((item, i) =>
                   item.type === 'ad' ? (
                     <AdCard key={item.key} />
@@ -843,6 +848,17 @@ export default function Inicio() {
               </>
             )}
             </div>
+
+            {/* Achado 8: jogos já encerrados saem do "Próximos Jogos" e ficam aqui,
+                no máximo 3, mais recente primeiro. */}
+            {!loadingGames && ultimosJogos.length > 0 ? (
+              <div style={{ marginTop: 16 }} data-tour="ultimos-jogos-section">
+                <div className="games-label">Últimos Jogos</div>
+                {ultimosJogos.map((g) => (
+                  <GameCard key={g.id} game={g} busy={false} isNext={false} onPresence={onPresence} onVerSorteio={verSorteio} />
+                ))}
+              </div>
+            ) : null}
 
             {/* Card do campeonato (equipa principal) */}
             {campeonato && campSlug ? (

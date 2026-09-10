@@ -13,6 +13,12 @@ const NIVEIS = [
 const inputPlacar = { width: 48, textAlign: 'center', padding: '8px 6px', borderRadius: 8, border: '1px solid #222', background: '#0c0c0c', color: '#fff', fontSize: 18, fontWeight: 800 };
 const stepBtn = { width: 28, height: 28, borderRadius: 8, border: '1px solid #333', background: 'transparent', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', lineHeight: 1 };
 
+// Achado 9: sem resultado antes do jogo acontecer — exceto jogo histórico
+// (criado como "Já aconteceu"), que não tem essa trava.
+function jaComecouJogo(game) {
+  return !!game.data && new Date(game.data).getTime() <= Date.now();
+}
+
 function MiniAvatar({ nome, avatarUrl }) {
   const [falhou, setFalhou] = useState(false);
   const src = avatarUrl ? urlAsset(avatarUrl) : null;
@@ -28,6 +34,8 @@ function MiniAvatar({ nome, avatarUrl }) {
 }
 
 export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, nomeB, onSaved, showToast }) {
+  const podeSalvar = jaComecouJogo(game) || game.historico;
+
   const [nivel, setNivel] = useState(game.resultado_nivel || 0);
   const [vencedor, setVencedor] = useState(game.time_vencedor || null);
   const [placarA, setPlacarA] = useState(game.placar_a ?? 0);
@@ -66,6 +74,14 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
     } finally {
       setBusy(false);
     }
+  }
+
+  if (!podeSalvar) {
+    return (
+      <p className="muted" style={{ marginTop: 8 }}>
+        O resultado só pode ser registrado depois do início do jogo.
+      </p>
+    );
   }
 
   return (

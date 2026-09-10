@@ -14,7 +14,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import { useI18n } from '../context/I18nContext';
-import { nomeIdioma } from '../lib/i18n';
+import { nomeIdioma, MOSTRAR_IDIOMA } from '../lib/i18n';
 // O UploadComCrop saiu com a secção de personalizar (o upload de foto vive na
 // Figurinha, que já o tinha). O PlayerAvatar fica: o cabeçalho de identidade mostra
 // o avatar — só não o deixa clicar.
@@ -345,27 +345,31 @@ export default function MeuPerfil() {
             roubava a página ao nome de jogador. Passa a UMA linha, no padrão das
             linhas da Conta, com o valor actual por baixo; a escolha vive num bottom
             sheet. */}
-        <SecLabel>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <Icon name="idioma" size={20} color="#d4a017" />
-            Idioma / Language
-          </span>
-        </SecLabel>
-        <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
-          <button
-            type="button"
-            onClick={() => setSheetIdioma(true)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%', textAlign: 'left', padding: '14px 16px', border: 'none', background: 'transparent', cursor: 'pointer' }}
-          >
-            <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
-              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>Idioma</span>
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', color: '#d4a017' }}>
-                {nomeIdioma(idiomaActual)}
+        {MOSTRAR_IDIOMA ? (
+          <>
+            <SecLabel>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Icon name="idioma" size={20} color="#d4a017" />
+                Idioma / Language
               </span>
-            </span>
-            <span aria-hidden="true" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 18, lineHeight: 1 }}>›</span>
-          </button>
-        </div>
+            </SecLabel>
+            <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setSheetIdioma(true)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%', textAlign: 'left', padding: '14px 16px', border: 'none', background: 'transparent', cursor: 'pointer' }}
+              >
+                <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>Idioma</span>
+                  <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', color: '#d4a017' }}>
+                    {nomeIdioma(idiomaActual)}
+                  </span>
+                </span>
+                <span aria-hidden="true" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 18, lineHeight: 1 }}>›</span>
+              </button>
+            </div>
+          </>
+        ) : null}
 
         {/* SECÇÃO PRIVACIDADE (Opção B): o rosto entra por omissão para MAIORES; aqui
             desliga-se para silhueta. No servidor a IDADE manda sempre (menores/sem data

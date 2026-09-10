@@ -103,7 +103,16 @@ export default function Register() {
               <div className="auth-alert auth-alert--error hud-corners-s">{error}</div>
             )}
             {success && (
-              <div className="auth-alert auth-alert--success hud-corners-s">{success}</div>
+              <>
+                <div className="auth-alert auth-alert--success hud-corners-s">{success}</div>
+                <button
+                  type="button"
+                  className="auth-btn hud-corners-s"
+                  onClick={() => navigate('/login', { state: { email } })}
+                >
+                  Já confirmei, entrar
+                </button>
+              </>
             )}
 
             <div className="auth-field">

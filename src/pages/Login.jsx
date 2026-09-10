@@ -14,7 +14,7 @@ export default function Login() {
   const location = useLocation();
   const from = location.state?.from?.pathname || '/home';
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(location.state?.email || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

@@ -196,7 +196,12 @@ export default function Jogo() {
                   {game.sorteio_realizado && game.num_times ? ` · ${game.num_times} times` : ''}
                 </div>
               </div>
-              <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 9px', clipPath: CLIP_S, flexShrink: 0, color: game.status === 'em_curso' ? '#7bd88f' : game.status === 'cancelado' ? '#fda4af' : '#8ab4ff', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.04)' }}>{STATUS_LABELS[game.status] || game.status}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 9px', clipPath: CLIP_S, color: game.status === 'em_curso' ? '#7bd88f' : game.status === 'cancelado' ? '#fda4af' : '#8ab4ff', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.04)' }}>{STATUS_LABELS[game.status] || game.status}</span>
+                {game.sorteio_realizado && game.status === 'agendado' ? (
+                  <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', clipPath: CLIP_S, color: '#d4a017', border: '1px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>Times sorteados</span>
+                ) : null}
+              </div>
             </div>
 
             {/* Resultado (visível a todos) */}
