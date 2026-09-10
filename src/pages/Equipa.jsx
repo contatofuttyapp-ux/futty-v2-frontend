@@ -9,6 +9,7 @@ import { useTeam } from '../hooks/useTeam';
 import { urlAsset } from '../utils/avatar';
 import { POSICOES, labelPosicao } from '../utils/posicoes';
 import { copiarTexto } from '../utils/clipboard';
+import { plural } from '../utils/plural';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -205,10 +206,10 @@ export default function Equipa() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, lineHeight: 1.1 }}>{team.nome}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-                  {members.length} {members.length === 1 ? 'membro' : 'membros'}
+                  {members.length} {plural(members.length, 'membro', 'membros')}
                 </div>
               </div>
-              {team.role ? <Badge45 gold={team.role === 'admin'}>{team.role}</Badge45> : null}
+              {team.role ? <Badge45 gold={team.role === 'admin'}>{team.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45> : null}
             </div>
 
             {/* Acções principais */}
@@ -307,7 +308,7 @@ export default function Equipa() {
                     {m.nome && <div style={{ fontSize: 10, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>}
                   </div>
                   {m.posicao ? <Badge45 gold>{m.posicao === 'GL' ? 'GR' : m.posicao}</Badge45> : null}
-                  <Badge45 gold={m.role === 'admin'}>{m.role}</Badge45>
+                  <Badge45 gold={m.role === 'admin'}>{m.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45>
                 </div>
               ))}
               {members.length === 0 && <p className="muted" style={{ padding: '10px 2px' }}>Nenhum membro ainda.</p>}

@@ -4,6 +4,7 @@ import Icon from '../components/Icon';
 import { Link, useParams } from 'react-router-dom';
 import { useTeamGames } from '../hooks/useTeam';
 import { dayMonth, formatDateTime, STATUS_LABELS } from '../utils/format';
+import { plural } from '../utils/plural';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import '../styles/app.css';
@@ -77,7 +78,7 @@ export default function Jogos() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>{g.local || 'Jogo'}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                      {formatDateTime(g.data)} · {g.confirmados} confirmados
+                      {formatDateTime(g.data)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
                       {g.jogadores_por_time ? ` · ${g.jogadores_por_time}/time` : ''}
                       {g.sorteio_realizado && g.num_times ? ` · ${g.num_times} times` : ''}
                     </div>

@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
 import { POSICOES } from '../utils/posicoes';
+import { plural } from '../utils/plural';
 import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 import PlayerAvatar from '../components/PlayerAvatar';
@@ -23,9 +24,9 @@ import '../styles/app.css';
 // Opções de cor de fundo do avatar da equipa (sem logo) e de visibilidade.
 const CORES_FUNDO = ['#1a1a2e', '#0d1f0d', '#1f0d0d', '#1f1a0d', '#0d0d1f', '#111111'];
 const VIS_OPCOES = [
-  { k: 'privado', icon: Lock, label: 'Privada' },
+  { k: 'privado', icon: Lock, label: 'Privado' },
   { k: 'publico_aprovacao', icon: LockOpen, label: 'Com aprovação' },
-  { k: 'publico_aberto', icon: Globe, label: 'Aberta' },
+  { k: 'publico_aberto', icon: Globe, label: 'Aberto' },
 ];
 const VIS_DESC = {
   privado: 'Só por convite, não aparece no Explorar.',
@@ -502,7 +503,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
           <>
             <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>{fmtJogoCompleto(pj.date)}</div>
             {rsvpAtivo ? (
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{rsvpConf} confirmados / {rsvpTotal} membros</div>
+              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{rsvpConf} {plural(rsvpConf, 'confirmado', 'confirmados')} / {rsvpTotal} {plural(rsvpTotal, 'membro', 'membros')}</div>
             ) : null}
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Fazer sorteio</button>
@@ -580,7 +581,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 11, color: 'var(--neon)', fontWeight: 800, letterSpacing: '0.08em' }}>PRÓXIMO JOGO</div>
             <div style={{ fontWeight: 700, color: '#fff', marginTop: 2 }}>{pj.location || 'Jogo'}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{formatDateTime(pj.date)} · {pj.confirmados} confirmados</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{formatDateTime(pj.date)} · {pj.confirmados} {plural(pj.confirmados, 'confirmado', 'confirmados')}</div>
           </div>
           <button type="button" className="btn btn--purple btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Ver jogo</button>
         </div>
@@ -1197,7 +1198,7 @@ function TabMembros({ slug, meId, showToast }) {
                     aria-pressed={ativo}
                     style={{ padding: '4px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${ativo ? '#d4a017' : '#333'}`, background: ativo ? 'rgba(212,160,23,0.15)' : 'transparent', color: ativo ? '#d4a017' : 'var(--text-dim)' }}
                   >
-                    {k || '-'}
+                    {k === 'GL' ? 'GR' : (k || '-')}
                   </button>
                 );
               })}
@@ -1513,7 +1514,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
   if (info.rsvp_fechado) {
     return (
       <div style={linha}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>RSVP fechado: {info.confirmados.length} confirmados</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>RSVP fechado: {info.confirmados.length} {plural(info.confirmados.length, 'confirmado', 'confirmados')}</div>
         <ListaUsers users={info.confirmados} />
         <button type="button" className="btn btn--primary btn--sm" style={{ marginTop: 10 }} onClick={fazerSorteio}>
           Fazer sorteio com confirmados
@@ -1528,7 +1529,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
       <div style={linha}>
         <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700 }}>Aberto até {fmtPrazoAdmin(info.rsvp_prazo)}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
-          {info.confirmados.length} confirmados · {info.recusados.length} recusados · {info.pendentes.length} pendentes
+          {info.confirmados.length} {plural(info.confirmados.length, 'confirmado', 'confirmados')} · {info.recusados.length} {plural(info.recusados.length, 'recusado', 'recusados')} · {info.pendentes.length} {plural(info.pendentes.length, 'pendente', 'pendentes')}
         </div>
         <ListaUsers users={info.confirmados} titulo="Confirmados" />
         <ListaUsers users={info.recusados} titulo="Recusados" />
@@ -1751,7 +1752,7 @@ function TabJogos({ slug, showToast, navigate }) {
                 <div key={g.id} style={{ ...CARD, padding: 12 }}>
                   <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-                    {formatDateTime(g.data)} · {g.confirmados} confirmados
+                    {formatDateTime(g.data)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
                   </div>
                   {g.max_jogadores != null ? (() => {
                     const cheio = g.confirmados >= g.max_jogadores;

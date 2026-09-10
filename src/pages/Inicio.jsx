@@ -9,6 +9,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
+import { plural } from '../utils/plural';
 import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
@@ -186,7 +187,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
           <span className={`gcard__date ${today ? 'gcard__date--today' : ''}`}>
             {game.date ? formatDateTime(game.date) : 'Data a definir'}
           </span>
-          {` · ${game.confirmed_count} confirmados`}
+          {` · ${game.confirmed_count} ${plural(game.confirmed_count, 'confirmado', 'confirmados')}`}
         </div>
 
         {isPast ? (

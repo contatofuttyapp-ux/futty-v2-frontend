@@ -199,9 +199,9 @@ export default function CriarEquipa() {
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Aceita novos membros?</h1>
             <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Como se entra no seu time.</p>
             {[
-              { k: 'privado', t: 'Fechada', d: 'só por convite do admin' },
+              { k: 'privado', t: 'Fechado', d: 'só por convite do admin' },
               { k: 'publico_aprovacao', t: 'Com aprovação', d: 'pedem no Explorar, você aprova' },
-              { k: 'publico_aberto', t: 'Aberta', d: 'qualquer um entra pelo Explorar' },
+              { k: 'publico_aberto', t: 'Aberto', d: 'qualquer um entra pelo Explorar' },
             ].map((o) => (
               <button key={o.k} type="button" onClick={() => setModo(o.k)} style={{ ...VIDRO, clipPath: CLIP, display: 'block', width: '100%', textAlign: 'left', padding: '12px 14px', marginBottom: 8, cursor: 'pointer', borderColor: modo === o.k ? 'rgba(212,160,23,0.65)' : 'rgba(255,255,255,0.10)', background: modo === o.k ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)', color: 'inherit' }}>
                 <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 14, display: 'block', color: modo === o.k ? '#f0c94a' : '#fff' }}>{o.t}</span>

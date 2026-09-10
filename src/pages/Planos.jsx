@@ -1,11 +1,12 @@
 // Futty v2.0 — Planos (/planos): Free / Pro / Elite lado a lado.
 // Pagamentos = SÓ via IAP das lojas (Apple/Google) — decisão final do dono (SPEC-INFRA).
-// Stripe foi removido; os botões mostram um lugar digno "em breve" até a vaga "App nas lojas".
+// Stripe foi removido; o botão diz a verdade: pagamento ainda não existe nesta versão.
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { useApi } from '../hooks/useApi';
 import Topbar from '../components/Topbar';
 import Icon from '../components/Icon';
+import { LIMITES_IA } from '../lib/planos';
 import '../styles/app.css';
 
 // Preço por MOEDA — nunca as duas em simultâneo. Os valores mostram o preço-alvo;
@@ -15,7 +16,7 @@ const PLANOS = [
     id: 'free',
     nome: 'Free',
     preco: { BRL: 'Grátis', EUR: 'Grátis' },
-    features: ['Sorteio', 'Ranking', 'Resenha', '3 avatares IA'],
+    features: ['Sorteio', 'Ranking', 'Resenha', `${LIMITES_IA.free} avatares IA`],
     botao: null,
   },
   {
@@ -23,7 +24,7 @@ const PLANOS = [
     nome: 'Pro',
     icone: 'estrela', // asset da casa — substitui o ★ do texto
     preco: { BRL: 'R$9,90/mês', EUR: '€2,99/mês' },
-    features: ['Tudo do Free', '50 avatares IA/mês', 'Sem anúncios', 'Frames exclusivos', 'Badge dourado'],
+    features: ['Tudo do Free', `${LIMITES_IA.pro} avatares IA/mês`, 'Sem anúncios', 'Frames exclusivos', 'Badge dourado'],
     botao: 'Assinar Pro',
   },
   {
@@ -31,7 +32,7 @@ const PLANOS = [
     nome: 'Elite',
     icone: 'coroa', // asset da casa (/icons/coroa.svg), tingido a dourado — substitui o emoji 👑
     preco: { BRL: 'R$24,90/mês', EUR: '€7,99/mês' },
-    features: ['Tudo do Pro', '100 avatares IA/mês', 'Kit Elite dourado'],
+    features: ['Tudo do Pro', `${LIMITES_IA.elite} avatares IA/mês`, 'Kit Elite dourado'],
     botao: 'Assinar Elite',
   },
 ];
@@ -169,10 +170,13 @@ export default function Planos() {
                 </ul>
 
                 {/* Pagamentos = só via IAP das lojas (decisão do dono, SPEC-INFRA).
-                    Lugar digno em vez de botão morto — sem CTA clicável até a vaga
-                    "App nas lojas" ligar o IAP real. Escondido no plano actual. */}
+                    Botão desativado que diz a verdade em vez de "em breve" —
+                    sem CTA clicável até a vaga "App nas lojas" ligar o IAP real.
+                    Escondido no plano actual. */}
                 {p.botao && !atual ? (
-                  <div
+                  <button
+                    type="button"
+                    disabled
                     className="hud-corners"
                     style={{
                       width: '100%',
@@ -183,10 +187,12 @@ export default function Planos() {
                       color: 'rgba(255,255,255,0.55)',
                       border: '1.2px dashed rgba(255,255,255,0.18)',
                       background: 'rgba(255,255,255,0.02)',
+                      cursor: 'not-allowed',
+                      fontFamily: 'inherit',
                     }}
                   >
-                    Assinatura disponível no app das lojas <b style={{ color: 'rgba(255,255,255,0.7)' }}>(em breve)</b>
-                  </div>
+                    Pagamento ainda não disponível nesta versão
+                  </button>
                 ) : null}
               </div>
             );

@@ -4,6 +4,7 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
+import { plural } from '../utils/plural';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -176,7 +177,7 @@ export default function Jogo() {
           <>
             {rsvpConfirmados ? (
               <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.08)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
-                Sorteio com {confirmados.length} confirmados via RSVP
+                Sorteio com {confirmados.length} {plural(confirmados.length, 'confirmado', 'confirmados')} via RSVP
               </div>
             ) : null}
             <div className="hud-corners" style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>

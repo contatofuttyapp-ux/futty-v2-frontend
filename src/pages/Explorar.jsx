@@ -10,6 +10,7 @@ import { apiFetch } from '../lib/api';
 import Topbar from '../components/Topbar';
 import EscudoEquipa from '../components/EscudoEquipa';
 import Toast from '../components/Toast';
+import { plural } from '../utils/plural';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -169,7 +170,7 @@ export default function Explorar() {
             <b style={{ fontFamily: RAJ, fontSize: 13, color: '#e4d9ff', letterSpacing: '0.04em', display: 'block' }}>
               {geoPedida ? 'Localização ativa' : 'Usar minha localização'}
             </b>
-            <span style={{ fontSize: 10, color: '#9a8fc0' }}>opt-in: se recusar, a busca por cidade chega; sua posição nunca sai do celular</span>
+            <span style={{ fontSize: 10, color: '#9a8fc0' }}>opt-in: se recusar, você busca por cidade; sua posição nunca sai do celular</span>
           </span>
         </button>
 
@@ -218,7 +219,7 @@ export default function Explorar() {
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                   {equipa.dist != null ? <b style={{ color: '#b69cff' }}>a {equipa.dist < 1 ? '<1' : Math.round(equipa.dist)} km · </b> : ''}
                   {equipa.cidade ? `${equipa.cidade} · ` : equipa.localizacao ? `${equipa.localizacao} · ` : ''}
-                  {equipa.membro_count} membros · {equipa.modo_visibilidade === 'publico_aberto' ? 'aberto' : 'com aprovação'}
+                  {equipa.membro_count} {plural(equipa.membro_count, 'membro', 'membros')} · {equipa.modo_visibilidade === 'publico_aberto' ? 'aberto' : 'com aprovação'}
                 </div>
               </div>
               {equipa.ja_membro ? (
