@@ -1,14 +1,18 @@
 // Futty v2.0 — Gabinete do Dono (/gabinete). Gabinete 2.0 (11-set,
 // PAINEL-E-CUSTOS.md secção 6): substitui as duas páginas antigas (/gabinete
-// com 16 secções + /super) por UMA página com 5 abas, desktop primeiro (menu
+// com 16 secções + /super) por UMA página com 7 abas, desktop primeiro (menu
 // lateral de abas à esquerda, conteúdo largo à direita, tabelas sem esconder
 // colunas). No celular as abas viram scroll horizontal no topo.
 //
 // Um pedido só (GET /resumo) alimenta Visão geral/Dinheiro/Segurança/
-// Registros; Pessoas & times usa os endpoints próprios (paginação e ações).
-// O que saiu da tela (MRR, Cobertura de venda, DPAs por operador,
-// Interruptores por página, Burn & margem, Documentos & canal do titular)
-// continua no código, atrás da flag MOSTRAR_AVANCADO (src/config/flags.js).
+// Registros; Pessoas & times e Anúncios usam os endpoints próprios
+// (paginação e ações; campanhas com métricas ao vivo). Ajuste do dono
+// (11-set): Anúncios virou aba própria (interruptor geral + interruptores
+// por página + campanhas + receita), Burn & margem voltou para o fim de
+// Dinheiro, e Cobertura de venda ganhou aba própria — as três saíram da
+// flag MOSTRAR_AVANCADO. Só ficaram atrás dela DPAs por operador e
+// Documentos & canal do titular (aba Segurança) e MRR (sem cartão próprio,
+// sem fonte real ainda).
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -67,8 +71,10 @@ const ABAS = [
   { k: 'visao', label: 'Visão geral' },
   { k: 'pessoas', label: 'Pessoas & times' },
   { k: 'dinheiro', label: 'Dinheiro' },
+  { k: 'anuncios', label: 'Anúncios' },
   { k: 'seguranca', label: 'Segurança' },
   { k: 'registros', label: 'Registros & prazos' },
+  { k: 'cobertura', label: 'Cobertura' },
 ];
 
 export default function Gabinete() {
@@ -85,6 +91,7 @@ export default function Gabinete() {
   const [custos, setCustos] = useState(null);
   const [registros, setRegistros] = useState(null);
   const [segManual, setSegManual] = useState(null);
+  const [cobertura, setCobertura] = useState(null);
 
   function carregar() {
     return Promise.all([
@@ -96,6 +103,7 @@ export default function Gabinete() {
       setCustos(o.custos_fixos || []);
       setRegistros(o.registros || []);
       setSegManual(o.seguranca_manual || { testes_permissao: {}, npm_audit: {}, ultima_auditoria: {} });
+      setCobertura(o.cobertura || { vende: [], bloqueado: [] });
     });
   }
 
@@ -129,7 +137,7 @@ export default function Gabinete() {
   }
 
   if (erro) return <div className="app-shell"><main className="app-main" style={{ padding: 24 }}><p className="muted">{erro}</p><Link to="/home" className="muted">← Início</Link></main></div>;
-  if (!dados || !op || !custos || !registros || !segManual) return <LoadingFutty legenda="Carregando o Gabinete…" />;
+  if (!dados || !op || !custos || !registros || !segManual || !cobertura) return <LoadingFutty legenda="Carregando o Gabinete…" />;
 
   return (
     <div className="app-shell">
@@ -154,9 +162,14 @@ export default function Gabinete() {
             {aba === 'pessoas' && <PessoasTimes showMsg={showMsg} />}
             {aba === 'dinheiro' && (
               <AbaDinheiro
-                dados={dados} op={op} pub={pub}
+                dados={dados}
                 custos={custos} setCustos={setCustos}
                 onSalvarCustos={() => salvarParcial('custos_fixos', custos)}
+              />
+            )}
+            {aba === 'anuncios' && (
+              <AbaAnuncios
+                op={op} pub={pub}
                 onSalvarOp={async (campo, valor) => { await salvarParcial(campo, valor); const p = await apiFetch('/api/super/gabinete/publicidade').catch(() => null); if (p) setPub(p); }}
               />
             )}
@@ -169,6 +182,9 @@ export default function Gabinete() {
             )}
             {aba === 'registros' && (
               <AbaRegistros registros={registros} setRegistros={setRegistros} onSalvar={() => salvarParcial('registros', registros)} />
+            )}
+            {aba === 'cobertura' && (
+              <AbaCobertura cobertura={cobertura} setCobertura={setCobertura} onSalvar={() => salvarParcial('cobertura', cobertura)} />
             )}
           </div>
         </div>
@@ -217,10 +233,20 @@ function AbaVisaoGeral({ dados }) {
   );
 }
 
+// Normaliza um custo fixo a um valor mensal (para o Burn & margem): anual
+// divide por 12; uso/único não entra num "burn" fixo recorrente. "pago" NÃO
+// entra nessa conta — marca só se a parcela deste ciclo já foi paga, não se
+// o custo deixou de existir.
+function valorMensal(c) {
+  const v = Number(c.valor) || 0;
+  if (c.periodicidade === 'ano') return v / 12;
+  if (c.periodicidade === 'uso' || c.periodicidade === 'único') return 0;
+  return v;
+}
+
 // ─── ABA 3: DINHEIRO ─────────────────────────────────────────────────────────
-function AbaDinheiro({ dados, op, pub, custos, setCustos, onSalvarCustos, onSalvarOp }) {
+function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos }) {
   const ia = dados.dinheiro.ia_mes;
-  const [novaCamp, setNovaCamp] = useState({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
 
   function editarCusto(i, campo, valor) {
     setCustos(custos.map((c, k) => (k === i ? { ...c, [campo]: valor } : c)));
@@ -230,19 +256,10 @@ function AbaDinheiro({ dados, op, pub, custos, setCustos, onSalvarCustos, onSalv
   }
   function delCusto(i) { setCustos(custos.filter((_, k) => k !== i)); }
 
-  function addCampanha() {
-    if (!novaCamp.nome.trim()) return;
-    const paginas = Object.entries(novaCamp.paginas).filter(([, v2]) => v2).map(([k]) => k);
-    const c = { id: uid(), nome: novaCamp.nome.trim(), anunciante: novaCamp.anunciante.trim(), texto: novaCamp.texto.trim() || novaCamp.nome.trim(), sub: novaCamp.anunciante.trim(), cta: 'Ver', link: novaCamp.link.trim(), cls: novaCamp.cls, inicio: '', fim: novaCamp.fim.trim(), paginas, estado: 'ativa' };
-    onSalvarOp('campanhas', [...(op.campanhas || []), c]);
-    setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
-  }
-  const setEstadoCamp = (id, estado) => onSalvarOp('campanhas', op.campanhas.map((c) => (c.id === id ? { ...c, estado } : c)));
-  const delCamp = (id) => onSalvarOp('campanhas', op.campanhas.filter((c) => c.id !== id));
-
   const hoje = hojeISO();
   const custosVencidos = custos.filter((c) => !c.pago && c.proxima_data && c.proxima_data < hoje).length;
-  const burn = MOSTRAR_AVANCADO ? Math.round(custos.reduce((s, c) => s + (c.pago === false ? 0 : Number(c.valor) || 0), 0)) : 0;
+  const burn = Math.round(custos.reduce((s, c) => s + valorMensal(c), 0));
+  const receita = 0; // sem IAP e sem receita de anúncios ainda — nunca inventa número
 
   return (
     <div>
@@ -287,7 +304,66 @@ function AbaDinheiro({ dados, op, pub, custos, setCustos, onSalvarCustos, onSalv
         <div><Semaforo cor={ia.freeze ? 'vermelho' : 'verde'}>{ia.freeze ? 'Freeze ligado' : 'Normal'}</Semaforo><div style={{ ...muted, marginTop: 4 }}>estado da IA</div></div>
       </div>
 
-      <h2 style={sectionH2}>Anúncios</h2>
+      <h2 style={sectionH2}>Burn & margem</h2>
+      <div style={{ ...CARD, padding: 16 }}>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div><div style={{ ...bigNum, color: '#fda4af' }}>R${burn}</div><span style={muted}>custos fixos / mês</span></div>
+          <div><div style={bigNum}>R${receita}</div><span style={muted}>receita (IAP + anúncios)</span></div>
+          <div><div style={{ ...bigNum, color: '#fda4af' }}>-R${burn - receita}</div><span style={muted}>margem líquida</span></div>
+        </div>
+        <p style={{ ...muted, marginTop: 10 }}>Sem receita ainda (IAP das lojas e receita de anúncios por ligar) — a margem fica negativa, igual ao custo. Assume que os custos fixos estão na mesma moeda; não converte.</p>
+      </div>
+    </div>
+  );
+}
+
+const NOMES_PAGINA = { inicio: 'Início', sorteio: 'Sorteio in-app', p: 'Pública /p/' };
+
+// ─── ABA "ANÚNCIOS" ──────────────────────────────────────────────────────────
+function AbaAnuncios({ op, pub, onSalvarOp }) {
+  const [novaCamp, setNovaCamp] = useState({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
+  const ativoGeral = op.ads_ativo !== false;
+
+  function addCampanha() {
+    if (!novaCamp.nome.trim()) return;
+    const paginas = Object.entries(novaCamp.paginas).filter(([, v2]) => v2).map(([k]) => k);
+    const c = { id: uid(), nome: novaCamp.nome.trim(), anunciante: novaCamp.anunciante.trim(), texto: novaCamp.texto.trim() || novaCamp.nome.trim(), sub: novaCamp.anunciante.trim(), cta: 'Ver', link: novaCamp.link.trim(), cls: novaCamp.cls, inicio: '', fim: novaCamp.fim.trim(), paginas, estado: 'ativa' };
+    onSalvarOp('campanhas', [...(op.campanhas || []), c]);
+    setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
+  }
+  const setEstadoCamp = (id, estado) => onSalvarOp('campanhas', op.campanhas.map((c) => (c.id === id ? { ...c, estado } : c)));
+  const delCamp = (id) => onSalvarOp('campanhas', op.campanhas.filter((c) => c.id !== id));
+
+  const receitaAnuncios = null; // sem fonte de receita por anúncio ainda (só imp/cli)
+
+  return (
+    <div>
+      <h2 style={sectionH2}>Interruptor geral</h2>
+      <div style={{ ...CARD, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <input
+          type="checkbox"
+          checked={ativoGeral}
+          onChange={(e) => onSalvarOp('ads_ativo', e.target.checked)}
+          style={{ width: 22, height: 22 }}
+        />
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>Anúncios no app: {ativoGeral ? 'ligado' : 'desligado'}</div>
+          <div style={muted}>Desligado corta anúncio em toda tela, mesmo nas que estiverem marcadas abaixo.</div>
+        </div>
+      </div>
+
+      <h2 style={sectionH2}>Interruptores por página <span style={{ fontWeight: 400, color: '#8a8a98', textTransform: 'none' }}>(default desligado)</span></h2>
+      <div style={{ ...CARD, padding: 14, opacity: ativoGeral ? 1 : 0.5 }}>
+        {!ativoGeral ? <p style={{ ...muted, marginBottom: 8 }}>Interruptor geral desligado — estes toggles não têm efeito agora.</p> : null}
+        {Object.keys(NOMES_PAGINA).map((pg) => (
+          <div key={pg} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: '1px solid #1a1a1a' }}>
+            <span style={{ flex: 1, fontSize: 13, color: '#c9c2d6' }}>{NOMES_PAGINA[pg]}</span>
+            <input type="checkbox" checked={!!op.toggles?.[pg]} onChange={(e) => onSalvarOp('toggles', { ...(op.toggles || {}), [pg]: e.target.checked })} style={{ width: 20, height: 20 }} />
+          </div>
+        ))}
+      </div>
+
+      <h2 style={sectionH2}>Campanhas</h2>
       {(pub?.alertas || []).length ? (
         <div style={{ ...CARD, padding: 10, marginBottom: 10, borderColor: 'rgba(253,164,175,.35)' }}>
           {pub.alertas.map((a, i) => <div key={i} style={{ color: '#fda4af', fontSize: 12, padding: '2px 0' }}>⚠ {a}</div>)}
@@ -299,7 +375,7 @@ function AbaDinheiro({ dados, op, pub, custos, setCustos, onSalvarCustos, onSalv
             const ctr = c.imp ? (c.cli / c.imp * 100).toFixed(1) : '0.0';
             return (
               <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr auto auto', alignItems: 'center', gap: 8, padding: '9px 0', borderTop: '1px solid #1a1a1a', fontSize: 12.5 }}>
-                <div><div style={{ fontWeight: 700, fontSize: 13.5 }}>{c.nome}</div><div style={muted}>{c.anunciante || '-'} · {(c.paginas || []).join(', ') || 'sem página'} · <span style={{ color: c.cls === 'livre' ? '#7bd88f' : '#fda4af' }}>{c.cls === 'livre' ? 'livre' : '18+'}</span></div></div>
+                <div><div style={{ fontWeight: 700, fontSize: 13.5 }}>{c.nome}</div><div style={muted}>{c.anunciante || '-'} · {(c.paginas || []).map((pg) => NOMES_PAGINA[pg] || pg).join(', ') || 'sem página'} · <span style={{ color: c.cls === 'livre' ? '#7bd88f' : '#fda4af' }}>{c.cls === 'livre' ? 'livre' : '18+'}</span></div></div>
                 <div style={muted}>{c.imp} imp · {c.cli} cli · CTR {ctr}%{c.dias_restantes != null ? ` · ${c.dias_restantes}d` : ''}</div>
                 <span style={{ ...chip, borderColor: c.estado === 'ativa' ? '#7bd88f' : '#f0c94a', color: c.estado === 'ativa' ? '#7bd88f' : '#f0c94a', cursor: 'pointer' }} onClick={() => setEstadoCamp(c.id, c.estado === 'ativa' ? 'pausada' : 'ativa')}>{c.estado === 'ativa' ? 'ativa' : c.estado === 'pausada' ? 'pausada ▸' : 'terminada'}</span>
                 <span style={{ color: '#6a6a76', cursor: 'pointer' }} onClick={() => delCamp(c.id)}>✕</span>
@@ -313,43 +389,19 @@ function AbaDinheiro({ dados, op, pub, custos, setCustos, onSalvarCustos, onSalv
           <input placeholder="Link" style={{ ...inp, flex: '1 1 90px' }} value={novaCamp.link} onChange={(e) => setNovaCamp({ ...novaCamp, link: e.target.value })} />
           <select style={{ ...inp, width: 90 }} value={novaCamp.cls} onChange={(e) => setNovaCamp({ ...novaCamp, cls: e.target.value })}><option value="livre">livre</option><option value="18+">18+</option></select>
           <input placeholder="fim (AAAA-MM-DD)" style={{ ...inp, width: 140 }} value={novaCamp.fim} onChange={(e) => setNovaCamp({ ...novaCamp, fim: e.target.value })} />
-          {['inicio', 'sorteio', 'p'].map((pg) => (
+          {Object.keys(NOMES_PAGINA).map((pg) => (
             <label key={pg} style={{ fontSize: 11, color: '#c9c2d6', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <input type="checkbox" checked={!!novaCamp.paginas[pg]} onChange={(e) => setNovaCamp({ ...novaCamp, paginas: { ...novaCamp.paginas, [pg]: e.target.checked } })} />{pg}
+              <input type="checkbox" checked={!!novaCamp.paginas[pg]} onChange={(e) => setNovaCamp({ ...novaCamp, paginas: { ...novaCamp.paginas, [pg]: e.target.checked } })} />{NOMES_PAGINA[pg]}
             </label>
           ))}
           <button type="button" style={btnGold} onClick={addCampanha}>+ Criar campanha</button>
         </div>
       </div>
 
-      {MOSTRAR_AVANCADO ? (
-        <>
-          <h2 style={sectionH2}>Burn & margem</h2>
-          <div style={{ ...CARD, padding: 16 }}>
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div><div style={{ ...bigNum, color: '#fda4af' }}>R${burn}</div><span style={muted}>custos / mês</span></div>
-              <div><div style={bigNum}>-</div><span style={muted}>MRR (IAP)</span></div>
-              <div><div style={bigNum}>-</div><span style={muted}>margem líquida</span></div>
-            </div>
-          </div>
-          <h2 style={sectionH2}>Cobertura de venda</h2>
-          <div style={{ ...CARD, padding: 16 }}>
-            <div style={muted}>Onde o mundo nos compra</div>
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>{(op.cobertura?.vende || []).map((x, i) => <span key={i} style={{ ...chip, color: '#7bd88f', borderColor: 'rgba(123,216,143,.35)' }}>{x}</span>)}</div>
-            <div style={{ ...muted, marginTop: 10 }}>Onde ainda não</div>
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>{(op.cobertura?.bloqueado || []).map((x, i) => <span key={i} style={{ ...chip, color: '#7a7a86', borderColor: 'rgba(255,255,255,.1)' }}>{x}</span>)}</div>
-          </div>
-          <h2 style={sectionH2}>Interruptores por página <span style={{ fontWeight: 400, color: '#8a8a98', textTransform: 'none' }}>(default OFF)</span></h2>
-          <div style={{ ...CARD, padding: 14 }}>
-            {['inicio', 'sorteio', 'p'].map((pg) => (
-              <div key={pg} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: '1px solid #1a1a1a' }}>
-                <span style={{ flex: 1, fontSize: 13, color: '#c9c2d6' }}>{pg === 'inicio' ? 'Início' : pg === 'sorteio' ? 'Sorteio in-app' : 'Pública /p/'}</span>
-                <input type="checkbox" checked={!!op.toggles?.[pg]} onChange={(e) => onSalvarOp('toggles', { ...(op.toggles || {}), [pg]: e.target.checked })} style={{ width: 20, height: 20 }} />
-              </div>
-            ))}
-          </div>
-        </>
-      ) : null}
+      <h2 style={sectionH2}>Receita de anúncios</h2>
+      <div style={{ ...CARD, padding: 16, color: 'var(--text-dim)', fontSize: 13 }}>
+        {receitaAnuncios == null ? 'Sem receita de anúncios ainda.' : fmtUSD(receitaAnuncios)}
+      </div>
     </div>
   );
 }
@@ -507,6 +559,67 @@ function AbaRegistros({ registros, setRegistros, onSalvar }) {
           <button type="button" style={btnGold} onClick={onSalvar}>Salvar</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── ABA "COBERTURA" ──────────────────────────────────────────────────────────
+// Onde vendemos e onde não. Fonte é manual (gabineteStore.cobertura) — não há
+// lista de países vinda de código nenhum (grep confirmado: sem IAP das lojas
+// ligado, não existe fonte automática) — editável igual aos Registros.
+function ColunaCobertura({ titulo, lista, cor, borda, onAdd, onDel }) {
+  const [novo, setNovo] = useState('');
+  function add() {
+    if (!novo.trim()) return;
+    onAdd(novo.trim());
+    setNovo('');
+  }
+  return (
+    <div style={{ ...CARD, padding: 16 }}>
+      <h3 style={{ margin: '0 0 10px', fontSize: 12, color: '#9a8fc0', textTransform: 'uppercase' }}>{titulo}</h3>
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+        {lista.map((x, i) => (
+          <span key={i} style={{ ...chip, color: cor, borderColor: borda, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {x}
+            <span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => onDel(i)}>✕</span>
+          </span>
+        ))}
+        {!lista.length ? <span style={muted}>Vazio.</span> : null}
+      </div>
+      <div style={{ display: 'flex', gap: 7, marginTop: 12, paddingTop: 12, borderTop: '1px dashed rgba(255,255,255,.12)' }}>
+        <input style={{ ...inp, flex: 1 }} placeholder="Ex.: 🇧🇷 Brasil ou BRL" value={novo} onChange={(e) => setNovo(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+        <button type="button" style={btn} onClick={add}>+ Adicionar</button>
+      </div>
+    </div>
+  );
+}
+
+function AbaCobertura({ cobertura, setCobertura, onSalvar }) {
+  const vende = cobertura.vende || [];
+  const bloqueado = cobertura.bloqueado || [];
+  return (
+    <div>
+      <h2 style={sectionH2}>Cobertura de venda</h2>
+      <p style={muted}>Onde o mundo nos compra hoje, e onde ainda não. Lista editável à mão — sem IAP das lojas ligado ainda não há fonte automática.</p>
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', marginTop: 10 }}>
+        <ColunaCobertura
+          titulo="Onde vende"
+          lista={vende}
+          cor="#7bd88f"
+          borda="rgba(123,216,143,.35)"
+          onAdd={(x) => setCobertura({ ...cobertura, vende: [...vende, x] })}
+          onDel={(i) => setCobertura({ ...cobertura, vende: vende.filter((_, k) => k !== i) })}
+        />
+        <ColunaCobertura
+          titulo="Onde ainda não"
+          lista={bloqueado}
+          cor="#7a7a86"
+          borda="rgba(255,255,255,.1)"
+          onAdd={(x) => setCobertura({ ...cobertura, bloqueado: [...bloqueado, x] })}
+          onDel={(i) => setCobertura({ ...cobertura, bloqueado: bloqueado.filter((_, k) => k !== i) })}
+        />
+      </div>
+      <div style={{ marginTop: 12 }}><button type="button" style={btnGold} onClick={onSalvar}>Salvar</button></div>
     </div>
   );
 }
