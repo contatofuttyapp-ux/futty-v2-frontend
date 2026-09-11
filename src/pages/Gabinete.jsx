@@ -1,413 +1,535 @@
-// Futty v2.0 — Gabinete do Dono (/gabinete). Rota super-admin (guard no servidor E no
-// cliente). Linha do tempo scrollável no cânone (vidro/aurora/45°/Rajdhani) — transplante
-// do gabinete-mockup.html. Lei: o dono é CEGO ao conteúdo (só números). Receita: sem dados
-// enquanto a fonte real (IAP das lojas) não existir — nada de "em breve" na tela (10-set).
+// Futty v2.0 — Gabinete do Dono (/gabinete). Gabinete 2.0 (11-set,
+// PAINEL-E-CUSTOS.md secção 6): substitui as duas páginas antigas (/gabinete
+// com 16 secções + /super) por UMA página com 5 abas, desktop primeiro (menu
+// lateral de abas à esquerda, conteúdo largo à direita, tabelas sem esconder
+// colunas). No celular as abas viram scroll horizontal no topo.
+//
+// Um pedido só (GET /resumo) alimenta Visão geral/Dinheiro/Segurança/
+// Registros; Pessoas & times usa os endpoints próprios (paginação e ações).
+// O que saiu da tela (MRR, Cobertura de venda, DPAs por operador,
+// Interruptores por página, Burn & margem, Documentos & canal do titular)
+// continua no código, atrás da flag MOSTRAR_AVANCADO (src/config/flags.js).
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
+import PessoasTimes from './gabinete/PessoasTimes';
+import { MOSTRAR_AVANCADO } from '../config/flags';
 
-const OURO = '#d4a017'; const OURO2 = '#f0c94a'; const ROXO = '#8b5cf6'; const PRATA = '#aab4c8'; const VERDE = '#7bd88f';
-// Política/termos: "publicada" simples OU publicada-mas-em-revisão contam como publicados.
-const ESTADOS_PUBLICADOS = ['publicada', 'publicada (revisão jurídica pendente)'];
+const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
+const btn = {
+  padding: '6px 10px', borderRadius: 8, border: '1px solid #2a2a2a', background: '#0c0c0c',
+  color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+};
+const btnGold = { ...btn, background: 'linear-gradient(180deg,#f5e070,#d4a017)', color: '#0d0d12', border: 'none', padding: '8px 16px' };
+const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #222' };
+const td = { padding: '6px 8px', fontSize: 13, borderBottom: '1px solid #1a1a1a', verticalAlign: 'middle' };
+const inp = { fontSize: 12, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '6px 8px', borderRadius: 6, width: '100%', boxSizing: 'border-box' };
 
-// ── mini-gráficos SVG (cânone: dourado sobre vidro) — portados do mockup ──
-function lineChart(vals, cor, w, h) {
-  const pad = 6; const max = Math.max(...vals, 1);
-  const n = Math.max(vals.length, 2);
-  const X = (i) => pad + (i * (w - pad * 2)) / (n - 1);
-  const Y = (v) => h - pad - (v * (h - pad * 2)) / max;
-  const pts = vals.map((v, i) => `${X(i)},${Y(v)}`).join(' ');
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:${h}px;width:100%">`
-    + `<polyline points="${pts}" fill="none" stroke="${cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
-    + `<circle cx="${X(vals.length - 1)}" cy="${Y(vals[vals.length - 1] || 0)}" r="3" fill="${cor}"/></svg>`;
-}
-function barChart(vals, cor, w, h) {
-  const pad = 6; const max = Math.max(...vals, 1); const bw = (w - pad * 2) / Math.max(vals.length, 1) * 0.62;
-  let out = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:${h}px;width:100%">`;
-  vals.forEach((v, i) => { const x = pad + (i + 0.19) * (w - pad * 2) / vals.length; const bh = (v * (h - pad * 2)) / max; out += `<rect x="${x}" y="${h - pad - bh}" width="${bw}" height="${bh}" rx="2" fill="${cor}"/>`; });
-  return out + '</svg>';
-}
-function stacked(v, w, h) {
-  const pad = 6; const n = v.posts.length || 1;
-  const tot = v.posts.map((_, i) => v.posts[i] + v.sorteios[i] + v.jogos[i]); const max = Math.max(...tot, 1);
-  const bw = (w - pad * 2) / n * 0.6;
-  let out = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:${h}px;width:100%">`;
-  for (let i = 0; i < n; i += 1) {
-    const x = pad + (i + 0.2) * (w - pad * 2) / n; let y = h - pad;
-    for (const [k, c] of [['jogos', ROXO], ['sorteios', PRATA], ['posts', OURO]]) {
-      const bh = ((v[k][i] || 0) * (h - pad * 2)) / max; y -= bh;
-      out += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${c}"/>`;
-    }
-  }
-  return out + '</svg>';
-}
-const SVG = (html) => <div dangerouslySetInnerHTML={{ __html: html }} />;
-
-function Hud({ h2, n, breve }) {
+const CORES = { verde: '#7bd88f', amarelo: '#f0c94a', vermelho: '#fda4af', cinza: '#8a8a98' };
+function Semaforo({ cor, children }) {
   return (
-    <div className="gab-hud">
-      <h2>{h2}</h2>
-      {breve ? <span className="gab-breve">{breve}</span> : n ? <span className="gab-n">{n}</span> : null}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+      <span style={{ width: 9, height: 9, borderRadius: '50%', background: CORES[cor] || CORES.cinza, flexShrink: 0 }} />
+      <span style={{ fontSize: 13, color: '#ddd' }}>{children}</span>
+    </span>
+  );
+}
+
+function hojeISO() { return new Date().toISOString().slice(0, 10); }
+function fmtUptime(s) {
+  if (!s && s !== 0) return '-';
+  const d = Math.floor(s / 86400); const h = Math.floor((s % 86400) / 3600); const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
+}
+function fmtUSD(n) { return `US$${Number(n || 0).toFixed(2)}`; }
+function diasAte(dataISO) {
+  if (!dataISO) return null;
+  const ms = new Date(`${dataISO}T00:00:00Z`) - new Date(`${hojeISO()}T00:00:00Z`);
+  return Math.round(ms / 86400000);
+}
+const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : `c${Date.now()}`);
+
+function Card6({ n, legenda, sub }) {
+  return (
+    <div style={{ ...CARD, padding: 16 }}>
+      <div style={{ fontSize: 26, fontWeight: 800, color: '#fff', fontFamily: "'Rajdhani',sans-serif" }}>{n}</div>
+      {sub ? <div style={{ fontSize: 12, color: '#f0c94a', marginTop: 2 }}>{sub}</div> : null}
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 6 }}>{legenda}</div>
     </div>
   );
 }
-const Vazio = ({ children }) => <div className="gab-card gab-vazio">{children}</div>;
+
+const ABAS = [
+  { k: 'visao', label: 'Visão geral' },
+  { k: 'pessoas', label: 'Pessoas & times' },
+  { k: 'dinheiro', label: 'Dinheiro' },
+  { k: 'seguranca', label: 'Segurança' },
+  { k: 'registros', label: 'Registros & prazos' },
+];
 
 export default function Gabinete() {
-  const [dados, setDados] = useState(null);
-  const [op, setOp] = useState(null);
-  const [seg, setSeg] = useState(null);
-  const [pub, setPub] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const aba = ABAS.some((a) => a.k === searchParams.get('aba')) ? searchParams.get('aba') : 'visao';
+
+  const [dados, setDados] = useState(null); // /resumo
+  const [op, setOp] = useState(null); // /operacao (objeto completo, para PUT seguro)
+  const [pub, setPub] = useState(null); // /publicidade (campanhas + métricas)
   const [erro, setErro] = useState('');
   const [toast, setToast] = useState(null);
-  const [novoCusto, setNovoCusto] = useState({ nome: '', valor: '', ciclo: 'mês', renova: '' });
-  const [novoReg, setNovoReg] = useState({ nome: '', tipo: '', renova: '' });
-  const [novaCamp, setNovaCamp] = useState({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
 
-  async function recarregarPub() { try { setPub(await apiFetch('/api/super/gabinete/publicidade')); } catch { /* */ } }
+  // Cópias editáveis locais (só vão ao servidor no "Salvar" de cada bloco).
+  const [custos, setCustos] = useState(null);
+  const [registros, setRegistros] = useState(null);
+  const [segManual, setSegManual] = useState(null);
+
+  function carregar() {
+    return Promise.all([
+      apiFetch('/api/super/gabinete/resumo'),
+      apiFetch('/api/super/gabinete/operacao'),
+      apiFetch('/api/super/gabinete/publicidade').catch(() => null),
+    ]).then(([r, o, p]) => {
+      setDados(r); setOp(o); setPub(p);
+      setCustos(o.custos_fixos || []);
+      setRegistros(o.registros || []);
+      setSegManual(o.seguranca_manual || { testes_permissao: {}, npm_audit: {}, ultima_auditoria: {} });
+    });
+  }
+
   useEffect(() => {
     let vivo = true;
-    Promise.all([
-      apiFetch('/api/super/gabinete'),
-      apiFetch('/api/super/gabinete/operacao'),
-      apiFetch('/api/denuncias/agregados').catch(() => null),
-      apiFetch('/api/super/gabinete/publicidade').catch(() => null),
-    ]).then(([g, o, s, pb]) => { if (!vivo) return; setDados(g); setOp(o); setSeg(s); setPub(pb); })
-      .catch((e) => vivo && setErro(e.message));
+    carregar().catch((e) => vivo && setErro(e.message));
     return () => { vivo = false; };
   }, []);
 
-  async function guardarOp(next) {
-    const anterior = op; setOp(next);
-    try { const salvo = await apiFetch('/api/super/gabinete/operacao', { method: 'PUT', body: JSON.stringify(next) }); setOp(salvo); setToast({ tipo: 'success', mensagem: 'Salvo.' }); recarregarPub(); }
-    catch (e) { setOp(anterior); setToast({ tipo: 'error', mensagem: e.message }); }
+  function irAba(k) {
+    setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set('aba', k); return p; });
   }
-  const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `c${Date.now()}`);
-  function addCampanha() {
-    if (!novaCamp.nome.trim()) return;
-    const paginas = Object.entries(novaCamp.paginas).filter(([, v]) => v).map(([k]) => k);
-    const c = { id: uid(), nome: novaCamp.nome.trim(), anunciante: novaCamp.anunciante.trim(), texto: novaCamp.texto.trim() || novaCamp.nome.trim(), sub: novaCamp.anunciante.trim(), cta: 'Ver', link: novaCamp.link.trim(), cls: novaCamp.cls, inicio: '', fim: novaCamp.fim.trim(), paginas, estado: 'ativa' };
-    guardarOp({ ...op, campanhas: [...(op.campanhas || []), c] });
-    setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
+  function showMsg(mensagem, erroToast = false) {
+    setToast({ tipo: erroToast ? 'error' : 'success', mensagem });
   }
-  const setEstadoCamp = (id, estado) => guardarOp({ ...op, campanhas: op.campanhas.map((c) => (c.id === id ? { ...c, estado } : c)) });
-  const delCamp = (id) => guardarOp({ ...op, campanhas: op.campanhas.filter((c) => c.id !== id) });
-  const setToggle = (pag, on) => guardarOp({ ...op, toggles: { ...(op.toggles || {}), [pag]: on } });
-  const addCusto = () => { if (!novoCusto.nome.trim()) return; guardarOp({ ...op, custos: [...(op.custos || []), { nome: novoCusto.nome.trim(), desc: '', valor: Number(novoCusto.valor) || 0, ciclo: novoCusto.ciclo, renova: novoCusto.renova.trim(), estado: (Number(novoCusto.valor) || 0) === 0 ? 'free' : 'ativo' }] }); setNovoCusto({ nome: '', valor: '', ciclo: 'mês', renova: '' }); };
-  const delCusto = (i) => guardarOp({ ...op, custos: op.custos.filter((_, k) => k !== i) });
-  const addReg = () => { if (!novoReg.nome.trim()) return; guardarOp({ ...op, registos: [...(op.registos || []), { nome: novoReg.nome.trim(), tipo: novoReg.tipo.trim(), renova: novoReg.renova.trim(), dias: null }] }); setNovoReg({ nome: '', tipo: '', renova: '' }); };
-  const delReg = (i) => guardarOp({ ...op, registos: op.registos.filter((_, k) => k !== i) });
+
+  // PUT seguro: sempre manda o objeto `op` completo com só o campo alterado
+  // trocado — omitir os outros no PUT apagava campanhas/toggles/proteção de
+  // dados (gravar() no backend não tem memória do que já existia).
+  async function salvarParcial(campo, valor) {
+    const proximo = { ...op, [campo]: valor };
+    try {
+      const salvo = await apiFetch('/api/super/gabinete/operacao', { method: 'PUT', body: JSON.stringify(proximo) });
+      setOp(salvo);
+      showMsg('Salvo.');
+      return salvo;
+    } catch (e) {
+      showMsg(e.message, true);
+      return null;
+    }
+  }
 
   if (erro) return <div className="app-shell"><main className="app-main" style={{ padding: 24 }}><p className="muted">{erro}</p><Link to="/home" className="muted">← Início</Link></main></div>;
-  if (!dados || !op) return <LoadingFutty legenda="Carregando o Gabinete…" />;
-
-  const p = dados.pulso;
-  const c = dados.crescimento;
-  const v = dados.vida;
-  const estCls = { ativo: 'gab-ok', free: 'gab-free', uso: 'gab-uso' };
-  const estLbl = { ativo: 'ativo', free: 'grátis', uso: 'por uso' };
-  const perMes = (x) => (x.estado === 'free' ? 0 : x.ciclo === 'ano' ? x.valor / 12 : x.valor);
-  const burn = Math.round((op.custos || []).reduce((s, x) => s + perMes(x), 0));
-  // Proteção de dados (LGPD) — do store; helpers para o bloco editável.
-  const pd = op.protecao_dados || { dpas: [], politica_privacidade: {}, termos_uso: {}, canal_titular: {} };
-  const hoje = () => new Date().toISOString().slice(0, 10);
-  const selBase = { fontSize: 11, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, padding: '4px 8px', borderRadius: 20, cursor: 'pointer', background: 'transparent' };
-  const selDpa = (estado) => (estado === 'aceite' ? { ...selBase, color: '#7bd88f', border: '1px solid rgba(123,216,143,.4)' } : estado === 'n.a.' ? { ...selBase, color: '#8ab4ff', border: '1px solid rgba(138,180,255,.4)' } : { ...selBase, color: '#fda4af', border: '1px solid rgba(253,164,175,.5)' });
+  if (!dados || !op || !custos || !registros || !segManual) return <LoadingFutty legenda="Carregando o Gabinete…" />;
 
   return (
-    <div className="app-shell gab">
+    <div className="app-shell">
       <GabCSS />
-      <main className="app-main page-reveal" style={{ maxWidth: 1180, padding: '20px 16px 60px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-          <h1 className="gab-h1">Gabinete <span style={{ color: OURO2 }}>do Dono</span></h1>
-          <Link to="/home" className="gab-n" style={{ textDecoration: 'none' }}>← Início</Link>
-        </div>
-        <p className="gab-sub">Rota super-admin. A história do produto de relance: o dono é <b>cego ao conteúdo</b>, só números.</p>
-
-        {/* PULSO DO DIA */}
-        <div className="gab-card gab-head">
-          <div className="gab-g">Pulso do dia</div>
-          <div className="gab-pulse">
-            <Kpi v={p.users_hoje} l="usuários hoje" cls="up" />
-            <Kpi v={p.jogos_hoje} l="jogos hoje" />
-            <Kpi v={p.denuncias_abertas} l="denúncias abertas" />
-            <Kpi v={p.mrr ?? '-'} l="MRR" />
-          </div>
+      <main className="app-main gab2-main" style={{ maxWidth: 1320, padding: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '20px 20px 0' }}>
+          <h1 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 26, margin: 0 }}>Gabinete <span style={{ color: '#f0c94a' }}>do Dono</span></h1>
+          <Link to="/home" style={{ fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none' }}>← Início</Link>
         </div>
 
-        {/* CRESCIMENTO */}
-        <Hud h2="Crescimento" n="por semana · últimas 8" />
-        <div className="gab-cards c3">
-          <div className="gab-card"><h3>Usuários</h3><div className="gab-big">{c.users.at(-1)}</div>{SVG(lineChart(c.users, OURO2, 260, 92))}</div>
-          <div className="gab-card"><h3>Times</h3><div className="gab-big">{c.equipas.at(-1)}</div>{SVG(barChart(c.equipas, OURO, 260, 92))}</div>
-          <div className="gab-card"><h3>Campeonatos</h3><div className="gab-big">{c.camp.at(-1)}</div>{SVG(lineChart(c.camp, ROXO, 260, 92))}</div>
-        </div>
-
-        {/* RECEITA — sem dados (IAP das lojas por ligar; Stripe pausado — SPEC-INFRA) */}
-        <Hud h2="Receita" breve="Falta ligar o IAP das lojas" />
-        <Vazio>Sem dados de receita ainda.</Vazio>
-
-        {/* PUBLICIDADE — a valer: campanhas + medição + toggles por página */}
-        <Hud h2="Publicidade" n="campanhas · medição nossa (impressão/clique) · lei de menores no motor" />
-        {(pub?.alertas || []).length ? (
-          <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(253,164,175,.35)' }}>
-            {pub.alertas.map((a, i) => <div key={i} className="gab-osub" style={{ color: '#fda4af', padding: '2px 0' }}>⚠ {a}</div>)}
-          </div>
-        ) : null}
-        <div className="gab-cards c2">
-          <div className="gab-card">
-            <h3>Campanhas</h3>
-            {(pub?.campanhas || []).length === 0 ? <div className="gab-osub" style={{ padding: '8px 0' }}>Sem campanhas. Crie a 1ª abaixo.</div>
-              : pub.campanhas.map((c) => {
-                const ctr = c.imp ? (c.cli / c.imp * 100).toFixed(1) : '0.0';
-                return (
-                  <div key={c.id} className="gab-oprow" style={{ gridTemplateColumns: '1.4fr .9fr auto auto' }}>
-                    <div><div className="gab-nm">{c.nome}</div><div className="gab-osub">{c.anunciante || '-'} · {(c.paginas || []).join(', ') || 'sem página'} · <span style={{ color: c.cls === 'livre' ? '#7bd88f' : '#fda4af' }}>{c.cls === 'livre' ? 'livre' : '18+'}</span></div></div>
-                    <div className="gab-osub">{c.imp} imp · {c.cli} cli · CTR {ctr}%{c.dias_restantes != null ? ` · ${c.dias_restantes}d` : ''}</div>
-                    <span className={`gab-chip ${c.estado === 'ativa' ? 'gab-ok' : c.estado === 'pausada' ? 'gab-uso' : 'gab-warn'}`} style={{ cursor: 'pointer' }} onClick={() => setEstadoCamp(c.id, c.estado === 'ativa' ? 'pausada' : 'ativa')}>{c.estado === 'ativa' ? 'ativa' : c.estado === 'pausada' ? 'pausada ▸' : 'terminada'}</span>
-                    <div className="gab-del" title="remover" onClick={() => delCamp(c.id)}>✕</div>
-                  </div>
-                );
-              })}
-            <div className="gab-form">
-              <input placeholder="Nome da campanha" style={{ flex: '1.3 1 110px' }} value={novaCamp.nome} onChange={(e) => setNovaCamp({ ...novaCamp, nome: e.target.value })} />
-              <input placeholder="Anunciante" style={{ flex: '1 1 90px' }} value={novaCamp.anunciante} onChange={(e) => setNovaCamp({ ...novaCamp, anunciante: e.target.value })} />
-              <input placeholder="Texto do banner" style={{ flex: '1.3 1 110px' }} value={novaCamp.texto} onChange={(e) => setNovaCamp({ ...novaCamp, texto: e.target.value })} />
-              <input placeholder="Link" style={{ flex: '1 1 90px' }} value={novaCamp.link} onChange={(e) => setNovaCamp({ ...novaCamp, link: e.target.value })} />
-              <select value={novaCamp.cls} onChange={(e) => setNovaCamp({ ...novaCamp, cls: e.target.value })}><option value="livre">livre</option><option value="18+">18+</option></select>
-              <input placeholder="fim (YYYY-MM-DD)" style={{ width: 120 }} value={novaCamp.fim} onChange={(e) => setNovaCamp({ ...novaCamp, fim: e.target.value })} />
-              {['inicio', 'sorteio', 'p'].map((pg) => (
-                <label key={pg} style={{ fontSize: 11, color: '#c9c2d6', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <input type="checkbox" checked={!!novaCamp.paginas[pg]} onChange={(e) => setNovaCamp({ ...novaCamp, paginas: { ...novaCamp.paginas, [pg]: e.target.checked } })} />{pg}
-                </label>
-              ))}
-              <button type="button" className="gab-add" onClick={addCampanha}>+ Criar campanha</button>
-              <span style={{ flexBasis: '100%', fontSize: 10.5, color: '#7a7a86' }}>classificação por campanha (livre/18+ · sem cls = 18+ fail-closed); menor/anônimo só recebe "livre".</span>
-            </div>
-          </div>
-          <div className="gab-card">
-            <h3>Interruptores por página <span style={{ fontWeight: 400, color: '#8a8a98', textTransform: 'none' }}>(default OFF)</span></h3>
-            {['inicio', 'sorteio', 'p'].map((pg) => (
-              <div key={pg} className="gab-planrow">
-                <span style={{ flex: 1, fontSize: 13, color: '#c9c2d6' }}>{pg === 'inicio' ? 'Início' : pg === 'sorteio' ? 'Sorteio in-app' : 'Pública /p/'}</span>
-                <input type="checkbox" checked={!!op.toggles?.[pg]} onChange={(e) => setToggle(pg, e.target.checked)} style={{ width: 20, height: 20, accentColor: '#8b5cf6' }} />
-                <span className={`gab-chip ${op.toggles?.[pg] ? 'gab-ok' : 'gab-warn'}`}>{op.toggles?.[pg] ? 'ON' : 'OFF'}</span>
-              </div>
+        <div className="gab2">
+          <nav className="gab2-side">
+            {ABAS.map((a) => (
+              <button key={a.k} type="button" className={`gab2-tab ${aba === a.k ? 'ativa' : ''}`} onClick={() => irAba(a.k)}>
+                {a.label}
+              </button>
             ))}
-            <p className="gab-muted" style={{ marginTop: 12 }}>Página desligada → nenhum anúncio aí, mesmo com campanha. A lei de menores roda no servidor a cada pedido.</p>
+          </nav>
+
+          <div className="gab2-content">
+            {aba === 'visao' && <AbaVisaoGeral dados={dados} />}
+            {aba === 'pessoas' && <PessoasTimes showMsg={showMsg} />}
+            {aba === 'dinheiro' && (
+              <AbaDinheiro
+                dados={dados} op={op} pub={pub}
+                custos={custos} setCustos={setCustos}
+                onSalvarCustos={() => salvarParcial('custos_fixos', custos)}
+                onSalvarOp={async (campo, valor) => { await salvarParcial(campo, valor); const p = await apiFetch('/api/super/gabinete/publicidade').catch(() => null); if (p) setPub(p); }}
+              />
+            )}
+            {aba === 'seguranca' && (
+              <AbaSeguranca
+                dados={dados} segManual={segManual} setSegManual={setSegManual}
+                onSalvar={() => salvarParcial('seguranca_manual', segManual)}
+                op={op} onSalvarOp={salvarParcial}
+              />
+            )}
+            {aba === 'registros' && (
+              <AbaRegistros registros={registros} setRegistros={setRegistros} onSalvar={() => salvarParcial('registros', registros)} />
+            )}
           </div>
         </div>
-
-        {/* OPERAÇÃO — a secção que administra (editável) */}
-        <Hud h2="Operação" n="finanças & infra · a seção que administra" />
-        <div className="gab-cards c2">
-          <div className="gab-card">
-            <h3>Custos fixos da casa</h3>
-            {(op.custos || []).map((x, i) => (
-              <div key={i} className="gab-oprow gab-custos">
-                <div><div className="gab-nm">{x.nome}</div><div className="gab-osub">{x.desc}</div></div>
-                <div className="gab-val">€{x.valor}</div>
-                <div className="gab-osub">/{x.ciclo}{x.renova ? ` · renova ${x.renova}` : ''}</div>
-                <span className={`gab-chip ${estCls[x.estado] || 'gab-ok'}`}>{estLbl[x.estado] || x.estado}</span>
-                <div className="gab-del" title="remover" onClick={() => delCusto(i)}>✕</div>
-              </div>
-            ))}
-            <div className="gab-form">
-              <input placeholder="Serviço" style={{ flex: '1.3 1 90px' }} value={novoCusto.nome} onChange={(e) => setNovoCusto({ ...novoCusto, nome: e.target.value })} />
-              <input placeholder="€" style={{ width: 52 }} value={novoCusto.valor} onChange={(e) => setNovoCusto({ ...novoCusto, valor: e.target.value })} />
-              <select value={novoCusto.ciclo} onChange={(e) => setNovoCusto({ ...novoCusto, ciclo: e.target.value })}><option>mês</option><option>ano</option><option>uso</option></select>
-              <input placeholder="próxima renovação" style={{ flex: '1 1 90px' }} value={novoCusto.renova} onChange={(e) => setNovoCusto({ ...novoCusto, renova: e.target.value })} />
-              <button type="button" className="gab-add" onClick={addCusto}>+ Adicionar custo</button>
-            </div>
-          </div>
-          <div className="gab-card">
-            <h3>Burn & margem</h3>
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div><div className="gab-big" style={{ color: '#fda4af' }}>€{burn}</div><span className="gab-muted">custos / mês</span></div>
-              <div><div className="gab-big">-</div><span className="gab-muted">MRR (IAP)</span></div>
-              <div><div className="gab-big">-</div><span className="gab-muted">margem líquida</span></div>
-            </div>
-            <div className="gab-burnbar"><i style={{ width: '100%', background: '#fda4af' }} /></div>
-            <p className="gab-muted" style={{ marginTop: 10 }}>Ligue o <b>IAP das lojas</b> para a margem e o "paga-se?" (comissão da loja incluída). Por agora, só o <b>burn</b> (€{burn}/mês).</p>
-          </div>
-        </div>
-        <div className="gab-cards c2" style={{ marginTop: 12 }}>
-          <div className="gab-card">
-            <h3>Registros & prazos</h3>
-            {(op.registos || []).map((r, i) => (
-              <div key={i} className="gab-oprow gab-regs">
-                <div><div className="gab-nm">{r.nome}</div><div className="gab-osub">{r.tipo}</div></div>
-                <div className="gab-osub">{r.renova ? `renova ${r.renova}` : 'sem data'}</div>
-                {r.dias != null ? <span className={`gab-chip ${r.dias < 30 ? 'gab-warn' : 'gab-ok'}`}>{r.dias}d{r.dias < 30 ? ' ⚠' : ''}</span> : <span className="gab-osub">sem prazo</span>}
-                <div className="gab-del" title="remover" onClick={() => delReg(i)}>✕</div>
-              </div>
-            ))}
-            <div className="gab-form">
-              <input placeholder="Registro (marca, licença…)" style={{ flex: '1.4 1 110px' }} value={novoReg.nome} onChange={(e) => setNovoReg({ ...novoReg, nome: e.target.value })} />
-              <input placeholder="tipo / entidade" style={{ flex: '1 1 90px' }} value={novoReg.tipo} onChange={(e) => setNovoReg({ ...novoReg, tipo: e.target.value })} />
-              <input placeholder="data de renovação" style={{ flex: '1 1 90px' }} value={novoReg.renova} onChange={(e) => setNovoReg({ ...novoReg, renova: e.target.value })} />
-              <button type="button" className="gab-add" onClick={addReg}>+ Adicionar registro</button>
-            </div>
-          </div>
-          <div className="gab-card">
-            <h3>Cobertura de venda</h3>
-            <div className="gab-muted">Onde o mundo nos compra</div>
-            <div className="gab-cov">{(op.cobertura?.vende || []).map((x, i) => <span key={i} className="on">{x}</span>)}</div>
-            <div className="gab-muted" style={{ marginTop: 10 }}>Onde ainda não</div>
-            <div className="gab-cov">{(op.cobertura?.bloqueado || []).map((x, i) => <span key={i} className="off">{x}</span>)}</div>
-            <p className="gab-muted" style={{ marginTop: 10 }}>Informativo: à mão + o que a loja expõe (IAP).</p>
-          </div>
-        </div>
-
-        {/* PROTEÇÃO DE DADOS (LGPD) — mesma família "papéis da casa" que Registos & Prazos */}
-        <Hud h2="Proteção de dados" n="LGPD · DPAs, política, termos, canal do titular (editável à mão)" />
-        {!ESTADOS_PUBLICADOS.includes(pd.politica_privacidade?.estado) ? (
-          <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(253,164,175,.4)' }}>
-            <span className="gab-osub" style={{ color: '#fda4af' }}>⚠ Política de privacidade <b>ainda não publicada</b>, bloqueia o envio às lojas (App Store / Play Store) e o compliance LGPD.</span>
-          </div>
-        ) : pd.politica_privacidade?.estado === 'publicada (revisão jurídica pendente)' ? (
-          <div className="gab-card" style={{ marginBottom: 12, borderColor: 'rgba(240,201,74,.35)' }}>
-            <span className="gab-osub" style={{ color: '#f0c94a' }}>ℹ Política e termos <b>publicados</b> (<Link to="/privacidade" style={{ color: '#f0c94a' }}>/privacidade</Link> · <Link to="/termos" style={{ color: '#f0c94a' }}>/termos</Link>), ainda em <b>revisão jurídica</b> antes do envio às lojas.</span>
-          </div>
-        ) : null}
-        <div className="gab-cards c2">
-          <div className="gab-card">
-            <h3>DPAs por operador</h3>
-            {(pd.dpas || []).map((d, i) => (
-              <div key={i} className="gab-oprow" style={{ gridTemplateColumns: '0.8fr auto 1.1fr' }}>
-                <div className="gab-nm">{d.nome}</div>
-                <select value={d.estado} onChange={(e) => guardarOp({ ...op, protecao_dados: { ...pd, dpas: pd.dpas.map((x, k) => (k === i ? { ...x, estado: e.target.value } : x)) } })} style={selDpa(d.estado)}>
-                  <option>por tratar</option><option>aceite</option><option>n.a.</option>
-                </select>
-                <input placeholder="link do DPA" defaultValue={d.link} onBlur={(e) => guardarOp({ ...op, protecao_dados: { ...pd, dpas: pd.dpas.map((x, k) => (k === i ? { ...x, link: e.target.value, data: e.target.value && !x.data ? hoje() : x.data } : x)) } })} style={{ fontSize: 11, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '5px 7px', borderRadius: 6, minWidth: 0 }} />
-              </div>
-            ))}
-          </div>
-          <div className="gab-card">
-            <h3>Documentos & canal do titular</h3>
-            {[['politica_privacidade', 'Política de privacidade'], ['termos_uso', 'Termos de uso']].map(([k, label]) => (
-              <div key={k} className="gab-oprow" style={{ gridTemplateColumns: '1fr auto 1.1fr' }}>
-                <div className="gab-nm" style={{ fontSize: 12 }}>{label}</div>
-                <select value={pd[k]?.estado || 'por publicar'} onChange={(e) => guardarOp({ ...op, protecao_dados: { ...pd, [k]: { ...(pd[k] || {}), estado: e.target.value, data: ESTADOS_PUBLICADOS.includes(e.target.value) && !pd[k]?.data ? hoje() : pd[k]?.data } } })} style={selDpa(ESTADOS_PUBLICADOS.includes(pd[k]?.estado) ? 'aceite' : 'por tratar')}>
-                  <option>por publicar</option><option>publicada</option><option>publicada (revisão jurídica pendente)</option>
-                </select>
-                <input placeholder="URL" defaultValue={pd[k]?.url} onBlur={(e) => guardarOp({ ...op, protecao_dados: { ...pd, [k]: { ...(pd[k] || {}), url: e.target.value } } })} style={{ fontSize: 11, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '5px 7px', borderRadius: 6, minWidth: 0 }} />
-              </div>
-            ))}
-            <div className="gab-oprow" style={{ gridTemplateColumns: '1fr auto 1.1fr' }}>
-              <div className="gab-nm" style={{ fontSize: 12 }}>Canal do titular <span className="gab-osub">(direitos LGPD)</span></div>
-              <select value={pd.canal_titular?.estado || 'por definir'} onChange={(e) => guardarOp({ ...op, protecao_dados: { ...pd, canal_titular: { ...(pd.canal_titular || {}), estado: e.target.value } } })} style={selDpa(pd.canal_titular?.estado === 'ativo' ? 'aceite' : 'por tratar')}>
-                <option>por definir</option><option>ativo</option>
-              </select>
-              <input placeholder="email / formulário" defaultValue={pd.canal_titular?.destino} onBlur={(e) => guardarOp({ ...op, protecao_dados: { ...pd, canal_titular: { ...(pd.canal_titular || {}), destino: e.target.value } } })} style={{ fontSize: 11, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '5px 7px', borderRadius: 6, minWidth: 0 }} />
-            </div>
-          </div>
-        </div>
-
-        {/* VIDA */}
-        <Hud h2="Vida" n="atividade · últimos 7 dias" />
-        <div className="gab-card"><h3>Posts · sorteios · jogos</h3>{SVG(stacked(v, 900, 140))}
-          <div className="gab-legenda"><span><i style={{ background: OURO }} />posts</span><span><i style={{ background: PRATA }} />sorteios</span><span><i style={{ background: ROXO }} />jogos</span></div>
-        </div>
-
-        {/* SEGURANÇA (agregada) */}
-        <Hud h2="Segurança" n="agregada · zero conteúdo" />
-        {seg && seg.total > 0 ? (
-          <div className="gab-cards c2">
-            <div className="gab-card"><h3>Denúncias por categoria</h3>
-              {Object.entries(seg.por_categoria || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => {
-                const max = Math.max(...Object.values(seg.por_categoria), 1);
-                return <div key={k} className="gab-planrow"><span style={{ width: 78, fontSize: 12, color: k === 'menor' ? '#fecdd3' : '#c9c2d6', textTransform: 'capitalize' }}>{k}</span><span className="gab-bar"><i style={{ width: `${(n / max * 100).toFixed(0)}%`, background: k === 'menor' ? '#fda4af' : OURO }} /></span><b style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 13, minWidth: 24, textAlign: 'right' }}>{n}</b></div>;
-              })}
-            </div>
-            <div className="gab-card">
-              <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-                <div><div className="gab-big" style={{ color: VERDE }}>{seg.pct_auto_resolvida}%</div><span className="gab-muted">auto-resolvida pela IA</span></div>
-                <div><div className="gab-big">{seg.tempo_medio_ms != null ? `${Math.round(seg.tempo_medio_ms / 60000)}min` : '-'}</div><span className="gab-muted">tempo médio</span></div>
-                <div><div className="gab-big">{seg.total}</div><span className="gab-muted">total (histórico)</span></div>
-              </div>
-              <p className="gab-muted" style={{ marginTop: 12 }}>Lei do dono cego: <b>zero conteúdo, zero identidade</b>. Só contagens.</p>
-            </div>
-          </div>
-        ) : <Vazio>Zero denúncias. Casa tranquila.</Vazio>}
-
-        {/* MARCOS */}
-        <Hud h2="Marcos" n="o que vale a pena celebrar" />
-        {(dados.marcos || []).length ? (
-          <div className="gab-card">{dados.marcos.map((m, i) => (
-            <div key={i} className="gab-marco"><span className="gab-dot">{m.ic}</span><div><div className="gab-mt">{m.t}</div><div className="gab-md">{m.d}</div></div></div>
-          ))}</div>
-        ) : <Vazio>O 1º marco chega com o 1º campeão. Você vai querer ver isso.</Vazio>}
       </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
   );
 }
 
-function Kpi({ v, l, cls }) {
-  return <div className="gab-kpi"><div className={`gab-v ${cls === 'up' ? 'gab-up' : ''}`}>{v}</div><div className="gab-l">{l}</div></div>;
+// ─── ABA 1: VISÃO GERAL ──────────────────────────────────────────────────────
+function AbaVisaoGeral({ dados }) {
+  const v = dados.visao_geral;
+  const precisa = dados.precisa_de_voce || [];
+  return (
+    <div>
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))' }}>
+        <Card6 n={`${v.usuarios_novos_hoje} · ${v.usuarios_novos_7d}`} legenda="Usuários novos (hoje · 7 dias)" />
+        <Card6 n={v.jogos_criados_7d} legenda="Jogos criados (7 dias)" />
+        <Card6
+          n={`${v.figurinhas_hoje.qtd} · ${v.figurinhas_mes.qtd}`}
+          sub={`${fmtUSD(v.figurinhas_hoje.custo_usd)} hoje · ${fmtUSD(v.figurinhas_mes.custo_usd)} mês`}
+          legenda="Figurinhas geradas (hoje · mês)"
+        />
+        <Card6 n={v.denuncias_abertas} legenda="Denúncias abertas" />
+        <Card6
+          n={v.ia.freeze ? 'FREEZE' : 'Normal'}
+          sub={v.ia.freeze ? v.ia.motivo : null}
+          legenda="Estado da IA"
+        />
+        <Card6 n={`v${v.servidor.versao}`} sub={`uptime ${fmtUptime(v.servidor.uptime_s)}`} legenda="Servidor" />
+      </div>
+
+      <h2 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: '.05em', color: '#f0c94a', textTransform: 'uppercase', margin: '26px 0 10px' }}>Precisa de você hoje</h2>
+      {precisa.length ? (
+        <div style={{ ...CARD, padding: 4 }}>
+          {precisa.map((p, i) => (
+            <div key={i} style={{ padding: '10px 14px', borderTop: i ? '1px solid #1a1a1a' : 'none', fontSize: 13, color: '#ddd' }}>
+              ⚠ {p.texto}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ ...CARD, padding: 16, color: 'var(--text-dim)', fontSize: 13 }}>Nada pendente. Casa tranquila.</div>
+      )}
+    </div>
+  );
 }
 
-// Cânone do Gabinete (transplante do gabinete-mockup.html), scoped a .gab.
+// ─── ABA 3: DINHEIRO ─────────────────────────────────────────────────────────
+function AbaDinheiro({ dados, op, pub, custos, setCustos, onSalvarCustos, onSalvarOp }) {
+  const ia = dados.dinheiro.ia_mes;
+  const [novaCamp, setNovaCamp] = useState({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
+
+  function editarCusto(i, campo, valor) {
+    setCustos(custos.map((c, k) => (k === i ? { ...c, [campo]: valor } : c)));
+  }
+  function addCusto() {
+    setCustos([...custos, { id: uid(), nome: '', valor: 0, moeda: 'BRL', periodicidade: 'mês', proxima_data: '', pago: true, nota: '' }]);
+  }
+  function delCusto(i) { setCustos(custos.filter((_, k) => k !== i)); }
+
+  function addCampanha() {
+    if (!novaCamp.nome.trim()) return;
+    const paginas = Object.entries(novaCamp.paginas).filter(([, v2]) => v2).map(([k]) => k);
+    const c = { id: uid(), nome: novaCamp.nome.trim(), anunciante: novaCamp.anunciante.trim(), texto: novaCamp.texto.trim() || novaCamp.nome.trim(), sub: novaCamp.anunciante.trim(), cta: 'Ver', link: novaCamp.link.trim(), cls: novaCamp.cls, inicio: '', fim: novaCamp.fim.trim(), paginas, estado: 'ativa' };
+    onSalvarOp('campanhas', [...(op.campanhas || []), c]);
+    setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
+  }
+  const setEstadoCamp = (id, estado) => onSalvarOp('campanhas', op.campanhas.map((c) => (c.id === id ? { ...c, estado } : c)));
+  const delCamp = (id) => onSalvarOp('campanhas', op.campanhas.filter((c) => c.id !== id));
+
+  const hoje = hojeISO();
+  const custosVencidos = custos.filter((c) => !c.pago && c.proxima_data && c.proxima_data < hoje).length;
+  const burn = MOSTRAR_AVANCADO ? Math.round(custos.reduce((s, c) => s + (c.pago === false ? 0 : Number(c.valor) || 0), 0)) : 0;
+
+  return (
+    <div>
+      <h2 style={sectionH2}>Custos fixos</h2>
+      {custosVencidos > 0 ? <p style={{ color: '#fda4af', fontSize: 12, margin: '0 0 8px' }}>⚠ {custosVencidos} custo(s) com data vencida.</p> : null}
+      <div style={{ ...CARD, overflowX: 'auto', padding: 10 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
+          <thead><tr><th style={th}>Nome</th><th style={th}>Valor</th><th style={th}>Moeda</th><th style={th}>Periodicidade</th><th style={th}>Próxima data</th><th style={th}>Pago</th><th style={th}>Nota</th><th style={th} /></tr></thead>
+          <tbody>
+            {custos.map((c, i) => {
+              const vencido = !c.pago && c.proxima_data && c.proxima_data < hoje;
+              return (
+                <tr key={c.id || i} style={vencido ? { background: 'rgba(253,164,175,.06)' } : undefined}>
+                  <td style={td}><input style={inp} value={c.nome} onChange={(e) => editarCusto(i, 'nome', e.target.value)} /></td>
+                  <td style={{ ...td, width: 90 }}><input style={inp} type="number" step="0.01" value={c.valor} onChange={(e) => editarCusto(i, 'valor', Number(e.target.value))} /></td>
+                  <td style={{ ...td, width: 70 }}><input style={inp} value={c.moeda} onChange={(e) => editarCusto(i, 'moeda', e.target.value)} /></td>
+                  <td style={{ ...td, width: 110 }}>
+                    <select style={inp} value={c.periodicidade} onChange={(e) => editarCusto(i, 'periodicidade', e.target.value)}>
+                      <option value="mês">mês</option><option value="ano">ano</option><option value="uso">uso</option><option value="único">único</option>
+                    </select>
+                  </td>
+                  <td style={{ ...td, width: 140 }}><input style={inp} type="date" value={c.proxima_data || ''} onChange={(e) => editarCusto(i, 'proxima_data', e.target.value)} /></td>
+                  <td style={{ ...td, width: 60, textAlign: 'center' }}><input type="checkbox" checked={!!c.pago} onChange={(e) => editarCusto(i, 'pago', e.target.checked)} style={{ width: 18, height: 18 }} /></td>
+                  <td style={td}><input style={inp} value={c.nota || ''} onChange={(e) => editarCusto(i, 'nota', e.target.value)} /></td>
+                  <td style={{ ...td, width: 30 }}><span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => delCusto(i)}>✕</span></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <button type="button" style={btn} onClick={addCusto}>+ Adicionar custo</button>
+          <button type="button" style={btnGold} onClick={onSalvarCustos}>Salvar</button>
+        </div>
+      </div>
+
+      <h2 style={sectionH2}>IA do mês</h2>
+      <div style={{ ...CARD, padding: 16, display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+        <div><div style={bigNum}>{fmtUSD(ia.gasto_usd)}</div><span style={muted}>gasto no mês</span></div>
+        <div><div style={bigNum}>{fmtUSD(ia.gasto_hoje_usd)}</div><span style={muted}>gasto hoje</span></div>
+        <div><div style={bigNum}>{fmtUSD(ia.teto_diario_usd)}</div><span style={muted}>teto diário configurado</span></div>
+        <div><Semaforo cor={ia.freeze ? 'vermelho' : 'verde'}>{ia.freeze ? 'Freeze ligado' : 'Normal'}</Semaforo><div style={{ ...muted, marginTop: 4 }}>estado da IA</div></div>
+      </div>
+
+      <h2 style={sectionH2}>Anúncios</h2>
+      {(pub?.alertas || []).length ? (
+        <div style={{ ...CARD, padding: 10, marginBottom: 10, borderColor: 'rgba(253,164,175,.35)' }}>
+          {pub.alertas.map((a, i) => <div key={i} style={{ color: '#fda4af', fontSize: 12, padding: '2px 0' }}>⚠ {a}</div>)}
+        </div>
+      ) : null}
+      <div style={{ ...CARD, padding: 14 }}>
+        {(pub?.campanhas || []).length === 0 ? <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem campanhas. Crie a 1ª abaixo.</div>
+          : pub.campanhas.map((c) => {
+            const ctr = c.imp ? (c.cli / c.imp * 100).toFixed(1) : '0.0';
+            return (
+              <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr auto auto', alignItems: 'center', gap: 8, padding: '9px 0', borderTop: '1px solid #1a1a1a', fontSize: 12.5 }}>
+                <div><div style={{ fontWeight: 700, fontSize: 13.5 }}>{c.nome}</div><div style={muted}>{c.anunciante || '-'} · {(c.paginas || []).join(', ') || 'sem página'} · <span style={{ color: c.cls === 'livre' ? '#7bd88f' : '#fda4af' }}>{c.cls === 'livre' ? 'livre' : '18+'}</span></div></div>
+                <div style={muted}>{c.imp} imp · {c.cli} cli · CTR {ctr}%{c.dias_restantes != null ? ` · ${c.dias_restantes}d` : ''}</div>
+                <span style={{ ...chip, borderColor: c.estado === 'ativa' ? '#7bd88f' : '#f0c94a', color: c.estado === 'ativa' ? '#7bd88f' : '#f0c94a', cursor: 'pointer' }} onClick={() => setEstadoCamp(c.id, c.estado === 'ativa' ? 'pausada' : 'ativa')}>{c.estado === 'ativa' ? 'ativa' : c.estado === 'pausada' ? 'pausada ▸' : 'terminada'}</span>
+                <span style={{ color: '#6a6a76', cursor: 'pointer' }} onClick={() => delCamp(c.id)}>✕</span>
+              </div>
+            );
+          })}
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: '1px dashed rgba(255,255,255,.12)' }}>
+          <input placeholder="Nome da campanha" style={{ ...inp, flex: '1.3 1 110px' }} value={novaCamp.nome} onChange={(e) => setNovaCamp({ ...novaCamp, nome: e.target.value })} />
+          <input placeholder="Anunciante" style={{ ...inp, flex: '1 1 90px' }} value={novaCamp.anunciante} onChange={(e) => setNovaCamp({ ...novaCamp, anunciante: e.target.value })} />
+          <input placeholder="Texto do banner" style={{ ...inp, flex: '1.3 1 110px' }} value={novaCamp.texto} onChange={(e) => setNovaCamp({ ...novaCamp, texto: e.target.value })} />
+          <input placeholder="Link" style={{ ...inp, flex: '1 1 90px' }} value={novaCamp.link} onChange={(e) => setNovaCamp({ ...novaCamp, link: e.target.value })} />
+          <select style={{ ...inp, width: 90 }} value={novaCamp.cls} onChange={(e) => setNovaCamp({ ...novaCamp, cls: e.target.value })}><option value="livre">livre</option><option value="18+">18+</option></select>
+          <input placeholder="fim (AAAA-MM-DD)" style={{ ...inp, width: 140 }} value={novaCamp.fim} onChange={(e) => setNovaCamp({ ...novaCamp, fim: e.target.value })} />
+          {['inicio', 'sorteio', 'p'].map((pg) => (
+            <label key={pg} style={{ fontSize: 11, color: '#c9c2d6', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <input type="checkbox" checked={!!novaCamp.paginas[pg]} onChange={(e) => setNovaCamp({ ...novaCamp, paginas: { ...novaCamp.paginas, [pg]: e.target.checked } })} />{pg}
+            </label>
+          ))}
+          <button type="button" style={btnGold} onClick={addCampanha}>+ Criar campanha</button>
+        </div>
+      </div>
+
+      {MOSTRAR_AVANCADO ? (
+        <>
+          <h2 style={sectionH2}>Burn & margem</h2>
+          <div style={{ ...CARD, padding: 16 }}>
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div><div style={{ ...bigNum, color: '#fda4af' }}>R${burn}</div><span style={muted}>custos / mês</span></div>
+              <div><div style={bigNum}>-</div><span style={muted}>MRR (IAP)</span></div>
+              <div><div style={bigNum}>-</div><span style={muted}>margem líquida</span></div>
+            </div>
+          </div>
+          <h2 style={sectionH2}>Cobertura de venda</h2>
+          <div style={{ ...CARD, padding: 16 }}>
+            <div style={muted}>Onde o mundo nos compra</div>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>{(op.cobertura?.vende || []).map((x, i) => <span key={i} style={{ ...chip, color: '#7bd88f', borderColor: 'rgba(123,216,143,.35)' }}>{x}</span>)}</div>
+            <div style={{ ...muted, marginTop: 10 }}>Onde ainda não</div>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>{(op.cobertura?.bloqueado || []).map((x, i) => <span key={i} style={{ ...chip, color: '#7a7a86', borderColor: 'rgba(255,255,255,.1)' }}>{x}</span>)}</div>
+          </div>
+          <h2 style={sectionH2}>Interruptores por página <span style={{ fontWeight: 400, color: '#8a8a98', textTransform: 'none' }}>(default OFF)</span></h2>
+          <div style={{ ...CARD, padding: 14 }}>
+            {['inicio', 'sorteio', 'p'].map((pg) => (
+              <div key={pg} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: '1px solid #1a1a1a' }}>
+                <span style={{ flex: 1, fontSize: 13, color: '#c9c2d6' }}>{pg === 'inicio' ? 'Início' : pg === 'sorteio' ? 'Sorteio in-app' : 'Pública /p/'}</span>
+                <input type="checkbox" checked={!!op.toggles?.[pg]} onChange={(e) => onSalvarOp('toggles', { ...(op.toggles || {}), [pg]: e.target.checked })} style={{ width: 20, height: 20 }} />
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── ABA 4: SEGURANÇA ────────────────────────────────────────────────────────
+function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp }) {
+  const s = dados.seguranca;
+  const bt = s.banco_trancado;
+  const corBanco = bt.estado === 'verde' ? 'verde' : bt.estado === 'vermelho' ? 'vermelho' : 'amarelo';
+  const txtBanco = bt.estado === 'verde' ? 'trancado (RLS ok, zero policies em users)'
+    : bt.estado === 'vermelho' ? `problema: ${(bt.tabelas_sem_rls || []).length} tabela(s) sem RLS, ${bt.policies_users} policy(ies) em users`
+      : 'a confirmar — migração 050 ainda não foi corrida no Supabase';
+
+  const diasBackup = s.ultimo_backup ? diasAte(s.ultimo_backup.data) : null;
+  const corBackup = !s.ultimo_backup ? 'amarelo' : diasBackup != null && diasBackup >= -8 ? 'verde' : 'vermelho';
+  const txtBackup = !s.ultimo_backup ? 'nunca corrido'
+    : `${s.ultimo_backup.data} · ${s.ultimo_backup.tabelas} tabelas · ${s.ultimo_backup.linhas} linhas`;
+
+  const pd = op.protecao_dados || {};
+  const ESTADOS_PUBLICADOS = ['publicada', 'publicada (revisão jurídica pendente)'];
+
+  function setManual(campo, sub, valor) {
+    setSegManual({ ...segManual, [campo]: { ...(segManual[campo] || {}), [sub]: valor } });
+  }
+
+  return (
+    <div>
+      <h2 style={sectionH2}>Checklist</h2>
+      <div style={{ ...CARD, padding: 4 }}>
+        <LinhaChecklist rotulo="Banco trancado" cor={corBanco}>{txtBanco}</LinhaChecklist>
+        <LinhaChecklist rotulo="Último backup" cor={corBackup}>{txtBackup} · próximo previsto {s.proximo_backup}</LinhaChecklist>
+        <LinhaChecklist rotulo="Kill-switch de IA" cor={s.kill_switch_ia.freeze ? 'vermelho' : 'verde'}>
+          {s.kill_switch_ia.freeze ? `ligado desde ${(s.kill_switch_ia.desde || '').slice(0, 10)} — ${s.kill_switch_ia.motivo}` : 'normal, não travado'}
+        </LinhaChecklist>
+        <LinhaChecklist rotulo="Rate limit ativo" cor="verde">
+          {s.rate_limit.length} regra(s) configurada(s)
+        </LinhaChecklist>
+        <LinhaChecklist rotulo="Testes de permissão" cor={segManual.testes_permissao?.data ? 'verde' : 'cinza'}>
+          <CampoManual v={segManual.testes_permissao?.data} onData={(v) => setManual('testes_permissao', 'data', v)} vTexto={segManual.testes_permissao?.resultado} onTexto={(v) => setManual('testes_permissao', 'resultado', v)} placeholderTexto="resultado (ex.: 4 pass, 0 fail)" />
+        </LinhaChecklist>
+        <LinhaChecklist rotulo="npm audit" cor={segManual.npm_audit?.data ? 'verde' : 'cinza'}>
+          <CampoManual v={segManual.npm_audit?.data} onData={(v) => setManual('npm_audit', 'data', v)} vTexto={segManual.npm_audit?.falhas ?? ''} onTexto={(v) => setManual('npm_audit', 'falhas', v)} placeholderTexto="nº de falhas restantes" />
+        </LinhaChecklist>
+        <LinhaChecklist rotulo="Última auditoria" cor={segManual.ultima_auditoria?.data ? 'verde' : 'cinza'}>
+          <CampoManual v={segManual.ultima_auditoria?.data} onData={(v) => setManual('ultima_auditoria', 'data', v)} vTexto={segManual.ultima_auditoria?.link} onTexto={(v) => setManual('ultima_auditoria', 'link', v)} placeholderTexto="link do ficheiro" />
+        </LinhaChecklist>
+      </div>
+      <div style={{ marginTop: 10 }}><button type="button" style={btnGold} onClick={onSalvar}>Salvar checklist manual</button></div>
+
+      <details style={{ marginTop: 10 }}>
+        <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--text-dim)' }}>Detalhe do rate limit</summary>
+        <div style={{ ...CARD, marginTop: 8, overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 460 }}>
+            <thead><tr><th style={th}>Rota</th><th style={th}>Limite</th></tr></thead>
+            <tbody>{s.rate_limit.map((r, i) => <tr key={i}><td style={td}>{r.rota}</td><td style={td}>{r.limite}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </details>
+
+      {MOSTRAR_AVANCADO ? (
+        <>
+          <h2 style={sectionH2}>Proteção de dados (LGPD)</h2>
+          {!ESTADOS_PUBLICADOS.includes(pd.politica_privacidade?.estado) ? (
+            <div style={{ ...CARD, padding: 10, marginBottom: 10, borderColor: 'rgba(253,164,175,.4)' }}>
+              <span style={{ color: '#fda4af', fontSize: 12 }}>⚠ Política de privacidade ainda não publicada.</span>
+            </div>
+          ) : null}
+          <div style={{ ...CARD, padding: 14 }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 12, color: '#9a8fc0', textTransform: 'uppercase' }}>DPAs por operador</h3>
+            {(pd.dpas || []).map((d, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '.8fr auto 1.1fr', gap: 8, padding: '7px 0', borderTop: i ? '1px solid #1a1a1a' : 'none', alignItems: 'center' }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{d.nome}</div>
+                <select value={d.estado} onChange={(e) => onSalvarOp('protecao_dados', { ...pd, dpas: pd.dpas.map((x, k) => (k === i ? { ...x, estado: e.target.value } : x)) })} style={{ ...inp, width: 110 }}>
+                  <option>por tratar</option><option>aceite</option><option>n.a.</option>
+                </select>
+                <input placeholder="link do DPA" defaultValue={d.link} onBlur={(e) => onSalvarOp('protecao_dados', { ...pd, dpas: pd.dpas.map((x, k) => (k === i ? { ...x, link: e.target.value } : x)) })} style={inp} />
+              </div>
+            ))}
+            <h3 style={{ margin: '16px 0 8px', fontSize: 12, color: '#9a8fc0', textTransform: 'uppercase' }}>Documentos & canal do titular</h3>
+            {[['politica_privacidade', 'Política de privacidade'], ['termos_uso', 'Termos de uso']].map(([k, label]) => (
+              <div key={k} style={{ display: 'grid', gridTemplateColumns: '1fr auto 1.1fr', gap: 8, padding: '7px 0', borderTop: '1px solid #1a1a1a', alignItems: 'center' }}>
+                <div style={{ fontSize: 12 }}>{label}</div>
+                <select value={pd[k]?.estado || 'por publicar'} onChange={(e) => onSalvarOp('protecao_dados', { ...pd, [k]: { ...(pd[k] || {}), estado: e.target.value } })} style={{ ...inp, width: 200 }}>
+                  <option>por publicar</option><option>publicada</option><option>publicada (revisão jurídica pendente)</option>
+                </select>
+                <input placeholder="URL" defaultValue={pd[k]?.url} onBlur={(e) => onSalvarOp('protecao_dados', { ...pd, [k]: { ...(pd[k] || {}), url: e.target.value } })} style={inp} />
+              </div>
+            ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1.1fr', gap: 8, padding: '7px 0', borderTop: '1px solid #1a1a1a', alignItems: 'center' }}>
+              <div style={{ fontSize: 12 }}>Canal do titular</div>
+              <select value={pd.canal_titular?.estado || 'por definir'} onChange={(e) => onSalvarOp('protecao_dados', { ...pd, canal_titular: { ...(pd.canal_titular || {}), estado: e.target.value } })} style={{ ...inp, width: 200 }}>
+                <option>por definir</option><option>ativo</option>
+              </select>
+              <input placeholder="email / formulário" defaultValue={pd.canal_titular?.destino} onBlur={(e) => onSalvarOp('protecao_dados', { ...pd, canal_titular: { ...(pd.canal_titular || {}), destino: e.target.value } })} style={inp} />
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function LinhaChecklist({ rotulo, cor, children }) {
+  return (
+    <div style={{ padding: '10px 14px', borderTop: '1px solid #1a1a1a', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 14px' }}>
+      <span style={{ width: 160, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{rotulo}</span>
+      <Semaforo cor={cor}>{typeof children === 'string' ? children : null}</Semaforo>
+      {typeof children !== 'string' ? children : null}
+    </div>
+  );
+}
+function CampoManual({ v, onData, vTexto, onTexto, placeholderTexto }) {
+  return (
+    <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <input type="date" value={v || ''} onChange={(e) => onData(e.target.value)} style={{ ...inp, width: 140 }} />
+      <input placeholder={placeholderTexto} value={vTexto ?? ''} onChange={(e) => onTexto(e.target.value)} style={{ ...inp, width: 220 }} />
+    </span>
+  );
+}
+
+// ─── ABA 5: REGISTROS & PRAZOS ───────────────────────────────────────────────
+function AbaRegistros({ registros, setRegistros, onSalvar }) {
+  function editar(i, campo, valor) { setRegistros(registros.map((r, k) => (k === i ? { ...r, [campo]: valor } : r))); }
+  function add() { setRegistros([...registros, { id: uid(), nome: '', numero: '', estado: '', data: '', nota: '' }]); }
+  function del(i) { setRegistros(registros.filter((_, k) => k !== i)); }
+
+  return (
+    <div>
+      <h2 style={sectionH2}>Registros & prazos</h2>
+      <div style={{ ...CARD, overflowX: 'auto', padding: 10 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 780 }}>
+          <thead><tr><th style={th}>Nome</th><th style={th}>Número</th><th style={th}>Estado</th><th style={th}>Data</th><th style={th}>Nota</th><th style={th} /></tr></thead>
+          <tbody>
+            {registros.map((r, i) => {
+              const dias = diasAte(r.data);
+              const proximo = dias != null && dias < 30;
+              return (
+                <tr key={r.id || i} style={proximo ? { background: 'rgba(240,201,74,.06)' } : undefined}>
+                  <td style={td}><input style={inp} value={r.nome} onChange={(e) => editar(i, 'nome', e.target.value)} /></td>
+                  <td style={{ ...td, width: 110 }}><input style={inp} value={r.numero || ''} onChange={(e) => editar(i, 'numero', e.target.value)} /></td>
+                  <td style={{ ...td, width: 180 }}><input style={inp} value={r.estado || ''} onChange={(e) => editar(i, 'estado', e.target.value)} /></td>
+                  <td style={{ ...td, width: 150 }}>
+                    <input style={inp} type="date" value={r.data || ''} onChange={(e) => editar(i, 'data', e.target.value)} />
+                    {proximo ? <div style={{ fontSize: 10.5, color: '#f0c94a', marginTop: 2 }}>{dias < 0 ? `${-dias}d atrás` : `em ${dias}d`} ⚠</div> : null}
+                  </td>
+                  <td style={td}><input style={inp} value={r.nota || ''} onChange={(e) => editar(i, 'nota', e.target.value)} /></td>
+                  <td style={{ ...td, width: 30 }}><span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => del(i)}>✕</span></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <button type="button" style={btn} onClick={add}>+ Adicionar registro</button>
+          <button type="button" style={btnGold} onClick={onSalvar}>Salvar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const sectionH2 = { fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: '.05em', color: '#f0c94a', textTransform: 'uppercase', margin: '26px 0 10px' };
+const bigNum = { fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 26, color: '#f0c94a' };
+const muted = { fontSize: 11.5, color: 'var(--text-dim)' };
+const chip = { fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: '.04em', padding: '2px 8px', borderRadius: 20, border: '1px solid', whiteSpace: 'nowrap' };
+
 function GabCSS() {
   return (
     <style>{`
-    .gab .gab-h1{font-family:'Rajdhani',sans-serif;font-weight:800;letter-spacing:.03em;margin:0;font-size:28px}
-    .gab .gab-sub{color:#9a9aa8;font-size:13px;margin:2px 0 16px;line-height:1.5}
-    .gab .gab-hud{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px}
-    .gab .gab-hud h2{font-family:'Rajdhani',sans-serif;font-weight:800;letter-spacing:.06em;font-size:16px;margin:0;color:#f0c94a;text-transform:uppercase}
-    .gab .gab-n{font-size:11px;color:#8a8a98}
-    .gab .gab-breve{display:inline-block;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:10.5px;letter-spacing:.06em;color:#8ab4ff;border:1px solid rgba(138,180,255,.4);background:rgba(138,180,255,.08);padding:2px 8px}
-    .gab .gab-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:14px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
-    .gab .gab-card h3{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:.05em;color:#9a8fc0;text-transform:uppercase;margin:0 0 10px}
-    .gab .gab-cards{display:grid;gap:12px}
-    @media(min-width:820px){.gab .gab-cards.c3{grid-template-columns:repeat(3,1fr)}.gab .gab-cards.c2{grid-template-columns:repeat(2,1fr)}}
-    .gab .gab-big{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:28px;color:#f0c94a}
-    .gab .gab-muted{color:#8a8a98;font-size:12px}
-    .gab .gab-head{padding:16px}
-    .gab .gab-g{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:20px;letter-spacing:.03em}
-    .gab .gab-pulse{display:grid;gap:10px;margin-top:12px;grid-template-columns:repeat(2,1fr)}
-    @media(min-width:640px){.gab .gab-pulse{grid-template-columns:repeat(4,1fr)}}
-    .gab .gab-kpi{padding:12px 13px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px)}
-    .gab .gab-v{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:24px;color:#fff;line-height:1}
-    .gab .gab-v.gab-up{color:#7bd88f}
-    .gab .gab-l{font-size:10.5px;color:#8a8a98;text-transform:uppercase;letter-spacing:.06em;margin-top:5px}
-    .gab .gab-vazio{color:#8a8a98;font-size:13px;line-height:1.6;text-align:center;padding:20px 16px}
-    .gab .gab-planrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.06)}
-    .gab .gab-planrow:first-child{border-top:none}
-    .gab .gab-bar{height:9px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;flex:1}
-    .gab .gab-bar>i{display:block;height:100%}
-    .gab .gab-legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#9a9aa8;margin-top:8px}
-    .gab .gab-legenda i{width:9px;height:9px;display:inline-block;margin-right:5px;border-radius:2px;vertical-align:middle}
-    .gab .gab-marco{display:flex;gap:11px;padding:11px 0;border-top:1px solid rgba(255,255,255,.06)}
-    .gab .gab-marco:first-child{border-top:none}
-    .gab .gab-dot{width:30px;height:30px;flex-shrink:0;display:grid;place-items:center;background:rgba(212,160,23,.12);border:1px solid rgba(212,160,23,.4);font-size:14px;clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px)}
-    .gab .gab-mt{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px}
-    .gab .gab-md{font-size:11px;color:#8a8a98}
-    .gab .gab-oprow{display:grid;align-items:center;gap:8px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06);font-size:12.5px}
-    .gab .gab-oprow:first-of-type{border-top:none}
-    .gab .gab-custos{grid-template-columns:1.3fr .5fr 1fr auto auto}
-    .gab .gab-regs{grid-template-columns:1.5fr 1fr auto auto}
-    .gab .gab-nm{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13.5px;color:#eee}
-    .gab .gab-osub{font-size:11px;color:#8a8a98}
-    .gab .gab-val{font-family:'Rajdhani',sans-serif;font-weight:800;color:#f0c94a}
-    .gab .gab-del{color:#6a6a76;cursor:pointer;font-size:14px;text-align:center}
-    .gab .gab-chip{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;letter-spacing:.04em;padding:2px 7px;border-radius:20px;white-space:nowrap}
-    .gab .gab-ok{color:#7bd88f;border:1px solid rgba(123,216,143,.4);background:rgba(123,216,143,.08)}
-    .gab .gab-free{color:#8ab4ff;border:1px solid rgba(138,180,255,.4);background:rgba(138,180,255,.08)}
-    .gab .gab-uso{color:#f0c94a;border:1px solid rgba(212,160,23,.4);background:rgba(212,160,23,.08)}
-    .gab .gab-warn{color:#fda4af;border:1px solid rgba(253,164,175,.5);background:rgba(253,164,175,.1)}
-    .gab .gab-form{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px dashed rgba(255,255,255,.12)}
-    .gab .gab-form input,.gab .gab-form select{font-family:'Inter',sans-serif;font-size:12px;color:#e8e8ef;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);padding:6px 8px;border-radius:6px;min-width:0}
-    .gab .gab-add{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12px;letter-spacing:.04em;color:#0d0d12;background:linear-gradient(180deg,#f5e070,#d4a017);border:none;padding:7px 13px;border-radius:6px;cursor:pointer}
-    .gab .gab-burnbar{height:12px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden;display:flex;margin-top:6px}
-    .gab .gab-burnbar>i{display:block;height:100%}
-    .gab .gab-cov{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
-    .gab .gab-cov span{font-size:11.5px;padding:3px 9px;border-radius:20px}
-    .gab .gab-cov .on{color:#7bd88f;border:1px solid rgba(123,216,143,.35);background:rgba(123,216,143,.06)}
-    .gab .gab-cov .off{color:#7a7a86;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02)}
+    .gab2 { display: flex; align-items: flex-start; gap: 0; padding: 16px 20px 60px; }
+    .gab2-side { flex: 0 0 190px; position: sticky; top: 12px; display: flex; flex-direction: column; gap: 4px; padding-right: 14px; border-right: 1px solid rgba(255,255,255,.08); }
+    .gab2-tab { text-align: left; padding: 10px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--text-dim); font-size: 13px; font-weight: 700; cursor: pointer; }
+    .gab2-tab.ativa { background: rgba(212,160,23,.1); border-color: rgba(212,160,23,.4); color: #f0c94a; }
+    .gab2-content { flex: 1; min-width: 0; padding-left: 20px; }
+    @media (max-width: 820px) {
+      .gab2 { flex-direction: column; padding: 12px 14px 50px; }
+      .gab2-side { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid rgba(255,255,255,.08); padding: 0 0 10px; position: static; width: 100%; box-sizing: border-box; }
+      .gab2-tab { flex: 0 0 auto; white-space: nowrap; }
+      .gab2-content { padding-left: 0; padding-top: 14px; width: 100%; }
+    }
     `}</style>
   );
 }
