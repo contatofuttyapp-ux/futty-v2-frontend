@@ -7,7 +7,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
+import { lerCache, gravarCache } from '../lib/cacheLocal';
 import { nomeJogador, urlAsset } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { getFrameColor } from '../utils/frameColors';
@@ -183,6 +185,8 @@ export default function Figurinha() {
   // usa de imediato, sem esperar round-trip) e as escolhas guardadas
   // (fundo/avatar genérico/fase da estreia).
   const { perfil, erro: erroPerfil, recarregar: recarregarPerfilGlobal } = usePerfil();
+  const { session } = useAuth();
+  const userId = session?.user?.id || null;
 
   const [me, setMe] = useState(null);
   const [fundo, setFundo] = useState('estadio');
@@ -255,9 +259,23 @@ export default function Figurinha() {
   });
   useEffect(() => {
     let ativo = true;
-    apiFetch('/api/me/selos').then((d) => { if (ativo) setSelos(d.selos || []); }).catch(() => {});
+    // Cache local (13-set, "Velocidade 3"): mostra os selos da última visita
+    // na hora; o pedido de verdade corre por trás e substitui ao responder.
+    const doCache = lerCache(userId, 'selos');
+    if (doCache) {
+      Promise.resolve().then(() => { if (ativo) setSelos(doCache); });
+    }
+    apiFetch('/api/me/selos')
+      .then((d) => {
+        if (!ativo) return;
+        setSelos(d.selos || []);
+        gravarCache(userId, 'selos', d.selos || []);
+      })
+      .catch((e) => {
+        if (doCache) console.warn('[Figurinha] /api/me/selos falhou, mantendo cache:', e.message);
+      });
     return () => { ativo = false; };
-  }, []);
+  }, [userId]);
   function toggleSelo(id) {
     setSelosOcultos((cur) => {
       const n = new Set(cur);

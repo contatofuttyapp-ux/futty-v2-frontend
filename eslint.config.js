@@ -5,7 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // android/** e ios/** — bundle compilado do Capacitor (JS minificado de
+  // libs de terceiros), não código do Futty. Sem isto o lint reporta ~280
+  // erros de código que ninguém escreveu aqui (13-set, "Velocidade 3").
+  globalIgnores(['dist', 'android', 'ios']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

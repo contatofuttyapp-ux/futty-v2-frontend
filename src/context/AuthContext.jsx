@@ -1,6 +1,7 @@
 // Futty v2.0 — Contexto de autenticação (sessão Supabase)
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { limparCacheLocal } from '../lib/cacheLocal';
 
 const AuthContext = createContext(null);
 
@@ -29,7 +30,13 @@ export function AuthProvider({ children }) {
     session,
     user: session?.user ?? null,
     loading,
-    signOut: () => supabase.auth.signOut(),
+    // Celular compartilhado (13-set): limpa o cache local ANTES do signOut —
+    // a próxima conta que entrar neste aparelho não pode ver, nem por 1
+    // render, o perfil/equipas de quem saiu.
+    signOut: () => {
+      limparCacheLocal();
+      return supabase.auth.signOut();
+    },
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

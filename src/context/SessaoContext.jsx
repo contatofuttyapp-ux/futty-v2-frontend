@@ -25,6 +25,10 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from './PerfilContext';
 import { apiFetch } from '../lib/api';
+import { lerCache, gravarCache } from '../lib/cacheLocal';
+
+const CACHE_TEAMS = 'teams';
+const CACHE_VOTACAO = 'votacao_status';
 
 const SessaoContext = createContext(null);
 
@@ -59,9 +63,15 @@ export function SessaoProvider({ children }) {
       const lista = data?.teams || [];
       setTeams(lista);
       setErroTeams('');
+      gravarCache(userId, CACHE_TEAMS, lista);
       return lista;
     } catch (e) {
       if (userIdRef.current !== userId) return null;
+      const doCache = lerCache(userId, CACHE_TEAMS);
+      if (doCache) {
+        console.warn('[SessaoContext] /api/teams falhou, mantendo cache:', e.message);
+        return doCache;
+      }
       setErroTeams(e.message || 'Não foi possível carregar as equipas.');
       return null;
     } finally {
@@ -93,6 +103,19 @@ export function SessaoProvider({ children }) {
     }
     if (jaTentouTeamsRef.current || noInicioAgora) return undefined; // hidratarTeams() pode cobrir
     jaTentouTeamsRef.current = true;
+
+    // Cache local (13-set, "Velocidade 3"): mostra as equipas da última visita
+    // na hora, sem `carregandoTeams` a tapar a tela — carregarTeams() por
+    // trás substitui assim que a resposta fresca chegar.
+    const doCache = lerCache(userId, CACHE_TEAMS);
+    if (doCache) {
+      Promise.resolve().then(() => {
+        setTeams(doCache);
+        setErroTeams('');
+        setCarregandoTeams(false);
+      });
+    }
+
     carregarTeams();
     return undefined;
   }, [userId, noInicioAgora, carregarTeams]);
@@ -116,18 +139,34 @@ export function SessaoProvider({ children }) {
     }
     if (votacaoTentadaParaRef.current === slug || noInicioAgora) return undefined; // hidratarVotacaoStatus() pode cobrir
     votacaoTentadaParaRef.current = slug;
+
+    // Cache local (13-set, "Velocidade 3"): mostra o status da última visita
+    // na hora; o pedido por trás substitui assim que responder.
+    const doCache = lerCache(userId, CACHE_VOTACAO);
     let ativo = true;
+    if (doCache) {
+      Promise.resolve().then(() => {
+        if (ativo) setVotacaoStatus(doCache);
+      });
+    }
     apiFetch(`/api/teams/${slug}/votacao-status`)
       .then((d) => {
-        if (ativo) setVotacaoStatus(d);
+        if (!ativo) return;
+        setVotacaoStatus(d);
+        gravarCache(userId, CACHE_VOTACAO, d);
       })
-      .catch(() => {
-        if (ativo) setVotacaoStatus(null);
+      .catch((e) => {
+        if (!ativo) return;
+        if (doCache) {
+          console.warn('[SessaoContext] votacao-status falhou, mantendo cache:', e.message);
+          return;
+        }
+        setVotacaoStatus(null);
       });
     return () => {
       ativo = false;
     };
-  }, [teams, noInicioAgora]);
+  }, [teams, noInicioAgora, userId]);
 
   // Espelho de `teams` em ref: hidratarVotacaoStatus precisa do slug ATUAL
   // (equipa principal) sem depender de re-render para ler o valor mais recente.
@@ -142,12 +181,14 @@ export function SessaoProvider({ children }) {
     setErroTeams('');
     setCarregandoTeams(false);
     jaTentouTeamsRef.current = true; // já temos dado — sair de /home não deve refazer o pedido
-  }, []);
+    gravarCache(userId, CACHE_TEAMS, novasTeams);
+  }, [userId]);
 
   const hidratarVotacaoStatus = useCallback((status) => {
     setVotacaoStatus(status ?? null);
     votacaoTentadaParaRef.current = teamsRef.current[0]?.slug || null;
-  }, []);
+    gravarCache(userId, CACHE_VOTACAO, status ?? null);
+  }, [userId]);
 
   const value = {
     me,

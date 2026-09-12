@@ -6,6 +6,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
+import { lerCache, gravarCache } from '../lib/cacheLocal';
+
+const CACHE_CHAVE = 'me';
 
 const PerfilContext = createContext(null);
 
@@ -46,6 +49,21 @@ export function PerfilProvider({ children }) {
         ativo = false;
       };
     }
+    // Cache local (13-set, "Velocidade 3", stale-while-revalidate): mostra o
+    // último /api/me bom na hora (sem LoadingFutty) enquanto o pedido de
+    // verdade corre por trás — motor em São Paulo, quem está longe sente
+    // ~240ms mesmo já com tudo centralizado num pedido só por sessão.
+    const doCache = lerCache(userId, CACHE_CHAVE);
+    if (doCache) {
+      Promise.resolve().then(() => {
+        if (!ativo) return;
+        setPerfil(doCache);
+        setErro(null);
+        setErroCode(null);
+        setCarregadoParaId(userId);
+      });
+    }
+
     apiFetch('/api/me')
       .then((data) => {
         if (!ativo) return;
@@ -53,9 +71,15 @@ export function PerfilProvider({ children }) {
         setErro(null);
         setErroCode(null);
         setCarregadoParaId(userId);
+        gravarCache(userId, CACHE_CHAVE, data);
       })
       .catch((e) => {
         if (!ativo) return;
+        if (doCache) {
+          // Já mostrando o cache — mantém, sem risco a tela com erro.
+          console.warn('[PerfilContext] /api/me falhou, mantendo cache:', e.message);
+          return;
+        }
         setPerfil(null);
         setErro(e.message || 'Não foi possível carregar o perfil.');
         setErroCode(e.code || null);
@@ -78,6 +102,7 @@ export function PerfilProvider({ children }) {
       setPerfil(data);
       setErro(null);
       setErroCode(null);
+      gravarCache(idDoPedido, CACHE_CHAVE, data);
       return data;
     } catch (e) {
       if (userIdRef.current !== idDoPedido) return null;
@@ -98,6 +123,7 @@ export function PerfilProvider({ children }) {
       setErro(null);
       setErroCode(null);
       setCarregadoParaId(userId);
+      gravarCache(userId, CACHE_CHAVE, data);
     },
     [userId]
   );

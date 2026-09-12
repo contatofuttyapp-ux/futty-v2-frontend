@@ -1,4 +1,4 @@
-const CACHE_NAME = 'futty-v1';
+const CACHE_NAME = 'futty-v2';
 const STATIC_ASSETS = ['/', '/home', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -19,9 +19,29 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
+// Cacheável (13-set, "Velocidade 3"): só GET da MESMA origem — nunca outra
+// origem (Supabase Auth/Storage teriam respostas privadas/assinadas cacheadas
+// por engano, além de o SW nem controlar essas origens) nem /api/ (dados
+// dinâmicos; o cache local em localStorage já cobre isso, ver
+// src/lib/cacheLocal.js). Dentro da mesma origem, só o que faz sentido reter:
+// assets versionados (hash no nome — nunca fica obsoleto), ícones, fontes
+// locais, o manifest e a navegação (index.html, network-first como sempre foi).
+function ehCacheavel(url, request) {
+  if (url.origin !== self.location.origin) return false;
+  if (url.pathname.startsWith('/api/')) return false;
+  if (request.mode === 'navigate') return true;
+  return (
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname === '/manifest.json' ||
+    /\.(woff2?|ttf|otf|eot)$/.test(url.pathname)
+  );
+}
+
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('/api/')) return;
+  const url = new URL(e.request.url);
+  if (!ehCacheavel(url, e.request)) return;
   e.respondWith(
     fetch(e.request)
       .then((r) => {

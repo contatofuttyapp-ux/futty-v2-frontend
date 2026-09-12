@@ -1,5 +1,6 @@
 // Futty v2.0 — Hooks de dados de equipas (encapsulam as chamadas à API).
 import { useApi } from './useApi';
+import { useApiComCache } from './useApiComCache';
 import { useSessao } from '../context/SessaoContext';
 
 /**
@@ -15,9 +16,10 @@ export function useTeams() {
   return { teams, loading: carregandoTeams, error: erroTeams };
 }
 
-/** Detalhes de uma equipa + membros. */
+/** Detalhes de uma equipa + membros. Cache local (13-set, "Velocidade 3"):
+ * mostra a última visita na hora, atualiza por trás. */
 export function useTeam(slug) {
-  const { data, loading, error, reload } = useApi(slug ? `/api/teams/${slug}` : null);
+  const { data, loading, error, reload } = useApiComCache(slug ? `/api/teams/${slug}` : null, slug ? `team:${slug}` : null);
   return {
     team: data?.team || null,
     members: data?.members || [],

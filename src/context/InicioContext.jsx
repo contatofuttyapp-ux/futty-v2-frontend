@@ -11,12 +11,18 @@
 // volta ao comportamento de sempre.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from './PerfilContext';
 import { useSessao } from './SessaoContext';
+import { lerCache, gravarCache } from '../lib/cacheLocal';
+
+const CACHE_CHAVE = 'inicio';
 
 const InicioContext = createContext(null);
 
 export function InicioProvider({ children }) {
+  const { session } = useAuth();
+  const userId = session?.user?.id || null;
   const { hidratar: hidratarPerfil } = usePerfil();
   // SessaoProvider fica ACIMA do Layout (ver App.jsx) e o InicioProvider é
   // montado como filho do Layout — é descendente, por isso useSessao() aqui
@@ -50,13 +56,14 @@ export function InicioProvider({ children }) {
       // neste payload, sem o SessaoContext precisar do seu próprio /api/teams.
       if (d?.teams?.teams) hidratarTeams(d.teams.teams);
       if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status);
+      gravarCache(userId, CACHE_CHAVE, d);
       return d;
     } catch (e) {
       if (geracaoRef.current !== minhaGeracao) return null;
       setErro(e.message || 'Não foi possível carregar o Início.');
       return null;
     }
-  }, [hidratarPerfil, hidratarTeams, hidratarVotacaoStatus]);
+  }, [hidratarPerfil, hidratarTeams, hidratarVotacaoStatus, userId]);
 
   // Carga inicial ao montar (mesmo padrão do PerfilContext: o efeito chama a
   // API diretamente, em vez de invocar `carregar`, para o setState correr
@@ -64,6 +71,23 @@ export function InicioProvider({ children }) {
   useEffect(() => {
     let ativo = true;
     const minhaGeracao = ++geracaoRef.current;
+
+    // Cache local (13-set, "Velocidade 3"): mostra o Início da última visita
+    // na hora (sem LoadingFutty) — o /api/inicio de verdade corre por trás e
+    // substitui (e regrava o cache) assim que responder. Hidrata Perfil/Sessao
+    // também a partir do cache, para o resto da app sentir o mesmo ganho.
+    const doCache = lerCache(userId, CACHE_CHAVE);
+    if (doCache) {
+      Promise.resolve().then(() => {
+        if (!ativo || geracaoRef.current !== minhaGeracao) return;
+        setDados(doCache);
+        setErro('');
+        if (doCache?.me) hidratarPerfil(doCache.me);
+        if (doCache?.teams?.teams) hidratarTeams(doCache.teams.teams);
+        if (doCache?.votacao_status !== undefined) hidratarVotacaoStatus(doCache.votacao_status);
+      });
+    }
+
     apiFetch('/api/inicio')
       .then((d) => {
         if (!ativo || geracaoRef.current !== minhaGeracao) return;
@@ -72,9 +96,14 @@ export function InicioProvider({ children }) {
         if (d?.me) hidratarPerfil(d.me);
         if (d?.teams?.teams) hidratarTeams(d.teams.teams);
         if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status);
+        gravarCache(userId, CACHE_CHAVE, d);
       })
       .catch((e) => {
         if (!ativo || geracaoRef.current !== minhaGeracao) return;
+        if (doCache) {
+          console.warn('[InicioContext] /api/inicio falhou, mantendo cache:', e.message);
+          return;
+        }
         setErro(e.message || 'Não foi possível carregar o Início.');
       });
     return () => {
