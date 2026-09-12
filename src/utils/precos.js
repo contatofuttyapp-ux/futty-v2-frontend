@@ -1,7 +1,8 @@
 // Futty v2.0 — Preços por região (12-set, "Velocidade 2"). Decide a moeda pelo
 // IDIOMA ou pelo FUSO HORÁRIO do aparelho — nunca por IP/geolocalização (sem
 // permissão a pedir, sem custo de rede, funciona offline). pt-BR (idioma) OU
-// America/* (fuso) → real; qualquer outra combinação → euro. Computado 1x ao
+// America/* (fuso) → R$9,90/R$24,90; qualquer outra combinação → EUR €2,99/€7,99
+// (regra 11-ago: preço por poder de compra, não por câmbio). Computado 1x ao
 // carregar o módulo — a moeda não muda durante a sessão (SPA sem SSR: navigator
 // e Intl sempre existem no browser).
 //
@@ -27,7 +28,7 @@ function detectarRegiao() {
 
 const TABELA = {
   BRL: { simbolo: 'R$', pro: 9.9, elite: 24.9 },
-  EUR: { simbolo: '€', pro: 1.99, elite: 4.99 },
+  EUR: { simbolo: '€', pro: 2.99, elite: 7.99 },
 };
 
 function criarFormatador(simbolo) {
