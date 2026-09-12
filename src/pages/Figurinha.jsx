@@ -546,10 +546,13 @@ export default function Figurinha() {
       if (err?.code === 'EMAIL_NAO_CONFIRMADO') setEmailNaoConfirmado(true);
       else if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano → card de quota
       else {
-        // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO: causas acionáveis com mensagem digna
-        // própria, em vez do genérico "não deu desta vez". Resto (fal fora do ar,
-        // etc.) mantém o genérico com retry, que já cobre bem o transitório.
-        if (err?.code === 'FOTO_INVALIDA' || err?.code === 'TETO_DIARIO_ATINGIDO') setErroIAmsg(err.message);
+        // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO / IA_INDISPONIVEL: causas acionáveis
+        // com mensagem digna própria, em vez do genérico "não deu desta vez".
+        // IA_INDISPONIVEL (14-set: fal recusou por chave/crédito, falha do MOTOR)
+        // usa a mensagem que já vem do backend — nunca sugere "tente outra foto",
+        // porque o problema não é a foto. Resto (fal fora do ar, etc.) mantém o
+        // genérico com retry, que já cobre bem o transitório.
+        if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL'].includes(err?.code)) setErroIAmsg(err.message);
         setErroIA(true); // qualquer falha → estado de erro com retry no overlay
       }
     } finally {

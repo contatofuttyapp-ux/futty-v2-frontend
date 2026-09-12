@@ -735,9 +735,12 @@ export default function Inicio() {
                 <img src={urlAsset(user.foto_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: '#f8b4b4', lineHeight: 1.4 }}>Não deu certo com essa foto. Tente outra.</span>
+            {/* Texto neutro (14-set): 'falhou' também cobre IA_INDISPONIVEL (motor
+                recusado pela fal, nada a ver com a foto) — "tente outra foto" seria
+                enganoso nesse caso. */}
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: '#f8b4b4', lineHeight: 1.4 }}>Não deu para gerar sua figurinha agora. Tente de novo na aba Figurinha.</span>
             <Link to="/figurinha" className="btn btn--sm hud-corners-s cta-gold" style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none' }}>
-              Escolher outra foto
+              Ir para Figurinha
             </Link>
           </div>
         ) : null}

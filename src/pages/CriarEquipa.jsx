@@ -70,6 +70,7 @@ export default function CriarEquipa() {
   const navigate = useNavigate();
   const [passo, setPasso] = useState(1);
   const [nome, setNome] = useState('');
+  const [cidade, setCidade] = useState('');
   const [mostrarGols, setMostrarGols] = useState(true);
   const [modo, setModo] = useState('privado'); // privado | publico_aprovacao | publico_aberto
   const [team, setTeam] = useState(null); // criada no fim do passo 3
@@ -78,14 +79,24 @@ export default function CriarEquipa() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Passo 3 → cria a equipa de uma vez (nome → POST; flags → PATCH) e segue p/ convites.
+  // Passo 3 → cria a equipa de uma vez (nome+cidade → POST; flags → PATCH) e segue p/ convites.
   async function criarESeguir() {
     if (busy) return;
+    // Cidade é obrigatória em times públicos (14-set): é como jogadores perto
+    // encontram o time no Explorar/distância. No privado fica opcional. Manda
+    // de volta ao passo 1 (onde fica o campo) com um toast claro.
+    if (modo !== 'privado' && !cidade.trim()) {
+      setToast({ tipo: 'error', mensagem: 'Times públicos precisam de uma cidade — é assim que jogadores perto encontram o seu.' });
+      setPasso(1);
+      return;
+    }
     setBusy(true);
     try {
       // Sem cor no body: o backend cai para o fallback interno ('verde'); muda-se
       // depois nas definições do admin (decisão: cor despromovida, SPEC-EQUIPAS).
-      const { team: t } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify({ nome: nome.trim() }) });
+      const bodyCriar = { nome: nome.trim() };
+      if (cidade.trim()) bodyCriar.cidade = cidade.trim();
+      const { team: t } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
       // P2-12: a equipa já existe aqui. Se o PATCH das definições falhar, NÃO
       // dizer "erro a criar" — a equipa nasceu; segue-se para convites e avisa-se
       // que a definição ficou por aplicar (ajusta-se no admin).
@@ -147,6 +158,11 @@ export default function CriarEquipa() {
             <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O escudo nasce das iniciais. Veja-o se formar enquanto você escreve.</p>
             <Lbl>Nome do time</Lbl>
             <input className="input input--hud" value={nome} maxLength={40} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 15 }} />
+            <Lbl>Cidade</Lbl>
+            <input className="input input--hud" value={cidade} maxLength={100} onChange={(e) => setCidade(e.target.value)} placeholder="Ex: Brasília" style={{ width: '100%', fontFamily: RAJ, fontSize: 15 }} />
+            <p className="muted" style={{ fontSize: 11, margin: '6px 0 0', lineHeight: 1.5 }}>
+              É assim que jogadores perto de você encontram o time. Só a cidade, nunca o endereço.
+            </p>
             <div style={{ width: 110, height: 110, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 38, color: '#fff', background: 'rgba(255,255,255,0.04)', border: '2.5px solid #8b5cf6', margin: '22px auto 6px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
               {iniciais(nome)}
             </div>
