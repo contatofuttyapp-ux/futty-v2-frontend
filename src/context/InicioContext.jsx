@@ -12,11 +12,18 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { usePerfil } from './PerfilContext';
+import { useSessao } from './SessaoContext';
 
 const InicioContext = createContext(null);
 
 export function InicioProvider({ children }) {
   const { hidratar: hidratarPerfil } = usePerfil();
+  // SessaoProvider fica ACIMA do Layout (ver App.jsx) e o InicioProvider é
+  // montado como filho do Layout — é descendente, por isso useSessao() aqui
+  // vê o contexto de verdade. /api/inicio já traz teams/votacao_status; em vez
+  // de o SessaoContext duplicar esse pedido ao chegar direto em /home, este
+  // Provider empurra os dados para lá assim que a resposta chega.
+  const { hidratarTeams, hidratarVotacaoStatus } = useSessao();
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState('');
   const carregando = !dados && !erro;
@@ -39,13 +46,17 @@ export function InicioProvider({ children }) {
       // mantém o PerfilContext fresco com o `me` que /api/inicio acabou de
       // trazer, sem o Início disparar um /api/me próprio por cima.
       if (d?.me) hidratarPerfil(d.me);
+      // Mesma lógica para o SessaoContext — teams/votacao_status já vieram
+      // neste payload, sem o SessaoContext precisar do seu próprio /api/teams.
+      if (d?.teams?.teams) hidratarTeams(d.teams.teams);
+      if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status);
       return d;
     } catch (e) {
       if (geracaoRef.current !== minhaGeracao) return null;
       setErro(e.message || 'Não foi possível carregar o Início.');
       return null;
     }
-  }, [hidratarPerfil]);
+  }, [hidratarPerfil, hidratarTeams, hidratarVotacaoStatus]);
 
   // Carga inicial ao montar (mesmo padrão do PerfilContext: o efeito chama a
   // API diretamente, em vez de invocar `carregar`, para o setState correr
@@ -59,6 +70,8 @@ export function InicioProvider({ children }) {
         setDados(d);
         setErro('');
         if (d?.me) hidratarPerfil(d.me);
+        if (d?.teams?.teams) hidratarTeams(d.teams.teams);
+        if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status);
       })
       .catch((e) => {
         if (!ativo || geracaoRef.current !== minhaGeracao) return;

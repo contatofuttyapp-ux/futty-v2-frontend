@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from '
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import { PerfilProvider } from './context/PerfilContext';
+import { SessaoProvider } from './context/SessaoContext';
 import { I18nProvider } from './context/I18nContext';
 import { useAuth } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
@@ -292,11 +293,17 @@ export default function App() {
         <AuthProvider>
           <PerfilProvider>
             <BrowserRouter>
-              <RouteTitle />
-              <Layout>
-                <AnimatedRoutes />
-              </Layout>
-              <CookieBanner />
+              {/* SessaoProvider tem de ficar ACIMA do Layout: o Layout lê equipas no
+                  seu próprio corpo (rankingTo da BottomNav), e o InicioProvider é
+                  montado como FILHO do Layout — um contexto só é visível para
+                  descendentes, nunca para quem o envolve. */}
+              <SessaoProvider>
+                <RouteTitle />
+                <Layout>
+                  <AnimatedRoutes />
+                </Layout>
+                <CookieBanner />
+              </SessaoProvider>
             </BrowserRouter>
           </PerfilProvider>
         </AuthProvider>

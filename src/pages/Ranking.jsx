@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
-import { useTeams } from '../hooks/useTeam';
+import { useSessao } from '../context/SessaoContext';
 import { useRanking } from '../hooks/useRanking';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset } from '../utils/avatar';
@@ -141,8 +141,12 @@ function MeiaEstrelas({ value = 0, onChange }) {
 export default function Ranking() {
   const { slug } = useParams();
   const { ranking, loading, error, reload } = useRanking(slug);
-  const { data: status } = useApi(slug ? `/api/teams/${slug}/votacao-status` : null);
-  const { teams } = useTeams();
+  const { teams, votacaoStatus } = useSessao();
+  // votacaoStatus do SessaoContext já é da equipa PRINCIPAL (teams[0], 1x por
+  // sessão) — só dispara pedido próprio quando esta página é de OUTRA equipa.
+  const usaVotacaoDoContexto = slug === teams[0]?.slug;
+  const { data: votacaoPropria } = useApi(!usaVotacaoDoContexto && slug ? `/api/teams/${slug}/votacao-status` : null);
+  const status = usaVotacaoDoContexto ? votacaoStatus : votacaoPropria;
   const equipaAtual = teams.find((t) => t.slug === slug) || null;
 
   const [voteModal, setVoteModal] = useState(null); // jogador a votar

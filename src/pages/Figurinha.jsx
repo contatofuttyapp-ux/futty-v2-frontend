@@ -176,11 +176,13 @@ function EstrelaIA({ size = 16, color = '#d4a017', style }) {
 
 export default function Figurinha() {
   const navigate = useNavigate();
-  // Achado 4 (roteiro 10-set): esta página tem o seu próprio /api/me local (`me`,
-  // fora do escopo do PerfilContext — precisa de efeitos de inicialização que um
-  // simples espelho de leitura não cobre). Só usa o contexto para AVISAR as outras
-  // páginas depois de mudar avatar genérico ou gerar avatar IA.
-  const { recarregar: recarregarPerfilGlobal } = usePerfil();
+  // Velocidade 2 (12-set): esta página tinha o seu próprio GET /api/me — o
+  // PerfilContext já carrega isso 1x por sessão; agora só usa o `perfil` de lá
+  // para inicializar o espelho local `me` (que continua a existir porque a
+  // página precisa de merges finos — slots, kit_ativo, avatar_url — que o card
+  // usa de imediato, sem esperar round-trip) e as escolhas guardadas
+  // (fundo/avatar genérico/fase da estreia).
+  const { perfil, erro: erroPerfil, recarregar: recarregarPerfilGlobal } = usePerfil();
 
   const [me, setMe] = useState(null);
   const [fundo, setFundo] = useState('estadio');
@@ -268,25 +270,35 @@ export default function Figurinha() {
   const selosKey = selosVisiveis.map((s) => `${s.id}:${s.tier}`).join('|');
   const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom, selos: selosVisiveis.map((s) => ({ tier: s.tier, label: s.label })) };
 
-  // Carrega o perfil e pré-selecciona as escolhas guardadas.
+  // Pré-selecciona as escolhas guardadas a partir do `perfil` já carregado
+  // pelo PerfilContext — 1x só, quando ele chega (guard por ref: o `perfil`
+  // pode mudar depois, ex. recarregarPerfilGlobal(), sem reiniciar o flow).
+  const inicializadoRef = useRef(false);
   useEffect(() => {
+    if (inicializadoRef.current) return undefined;
+    if (!perfil && !erroPerfil) return undefined;
+    inicializadoRef.current = true;
+    // Adiado ao microtask (mesmo padrão do PerfilContext): setState síncrono
+    // no corpo do efeito dispara cascading renders.
     let ativo = true;
-    apiFetch('/api/me')
-      .then((d) => {
-        if (!ativo) return;
-        setMe(d);
-        if (d?.user?.fundo_figurinha) setFundo(d.user.fundo_figurinha);
-        if (d?.user?.avatar_generico) setAvatarGenericoEscolha(d.user.avatar_generico);
+    Promise.resolve().then(() => {
+      if (!ativo) return;
+      if (perfil) {
+        setMe(perfil);
+        if (perfil?.user?.fundo_figurinha) setFundo(perfil.user.fundo_figurinha);
+        if (perfil?.user?.avatar_generico) setAvatarGenericoEscolha(perfil.user.avatar_generico);
         // Decisão da estreia (só quando ainda não foi vista): sem avatar → flow.
         if (!localStorage.getItem('futty_figurinha_estreia')) {
-          setEstreiaFase(d?.user?.avatar_url ? 'fim' : 'foto');
+          setEstreiaFase(perfil?.user?.avatar_url ? 'fim' : 'foto');
         }
-      })
-      .catch((e) => ativo && setErro(e.message));
+      } else if (erroPerfil) {
+        setErro(erroPerfil);
+      }
+    });
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [perfil, erroPerfil]);
 
   // Liberta o objectURL da foto local (ao trocar/desmontar).
   useEffect(() => {
@@ -556,6 +568,7 @@ export default function Figurinha() {
       try {
         const data = await apiFetch('/api/me/kit', { method: 'PUT', body: JSON.stringify({ kit: kit.id }) });
         setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit } } : m));
+        recarregarPerfilGlobal();
       } catch {
         setErroIA(true);
       }
@@ -585,6 +598,7 @@ export default function Figurinha() {
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ fundo_figurinha: k }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, fundo_figurinha: k } } : m));
+      recarregarPerfilGlobal();
     } catch { /* preferência: não vale um erro no ecrã */ }
   }
 

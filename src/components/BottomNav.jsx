@@ -1,27 +1,26 @@
 // Futty v2.0 — Barra de navegação inferior (ícones SVG custom + animações por tab).
 import { Link, useLocation } from 'react-router-dom';
 import Icon from './Icon';
-import { useTeams } from '../hooks/useTeam';
 import { useApi } from '../hooks/useApi';
-import { useInicio } from '../context/InicioContext';
+import { useSessao } from '../context/SessaoContext';
 
 export default function BottomNav() {
   const { pathname } = useLocation();
-  const { teams } = useTeams();
-  const inicio = useInicio(); // não-null só dentro do /home (ver Layout.jsx)
+  const { teams, votacaoStatus } = useSessao();
 
   // Slug para o Ranking: o da rota atual ou a 1ª equipa do utilizador.
   const urlSlug = pathname.match(/^\/equipa\/([^/]+)/)?.[1] || null;
   const slug = urlSlug || teams[0]?.slug || null;
   const rankingTo = slug ? `/equipa/${slug}/ranking` : '/home';
 
-  // Votos pendentes -> badge vermelho na tab Ranking. Dentro do Início, /api/inicio
-  // já trouxe o votacao_status do time principal (11-set, "1 pedido só") — só
-  // dispara o pedido próprio quando NÃO estamos lá, ou quando a rota atual é de
-  // outra equipa (urlSlug ≠ time principal), caso em que o agregado não serve.
-  const podeUsarDoInicio = inicio !== null && !urlSlug;
-  const { data: votacaoPropria } = useApi(!podeUsarDoInicio && slug ? `/api/teams/${slug}/votacao-status` : null);
-  const votacao = podeUsarDoInicio ? inicio.dados?.votacao_status : votacaoPropria;
+  // Votos pendentes -> badge vermelho na tab Ranking. votacaoStatus do
+  // SessaoContext já é da equipa PRINCIPAL (teams[0], 1x por sessão) — só
+  // dispara pedido próprio quando a rota é de uma equipa DIFERENTE da
+  // principal (urlSlug truthy e distinto), caso em que o valor do contexto
+  // não serve.
+  const usaVotacaoDoContexto = !urlSlug || urlSlug === teams[0]?.slug;
+  const { data: votacaoPropria } = useApi(!usaVotacaoDoContexto && slug ? `/api/teams/${slug}/votacao-status` : null);
+  const votacao = usaVotacaoDoContexto ? votacaoStatus : votacaoPropria;
   const hasPendingVotes = !!votacao && (votacao.faltam > 0 || votacao.pedido_revotacao);
 
   const tabs = [

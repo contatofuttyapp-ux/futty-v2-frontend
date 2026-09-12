@@ -1,21 +1,22 @@
 // Futty v2.0 — Planos (/planos): Free / Pro / Elite lado a lado.
 // Pagamentos = SÓ via IAP das lojas (Apple/Google) — decisão final do dono (SPEC-INFRA).
 // Stripe foi removido; o botão diz a verdade: pagamento ainda não existe nesta versão.
-import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { usePerfil } from '../context/PerfilContext';
 import Topbar from '../components/Topbar';
 import Icon from '../components/Icon';
 import { LIMITES_IA } from '../lib/planos';
+import { precos } from '../utils/precos';
 import '../styles/app.css';
 
-// Preço por MOEDA — nunca as duas em simultâneo. Os valores mostram o preço-alvo;
-// a cobrança real será via IAP da loja (App Store/Play), a definir na vaga "App nas lojas".
+// Preço por REGIÃO (ver utils/precos.js) — nunca real e euro ao mesmo tempo.
+// Os valores mostram o preço-alvo; a cobrança real será via IAP da loja
+// (App Store/Play), a definir na vaga "App nas lojas".
 const PLANOS = [
   {
     id: 'free',
     nome: 'Free',
-    preco: { BRL: 'Grátis', EUR: 'Grátis' },
+    preco: 'Grátis',
     features: ['Sorteio', 'Ranking', 'Resenha', `${LIMITES_IA.free} avatares IA`],
     botao: null,
   },
@@ -23,7 +24,7 @@ const PLANOS = [
     id: 'pro',
     nome: 'Pro',
     icone: 'estrela', // asset da casa — substitui o ★ do texto
-    preco: { BRL: 'R$9,90/mês', EUR: '€2,99/mês' },
+    preco: precos.pro,
     features: ['Tudo do Free', `${LIMITES_IA.pro} avatares IA/mês`, 'Sem anúncios', 'Frames exclusivos', 'Badge dourado'],
     botao: 'Assinar Pro',
   },
@@ -31,7 +32,7 @@ const PLANOS = [
     id: 'elite',
     nome: 'Elite',
     icone: 'coroa', // asset da casa (/icons/coroa.svg), tingido a dourado — substitui o emoji 👑
-    preco: { BRL: 'R$24,90/mês', EUR: '€7,99/mês' },
+    preco: precos.elite,
     features: ['Tudo do Pro', `${LIMITES_IA.elite} avatares IA/mês`, 'Kit Elite dourado'],
     botao: 'Assinar Elite',
   },
@@ -65,8 +66,6 @@ const PLANOS_PARTICULAS = [
 export default function Planos() {
   const { perfil: me } = usePerfil();
   const planoAtual = me?.user?.plan || 'free';
-  // Moeda única, decidida uma vez. Ler navigator durante o render é impuro → initializer.
-  const [moeda] = useState(() => (navigator.language === 'pt-BR' ? 'BRL' : 'EUR'));
 
   return (
     <div className="app-shell">
@@ -159,7 +158,7 @@ export default function Planos() {
                     #d4a017 sobre o pico do blob DOURADO cai a 3.42 — dourado sobre
                     dourado, abaixo do AA 4.5. A sombra devolve-lhe a leitura sem mexer na
                     opacidade do card. */}
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{p.preco[moeda]}</div>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{p.preco}</div>
 
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 5, flex: 1 }}>
                   {p.features.map((f) => (

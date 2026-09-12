@@ -1,22 +1,18 @@
 // Futty v2.0 — Hooks de dados de equipas (encapsulam as chamadas à API).
 import { useApi } from './useApi';
-import { useInicio } from '../context/InicioContext';
+import { useSessao } from '../context/SessaoContext';
 
 /**
- * Lista de equipas do utilizador autenticado. Dentro do Início (InicioProvider
- * montado, ver Layout.jsx), lê de lá em vez de disparar o seu próprio
- * /api/teams — /api/inicio já traz isso (11-set, "1 pedido só"). Fora do
- * Início, comportamento de sempre.
+ * Lista de equipas do utilizador autenticado. Lê do SessaoContext (12-set,
+ * "Velocidade 2") — carregado 1x por sessão e partilhado por toda a app, em
+ * vez de cada tela disparar o seu próprio /api/teams a cada navegação. Na
+ * rota /home o SessaoContext é hidratado pelo InicioContext a partir do
+ * payload agregado de /api/inicio (11-set, "1 pedido só") — este hook não
+ * precisa saber disso, só lê o resultado final.
  */
 export function useTeams() {
-  const inicio = useInicio(); // null fora do InicioProvider
-  const dentroDoInicio = inicio !== null;
-  const { data, loading, error } = useApi(dentroDoInicio ? null : '/api/teams');
-
-  if (dentroDoInicio) {
-    return { teams: inicio.dados?.teams?.teams || [], loading: inicio.carregando, error: inicio.erro };
-  }
-  return { teams: data?.teams || [], loading, error };
+  const { teams, carregandoTeams, erroTeams } = useSessao();
+  return { teams, loading: carregandoTeams, error: erroTeams };
 }
 
 /** Detalhes de uma equipa + membros. */
