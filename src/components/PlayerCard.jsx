@@ -11,10 +11,33 @@
 // (que NÃO se corrigiram de propósito: morrem com ele) e a prop `cantos`.
 // Ver também `users.cor_frame`: nenhum UI a escreve desde que a Figurinha fixou o
 // frame em 'dourado'; sobrevive só porque o Ranking a lê.
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { urlAsset, nomeJogador, iniciaisJogador, gradienteAvatar } from '../utils/avatar';
 import { getFrameColor } from '../utils/frameColors';
 import { getKit, kitGradientCss } from '../utils/kits';
+
+// Canvas 1×1 reaproveitado só para medir texto (measureText) — nunca desenha nada.
+let medidorCtx = null;
+function obterMedidor() {
+  if (!medidorCtx) medidorCtx = document.createElement('canvas').getContext('2d');
+  return medidorCtx;
+}
+
+// Regra do dono (14-set): o nome do jogador nunca é cortado — a letra encolhe até
+// caber (mesmo princípio de utils/figurinhaCanvas.js#desenharPlacaNome). Mede na
+// MESMA fonte/peso/letter-spacing do CSS abaixo (Rajdhani 900, 0.16em) via canvas
+// measureText e escolhe o maior tamanho entre 24 e 12 que caiba na largura
+// disponível. Abaixo de 12 a reticência do CSS assume — defesa teórica, nome
+// normal nenhum chega lá.
+function ajustarFonteNome(nomeMaiusculo, larguraDisponivel) {
+  const ctx = obterMedidor();
+  for (let f = 24; f >= 12; f -= 1) {
+    ctx.font = `900 ${f}px 'Rajdhani', sans-serif`;
+    ctx.letterSpacing = `${(f * 0.16).toFixed(2)}px`; // 0.16em → px na fonte testada
+    if (ctx.measureText(nomeMaiusculo).width <= larguraDisponivel) return f;
+  }
+  return 12;
+}
 
 // 18 partículas (12 finas + 6 maiores douradas), distribuídas pelo card.
 const PARTICULAS = [
@@ -84,6 +107,25 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
   const [imgFalhou, setImgFalhou] = useState(false);
 
   const nome = nomeJogador(jogador);
+
+  // Fit-to-width do nome (14-set): mede a largura REAL disponível (o card é
+  // responsivo — containerType:'size' acima) e reajusta ao redimensionar.
+  // useLayoutEffect (não useEffect) para a 1ª medição correr antes do paint,
+  // sem flash do tamanho 24 por defeito.
+  const nomeRowRef = useRef(null);
+  const [nomeFontSize, setNomeFontSize] = useState(24);
+  useLayoutEffect(() => {
+    const el = nomeRowRef.current;
+    if (!el || !mostrarNome) return undefined;
+    const ajustar = () => {
+      const largura = el.offsetWidth;
+      if (largura > 0) setNomeFontSize(ajustarFonteNome(nome.toUpperCase(), largura));
+    };
+    ajustar();
+    const ro = new ResizeObserver(ajustar);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [nome, mostrarNome]);
   // fotoOverride (preview local da Figurinha) tem prioridade sobre o avatar guardado.
   const avatarSrc = fotoOverride ?? (jogador?.avatar_url ? urlAsset(jogador.avatar_url) : null);
 
@@ -302,20 +344,21 @@ export default function PlayerCard({ jogador = {}, stats = {}, equipa = null, fu
         : null}
 
       {mostrarNome || mostrarStats ? (
-        <div style={{ position: 'absolute', left: 8, right: 8, bottom: 12, zIndex: 6, textAlign: 'center' }}>
+        <div ref={nomeRowRef} style={{ position: 'absolute', left: 8, right: 8, bottom: 12, zIndex: 6, textAlign: 'center' }}>
           {mostrarNome ? (
             <div
               style={{
+                fontFamily: "'Rajdhani', sans-serif",
                 textTransform: 'uppercase',
                 fontWeight: 900,
-                fontSize: 24,
-                letterSpacing: '0.16em',
+                fontSize: nomeFontSize,
+                letterSpacing: '0.16em', // em: acompanha nomeFontSize automaticamente
                 lineHeight: 1.1,
                 color: '#fff',
                 textShadow: '0 0 10px rgba(139,92,246,0.8), 0 0 20px rgba(139,92,246,0.4), 0 0 40px rgba(139,92,246,0.2)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                textOverflow: 'ellipsis', // só entra em jogo abaixo dos 12px (defesa teórica)
                 animation: 'pcNamePulse 3.9s ease-in-out infinite alternate',
               }}
             >

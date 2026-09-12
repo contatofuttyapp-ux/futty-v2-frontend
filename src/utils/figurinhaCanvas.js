@@ -497,12 +497,21 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      // Fit-to-width (FASE 3.24): começa em nomeFonte e reduz em passos de 2*k até
-      // caber na largura da placa menos padding, ou atingir o mínimo de 28*k.
+      // Fit-to-width (FASE 3.24 → FASE 3.55, 14-set): regra do dono — o nome do
+      // jogador NUNCA é cortado, a letra encolhe até caber. O piso antigo (36*k)
+      // ainda truncava nomes normais ("CHAVO, EL MATADOR" saía "…EL M…"). Medido
+      // na fonte real (k=1, larguraMax=272): CHAVO, EL MATADOR cabe a 28,
+      // WASHINGTON JUNIOR a 26, JOÃO PEDRO SILVA a 30 — por isso o piso desce
+      // para 22*k, com passos de 1*k (encaixe mais justo que os 2*k antigos). A
+      // reticência fica só como defesa TEÓRICA (só entraria com algo como 18
+      // letras largas em maiúsculas, tipo "MMMMMMMMMMMMMMMMMM").
       let nomeUpper = String(nome).toUpperCase();
       const larguraMax = placaW - 24 * k; // largura da placa menos padding
-      const fonteMin = 36 * k; // FASE 3.36: intervalo apertado (era 28*k)
-      const lsPara = (f) => (3 * k) * (f / nomeFonte); // 3*k na base, proporcional
+      const fonteMin = 22 * k; // FASE 3.55: nome nunca corta (era 36*k)
+      // Letter-spacing acompanha a fonte (nunca fixo), com piso de 0.5*k para o
+      // texto não colar nos tamanhos mínimos. Divide por nomeFonte (não pelo
+      // número cru 46) para o k não entrar em dobro — nomeFonte já é 46*k.
+      const lsPara = (f) => Math.max(0.5 * k, (3 * k) * (f / nomeFonte));
       let fonte = nomeFonte;
       const aplicarFonte = () => {
         ctx.font = `700 ${fonte}px 'Rajdhani', system-ui, sans-serif`;
@@ -510,10 +519,10 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
       };
       aplicarFonte();
       while (ctx.measureText(nomeUpper).width > larguraMax && fonte > fonteMin) {
-        fonte = Math.max(fonteMin, fonte - 2 * k);
+        fonte = Math.max(fonteMin, fonte - 1 * k);
         aplicarFonte();
       }
-      // Defesa extra: nome absurdamente longo que nem a 28*k cabe → reticências.
+      // Defesa extra (teórica): nome tão largo que nem a 22*k cabe → reticências.
       if (ctx.measureText(nomeUpper).width > larguraMax) {
         while (nomeUpper.length > 1 && ctx.measureText(nomeUpper + '…').width > larguraMax) nomeUpper = nomeUpper.slice(0, -1);
         nomeUpper += '…';
