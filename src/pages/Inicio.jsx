@@ -21,6 +21,7 @@ import LoadingFutty from '../components/LoadingFutty';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
+import { urlAsset } from '../utils/avatar';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
 import '../styles/app.css';
 
@@ -394,6 +395,43 @@ export default function Inicio() {
   const cromoAvatarEhIA = !!user?.foto_url && !!user?.avatar_url && user.foto_url !== user.avatar_url;
   const cromoFundo = user?.fundo_figurinha || 'estadio';
 
+  // Figurinha automática do cadastro (12-set): o Onboarding dispara a geração
+  // em fundo e marca o sessionStorage; aqui o Início mostra "criando..." em vez
+  // do CTA normal, com polling de /api/me até sair de 'gerando'. O sessionStorage
+  // cobre o instante entre o disparo e o /api/me confirmar 'gerando' — sem ele o
+  // usuário veria o CTA normal piscar por 1 beat antes do estado de loading.
+  const [figurinhaSessaoMarcada, setFigurinhaSessaoMarcada] = useState(() => {
+    try {
+      return sessionStorage.getItem('futty_figurinha_gerando') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const figurinhaStatus = user?.figurinha_status || null;
+  const figurinhaGerando = figurinhaStatus === 'gerando' || (figurinhaSessaoMarcada && !figurinhaStatus && !user?.avatar_url);
+  const figurinhaFalhou = figurinhaStatus === 'falhou';
+
+  // Limpa o sessionStorage assim que sair de 'gerando' — sincronizado DURANTE
+  // o render (mesmo padrão de MeuPerfil.jsx), não num efeito.
+  if (figurinhaSessaoMarcada && !figurinhaGerando) {
+    try {
+      sessionStorage.removeItem('futty_figurinha_gerando');
+    } catch {
+      /* priv */
+    }
+    setFigurinhaSessaoMarcada(false);
+  }
+
+  useEffect(() => {
+    if (!figurinhaGerando) return undefined;
+    const prazo = Date.now() + 3 * 60 * 1000; // máx. 3 min de polling (mesmo teto do backend)
+    const id = setInterval(() => {
+      recarregarPerfil();
+      if (Date.now() > prazo) clearInterval(id);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [figurinhaGerando, recarregarPerfil]);
+
   // Escolha do avatar genérico (31-jul): undefined = usa o que veio do servidor;
   // definido = override otimista local (PATCH em curso ou já confirmado).
   const [sheetAvatarAberto, setSheetAvatarAberto] = useState(false);
@@ -675,10 +713,39 @@ export default function Inicio() {
           </div>
         ) : null}
 
+        {/* Figurinha automática do cadastro (12-set): enquanto a IA gera em fundo,
+            mostra a foto da pessoa com um brilho dourado passando em vez do CTA
+            normal — sem isso pareceria que nada está acontecendo por ~30s. */}
+        {figurinhaGerando ? (
+          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.4)' }}>
+            <span className="figurinha-gerando-moldura" style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.5)', background: '#101012' }}>
+              {user?.foto_url ? (
+                <img src={urlAsset(user.foto_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : null}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Sua figurinha está sendo criada…</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>leva uns 30 segundos</span>
+            </span>
+          </div>
+        ) : figurinhaFalhou ? (
+          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
+            <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(248,113,113,0.5)', background: '#101012', overflow: 'hidden' }}>
+              {user?.foto_url ? (
+                <img src={urlAsset(user.foto_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : null}
+            </span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: '#f8b4b4', lineHeight: 1.4 }}>Não deu certo com essa foto. Tente outra.</span>
+            <Link to="/figurinha" className="btn btn--sm hud-corners-s cta-gold" style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none' }}>
+              Escolher outra foto
+            </Link>
+          </div>
+        ) : null}
+
         {/* CARD PERSISTENTE — sem foto não há cromo: moldura V1 vazia + convite.
             Sem X: persiste até haver foto (a estratégia "quase-obrigatória" do
             onboarding dia-1). Substitui o antigo CTA dispensável quando não há avatar. */}
-        {!meLoading && user && !user.avatar_url ? (
+        {figurinhaGerando || figurinhaFalhou ? null : !meLoading && user && !user.avatar_url ? (
           <Link to="/perfil" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,160,23,0.4)', textDecoration: 'none', color: 'inherit' }}>
             <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
               <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: '#101012', border: '1.5px solid rgba(212,160,23,0.5)', clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)' }}>

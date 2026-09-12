@@ -825,6 +825,31 @@
 @media (prefers-reduced-motion: reduce) {
   .rank-shimmer { animation: none; }
 }
+/* Figurinha automática do cadastro (12-set): brilho dourado passando na
+   moldura enquanto a IA gera em fundo — mesmo padrão do .rank-shimmer acima,
+   cor dourada em vez de branca. */
+.figurinha-gerando-moldura {
+  position: relative;
+  overflow: hidden;
+}
+.figurinha-gerando-moldura::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(240, 201, 74, 0.55), transparent);
+  animation: figurinhaShimmer 1.8s ease-in-out infinite;
+}
+@keyframes figurinhaShimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(300%) skewX(-15deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .figurinha-gerando-moldura::after { animation: none; }
+}
 
 .rank-pos {
   width: 30px;

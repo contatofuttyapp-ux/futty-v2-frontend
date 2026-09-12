@@ -73,8 +73,9 @@ export default function Onboarding() {
   const [enviando, setEnviando] = useState(false);
   const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
   const ultimoBlob = useRef(null); // retém o blob p/ "tentar de novo" sem recortar
+  const figurinhaIAEmVooRef = useRef(false); // evita empilhar POST /api/me/avatar/ai
   const [nome, setNome] = useState('');
-  const [gr, setGr] = useState(null); // 'GL' | 'linha' | null (opcional)
+  const [gr, setGr] = useState('linha'); // 'GL' | 'linha'
   const [salvando, setSalvando] = useState(false);
   const [toast, setToast] = useState(null);
   const selfieRef = useRef(null);
@@ -84,6 +85,27 @@ export default function Onboarding() {
     const f = e.target.files?.[0];
     if (f) setCropFile(f);
     e.target.value = '';
+  }
+
+  // Figurinha automática do cadastro (12-set): dispara assim que a foto sobe,
+  // SEM esperar — o usuário segue para nome/posição enquanto ela é gerada em
+  // fundo. Fire-and-forget de propósito (.catch silencioso): se falhar, o
+  // Início mostra "não deu certo" e oferece trocar de foto — não trava aqui.
+  // Não empilha: se a pessoa trocar a foto de novo ENQUANTO a 1ª geração ainda
+  // está em voo, não dispara uma 2ª.
+  function dispararFigurinhaIA() {
+    if (figurinhaIAEmVooRef.current) return;
+    figurinhaIAEmVooRef.current = true;
+    try {
+      sessionStorage.setItem('futty_figurinha_gerando', '1');
+    } catch {
+      /* priv */
+    }
+    apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold', origem: 'cadastro' }) })
+      .catch(() => {})
+      .finally(() => {
+        figurinhaIAEmVooRef.current = false;
+      });
   }
 
   // Crop confirmado → sobe já (POST /api/me/avatar) e a foto CAI na moldura.
@@ -101,6 +123,7 @@ export default function Onboarding() {
       const res = await apiUpload('/api/me/avatar', file, 'avatar');
       setAvatarUrl(res.avatar_url || res.foto_url || null);
       ultimoBlob.current = null;
+      dispararFigurinhaIA();
     } catch (e) {
       setUploadErro(mensagemUploadFoto(e));
     } finally {
@@ -219,18 +242,18 @@ export default function Onboarding() {
                 value={nome}
                 maxLength={18}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder="ex.: Chavo"
+                placeholder="ex.: Bruninho"
                 style={{ width: '100%', fontFamily: RAJ, fontSize: 17, fontWeight: 700, textAlign: 'center' }}
               />
               <label style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '20px 0 6px' }}>
                 Você é goleiro? <em style={{ color: '#6f6a80', textTransform: 'none', letterSpacing: 0, fontStyle: 'normal' }}>(opcional)</em>
               </label>
               <div className="chips-row" style={{ justifyContent: 'center' }}>
-                <button type="button" className={`chip ${gr === 'GL' ? 'chip--active' : ''}`} onClick={() => setGr(gr === 'GL' ? null : 'GL')} style={gr !== 'GL' ? { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' } : undefined}>
-                  GR: sou goleiro
-                </button>
-                <button type="button" className={`chip ${gr === 'linha' ? 'chip--active' : ''}`} onClick={() => setGr(gr === 'linha' ? null : 'linha')}>
+                <button type="button" className={`chip ${gr === 'linha' ? 'chip--active' : ''}`} onClick={() => setGr('linha')}>
                   Jogo na linha
+                </button>
+                <button type="button" className={`chip ${gr === 'GL' ? 'chip--active' : ''}`} onClick={() => setGr('GL')} style={gr !== 'GL' ? { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' } : undefined}>
+                  Sou goleiro
                 </button>
               </div>
               <div style={{ marginTop: 30 }}>
