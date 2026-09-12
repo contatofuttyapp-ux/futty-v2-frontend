@@ -2,8 +2,14 @@
 // com filtro etário fail-closed + toggle por página no servidor). Conta impressão (ao
 // aparecer) e clique (ao tocar) via /api/ads/evento. Sem campanha elegível OU página OFF
 // → não renderiza nada. Variants: 'native' (Início/feed) e 'banner' (sorteio).
+//
+// Dentro do Início (pagina='inicio', InicioProvider montado — ver Layout.jsx),
+// o anúncio já veio dentro de GET /api/inicio (11-set, "1 pedido só") — lê de lá
+// em vez de disparar o seu próprio GET /api/ads. O POST /api/ads/evento de
+// impressão/clique mantém-se sempre, para qualquer origem do anúncio.
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
+import { useInicio } from '../context/InicioContext';
 import Icon from './Icon';
 
 const BASE = {
@@ -12,17 +18,24 @@ const BASE = {
 };
 
 export default function AdCard({ pagina = 'inicio', variant = 'native' }) {
-  const [ad, setAd] = useState(null);
-  const [pronto, setPronto] = useState(false);
+  const inicio = useInicio(); // não-null só dentro do /home (ver Layout.jsx)
+  const usaDoInicio = inicio !== null && pagina === 'inicio';
+
+  const [adProprio, setAdProprio] = useState(null);
+  const [prontoProprio, setProntoProprio] = useState(false);
   const impRef = useRef(null);
 
   useEffect(() => {
+    if (usaDoInicio) return undefined; // /api/inicio já trouxe — não duplica o pedido
     let vivo = true;
     apiFetch(`/api/ads?pagina=${encodeURIComponent(pagina)}`)
-      .then((r) => { if (vivo) { setAd(r?.ad || null); setPronto(true); } })
-      .catch(() => { if (vivo) setPronto(true); });
+      .then((r) => { if (vivo) { setAdProprio(r?.ad || null); setProntoProprio(true); } })
+      .catch(() => { if (vivo) setProntoProprio(true); });
     return () => { vivo = false; };
-  }, [pagina]);
+  }, [pagina, usaDoInicio]);
+
+  const ad = usaDoInicio ? inicio.dados?.ad?.ad ?? null : adProprio;
+  const pronto = usaDoInicio ? !inicio.carregando : prontoProprio;
 
   useEffect(() => {
     if (ad && ad.id && impRef.current !== ad.id) {

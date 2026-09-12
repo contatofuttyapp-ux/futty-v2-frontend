@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import { useTeams } from '../hooks/useTeam';
 import { usePerfil } from '../context/PerfilContext';
+import { InicioProvider } from '../context/InicioContext';
 import { useAuth } from '../hooks/useAuth';
 import BottomNav from './BottomNav';
 import AuroraBg from './AuroraBg';
@@ -111,12 +112,22 @@ export default function Layout({ children }) {
   // Só intercepta o swipe quando a BottomNav está visível (tabs principais).
   const swipeProps = showNav ? swipeHandlers : {};
 
+  // Início (11-set): 1 pedido só (GET /api/inicio) alimenta a tela E a BottomNav
+  // (equipas, votacao-status) enquanto o utilizador está nela — ver InicioContext.
+  // Fora do /home o Provider nem monta; tudo o resto continua como sempre.
+  const naInicio = pathname === '/home';
+  const conteudo = (
+    <>
+      {children}
+      {showNav && <BottomNav />}
+    </>
+  );
+
   return (
     <div style={{ paddingBottom: showNav ? 70 : 0 }} {...swipeProps}>
       <AuroraBg />
       <OnboardingGate pathname={pathname} />
-      {children}
-      {showNav && <BottomNav />}
+      {naInicio ? <InicioProvider>{conteudo}</InicioProvider> : conteudo}
     </div>
   );
 }

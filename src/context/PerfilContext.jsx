@@ -87,6 +87,21 @@ export function PerfilProvider({ children }) {
     }
   }, [userId]);
 
+  // Hidratação externa (11-set): o InicioContext já traz `me` dentro do payload
+  // agregado de /api/inicio — em vez de disparar um /api/me próprio, ele chama
+  // isto para preencher o mesmo estado que o efeito acima preencheria. Silencioso
+  // como `carregar`: não risca nada que um consumidor já esteja a mostrar.
+  const hidratar = useCallback(
+    (data) => {
+      if (!data || !userId) return;
+      setPerfil(data);
+      setErro(null);
+      setErroCode(null);
+      setCarregadoParaId(userId);
+    },
+    [userId]
+  );
+
   const value = {
     perfil,
     carregando,
@@ -95,6 +110,7 @@ export function PerfilProvider({ children }) {
     // o ecrã próprio em vez do app.
     suspenso: erroCode === 'CONTA_SUSPENSA',
     recarregar: carregar,
+    hidratar,
   };
 
   return <PerfilContext.Provider value={value}>{children}</PerfilContext.Provider>;

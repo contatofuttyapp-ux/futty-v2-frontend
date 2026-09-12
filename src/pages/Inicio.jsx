@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { usePerfil } from '../context/PerfilContext';
+import { useInicio } from '../context/InicioContext';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { celebrarTop3 } from '../hooks/useConfetti';
@@ -272,6 +273,13 @@ function EmptyState() {
 export default function Inicio() {
   const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil } = usePerfil();
   const { teams, loading: teamsLoading } = useTeams();
+  // Início (11-set): 1 pedido só (GET /api/inicio, via Layout.jsx que monta o
+  // InicioProvider só nesta rota) alimenta jogos, RSVP, campeonato, pedidos,
+  // votações pendentes, desfechos de denúncia e o anúncio — em vez dos ~9
+  // pedidos que esta página disparava em paralelo. As AÇÕES (confirmar
+  // presença, ausência, etc.) continuam a ir direto à API de sempre.
+  const inicio = useInicio();
+  const dadosInicio = inicio.dados;
 
   // O cromo é gerado AQUI (não dentro do CromoInicio) para que a geração corra
   // durante o gate de carregamento, antes de a página aparecer — ver `pageReady`.
@@ -282,9 +290,7 @@ export default function Inicio() {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState('all');
-  const [rsvpInfo, setRsvpInfo] = useState(null); // RSVP do próximo jogo (se aberto)
   const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
-  const [campeonato, setCampeonato] = useState(null); // campeonato da equipa principal
   const [ausenciaBusy, setAusenciaBusy] = useState(false);
   const [toast, setToast] = useState(null); // { msg, tipo }
   const celebrouCamp = useRef(false);
@@ -341,15 +347,16 @@ export default function Inicio() {
     window.location.assign(`/equipa/${game.team_slug}/jogo/${game.id}/sorteio`);
   }
 
-  useEffect(() => {
-    let active = true;
-    apiFetch('/api/games/my-invites')
-      .then((d) => active && setGames(d.games || []))
-      .catch((err) => active && setError(err.message));
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Sincroniza `games` a partir de /api/inicio (carga inicial e qualquer
+  // reload() subsequente) — as ações abaixo continuam a fazer optimistic
+  // update em cima deste estado local, exatamente como faziam com o fetch
+  // próprio de antes. Sincronizado DURANTE o render (mesmo padrão de
+  // MeuPerfil.jsx), não num efeito — evita o lint react-hooks/set-state-in-effect.
+  const [convitesAnterior, setConvitesAnterior] = useState(undefined);
+  if (dadosInicio?.convites !== convitesAnterior) {
+    setConvitesAnterior(dadosInicio?.convites);
+    if (dadosInicio?.convites) setGames(dadosInicio.convites.games || []);
+  }
 
   // Presença com optimistic update + chamada à API.
   async function onPresence(gameId, going) {
@@ -371,8 +378,9 @@ export default function Inicio() {
       });
     } catch (err) {
       setError(err.message);
-      const fresh = await apiFetch('/api/games/my-invites').catch(() => null);
-      if (fresh) setGames(fresh.games || []);
+      // Recarrega o agregado inteiro (não só os jogos) — o useEffect acima
+      // aplica `games` fresco assim que a resposta chegar.
+      await inicio.reload();
     } finally {
       setBusyId(null);
     }
@@ -456,43 +464,33 @@ export default function Inicio() {
   }
 
   // RSVP do próximo jogo: mostra o cartão de confirmação se estiver aberto.
-  // Guarda o gameId no estado para o render ignorar dados de um jogo anterior.
-  useEffect(() => {
-    if (!nextId) return undefined;
-    let ativo = true;
-    apiFetch(`/api/jogos/${nextId}/rsvp`)
-      .then((d) => {
-        if (!ativo) return;
-        setRsvpInfo({ ...d, gameId: nextId });
-        const meuId = me?.user?.id;
-        setMinhaResposta(
-          d.confirmados?.some((u) => u.id === meuId)
-            ? 'confirmado'
-            : d.recusados?.some((u) => u.id === meuId)
-              ? 'recusado'
-              : null
-        );
-      })
-      .catch(() => {
-        if (ativo) setRsvpInfo({ gameId: nextId, rsvp_aberto: false });
-      });
-    return () => {
-      ativo = false;
-    };
-  }, [nextId, me?.user?.id]);
+  // /api/inicio já calculou o próximo jogo com o MESMO critério do `nextId`
+  // abaixo (1º não-encerrado, jogos ordenados por data ASC) e devolveu o RSVP
+  // dele — sem rsvp aqui é porque não há próximo jogo, ou a leitura falhou.
+  const rsvpData = dadosInicio?.rsvp || null;
+  const rsvpInfo = nextId ? { ...(rsvpData || { rsvp_aberto: false }), gameId: nextId } : null;
+  // Sincronizado DURANTE o render (mesmo padrão de MeuPerfil.jsx), não num
+  // efeito: `minhaResposta` continua editável localmente pelo RSVPCard
+  // (onResposta={setMinhaResposta}) depois desta sincronização inicial.
+  const [rsvpDataAnterior, setRsvpDataAnterior] = useState(undefined);
+  if (rsvpData !== rsvpDataAnterior) {
+    setRsvpDataAnterior(rsvpData);
+    if (rsvpData) {
+      const meuId = me?.user?.id;
+      setMinhaResposta(
+        rsvpData.confirmados?.some((u) => u.id === meuId)
+          ? 'confirmado'
+          : rsvpData.recusados?.some((u) => u.id === meuId)
+            ? 'recusado'
+            : null
+      );
+    }
+  }
 
-  // Campeonato da equipa principal (card no Início).
+  // Campeonato da equipa principal (card no Início) — mesmo campSlug que o
+  // backend usou para calcular `campeonato` dentro de /api/inicio.
   const campSlug = teams[0]?.slug || null;
-  useEffect(() => {
-    if (!campSlug) return undefined;
-    let ativo = true;
-    apiFetch(`/api/equipas/${campSlug}/campeonato`)
-      .then((d) => ativo && setCampeonato(d?.campeonato || null))
-      .catch(() => {});
-    return () => {
-      ativo = false;
-    };
-  }, [campSlug]);
+  const campeonato = dadosInicio?.campeonato?.campeonato || null;
 
   // Confetti uma vez quando o campeonato está terminado.
   useEffect(() => {
@@ -513,16 +511,15 @@ export default function Inicio() {
   const noTeams = !teamsLoading && teams.length === 0;
 
   // Desfechos dos meus pedidos de entrada (aceite/recusado) — ciclo v1 sem push.
+  // Sincronizado DURANTE o render a partir de /api/inicio (carga inicial +
+  // reload()) — mesmo padrão de MeuPerfil.jsx, não num efeito; as ações abaixo
+  // continuam a fazer optimistic update local por cima.
   const [desfechos, setDesfechos] = useState([]);
-  useEffect(() => {
-    let ativo = true;
-    apiFetch('/api/me/pedidos')
-      .then((d) => ativo && setDesfechos(d.pedidos || []))
-      .catch(() => {});
-    return () => {
-      ativo = false;
-    };
-  }, []);
+  const [pedidosAnterior, setPedidosAnterior] = useState(undefined);
+  if (dadosInicio?.pedidos !== pedidosAnterior) {
+    setPedidosAnterior(dadosInicio?.pedidos);
+    if (dadosInicio?.pedidos) setDesfechos(dadosInicio.pedidos.pedidos || []);
+  }
   function dispensarDesfecho(id) {
     setDesfechos((cur) => cur.filter((p) => p.id !== id));
     apiFetch(`/api/me/pedidos/${id}`, { method: 'DELETE' }).catch(() => {});
@@ -539,17 +536,8 @@ export default function Inicio() {
 
   // P1-3 — a votação era invisível fora do Ranking. Banner no Início quando há
   // avaliações por dar (agregado de todas as equipas); dispensável por sessão.
-  const [votacoes, setVotacoes] = useState([]);
+  const votacoes = dadosInicio?.votacoes_pendentes?.pendentes || [];
   const [votacaoFechada, setVotacaoFechada] = useState(() => sessionStorage.getItem('futty_votacao_dismiss') === '1');
-  useEffect(() => {
-    let ativo = true;
-    apiFetch('/api/me/votacoes-pendentes')
-      .then((d) => ativo && setVotacoes(d.pendentes || []))
-      .catch(() => {});
-    return () => {
-      ativo = false;
-    };
-  }, []);
   const votacaoTop = !votacaoFechada ? votacoes[0] : null;
   function fecharVotacao() {
     setVotacaoFechada(true);
@@ -557,13 +545,8 @@ export default function Inicio() {
   }
 
   // Tijolo 3 — desfecho das MINHAS denúncias (nº, sem veredicto). Banner discreto.
-  const [denunciaDesfechos, setDenunciaDesfechos] = useState(0);
+  const denunciaDesfechos = dadosInicio?.denuncias_desfechos?.total || 0;
   const [desfechoFechado, setDesfechoFechado] = useState(() => sessionStorage.getItem('futty_denuncia_desfecho') === '1');
-  useEffect(() => {
-    let ativo = true;
-    apiFetch('/api/denuncias/meus-desfechos').then((d) => ativo && setDenunciaDesfechos(d.total || 0)).catch(() => {});
-    return () => { ativo = false; };
-  }, []);
   function fecharDesfecho() {
     setDesfechoFechado(true);
     sessionStorage.setItem('futty_denuncia_desfecho', '1');
@@ -758,7 +741,7 @@ export default function Inicio() {
           </div>
         </div>
 
-        {error && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error}</div>}
+        {(error || inicio.erro) && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error || inicio.erro}</div>}
 
         {noTeams ? (
           <EmptyState />
