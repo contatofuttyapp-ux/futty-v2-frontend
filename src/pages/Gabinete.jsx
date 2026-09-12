@@ -50,6 +50,7 @@ function fmtUptime(s) {
   return `${m}min`;
 }
 function fmtUSD(n) { return `US$${Number(n || 0).toFixed(2)}`; }
+function fmtEUR(n) { return `€${Number(n || 0).toFixed(2).replace('.', ',')}`; }
 function diasAte(dataISO) {
   if (!dataISO) return null;
   const ms = new Date(`${dataISO}T00:00:00Z`) - new Date(`${hojeISO()}T00:00:00Z`);
@@ -93,6 +94,7 @@ export default function Gabinete() {
   const [acessos, setAcessos] = useState(null);
   const [segManual, setSegManual] = useState(null);
   const [cobertura, setCobertura] = useState(null);
+  const [cambio, setCambio] = useState(null);
 
   function carregar() {
     return Promise.all([
@@ -106,6 +108,7 @@ export default function Gabinete() {
       setAcessos(o.acessos || []);
       setSegManual(o.seguranca_manual || { testes_permissao: {}, npm_audit: {}, ultima_auditoria: {} });
       setCobertura(o.cobertura || { vende: [], bloqueado: [] });
+      setCambio(o.cambio_usd_eur ?? 0.86);
     });
   }
 
@@ -139,7 +142,7 @@ export default function Gabinete() {
   }
 
   if (erro) return <div className="app-shell"><main className="app-main" style={{ padding: 24 }}><p className="muted">{erro}</p><Link to="/home" className="muted">← Início</Link></main></div>;
-  if (!dados || !op || !custos || !registros || !acessos || !segManual || !cobertura) return <LoadingFutty legenda="Carregando o Gabinete…" />;
+  if (!dados || !op || !custos || !registros || !acessos || !segManual || !cobertura || cambio == null) return <LoadingFutty legenda="Carregando o Gabinete…" />;
 
   return (
     <div className="app-shell">
@@ -167,6 +170,8 @@ export default function Gabinete() {
                 dados={dados}
                 custos={custos} setCustos={setCustos}
                 onSalvarCustos={() => salvarParcial('custos_fixos', custos)}
+                cambio={cambio} setCambio={setCambio}
+                onSalvarCambio={() => salvarParcial('cambio_usd_eur', cambio)}
               />
             )}
             {aba === 'anuncios' && (
@@ -251,7 +256,7 @@ function valorMensal(c) {
 }
 
 // ─── ABA 3: DINHEIRO ─────────────────────────────────────────────────────────
-function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos }) {
+function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCambio, onSalvarCambio }) {
   const ia = dados.dinheiro.ia_mes;
 
   function editarCusto(i, campo, valor) {
@@ -264,7 +269,7 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos }) {
 
   const hoje = hojeISO();
   const custosVencidos = custos.filter((c) => !c.pago && c.proxima_data && c.proxima_data < hoje).length;
-  const burn = Math.round(custos.reduce((s, c) => s + valorMensal(c), 0));
+  const burn = custos.reduce((s, c) => s + valorMensal(c), 0); // fmtEUR já mostra 2 casas
   const receita = 0; // sem IAP e sem receita de anúncios ainda — nunca inventa número
 
   return (
@@ -304,20 +309,34 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos }) {
 
       <h2 style={sectionH2}>IA do mês</h2>
       <div style={{ ...CARD, padding: 16, display: 'flex', gap: 28, flexWrap: 'wrap' }}>
-        <div><div style={bigNum}>{fmtUSD(ia.gasto_usd)}</div><span style={muted}>gasto no mês</span></div>
+        <div>
+          <div style={bigNum}>{fmtUSD(ia.gasto_usd)}</div>
+          <span style={muted}>gasto no mês · ≈ {fmtEUR(ia.gasto_usd * cambio)}</span>
+        </div>
         <div><div style={bigNum}>{fmtUSD(ia.gasto_hoje_usd)}</div><span style={muted}>gasto hoje</span></div>
         <div><div style={bigNum}>{fmtUSD(ia.teto_diario_usd)}</div><span style={muted}>teto diário configurado</span></div>
         <div><Semaforo cor={ia.freeze ? 'vermelho' : 'verde'}>{ia.freeze ? 'Freeze ligado' : 'Normal'}</Semaforo><div style={{ ...muted, marginTop: 4 }}>estado da IA</div></div>
+      </div>
+      <div style={{ ...CARD, padding: 12, marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 13, color: '#ddd' }}>1 US$ = €</span>
+        <input
+          style={{ ...inp, width: 80 }}
+          type="number" step="0.01" min="0.5" max="2"
+          value={cambio}
+          onChange={(e) => setCambio(Number(e.target.value))}
+        />
+        <span style={muted}>(editar quando o câmbio mudar)</span>
+        <button type="button" style={btn} onClick={onSalvarCambio}>Salvar câmbio</button>
       </div>
 
       <h2 style={sectionH2}>Burn & margem</h2>
       <div style={{ ...CARD, padding: 16 }}>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div><div style={{ ...bigNum, color: '#fda4af' }}>R${burn}</div><span style={muted}>custos fixos / mês</span></div>
-          <div><div style={bigNum}>R${receita}</div><span style={muted}>receita (IAP + anúncios)</span></div>
-          <div><div style={{ ...bigNum, color: '#fda4af' }}>-R${burn - receita}</div><span style={muted}>margem líquida</span></div>
+          <div><div style={{ ...bigNum, color: '#fda4af' }}>{fmtEUR(burn)}</div><span style={muted}>custos fixos / mês</span></div>
+          <div><div style={bigNum}>{fmtEUR(receita)}</div><span style={muted}>receita (IAP + anúncios)</span></div>
+          <div><div style={{ ...bigNum, color: '#fda4af' }}>-{fmtEUR(burn - receita)}</div><span style={muted}>margem líquida</span></div>
         </div>
-        <p style={{ ...muted, marginTop: 10 }}>Sem receita ainda (IAP das lojas e receita de anúncios por ligar) — a margem fica negativa, igual ao custo. Assume que os custos fixos estão na mesma moeda; não converte.</p>
+        <p style={{ ...muted, marginTop: 10 }}>Tudo em euros; receita das lojas será convertida quando existir.</p>
       </div>
     </div>
   );
