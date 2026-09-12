@@ -68,7 +68,22 @@ export function InicioProvider({ children }) {
   // Carga inicial ao montar (mesmo padrão do PerfilContext: o efeito chama a
   // API diretamente, em vez de invocar `carregar`, para o setState correr
   // dentro do .then()/.catch() e não sincronamente no corpo do efeito).
+  //
+  // BUG (13-set → corrigido 14-set, "Velocidade 3"): este Provider é montado
+  // em Layout.jsx por PATHNAME (pathname === '/home'), FORA do AuthGuard —
+  // ao contrário do que o comentário acima sugeria, isto NÃO espera o
+  // getSession() do Supabase resolver. Com deps [] (carrega 1x ao montar), o
+  // efeito capturava `userId` (e hidratarPerfil/hidratarTeams/
+  // hidratarVotacaoStatus, cada um fechado sobre ESSE userId nulo) do
+  // primeiro render — se esse primeiro render acontecia antes da sessão
+  // resolver, `gravarCache(null, …)` era ignorado (cacheLocal.js exige
+  // userId) e as hidratações para outros contextos silenciosamente não
+  // escreviam nada. Em localhost a sessão já vinha resolvida do storage antes
+  // do 1º paint (raro reproduzir); em produção (rede real) não. Agora o
+  // efeito depende de [userId] e sai cedo sem ele — corre de novo, com o
+  // userId certo, assim que a sessão resolver.
   useEffect(() => {
+    if (!userId) return undefined;
     let ativo = true;
     const minhaGeracao = ++geracaoRef.current;
 
@@ -109,8 +124,7 @@ export function InicioProvider({ children }) {
     return () => {
       ativo = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- carrega 1x ao montar (o Provider só existe na rota /home); reload() explícito cobre o resto
-  }, []);
+  }, [userId, hidratarPerfil, hidratarTeams, hidratarVotacaoStatus]);
 
   const value = { dados, carregando, erro, reload: carregar };
   return <InicioContext.Provider value={value}>{children}</InicioContext.Provider>;

@@ -175,20 +175,29 @@ export function SessaoProvider({ children }) {
     teamsRef.current = teams;
   }, [teams]);
 
+  // userIdRef.current em vez do `userId` da closure (13-set → corrigido
+  // 14-set, "Velocidade 3"): estas funções são chamadas de FORA (o
+  // InicioContext guarda a referência que recebeu de useSessao() no seu
+  // próprio efeito) — se essa chamada vier de um efeito cujo useCallback foi
+  // criado num render anterior (userId ainda nulo), gravarCache(null, …)
+  // seria ignorado mesmo com a chamada em si a acontecer depois da sessão
+  // resolver. O ref é sempre o userId ATUAL, não o congelado na criação da
+  // função — por isso as duas ficam com deps [] (identidade estável, nunca
+  // recriadas à toa).
   const hidratarTeams = useCallback((novasTeams) => {
     if (!Array.isArray(novasTeams)) return;
     setTeams(novasTeams);
     setErroTeams('');
     setCarregandoTeams(false);
     jaTentouTeamsRef.current = true; // já temos dado — sair de /home não deve refazer o pedido
-    gravarCache(userId, CACHE_TEAMS, novasTeams);
-  }, [userId]);
+    gravarCache(userIdRef.current, CACHE_TEAMS, novasTeams);
+  }, []);
 
   const hidratarVotacaoStatus = useCallback((status) => {
     setVotacaoStatus(status ?? null);
     votacaoTentadaParaRef.current = teamsRef.current[0]?.slug || null;
-    gravarCache(userId, CACHE_VOTACAO, status ?? null);
-  }, [userId]);
+    gravarCache(userIdRef.current, CACHE_VOTACAO, status ?? null);
+  }, []);
 
   const value = {
     me,

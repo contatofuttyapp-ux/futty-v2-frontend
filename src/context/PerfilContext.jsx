@@ -116,17 +116,22 @@ export function PerfilProvider({ children }) {
   // agregado de /api/inicio — em vez de disparar um /api/me próprio, ele chama
   // isto para preencher o mesmo estado que o efeito acima preencheria. Silencioso
   // como `carregar`: não risca nada que um consumidor já esteja a mostrar.
-  const hidratar = useCallback(
-    (data) => {
-      if (!data || !userId) return;
-      setPerfil(data);
-      setErro(null);
-      setErroCode(null);
-      setCarregadoParaId(userId);
-      gravarCache(userId, CACHE_CHAVE, data);
-    },
-    [userId]
-  );
+  //
+  // userIdRef.current em vez do `userId` da closure (14-set, "Velocidade 3",
+  // mesmo motivo do fix em SessaoContext): quem chama isto (InicioContext)
+  // guarda a referência que recebeu de usePerfil() no seu próprio efeito — se
+  // essa referência vier de um render anterior (userId ainda nulo), o guard
+  // abaixo bloquearia a hidratação mesmo com a chamada em si já acontecendo
+  // depois da sessão resolver. Ref é sempre o userId ATUAL; deps [] mantém a
+  // identidade estável.
+  const hidratar = useCallback((data) => {
+    if (!data || !userIdRef.current) return;
+    setPerfil(data);
+    setErro(null);
+    setErroCode(null);
+    setCarregadoParaId(userIdRef.current);
+    gravarCache(userIdRef.current, CACHE_CHAVE, data);
+  }, []);
 
   const value = {
     perfil,
