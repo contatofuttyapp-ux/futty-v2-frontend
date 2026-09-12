@@ -90,6 +90,7 @@ export default function Gabinete() {
   // Cópias editáveis locais (só vão ao servidor no "Salvar" de cada bloco).
   const [custos, setCustos] = useState(null);
   const [registros, setRegistros] = useState(null);
+  const [acessos, setAcessos] = useState(null);
   const [segManual, setSegManual] = useState(null);
   const [cobertura, setCobertura] = useState(null);
 
@@ -102,6 +103,7 @@ export default function Gabinete() {
       setDados(r); setOp(o); setPub(p);
       setCustos(o.custos_fixos || []);
       setRegistros(o.registros || []);
+      setAcessos(o.acessos || []);
       setSegManual(o.seguranca_manual || { testes_permissao: {}, npm_audit: {}, ultima_auditoria: {} });
       setCobertura(o.cobertura || { vende: [], bloqueado: [] });
     });
@@ -137,7 +139,7 @@ export default function Gabinete() {
   }
 
   if (erro) return <div className="app-shell"><main className="app-main" style={{ padding: 24 }}><p className="muted">{erro}</p><Link to="/home" className="muted">← Início</Link></main></div>;
-  if (!dados || !op || !custos || !registros || !segManual || !cobertura) return <LoadingFutty legenda="Carregando o Gabinete…" />;
+  if (!dados || !op || !custos || !registros || !acessos || !segManual || !cobertura) return <LoadingFutty legenda="Carregando o Gabinete…" />;
 
   return (
     <div className="app-shell">
@@ -181,7 +183,11 @@ export default function Gabinete() {
               />
             )}
             {aba === 'registros' && (
-              <AbaRegistros registros={registros} setRegistros={setRegistros} onSalvar={() => salvarParcial('registros', registros)} />
+              <AbaRegistros
+                registros={registros} setRegistros={setRegistros} onSalvarRegistros={() => salvarParcial('registros', registros)}
+                acessos={acessos} setAcessos={setAcessos} onSalvarAcessos={() => salvarParcial('acessos', acessos)}
+                showMsg={showMsg}
+              />
             )}
             {aba === 'cobertura' && (
               <AbaCobertura cobertura={cobertura} setCobertura={setCobertura} onSalvar={() => salvarParcial('cobertura', cobertura)} />
@@ -523,7 +529,7 @@ function CampoManual({ v, onData, vTexto, onTexto, placeholderTexto }) {
 }
 
 // ─── ABA 5: REGISTROS & PRAZOS ───────────────────────────────────────────────
-function AbaRegistros({ registros, setRegistros, onSalvar }) {
+function AbaRegistros({ registros, setRegistros, onSalvarRegistros, acessos, setAcessos, onSalvarAcessos, showMsg }) {
   function editar(i, campo, valor) { setRegistros(registros.map((r, k) => (k === i ? { ...r, [campo]: valor } : r))); }
   function add() { setRegistros([...registros, { id: uid(), nome: '', numero: '', estado: '', data: '', nota: '' }]); }
   function del(i) { setRegistros(registros.filter((_, k) => k !== i)); }
@@ -556,6 +562,77 @@ function AbaRegistros({ registros, setRegistros, onSalvar }) {
         </table>
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <button type="button" style={btn} onClick={add}>+ Adicionar registro</button>
+          <button type="button" style={btnGold} onClick={onSalvarRegistros}>Salvar</button>
+        </div>
+      </div>
+
+      <BlocoAcessos acessos={acessos} setAcessos={setAcessos} onSalvar={onSalvarAcessos} showMsg={showMsg} />
+    </div>
+  );
+}
+
+// Acessos & contas (12-set): onde cada peça da operação mora — SÓ caminho e
+// conta, NUNCA senha. Mesma regra do backend (gravar() em gabineteStore.js,
+// que é a fonte de verdade e recusa a gravação inteira) — aqui é só feedback
+// imediato ao digitar/colar, sem esperar o "Salvar".
+function pareceSegredo(texto) {
+  if (!texto) return false;
+  if (/^(re_|sk_|eyJ)/.test(texto)) return true;
+  if (/\S{41,}/.test(texto)) return true;
+  return false;
+}
+
+function BlocoAcessos({ acessos, setAcessos, onSalvar, showMsg }) {
+  function editar(i, campo, valor) {
+    if (campo === 'obs' && pareceSegredo(valor)) {
+      showMsg('Senhas não entram aqui. Guarde no Gerenciador de Senhas do Google.', true);
+      return;
+    }
+    setAcessos(acessos.map((a, k) => (k === i ? { ...a, [campo]: valor } : a)));
+  }
+  function add() { setAcessos([...acessos, { id: uid(), servico: '', para_que: '', site: '', entra_com: '', obs: '' }]); }
+  function del(i) { setAcessos(acessos.filter((_, k) => k !== i)); }
+
+  return (
+    <div style={{ marginTop: 30 }}>
+      <h2 style={sectionH2}>Acessos & contas</h2>
+      <p style={{ ...muted, margin: '0 0 10px' }}>Só o caminho e a conta. Senhas ficam no Gerenciador de Senhas do Google (conta contatofuttyapp).</p>
+      <div style={{ ...CARD, overflowX: 'auto', padding: 10 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 920 }}>
+          <thead>
+            <tr>
+              <th style={th}>Serviço</th>
+              <th style={th}>Pra que serve</th>
+              <th style={th}>Site</th>
+              <th style={th}>Entra com</th>
+              <th style={th}>Observação</th>
+              <th style={th} />
+            </tr>
+          </thead>
+          <tbody>
+            {acessos.map((a, i) => (
+              <tr key={a.id || i}>
+                <td style={{ ...td, width: 150 }}><input style={inp} value={a.servico} onChange={(e) => editar(i, 'servico', e.target.value)} /></td>
+                <td style={td}><input style={inp} value={a.para_que || ''} onChange={(e) => editar(i, 'para_que', e.target.value)} /></td>
+                <td style={{ ...td, width: 190 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input style={{ ...inp, flex: 1 }} value={a.site || ''} onChange={(e) => editar(i, 'site', e.target.value)} placeholder="https://" />
+                    {a.site ? (
+                      <a href={a.site} target="_blank" rel="noopener noreferrer" title="Abrir em nova aba" style={{ color: '#f0c94a', fontSize: 15, flexShrink: 0, textDecoration: 'none' }}>
+                        ↗
+                      </a>
+                    ) : null}
+                  </div>
+                </td>
+                <td style={{ ...td, width: 170 }}><input style={inp} value={a.entra_com || ''} onChange={(e) => editar(i, 'entra_com', e.target.value)} /></td>
+                <td style={td}><input style={inp} value={a.obs || ''} onChange={(e) => editar(i, 'obs', e.target.value)} /></td>
+                <td style={{ ...td, width: 30 }}><span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => del(i)}>✕</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <button type="button" style={btn} onClick={add}>+ Adicionar acesso</button>
           <button type="button" style={btnGold} onClick={onSalvar}>Salvar</button>
         </div>
       </div>
