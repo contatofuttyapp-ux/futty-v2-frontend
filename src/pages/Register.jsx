@@ -1,5 +1,5 @@
 // Futty v2.0 — Registo (email/password)
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import GoogleIcon from '../components/GoogleIcon';
@@ -22,6 +22,18 @@ export default function Register() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
+  const [reenviarMsg, setReenviarMsg] = useState('');
+  const [reenviarErro, setReenviarErro] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
+  // Contagem regressiva do "Reenviar e-mail": 1 setTimeout por tick, dependency
+  // simples em `cooldown` — evita recriar um setInterval solto a limpar na mão.
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -67,11 +79,30 @@ export default function Register() {
     // O onboarding fica à espera no servidor (flag onboarding_completo): venhas
     // pelo link do email ou por login, entras sempre por ele.
     if (data.user && !data.session) {
-      setSuccess('Conta criada! Confirme seu e-mail, depois preparamos seu perfil (leva 30s).');
+      setSuccess(`Conta criada! Enviamos um e-mail de confirmação para ${email}. Olhe também no Spam.`);
     } else {
       // Sessão imediata → onboarding dia-1.
       navigate('/onboarding', { replace: true });
     }
+  }
+
+  async function handleResend() {
+    setReenviarErro('');
+    setReenviarMsg('');
+    setReenviando(true);
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/onboarding` },
+    });
+    setReenviando(false);
+
+    if (resendError) {
+      setReenviarErro('Aguarde um minuto e tente de novo.');
+      return;
+    }
+    setReenviarMsg('Enviamos de novo. Olhe também na aba Promoções e no Spam.');
+    setCooldown(60);
   }
 
   async function handleGoogle() {
@@ -105,6 +136,20 @@ export default function Register() {
             {success && (
               <>
                 <div className="auth-alert auth-alert--success hud-corners-s">{success}</div>
+                {reenviarMsg && (
+                  <div className="auth-alert auth-alert--success hud-corners-s">{reenviarMsg}</div>
+                )}
+                {reenviarErro && (
+                  <div className="auth-alert auth-alert--error hud-corners-s">{reenviarErro}</div>
+                )}
+                <button
+                  type="button"
+                  className="auth-btn hud-corners-s"
+                  onClick={handleResend}
+                  disabled={reenviando || cooldown > 0}
+                >
+                  {cooldown > 0 ? `Reenviar em ${cooldown}s…` : reenviando ? 'Enviando…' : 'Reenviar e-mail'}
+                </button>
                 <button
                   type="button"
                   className="auth-btn hud-corners-s"

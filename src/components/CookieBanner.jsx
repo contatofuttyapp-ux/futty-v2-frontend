@@ -2,7 +2,7 @@
 // Fixo no fundo, mas ACIMA da BottomNav (a navegação nunca é tapada); uma linha;
 // fecha ao Aceitar OU na primeira interação real (scroll/toque/tecla). Só aparece
 // enquanto localStorage 'futty_cookies' não for 'aceite'.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { shouldShowNav } from './Layout';
 import '../styles/app.css';
@@ -12,6 +12,7 @@ const KEY = 'futty_cookies';
 export default function CookieBanner() {
   const { pathname } = useLocation();
   const navVisivel = shouldShowNav(pathname);
+  const bannerRef = useRef(null);
   const [visivel, setVisivel] = useState(() => {
     try {
       return localStorage.getItem(KEY) !== 'aceite';
@@ -31,9 +32,15 @@ export default function CookieBanner() {
 
   // Fecha na PRIMEIRA interação real (scroll, toque, clique ou tecla) — o utilizador
   // que já começou a usar o app não fica com a navegação disputada. { once:true }.
+  // Exceto quando a interação nasce DENTRO do próprio banner: senão o pointerdown
+  // no link "Saiba mais" fecha o banner (capture roda antes do click do Link) e a
+  // navegação nunca chega a acontecer.
   useEffect(() => {
     if (!visivel) return undefined;
-    const fechar = () => aceitar();
+    const fechar = (e) => {
+      if (bannerRef.current && bannerRef.current.contains(e.target)) return;
+      aceitar();
+    };
     const opts = { once: true, passive: true, capture: true };
     window.addEventListener('pointerdown', fechar, opts);
     window.addEventListener('keydown', fechar, opts);
@@ -51,6 +58,7 @@ export default function CookieBanner() {
 
   return (
     <div
+      ref={bannerRef}
       role="region"
       aria-label="Aviso de cookies"
       style={{
@@ -83,7 +91,7 @@ export default function CookieBanner() {
         }}
       >
         Cookies para manter sua sessão.{' '}
-        <Link to="/privacidade" style={{ color: 'var(--neon)' }}>Saiba mais</Link>
+        <Link to="/privacidade" onClick={aceitar} style={{ color: 'var(--neon)' }}>Saiba mais</Link>
       </p>
       <button type="button" className="btn btn--sm btn--primary" style={{ flexShrink: 0 }} onClick={aceitar}>
         Aceitar
