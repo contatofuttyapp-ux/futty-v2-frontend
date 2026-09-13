@@ -1,5 +1,9 @@
 {
   "appId": "com.futty.app",
   "appName": "Futty",
-  "webDir": "dist"
+  "webDir": "dist",
+  "backgroundColor": "#080808",
+  "android": {
+    "backgroundColor": "#080808"
+  }
 }

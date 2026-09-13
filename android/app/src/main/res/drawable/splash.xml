@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 13-set — splash refeita. Era um splash.png por densidade e orientação (26
+     arquivos, 0,89 MB) posto como windowBackground, que o Android estica para
+     preencher a janela: em tela alta (20:9) a arte saía deformada.
+     Agora são duas camadas: o fundo da casa em cor sólida e o F centrado por
+     gravity="center" — gravity não escala, então o logo tem o mesmo tamanho
+     físico em qualquer tela e nunca distorce.
+     A cor é a MESMA de colors.xml, de capacitor.config.json e da variável bg do
+     index.css: é isso que faz o arranque não ter degrau nenhum. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/futtyFundo" />
+    <item>
+        <bitmap
+            android:src="@drawable/splash_logo"
+            android:gravity="center" />
+    </item>
+</layer-list>

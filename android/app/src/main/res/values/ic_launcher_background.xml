@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- 13-set: era #FFFFFF. O foreground é o F com fundo transparente, então a
+         placa branca aparecia por baixo em qualquer launcher que recorte em
+         círculo. Agora é o azul-quase-preto da marca. -->
+    <color name="ic_launcher_background">#050810</color>
 </resources>

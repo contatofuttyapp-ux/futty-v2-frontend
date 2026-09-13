@@ -42,8 +42,14 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // 13-set: ligados. O grosso do pacote é a webview, mas isto tira as
+            // classes e recursos que nenhuma parte do app alcança. As regras do
+            // Capacitor estão em proguard-rules.pro — sem elas o R8 remove as
+            // classes de plugin, que só são encontradas por reflexão em runtime,
+            // e o app abre numa tela em branco.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (temKeystore) {
                 signingConfig signingConfigs.release
             }

@@ -1,22 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
+    <!-- 13-set — o tema base era Theme.AppCompat.Light: janela BRANCA. Era daí
+         que vinha o flash branco ao abrir e ao voltar de segundo plano. Agora é
+         DayNight com o fundo da casa declarado, e a cadeia inteira (janela →
+         splash → WebView → body) usa a mesma cor. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.DarkActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/futtyFundo</item>
     </style>
 
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
+        <!-- Era @null: a janela ficava transparente e aparecia o branco do
+             sistema por baixo nos instantes em que o WebView ainda não pintou. -->
+        <item name="android:background">@color/futtyFundo</item>
+        <item name="android:windowBackground">@color/futtyFundo</item>
+        <!-- Barra de estado na cor do app, com ícones claros (fundo escuro). -->
+        <item name="android:statusBarColor">@color/futtyFundo</item>
+        <item name="android:navigationBarColor">@color/futtyFundo</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
-
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:statusBarColor">@color/futtyFundo</item>
+        <item name="android:navigationBarColor">@color/futtyFundo</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- API 31+: o sistema desenha a splash sozinho a partir destes dois. Sem
+             eles, o Android 12+ ignora o windowBackground e usa o ícone do
+             launcher sobre a cor do tema — que é justamente o que dava o
+             descasamento. -->
+        <item name="android:windowSplashScreenBackground">@color/futtyFundo</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

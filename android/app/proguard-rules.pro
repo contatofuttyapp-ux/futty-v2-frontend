@@ -1,21 +1,36 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# Regras do R8/ProGuard para o release do Futty.
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# 13-set — escritas quando minifyEnabled e shrinkResources foram ligados.
+# O problema que elas resolvem: o Capacitor encontra os plugins por REFLEXÃO,
+# lendo a anotação @CapacitorPlugin em runtime. O R8 não vê essas chamadas, dá as
+# classes por não usadas e apaga. O app compila, assina, instala — e abre numa
+# tela em branco, porque a ponte não acha nenhum plugin. Não há aviso nenhum na
+# compilação.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# A ponte e os plugins do Capacitor.
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+-keepclassmembers class * extends com.getcapacitor.Plugin {
+    @com.getcapacitor.PluginMethod public <methods>;
+}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Plugins desta app (@capacitor/app e @capacitor/browser).
+-keep class com.capacitorjs.plugins.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Plugins Cordova, que o Capacitor também carrega por reflexão.
+-keep class org.apache.cordova.** { *; }
+
+# Qualquer coisa exposta ao JavaScript do WebView tem de manter o nome: o JS
+# chama pelo nome, e renomear quebra em silêncio.
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# A anotação em si tem de sobreviver, senão a busca por ela não encontra nada.
+-keepattributes *Annotation*, JavascriptInterface
+
+# Rastreio de erro legível no Sentry/Play Console. Sem isto, um crash chega como
+# a.b.c(Unknown Source) e não dá para descobrir nada.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

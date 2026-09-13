@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 13-set — UMA cor de fundo para toda a cadeia de arranque: janela do
+         Android, splash, fundo do WebView e o body do app. É isso que faz o
+         arranque não piscar: não há branco nem degrau de cor entre as etapas.
+         Tem de bater com a variável bg do src/index.css. Se mudar lá, muda aqui. -->
+    <color name="futtyFundo">#080808</color>
+</resources>
