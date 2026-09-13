@@ -18,12 +18,24 @@ import LoadingFutty from './components/LoadingFutty';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage';
 import PageTransition from './components/PageTransition';
+import {
+  importarInicio,
+  importarFeed,
+  importarRanking,
+  importarFigurinha,
+  importarMeuPerfil,
+} from './lib/preaquecerAbas';
 
 // Páginas em lazy loading (cada uma no seu chunk).
+//
+// As cinco abas da barra de baixo importam-se através de lib/preaquecerAbas.js:
+// são as MESMAS funções que a BottomNav usa para as pré-carregar em ócio
+// (VELOCIDADE 4). Partilhar a função é o que garante que pré-aquecer e navegar
+// falam do mesmo módulo — o registo do browser devolve a mesma promessa.
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const Inicio = lazy(() => import('./pages/Inicio'));
+const Inicio = lazy(importarInicio);
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const SorteioShow = lazy(() => import('./pages/SorteioShow'));
 const CriarEquipa = lazy(() => import('./pages/CriarEquipa'));
@@ -32,14 +44,14 @@ const Convite = lazy(() => import('./pages/Convite'));
 const Jogos = lazy(() => import('./pages/Jogos'));
 const NovoJogo = lazy(() => import('./pages/NovoJogo'));
 const Jogo = lazy(() => import('./pages/Jogo'));
-const Ranking = lazy(() => import('./pages/Ranking'));
+const Ranking = lazy(importarRanking);
 const Campeonato = lazy(() => import('./pages/Campeonato'));
 const JogadorPerfil = lazy(() => import('./pages/JogadorPerfil'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const AlterarPassword = lazy(() => import('./pages/AlterarPassword'));
-const Feed = lazy(() => import('./pages/Feed'));
-const Figurinha = lazy(() => import('./pages/Figurinha'));
-const MeuPerfil = lazy(() => import('./pages/MeuPerfil'));
+const Feed = lazy(importarFeed);
+const Figurinha = lazy(importarFigurinha);
+const MeuPerfil = lazy(importarMeuPerfil);
 const Planos = lazy(() => import('./pages/Planos'));
 const SorteioPublico = lazy(() => import('./pages/SorteioPublico'));
 const CampeonatoPublico = lazy(() => import('./pages/CampeonatoPublico'));

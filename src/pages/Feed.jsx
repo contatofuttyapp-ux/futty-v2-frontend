@@ -11,6 +11,7 @@ import LoadingFutty from '../components/LoadingFutty';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
 import { useTeams } from '../hooks/useTeam';
+import { useApiComCache } from '../hooks/useApiComCache';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import Reacoes from '../components/Reacoes';
 import Comentarios from '../components/Comentarios';
@@ -192,7 +193,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
               onClick={() => onOpenImage(foto)}
               style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: '#000', cursor: 'zoom-in' }}
             >
-              <img src={foto} alt="" style={{ width: '100%', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
+              <img src={foto} alt="" loading="lazy" decoding="async" style={{ width: '100%', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
             </button>
           ) : null}
 
@@ -521,7 +522,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
             <video src={assetUrl(media[0].url)} controls style={{ width: '100%', maxHeight: 460, borderRadius: 10, display: 'block', background: '#000' }} />
           ) : (
             <button type="button" onClick={() => onOpenImage(assetUrl(media[0].url))} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block', width: '100%' }}>
-              <img src={assetUrl(media[0].url)} alt="" style={{ width: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
+              <img src={assetUrl(media[0].url)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
             </button>
           )}
         </div>
@@ -535,7 +536,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
                   <video src={url} controls style={{ width: 240, maxHeight: 220, display: 'block', background: '#000' }} />
                 ) : (
                   <button type="button" onClick={() => onOpenImage(url)} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block' }}>
-                    <img src={url} alt="" style={{ width: 240, maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    <img src={url} alt="" loading="lazy" decoding="async" width={240} style={{ width: 240, maxHeight: 220, objectFit: 'cover', display: 'block' }} />
                   </button>
                 )}
               </div>
@@ -872,22 +873,28 @@ export default function Feed() {
   // !teamsLoading evita mostrar isto por um instante antes de saber se há time.
   const semTime = !teamsLoading && teams.length === 0;
 
-  const [items, setItems] = useState(null); // null = a carregar
+  // VELOCIDADE 4 — a Resenha era a única das cinco abas sem cache nenhum: um
+  // apiFetch cru dentro de um efeito, e o loader a tapar a tela inteira até a
+  // resposta chegar de São Paulo. Quem está em Lisboa pagava essa espera em
+  // TODA visita à aba. Agora entra no mesmo stale-while-revalidate do resto da
+  // casa: pinta o feed da última visita na hora e actualiza por trás.
+  const { data: feedData, loading: feedCarregando, error: feedErro } = useApiComCache('/api/feed', 'feed');
+
+  const [items, setItems] = useState(null); // null = ainda não há nada para mostrar
   const [erro, setErro] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [imgFull, setImgFull] = useState(null);
   const [novoPostId, setNovoPostId] = useState(null); // P2-11: post acabado de criar
 
-  // Carrega o feed uma vez; o filtro por chip é local (sem nova chamada).
-  useEffect(() => {
-    let ativo = true;
-    apiFetch('/api/feed')
-      .then((d) => ativo && setItems(d.items || []))
-      .catch((err) => ativo && setErro(err.message));
-    return () => {
-      ativo = false;
-    };
-  }, []);
+  // `items` continua a ser estado local porque as ações fazem optimistic update
+  // por cima dele (apagar post, publicar, bloquear jogador). Sincronizado
+  // DURANTE o render a partir do hook — mesmo padrão do MeuPerfil e do Início,
+  // nunca num efeito (lint react-hooks/set-state-in-effect).
+  const [feedAnterior, setFeedAnterior] = useState(undefined);
+  if (feedData !== feedAnterior) {
+    setFeedAnterior(feedData);
+    if (feedData) setItems(feedData.items || []);
+  }
 
   // Bloqueio entre jogadores (Apple UGC 1.2): remove localmente todo o conteúdo
   // dessa pessoa (o servidor já filtra desde já para pedidos futuros).
@@ -932,7 +939,9 @@ export default function Feed() {
     return () => clearTimeout(t);
   }, [novoPostId]);
 
-  const loading = items === null;
+  // Só há loader quando não há NADA para mostrar (nem cache, nem resposta).
+  // Com cache, a tela pinta e a actualização acontece por trás, sem loader.
+  const loading = items === null && feedCarregando;
   const meId = user?.id;
   // Fonte do nome = a do Início (nome_jogador primeiro). NUNCA o derivado do email.
   const nomeUser = user?.nome_jogador || user?.nome || 'Jogador';
@@ -959,7 +968,7 @@ export default function Feed() {
               ))}
             </div>
 
-            {erro ? <div className="alert alert--error" style={{ marginTop: 12 }}>{erro}</div> : null}
+            {erro || feedErro ? <div className="alert alert--error" style={{ marginTop: 12 }}>{erro || feedErro}</div> : null}
 
             {/* 2.5 COMPOSER INLINE NO TOPO (só para quem pode publicar). Substitui o FAB. */}
             {podeCriar ? (

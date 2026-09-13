@@ -1,12 +1,20 @@
 // Futty v2.0 — Barra de navegação inferior (ícones SVG custom + animações por tab).
+import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Icon from './Icon';
 import { useApi } from '../hooks/useApi';
 import { useSessao } from '../context/SessaoContext';
+import { preaquecerAbas } from '../lib/preaquecerAbas';
 
 export default function BottomNav() {
   const { pathname } = useLocation();
   const { teams, votacaoStatus } = useSessao();
+
+  // VELOCIDADE 4: a barra aquece os próprios destinos. Cada aba vive num chunk
+  // separado que, até agora, só começava a ser lido no toque — e o toque ficava
+  // com cara de morto enquanto isso. Corre em ócio, depois da tela actual estar
+  // desenhada, e só uma vez por sessão.
+  useEffect(() => preaquecerAbas(), []);
 
   // Slug para o Ranking: o da rota atual ou a 1ª equipa do utilizador.
   const urlSlug = pathname.match(/^\/equipa\/([^/]+)/)?.[1] || null;

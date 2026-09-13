@@ -14,6 +14,13 @@ export default function Icon({ name, size = 24, color = '#d4a017', className = '
     <img
       src={`/icons/${name}.svg`}
       alt={name}
+      // VELOCIDADE 4: width/height como ATRIBUTOS (além do style) dão ao browser
+      // a caixa antes de o CSS chegar — e há cinco destes na barra de baixo, em
+      // toda tela. decoding="async" tira a descodificação do caminho da pintura:
+      // o ícone entra um instante depois em vez de segurar a tela inteira.
+      width={size}
+      height={size}
+      decoding="async"
       style={{ width: size, height: size, display: 'block', filter, ...style }}
       className={className}
     />

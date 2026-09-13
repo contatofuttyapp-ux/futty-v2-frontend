@@ -792,7 +792,7 @@ export default function Inicio() {
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.4)' }}>
             <span className="figurinha-gerando-moldura" style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.5)', background: '#101012' }}>
               {user?.foto_url ? (
-                <img src={urlAsset(user.foto_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urlAsset(user.foto_url)} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
@@ -804,7 +804,7 @@ export default function Inicio() {
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
             <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(248,113,113,0.5)', background: '#101012', overflow: 'hidden' }}>
               {user?.foto_url ? (
-                <img src={urlAsset(user.foto_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urlAsset(user.foto_url)} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </span>
             {/* Texto neutro (14-set): 'falhou' também cobre IA_INDISPONIVEL (motor
