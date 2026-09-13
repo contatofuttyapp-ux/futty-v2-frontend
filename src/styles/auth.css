@@ -268,6 +268,27 @@
   border-color: rgba(139, 92, 246, 0.45);
 }
 
+/* Botão da Apple (só no iOS nativo) — mesma caixa do Google, para a regra da
+   Apple de que o Entrar com a Apple não pode ser menos visível que os outros
+   logins. Branco em vez de roxo porque a marca tem de aparecer a uma cor só. */
+.auth-btn--apple {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+.auth-btn--apple:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
 /* O .auth-btn--primary (roxo neon cheio) foi-se: com o ForgotPassword a adoptar a
    receita, ficou sem um único utilizador. Regra da casa — classe sem quem a use é
    classe que mente ao próximo que ler este ficheiro. */

@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { entrarComGoogle } from '../lib/googleAuth';
+import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
 import GoogleIcon from '../components/GoogleIcon';
+import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
@@ -39,6 +41,19 @@ export default function Login() {
     setError('');
     const { error } = await entrarComGoogle({ redirectTo: `${window.location.origin}${from}` });
     if (error) setError(error.message);
+  }
+
+  // Ao contrário do Google, o login da Apple termina dentro da app (sem Custom
+  // Tab nem deep link): quando volta, a sessão já existe e a navegação é aqui.
+  async function handleApple() {
+    setError('');
+    const { error, cancelado } = await entrarComApple();
+    if (cancelado) return;
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    navigate(from, { replace: true });
   }
 
   return (
@@ -106,6 +121,20 @@ export default function Login() {
           </form>
 
           <div className="auth-divider">ou</div>
+
+          {/* A Apple vem primeiro no iPhone: a regra 4.8 da App Store pede que o
+              Entrar com a Apple não seja menos visível que os outros logins. */}
+          {podeEntrarComApple() && (
+            <button
+              type="button"
+              className="auth-btn auth-btn--apple hud-corners-s"
+              onClick={handleApple}
+              style={{ marginBottom: 10 }}
+            >
+              <AppleIcon />
+              Continuar com a Apple
+            </button>
+          )}
 
           <button
             type="button"

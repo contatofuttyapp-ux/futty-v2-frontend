@@ -5,8 +5,10 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { entrarComGoogle } from '../lib/googleAuth';
+import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
 import FuttyLockup from '../components/FuttyLockup';
 import GoogleIcon from '../components/GoogleIcon';
+import AppleIcon from '../components/AppleIcon';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -24,6 +26,15 @@ export default function LandingPage() {
     setErro('');
     const { error } = await entrarComGoogle({ redirectTo: `${window.location.origin}/` });
     if (error) setErro(error.message);
+  }
+
+  // Aqui não há navigate: esta tela é desenhada pelo IndexRedirect, que manda
+  // para /home assim que a sessão aparece. O da Apple nasce dentro da app, por
+  // isso isso acontece ainda antes desta função acabar.
+  async function handleApple() {
+    setErro('');
+    const { error, cancelado } = await entrarComApple();
+    if (!cancelado && error) setErro(error.message);
   }
 
   return (
@@ -68,6 +79,32 @@ export default function LandingPage() {
         </h1>
 
         <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 320 }}>
+          {/* A Apple vem primeiro no iPhone: a regra 4.8 da App Store pede que o
+              Entrar com a Apple não seja menos visível que os outros logins.
+              Sem o .auth-btn--apple porque esta tela não carrega o auth.css —
+              usa o contorno da casa, do mesmo tamanho do CTA dourado. */}
+          {podeEntrarComApple() && (
+            <button
+              type="button"
+              className="btn btn--outline hud-corners-s"
+              onClick={handleApple}
+              style={{
+                width: '100%',
+                height: 46,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                fontSize: 15,
+                fontFamily: "'Rajdhani', sans-serif",
+                cursor: 'pointer',
+              }}
+            >
+              <AppleIcon />
+              Continuar com a Apple
+            </button>
+          )}
+
           <div className="cta-gold-glow">
             <button
               type="button"
