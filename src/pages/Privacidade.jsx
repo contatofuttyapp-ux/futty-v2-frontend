@@ -4,6 +4,9 @@
 // razão social + CNPJ quando a empresa for constituída), sem travessões, com as
 // seções novas: transferência internacional, backups, registros de moderação e
 // alterações da política.
+// v2 (13-set): infraestrutura real (Cloud Run São Paulo + Cloudflare, não mais
+// Railway/Vercel), Resend e Sentry na lista de fornecedores, exclusão de conta
+// pelo próprio app (Perfil → Conta) como via principal.
 import { Link } from 'react-router-dom';
 import '../styles/app.css';
 
@@ -13,7 +16,7 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const ULTIMA_ATUALIZACAO = '31 de julho de 2026';
+const ULTIMA_ATUALIZACAO = '13 de setembro de 2026 (v2)';
 const CONTATO = 'contatofuttyapp@gmail.com';
 
 export default function Privacidade() {
@@ -64,7 +67,10 @@ export default function Privacidade() {
         </p>
         <ul style={ul}>
           <li><span style={strong}>Supabase</span>: banco de dados, autenticação e armazenamento de arquivos (fotos ficam em bucket privado)</li>
-          <li><span style={strong}>Railway / Vercel</span>: hospedagem do backend e do app</li>
+          <li><span style={strong}>Google Cloud</span> (Cloud Run, São Paulo): hospedagem do motor do app</li>
+          <li><span style={strong}>Cloudflare</span>: entrega das telas do app e proteção de rede</li>
+          <li><span style={strong}>Resend</span>: envio dos e-mails de conta (confirmação, redefinição de senha), só vê o seu e-mail</li>
+          <li><span style={strong}>Sentry</span>: registro de erros técnicos, sem dados pessoais além do id da conta</li>
           <li><span style={strong}>fal.ai</span>: recebe só a foto enviada no momento de gerar o card, não vê o resto do seu perfil</li>
           <li><span style={strong}>Anthropic</span>: recebe só o conteúdo denunciado, para triagem automática, sem a sua identidade</li>
           <li><span style={strong}>Apple / Google</span>: processam os pagamentos na loja; o cartão fica com a loja, o Futty só recebe a confirmação da compra</li>
@@ -90,7 +96,8 @@ export default function Privacidade() {
 
         <h2 style={h2}>6. Onde os dados ficam</h2>
         <p style={p}>
-          Os fornecedores listados na seção 3 podem processar dados em servidores fora do
+          O banco de dados e o motor do Futty ficam no Brasil, em São Paulo. Os demais
+          fornecedores listados na seção 3 podem processar dados em servidores fora do
           Brasil (por exemplo, nos Estados Unidos e na Europa). Nesses casos, a transferência
           acontece com as salvaguardas contratuais desses fornecedores, que atendem aos
           padrões internacionais de proteção de dados.
@@ -98,11 +105,14 @@ export default function Privacidade() {
 
         <h2 style={h2}>7. Retenção e eliminação: apagar apaga</h2>
         <p style={p}>
-          Guardamos seus dados enquanto a sua conta estiver ativa. Você pode pedir a
-          eliminação da sua conta e dos seus dados pessoais a qualquer momento pelo e-mail{' '}
-          <a href={`mailto:${CONTATO}`} style={{ color: 'var(--neon)' }}>{CONTATO}</a>. Quando
-          você apaga um post ou uma foto, o arquivo é removido do armazenamento, sem ficar
-          órfão em outro lugar.
+          Guardamos seus dados enquanto a sua conta estiver ativa. A forma mais rápida de
+          apagar é pelo próprio app: <span style={strong}>Perfil → Conta → Excluir conta</span>,
+          exclusão imediata. Veja o passo a passo em{' '}
+          <Link to="/excluir-conta" style={{ color: 'var(--neon)' }}>Excluir conta</Link>. Se
+          você não conseguir entrar no app, escreva para{' '}
+          <a href={`mailto:${CONTATO}`} style={{ color: 'var(--neon)' }}>{CONTATO}</a>, com
+          prazo de até 7 dias para o pedido ser atendido. Quando você apaga um post ou uma
+          foto, o arquivo é removido do armazenamento, sem ficar órfão em outro lugar.
         </p>
         <ul style={{ ...ul, marginTop: 6 }}>
           <li>Cópias de segurança podem reter dados apagados por até 30 dias antes de serem sobrescritas.</li>
