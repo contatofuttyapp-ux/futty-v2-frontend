@@ -1,0 +1,14 @@
+# Onde moram os certificados e perfis do Futty.
+#
+# Repositório à parte, privado, e NUNCA o repositório do app: certificado de
+# distribuição junto do código é material de assinatura solto para quem tiver
+# acesso ao projeto. O conteúdo vai cifrado com a MATCH_PASSWORD, e o Mac
+# alugado entra por uma chave de deploy só dele (secret MATCH_DEPLOY_KEY),
+# que só alcança este repositório e mais nada.
+
+git_url("git@github.com:contatofuttyapp-ux/futty-certificates.git")
+storage_mode("git")
+
+type("appstore")
+app_identifier(["com.futty.app"])
+team_id("M4ZMC5ZX8T")

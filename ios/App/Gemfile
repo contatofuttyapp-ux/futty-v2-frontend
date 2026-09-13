@@ -1,0 +1,6 @@
+# O fastlane vem pré-instalado no Mac do GitHub Actions, mas a versão muda sem
+# aviso. Fixar por aqui é o que impede o build de quebrar num dia em que a
+# GitHub trocou a imagem do runner.
+source "https://rubygems.org"
+
+gem "fastlane"

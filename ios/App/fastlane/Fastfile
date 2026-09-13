@@ -1,0 +1,93 @@
+# Futty — compila o app do iPhone e manda para o TestFlight, do Mac alugado.
+#
+# Por que fastlane match e não a assinatura automática do xcodebuild: rodado
+# por linha de comando, sem Xcode gráfico, o `xcodebuild archive` com
+# CODE_SIGN_STYLE=Automatic decide sozinho assinar "para desenvolvimento" — e
+# aí exige um aparelho cadastrado na conta da Apple, que um CI nunca vai ter.
+# Tentar corrigir isso forçando a identidade de distribuição só troca o erro
+# por um conflito ("automatically signed for development, but a conflicting
+# code signing identity Apple Distribution has been manually specified").
+#
+# O match resolve pela raiz: guarda um certificado de distribuição e um perfil
+# App Store, cifrados, no repositório privado futty-certificates; instala os
+# dois num chaveiro temporário do Mac da vez; e o build assina em modo MANUAL,
+# apontando para o perfil pelo nome. Sem adivinhação e sem aparelho.
+
+default_platform(:ios)
+
+APP_ID = "com.futty.app"
+TEAM_ID = "M4ZMC5ZX8T"
+
+platform :ios do
+  desc "Compila em Release e envia para o TestFlight"
+  lane :beta do
+    # A mesma chave serve para tudo: criar certificado e perfil (match) e
+    # enviar o build (upload_to_testflight). É App Manager, tem permissão.
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APPSTORE_KEY_ID"),
+      issuer_id: ENV.fetch("APPSTORE_ISSUER_ID"),
+      key_content: ENV.fetch("APPSTORE_P8_BASE64"),
+      is_key_content_base64: true
+    )
+
+    # Chaveiro temporário e desbloqueado para o Mac da vez. Sem isto o match
+    # não tem onde instalar o certificado e o build trava pedindo senha a um
+    # usuário que não existe.
+    setup_ci
+
+    # readonly: false porque na primeira execução ainda não existe certificado
+    # nem perfil — o match cria os dois no portal da Apple e guarda cifrados.
+    # Da segunda vez em diante ele só baixa o que já está lá.
+    match(
+      type: "appstore",
+      app_identifier: APP_ID,
+      readonly: false,
+      api_key: api_key
+    )
+
+    # O número do build tem de subir a cada envio: a App Store Connect recusa
+    # repetidos. O número da execução do workflow nunca repete.
+    increment_build_number(
+      xcodeproj: "App.xcodeproj",
+      build_number: ENV.fetch("GITHUB_RUN_NUMBER")
+    )
+
+    mapa = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
+    perfil = mapa[APP_ID] || ENV["sigh_#{APP_ID}_appstore_profile-name"]
+    UI.user_error!("O match não devolveu o nome do perfil de distribuição.") if perfil.to_s.empty?
+
+    # Aqui o projeto deixa de ser automático. O pbxproj fica em Automatic no
+    # repositório (é o que serve para abrir no Xcode); quem troca para manual
+    # é esta linha, só na hora do build e só no Mac da vez.
+    update_code_signing_settings(
+      path: "App.xcodeproj",
+      use_automatic_signing: false,
+      team_id: TEAM_ID,
+      code_sign_identity: "Apple Distribution",
+      profile_name: perfil,
+      bundle_identifier: APP_ID,
+      targets: ["App"]
+    )
+
+    build_app(
+      workspace: "App.xcworkspace",
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build",
+      output_name: "Futty.ipa",
+      export_options: {
+        signingStyle: "manual",
+        provisioningProfiles: { APP_ID => perfil }
+      }
+    )
+
+    # skip_waiting_for_build_processing: o processamento na App Store Connect
+    # leva de 5 a 15 minutos e não há nada a fazer enquanto isso — esperar só
+    # queimaria o Mac alugado.
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
