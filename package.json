@@ -8,15 +8,18 @@
     "dev:rede": "vite --mode network",
     "build": "vite build",
     "build:native": "vite build && node scripts/preparar-nativo.js && cap sync android",
+    "build:native:ios": "vite build && node scripts/preparar-nativo.js && cap sync ios",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^8.0.4",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.2",
     "@sentry/react": "^10.58.0",
     "@supabase/supabase-js": "^2.107.0",
     "canvas-confetti": "^1.9.4",

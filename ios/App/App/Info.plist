@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CAPACITOR_DEBUG</key>
+	<string>$(CAPACITOR_DEBUG)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>pt-BR</string>
+	<key>CFBundleDisplayName</key>
+	<string>Futty</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- Retorno do login Google (Custom Tab / SFSafariViewController) e dos links
+	     de e-mail de recuperar senha: com.futty.app://auth/callback. O mesmo
+	     esquema que o AndroidManifest regista no intent-filter e que
+	     lib/googleAuth.js usa como redirectTo. Quem recebe no iOS é o
+	     SceneDelegate (scene:openURLContexts:), que entrega ao Capacitor, que
+	     dispara o appUrlOpen ouvido por components/DeepLinkListener.jsx. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.futty.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.futty.app</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Só HTTPS: nenhuma exceção de App Transport Security. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- Textos que o iOS mostra no diálogo de permissão. São exigidos mesmo
+	     usando só o <input type="file"> e o navigator.geolocation do WebView:
+	     sem eles o app fecha na hora em que a permissão é pedida. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Para tirar a foto da sua figurinha</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Para escolher a foto da sua figurinha</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Para mostrar peladas perto de você; sua posição não sai do celular</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<!-- arm64 em vez do armv7 do molde do Capacitor: com iOS 15 mínimo não
+	     existe nenhum aparelho de 32 bits elegível, e armv7 daria uma exigência
+	     que nenhum dos aparelhos suportados cumpre. -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<!-- A barra de status é clara (texto branco) em toda a app, e não depende do
+	     view controller: o Futty é escuro do arranque ao fim, e o modo automático
+	     escreveria em preto sobre o #080808 quando o aparelho está em tema claro. -->
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- Tema escuro fixo: evita os controlos de formulário e o fundo do WebView
+	     virarem claros quando o aparelho está em modo claro. -->
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+</dict>
+</plist>

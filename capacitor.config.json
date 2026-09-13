@@ -5,5 +5,8 @@
   "backgroundColor": "#080808",
   "android": {
     "backgroundColor": "#080808"
+  },
+  "ios": {
+    "backgroundColor": "#080808"
   }
 }

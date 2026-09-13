@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Entrar com a Apple. A App Store exige este login sempre que o app oferece
+	     login por outra rede social (o Futty tem o do Google) — Guideline 4.8.
+	     "Default" = a app é o dono primário do App ID; não há Services ID a
+	     partilhar com uma versão web (ver IOS.md). Com assinatura automática, o
+	     xcodebuild -allowProvisioningUpdates liga esta capacidade no App ID
+	     sozinho, desde que a chave da App Store Connect API tenha permissão. -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>
