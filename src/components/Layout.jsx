@@ -28,8 +28,16 @@ function OnboardingGate({ pathname }) {
   // Achado 4 (roteiro 10-set): usava o seu próprio useApi('/api/me') — como o
   // Layout envolve TODAS as rotas, era um pedido extra em toda sessão nova. Agora
   // lê do PerfilContext partilhado.
-  const { perfil } = usePerfil();
-  const incompleto = ativa && perfil?.user?.onboarding_completo === false;
+  //
+  // BUG (13-set → corrigido 14-set, "Velocidade 3"): onboarding em loop sem
+  // fim. Ao concluir, Onboarding.jsx grava onboarding_completo=true no
+  // servidor e navega para /home; na recarga o cache local (Velocidade 3)
+  // mostra primeiro o perfil VELHO (onboarding_completo ainda false) — esta
+  // gate disparava o redirect de volta para /onboarding antes de o /api/me
+  // fresco chegar para corrigir. `!deCache` (nunca decide a partir de cache)
+  // fecha o loop.
+  const { perfil, deCache } = usePerfil();
+  const incompleto = ativa && !deCache && perfil?.user?.onboarding_completo === false;
 
   useEffect(() => {
     if (incompleto) navigate('/onboarding', { replace: true });

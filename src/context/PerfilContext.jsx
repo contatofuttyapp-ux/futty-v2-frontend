@@ -19,6 +19,13 @@ export function PerfilProvider({ children }) {
   const [perfil, setPerfil] = useState(null);
   const [erro, setErro] = useState(null);
   const [erroCode, setErroCode] = useState(null);
+  // deCache (14-set, bug do onboarding em loop): true enquanto o `perfil` em
+  // exibição veio do cache local e o /api/me fresco ainda não respondeu. Gates
+  // (onboarding, conta suspensa, super-admin) NUNCA decidem redirecionar/
+  // bloquear com deCache=true — só depois do dado fresco chegar. Mostrar
+  // conteúdo normal a partir do cache continua igual (é o ponto da
+  // "Velocidade 3"); é só a DECISÃO de navegação/bloqueio que espera o fresco.
+  const [deCache, setDeCache] = useState(false);
   // userId para o qual perfil/erro já refletem uma resposta (ou null = nenhuma
   // sessão). carregando é DERIVADO daqui — o mesmo truque do useApi (loadedPath),
   // que evita qualquer setState síncrono no corpo do efeito (lint
@@ -44,6 +51,7 @@ export function PerfilProvider({ children }) {
         setErro(null);
         setErroCode(null);
         setCarregadoParaId(null);
+        setDeCache(false);
       });
       return () => {
         ativo = false;
@@ -61,6 +69,7 @@ export function PerfilProvider({ children }) {
         setErro(null);
         setErroCode(null);
         setCarregadoParaId(userId);
+        setDeCache(true);
       });
     }
 
@@ -71,12 +80,15 @@ export function PerfilProvider({ children }) {
         setErro(null);
         setErroCode(null);
         setCarregadoParaId(userId);
+        setDeCache(false); // dado fresco chegou — gates já podem decidir
         gravarCache(userId, CACHE_CHAVE, data);
       })
       .catch((e) => {
         if (!ativo) return;
         if (doCache) {
-          // Já mostrando o cache — mantém, sem risco a tela com erro.
+          // Já mostrando o cache — mantém, sem risco a tela com erro. deCache
+          // continua true (o que está em exibição ainda não foi confirmado
+          // pelo fresco) — gates continuam à espera.
           console.warn('[PerfilContext] /api/me falhou, mantendo cache:', e.message);
           return;
         }
@@ -84,6 +96,7 @@ export function PerfilProvider({ children }) {
         setErro(e.message || 'Não foi possível carregar o perfil.');
         setErroCode(e.code || null);
         setCarregadoParaId(userId);
+        setDeCache(false);
       });
     return () => {
       ativo = false;
@@ -102,6 +115,7 @@ export function PerfilProvider({ children }) {
       setPerfil(data);
       setErro(null);
       setErroCode(null);
+      setDeCache(false); // recarga explícita É o dado fresco
       gravarCache(idDoPedido, CACHE_CHAVE, data);
       return data;
     } catch (e) {
@@ -124,22 +138,38 @@ export function PerfilProvider({ children }) {
   // abaixo bloquearia a hidratação mesmo com a chamada em si já acontecendo
   // depois da sessão resolver. Ref é sempre o userId ATUAL; deps [] mantém a
   // identidade estável.
-  const hidratar = useCallback((data) => {
+  //
+  // opts.deCache (14-set): o InicioContext hidrata TANTO do seu próprio cache
+  // local (payload /api/inicio da última visita) QUANTO do /api/inicio fresco
+  // — se aqui tratássemos as duas chamadas como "dado fresco", a hidratação a
+  // partir do cache do Início reabriria o MESMO bug do onboarding em loop por
+  // uma porta diferente. `deCache: true` marca explicitamente uma hidratação
+  // que ainda não foi confirmada pelo servidor nesta carga.
+  const hidratar = useCallback((data, opts = {}) => {
     if (!data || !userIdRef.current) return;
     setPerfil(data);
     setErro(null);
     setErroCode(null);
     setCarregadoParaId(userIdRef.current);
-    gravarCache(userIdRef.current, CACHE_CHAVE, data);
+    setDeCache(!!opts.deCache);
+    // Só regrava o cache do PerfilContext com dado CONFIRMADO fresco — uma
+    // hidratação deCache:true (cache do Início) não pode sobrescrever um
+    // cache de `me` que já esteja mais actualizado do que ela própria.
+    if (!opts.deCache) gravarCache(userIdRef.current, CACHE_CHAVE, data);
   }, []);
 
   const value = {
     perfil,
     carregando,
+    deCache,
     erro,
     // Conta suspensa (requireAuth do backend) — o AuthGuard usa isto para mostrar
-    // o ecrã próprio em vez do app.
-    suspenso: erroCode === 'CONTA_SUSPENSA',
+    // o ecrã próprio em vez do app. `&& !deCache` (14-set): decisão de gate
+    // nunca a partir de cache — erroCode só é preenchido pelo /api/me fresco
+    // (a exibição do cache limpa erroCode), mas o guard fica explícito mesmo
+    // assim, como invariante, não como dependência de como o resto do efeito
+    // está escrito hoje.
+    suspenso: erroCode === 'CONTA_SUSPENSA' && !deCache,
     recarregar: carregar,
     hidratar,
   };

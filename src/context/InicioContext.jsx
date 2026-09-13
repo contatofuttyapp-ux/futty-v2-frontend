@@ -97,7 +97,9 @@ export function InicioProvider({ children }) {
         if (!ativo || geracaoRef.current !== minhaGeracao) return;
         setDados(doCache);
         setErro('');
-        if (doCache?.me) hidratarPerfil(doCache.me);
+        // deCache:true — isto é o cache do PRÓPRIO Início, não o /api/inicio
+        // fresco (ver comentário em PerfilContext.hidratar).
+        if (doCache?.me) hidratarPerfil(doCache.me, { deCache: true });
         if (doCache?.teams?.teams) hidratarTeams(doCache.teams.teams);
         if (doCache?.votacao_status !== undefined) hidratarVotacaoStatus(doCache.votacao_status);
       });

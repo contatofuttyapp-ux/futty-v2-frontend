@@ -7,6 +7,7 @@ import { useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
+import { usePerfil } from '../context/PerfilContext';
 import FuttyLogo from '../components/FuttyLogo';
 import CropModal from '../components/CropModal';
 import Toast from '../components/Toast';
@@ -67,6 +68,7 @@ function MolduraFoto({ src, size = 170 }) {
 }
 
 export default function Onboarding() {
+  const { recarregar: recarregarPerfil } = usePerfil();
   const [passo, setPasso] = useState(1);
   const [cropFile, setCropFile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null); // preenchida após upload
@@ -137,12 +139,17 @@ export default function Onboarding() {
     try {
       if (nome.trim()) await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ nome_jogador: nome.trim().slice(0, 18) }) });
       if (gr === 'GL') localStorage.setItem('futty_pref_gr', 'GL');
-      // P1-1 — sela o onboarding no servidor ANTES de entrar. Entrada por
-      // navegação DURA (window.location): remonta o Layout e a sua gate, que
-      // volta a ler o /api/me fresco (onboarding_completo:true) em vez do valor
-      // `false` que ficou em cache na gate durante o redireccionamento. Evita o
-      // bounce de volta ao onboarding — sem flags de cliente persistentes.
+      // P1-1 — sela o onboarding no servidor ANTES de entrar.
       await apiFetch('/api/me/onboarding-completo', { method: 'POST' });
+      // 14-set ("Velocidade 3"): recarrega o PerfilContext AQUI — busca o
+      // /api/me fresco (onboarding_completo:true) e regrava o cache local —
+      // antes de navegar. Sem isto, a navegação dura remontava o Layout com o
+      // cache local AINDA velho (onboarding_completo:false) e a gate mandava
+      // de volta para /onboarding num loop sem fim (nada regravava o cache
+      // com o valor novo até o /api/me fresco da PRÓXIMA carga responder).
+      // Mantém o window.location.assign (navegação dura, mesmo motivo de
+      // sempre: remonta tudo do zero) mas só depois do recarregar resolver.
+      await recarregarPerfil();
       window.location.assign('/home');
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });

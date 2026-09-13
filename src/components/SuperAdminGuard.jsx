@@ -7,9 +7,13 @@ import { usePerfil } from '../context/PerfilContext';
 import LoadingFutty from './LoadingFutty';
 
 export default function SuperAdminGuard({ children }) {
-  const { perfil: me, carregando: loading } = usePerfil();
+  const { perfil: me, carregando: loading, deCache } = usePerfil();
 
-  if (loading) {
+  // deCache (14-set): bloqueio/permissão desta área nunca decide a partir do
+  // cache local — mesma regra do OnboardingGate/suspenso, senão um admin
+  // recém-promovido (ou rebaixado) veria por um instante o ecrã errado até o
+  // /api/me fresco confirmar.
+  if (loading || deCache) {
     return <LoadingFutty />;
   }
 
