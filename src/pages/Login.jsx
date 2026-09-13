@@ -1,7 +1,8 @@
 // Futty v2.0 — Login (email/password + Google)
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import { entrarComGoogle } from '../lib/googleAuth';
 import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
 import GoogleIcon from '../components/GoogleIcon';
@@ -16,11 +17,24 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/home';
+  const { session, loading: sessaoCarregando } = useAuth();
 
   const [email, setEmail] = useState(location.state?.email || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Rede de segurança para "já está autenticado": cobre chegar aqui já logado
+  // (link direto, voltar pelo histórico) e o login nativo pela Apple/Google, cuja
+  // sessão nasce de um evento fora desta tela (a folha da Apple; o appUrlOpen do
+  // Google — este já navega sozinho no DeepLinkListener, mas o efeito é reforço).
+  // Alvo fixo /home, não `from`: quem submete o formulário ou toca em Apple já
+  // navega para `from` por conta própria — como isso acontece dentro do mesmo
+  // ciclo de renderização em que a sessão muda, o React troca de rota antes deste
+  // efeito rodar de novo, então não há disputa entre os dois destinos na prática.
+  useEffect(() => {
+    if (!sessaoCarregando && session) navigate('/home', { replace: true });
+  }, [sessaoCarregando, session, navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();

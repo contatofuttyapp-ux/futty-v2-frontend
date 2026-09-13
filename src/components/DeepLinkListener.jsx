@@ -42,9 +42,13 @@ export default function DeepLinkListener() {
           return;
         }
         // type=recovery (link de "recuperar senha") — o Google/login normal não traz
-        // esse parâmetro. onAuthStateChange já actualizou a sessão sozinho (AuthContext);
-        // só falta levar o utilizador à tela de trocar a senha.
+        // esse parâmetro. onAuthStateChange já actualizou a sessão sozinho (AuthContext).
+        // Dois destinos: recuperar senha leva à troca; login normal leva para /home — sem
+        // isto, quem entra com o Google a partir de /login ou /register (Custom Tab +
+        // appUrlOpen, o WebView nunca navega sozinho) ficava parado na tela de login,
+        // autenticado por baixo dos panos e sem saber.
         if (params.get('type') === 'recovery') navigate('/alterar-password', { replace: true });
+        else navigate('/home', { replace: true });
       } catch (e) {
         console.warn('[deepLink] falha ao processar appUrlOpen:', e.message);
       }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import { entrarComGoogle } from '../lib/googleAuth';
 import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
 import GoogleIcon from '../components/GoogleIcon';
@@ -17,6 +18,7 @@ const MAX_NASCIMENTO = new Date(Date.now() - 86400000).toISOString().slice(0, 10
 
 export default function Register() {
   const navigate = useNavigate();
+  const { session, loading: sessaoCarregando } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -37,6 +39,17 @@ export default function Register() {
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [cooldown]);
+
+  // Rede de segurança para "já está autenticado": cobre chegar aqui já logado
+  // e o login nativo pela Apple/Google, cuja sessão nasce de um evento fora
+  // desta tela (a folha da Apple; o appUrlOpen do Google — este já navega
+  // sozinho no DeepLinkListener, mas o efeito é reforço). Não compete com o
+  // /onboarding do cadastro com sessão imediata (handleSubmit): a mudança de
+  // sessão e o navigate('/onboarding') acontecem no mesmo ciclo de renderização,
+  // então o React já trocou de rota (e desmontou esta tela) antes deste efeito rodar.
+  useEffect(() => {
+    if (!sessaoCarregando && session) navigate('/home', { replace: true });
+  }, [sessaoCarregando, session, navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();
