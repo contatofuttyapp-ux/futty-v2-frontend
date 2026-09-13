@@ -11,7 +11,10 @@ export default function BottomNav() {
   // Slug para o Ranking: o da rota atual ou a 1ª equipa do utilizador.
   const urlSlug = pathname.match(/^\/equipa\/([^/]+)/)?.[1] || null;
   const slug = urlSlug || teams[0]?.slug || null;
-  const rankingTo = slug ? `/equipa/${slug}/ranking` : '/home';
+  // Sem time, /ranking (sem :slug): a própria tela do Ranking mostra o convite
+  // a criar/entrar. Antes disto mandava para /home — mesma tela do Início, daí
+  // parecer que a navegação não tinha efeito nenhum.
+  const rankingTo = slug ? `/equipa/${slug}/ranking` : '/ranking';
 
   // Votos pendentes -> badge vermelho na tab Ranking. votacaoStatus do
   // SessaoContext já é da equipa PRINCIPAL (teams[0], 1x por sessão) — só

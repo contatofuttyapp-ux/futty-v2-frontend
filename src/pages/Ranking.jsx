@@ -12,6 +12,7 @@ import { nomeExibicao } from '../utils/nomeExibicao';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import EstadoErroRede from '../components/EstadoErroRede';
+import EstadoSemTime from '../components/EstadoSemTime';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import EscudoEquipa from '../components/EscudoEquipa';
@@ -140,6 +141,10 @@ function MeiaEstrelas({ value = 0, onChange }) {
 
 export default function Ranking() {
   const { slug } = useParams();
+  // Rota /ranking (sem :slug): é para onde a BottomNav manda quem ainda não
+  // tem time — ver o fallback de `rankingTo` em BottomNav.jsx. useRanking(undefined)
+  // e useApi(null) já não disparam pedido nenhum com slug ausente.
+  const semTime = !slug;
   const { ranking, loading, error, reload } = useRanking(slug);
   const { teams, votacaoStatus } = useSessao();
   // votacaoStatus do SessaoContext já é da equipa PRINCIPAL (teams[0], 1x por
@@ -193,63 +198,69 @@ export default function Ranking() {
 
   return (
     <div className="app-shell page-reveal">
-      <Topbar hud="RANKING" back={`/equipa/${slug}`} />
+      <Topbar hud="RANKING" back={semTime ? undefined : `/equipa/${slug}`} />
       <main className="app-main">
-        {/* Cabeçalho: escudo + nome da equipa actual. */}
-        {equipaAtual ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <EscudoEquipa team={equipaAtual} size={40} />
-            <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: '0.04em' }}>{equipaAtual.nome}</span>
-          </div>
-        ) : null}
-
-        {/* Chips das equipas do utilizador (sem "Todas"); trocar chip troca o ranking.
-            Com 1 equipa só, escondidos (não há escolha). */}
-        {teams.length > 1 ? (
-          <div className="chips-row" style={{ marginBottom: 12 }}>
-            {teams.map((t) => (
-              <Link
-                key={t.id}
-                to={`/equipa/${t.slug}/ranking`}
-                className={`chip ${t.slug === slug ? 'chip--active tab-shine' : ''}`}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none' }}
-              >
-                <EscudoEquipa team={t} size={20} />
-                {t.nome}
-              </Link>
-            ))}
-          </div>
-        ) : null}
-
-        {mostrarBanner ? (
-          <div className="rank-banner hud-corners">
-            <span style={{ flex: 1 }}>Atualize suas notas</span>
-            <button type="button" className="rank-banner__close" aria-label="Fechar" onClick={() => setBannerFechado(true)}>✕</button>
-          </div>
-        ) : null}
-
-        {error && ranking.length === 0 ? <EstadoErroRede onRepetir={reload} /> : null}
-
-        {loading && ranking.length === 0 ? (
-          <LoadingFutty />
-        ) : ranking.length === 0 ? (
-          /* P3-18 — vazio DIGNO com próximo passo (antes: só "Ainda não há jogadores"). */
-          <div style={{ textAlign: 'center', padding: '30px 16px', display: 'grid', gap: 14, justifyItems: 'center' }}>
-            <p className="muted" style={{ margin: 0, fontSize: 14, color: '#c9c2d6' }}>O ranking nasce do 1º jogo.</p>
-            {equipaAtual?.role === 'admin' ? (
-              <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--sm hud-corners-s cta-gold" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 18px', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
-                Criar o 1º jogo
-              </Link>
-            ) : (
-              <p className="muted" style={{ margin: 0, fontSize: 12 }}>Assim que houver jogo e votos, aparece aqui.</p>
-            )}
-          </div>
+        {semTime ? (
+          <EstadoSemTime icone="trofeu" mensagem="O ranking nasce com o seu time. Crie o seu ou entre em um." />
         ) : (
-          <div className="rank-list">
-            {ranking.map((p, idx) => (
-              <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
-            ))}
-          </div>
+          <>
+            {/* Cabeçalho: escudo + nome da equipa actual. */}
+            {equipaAtual ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <EscudoEquipa team={equipaAtual} size={40} />
+                <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: '0.04em' }}>{equipaAtual.nome}</span>
+              </div>
+            ) : null}
+
+            {/* Chips das equipas do utilizador (sem "Todas"); trocar chip troca o ranking.
+                Com 1 equipa só, escondidos (não há escolha). */}
+            {teams.length > 1 ? (
+              <div className="chips-row" style={{ marginBottom: 12 }}>
+                {teams.map((t) => (
+                  <Link
+                    key={t.id}
+                    to={`/equipa/${t.slug}/ranking`}
+                    className={`chip ${t.slug === slug ? 'chip--active tab-shine' : ''}`}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none' }}
+                  >
+                    <EscudoEquipa team={t} size={20} />
+                    {t.nome}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+
+            {mostrarBanner ? (
+              <div className="rank-banner hud-corners">
+                <span style={{ flex: 1 }}>Atualize suas notas</span>
+                <button type="button" className="rank-banner__close" aria-label="Fechar" onClick={() => setBannerFechado(true)}>✕</button>
+              </div>
+            ) : null}
+
+            {error && ranking.length === 0 ? <EstadoErroRede onRepetir={reload} /> : null}
+
+            {loading && ranking.length === 0 ? (
+              <LoadingFutty />
+            ) : ranking.length === 0 ? (
+              /* P3-18 — vazio DIGNO com próximo passo (antes: só "Ainda não há jogadores"). */
+              <div style={{ textAlign: 'center', padding: '30px 16px', display: 'grid', gap: 14, justifyItems: 'center' }}>
+                <p className="muted" style={{ margin: 0, fontSize: 14, color: '#c9c2d6' }}>O ranking nasce do 1º jogo.</p>
+                {equipaAtual?.role === 'admin' ? (
+                  <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--sm hud-corners-s cta-gold" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 18px', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
+                    Criar o 1º jogo
+                  </Link>
+                ) : (
+                  <p className="muted" style={{ margin: 0, fontSize: 12 }}>Assim que houver jogo e votos, aparece aqui.</p>
+                )}
+              </div>
+            ) : (
+              <div className="rank-list">
+                {ranking.map((p, idx) => (
+                  <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 

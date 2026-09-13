@@ -154,6 +154,17 @@ function AnimatedRoutes() {
               </AuthGuard>
             }
           />
+          {/* Sem :slug: para onde a BottomNav manda quem ainda não tem time
+              (ver `rankingTo` em BottomNav.jsx). O próprio Ranking.jsx detecta
+              a ausência do slug e mostra o convite a criar/entrar. */}
+          <Route
+            path="/ranking"
+            element={
+              <AuthGuard>
+                <Ranking />
+              </AuthGuard>
+            }
+          />
           <Route
             path="/equipa/:slug/campeonato"
             element={

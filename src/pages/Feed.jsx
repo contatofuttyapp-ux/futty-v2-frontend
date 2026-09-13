@@ -18,6 +18,7 @@ import UploadComCrop from '../components/UploadComCrop';
 import EscudoEquipa from '../components/EscudoEquipa';
 import DenunciaModal from '../components/DenunciaModal';
 import Toast from '../components/Toast';
+import EstadoSemTime from '../components/EstadoSemTime';
 import '../styles/app.css';
 
 // Cores de acento (theme.js): neon, purple, warning (#f59e0b).
@@ -865,7 +866,11 @@ export default function Feed() {
   // O usuário do Auth só tem id e e-mail; nome_jogador e avatar_url vivem no
   // perfil (/api/me). Sem isto o compositor dizia "Solte a resenha, Jogador…".
   const user = perfil?.user ? { ...authUser, ...perfil.user } : authUser;
-  const { teams } = useTeams();
+  const { teams, loading: teamsLoading } = useTeams();
+  // A resenha é por time: sem um, não há o que filtrar nem onde publicar — é o
+  // mesmo convite do Ranking, com identidade própria (ver EstadoSemTime).
+  // !teamsLoading evita mostrar isto por um instante antes de saber se há time.
+  const semTime = !teamsLoading && teams.length === 0;
 
   const [items, setItems] = useState(null); // null = a carregar
   const [erro, setErro] = useState('');
@@ -937,82 +942,87 @@ export default function Feed() {
     <div className="app-shell page-reveal">
       <Topbar hud="RESENHA" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-
-        {/* 2. CHIPS DE EQUIPA */}
-        <div className="chips-row">
-          <button type="button" className={`chip ${selectedTeam === 'all' ? 'chip--active tab-shine' : ''}`} onClick={() => setSelectedTeam('all')}>
-            Todas
-          </button>
-          {teams.map((t) => (
-            <button key={t.id} type="button" className={`chip ${selectedTeam === t.id ? 'chip--active tab-shine' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }} onClick={() => setSelectedTeam(t.id)}>
-              <EscudoEquipa team={t} size={20} />
-              {t.nome}
-            </button>
-          ))}
-        </div>
-
-        {erro ? <div className="alert alert--error" style={{ marginTop: 12 }}>{erro}</div> : null}
-
-        {/* 2.5 COMPOSER INLINE NO TOPO (só para quem pode publicar). Substitui o FAB. */}
-        {podeCriar ? (
-          <ComposerInline teams={equipasParaPostar} user={user} nome={primeiroNome} onCreated={aoCriarPost} />
-        ) : null}
-
-        {/* 3. FEED */}
-        <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
-          {loading ? (
-            <LoadingFutty />
-          ) : filtrados.length === 0 ? (
-            <div className="empty-state" style={{ marginTop: 8 }}>
-              <div className="empty-state__emoji"><Icon name="resenha" size={40} /></div>
-              <p className="muted">Ainda não há jogos na resenha.</p>
+        {semTime ? (
+          <EstadoSemTime icone="resenha" mensagem="A resenha é do time. Crie o seu ou entre em um." />
+        ) : (
+          <>
+            {/* 2. CHIPS DE EQUIPA */}
+            <div className="chips-row">
+              <button type="button" className={`chip ${selectedTeam === 'all' ? 'chip--active tab-shine' : ''}`} onClick={() => setSelectedTeam('all')}>
+                Todas
+              </button>
+              {teams.map((t) => (
+                <button key={t.id} type="button" className={`chip ${selectedTeam === t.id ? 'chip--active tab-shine' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }} onClick={() => setSelectedTeam(t.id)}>
+                  <EscudoEquipa team={t} size={20} />
+                  {t.nome}
+                </button>
+              ))}
             </div>
-          ) : (
-            filtrados.map((item, i) => {
-              const equipa = teams.find((t) => t.id === item.team_id);
-              const ehAdmin = equipa?.role === 'admin';
-              const slug = equipa?.slug || item.team_slug || null;
-              const inner =
-                item.kind === 'post' && item.tipo === 'anuncio' ? (
-                  <AnuncioCard p={item} index={i} />
-                ) : item.kind === 'post' ? (
-                  <PostCard
-                    p={item}
-                    podeApagar={item.author_id === meId || ehAdmin}
-                    isAdmin={ehAdmin}
-                    teamSlug={slug}
-                    meId={meId}
-                    onDelete={apagarPost}
-                    onOpenImage={setImgFull}
-                    onBloquear={bloquear}
-                    index={i}
-                  />
-                ) : (
-                  <JogoCard j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} index={i} />
-                );
-              // P2-11: âncora de scroll + destaque dourado no post recém-criado.
-              const card = (
-                <div
-                  key={`item-${item.kind}-${item.id}`}
-                  id={`feed-item-${item.id}`}
-                  className={item.kind === 'post' && item.id === novoPostId ? 'post-recem' : undefined}
-                >
-                  {inner}
+
+            {erro ? <div className="alert alert--error" style={{ marginTop: 12 }}>{erro}</div> : null}
+
+            {/* 2.5 COMPOSER INLINE NO TOPO (só para quem pode publicar). Substitui o FAB. */}
+            {podeCriar ? (
+              <ComposerInline teams={equipasParaPostar} user={user} nome={primeiroNome} onCreated={aoCriarPost} />
+            ) : null}
+
+            {/* 3. FEED */}
+            <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
+              {loading ? (
+                <LoadingFutty />
+              ) : filtrados.length === 0 ? (
+                <div className="empty-state" style={{ marginTop: 8 }}>
+                  <div className="empty-state__emoji"><Icon name="resenha" size={40} /></div>
+                  <p className="muted">Ainda não há jogos na resenha.</p>
                 </div>
-              );
-              // Anúncio nativo entre o 3º e o 4º item do feed.
-              if (i === 2) {
-                return (
-                  <Fragment key={`feed-ad-${item.id}`}>
-                    {card}
-                    <AdCard variant="native" />
-                  </Fragment>
-                );
-              }
-              return card;
-            })
-          )}
-        </div>
+              ) : (
+                filtrados.map((item, i) => {
+                  const equipa = teams.find((t) => t.id === item.team_id);
+                  const ehAdmin = equipa?.role === 'admin';
+                  const slug = equipa?.slug || item.team_slug || null;
+                  const inner =
+                    item.kind === 'post' && item.tipo === 'anuncio' ? (
+                      <AnuncioCard p={item} index={i} />
+                    ) : item.kind === 'post' ? (
+                      <PostCard
+                        p={item}
+                        podeApagar={item.author_id === meId || ehAdmin}
+                        isAdmin={ehAdmin}
+                        teamSlug={slug}
+                        meId={meId}
+                        onDelete={apagarPost}
+                        onOpenImage={setImgFull}
+                        onBloquear={bloquear}
+                        index={i}
+                      />
+                    ) : (
+                      <JogoCard j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} index={i} />
+                    );
+                  // P2-11: âncora de scroll + destaque dourado no post recém-criado.
+                  const card = (
+                    <div
+                      key={`item-${item.kind}-${item.id}`}
+                      id={`feed-item-${item.id}`}
+                      className={item.kind === 'post' && item.id === novoPostId ? 'post-recem' : undefined}
+                    >
+                      {inner}
+                    </div>
+                  );
+                  // Anúncio nativo entre o 3º e o 4º item do feed.
+                  if (i === 2) {
+                    return (
+                      <Fragment key={`feed-ad-${item.id}`}>
+                        {card}
+                        <AdCard variant="native" />
+                      </Fragment>
+                    );
+                  }
+                  return card;
+                })
+              )}
+            </div>
+          </>
+        )}
       </main>
 
       {/* (O FAB e o sheet de Novo post morreram: o composer é inline no topo.
