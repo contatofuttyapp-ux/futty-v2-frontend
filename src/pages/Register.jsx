@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { entrarComGoogle } from '../lib/googleAuth';
 import GoogleIcon from '../components/GoogleIcon';
 import FuttyLogo from '../components/FuttyLogo';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
@@ -107,10 +108,7 @@ export default function Register() {
 
   async function handleGoogle() {
     setError('');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/home` },
-    });
+    const { error } = await entrarComGoogle({ redirectTo: `${window.location.origin}/home` });
     if (error) setError(error.message);
   }
 

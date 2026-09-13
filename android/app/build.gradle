@@ -1,5 +1,16 @@
 apply plugin: 'com.android.application'
 
+// 14-set — assinatura de release: lê android/keystore.properties SE o arquivo
+// existir (storeFile, storePassword, keyAlias, keyPassword). Sem ele, o build de
+// release ainda funciona (sem assinatura própria) — só não serve para a loja. A
+// keystore em si NÃO se gera aqui; ver keystore.properties.example.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def temKeystore = keystorePropertiesFile.exists()
+if (temKeystore) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.futty.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +18,11 @@ android {
         applicationId "com.futty.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        // 1.0.0 — primeira versão enviada à loja (14-set). Bump a cada envio:
+        // versionCode sobe sempre (a Play Store exige um inteiro maior a cada
+        // build); versionName é o que a pessoa vê.
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +30,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (temKeystore) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (temKeystore) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

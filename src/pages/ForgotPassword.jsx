@@ -1,7 +1,9 @@
 // Futty v2.0 — Recuperar password
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '../lib/supabase';
+import { CALLBACK_URL_NATIVO } from '../lib/googleAuth';
 import FuttyLogo from '../components/FuttyLogo';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
@@ -20,9 +22,14 @@ export default function ForgotPassword() {
     setSuccess('');
     setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    // 14-set (Android): no nativo, o link do e-mail tem de voltar pelo esquema
+    // custom — components/DeepLinkListener.jsx troca o code e manda para
+    // /alterar-password sozinho. Na web, aponta direto pra lá (era /reset-password,
+    // rota que nunca existiu — bug corrigido de passagem).
+    const redirectTo = Capacitor.isNativePlatform()
+      ? CALLBACK_URL_NATIVO
+      : `${window.location.origin}/alterar-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     setLoading(false);
 
     if (error) {

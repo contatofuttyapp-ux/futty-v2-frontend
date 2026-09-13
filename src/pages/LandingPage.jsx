@@ -4,7 +4,7 @@
 // CTA final) morreram — quem quer saber mais entra.
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { entrarComGoogle } from '../lib/googleAuth';
 import FuttyLockup from '../components/FuttyLockup';
 import GoogleIcon from '../components/GoogleIcon';
 import Toast from '../components/Toast';
@@ -18,14 +18,11 @@ export default function LandingPage() {
   const location = useLocation();
   const [toastPassagem, setToastPassagem] = useState(location.state?.toast || '');
 
-  // Mesmo fluxo OAuth do Login (supabase.auth.signInWithOAuth) — a rota /login
-  // continua a existir para quem prefere email/password.
-  async function entrarComGoogle() {
+  // Mesmo fluxo OAuth do Login (lib/googleAuth) — a rota /login continua a
+  // existir para quem prefere email/password.
+  async function handleGoogle() {
     setErro('');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
-    });
+    const { error } = await entrarComGoogle({ redirectTo: `${window.location.origin}/` });
     if (error) setErro(error.message);
   }
 
@@ -75,7 +72,7 @@ export default function LandingPage() {
             <button
               type="button"
               className="cta-gold hud-corners-s"
-              onClick={entrarComGoogle}
+              onClick={handleGoogle}
               style={{
                 width: '100%',
                 display: 'inline-flex',

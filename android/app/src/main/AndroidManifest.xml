@@ -18,6 +18,18 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- 14-set (Android): retorno do login Google e dos links de e-mail
+                 (recuperar senha) — com.futty.app://auth/callback. Capturado por
+                 components/DeepLinkListener.jsx via App.addListener('appUrlOpen').
+                 Mesmo host que lib/googleAuth.js (CALLBACK_URL_NATIVO) usa como
+                 redirectTo — os dois lados têm de bater certo. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.futty.app" android:host="auth" />
+            </intent-filter>
         </activity>
 
         <provider
@@ -32,4 +44,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Foto da figurinha pela câmera (o upload por galeria não precisa disto). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Localização aproximada da equipa, na Explorar (nunca a pessoal — ver
+         Privacidade.jsx seção 4). Os dois níveis: o Android decide sozinho qual
+         diálogo mostrar conforme o que o código realmente pede em runtime. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 </manifest>

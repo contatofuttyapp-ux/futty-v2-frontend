@@ -1,6 +1,7 @@
 // Futty v2.0 — Hook de notificações push (Web Push API).
 // estado: 'idle' | 'nao_suportado' | 'suportado' | 'subscrito' | 'negado'
 import { useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { apiFetch } from '../lib/api';
 
 // A chave VAPID vem em base64url; pushManager.subscribe exige um Uint8Array.
@@ -16,6 +17,11 @@ function urlBase64ToUint8Array(base64String) {
 // Estado inicial derivado do browser (sem useEffect → evita set-state-in-effect).
 function estadoInicial() {
   if (typeof window === 'undefined') return 'idle';
+  // 14-set (Android): Web Push não existe dentro do WebView do Capacitor — o banner
+  // "Ativar notificações" (Inicio.jsx) e o toggle (MeuPerfil.jsx) já escondem sozinhos
+  // com 'nao_suportado', então basta a origem do estado saber que está no nativo.
+  // Entra depois via FCM (@capacitor/push-notifications), quando existir.
+  if (Capacitor.isNativePlatform()) return 'nao_suportado';
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return 'nao_suportado';
   if (Notification.permission === 'granted') return 'subscrito';
   if (Notification.permission === 'denied') return 'negado';

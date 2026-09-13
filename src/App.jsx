@@ -11,6 +11,7 @@ import AuthGuard from './components/AuthGuard';
 import SuperAdminGuard from './components/SuperAdminGuard';
 import CookieBanner from './components/CookieBanner';
 import RouteTitle from './components/RouteTitle';
+import DeepLinkListener from './components/DeepLinkListener';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
 import LoadingFutty from './components/LoadingFutty';
@@ -301,6 +302,7 @@ export default function App() {
                   descendentes, nunca para quem o envolve. */}
               <SessaoProvider>
                 <RouteTitle />
+                <DeepLinkListener />
                 <Layout>
                   <AnimatedRoutes />
                 </Layout>

@@ -10,4 +10,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// flowType 'pkce' explícito (Android, 14-set): o login Google nativo e os links de
+// e-mail (recuperar senha) trocam um `code` por sessão à mão —
+// components/DeepLinkListener.jsx chama exchangeCodeForSession(code) porque o
+// WebView do Capacitor nunca navega para a URL de retorno (ela é entregue via
+// appUrlOpen), então o detectSessionInUrl automático nunca dispara. Isso só
+// funciona com PKCE (o link traz `code`, não o token direto).
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { flowType: 'pkce' },
+});
