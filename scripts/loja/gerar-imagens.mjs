@@ -20,7 +20,8 @@ const PECAS = [
   { arquivo: '02-figurinha.png', tela: 'figurinha.png', kicker: 'Figurinha', titulo: 'Sua figurinha de craque' },
   { arquivo: '03-ranking.png', tela: 'ranking.png', kicker: 'Ranking', titulo: 'Ranking que vale discussão' },
   { arquivo: '04-resenha.png', tela: 'resenha.png', kicker: 'Resenha', titulo: 'A resenha do time' },
-  { arquivo: '05-presenca.png', tela: 'inicio.png', kicker: 'Presença', titulo: 'Confirme presença em um toque' },
+  // recorte: pixels da captura cortados no topo, para os botões "Vou / Não vou" caberem no cartaz.
+  { arquivo: '05-presenca.png', tela: 'inicio.png', kicker: 'Presença', titulo: 'Confirme presença em um toque', recorte: 160 },
   { arquivo: '06-explorar.png', tela: 'explorar.png', kicker: 'Explorar', titulo: 'Ache uma pelada perto de você' },
 ];
 
@@ -50,7 +51,8 @@ const FUNDO = `
     background-image: repeating-linear-gradient(115deg, rgba(255,255,255,.9) 0 2px, transparent 2px 118px); }
 `;
 
-function htmlPeca({ kicker, titulo, tela }) {
+function htmlPeca({ kicker, titulo, tela, recorte = 0 }) {
+  const deslocamento = Math.round((recorte * 760) / 1080);
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>
     ${FONTES}
     html, body { margin:0; width:1080px; height:1920px; overflow:hidden; background:#080808;
@@ -70,7 +72,8 @@ function htmlPeca({ kicker, titulo, tela }) {
     .celular { position:absolute; left:50%; top:470px; width:786px; transform:translateX(-50%);
       padding:13px; border-radius:76px; background:linear-gradient(160deg, #2c2c31 0%, #111114 55%, #1a1a1e 100%);
       box-shadow: 0 70px 160px rgba(0,0,0,.8), 0 0 0 1px rgba(212,175,55,.32), 0 0 140px rgba(212,175,55,.14); }
-    .tela { display:block; width:760px; border-radius:64px; }
+    .ecra { overflow:hidden; border-radius:64px; }
+    .tela { display:block; width:760px; margin-top:-${deslocamento}px; }
     .reflexo { position:absolute; inset:13px; border-radius:64px; pointer-events:none;
       background:linear-gradient(115deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 28%); }
   </style></head><body>
@@ -78,7 +81,7 @@ function htmlPeca({ kicker, titulo, tela }) {
       <div class="circulo"></div><div class="meio"></div></div>
     <div class="brilho"></div>
     <div class="texto"><div class="kicker">${kicker}</div><h1>${titulo}</h1></div>
-    <div class="celular"><img class="tela" src="${tela}" alt=""><div class="reflexo"></div></div>
+    <div class="celular"><div class="ecra"><img class="tela" src="${tela}" alt=""></div><div class="reflexo"></div></div>
   </body></html>`;
 }
 

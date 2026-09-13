@@ -1,6 +1,6 @@
 // Capturas cruas para a Google Play: celular 360×780 a 3× (1080×2340), logado
 // como a conta de demonstração criada por backend/scripts/demo-loja.js.
-// Correr a partir de frontend/: `node scripts/loja/capturar-telas.mjs [--so=inicio,perfil]`
+// Correr a partir de frontend/: `node scripts/loja/capturar-telas.mjs [--so=inicio,perfil] [--base=https://dev.futty.pages.dev]`
 // Saída: FUT/LOJA/cruas/<tela>.png
 import { readFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -10,11 +10,12 @@ import { chromium } from 'playwright';
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const LOJA = resolve(AQUI, '..', '..', '..', '..', 'LOJA');
 const CRUAS = join(LOJA, 'cruas');
-const BASE = 'https://futty.pages.dev';
+const opcao = (nome) => (process.argv.find((a) => a.startsWith(`--${nome}=`)) || '').slice(nome.length + 3);
+const BASE = opcao('base') || 'https://futty.pages.dev';
 
 const estado = JSON.parse(readFileSync(join(LOJA, 'demo-estado.json'), 'utf8'));
 const senha = readFileSync(join(LOJA, 'demo-senha.txt'), 'utf8').match(/senha: (.+)/)[1].trim();
-const so = (process.argv.find((a) => a.startsWith('--so=')) || '').slice(5).split(',').filter(Boolean);
+const so = opcao('so').split(',').filter(Boolean);
 const quer = (tela) => !so.length || so.includes(tela);
 
 // Posição fictícia em Brasília (Asa Sul), só para o Explorar mostrar distâncias.
@@ -106,7 +107,10 @@ if (quer('figurinha')) {
 if (quer('ranking')) {
   await page.goto(`${BASE}/equipa/${estado.teamSlug}/ranking`);
   await page.waitForSelector('.rank-list .rank-row', { timeout: 60000 });
-  await assentar(page, { minimo: 5000 }); // confete do pódio termina
+  await assentar(page);
+  // Confete do pódio (canvas-confetti): o canvas some quando a animação acaba.
+  await page.waitForFunction(() => !document.querySelector('canvas'), null, { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(500);
   await capturar(page, 'ranking');
 }
 
