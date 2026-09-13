@@ -1631,6 +1631,28 @@
   transform: scale(0.97);
 }
 
+/* VELOCIDADE 4 — a foto que segura o lugar do cromo enquanto o canvas desenha.
+   Recuada de propósito: mais escura e levemente desfocada, para se ler como
+   "ainda a compor" e não como uma figurinha feia. Quando o cromo real entra,
+   a troca é entre duas imagens do mesmo tamanho, no mesmo sítio — sem salto.
+   A respiração é a mesma do resto da casa e morre com prefers-reduced-motion. */
+.cromo-previa {
+  opacity: 0.4;
+  filter: blur(2px) saturate(0.7);
+  animation: cromo-previa-pulso 1.6s ease-in-out infinite;
+}
+
+@keyframes cromo-previa-pulso {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cromo-previa {
+    animation: none;
+  }
+}
+
 .cromo-inicio:focus-visible {
   outline: 2px solid var(--purple);
   outline-offset: 8px;

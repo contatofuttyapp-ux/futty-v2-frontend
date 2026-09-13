@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { limparCacheLocal } from '../lib/cacheLocal';
+import { limparCromos } from '../lib/cromoCache';
 
 const AuthContext = createContext(null);
 
@@ -32,9 +33,12 @@ export function AuthProvider({ children }) {
     loading,
     // Celular compartilhado (13-set): limpa o cache local ANTES do signOut —
     // a próxima conta que entrar neste aparelho não pode ver, nem por 1
-    // render, o perfil/equipas de quem saiu.
+    // render, o perfil/equipas de quem saiu. O cromo do Início (14-set,
+    // "Velocidade 4") mora em IndexedDB e não em localStorage, por isso tem de
+    // ser apagado à parte — é a cara da pessoa, seria o pior a sobrar.
     signOut: () => {
       limparCacheLocal();
+      limparCromos().catch(() => {});
       return supabase.auth.signOut();
     },
   };

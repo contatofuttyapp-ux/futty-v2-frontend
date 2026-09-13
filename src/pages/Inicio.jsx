@@ -12,6 +12,7 @@ import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
 import { plural } from '../utils/plural';
 import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
+import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
@@ -51,9 +52,13 @@ function isToday(iso) {
 // módulo (sobrevive ao unmount, ao contrário de um estado) com chave = tudo o que
 // mexe nos pixéis. Mudar o fundo na Figurinha muda a chave e regenera sozinho:
 // não há invalidação manual para alguém se esquecer de chamar.
+//
+// VELOCIDADE 4: este Map morre quando a aba morre. O cromo guardado em
+// IndexedDB (lib/cromoCache.js) é o que atravessa ABERTURAS — sem ele, toda
+// abertura do app redesenhava a figurinha do zero.
 const cromoCache = new Map();
 
-async function gerarCromoDataURL(opts, chave) {
+async function gerarCromoDataURL(opts, chave, userId) {
   const cached = cromoCache.get(chave);
   if (cached) return cached;
   const blob = await gerarFigurinhaCanvas(opts);
@@ -66,16 +71,27 @@ async function gerarCromoDataURL(opts, chave) {
     fr.onerror = () => resolve(null);
     fr.readAsDataURL(blob);
   });
-  if (dataURL) cromoCache.set(chave, dataURL);
+  if (dataURL) {
+    cromoCache.set(chave, dataURL);
+    // Guarda o BLOB (não o dataURL): o IndexedDB aguenta-o como é, sem os +33%
+    // do base64. Não se espera por isto — a tela não depende do cache.
+    gravarCromo(userId, chave, blob).catch(() => {});
+  }
   return dataURL;
 }
 
-// Presentacional: recebe o cromo JÁ gerado (dataURL) do Início. Não gera nem mostra
-// placeholder — quando este componente monta, a página já revelou com o cromo pronto
-// (ver `pageReady`), por isso nunca se vê um F aqui. Sem avatar IA o canvas já veio
-// com o genérico da casa desenhado (ver `jogadorCard` em Inicio()) — não há overlay
-// de convite: o card em si é o convite (rodízio 31-jul).
-function CromoInicio({ cromo, nome, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
+// Presentacional: recebe o cromo JÁ gerado (dataURL) do Início.
+//
+// VELOCIDADE 4 — até 14-set a página inteira esperava o cromo estar desenhado
+// para aparecer, e por isso este componente nunca precisava de um estado
+// intermédio. Agora é o contrário: a tela aparece primeiro e o cromo chega
+// quando fica pronto, então há um instante sem ele. Esse instante é preenchido
+// com a própria foto da pessoa (`previa`), no mesmo sítio e no mesmo tamanho —
+// sem isso a tela nascia com um buraco quadrado no meio, que é pior do que
+// esperar. Sem avatar IA o canvas já veio com o genérico da casa desenhado (ver
+// `jogadorCard` em Inicio()) — não há overlay de convite: o card em si é o
+// convite (rodízio 31-jul).
+function CromoInicio({ cromo, previa, nome, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
   return (
     <Link to={destino} data-tour="player-card" className="cromo-inicio" aria-label={destinoLabel}>
       {/* Sombra no chão — contra-fase com o bob: encolhe quando o cromo sobe. */}
@@ -87,7 +103,16 @@ function CromoInicio({ cromo, nome, destino = '/figurinha', destinoLabel = 'Ver 
       <div className="fig-bob" style={{ position: 'relative', width: '100%', height: '100%' }}>
         <div className="fig-sway" style={{ position: 'relative', width: '100%', height: '100%' }}>
           {cromo ? (
-            <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+            <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+          ) : previa ? (
+            <img
+              src={previa}
+              alt=""
+              aria-hidden="true"
+              decoding="async"
+              className="cromo-previa"
+              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+            />
           ) : null}
         </div>
       </div>
@@ -282,10 +307,11 @@ export default function Inicio() {
   const inicio = useInicio();
   const dadosInicio = inicio.dados;
 
-  // O cromo é gerado AQUI (não dentro do CromoInicio) para que a geração corra
-  // durante o gate de carregamento, antes de a página aparecer — ver `pageReady`.
+  // O cromo é gerado AQUI (não dentro do CromoInicio) porque o Início é quem
+  // sabe o avatar, o fundo e o nome. VELOCIDADE 4: já NÃO segura a página —
+  // começa a null, a tela aparece na mesma, e ele entra quando estiver pronto
+  // (do IndexedDB na hora, ou do canvas um segundo depois).
   const [cromo, setCromo] = useState(null);
-  const [cromoTentado, setCromoTentado] = useState(false);
 
   const [games, setGames] = useState(null); // null = a carregar
   const [error, setError] = useState('');
@@ -453,6 +479,10 @@ export default function Inicio() {
 
   // Gera o cromo assim que o user existe. corFrame/zoom são os defaults FIXOS da
   // Figurinha — divergir dava dois cromos diferentes para o mesmo utilizador.
+  //
+  // VELOCIDADE 4 — a ordem passa a ser: memória → IndexedDB → canvas. Só se
+  // chega ao canvas (o passo de um a três segundos no celular) quando não há
+  // nada guardado, ou quando a composição mudou. Nada disto segura a tela.
   useEffect(() => {
     if (!user) return undefined;
     let vivo = true;
@@ -462,11 +492,47 @@ export default function Inicio() {
     // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
     // download nem a montra do tile do seletor — densidade de repouso própria.
     const opts = { jogador: jogadorCard, fundo: cromoFundo, corFrame: 'dourado', avatarZoom: 1.1, formato: 'quadrado', fundoGlints: 'discreto' };
-    gerarCromoDataURL(opts, `q|${jogadorCard.avatar_url || '-'}|${cromoFundo}|${nome}`)
-      .then((url) => { if (vivo) { setCromo(url); setCromoTentado(true); } })
-      .catch((e) => { console.error('[cromo]', e); if (vivo) setCromoTentado(true); });
+    const chave = `q|${jogadorCard.avatar_url || '-'}|${cromoFundo}|${nome}`;
+
+    const naMemoria = cromoCache.get(chave);
+    if (naMemoria) {
+      // Já desenhado nesta sessão (voltar do feed, por exemplo). Adiado ao
+      // microtask: setState síncrono no corpo do efeito dispara renders em
+      // cascata — mesmo padrão do PerfilContext e do useApiComCache.
+      Promise.resolve().then(() => { if (vivo) setCromo(naMemoria); });
+      return () => { vivo = false; };
+    }
+
+    function desenhar() {
+      gerarCromoDataURL(opts, chave, user.id)
+        .then((url) => { if (vivo && url) setCromo(url); })
+        .catch((e) => { console.error('[cromo]', e); });
+    }
+
+    // Guardado da última abertura: se a composição é a mesma, os pixéis seriam
+    // idênticos — mostra-se e não se redesenha nada.
+    lerCromo(user.id)
+      .then((guardado) => {
+        if (!vivo) return;
+        if (guardado?.chave === chave) {
+          cromoCache.set(chave, guardado.dataURL);
+          setCromo(guardado.dataURL);
+          return;
+        }
+        desenhar();
+      })
+      .catch(desenhar);
+
     return () => { vivo = false; };
   }, [user, cromoAvatarEhIA, cromoFundo, avatarGenericoEscolha, nome]);
+
+  // A foto que segura o lugar do cromo enquanto ele não existe: a mesma imagem
+  // que o canvas vai usar por baixo, então a troca não salta.
+  const previaCromo = cromoAvatarEhIA
+    ? urlAsset(user?.avatar_url)
+    : user
+      ? avatarGenericoUrl(user.id, avatarGenericoEscolha)
+      : '';
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
@@ -590,13 +656,19 @@ export default function Inicio() {
     sessionStorage.setItem('futty_denuncia_desfecho', '1');
   }
 
-  // REVELAÇÃO: o LoadingFutty (F grande, sozinho, centrado) segura o ecrã até o cromo
-  // estar DESENHADO (dataURL pronto). Antes, o F do loader e o F-placeholder do cromo
-  // apareciam sobrepostos no arranque; agora só há um F, e a página só aparece com o
-  // cromo já pronto. Se o /api/me terminar sem user (erro), revela na mesma — não há
-  // cromo para esperar. O feed/jogos continua a carregar por baixo (não bloqueia isto).
-  const pageReady = cromoTentado || (!meLoading && !user);
-  if (!pageReady) return <LoadingFutty />;
+  // REVELAÇÃO — VELOCIDADE 4, a inversão que faz a diferença no celular.
+  //
+  // Era: o LoadingFutty segurava o ecrã até o cromo estar DESENHADO. Desenhar o
+  // cromo é um canvas 600×600 mais descodificar duas imagens — de um a três
+  // segundos num telemóvel. Ou seja: a pessoa ficava a olhar para um F enquanto
+  // TODO o resto da tela (nome, stats, jogos, equipa) já estava pronto há muito.
+  // Era essa espera, e não a rede, a maior parte do "surreal de devagar".
+  //
+  // É: a tela aparece assim que há PERFIL — que na segunda abertura vem do
+  // cache local, portanto de imediato. O cromo entra depois, no lugar que já
+  // está reservado para ele (.cromo-inicio tem aspect-ratio fixo, não há salto),
+  // com a foto da pessoa a segurar o sítio enquanto isso.
+  if (meLoading) return <LoadingFutty />;
 
   return (
     <div className="app-shell inicio-reveal">
@@ -777,7 +849,7 @@ export default function Inicio() {
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px', paddingTop: 'var(--space-lg)' }}>
           <div className="inicio-vline" aria-hidden="true" />
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            <CromoInicio cromo={cromo} nome={nome} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar meu time' : 'Ver e personalizar minha figurinha'} />
+            <CromoInicio cromo={cromo} previa={previaCromo} nome={nome} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar meu time' : 'Ver e personalizar minha figurinha'} />
             {/* Trocar visual — só quando o card veste o genérico (sem avatar IA). */}
             {!cromoAvatarEhIA ? (
               <button
