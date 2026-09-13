@@ -1,0 +1,205 @@
+# Futty — compila o app do iPhone na nuvem e manda para o TestFlight.
+#
+# Existe porque não há Mac aqui: o Xcode só corre em macOS, e este workflow
+# aluga um por execução. Nada de certificados à mão nem de fastlane match — a
+# assinatura é automática, feita pelo próprio Xcode com uma chave da API da App
+# Store Connect (ver IOS.md para como gerar e onde colar os segredos).
+#
+# Dispara à mão (Actions → iOS (TestFlight) → Run workflow) ou ao empurrar uma
+# etiqueta v* (ex.: v1.0.1), que também passa a ser o número de versão.
+name: iOS (TestFlight)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+# Duas execuções ao mesmo tempo dariam o mesmo número de build (é o número da
+# execução) e a segunda seria recusada pela App Store Connect.
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  testflight:
+    name: Compilar e enviar
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Buscar o código
+        uses: actions/checkout@v4
+
+      # Falhar aqui, com o nome do que falta, poupa 20 minutos de compilação
+      # para morrer no fim com um erro que não diz nada.
+      - name: Conferir os segredos
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ASSETS_URL: ${{ secrets.VITE_ASSETS_URL }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_P8_BASE64: ${{ secrets.APPSTORE_P8_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          faltam=""
+          for nome in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_API_URL VITE_ASSETS_URL \
+                      APPSTORE_KEY_ID APPSTORE_ISSUER_ID APPSTORE_P8_BASE64 APPLE_TEAM_ID; do
+            if [ -z "${!nome}" ]; then faltam="$faltam $nome"; fi
+          done
+          if [ -n "$faltam" ]; then
+            echo "::error::Faltam segredos no repositório:$faltam"
+            echo "Settings -> Secrets and variables -> Actions -> New repository secret (ver IOS.md)"
+            exit 1
+          fi
+          echo "Os 8 segredos estão lá."
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar as dependências
+        run: npm ci
+
+      # O Vite lê este ficheiro no modo production. Fica só no disco do runner,
+      # que é destruído no fim; o .gitignore já o impede de ser commitado.
+      # VITE_SENTRY_DSN fica de fora de propósito: sem DSN o Sentry não envia
+      # nada, que é o que a ficha de Segurança de Dados das lojas declara.
+      - name: Escrever o .env.production
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ASSETS_URL: ${{ secrets.VITE_ASSETS_URL }}
+        run: |
+          cat > .env.production <<EOF
+          VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+          VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+          VITE_API_URL=${VITE_API_URL}
+          VITE_ASSETS_URL=${VITE_ASSETS_URL}
+          EOF
+          echo "Escrito com $(wc -l < .env.production) variáveis."
+
+      # vite build + tirar a mídia pesada de dist/ (o app busca-a do site) +
+      # cap sync ios, que no macOS também corre o pod install.
+      - name: Compilar a web e sincronizar o projeto iOS
+        run: npm run build:native:ios
+
+      - name: Versão e número de build
+        run: |
+          # O número de build tem de subir a cada envio: a App Store Connect
+          # recusa um build repetido. O número da execução serve e nunca repete.
+          echo "BUILD_NUMERO=${{ github.run_number }}" >> "$GITHUB_ENV"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            versao="${{ github.ref_name }}"
+            echo "VERSAO_MARKETING=${versao#v}" >> "$GITHUB_ENV"
+          fi
+
+      # A mesma chave serve ao xcodebuild (assinatura) e ao altool (envio). O
+      # altool só a encontra se o ficheiro se chamar AuthKey_<ID>.p8 e estiver
+      # numa das pastas que ele procura — daí este caminho, e não um temporário.
+      - name: Instalar a chave da App Store Connect
+        env:
+          APPSTORE_P8_BASE64: ${{ secrets.APPSTORE_P8_BASE64 }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        run: |
+          pasta="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$pasta"
+          caminho="$pasta/AuthKey_${APPSTORE_KEY_ID}.p8"
+          if ! printf '%s' "$APPSTORE_P8_BASE64" | base64 -D > "$caminho" 2>/dev/null; then
+            printf '%s' "$APPSTORE_P8_BASE64" | base64 -d > "$caminho"
+          fi
+          chmod 600 "$caminho"
+          if ! grep -q "BEGIN PRIVATE KEY" "$caminho"; then
+            echo "::error::APPSTORE_P8_BASE64 não decodifica para um .p8 válido. Refaça o base64 (ver IOS.md)."
+            exit 1
+          fi
+          echo "CHAVE_P8=$caminho" >> "$GITHUB_ENV"
+
+      - name: Versão do Xcode
+        run: xcodebuild -version
+
+      # -allowProvisioningUpdates + a chave da API: é o Xcode que cria o App ID,
+      # liga a capacidade do Entrar com a Apple e emite o perfil, sozinho. Sem
+      # certificados no repositório e sem fastlane match.
+      - name: Arquivar
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          extra=""
+          if [ -n "$VERSAO_MARKETING" ]; then extra="MARKETING_VERSION=$VERSAO_MARKETING"; fi
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Futty.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$CHAVE_P8" \
+            -authenticationKeyID "$APPSTORE_KEY_ID" \
+            -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMERO" \
+            $extra \
+            archive
+
+      - name: Exportar o .ipa
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Futty.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$CHAVE_P8" \
+            -authenticationKeyID "$APPSTORE_KEY_ID" \
+            -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID"
+          ls -lh "$RUNNER_TEMP/export"
+
+      # Guardar ANTES de enviar: se a App Store Connect recusar, o .ipa fica na
+      # execução para se perceber o que saiu.
+      - name: Guardar o .ipa na execução
+        uses: actions/upload-artifact@v4
+        with:
+          name: futty-ios-build-${{ github.run_number }}
+          path: ${{ runner.temp }}/export/*.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enviar para o TestFlight
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          ipa="$(find "$RUNNER_TEMP/export" -name '*.ipa' -maxdepth 1 | head -1)"
+          if [ -z "$ipa" ]; then echo "::error::Nenhum .ipa foi exportado."; exit 1; fi
+          echo "Enviando $(basename "$ipa") como build $BUILD_NUMERO…"
+          xcrun altool --upload-app -f "$ipa" -t ios \
+            --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID"
+          echo "Enviado. O processamento na App Store Connect leva 5 a 15 minutos."
