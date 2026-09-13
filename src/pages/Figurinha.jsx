@@ -41,7 +41,7 @@ const FUNDOS = [
 ];
 // Background real de cada fundo (igual ao do PlayerCard) para os tiles.
 const FUNDO_BG = {
-  estadio: "url('/stadium_bg.png') center / cover no-repeat, #1b2433",
+  estadio: "url('/stadium_bg.webp') center / cover no-repeat, #1b2433",
   // 'gradiente' = Carta Épica. Chave interna mantida para não refactorizar estado.
   // Este valor é só o FALLBACK (base escura) até o render real do fundo ficar pronto
   // — o tile passa a mostrar o fundo verdadeiro em miniatura (ver `epicoTile`).

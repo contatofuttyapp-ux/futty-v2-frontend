@@ -34,12 +34,16 @@ const ASSET = '/sorteio-assets/';
 // da casa (baralho final, registado em SPEC-SORTEIO). As 2 cartas-F antigas
 // (dourada C / roxa C especular) morreram — a HÍBRIDA (palco ouro + F ametista)
 // ficou aprovada mas arquivada, não entra aqui (correção do dono).
+// 13-set: .png → .webp (1024×1536 a 416×624 — o rolo é flex:0 1 78px, nunca passa
+// de 78px de largura). 20 MB → 350 KB. Estes <img> entram por innerHTML, sem
+// onError: se um caminho aqui não bater com o arquivo, sai o ícone de imagem
+// quebrada e ninguém avisa. Mexer nesta lista pede conferir public/.
 const SIMB = [
-  { t: 'av', src: `${ASSET}v9-jacare.png` }, { t: 'cd', src: `${ASSET}777-seta-ouro.png` },
-  { t: 'av', src: `${ASSET}v9-et.png` }, { t: 'cd', src: `${ASSET}v94-trofeu-c.png` },
-  { t: 'av', src: `${ASSET}v9-onca.png` }, { t: 'cd', src: `${ASSET}f-roxa-media.png` },
-  { t: 'av', src: `${ASSET}v9-tigre.png` }, { t: 'cd', src: `${ASSET}v94-bola.png` },
-  { t: 'av', src: `${ASSET}v9-astronauta.png` },
+  { t: 'av', src: `${ASSET}v9-jacare.webp` }, { t: 'cd', src: `${ASSET}777-seta-ouro.webp` },
+  { t: 'av', src: `${ASSET}v9-et.webp` }, { t: 'cd', src: `${ASSET}v94-trofeu-c.webp` },
+  { t: 'av', src: `${ASSET}v9-onca.webp` }, { t: 'cd', src: `${ASSET}f-roxa-media.webp` },
+  { t: 'av', src: `${ASSET}v9-tigre.webp` }, { t: 'cd', src: `${ASSET}v94-bola.webp` },
+  { t: 'av', src: `${ASSET}v9-astronauta.webp` },
 ];
 const MBPOS = [[20, 2], [80, 2], [2, 40], [97, 40], [2, 72], [97, 72]];
 
@@ -93,7 +97,7 @@ function BannerSorteio() {
   return (
     <div className="faixaAd" role="button" tabIndex={0} onClick={clicar} style={{ cursor: 'pointer' }}>
       <span className="publab">Pub.</span>
-      <img src={ad.imagem_url || '/futty-logo-flat.png'} alt="" />
+      <img src={ad.imagem_url || '/futty-logo-flat.webp'} alt="" />
       <div className="col"><div className="adtit">{ad.texto}</div><div className="adsub">{ad.sub}</div></div>
       <span className="adcta">{ad.cta || 'Ver'}</span>
     </div>
@@ -317,7 +321,12 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     const somBtn = q('.somBtn');
     const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clique p/ ligar)'; };
     const onSom = () => { const on = SomSorteio.toggle(); if (on) { SomSorteio.toque(0.2); SomSorteio.iniciar(); } pintarSom(); };
-    somBtn.addEventListener('click', onSom); pintarSom(); SomSorteio.autoTeste();
+    somBtn.addEventListener('click', onSom); pintarSom();
+    // 13-set: o autoTeste dá load() nos 5 sons para logar "SOM OK 5/5" — 2 MB
+    // baixados ao abrir a cerimônia, inclusive com o som desligado, que é o
+    // padrão. Fica só em desenvolvimento; em produção os sons entram um a um,
+    // no primeiro uso (o el() do somSorteio.js já é preguiçoso).
+    if (import.meta.env.DEV) SomSorteio.autoTeste();
 
     // ── ALAVANCA: arrasto (mola) + tap + teclado ──
     const lever = q('.lever'); const grip = lever.querySelector('.l6-grip');
@@ -434,7 +443,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
             <div className="maqveu" />
           </div>
           <div className="lever6 lever" title="Puxar o F = repetir a cerimônia">
-            <div className="l6-grip"><div className="l6-knob"><img src="/futty-logo-flat.png" alt="F" /></div></div>
+            <div className="l6-grip"><div className="l6-knob"><img src="/futty-logo-flat.webp" alt="F" /></div></div>
             <span className="setas"><i /><i /><i /></span>
           </div>
         </div></div>

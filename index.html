@@ -13,19 +13,39 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Futty" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- O Inter passou a ser CARREGADO. Estava declarado no --sans (index.css) desde
-         sempre, mas nunca houve @font-face nenhum para ele: quem tivesse o Inter
-         instalado na máquina via Inter, quem não tivesse caía em silêncio para o
-         system-ui. Ou seja, o tipo de letra de leitura do app dependia da máquina de
-         quem olhava — e ninguém dava por isso, porque os dois são grotescas.
-         Vai na MESMA requisição do Rajdhani (o css2 aceita famílias múltiplas), para
-         não acrescentar um round-trip ao arranque. 400/500/600: o app usa 400 para
-         texto corrido e 600 para o que é semi-destacado; o 700+ é território do
-         Rajdhani, que é a fonte estrutural. -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet" />
+    <!-- FONTES — locais desde 13-set. Vinham do Google Fonts em duas requisições:
+         duas ligações novas (DNS + TLS) antes de a primeira letra aparecer, e no
+         celular isso é o "salto de fonte" ao abrir. Agora são 4 arquivos woff2 em
+         /fonts, subconjunto latin, 94 KB no total — e o app nativo não depende de
+         rede nenhuma para desenhar texto.
+         Caiu a requisição inteira do Chakra Petch: era pedida no arranque e não há
+         uma única regra de CSS que a use.
+         Só os pesos que existem: a Rajdhani não tem 800. As 43 regras com
+         font-weight:800 já caíam no 700 (ou em negrito sintético); carregar 700 é
+         o mais perto do que se pode. -->
+    <style>
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 400; font-display: swap;
+        src: url('/fonts/rajdhani-400.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 600; font-display: swap;
+        src: url('/fonts/rajdhani-600.woff2') format('woff2');
+      }
+      /* 700 cobre também o 800 pedido pelo CSS (a família não vai além de 700). */
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 700 800; font-display: swap;
+        src: url('/fonts/rajdhani-700.woff2') format('woff2');
+      }
+      /* Inter é variável: um arquivo só serve 400, 500 e 600. */
+      @font-face {
+        font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap;
+        src: url('/fonts/inter-latin.woff2') format('woff2');
+      }
+    </style>
+    <!-- A Rajdhani 700 é a que desenha títulos, HUD e números — é a primeira letra
+         que a pessoa vê. Vai em preload para não esperar o CSS ser lido. -->
+    <link rel="preload" href="/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <div id="root"></div>

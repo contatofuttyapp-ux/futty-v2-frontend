@@ -92,7 +92,7 @@ function desenharTituloGradiente(cx, texto, W, y, tamanho = 120) {
 
 // Marca FUTTY na base — logo REAL (não texto) + wordmark. MESMO lockup do ESCALAÇÃO.
 async function desenharLogoLockup(cx, W, H) {
-  const logo = await carregarImagem('/futty-logo-flat.png');
+  const logo = await carregarImagem('/futty-logo-flat.webp');
   const by = H - 58;
   cx.textBaseline = 'middle';
   cx.font = '800 32px Rajdhani, sans-serif'; const wF = cx.measureText('Futty').width;

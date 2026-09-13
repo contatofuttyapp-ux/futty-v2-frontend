@@ -114,7 +114,7 @@ const PREMIUM_GLINTS_DISCRETO = [PREMIUM_GLINTS[2], PREMIUM_GLINTS[7], PREMIUM_G
 // chapa falhe a carregar — nunca fica buraco) e as 3 cores do glint (centro/halo/cauda).
 const PALETAS_PREMIUM = {
   golden: { chapa: '/golden-plate.jpg', base0: '#2a1c05', base1: '#140d02', glintHi: '255,252,236', glintMid: '255,236,188', glintLo: '255,220,150' },
-  royal: { chapa: '/royal-plate.jpg', base0: '#1c1030', base1: '#0c0818', glintHi: '238,230,255', glintMid: '196,166,255', glintLo: '139,92,246' },
+  royal: { chapa: '/royal-plate.webp', base0: '#1c1030', base1: '#0c0818', glintHi: '238,230,255', glintMid: '196,166,255', glintLo: '139,92,246' },
 };
 
 // Um glint de diamante/cristal NO PICO: ponto redondo com halo + micro-cruz de 4 raios.
@@ -195,7 +195,7 @@ export async function desenharFundoEpico(ctx, W, H, { intensidade = 1 } = {}) {
 
   // b) PADRÃO num canvas OFFSCREEN → transferido com blur (só o padrão desfoca;
   //    base, luz e vinheta ficam nítidas). Seed FIXA → determinístico.
-  const fLogo = await carregarImagem('/futty-logo-flat.png', false);
+  const fLogo = await carregarImagem('/futty-logo-flat.webp', false);
   // Offscreen 25% MAIOR que o card: a pseudo-perspectiva (skew) desloca as bordas
   // e, sem esta folga, ficariam faixas sem padrão nos limites do card.
   const off = document.createElement('canvas');
@@ -691,7 +691,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     const desenhar = fundo === 'golden' ? desenharFundoGolden : desenharFundoRoyal;
     await desenhar(ctx, W, H, { glints: apenasMoldura ? false : fundoGlints });
   } else {
-    const bg = await carregarImagem('/stadium_bg.png', false);
+    const bg = await carregarImagem('/stadium_bg.webp', false);
     if (bg) {
       const scale = Math.max(W / bg.naturalWidth, H / bg.naturalHeight);
       const sw = bg.naturalWidth * scale;

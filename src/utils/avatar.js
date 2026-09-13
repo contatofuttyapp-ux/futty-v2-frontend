@@ -34,7 +34,7 @@ export function urlAsset(caminho) {
 // Genérico colorido (servido pelo FRONTEND em /avatares/genericos/<cor>.png).
 // Nota V2: os genéricos estão no public do frontend, não no backend.
 function genericoColorido(cor) {
-  return `/avatares/genericos/${cor}.png`;
+  return `/avatares/genericos/${cor}.webp`;
 }
 
 // Nome de exibição do jogador (nome_jogador → nome → #id).
