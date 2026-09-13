@@ -3,6 +3,10 @@
   "appName": "Futty",
   "webDir": "dist",
   "backgroundColor": "#080808",
+  "server": {
+    "iosScheme": "capacitor",
+    "androidScheme": "https"
+  },
   "android": {
     "backgroundColor": "#080808"
   },
