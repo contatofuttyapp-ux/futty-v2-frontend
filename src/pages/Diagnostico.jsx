@@ -59,7 +59,7 @@ export default function Diagnostico() {
   const [enviando, setEnviando] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const { aparelho, resumo, chamadas, navegacoes } = dados;
+  const { aparelho, resumo, chamadas, navegacoes, falhas } = dados;
 
   async function enviar() {
     if (enviando) return;
@@ -111,6 +111,21 @@ export default function Diagnostico() {
             Telas abertas: {resumo.navegacoes} · pintaram do cache: {resumo.pinturasDoCache}
           </div>
         </div>
+
+        {/* ─── Falhas silenciosas (VELOCIDADE 5) ─── */}
+        {falhas.length > 0 ? (
+          <div>
+            <div className="games-label">Não apareceu ({falhas.length})</div>
+            <div className="hud-corners-s" style={{ ...CARTAO, display: 'grid', gap: 6 }}>
+              {[...falhas].reverse().map((f, i) => (
+                <div key={i} style={{ fontSize: 12, lineHeight: 1.5, color: '#f8b4b4', wordBreak: 'break-word' }}>
+                  <b>{f.area}</b> · {f.causa}
+                  {f.detalhe ? <span style={{ color: 'var(--text-dim)' }}> — {f.detalhe}</span> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {/* ─── Chamadas ─── */}
         <div>

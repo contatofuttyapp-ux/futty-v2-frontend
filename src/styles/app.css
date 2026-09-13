@@ -1631,20 +1631,25 @@
   transform: scale(0.97);
 }
 
-/* VELOCIDADE 4 — a foto que segura o lugar do cromo enquanto o canvas desenha.
-   Recuada de propósito: mais escura e levemente desfocada, para se ler como
-   "ainda a compor" e não como uma figurinha feia. Quando o cromo real entra,
-   a troca é entre duas imagens do mesmo tamanho, no mesmo sítio — sem salto.
-   A respiração é a mesma do resto da casa e morre com prefers-reduced-motion. */
+/* A foto que segura o lugar do cromo enquanto o canvas desenha. Quando o cromo
+   real entra, a troca é entre duas imagens do mesmo tamanho, no mesmo sítio —
+   sem salto. A respiração morre com prefers-reduced-motion.
+
+   VELOCIDADE 5 (14-set) — NÍTIDA. Nasceu desfocada (blur 2px, opacity 0.4) para
+   se ler como "ainda a compor", e a ideia só se aguenta enquanto o cromo chega
+   logo a seguir. No iPhone da loja não chegava: a pessoa ficava a olhar para a
+   própria cara borrada, sem nunca perceber que aquilo era uma espera. Uma
+   espera que não acaba não é um estado de transição, é um defeito — e entre
+   mostrar o rosto nítido ou desfocado, quando pode ser o último quadro, mostra-se
+   nítido. O pulso (mais discreto agora) é o que continua a dizer "vem aí mais". */
 .cromo-previa {
-  opacity: 0.4;
-  filter: blur(2px) saturate(0.7);
+  opacity: 0.85;
   animation: cromo-previa-pulso 1.6s ease-in-out infinite;
 }
 
 @keyframes cromo-previa-pulso {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.5; }
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 0.95; }
 }
 
 @media (prefers-reduced-motion: reduce) {

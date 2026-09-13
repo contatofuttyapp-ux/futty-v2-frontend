@@ -19,6 +19,7 @@ const MAX = 50;
 
 const chamadas = [];
 const navegacoes = [];
+const falhas = [];
 
 // Navegação em curso: o relógio parte na mudança de rota (o "toque") e é lida
 // pelas chamadas que partem a seguir e pela primeira pintura.
@@ -123,6 +124,27 @@ export function marcarPintura() {
   });
 }
 
+/**
+ * Algo que devia ter aparecido e não apareceu (VELOCIDADE 5).
+ *
+ * Chamadas que falham já se veem pelo estado na lista de cima; isto é para o
+ * que morre em silêncio — o cromo do Início que fica no placeholder para
+ * sempre, por exemplo. Sem um registo destes, a única prova de que aconteceu é
+ * a pessoa dizer "ficou desfocado", e isso não diz PORQUÊ.
+ *
+ * `area` diz onde ('cromo'), `causa` diz o quê ('timeout-indexeddb',
+ * 'blob-nulo', 'erro'), `detalhe` é a mensagem do erro quando há uma. Nunca
+ * leva dados do utilizador.
+ */
+export function registarFalha(area, causa, detalhe = null) {
+  guardar(falhas, {
+    area,
+    causa,
+    detalhe: detalhe == null ? null : String(detalhe).slice(0, 200),
+    em: new Date().toISOString(),
+  });
+}
+
 /** Guarda a versão/build do app (só existe no nativo). Chamado uma vez. */
 export function definirInfoApp(info) {
   infoApp = info || null;
@@ -164,9 +186,11 @@ export function lerDiagnostico() {
       // Quantas telas pintaram sem esperar pela rede.
       pinturasDoCache: navegacoes.filter((n) => n.doCache).length,
       navegacoes: navegacoes.length,
+      falhas: falhas.length,
     },
     chamadas: [...chamadas],
     navegacoes: [...navegacoes],
+    falhas: [...falhas],
   };
 }
 
@@ -174,5 +198,6 @@ export function lerDiagnostico() {
 export function limparDiagnostico() {
   chamadas.length = 0;
   navegacoes.length = 0;
+  falhas.length = 0;
   navegacaoAberta = null;
 }

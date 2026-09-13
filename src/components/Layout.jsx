@@ -59,6 +59,7 @@ const HIDE_NAV_PATTERNS = [
   /^\/equipa\/[^/]+\/jogador\//,
 ];
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function shouldShowNav(pathname) {
   return !HIDE_NAV_PATTERNS.some((re) => re.test(pathname));
 }

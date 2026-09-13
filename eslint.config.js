@@ -27,9 +27,9 @@ export default defineConfig([
     languageOptions: { globals: globals.serviceworker },
   },
   {
-    // scripts/** corre no Node, na hora do build — não no browser. Tem process,
-    // console e os módulos de node:.
-    files: ['scripts/**/*.js'],
+    // scripts/** e o vite.config.js correm no Node, na hora do build — não no
+    // browser. Têm process, console e os módulos de node:.
+    files: ['scripts/**/*.js', 'vite.config.js'],
     languageOptions: { globals: globals.node },
   },
 ])

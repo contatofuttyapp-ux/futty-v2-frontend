@@ -31,9 +31,12 @@ import '../styles/app.css';
 // Épico (o único livre a seguir ao Estádio/Aura). LEI DA REGRA JUSTA: quem já
 // tinha Aura/Épico equipado mantém — o gate só corre ao TROCAR (ver escolherFundo).
 const FUNDOS = [
-  // ORDEM (dono, 31-jul): os GRÁTIS primeiro, os pagos depois — Neutro antes do Aura.
-  { k: 'estadio', label: 'Estádio' },
+  // ORDEM (dono, 14-set): Neutro, Estádio, Aura, Épico, Golden, Royal — os GRÁTIS
+  // primeiro, os pagos depois, e o Neutro à frente do Estádio. Revoga a ordem de
+  // 31-jul (Estádio primeiro). Só o SELETOR muda: o fundo de quem não escolheu
+  // continua a ser 'estadio' (useState abaixo e cromoFundo no Início).
   { k: 'preto', label: 'Neutro' },
+  { k: 'estadio', label: 'Estádio' },
   { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
   { k: 'gradiente', label: 'Épico', premium: true }, // chave interna 'gradiente' (estado), label novo
   { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres

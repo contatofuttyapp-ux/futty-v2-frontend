@@ -13,6 +13,7 @@ import { formatDateTime, formatRating } from '../utils/format';
 import { plural } from '../utils/plural';
 import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
+import { registarFalha } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
@@ -503,17 +504,43 @@ export default function Inicio() {
       return () => { vivo = false; };
     }
 
+    // VELOCIDADE 5 (14-set) — o cromo não pode depender de ninguém para sempre.
+    // No iPhone da loja apanhámos o placeholder desfocado eternamente: o
+    // lerCromo() do IndexedDB não tinha prazo e, com o WebKit a travar a base
+    // (outra aba a segurar o upgrade, modo privado, disco a responder mal), a
+    // promessa nunca assentava — e como o desenhar() estava DENTRO do .then(),
+    // o canvas também nunca corria. Uma otimização de cache a segurar a coisa
+    // que ela devia acelerar.
+    //
+    // Agora quem manda é o relógio: passados 400 ms sem resposta do cache,
+    // desenha-se na mesma. Perde-se o atalho, nunca a figurinha.
+    let desenhou = false;
     function desenhar() {
+      if (!vivo || desenhou) return;
+      desenhou = true;
       gerarCromoDataURL(opts, chave, user.id)
-        .then((url) => { if (vivo && url) setCromo(url); })
-        .catch((e) => { console.error('[cromo]', e); });
+        .then((url) => {
+          if (!vivo) return;
+          if (url) setCromo(url);
+          else registarFalha('cromo', 'blob-nulo');
+        })
+        .catch((e) => {
+          console.error('[cromo]', e);
+          registarFalha('cromo', 'erro', e?.message);
+        });
     }
 
     // Guardado da última abertura: se a composição é a mesma, os pixéis seriam
     // idênticos — mostra-se e não se redesenha nada.
-    lerCromo(user.id)
+    const prazoCache = new Promise((resolve) => setTimeout(() => resolve('prazo'), 400));
+    Promise.race([lerCromo(user.id).catch(() => null), prazoCache])
       .then((guardado) => {
         if (!vivo) return;
+        if (guardado === 'prazo') {
+          registarFalha('cromo', 'timeout-indexeddb');
+          desenhar();
+          return;
+        }
         if (guardado?.chave === chave) {
           cromoCache.set(chave, guardado.dataURL);
           setCromo(guardado.dataURL);
@@ -523,7 +550,15 @@ export default function Inicio() {
       })
       .catch(desenhar);
 
-    return () => { vivo = false; };
+    // Rede de segurança: se ao fim de 4 s ainda não há cromo no ecrã, foi o
+    // próprio canvas que não chegou ao fim (decodificar avatar e fundo é o
+    // passo caro). Fica registado para se ver no Gabinete — é a diferença
+    // entre "o cromo demora" e "o cromo não vem".
+    const vigia = setTimeout(() => {
+      if (vivo && !cromoCache.get(chave)) registarFalha('cromo', 'sem-cromo-4s');
+    }, 4000);
+
+    return () => { vivo = false; clearTimeout(vigia); };
   }, [user, cromoAvatarEhIA, cromoFundo, avatarGenericoEscolha, nome]);
 
   // A foto que segura o lugar do cromo enquanto ele não existe: a mesma imagem

@@ -1,5 +1,5 @@
 // Futty v2.0 — Router principal
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
@@ -14,7 +14,6 @@ import RouteTitle from './components/RouteTitle';
 import MedidorNavegacao from './components/MedidorNavegacao';
 import DeepLinkListener from './components/DeepLinkListener';
 import Layout from './components/Layout';
-import LoadingScreen from './components/LoadingScreen';
 import LoadingFutty from './components/LoadingFutty';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage';
@@ -67,14 +66,10 @@ const Diagnostico = lazy(() => import('./pages/Diagnostico'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
 //
-// VAGA 1 (B2) — o `loading` aqui é o do AuthProvider: dura o que o getSession() do
-// Supabase demorar, e isso não tem prazo. O LoadingScreen do arranque, esse, sai a
-// horas fixas (1200ms + 400ms de fade). Quando a rede é lenta o overlay desaparece
-// primeiro e este `return null` deixava o visitante a olhar para o vazio — o branco
-// do arranque. Agora o F continua a desenhar-se até haver resposta.
-// Os dois são fixed/inset:0 centrados com o mesmo <FuttyLoader size={129}>, por isso
-// a passagem de um para o outro é invisível: o F não salta, não muda de tamanho.
-// A lógica é a mesma — só o null deu lugar a um componente.
+// VELOCIDADE 5 (14-set) — este `loading` é o do AuthProvider e agora só é verdade
+// quando NÃO há sessão guardada no aparelho: com sessão, o AuthProvider já nasce
+// com ela (leitura síncrona do localStorage) e nunca se passa por aqui. Quem chega
+// a ver este F é o visitante de primeira viagem, e só enquanto o Supabase responde.
 function IndexRedirect() {
   const { session, loading } = useAuth();
   if (loading) return <LoadingFutty />;
@@ -105,7 +100,7 @@ function JogoRoute() {
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <Suspense fallback={<LoadingScreen />}>
+    <Suspense fallback={<LoadingFutty />}>
       <AnimatePresence mode="wait">
         <PageTransition key={location.pathname}>
           <Routes location={location}>
@@ -322,11 +317,15 @@ function AnimatedRoutes() {
   );
 }
 
+// VELOCIDADE 5 (14-set) — SEM TEMPO ARTIFICIAL no arranque. Havia aqui um overlay
+// que ficava 1200 ms fixos mais 400 ms de fade, em TODA abertura, olhasse ou não o
+// app para o que já estava pronto: um segundo e meio cobrado a quem já tinha tudo
+// em cache. O único loading de arranque passa a ser o LoadingFutty, e só enquanto
+// a sessão for mesmo desconhecida. No app da loja quem cobre o boot é a tela de
+// abertura do sistema, que sai quando a WebView pinta — o overlay duplicava-a.
 export default function App() {
-  const [loading, setLoading] = useState(true);
   return (
     <ErrorBoundary>
-      {loading && <LoadingScreen onDone={() => setLoading(false)} />}
       <I18nProvider>
         <AuthProvider>
           <PerfilProvider>
