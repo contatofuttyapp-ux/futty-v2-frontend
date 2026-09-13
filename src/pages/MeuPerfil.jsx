@@ -489,6 +489,12 @@ export default function MeuPerfil() {
               Painel de administração
             </ContaRow>
           ) : null}
+          {/* VELOCIDADE 4 — aberta a toda gente durante o teste, de propósito:
+              o número da lentidão tem de vir do aparelho de quem a sente. */}
+          <ContaRow onClick={() => navigate('/diagnostico')} cor="#8b5cf6">
+            <Icon name="definicoes" size={20} color="#d4a017" />
+            Diagnóstico
+          </ContaRow>
           {souSuperAdmin ? (
             <ContaRow onClick={() => navigate('/gabinete')} cor="#8b5cf6">
               <Icon name="definicoes" size={20} color="#d4a017" />

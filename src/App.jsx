@@ -11,6 +11,7 @@ import AuthGuard from './components/AuthGuard';
 import SuperAdminGuard from './components/SuperAdminGuard';
 import CookieBanner from './components/CookieBanner';
 import RouteTitle from './components/RouteTitle';
+import MedidorNavegacao from './components/MedidorNavegacao';
 import DeepLinkListener from './components/DeepLinkListener';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
@@ -62,6 +63,7 @@ const Gabinete = lazy(() => import('./pages/Gabinete'));
 const Termos = lazy(() => import('./pages/Termos'));
 const Privacidade = lazy(() => import('./pages/Privacidade'));
 const ExcluirConta = lazy(() => import('./pages/ExcluirConta'));
+const Diagnostico = lazy(() => import('./pages/Diagnostico'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
 //
@@ -249,6 +251,16 @@ function AnimatedRoutes() {
               </AuthGuard>
             }
           />
+          {/* VELOCIDADE 4 — a caixa-preta do app, aberta a toda gente durante o
+              teste: quem sente a lentidão é quem tem o aparelho na mão. */}
+          <Route
+            path="/diagnostico"
+            element={
+              <AuthGuard>
+                <Diagnostico />
+              </AuthGuard>
+            }
+          />
           <Route
             path="/perfil"
             element={
@@ -325,6 +337,7 @@ export default function App() {
                   descendentes, nunca para quem o envolve. */}
               <SessaoProvider>
                 <RouteTitle />
+                <MedidorNavegacao />
                 <DeepLinkListener />
                 <Layout>
                   <AnimatedRoutes />

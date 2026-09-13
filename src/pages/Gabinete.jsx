@@ -432,6 +432,106 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
 }
 
 // ─── ABA 4: SEGURANÇA ────────────────────────────────────────────────────────
+// VELOCIDADE 4 — relatórios que os testadores enviaram do próprio aparelho
+// (Perfil → Diagnóstico). Cada linha já traz as médias; o JSON inteiro só é
+// buscado quando se abre um, porque é o que tem as 50 chamadas.
+//
+// A leitura que interessa: MOTOR alto é problema nosso, no servidor; REDE alta é
+// a distância a São Paulo, e essa não se resolve com código. "Na frente" é o
+// tempo entre tocar numa aba e a tela real aparecer.
+function SecaoDiagnostico() {
+  const [lista, setLista] = useState(null);
+  const [erro, setErro] = useState('');
+  const [aberto, setAberto] = useState(null); // { chave, json } | { chave, erro }
+
+  useEffect(() => {
+    let vivo = true;
+    apiFetch('/api/super/diagnostico')
+      .then((d) => vivo && setLista(d.relatorios || []))
+      .catch((e) => vivo && setErro(e.message));
+    return () => { vivo = false; };
+  }, []);
+
+  async function verJson(r) {
+    const chave = `${r.userId}/${r.ficheiro}`;
+    if (aberto?.chave === chave) { setAberto(null); return; }
+    setAberto({ chave, json: null });
+    try {
+      const d = await apiFetch(`/api/super/diagnostico/${r.userId}/${r.ficheiro}`);
+      setAberto({ chave, json: d.relatorio });
+    } catch (e) {
+      setAberto({ chave, erro: e.message });
+    }
+  }
+
+  const media = (r, campo) => (r.resumo?.[campo]?.media != null ? `${r.resumo[campo].media}ms` : '—');
+
+  return (
+    <>
+      <h2 style={sectionH2}>Diagnóstico do app</h2>
+      {erro ? <div style={{ ...CARD, padding: 10, color: '#fda4af', fontSize: 12 }}>{erro}</div> : null}
+      {lista === null && !erro ? <div style={{ ...CARD, padding: 10, fontSize: 12, color: 'var(--text-dim)' }}>A carregar…</div> : null}
+      {lista && lista.length === 0 ? (
+        <div style={{ ...CARD, padding: 10, fontSize: 12, color: 'var(--text-dim)' }}>
+          Nenhum relatório ainda. Eles chegam quando alguém toca em “Enviar relatório” no Perfil → Diagnóstico.
+        </div>
+      ) : null}
+      {lista && lista.length > 0 ? (
+        <div style={{ ...CARD, overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
+            <thead>
+              <tr>
+                <th style={th}>Quando</th>
+                <th style={th}>Aparelho</th>
+                <th style={th}>Motor</th>
+                <th style={th}>Rede</th>
+                <th style={th}>Na frente</th>
+                <th style={th}>JSON</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((r) => {
+                const chave = `${r.userId}/${r.ficheiro}`;
+                const estaAberto = aberto?.chave === chave;
+                return (
+                  <tr key={chave}>
+                    <td style={td}>{String(r.em).replace('T', ' ').slice(0, 16)}</td>
+                    <td style={td}>
+                      {r.plataforma || '?'}
+                      {r.appVersao ? ` ${r.appVersao} (${r.appBuild})` : ''}
+                    </td>
+                    <td style={{ ...td, color: '#f0c94a' }}>{media(r, 'motor')}</td>
+                    <td style={{ ...td, color: '#b69cff' }}>{media(r, 'rede')}</td>
+                    <td style={td}>{media(r, 'pintura')}</td>
+                    <td style={td}>
+                      <button type="button" style={btn} onClick={() => verJson(r)}>
+                        {estaAberto ? 'Fechar' : 'Ver'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {aberto ? (
+            <div style={{ borderTop: '1px solid #222', padding: 10 }}>
+              {aberto.erro ? (
+                <span style={{ color: '#fda4af', fontSize: 12 }}>{aberto.erro}</span>
+              ) : aberto.json ? (
+                <pre style={{ margin: 0, maxHeight: 360, overflow: 'auto', fontSize: 11, lineHeight: 1.5, color: '#c9c2d6', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {JSON.stringify(aberto.json, null, 2)}
+                </pre>
+              ) : (
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>A abrir…</span>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp }) {
   const s = dados.seguranca;
   const bt = s.banco_trancado;
@@ -485,6 +585,8 @@ function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp
           </table>
         </div>
       </details>
+
+      <SecaoDiagnostico />
 
       {MOSTRAR_AVANCADO ? (
         <>

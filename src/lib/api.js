@@ -1,6 +1,7 @@
 // Futty v2.0 — Cliente da API backend (com JWT do utilizador)
 import { Capacitor } from '@capacitor/core';
 import { supabase } from './supabase';
+import { registarChamada, lerServerTiming } from './diagnostico';
 
 // VELOCIDADE 4 — de onde sai o /api depende de onde a tela está a correr:
 //
@@ -42,7 +43,13 @@ export async function apiFetch(path, options = {}) {
     headers.Authorization = `Bearer ${session.access_token}`;
   }
 
+  // VELOCIDADE 4 — a caixa-preta mede AQUI, no único sítio por onde todas as
+  // chamadas passam. Só rota, estado e tempos; nunca corpo nem token.
+  const t0 = performance.now();
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const ms = performance.now() - t0;
+  const { motorMs, edgeMs } = lerServerTiming(res.headers.get('Server-Timing'));
+  registarChamada({ rota: path, metodo: options.method || 'GET', status: res.status, ms, motorMs, edgeMs });
 
   let body = null;
   try {

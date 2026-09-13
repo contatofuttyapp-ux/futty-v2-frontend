@@ -14,6 +14,7 @@ const TITULOS = [
   ['/feed', 'Feed'],
   ['/figurinha', 'Figurinha'],
   ['/perfil', 'Perfil'],
+  ['/diagnostico', 'Diagnóstico'],
   ['/planos', 'Planos'],
   ['/explorar', 'Explorar'],
   ['/super', 'Super-Admin'],

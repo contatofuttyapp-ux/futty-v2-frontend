@@ -21,6 +21,7 @@ import FuttyLoader from './FuttyLoader';
 // tGlobal (não-reactivo): este ecrã também é usado FORA do I18nProvider
 // (guarda de auth no arranque) — hook aqui rebenta; tGlobal lê o idioma guardado.
 import { tGlobal } from '../lib/i18n';
+import { loaderEntrou, loaderSaiu } from '../lib/diagnostico';
 
 // P3-14 — se o carregamento passar dos 4s, uma legenda discreta aparece por baixo do F
 // (contexto: "não travou, ainda estamos a puxar"). `legenda` é opcional — cada página
@@ -33,6 +34,13 @@ export default function LoadingFutty({ legenda = 'Bola parada…\nO servidor tá
   useEffect(() => {
     const t = setTimeout(() => setMostrarLegenda(true), 4000);
     return () => clearTimeout(t);
+  }, []);
+
+  // VELOCIDADE 4: enquanto este F estiver no ecrã, a tela real ainda não está —
+  // a caixa-preta só marca "pintou" depois de o último loader sair.
+  useEffect(() => {
+    loaderEntrou();
+    return loaderSaiu;
   }, []);
   return (
     <div
