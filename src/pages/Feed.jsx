@@ -9,6 +9,7 @@ import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import { useAuth } from '../hooks/useAuth';
+import { usePerfil } from '../context/PerfilContext';
 import { useTeams } from '../hooks/useTeam';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import Reacoes from '../components/Reacoes';
@@ -859,7 +860,11 @@ const linkBtn = {
 
 // ─── Página ────────────────────────────────────────────────────────────────────
 export default function Feed() {
-  const { user } = useAuth();
+  const { user: authUser } = useAuth();
+  const { perfil } = usePerfil();
+  // O usuário do Auth só tem id e e-mail; nome_jogador e avatar_url vivem no
+  // perfil (/api/me). Sem isto o compositor dizia "Solte a resenha, Jogador…".
+  const user = perfil?.user ? { ...authUser, ...perfil.user } : authUser;
   const { teams } = useTeams();
 
   const [items, setItems] = useState(null); // null = a carregar
