@@ -14,7 +14,7 @@ import AuroraBg from './AuroraBg';
 // onboarding — para não fazer loop).
 const ROTAS_SEM_ONBOARDING = [
   /^\/$/, /^\/login/, /^\/register/, /^\/forgot-password/,
-  /^\/convite\//, /^\/p\//, /^\/termos/, /^\/privacidade/, /^\/onboarding/,
+  /^\/convite\//, /^\/p\//, /^\/termos/, /^\/privacidade/, /^\/excluir-conta/, /^\/onboarding/,
 ];
 
 // Gate do onboarding dia-1: se a conta ainda não o concluiu (flag no servidor),

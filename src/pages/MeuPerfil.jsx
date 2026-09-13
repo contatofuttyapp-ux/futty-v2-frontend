@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { limparCacheLocal } from '../lib/cacheLocal';
 import { useAuth } from '../hooks/useAuth';
 import { useApi } from '../hooks/useApi';
 import { usePerfil } from '../context/PerfilContext';
@@ -99,6 +100,10 @@ export default function MeuPerfil() {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [nomeJogFocus, setNomeJogFocus] = useState(false);
   const [sheetIdioma, setSheetIdioma] = useState(false);
+  // Excluir conta (LGPD/exigência das lojas, 14-set).
+  const [sheetExcluir, setSheetExcluir] = useState(false);
+  const [confirmExcluir, setConfirmExcluir] = useState('');
+  const [excluindo, setExcluindo] = useState(false);
 
   function showToast(mensagem, tipo = 'success') {
     setToast({ mensagem, tipo });
@@ -132,6 +137,26 @@ export default function MeuPerfil() {
     setTimeout(() => {
       showToast('Email: suporte@futty.app', 'info');
     }, 500);
+  }
+
+  // Excluir conta — irreversível. DELETE /api/me já faz tudo no servidor
+  // (times, Storage, conta); aqui só resta limpar o que sobra no aparelho e
+  // sair. limparCacheLocal() antes do signOut() é redundante com o que o
+  // próprio signOut já faz (AuthContext.jsx) — fica explícito mesmo assim,
+  // pela mesma razão de sempre: o próximo a entrar neste aparelho não pode
+  // ver, nem por 1 render, dados de uma conta que acabou de deixar de existir.
+  async function excluirConta() {
+    if (confirmExcluir !== 'EXCLUIR' || excluindo) return;
+    setExcluindo(true);
+    try {
+      await apiFetch('/api/me', { method: 'DELETE', body: JSON.stringify({ confirmacao: 'EXCLUIR' }) });
+      limparCacheLocal();
+      await signOut();
+      navigate('/', { state: { toast: 'Conta excluída. Até a próxima pelada.' } });
+    } catch (e) {
+      showToast(e.message || 'Não foi possível excluir a conta.', 'error');
+      setExcluindo(false);
+    }
   }
 
   // Atualiza um campo localmente (sem gravar — só para os inputs de texto).
@@ -470,9 +495,18 @@ export default function MeuPerfil() {
               Gabinete
             </ContaRow>
           ) : null}
-          <ContaRow onClick={() => setConfirmSignOut(true)} cor="rgba(239,68,68,0.8)" semBorda>
+          <ContaRow onClick={() => setConfirmSignOut(true)} cor="rgba(239,68,68,0.8)">
             <Icon name="sair" size={20} color="#d4a017" />
             Sair da conta
+          </ContaRow>
+          {/* Vermelho discreto (mais apagado que "Sair da conta"): é uma ação
+              rara e séria, não precisa do mesmo peso visual da de todo dia.
+              Ícone reaproveitado de "Sair" (não há um de lixeira no set custom
+              de /public/icons) — mesmo padrão já usado com "cadeado" (senha e
+              privacidade dividem o ícone). */}
+          <ContaRow onClick={() => { setConfirmExcluir(''); setSheetExcluir(true); }} cor="rgba(239,68,68,0.5)" semBorda>
+            <Icon name="sair" size={20} color="#d4a017" />
+            Excluir conta
           </ContaRow>
         </div>
 
@@ -600,6 +634,80 @@ export default function MeuPerfil() {
                 </button>
               );
             })}
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {/* Bottom sheet "Excluir conta" — mesmo padrão do sheet de idioma (portal
+          para o <body>, painel encostado em baixo; ver nota longa acima de
+          sheetIdioma sobre o porquê do portal). Fechar por fora fica ativo
+          mesmo aqui: é reversível até o clique em "Excluir de vez". */}
+      {sheetExcluir ? createPortal(
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onClick={() => { if (!excluindo) setSheetExcluir(false); }}
+          style={{ alignItems: 'flex-end', padding: 0 }}
+        >
+          <div
+            className="hud-corners-topo"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Excluir minha conta"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', background: '#16161c', borderTop: '1px solid rgba(239,68,68,0.35)', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+          >
+            <div aria-hidden="true" style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)', margin: '10px auto 6px' }} />
+            <div style={{ padding: '4px 20px 20px' }}>
+              <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.04em', color: '#f87171', margin: '10px 0 10px' }}>
+                Excluir minha conta
+              </h2>
+              <p style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.65)', margin: '0 0 16px' }}>
+                Isso apaga seu perfil, sua figurinha, suas fotos e suas participações. Times em que você é o único membro são apagados; os outros continuam com o time. Não dá para desfazer.
+              </p>
+              <label style={{ display: 'grid', gap: 6, marginBottom: 16 }}>
+                <span style={labelStyle}>Digite EXCLUIR para confirmar</span>
+                <input
+                  value={confirmExcluir}
+                  onChange={(e) => setConfirmExcluir(e.target.value)}
+                  placeholder="EXCLUIR"
+                  autoCapitalize="characters"
+                  disabled={excluindo}
+                  className="hud-corners-s"
+                  style={inputStyle}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn hud-corners-s"
+                style={{
+                  width: '100%',
+                  fontFamily: "'Rajdhani', sans-serif",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  background: confirmExcluir === 'EXCLUIR' ? 'var(--danger)' : 'rgba(239,68,68,0.12)',
+                  border: '1px solid rgba(239,68,68,0.5)',
+                  color: confirmExcluir === 'EXCLUIR' ? '#fff' : 'rgba(255,255,255,0.35)',
+                  cursor: confirmExcluir === 'EXCLUIR' && !excluindo ? 'pointer' : 'not-allowed',
+                }}
+                disabled={confirmExcluir !== 'EXCLUIR' || excluindo}
+                onClick={excluirConta}
+              >
+                {excluindo ? 'Excluindo…' : 'Excluir de vez'}
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                style={{ width: '100%', marginTop: 10 }}
+                disabled={excluindo}
+                onClick={() => setSheetExcluir(false)}
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>,
         document.body

@@ -143,6 +143,7 @@ export default function Privacidade() {
 
         <ul style={{ ...ul, marginTop: 20 }}>
           <li>Veja também os <Link to="/termos" style={{ color: 'var(--neon)' }}>Termos de Uso</Link>.</li>
+          <li>Quer apagar a sua conta? Veja o passo a passo em <Link to="/excluir-conta" style={{ color: 'var(--neon)' }}>Excluir conta</Link>.</li>
         </ul>
       </div>
     </div>

@@ -3,14 +3,20 @@
 // e as três portas de entrada. As secções antigas (figurinha/como-funciona/planos/
 // CTA final) morreram — quem quer saber mais entra.
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import FuttyLockup from '../components/FuttyLockup';
 import GoogleIcon from '../components/GoogleIcon';
+import Toast from '../components/Toast';
 import '../styles/app.css';
 
 export default function LandingPage() {
   const [erro, setErro] = useState('');
+  // Toast de passagem (ex.: "Conta excluída..." depois de MeuPerfil.jsx
+  // navegar para "/" com state) — location.state some numa próxima
+  // navegação, por isso é lido só uma vez no estado inicial.
+  const location = useLocation();
+  const [toastPassagem, setToastPassagem] = useState(location.state?.toast || '');
 
   // Mesmo fluxo OAuth do Login (supabase.auth.signInWithOAuth) — a rota /login
   // continua a existir para quem prefere email/password.
@@ -104,6 +110,8 @@ export default function LandingPage() {
           </Link>
         </div>
       </div>
+
+      {toastPassagem ? <Toast mensagem={toastPassagem} tipo="success" onClose={() => setToastPassagem('')} /> : null}
     </div>
   );
 }
