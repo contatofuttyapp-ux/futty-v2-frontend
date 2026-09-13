@@ -7,12 +7,25 @@
 // API mínima: ligado(get) · toggle · autoTeste · iniciar · girar/girarLento/pararGiro
 //   · toque · cartaoVeu/cartaoVeuSai · vitoria · vitoriaTocando · silenciar · stamps
 // ═══════════════════════════════════════════════════════════════════════════════
+import { urlAsset } from '../utils/avatar';
+
+// 13-set: os caminhos passam por urlAsset(). Na web não muda nada (mesma
+// origem); no app nativo os sons não viajam dentro do pacote, vêm da web e
+// ficam em cache. Aqui vão SEM o %20 de antes — o urlAsset faz o encodeURI,
+// e codificar duas vezes daria "Hud%2520UI.MP3".
+const CAMINHOS = {
+  trilha:  '/sons/trilha-chiptune.mp3',
+  giro:    '/sons/slot-machine.mp3',
+  hud:     '/sons/Hud UI.MP3',
+  veu:     '/sons/sorteio-finalizado.mp3',
+  vitoria: '/sons/Victory.MP3',
+};
 const KIT = {
-  trilha:  { src: '/sons/trilha-chiptune.mp3',   vol: 0.16, loop: true  },
-  giro:    { src: '/sons/slot-machine.mp3',       vol: 0.45, loop: true  },
-  hud:     { src: '/sons/Hud%20UI.MP3',           vol: 0.28, loop: false },
-  veu:     { src: '/sons/sorteio-finalizado.mp3', vol: 0.55, loop: false },
-  vitoria: { src: '/sons/Victory.MP3',            vol: 0.55, loop: false },
+  trilha:  { src: urlAsset(CAMINHOS.trilha),  vol: 0.16, loop: true  },
+  giro:    { src: urlAsset(CAMINHOS.giro),    vol: 0.45, loop: true  },
+  hud:     { src: urlAsset(CAMINHOS.hud),     vol: 0.28, loop: false },
+  veu:     { src: urlAsset(CAMINHOS.veu),     vol: 0.55, loop: false },
+  vitoria: { src: urlAsset(CAMINHOS.vitoria), vol: 0.55, loop: false },
 };
 const els = {}, falhou = {};
 let ligado = false;

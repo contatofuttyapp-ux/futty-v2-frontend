@@ -26,4 +26,10 @@ export default defineConfig([
     files: ['public/sw.js'],
     languageOptions: { globals: globals.serviceworker },
   },
+  {
+    // scripts/** corre no Node, na hora do build — não no browser. Tem process,
+    // console e os módulos de node:.
+    files: ['scripts/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])

@@ -1,6 +1,7 @@
-// Futty v2.0 — FONTE ÚNICA DE VERDADE para resolução de avatares.
-// Todos os sítios que mostram avatares do sorteio (slot, resultado, canvas de
+// Futty v2.0 — FONTE ÚNICA DE VERDADE para resolução de avatares e da mídia de
+// public/. Todos os sítios que mostram avatares do sorteio (resultado, canvas de
 // download) importam daqui. Sem exceção.
+import { Capacitor } from '@capacitor/core';
 
 // ─── Configuração ────────────────────────────────────────────────────────────
 
@@ -14,27 +15,48 @@ function backendBase() {
 export const COR_POR_TIME = ['verde', 'azul', 'vermelho', 'preto'];
 const CORES_VALIDAS = ['verde', 'azul', 'vermelho', 'preto'];
 
+// ─── Mídia que não viaja dentro do app ───────────────────────────────────────
+// 13-set. O pacote da loja leva só a casca: código, CSS, fontes, ícones, splash
+// e os fundos que entram em canvas. O resto da mídia é buscado da web na hora e
+// fica em cache no aparelho (Cache-Control immutable — ver public/_headers).
+//
+// Só estas três pastas. As imagens de fundo da figurinha (stadium_bg,
+// futty-logo-flat, as chapas) continuam DENTRO do app de propósito: elas entram
+// em canvas com crossOrigin desligado, e servi-las de outra origem contaminaria
+// o canvas — o toBlob() passaria a lançar e o download da figurinha morria.
+// São 457 KB; não vale o risco.
+const PASTAS_REMOTAS = ['/avatares/', '/sorteio-assets/', '/sons/'];
+
+// Base da mídia no nativo. Na web fica vazio: mesma origem, como sempre foi.
+function baseAssets() {
+  if (!Capacitor.isNativePlatform()) return '';
+  return String(import.meta.env.VITE_ASSETS_URL || '').trim().replace(/\/+$/, '');
+}
+
 // ─── Funções base ─────────────────────────────────────────────────────────────
 
-// Resolve um avatar_url para URL utilizável.
+// Resolve um caminho de mídia para URL utilizável. Ponto único: tudo que aponta
+// para public/ passa por aqui, para a troca web/nativo existir num sítio só.
+//
 // Após a normalização (scripts/normalizar-avatares.js), os URLs do backend já
-// são absolutos. Só os genéricos do frontend (/avatares/...) precisam de
-// tratamento especial; o resto é um fallback para caminhos ainda não normalizados.
+// são absolutos. Só a mídia do frontend precisa de tratamento; o resto é um
+// fallback para caminhos ainda não normalizados.
 export function urlAsset(caminho) {
   if (!caminho) return '';
   const s = String(caminho).trim();
   if (s.startsWith('http://') || s.startsWith('https://')) return s;
-  if (s.startsWith('/avatares/')) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${origin}${encodeURI(s)}`; // encode trata espaços/acentos (ex.: "Peixe boi.png")
+  if (PASTAS_REMOTAS.some((p) => s.startsWith(p))) {
+    // encode trata espaços e acentos (ex.: "Hud UI.MP3", "Peixe boi.png").
+    const base = baseAssets() || (typeof window !== 'undefined' ? window.location.origin : '');
+    return `${base}${encodeURI(s)}`;
   }
   return `${backendBase()}${s.startsWith('/') ? s : `/${s}`}`;
 }
 
-// Genérico colorido (servido pelo FRONTEND em /avatares/genericos/<cor>.png).
-// Nota V2: os genéricos estão no public do frontend, não no backend.
+// Genérico colorido (em /avatares/genericos/<cor>.webp). Passa pelo urlAsset
+// para, no nativo, sair da web em vez de um arquivo que não foi empacotado.
 function genericoColorido(cor) {
-  return `/avatares/genericos/${cor}.webp`;
+  return urlAsset(`/avatares/genericos/${cor}.webp`);
 }
 
 // Nome de exibição do jogador (nome_jogador → nome → #id).

@@ -35,15 +35,17 @@ const ASSET = '/sorteio-assets/';
 // (dourada C / roxa C especular) morreram — a HÍBRIDA (palco ouro + F ametista)
 // ficou aprovada mas arquivada, não entra aqui (correção do dono).
 // 13-set: .png → .webp (1024×1536 a 416×624 — o rolo é flex:0 1 78px, nunca passa
-// de 78px de largura). 20 MB → 350 KB. Estes <img> entram por innerHTML, sem
-// onError: se um caminho aqui não bater com o arquivo, sai o ícone de imagem
-// quebrada e ninguém avisa. Mexer nesta lista pede conferir public/.
+// de 78px de largura). 20 MB → 350 KB. E cada src passa por urlAsset(): na web
+// não muda nada, no app nativo estes arquivos não viajam dentro do pacote, vêm
+// da web. Estes <img> entram por innerHTML, sem onError: se um caminho aqui não
+// bater com o arquivo, sai o ícone de imagem quebrada e ninguém avisa. Mexer
+// nesta lista pede conferir public/.
 const SIMB = [
-  { t: 'av', src: `${ASSET}v9-jacare.webp` }, { t: 'cd', src: `${ASSET}777-seta-ouro.webp` },
-  { t: 'av', src: `${ASSET}v9-et.webp` }, { t: 'cd', src: `${ASSET}v94-trofeu-c.webp` },
-  { t: 'av', src: `${ASSET}v9-onca.webp` }, { t: 'cd', src: `${ASSET}f-roxa-media.webp` },
-  { t: 'av', src: `${ASSET}v9-tigre.webp` }, { t: 'cd', src: `${ASSET}v94-bola.webp` },
-  { t: 'av', src: `${ASSET}v9-astronauta.webp` },
+  { t: 'av', src: urlAsset(`${ASSET}v9-jacare.webp`) }, { t: 'cd', src: urlAsset(`${ASSET}777-seta-ouro.webp`) },
+  { t: 'av', src: urlAsset(`${ASSET}v9-et.webp`) }, { t: 'cd', src: urlAsset(`${ASSET}v94-trofeu-c.webp`) },
+  { t: 'av', src: urlAsset(`${ASSET}v9-onca.webp`) }, { t: 'cd', src: urlAsset(`${ASSET}f-roxa-media.webp`) },
+  { t: 'av', src: urlAsset(`${ASSET}v9-tigre.webp`) }, { t: 'cd', src: urlAsset(`${ASSET}v94-bola.webp`) },
+  { t: 'av', src: urlAsset(`${ASSET}v9-astronauta.webp`) },
 ];
 const MBPOS = [[20, 2], [80, 2], [2, 40], [97, 40], [2, 72], [97, 72]];
 

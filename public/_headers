@@ -1,0 +1,47 @@
+# Cabeçalhos do Cloudflare Pages. Este arquivo não é servido: o Pages lê e aplica.
+#
+# 13-set. Duas coisas dependem disto:
+#   1. O app nativo não leva mídia pesada dentro do pacote — busca daqui na
+#      primeira vez e fica no cache do aparelho. Sem cache longo, baixaria tudo
+#      de novo a cada abertura.
+#   2. O `immutable` diz ao navegador para nem perguntar se mudou. Só é honesto
+#      porque estes caminhos têm conteúdo fixo: quando a arte muda, muda o nome
+#      do arquivo (o /assets/ já vem com hash do Vite).
+
+# Saída do bundler — nome com hash, conteúdo nunca muda.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Mídia buscada pelo app nativo. O Access-Control-Allow-Origin é necessário
+# porque no nativo o WebView corre noutra origem (capacitor://localhost ou
+# https://localhost) e estes pedidos passam a ser cross-origin.
+/avatares/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/sorteio-assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/sons/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/icons/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# O contrário: estes dois mandam no que o resto vira. Se ficarem em cache, a
+# pessoa fica presa numa versão antiga do app com um service worker antigo, e
+# publicar deixa de ter efeito.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/manifest.json
+  Cache-Control: public, max-age=3600
