@@ -39,6 +39,19 @@ export default defineConfig({
   // (localhost continua a funcionar igual); é o que deixa o telemóvel na mesma
   // wifi alcançar o dev server pelo IP da máquina (vaga do celular).
   server: { host: true },
+  // VELOCIDADE 4 — em produção o /api vive na MESMA origem das telas, servido
+  // pela função da Cloudflare (functions/api/[[path]].js). O `vite preview`
+  // serve a build de produção mas não corre essa função, e sem isto o /api
+  // relativo batia num 404: a build de produção ficava impossível de testar
+  // localmente. Este proxy faz aqui o que a função faz lá.
+  preview: {
+    proxy: {
+      '/api': {
+        target: process.env.VITE_PREVIEW_API || 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     rollupOptions: {
       output: { manualChunks },
