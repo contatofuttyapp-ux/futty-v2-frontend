@@ -3,6 +3,7 @@
 // Devolve (url, mediaType) ao pai via onUpload. O pai gere a lista/preview.
 import { useRef, useState } from 'react';
 import { uploadFile } from '../lib/api';
+import { normalizarFoto } from '../utils/normalizarFoto';
 import CropModal from './CropModal';
 
 // uploadFn opcional: substitui o upload por defeito (uploadFile → /api/feed/upload).
@@ -18,7 +19,7 @@ export default function UploadComCrop({ onUpload, uploadFn = null, accept = 'ima
     inputRef.current?.click();
   }
 
-  function onFileChange(e) {
+  async function onFileChange(e) {
     const file = e.target.files?.[0];
     e.target.value = ''; // permite reescolher o mesmo ficheiro
     if (!file) return;
@@ -28,9 +29,11 @@ export default function UploadComCrop({ onUpload, uploadFn = null, accept = 'ima
     const ehImagem = tipo.startsWith('image/');
     const ehGif = tipo === 'image/gif';
 
-    // Imagem (não-GIF) → recorta primeiro; GIF/vídeo → upload direto.
+    // Imagem (não-GIF) → normaliza orientação EXIF, depois recorta; GIF/vídeo
+    // → upload direto (canvas destruiria a animação do GIF, e vídeo nem passa
+    // por canvas — normalizarFoto só mexe em imagem estática).
     if (ehImagem && !ehGif) {
-      setCropFile(file);
+      setCropFile(await normalizarFoto(file));
     } else {
       void enviar(file);
     }

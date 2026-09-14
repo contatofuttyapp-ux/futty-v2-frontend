@@ -1574,13 +1574,24 @@
   .fig-card-enter { animation: none; }
 }
 
-/* Conjunto completo (card + botões + tabs + tiles + Baixar/Compartilhar) chega
-   perto da bottom nav sem vazio. RESERVA = TODO o não-card MEDIDO: Topbar 44 +
-   padding página 14 + [zona padBottom 10 + faixa 30 + botões 40 + 3 gaps 42 +
-   tabs 36 + tiles(-15%) ~86 + Baixar/Compartilhar 40] + main padBottom 24 +
-   bottom nav (fixed) 75 = 441px. Tecto 78vw (card cresce em ecrãs grandes). */
+/* Conjunto completo (card + botões + tabs + tiles + Baixar/Compartilhar) cabe
+   em 100dvh SEM rolagem (build 9 — revoga a versão de 14-set que aceitava
+   "rolagem ligeira" em ecrãs curtos: deixou de ser aceitável, Baixar/
+   Compartilhar têm de estar sempre visíveis). RESERVA = tudo o que não é o
+   card, remedido linha a linha: Topbar HUD 44 + app-main padTop 10 + zona do
+   card (padding 4+16) 20 + grelha de controlos (gap 14 × 4) 56 + linha de
+   zoom 26 + Trocar-foto/Gerar 40 + tabs 36 + painel de tiles ~105 + Baixar/
+   Compartilhar 46 + app-main padBottom 24 + reserva da bottom nav (fixed,
+   Layout.jsx) 70 = 477px. Faltava aqui a CAUSA do bug (build 8, "Velocidade
+   5"): a área segura do iPhone (relógio/ilha em cima, barra de gesto embaixo)
+   passou a empurrar tudo com env(safe-area-inset-top/bottom) — sem somar os
+   dois ao cálculo, a reserva ficava pequena demais em qualquer aparelho com
+   notch, e o card nascia grande demais para caber. Sem tiers por breakpoint
+   (a divergência entre 3 números copiados à mão foi o que deixou este cálculo
+   sair de sincronia da última vez) — UMA fórmula, o card encolhe sozinho em
+   qualquer altura de ecrã. Tecto 78vw (card não cresce demais em ecrãs largos). */
 .fig-studio-card {
-  width: min(78vw, calc((100dvh - 441px) * 2 / 3));
+  width: min(78vw, calc((100dvh - 477px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 2 / 3));
   aspect-ratio: 2 / 3;
 }
 .fig-io-btn { height: 40px; }
@@ -1629,7 +1640,7 @@
 .cromo-inicio {
   position: relative;
   display: block;
-  width: calc(min(78vw, (100dvh - 441px) * 2 / 3) * 0.78);
+  width: calc(min(78vw, (100dvh - 477px) * 2 / 3) * 0.78);
   aspect-ratio: 1 / 1;
   margin: 0 auto;
   transition: transform 0.18s ease, filter 0.18s ease;
@@ -1756,15 +1767,12 @@
   .cta-gold { transition: filter 0.12s ease; }
   .cta-gold:active { transform: none; }
 }
-/* Tier ecrãs pequenos (SE e similares, <700px): reserva menor (~300) → card com
-   tamanho decente, aceitando scroll ligeiro até Baixar/Compartilhar só aqui.
-   Vem ANTES do bloco <620px para este último (mais restritivo) vencer. */
+/* Ecrãs curtos (iPhone SE e afins, <700px): a fórmula base já encolhe o card
+   sozinha, mas os botões Trocar-foto/Gerar (.fig-io-btn) ainda valem 40px de
+   reserva fixa — 6px a menos aqui devolvem-se ao card, e saem do cálculo
+   acima só neste tier (a reserva de 477 assume os 40px cheios nos ecrãs
+   normais). Build 9: revoga o tier anterior, que aceitava rolagem. */
 @media (max-height: 700px) {
-  .fig-studio-card { width: min(78vw, calc((100dvh - 300px) * 2 / 3)); }
-}
-/* Emergência: ecrãs muito curtos (<620px). Reserva menor + botões a 34px. */
-@media (max-height: 620px) {
-  .fig-studio-card { width: min(78vw, calc((100dvh - 400px) * 2 / 3)); }
   .fig-io-btn { height: 34px; }
 }
 

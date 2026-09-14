@@ -7,6 +7,7 @@ import { useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
+import { normalizarFoto } from '../utils/normalizarFoto';
 import { usePerfil } from '../context/PerfilContext';
 import FuttyLogo from '../components/FuttyLogo';
 import CropModal from '../components/CropModal';
@@ -83,10 +84,11 @@ export default function Onboarding() {
   const selfieRef = useRef(null);
   const galeriaRef = useRef(null);
 
-  function escolherFicheiro(e) {
+  async function escolherFicheiro(e) {
     const f = e.target.files?.[0];
-    if (f) setCropFile(f);
     e.target.value = '';
+    if (!f) return;
+    setCropFile(await normalizarFoto(f));
   }
 
   // Figurinha automática do cadastro (12-set): dispara assim que a foto sobe,

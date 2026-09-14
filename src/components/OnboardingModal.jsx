@@ -16,7 +16,7 @@ export default function OnboardingModal({ teamNome, onClose }) {
     {
       icon: 'figurinha',
       titulo: 'Sua figurinha',
-      texto: 'Crie sua figurinha personalizada. Adicione uma foto e gere seu avatar IA estilo cromo Panini.',
+      texto: 'Adicione uma foto e a IA pinta você como figurinha de colecionador.',
       botao: 'Próximo →',
     },
     {

@@ -12,6 +12,7 @@ import { usePerfil } from '../context/PerfilContext';
 import { lerCache, gravarCache } from '../lib/cacheLocal';
 import { nomeJogador, urlAsset } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
+import { normalizarFoto } from '../utils/normalizarFoto';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
@@ -22,6 +23,7 @@ import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import SeloHonra from '../components/SeloHonra';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
+import Toast from '../components/Toast';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
@@ -31,14 +33,16 @@ import '../styles/app.css';
 // Épico (o único livre a seguir ao Estádio/Aura). LEI DA REGRA JUSTA: quem já
 // tinha Aura/Épico equipado mantém — o gate só corre ao TROCAR (ver escolherFundo).
 const FUNDOS = [
-  // ORDEM (dono, 14-set): Neutro, Estádio, Aura, Épico, Golden, Royal — os GRÁTIS
-  // primeiro, os pagos depois, e o Neutro à frente do Estádio. Revoga a ordem de
-  // 31-jul (Estádio primeiro). Só o SELETOR muda: o fundo de quem não escolheu
-  // continua a ser 'estadio' (useState abaixo e cromoFundo no Início).
+  // ORDEM (dono, 14-set — 2ª revisão, build 9): Neutro, Estádio, Épico, Aura,
+  // Golden, Royal — os GRÁTIS primeiro, os pagos depois, Neutro à frente do
+  // Estádio e Épico à frente de Aura. Revoga a ordem anterior de 14-set
+  // (Neutro, Estádio, Aura, Épico...) e a de 31-jul (Estádio primeiro). Só o
+  // SELETOR muda: o fundo de quem não escolheu continua a ser 'estadio'
+  // (useState abaixo e cromoFundo no Início).
   { k: 'preto', label: 'Neutro' },
   { k: 'estadio', label: 'Estádio' },
-  { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
   { k: 'gradiente', label: 'Épico', premium: true }, // chave interna 'gradiente' (estado), label novo
+  { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
   { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
   { k: 'royal', label: 'Royal', premium: true }, // par de luxo do Golden — chapa roxa da casa
 ];
@@ -202,6 +206,14 @@ export default function Figurinha() {
   const [limiteIA, setLimiteIA] = useState(false);
   const [erroIA, setErroIA] = useState(false); // falha da geração (≠ 403) → estado de erro no overlay
   const [erroIAmsg, setErroIAmsg] = useState(''); // mensagem específica (ex.: foto inválida); vazio = texto genérico
+  // Toast curto e genérico (build 9): { mensagem, tipo }. Dois usos — aviso
+  // quando /avatar/ai reutiliza o slot (mesma foto de antes, sem isto o botão
+  // "carregava e nada acontecia"), e erro do PATCH de fundo (ver escolherFundo).
+  const [toast, setToast] = useState(null);
+  // Destaque pulsante no botão Gerar (build 9): true assim que uma foto NOVA
+  // sobe nesta sessão, até a próxima geração terminar (reutilizada ou não) —
+  // guia quem trocou a foto e não percebeu que falta tocar em Gerar.
+  const [fotoTrocadaSemGerar, setFotoTrocadaSemGerar] = useState(false);
   const [emailNaoConfirmado, setEmailNaoConfirmado] = useState(false); // gate anti-abuso (11-ago): geração exige e-mail confirmado
   const [reenviarBusy, setReenviarBusy] = useState(false);
   const [reenviarFeito, setReenviarFeito] = useState(false);
@@ -464,6 +476,7 @@ export default function Figurinha() {
       setUploadFoto(false);
       ultimoFicheiro.current = null;
       if (emEstreia) await gerarAvatarIAEstreia(); // auto-trigger
+      else setFotoTrocadaSemGerar(true); // fora da estreia, quem decide gerar é o próprio usuário
     } catch (err) {
       // P1-5 — mensagem accionável (rede/tamanho/formato) + retry inline, não um erro cru.
       setUploadErro(mensagemUploadFoto(err));
@@ -477,8 +490,11 @@ export default function Figurinha() {
     e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
     if (!file) return;
     setModalFoto(false); // fecha o modal "A tua foto" ao escolher — revela o fluxo upload→gerar
-    ultimoFicheiro.current = file;
-    await subirFoto(file, estreiaFase === 'foto');
+    // Sem CropModal aqui (Figurinha sobe direto) — normaliza antes do upload,
+    // mesmo ponto onde o Onboarding normaliza antes do recorte.
+    const normalizada = await normalizarFoto(file);
+    ultimoFicheiro.current = normalizada;
+    await subirFoto(normalizada, estreiaFase === 'foto');
   }
 
   // "Tentar de novo" (P1-5): repete o upload com a MESMA foto, sem re-seleccionar.
@@ -543,6 +559,11 @@ export default function Figurinha() {
       } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
       recarregarPerfilGlobal();
+      setFotoTrocadaSemGerar(false); // gerou (ou reutilizou de propósito) — some o pulso
+      // reutilizado:true (motor, build 9) — o slot deste kit já valia para a
+      // foto atual e não gerou de novo. Sem aviso, parecia que o toque no
+      // botão não fez nada.
+      if (data.reutilizado) setToast({ tipo: 'info', mensagem: 'Sua figurinha já estava pronta' });
     } catch (err) {
       // EMAIL_NAO_CONFIRMADO: gate anti-abuso (11-ago) — mesmo status 403 do limite
       // de quota, por isso tem de ser verificado PRIMEIRO (código distingue os dois).
@@ -618,12 +639,19 @@ export default function Figurinha() {
     const planoUser = me?.user?.plan || 'free';
     const ehSuper = !!me?.user?.is_super_admin;
     if (def?.premium && !ehSuper && !PLANOS_COM_KITS.includes(planoUser)) return navigate('/planos');
+    // Guarda o anterior para reverter se o PATCH falhar (build 9, achado real:
+    // constraint do Royal sem a migração aplicada dava 500 — o tile ficava
+    // marcado no fundo novo com o banco silenciosamente no antigo).
+    const anterior = fundo;
     setFundo(k);
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ fundo_figurinha: k }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, fundo_figurinha: k } } : m));
       recarregarPerfilGlobal();
-    } catch { /* preferência: não vale um erro no ecrã */ }
+    } catch (e) {
+      setFundo(anterior); // nunca fica com o tile marcado e o banco diferente
+      setToast({ tipo: 'error', mensagem: e?.message || 'Não foi possível trocar o fundo agora.' });
+    }
   }
 
   // Escolha do avatar genérico (31-jul) — mesmo padrão optimista do fundo.
@@ -756,7 +784,7 @@ export default function Figurinha() {
               </>
             ) : estreiaFase === 'gerando' ? (
               <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando seu avatar Panini… <EstrelaIA size={14} color="#fff" /></h2>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando sua figurinha… <EstrelaIA size={14} color="#fff" /></h2>
                 <p style={{ fontSize: 13, color: 'var(--label-color)', margin: 0 }}>Pode demorar até 30 segundos</p>
               </>
             ) : (
@@ -970,7 +998,7 @@ export default function Figurinha() {
               {jogador.avatar_url ? (
                 <button
                   type="button"
-                  className="btn btn--purple fig-io-btn hud-corners"
+                  className={`btn btn--purple fig-io-btn hud-corners${fotoTrocadaSemGerar && !gerandoIA ? ' pulse-active' : ''}`}
                   style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   disabled={gerandoIA || uploadFoto}
                   onClick={gerarAvatarIA}
@@ -1069,7 +1097,7 @@ export default function Figurinha() {
             // UMA linha só, scroll horizontal (nunca 2 linhas — ordem do dono). Tiles
             // com largura FIXA (não fração do container) para não encolher/quebrar;
             // scroll-snap para o gesto de arrastar assentar num tile de cada vez.
-            <div style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: 10, padding: '2px 6px 8px', margin: '0 auto', maxWidth: '100%', scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: 10, padding: '2px 6px 8px', margin: '0 auto', width: '85%', maxWidth: '100%', scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
                 // Cadeado premium (mesma regra dos kits): fundo premium + plano não pago.
@@ -1273,6 +1301,8 @@ export default function Figurinha() {
           ) : null}
         </div>
       </main>
+
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
       <AvatarGenericoSheet
         aberto={sheetAvatarAberto}
