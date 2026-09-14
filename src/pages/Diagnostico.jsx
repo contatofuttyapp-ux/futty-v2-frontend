@@ -14,6 +14,7 @@
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { lerDiagnostico, limparDiagnostico } from '../lib/diagnostico';
+import { lerUltimoErro, limparUltimoErro } from '../lib/ultimoErro';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
@@ -58,6 +59,7 @@ export default function Diagnostico() {
   const [dados, setDados] = useState(() => lerDiagnostico());
   const [enviando, setEnviando] = useState(false);
   const [toast, setToast] = useState(null);
+  const [ultimoErro, setUltimoErro] = useState(() => lerUltimoErro());
 
   const { aparelho, resumo, chamadas, navegacoes, falhas } = dados;
 
@@ -80,6 +82,11 @@ export default function Diagnostico() {
     setToast({ msg: 'Medições zeradas. Navegue um pouco e volte aqui.', tipo: 'success' });
   }
 
+  function limparErro() {
+    limparUltimoErro();
+    setUltimoErro(null);
+  }
+
   return (
     <div className="app-shell page-reveal">
       <Topbar hud="DIAGNÓSTICO" back="/perfil" />
@@ -88,6 +95,29 @@ export default function Diagnostico() {
           O que este aparelho mediu nesta sessão. <b style={{ color: '#f0c94a' }}>Motor</b> é o tempo do
           servidor; <b style={{ color: '#b69cff' }}>rede</b> é o que a distância cobra.
         </p>
+
+        {/* ─── Último erro fatal (build 10) ─── */}
+        {ultimoErro ? (
+          <div>
+            <div className="games-label">Último erro (crash)</div>
+            <div className="hud-corners-s" style={{ ...CARTAO, display: 'grid', gap: 6 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                {new Date(ultimoErro.data).toLocaleString('pt-BR')} · rota {ultimoErro.rota || '—'}
+              </div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.5, color: '#f8b4b4', wordBreak: 'break-word' }}>
+                {ultimoErro.mensagem}
+              </div>
+              {ultimoErro.stackCurto ? (
+                <pre style={{ fontSize: 10.5, lineHeight: 1.5, color: 'var(--text-dim)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'monospace' }}>
+                  {ultimoErro.stackCurto}
+                </pre>
+              ) : null}
+              <button type="button" className="btn btn--purple-outline hud-corners-s" style={{ height: 34, fontSize: 12, marginTop: 4 }} onClick={limparErro}>
+                Limpar
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           <Numero rotulo="Chamada total" stat={resumo.total} />

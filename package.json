@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "dev:rede": "vite --mode network",
-    "build": "vite build",
-    "build:native": "vite build && node scripts/preparar-nativo.js && cap sync android",
-    "build:native:ios": "vite build && node scripts/preparar-nativo.js && cap sync ios",
+    "build": "vite build && node scripts/verificar-dist.js",
+    "build:native": "npm run build && node scripts/preparar-nativo.js && cap sync android",
+    "build:native:ios": "npm run build && node scripts/preparar-nativo.js && cap sync ios",
     "lint": "eslint .",
     "preview": "vite preview"
   },

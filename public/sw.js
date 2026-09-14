@@ -1,4 +1,9 @@
-const CACHE_NAME = 'futty-v2';
+// v3 (build 10, achado real): um 502 transitório do Cloudflare ficou GUARDADO
+// no cache v2 e passou a ser servido mesmo depois do 502 já ter passado — o
+// import dinâmico de um chunk quebrava com "Failed to fetch dynamically
+// imported module" e o app não abria mais. Trocar o nome força todo aparelho
+// a começar de um cache vazio; o `activate` (abaixo) apaga o v2 poluído.
+const CACHE_NAME = 'futty-v3';
 const STATIC_ASSETS = ['/', '/home', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -45,9 +50,18 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request)
       .then((r) => {
-        const clone = r.clone();
-        caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
-        return r;
+        // Só guarda resposta BOA (200, mesma origem, não-opaca) — nunca um
+        // 4xx/5xx transitório da CDN (foi um 502 guardado aqui que quebrou o
+        // build 9: ficava preso no cache e era servido para sempre depois).
+        if (r.ok && r.type === 'basic') {
+          const clone = r.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+          return r;
+        }
+        // Resposta ruim: nunca guarda. Se houver uma cópia boa guardada de
+        // antes, serve essa em vez do erro transitório; senão, devolve a
+        // resposta ruim mesmo (não há nada melhor para oferecer).
+        return caches.match(e.request).then((doCache) => doCache || r);
       })
       .catch(() => caches.match(e.request))
   );

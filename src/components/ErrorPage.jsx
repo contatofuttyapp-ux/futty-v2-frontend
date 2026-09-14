@@ -12,7 +12,7 @@
 // asset, e a página de erro passa a falar a linguagem do resto.
 import FuttyLoader from './FuttyLoader';
 
-export default function ErrorPage({ onRetry, mensagem, titulo }) {
+export default function ErrorPage({ onRetry, mensagem, titulo, detalheTecnico }) {
   return (
     <div
       style={{
@@ -35,6 +35,14 @@ export default function ErrorPage({ onRetry, mensagem, titulo }) {
       <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, maxWidth: 280, lineHeight: 1.5, margin: 0 }}>
         {mensagem || 'O servidor está descansando. Tente de novo daqui a pouco.'}
       </p>
+
+      {/* Letra pequena (build 10): a mensagem técnica, só para quem sabe o
+          que está a ler — o mesmo texto fica em Perfil → Diagnóstico. */}
+      {detalheTecnico ? (
+        <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 11, maxWidth: 300, lineHeight: 1.4, margin: 0, wordBreak: 'break-word' }}>
+          {detalheTecnico}
+        </p>
+      ) : null}
 
       {/* A acção primária (ouro) tira o utilizador do beco: se há como repetir, repete;
           senão, leva ao Início (onde vivem os próximos jogos). O 2º elo é uma porta

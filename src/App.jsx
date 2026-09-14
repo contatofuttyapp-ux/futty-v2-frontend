@@ -1,5 +1,5 @@
 // Futty v2.0 — Router principal
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
@@ -18,6 +18,7 @@ import LoadingFutty from './components/LoadingFutty';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage';
 import PageTransition from './components/PageTransition';
+import { lazyComRetry } from './utils/lazyComRetry';
 import {
   importarInicio,
   importarFeed,
@@ -26,43 +27,46 @@ import {
   importarMeuPerfil,
 } from './lib/preaquecerAbas';
 
-// Páginas em lazy loading (cada uma no seu chunk).
+// Páginas em lazy loading (cada uma no seu chunk), com retry (build 10 —
+// ver utils/lazyComRetry.js) para quando o chunk falha a carregar (deploy
+// novo publicado com a pessoa já de app aberto, ou resposta ruim transitória
+// da CDN).
 //
 // As cinco abas da barra de baixo importam-se através de lib/preaquecerAbas.js:
 // são as MESMAS funções que a BottomNav usa para as pré-carregar em ócio
 // (VELOCIDADE 4). Partilhar a função é o que garante que pré-aquecer e navegar
 // falam do mesmo módulo — o registo do browser devolve a mesma promessa.
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const Inicio = lazy(importarInicio);
-const Onboarding = lazy(() => import('./pages/Onboarding'));
-const SorteioShow = lazy(() => import('./pages/SorteioShow'));
-const CriarEquipa = lazy(() => import('./pages/CriarEquipa'));
-const Equipa = lazy(() => import('./pages/Equipa'));
-const Convite = lazy(() => import('./pages/Convite'));
-const Jogos = lazy(() => import('./pages/Jogos'));
-const NovoJogo = lazy(() => import('./pages/NovoJogo'));
-const Jogo = lazy(() => import('./pages/Jogo'));
-const Ranking = lazy(importarRanking);
-const Campeonato = lazy(() => import('./pages/Campeonato'));
-const JogadorPerfil = lazy(() => import('./pages/JogadorPerfil'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel'));
-const AlterarPassword = lazy(() => import('./pages/AlterarPassword'));
-const Feed = lazy(importarFeed);
-const Figurinha = lazy(importarFigurinha);
-const MeuPerfil = lazy(importarMeuPerfil);
-const Planos = lazy(() => import('./pages/Planos'));
-const SorteioPublico = lazy(() => import('./pages/SorteioPublico'));
-const CampeonatoPublico = lazy(() => import('./pages/CampeonatoPublico'));
-const Explorar = lazy(() => import('./pages/Explorar'));
-const LandingPage = lazy(() => import('./pages/LandingPage'));
-const Super = lazy(() => import('./pages/Super'));
-const Gabinete = lazy(() => import('./pages/Gabinete'));
-const Termos = lazy(() => import('./pages/Termos'));
-const Privacidade = lazy(() => import('./pages/Privacidade'));
-const ExcluirConta = lazy(() => import('./pages/ExcluirConta'));
-const Diagnostico = lazy(() => import('./pages/Diagnostico'));
+const Login = lazyComRetry(() => import('./pages/Login'));
+const Register = lazyComRetry(() => import('./pages/Register'));
+const ForgotPassword = lazyComRetry(() => import('./pages/ForgotPassword'));
+const Inicio = lazyComRetry(importarInicio);
+const Onboarding = lazyComRetry(() => import('./pages/Onboarding'));
+const SorteioShow = lazyComRetry(() => import('./pages/SorteioShow'));
+const CriarEquipa = lazyComRetry(() => import('./pages/CriarEquipa'));
+const Equipa = lazyComRetry(() => import('./pages/Equipa'));
+const Convite = lazyComRetry(() => import('./pages/Convite'));
+const Jogos = lazyComRetry(() => import('./pages/Jogos'));
+const NovoJogo = lazyComRetry(() => import('./pages/NovoJogo'));
+const Jogo = lazyComRetry(() => import('./pages/Jogo'));
+const Ranking = lazyComRetry(importarRanking);
+const Campeonato = lazyComRetry(() => import('./pages/Campeonato'));
+const JogadorPerfil = lazyComRetry(() => import('./pages/JogadorPerfil'));
+const AdminPanel = lazyComRetry(() => import('./pages/AdminPanel'));
+const AlterarPassword = lazyComRetry(() => import('./pages/AlterarPassword'));
+const Feed = lazyComRetry(importarFeed);
+const Figurinha = lazyComRetry(importarFigurinha);
+const MeuPerfil = lazyComRetry(importarMeuPerfil);
+const Planos = lazyComRetry(() => import('./pages/Planos'));
+const SorteioPublico = lazyComRetry(() => import('./pages/SorteioPublico'));
+const CampeonatoPublico = lazyComRetry(() => import('./pages/CampeonatoPublico'));
+const Explorar = lazyComRetry(() => import('./pages/Explorar'));
+const LandingPage = lazyComRetry(() => import('./pages/LandingPage'));
+const Super = lazyComRetry(() => import('./pages/Super'));
+const Gabinete = lazyComRetry(() => import('./pages/Gabinete'));
+const Termos = lazyComRetry(() => import('./pages/Termos'));
+const Privacidade = lazyComRetry(() => import('./pages/Privacidade'));
+const ExcluirConta = lazyComRetry(() => import('./pages/ExcluirConta'));
+const Diagnostico = lazyComRetry(() => import('./pages/Diagnostico'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
 //
