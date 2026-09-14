@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "vite",
     "dev:rede": "vite --mode network",
-    "build": "vite build && node scripts/verificar-dist.js && node scripts/testar-visibilidade.mjs",
+    "build": "vite build && node scripts/verificar-dist.js",
     "test:visibilidade": "node scripts/testar-visibilidade.mjs",
-    "build:native": "npm run build && node scripts/preparar-nativo.js && cap sync android",
-    "build:native:ios": "npm run build && node scripts/preparar-nativo.js && cap sync ios",
+    "build:native": "npm run build && npm run test:visibilidade && node scripts/preparar-nativo.js && cap sync android",
+    "build:native:ios": "npm run build && npm run test:visibilidade && node scripts/preparar-nativo.js && cap sync ios",
     "lint": "eslint .",
     "preview": "vite preview"
   },

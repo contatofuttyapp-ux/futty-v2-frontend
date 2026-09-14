@@ -89,7 +89,19 @@ async function medir(browser, rota, tamanho) {
 }
 
 const servidor = await subirServidor();
-const browser = await chromium.launch();
+let browser;
+try {
+  browser = await chromium.launch();
+} catch (e) {
+  servidor.kill();
+  if (/executable doesn't exist/i.test(e.message)) {
+    console.error(
+      '[visibilidade] ❌ o Chromium do Playwright não está instalado. Rode `npx playwright install chromium` e tente de novo.'
+    );
+    process.exit(1);
+  }
+  throw e;
+}
 const falhas = [];
 try {
   for (const rota of ROTAS) {
