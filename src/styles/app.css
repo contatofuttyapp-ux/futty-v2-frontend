@@ -1637,6 +1637,25 @@
   .page-reveal { animation: none; }
 }
 
+/* Transição de entrada de TODA página (components/PageTransition.jsx, build 11).
+   Era framer-motion e deixava o app invisível quando a rota suspendia depois de
+   já ter montado — ver o comentário no PageTransition.jsx. Aqui quem toca é o
+   motor do browser: o estado natural do elemento é VISÍVEL (opacity 1), a
+   animação só encena a entrada, e se ela não correr por qualquer motivo a página
+   aparece na mesma. É a diferença que importa — nenhum JS precisa de terminar
+   para o conteúdo ser visto. */
+@keyframes pageEntra {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.page-transition {
+  animation: pageEntra 0.18s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Só o fade, sem deslize — e mais curto. */
+  .page-transition { animation: inicioReveal 0.12s ease-out both; }
+}
+
 .cromo-inicio {
   position: relative;
   display: block;

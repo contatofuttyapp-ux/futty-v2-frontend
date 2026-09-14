@@ -1,7 +1,6 @@
 // Futty v2.0 — Router principal
 import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import { PerfilProvider } from './context/PerfilContext';
 import { SessaoProvider } from './context/SessaoContext';
@@ -99,15 +98,20 @@ function JogoRoute() {
   return <Jogo key={id} />;
 }
 
-// Rotas animadas: AnimatePresence deteta a mudança de rota pela location e
-// o PageTransition (keyed pelo pathname) faz o fade/deslize de saída/entrada.
+// Rotas animadas: o PageTransition (keyed pelo pathname) faz o fade/deslize de
+// entrada em CSS. Trocar a key remonta o div e é isso que recomeça o keyframe.
+//
+// BUILD 11 — SAIU O <AnimatePresence mode="wait">. Servia para segurar a página
+// nova até a animação de SAÍDA da antiga acabar; ou seja, punha a visibilidade
+// do app atrás de uma animação JS ter de terminar — exatamente o que fez o app
+// abrir invisível (ver components/PageTransition.jsx). Uma saída de 0,18s não
+// paga esse risco, e sem ela o React troca a página na hora.
 function AnimatedRoutes() {
   const location = useLocation();
   return (
     <Suspense fallback={<LoadingFutty />}>
-      <AnimatePresence mode="wait">
-        <PageTransition key={location.pathname}>
-          <Routes location={location}>
+      <PageTransition key={location.pathname}>
+        <Routes location={location}>
           <Route path="/" element={<IndexRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -314,9 +318,8 @@ function AnimatedRoutes() {
           />
           {/* fallback — página inexistente */}
           <Route path="*" element={<ErrorPage titulo="Página não encontrada" mensagem="Esta página não existe." />} />
-          </Routes>
-        </PageTransition>
-      </AnimatePresence>
+        </Routes>
+      </PageTransition>
     </Suspense>
   );
 }

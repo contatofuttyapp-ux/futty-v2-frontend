@@ -77,6 +77,14 @@ jobs:
       - name: Instalar as dependências
         run: npm ci
 
+      # O `npm run build` termina em scripts/testar-visibilidade.mjs, que abre o
+      # dist num Chromium de verdade para conferir que a página ABRE VISÍVEL
+      # (build 11: o app chegou ao TestFlight com a página inteira no DOM mas em
+      # opacity 0 — só fundo e aviso de cookies). O npm ci traz o pacote do
+      # Playwright, mas não o browser; sem esta linha o build falha aqui.
+      - name: Instalar o Chromium do Playwright
+        run: npx playwright install chromium
+
       # O Vite lê este arquivo no modo production. Fica só no disco do runner,
       # que é destruído no fim; o .gitignore já o impede de ser commitado.
       # VITE_SENTRY_DSN fica de fora de propósito: sem DSN o Sentry não envia
