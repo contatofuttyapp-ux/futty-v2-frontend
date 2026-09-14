@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover (14-set, VELOCIDADE 5): sem isto o WebView do iPhone
+         desenha a partir da faixa SEGURA por omissão — o site preenche o
+         retângulo todo mas o conteúdo real, sem viewport-fit=cover, também não
+         recebe env(safe-area-inset-*) nenhum (fica tudo a 0), então o topo e o
+         gesto de baixo comem a topbar e a bottom nav. Com cover, o app desenha
+         por baixo do relógio/ilha e da barra de gesto — e é o CSS (Layout.jsx,
+         app.css) que devolve o espaço com env(safe-area-inset-top/bottom). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Futty</title>
 
     <!-- PWA -->
@@ -24,6 +31,15 @@
          font-weight:800 já caíam no 700 (ou em negrito sintético); carregar 700 é
          o mais perto do que se pode. -->
     <style>
+      /* Fundo de html/body ANTES de qualquer CSS/JS carregar (14-set, VELOCIDADE
+         5): mesma cor do `backgroundColor` do capacitor.config.json — a casca
+         nativa já pinta #080808 atrás do WebView antes dele existir; sem isto
+         aqui, o primeiro frame do próprio WebView era branco (o padrão do
+         browser) até o index.css chegar, um flash mais visível agora que o
+         overlay de arranque de 1200ms saiu (Velocidade 5). O app.css assume a
+         partir daí, com a paleta #050810 de sempre — a troca é sub-imperceptível,
+         as duas cores são quase-pretas. */
+      html, body { background: #080808; }
       @font-face {
         font-family: 'Rajdhani'; font-style: normal; font-weight: 400; font-display: swap;
         src: url('/fonts/rajdhani-400.woff2') format('woff2');

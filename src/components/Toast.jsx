@@ -37,7 +37,9 @@ export default function Toast({ mensagem, tipo = 'info', onClose }) {
       aria-live="polite"
       style={{
         position: 'fixed',
-        top: 16,
+        // calc(), não 16 fixo (14-set, VELOCIDADE 5): sem o inset, o toast
+        // nascia debaixo do relógio/ilha no iPhone.
+        top: 'calc(16px + env(safe-area-inset-top, 0px))',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 300,

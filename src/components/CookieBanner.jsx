@@ -66,7 +66,9 @@ export default function CookieBanner() {
         left: 0,
         right: 0,
         // ACIMA da BottomNav quando ela existe — a navegação nunca é tapada.
-        bottom: navVisivel ? 'calc(58px + env(safe-area-inset-bottom))' : 0,
+        // Sem nav, o inset é só do banner (14-set, VELOCIDADE 5: era `0` fixo
+        // — colava na barra de gesto nas rotas sem BottomNav, ex. /jogo/:id).
+        bottom: navVisivel ? 'calc(58px + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom, 0px)',
         zIndex: 40, // abaixo da nav (z-index:50) — nunca a cobre
         background: 'var(--surface-1)',
         borderTop: '1px solid var(--border)',

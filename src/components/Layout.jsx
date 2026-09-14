@@ -133,7 +133,40 @@ export default function Layout({ children }) {
   );
 
   return (
-    <div style={{ paddingBottom: showNav ? 70 : 0 }} {...swipeProps}>
+    // ÁREA SEGURA — UM lugar só (14-set, VELOCIDADE 5). Este div embrulha TODA
+    // rota (App.jsx monta Layout por cima de AnimatedRoutes), por isso é a
+    // "casca" onde o topo se resolve para o app inteiro de uma vez —
+    // index.html ganhou viewport-fit=cover para o WebView desenhar por baixo
+    // do relógio/ilha, e é este padding-top que devolve o espaço.
+    //
+    // O de BAIXO fica em dois sítios, não um: a .bottom-nav (app.css) já tinha
+    // o seu próprio env(safe-area-inset-bottom) desde a Velocidade 4 — cresce
+    // sem empurrar os tabs (a altura deles não muda, só a folga por baixo). O
+    // que faltava era este padding aqui, que reserva o espaço da página para
+    // essa nav mais alta: os 70px fixos assumiam uma nav sem faixa de gesto por
+    // baixo — num iPhone com Home Indicator ela cresce para ~96px, e o fim da
+    // página ficava tapado pelos ~26px que sobravam.
+    //
+    // .app-topbar (sticky) tem o SEU PRÓPRIO top: env(safe-area-inset-top) no
+    // app.css — o padding-top daqui só acerta a posição INICIAL (antes de
+    // rolar); um elemento sticky, ao colar, esquece o padding do ancestral e
+    // volta a colar-se ao y=0 REAL do ecrã se o "top" dele continuar 0. Os
+    // dois têm de mudar juntos.
+    //
+    // Modais/sheets que fazem createPortal para document.body (CropModal,
+    // AvatarGenericoSheet) escapam a este div por completo — o inset deles é
+    // resolvido à parte, no próprio componente.
+    //
+    // Android: Capacitor 8.5.0 (o instalado aqui) não tem a chave
+    // `android.adjustMarginsForEdgeToEdge` em nenhum pacote @capacitor/*
+    // (conferido no node_modules — grep sem resultado nenhum); não foi
+    // escrita no capacitor.config.json para não inventar uma opção que a
+    // versão instalada não reconhece. O MainActivity.java é um BridgeActivity
+    // sem overrides — o Capacitor já expõe os WindowInsets do Android como os
+    // MESMOS env(safe-area-inset-*) do iOS, então o CSS daqui serve os dois
+    // sem bifurcar; falta só medir no aparelho real quando o Pedro tiver um à
+    // mão (o Chrome do desktop não emula insets do Android).
+    <div style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: showNav ? 'calc(70px + env(safe-area-inset-bottom, 0px))' : 0 }} {...swipeProps}>
       <AuroraBg />
       <OnboardingGate pathname={pathname} />
       {naInicio ? <InicioProvider>{conteudo}</InicioProvider> : conteudo}

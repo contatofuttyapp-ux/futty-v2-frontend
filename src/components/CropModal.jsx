@@ -103,8 +103,10 @@ export default function CropModal({ file, aspect = 1, aspectos = ASPECTS, onConf
         ) : null}
       </div>
 
-      {/* Controlos */}
-      <div style={{ padding: '16px', background: '#0c0c0c', display: 'grid', gap: 14 }}>
+      {/* Controlos — fixed inset:0 escapa à casca do Layout (createPortal), por
+          isso o inset de baixo é resolvido aqui (14-set, VELOCIDADE 5): sem
+          isto, "Confirmar"/"Cancelar" nasciam debaixo da barra de gesto. */}
+      <div style={{ padding: '16px 16px max(16px, env(safe-area-inset-bottom, 0px))', background: '#0c0c0c', display: 'grid', gap: 14 }}>
         {/* Proporções */}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
           {aspectos.map(({ k, v }) => {

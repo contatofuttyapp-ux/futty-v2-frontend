@@ -68,7 +68,7 @@ function MolduraFoto({ src, size = 170 }) {
 }
 
 export default function Onboarding() {
-  const { recarregar: recarregarPerfil } = usePerfil();
+  const { perfil, hidratar, recarregar: recarregarPerfil } = usePerfil();
   const [passo, setPasso] = useState(1);
   const [cropFile, setCropFile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null); // preenchida após upload
@@ -142,14 +142,21 @@ export default function Onboarding() {
       // P1-1 — sela o onboarding no servidor ANTES de entrar.
       await apiFetch('/api/me/onboarding-completo', { method: 'POST' });
       // 14-set ("Velocidade 3"): recarrega o PerfilContext AQUI — busca o
-      // /api/me fresco (onboarding_completo:true) e regrava o cache local —
-      // antes de navegar. Sem isto, a navegação dura remontava o Layout com o
-      // cache local AINDA velho (onboarding_completo:false) e a gate mandava
-      // de volta para /onboarding num loop sem fim (nada regravava o cache
-      // com o valor novo até o /api/me fresco da PRÓXIMA carga responder).
-      // Mantém o window.location.assign (navegação dura, mesmo motivo de
-      // sempre: remonta tudo do zero) mas só depois do recarregar resolver.
-      await recarregarPerfil();
+      // /api/me fresco e regrava o cache local — antes de navegar. Sem isto, a
+      // navegação dura remontava o Layout com o cache local AINDA velho e a
+      // gate mandava de volta para /onboarding num loop sem fim.
+      const fresco = await recarregarPerfil();
+      // VELOCIDADE 5 (14-set) — CINTO E SUSPENSÓRIO. A causa raiz do loop era
+      // outra: o cache de SESSÃO do backend (middleware/auth.js, TTL 60s)
+      // continuava a devolver onboarding_completo:false ao /api/me de cima —
+      // corrigido lá (routes/auth.js chama invalidarSessaoDoPedido depois do
+      // updateUserById). Mas esta tela não pode voltar a depender de o /api/me
+      // vir certo para conseguir sair: aplica-se onboarding_completo:true por
+      // CIMA do que quer que o fresco tenha respondido, otimista, e hidratar()
+      // já regrava o cache local com ele. Se o backend um dia voltar a servir
+      // stale, é esta linha que impede o loop — não o inverso.
+      const base = fresco || perfil;
+      if (base) hidratar({ ...base, user: { ...base.user, onboarding_completo: true } });
       window.location.assign('/home');
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });

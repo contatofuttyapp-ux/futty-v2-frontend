@@ -13,7 +13,11 @@
   padding: 0 16px;
   height: 52px;
   position: sticky;
-  top: 0;
+  /* env(), não 0 (14-set, VELOCIDADE 5): o padding-top da casca (Layout.jsx)
+     só acerta a posição INICIAL, antes de rolar — ao colar (sticky), este
+     "top" é que decide onde ela para, e um valor fixo em 0 cola-a no y=0 REAL
+     do ecrã, debaixo do relógio/ilha, assim que a página rola. */
+  top: env(safe-area-inset-top, 0px);
   z-index: 100;
   background: rgba(5, 8, 15, 0.8);
   backdrop-filter: blur(16px);
@@ -1024,7 +1028,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  /* max(): nunca menos que os 16px de sempre, mais o que o notch/gesto exigir
+     (14-set, VELOCIDADE 5) — um modal alto não pode nascer com o card colado
+     ao relógio ou à barra de gesto. Sheets de fundo (AvatarGenericoSheet, o
+     de idioma em MeuPerfil.jsx) sobrepõem `padding: 0` inline e resolvem o
+     próprio inset de baixo à parte — não são afetados por isto. */
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
 }
 
 .modal-card {
