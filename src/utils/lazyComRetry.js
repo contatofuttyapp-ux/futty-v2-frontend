@@ -32,35 +32,45 @@ function aguardar(ms) {
 }
 
 export function lazyComRetry(importarFn) {
-  return lazy(async () => {
+  return lazy(() => {
+    // Velocidade 7B: módulo já carregado (lib/preaquecerAbas.js) vai por um
+    // thenable SÍNCRONO — o React.lazy resolve-o na própria renderização e a
+    // tela aparece sem passar pelo F do Suspense (e sem os ~300 ms que o React
+    // segura o fallback antes de revelar). Uma promessa, mesmo resolvida, suspende.
+    const pronto = importarFn.jaCarregado?.();
+    if (pronto) return { then: (resolver) => resolver(pronto) };
+    return carregarComRetry(importarFn);
+  });
+}
+
+async function carregarComRetry(importarFn) {
+  try {
+    return await importarFn();
+  } catch (erro) {
+    if (!ehFalhaDeChunk(erro)) throw erro;
+
+    await aguardar(300);
     try {
       return await importarFn();
-    } catch (erro) {
-      if (!ehFalhaDeChunk(erro)) throw erro;
+    } catch (erro2) {
+      if (!ehFalhaDeChunk(erro2)) throw erro2;
 
-      await aguardar(300);
+      let jaRecarregou = false;
       try {
-        return await importarFn();
-      } catch (erro2) {
-        if (!ehFalhaDeChunk(erro2)) throw erro2;
-
-        let jaRecarregou = false;
-        try {
-          jaRecarregou = sessionStorage.getItem(CHAVE_JA_RECARREGOU) === '1';
-        } catch {
-          /* storage bloqueado — segue sem esse controlo, melhor arriscar um reload a mais que ficar preso */
-        }
-        if (jaRecarregou) throw erro2; // já tentou nesta sessão — mostra o ErrorBoundary, não recarrega em loop
-
-        try {
-          sessionStorage.setItem(CHAVE_JA_RECARREGOU, '1');
-        } catch {
-          /* ignora — se não guardar, o pior caso é um reload a mais numa próxima falha */
-        }
-        window.location.reload();
-        // Fica pendurado até o reload de verdade acontecer — não há para onde devolver.
-        return new Promise(() => {});
+        jaRecarregou = sessionStorage.getItem(CHAVE_JA_RECARREGOU) === '1';
+      } catch {
+        /* storage bloqueado — segue sem esse controlo, melhor arriscar um reload a mais que ficar preso */
       }
+      if (jaRecarregou) throw erro2; // já tentou nesta sessão — mostra o ErrorBoundary, não recarrega em loop
+
+      try {
+        sessionStorage.setItem(CHAVE_JA_RECARREGOU, '1');
+      } catch {
+        /* ignora — se não guardar, o pior caso é um reload a mais numa próxima falha */
+      }
+      window.location.reload();
+      // Fica pendurado até o reload de verdade acontecer — não há para onde devolver.
+      return new Promise(() => {});
     }
-  });
+  }
 }

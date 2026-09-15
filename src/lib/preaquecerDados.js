@@ -127,7 +127,7 @@ export function preaquecer(userId, dadosInicio) {
         continue;
       }
       try {
-        const d = await apiFetch(rota);
+        const d = await apiFetch(rota, { segundoPlano: true });
         gravarCache(userId, chave, moldar(d));
         payloads.push(d);
         itens += 1;

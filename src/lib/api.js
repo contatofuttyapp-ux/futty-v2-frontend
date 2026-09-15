@@ -1,7 +1,7 @@
 // Futty v2.0 — Cliente da API backend (com JWT do utilizador)
 import { Capacitor } from '@capacitor/core';
 import { supabase } from './supabase';
-import { registarChamada, lerServerTiming } from './diagnostico';
+import { registarChamada, lerServerTiming, marcarDadosDaTela } from './diagnostico';
 
 // VELOCIDADE 4 — de onde sai o /api depende de onde a tela está a correr:
 //
@@ -43,7 +43,9 @@ export { urlAsset as assetUrl } from '../utils/avatar';
 const getsEmVoo = new Map();
 
 // Faz um pedido autenticado à API, anexando o access token da sessão Supabase.
-export async function apiFetch(path, options = {}) {
+// `segundoPlano: true` (pré-aquecimento): a chamada não conta como dados da tela
+// no Diagnóstico.
+export async function apiFetch(path, { segundoPlano = false, ...options } = {}) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -52,20 +54,25 @@ export async function apiFetch(path, options = {}) {
   const metodo = (options.method || 'GET').toUpperCase();
   if (metodo !== 'GET' || options.body != null) {
     getsEmVoo.clear();
-    return pedir(path, options, token);
+    return pedir(path, options, token, segundoPlano);
   }
 
   const chave = `${token || '-'}|${path}`;
   const emVoo = getsEmVoo.get(chave);
-  if (emVoo) return emVoo;
-  const promessa = pedir(path, options, token).finally(() => {
+  if (emVoo) {
+    // A tela pegou carona num pedido do pré-aquecimento: quando ele chegar, os
+    // dados são dela também.
+    if (!segundoPlano) emVoo.then(marcarDadosDaTela, marcarDadosDaTela);
+    return emVoo;
+  }
+  const promessa = pedir(path, options, token, segundoPlano).finally(() => {
     if (getsEmVoo.get(chave) === promessa) getsEmVoo.delete(chave);
   });
   getsEmVoo.set(chave, promessa);
   return promessa;
 }
 
-async function pedir(path, options, token) {
+async function pedir(path, options, token, segundoPlano) {
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
@@ -80,7 +87,7 @@ async function pedir(path, options, token) {
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
   const ms = performance.now() - t0;
   const { motorMs, edgeMs } = lerServerTiming(res.headers.get('Server-Timing'));
-  registarChamada({ rota: path, metodo: options.method || 'GET', status: res.status, ms, motorMs, edgeMs });
+  registarChamada({ rota: path, metodo: (options.method || 'GET').toUpperCase(), status: res.status, ms, motorMs, edgeMs, segundoPlano });
 
   let body = null;
   try {

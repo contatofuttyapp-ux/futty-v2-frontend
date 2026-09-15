@@ -52,8 +52,11 @@ export function lerServerTiming(header) {
   return { motorMs: ler('app'), edgeMs: ler('edge') };
 }
 
-/** Uma chamada à API que terminou (com sucesso ou não). */
-export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = null, edgeMs = null }) {
+/**
+ * Uma chamada à API que terminou (com sucesso ou não). `segundoPlano`: veio do
+ * pré-aquecimento, não da tela.
+ */
+export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = null, edgeMs = null, segundoPlano = false }) {
   guardar(chamadas, {
     rota,
     metodo,
@@ -63,11 +66,20 @@ export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = nu
     edgeMs: edgeMs == null ? null : Math.round(edgeMs),
     // O que sobra depois de tirar o motor é a conta da distância.
     redeMs: motorMs == null ? null : Math.max(0, Math.round(ms - motorMs)),
+    segundoPlano,
     em: new Date().toISOString(),
   });
 
-  // Se há uma navegação recente aberta, esta chamada conta para o "dados
-  // prontos" dela — a última a chegar é a que manda.
+  if (metodo === 'GET' && !segundoPlano) marcarDadosDaTela();
+}
+
+/**
+ * Chegaram dados PARA A TELA: contam para o "dados prontos" da navegação aberta
+ * (a última a chegar é a que manda). Velocidade 7B: só leituras pedidas pela
+ * própria tela — o pré-aquecimento e as escritas (impressão de anúncio, voto)
+ * entravam aqui, e o Ranking aparecia com "dados em 436 ms" que nem eram dele.
+ */
+export function marcarDadosDaTela() {
   if (navegacaoAberta && performance.now() - navegacaoAberta.t0 < JANELA_DA_NAVEGACAO_MS) {
     navegacaoAberta.msDados = Math.round(performance.now() - navegacaoAberta.t0);
   }
@@ -75,23 +87,29 @@ export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = nu
 
 /** Mudança de rota — o relógio do "toque" parte aqui. */
 export function marcarNavegacao(rota) {
-  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null };
+  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()) };
 }
 
-// Quantos loaders de ecrã estão montados agora. Sem isto, a medição de "primeira
+// Loaders de ecrã montados agora, por motivo. Sem isto, a medição de "primeira
 // pintura" contava o instante em que o LOADER apareceu — que é rapidíssimo e não
-// é o que a pessoa quer ver. Um diagnóstico que mede a coisa errada é pior do
-// que não ter diagnóstico nenhum. Enquanto houver loader no ecrã, a tela real
-// ainda não está lá, e o relógio continua a correr.
-let loaders = 0;
+// é o que a pessoa quer ver. Enquanto houver loader no ecrã, a tela real ainda
+// não está lá, e o relógio continua a correr.
+//
+// O motivo (Velocidade 7B) diz QUEM segurou a pintura: 'codigo' (o chunk da tela
+// a carregar), 'sessao' (AuthGuard à espera da sessão/perfil) ou 'tela' (a
+// própria tela sem dados). Fica gravado em cada navegação.
+const loadersAtivos = new Map(); // motivo -> quantos
 
-export function loaderEntrou() {
-  loaders += 1;
+export function loaderEntrou(motivo = 'tela') {
+  loadersAtivos.set(motivo, (loadersAtivos.get(motivo) || 0) + 1);
+  if (navegacaoAberta && navegacaoAberta.msPintura == null) navegacaoAberta.esperou.add(motivo);
 }
 
-export function loaderSaiu() {
-  loaders = Math.max(0, loaders - 1);
-  if (loaders === 0) agendarPintura();
+export function loaderSaiu(motivo = 'tela') {
+  const resto = (loadersAtivos.get(motivo) || 0) - 1;
+  if (resto > 0) loadersAtivos.set(motivo, resto);
+  else loadersAtivos.delete(motivo);
+  if (loadersAtivos.size === 0) agendarPintura();
 }
 
 /**
@@ -110,13 +128,15 @@ export function agendarPintura() {
 /** A rota nova desenhou-se de verdade (sem loader por cima). */
 export function marcarPintura() {
   if (!navegacaoAberta || navegacaoAberta.msPintura != null) return;
-  if (loaders > 0) return; // ainda há loader — quem sair por último volta cá
+  if (loadersAtivos.size > 0) return; // ainda há loader — quem sair por último volta cá
   navegacaoAberta.msPintura = Math.round(performance.now() - navegacaoAberta.t0);
   guardar(navegacoes, {
     rota: navegacaoAberta.rota,
     msPintura: navegacaoAberta.msPintura,
     // Pode ficar null: telas que pintam sem pedir nada.
     msDados: navegacaoAberta.msDados,
+    // Que loaders a pintura esperou (vazio = nenhum).
+    esperou: [...navegacaoAberta.esperou],
     // Pintou ANTES de os dados chegarem = veio do cache local. É exactamente o
     // que a "Velocidade 3/4" foi buscar, e aqui vê-se se está a acontecer.
     doCache: navegacaoAberta.msDados != null && navegacaoAberta.msPintura < navegacaoAberta.msDados,

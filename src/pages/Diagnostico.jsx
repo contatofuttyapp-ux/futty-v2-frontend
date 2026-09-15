@@ -228,6 +228,8 @@ export default function Diagnostico() {
                       <td style={{ padding: '7px 10px' }}>
                         {rotaCurta(n.rota)}
                         {n.doCache ? <span style={{ color: '#7bd88f', fontSize: 11 }}> · cache</span> : null}
+                        {/* Velocidade 7B: que loader a pintura esperou (código da tela, sessão, a própria tela). */}
+                        {n.esperou?.length ? <span style={{ color: '#f0c94a', fontSize: 11 }}> · esperou {n.esperou.join(', ')}</span> : null}
                       </td>
                       <td style={{ padding: '7px 6px', textAlign: 'right', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>{n.msPintura}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-dim)', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>

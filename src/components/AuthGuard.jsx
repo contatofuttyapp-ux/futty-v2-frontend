@@ -34,14 +34,14 @@ export default function AuthGuard({ children }) {
   const location = useLocation();
   const { carregando: perfilCarregando, suspenso } = usePerfil();
 
-  if (loading) return <LoadingFutty />;
+  if (loading) return <LoadingFutty motivo="sessao" />;
 
   if (!session) {
     // Guarda o destino para voltar após login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (perfilCarregando) return <LoadingFutty />; // a confirmar o estado da conta
+  if (perfilCarregando) return <LoadingFutty motivo="sessao" />; // a confirmar o estado da conta
   if (suspenso) return <ContaSuspensa onSair={() => signOut()} />;
 
   return children;

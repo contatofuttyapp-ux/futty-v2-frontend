@@ -30,7 +30,9 @@ import { loaderEntrou, loaderSaiu } from '../lib/diagnostico';
 // com tom de jogo — escolhida pelo dono a 31-jul.
 // Achado 3/23 (roteiro 10-set): a 3s a legenda aparecia em quase toda navegação —
 // subiu para 4s enquanto o backend não fica consistentemente mais rápido.
-export default function LoadingFutty({ legenda = 'Bola parada…\nO servidor tá demorando mais que o normal' }) {
+// `motivo` (Velocidade 7B) só vai para o Diagnóstico: diz quem segurou a pintura
+// ('codigo' = chunk da tela, 'sessao' = AuthGuard, 'tela' = a tela sem dados).
+export default function LoadingFutty({ legenda = 'Bola parada…\nO servidor tá demorando mais que o normal', motivo = 'tela' }) {
   const [mostrarLegenda, setMostrarLegenda] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setMostrarLegenda(true), 4000);
@@ -40,9 +42,9 @@ export default function LoadingFutty({ legenda = 'Bola parada…\nO servidor tá
   // VELOCIDADE 4: enquanto este F estiver no ecrã, a tela real ainda não está —
   // a caixa-preta só marca "pintou" depois de o último loader sair.
   useEffect(() => {
-    loaderEntrou();
-    return loaderSaiu;
-  }, []);
+    loaderEntrou(motivo);
+    return () => loaderSaiu(motivo);
+  }, [motivo]);
   // PORTAL PARA O BODY (15-set): o [data-page] (.page-transition) leva a animação
   // pageEntra (app.css), que anima `transform`. Com animation-fill-mode:both, o
   // computed style do transform DEPOIS da animação acabar não volta ao keyword

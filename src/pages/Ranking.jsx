@@ -160,14 +160,18 @@ export default function Ranking() {
   const [toast, setToast] = useState(null);
   const [bannerFechado, setBannerFechado] = useState(false);
   const celebrouTop3 = useRef(false);
+  const festaRef = useRef(null);
+  useEffect(() => () => clearTimeout(festaRef.current), []);
 
-  // Confetti uma vez se o utilizador estiver no pódio (top 3).
+  // Confetti uma vez se o utilizador estiver no pódio (top 3). Velocidade 7B: sai
+  // 400 ms depois de a lista estar na tela — criar o canvas de tela cheia e o
+  // worker do confetti no mesmo instante da primeira pintura disputava-a.
   useEffect(() => {
     if (celebrouTop3.current) return;
     const meu = ranking.find((p) => p.sou_eu && p.posicao <= 3);
     if (meu) {
       celebrouTop3.current = true;
-      celebrarTop3(meu.posicao);
+      festaRef.current = setTimeout(() => celebrarTop3(meu.posicao), 400);
     }
   }, [ranking]);
 

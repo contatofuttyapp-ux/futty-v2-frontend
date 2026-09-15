@@ -75,7 +75,7 @@ const Diagnostico = lazyComRetry(() => import('./pages/Diagnostico'));
 // a ver este F é o visitante de primeira viagem, e só enquanto o Supabase responde.
 function IndexRedirect() {
   const { session, loading } = useAuth();
-  if (loading) return <LoadingFutty />;
+  if (loading) return <LoadingFutty motivo="sessao" />;
   if (session) return <Navigate to="/home" replace />;
   return <LandingPage />;
 }
@@ -109,7 +109,7 @@ function JogoRoute() {
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <Suspense fallback={<LoadingFutty />}>
+    <Suspense fallback={<LoadingFutty motivo="codigo" />}>
       <PageTransition key={location.pathname}>
         <Routes location={location}>
           <Route path="/" element={<IndexRedirect />} />

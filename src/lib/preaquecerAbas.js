@@ -15,11 +15,22 @@
 // isso pré-aquecer e depois navegar não descarrega duas vezes, e pré-aquecer a
 // meio de um lazy() em curso não atrapalha nada.
 
-export const importarInicio = () => import('../pages/Inicio');
-export const importarFeed = () => import('../pages/Feed');
-export const importarRanking = () => import('../pages/Ranking');
-export const importarFigurinha = () => import('../pages/Figurinha');
-export const importarMeuPerfil = () => import('../pages/MeuPerfil');
+// Velocidade 7B: cada função lembra o módulo depois de carregado
+// (`jaCarregado()`). O React.lazy suspende na primeira renderização sempre que
+// recebe uma promessa — mesmo já resolvida — e ainda segura o fallback ~300 ms;
+// com o módulo em mãos, utils/lazyComRetry.js entrega-o sem suspender.
+function lembrar(importar) {
+  let modulo = null;
+  const carregar = () => (modulo ? Promise.resolve(modulo) : importar().then((m) => { modulo = m; return m; }));
+  carregar.jaCarregado = () => modulo;
+  return carregar;
+}
+
+export const importarInicio = lembrar(() => import('../pages/Inicio'));
+export const importarFeed = lembrar(() => import('../pages/Feed'));
+export const importarRanking = lembrar(() => import('../pages/Ranking'));
+export const importarFigurinha = lembrar(() => import('../pages/Figurinha'));
+export const importarMeuPerfil = lembrar(() => import('../pages/MeuPerfil'));
 
 // Só as abas da barra de baixo. Telas fundas (Equipa, Jogo, Campeonato, Admin)
 // ficam de fora de propósito: pré-carregar tudo seria trocar uma espera no
