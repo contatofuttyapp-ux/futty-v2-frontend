@@ -36,6 +36,12 @@
 //             lê o relatório do próprio Diagnóstico (POST interceptado) e mede de
 //             fora os quadros e a 1ª linha/imagem. --lento: um laço ocupa ~3/4 da
 //             thread principal (o WebKit não tem CPU 4x mais lenta).
+// Rodada 9 (16-set) — cena nova:
+//   fixos     percorre Jogo (com sorteio), sorteio, sorteio público, Planos e
+//             landing; lista TODO `position: fixed` visível, rola a página e
+//             mede outra vez. Quem se mexeu não estava preso à tela — e o
+//             relatório aponta o ancestral culpado (transform, filter,
+//             container-type…). Prova empírica, não teoria.
 // Em campos, voto e aviso, TODA escrita à /api (POST/PATCH/PUT/DELETE) é
 // interceptada e respondida com 200 — impressões de anúncio incluídas. Em
 // ranking1 não: interceptar desliga o cache HTTP do WebKit e falsearia a medição
@@ -531,6 +537,155 @@ async function cenaAviso(navegador, sessao) {
   return { passos, comRsvp: { ...comRsvp, captura: path.relative(RAIZ, capturaRsvp) }, escritas };
 }
 
+// ─── Cena "fixos": position:fixed que não ancora na TELA ──────────────────────
+// Rodada 9, item 4. O mesmo defeito do modal de votar: um `position: fixed`
+// dentro do [data-page] pode ancorar na PÁGINA em vez da tela — basta um
+// ancestral com transform, filter, backdrop-filter, perspective, will-change
+// dessas, contain ou container-type. Aqui a prova é empírica, não teórica:
+// mede-se cada elemento fixo, rola-se a página e mede-se outra vez. Quem se
+// mexeu não estava preso à tela.
+function medirFixos() {
+  const descrever = (el) => {
+    const cls = typeof el.className === 'string' ? el.className : el.getAttribute('class') || '';
+    return `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${cls ? `.${cls.trim().split(/\s+/).slice(0, 2).join('.')}` : ''}`;
+  };
+  const caminho = (el) => {
+    const partes = [];
+    for (let n = el; n && n !== document.documentElement && partes.length < 4; n = n.parentElement) partes.unshift(descrever(n));
+    return partes.join(' > ');
+  };
+  // Propriedades que fazem um elemento virar o "chão" do position:fixed dos filhos.
+  const motivosDe = (cs) => {
+    const m = [];
+    if (cs.transform && cs.transform !== 'none') m.push(`transform: ${cs.transform}`);
+    if (cs.filter && cs.filter !== 'none') m.push(`filter: ${cs.filter}`);
+    if (cs.backdropFilter && cs.backdropFilter !== 'none') m.push(`backdrop-filter: ${cs.backdropFilter}`);
+    if (cs.perspective && cs.perspective !== 'none') m.push(`perspective: ${cs.perspective}`);
+    if (cs.willChange && /transform|filter|perspective/.test(cs.willChange)) m.push(`will-change: ${cs.willChange}`);
+    if (cs.contain && /paint|layout|strict|content/.test(cs.contain)) m.push(`contain: ${cs.contain}`);
+    if (cs.containerType && cs.containerType !== 'normal') m.push(`container-type: ${cs.containerType}`);
+    if (cs.contentVisibility && cs.contentVisibility !== 'visible') m.push(`content-visibility: ${cs.contentVisibility}`);
+    return m;
+  };
+
+  const pagina = document.querySelector('[data-page]');
+  const lista = [...document.body.getElementsByTagName('*')]
+    .filter((el) => getComputedStyle(el).position === 'fixed' && el.getClientRects().length > 0);
+  window.__futtyFixos = lista;
+  return lista.map((el) => {
+    const r = el.getBoundingClientRect();
+    let culpado = null;
+    for (let n = el.parentElement; n && n !== document.documentElement; n = n.parentElement) {
+      const m = motivosDe(getComputedStyle(n));
+      if (m.length) { culpado = { elemento: descrever(n), motivos: m }; break; }
+    }
+    return {
+      caminho: caminho(el),
+      topo: Math.round(r.top), esquerda: Math.round(r.left),
+      largura: Math.round(r.width), altura: Math.round(r.height),
+      dentroDaPagina: !!pagina && pagina.contains(el),
+      filhoDoBody: el.parentElement === document.body,
+      culpado,
+    };
+  });
+}
+
+function remedirFixos() {
+  return (window.__futtyFixos || []).map((el) => {
+    const r = el.getBoundingClientRect();
+    return { topo: Math.round(r.top), esquerda: Math.round(r.left) };
+  });
+}
+
+// Mede uma tela: fixos antes e depois de rolar. Devolve quem se mexeu.
+async function telaFixa(navegador, sessao, { nome, rota, comSessao = true, preparar = null, viewport = null }) {
+  const contexto = await novoContexto(navegador, comSessao ? sessao : null, { amostrar: false });
+  await travarEscritas(contexto);
+  const pagina = await contexto.newPage();
+  if (viewport) await pagina.setViewportSize(viewport);
+  const erros = [];
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('[data-page]', { timeout: 30000 }).catch(() => {});
+  await espera(2200); // a animação de entrada (0,18 s) e os dados
+  let nota = null;
+  if (preparar) nota = await preparar(pagina).catch((e) => `preparar falhou: ${e.message}`);
+  await espera(600);
+
+  const antes = await pagina.evaluate(medirFixos);
+  const capturaTopo = arquivoCaptura(`fixo-${nome}`);
+  await pagina.screenshot({ path: capturaTopo });
+
+  const rolou = await pagina.evaluate(() => {
+    const se = document.scrollingElement;
+    const alvo = Math.min(600, Math.max(0, se.scrollHeight - window.innerHeight));
+    window.scrollTo(0, alvo);
+    return Math.round(se.scrollTop);
+  });
+  await espera(500);
+  const depois = await pagina.evaluate(remedirFixos);
+  const capturaRolada = arquivoCaptura(`fixo-${nome}-rolado`);
+  await pagina.screenshot({ path: capturaRolada });
+
+  const fixos = antes.map((f, i) => {
+    const d = depois[i] || {};
+    const desvio = { topo: (d.topo ?? f.topo) - f.topo, esquerda: (d.esquerda ?? f.esquerda) - f.esquerda };
+    return { ...f, depoisDeRolar: d, desvio, ancorado: Math.abs(desvio.topo) <= 1 && Math.abs(desvio.esquerda) <= 1 };
+  });
+  await contexto.close();
+  return {
+    nome, rota, rolou, nota, erros,
+    tela: viewport || IPHONE.viewport,
+    fixos,
+    soltos: fixos.filter((f) => !f.ancorado),
+    capturas: [path.relative(RAIZ, capturaTopo), path.relative(RAIZ, capturaRolada)],
+  };
+}
+
+// O jogo com sorteio feito (o banner fixo de publicidade só aparece aí) e o
+// gameId para a vista pública do sorteio. Lê a resposta que o próprio app pede.
+async function acharJogoSorteado(navegador, sessao) {
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  const pagina = await contexto.newPage();
+  const jogos = [];
+  pagina.on('response', async (resposta) => {
+    if (!/\/api\/teams\/[^/]+\/games$/.test(new URL(resposta.url()).pathname)) return;
+    const json = await resposta.json().catch(() => null);
+    for (const g of json?.games || []) jogos.push(g);
+  });
+  await pagina.goto(`${BASE}/equipa/${TIME}/jogos`, { waitUntil: 'domcontentloaded' });
+  await espera(4000);
+  await contexto.close();
+  const sorteado = jogos.find((g) => g.sorteio_realizado) || jogos[0] || null;
+  return sorteado ? { id: sorteado.id, sorteioRealizado: !!sorteado.sorteio_realizado, total: jogos.length } : null;
+}
+
+async function cenaFixos(navegador, sessao) {
+  const jogo = await acharJogoSorteado(navegador, sessao);
+  const telas = [];
+
+  if (jogo) {
+    telas.push(await telaFixa(navegador, sessao, { nome: 'jogo', rota: `/equipa/${TIME}/jogo/${jogo.id}` }));
+    telas.push(await telaFixa(navegador, sessao, {
+      nome: 'sorteio',
+      rota: `/equipa/${TIME}/jogo/${jogo.id}/sorteio`,
+      // O termo de uso é um .modal-overlay renderizado dentro da própria tela.
+      preparar: async (pagina) => {
+        const b = pagina.locator('button', { hasText: /^(Baixar|Salvar)/ }).first();
+        if (!(await b.count())) return 'sem botão de baixar (sorteio não realizado?)';
+        await b.scrollIntoViewIfNeeded();
+        await b.click({ force: true });
+        await espera(700);
+        return (await pagina.locator('[role="dialog"]').count()) ? 'termo aberto' : 'sem termo (já aceite)';
+      },
+    }));
+    telas.push(await telaFixa(navegador, sessao, { nome: 'sorteio-publico', rota: `/p/${TIME}/${jogo.id}`, comSessao: false }));
+  }
+  telas.push(await telaFixa(navegador, sessao, { nome: 'planos', rota: '/planos' }));
+  telas.push(await telaFixa(navegador, sessao, { nome: 'landing', rota: '/', comSessao: false }));
+  return { jogo, telas };
+}
+
 // ─── Cena "ranking1": 1ª visita ao Ranking pelo Início ─────────────────────────
 async function lerRelatorioDoApp(contexto, pagina) {
   // A interceção só entra AGORA, com a medição feita: qualquer route no contexto
@@ -688,6 +843,20 @@ try {
     for (const p of a.passos) console.log(`   ${p.passo}: botões [${p.bloco.botoes?.join(' · ')}]${p.dialogo ? ` · diálogo "${p.dialogo}"` : ''} → ${p.captura}`);
     console.log(`   com RSVP aberto: card ${a.comRsvp.rsvpCard ? 'sim' : 'não'} · botões [${a.comRsvp.botoes?.join(' · ')}] → ${a.comRsvp.captura}`);
     console.log(`   escritas interceptadas: ${a.escritas.map((e) => `${e.metodo} ${e.rota} ${e.corpo || ''}`).join(' | ') || 'nenhuma'}`);
+  }
+
+  if (CENAS.includes('fixos')) {
+    const f = await cenaFixos(navegador, sessao);
+    saida.fixos = f;
+    console.log(`\n[iphone] fixos · jogo ${f.jogo ? `${f.jogo.id} (sorteado: ${f.jogo.sorteioRealizado ? 'sim' : 'não'})` : 'nenhum encontrado'}`);
+    for (const t of f.telas) {
+      console.log(`   ${t.nome} (${t.rota}) · rolou ${t.rolou}px · ${t.fixos.length} fixo(s), ${t.soltos.length} solto(s)${t.nota ? ` · ${t.nota}` : ''}`);
+      for (const s of t.soltos) {
+        console.log(`     SOLTO ${s.caminho} em (${s.esquerda}, ${s.topo}) ${s.largura}x${s.altura} → desviou ${s.desvio.topo}px ao rolar`);
+        console.log(`       culpado: ${s.culpado ? `${s.culpado.elemento} [${s.culpado.motivos.join('; ')}]` : 'não identificado'}`);
+      }
+      console.log(`     capturas: ${t.capturas.join(' · ')}${t.erros.length ? ` · erros: ${t.erros.join(' | ')}` : ''}`);
+    }
   }
 
   if (CENAS.includes('ranking1')) {

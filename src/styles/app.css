@@ -1691,8 +1691,17 @@
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
+/* `backwards`, não `both` (Rodada 9). Com `both` o keyframe final ficava
+   CONGELADO no elemento para sempre — e um `transform: none` animado resolve-se
+   em `matrix(1, 0, 0, 1, 0, 0)`, que não move nada mas faz da página o "chão" de
+   todo `position: fixed` lá dentro. Era isso que atirava o banner do Jogo para
+   3051 px (fora da tela), punha o toast do sorteio abaixo da dobra e fazia o
+   fundo dos Planos rolar com a página. `backwards` só aplica o estado inicial
+   ANTES de a animação começar: no fim o elemento volta ao seu próprio estilo
+   (opacity 1, transform none) — mesma entrada, mesmo desenho, sem chão falso.
+   A lei do build 11 continua de pé: o estado natural é VISÍVEL. */
 .page-transition {
-  animation: pageEntra 0.18s ease-out both;
+  animation: pageEntra 0.18s ease-out backwards;
 }
 @media (prefers-reduced-motion: reduce) {
   /* Só o fade, sem deslize — e mais curto. */
