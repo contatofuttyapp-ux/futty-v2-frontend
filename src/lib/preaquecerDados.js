@@ -15,7 +15,7 @@
 //   · nada disto acontece em ligação fraca ou com poupança de dados ligada;
 //   · qualquer falha é silenciosa — isto é adiantamento, nunca uma dependência.
 import { apiFetch } from './api';
-import { gravarCache } from './cacheLocal';
+import { gravarCache, lerCacheComIdade } from './cacheLocal';
 import { registarPreaquecimento } from './diagnostico';
 import { urlImagem } from '../utils/avatar';
 
@@ -25,6 +25,10 @@ const IMAGENS_EM_PARALELO = 4;
 // Teto de imagens por aquecimento: um time grande tem 30+ avatares e não vale
 // a pena descer todos — as primeiras são as que aparecem nas listas.
 const MAX_IMAGENS = 24;
+// Velocidade 7B: a mesma janela de frescor das telas (useApiComCache, Figurinha).
+// Se a pessoa abriu a Figurinha antes de o aquecimento chegar aos selos, a tela
+// já os buscou e gravou — pedir de novo por trás era o "selos em dobro".
+const FRESCO_MS = 30000;
 
 let jaCorreu = false;
 
@@ -117,6 +121,11 @@ export function preaquecer(userId, dadosInicio) {
     passos.push(['/api/blocks', 'blocks', (d) => d]);
 
     for (const [rota, chave, moldar] of passos) {
+      const recente = lerCacheComIdade(userId, chave);
+      if (recente && recente.idadeMs < FRESCO_MS) {
+        payloads.push(recente.dados);
+        continue;
+      }
       try {
         const d = await apiFetch(rota);
         gravarCache(userId, chave, moldar(d));

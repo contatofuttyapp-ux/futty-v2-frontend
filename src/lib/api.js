@@ -29,18 +29,49 @@ const API_URL = !Capacitor.isNativePlatform() && import.meta.env.PROD ? '' : MOT
 // Resolução de assets: fonte única em utils/avatar.js (re-exportado como assetUrl).
 export { urlAsset as assetUrl } from '../utils/avatar';
 
+// VELOCIDADE 7B — o mesmo GET em paralelo é UMA ida à rede: quem chega com um
+// pedido igual ainda no ar recebe a mesma promessa. O caso real: o
+// pré-aquecimento pedia /api/me/selos (e o ranking) e a tela, aberta nesse
+// instante, pedia outra vez. Só GET sem corpo; a entrada sai assim que a
+// resposta chega (não é cache — esse é o cacheLocal). A chave leva o token:
+// sessões diferentes nunca partilham resposta. Quem recebe o mesmo objeto não o
+// deve alterar — nenhuma tela o faz (o estado do React é trocado, não mexido).
+//
+// Qualquer ESCRITA esvazia o mapa: um GET só aproveita outro que começou depois
+// da última escrita. Sem isto, votar e recarregar o ranking podia pegar carona
+// num GET que saiu antes do voto e devolver a lista velha.
+const getsEmVoo = new Map();
+
 // Faz um pedido autenticado à API, anexando o access token da sessão Supabase.
 export async function apiFetch(path, options = {}) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
+  const token = session?.access_token || null;
 
+  const metodo = (options.method || 'GET').toUpperCase();
+  if (metodo !== 'GET' || options.body != null) {
+    getsEmVoo.clear();
+    return pedir(path, options, token);
+  }
+
+  const chave = `${token || '-'}|${path}`;
+  const emVoo = getsEmVoo.get(chave);
+  if (emVoo) return emVoo;
+  const promessa = pedir(path, options, token).finally(() => {
+    if (getsEmVoo.get(chave) === promessa) getsEmVoo.delete(chave);
+  });
+  getsEmVoo.set(chave, promessa);
+  return promessa;
+}
+
+async function pedir(path, options, token) {
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
-  if (session?.access_token) {
-    headers.Authorization = `Bearer ${session.access_token}`;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
   // VELOCIDADE 4 — a caixa-preta mede AQUI, no único sítio por onde todas as
@@ -74,6 +105,7 @@ export async function apiUpload(path, file, field = 'file') {
     data: { session },
   } = await supabase.auth.getSession();
 
+  getsEmVoo.clear(); // escrita: ver a nota de getsEmVoo
   const fd = new FormData();
   fd.append(field, file);
 
@@ -104,6 +136,7 @@ export async function uploadFile(file) {
     data: { session },
   } = await supabase.auth.getSession();
 
+  getsEmVoo.clear(); // escrita: ver a nota de getsEmVoo
   const fd = new FormData();
   fd.append('file', file);
 

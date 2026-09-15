@@ -268,19 +268,23 @@ export default function Figurinha() {
   // SELOS DE HONRA (Vaga 11C): busca os selos do utilizador; mostra no cromo os 2
   // de maior prioridade que NÃO estejam ocultos (olhinho, persistido). Vêm já
   // ordenados por prioridade (campeonato > ranking) do backend.
-  const [selos, setSelos] = useState([]);
+  // Velocidade 7B: os selos do cache entram JÁ no primeiro render (antes vinham
+  // num microtask, e essa chegada tardia recomeçava o desenho do cromo). Os
+  // selos nunca seguram a tela: sem cache, o cromo desenha sem eles e redesenha
+  // uma vez quando o /api/me/selos chegar.
+  const [selos, setSelos] = useState(() => lerCacheComIdade(userId, 'selos')?.dados ?? []);
+  const [selosDoUsuario, setSelosDoUsuario] = useState(userId);
+  if (selosDoUsuario !== userId) {
+    setSelosDoUsuario(userId);
+    setSelos(lerCacheComIdade(userId, 'selos')?.dados ?? []);
+  }
   const [selosOcultos, setSelosOcultos] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('futty_selos_ocultos') || '[]')); } catch { return new Set(); }
   });
   useEffect(() => {
     let ativo = true;
-    // Cache local (13-set, "Velocidade 3"): mostra os selos da última visita
-    // na hora; o pedido de verdade corre por trás e substitui ao responder.
     const comIdade = lerCacheComIdade(userId, 'selos');
     const doCache = comIdade?.dados ?? null;
-    if (doCache) {
-      Promise.resolve().then(() => { if (ativo) setSelos(doCache); });
-    }
     // Velocidade 6B: mesma janela de frescor do useApiComCache. Se o
     // pré-aquecimento acabou de trazer os selos, não se pedem outra vez.
     if (comIdade && comIdade.idadeMs < 30000) return () => { ativo = false; };
@@ -348,37 +352,52 @@ export default function Figurinha() {
     if (estreiaFase === 'pronto') celebrarCromoPronto();
   }, [estreiaFase]);
 
+  // Velocidade 7B: uma geração do cromo só é jogada fora se já houver cromo NA
+  // TELA. Antes, qualquer mudança a meio — os selos a chegarem do cache ou da
+  // rede — descartava o desenho quase pronto e o card ficava no F até a geração
+  // seguinte acabar: "a Figurinha só pinta quando /api/me/selos chega". Agora a
+  // primeira a terminar pinta, e a mais nova substitui quando terminar.
+  const geracaoCromoRef = useRef(0);
+  const cromoNaTelaRef = useRef({ fim: false, estreia: false });
+  const montadaRef = useRef(true);
   useEffect(() => {
-    let vivo = true;
+    montadaRef.current = true;
+    return () => { montadaRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!me) return; // sem perfil ainda: nada de pintar um cromo vazio
+    const minha = ++geracaoCromoRef.current;
+    const modo = estreiaFase === 'fim' ? 'fim' : 'estreia';
+    const podePintar = () => montadaRef.current && (geracaoCromoRef.current === minha || !cromoNaTelaRef.current[modo]);
     const trocar = (setter) => (blob) => setter((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return blob ? URL.createObjectURL(blob) : null;
     });
     const gerar = async () => {
-      if (!jogador) return;
       try {
-        if (estreiaFase === 'fim') {
+        if (modo === 'fim') {
           // Studio: duas camadas (partículas entre fundo e jogador).
           const { fundoBlob, jogadorBlob, placaBlob } = await gerarCamadasFigurinha(opts);
-          if (!vivo) return;
+          if (!podePintar()) return;
           trocar(setFundoUrl)(fundoBlob);
           trocar(setJogadorUrl)(jogadorBlob);
           trocar(setPlacaUrl)(placaBlob);
         } else {
           // Estreia: imagem composta única.
           const blob = await gerarFigurinhaCanvas(opts);
-          if (!vivo) return;
+          if (!podePintar()) return;
           trocar(setPreviewUrl)(blob);
         }
+        cromoNaTelaRef.current[modo] = true;
       } catch (e) {
         console.error('[preview]', e);
       }
     };
     gerar();
-    return () => { vivo = false; };
     // selosKey: regenera o cromo quando os selos visíveis mudam (chegam da API ou
-    // o utilizador oculta/mostra no olhinho).
-  }, [fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, avatarGenericoEscolha, estreiaFase, selosKey]);
+    // o utilizador oculta/mostra no olhinho). me?.user?.id: a 1ª geração espera o perfil.
+  }, [me?.user?.id, fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, avatarGenericoEscolha, estreiaFase, selosKey]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => () => { if (fundoUrl) URL.revokeObjectURL(fundoUrl); }, [fundoUrl]);

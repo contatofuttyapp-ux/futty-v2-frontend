@@ -3,25 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
 
-// VELOCIDADE 6B (15-set) — dois componentes montados ao mesmo tempo a pedir o
-// MESMO path davam dois pedidos iguais à rede. O caso real: a barra de baixo e
-// o Ranking pedem ambos o votacao-status do time, e de Lisboa isso são duas
-// idas de ~250 ms a São Paulo para a mesma resposta.
-//
-// Aqui guarda-se a promessa em voo por path: o segundo a chegar pega a mesma.
-// A entrada sai do mapa assim que a promessa termina — isto NÃO é cache de
-// resposta (esse é o cacheLocal), é só uma janela de coalescência.
-const emVoo = new Map();
-
-function buscarUmaVez(path) {
-  const existente = emVoo.get(path);
-  if (existente) return existente;
-  const p = apiFetch(path).finally(() => {
-    if (emVoo.get(path) === p) emVoo.delete(path);
-  });
-  emVoo.set(path, p);
-  return p;
-}
+// Dois componentes a pedir o MESMO path ao mesmo tempo dão uma ida à rede só:
+// desde a Velocidade 7B essa coalescência vive no próprio apiFetch (lib/api.js),
+// e vale também para quem chama apiFetch direto (pré-aquecimento, Figurinha).
 
 /**
  * @param {string|null} path - null = não busca.
@@ -49,7 +33,7 @@ export function useApi(path, opts = {}) {
   useEffect(() => {
     if (!path || pausado) return undefined;
     let active = true;
-    buscarUmaVez(path)
+    apiFetch(path)
       .then((data) => active && setState({ data, error: '', loadedPath: path }))
       .catch((err) => active && setState({ data: null, error: err.message, loadedPath: path }));
     return () => {
