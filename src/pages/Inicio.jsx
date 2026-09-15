@@ -1,5 +1,6 @@
 // Futty v2.0 — Início: o cromo, chips de equipas, próximos jogos e publicidade.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { apiFetch } from '../lib/api';
@@ -32,6 +33,13 @@ function isToday(iso) {
   const d = new Date(iso);
   const n = new Date();
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+}
+
+// "domingo, 20/09" — o dia do jogo na pergunta do aviso de ausência.
+function diaDoJogo(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
 }
 
 // ----- O cromo do Início -----
@@ -322,6 +330,7 @@ export default function Inicio() {
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
   const [ausenciaBusy, setAusenciaBusy] = useState(false);
+  const [confirmarAusencia, setConfirmarAusencia] = useState(false); // pergunta "Avisar o time…?" aberta
   const [toast, setToast] = useState(null); // { msg, tipo }
   const celebrouCamp = useRef(false);
 
@@ -584,11 +593,16 @@ export default function Inicio() {
   const proximoJogo = proximosJogos[0] || null;
   const nextId = proximoJogo?.id ?? null;
 
-  // Ausência antecipada ao próximo jogo (declaração proactiva, sem RSVP).
-  async function toggleAusencia() {
+  // Aviso de ausência ao próximo jogo (declaração proactiva, sem RSVP).
+  // Rodada 8A: "Não vou ao próximo jogo / Afinal vou" lia como ESTADO, não como
+  // ação. Agora o botão diz o que faz ("Avisar que não vou"), pergunta antes, e
+  // depois fica a faixa "Você avisou que não vai · Desfazer". O servidor já
+  // fazia o resto: quando o admin abre o RSVP, quem avisou entra como "Não vou"
+  // (routes/rsvp.js), e a marca zera quando o resultado do jogo é lançado.
+  async function definirAusencia(novo) {
     if (!proximoJogo?.team_slug || ausenciaBusy) return;
-    const novo = !proximoJogo.ausente_proximo;
     const teamId = proximoJogo.team_id;
+    setConfirmarAusencia(false);
     setAusenciaBusy(true);
     // Optimista: a flag é por equipa → atualiza todos os jogos dessa equipa.
     setGames((prev) => (prev || []).map((g) => (g.team_id === teamId ? { ...g, ausente_proximo: novo } : g)));
@@ -597,10 +611,10 @@ export default function Inicio() {
         method: 'PATCH',
         body: JSON.stringify({ ausente: novo }),
       });
-      setToast({ msg: novo ? 'Você marcou ausência no próximo jogo.' : 'Boa, contamos com você!', tipo: 'success' });
+      setToast({ msg: novo ? 'Pronto: o time já sabe que você não vai.' : 'Aviso desfeito.', tipo: 'success' });
     } catch (err) {
       setGames((prev) => (prev || []).map((g) => (g.team_id === teamId ? { ...g, ausente_proximo: !novo } : g)));
-      setToast({ msg: err.message, tipo: 'error' });
+      setToast({ msg: err.message || (novo ? 'Não deu para avisar agora. Tente de novo.' : 'Não deu para desfazer agora. Tente de novo.'), tipo: 'error' });
     } finally {
       setAusenciaBusy(false);
     }
@@ -612,6 +626,8 @@ export default function Inicio() {
   // dele — sem rsvp aqui é porque não há próximo jogo, ou a leitura falhou.
   const rsvpData = dadosInicio?.rsvp || null;
   const rsvpInfo = nextId ? { ...(rsvpData || { rsvp_aberto: false }), gameId: nextId } : null;
+  // O RSVPCard do próximo jogo está na tela (e com ele o Vou / Não vou).
+  const rsvpAbertoNoProximo = !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado);
   // Sincronizado DURANTE o render (mesmo padrão de MeuPerfil.jsx), não num
   // efeito: `minhaResposta` continua editável localmente pelo RSVPCard
   // (onResposta={setMinhaResposta}) depois desta sincronização inicial.
@@ -968,27 +984,26 @@ export default function Inicio() {
             {/* Jogos */}
             <div data-tour="jogos-section">
               <div className="games-label">Próximos Jogos</div>
-            {rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado ? (
+            {rsvpAbertoNoProximo ? (
               <RSVPCard gameId={nextId} prazo={rsvpInfo.rsvp_prazo} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
             ) : null}
-            {proximoJogo && proximoJogo.team_slug ? (
+            {/* Aviso de ausência (Rodada 8A). Com o RSVP aberto para ESTE jogo, some
+                — o card acima já tem Vou / Não vou, e é a resposta dele que vale. */}
+            {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo ? (
               proximoJogo.ausente_proximo ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '8px 0 4px' }}>
-                  <span className="hud-corners-s" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--danger)', background: 'rgba(248,113,113,0.12)', border: '1px solid var(--danger)', padding: '4px 10px' }}>
-                    Ausente declarado
-                  </span>
-                  <button type="button" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ border: 'none', background: 'transparent', color: 'var(--neon)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', padding: 0, opacity: ausenciaBusy ? 0.6 : 1 }}>
-                    {ausenciaBusy ? '…' : 'Afinal vou'}
+                <div className="hud-corners-s" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 4px', padding: '8px 12px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
+                  <Icon name="ausente" size={16} color="grey" />
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#f8b4b4' }}>Você avisou que não vai</span>
+                  <button type="button" onClick={() => definirAusencia(false)} disabled={ausenciaBusy} style={{ border: 'none', background: 'transparent', color: 'var(--neon)', fontWeight: 700, fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 3, cursor: ausenciaBusy ? 'default' : 'pointer', padding: '4px 0', flexShrink: 0, opacity: ausenciaBusy ? 0.6 : 1 }}>
+                    {ausenciaBusy ? 'Salvando…' : 'Desfazer'}
                   </button>
                 </div>
               ) : (
-                <button type="button" className="hud-corners-s" onClick={toggleAusencia} disabled={ausenciaBusy} style={{ margin: '8px 0 4px', border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', color: 'var(--text-dim)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', padding: '6px 12px', opacity: ausenciaBusy ? 0.6 : 1 }}>
-                  {ausenciaBusy ? 'Salvando…' : (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <Icon name="ausente" size={16} color="grey" />
-                      Não vou ao próximo jogo
-                    </span>
-                  )}
+                <button type="button" className="hud-corners-s" onClick={() => setConfirmarAusencia(true)} disabled={ausenciaBusy} style={{ margin: '8px 0 4px', border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', color: 'var(--text-dim)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', padding: '6px 12px', opacity: ausenciaBusy ? 0.6 : 1 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="ausente" size={16} color="grey" />
+                    {ausenciaBusy ? 'Salvando…' : 'Avisar que não vou'}
+                  </span>
                 </button>
               )
             ) : null}
@@ -1055,6 +1070,31 @@ export default function Inicio() {
       </main>
 
       {toast ? <Toast mensagem={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
+
+      {/* Pergunta do aviso de ausência — portal para o body (overlay fixo nunca
+          dentro do [data-page], ver LoadingFutty.jsx). */}
+      {confirmarAusencia && proximoJogo && !rsvpAbertoNoProximo
+        ? createPortal(
+            <div className="modal-overlay" role="presentation" onClick={() => setConfirmarAusencia(false)}>
+              <div className="modal-card modal-card--hud" role="dialog" aria-modal="true" aria-labelledby="aviso-ausencia-pergunta" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-card__inner">
+                  <p id="aviso-ausencia-pergunta" style={{ fontSize: 15, lineHeight: 1.5, marginBottom: 16 }}>
+                    {diaDoJogo(proximoJogo.date)
+                      ? `Avisar o time que você não vai ao jogo de ${diaDoJogo(proximoJogo.date)}?`
+                      : 'Avisar o time que você não vai ao próximo jogo?'}
+                  </p>
+                  <button type="button" className="btn hud-corners-s cta-gold" style={{ width: '100%' }} onClick={() => definirAusencia(true)}>
+                    Avisar
+                  </button>
+                  <button type="button" className="btn btn--ghost btn--sm btn--hud hud-corners-s" style={{ width: '100%', marginTop: 10 }} onClick={() => setConfirmarAusencia(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
 
       <AvatarGenericoSheet
         aberto={sheetAvatarAberto}
