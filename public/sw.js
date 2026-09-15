@@ -4,7 +4,7 @@
 // imported module" e o app não abria mais. Trocar o nome força todo aparelho
 // a começar de um cache vazio; o `activate` (abaixo) apaga o v2 poluído.
 // v4 (15-set, Velocidade 6B): entraram /avatares/, /sorteio-assets/ e /sons/.
-// Subir o nome é o que faz o activate deitar fora o cache antigo.
+// Subir o nome é o que faz o activate jogar fora o cache antigo.
 const CACHE_NAME = 'futty-v4';
 const STATIC_ASSETS = ['/', '/home', '/manifest.json'];
 

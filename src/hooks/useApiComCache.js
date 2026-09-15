@@ -36,11 +36,11 @@ export function useApiComCache(path, cacheKey, opts = {}) {
   // Leitura SÍNCRONA: o primeiro render já sai com dados, sem piscar.
   const ler = () => (cacheKey && userId ? lerCacheComIdade(userId, cacheKey) : null);
   const [doCache, setDoCache] = useState(ler);
-  // `forcado` fica verdadeiro quando o utilizador pede dado novo (reload manual):
+  // `forcado` fica verdadeiro quando o usuário pede dado novo (reload manual):
   // aí a janela de frescor é ignorada.
   const [forcado, setForcado] = useState(false);
 
-  // Troca de chave (navegar de uma equipa para outra): ajusta o estado DURANTE o
+  // Troca de chave (navegar de um time para outro): ajusta o estado DURANTE o
   // render — é o padrão oficial do React para estado derivado de props, e evita
   // tanto o efeito (que só correria depois de já ter pintado o dado errado) como
   // o setState-em-efeito que o lint da casa proíbe.

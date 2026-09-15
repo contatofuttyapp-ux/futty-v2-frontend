@@ -5,10 +5,10 @@ import { apiFetch } from '../lib/api';
 
 // VELOCIDADE 6B (15-set) — dois componentes montados ao mesmo tempo a pedir o
 // MESMO path davam dois pedidos iguais à rede. O caso real: a barra de baixo e
-// o Ranking pedem ambos o votacao-status da equipa, e de Lisboa isso são duas
+// o Ranking pedem ambos o votacao-status do time, e de Lisboa isso são duas
 // idas de ~250 ms a São Paulo para a mesma resposta.
 //
-// Aqui guarda-se a promessa em voo por path: o segundo a chegar apanha a mesma.
+// Aqui guarda-se a promessa em voo por path: o segundo a chegar pega a mesma.
 // A entrada sai do mapa assim que a promessa termina — isto NÃO é cache de
 // resposta (esse é o cacheLocal), é só uma janela de coalescência.
 const emVoo = new Map();

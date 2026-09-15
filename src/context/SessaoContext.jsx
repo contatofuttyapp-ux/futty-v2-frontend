@@ -127,9 +127,9 @@ export function SessaoProvider({ children }) {
   useEffect(() => {
     // VELOCIDADE 6B (15-set): este efeito esperava `teams` — ou seja, esperava o
     // /api/teams responder — antes de sequer começar o votacao-status. Duas idas
-    // a São Paulo em fila, ~500 ms só de espera. Mas o slug da equipa principal
+    // a São Paulo em fila, ~500 ms só de espera. Mas o slug do time principal
     // está no cache local desde a última visita: dá para arrancar já com ele.
-    // Se o /api/teams trouxer outro slug (a pessoa mudou de equipa principal), o
+    // Se o /api/teams trouxer outro slug (a pessoa mudou de time principal), o
     // efeito corre de novo com o slug certo — votacaoTentadaParaRef trata disso.
     const slug = teams[0]?.slug || lerCache(userId, CACHE_TEAMS)?.[0]?.slug || null;
     if (!slug) {

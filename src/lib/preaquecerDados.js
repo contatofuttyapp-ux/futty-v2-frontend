@@ -19,10 +19,10 @@ import { gravarCache } from './cacheLocal';
 import { registarPreaquecimento } from './diagnostico';
 import { urlImagem } from '../utils/avatar';
 
-// Quantas imagens descem ao mesmo tempo. 4 é o que o browser faria sozinho numa
+// Quantas imagens baixam ao mesmo tempo. 4 é o que o browser faria sozinho numa
 // lista; mais do que isso rouba banda ao que a pessoa está mesmo a ver.
 const IMAGENS_EM_PARALELO = 4;
-// Teto de imagens por aquecimento: uma equipa grande tem 30+ avatares e não vale
+// Teto de imagens por aquecimento: um time grande tem 30+ avatares e não vale
 // a pena descer todos — as primeiras são as que aparecem nas listas.
 const MAX_IMAGENS = 24;
 
@@ -66,7 +66,7 @@ function colherImagens(no, saida, prof = 0) {
 function baixarImagem(url, crossOrigin) {
   return new Promise((resolve) => {
     const img = new Image();
-    // O canvas da figurinha carrega o avatar do próprio utilizador com
+    // O canvas da figurinha carrega o avatar do próprio usuário com
     // crossOrigin='anonymous'. O CORS manda Vary: Origin, por isso o browser
     // guarda as duas formas em entradas SEPARADAS do cache — aquecer sem o
     // crossOrigin não serviria de nada ao canvas.
@@ -90,7 +90,7 @@ async function emLotes(tarefas, tamanho) {
 /**
  * @param {string} userId
  * @param {object} dadosInicio - o payload de /api/inicio já resolvido (para
- *   saber a equipa principal e aproveitar as imagens que ele já traz).
+ *   saber o time principal e aproveitar as imagens que ele já traz).
  */
 export function preaquecer(userId, dadosInicio) {
   if (jaCorreu || !userId) return;
@@ -131,7 +131,7 @@ export function preaquecer(userId, dadosInicio) {
     const urls = new Set();
     for (const p of payloads) colherImagens(p, urls);
 
-    // O avatar do PRÓPRIO utilizador é o mais importante: é o cromo do Início e
+    // O avatar do PRÓPRIO usuário é o mais importante: é o cromo do Início e
     // entra no canvas da figurinha. Vai em 512 e DUAS VEZES — com e sem
     // crossOrigin. Não é desperdício: o CORS manda `Vary: Origin`, por isso o
     // browser guarda as duas formas em entradas SEPARADAS do cache. O canvas
