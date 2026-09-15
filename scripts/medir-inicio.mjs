@@ -1,4 +1,5 @@
-// Futty v2.0 — Mede a abertura do Início num Chrome de verdade (VELOCIDADE 4).
+// Futty v2.0 — Mede a abertura do app num Chrome de verdade (VELOCIDADE 4;
+// contagem de imagens e bytes por aba na VELOCIDADE 6B, 15-set).
 //
 // A pergunta que este script responde com número: entre chegar ao Início e ver
 // a tela, quanto tempo passa — e quanto passaria com a regra ANTIGA, que só
@@ -10,13 +11,19 @@
 //   cromoMs    — quando a figurinha aparece (era exactamente o que a regra
 //                antiga esperava: `pageReady = cromoTentado`)
 //
-// Conta também quantos pedidos cada tela dispara, separando OPTIONS (preflight)
-// do resto.
+// VELOCIDADE 6B acrescenta, POR ABA e em volta FRIA e QUENTE: quantos pedidos
+// /api, quantos /api/media (avatares), quantos bytes vieram DA REDE, e quanto
+// tempo até a ÚLTIMA imagem aparecer. Os números saem do PerformanceObserver da
+// própria página (`performance.getEntriesByType('resource')`) e não dos eventos
+// do Playwright, de propósito: uma imagem servida do cache do browser continua a
+// aparecer nas entradas de performance, com `transferSize` 0. É assim que se vê
+// a diferença entre "não pediu" e "pediu e veio do cache".
 //
 // Uso (com o backend a correr em :3001 e `npm run build` feito):
+//   npx vite preview --port 4173
 //   node scripts/medir-inicio.mjs
-//   node scripts/medir-inicio.mjs --url http://localhost:4173
-import { readFileSync } from 'node:fs';
+//   node scripts/medir-inicio.mjs --url http://localhost:4173 --json antes.json
+import { readFileSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 const args = process.argv.slice(2);
@@ -28,6 +35,8 @@ const opcao = (nome, omissao) => {
 const BASE = opcao('url', 'http://localhost:4173');
 const EMAIL = opcao('email', 'demo-loja@futtymock.com');
 const FICHEIRO_SENHA = opcao('senha', 'C:/Users/phfer/Desktop/FUT/LOJA/demo-senha.txt');
+const SAIDA_JSON = opcao('json', null);
+const ETIQUETA = opcao('etiqueta', 'medição');
 
 function lerSenha() {
   const bruto = readFileSync(FICHEIRO_SENHA, 'utf8');
@@ -37,6 +46,26 @@ function lerSenha() {
 }
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ─── Contagem por aba, lida de dentro da página ──────────────────────────────
+// Marca o instante zero e devolve tudo o que a rede fez desde então.
+const MARCAR = () => performance.now();
+const COLHER = (t0) => {
+  const rec = performance.getEntriesByType('resource').filter((e) => e.startTime >= t0);
+  const api = rec.filter((e) => e.name.includes('/api/') && !e.name.includes('/api/media/'));
+  const img = rec.filter((e) => e.name.includes('/api/media/'));
+  const bytes = (lista) => lista.reduce((s, e) => s + (e.transferSize || 0), 0);
+  const doCache = img.filter((e) => e.transferSize === 0).length;
+  const ultimaImagem = img.length ? Math.round(Math.max(...img.map((e) => e.responseEnd)) - t0) : 0;
+  return {
+    api: api.length,
+    imagens: img.length,
+    imagensDoCache: doCache,
+    bytes: Math.round(bytes(rec)),
+    bytesImagens: Math.round(bytes(img)),
+    ultimaImagemMs: ultimaImagem,
+  };
+};
 
 async function medir() {
   const navegador = await chromium.launch({ channel: 'chrome', headless: true });
@@ -120,24 +149,41 @@ async function medir() {
     resultados.push({ volta, conteudoMs, cromoMs, pedidos: contar() });
   }
 
-  // ─── Pedidos por tela (as outras abas) ───
-  const porTela = [];
-  for (const [nome, chave] of [['Resenha', 'feed'], ['Ranking', 'ranking'], ['Figurinha', 'figurinha'], ['Perfil', 'perfil']]) {
-    zerar();
-    const t0 = Date.now();
-    await pagina.click(aba(chave));
-    await pagina.waitForSelector('.app-main', { timeout: 20000 });
-    await espera(1500);
-    porTela.push({ tela: nome, ms: Date.now() - t0, pedidos: contar() });
+  // ─── VELOCIDADE 6B: pedidos, imagens e bytes POR ABA ───
+  // Duas passagens pelas mesmas 5 abas. A 1ª é FRIA (nunca lá esteve nesta
+  // sessão); a 2ª é QUENTE (cache local + cache HTTP já cheios). O que tem de
+  // cair para perto de zero na volta quente é a contagem e os bytes.
+  const ABAS = [['Início', 'home'], ['Resenha', 'feed'], ['Ranking', 'ranking'], ['Figurinha', 'figurinha'], ['Perfil', 'perfil']];
+  const porTela = { fria: [], quente: [] };
+
+  for (const passagem of ['fria', 'quente']) {
+    for (const [nome, chave] of ABAS) {
+      // Sai para outra aba primeiro, para o clique ser mesmo uma troca de tela.
+      const outra = chave === 'perfil' ? 'home' : 'perfil';
+      await pagina.click(aba(outra));
+      await pagina.waitForSelector('.app-main', { timeout: 20000 });
+      await espera(600);
+
+      zerar();
+      const t0Pagina = await pagina.evaluate(MARCAR);
+      const t0 = Date.now();
+      await pagina.click(aba(chave));
+      await pagina.waitForSelector('.app-main', { timeout: 20000 });
+      await espera(2500); // dá tempo às imagens de chegarem
+      const rede = await pagina.evaluate(COLHER, t0Pagina);
+      porTela[passagem].push({ tela: nome, ms: Date.now() - t0, pedidos: contar(), ...rede });
+    }
   }
 
   await navegador.close();
   return { frio, resultados, porTela };
 }
 
+const kb = (b) => `${(b / 1024).toFixed(1)} KB`;
+
 medir()
   .then(({ frio, resultados, porTela }) => {
-    console.log('\n=== INÍCIO: tela na frente vs figurinha desenhada ===');
+    console.log(`\n=== INÍCIO: tela na frente vs figurinha desenhada (${ETIQUETA}) ===`);
     console.log('(CPU 4x mais lento + 250ms de latência = celular em Lisboa)');
     console.log('(cromoMs é o que a regra ANTIGA esperava antes de revelar a tela)\n');
     console.log(
@@ -154,11 +200,28 @@ medir()
     const med = (c) => Math.round(resultados.reduce((a, r) => a + r[c], 0) / resultados.length);
     console.log(`\nmédia: conteudo ${med('conteudoMs')}ms | cromo ${med('cromoMs')}ms`);
 
-    console.log('\n=== PEDIDOS POR TELA ===');
-    for (const t of porTela) {
-      console.log(`${t.tela.padEnd(10)} ${String(t.ms).padStart(5)}ms | pedidos ${t.pedidos.total} (api ${t.pedidos.api}, preflight ${t.pedidos.preflight})`);
+    for (const passagem of ['fria', 'quente']) {
+      console.log(`\n=== POR ABA — volta ${passagem.toUpperCase()} (${ETIQUETA}) ===`);
+      console.log('aba         ms  /api  imgs  (cache)   bytes rede   até última img');
+      for (const t of porTela[passagem]) {
+        console.log(
+          `${t.tela.padEnd(10)} ${String(t.ms).padStart(5)} ${String(t.api).padStart(5)} ` +
+          `${String(t.imagens).padStart(5)} ${String(t.imagensDoCache).padStart(8)} ` +
+          `${kb(t.bytes).padStart(12)} ${String(t.ultimaImagemMs).padStart(12)}ms`
+        );
+      }
+      const soma = (c) => porTela[passagem].reduce((a, t) => a + t[c], 0);
+      console.log(
+        `${'TOTAL'.padEnd(10)} ${''.padStart(5)} ${String(soma('api')).padStart(5)} ` +
+        `${String(soma('imagens')).padStart(5)} ${String(soma('imagensDoCache')).padStart(8)} ${kb(soma('bytes')).padStart(12)}`
+      );
     }
     console.log('');
+
+    if (SAIDA_JSON) {
+      writeFileSync(SAIDA_JSON, JSON.stringify({ etiqueta: ETIQUETA, frio, resultados, porTela }, null, 2));
+      console.log(`(gravado em ${SAIDA_JSON})\n`);
+    }
   })
   .catch((e) => {
     console.error('Falhou:', e.message);
