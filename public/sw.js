@@ -3,7 +3,9 @@
 // import dinâmico de um chunk quebrava com "Failed to fetch dynamically
 // imported module" e o app não abria mais. Trocar o nome força todo aparelho
 // a começar de um cache vazio; o `activate` (abaixo) apaga o v2 poluído.
-const CACHE_NAME = 'futty-v3';
+// v4 (15-set, Velocidade 6B): entraram /avatares/, /sorteio-assets/ e /sons/.
+// Subir o nome é o que faz o activate deitar fora o cache antigo.
+const CACHE_NAME = 'futty-v4';
 const STATIC_ASSETS = ['/', '/home', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -38,6 +40,14 @@ function ehCacheavel(url, request) {
   return (
     url.pathname.startsWith('/assets/') ||
     url.pathname.startsWith('/icons/') ||
+    // Velocidade 6B (15-set): a mídia que o app busca da web em vez de levar no
+    // pacote (ver PASTAS_REMOTAS em src/utils/avatar.js). Já sai com
+    // Cache-Control immutable em public/_headers — retê-la aqui fecha o ciclo:
+    // depois da primeira vez, avatares genéricos, arte do sorteio e sons deixam
+    // de tocar na rede, inclusive offline.
+    url.pathname.startsWith('/avatares/') ||
+    url.pathname.startsWith('/sorteio-assets/') ||
+    url.pathname.startsWith('/sons/') ||
     url.pathname === '/manifest.json' ||
     /\.(woff2?|ttf|otf|eot)$/.test(url.pathname)
   );

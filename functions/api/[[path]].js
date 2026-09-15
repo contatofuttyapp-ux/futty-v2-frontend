@@ -38,8 +38,17 @@ export async function onRequest({ request, env }) {
   pedido.headers.delete('origin');
   pedido.headers.delete('referer');
 
+  // VELOCIDADE 6B (15-set): a mídia é imutável por construção — o URL é um token
+  // assinado que muda quando o conteúdo muda (ver backend/utils/mediaToken.js), e
+  // o motor já responde `Cache-Control: public, max-age=1 ano, immutable`. Aqui
+  // diz-se à Cloudflare para a guardar na BORDA: a segunda pessoa a ver a mesma
+  // foto recebe-a do datacenter mais perto dela, sem o salto até São Paulo.
+  // Só a mídia — tudo o resto leva Authorization e é de uma pessoa só.
+  const ehMidia = url.pathname.startsWith('/api/media/');
+  const opcoes = ehMidia ? { cf: { cacheEverything: true, cacheTtl: 31536000 } } : undefined;
+
   const t0 = Date.now();
-  const resposta = await fetch(pedido);
+  const resposta = await fetch(pedido, opcoes);
   const msEdge = Date.now() - t0;
 
   const saida = new Response(resposta.body, resposta);
@@ -55,7 +64,7 @@ export async function onRequest({ request, env }) {
   // partilhado nenhum. A exceção é /api/media/<token>, que é imagem e já vem com
   // o Cache-Control do motor — forçar no-store nela faria o feed rebuscar cada
   // foto a cada rolagem.
-  if (!url.pathname.startsWith('/api/media/')) {
+  if (!ehMidia) {
     saida.headers.set('Cache-Control', 'no-store');
   }
 
