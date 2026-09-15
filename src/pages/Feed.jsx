@@ -82,7 +82,7 @@ function FeedAvatar({ avatarUrl, size = 48 }) {
   return (
     <span className="avatar-frame" style={{ width: size, height: size, flexShrink: 0 }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src && !falhou ? <img src={src} alt="" width={size} height={size} decoding="async" loading="lazy" onError={() => setFalhou(true)} /> : <SilhuetaJogador size="76%" />}
+        {src && !falhou ? <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} /> : <SilhuetaJogador size="76%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />
@@ -195,7 +195,8 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
               onClick={() => onOpenImage(foto)}
               style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: '#000', cursor: 'zoom-in' }}
             >
-              <img src={urlImagem(foto, 1024)} alt="" width={390} height={420} loading="lazy" decoding="async" style={{ width: '100%', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
+              {/* Foto de post: lazy; os atributos só reservam a proporção, o CSS manda no tamanho. */}
+              <img src={urlImagem(foto, 1024)} alt="" width={390} height={420} loading="lazy" decoding="async" style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
             </button>
           ) : null}
 
@@ -524,7 +525,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
             <video src={assetUrl(media[0].url)} controls style={{ width: '100%', maxHeight: 460, borderRadius: 10, display: 'block', background: '#000' }} />
           ) : (
             <button type="button" onClick={() => onOpenImage(assetUrl(media[0].url))} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block', width: '100%' }}>
-              <img src={urlImagem(assetUrl(media[0].url), 1024)} alt="" width={362} height={460} loading="lazy" decoding="async" style={{ width: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
+              <img src={urlImagem(assetUrl(media[0].url), 1024)} alt="" width={362} height={460} loading="lazy" decoding="async" style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
             </button>
           )}
         </div>
@@ -538,7 +539,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
                   <video src={url} controls style={{ width: 240, maxHeight: 220, display: 'block', background: '#000' }} />
                 ) : (
                   <button type="button" onClick={() => onOpenImage(url)} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block' }}>
-                    <img src={urlImagem(url, 512)} alt="" loading="lazy" decoding="async" width={240} height={220} style={{ width: 240, maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    <img src={urlImagem(url, 512)} alt="" loading="lazy" decoding="async" width={240} height={220} style={{ width: 240, maxWidth: '100%', height: 'auto', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
                   </button>
                 )}
               </div>

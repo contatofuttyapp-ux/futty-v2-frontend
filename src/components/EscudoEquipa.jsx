@@ -35,7 +35,8 @@ export default function EscudoEquipa({ team = {}, size = 22 }) {
         letterSpacing: '0.02em',
       }}
     >
-      {src ? <img src={src} alt="" width={size} height={size} decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : ini}
+      {/* minWidth/minHeight 0: item de grid — ver a nota em .pavatar img (app.css). */}
+      {src ? <img src={src} alt="" decoding="async" style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover' }} /> : ini}
     </span>
   );
 }

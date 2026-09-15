@@ -58,7 +58,8 @@ function Avatar({ avatarUrl, size = 40 }) {
       }}
     >
       {src && !falhou ? (
-        <img src={src} alt="" width={size} height={size} decoding="async" loading="lazy" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        // minWidth/minHeight 0: item de grid — ver a nota em .pavatar img (app.css).
+        <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover' }} />
       ) : (
         <SilhuetaJogador size="76%" />
       )}
@@ -93,7 +94,7 @@ function Anexos({ anexos, onOpenImage }) {
               height={carrossel ? 140 : 120}
               decoding="async"
               loading="lazy"
-              style={carrossel ? { width: 140, height: 140, objectFit: 'cover', display: 'block' } : { width: '100%', height: 120, objectFit: 'cover', display: 'block' }}
+              style={carrossel ? { width: 140, maxWidth: '100%', height: 140, objectFit: 'cover', display: 'block' } : { width: '100%', maxWidth: '100%', height: 120, objectFit: 'cover', display: 'block' }}
             />
           </button>
         );

@@ -34,7 +34,7 @@ function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 4
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src ? <img src={src} alt="" width={size} height={size} decoding="async" loading="lazy" /> : <SilhuetaJogador size="74%" />}
+        {src ? <img src={src} alt="" decoding="async" /> : <SilhuetaJogador size="74%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />

@@ -25,7 +25,8 @@ function MiniAvatar({ nome, avatarUrl }) {
   return (
     <div style={{ width: 32, height: 32, borderRadius: 6, overflow: 'hidden', background: '#15151a', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
       {src && !falhou ? (
-        <img src={src} alt="" width={32} height={32} decoding="async" loading="lazy" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+        // minWidth/minHeight 0: item de grid — ver a nota em .pavatar img (app.css).
+        <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover', objectPosition: 'top center' }} />
       ) : (
         <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>{iniciaisNome(nome)}</span>
       )}

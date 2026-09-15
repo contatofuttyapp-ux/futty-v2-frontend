@@ -913,9 +913,19 @@
   flex-shrink: 0;
 }
 
+/* min-width/min-height 0 (Velocidade 7B): a caixa é um grid e a <img> um item
+   dele. Com o mínimo automático, o WebKit do iPhone estica a linha do grid até
+   a altura que a foto teria pela proporção dela — num avatar retrato (a
+   silhueta genérica é 368×680) a linha fica quase o dobro da caixa, e o
+   place-items:center empurra a imagem 20–27 px para baixo: cabeça no fundo,
+   resto cortado. Foto quadrada não mexe, por isso "só alguns" saíam errados.
+   O Chrome não faz isto. */
 .pavatar img {
+  display: block;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
   object-fit: cover;
   object-position: top center; /* mostra a cabeça em vez do tronco */
 }
@@ -963,9 +973,14 @@
   color: #fff;
   font-weight: 800;
 }
+/* min-width/min-height 0: mesmo motivo do .pavatar img acima (grid + foto
+   retrato no WebKit do iPhone = avatar deslocado para baixo). */
 .avatar-frame__fill img {
+  display: block;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
   object-fit: cover;
   object-position: top center;
 }

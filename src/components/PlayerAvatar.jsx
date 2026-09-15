@@ -12,7 +12,7 @@ import { avatarGenericoUrl } from '../utils/avatarGenerico';
 // Tamanho da caixa em px CSS, por variante (ver .pavatar em styles/app.css).
 const PX = { lg: 128, md: 72, sm: 36, base: 52 };
 
-export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, userId = null, avatarGenerico = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null, eager = false }) {
+export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, userId = null, avatarGenerico = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null }) {
   const [falhou, setFalhou] = useState(false);
 
   // Fonte da imagem: avatarUrl resolvido (frontend/backend/absoluto) OU por cor do
@@ -45,17 +45,10 @@ export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, us
   return (
     <div className={cls} style={estilo}>
       {src && !falhou ? (
-        // width/height = a caixa real: reserva o espaço antes da imagem chegar,
-        // por isso a lista não salta quando cada avatar aparece.
-        <img
-          src={src}
-          alt=""
-          width={px}
-          height={px}
-          decoding="async"
-          loading={eager ? 'eager' : 'lazy'}
-          onError={() => setFalhou(true)}
-        />
+        // Sem width/height nem loading="lazy" (Velocidade 7B): quem dá o tamanho
+        // é a caixa (.pavatar img, 100%), e um avatar de 8 KB não ganha nada em
+        // esperar a rolagem — só abria mais uma porta para o Safari errar.
+        <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} />
       ) : (
         <SilhuetaJogador size="78%" />
       )}

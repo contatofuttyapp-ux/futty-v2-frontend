@@ -30,7 +30,8 @@ export default function TeamAvatar({ team = {}, size = 'md' }) {
       }}
     >
       {src ? (
-        <img src={src} alt="" width={px} height={px} decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        // minWidth/minHeight 0: item de grid — ver a nota em .pavatar img (app.css).
+        <img src={src} alt="" decoding="async" style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover' }} />
       ) : (
         initials(team.nome) || '?'
       )}
