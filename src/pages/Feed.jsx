@@ -12,6 +12,7 @@ import LoadingFutty from '../components/LoadingFutty';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
 import { useTeams } from '../hooks/useTeam';
+import { useAd } from '../hooks/useAd';
 import { useApiComCache } from '../hooks/useApiComCache';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import Reacoes from '../components/Reacoes';
@@ -881,6 +882,13 @@ export default function Feed() {
   // casa: pinta o feed da última visita na hora e actualiza por trás.
   const { data: feedData, loading: feedCarregando, error: feedErro } = useApiComCache('/api/feed', 'feed');
 
+  // VELOCIDADE 6B (15-set): o anúncio é pedido AQUI, no topo, em paralelo com o
+  // feed. Antes o AdCard só era montado entre o 3º e o 4º item da lista, por
+  // isso o pedido dele só começava depois do /api/feed inteiro ter chegado e
+  // sido pintado — duas idas a São Paulo em fila por uma faixa de 100 px.
+  // `pagina='inicio'` de propósito: é a página configurada no Gabinete.
+  const { ad: adFeed, pronto: adPronto } = useAd('inicio');
+
   const [items, setItems] = useState(null); // null = ainda não há nada para mostrar
   const [erro, setErro] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('all');
@@ -1023,7 +1031,7 @@ export default function Feed() {
                     return (
                       <Fragment key={`feed-ad-${item.id}`}>
                         {card}
-                        <AdCard variant="native" />
+                        <AdCard variant="native" ad={adFeed} prontoExterno={adPronto} />
                       </Fragment>
                     );
                   }

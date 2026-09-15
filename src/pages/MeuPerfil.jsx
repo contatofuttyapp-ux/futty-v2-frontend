@@ -9,7 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { limparCacheLocal } from '../lib/cacheLocal';
 import { useAuth } from '../hooks/useAuth';
-import { useApi } from '../hooks/useApi';
+import { useApiComCache } from '../hooks/useApiComCache';
 import { usePerfil } from '../context/PerfilContext';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -91,7 +91,9 @@ export default function MeuPerfil() {
   const [toast, setToast] = useState(null);
   const souSuperAdmin = perfil?.user?.is_super_admin === true;
   // Bloqueio entre jogadores (Apple UGC 1.2): lista de quem EU bloqueei.
-  const { data: blocksData, reload: reloadBlocks } = useApi('/api/blocks');
+  // Velocidade 6B: entra no mesmo stale-while-revalidate do resto da casa — a
+  // lista de bloqueados quase nunca muda, e o pré-aquecimento já a trouxe.
+  const { data: blocksData, reload: reloadBlocks } = useApiComCache('/api/blocks', 'blocks');
   const bloqueados = blocksData?.bloqueados || [];
   const [desbloqueandoId, setDesbloqueandoId] = useState(null);
   // avatarAberto e avatarBusy saíram com a galeria: o primeiro era o disclosure que

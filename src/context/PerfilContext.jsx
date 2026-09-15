@@ -9,6 +9,10 @@ import { apiFetch } from '../lib/api';
 import { lerCache, gravarCache } from '../lib/cacheLocal';
 
 const CACHE_CHAVE = 'me';
+// Quanto se espera pela hidratação vinda do /api/inicio antes de pedir /api/me
+// por conta própria (Velocidade 6B). De Lisboa o /api/inicio responde em ~900 ms;
+// 3 s é folga suficiente sem deixar a tela presa se ele nunca vier.
+const ESPERA_HIDRATACAO_MS = 3000;
 
 const PerfilContext = createContext(null);
 
@@ -71,6 +75,40 @@ export function PerfilProvider({ children }) {
         setCarregadoParaId(userId);
         setDeCache(true);
       });
+    }
+
+    // VELOCIDADE 6B (15-set): a abrir DIRETO no Início, o /api/inicio já traz o
+    // `me` dentro do payload agregado e hidrata este contexto (hidratarPerfil).
+    // Pedir /api/me aqui era um segundo pedido para a mesma coisa, a competir
+    // com o /api/inicio logo no arranque — o pior momento possível.
+    //
+    // Este provider vive ACIMA do BrowserRouter (ver App.jsx), por isso não há
+    // useLocation: lê-se o pathname do arranque, que é o que interessa (o efeito
+    // só corre uma vez por sessão). E, como nada garante que a hidratação venha
+    // — o /api/inicio pode falhar ou ficar pendurado —, arma-se um prazo: se
+    // ninguém hidratar a tempo, pede-se /api/me na mesma.
+    const rota = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (rota === '/' || rota === '/home') {
+      const prazo = setTimeout(() => {
+        if (!ativo || userIdRef.current !== userId) return;
+        // Se já hidratou, `carregadoParaId` é o userId e não há nada a fazer.
+        setCarregadoParaId((atual) => {
+          if (atual === userId) return atual;
+          apiFetch('/api/me')
+            .then((data) => {
+              if (!ativo || userIdRef.current !== userId) return;
+              setPerfil(data);
+              setErro(null);
+              setErroCode(null);
+              setCarregadoParaId(userId);
+              setDeCache(false);
+              gravarCache(userId, CACHE_CHAVE, data);
+            })
+            .catch(() => {});
+          return atual;
+        });
+      }, ESPERA_HIDRATACAO_MS);
+      return () => { ativo = false; clearTimeout(prazo); };
     }
 
     apiFetch('/api/me')

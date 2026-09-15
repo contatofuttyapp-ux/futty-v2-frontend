@@ -28,6 +28,16 @@ function chaveCompleta(userId, chave) {
  * vencida). Nunca lança — quota cheia/modo privado tratam-se como "sem cache".
  */
 export function lerCache(userId, chave) {
+  return lerCacheComIdade(userId, chave)?.dados ?? null;
+}
+
+/**
+ * Como lerCache, mas diz também QUANDO foi gravado. A Velocidade 6B (15-set)
+ * precisa disto: se o pré-aquecimento acabou de passar por esta chave, a tela
+ * pinta do cache e NÃO repete o pedido — ver `frescoMs` em useApiComCache.
+ * Devolve `{ dados, idadeMs }` ou null.
+ */
+export function lerCacheComIdade(userId, chave) {
   if (!userId) return null;
   try {
     const bruto = localStorage.getItem(chaveCompleta(userId, chave));
@@ -37,7 +47,8 @@ export function lerCache(userId, chave) {
       localStorage.removeItem(chaveCompleta(userId, chave));
       return null;
     }
-    return dados ?? null;
+    if (dados == null) return null;
+    return { dados, idadeMs: Date.now() - em };
   } catch {
     return null;
   }

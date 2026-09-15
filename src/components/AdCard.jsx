@@ -18,25 +18,32 @@ const BASE = {
   border: '1px solid rgba(212,160,23,0.06)', borderLeft: '2px solid rgba(212,160,23,0.3)',
 };
 
-export default function AdCard({ pagina = 'inicio', variant = 'native' }) {
+/**
+ * `ad`/`prontoExterno` (Velocidade 6B, 15-set): quando a tela já pediu o anúncio
+ * no seu topo — em paralelo com os dados dela, em vez de esperar por eles — passa-o
+ * por prop e este componente não pede nada. Sem prop, mantém o comportamento
+ * antigo (pede sozinho ao montar).
+ */
+export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adProp = undefined, prontoExterno = undefined }) {
   const inicio = useInicio(); // não-null só dentro do /home (ver Layout.jsx)
-  const usaDoInicio = inicio !== null && pagina === 'inicio';
+  const vemDeFora = adProp !== undefined;
+  const usaDoInicio = !vemDeFora && inicio !== null && pagina === 'inicio';
 
   const [adProprio, setAdProprio] = useState(null);
   const [prontoProprio, setProntoProprio] = useState(false);
   const impRef = useRef(null);
 
   useEffect(() => {
-    if (usaDoInicio) return undefined; // /api/inicio já trouxe — não duplica o pedido
+    if (usaDoInicio || vemDeFora) return undefined; // já há anúncio — não duplica o pedido
     let vivo = true;
     apiFetch(`/api/ads?pagina=${encodeURIComponent(pagina)}`)
       .then((r) => { if (vivo) { setAdProprio(r?.ad || null); setProntoProprio(true); } })
       .catch(() => { if (vivo) setProntoProprio(true); });
     return () => { vivo = false; };
-  }, [pagina, usaDoInicio]);
+  }, [pagina, usaDoInicio, vemDeFora]);
 
-  const ad = usaDoInicio ? inicio.dados?.ad?.ad ?? null : adProprio;
-  const pronto = usaDoInicio ? !inicio.carregando : prontoProprio;
+  const ad = vemDeFora ? adProp : usaDoInicio ? inicio.dados?.ad?.ad ?? null : adProprio;
+  const pronto = vemDeFora ? (prontoExterno ?? true) : usaDoInicio ? !inicio.carregando : prontoProprio;
 
   useEffect(() => {
     if (ad && ad.id && impRef.current !== ad.id) {
