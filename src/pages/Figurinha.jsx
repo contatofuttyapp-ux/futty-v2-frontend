@@ -3,6 +3,7 @@
 // entrada animada; opções em tabs (Fundo/Frame/Uniforme) + toggles compactos.
 // Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
@@ -1297,8 +1298,11 @@ export default function Figurinha() {
         onEscolher={escolherAvatarGenerico}
       />
 
-      {/* Modal "A tua foto" — foto actual + estado do avatar IA + carregar nova */}
-      {modalFoto ? (
+      {/* Modal "A tua foto" — foto actual + estado do avatar IA + carregar nova.
+          Portal para o body (15-set): fixed dentro do [data-page] animado não
+          confia no viewport no WebKit do iPhone — ver nota em LoadingFutty.jsx. */}
+      {modalFoto
+        ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -1389,8 +1393,10 @@ export default function Figurinha() {
               <Camera size={16} /> Carregar nova foto
             </button>
           </div>
-        </div>
-      ) : null}
+        </div>,
+        document.body
+          )
+        : null}
     </div>
   );
 }

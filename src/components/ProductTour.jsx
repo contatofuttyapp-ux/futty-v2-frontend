@@ -1,6 +1,7 @@
 // Futty v2.0 — Onboarding product tour (3 passos com spotlight).
 // Mede o elemento alvo com getBoundingClientRect e recorta um "buraco" no overlay.
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 
 const GOLD = '#d4a017';
@@ -72,7 +73,11 @@ export default function ProductTour({ onDone }) {
   // Seta apontando para o alvo.
   const arrowLeft = spot ? Math.min(Math.max(rect.left + rect.width / 2 - balloonLeft, 20), BW - 20) : BW / 2;
 
-  return (
+  // Portal para o body (15-set): as coordenadas vêm de getBoundingClientRect
+  // (viewport), então o overlay tem de ancorar ao viewport de verdade — fixed
+  // dentro do [data-page] animado não confia nisso no WebKit do iPhone, ver
+  // nota em LoadingFutty.jsx.
+  return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 9000 }}>
       {/* Overlay + spotlight */}
       {spot ? (
@@ -165,6 +170,7 @@ export default function ProductTour({ onDone }) {
           {passo + 1} / {PASSOS.length}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

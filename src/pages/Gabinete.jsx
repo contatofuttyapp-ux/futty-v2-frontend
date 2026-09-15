@@ -363,6 +363,14 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
 
   return (
     <div>
+      {/* Regra de 15-set (dono): publicidade passou a valer para todos os planos —
+          Pro/Elite veem metade das oportunidades elegíveis, nunca zero; Free vê
+          todas. Determinístico por usuário+dia (services/inicio.js#metadeDasVezes),
+          não depende de configuração aqui. */}
+      <p style={{ ...muted, marginBottom: 14 }}>
+        Publicidade em todos os planos: Free vê sempre que houver campanha elegível; Pro e Elite veem metade das vezes, nunca zero.
+      </p>
+
       <h2 style={sectionH2}>Interruptor geral</h2>
       <div style={{ ...CARD, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
         <input

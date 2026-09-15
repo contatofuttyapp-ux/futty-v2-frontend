@@ -1,6 +1,7 @@
 // Futty v2.0 — Comentários (4A: texto, anexos, reações · 4B: menções,
 // respostas aninhadas, denúncias).
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, assetUrl } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -556,18 +557,23 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
       {/* Toast */}
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
-      {/* Fullscreen de anexo */}
-      {imgFull ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Imagem"
-          onClick={() => setImgFull(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-        >
-          <img src={imgFull} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-        </div>
-      ) : null}
+      {/* Fullscreen de anexo — portal para o body (15-set), mesma razão do
+          LoadingFutty.jsx: fixed dentro do [data-page] animado não confia no
+          viewport no WebKit do iPhone. */}
+      {imgFull
+        ? createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Imagem"
+              onClick={() => setImgFull(null)}
+              style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+            >
+              <img src={imgFull} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

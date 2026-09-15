@@ -1,5 +1,6 @@
 // Futty v2.0 — Toast simples no topo do ecrã (auto-dismiss 3s com fade).
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const CORES = {
   success: 'var(--neon)',
@@ -31,7 +32,10 @@ export default function Toast({ mensagem, tipo = 'info', onClose }) {
   if (!mensagem) return null;
   const cor = CORES[tipo] || CORES.info;
 
-  return (
+  // Portal para o body (15-set): position:fixed dentro do [data-page] animado
+  // (pageEntra em app.css) não centra/ancora ao viewport de forma confiável no
+  // WebKit do iPhone — ver a nota em LoadingFutty.jsx.
+  return createPortal(
     <div
       role="status"
       aria-live="polite"
@@ -58,6 +62,7 @@ export default function Toast({ mensagem, tipo = 'info', onClose }) {
       }}
     >
       {mensagem}
-    </div>
+    </div>,
+    document.body
   );
 }

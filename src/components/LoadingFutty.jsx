@@ -17,6 +17,7 @@
 // Excepção: micro-loadings dentro de botões e o overlay de geração (que é relativo ao
 // CARD, não ao viewport) usam o <FuttyLoader> directo e não este componente.
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import FuttyLoader from './FuttyLoader';
 // tGlobal (não-reactivo): este ecrã também é usado FORA do I18nProvider
 // (guarda de auth no arranque) — hook aqui rebenta; tGlobal lê o idioma guardado.
@@ -42,8 +43,19 @@ export default function LoadingFutty({ legenda = 'Bola parada…\nO servidor tá
     loaderEntrou();
     return loaderSaiu;
   }, []);
-  return (
+  // PORTAL PARA O BODY (15-set): o [data-page] (.page-transition) leva a animação
+  // pageEntra (app.css), que anima `transform`. Com animation-fill-mode:both, o
+  // computed style do transform DEPOIS da animação acabar não volta ao keyword
+  // `none` — fica uma matriz identidade (a animação continua "associada" ao
+  // elemento) — e por spec isso É containing block de `position:fixed`. Não é só
+  // um capricho do WebKit do iPhone (onde o bug apareceu primeiro): confirmado
+  // também no Chromium via scripts/testar-visibilidade.mjs. Ajustar só o keyframe
+  // não bastava; o F centrava-se na ÁREA da página (que pode começar abaixo da
+  // topbar), não no viewport. Renderizando direto em document.body o F nunca tem
+  // esse ancestral no meio, ponto final.
+  return createPortal(
     <div
+      data-loading-futty
       style={{
         position: 'fixed',
         inset: 0,
@@ -62,6 +74,7 @@ export default function LoadingFutty({ legenda = 'Bola parada…\nO servidor tá
           {tGlobal(legenda)}
         </span>
       ) : null}
-    </div>
+    </div>,
+    document.body
   );
 }

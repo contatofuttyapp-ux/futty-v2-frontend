@@ -25,7 +25,7 @@ const PLANOS = [
     nome: 'Pro',
     icone: 'estrela', // asset da casa — substitui o ★ do texto
     preco: precos.pro,
-    features: ['Tudo do Free', `${LIMITES_IA.pro} avatares IA/mês`, 'Sem anúncios', 'Frames exclusivos', 'Badge dourado'],
+    features: ['Tudo do Free', `${LIMITES_IA.pro} avatares IA/mês`, 'Menos anúncios', 'Frames exclusivos', 'Badge dourado'],
     botao: 'Assinar Pro',
   },
   {

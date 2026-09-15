@@ -2,6 +2,7 @@
 // Só admins. Sidebar (desktop) / drawer (mobile). Tab persistida na URL.
 import Icon from '../components/Icon';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, House, Settings, Users, Link2, CircleDot, Medal, Trophy, ChartColumn, Megaphone, Flag } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
@@ -2417,15 +2418,20 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Drawer mobile */}
-      {drawer ? (
-        <div role="presentation" onClick={() => setDrawer(false)} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-end' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', background: '#0a0a0a', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderTop: '1px solid #1a1a1a', padding: '10px 0 16px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <div style={{ width: 40, height: 4, borderRadius: 999, background: '#333', margin: '6px auto 10px' }} />
-            <MenuItems tab={tab} onPick={irTab} />
-          </div>
-        </div>
-      ) : null}
+      {/* Drawer mobile — portal para o body (15-set): fixed dentro do [data-page]
+          animado não confia no viewport no WebKit do iPhone, ver nota em
+          LoadingFutty.jsx. */}
+      {drawer
+        ? createPortal(
+            <div role="presentation" onClick={() => setDrawer(false)} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-end' }}>
+              <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', background: '#0a0a0a', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderTop: '1px solid #1a1a1a', padding: '10px 0 16px', maxHeight: '80vh', overflowY: 'auto' }}>
+                <div style={{ width: 40, height: 4, borderRadius: 999, background: '#333', margin: '6px auto 10px' }} />
+                <MenuItems tab={tab} onPick={irTab} />
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
 
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>
