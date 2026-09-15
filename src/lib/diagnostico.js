@@ -82,18 +82,95 @@ export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = nu
 export function marcarDadosDaTela() {
   if (navegacaoAberta && performance.now() - navegacaoAberta.t0 < JANELA_DA_NAVEGACAO_MS) {
     navegacaoAberta.msDados = Math.round(performance.now() - navegacaoAberta.t0);
+    // Rodada 8A: dados que chegam DEPOIS da pintura também entram no registo já
+    // guardado. Antes ficava "dados —" e o doCache nunca podia ser verdade (o
+    // registo copiava o msDados no instante da pintura, quando ainda era null):
+    // "pintaram do cache: 0" em todos os relatórios.
+    const registo = navegacaoAberta.registo;
+    if (registo) {
+      registo.msDados = navegacaoAberta.msDados;
+      registo.doCache = registo.msPintura < registo.msDados;
+    }
   }
 }
 
 /** Mudança de rota — o relógio do "toque" parte aqui. */
 export function marcarNavegacao(rota) {
-  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()) };
+  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null };
+  vigiarQuadros(navegacaoAberta);
   // Largura: nem todo transbordo dispara resize — mede também 1 s e 3 s depois
   // de cada troca de tela, quando os dados e as imagens já assentaram.
   if (typeof window !== 'undefined') {
     window.setTimeout(medirLargura, 1000);
     window.setTimeout(medirLargura, 3000);
   }
+}
+
+// ─── Marcas finas da navegação (Rodada 8A, 15-set) ───────────────────────────
+// O build 18 mandou "Ranking: pintura 1866 ms, dados 809, esperou []" — nenhum
+// loader na frente e mesmo assim mais de um segundo e meio sem tela. Sem saber
+// ONDE esse tempo caiu, qualquer conserto é palpite. Cada navegação guarda agora
+// os instantes (ms desde a troca de rota):
+//   lista     — a tela commitou o conteúdo (quem chama: useLayoutEffect)
+//   listaNova — a resposta fresca substituiu o que veio do cache (idem)
+//   loaderSaiu — o último F de carregamento saiu
+//   dados     — (o msDados de sempre)
+//   imagem    — a 1ª imagem da tela terminou de carregar
+//   efeito    — o agendamento da pintura correu (efeito passivo do React)
+//   quadro1   — o 1º quadro (requestAnimationFrame) depois da troca
+//   quadroMaior / quadroMaiorEm — o quadro mais longo antes da pintura: se for
+//               grande, a thread principal ou o desenho travaram
+// e o MAIOR intervalo entre instantes seguidos até a pintura vai para `esperou`
+// (ex.: "dados→pintura 1057ms"), ao lado dos loaders.
+
+/** Instante de uma navegação (só o 1º de cada nome conta). */
+export function marcarInstante(nome) {
+  const nav = navegacaoAberta;
+  if (!nav || typeof performance === 'undefined') return;
+  const ms = Math.round(performance.now() - nav.t0);
+  if (ms > JANELA_DA_NAVEGACAO_MS || nav.marcas[nome] != null) return;
+  nav.marcas[nome] = ms;
+}
+
+// Quadros: um laço de requestAnimationFrame só enquanto a tela não pinta (teto de
+// 10 s). É isto que separa "a tela esperou alguma coisa" de "a tela travou".
+function vigiarQuadros(nav) {
+  if (typeof requestAnimationFrame === 'undefined') return;
+  let anterior = null;
+  const laco = (agora) => {
+    if (navegacaoAberta !== nav) return;
+    const ms = Math.round(agora - nav.t0);
+    if (anterior == null) {
+      nav.marcas.quadro1 = Math.max(0, ms);
+    } else {
+      const gap = Math.round(agora - anterior);
+      if (gap > (nav.marcas.quadroMaior || 0)) {
+        nav.marcas.quadroMaior = gap;
+        nav.marcas.quadroMaiorEm = Math.max(0, Math.round(anterior - nav.t0));
+      }
+    }
+    anterior = agora;
+    if (nav.msPintura == null && ms < JANELA_DA_NAVEGACAO_MS) requestAnimationFrame(laco);
+  };
+  requestAnimationFrame(laco);
+}
+
+// O maior intervalo entre instantes seguidos, da troca de rota até à pintura.
+function maiorIntervalo(nav) {
+  const pontos = [['toque', 0]];
+  for (const nome of ['lista', 'listaNova', 'loaderSaiu', 'imagem']) {
+    const v = nav.marcas[nome];
+    if (v != null && v <= nav.msPintura) pontos.push([nome, v]);
+  }
+  if (nav.msDados != null && nav.msDados <= nav.msPintura) pontos.push(['dados', nav.msDados]);
+  pontos.sort((a, b) => a[1] - b[1]);
+  pontos.push(['pintura', nav.msPintura]);
+  let maior = null;
+  for (let i = 1; i < pontos.length; i += 1) {
+    const ms = pontos[i][1] - pontos[i - 1][1];
+    if (!maior || ms > maior.ms) maior = { de: pontos[i - 1][0], ate: pontos[i][0], ms };
+  }
+  return maior && maior.ms > 0 ? `${maior.de}→${maior.ate} ${maior.ms}ms` : null;
 }
 
 // Loaders de ecrã montados agora, por motivo. Sem isto, a medição de "primeira
@@ -115,7 +192,13 @@ export function loaderSaiu(motivo = 'tela') {
   const resto = (loadersAtivos.get(motivo) || 0) - 1;
   if (resto > 0) loadersAtivos.set(motivo, resto);
   else loadersAtivos.delete(motivo);
-  if (loadersAtivos.size === 0) agendarPintura();
+  if (loadersAtivos.size === 0) {
+    // O ÚLTIMO a sair antes da pintura é o que conta (Rodada 8A).
+    if (navegacaoAberta && navegacaoAberta.msPintura == null) {
+      navegacaoAberta.marcas.loaderSaiu = Math.round(performance.now() - navegacaoAberta.t0);
+    }
+    agendarPintura();
+  }
 }
 
 /**
@@ -124,6 +207,7 @@ export function loaderSaiu(motivo = 'tela') {
  * já corre com o desenho feito.
  */
 export function agendarPintura() {
+  marcarInstante('efeito');
   if (typeof requestAnimationFrame === 'undefined') {
     marcarPintura();
     return;
@@ -135,19 +219,27 @@ export function agendarPintura() {
 export function marcarPintura() {
   if (!navegacaoAberta || navegacaoAberta.msPintura != null) return;
   if (loadersAtivos.size > 0) return; // ainda há loader — quem sair por último volta cá
-  navegacaoAberta.msPintura = Math.round(performance.now() - navegacaoAberta.t0);
-  guardar(navegacoes, {
-    rota: navegacaoAberta.rota,
-    msPintura: navegacaoAberta.msPintura,
+  const nav = navegacaoAberta;
+  nav.msPintura = Math.round(performance.now() - nav.t0);
+  const intervalo = maiorIntervalo(nav);
+  const registo = {
+    rota: nav.rota,
+    msPintura: nav.msPintura,
     // Pode ficar null: telas que pintam sem pedir nada.
-    msDados: navegacaoAberta.msDados,
-    // Que loaders a pintura esperou (vazio = nenhum).
-    esperou: [...navegacaoAberta.esperou],
+    msDados: nav.msDados,
+    // Que loaders a pintura esperou (vazio = nenhum) e, desde a Rodada 8A, o
+    // maior intervalo entre instantes seguidos até a pintura.
+    esperou: [...nav.esperou, ...(intervalo ? [intervalo] : [])],
+    // Rodada 8A: os instantes finos (ver marcarInstante). É o MESMO objeto das
+    // marcas da navegação: uma imagem que chega depois da pintura ainda entra.
+    marcas: nav.marcas,
     // Pintou ANTES de os dados chegarem = veio do cache local. É exactamente o
     // que a "Velocidade 3/4" foi buscar, e aqui vê-se se está a acontecer.
-    doCache: navegacaoAberta.msDados != null && navegacaoAberta.msPintura < navegacaoAberta.msDados,
+    doCache: nav.msDados != null && nav.msPintura < nav.msDados,
     em: new Date().toISOString(),
-  });
+  };
+  nav.registo = registo;
+  guardar(navegacoes, registo);
   medirLargura();
 }
 

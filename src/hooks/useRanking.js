@@ -5,7 +5,9 @@ import { useApiComCache } from './useApiComCache';
 
 export function useRanking(slug) {
   const path = slug ? `/api/teams/${slug}/ranking` : null;
-  const { data, loading, error, reload } = useApiComCache(path, slug ? `ranking:${slug}` : null);
+  // revalidarDepoisDaPintura (Rodada 8A): com cache velho, a lista pinta antes de
+  // o pedido sair — ver a nota em useApiComCache.js.
+  const { data, loading, error, reload } = useApiComCache(path, slug ? `ranking:${slug}` : null, { revalidarDepoisDaPintura: true });
   return {
     team: data?.team || null,
     ranking: data?.ranking || [],

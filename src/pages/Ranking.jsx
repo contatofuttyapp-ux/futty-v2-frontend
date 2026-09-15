@@ -1,9 +1,10 @@
 // Futty v2.0 — Ranking (modelo definitivo): voto por jogador (meias estrelas),
 // nota exibida 6-10, score por categoria. Sem jogo de votação nem períodos.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { marcarInstante } from '../lib/diagnostico';
 import { useApi } from '../hooks/useApi';
 import { useSessao } from '../context/SessaoContext';
 import { useRanking } from '../hooks/useRanking';
@@ -19,6 +20,9 @@ import Toast from '../components/Toast';
 import EscudoEquipa from '../components/EscudoEquipa';
 import '../styles/app.css';
 
+// Diagnóstico (Rodada 8A): a 1ª imagem da tela que terminou de carregar.
+const marcarImagem = () => marcarInstante('imagem');
+
 // Moldura de avatar do cânone (V1): quadrado + cantos-L dourados + interior no material
 // da casa + véu. Moldura única da página — rows, pódio e modal partilham-na.
 function FrameAvatar({ avatarUrl, size = 48 }) {
@@ -26,7 +30,7 @@ function FrameAvatar({ avatarUrl, size = 48 }) {
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src ? <img src={src} alt="" decoding="async" /> : <SilhuetaJogador size="74%" />}
+        {src ? <img src={src} alt="" decoding="async" onLoad={marcarImagem} /> : <SilhuetaJogador size="74%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />
@@ -113,6 +117,25 @@ function RankRow({ p, idx, slug, onVote }) {
       </div>
     </div>
   );
+}
+
+// A lista. O useLayoutEffect corre no commit, antes do desenho: é o instante
+// "lista commitada" do Diagnóstico (Rodada 8A) — daí até a pintura, o tempo é do
+// navegador (estilo, layout, desenho), não dos dados. `ranking` muda de identidade
+// quando a resposta fresca substitui a do cache: esse commit é a "lista nova".
+function ListaRanking({ ranking, children }) {
+  // Compara a LISTA, não um "já montou": o StrictMode repete os efeitos em dev e
+  // a repetição não é uma lista nova.
+  const primeira = useRef(null);
+  useLayoutEffect(() => {
+    if (primeira.current == null) {
+      primeira.current = ranking;
+      marcarInstante('lista');
+    } else if (ranking !== primeira.current) {
+      marcarInstante('listaNova');
+    }
+  }, [ranking]);
+  return <div className="rank-list">{children}</div>;
 }
 
 // Converte a média interna (1-5) para a nota exibida (6-10).
@@ -259,11 +282,11 @@ export default function Ranking() {
                 )}
               </div>
             ) : (
-              <div className="rank-list">
+              <ListaRanking ranking={ranking}>
                 {ranking.map((p, idx) => (
                   <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
                 ))}
-              </div>
+              </ListaRanking>
             )}
           </>
         )}

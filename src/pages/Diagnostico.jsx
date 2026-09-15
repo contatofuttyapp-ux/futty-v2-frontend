@@ -48,6 +48,23 @@ function Numero({ rotulo, stat, sufixo = 'ms' }) {
   );
 }
 
+// Rodada 8A: os instantes finos de uma tela, numa linha só
+// ("lista 12 · 1º quadro 30 · maior quadro 1800@40 · imagem 850").
+const NOMES_MARCAS = [
+  ['lista', 'lista'],
+  ['listaNova', 'lista nova'],
+  ['loaderSaiu', 'loader saiu'],
+  ['efeito', 'efeito'],
+  ['quadro1', '1º quadro'],
+  ['imagem', '1ª imagem'],
+];
+function linhaDeMarcas(marcas) {
+  if (!marcas) return '';
+  const partes = NOMES_MARCAS.filter(([k]) => marcas[k] != null).map(([k, rotulo]) => `${rotulo} ${marcas[k]}`);
+  if (marcas.quadroMaior != null) partes.push(`maior quadro ${marcas.quadroMaior}@${marcas.quadroMaiorEm}`);
+  return partes.join(' · ');
+}
+
 // Rota sem a query, e encurtada pela ponta ESQUERDA: o que distingue
 // /api/teams/<slug>/ranking de /api/teams/<slug>/jogos está no fim.
 function rotaCurta(rota) {
@@ -240,6 +257,9 @@ export default function Diagnostico() {
                         {n.doCache ? <span style={{ color: '#7bd88f', fontSize: 11 }}> · cache</span> : null}
                         {/* Velocidade 7B: que loader a pintura esperou (código da tela, sessão, a própria tela). */}
                         {n.esperou?.length ? <span style={{ color: '#f0c94a', fontSize: 11 }}> · esperou {n.esperou.join(', ')}</span> : null}
+                        {linhaDeMarcas(n.marcas) ? (
+                          <div style={{ color: 'var(--text-dim)', fontSize: 10.5, lineHeight: 1.4, marginTop: 2 }}>{linhaDeMarcas(n.marcas)}</div>
+                        ) : null}
                       </td>
                       <td style={{ padding: '7px 6px', textAlign: 'right', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>{n.msPintura}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-dim)', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>
