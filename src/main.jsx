@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import './index.css'
 import App from './App.jsx'
+import { observarImagens } from './lib/diagnostico'
 
 // Marca de versão do bundle — permite confirmar na consola que o tab serve o
 // código novo (stale check). Bump manual quando importa distinguir uma sessão.
@@ -18,6 +19,10 @@ Sentry.init({
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 0,
 })
+
+// Velocidade 6B: passa a contar quantas imagens do proxy vieram do cache do
+// aparelho — é o número que diz se o ganho é real no celular de verdade.
+observarImagens();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

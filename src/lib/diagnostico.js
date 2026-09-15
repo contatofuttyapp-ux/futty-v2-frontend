@@ -136,6 +136,51 @@ export function marcarPintura() {
  * 'blob-nulo', 'erro'), `detalhe` é a mensagem do erro quando há uma. Nunca
  * leva dados do utilizador.
  */
+// ─── Velocidade 6B (15-set) ──────────────────────────────────────────────────
+
+let preaquecimento = null;
+
+/** Regista o resultado do pré-aquecimento em segundo plano (uma vez por sessão). */
+export function registarPreaquecimento({ itens, imagens, ms }) {
+  preaquecimento = { itens, imagens, ms, em: new Date().toISOString() };
+}
+
+// Imagens do proxy: quantas, quanto tempo, e quantas vieram do cache do browser.
+// `transferSize === 0` numa entrada de performance significa exatamente isso —
+// o pedido existiu, mas não gastou rede. É o número que diz se a Velocidade 6B
+// está a funcionar no aparelho de verdade.
+const imagens = [];
+let observadorImagens = null;
+
+function registarImagem(entrada) {
+  guardar(imagens, {
+    ms: Math.round(entrada.duration),
+    doCache: entrada.transferSize === 0,
+    bytes: entrada.transferSize || 0,
+  });
+}
+
+/** Liga o observador de imagens. Chamado uma vez, no arranque do app. */
+export function observarImagens() {
+  if (observadorImagens || typeof PerformanceObserver === 'undefined') return;
+  try {
+    // As que já aconteceram antes de chegarmos aqui.
+    if (typeof performance !== 'undefined' && performance.getEntriesByType) {
+      for (const e of performance.getEntriesByType('resource')) {
+        if (e.name.includes('/api/media/')) registarImagem(e);
+      }
+    }
+    observadorImagens = new PerformanceObserver((lista) => {
+      for (const e of lista.getEntries()) {
+        if (e.name.includes('/api/media/')) registarImagem(e);
+      }
+    });
+    observadorImagens.observe({ type: 'resource', buffered: true });
+  } catch {
+    /* navegador sem suporte — o resto do diagnóstico continua */
+  }
+}
+
 export function registarFalha(area, causa, detalhe = null) {
   guardar(falhas, {
     area,
@@ -187,7 +232,17 @@ export function lerDiagnostico() {
       pinturasDoCache: navegacoes.filter((n) => n.doCache).length,
       navegacoes: navegacoes.length,
       falhas: falhas.length,
+      // Velocidade 6B: "imagens: n, média ms, % do cache".
+      imagens: imagens.length
+        ? {
+          n: imagens.length,
+          mediaMs: Math.round(imagens.reduce((a, i) => a + i.ms, 0) / imagens.length),
+          pctDoCache: Math.round((imagens.filter((i) => i.doCache).length / imagens.length) * 100),
+          bytes: imagens.reduce((a, i) => a + i.bytes, 0),
+        }
+        : null,
     },
+    preaquecimento,
     chamadas: [...chamadas],
     navegacoes: [...navegacoes],
     falhas: [...falhas],
@@ -199,5 +254,7 @@ export function limparDiagnostico() {
   chamadas.length = 0;
   navegacoes.length = 0;
   falhas.length = 0;
+  imagens.length = 0;
+  preaquecimento = null;
   navegacaoAberta = null;
 }

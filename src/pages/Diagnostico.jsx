@@ -61,7 +61,7 @@ export default function Diagnostico() {
   const [toast, setToast] = useState(null);
   const [ultimoErro, setUltimoErro] = useState(() => lerUltimoErro());
 
-  const { aparelho, resumo, chamadas, navegacoes, falhas } = dados;
+  const { aparelho, resumo, chamadas, navegacoes, falhas, preaquecimento } = dados;
 
   async function enviar() {
     if (enviando) return;
@@ -139,6 +139,20 @@ export default function Diagnostico() {
               : 'Ligação: o aparelho não informa'}
             <br />
             Telas abertas: {resumo.navegacoes} · pintaram do cache: {resumo.pinturasDoCache}
+            {/* Velocidade 6B: quantas imagens o app mostrou e quantas nem foram
+                à rede. É o número que diz se o ganho é real no aparelho. */}
+            {resumo.imagens ? (
+              <>
+                <br />
+                Imagens: {resumo.imagens.n} · média {resumo.imagens.mediaMs}ms · {resumo.imagens.pctDoCache}% do cache
+              </>
+            ) : null}
+            {preaquecimento ? (
+              <>
+                <br />
+                Adiantou em segundo plano: {preaquecimento.itens} telas e {preaquecimento.imagens} imagens ({(preaquecimento.ms / 1000).toFixed(1)}s)
+              </>
+            ) : null}
           </div>
         </div>
 

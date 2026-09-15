@@ -15,6 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from './PerfilContext';
 import { useSessao } from './SessaoContext';
 import { lerCache, gravarCache } from '../lib/cacheLocal';
+import { preaquecer } from '../lib/preaquecerDados';
 
 const CACHE_CHAVE = 'inicio';
 
@@ -114,6 +115,10 @@ export function InicioProvider({ children }) {
         if (d?.teams?.teams) hidratarTeams(d.teams.teams);
         if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status);
         gravarCache(userId, CACHE_CHAVE, d);
+        // IDEIA DO DONO (Velocidade 6B): com o Início já pintado, o app aproveita
+        // o aparelho parado para baixar os dados e as imagens das outras abas.
+        // O primeiro toque em qualquer aba passa a não custar rede nenhuma.
+        preaquecer(userId, d);
       })
       .catch((e) => {
         if (!ativo || geracaoRef.current !== minhaGeracao) return;

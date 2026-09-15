@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { limparCacheLocal } from '../lib/cacheLocal';
+import { esquecerPreaquecimento } from '../lib/preaquecerDados';
 import { limparCromos } from '../lib/cromoCache';
 
 const AuthContext = createContext(null);
@@ -77,6 +78,7 @@ export function AuthProvider({ children }) {
     // ser apagado à parte — é a cara da pessoa, seria o pior a sobrar.
     signOut: () => {
       limparCacheLocal();
+      esquecerPreaquecimento();
       limparCromos().catch(() => {});
       return supabase.auth.signOut();
     },
