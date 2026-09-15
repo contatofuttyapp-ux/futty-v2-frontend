@@ -147,6 +147,16 @@ export default function Diagnostico() {
                 Imagens: {resumo.imagens.n} · média {resumo.imagens.mediaMs}ms · {resumo.imagens.pctDoCache}% do cache
               </>
             ) : null}
+            {/* Velocidade 7B: se a maior largura vista passar da do aparelho, a página encolheu. */}
+            {resumo.largura ? (
+              <>
+                <br />
+                Largura: aparelho {resumo.largura.aparelho}px · maior vista {Math.max(resumo.largura.maiorViewport, resumo.largura.maiorRolavel)}px
+                {Math.max(resumo.largura.maiorViewport, resumo.largura.maiorRolavel) > resumo.largura.aparelho ? (
+                  <span style={{ color: '#f8b4b4' }}> · passou em {rotaCurta(resumo.largura.rota)}</span>
+                ) : null}
+              </>
+            ) : null}
             {preaquecimento ? (
               <>
                 <br />

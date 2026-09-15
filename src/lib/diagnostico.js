@@ -88,6 +88,12 @@ export function marcarDadosDaTela() {
 /** Mudança de rota — o relógio do "toque" parte aqui. */
 export function marcarNavegacao(rota) {
   navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()) };
+  // Largura: nem todo transbordo dispara resize — mede também 1 s e 3 s depois
+  // de cada troca de tela, quando os dados e as imagens já assentaram.
+  if (typeof window !== 'undefined') {
+    window.setTimeout(medirLargura, 1000);
+    window.setTimeout(medirLargura, 3000);
+  }
 }
 
 // Loaders de ecrã montados agora, por motivo. Sem isto, a medição de "primeira
@@ -142,6 +148,7 @@ export function marcarPintura() {
     doCache: navegacaoAberta.msDados != null && navegacaoAberta.msPintura < navegacaoAberta.msDados,
     em: new Date().toISOString(),
   });
+  medirLargura();
 }
 
 /**
@@ -172,12 +179,53 @@ export function registarPreaquecimento({ itens, imagens, ms }) {
 const imagens = [];
 let observadorImagens = null;
 
+// Abaixo disto uma imagem não foi a São Paulo e voltou: veio do aparelho.
+const IMAGEM_DO_CACHE_MS = 40;
+
 function registarImagem(entrada) {
+  // Velocidade 7B: o Safari (e qualquer navegador numa imagem de outra origem sem
+  // Timing-Allow-Origin — o caso do app nativo) devolve TODOS os tamanhos a 0, e
+  // "transferSize === 0" marcava 100% do cache. Sem tamanho nenhum visível, quem
+  // decide é a duração.
+  const temTamanhos = entrada.transferSize > 0 || entrada.encodedBodySize > 0 || entrada.decodedBodySize > 0;
   guardar(imagens, {
     ms: Math.round(entrada.duration),
-    doCache: entrada.transferSize === 0,
+    doCache: temTamanhos ? entrada.transferSize === 0 : entrada.duration < IMAGEM_DO_CACHE_MS,
     bytes: entrada.transferSize || 0,
   });
+}
+
+// ─── Largura da tela (Velocidade 7B) ─────────────────────────────────────────
+// Para apanhar em campo o (b): se algo passar da largura da tela, o WebKit do
+// iPhone alarga a viewport e encolhe a página inteira. Guarda a largura do
+// aparelho, a maior viewport e a maior largura rolável vistas, e em que tela.
+let largura = null;
+
+function medirLargura() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const viewport = Math.round(window.innerWidth);
+  // Mede também POR DENTRO da guarda (overflow-x: clip em #root/[data-page]): a
+  // página já não encolhe, mas o que passar da largura continua a aparecer aqui.
+  const pagina = document.querySelector('[data-page] > *');
+  const rolavel = Math.round(Math.max((document.scrollingElement || document.documentElement)?.scrollWidth || 0, pagina?.scrollWidth || 0));
+  if (!largura) {
+    largura = { aparelho: window.screen?.width ?? viewport, maiorViewport: viewport, maiorRolavel: rolavel, rota: window.location.pathname, em: null };
+    return;
+  }
+  if (viewport > largura.maiorViewport || rolavel > largura.maiorRolavel) {
+    largura.maiorViewport = Math.max(largura.maiorViewport, viewport);
+    largura.maiorRolavel = Math.max(largura.maiorRolavel, rolavel);
+    largura.rota = window.location.pathname;
+    largura.em = new Date().toISOString();
+  }
+}
+
+/** Liga a vigia da largura. Chamado uma vez, no arranque do app. */
+export function vigiarLargura() {
+  if (typeof window === 'undefined') return;
+  medirLargura();
+  window.addEventListener('resize', medirLargura, { passive: true });
+  window.visualViewport?.addEventListener('resize', medirLargura, { passive: true });
 }
 
 /** Liga o observador de imagens. Chamado uma vez, no arranque do app. */
@@ -261,6 +309,9 @@ export function lerDiagnostico() {
           bytes: imagens.reduce((a, i) => a + i.bytes, 0),
         }
         : null,
+      // Velocidade 7B: { aparelho, maiorViewport, maiorRolavel, rota, em } — se a
+      // maior largura passar da do aparelho, a página encolheu em campo.
+      largura,
     },
     preaquecimento,
     chamadas: [...chamadas],
@@ -277,4 +328,6 @@ export function limparDiagnostico() {
   imagens.length = 0;
   preaquecimento = null;
   navegacaoAberta = null;
+  largura = null;
+  medirLargura();
 }
