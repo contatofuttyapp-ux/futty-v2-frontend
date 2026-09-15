@@ -9,7 +9,7 @@ import { apiFetch, apiUpload } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
-import { POSICOES } from '../utils/posicoes';
+import { LABEL_LINHA } from '../utils/posicoes';
 import { plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import LoadingFutty from '../components/LoadingFutty';
@@ -406,7 +406,6 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
   const [proximoRsvp, setProximoRsvp] = useState(null); // rsvp do próximo jogo
   const [ultimoJogo, setUltimoJogo] = useState(undefined); // GET do último jogo (undefined=loading, null=nenhum)
   const [semFoto, setSemFoto] = useState(0);
-  const [semPosicao, setSemPosicao] = useState(0);
 
   async function pedirRevotacao() {
     setRevotarBusy(true);
@@ -429,13 +428,12 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
     apiFetch(`/api/teams/${slug}/pedidos`).then((d) => ativo && setPedidos((d.pedidos || []).length)).catch(() => {});
     apiFetch('/api/feed/denuncias').then((d) => ativo && setDenuncias((d.denuncias || []).length)).catch(() => {});
 
-    // Membros sem foto / sem posição.
+    // Membros sem foto. (Rodada 9: "sem posição" saiu — jogador de linha é o
+    // normal, nunca foi pendência.)
     apiFetch(`/api/teams/${slug}/membros`)
       .then((d) => {
         if (!ativo) return;
-        const ms = d.membros || [];
-        setSemFoto(ms.filter((m) => !m.avatar_url).length);
-        setSemPosicao(ms.filter((m) => !m.posicao).length);
+        setSemFoto((d.membros || []).filter((m) => !m.avatar_url).length);
       })
       .catch(() => {});
 
@@ -498,7 +496,6 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
   if (semFoto > 0) alertas.push({ txt: `${semFoto} ${semFoto === 1 ? 'jogador sem foto' : 'jogadores sem foto'}`, acao: () => onGoTab('membros') });
   if (naoResponderam > 0) alertas.push({ txt: `${naoResponderam} ${naoResponderam === 1 ? 'jogador não respondeu' : 'jogadores não responderam'} ao RSVP`, acao: () => onGoTab('jogos') });
   if (uGame && (uGame.resultado_nivel || 0) === 0) alertas.push({ txt: 'Resultado do último jogo não registrado', acao: () => navigate(`/equipa/${slug}/jogo/${uGame.id}`) });
-  if (semPosicao > 0) alertas.push({ txt: `${semPosicao} ${semPosicao === 1 ? 'jogador sem posição' : 'jogadores sem posição'}`, acao: () => onGoTab('membros') });
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
@@ -1192,22 +1189,23 @@ function TabMembros({ slug, meId, showToast }) {
             ) : null}
             </div>
 
+            {/* Rodada 9: goleiro ou linha, mais nada. Ligado, os jogos deste time
+                já nascem com ele no gol (o jogador ainda desliga em cada jogo). */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Posição:</span>
-              {[...POSICOES.map((p) => p.k), null].map((k) => {
-                const ativo = (m.posicao || null) === k;
+              {(() => {
+                const ehGoleiro = m.posicao === 'GL';
                 return (
                   <button
-                    key={k || 'none'}
                     type="button"
-                    onClick={() => setPosicao(m, k)}
-                    aria-pressed={ativo}
-                    style={{ padding: '4px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${ativo ? '#d4a017' : '#333'}`, background: ativo ? 'rgba(212,160,23,0.15)' : 'transparent', color: ativo ? '#d4a017' : 'var(--text-dim)' }}
+                    onClick={() => setPosicao(m, ehGoleiro ? null : 'GL')}
+                    aria-pressed={ehGoleiro}
+                    style={{ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${ehGoleiro ? '#d4a017' : '#333'}`, background: ehGoleiro ? 'rgba(212,160,23,0.15)' : 'transparent', color: ehGoleiro ? '#d4a017' : 'var(--text-dim)' }}
                   >
-                    {k === 'GL' ? 'GR' : (k || '-')}
+                    Goleiro
                   </button>
                 );
-              })}
+              })()}
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{m.posicao === 'GL' ? '' : LABEL_LINHA}</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>

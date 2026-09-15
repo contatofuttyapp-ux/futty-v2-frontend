@@ -113,6 +113,8 @@ export default function Jogo() {
       : { tipo: 'error', mensagem: 'Não deu para copiar, copie o link à mão.' });
   }
 
+  // `goleiro` omitido = o motor decide (o que já estiver marcado neste jogo ou,
+  // se ainda não houver, a flag de goleiro do time — Rodada 9).
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
   const marcar = (userId, patch) => runAction(`/api/games/${id}/jogador`, { user_id: userId, ...patch });
 
@@ -268,7 +270,7 @@ export default function Jogo() {
                   {confirmacao === 'cancelar-presenca' ? (
                     <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Cancelar mesmo?</span>
-                      <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ borderColor: 'rgba(253,164,175,0.5)', color: '#fda4af' }} onClick={() => { setConfirmacao(null); confirmar(false, false); }} disabled={busy}>
+                      <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ borderColor: 'rgba(253,164,175,0.5)', color: '#fda4af' }} onClick={() => { setConfirmacao(null); confirmar(false); }} disabled={busy}>
                         Sim, sair
                       </button>
                       <button type="button" className="btn btn--sm btn--ghost" onClick={() => setConfirmacao(null)} disabled={busy}>
@@ -294,7 +296,10 @@ export default function Jogo() {
                     type="button"
                     className="btn btn--sm hud-corners-s cta-gold"
                     style={{ marginLeft: 'auto', fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }}
-                    onClick={() => confirmar(true, false)}
+                    /* Rodada 9: sem `goleiro` no pedido — o motor usa a flag do
+                       time (quem é goleiro do time já entra no gol) e respeita o
+                       que o jogador/admin tenham marcado neste jogo. */
+                    onClick={() => confirmar(true)}
                     disabled={busy}
                   >
                     Confirmar presença

@@ -8,7 +8,7 @@ import { usePerfil } from '../context/PerfilContext';
 import { useTeam } from '../hooks/useTeam';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
-import { POSICOES, labelPosicao } from '../utils/posicoes';
+import { LABEL_LINHA } from '../utils/posicoes';
 import { copiarTexto } from '../utils/clipboard';
 import { plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -94,7 +94,7 @@ export default function Equipa() {
   const [toast, setToast] = useState(null);
 
   const meuId = me?.user?.id;
-  const minhaPosicao = members.find((m) => m.id === meuId)?.posicao || null;
+  const souGoleiroNoTime = members.find((m) => m.id === meuId)?.posicao === 'GL';
 
   // Onboarding: 1ª vez de um jogador que não fundou a equipa (não-admin, sem
   // avatar ainda) e que nunca o dispensou (localStorage por equipa).
@@ -115,9 +115,9 @@ export default function Equipa() {
     localStorage.setItem('futty_cta_figurinha', '1');
   }
 
-  // Define a minha posição na equipa (null = sem posição).
+  // Liga/desliga o goleiro do time ('GL' ou null — Rodada 9, não há mais posições).
   async function escolherPosicao(pos) {
-    if (posBusy || pos === minhaPosicao) return;
+    if (posBusy) return;
     setPosBusy(true);
     try {
       await apiFetch(`/api/equipas/${slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ posicao: pos }) });
@@ -129,14 +129,14 @@ export default function Equipa() {
     }
   }
 
-  // Onboarding dia-1: "és guarda-redes?" ficou em pref local — aplica-se aqui, na
-  // 1ª equipa em que o jogador entra sem posição definida (e a pref morre).
+  // Onboarding dia-1: "você é goleiro?" ficou em pref local — aplica-se aqui, no
+  // 1º time em que o jogador entra ainda como jogador de linha (e a pref morre).
   // Rodada 8A: o cadastro já não pergunta; isto só serve a quem respondeu antes.
   // (set-state-in-effect justificado: é uma acção one-shot pós-onboarding — dispara
   // o MESMO fluxo do clique no chip, uma única vez, e a pref morre.)
   useEffect(() => {
     if (!team || !meuId || posBusy) return;
-    if (minhaPosicao === null && localStorage.getItem('futty_pref_gr') === 'GL') {
+    if (!souGoleiroNoTime && localStorage.getItem('futty_pref_gr') === 'GL') {
       localStorage.removeItem('futty_pref_gr');
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot pós-onboarding
       escolherPosicao('GL');
@@ -234,39 +234,24 @@ export default function Equipa() {
               </div>
             )}
 
-            {/* A minha posição — DESTAQUE (regra: o próprio jogador decide; GR no roxo) */}
-            <SecLabel>Minha posição neste time: você decide</SecLabel>
+            {/* Goleiro ou linha — Rodada 9: um chip só, o próprio jogador decide.
+                Ligado, cada jogo deste time já nasce com você no gol. */}
+            <SecLabel>Sou goleiro neste time: você decide</SecLabel>
             <div style={{ ...VIDRO, clipPath: CLIP, padding: '14px 12px' }}>
               <div className="chips-row" style={{ justifyContent: 'center' }}>
-                {POSICOES.map((p) => {
-                  const on = minhaPosicao === p.k;
-                  const ehGR = p.k === 'GL';
-                  return (
-                    <button
-                      key={p.k}
-                      type="button"
-                      title={p.label}
-                      className={`chip ${on ? 'chip--active' : ''}`}
-                      disabled={posBusy}
-                      onClick={() => escolherPosicao(p.k)}
-                      style={ehGR ? { color: on ? undefined : '#b69cff', borderColor: on ? undefined : 'rgba(139,92,246,0.55)', background: on ? undefined : 'rgba(139,92,246,0.08)' } : undefined}
-                    >
-                      {ehGR ? 'GR' : p.k}
-                    </button>
-                  );
-                })}
                 <button
                   type="button"
-                  title="Sem posição"
-                  className={`chip ${minhaPosicao === null ? 'chip--active' : ''}`}
+                  aria-pressed={souGoleiroNoTime}
+                  className={`chip ${souGoleiroNoTime ? 'chip--active' : ''}`}
                   disabled={posBusy}
-                  onClick={() => escolherPosicao(null)}
+                  onClick={() => escolherPosicao(souGoleiroNoTime ? null : 'GL')}
+                  style={souGoleiroNoTime ? undefined : { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' }}
                 >
-                  -
+                  Sou goleiro neste time
                 </button>
               </div>
               <p style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', margin: '10px 0 0' }}>
-                {minhaPosicao ? labelPosicao(minhaPosicao) : 'Sua posição alimenta o sorteio (GR no gol) e seu chip no ranking.'}
+                {souGoleiroNoTime ? 'Você entra no gol nos sorteios deste time. Dá para desligar em cada jogo.' : LABEL_LINHA}
               </p>
             </div>
 
@@ -311,7 +296,7 @@ export default function Equipa() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{nomeExibicao(m)}</div>
                   </div>
-                  {m.posicao ? <Badge45 gold>{m.posicao === 'GL' ? 'GR' : m.posicao}</Badge45> : null}
+                  {m.posicao === 'GL' ? <Badge45 gold>GR</Badge45> : null}
                   <Badge45 gold={m.role === 'admin'}>{m.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45>
                 </div>
               ))}
