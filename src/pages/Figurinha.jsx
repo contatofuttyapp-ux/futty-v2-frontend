@@ -10,7 +10,7 @@ import { apiFetch, apiUpload } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
-import { lerCache, gravarCache } from '../lib/cacheLocal';
+import { lerCacheComIdade, gravarCache } from '../lib/cacheLocal';
 import { nomeJogador, urlAsset, urlImagem } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
@@ -276,10 +276,14 @@ export default function Figurinha() {
     let ativo = true;
     // Cache local (13-set, "Velocidade 3"): mostra os selos da última visita
     // na hora; o pedido de verdade corre por trás e substitui ao responder.
-    const doCache = lerCache(userId, 'selos');
+    const comIdade = lerCacheComIdade(userId, 'selos');
+    const doCache = comIdade?.dados ?? null;
     if (doCache) {
       Promise.resolve().then(() => { if (ativo) setSelos(doCache); });
     }
+    // Velocidade 6B: mesma janela de frescor do useApiComCache. Se o
+    // pré-aquecimento acabou de trazer os selos, não se pedem outra vez.
+    if (comIdade && comIdade.idadeMs < 30000) return () => { ativo = false; };
     apiFetch('/api/me/selos')
       .then((d) => {
         if (!ativo) return;
