@@ -17,6 +17,7 @@ import { normalizarFoto } from '../utils/normalizarFoto';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
+import { ehAppNativo, salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
@@ -145,16 +146,6 @@ function ficheiroNome(nome, sufixo = '') {
   return `futty-${base || 'jogador'}${sufixo}.png`;
 }
 
-// Baixa um blob como ficheiro.
-function baixarBlob(blob, nomeFicheiro) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.download = nomeFicheiro;
-  a.href = url;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 // Estrela de 4 pontas custom (celebracao.svg) tingida por CSS mask. O padrão do
 // app tinge SVGs pretos por filtro (components/Icon.jsx), mas esse só cobre 3
 // cores fixas; a máscara permite QUALQUER cor exacta (branco/roxo/dourado).
@@ -243,6 +234,7 @@ export default function Figurinha() {
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
+  const appNativo = ehAppNativo();
   // GRUPO B 6a — `equipa` existia só para alimentar o PlayerCard, que saiu daqui.
   const frameHex = getFrameColor(corFrame).stroke;
   // Regra única: a foto CRUA nunca entra no card. Só entra o avatar quando é
@@ -541,18 +533,23 @@ export default function Figurinha() {
   ) : null;
 
   // Partilha do cromo no momento da estreia (imagem do card + texto viral).
+  // No app (Rodada 8A) vai direto à folha de compartilhar do sistema: o
+  // navigator.share do WebView não é garantido, e o <a download> é ignorado.
   async function partilharCromo() {
     celebrarPartilha(frameHex);
     try {
       const blob = await gerarFigurinhaCanvas(opts);
-      const file = blob ? new File([blob], ficheiroNome(nomeJogador(jogador)), { type: 'image/png' }) : null;
+      const nome = ficheiroNome(nomeJogador(jogador));
+      const file = blob ? new File([blob], nome, { type: 'image/png' }) : null;
       const payload = { title: 'Meu card Futty', text: 'Veja meu cartão de jogador no Futty ⚽' };
-      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      if (ehAppNativo()) {
+        await salvarOuCompartilhar(blob, nome, { titulo: payload.title });
+      } else if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ ...payload, files: [file] });
       } else if (navigator.share) {
         await navigator.share(payload);
       } else if (blob) {
-        baixarBlob(blob, file.name);
+        await salvarOuCompartilhar(blob, nome);
       }
     } catch (e) {
       if (e?.name !== 'AbortError') setErro(e?.message || 'Não foi possível compartilhar.');
@@ -697,7 +694,9 @@ export default function Figurinha() {
         setErro('Não foi possível gerar a imagem.');
         return;
       }
-      baixarBlob(blob, ficheiroNome(nomeJogador(jogador)));
+      // Web: baixa. App: folha de compartilhar (tem "Salvar imagem"); fechar a
+      // folha sem escolher nada não é erro.
+      await salvarOuCompartilhar(blob, ficheiroNome(nomeJogador(jogador)), { titulo: 'Minha figurinha Futty' });
     } catch (e) {
       setErro(e?.message || 'Erro ao gerar.');
     } finally {
@@ -716,10 +715,10 @@ export default function Figurinha() {
         return;
       }
       const file = new File([blob], ficheiroNome(nomeJogador(jogador)), { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      if (!ehAppNativo() && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: 'Minha figurinha Futty' });
       } else {
-        baixarBlob(blob, file.name);
+        await salvarOuCompartilhar(blob, file.name, { titulo: 'Minha figurinha Futty' });
       }
     } catch (e) {
       if (e?.name !== 'AbortError') setErro(e?.message || 'Não foi possível compartilhar.');
@@ -1258,9 +1257,18 @@ export default function Figurinha() {
           {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os
               botões do topo (40px) → hierarquia: topo = configurar, fundo = agir. */}
           <div style={{ display: 'flex', gap: 12 }}>
-            {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente. */}
-            <button type="button" className="btn btn--purple-outline hud-corners" style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={busy} onClick={baixar}>
-              <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
+            {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente.
+                No app (Rodada 8A) não há "baixar": abre a folha de compartilhar, que
+                tem "Salvar imagem" — daí o rótulo. Mais longo, vai sem ícone, sem
+                quebrar linha e com letra que acompanha a tela (cabe de 360 a 430 px). */}
+            <button
+              type="button"
+              className="btn btn--purple-outline hud-corners"
+              style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...(appNativo ? { whiteSpace: 'nowrap', paddingLeft: 8, paddingRight: 8, fontSize: 'clamp(12px, 3.5vw, 14px)' } : null) }}
+              disabled={busy}
+              onClick={baixar}
+            >
+              {appNativo ? null : <Download size={16} />} {busy ? 'Gerando…' : appNativo ? 'Salvar / compartilhar' : 'Baixar'}
             </button>
             {/* FASE 3.47 — CTA dourado partilhado com o "Assinar Pro" dos Planos:
                 gradiente, texto, altura, glow e shine vivem em .cta-gold/.cta-gold-glow

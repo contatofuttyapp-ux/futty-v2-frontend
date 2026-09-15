@@ -11,6 +11,7 @@ import { apiFetch } from '../lib/api';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio, { MARCA_TIME } from '../components/CerimoniaSorteio';
 import { gerarCartao916 } from '../utils/sorteioCartao';
+import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -65,10 +66,14 @@ export default function SorteioShow() {
     }
   }
 
+  // Rodada 8A: na web baixa; no app abre a folha de compartilhar (o <a download>
+  // não faz nada no WebView). A folha já é o retorno visual; fechar sem escolher
+  // nada é silencioso.
   async function baixarCartao(ti) {
     try {
-      await gerarCartao916(resultado, ti, data?.team?.nome || '');
-      setToast({ tipo: 'success', mensagem: 'Cartão 9:16 gerado!' });
+      const { blob, nome } = await gerarCartao916(resultado, ti, data?.team?.nome || '');
+      const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
+      if (entrega === 'baixou') setToast({ tipo: 'success', mensagem: 'Cartão 9:16 gerado!' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message || 'Não deu para gerar o cartão.' });
     }

@@ -53,6 +53,10 @@
 	<string>Para tirar a foto da sua figurinha</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Para escolher a foto da sua figurinha</string>
+	<!-- Rodada 8A: "Salvar imagem" na folha de compartilhar da figurinha grava
+	     nas Fotos DENTRO do processo do app; sem este texto o iOS fecha o app. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Para salvar sua figurinha nas suas fotos</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Para mostrar peladas perto de você; sua posição não sai do celular</string>
 	<key>UIApplicationSceneManifest</key>

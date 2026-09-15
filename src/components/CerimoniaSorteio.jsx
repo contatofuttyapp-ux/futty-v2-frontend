@@ -366,8 +366,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       if (aGuardar) return;
       aGuardar = true; SomSorteio.toque(0.24); mostrarToast('Gerando o cartaz…');
       try {
-        await gerarCartazEscalacao(resultado, { equipa: infoRef.current.equipa, data: infoRef.current.data });
-        mostrarToast('Cartaz salvo');
+        // No app a entrega é a folha de compartilhar (Rodada 8A); fechada sem
+        // escolher nada, não se diz "salvo".
+        const { entrega } = await gerarCartazEscalacao(resultado, { equipa: infoRef.current.equipa, data: infoRef.current.data });
+        if (entrega !== 'cancelou') mostrarToast('Cartaz salvo');
       } catch {
         mostrarToast('Não deu para gerar o cartaz');
       } finally { aGuardar = false; }

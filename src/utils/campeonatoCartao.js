@@ -1,8 +1,10 @@
 // Futty v2.0 — Cartões 9:16 do campeonato (v2) — espelho da celebração aprovada.
 // Canvas 1080×1920, fundo da casa, marca FUTTY. Troféu DA CASA (mesmo path do Icon)
 // desenhado grande; escudos dos times; confete composto à mão (não aleatório feio).
-// Download PNG. Dois cartões: campeão e pódio.
+// PNG entregue por utils/salvarImagem.js (Rodada 8A): baixa na web, folha de
+// compartilhar no app. Dois cartões: campeão e pódio.
 import { podioDe } from './campeonatoPodio';
+import { salvarOuCompartilhar } from './salvarImagem';
 
 // Path do troféu da casa (o mesmo de public/icons/trofeu.svg, viewBox 48×48).
 const TROFEU = [
@@ -20,19 +22,16 @@ function seeded(id) {
   return () => { h = (h * 1103515245 + 12345) & 0x7fffffff; return h / 0x7fffffff; };
 }
 
-function baixar(cv, nome) {
-  return new Promise((resolve) => {
-    cv.toBlob((blb) => {
-      if (blb) {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blb);
-        a.download = nome;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      }
-      resolve();
-    }, 'image/png');
-  });
+// O <a download> que vivia aqui não fazia nada dentro do app (WebView).
+// Como antes, uma falha não sobe para a tela (os botões não têm aviso).
+async function baixar(cv, nome) {
+  const blob = await new Promise((resolve) => cv.toBlob(resolve, 'image/png'));
+  if (!blob) return;
+  try {
+    await salvarOuCompartilhar(blob, nome, { titulo: 'Campeonato Futty' });
+  } catch (e) {
+    console.warn('[campeonatoCartao] não deu para entregar o cartão:', e?.message || e);
+  }
 }
 
 function fundoCasa(cx, W, H) {

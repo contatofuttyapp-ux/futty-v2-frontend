@@ -2,8 +2,11 @@
 // Duas saídas, MESMA identidade visual (peças partilhadas, não imitação):
 //   gerarCartao916      — 1 imagem POR equipa (botões "9:16 · Time X").
 //   gerarCartazEscalacao — o cartaz ÚNICO com TODOS os times (botão "Guardar" da máquina).
-// Canvas puro (1080×1920) → download PNG.
+// Canvas puro (1080×1920) → PNG. A entrega é do utils/salvarImagem.js (Rodada 8A):
+// na web baixa; no app abre a folha de compartilhar — o <a download> não faz nada
+// dentro do WebView.
 import { urlAsset, urlImagem } from './avatar';
+import { salvarOuCompartilhar } from './salvarImagem';
 
 const KITS = [
   { n: 'OURO', c: '#d4a017' },
@@ -204,13 +207,10 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
 
   await desenharLogoLockup(cx, W, H);
 
-  const blobPng = await new Promise((res) => cv.toBlob(res, 'image/png'));
-  const url = URL.createObjectURL(blobPng);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `futty-sorteio-${(time.nome || 'time').toLowerCase().replace(/\s+/g, '-')}.png`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  // Devolve a imagem; quem chama entrega (SorteioShow → salvarOuCompartilhar).
+  const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('Não deu para gerar o cartão.');
+  return { blob, nome: `futty-sorteio-${(time.nome || 'time').toLowerCase().replace(/\s+/g, '-')}.png` };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -308,12 +308,14 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
 
   await desenharLogoLockup(cx, W, H);
 
-  // ── saída: dataURL (proof) + download (default) ──
+  // ── saída: dataURL (proof) + entrega (default): baixa na web, folha de
+  //    compartilhar no app. `entrega` diz o que aconteceu ('cancelou' = a pessoa
+  //    fechou a folha — quem chama não mostra "salvo").
   const url = cv.toDataURL('image/png');
+  let entrega = null;
   if (opts.baixar !== false) {
-    const a = document.createElement('a');
-    a.href = url; a.download = `futty-escalacao-${equipa.toLowerCase().replace(/\s+/g, '-')}.png`;
-    a.click();
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+    entrega = await salvarOuCompartilhar(blob, `futty-escalacao-${equipa.toLowerCase().replace(/\s+/g, '-')}.png`, { titulo: 'Escalação Futty' });
   }
-  return { url };
+  return { url, entrega };
 }
