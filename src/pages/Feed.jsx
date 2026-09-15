@@ -120,7 +120,9 @@ function ComentariosResumo({ recentes = [], total = 0, aberto, onToggle, childre
   return (
     <div style={{ padding: '0 14px 12px' }}>
       {!aberto && recentes.length > 0 ? (
-        <div style={{ display: 'grid', gap: 8, marginBottom: 8 }}>
+        // minmax(0, 1fr): a prévia cortada em 2 linhas (-webkit-box) mede, no
+        // WebKit, a frase inteira numa linha só — uma coluna automática cresceria até ela.
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, marginBottom: 8 }}>
           {recentes.map((c, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <FeedAvatar nome={c.nome} avatarUrl={c.avatar_url} size={28} />
@@ -164,7 +166,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
   }
 
   return (
-    <div className="anim-slide-in" style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
+    <div className="anim-slide-in feed-card" style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
       {/* A) HEADER */}
       <div style={{ padding: 14, position: 'relative' }}>
         <div style={{ paddingRight: 80 }}>
@@ -285,7 +287,7 @@ function AnuncioCard({ p, index = 0 }) {
   const mensagem = p.conteudo?.mensagem || p.body || '';
   return (
     <div
-      className="anim-slide-in"
+      className="anim-slide-in feed-card"
       style={{
         clipPath: CLIP_CARD,
         background: 'rgba(212,160,23,0.08)',
@@ -440,7 +442,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
   const podeDenunciar = p.author_id !== meId;
 
   return (
-    <div className="anim-slide-in" style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
+    <div className="anim-slide-in feed-card" style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
       {/* A) HEADER */}
       <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <FeedAvatar nome={p.author_nome} avatarUrl={p.author_avatar_url} size={40} />
@@ -985,8 +987,10 @@ export default function Feed() {
               <ComposerInline teams={equipasParaPostar} user={user} nome={primeiroNome} onCreated={aoCriarPost} />
             ) : null}
 
-            {/* 3. FEED */}
-            <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
+            {/* 3. FEED — coluna travada na largura da tela (minmax(0, 1fr)). Com a
+                coluna automática, um card largo (a prévia de comentário acima)
+                alargava TODOS para 638 px num iPhone de 430: era o (b) da 7B. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14, marginTop: 14 }}>
               {loading ? (
                 <LoadingFutty />
               ) : filtrados.length === 0 ? (
@@ -1023,6 +1027,7 @@ export default function Feed() {
                       key={`item-${item.kind}-${item.id}`}
                       id={`feed-item-${item.id}`}
                       className={item.kind === 'post' && item.id === novoPostId ? 'post-recem' : undefined}
+                      style={{ minWidth: 0, maxWidth: '100%' }}
                     >
                       {inner}
                     </div>

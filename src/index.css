@@ -178,6 +178,16 @@ body {
   background: transparent;
 }
 
+/* Guarda contra rolagem lateral (Velocidade 7B). Se algo passar da largura da
+   tela, o WebKit do iPhone alarga a viewport para caber e ENCOLHE a página
+   inteira (o print da Resenha a ~66%). `clip` corta sem virar contêiner de
+   rolagem — o sticky da topbar continua a funcionar, ao contrário de `hidden`,
+   que também forçaria overflow-y:auto. Safari < 16 ignora (sem guarda, sem dano). */
+#root,
+[data-page] {
+  overflow-x: clip;
+}
+
 /* Tipografia premium — só logos/títulos, nunca texto de interface. */
 .font-premium {
   font-family: 'Rajdhani', var(--sans);

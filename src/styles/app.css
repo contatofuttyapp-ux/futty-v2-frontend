@@ -1003,6 +1003,16 @@
 .avatar-frame__lc--br { bottom: -1px; right: -1px; border-bottom: 2px solid #d4a017; border-right: 2px solid #d4a017; border-radius: 0 0 2px 0; }
 .avatar-frame__lc--bl { bottom: -1px; left: -1px; border-bottom: 2px solid #d4a017; border-left: 2px solid #d4a017; border-radius: 0 0 0 2px; }
 
+/* Cards da Resenha (Velocidade 7B): nunca mais largos que a coluna, e nenhuma
+   imagem dentro deles mais larga que o card. */
+.feed-card {
+  min-width: 0;
+  max-width: 100%;
+}
+.feed-card img {
+  max-width: 100%;
+}
+
 /* Etiquetas roxas (cabeça de chave / goleiro) */
 
 /* Botões de ação por linha (Votar / Ver perfil) */
