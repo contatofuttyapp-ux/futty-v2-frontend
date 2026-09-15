@@ -2,6 +2,7 @@
 import Icon from './Icon';
 // Slide entre passos via AnimatePresence + PageTransition. X fecha em qualquer passo.
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence } from 'framer-motion';
 import PageTransition from './PageTransition';
 
@@ -35,7 +36,9 @@ export default function OnboardingModal({ teamNome, onClose }) {
     else onClose();
   }
 
-  return (
+  // Portal para o body (Rodada 8A): fixed dentro do [data-page] animado ancora na
+  // página, não na tela — ver a nota em LoadingFutty.jsx.
+  return createPortal(
     <div className="modal-overlay" role="presentation" onClick={onClose}>
       <div
         role="dialog"
@@ -88,6 +91,7 @@ export default function OnboardingModal({ teamNome, onClose }) {
           {atual.botao}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

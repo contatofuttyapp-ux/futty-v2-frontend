@@ -109,9 +109,11 @@ function fmtDiaCurto(iso) {
 const cardDash = { background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-md)' };
 const cardDashLbl = { fontFamily: "'Rajdhani', sans-serif", fontSize: 'var(--label-size)', fontWeight: 700, color: 'var(--label-color)', textTransform: 'uppercase', letterSpacing: '1px' };
 
-// Pequeno modal de confirmação reutilizável.
+// Pequeno modal de confirmação reutilizável. Os três modais desta página vão por
+// PORTAL para o body (Rodada 8A): fixed dentro do [data-page] animado ancora na
+// página, não na tela — ver a nota em LoadingFutty.jsx.
 function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, onConfirm, onCancel, children = null }) {
-  return (
+  return createPortal(
     <div className="modal-overlay" role="presentation" onClick={onCancel}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-card__inner">
@@ -130,7 +132,8 @@ function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, onC
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1872,7 +1875,7 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="modal-overlay" role="presentation" onClick={() => !saving && onClose()}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
         <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 12 }}>
@@ -1888,7 +1891,8 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
           <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>{saving ? 'Salvando…' : 'Salvar'}</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -2042,7 +2046,7 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="modal-overlay" role="presentation" onClick={() => !saving && onClose()}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 16, maxHeight: '82vh', overflowY: 'auto' }}>
@@ -2099,7 +2103,8 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

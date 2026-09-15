@@ -1,6 +1,7 @@
 // Futty v2.0 — Modal de denúncia (Tijolo 3). 6 categorias, 1 toque, confirmação
 // digna "recebido — vamos analisar" (nunca veredicto). POST /api/denuncias.
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
 
 // As 6 categorias da SPEC-DENUNCIAS. "menor" com marca própria (regra dura).
@@ -35,7 +36,9 @@ export default function DenunciaModal({ targetType, targetId, onClose, onResult 
     }
   }
 
-  return (
+  // Portal para o body (Rodada 8A): abre de dentro de um post ou comentário, no
+  // meio do [data-page] — fixed ali ancora na página, não na tela (LoadingFutty.jsx).
+  return createPortal(
     <div className="modal-overlay" role="presentation" onClick={() => !busy && onClose?.()}>
       <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: 390 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-card__inner" style={{ textAlign: 'center' }}>
@@ -82,6 +85,7 @@ export default function DenunciaModal({ targetType, targetId, onClose, onResult 
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

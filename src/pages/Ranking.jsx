@@ -1,6 +1,7 @@
 // Futty v2.0 — Ranking (modelo definitivo): voto por jogador (meias estrelas),
 // nota exibida 6-10, score por categoria. Sem jogo de votação nem períodos.
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
@@ -268,8 +269,11 @@ export default function Ranking() {
         )}
       </main>
 
-      {/* Modal de votação (meias estrelas) */}
-      {voteModal && (
+      {/* Modal de votação (meias estrelas). PORTAL para o body (Rodada 8A): dentro
+          do [data-page], o transform da animação de entrada vira o "chão" do
+          position:fixed e o modal centrava-se na PÁGINA inteira, não na tela — com
+          a lista rolada ficava fora de quadro e a barra de baixo por cima do véu. */}
+      {voteModal && createPortal(
         <div className="modal-overlay" role="presentation" onClick={() => !voteBusy && setVoteModal(null)}>
           <div className="modal-card modal-card--hud" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
@@ -293,7 +297,8 @@ export default function Ranking() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}

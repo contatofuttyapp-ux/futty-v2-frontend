@@ -582,8 +582,9 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
       ) : null}
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
-      {/* Modal de confirmação de apagar */}
-      {confirmar ? (
+      {/* Modal de confirmação de apagar — portal para o body (Rodada 8A), mesma
+          razão do LoadingFutty.jsx: fixed dentro do [data-page] não ancora na tela. */}
+      {confirmar ? createPortal(
         <div className="modal-overlay" role="presentation" onClick={() => setConfirmar(false)}>
           <div className="modal-card modal-card--hud" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
@@ -604,7 +605,8 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   );

@@ -533,8 +533,9 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
         />
       </div>
 
-      {/* Modal de confirmação de apagar */}
-      {apagarId ? (
+      {/* Modal de confirmação de apagar — portal para o body (Rodada 8A), mesma
+          razão do LoadingFutty.jsx: fixed dentro do [data-page] não ancora na tela. */}
+      {apagarId ? createPortal(
         <div className="modal-overlay" role="presentation" onClick={() => setApagarId(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
@@ -547,7 +548,8 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
 
       {/* Modal de denúncia */}
