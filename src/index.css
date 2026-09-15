@@ -218,11 +218,19 @@ a:hover {
 
 button {
   font-family: inherit;
+  font-size: 1rem;
 }
 
+/* ZOOM DO iOS (Rodada 8A, 15-set). Campo com fonte abaixo de 16 px faz o iPhone
+   dar zoom na página inteira ao focar — e o zoom não volta sozinho: a Resenha
+   "desenquadrava" ao tocar no comentário (13 px). 16 px é o PISO de todo campo:
+   maior pode, menor nunca. Estilo inline ganha desta regra, por isso os campos
+   com fontSize inline também foram subidos para 16. O index.html leva ainda
+   maximum-scale=1. */
 input,
-button {
-  font-size: 1rem;
+textarea,
+select {
+  font-size: 16px;
 }
 
 /* Entrada suave de cards (Início, Resenha). */

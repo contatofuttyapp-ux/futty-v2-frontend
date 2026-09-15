@@ -749,7 +749,7 @@ const inputStyle = {
   background: 'rgba(255,255,255,0.04)',
   color: '#ffffff',
   fontFamily: 'var(--sans)',
-  fontSize: 14,
+  fontSize: 16, // abaixo de 16 o iPhone dá zoom ao focar (Rodada 8A, ver index.css)
 };
 
 // O HERO. O que se escreve aqui vai desenhado na placa do cromo, por isso o input

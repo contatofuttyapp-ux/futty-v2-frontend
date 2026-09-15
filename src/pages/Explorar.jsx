@@ -161,7 +161,7 @@ export default function Explorar() {
             value={pesquisa}
             onChange={(e) => setPesquisa(e.target.value)}
             placeholder="Cidade ou nome do time…"
-            style={{ flex: 1, border: 'none', background: 'transparent', color: '#fff', outline: 'none', fontFamily: RAJ, fontSize: 15, fontWeight: 600 }}
+            style={{ flex: 1, border: 'none', background: 'transparent', color: '#fff', outline: 'none', fontFamily: RAJ, fontSize: 16, fontWeight: 600 }}
           />
         </div>
 

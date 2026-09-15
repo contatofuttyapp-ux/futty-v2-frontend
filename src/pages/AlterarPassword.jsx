@@ -14,7 +14,7 @@ const inputStyle = {
   border: '1px solid rgba(255,255,255,0.14)',
   background: 'rgba(255,255,255,0.03)',
   color: '#fff',
-  fontSize: 14,
+  fontSize: 16, // abaixo de 16 o iPhone dá zoom ao focar (Rodada 8A, ver index.css)
   fontFamily: "'Rajdhani', sans-serif",
   clipPath: 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)',
 };

@@ -49,6 +49,7 @@ const MENU = [
   { k: 'comunicacao', icon: Megaphone, label: 'Comunicação' },
   { k: 'denuncias', icon: Flag, label: 'Denúncias' },
 ];
+// fontSize 16: abaixo disso o iPhone dá zoom ao focar (Rodada 8A, ver index.css).
 const inputStyle = {
   width: '100%',
   boxSizing: 'border-box',
@@ -57,7 +58,7 @@ const inputStyle = {
   border: '1px solid #222222',
   background: '#0c0c0c',
   color: '#fff',
-  fontSize: 14,
+  fontSize: 16,
 };
 const lbl = { fontSize: 12, color: 'var(--text-dim)' };
 const secLbl = { fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-dim)', textTransform: 'uppercase' };
@@ -1237,7 +1238,7 @@ function TabMembros({ slug, meId, showToast }) {
                 onChange={(e) => setNotaLocal(m, e.target.value.slice(0, 200))}
                 onBlur={() => saveNota(m)}
                 placeholder="Razão (só você vê)…"
-                style={{ marginTop: 10, width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 13 }}
+                style={{ marginTop: 10, width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 16 }}
               />
             ) : null}
 
@@ -1564,7 +1565,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
             type="datetime-local"
             value={prazoInput}
             onChange={(e) => setPrazoInput(e.target.value)}
-            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 13 }}
+            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 16 }}
           />
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={abrir}>Confirmar</button>
@@ -1831,7 +1832,7 @@ function TabJogos({ slug, showToast, navigate }) {
               value={motivoCancel}
               onChange={(e) => setMotivoCancel(e.target.value.slice(0, 300))}
               placeholder="Motivo (opcional)"
-              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 13 }}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 16 }}
             />
           ) : null}
         </ConfirmModal>

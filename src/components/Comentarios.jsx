@@ -176,7 +176,7 @@ function ComentarioForm({ membros, placeholder = 'Escreva um comentário…', av
             onBlur={() => setTimeout(() => setDrop((d) => ({ ...d, open: false })), 150)}
             placeholder={placeholder}
             rows={2}
-            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 12, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 13, resize: 'vertical' }}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 12, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 16, resize: 'vertical' }}
           />
           <span style={{ position: 'absolute', right: 10, bottom: 8, fontSize: 10, color: 'var(--text-dim)' }}>{texto.length}/500</span>
 

@@ -9,8 +9,12 @@
          recebe env(safe-area-inset-*) nenhum (fica tudo a 0), então o topo e o
          gesto de baixo comem a topbar e a bottom nav. Com cover, o app desenha
          por baixo do relógio/ilha e da barra de gesto — e é o CSS (Layout.jsx,
-         app.css) que devolve o espaço com env(safe-area-inset-top/bottom). -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+         app.css) que devolve o espaço com env(safe-area-inset-top/bottom).
+         maximum-scale=1 (Rodada 8A, 15-set): o iPhone dava zoom ao focar um
+         campo e a tela ficava "desenquadrada". A causa é a fonte < 16 px (piso
+         em index.css); isto é o cinto. É app nativo: o zoom de acessibilidade
+         fica a cargo do sistema. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <title>Futty</title>
 
     <!-- PWA -->

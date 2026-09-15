@@ -29,7 +29,8 @@ const btn = {
 const btnGold = { ...btn, background: 'linear-gradient(180deg,#f5e070,#d4a017)', color: '#0d0d12', border: 'none', padding: '8px 16px' };
 const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #222' };
 const td = { padding: '6px 8px', fontSize: 13, borderBottom: '1px solid #1a1a1a', verticalAlign: 'middle' };
-const inp = { fontSize: 12, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '6px 8px', borderRadius: 6, width: '100%', boxSizing: 'border-box' };
+// fontSize 16: abaixo disso o iPhone dá zoom ao focar (Rodada 8A, ver index.css).
+const inp = { fontSize: 16, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '6px 8px', borderRadius: 6, width: '100%', boxSizing: 'border-box' };
 
 const CORES = { verde: '#7bd88f', amarelo: '#f0c94a', vermelho: '#fda4af', cinza: '#8a8a98' };
 function Semaforo({ cor, children }) {

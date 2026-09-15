@@ -157,9 +157,9 @@ export default function CriarEquipa() {
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Dê nome ao seu time</h1>
             <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O escudo nasce das iniciais. Veja-o se formar enquanto você escreve.</p>
             <Lbl>Nome do time</Lbl>
-            <input className="input input--hud" value={nome} maxLength={40} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 15 }} />
+            <input className="input input--hud" value={nome} maxLength={40} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 16 }} />
             <Lbl>Cidade</Lbl>
-            <input className="input input--hud" value={cidade} maxLength={100} onChange={(e) => setCidade(e.target.value)} placeholder="Ex: Brasília" style={{ width: '100%', fontFamily: RAJ, fontSize: 15 }} />
+            <input className="input input--hud" value={cidade} maxLength={100} onChange={(e) => setCidade(e.target.value)} placeholder="Ex: Brasília" style={{ width: '100%', fontFamily: RAJ, fontSize: 16 }} />
             <p className="muted" style={{ fontSize: 11, margin: '6px 0 0', lineHeight: 1.5 }}>
               É assim que jogadores perto de você encontram o time. Só a cidade, nunca o endereço.
             </p>

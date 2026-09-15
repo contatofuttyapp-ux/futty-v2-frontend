@@ -417,7 +417,7 @@
 
 .invite-link input {
   flex: 1;
-  font-size: 13px;
+  font-size: 16px; /* piso dos campos — abaixo disso o iPhone dá zoom (index.css) */
   font-family: ui-monospace, Consolas, monospace;
 }
 
@@ -2671,7 +2671,7 @@
 .camp-fopt__d{font-size:11px;color:#9a9aa8;margin-top:2px;line-height:1.4}
 .camp-slot{display:flex;align-items:center;gap:10px;padding:9px 11px;margin-bottom:7px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,.12);
   clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px)}
-.camp-slot input{flex:1;min-width:0;background:transparent;border:none;color:#fff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;outline:none}
+.camp-slot input{flex:1;min-width:0;background:transparent;border:none;color:#fff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;outline:none}
 .camp-slot__c{font-size:10px;color:#8a8a98;font-family:'Rajdhani',sans-serif;letter-spacing:.04em}
 
 .camp-card{display:block;text-decoration:none;color:inherit;padding:12px 14px;margin-bottom:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.10);

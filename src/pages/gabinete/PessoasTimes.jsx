@@ -94,7 +94,7 @@ function TabUsers({ showMsg }) {
                 <td style={td}>{u.nome || '-'}{u.is_super_admin ? ' (super)' : ''}</td>
                 <td style={td}>{u.email}</td>
                 <td style={td}>
-                  <select value={u.plan || 'free'} onChange={(e) => mudarPlano(u, e.target.value)} style={{ ...btn, padding: '5px 8px' }}>
+                  <select value={u.plan || 'free'} onChange={(e) => mudarPlano(u, e.target.value)} style={{ ...btn, padding: '5px 8px', fontSize: 16 }}>
                     {PLANOS.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </td>

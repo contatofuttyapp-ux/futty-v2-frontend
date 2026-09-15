@@ -732,7 +732,7 @@ function ComposerInline({ teams, user, nome, onCreated }) {
           value={teamId}
           onChange={(e) => setTeamId(e.target.value)}
           className="input input--hud hud-corners-s"
-          style={{ fontSize: 14 }}
+          style={{ fontSize: 16 }}
         >
           {teams.map((t) => (
             <option key={t.id} value={t.id}>
@@ -750,7 +750,7 @@ function ComposerInline({ teams, user, nome, onCreated }) {
           placeholder="Escreva sua resenha…"
           rows={4}
           className="input input--hud hud-corners-s"
-          style={{ fontSize: 14, resize: 'vertical' }}
+          style={{ fontSize: 16, resize: 'vertical' }}
         />
         <div style={{ position: 'absolute', right: 10, bottom: 8, fontSize: 11, color: 'var(--text-dim)' }}>{texto.length}/2000</div>
       </div>
@@ -805,7 +805,7 @@ function ComposerInline({ teams, user, nome, onCreated }) {
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmarLink(); } }}
               placeholder="Cole o link (YouTube, TikTok ou Instagram)"
               className="input input--hud hud-corners-s"
-              style={{ flex: 1, fontSize: 14 }}
+              style={{ flex: 1, fontSize: 16 }}
             />
             <button type="button" className="btn btn--hud btn--gold hud-corners-s" style={{ minWidth: 64 }} onClick={confirmarLink}>OK</button>
           </div>

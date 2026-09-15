@@ -737,7 +737,7 @@ export default function Inicio() {
                 value={dobInput}
                 max={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setDobInput(e.target.value)}
-                style={{ flex: '1 1 150px', padding: '8px 10px', borderRadius: 2, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: 14 }}
+                style={{ flex: '1 1 150px', padding: '8px 10px', borderRadius: 2, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: 16 }}
                 aria-label="Data de nascimento"
               />
               <button type="button" className="btn btn--purple btn--sm hud-corners-s" disabled={!dobInput || dobBusy} onClick={guardarDob}>
