@@ -132,12 +132,27 @@ export function preaquecer(userId, dadosInicio) {
     for (const p of payloads) colherImagens(p, urls);
 
     // O avatar do PRÓPRIO utilizador é o mais importante: é o cromo do Início e
-    // entra no canvas da figurinha. Vai em 512 e com crossOrigin, igual ao canvas.
+    // entra no canvas da figurinha. Vai em 512 e DUAS VEZES — com e sem
+    // crossOrigin. Não é desperdício: o CORS manda `Vary: Origin`, por isso o
+    // browser guarda as duas formas em entradas SEPARADAS do cache. O canvas
+    // carrega-o com crossOrigin (senão o toBlob() lançava); a <img> da tela da
+    // Figurinha carrega-o sem. Aquecer só uma deixava a outra a ir à rede.
     const meu = dadosInicio?.me?.user?.avatar_url || null;
     const tarefas = [];
     if (meu && meu.includes('/api/media/')) {
-      tarefas.push(() => baixarImagem(urlImagem(meu, 512), true));
-      urls.delete(meu);
+      const grande = urlImagem(meu, 512);
+      tarefas.push(() => baixarImagem(grande, true));
+      tarefas.push(() => baixarImagem(grande, false));
+      // `meu` FICA no conjunto de propósito: o mesmo avatar também aparece
+      // pequeno (badge da Figurinha, listas de membros), e 128 é outra entrada
+      // do cache. Aquecer só o 512 deixava o pequeno a ir à rede.
+    }
+    // A foto ORIGINAL (a que a pessoa enviou) é outra imagem, e a tela da
+    // Figurinha mostra-a grande (46vh) — pede-a em 512, não em 128 como as
+    // listas. Sem isto, abrir a Figurinha continuava a custar uma ida à rede.
+    const minhaFoto = dadosInicio?.me?.user?.foto_url || null;
+    if (minhaFoto && minhaFoto.includes('/api/media/') && minhaFoto !== meu) {
+      tarefas.push(() => baixarImagem(urlImagem(minhaFoto, 512), false));
     }
     // O resto vai no tamanho das listas.
     for (const u of urls) tarefas.push(() => baixarImagem(urlImagem(u, 128), false));
