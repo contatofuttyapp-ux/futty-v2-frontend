@@ -204,6 +204,13 @@ function camposDaTela() {
 // carregada e o toque na aba. Tudo em performance.now() da própria página, a
 // mesma base do Diagnóstico do app.
 function observadorRanking({ lento }) {
+  // Como no WebView do iPhone, sem requestIdleCallback: o pré-aquecimento só sai
+  // 1,5 s depois do /api/inicio. Com ele (o WebKit do Playwright tem), o
+  // aquecimento chegava sempre antes do toque e a cena nunca via o Ranking
+  // revalidar o cache velho — o caminho lento dos relatórios do iPhone.
+  // (Atribuir, não `delete`: a função vive no Window.prototype.)
+  window.requestIdleCallback = undefined;
+  window.cancelIdleCallback = undefined;
   const reg = { quadros: [], maiorQuadro: { ms: 0, em: 0 }, primeiraLinha: null, primeiraImagem: null, toque: null };
   window.__futtyRanking = reg;
   let ultimo = performance.now();
@@ -575,12 +582,21 @@ async function umaVisitaRanking(navegador, sessao, { comCache }) {
   await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('.bottom-nav__tab--ranking', { timeout: 30000 });
   await pagina.waitForSelector('.games-label, .home-empty', { timeout: 30000 });
-  // O Pedro tocou ~1,1 s depois de o Início pintar — antes do pré-aquecimento (1,5 s).
-  await espera(900);
-  await pagina.locator('.bottom-nav__tab--ranking').click();
+  // No relatório do build 18 o toque veio 214 ms depois de o /api/inicio voltar
+  // (o Início já tinha pintado do cache) — antes do pré-aquecimento (1,5 s).
+  // force: sem a espera de "elemento parado" do Playwright, que com quadros
+  // lentos passava de 1 s e perdia a corrida para o aquecimento.
+  await espera(200);
+  await pagina.locator('.bottom-nav__tab--ranking').click({ force: true });
   await pagina.waitForSelector('.rank-row', { timeout: 30000 });
   await espera(4500);
   const fora = await pagina.evaluate(() => window.__futtyRanking);
+  // Quando o pedido do ranking saiu, contado do toque (o que muda com a Rodada 8A:
+  // com cache velho, só depois de a lista pintar).
+  const pedidoRankingMs = await pagina.evaluate((toque) => {
+    const e = performance.getEntriesByType('resource').find((x) => new URL(x.name).pathname.endsWith('/ranking') && x.startTime >= (toque || 0));
+    return e ? Math.round(e.startTime - toque) : null;
+  }, fora?.toque);
   const captura = arquivoCaptura(`ranking1-${comCache ? 'com-cache' : 'sem-cache'}`);
   await pagina.screenshot({ path: captura });
   const relatorio = await lerRelatorioDoApp(contexto, pagina);
@@ -591,6 +607,7 @@ async function umaVisitaRanking(navegador, sessao, { comCache }) {
   return {
     comCache,
     lento: LENTO,
+    pedidoRankingMs,
     diagnostico: navRanking,
     deFora: fora && {
       primeiraLinhaMs: rel(fora.primeiraLinha),
@@ -680,6 +697,7 @@ try {
       const d = v.diagnostico;
       console.log(`\n[iphone] 1ª visita ao Ranking ${v.comCache ? 'COM cache velho' : 'SEM cache'}${v.lento ? ' (lento)' : ''}`);
       console.log(`   Diagnóstico do app: pintura ${d?.msPintura} ms · dados ${d?.msDados} ms · esperou [${(d?.esperou || []).join(', ')}]${d?.marcas ? ` · marcas ${JSON.stringify(d.marcas)}` : ''}`);
+      console.log(`   pedido do ranking depois do toque: ${v.pedidoRankingMs == null ? 'nenhum' : `saiu em ${v.pedidoRankingMs} ms`}`);
       if (v.deFora) console.log(`   de fora (desde o toque): 1ª linha ${v.deFora.primeiraLinhaMs} ms · 1ª imagem ${v.deFora.primeiraImagemMs} ms · maior quadro ${v.deFora.maiorQuadro.ms} ms em ${v.deFora.maiorQuadro.emMs} ms`);
       if (v.deFora?.quadrosLongos?.length) console.log(`   quadros > 60 ms: ${v.deFora.quadrosLongos.map((q) => `${q.ms}@${q.emMs}`).join(', ')}`);
       console.log(`   chamadas: ${v.chamadas.join(' | ')}`);
