@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
+import { urlImagem } from '../../utils/avatar';
 import EstadoErroRede from '../../components/EstadoErroRede';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -242,7 +243,7 @@ function TabDenuncias({ showMsg }) {
             <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>· {c.target_type} · {fmtData(c.criado_em)}</span>
           </div>
           {c.preview_texto ? <p style={{ margin: '0 0 8px', fontSize: 13, color: '#ddd', wordBreak: 'break-word' }}>{c.preview_texto}</p> : null}
-          {c.preview_media ? <img src={c.preview_media} alt="conteúdo denunciado" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, border: '1px solid #333', display: 'block', marginBottom: 8 }} /> : null}
+          {c.preview_media ? <img src={urlImagem(c.preview_media, 256)} alt="conteúdo denunciado" decoding="async" loading="lazy" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, border: '1px solid #333', display: 'block', marginBottom: 8 }} /> : null}
           {c.descricao ? <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-dim)' }}>Nota do denunciante: {c.descricao}</p> : null}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button type="button" style={btn} onClick={() => decidir(c, 'manter')}>Manter</button>

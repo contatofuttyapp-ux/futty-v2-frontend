@@ -1,7 +1,7 @@
 // Futty v2.0 — Editor do resultado do jogo (admin): 4 níveis de detalhe.
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { urlAsset, iniciaisNome } from '../utils/avatar';
+import { urlAsset, urlImagem, iniciaisNome } from '../utils/avatar';
 
 const NIVEIS = [
   { n: 0, label: 'Sem resultado' },
@@ -21,11 +21,11 @@ function jaComecouJogo(game) {
 
 function MiniAvatar({ nome, avatarUrl }) {
   const [falhou, setFalhou] = useState(false);
-  const src = avatarUrl ? urlAsset(avatarUrl) : null;
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128) : null;
   return (
     <div style={{ width: 32, height: 32, borderRadius: 6, overflow: 'hidden', background: '#15151a', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
       {src && !falhou ? (
-        <img src={src} alt="" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+        <img src={src} alt="" width={32} height={32} decoding="async" loading="lazy" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
       ) : (
         <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>{iniciaisNome(nome)}</span>
       )}

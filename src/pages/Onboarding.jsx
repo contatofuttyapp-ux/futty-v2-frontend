@@ -5,7 +5,7 @@
 // "Deixar para depois" só aparece aos ~4s; quem salta leva o card persistente no Início.
 import { useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
-import { urlAsset } from '../utils/avatar';
+import { urlAsset, urlImagem } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
 import { usePerfil } from '../context/PerfilContext';
@@ -53,7 +53,7 @@ function MolduraFoto({ src, size = 170 }) {
     <div style={{ position: 'relative', width: size, height: size, margin: '0 auto' }}>
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', overflow: 'hidden', background: 'linear-gradient(0deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03)), #101012', clipPath: OCTO, border: '1.5px solid rgba(212,160,23,0.5)', animation: src ? 'none' : undefined, boxShadow: '0 0 18px rgba(212,160,23,0.3)' }}>
         {src ? (
-          <img src={src} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+          <img src={urlImagem(src, 512)} alt="" width={size} height={size} decoding="async" fetchpriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
         ) : (
           <div style={{ display: 'grid', placeItems: 'center', gap: 8, color: 'rgba(255,255,255,0.35)' }}>
             <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="rgba(212,160,23,0.65)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>

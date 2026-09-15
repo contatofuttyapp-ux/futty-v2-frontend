@@ -53,6 +53,35 @@ export function urlAsset(caminho) {
   return `${backendBase()}${s.startsWith('/') ? s : `/${s}`}`;
 }
 
+// ─── Tamanho da imagem (Velocidade 6B, 15-set) ───────────────────────────────
+// O motor (Velocidade 6A) passou a servir o proxy de imagem já redimensionado e
+// em WebP: `?w=128|256|512|1024`. Antes, uma lista de 20 jogadores baixava 20
+// figurinhas em tamanho de cartaz (418 KB cada) para as mostrar a 48 px.
+//
+// Só mexe em URLs do NOSSO proxy. Tudo o resto passa intacto de propósito: os
+// kits e avatares genéricos (bucket público `kits`), a foto do login Google
+// (lh3.googleusercontent.com), os assets de public/ e as imagens das campanhas
+// de publicidade — nenhum deles entende `?w=`, e acrescentá-lo só quebraria o
+// cache do CDN de terceiros.
+const DEGRAUS = [128, 256, 512, 1024];
+
+/**
+ * Acrescenta `?w=` a um URL do proxy de imagem. `w` é arredondado ao degrau
+ * mais próximo (o motor faz o mesmo, mas assim o URL — e logo a chave do cache
+ * do browser — é sempre um dos quatro).
+ */
+export function urlImagem(url, w) {
+  const s = String(url ?? '').trim();
+  if (!s || !s.includes('/api/media/')) return s;
+  const alvo = DEGRAUS.reduce((melhor, d) => (Math.abs(d - w) < Math.abs(melhor - w) ? d : melhor), DEGRAUS[0]);
+  return `${s}${s.includes('?') ? '&' : '?'}w=${alvo}`;
+}
+
+/** Atalho: resolve o caminho E escolhe o tamanho, na mesma chamada. */
+export function urlAssetImagem(caminho, w) {
+  return urlImagem(urlAsset(caminho), w);
+}
+
 // Genérico colorido (em /avatares/genericos/<cor>.webp). Passa pelo urlAsset
 // para, no nativo, sair da web em vez de um arquivo que não foi empacotado.
 function genericoColorido(cor) {

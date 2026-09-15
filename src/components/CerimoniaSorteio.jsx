@@ -8,7 +8,7 @@
 // selado no giro, véu re-escopado ao interior + cartão fit-to-width, lock-in + molduras vivas
 // na Victory, som selado (somSorteio.js, opt-in off), reserva neutro, X de saída, botões C3.
 import { useEffect, useRef, useState } from 'react';
-import { urlAsset } from '../utils/avatar';
+import { urlAsset, urlImagem } from '../utils/avatar';
 import { apiFetch } from '../lib/api';
 import { gerarCartazEscalacao } from '../utils/sorteioCartao';
 import SomSorteio from './somSorteio';
@@ -137,7 +137,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     //   ti < 0 → RESERVA (silhueta cinza-aço).
     const vis = (j, ti) => ({
       nome: (j.convidado ? '· ' : '') + (j.nome || '?'),
-      img: j.avatar_url ? urlAsset(j.avatar_url) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
+      img: j.avatar_url ? urlImagem(urlAsset(j.avatar_url), 128) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
     });
 
     // — moldura de um jogador (innerHTML; corre dentro de .smaq → estilos aplicam).

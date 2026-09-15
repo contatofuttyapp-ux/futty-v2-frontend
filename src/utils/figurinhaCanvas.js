@@ -1,6 +1,6 @@
 // Futty v2.0 — Geração da figurinha (PNG via canvas). Card 2:3 (base 400×600) e
 // versão Story 9:16 (1080×1920) para o Instagram. Tudo no cliente, sem servidor.
-import { urlAsset, nomeJogador } from './avatar';
+import { urlAsset, urlImagem, nomeJogador } from './avatar';
 import { getFrameColor } from './frameColors';
 
 // Carrega uma imagem; devolve null se falhar (evita tainting do canvas).
@@ -391,7 +391,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
 
   // Avatar (carregado uma vez; usado tanto no card completo como na camada só-avatar).
   const nome = nomeJogador(jogador);
-  const avatarUrl = fotoOverride || (jogador?.avatar_url ? urlAsset(jogador.avatar_url) : null);
+  const avatarUrl = fotoOverride || (jogador?.avatar_url ? urlImagem(urlAsset(jogador.avatar_url), 512) : null);
   const ehAbsoluto = avatarUrl && /^https?:\/\//i.test(avatarUrl);
   const avatar = avatarUrl ? await carregarImagem(avatarUrl, ehAbsoluto) : null;
 

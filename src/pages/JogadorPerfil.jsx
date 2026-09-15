@@ -9,7 +9,7 @@ import { useApi } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
 import SeloHonra from '../components/SeloHonra';
-import { urlAsset } from '../utils/avatar';
+import { urlAsset, urlImagem } from '../utils/avatar';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import EscudoEquipa from '../components/EscudoEquipa';
@@ -230,7 +230,7 @@ export default function JogadorPerfil() {
               <div className="perfil-palco">
                 <div className="perfil-glow" />
                 {imgSrc ? (
-                  <img className={ehRecorte ? 'perfil-cutout' : 'perfil-faded'} src={imgSrc} alt="" />
+                  <img className={ehRecorte ? 'perfil-cutout' : 'perfil-faded'} src={urlImagem(imgSrc, 512)} alt="" width={250} height={284} decoding="async" fetchpriority="high" />
                 ) : (
                   <span style={{ position: 'absolute', left: '50%', bottom: 96, transform: 'translateX(-50%)', zIndex: 1, display: 'grid', placeItems: 'center', width: 180, height: 180, clipPath: CLIP, background: 'rgba(212,160,23,0.1)', border: `1px solid ${OURO}` }}>
                     <SilhuetaJogador size="64%" color="rgba(212,160,23,0.75)" />
@@ -359,7 +359,7 @@ export default function JogadorPerfil() {
                   <div style={{ display: 'flex', gap: 6, marginTop: 8, overflowX: 'auto' }}>
                     {p.media.map((m, i) => (m.media_type === 'video'
                       ? <video key={i} src={urlAsset(m.url)} style={{ width: 96, height: 96, objectFit: 'cover', clipPath: CLIP_S, background: '#000', flexShrink: 0 }} />
-                      : <img key={i} src={urlAsset(m.url)} alt="" style={{ width: 96, height: 96, objectFit: 'cover', clipPath: CLIP_S, flexShrink: 0 }} />))}
+                      : <img key={i} src={urlImagem(urlAsset(m.url), 256)} alt="" width={96} height={96} decoding="async" loading="lazy" style={{ width: 96, height: 96, objectFit: 'cover', clipPath: CLIP_S, flexShrink: 0 }} />))}
                   </div>
                 ) : null}
                 {p.comentarios_total ? (

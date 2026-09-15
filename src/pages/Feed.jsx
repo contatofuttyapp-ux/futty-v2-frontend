@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Camera, ExternalLink, Eye, Link2, Music2, Play, Share2, Video } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
+import { urlImagem } from '../utils/avatar';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -76,11 +77,11 @@ function timeCampeao(j) {
 // ─── Avatar — moldura V1 do cânone (.avatar-frame), única na página ────────────
 function FeedAvatar({ avatarUrl, size = 48 }) {
   const [falhou, setFalhou] = useState(false);
-  const src = avatarUrl ? assetUrl(avatarUrl) : null;
+  const src = avatarUrl ? urlImagem(assetUrl(avatarUrl), 128) : null;
   return (
     <span className="avatar-frame" style={{ width: size, height: size, flexShrink: 0 }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src && !falhou ? <img src={src} alt="" onError={() => setFalhou(true)} /> : <SilhuetaJogador size="76%" />}
+        {src && !falhou ? <img src={src} alt="" width={size} height={size} decoding="async" loading="lazy" onError={() => setFalhou(true)} /> : <SilhuetaJogador size="76%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />
@@ -193,7 +194,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
               onClick={() => onOpenImage(foto)}
               style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: '#000', cursor: 'zoom-in' }}
             >
-              <img src={foto} alt="" loading="lazy" decoding="async" style={{ width: '100%', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
+              <img src={urlImagem(foto, 1024)} alt="" width={390} height={420} loading="lazy" decoding="async" style={{ width: '100%', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
             </button>
           ) : null}
 
@@ -522,7 +523,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
             <video src={assetUrl(media[0].url)} controls style={{ width: '100%', maxHeight: 460, borderRadius: 10, display: 'block', background: '#000' }} />
           ) : (
             <button type="button" onClick={() => onOpenImage(assetUrl(media[0].url))} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block', width: '100%' }}>
-              <img src={assetUrl(media[0].url)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
+              <img src={urlImagem(assetUrl(media[0].url), 1024)} alt="" width={362} height={460} loading="lazy" decoding="async" style={{ width: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
             </button>
           )}
         </div>
@@ -536,7 +537,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
                   <video src={url} controls style={{ width: 240, maxHeight: 220, display: 'block', background: '#000' }} />
                 ) : (
                   <button type="button" onClick={() => onOpenImage(url)} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block' }}>
-                    <img src={url} alt="" loading="lazy" decoding="async" width={240} style={{ width: 240, maxHeight: 220, objectFit: 'cover', display: 'block' }} />
+                    <img src={urlImagem(url, 512)} alt="" loading="lazy" decoding="async" width={240} height={220} style={{ width: 240, maxHeight: 220, objectFit: 'cover', display: 'block' }} />
                   </button>
                 )}
               </div>
@@ -758,7 +759,7 @@ function ComposerInline({ teams, user, nome, onCreated }) {
               {m.media_type === 'video' ? (
                 <video src={assetUrl(m.url)} style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }} />
               ) : (
-                <img src={assetUrl(m.url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urlImagem(assetUrl(m.url), 256)} alt="" width={80} height={80} decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               )}
               <button
                 type="button"

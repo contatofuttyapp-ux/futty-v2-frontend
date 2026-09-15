@@ -23,7 +23,7 @@ import LoadingFutty from '../components/LoadingFutty';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
-import { urlAsset } from '../utils/avatar';
+import { urlAsset, urlImagem } from '../utils/avatar';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
 import '../styles/app.css';
 
@@ -104,13 +104,15 @@ function CromoInicio({ cromo, previa, nome, destino = '/figurinha', destinoLabel
       <div className="fig-bob" style={{ position: 'relative', width: '100%', height: '100%' }}>
         <div className="fig-sway" style={{ position: 'relative', width: '100%', height: '100%' }}>
           {cromo ? (
-            <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+            <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" decoding="async" fetchpriority="high" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
           ) : previa ? (
             <img
               src={previa}
               alt=""
               aria-hidden="true"
               decoding="async"
+              fetchpriority="high"
+              loading="eager"
               className="cromo-previa"
               style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
             />
@@ -488,7 +490,9 @@ export default function Inicio() {
     if (!user) return undefined;
     let vivo = true;
     // Sem avatar IA: veste o genérico da casa (escolhido ou rodízio por id).
-    const jogadorCard = cromoAvatarEhIA ? user : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha) };
+    const jogadorCard = cromoAvatarEhIA
+      ? { ...user, avatar_url: urlImagem(user.avatar_url, 512) }
+      : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha) };
     // fundoGlints:'discreto' — o cromo do Início é um OBJECTO estático (nunca em
     // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
     // download nem a montra do tile do seletor — densidade de repouso própria.
@@ -564,7 +568,7 @@ export default function Inicio() {
   // A foto que segura o lugar do cromo enquanto ele não existe: a mesma imagem
   // que o canvas vai usar por baixo, então a troca não salta.
   const previaCromo = cromoAvatarEhIA
-    ? urlAsset(user?.avatar_url)
+    ? urlImagem(urlAsset(user?.avatar_url), 512)
     : user
       ? avatarGenericoUrl(user.id, avatarGenericoEscolha)
       : '';
@@ -827,7 +831,7 @@ export default function Inicio() {
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.4)' }}>
             <span className="figurinha-gerando-moldura" style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.5)', background: '#101012' }}>
               {user?.foto_url ? (
-                <img src={urlAsset(user.foto_url)} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urlImagem(urlAsset(user.foto_url), 128)} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
@@ -839,7 +843,7 @@ export default function Inicio() {
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
             <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(248,113,113,0.5)', background: '#101012', overflow: 'hidden' }}>
               {user?.foto_url ? (
-                <img src={urlAsset(user.foto_url)} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urlImagem(urlAsset(user.foto_url), 128)} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </span>
             {/* Texto neutro (14-set): 'falhou' também cobre IA_INDISPONIVEL (motor

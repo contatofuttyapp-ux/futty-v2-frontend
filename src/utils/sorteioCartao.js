@@ -3,7 +3,7 @@
 //   gerarCartao916      — 1 imagem POR equipa (botões "9:16 · Time X").
 //   gerarCartazEscalacao — o cartaz ÚNICO com TODOS os times (botão "Guardar" da máquina).
 // Canvas puro (1080×1920) → download PNG.
-import { urlAsset } from './avatar';
+import { urlAsset, urlImagem } from './avatar';
 
 const KITS = [
   { n: 'OURO', c: '#d4a017' },
@@ -138,7 +138,7 @@ function desenharCartaoJogador(cx, x, y, w, h, cor, nome, img) {
 // de jogadores, guardando em `j._img`.
 async function carregarFotosDoTime(jogadores, cor) {
   await Promise.all(jogadores.map(async (j) => {
-    let img = j.avatar_url ? await carregarImagem(urlAsset(j.avatar_url)) : null;
+    let img = j.avatar_url ? await carregarImagem(urlImagem(urlAsset(j.avatar_url), 512)) : null;
     if (!img) img = await carregarImagem(silhuetaURI(cor));
     j._img = img;
   }));

@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { useInicio } from '../context/InicioContext';
+import { urlImagem } from '../utils/avatar';
 import Icon from './Icon';
 
 const BASE = {
@@ -56,7 +57,9 @@ export default function AdCard({ pagina = 'inicio', variant = 'native' }) {
   };
 
   const conteudo = ad.imagem_url ? (
-    <img src={ad.imagem_url} alt={ad.texto || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    // A imagem da campanha costuma ser de outra origem — urlImagem devolve-a
+    // intacta, mas se um dia a campanha vier do nosso Storage já pede o tamanho certo.
+    <img src={urlImagem(ad.imagem_url, 512)} alt={ad.texto || ''} width={390} height={100} decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
   ) : (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', height: '100%', padding: '0 14px', boxSizing: 'border-box' }}>
       <Icon name="anuncio" size={22} color="#d4a017" />

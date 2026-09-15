@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
 import { lerCache, gravarCache } from '../lib/cacheLocal';
-import { nomeJogador, urlAsset } from '../utils/avatar';
+import { nomeJogador, urlAsset, urlImagem } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
 import { getFrameColor } from '../utils/frameColors';
@@ -1351,7 +1351,7 @@ export default function Figurinha() {
                  #0d0d12 lêem como moldura intencional, não como corte. */
               <div className="hud-corners" style={{ width: '100%', background: '#0d0d12' }}>
                 <img
-                  src={urlAsset(fotoOriginal)}
+                  src={urlImagem(urlAsset(fotoOriginal), 512)}
                   alt="Sua foto"
                   style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '46vh', objectFit: 'contain', display: 'block', margin: '0 auto' }}
                 />
@@ -1366,8 +1366,12 @@ export default function Figurinha() {
                 /* (j) Badge com glow dourado suave — mesma família dos dots. */
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'linear-gradient(90deg, rgba(139,92,246,0.18), rgba(212,160,23,0.12))', border: '1px solid rgba(139,92,246,0.4)', boxShadow: '0 0 12px rgba(212,160,23,0.22)' }}>
                   <img
-                    src={urlAsset(me?.user?.avatar_url)}
+                    src={urlImagem(urlAsset(me?.user?.avatar_url), 128)}
                     alt="Avatar IA"
+                    width={48}
+                    height={48}
+                    decoding="async"
+                    loading="lazy"
                     style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid rgba(212,160,23,0.5)', flex: 'none', background: '#0d0d12' }}
                   />
                   <div style={{ display: 'grid', gap: 3 }}>

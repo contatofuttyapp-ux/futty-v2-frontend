@@ -3,7 +3,7 @@
 // topo com marca vermelha. Ações: remover / manter / avisar. GET/POST /api/denuncias.
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { urlAsset } from '../utils/avatar';
+import { urlAsset, urlImagem } from '../utils/avatar';
 
 const RAJ = "'Rajdhani', sans-serif";
 const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)';
@@ -41,7 +41,7 @@ function CasoCard({ slug, caso, onResolvido }) {
         style={{ position: 'relative', width: '100%', height: 118, marginBottom: 10, overflow: 'hidden', clipPath: CLIP_S, border: 'none', cursor: 'pointer', padding: 0, background: '#111' }}
       >
         {caso.preview_media ? (
-          <img src={urlAsset(caso.preview_media)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: revelado ? 'none' : 'blur(18px) brightness(.8)', transform: revelado ? 'none' : 'scale(1.1)' }} />
+          <img src={urlImagem(urlAsset(caso.preview_media), 256)} alt="" width={390} height={118} decoding="async" loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: revelado ? 'none' : 'blur(18px) brightness(.8)', transform: revelado ? 'none' : 'scale(1.1)' }} />
         ) : (
           <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 12, filter: revelado ? 'none' : 'blur(6px)', color: '#c9c2d6', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center' }}>
             {caso.preview_texto || '(sem pré-visualização)'}

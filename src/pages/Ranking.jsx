@@ -7,7 +7,7 @@ import { useApi } from '../hooks/useApi';
 import { useSessao } from '../context/SessaoContext';
 import { useRanking } from '../hooks/useRanking';
 import { celebrarTop3 } from '../hooks/useConfetti';
-import { urlAsset } from '../utils/avatar';
+import { urlAsset, urlImagem } from '../utils/avatar';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -21,11 +21,11 @@ import '../styles/app.css';
 // Moldura de avatar do cânone (V1): quadrado + cantos-L dourados + interior no material
 // da casa + véu. Moldura única da página — rows, pódio e modal partilham-na.
 function FrameAvatar({ avatarUrl, size = 48 }) {
-  const src = avatarUrl ? urlAsset(avatarUrl) : null;
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128) : null;
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src ? <img src={src} alt="" /> : <SilhuetaJogador size="74%" />}
+        {src ? <img src={src} alt="" width={size} height={size} decoding="async" loading="lazy" /> : <SilhuetaJogador size="74%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />

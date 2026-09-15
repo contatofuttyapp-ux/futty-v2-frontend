@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, assetUrl } from '../lib/api';
+import { urlImagem } from '../utils/avatar';
 import { useAuth } from '../hooks/useAuth';
 import SilhuetaJogador from './SilhuetaJogador';
 import Reacoes from './Reacoes';
@@ -57,7 +58,7 @@ function Avatar({ avatarUrl, size = 40 }) {
       }}
     >
       {src && !falhou ? (
-        <img src={src} alt="" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={src} alt="" width={size} height={size} decoding="async" loading="lazy" onError={() => setFalhou(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <SilhuetaJogador size="76%" />
       )}
@@ -86,8 +87,12 @@ function Anexos({ anexos, onOpenImage }) {
             style={{ padding: 0, border: 'none', background: '#000', borderRadius: 10, overflow: 'hidden', cursor: 'zoom-in', flexShrink: 0 }}
           >
             <img
-              src={url}
+              src={urlImagem(url, 256)}
               alt=""
+              width={carrossel ? 140 : 172}
+              height={carrossel ? 140 : 120}
+              decoding="async"
+              loading="lazy"
               style={carrossel ? { width: 140, height: 140, objectFit: 'cover', display: 'block' } : { width: '100%', height: 120, objectFit: 'cover', display: 'block' }}
             />
           </button>
@@ -202,7 +207,7 @@ function ComentarioForm({ membros, placeholder = 'Escreva um comentário…', av
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {anexos.map((a, ix) => (
               <div key={`${a.url}-${ix}`} style={{ position: 'relative', width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: '1px solid #222222' }}>
-                <img src={assetUrl(a.url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urlImagem(assetUrl(a.url), 256)} alt="" width={64} height={64} decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <button
                   type="button"
                   aria-label="Remover anexo"
@@ -569,7 +574,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
               onClick={() => setImgFull(null)}
               style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
             >
-              <img src={imgFull} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              <img src={urlImagem(imgFull, 1024)} alt="" decoding="async" fetchpriority="high" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
             </div>,
             document.body
           )

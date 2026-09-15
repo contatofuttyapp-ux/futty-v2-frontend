@@ -6,7 +6,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { usePerfil } from '../context/PerfilContext';
 import { useTeam } from '../hooks/useTeam';
-import { urlAsset } from '../utils/avatar';
+import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { POSICOES, labelPosicao } from '../utils/posicoes';
 import { copiarTexto } from '../utils/clipboard';
@@ -30,11 +30,11 @@ const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5p
 // Sem foto, mas com identidade (userId), mostra o avatar genérico da casa — nunca
 // a silhueta "?".
 function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 40 }) {
-  const src = avatarUrl ? urlAsset(avatarUrl) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src ? <img src={src} alt="" /> : <SilhuetaJogador size="74%" />}
+        {src ? <img src={src} alt="" width={size} height={size} decoding="async" loading="lazy" /> : <SilhuetaJogador size="74%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />
