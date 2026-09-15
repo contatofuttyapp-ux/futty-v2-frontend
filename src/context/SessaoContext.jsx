@@ -38,7 +38,11 @@ export function SessaoProvider({ children }) {
   const { pathname } = useLocation();
   const { perfil: me, recarregar: reloadMe } = usePerfil();
 
-  const noInicioAgora = pathname === '/home';
+  // "/" conta como Início (Velocidade 7B): no arranque frio a rota é "/" por um
+  // instante antes do <Navigate> para "/home", e bastava esse instante para
+  // disparar /api/teams + votacao-status em paralelo com o /api/inicio que traz
+  // os dois — 3 pedidos frios em vez de 1. O PerfilContext já fazia o mesmo.
+  const noInicioAgora = pathname === '/home' || pathname === '/';
 
   const [teams, setTeams] = useState([]);
   // Chegando direto em /home, `teams` fica vazio até o InicioContext hidratar
