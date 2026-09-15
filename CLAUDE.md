@@ -63,7 +63,9 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
 - Post nasce/vive na equipa (team_id); alcance global nunca.
 - v1 sem upload de vídeo (link embed YouTube/TikTok/IG); partilha = LINK + imagem 9:16.
 - Flag `teams.mostrar_gols` (admin) esconde gols/artilharia (radar 5↔3).
-- Onboarding dia-1 pede SÓ o que o dia-1 usa (foto quase-obrigatória, nome, GR opcional).
+- Onboarding dia-1 pede SÓ o que o dia-1 usa (foto quase-obrigatória, nome). O "Você é
+  goleiro?" saiu (15-set, dono): o sorteio usa o goleiro marcado na confirmação de
+  presença ou pelo admin.
 
 ## Conector Supabase (ferramentas)
 - **ATIVO em READ-ONLY** (por desenho — segurança). Leituras SQL diretas: SIM.

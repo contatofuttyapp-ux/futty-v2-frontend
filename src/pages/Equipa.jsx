@@ -131,6 +131,7 @@ export default function Equipa() {
 
   // Onboarding dia-1: "és guarda-redes?" ficou em pref local — aplica-se aqui, na
   // 1ª equipa em que o jogador entra sem posição definida (e a pref morre).
+  // Rodada 8A: o cadastro já não pergunta; isto só serve a quem respondeu antes.
   // (set-state-in-effect justificado: é uma acção one-shot pós-onboarding — dispara
   // o MESMO fluxo do clique no chip, uma única vez, e a pref morre.)
   useEffect(() => {

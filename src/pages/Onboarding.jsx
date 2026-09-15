@@ -78,7 +78,6 @@ export default function Onboarding() {
   const ultimoBlob = useRef(null); // retém o blob p/ "tentar de novo" sem recortar
   const figurinhaIAEmVooRef = useRef(false); // evita empilhar POST /api/me/avatar/ai
   const [nome, setNome] = useState('');
-  const [gr, setGr] = useState('linha'); // 'GL' | 'linha'
   const [salvando, setSalvando] = useState(false);
   const [toast, setToast] = useState(null);
   const selfieRef = useRef(null);
@@ -135,12 +134,13 @@ export default function Onboarding() {
     }
   }
 
-  // Fim: nome de jogador (PATCH /api/me) + preferência GR (aplica-se na 1ª equipa).
+  // Fim: nome de jogador (PATCH /api/me). A pergunta "Você é goleiro?" saiu do
+  // cadastro (Rodada 8A, decisão do dono): o sorteio só usa game_players.goleiro,
+  // marcado na confirmação de presença (Jogo.jsx, "Sou goleiro (GR)") ou pelo admin.
   async function concluir() {
     setSalvando(true);
     try {
       if (nome.trim()) await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ nome_jogador: nome.trim().slice(0, 18) }) });
-      if (gr === 'GL') localStorage.setItem('futty_pref_gr', 'GL');
       // P1-1 — sela o onboarding no servidor ANTES de entrar.
       await apiFetch('/api/me/onboarding-completo', { method: 'POST' });
       // 14-set ("Velocidade 3"): recarrega o PerfilContext AQUI — busca o
@@ -261,22 +261,11 @@ export default function Onboarding() {
                 placeholder="ex.: Bruninho"
                 style={{ width: '100%', fontFamily: RAJ, fontSize: 17, fontWeight: 700, textAlign: 'center' }}
               />
-              <label style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '20px 0 6px' }}>
-                Você é goleiro? <em style={{ color: '#6f6a80', textTransform: 'none', letterSpacing: 0, fontStyle: 'normal' }}>(opcional)</em>
-              </label>
-              <div className="chips-row" style={{ justifyContent: 'center' }}>
-                <button type="button" className={`chip ${gr === 'linha' ? 'chip--active' : ''}`} onClick={() => setGr('linha')}>
-                  Jogo na linha
-                </button>
-                <button type="button" className={`chip ${gr === 'GL' ? 'chip--active' : ''}`} onClick={() => setGr('GL')} style={gr !== 'GL' ? { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' } : undefined}>
-                  Sou goleiro
-                </button>
-              </div>
               <div style={{ marginTop: 30 }}>
                 <Cta cheio onClick={concluir} disabled={salvando}>{salvando ? 'Entrando…' : 'Entrar'}</Cta>
               </div>
               <div style={{ fontSize: 10, color: '#6f6a80', textAlign: 'center', marginTop: 10 }}>
-                a posição certa (DEF/MEI/ATA) você escolhe no seu time, aqui só o que o dia-1 usa
+                a posição você escolhe no seu time, aqui só o que o dia-1 usa
               </div>
             </div>
           </>
