@@ -27,21 +27,20 @@ import Toast from '../components/Toast';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
-// GATES CONFIRMADOS (ordem do dono): Aura e Épico viram PREMIUM (mesmo padrão do
-// Golden — verdade no servidor, ver FUNDOS_PREMIUM em backend/routes/auth.js; o
-// `premium: true` aqui é só o cadeado do desejo). Neutro passa a vir ANTES do
-// Épico (o único livre a seguir ao Estádio/Aura). LEI DA REGRA JUSTA: quem já
-// tinha Aura/Épico equipado mantém — o gate só corre ao TROCAR (ver escolherFundo).
+// GATES CONFIRMADOS (ordem do dono): Aura, Golden e Royal são PREMIUM (verdade no
+// servidor, ver FUNDOS_PREMIUM em backend/routes/auth.js; o `premium: true` aqui é
+// só o cadeado do desejo). Épico virou GRÁTIS (15-set, decisão do dono) — deixou de
+// ter `premium`. LEI DA REGRA JUSTA: quem já tinha Aura equipado mantém — o gate só
+// corre ao TROCAR (ver escolherFundo).
 const FUNDOS = [
-  // ORDEM (dono, 14-set — 2ª revisão, build 9): Neutro, Estádio, Épico, Aura,
-  // Golden, Royal — os GRÁTIS primeiro, os pagos depois, Neutro à frente do
-  // Estádio e Épico à frente de Aura. Revoga a ordem anterior de 14-set
-  // (Neutro, Estádio, Aura, Épico...) e a de 31-jul (Estádio primeiro). Só o
+  // ORDEM (dono, 15-set — 3ª revisão): Neutro, Épico, Estádio, Aura, Golden, Royal
+  // — os GRÁTIS primeiro (Neutro, Épico, Estádio), os pagos depois (Aura, Golden,
+  // Royal). Revoga a ordem de 14-set (Neutro, Estádio, Épico, Aura...). Só o
   // SELETOR muda: o fundo de quem não escolheu continua a ser 'estadio'
   // (useState abaixo e cromoFundo no Início).
   { k: 'preto', label: 'Neutro' },
+  { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label novo — GRÁTIS (15-set)
   { k: 'estadio', label: 'Estádio' },
-  { k: 'gradiente', label: 'Épico', premium: true }, // chave interna 'gradiente' (estado), label novo
   { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
   { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
   { k: 'royal', label: 'Royal', premium: true }, // par de luxo do Golden — chapa roxa da casa
@@ -1097,7 +1096,9 @@ export default function Figurinha() {
             // UMA linha só, scroll horizontal (nunca 2 linhas — ordem do dono). Tiles
             // com largura FIXA (não fração do container) para não encolher/quebrar;
             // scroll-snap para o gesto de arrastar assentar num tile de cada vez.
-            <div style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: 10, padding: '2px 6px 8px', margin: '0 auto', width: '85%', maxWidth: '100%', scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
+            // Grade partilhada com a tab Uniforme (.fig-seletor-grade / .fig-seletor-tile
+            // em app.css) — ver nota de 15-set ali.
+            <div className="fig-seletor-grade">
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
                 // Cadeado premium (mesma regra dos kits): fundo premium + plano não pago.
@@ -1111,18 +1112,10 @@ export default function Figurinha() {
                   <button
                     key={f.k}
                     type="button"
+                    className="fig-seletor-tile"
                     onClick={() => escolherFundo(f.k)}
                     aria-pressed={sel}
                     style={{
-                      flex: '0 0 76px',
-                      scrollSnapAlign: 'center',
-                      display: 'grid',
-                      gap: 4,
-                      padding: 0,
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'center',
                       opacity: sel ? 1 : 0.55, // não-seleccionado mais discreto
                       // glow da selecção no PAI (drop-shadow segue o recorte a 45°;
                       // um box-shadow no thumb seria cortado pelo clip-path).
@@ -1166,8 +1159,10 @@ export default function Figurinha() {
               })}
             </div>
           ) : (
-            // Container a 85% → tiles ~15% mais pequenos, 4 numa linha centrada.
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, width: '85%', margin: '0 auto' }}>
+            // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile
+            // em app.css, nota de 15-set) — mesma largura total, mesmo tile, mesmo gap,
+            // mesmo padding lateral, mesma rolagem horizontal.
+            <div className="fig-seletor-grade">
               {/* Achado 1 (roteiro 10-set): kit ainda não lançado nem aparece — nada de
                   "em breve" na tela. */}
               {KITS_FIGURINHA.filter((kit) => kit.estado !== 'breve').map((kit) => {
@@ -1184,20 +1179,11 @@ export default function Figurinha() {
                   <button
                     key={kit.id}
                     type="button"
+                    className="fig-seletor-tile"
                     onClick={() => escolherKit(kit)}
                     aria-label={kit.nome}
                     aria-pressed={vestido}
                     disabled={gerandoIA}
-                    style={{
-                      flex: '0 0 calc((100% - 24px) / 4)',
-                      display: 'grid',
-                      gap: 4,
-                      padding: 0,
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                    }}
                   >
                     {/* Thumbnail quadrado */}
                     <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: vestido ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: vestido ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
