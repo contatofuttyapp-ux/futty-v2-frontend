@@ -28,3 +28,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Capturas do scripts/ver-iphone.mjs (Velocidade 7B): prova local, não vai para o git
+scripts/capturas/
