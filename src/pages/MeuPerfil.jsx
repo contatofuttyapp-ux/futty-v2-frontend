@@ -216,6 +216,9 @@ export default function MeuPerfil() {
   const stats = perfil.stats || {};
   const nomeMostrar = nomeExibicao(u);
   // O `creditos` (avatar_ia_creditos) saiu com o teaser de IA — só ele o lia.
+  // Rodada 12C: o time principal (o primeiro da lista) é o que dá a vitrine —
+  // com mais de um, é o mesmo critério que o Início já usa para o campeonato.
+  const vitrineSlug = teams[0]?.slug || null;
 
   return (
     <div className="app-shell">
@@ -268,6 +271,23 @@ export default function MeuPerfil() {
           <span>·</span>
           <span><b style={{ color: '#fff' }}>{stats.gols ?? 0}</b> gols</span>
         </div>
+
+        {/* RODADA 12C — a vitrine de jogador, a um toque.
+            Estas três estatísticas aqui em cima são o resumo do que a vitrine
+            mostra inteiro (radar, conquistas, histórico, evolução). Até aqui só
+            se chegava lá pelo avatar de outra pessoa no Ranking — a própria
+            vitrine, que é a que interessa mostrar aos amigos, não tinha porta.
+            Só com time: a vitrine vive dentro de um (/equipa/:slug/jogador/:id). */}
+        {vitrineSlug ? (
+          <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 12 }}>
+            <Link to={`/equipa/${vitrineSlug}/jogador/${u.id}`} className="btn hud-corners cta-gold" style={{ flex: 1, textDecoration: 'none' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Icon name="estrela" size={16} />
+                Ver minha vitrine de jogador
+              </span>
+            </Link>
+          </div>
+        ) : null}
 
         {/* A SECÇÃO DE PERSONALIZAR O AVATAR SAIU — o disclosure "Toca no avatar (ou
             aqui) para personalizar →", o teaser de IA, o "Enviar foto" e a galeria

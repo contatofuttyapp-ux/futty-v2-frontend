@@ -5,7 +5,7 @@
 // membership no endpoint (quem não partilha equipa não chega aqui → estado digno).
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { useApi } from '../hooks/useApi';
+import { useApiComCache } from '../hooks/useApiComCache';
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
 import SeloHonra from '../components/SeloHonra';
@@ -103,8 +103,15 @@ export default function JogadorPerfil() {
   const [searchParams] = useSearchParams();
   const { user: eu } = useAuth();
   const [bloqueado, setBloqueado] = useState(false);
-  const { data, loading, error } = useApi(`/api/teams/${slug}/jogador/${userId}`);
-  const { data: selosData } = useApi(`/api/equipas/${slug}/jogador/${userId}/selos`);
+  // RODADA 12C — a vitrine deixa de nascer em branco a cada visita.
+  //
+  // Com o cromo do Início, o botão do Perfil e os autores da Resenha a abrirem
+  // esta tela, ela passou de "uma visita por sessão, vinda do Ranking" a um
+  // destino frequente — e cada abertura pagava a ida inteira a São Paulo antes
+  // de mostrar o que já se sabia. Chave por time+jogador: a vitrine do João não
+  // pode pintar com os dados da Maria enquanto a resposta dela não chega.
+  const { data, loading, error } = useApiComCache(`/api/teams/${slug}/jogador/${userId}`, `jogador:${slug}:${userId}`);
+  const { data: selosData } = useApiComCache(`/api/equipas/${slug}/jogador/${userId}/selos`, `jogador-selos:${slug}:${userId}`);
   const selos = selosData?.selos || [];
   // Nome dourado — 2 variantes p/ o look (?nome=b). A: ouro-heavy c/ bordas quentes;
   // B: ouro quase pleno com pico claro no centro.
@@ -191,7 +198,10 @@ export default function JogadorPerfil() {
 
   return (
     <div className="app-shell page-reveal" style={{ '--vitrine': ROXO }}>
-      <Topbar hud="PERFIL" back={`/equipa/${slug}/ranking`} />
+      {/* Rodada 12C: volta para onde a pessoa estava (Início, Resenha, Perfil,
+          Ranking…). O Ranking fica como destino de quem abriu o link direto e
+          não tem histórico para desfazer. */}
+      <Topbar hud="PERFIL" back="voltar" backFallback={`/equipa/${slug}/ranking`} />
 
       {eu && eu.id !== userId ? (
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 16px 0' }}>

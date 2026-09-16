@@ -1,10 +1,44 @@
 // Futty v2.0 — Barra de topo. Com `back`: chevron "← Voltar". Com `title` (sem back):
 // só o título centrado. Com `hud`: wordmark dourado à esquerda + linha HUD (estilo
 // circuito). Sem nenhum: logo F flat (fallback de marca). Linha gradiente por baixo.
+//
+// RODADA 12C — `back` passa a aceitar a string 'voltar' além de uma URL.
+//
+// Com uma URL o chevron é um <Link> para um lugar FIXO, e isso está certo para
+// telas com um pai só (Planos → Perfil). Deixou de estar para a vitrine do
+// jogador, que agora se abre de quatro sítios: voltar sempre para o Ranking
+// mandava para uma tela onde a pessoa nunca esteve.
+//
+// Com 'voltar' o chevron vira um <button> que desfaz o último passo do
+// histórico. Quem chega por link direto (sem histórico interno) não tem passo
+// para desfazer — aí vale o `backFallback`, e sem ele o Início.
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import FuttyLogo from './FuttyLogo';
+
+/** O chevron de voltar: <Link> para uma URL, ou <button> que desfaz um passo. */
+function BotaoVoltar({ back, backFallback, className, style, size }) {
+  const navigate = useNavigate();
+  if (back !== 'voltar') {
+    return (
+      <Link to={back} className={className} aria-label="Voltar" style={style}>
+        <ChevronLeft size={size} />
+      </Link>
+    );
+  }
+  // `location.key` é 'default' quando esta é a PRIMEIRA entrada do histórico
+  // desta aba — ou seja, a pessoa abriu o link direto e não há para onde voltar.
+  const desfazer = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate(backFallback || '/home', { replace: true });
+  };
+  return (
+    <button type="button" onClick={desfazer} className={className} aria-label="Voltar" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', ...style }}>
+      <ChevronLeft size={size} />
+    </button>
+  );
+}
 
 // Variante HUD: wordmark dourado + linha dourada com um degrau de 45° na base.
 // O degrau é COLADO ao fim do texto (não um x fixo): mede-se o fim do wordmark
@@ -12,7 +46,7 @@ import FuttyLogo from './FuttyLogo';
 // O FUNDO PRETO é recortado com a MESMA geometria da linha → a linha é a fronteira
 // real entre o preto (acima) e o que está atrás (abaixo). Recalcula em resize e
 // quando as fontes carregam. Robusto a qualquer título (não só "FIGURINHA").
-function HudTopbar({ hud, back }) {
+function HudTopbar({ hud, back, backFallback }) {
   const svgRef = useRef(null);
   const textRef = useRef(null);
   const [stepX, setStepX] = useState(128); // unidades do viewBox (default até medir)
@@ -90,9 +124,7 @@ function HudTopbar({ hud, back }) {
             O degrau é medido a partir do fim do wordmark, por isso continua a colar-se
             ao título mesmo com o chevron a empurrá-lo para a direita. */}
         {back ? (
-          <Link to={back} className="topbar-back" aria-label="Voltar" style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', marginRight: 4 }}>
-            <ChevronLeft size={20} />
-          </Link>
+          <BotaoVoltar back={back} backFallback={backFallback} className="topbar-back" size={20} style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', marginRight: 4 }} />
         ) : null}
         <span
           ref={textRef}
@@ -133,16 +165,14 @@ function HudTopbar({ hud, back }) {
   );
 }
 
-export default function Topbar({ title = null, back = null, hud = null }) {
-  if (hud) return <HudTopbar hud={hud} back={back} />;
+export default function Topbar({ title = null, back = null, hud = null, backFallback = null }) {
+  if (hud) return <HudTopbar hud={hud} back={back} backFallback={backFallback} />;
 
   return (
     <div className="app-topbar-wrap">
       <header className="app-topbar">
         {back ? (
-          <Link to={back} className="topbar-back" aria-label="Voltar">
-            <ChevronLeft size={22} />
-          </Link>
+          <BotaoVoltar back={back} backFallback={backFallback} className="topbar-back" size={22} />
         ) : !title ? (
           <Link to="/home" aria-label="Início" style={{ display: 'flex', alignItems: 'center' }}>
             <FuttyLogo variant="flat" size={36} />

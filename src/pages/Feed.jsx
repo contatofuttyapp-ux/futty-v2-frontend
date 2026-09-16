@@ -2,6 +2,7 @@
 // Jogos passados com resultado + posts editoriais. Sem Topbar (título no conteúdo).
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { Camera, ExternalLink, Eye, Link2, Music2, Play, Share2, Video } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import { urlImagem } from '../utils/avatar';
@@ -74,6 +75,19 @@ function timeCampeao(j) {
   const idx = j?.campeao_time_index;
   if (idx == null || idx < 0 || idx >= times.length) return null;
   return times[idx];
+}
+
+// RODADA 12C — envolve o que estiver dentro num link para a vitrine do jogador.
+// Sem `teamSlug` ou sem `userId` não há rota possível: devolve o conteúdo cru,
+// e a Resenha fica exactamente como era. É o mesmo destino que o avatar do
+// Ranking já abria — o que mudou é ter mais uma porta para ele.
+function LinkVitrine({ teamSlug, userId, style, children }) {
+  if (!teamSlug || !userId) return <span style={style}>{children}</span>;
+  return (
+    <Link to={`/equipa/${teamSlug}/jogador/${userId}`} style={style} aria-label="Ver a vitrine deste jogador">
+      {children}
+    </Link>
+  );
 }
 
 // ─── Avatar — moldura V1 do cânone (.avatar-frame), única na página ────────────
@@ -446,10 +460,18 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
     <div className="anim-slide-in feed-card" style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
       {/* A) HEADER */}
       <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <FeedAvatar nome={p.author_nome} avatarUrl={p.author_avatar_url} size={40} />
+        {/* RODADA 12C — avatar e nome abrem a vitrine do autor, como já
+            acontecia no Ranking. Só com `teamSlug`: a vitrine vive dentro de um
+            time, e sem ele não há rota. Sem slug ficam como eram, texto seco —
+            um nome que não leva a lado nenhum é melhor do que um link morto. */}
+        <LinkVitrine teamSlug={teamSlug} userId={p.author_id} style={{ lineHeight: 0, flexShrink: 0 }}>
+          <FeedAvatar nome={p.author_nome} avatarUrl={p.author_avatar_url} size={40} />
+        </LinkVitrine>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 800, color: '#fff', fontSize: 14 }}>{p.author_nome || 'Membro'}</span>
+            <LinkVitrine teamSlug={teamSlug} userId={p.author_id} style={{ fontWeight: 800, color: '#fff', fontSize: 14, textDecoration: 'none' }}>
+              {p.author_nome || 'Membro'}
+            </LinkVitrine>
             {p.team_name ? (
               <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#b69cff', background: 'rgba(124,58,237,0.18)', border: '1px solid var(--purple)', padding: '2px 8px' }}>
                 {p.team_name}

@@ -815,6 +815,15 @@ export default function Inicio() {
 
   const noTeams = !teamsLoading && teams.length === 0;
 
+  // Rodada 12C: para onde o cromo leva. A vitrine vive DENTRO de um time (a
+  // rota é /equipa/:slug/jogador/:id), por isso só existe com time e com
+  // sessão carregada; até lá, a Figurinha continua a ser um destino honesto.
+  const destinoCromo = noTeams
+    ? { to: '/criar-equipa', label: 'Criar meu time' }
+    : campSlug && user?.id
+      ? { to: `/equipa/${campSlug}/jogador/${user.id}`, label: 'Ver minha vitrine de jogador' }
+      : { to: '/figurinha', label: 'Ver e personalizar minha figurinha' };
+
   // Desfechos dos meus pedidos de entrada (aceite/recusado) — ciclo v1 sem push.
   // Sincronizado DURANTE o render a partir de /api/inicio (carga inicial +
   // reload()) — mesmo padrão de MeuPerfil.jsx, não num efeito; as ações abaixo
@@ -1050,7 +1059,14 @@ export default function Inicio() {
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px', paddingTop: 'var(--space-lg)' }}>
           <div className="inicio-vline" aria-hidden="true" />
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            <CromoInicio cromo={cromo} previa={previaCromo} fundo={cromoFundo} nome={nome} refCromo={refCromo} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar meu time' : 'Ver e personalizar minha figurinha'} />
+            {/* RODADA 12C — o cromo abre a VITRINE, não a oficina.
+                O cromo é o retrato da pessoa como jogadora; o destino natural
+                de tocar nele é a página que mostra o que ela fez (nota, gols,
+                conquistas), a mesma que se abre pelo avatar no Ranking. Editar
+                a figurinha continua a um toque, na aba Figurinha da barra de
+                baixo. Sem time não há vitrine (ela vive dentro de um time): aí
+                o destino é a Figurinha, e sem conta nenhuma, criar o time. */}
+            <CromoInicio cromo={cromo} previa={previaCromo} fundo={cromoFundo} nome={nome} refCromo={refCromo} destino={destinoCromo.to} destinoLabel={destinoCromo.label} />
             {/* Trocar visual — só quando o card veste o genérico (sem avatar IA). */}
             {!cromoAvatarEhIA ? (
               <button

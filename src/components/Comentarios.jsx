@@ -415,10 +415,31 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
     return (
       <>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Avatar nome={c.author_nome} avatarUrl={c.author_avatar_url} size={40} />
+          {/* RODADA 12C — avatar e nome abrem a vitrine do autor. O caminho já
+              existia (irParaPerfil, usado nas menções @); o que faltava era a
+              porta mais óbvia. Sem `teamSlug` o irParaPerfil não navega, então
+              fica um clique inerte em vez de um link partido. */}
+          <span
+            role={teamSlug ? 'button' : undefined}
+            tabIndex={teamSlug ? 0 : undefined}
+            aria-label={teamSlug ? 'Ver a vitrine deste jogador' : undefined}
+            onClick={() => irParaPerfil(c.author_id)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); irParaPerfil(c.author_id); } }}
+            style={{ lineHeight: 0, flexShrink: 0, cursor: teamSlug ? 'pointer' : 'default' }}
+          >
+            <Avatar nome={c.author_nome} avatarUrl={c.author_avatar_url} size={40} />
+          </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-              <span style={{ fontWeight: 800, color: '#fff', fontSize: 13 }}>{c.author_nome || 'Membro'}</span>
+              <span
+                role={teamSlug ? 'button' : undefined}
+                tabIndex={teamSlug ? 0 : undefined}
+                onClick={() => irParaPerfil(c.author_id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); irParaPerfil(c.author_id); } }}
+                style={{ fontWeight: 800, color: '#fff', fontSize: 13, cursor: teamSlug ? 'pointer' : 'default' }}
+              >
+                {c.author_nome || 'Membro'}
+              </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, position: 'relative' }}>
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{haQuantoTempo(c.created_at)}</span>
                 {podeApagar || podeDenunciar ? (
