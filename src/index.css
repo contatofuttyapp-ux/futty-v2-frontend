@@ -15,16 +15,16 @@
   --border: #222222;
   --radius: 16px;
 
-  /* Presença — "Vou" / "Não vou" (Rodada 12A, decisão do dono).
-     Verde e vermelho saturados saíram de vez: num app que é dourado e roxo, um
-     par de semáforo lê-se como alerta de sistema, não como a escolha de quem
-     vai jogar bola. O sim veste o dourado da casa (o mesmo do "Votar"); o não
-     recua para fantasma, com a borda rosa apagada — dizer que não é uma
-     resposta legítima, não um erro. */
-  --presenca-sim: #d4a017;
-  --presenca-sim-fundo: rgba(30, 24, 8, 0.9);
-  --presenca-sim-texto: #f0c94a;
-  --presenca-sim-ativo-texto: #1a1405;
+  /* Presença — "Vou" / "Não vou" (Rodada 12A → revertido na Rodada 13,
+     decisão do dono, build 22). O "Vou" dourado durou uma rodada: o dourado
+     tinha de ser único e forte, e o "Ver sorteio"/"Sortear" — a ação mais
+     importante do app — é quem precisa dele, não um botão de presença. O
+     "Vou" vira fantasma VERDE, o gémeo exato do "Não vou" vermelho: mesma
+     opacidade (0.45 na borda, 0.15 no preenchimento), mesmo peso — só troca a
+     cor. Nenhum dos dois pode ler-se como semáforo saturado nem como dourado. */
+  --presenca-sim-borda: rgba(74, 222, 128, 0.45);
+  --presenca-sim-fundo: rgba(74, 222, 128, 0.15);
+  --presenca-sim-texto: #4ade80;
   --presenca-nao-borda: rgba(248, 113, 113, 0.45);
   --presenca-nao-fundo: rgba(248, 113, 113, 0.15);
   --presenca-nao-texto: #f87171;

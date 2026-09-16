@@ -15,7 +15,9 @@ function formatarPrazo(iso) {
 // do "Vou"/"Não vou" do card de jogo. O verde #16a34a e o vermelho #dc2626 que
 // estavam aqui saíram: num app dourado e roxo o par de semáforo lê-se como
 // alerta de sistema. Dizer que não é uma resposta legítima, não um erro — por
-// isso o "Não vou" é fantasma, e não um botão vermelho a gritar.
+// isso os dois são fantasma, e não um botão saturado a gritar. RODADA 13: o
+// "Vou" deixou de ser dourado (agora é só do "Ver sorteio"/"Sortear") e passou
+// a usar a MESMA receita do "Não vou" — só a cor muda.
 const BASE_BOTAO = {
   flex: 1,
   height: 42,
@@ -28,9 +30,9 @@ const BASE_BOTAO = {
 function botaoSim(sel) {
   return {
     ...BASE_BOTAO,
-    border: '1px solid var(--presenca-sim)',
-    background: sel ? 'var(--presenca-sim)' : 'var(--presenca-sim-fundo)',
-    color: sel ? 'var(--presenca-sim-ativo-texto)' : 'var(--presenca-sim-texto)',
+    border: '1px solid var(--presenca-sim-borda)',
+    background: sel ? 'var(--presenca-sim-fundo)' : 'transparent',
+    color: sel ? 'var(--presenca-sim-texto)' : 'var(--text-dim)',
   };
 }
 

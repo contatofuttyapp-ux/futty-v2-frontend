@@ -2426,10 +2426,9 @@
   flex: 1;
 }
 
-/* .pulse-glow é o mesmo par para qualquer botão com cantos a 45° fora da linha
-   de presença — o "Ver sorteio" e o "Sortear" da Rodada 12A. Põe-se num wrapper
-   à volta do botão, que leva o .pulse-active. */
-.pbtn-pulse,
+/* .pulse-glow é o mesmo par para qualquer botão dourado com cantos a 45° fora
+   da linha de presença — o "Ver sorteio" e o "Sortear". Põe-se num wrapper à
+   volta do botão, que leva o .pulse-active. */
 .pulse-glow {
   animation: pulseGlowDourado 2.6s ease-in-out infinite;
 }
@@ -2437,6 +2436,19 @@
 @keyframes pulseGlowDourado {
   0%, 100% { filter: drop-shadow(0 0 4px rgba(212, 160, 23, 0.2)); }
   50%      { filter: drop-shadow(0 0 10px rgba(212, 160, 23, 0.5)); }
+}
+
+/* RODADA 13 — o "Vou" perde o dourado (ver --presenca-* em index.css): o glow
+   do wrapper segue o mesmo verde da borda/preenchimento. Classe própria (não
+   .pulse-glow) porque é o único wrapper de presença que pulsa — "Não vou" é
+   fantasma parado. */
+.pbtn-pulse {
+  animation: pulseGlowVerde 2.6s ease-in-out infinite;
+}
+
+@keyframes pulseGlowVerde {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.2)); }
+  50%      { filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.5)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2466,19 +2478,19 @@
   cursor: default;
 }
 
-/* RODADA 12A — a paleta de presença (ver --presenca-* em index.css). Por
-   escolher, o "Vou" já é dourado: é a receita do "Votar" do Ranking, e dourado
-   por escolher é o que faz a acção principal saltar da linha. */
+/* RODADA 13 (decisão do dono, build 22) — o "Vou" perde o dourado: no card o
+   dourado passa a ser só o "Ver sorteio"/"Sortear", a ação mais importante.
+   "Vou" vira fantasma verde, o gémeo exato do "Não vou" (ver --presenca-* em
+   index.css) — mesma receita, cores trocadas. */
 .pbtn--go {
-  background: var(--presenca-sim-fundo);
-  border-color: var(--presenca-sim);
-  color: var(--presenca-sim-texto);
+  border-color: var(--presenca-sim-borda);
+  color: var(--text-dim);
 }
 
 .pbtn--go.active {
-  background: var(--presenca-sim);
-  color: var(--presenca-sim-ativo-texto);
-  border-color: var(--presenca-sim);
+  background: var(--presenca-sim-fundo);
+  color: var(--presenca-sim-texto);
+  border-color: var(--presenca-sim-borda);
 }
 
 /* O "Não vou" é fantasma: o texto fica apagado e só a borda diz de que resposta
@@ -2492,6 +2504,22 @@
   background: var(--presenca-nao-fundo);
   color: var(--presenca-nao-texto);
   border-color: var(--presenca-nao-borda);
+}
+
+/* O .pulse-active do "Vou" (ver .pbtn-slot mais abaixo) também é dourado por
+   omissão (heroicPulse, usado nos blocos de prémio e no pódio) — aqui, mais
+   específico, ganha a variante verde só para este botão. */
+.pbtn--go.pulse-active {
+  animation: heroicPulseVerde 2.6s ease-in-out infinite;
+}
+
+@keyframes heroicPulseVerde {
+  0%, 100% { box-shadow: 0 0 8px rgba(74, 222, 128, 0.2); border-color: rgba(74, 222, 128, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(74, 222, 128, 0.5), 0 0 40px rgba(74, 222, 128, 0.2); border-color: rgba(74, 222, 128, 0.7); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pbtn--go.pulse-active { animation: none; }
 }
 
 .gcard__drawn {
