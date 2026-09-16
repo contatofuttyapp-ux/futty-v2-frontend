@@ -1789,6 +1789,28 @@
   filter: drop-shadow(0 1% 6% rgba(0, 0, 0, 0.9));
 }
 
+/* RODADA 12A — o lugar do cromo enquanto o avatar ainda não decodificou. Só a
+   silhueta octogonal e o fundo escolhido: SEM a moldura dourada, porque uma
+   moldura sozinha lê-se como cromo partido — o defeito que esta rodada corrige.
+   Mesma área e mesmo recorte da .cromo-previa, para a composição não saltar
+   quando entrar. */
+.cromo-previa__reserva {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(8% 0, 92% 0, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0 92%, 0 8%);
+  background-size: cover;
+  background-position: 50% 22%;
+}
+
+/* A silhueta da casa quando a foto passou do prazo (ver PRAZO_AVATAR_MS). Ocupa
+   o lugar do avatar, centrada; a foto substitui-a quando chegar. */
+.cromo-previa__silhueta {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
 /* Gradiente inferior do retrato quadrado (0.84→1, alpha 0.55), como no canvas. */
 .cromo-previa__pe {
   position: absolute;

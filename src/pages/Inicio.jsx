@@ -21,6 +21,7 @@ import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
 import ProductTour from '../components/ProductTour';
 import LoadingFutty from '../components/LoadingFutty';
+import SilhuetaJogador from '../components/SilhuetaJogador';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
@@ -116,35 +117,77 @@ function fundoDaPrevia(fundo) {
 }
 
 // A PRÉVIA — o cromo inteiro composto em DOM, pronto na primeira pintura.
-// O avatar é medido quando carrega e posicionado com a conta do canvas
-// (enquadrarAvatar), em percentagens: assim os dois põem o jogador no mesmo
-// sítio e a troca da prévia pelo cromo desenhado não salta.
+// O avatar é medido e posicionado com a conta do canvas (enquadrarAvatar), em
+// percentagens: assim os dois põem o jogador no mesmo sítio e a troca da prévia
+// pelo cromo desenhado não salta.
+//
+// RODADA 12A (16-set) — a composição entra INTEIRA, num quadro só.
+//
+// Até aqui a moldura dourada pintava no primeiro quadro e o avatar entrava
+// depois, no onLoad: no aparelho isso é uma moldura vazia à espera de uma cara,
+// e foi o que o Pedro viu no build 21. Agora nada da composição vai à tela antes
+// de a imagem estar DECODIFICADA — decode(), não onLoad: o onLoad garante os
+// bytes, não os pixéis prontos a desenhar, e é entre um e outro que o WebKit
+// segura o quadro. Até lá fica só a área reservada com o fundo escolhido: o
+// mesmo lugar, o mesmo tamanho, sem forma pela metade.
+//
+// Se a foto não chegar em PRAZO_AVATAR_MS, a composição aparece na mesma com a
+// silhueta da casa (SVG, não espera rede nenhuma) e a foto entra quando chegar.
+// Uma espera sem fim não é transição, é defeito — a mesma lição da Velocidade 5.
+const PRAZO_AVATAR_MS = 1500;
+
 function PreviaCromo({ previa, fundo }) {
-  const [caixa, setCaixa] = useState(null);
-  const medir = (img) => {
-    if (!img?.naturalWidth) return;
-    // W=H=100 → o resultado já vem em percentagem do lado do cromo.
-    const { dx, dy, dw, dh } = enquadrarAvatar({
-      W: 100, H: 100, nw: img.naturalWidth, nh: img.naturalHeight, avatarZoom: 1.1, ehQuadrado: true,
-    });
-    setCaixa({ left: `${dx}%`, top: `${dy}%`, width: `${dw}%`, height: `${dh}%` });
-  };
+  const [avatar, setAvatar] = useState(null);
+  const [semEspera, setSemEspera] = useState(!previa);
+  // Prévia nova (a pessoa trocou o avatar genérico): volta à área reservada.
+  // Ajuste DURANTE o render — o padrão oficial do React para estado derivado de
+  // props, o mesmo que o useListaProgressiva usa. Num efeito corria tarde de
+  // mais e a composição antiga chegava a pintar com a foto errada.
+  const [vista, setVista] = useState(previa);
+  if (vista !== previa) {
+    setVista(previa);
+    setAvatar(null);
+    setSemEspera(!previa);
+  }
+
+  useEffect(() => {
+    if (!previa) return undefined;
+    let vivo = true;
+    const prazo = setTimeout(() => { if (vivo) setSemEspera(true); }, PRAZO_AVATAR_MS);
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = previa;
+    // decode() rejeita em imagem quebrada; aí vale a silhueta, como no prazo.
+    img.decode()
+      .then(() => {
+        if (!vivo || !img.naturalWidth) return;
+        // W=H=100 → o resultado já vem em percentagem do lado do cromo.
+        const { dx, dy, dw, dh } = enquadrarAvatar({
+          W: 100, H: 100, nw: img.naturalWidth, nh: img.naturalHeight, avatarZoom: 1.1, ehQuadrado: true,
+        });
+        setAvatar({ left: `${dx}%`, top: `${dy}%`, width: `${dw}%`, height: `${dh}%` });
+      })
+      .catch(() => { if (vivo) setSemEspera(true); });
+    return () => { vivo = false; clearTimeout(prazo); };
+  }, [previa]);
+
+  if (!avatar && !semEspera) {
+    return <div className="cromo-previa__reserva" style={fundoDaPrevia(fundo)} aria-hidden="true" />;
+  }
+
   return (
     <div className="cromo-previa" aria-hidden="true">
       <div className="cromo-previa__dentro">
         <div className="cromo-previa__fundo" style={fundoDaPrevia(fundo)} />
-        {previa ? (
-          <img
-            src={previa}
-            alt=""
-            decoding="async"
-            fetchpriority="high"
-            loading="eager"
-            className="cromo-previa__avatar"
-            style={caixa || { opacity: 0 }}
-            onLoad={(e) => medir(e.currentTarget)}
-          />
-        ) : null}
+        {avatar ? (
+          // decoding="sync": os pixéis já estão decodificados acima, então este
+          // <img> pinta no mesmo quadro em que a moldura aparece.
+          <img src={previa} alt="" decoding="sync" className="cromo-previa__avatar" style={avatar} />
+        ) : (
+          <div className="cromo-previa__silhueta">
+            <SilhuetaJogador size="58%" color="rgba(240,201,74,0.5)" interrogacao={false} />
+          </div>
+        )}
         <div className="cromo-previa__pe" />
       </div>
     </div>
