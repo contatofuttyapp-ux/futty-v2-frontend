@@ -63,11 +63,13 @@ export function primeiraAberturaDaVersao() {
  * está a usar o app, isto simplesmente não corre, e é assim que tem de ser.
  *
  * @param {() => void} fn
- * @param {{ paradoMs?: number, contarVersaoNova?: boolean }} [opts]
+ * @param {{ paradoMs?: number, contarVersaoNova?: boolean, aoAgendar?: (esperaMs: number) => void }} [opts]
  *   contarVersaoNova: na 1ª abertura de um build novo, espera mais 5 s.
+ *   aoAgendar: recebe a espera calculada. Serve ao diagnóstico, para o relatório
+ *   saber distinguir "não correu" de "está à espera, e isso é o esperado".
  * @returns {() => void} cancela o agendamento.
  */
-export function quandoParado(fn, { paradoMs = PARADO_MS, contarVersaoNova = true } = {}) {
+export function quandoParado(fn, { paradoMs = PARADO_MS, contarVersaoNova = true, aoAgendar = null } = {}) {
   if (typeof window === 'undefined') {
     fn();
     return () => {};
@@ -77,6 +79,7 @@ export function quandoParado(fn, { paradoMs = PARADO_MS, contarVersaoNova = true
   let largarGestos = null;
 
   const espera = paradoMs + (contarVersaoNova && primeiraAberturaDaVersao() ? EXTRA_VERSAO_NOVA_MS : 0);
+  aoAgendar?.(espera);
 
   const cancelar = () => {
     cancelado = true;

@@ -16,7 +16,7 @@
 //   · qualquer falha é silenciosa — isto é adiantamento, nunca uma dependência.
 import { apiFetch } from './api';
 import { gravarCache, lerCacheComIdade } from './cacheLocal';
-import { marcarPreaquecimento, registarPreaquecimento } from './diagnostico';
+import { marcarPreaquecimento, registarPreaquecimento, marcarPreaquecimentoAgendado } from './diagnostico';
 import { esperarSeOcupado, quandoParado, respirar } from './ritmo';
 import { urlImagem } from '../utils/avatar';
 
@@ -186,5 +186,5 @@ export function preaquecer(userId, dadosInicio) {
     const imagens = await emLotes(tarefas, IMAGENS_EM_PARALELO);
     marcarPreaquecimento(false);
     registarPreaquecimento({ itens, imagens, ms: Date.now() - t0 });
-  });
+  }, { aoAgendar: marcarPreaquecimentoAgendado });
 }

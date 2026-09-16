@@ -80,12 +80,37 @@ function linhaDeFases(t) {
 }
 
 // Velocidade 8 — "arranque: compilação a ms, React b ms, Início c ms".
+// Fluidez 2 — diz também POR ONDE o app entrou: 1200 ms a abrir direto no
+// Início e 18000 ms a passar pelo login são números de coisas diferentes.
 function linhaDeArranque(a) {
   if (!a || a.compilacaoMs == null) return null;
   const partes = [`compilação ${a.compilacaoMs} ms`];
   if (a.reactMs != null) partes.push(`React ${a.reactMs} ms`);
   if (a.inicioMs != null) partes.push(`Início ${a.inicioMs} ms`);
-  return `Arranque: ${partes.join(', ')}`;
+  const por = a.entrouPor && a.entrouPor !== '/home' ? ` (entrou por ${rotaCurta(a.entrouPor)})` : '';
+  return `Arranque: ${partes.join(', ')}${por}`;
+}
+
+// Fluidez 2 — "cromo: fases". O canvas da figurinha, por cenário: quanto somou e
+// qual foi a fase mais cara. É o que transforma "a figurinha demora" em algo que
+// aponta para um conserto.
+function linhasDoCromo(cromo) {
+  const entradas = Object.entries(cromo || {});
+  if (!entradas.length) return null;
+  return entradas
+    .sort((a, b) => b[1].somaMs - a[1].somaMs)
+    .map(([cenario, v]) => `${cenario}: ${v.somaMs} ms (pior ${v.piorFase} ${v.piorMs} ms)`);
+}
+
+// Fluidez 2 — o pré-aquecimento pode não ter corrido POR BOM MOTIVO (a pessoa
+// não parou de tocar). "null" lia-se como defeito; agora diz-se o que é.
+function linhaDePreaquecimento(p) {
+  if (!p) return null;
+  if (p.estado) {
+    const previsto = p.previstoEmMs != null ? `, previsto aos ${(p.previstoEmMs / 1000).toFixed(1)}s` : '';
+    return `Adiantamento em segundo plano: ${p.estado} — precisa de ${(p.esperaMs / 1000).toFixed(1)}s sem toque${previsto}`;
+  }
+  return `Adiantou em segundo plano: ${p.itens} telas e ${p.imagens} imagens (${(p.ms / 1000).toFixed(1)}s)`;
 }
 
 // Rota sem a query, e encurtada pela ponta ESQUERDA: o que distingue
@@ -233,14 +258,29 @@ export default function Diagnostico() {
                 ) : null}
               </>
             ) : null}
-            {preaquecimento ? (
+            {linhaDePreaquecimento(preaquecimento) ? (
               <>
                 <br />
-                Adiantou em segundo plano: {preaquecimento.itens} telas e {preaquecimento.imagens} imagens ({(preaquecimento.ms / 1000).toFixed(1)}s)
+                {linhaDePreaquecimento(preaquecimento)}
               </>
             ) : null}
           </div>
         </div>
+
+        {/* ─── Fases do cromo (FLUIDEZ 2) ─── */}
+        {linhasDoCromo(resumo.cromo) ? (
+          <div>
+            <div className="games-label">Cromo: fases</div>
+            <div className="hud-corners-s" style={{ ...CARTAO, display: 'grid', gap: 6 }}>
+              <div style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--text-dim)' }}>
+                O canvas da figurinha, por fundo: quanto somou e qual foi a fase mais cara.
+              </div>
+              {linhasDoCromo(resumo.cromo).map((linha) => (
+                <div key={linha} style={{ fontSize: 12, lineHeight: 1.5, wordBreak: 'break-word' }}>{linha}</div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {/* ─── Falhas silenciosas (VELOCIDADE 5) ─── */}
         {falhas.length > 0 ? (

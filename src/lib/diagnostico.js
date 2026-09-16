@@ -94,9 +94,27 @@ export function marcarDadosDaTela() {
   }
 }
 
+// FLUIDEZ 2 (16-set) — a PRIMEIRA ida ao Início desta abertura.
+//
+// A Velocidade 8 protegia o `arranque.inicioMs` com uma janela de 10 s, para um
+// regresso ao Início lá mais à frente não ser contado como arranque. Só que a
+// janela apanhava o caso certo pelo motivo errado: quem abre o app em `/login`
+// (ou em `/`, com redireccionamento) leva mais de 10 s a chegar ao Início — o
+// tempo de escrever a senha conta — e o relatório vinha com "Início —", que é
+// justamente o número que se queria.
+//
+// O que distingue o arranque de um regresso não é o relógio, é a ORDEM: o
+// arranque é a primeira vez que se NAVEGA para o Início. Se essa primeira vez
+// não chegou a pintar (a pessoa saiu antes), não se marca nada — melhor sem
+// número do que com um número de outra coisa.
+let jaHouveInicio = false;
+
 /** Mudança de rota — o relógio do "toque" parte aqui. */
 export function marcarNavegacao(rota) {
-  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null, quadroAnterior: null };
+  const primeiraIdaAoInicio = rota === '/home' && !jaHouveInicio;
+  if (rota === '/home') jaHouveInicio = true;
+  if (arranque.entrouPor == null) arranque.entrouPor = rota;
+  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null, quadroAnterior: null, primeiraIdaAoInicio };
   // Largura: nem todo transbordo dispara resize — mede também 1 s e 3 s depois
   // de cada troca de tela, quando os dados e as imagens já assentaram.
   if (typeof window !== 'undefined') {
@@ -227,7 +245,10 @@ function ligarMedidorDeQuadros() {
 // COMPILAÇÃO de tudo o que está no modulepreload. É o custo que o Pedro sente
 // na primeira abertura depois de instalar/atualizar, quando o WebKit ainda não
 // tem cache de bytecode nenhum.
-const arranque = { compilacaoMs: null, reactMs: null, inicioMs: null };
+// `entrouPor` (Fluidez 2): a rota em que o app abriu. Sem ela o `inicioMs` é
+// ambíguo — 1200 ms a abrir direto no Início e 18000 ms a passar pelo login são
+// números de coisas diferentes, e o relatório tem de dizer qual é qual.
+const arranque = { compilacaoMs: null, reactMs: null, inicioMs: null, entrouPor: null };
 
 /** Chamado na 1ª linha do main.jsx. Também liga o medidor de travadas. */
 export function marcarArranque(ms) {
@@ -386,13 +407,8 @@ export function marcarPintura() {
   // aposPrimeiraPintura). E se essa tela for o Início, o instante fica no
   // arranque: é o "c ms" do resumo.
   //
-  // Só DENTRO da janela de arranque. Sem esta guarda o número mentia: se a
-  // pessoa sai do Início antes de ele pintar (ou entra o app por outra rota), a
-  // marca calhava na visita SEGUINTE ao Início e o resumo dizia "Início 12608
-  // ms" — que não é o arranque de coisa nenhuma. Apanhado a medir isto no
-  // WebKit. Fora da janela, o Início é uma navegação como as outras e aparece na
-  // lista de telas; aqui fica "—", que é a verdade.
-  if (arranque.inicioMs == null && nav.rota === '/home' && performance.now() < FASE_ARRANQUE_MS) {
+  // Fluidez 2: quem manda é a ORDEM, não o relógio (ver primeiraIdaAoInicio).
+  if (arranque.inicioMs == null && nav.primeiraIdaAoInicio) {
     arranque.inicioMs = Math.round(performance.now());
   }
   anunciarPrimeiraPintura();
@@ -413,10 +429,40 @@ export function marcarPintura() {
 // ─── Velocidade 6B (15-set) ──────────────────────────────────────────────────
 
 let preaquecimento = null;
+let preaquecimentoEspera = null;
 
 /** Regista o resultado do pré-aquecimento em segundo plano (uma vez por sessão). */
 export function registarPreaquecimento({ itens, imagens, ms }) {
   preaquecimento = { itens, imagens, ms, em: new Date().toISOString() };
+}
+
+/**
+ * O pré-aquecimento foi AGENDADO e está à espera de o aparelho parar (FLUIDEZ 2).
+ *
+ * Sem isto, um relatório enviado enquanto a pessoa mexe na tela vinha com
+ * `preaquecimento: null` — que se lê como "não existe" quando a verdade é
+ * "ainda não correu, e é por bom motivo". São diagnósticos opostos: o primeiro
+ * manda procurar um defeito, o segundo diz que o ritmo está a funcionar.
+ *
+ * @param {number} esperaMs quanto tempo sem gesto é preciso para arrancar.
+ */
+export function marcarPreaquecimentoAgendado(esperaMs) {
+  preaquecimentoEspera = esperaMs;
+}
+
+/** O que dizer sobre o pré-aquecimento no relatório. */
+function lerPreaquecimento() {
+  if (preaquecimento) return preaquecimento;
+  if (preaquecimentoEspera == null) return null;
+  const desdeOGesto = ultimoGesto === -Infinity ? null : Math.round(performance.now() - ultimoGesto);
+  return {
+    estado: 'adiado (toques)',
+    esperaMs: preaquecimentoEspera,
+    desdeOUltimoGestoMs: desdeOGesto,
+    // Quando vai correr, se a pessoa não voltar a tocar. Em ms desde a abertura,
+    // como as outras marcas do arranque.
+    previstoEmMs: ultimoGesto === -Infinity ? null : Math.round(ultimoGesto + preaquecimentoEspera),
+  };
 }
 
 // Imagens do proxy: quantas, quanto tempo, e quantas vieram do cache do browser.
@@ -606,7 +652,7 @@ export function lerDiagnostico() {
       // Fluidez 2: quanto cada fase do canvas custou, por cenário.
       cromo: lerFasesCromo(),
     },
-    preaquecimento,
+    preaquecimento: lerPreaquecimento(),
     chamadas: [...chamadas],
     navegacoes: [...navegacoes],
     falhas: [...falhas],
@@ -620,6 +666,7 @@ export function limparDiagnostico() {
   falhas.length = 0;
   imagens.length = 0;
   preaquecimento = null;
+  preaquecimentoEspera = null;
   navegacaoAberta = null;
   largura = null;
   cromoFases.clear();
