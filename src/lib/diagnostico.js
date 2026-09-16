@@ -505,6 +505,39 @@ export function registarFalha(area, causa, detalhe = null) {
   });
 }
 
+// ─── Fases do cromo (FLUIDEZ 2, 16-set) ──────────────────────────────────────
+// O build 20 mandou `/figurinha dados=8836 ms` e uma travada de 6402 ms na fase
+// "outro" — a composição do cromo do Início. "O canvas é lento" não aponta para
+// conserto nenhum: é preciso saber QUAL fase. Cada composição regista aqui o
+// tempo de cada passo (decodificar o avatar, encher o fundo, os glints, a
+// moldura, o texto, o toBlob) e a tela de Diagnóstico mostra a soma e a mais
+// cara. Guarda-se a PIOR composição de cada cenário, não a última: a que dói é
+// a primeira, com os caches todos frios.
+const cromoFases = new Map(); // cenário -> { somaMs, piorFase, piorMs, fases[] }
+
+export function registarFasesCromo(cenario, fases) {
+  if (!fases?.length) return;
+  // As fases marcadas `detalhe` são um recorte de dentro de outra fase (a maior
+  // fatia de um laço): entram no relatório para se ver, mas não na soma — senão
+  // contavam o mesmo tempo duas vezes.
+  const cronologicas = fases.filter((f) => !f.detalhe);
+  const somaMs = Math.round(cronologicas.reduce((a, f) => a + f.ms, 0));
+  const anterior = cromoFases.get(cenario);
+  if (anterior && anterior.somaMs >= somaMs) return;
+  const pior = cronologicas.reduce((a, f) => (f.ms > a.ms ? f : a), cronologicas[0]);
+  cromoFases.set(cenario, {
+    somaMs,
+    piorFase: pior.fase,
+    piorMs: Math.round(pior.ms),
+    fases: fases.map((f) => ({ fase: f.fase, ms: Math.round(f.ms), ...(f.detalhe ? { detalhe: true } : {}) })),
+  });
+}
+
+/** As fases medidas, por cenário. Lida pela tela de Diagnóstico e pela bancada. */
+export function lerFasesCromo() {
+  return Object.fromEntries([...cromoFases].map(([k, v]) => [k, { ...v, fases: [...v.fases] }]));
+}
+
 /** Guarda a versão/build do app (só existe no nativo). Chamado uma vez. */
 export function definirInfoApp(info) {
   infoApp = info || null;
@@ -570,6 +603,8 @@ export function lerDiagnostico() {
       // Velocidade 8: compilação = HTML + download + execução de tudo o que está
       // no modulepreload; React = 1º commit da árvore; Início = 1ª pintura do /home.
       arranque: { ...arranque },
+      // Fluidez 2: quanto cada fase do canvas custou, por cenário.
+      cromo: lerFasesCromo(),
     },
     preaquecimento,
     chamadas: [...chamadas],
@@ -587,6 +622,7 @@ export function limparDiagnostico() {
   preaquecimento = null;
   navegacaoAberta = null;
   largura = null;
+  cromoFases.clear();
   // As travadas zeram; as marcas do ARRANQUE não — aconteceram uma vez nesta
   // abertura e não voltam a acontecer, zerá-las era perder o número de vez.
   travadas.leves = 0;
