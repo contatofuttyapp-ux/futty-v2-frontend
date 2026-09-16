@@ -236,7 +236,7 @@ export default function Equipa() {
 
             {/* Goleiro ou linha — Rodada 9: um chip só, o próprio jogador decide.
                 Ligado, cada jogo deste time já nasce com você no gol. */}
-            <SecLabel>Sou goleiro neste time: você decide</SecLabel>
+            <SecLabel>Goleiro ou linha: você decide</SecLabel>
             <div style={{ ...VIDRO, clipPath: CLIP, padding: '14px 12px' }}>
               <div className="chips-row" style={{ justifyContent: 'center' }}>
                 <button
