@@ -718,13 +718,16 @@
 
 /* RODADA 12A — o lugar de uma linha do ranking que ainda não montou.
 
-   A altura é a da .rank-row fechada à conta (12px de padding + 48px de avatar +
-   12px + 2px de borda = 74px, com o box-sizing:border-box global): a lista nasce
-   do tamanho final e nada salta quando a linha real ocupa o lugar. Mesmo
-   material e mesmo recorte a 45° das linhas de verdade, só sem conteúdo — um
-   cinza estranho à paleta leria como erro, não como espera. */
+   A altura é a da .rank-row MEDIDA no WebKit do iPhone pela bancada
+   (scripts/ver-iphone.mjs --cenas rodada12a), não calculada: quem manda na
+   altura não é o avatar de 48px, é o .rank-info com as suas duas linhas de texto
+   (nome em Rajdhani + a nota). A cena compara as duas alturas a cada passagem e
+   falha se divergirem — mexer na tipografia da linha pede re-medir aqui.
+
+   Mesmo material e mesmo recorte a 45° das linhas de verdade, só sem conteúdo:
+   um cinza estranho à paleta leria como erro, não como espera. */
 .rank-row-esqueleto {
-  height: 74px;
+  height: 79px;
   background: linear-gradient(0deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02)), var(--bg-elev);
   border: 1px solid var(--border);
   clip-path: polygon(

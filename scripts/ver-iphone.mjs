@@ -1186,6 +1186,320 @@ async function cenaRanking1(navegador, sessao) {
   return [await umaVisitaRanking(navegador, sessao, { comCache: false }), await umaVisitaRanking(navegador, sessao, { comCache: true })];
 }
 
+// ─── Cena "rodada12a" (16-set): as provas dos itens 1 a 6 ─────────────────────
+// Cada item tem um número que decide sozinho se passou, e uma captura ao lado
+// para o Pedro confirmar a olho. Tudo com o service worker bloqueado e as
+// escritas interceptadas — nada desta cena chega ao banco.
+
+// Item 1 — o cromo do Início tem de entrar INTEIRO. O defeito era a moldura
+// dourada a pintar sozinha, à espera de o avatar carregar. Isto amostra a área
+// do cromo a cada 40 ms desde ANTES de o app montar; o número que conta é
+// `molduraSolta`: amostras com a moldura no ecrã e nada dentro. Tem de ser 0.
+function vigiarCromo() {
+  const t0 = performance.now();
+  const amostras = [];
+  window.__futtyCromo = amostras;
+  // VISÍVEL, não "existe no DOM". O código antigo já punha o <img> do avatar na
+  // árvore desde o primeiro quadro, com opacity:0 até o onLoad o medir — medir a
+  // presença dava "0 molduras soltas" também no build 21, que é exactamente o
+  // defeito que esta rodada veio corrigir. Uma prova que não distingue o antes
+  // do depois não prova nada (apanhado ao correr a etiqueta "antes").
+  const visivel = (el) => {
+    if (!el) return false;
+    const cs = getComputedStyle(el);
+    if (cs.opacity === '0' || cs.visibility === 'hidden' || cs.display === 'none') return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 1 && r.height > 1;
+  };
+  const tique = () => {
+    const moldura = document.querySelector('.cromo-previa');
+    const avatar = document.querySelector('.cromo-previa__avatar');
+    const silhueta = document.querySelector('.cromo-previa__silhueta');
+    const temAvatar = visivel(avatar);
+    const temSilhueta = visivel(silhueta);
+    amostras.push({
+      t: Math.round(performance.now() - t0),
+      moldura: visivel(moldura),
+      reserva: visivel(document.querySelector('.cromo-previa__reserva')),
+      avatar: temAvatar,
+      silhueta: temSilhueta,
+      cromoFinal: visivel(document.querySelector('.fig-aura')),
+      // O defeito: a moldura dourada no ecrã, e nada dentro dela.
+      molduraSolta: visivel(moldura) && !temAvatar && !temSilhueta,
+    });
+    if (performance.now() - t0 < 6000) setTimeout(tique, 40);
+  };
+  tique();
+}
+
+async function provaCromo(navegador, sessao) {
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto);
+  await contexto.addInitScript(vigiarCromo);
+  const pagina = await contexto.newPage();
+  const t0 = Date.now();
+  await pagina.goto(`${BASE}/home`, { waitUntil: 'commit' });
+  // As capturas que o item 1 pede: 100, 300 e 600 ms.
+  const capturas = [];
+  for (const ms of [100, 300, 600]) {
+    const falta = ms - (Date.now() - t0);
+    if (falta > 0) await espera(falta);
+    const arquivo = arquivoCaptura(`cromo-${String(ms).padStart(4, '0')}ms`);
+    await pagina.screenshot({ path: arquivo });
+    capturas.push({ ms, real: Date.now() - t0, arquivo: path.relative(RAIZ, arquivo) });
+  }
+  // As três de cima contam do goto, e num arranque frio ainda apanham o F de
+  // carregamento (a sessão e o perfil demoram mais do que 600 ms). Para se VER o
+  // que esta rodada mudou, mais três ancoradas no instante em que a área do
+  // cromo aparece: a primeira é o quadro em que ela nasce.
+  await pagina.waitForSelector('.cromo-previa, .cromo-previa__reserva, .fig-aura', { timeout: 20000 }).catch(() => {});
+  const t1 = Date.now();
+  for (const ms of [0, 150, 400]) {
+    const falta = ms - (Date.now() - t1);
+    if (falta > 0) await espera(falta);
+    const arquivo = arquivoCaptura(`cromo-apos-${String(ms).padStart(4, '0')}ms`);
+    await pagina.screenshot({ path: arquivo });
+    capturas.push({ ms, ancorada: true, real: Date.now() - t1, arquivo: path.relative(RAIZ, arquivo) });
+  }
+  await espera(Math.max(0, 6500 - (Date.now() - t0)));
+  const amostras = await pagina.evaluate(() => window.__futtyCromo || []);
+  await pagina.screenshot({ path: arquivoCaptura('cromo-final') });
+  await contexto.close();
+
+  const comMoldura = amostras.filter((a) => a.moldura);
+  const soltas = amostras.filter((a) => a.molduraSolta);
+  const primeira = (fn) => { const a = amostras.find(fn); return a ? a.t : null; };
+  return {
+    amostras: amostras.length,
+    molduraSolta: soltas.length,
+    msMolduraSolta: soltas.slice(0, 8).map((a) => a.t),
+    primeiraReservaMs: primeira((a) => a.reserva),
+    primeiraMolduraMs: primeira((a) => a.moldura),
+    primeiroAvatarMs: primeira((a) => a.avatar),
+    primeiraSilhuetaMs: primeira((a) => a.silhueta),
+    primeiroCromoFinalMs: primeira((a) => a.cromoFinal),
+    amostrasComMoldura: comMoldura.length,
+    capturas,
+  };
+}
+
+// Lê a animação COMPUTADA de um par wrapper/botão. Não basta a classe estar no
+// DOM: uma regra por baixo, ou o prefers-reduced-motion, deixa-a sem efeito.
+function medirPulso(seletor) {
+  const botao = [...document.querySelectorAll('button')].find((b) => new RegExp(seletor, 'i').test((b.innerText || '').trim()));
+  if (!botao) return null;
+  const wrapper = botao.parentElement;
+  const cs = getComputedStyle(botao);
+  const cw = wrapper ? getComputedStyle(wrapper) : null;
+  const r = botao.getBoundingClientRect();
+  return {
+    texto: botao.innerText.trim().slice(0, 30),
+    classesBotao: botao.className,
+    classesWrapper: wrapper?.className || null,
+    animacaoBotao: cs.animationName,
+    animacaoWrapper: cw?.animationName || null,
+    pulsa: cs.animationName !== 'none' || (cw?.animationName || 'none') !== 'none',
+    naTela: r.top >= 0 && r.bottom <= window.innerHeight && r.width > 0,
+  };
+}
+
+// Itens 2, 3, 4 e 8 — a página do sorteio: o pulso do "Ver sorteio" na página do
+// jogo, a barra de compartilhar e o slot 320×100 depois da cerimónia.
+async function provaSorteio(navegador, sessao, jogo) {
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto);
+  await contexto.addInitScript(`window.__medir = ${medirPulso.toString()}`);
+  // A conta demo não tem campanha ativa e o AdCard não renderiza sem uma: serve-se
+  // aqui a campanha de prévia, para o estado "slot preenchido" existir de facto.
+  await contexto.route('**/api/ads?**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ad: { id: 'previa-12b', texto: 'Chuteira nova para o time inteiro', sub: 'Campanha de prévia da Rodada 12B', cta: 'Ver oferta', link: 'https://exemplo.invalid' } }),
+  }));
+  const pagina = await contexto.newPage();
+  const erros = [];
+  pagina.on('pageerror', (e) => erros.push(e.message));
+
+  // ── Item 2: os botões da página do jogo ──
+  await pagina.goto(`${BASE}/equipa/${TIME}/jogo/${jogo.id}`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('main', { timeout: 30000 });
+  await espera(2500);
+  const botoesJogo = await pagina.evaluate(() => ({
+    verSorteio: window.__medir('^ver sorteio$'),
+    sortear: window.__medir('^sortear'),
+  }));
+  await pagina.screenshot({ path: arquivoCaptura('jogo-botoes') });
+
+  // ── Itens 3, 4: a barra e o slot, antes e depois de a cerimónia acabar ──
+  await pagina.goto(`${BASE}/equipa/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('.smaq', { timeout: 30000 });
+  await espera(2500);
+  const durante = await pagina.evaluate(() => ({
+    barra: !!document.querySelector('.sorteio-barra'),
+    anuncio: !!document.querySelector('[style*="aspect-ratio"]'),
+    somVisivel: (() => { const b = document.querySelector('.somBtn'); if (!b) return null; const r = b.getBoundingClientRect(); return `${Math.round(r.width)}x${Math.round(r.height)}`; })(),
+  }));
+  await pagina.screenshot({ path: arquivoCaptura('sorteio-durante') });
+
+  // "» concluir já" salta a animação; o fim é o mesmo (o finally da cerimónia).
+  const saltar = pagina.locator('.saltar button');
+  if (await saltar.count()) await saltar.click({ force: true }).catch(() => {});
+  await pagina.waitForSelector('.sorteio-barra', { timeout: 25000 }).catch(() => {});
+  await espera(1800);
+
+  const depois = await pagina.evaluate(() => {
+    const barra = document.querySelector('.sorteio-barra');
+    const r = barra?.getBoundingClientRect();
+    const botoes = barra ? [...barra.querySelectorAll('button')].map((b) => {
+      const rb = b.getBoundingClientRect();
+      return { texto: b.innerText.trim().slice(0, 24), naTela: rb.top >= 0 && rb.bottom <= window.innerHeight && rb.width > 0 };
+    }) : [];
+    // O slot IAB: a caixa com aspect-ratio 3.2 dentro do <main>. O WebKit
+    // computa "3.2 / 1" e não "3.2" — comparar com a string crua não achava nada
+    // e dava FALHA num slot que estava lá (apanhado na 1ª passagem desta cena).
+    const slot = [...document.querySelectorAll('main div')].find((d) => /^3\.2(\s*\/\s*1)?$/.test(getComputedStyle(d).aspectRatio));
+    const rs = slot?.getBoundingClientRect();
+    const rotulo = slot?.parentElement?.firstElementChild;
+    return {
+      barra: !!barra,
+      barraFixa: barra ? getComputedStyle(barra).position : null,
+      // Presa à TELA: com a página rolada, o topo da barra tem de continuar a
+      // bater com a altura da janela (é o teste da cena "fixos" da Rodada 9).
+      barraCaixa: r ? { topo: Math.round(r.top), baixo: Math.round(r.bottom), altura: Math.round(r.height) } : null,
+      barraNaTela: r ? r.bottom <= window.innerHeight + 1 && r.top >= 0 : null,
+      botoes,
+      slot: rs ? { largura: Math.round(rs.width), altura: Math.round(rs.height), proporcao: Number((rs.width / rs.height).toFixed(2)) } : null,
+      rotuloSlot: rotulo?.innerText?.trim()?.slice(0, 20) || null,
+      tela: { largura: window.innerWidth, altura: window.innerHeight },
+    };
+  });
+  await pagina.screenshot({ path: arquivoCaptura('sorteio-barra-e-anuncio') });
+
+  // A barra tem de continuar presa com a página rolada.
+  await pagina.evaluate(() => window.scrollBy(0, 400));
+  await espera(500);
+  const rolado = await pagina.evaluate(() => {
+    const r = document.querySelector('.sorteio-barra')?.getBoundingClientRect();
+    return r ? { baixo: Math.round(r.bottom), altura: window.innerHeight, presa: Math.abs(r.bottom - window.innerHeight) <= 2 } : null;
+  });
+  await pagina.screenshot({ path: arquivoCaptura('sorteio-barra-rolada') });
+  await contexto.close();
+  return { botoesJogo, durante, depois, rolado, erros };
+}
+
+// Item 5 — o Ranking nunca mostra lista pela metade: as linhas que faltam ficam
+// como esqueleto. O número que conta é `metade`: amostras em que o total de
+// linhas desenhadas (reais + esqueletos) foi menor que o total do ranking.
+function vigiarRanking() {
+  const t0 = performance.now();
+  const amostras = [];
+  window.__futtyEsqueleto = amostras;
+  const tique = () => {
+    const reais = document.querySelectorAll('.rank-row').length;
+    const esqueletos = document.querySelectorAll('.rank-row-esqueleto').length;
+    if (reais || esqueletos) amostras.push({ t: Math.round(performance.now() - t0), reais, esqueletos, total: reais + esqueletos });
+    if (performance.now() - t0 < 8000) setTimeout(tique, 40);
+  };
+  tique();
+}
+
+async function provaRanking(navegador, sessao) {
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto);
+  await contexto.addInitScript(vigiarRanking);
+  // O time demo tem 12 jogadores e o useListaProgressiva só divide a lista acima
+  // de 15 — com 12, ela entra inteira à primeira e NUNCA há esqueleto nenhum
+  // para medir (a 1ª passagem desta cena deu "0 esqueletos" e era isto, não um
+  // defeito). A resposta é engordada aqui para 24 linhas, que é o tamanho em que
+  // o defeito aparecia no iPhone do Pedro.
+  let engordado = 0;
+  await contexto.route('**/ranking', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const resposta = await route.fetch();
+    const json = await resposta.json().catch(() => null);
+    const lista = json?.ranking;
+    if (!Array.isArray(lista) || !lista.length) return route.fulfill({ response: resposta });
+    const dobrado = [...lista, ...lista.map((p, i) => ({ ...p, user_id: `${p.user_id}-copia`, posicao: lista.length + i + 1 }))];
+    engordado = dobrado.length;
+    return route.fulfill({ response: resposta, json: { ...json, ranking: dobrado } });
+  });
+  const pagina = await contexto.newPage();
+  await pagina.goto(`${BASE}/equipa/${TIME}/ranking`, { waitUntil: 'commit' });
+  await pagina.waitForSelector('.rank-row, .rank-row-esqueleto', { timeout: 30000 });
+  await pagina.screenshot({ path: arquivoCaptura('ranking-esqueleto-cedo') });
+  // As alturas medem-se AGORA, com esqueletos ainda no ecrã: daqui a 8 s já são
+  // todos linhas reais e não haveria com que comparar.
+  const alturas = await pagina.evaluate(() => {
+    const h = (el) => (el ? Math.round(el.getBoundingClientRect().height) : null);
+    return {
+      linhaReal: h(document.querySelector('.rank-row:not(.rank-row--hero)')),
+      esqueleto: h(document.querySelector('.rank-row-esqueleto')),
+    };
+  });
+  await espera(8200);
+  const amostras = await pagina.evaluate(() => window.__futtyEsqueleto || []);
+  await pagina.screenshot({ path: arquivoCaptura('ranking-completo') });
+  await contexto.close();
+
+  const finalTotal = amostras.length ? amostras[amostras.length - 1].total : 0;
+  const comEsqueleto = amostras.filter((a) => a.esqueletos > 0);
+  // "Pela metade": desenhou menos linhas do que a lista tem no fim.
+  const metade = amostras.filter((a) => a.total < finalTotal);
+  return {
+    engordadoPara: engordado,
+    amostras: amostras.length,
+    totalFinal: finalTotal,
+    amostrasComEsqueleto: comEsqueleto.length,
+    maxEsqueletos: amostras.reduce((m, a) => Math.max(m, a.esqueletos), 0),
+    listaPelaMetade: metade.length,
+    msPelaMetade: metade.slice(0, 8).map((a) => `${a.t}ms:${a.total}/${finalTotal}`),
+    primeirasAmostras: amostras.slice(0, 6),
+    alturas,
+  };
+}
+
+// Item 6 — a paleta do Vou / Não vou. Lê as cores COMPUTADAS (o que o olho vê),
+// não as classes: é a única forma de provar que o verde e o vermelho saíram.
+async function provaPresenca(navegador, sessao) {
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto);
+  await contexto.addInitScript(`window.__medir = ${medirPulso.toString()}`);
+  const pagina = await contexto.newPage();
+  await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('.games-label, .home-empty', { timeout: 30000 });
+  await espera(3000);
+  const presenca = await pagina.evaluate(() => {
+    const ler = (el) => {
+      if (!el) return null;
+      const cs = getComputedStyle(el);
+      return { texto: el.innerText.trim().slice(0, 12), cor: cs.color, fundo: cs.backgroundColor, borda: cs.borderColor, classes: el.className };
+    };
+    const rsvp = [...document.querySelectorAll('button')].filter((b) => /^(Vou|Não vou)$/.test((b.innerText || '').trim()));
+    return {
+      cardVou: ler(document.querySelector('.pbtn--go')),
+      cardNao: ler(document.querySelector('.pbtn--no')),
+      // O RSVPCard usa estilos em linha, não as classes .pbtn.
+      rsvp: rsvp.filter((b) => !b.classList.contains('pbtn')).map(ler),
+      verSorteio: window.__medir('^ver sorteio$'),
+    };
+  });
+  const alvo = pagina.locator('.gcard__presence, .pbtn--go').first();
+  if (await alvo.count()) await alvo.scrollIntoViewIfNeeded().catch(() => {});
+  await espera(400);
+  await pagina.screenshot({ path: arquivoCaptura('presenca-vou-nao-vou') });
+  await contexto.close();
+  return presenca;
+}
+
+async function cenaRodada12a(navegador, sessao) {
+  const jogo = await acharJogoSorteado(navegador, sessao);
+  const cromo = await provaCromo(navegador, sessao);
+  const ranking = await provaRanking(navegador, sessao);
+  const presenca = await provaPresenca(navegador, sessao);
+  const sorteio = jogo ? await provaSorteio(navegador, sessao, jogo) : null;
+  return { jogo, cromo, ranking, presenca, sorteio };
+}
+
 mkdirSync(PASTA, { recursive: true });
 const navegador = await webkit.launch();
 try {
@@ -1300,6 +1614,56 @@ try {
       if (v.deFora?.quadrosLongos?.length) console.log(`   quadros > 60 ms: ${v.deFora.quadrosLongos.map((q) => `${q.ms}@${q.emMs}`).join(', ')}`);
       console.log(`   chamadas: ${v.chamadas.join(' | ')}`);
       console.log(`   captura: ${v.captura}${v.erros.length ? ` · erros de JS: ${v.erros.join(' | ')}` : ''}`);
+    }
+  }
+
+  if (CENAS.includes('rodada12a')) {
+    const r = await cenaRodada12a(navegador, sessao);
+    saida.rodada12a = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+
+    const c = r.cromo;
+    console.log('\n[iphone] RODADA 12A · item 1 — cromo do Início inteiro num quadro');
+    console.log(`   ${ok(c.molduraSolta === 0)} · moldura sem avatar nem silhueta: ${c.molduraSolta} de ${c.amostras} amostras${c.msMolduraSolta.length ? ` (aos ${c.msMolduraSolta.join(', ')} ms)` : ''}`);
+    console.log(`   reserva aos ${c.primeiraReservaMs} ms · moldura aos ${c.primeiraMolduraMs} ms · avatar aos ${c.primeiroAvatarMs} ms · silhueta aos ${c.primeiraSilhuetaMs ?? '—'} ms · cromo final aos ${c.primeiroCromoFinalMs ?? '—'} ms`);
+    for (const cap of c.capturas) console.log(`   captura ${cap.ancorada ? `${cap.ms} ms depois de o cromo aparecer` : `${cap.ms} ms do goto`} (real ${cap.real}): ${cap.arquivo}`);
+
+    const k = r.ranking;
+    console.log('\n[iphone] RODADA 12A · item 5 — Ranking sem buracos');
+    const alturaBate = k.alturas.esqueleto != null && k.alturas.esqueleto === k.alturas.linhaReal;
+    console.log(`   ${ok(k.listaPelaMetade === 0 && k.maxEsqueletos > 0)} · amostras com a lista pela metade: ${k.listaPelaMetade}${k.msPelaMetade.length ? ` (${k.msPelaMetade.join(', ')})` : ''}`);
+    console.log(`   lista engordada para ${k.engordadoPara} · total final ${k.totalFinal} linhas · esqueletos vistos: até ${k.maxEsqueletos}, em ${k.amostrasComEsqueleto} amostras`);
+    console.log(`   ${ok(alturaBate)} · altura: esqueleto ${k.alturas.esqueleto}px vs linha real ${k.alturas.linhaReal}px (têm de ser iguais, ou a lista salta)`);
+    console.log(`   primeiras amostras: ${k.primeirasAmostras.map((a) => `${a.t}ms ${a.reais}+${a.esqueletos}`).join(' · ')}`);
+
+    const p = r.presenca;
+    console.log('\n[iphone] RODADA 12A · item 6 — paleta do Vou / Não vou (cores computadas)');
+    for (const [rotulo, b] of [['card Vou', p.cardVou], ['card Não vou', p.cardNao], ...(p.rsvp || []).map((x, i) => [`rsvp ${i + 1}`, x])]) {
+      if (b) console.log(`   ${rotulo.padEnd(13)} "${b.texto}" · cor ${b.cor} · fundo ${b.fundo} · borda ${b.borda}`);
+    }
+    console.log(`   "Ver sorteio" no Início: ${p.verSorteio ? `${ok(p.verSorteio.pulsa)} pulsa (botão ${p.verSorteio.animacaoBotao}, wrapper ${p.verSorteio.animacaoWrapper})` : 'não está nesta tela'}`);
+
+    if (r.sorteio) {
+      const s = r.sorteio;
+      console.log('\n[iphone] RODADA 12A · item 2 — botões do jogo');
+      // Com o jogo JÁ sorteado, o "Sortear novamente" tem de estar calado: o
+      // destaque é do "Ver sorteio", e dois pulsos lado a lado não destacam
+      // nenhum. O esperado depende do estado, não é sempre "pulsa".
+      const jaSorteado = !!r.jogo?.sorteioRealizado;
+      for (const [nome, b] of Object.entries(s.botoesJogo)) {
+        if (!b) { console.log(`   ${nome.padEnd(11)} não está nesta tela`); continue; }
+        const devePulsar = nome === 'verSorteio' ? true : !jaSorteado;
+        console.log(`   ${nome.padEnd(11)} ${ok(b.pulsa === devePulsar)} "${b.texto}" · pulsa ${b.pulsa} (esperado ${devePulsar}${nome === 'sortear' && jaSorteado ? ', jogo já sorteado' : ''}) · botão ${b.animacaoBotao} · wrapper ${b.animacaoWrapper}`);
+      }
+      console.log('\n[iphone] RODADA 12A · itens 3, 4 e 8 — barra, anúncio e mudo');
+      console.log(`   durante a cerimônia: barra ${s.durante.barra ? 'PRESENTE (devia estar ausente)' : 'ausente, OK'} · botão de mudo ${s.durante.somVisivel}`);
+      console.log(`   ${ok(s.depois.barra && s.depois.barraNaTela)} · barra depois: ${s.depois.barraFixa} · caixa ${JSON.stringify(s.depois.barraCaixa)} · tela ${s.depois.tela.altura}px`);
+      console.log(`   botões da barra: ${s.depois.botoes.map((b) => `"${b.texto}" ${b.naTela ? 'na tela' : 'FORA'}`).join(' · ') || 'nenhum'}`);
+      console.log(`   ${ok(!!s.depois.slot)} · slot IAB: ${s.depois.slot ? `${s.depois.slot.largura}x${s.depois.slot.altura}px · proporção ${s.depois.slot.proporcao} (320x100 = 3.2)` : 'não renderizou'} · rótulo "${s.depois.rotuloSlot}"`);
+      console.log(`   ${ok(s.rolado?.presa)} · com a página rolada, a barra continua presa: ${JSON.stringify(s.rolado)}`);
+      if (s.erros.length) console.log(`   erros de JS: ${s.erros.join(' | ')}`);
+    } else {
+      console.log('\n[iphone] RODADA 12A · itens 2, 3, 4: sem jogo sorteado nesta conta — não medidos.');
     }
   }
 
