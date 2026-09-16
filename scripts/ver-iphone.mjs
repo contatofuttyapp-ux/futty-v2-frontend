@@ -1658,6 +1658,118 @@ async function cenaRodada12c(navegador, sessao) {
   return { jogo, telas, mudo, vitrine, cromo, voltar };
 }
 
+// ─── Cena "rodada13" (16-set): Vou verde, "Ver sorteio" com vida ─────────────
+// Item 1 — a paleta de presença troca de novo: "Vou" perde o dourado e vira
+// fantasma VERDE, gémeo do "Não vou" vermelho — nenhum dos dois pode sair
+// dourado, que agora é só do "Ver sorteio"/"Sortear" (decisão do dono, build
+// 22). Item 2 — "Ver sorteio" no card do Início ganha a receita cheia do
+// .cta-gold: largura total do card, altura 46.
+//
+// Acha, na resposta REAL de /api/inicio, o primeiro jogo (em qualquer
+// profundidade do payload — não se assume a forma exata) que passa no filtro,
+// e aplica um patch nele: zera a presença (estado "nenhum" determinístico) ou
+// força "sorteado" quando a conta demo não tiver nenhum jogo nesse estado.
+// Sem isto a cena dependeria de sorte de dados. Nada disto grava no banco: é
+// um patch na RESPOSTA que o browser recebe, e as escritas continuam travadas.
+function acharEPatchear(json, filtro, patch) {
+  let alvo = null;
+  const visitar = (v) => {
+    if (!v || typeof v !== 'object' || alvo) return;
+    if (Array.isArray(v)) { for (const x of v) visitar(x); return; }
+    if (!alvo && 'status' in v && 'user_status' in v && filtro(v)) { alvo = v.id; Object.assign(v, patch); return; }
+    for (const k of Object.keys(v)) visitar(v[k]);
+  };
+  visitar(json);
+  return alvo;
+}
+
+async function medirBotao(pagina, fonteRegex) {
+  return pagina.evaluate((fonte) => {
+    const re = new RegExp(fonte);
+    const btn = [...document.querySelectorAll('button')].find((b) => re.test((b.innerText || '').trim()));
+    if (!btn) return { achou: false };
+    const cs = getComputedStyle(btn);
+    const r = btn.getBoundingClientRect();
+    const card = btn.closest('.gcard');
+    const rc = card?.getBoundingClientRect();
+    return {
+      achou: true,
+      texto: btn.innerText.trim(),
+      cor: cs.color,
+      fundo: cs.backgroundColor,
+      borda: cs.borderColor,
+      caixa: `${Math.round(r.width)}x${Math.round(r.height)}`,
+      caixaCard: rc ? `${Math.round(rc.width)}x${Math.round(rc.height)}` : null,
+    };
+  }, fonteRegex);
+}
+
+async function cenaRodada13(navegador, sessao) {
+  const erros = [];
+
+  // ── Item 1: Vou / Não vou — nenhum, Vou, Não vou ──
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto);
+  await contexto.route('**/api/inicio*', async (route) => {
+    const resposta = await route.fetch();
+    const json = await resposta.json().catch(() => null);
+    if (!json) return route.fulfill({ response: resposta });
+    acharEPatchear(json, (g) => g.status !== 'finished' && g.status !== 'drawn', { user_status: null });
+    return route.fulfill({ response: resposta, json });
+  });
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('.games-label, .home-empty', { timeout: 30000 });
+  await espera(3000);
+
+  const presenca = {};
+  const alvo = pagina.locator('.pbtn--go').first();
+  if (await alvo.count()) {
+    await alvo.scrollIntoViewIfNeeded().catch(() => {});
+    await espera(300);
+    presenca.nenhum = { go: await medirBotao(pagina, '^Vou$'), no: await medirBotao(pagina, '^Não vou$') };
+    await pagina.screenshot({ path: arquivoCaptura('presenca-1-nenhum') });
+
+    await pagina.locator('.pbtn--go').first().click({ force: true });
+    await espera(500);
+    presenca.vou = { go: await medirBotao(pagina, '^Vou$'), no: await medirBotao(pagina, '^Não vou$') };
+    await pagina.screenshot({ path: arquivoCaptura('presenca-2-vou') });
+
+    await pagina.locator('.pbtn--no').first().click({ force: true });
+    await espera(500);
+    presenca.naoVou = { go: await medirBotao(pagina, '^Vou$'), no: await medirBotao(pagina, '^Não vou$') };
+    await pagina.screenshot({ path: arquivoCaptura('presenca-3-nao-vou') });
+  } else {
+    presenca.semCard = true;
+  }
+  await contexto.close();
+
+  // ── Item 2: "Ver sorteio" no card do Início — dourado, largura total ──
+  const contexto2 = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto2);
+  await contexto2.route('**/api/inicio*', async (route) => {
+    const resposta = await route.fetch();
+    const json = await resposta.json().catch(() => null);
+    if (!json) return route.fulfill({ response: resposta });
+    acharEPatchear(json, () => true, { status: 'drawn' });
+    return route.fulfill({ response: resposta, json });
+  });
+  const pagina2 = await contexto2.newPage();
+  pagina2.on('pageerror', (e) => erros.push(e.message));
+  await pagina2.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await pagina2.waitForSelector('.games-label, .home-empty', { timeout: 30000 });
+  await espera(3000);
+  const verSorteio = await medirBotao(pagina2, '^Ver sorteio$');
+  const cardSorteado = pagina2.locator('.badge--sorteado').first();
+  if (await cardSorteado.count()) await cardSorteado.scrollIntoViewIfNeeded().catch(() => {});
+  await espera(300);
+  await pagina2.screenshot({ path: arquivoCaptura('sorteado-ver-sorteio') });
+  await contexto2.close();
+
+  return { presenca, verSorteio, erros };
+}
+
 mkdirSync(PASTA, { recursive: true });
 const navegador = await webkit.launch();
 try {
@@ -1852,6 +1964,38 @@ try {
       const voltouBem = r.voltar.voltouPara === '/home';
       console.log(`   ${ok(voltouBem)} voltar: abriu ${r.voltar.naVitrine} (botão <${r.voltar.tipoBotao}>) → voltou para ${r.voltar.voltouPara} (esperado /home, de onde se veio)`);
     }
+  }
+
+  if (CENAS.includes('rodada13')) {
+    const r = await cenaRodada13(navegador, sessao);
+    saida.rodada13 = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    // As cores computadas do dourado antigo (--presenca-sim* de antes da
+    // Rodada 13): borda/fundo #d4a017, texto #f0c94a, fundo escuro rgba(30,24,8).
+    const DOURADO = /rgba?\(\s*212,\s*160,\s*23|rgba?\(\s*240,\s*201,\s*74|rgba?\(\s*30,\s*24,\s*8/;
+    const semDourado = (b) => b?.achou && !DOURADO.test(b.cor) && !DOURADO.test(b.fundo) && !DOURADO.test(b.borda);
+
+    console.log('\n[iphone] RODADA 13 · item 1 — "Vou" vira fantasma verde (nenhum / Vou / Não vou)');
+    if (r.presenca.semCard) {
+      console.log('   sem jogo com RSVP nesta conta — não medido.');
+    } else {
+      for (const [estado, p] of Object.entries(r.presenca)) {
+        for (const [rotulo, b] of [['Vou', p.go], ['Não vou', p.no]]) {
+          if (!b?.achou) { console.log(`   ${estado.padEnd(8)} ${rotulo.padEnd(8)} não achei o botão`); continue; }
+          console.log(`   ${estado.padEnd(8)} ${ok(semDourado(b))} ${rotulo.padEnd(8)} cor ${b.cor} · fundo ${b.fundo} · borda ${b.borda}`);
+        }
+      }
+    }
+
+    console.log('\n[iphone] RODADA 13 · item 2 — "Ver sorteio" no card do Início (dourado, largura total)');
+    const v = r.verSorteio;
+    if (!v?.achou) {
+      console.log('   sem jogo sorteado nesta conta — não medido.');
+    } else {
+      console.log(`   "${v.texto}" · botão ${v.caixa} (altura esperada 46px) · card ${v.caixaCard}`);
+      console.log(`   cor ${v.cor} · fundo ${v.fundo} · borda ${v.borda}`);
+    }
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);

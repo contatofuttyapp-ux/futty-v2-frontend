@@ -1,5 +1,6 @@
 // Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
 import { useState } from 'react';
+import { Trophy } from 'lucide-react';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useApi } from '../hooks/useApi';
@@ -445,18 +446,20 @@ export default function Jogo() {
                 // RODADA 12A — com gente confirmada para dois times, sortear é A
                 // ação da página: pulsa. Já sorteado, o destaque passa ao "Ver
                 // sorteio" ao lado (duas coisas a pulsar não destacam nenhuma).
-                <span className={podeSortear ? 'pulse-glow' : ''} style={{ display: 'flex' }}>
-                  <button type="button" className={`btn btn--sm hud-corners-s cta-gold ${podeSortear ? 'pulse-active' : ''}`} style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => game.sorteio_realizado ? setConfirmacao('re-sorteio') : sortear()} disabled={busy}>
-                    {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
+                // RODADA 13 — a receita cheia do .cta-gold (largura total,
+                // troféu), igual ao "Compartilhar" da Figurinha.
+                <span className={`cta-gold-glow ${podeSortear ? 'pulse-glow' : ''}`} style={{ display: 'flex', width: '100%' }}>
+                  <button type="button" className={`btn hud-corners cta-gold ${podeSortear ? 'pulse-active' : ''}`} style={{ flex: 1 }} onClick={() => game.sorteio_realizado ? setConfirmacao('re-sorteio') : sortear()} disabled={busy}>
+                    <Trophy size={16} /> {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
                   </button>
                 </span>
               )}
               {/* LEI: jogo manual/histórico (times à mão → sem seed) NÃO abre cerimónia.
                   Só o sorteio (com seed) tem replay/"Ver sorteio". */}
               {game.sorteio_realizado && game.times_resultado?.seed != null && (
-                <span className="pulse-glow" style={{ display: 'flex' }}>
-                  <button type="button" className="btn btn--sm hud-corners-s cta-gold pulse-active" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => navigate(`/equipa/${slug}/jogo/${id}/sorteio`)}>
-                    Ver sorteio
+                <span className="cta-gold-glow pulse-glow" style={{ display: 'flex', width: '100%' }}>
+                  <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} onClick={() => navigate(`/equipa/${slug}/jogo/${id}/sorteio`)}>
+                    <Trophy size={16} /> Ver sorteio
                   </button>
                 </span>
               )}

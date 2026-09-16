@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { usePerfil } from '../context/PerfilContext';
 import { useInicio } from '../context/InicioContext';
@@ -319,24 +319,27 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
             {going && <span className="muted" style={{ fontSize: 13 }}>Você esteve presente</span>}
           </div>
         ) : isDrawn ? (
-          <div className="gcard__drawn">
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="badge badge--sorteado hud-corners-s">Sorteado</span>
-              <span className="muted" style={{ fontSize: 13 }}>
-                {going ? 'Vai jogar' : notGoing ? 'Não vai' : 'Sem resposta'}
+          <>
+            <div className="gcard__drawn">
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="badge badge--sorteado hud-corners-s">Sorteado</span>
+                <span className="muted" style={{ fontSize: 13 }}>
+                  {going ? 'Vai jogar' : notGoing ? 'Não vai' : 'Sem resposta'}
+                </span>
               </span>
-            </span>
-            {/* RODADA 12A — ver o sorteio é a ação mais importante do app; o
-                card tinha-a como um botão qualquer. Mesmo par do "Vou" aqui ao
-                lado: o glow no wrapper (drop-shadow atravessa o recorte a 45°),
-                o .pulse-active no botão (a metade dele que anima a borda
+            </div>
+            {/* RODADA 13 — ver o sorteio é A ação do card: dourado forte,
+                largura total, nada mais no card compete (chips e bordas ficam
+                nos tons apagados). Mesmo par de sempre para o clip a 45°: o
+                glow no wrapper (drop-shadow atravessa o recorte), o
+                .pulse-active no botão (a metade dele que anima a borda
                 sobrevive ao clip-path). */}
-            <span className="pulse-glow" style={{ display: 'flex' }}>
-              <button type="button" className="btn btn--purple btn--sm hud-corners-s pulse-active tab-shine" onClick={() => onVerSorteio(game)}>
-                Ver sorteio
+            <span className="cta-gold-glow pulse-glow" style={{ display: 'flex', marginTop: 12 }}>
+              <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} onClick={() => onVerSorteio(game)}>
+                <Trophy size={16} /> Ver sorteio
               </button>
             </span>
-          </div>
+          </>
         ) : (
           <div className="gcard__presence">
             {/* O pulso do "Vou" é funcional (marca a acção disponível) e o
