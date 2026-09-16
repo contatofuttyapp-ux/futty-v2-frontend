@@ -241,26 +241,40 @@ async function medir() {
 
   const aba = (k) => `.bottom-nav__tab--${k}`;
 
-  // ─── RANKING, 1ª visita ───
+  // ─── RANKING ───
   // O caro é o PRIMEIRO desenho: 23 linhas com moldura, pódio e botões. Nas
-  // visitas seguintes o React já tem o chunk compilado e o cache cheio.
-  await pagina.evaluate(ZERAR);
-  const tRanking = Date.now();
-  await pagina.click(aba('ranking'));
-  await pagina.waitForSelector('.app-main', { timeout: 30000 });
-  await espera(3500);
-  const rankingFrio = { ms: Date.now() - tRanking, ...(await pagina.evaluate(COLHER)) };
+  // visitas seguintes o chunk já está compilado e o cache cheio — o relatório do
+  // aparelho diz 1785 ms na 1ª e 84-125 ms nas outras.
+  //
+  // Mede-se até a 1ª LINHA existir (é quando a pessoa vê o ranking) e até a
+  // lista estar COMPLETA (a lista progressiva entrega 10 e depois lotes de 5).
+  // Uma espera fixa mediria sobretudo a espera.
+  const visitarRanking = async () => {
+    await pagina.evaluate(ZERAR);
+    const t0 = Date.now();
+    await pagina.click(aba('ranking'));
+    await pagina.waitForSelector('.rank-row', { timeout: 30000 });
+    const primeiraLinhaMs = Date.now() - t0;
+    const linhas = await pagina.evaluate(async () => {
+      // Espera a lista parar de crescer: duas leituras iguais seguidas.
+      let anterior = -1;
+      for (let i = 0; i < 100; i += 1) {
+        const n = document.querySelectorAll('.rank-row').length;
+        if (n === anterior && n > 0) return n;
+        anterior = n;
+        await new Promise((r) => setTimeout(r, 80));
+      }
+      return document.querySelectorAll('.rank-row').length;
+    });
+    return { ms: primeiraLinhaMs, completaMs: Date.now() - t0, linhas, ...(await pagina.evaluate(COLHER)) };
+  };
 
-  // ─── RANKING, 2ª visita (para comparar) ───
+  const rankingFrio = await visitarRanking();
+
   await pagina.click(aba('home'));
   await pagina.waitForSelector('.app-main', { timeout: 20000 });
   await espera(1200);
-  await pagina.evaluate(ZERAR);
-  const tR2 = Date.now();
-  await pagina.click(aba('ranking'));
-  await pagina.waitForSelector('.app-main', { timeout: 20000 });
-  await espera(2500);
-  const rankingQuente = { ms: Date.now() - tR2, ...(await pagina.evaluate(COLHER)) };
+  const rankingQuente = await visitarRanking();
 
   // ─── RESENHA: entrada + rolagem ───
   await pagina.click(aba('home'));
@@ -304,7 +318,7 @@ async function medir() {
 }
 
 const linhaPintura = (nome, r) =>
-  `${nome.padEnd(22)} ${String(r.ms).padStart(6)}  ${String(r.maior).padStart(7)}  ` +
+  `${nome.padEnd(22)} ${String(r.ms).padStart(6)} ${String(r.completaMs ?? "—").padStart(9)} ${String(r.linhas ?? "—").padStart(7)}  ${String(r.maior).padStart(6)}  ` +
   `${String(r.acima100).padStart(6)}  ${String(r.acima50).padStart(6)}`;
 
 const linhaRolagem = (nome, r) =>
@@ -317,7 +331,7 @@ medir()
     console.log(`\n=== ROLAGEM E 1ª VISITA no WEBKIT (${ETIQUETA}) ===`);
     console.log('(iPhone 15 Pro Max: 430×932 @ 3x, backend local)\n');
     console.log('ENTRADA NA TELA (o relógio de quadros em headless é grosseiro — ver ms)');
-    console.log('                          ms   maior   >100ms   >50ms');
+    console.log('                          ms  completa  linhas   maior   >100ms   >50ms');
     console.log(linhaPintura('Ranking 1ª visita', r.rankingFrio));
     console.log(linhaPintura('Ranking 2ª visita', r.rankingQuente));
     console.log(linhaPintura('Resenha entrada', r.feedEntrada));
