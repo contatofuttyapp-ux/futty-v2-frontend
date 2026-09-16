@@ -259,7 +259,9 @@ export default function Jogo() {
               ) : null}
               {estouConfirmado ? (
                 <>
-                  <span style={{ fontFamily: RAJ, color: '#7bd88f', fontWeight: 800, letterSpacing: '0.04em' }}>✓ Você está confirmado</span>
+                  {/* Rodada 12A: o verde saturado saiu — quem está confirmado
+                      veste o dourado da casa, como o "Vou" do card de jogo. */}
+                  <span style={{ fontFamily: RAJ, color: 'var(--presenca-sim-texto)', fontWeight: 800, letterSpacing: '0.04em' }}>✓ Você está confirmado</span>
                   <label className="check-inline" style={{ fontFamily: RAJ }}>
                     <input
                       type="checkbox"
@@ -273,7 +275,7 @@ export default function Jogo() {
                   {confirmacao === 'cancelar-presenca' ? (
                     <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Cancelar mesmo?</span>
-                      <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ borderColor: 'rgba(253,164,175,0.5)', color: '#fda4af' }} onClick={() => { setConfirmacao(null); confirmar(false); }} disabled={busy}>
+                      <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ borderColor: 'var(--presenca-nao-borda)', color: 'var(--presenca-nao-texto)' }} onClick={() => { setConfirmacao(null); confirmar(false); }} disabled={busy}>
                         Sim, sair
                       </button>
                       <button type="button" className="btn btn--sm btn--ghost" onClick={() => setConfirmacao(null)} disabled={busy}>

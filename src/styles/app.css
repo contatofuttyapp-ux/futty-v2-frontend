@@ -2456,16 +2456,32 @@
   cursor: default;
 }
 
+/* RODADA 12A — a paleta de presença (ver --presenca-* em index.css). Por
+   escolher, o "Vou" já é dourado: é a receita do "Votar" do Ranking, e dourado
+   por escolher é o que faz a acção principal saltar da linha. */
+.pbtn--go {
+  background: var(--presenca-sim-fundo);
+  border-color: var(--presenca-sim);
+  color: var(--presenca-sim-texto);
+}
+
 .pbtn--go.active {
-  background: var(--neon);
-  color: #04140d;
-  border-color: var(--neon);
+  background: var(--presenca-sim);
+  color: var(--presenca-sim-ativo-texto);
+  border-color: var(--presenca-sim);
+}
+
+/* O "Não vou" é fantasma: o texto fica apagado e só a borda diz de que resposta
+   se trata. Escolhido, ganha o preenchimento rosa fraco e o texto na cor. */
+.pbtn--no {
+  border-color: var(--presenca-nao-borda);
+  color: var(--text-dim);
 }
 
 .pbtn--no.active {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  border-color: var(--text-dim);
+  background: var(--presenca-nao-fundo);
+  color: var(--presenca-nao-texto);
+  border-color: var(--presenca-nao-borda);
 }
 
 .gcard__drawn {

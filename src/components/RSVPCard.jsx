@@ -11,17 +11,35 @@ function formatarPrazo(iso) {
   return `${data} · ${hora}`;
 }
 
-function botaoStyle(sel, cor) {
+// RODADA 12A — a paleta de presença da casa (--presenca-* em index.css), a mesma
+// do "Vou"/"Não vou" do card de jogo. O verde #16a34a e o vermelho #dc2626 que
+// estavam aqui saíram: num app dourado e roxo o par de semáforo lê-se como
+// alerta de sistema. Dizer que não é uma resposta legítima, não um erro — por
+// isso o "Não vou" é fantasma, e não um botão vermelho a gritar.
+const BASE_BOTAO = {
+  flex: 1,
+  height: 42,
+  borderRadius: 'var(--radius-sm)',
+  cursor: 'pointer',
+  fontWeight: 700,
+  fontSize: 14,
+};
+
+function botaoSim(sel) {
   return {
-    flex: 1,
-    height: 42,
-    borderRadius: 'var(--radius-sm)',
-    cursor: 'pointer',
-    fontWeight: 700,
-    fontSize: 14,
-    border: `1px solid ${sel ? cor : 'var(--border-subtle)'}`,
-    background: sel ? cor : 'var(--surface-1)',
-    color: sel ? '#fff' : 'rgba(255,255,255,0.7)',
+    ...BASE_BOTAO,
+    border: '1px solid var(--presenca-sim)',
+    background: sel ? 'var(--presenca-sim)' : 'var(--presenca-sim-fundo)',
+    color: sel ? 'var(--presenca-sim-ativo-texto)' : 'var(--presenca-sim-texto)',
+  };
+}
+
+function botaoNao(sel) {
+  return {
+    ...BASE_BOTAO,
+    border: '1px solid var(--presenca-nao-borda)',
+    background: sel ? 'var(--presenca-nao-fundo)' : 'transparent',
+    color: sel ? 'var(--presenca-nao-texto)' : 'var(--text-dim)',
   };
 }
 
@@ -77,17 +95,17 @@ export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, ch
             </button>
           </div>
         ) : (
-          <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={{ ...botaoStyle(false, '#16a34a'), width: '100%', marginTop: 10, opacity: busy ? 0.6 : 1 }}>
+          <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={{ ...botaoSim(false), width: '100%', marginTop: 10, opacity: busy ? 0.6 : 1 }}>
             Entrar na lista de espera
           </button>
         )
       ) : (
         <>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={botaoStyle(respostaActual === 'confirmado', '#16a34a')}>
+            <button type="button" disabled={busy} onClick={() => responder('confirmado')} style={botaoSim(respostaActual === 'confirmado')}>
               Vou
             </button>
-            <button type="button" disabled={busy} onClick={() => responder('recusado')} style={botaoStyle(respostaActual === 'recusado', '#dc2626')}>
+            <button type="button" disabled={busy} onClick={() => responder('recusado')} style={botaoNao(respostaActual === 'recusado')}>
               Não vou
             </button>
           </div>

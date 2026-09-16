@@ -15,6 +15,20 @@
   --border: #222222;
   --radius: 16px;
 
+  /* Presença — "Vou" / "Não vou" (Rodada 12A, decisão do dono).
+     Verde e vermelho saturados saíram de vez: num app que é dourado e roxo, um
+     par de semáforo lê-se como alerta de sistema, não como a escolha de quem
+     vai jogar bola. O sim veste o dourado da casa (o mesmo do "Votar"); o não
+     recua para fantasma, com a borda rosa apagada — dizer que não é uma
+     resposta legítima, não um erro. */
+  --presenca-sim: #d4a017;
+  --presenca-sim-fundo: rgba(30, 24, 8, 0.9);
+  --presenca-sim-texto: #f0c94a;
+  --presenca-sim-ativo-texto: #1a1405;
+  --presenca-nao-borda: rgba(248, 113, 113, 0.45);
+  --presenca-nao-fundo: rgba(248, 113, 113, 0.15);
+  --presenca-nao-texto: #f87171;
+
   /* Fundo aurora — afináveis aqui. */
   --aurora-opacity: 0.32; /* opacidade dos blobs */
   --aurora-po: 0.28;      /* opacidade máxima das partículas */
