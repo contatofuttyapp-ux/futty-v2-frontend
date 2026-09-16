@@ -106,11 +106,16 @@ function BannerSorteio() {
   );
 }
 
-export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data }) {
+export default function CerimoniaSorteio({ resultado, autoStart = true, aoComecar, aoTerminar, equipa, data }) {
   const rootRef = useRef(null);
   // props estáveis para o efeito (que corre 1x); um re-sorteio remonta via key no consumidor.
   const cbRef = useRef(aoTerminar);
   useEffect(() => { cbRef.current = aoTerminar; });
+  // Rodada 12A: simétrico do aoTerminar — a alavanca repete a cerimónia, e quem
+  // mostra alguma coisa no fim (a barra de compartilhar) precisa de a esconder
+  // outra vez quando ela recomeça.
+  const cbComecarRef = useRef(aoComecar);
+  useEffect(() => { cbComecarRef.current = aoComecar; });
   // info do cartaz (equipa/data) — lida no clique do "Guardar", sempre a mais recente.
   const infoRef = useRef({ equipa, data });
   useEffect(() => { infoRef.current = { equipa, data }; });
@@ -297,6 +302,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       if (aCorrer || !vivo) return;
       aCorrer = true; saltarFlag = false;
       q('.lever').classList.add('girando'); q('.partilha').classList.remove('on');
+      cbComecarRef.current?.();
       try { await corpo(); } finally {
         aCorrer = false; q('.saltar')?.classList.remove('on');
         q('.lever').classList.remove('girando'); q('.partilha').classList.add('on');

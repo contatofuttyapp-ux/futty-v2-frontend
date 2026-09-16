@@ -10,7 +10,7 @@ import { useApi } from '../hooks/useApi';
 import { apiFetch } from '../lib/api';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio, { MARCA_TIME } from '../components/CerimoniaSorteio';
-import { gerarCartao916 } from '../utils/sorteioCartao';
+import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import Toast from '../components/Toast';
 import '../styles/app.css';
@@ -22,6 +22,12 @@ export default function SorteioShow() {
   const { data, loading } = useApi(`/api/games/${id}`);
   const [toast, setToast] = useState(null);
   const [termoAberto, setTermoAberto] = useState(false);
+  // RODADA 12A — compartilhar deixa de estar escondido abaixo da dobra. Enquanto
+  // a cerimónia corre não aparece nada (é o momento de olhar, não de agir); no
+  // fim, a barra entra presa ao fundo da tela. `false` outra vez se a pessoa
+  // puxar a alavanca para repetir.
+  const [terminou, setTerminou] = useState(false);
+  const [gerando, setGerando] = useState(false);
   const game = data?.game;
   const resultado = game?.times_resultado;
   const dataCartaz = game?.data
@@ -70,39 +76,58 @@ export default function SorteioShow() {
   // não faz nada no WebView). A folha já é o retorno visual; fechar sem escolher
   // nada é silencioso.
   async function baixarCartao(ti) {
+    if (gerando) return;
+    setGerando(true);
     try {
       const { blob, nome } = await gerarCartao916(resultado, ti, data?.team?.nome || '');
       const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
       if (entrega === 'baixou') setToast({ tipo: 'success', mensagem: 'Cartão 9:16 gerado!' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message || 'Não deu para gerar o cartão.' });
+    } finally {
+      setGerando(false);
+    }
+  }
+
+  // Os dois times numa imagem só (o cartaz da escalação). Entrega sozinho: baixa
+  // na web, abre a folha de compartilhar no app — o mesmo salvarOuCompartilhar.
+  async function compartilharTimes() {
+    if (gerando) return;
+    setGerando(true);
+    try {
+      const { entrega } = await gerarCartazEscalacao(resultado, { equipa: data?.team?.nome || '', data: dataCartaz });
+      if (entrega === 'baixou') setToast({ tipo: 'success', mensagem: 'Imagem dos times gerada!' });
+    } catch (e) {
+      setToast({ tipo: 'error', mensagem: e.message || 'Não deu para gerar a imagem.' });
+    } finally {
+      setGerando(false);
     }
   }
 
   return (
     <div className="app-shell">
       {/* LEI: página do sorteio = IMERSIVA, SEM Topbar; a saída faz-se pelo X da máquina. */}
-      <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
+      <main className={`app-main page-reveal ${terminou ? 'sorteio-main--barra' : ''}`} style={{ maxWidth: 480 }}>
         {loading ? (
           <LoadingFutty />
         ) : !resultado ? (
           <p className="muted">O sorteio ainda não foi realizado.</p>
         ) : (
           <>
-            <CerimoniaSorteio resultado={resultado} equipa={data?.team?.nome || ''} data={dataCartaz} />
+            <CerimoniaSorteio
+              resultado={resultado}
+              equipa={data?.team?.nome || ''}
+              data={dataCartaz}
+              aoComecar={() => setTerminou(false)}
+              aoTerminar={() => setTerminou(true)}
+            />
 
-            {/* partilha (§9): link + imagem 9:16 — vídeo morto */}
+            {/* partilha (§9): o link fica aqui; a imagem dos times e os 9:16
+                mudaram-se para a barra presa ao fundo (ver abaixo). */}
             <div style={{ marginTop: 18, display: 'grid', gap: 8 }}>
               <button type="button" className="btn hud-corners-s cta-gold" style={{ width: '100%', fontFamily: RAJ, letterSpacing: '0.08em', textTransform: 'uppercase' }} onClick={pedirCopiar}>
                 Copiar link do sorteio
               </button>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {(resultado.times || []).map((t, ti) => (
-                  <button key={ti} type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ flex: 1, color: MARCA_TIME[ti % MARCA_TIME.length].c, borderColor: MARCA_TIME[ti % MARCA_TIME.length].c }} onClick={() => baixarCartao(ti)}>
-                    9:16 · {t.nome}
-                  </button>
-                ))}
-              </div>
               <p className="muted" style={{ fontSize: 11, textAlign: 'center', margin: 0 }}>
                 o link reproduz esta MESMA cerimônia (semente {resultado.seed ?? '—'}) para quem abrir, sem app
               </p>
@@ -110,6 +135,27 @@ export default function SorteioShow() {
           </>
         )}
       </main>
+      {/* RODADA 12A — a barra de compartilhar, presa ao fundo da tela. Vai por
+          portal para o body: dentro do [data-page] qualquer ancestral com
+          transform/filter transformaria o `fixed` em "preso à página" e ela
+          rolava junto (o defeito que a cena "fixos" da Rodada 9 mediu). Sai
+          sozinha quando a pessoa deixa a tela — desmonta com a página. */}
+      {terminou && resultado ? createPortal(
+        <div className="sorteio-barra">
+          <button type="button" className="btn hud-corners-s cta-gold sorteio-barra__principal" disabled={gerando} onClick={compartilharTimes}>
+            {gerando ? 'Gerando…' : 'Compartilhar times'}
+          </button>
+          <div className="sorteio-barra__times">
+            {(resultado.times || []).map((t, ti) => (
+              <button key={ti} type="button" className="btn btn--sm btn--outline hud-corners-s" disabled={gerando} style={{ flex: 1, minWidth: 0, color: MARCA_TIME[ti % MARCA_TIME.length].c, borderColor: MARCA_TIME[ti % MARCA_TIME.length].c }} onClick={() => baixarCartao(ti)}>
+                9:16 · {t.nome}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body,
+      ) : null}
+
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
       {/* TERMO 1-clique de quem partilha (registado em share_declarations). */}

@@ -2915,3 +2915,59 @@
   .landing-glow { animation: none; }
   .landing-drift { animation: none; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RODADA 12A — a barra de compartilhar da página do sorteio.
+
+   Compartilhar estava abaixo da dobra: quem acabava de ver a cerimónia tinha de
+   rolar para achar como mandar aquilo ao grupo — e o momento de partilhar é
+   exactamente o segundo a seguir ao fim. A barra prende-se ao fundo da tela
+   quando a cerimónia acaba, com a imagem dos dois times e um 9:16 por time.
+
+   Nesta rota a BottomNav não existe (HIDE_NAV_PATTERNS em Layout.jsx apanha
+   /equipa/:slug/jogo/), por isso a barra encosta no fundo e só tem de respeitar
+   a safe-area do iPhone.
+   ───────────────────────────────────────────────────────────────────────────── */
+.sorteio-barra {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  /* Véu por cima do que estiver a passar por baixo: os botões têm de se ler
+     contra a máquina do sorteio, que é clara em cima e escura em baixo. */
+  background: linear-gradient(rgba(5, 8, 16, 0), rgba(5, 8, 16, 0.94) 26%, #050810 60%);
+  animation: sorteioBarraSobe 0.24s ease-out both;
+}
+
+.sorteio-barra__principal {
+  width: 100%;
+  font-family: 'Rajdhani', var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sorteio-barra__times {
+  display: flex;
+  gap: 8px;
+}
+
+/* Só transform: mesmo que a animação não corra, o estado natural é a barra no
+   lugar e visível (lei dos builds 10-12). */
+@keyframes sorteioBarraSobe {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* O fim da página não pode ficar debaixo da barra. */
+.sorteio-main--barra {
+  padding-bottom: calc(136px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sorteio-barra { animation: none; }
+}
