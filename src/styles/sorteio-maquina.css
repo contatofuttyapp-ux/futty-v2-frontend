@@ -354,6 +354,88 @@
 .smaq .saltar button{font-size:10.5px;color:#8a8a98;background:none;border:none;cursor:pointer;letter-spacing:.05em}
 .smaq .maqcap{font-size:11px;color:#8a8a98;text-align:center;margin-top:26px;line-height:1.55;max-width:800px;margin-left:auto;margin-right:auto}
 .smaq .maqcap b{color:#eee}
+/* ═══ RODADA 14B — O FIM DO SORTEIO COMO PRÊMIO (16-set) ═══════════════════════
+   O instante em que os times aparecem é "acabou de ganhar" numa slot machine.
+   Nada aqui redesenha a máquina: são estados novos (.maq.premio → .maq.premioCalmo)
+   sobre as peças que já existem, e uma camada de raios atrás do bloco dos times.
+   Tudo em transform/opacity — nem filter nem box-shadow animados. O flash e a
+   pílula vivem no body (prefixo .smaqx-, fora do escopo .smaq de propósito).
+
+   Linha do tempo, contada do jackpot (T0 = "TIMES SORTEADOS" acende):
+     T0        flash (100 ms a 0,35) · marquise em sequência · raios · moedas · título
+     T0+3,0 s  marquise passa a brilho suave (.premioCalmo) — fica assim
+     T0+5,1 s  o botão "Compartilhar os times" sobe (ver .compartilhar) */
+
+/* (ii) A MARQUISE. As lâmpadas .mq (moldura da máquina) e .luz (réguas) já são a
+   moldura do retângulo — o que muda é o que elas fazem. O branco é um ::after por
+   cima de cada lâmpada que acende em sequência; o dourado é a própria lâmpada.
+   Só opacity nos dois. */
+.smaq .luz{position:relative}
+.smaq .mq::after,
+.smaq .luz::after{content:'';position:absolute;inset:0;border-radius:50%;background:#fff;opacity:0;pointer-events:none}
+.smaq .maq.premio .mq,
+.smaq .maq.premio .luz{animation:premioLampa .8s linear infinite;animation-delay:calc(var(--i)*-.045s)}
+.smaq .maq.premio .mq::after,
+.smaq .maq.premio .luz::after{animation:premioBranco .8s linear infinite;animation-delay:calc(var(--i)*-.045s)}
+@keyframes premioLampa{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes premioBranco{0%{opacity:0}22%{opacity:1}48%{opacity:0}100%{opacity:0}}
+/* depois dos 3 s: brilho suave, uma respiração lenta — é o estado final da moldura */
+.smaq .maq.premioCalmo .mq,
+.smaq .maq.premioCalmo .luz{animation:premioSuave 3.2s ease-in-out infinite;animation-delay:calc(var(--i)*-.12s)}
+@keyframes premioSuave{0%,100%{opacity:.5}50%{opacity:.88}}
+.smaq .maq.premioCalmo{box-shadow:0 0 26px 6px rgba(245,224,112,.28),0 0 60px 10px rgba(139,92,246,.14)}
+
+/* (iii) OS RAIOS atrás do bloco dos times: gradiente cônico numa camada própria
+   dentro do .interior (o clip-path da .maq corta o que sair pelas bordas). O
+   conteúdo sobe um nível para ficar por cima. Opacidade baixa no próprio
+   gradiente; a camada entra por transição de opacity e gira por transform. */
+.smaq .interiorConteudo{position:relative;z-index:1}
+.smaq .premioRaios{position:absolute;left:50%;top:50%;width:230%;aspect-ratio:1;z-index:0;pointer-events:none;border-radius:50%;
+    transform:translate(-50%,-50%) rotate(0deg);opacity:0;transition:opacity .6s ease;
+    background:conic-gradient(rgba(245,224,112,.17) 0 18deg,transparent 18deg 45deg,
+      rgba(245,224,112,.17) 45deg 63deg,transparent 63deg 90deg,
+      rgba(245,224,112,.17) 90deg 108deg,transparent 108deg 135deg,
+      rgba(245,224,112,.17) 135deg 153deg,transparent 153deg 180deg,
+      rgba(245,224,112,.17) 180deg 198deg,transparent 198deg 225deg,
+      rgba(245,224,112,.17) 225deg 243deg,transparent 243deg 270deg,
+      rgba(245,224,112,.17) 270deg 288deg,transparent 288deg 315deg,
+      rgba(245,224,112,.17) 315deg 333deg,transparent 333deg 360deg);
+    -webkit-mask:radial-gradient(circle,#000 0%,transparent 62%);mask:radial-gradient(circle,#000 0%,transparent 62%)}
+.smaq .maq.premio .premioRaios{opacity:1;animation:premioGira 9s linear infinite}
+.smaq .maq.premioCalmo .premioRaios{opacity:.55;animation:premioGira 9s linear infinite}
+@keyframes premioGira{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+/* (v) O TÍTULO "TIMES SORTEADOS": leve escala 1 → 1,06 → 1 na caixa e uma
+   varredura de luz por cima das letras. O ::before da caixa já é o filete
+   interno; a varredura é o ::after, cortada pelo clip-path da própria caixa. */
+.smaq .fimcaixa::after{content:'';position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;transform:translateX(-120%);
+    background:linear-gradient(105deg,transparent 36%,rgba(255,250,225,.42) 50%,transparent 64%)}
+.smaq .maq.premio .fimcaixa{animation:premioTitulo .75s cubic-bezier(.3,1.3,.4,1) .05s both}
+.smaq .maq.premio .fimcaixa::after{animation:premioVarre 1.1s ease-out .25s both}
+@keyframes premioTitulo{0%{transform:scale(1)}45%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes premioVarre{0%{transform:translateX(-120%);opacity:1}100%{transform:translateX(120%);opacity:1}}
+
+/* (i) O FLASH de tela inteira. Vai para o body (ver flashTela no componente):
+   dentro do [data-page] um ancestral com transform/filter prenderia o `fixed`
+   à página — o defeito que a barra da 12A já tinha medido. 180 ms no total,
+   ~100 ms no patamar de 0,35. */
+.smaqx-flash{position:fixed;inset:0;z-index:250;pointer-events:none;background:#f5d060;opacity:0;
+    animation:smaqxFlash .18s linear both}
+@keyframes smaqxFlash{0%{opacity:0}22%{opacity:.35}66%{opacity:.35}100%{opacity:0}}
+
+@media (prefers-reduced-motion: reduce){
+  /* Só o flash e o brilho suave (lei do item 1): sem sequência, sem raios, sem título a mexer. */
+  .smaq .maq.premio .mq,
+  .smaq .maq.premio .luz,
+  .smaq .maq.premioCalmo .mq,
+  .smaq .maq.premioCalmo .luz{animation:none;opacity:.72}
+  .smaq .maq.premio .mq::after,
+  .smaq .maq.premio .luz::after{animation:none}
+  .smaq .premioRaios{animation:none!important;opacity:0!important;transition:none}
+  .smaq .maq.premio .fimcaixa,
+  .smaq .maq.premio .fimcaixa::after{animation:none}
+}
+
 @media (prefers-reduced-motion: reduce){
   .smaq .luz,
 .smaq .mq,

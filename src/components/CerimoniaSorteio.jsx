@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { apiFetch } from '../lib/api';
 import { gerarCartazEscalacao } from '../utils/sorteioCartao';
+import { celebrarPremioSorteio, prepararConfetti } from '../hooks/useConfetti';
 import SomSorteio from './somSorteio';
 import '../styles/app.css';
 import '../styles/sorteio-maquina.css';
@@ -259,6 +260,26 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
       }
     }
 
+    // — RODADA 14B: o flash de tela inteira. Vai para o body (não para o root):
+    //   dentro do [data-page] um ancestral com transform/filter prenderia o
+    //   `fixed` à página. Entra no `clones` para o cleanup o apanhar.
+    function flashTela() {
+      const f = document.createElement('div'); f.className = 'smaqx-flash';
+      document.body.appendChild(f); clones.add(f);
+      const id = setTimeout(() => { f.remove(); clones.delete(f); }, 400); timers.add(id);
+    }
+    // — RODADA 14B: O PRÊMIO. Corre UMA vez, no instante em que "TIMES SORTEADOS"
+    //   acende — o mesmo instante do jackpot.mp3. Marquise em sequência, raios,
+    //   moedas e título são o estado .premio (CSS); aos 3 s vira .premioCalmo, o
+    //   brilho suave que fica. Nada disto roda enquanto a cerimónia ainda sorteia.
+    function premioAbrir() {
+      maq.classList.remove('premioCalmo'); maq.classList.add('premio');
+      flashTela();
+      celebrarPremioSorteio(2500);
+      const idCalmo = setTimeout(() => { if (vivo) { maq.classList.remove('premio'); maq.classList.add('premioCalmo'); } }, 3000);
+      timers.add(idCalmo);
+    }
+
     // — o final: cartão (véu no interior) + lock-in + molduras vivas
     async function finalLockIn() {
       const quem = q('.quem'); quem.textContent = '';
@@ -274,9 +295,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
         while (caixa.offsetWidth > alvo && fs > 13) { fs -= 1; caixa.style.setProperty('--fs', `${fs}px`); }
       }
       q('.palcoStage').classList.add('veuTotal'); ft.classList.add('on');
-      // O time inteiro acabou de aparecer: efeito próprio de fecho, separado
-      // da revelação por jogador (Rodada 12D — o dono quis os dois de volta).
+      // O time inteiro acabou de aparecer: o jackpot (Rodada 14A) e o prêmio
+      // (Rodada 14B) nascem no mesmo instante — é o segundo de "ganhei".
       SomSorteio.fecharTime();
+      premioAbrir();
       await sleep(1700); if (!vivo) return;
       ft.classList.remove('on'); q('.palcoStage').classList.remove('veuTotal');
       await sleep(200); ft.innerHTML = ''; await sleep(220); if (!vivo) return;
@@ -308,7 +330,13 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     async function corpo() {
       const lv = q('.lever'); lv.classList.remove('pull'); void lv.offsetWidth; lv.classList.add('pull');
       q('.palcoStage').classList.remove('veuTotal'); montarGrupos(); q('.fimtxt').classList.remove('on');
-      if (reduzido) { preencherTudo(); return; }
+      // Rodada 14B: a alavanca repete a cerimónia — o prêmio da corrida anterior
+      // apaga-se antes de os rolos voltarem a girar.
+      maq.classList.remove('premio', 'premioCalmo');
+      // Movimento reduzido: sem cerimónia, e do prêmio só o flash e o brilho suave.
+      if (reduzido) { preencherTudo(); flashTela(); maq.classList.add('premioCalmo'); return; }
+      // As moedas vêm de um chunk próprio; pedi-lo agora dá ~10 s de avanço ao jackpot.
+      prepararConfetti();
       q('.saltar').classList.add('on');
       for (let t = 0; t < times.length; t += 1) {
         await girarTime(t); if (saltarFlag) { preencherTudo(); return; } if (!vivo) return;
@@ -466,6 +494,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
               <div className="letreiro"><span>Sorteio</span></div>
             </div></div>
             <div className="interior">
+              {/* Rodada 14B — os raios do prêmio, atrás do bloco dos times. */}
+              <div className="premioRaios" />
               <div className="interiorConteudo">
                 <div className="janela">
                   <span className="quem" />
