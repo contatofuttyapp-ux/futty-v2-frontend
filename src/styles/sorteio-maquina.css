@@ -236,20 +236,6 @@
 .smaq .lever6.arrastando .setas i:nth-child(2){opacity:clamp(.16,calc((var(--drag,0) - .33) * 3),1)}
 .smaq .lever6.arrastando .setas i:nth-child(3){opacity:clamp(.16,calc((var(--drag,0) - .66) * 3),1)}
 .smaq .lever6.armado .l6-knob{filter:brightness(1.15) drop-shadow(0 0 16px rgba(240,201,74,1)) drop-shadow(0 0 30px rgba(139,92,246,.6))}
-.smaq .partilha{display:none;gap:12px;justify-content:center;margin:16px auto 0;max-width:460px}
-.smaq .partilha.on{display:flex}
-.smaq .pbtn{flex:1;position:relative;display:inline-flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;
-    font-family:'Rajdhani',sans-serif;font-weight:800;font-size:13px;letter-spacing:.09em;text-transform:uppercase;
-    color:#e9dfb2;padding:12px 16px;transition:filter .15s ease;
-    background:repeating-linear-gradient(90deg,#42424c 0 1px,#32323a 1px 3px),linear-gradient(180deg,#464650,#20202a);
-    background-blend-mode:overlay;border:1px solid rgba(212,160,23,.6);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -3px 5px rgba(0,0,0,.6),0 3px 8px rgba(0,0,0,.55);
-    text-shadow:0 -1px 0 rgba(0,0,0,.85),0 0 6px rgba(245,224,112,.2);
-    clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 9px,100% calc(100% - 9px),calc(100% - 9px) 100%,9px 100%,0 calc(100% - 9px),0 9px)}
-.smaq .pbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none;
-    filter:drop-shadow(0 0 3px rgba(240,201,74,.5))}
-.smaq .pbtn:hover{filter:brightness(1.12)}
-.smaq .pbtn:active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 0 3px 6px rgba(0,0,0,.6)}
 .smaq .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,16px);z-index:300;white-space:nowrap;
     display:inline-flex;align-items:center;gap:8px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:.03em;
     color:#f0e6c8;background:linear-gradient(180deg,#12101c,#0a0810);border:1px solid rgba(212,160,23,.55);padding:10px 18px;
@@ -423,8 +409,25 @@
     animation:smaqxFlash .18s linear both}
 @keyframes smaqxFlash{0%{opacity:0}22%{opacity:.35}66%{opacity:.35}100%{opacity:0}}
 
+/* (item 2) UM CAMINHO PARA COMPARTILHAR — dentro do card, logo abaixo da máquina.
+   Escondido enquanto sorteia (não é hora de agir). `.on` é o estado "no lugar e
+   visível"; a animação só o faz deslizar de baixo — sem ela, o estado natural é
+   o botão no sítio (lei dos builds 10-12). O botão leva a receita do "Ver
+   sorteio" (.cta-gold + .cta-gold-glow + .pulse-glow/.pulse-active) e por baixo
+   vai a linha discreta dos 9:16 por time, em contorno fino na cor de cada um. */
+.smaq .compartilhar{display:none;max-width:480px;margin:14px auto 0;padding:0 16px}
+.smaq .compartilhar.on{display:block;animation:compartilharSobe .5s cubic-bezier(.2,.9,.3,1) both}
+@keyframes compartilharSobe{from{transform:translateY(22px);opacity:0}to{transform:none;opacity:1}}
+.smaq .compartilhar__btn{display:flex;align-items:center;justify-content:center;gap:9px;
+    font-family:'Rajdhani',sans-serif;font-size:15px;letter-spacing:.08em;text-transform:uppercase}
+.smaq .compartilhar__btn svg{width:17px;height:17px;flex:none}
+.smaq .compartilhar__times{display:flex;gap:8px;margin-top:8px}
+.smaq .compartilhar__time{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+
 @media (prefers-reduced-motion: reduce){
   /* Só o flash e o brilho suave (lei do item 1): sem sequência, sem raios, sem título a mexer. */
+  .smaq .compartilhar.on{animation:none}
   .smaq .maq.premio .mq,
   .smaq .maq.premio .luz,
   .smaq .maq.premioCalmo .mq,

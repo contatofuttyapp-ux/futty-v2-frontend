@@ -8,9 +8,11 @@
 // selado no giro, véu re-escopado ao interior + cartão fit-to-width, lock-in + molduras vivas
 // na Victory, som selado (somSorteio.js, opt-in off), reserva neutro, X de saída, botões C3.
 import { useEffect, useRef, useState } from 'react';
+import { Share2 } from 'lucide-react';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { apiFetch } from '../lib/api';
-import { gerarCartazEscalacao } from '../utils/sorteioCartao';
+import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
+import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPremioSorteio, prepararConfetti } from '../hooks/useConfetti';
 import SomSorteio from './somSorteio';
 import '../styles/app.css';
@@ -125,19 +127,20 @@ function BannerSorteio() {
  * anúncios na mesma tela seriam duas impressões pela mesma vista. Quem tem slot
  * próprio passa `false`; o /p/ e o Campeonato continuam com a faixa de sempre.
  */
-export default function CerimoniaSorteio({ resultado, autoStart = true, aoComecar, aoTerminar, equipa, data, bannerInterno = true, euSorteei = false }) {
+export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data, bannerInterno = true, euSorteei = false }) {
   const rootRef = useRef(null);
   // props estáveis para o efeito (que corre 1x); um re-sorteio remonta via key no consumidor.
   const cbRef = useRef(aoTerminar);
   useEffect(() => { cbRef.current = aoTerminar; });
-  // Rodada 12A: simétrico do aoTerminar — a alavanca repete a cerimónia, e quem
-  // mostra alguma coisa no fim (a barra de compartilhar) precisa de a esconder
-  // outra vez quando ela recomeça.
-  const cbComecarRef = useRef(aoComecar);
-  useEffect(() => { cbComecarRef.current = aoComecar; });
-  // info do cartaz (equipa/data) — lida no clique do "Guardar", sempre a mais recente.
-  const infoRef = useRef({ equipa, data });
-  useEffect(() => { infoRef.current = { equipa, data }; });
+  // RODADA 14B — compartilhar vive AQUI, logo abaixo do retângulo dos times, e é
+  // o único lugar. Escondido enquanto a cerimónia corre (é o momento de olhar,
+  // não de agir); sobe 5,1 s depois do jackpot, ou no fim se a pessoa saltou. A
+  // alavanca esconde-o outra vez ao recomeçar.
+  const [compartilharOn, setCompartilharOn] = useState(false);
+  const [gerando, setGerando] = useState(false);
+  const btnRef = useRef(null);
+  // O toast da máquina nasce dentro do efeito; os botões (React) falam com ele por aqui.
+  const toastRef = useRef(() => {});
 
   useEffect(() => {
     const root = rootRef.current;
@@ -278,6 +281,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
       celebrarPremioSorteio(2500);
       const idCalmo = setTimeout(() => { if (vivo) { maq.classList.remove('premio'); maq.classList.add('premioCalmo'); } }, 3000);
       timers.add(idCalmo);
+      // O botão de compartilhar sobe 1,5 s depois de o jackpot acabar (3,6 s):
+      // primeiro a pessoa OLHA para o prêmio, depois é convidada a mandá-lo.
+      const idBotao = setTimeout(() => { if (vivo) setCompartilharOn(true); }, 5100);
+      timers.add(idBotao);
     }
 
     // — o final: cartão (véu no interior) + lock-in + molduras vivas
@@ -349,11 +356,12 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     async function cerimonia() {
       if (aCorrer || !vivo) return;
       aCorrer = true; saltarFlag = false;
-      q('.lever').classList.add('girando'); q('.partilha').classList.remove('on');
-      cbComecarRef.current?.();
+      q('.lever').classList.add('girando'); setCompartilharOn(false);
       try { await corpo(); } finally {
         aCorrer = false; q('.saltar')?.classList.remove('on');
-        q('.lever').classList.remove('girando'); q('.partilha').classList.add('on');
+        // Quem saltou (ou pediu movimento reduzido) não passa pelo prêmio: o
+        // botão entra aqui, no fim, sem esperar os 5,1 s.
+        q('.lever').classList.remove('girando'); if (vivo) setCompartilharOn(true);
         if (vivo) cbRef.current?.();
       }
     }
@@ -417,34 +425,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     // ── X de saída (volta à página do jogo) ──
     const sairX = q('.sairX'); const onSair = () => { if (window.history.length > 1) window.history.back(); }; sairX.addEventListener('click', onSair);
 
-    // ── botões C3: Guardar (cartaz) + Compartilhar (link /p/) ──
+    // ── o toast da máquina (os botões de compartilhar, em React, chegam-lhe pelo toastRef) ──
     let toastT = null;
     const mostrarToast = (msg) => { const el = q('.toast'); el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>${esc(msg)}`; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 1900); timers.add(toastT); };
-    // link /p/ a partir do URL do jogo (/equipa/:slug/jogo/:id/... → /p/:slug/:id)
-    const m = window.location.pathname.match(/\/equipa\/([^/]+)\/jogo\/([^/]+)/);
-    const linkP = m ? `${window.location.origin}/p/${m[1]}/${m[2]}` : `${window.location.origin}${window.location.pathname}`;
-    let aGuardar = false;
-    const onGuardar = async () => {
-      if (aGuardar) return;
-      aGuardar = true; mostrarToast('Gerando o cartaz…');
-      try {
-        // No app a entrega é a folha de compartilhar (Rodada 8A); fechada sem
-        // escolher nada, não se diz "salvo".
-        const { entrega } = await gerarCartazEscalacao(resultado, { equipa: infoRef.current.equipa, data: infoRef.current.data });
-        if (entrega !== 'cancelou') mostrarToast('Cartaz salvo');
-      } catch {
-        mostrarToast('Não deu para gerar o cartaz');
-      } finally { aGuardar = false; }
-    };
-    const onComp = async () => {
-      try { await navigator.clipboard.writeText(linkP); } catch {
-        const t = document.createElement('textarea'); t.value = linkP; document.body.appendChild(t); t.select();
-        try { document.execCommand('copy'); } catch { /* */ } t.remove();
-      }
-      mostrarToast('Link copiado');
-    };
-    const bg = q('.btGuardar'); const bc = q('.btComp');
-    bg.addEventListener('click', onGuardar); bc.addEventListener('click', onComp);
+    toastRef.current = mostrarToast;
 
     // ── arranque ──
     montarGrupos();
@@ -464,14 +448,40 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
       lever.removeEventListener('pointerup', onUp); lever.removeEventListener('pointercancel', onUp);
       lever.removeEventListener('keydown', onKey);
       saltarBtn.removeEventListener('click', onSaltar); sairX.removeEventListener('click', onSair);
-      bg.removeEventListener('click', onGuardar); bc.removeEventListener('click', onComp);
+      toastRef.current = () => {};
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a cerimónia monta 1x; re-sorteio remonta via key
   }, []);
 
+  // Rodada 8A: na web baixa; no app abre a folha de compartilhar (o <a download>
+  // não faz nada no WebView). A folha já é o retorno; fechada sem escolher nada,
+  // não se diz "salvo".
+  async function compartilharTimes() {
+    if (gerando) return;
+    setGerando(true);
+    try {
+      const { entrega } = await gerarCartazEscalacao(resultado, { equipa, data });
+      if (entrega === 'baixou') toastRef.current('Imagem dos times salva');
+    } catch (e) {
+      toastRef.current(e?.message || 'Não deu para gerar a imagem');
+    } finally { setGerando(false); }
+  }
+  async function compartilharTime(ti) {
+    if (gerando) return;
+    setGerando(true);
+    try {
+      const { blob, nome } = await gerarCartao916(resultado, ti, equipa);
+      const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
+      if (entrega === 'baixou') toastRef.current('Cartão 9:16 salvo');
+    } catch (e) {
+      toastRef.current(e?.message || 'Não deu para gerar o cartão');
+    } finally { setGerando(false); }
+  }
+
   if (!resultado?.times?.length) {
     return <div style={{ padding: 24, textAlign: 'center', color: '#8a8a98' }}>Sem resultado para mostrar.</div>;
   }
+  const times = resultado.times;
 
   return (
     <div className="smaq" ref={rootRef}>
@@ -519,9 +529,22 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
           </div>
         </div></div>
       </div>
-      <div className="partilha">
-        <button type="button" className="pbtn btGuardar" title="Salvar a imagem 9:16 (cartaz)"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>Salvar</button>
-        <button type="button" className="pbtn btComp" title="Compartilhar o link da cerimônia (/p/)"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg>Compartilhar</button>
+      {/* RODADA 14B — UM caminho para compartilhar, logo abaixo do retângulo dos
+          times: a imagem dos dois times na receita do "Ver sorteio" (.cta-gold +
+          glow + pulso), e por baixo uma linha discreta com o 9:16 de cada time. */}
+      <div className={`compartilhar${compartilharOn ? ' on' : ''}`}>
+        <div className="cta-gold-glow pulse-glow" style={{ display: 'flex' }}>
+          <button ref={btnRef} type="button" className="btn hud-corners cta-gold compartilhar__btn pulse-active" style={{ flex: 1 }} disabled={gerando} onClick={compartilharTimes}>
+            <Share2 size={17} /> {gerando ? 'Gerando…' : 'Compartilhar os times'}
+          </button>
+        </div>
+        <div className="compartilhar__times">
+          {times.map((t, ti) => (
+            <button key={ti} type="button" className="btn btn--sm btn--outline hud-corners-s compartilhar__time" style={{ color: marca(ti).c, borderColor: marca(ti).c }} disabled={gerando} onClick={() => compartilharTime(ti)}>
+              9:16 · {t.nome}
+            </button>
+          ))}
+        </div>
       </div>
       {/* BannerAd — servido a valer (/api/ads?pagina=sorteio); toggle do dono + menores
           fail-closed no servidor. Sem campanha/OFF → não aparece. */}
