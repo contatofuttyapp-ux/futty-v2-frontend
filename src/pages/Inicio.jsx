@@ -12,10 +12,9 @@ import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
 import { plural } from '../utils/plural';
-import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
+import { gerarFigurinhaCanvas, enquadrarAvatar } from '../utils/figurinhaCanvas';
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
-import { registarFalha } from '../lib/diagnostico';
-import { quandoParado } from '../lib/ritmo';
+import { registarFalha, aposPrimeiraPintura } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
@@ -101,9 +100,60 @@ async function gerarCromoDataURL(opts, chave, userId) {
 // esperar. Sem avatar IA o canvas já veio com o genérico da casa desenhado (ver
 // `jogadorCard` em Inicio()) — não há overlay de convite: o card em si é o
 // convite (rodízio 31-jul).
-function CromoInicio({ cromo, previa, nome, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
+// O fundo do cromo, em CSS, para a prévia. Os que têm asset usam o MESMO
+// ficheiro que o canvas desenha (e com o mesmo enquadramento: `cover` ancorado a
+// 22% do topo é o biasTopo do retrato quadrado). Os desenhados ficam pela base —
+// o honeycomb do Épico é alpha 0.065 e não se distingue num placeholder.
+function fundoDaPrevia(fundo) {
+  if (fundo === 'estadio') return { backgroundImage: 'url(/stadium_bg.webp)' };
+  if (fundo === 'golden') return { backgroundImage: 'url(/golden-plate.jpg)', backgroundPosition: '50% 50%' };
+  if (fundo === 'royal') return { backgroundImage: 'url(/royal-plate.webp)', backgroundPosition: '50% 50%' };
+  if (fundo === 'aura') {
+    return { background: 'radial-gradient(ellipse 50% 48% at 50% 42%, rgba(212,160,23,0.5), rgba(212,160,23,0.12) 64%, transparent 92%), linear-gradient(#0a0a12, #070812 55%, #050609)' };
+  }
+  // 'preto' (Neutro) e 'gradiente' (Épico) partilham a base escura da casa.
+  return { background: 'linear-gradient(#16161c, #1d1d24 50%, #101014)' };
+}
+
+// A PRÉVIA — o cromo inteiro composto em DOM, pronto na primeira pintura.
+// O avatar é medido quando carrega e posicionado com a conta do canvas
+// (enquadrarAvatar), em percentagens: assim os dois põem o jogador no mesmo
+// sítio e a troca da prévia pelo cromo desenhado não salta.
+function PreviaCromo({ previa, fundo }) {
+  const [caixa, setCaixa] = useState(null);
+  const medir = (img) => {
+    if (!img?.naturalWidth) return;
+    // W=H=100 → o resultado já vem em percentagem do lado do cromo.
+    const { dx, dy, dw, dh } = enquadrarAvatar({
+      W: 100, H: 100, nw: img.naturalWidth, nh: img.naturalHeight, avatarZoom: 1.1, ehQuadrado: true,
+    });
+    setCaixa({ left: `${dx}%`, top: `${dy}%`, width: `${dw}%`, height: `${dh}%` });
+  };
   return (
-    <Link to={destino} data-tour="player-card" className="cromo-inicio" aria-label={destinoLabel}>
+    <div className="cromo-previa" aria-hidden="true">
+      <div className="cromo-previa__dentro">
+        <div className="cromo-previa__fundo" style={fundoDaPrevia(fundo)} />
+        {previa ? (
+          <img
+            src={previa}
+            alt=""
+            decoding="async"
+            fetchpriority="high"
+            loading="eager"
+            className="cromo-previa__avatar"
+            style={caixa || { opacity: 0 }}
+            onLoad={(e) => medir(e.currentTarget)}
+          />
+        ) : null}
+        <div className="cromo-previa__pe" />
+      </div>
+    </div>
+  );
+}
+
+function CromoInicio({ cromo, previa, fundo, nome, refCromo, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
+  return (
+    <Link to={destino} ref={refCromo} data-tour="player-card" className="cromo-inicio" aria-label={destinoLabel}>
       {/* Sombra no chão — contra-fase com o bob: encolhe quando o cromo sobe. */}
       <div
         className="fig-shadow"
@@ -114,18 +164,9 @@ function CromoInicio({ cromo, previa, nome, destino = '/figurinha', destinoLabel
         <div className="fig-sway" style={{ position: 'relative', width: '100%', height: '100%' }}>
           {cromo ? (
             <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" decoding="async" fetchpriority="high" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
-          ) : previa ? (
-            <img
-              src={previa}
-              alt=""
-              aria-hidden="true"
-              decoding="async"
-              fetchpriority="high"
-              loading="eager"
-              className="cromo-previa"
-              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-            />
-          ) : null}
+          ) : (
+            <PreviaCromo previa={previa} fundo={fundo} />
+          )}
         </div>
       </div>
     </Link>
@@ -324,6 +365,9 @@ export default function Inicio() {
   // começa a null, a tela aparece na mesma, e ele entra quando estiver pronto
   // (do IndexedDB na hora, ou do canvas um segundo depois).
   const [cromo, setCromo] = useState(null);
+  // O elemento do cromo — para medir a que largura ele é realmente mostrado e
+  // gerar o canvas nesse tamanho, em vez dos 600×600 fixos de antes.
+  const refCromo = useRef(null);
 
   const [games, setGames] = useState(null); // null = a carregar
   const [error, setError] = useState('');
@@ -529,32 +573,44 @@ export default function Inicio() {
     // Agora quem manda é o relógio: passados 400 ms sem resposta do cache,
     // desenha-se na mesma. Perde-se o atalho, nunca a figurinha.
     //
-    // VELOCIDADE 8 (16-set) — o CANVAS espera o aparelho parar. Os dois atalhos
-    // (memória e IndexedDB) continuam imediatos: são baratos e é deles que vem
-    // o cromo instantâneo de quem já abriu o app antes. O que espera é só o
-    // desenho de verdade — decodificar o avatar e o fundo e compor um canvas de
-    // 600×600 é de um a três segundos de thread principal no celular, e fazê-lo
-    // por cima do primeiro toque é meio caminho para o engasgo.
+    // FLUIDEZ 2 (16-set) — o canvas deixa de esperar o aparelho PARAR.
     //
-    // Sem o extra da versão nova, ao contrário do pré-aquecimento: o cromo é o
-    // que a pessoa está a OLHAR, não um adiantamento para depois. Mais 5 s a ver
-    // a foto de prévia seria trocar um defeito por outro.
+    // A Velocidade 8 pô-lo atrás do `quandoParado` (3 s sem tocar na tela)
+    // porque compor era de um a três segundos de thread principal. Isso resolvia
+    // o engasgo e criava outro: o relatório do build 20 mostra a travada de
+    // 6402 ms aos 82 s — o cromo a compor quando a pessoa finalmente parou, ou
+    // seja no pior momento possível, já depois de ter desistido de esperar.
+    //
+    // Agora compor custa ~100 ms e é fatiado (ver figurinhaCanvas), por isso o
+    // certo é o contrário: começar CEDO, dois quadros depois da primeira
+    // pintura. Dois quadros porque o primeiro ainda cai antes do desenho e o
+    // segundo já corre com a tela na frente — o mesmo critério da marcação da
+    // pintura em lib/diagnostico.js. Os atalhos (memória e IndexedDB) continuam
+    // imediatos: é deles que vem o cromo instantâneo de quem já abriu o app.
     let desenhou = false;
-    let largarEspera = null;
-    // Em que instante o desenho começou mesmo — a vigia dos 4 s conta a partir
-    // daqui, senão a espera por "parado" disparava um alarme falso.
+    let quadro1 = null;
+    let quadro2 = null;
     let comecouEm = null;
     function desenhar() {
       if (!vivo || desenhou) return;
       desenhou = true;
-      largarEspera = quandoParado(() => {
+      aposPrimeiraPintura(() => {
         if (!vivo) return;
-        comecouEm = Date.now();
-        compor();
-      }, { contarVersaoNova: false });
+        quadro1 = requestAnimationFrame(() => {
+          quadro2 = requestAnimationFrame(() => {
+            if (!vivo) return;
+            comecouEm = Date.now();
+            compor();
+          });
+        });
+      });
     }
     function compor() {
-      gerarCromoDataURL(opts, chave, user.id)
+      // A largura a que o cromo é MOSTRADO manda no tamanho do canvas: gerar
+      // 600×600 para uma tela que mostra 99 px é rasterizar e codificar seis
+      // vezes mais pixéis do que se vê (ver ladoDoCromo).
+      const larguraExibida = refCromo.current?.getBoundingClientRect().width || null;
+      gerarCromoDataURL({ ...opts, larguraExibida }, chave, user.id)
         .then((url) => {
           if (!vivo) return;
           if (url) setCromo(url);
@@ -605,7 +661,8 @@ export default function Inicio() {
     return () => {
       vivo = false;
       clearInterval(vigia);
-      if (largarEspera) largarEspera();
+      if (quadro1 != null) cancelAnimationFrame(quadro1);
+      if (quadro2 != null) cancelAnimationFrame(quadro2);
     };
   }, [user, cromoAvatarEhIA, cromoFundo, avatarGenericoEscolha, nome]);
 
@@ -939,7 +996,7 @@ export default function Inicio() {
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px', paddingTop: 'var(--space-lg)' }}>
           <div className="inicio-vline" aria-hidden="true" />
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            <CromoInicio cromo={cromo} previa={previaCromo} nome={nome} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar meu time' : 'Ver e personalizar minha figurinha'} />
+            <CromoInicio cromo={cromo} previa={previaCromo} fundo={cromoFundo} nome={nome} refCromo={refCromo} destino={noTeams ? '/criar-equipa' : '/figurinha'} destinoLabel={noTeams ? 'Criar meu time' : 'Ver e personalizar minha figurinha'} />
             {/* Trocar visual — só quando o card veste o genérico (sem avatar IA). */}
             {!cromoAvatarEhIA ? (
               <button

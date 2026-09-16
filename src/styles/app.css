@@ -1741,14 +1741,67 @@
    espera que não acaba não é um estado de transição, é um defeito — e entre
    mostrar o rosto nítido ou desfocado, quando pode ser o último quadro, mostra-se
    nítido. O pulso (mais discreto agora) é o que continua a dizer "vem aí mais". */
+/* FLUIDEZ 2 (16-set) — a prévia deixou de ser "a foto da pessoa a segurar o
+   lugar" e passou a ser O CROMO INTEIRO, composto em DOM: fundo escolhido +
+   avatar no mesmo enquadramento + moldura dourada. Antes, o primeiro quadro
+   mostrava um retrato solto no meio da página e a moldura só aparecia quando o
+   canvas acabava — o Pedro apanhou isso no aparelho ("o frame do cromo do
+   Início aparece depois do avatar"). Agora a pessoa vê um cromo desde a
+   primeira pintura, e o que o canvas traz depois é o acabamento, não a forma.
+
+   O enquadramento do avatar NÃO está aqui: vem do enquadrarAvatar() do
+   figurinhaCanvas, a mesma conta que o canvas usa, aplicada em percentagens.
+   Duas contas divergiriam e a troca saltava à vista.
+
+   O dourado fica POR BAIXO e o conteúdo por cima, encolhido: o anel que sobra é
+   a moldura. É mais barato que recortar um buraco e dá o mesmo desenho. */
 .cromo-previa {
-  opacity: 0.85;
+  position: absolute;
+  inset: 0;
+  /* Corpo dourado do frame: 7*k a partir da borda, com k = lado/400 → 1.75%.
+     O gradiente é o mesmo do desenharFrame() do canvas. */
+  background: linear-gradient(135deg, #f7e08a 0%, #c8940f 30%, #f5d060 55%, #8a6508 80%, #e8c04a 100%);
+  /* cut = 32*k = 8% do lado, nos quatro cantos (o octógono do cromo). */
+  clip-path: polygon(8% 0, 92% 0, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0 92%, 0 8%);
   animation: cromo-previa-pulso 1.6s ease-in-out infinite;
 }
 
+/* Linha interna fina do frame (1.2*k a 8.5*k de inset → 0.3% a 2.125%). */
+.cromo-previa__dentro {
+  position: absolute;
+  inset: 1.75%;
+  clip-path: polygon(8% 0, 92% 0, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0 92%, 0 8%);
+  background: #0d0d12;
+  box-shadow: inset 0 0 0 0.35% rgba(245, 224, 112, 0.9);
+}
+
+.cromo-previa__fundo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: 50% 22%;
+}
+
+/* O avatar é posicionado por estilo em linha (percentagens vindas do
+   enquadrarAvatar). Aqui só a sombra, a mesma do canvas (24*k = 6% do lado). */
+.cromo-previa__avatar {
+  position: absolute;
+  filter: drop-shadow(0 1% 6% rgba(0, 0, 0, 0.9));
+}
+
+/* Gradiente inferior do retrato quadrado (0.84→1, alpha 0.55), como no canvas. */
+.cromo-previa__pe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 84%;
+  bottom: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55));
+}
+
 @keyframes cromo-previa-pulso {
-  0%, 100% { opacity: 0.75; }
-  50% { opacity: 0.95; }
+  0%, 100% { opacity: 0.88; }
+  50% { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

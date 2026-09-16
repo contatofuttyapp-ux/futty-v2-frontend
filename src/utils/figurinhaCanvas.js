@@ -549,6 +549,39 @@ function desenharUmSelo(cx, x, y, w, tier, label) {
   cx.restore();
 }
 
+// FLUIDEZ 2 (16-set) — ONDE o avatar fica dentro do card. Extraído do desenho
+// para poder ser usado também pela PRÉVIA em DOM do Início (ver CromoInicio):
+// os dois têm de pôr o jogador exactamente no mesmo sítio, senão a troca da
+// prévia pelo cromo desenhado salta à vista. Uma conta só, um sítio só.
+//
+// FASE 3.44 — Zoom ANCORADO AOS OLHOS. Antes fixava-se o topo (dy = H*0.12) e,
+// como dh cresce com avatarZoom, o olhar descia ao ampliar. Agora ancora-se o
+// ponto dos olhos: dy = EYE_Y - dh*EYE_FRAC. Como dh já inclui o zoom, os olhos
+// ficam sempre em EYE_Y e o corpo cresce à volta desse ponto.
+// EYE_FRAC medido no avatar gerado (445x680, já com trim+extend): pupila esquerda
+// a 20.9% e direita a 22.2% da altura do PNG (cabeça inclinada) → média 21.5%.
+const EYE_FRAC = 0.215;
+
+export function enquadrarAvatar({ W, H, nw, nh, avatarZoom = 1, ehQuadrado = false }) {
+  // Retrato quadrado: o jogador DOMINA o retrato (box +20%: 0.80 → 0.96). O card
+  // 2:3 fica nos 0.80 de sempre.
+  const boxFrac = ehQuadrado ? 0.96 : 0.80;
+  const scale = Math.min((W * boxFrac) / nw, (H * boxFrac) / nh) * avatarZoom;
+  const dw = nw * scale;
+  const dh = nh * scale;
+  // Card 2:3: olhos no terço superior (0.30). Retrato QUADRADO: com o avatar maior
+  // (box 0.96) o rosto sobe para 0.34 — dá presença ao jogador sem cortar a coroa.
+  const EYE_Y = H * (ehQuadrado ? 0.34 : 0.30);
+  return { dx: (W - dw) / 2, dy: EYE_Y - dh * EYE_FRAC, dw, dh };
+}
+
+/** O recorte octogonal do card, em percentagem — para o clip-path do CSS. */
+export function octagonoCSS() {
+  // cut = 32*k e k = W/400 → o corte é sempre 8% da LARGURA. Num quadrado é
+  // igual nos dois eixos; no card 2:3 a fracção vertical é 8%·W/H.
+  return 8;
+}
+
 async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [], fundoGlints = 'pico', cron = null }) {
   const W = largura;
   const H = altura;
@@ -625,30 +658,11 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // Desenha o avatar real com enquadramento/zoom/posição fixos. Corte LIMPO (sem
   // fade) exactamente na linha onde a placa começa — a placa cobre a linha de corte.
   const desenharAvatar = () => {
-    // Retrato quadrado: o jogador DOMINA o retrato (box +20%: 0.80 → 0.96). O card
-    // 2:3 fica nos 0.80 de sempre.
-    const boxFrac = ehQuadrado ? 0.96 : 0.80;
-    const boxW = W * boxFrac;
-    const boxH = H * boxFrac;
-    const scale = Math.min(boxW / avatar.naturalWidth, boxH / avatar.naturalHeight) * avatarZoom;
-    const dw = avatar.naturalWidth * scale;
-    const dh = avatar.naturalHeight * scale;
-    const dx = (W - dw) / 2;
-    // FASE 3.44 — Zoom ANCORADO AOS OLHOS. Antes fixava-se o topo (dy = H*0.12) e,
-    // como dh cresce com avatarZoom, o olhar descia ao ampliar. Agora ancora-se o
-    // ponto dos olhos: dy = EYE_Y - dh*EYE_FRAC. Como dh já inclui o zoom, os olhos
-    // ficam sempre em EYE_Y e o corpo cresce à volta desse ponto.
-    // EYE_FRAC medido no avatar gerado (445x680, já com trim+extend): pupila esquerda
-    // a 20.9% e direita a 22.2% da altura do PNG (cabeça inclinada) → média 21.5%.
-    // Confirma-se por retro-cálculo da 3.28: com dy=H*0.12 os olhos davam 29.2% do
-    // card, o ~29% que essa fase mediu. (A 30% do PNG fica a BOCA, não os olhos.)
-    const EYE_FRAC = 0.215;
-    // Card 2:3: olhos no terço superior (0.30). Retrato QUADRADO: com o avatar maior
-    // (box 0.96) o rosto sobe para 0.34 — dá presença ao jogador sem cortar a coroa.
-    // Calculado com o avatar real (445×680, olhos a 21.5%): a dh≈634, dy = 0.34·600 −
-    // 634·0.215 ≈ 68px, e o topo do clip está a 16.65px → ~51px de folga na coroa.
-    const EYE_Y = H * (ehQuadrado ? 0.34 : 0.30);
-    const dy = EYE_Y - dh * EYE_FRAC;
+    // A conta do enquadramento vive em enquadrarAvatar (topo do ficheiro): a
+    // prévia em DOM do Início usa a MESMA, senão a troca saltava à vista.
+    const { dx, dy, dw, dh } = enquadrarAvatar({
+      W, H, nw: avatar.naturalWidth, nh: avatar.naturalHeight, avatarZoom, ehQuadrado,
+    });
 
     // FASE 3.26/3.45 — Clip OCTOGONAL: o avatar nunca é desenhado sobre o CORPO
     // dourado grosso do frame, em nenhum lado. Geometria medida do próprio frame:
