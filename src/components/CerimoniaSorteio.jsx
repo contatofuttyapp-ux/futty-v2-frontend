@@ -561,8 +561,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
           times: a imagem dos dois times na receita do "Ver sorteio" (.cta-gold +
           glow + pulso), e por baixo uma linha discreta com o 9:16 de cada time. */}
       <div className={`compartilhar${compartilharOn ? ' on' : ''}`}>
-        <div className="cta-gold-glow pulse-glow" style={{ display: 'flex' }}>
-          <button ref={btnRef} type="button" className="btn hud-corners cta-gold compartilhar__btn pulse-active" style={{ flex: 1 }} disabled={gerando} onClick={compartilharTimes}>
+        {/* O pulso forte é de quem acabou de sortear. Quem abre o resultado depois
+            vê o estado final: o botão no lugar só com o glow (item 4 da 14B). */}
+        <div className={`cta-gold-glow${euSorteei ? ' pulse-glow' : ''}`} style={{ display: 'flex' }}>
+          <button ref={btnRef} type="button" className={`btn hud-corners cta-gold compartilhar__btn${euSorteei ? ' pulse-active' : ''}`} style={{ flex: 1 }} disabled={gerando} onClick={compartilharTimes}>
             <Share2 size={17} /> {gerando ? 'Gerando…' : 'Compartilhar os times'}
           </button>
         </div>

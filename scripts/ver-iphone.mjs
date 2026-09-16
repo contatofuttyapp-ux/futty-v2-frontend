@@ -252,9 +252,10 @@ function observadorRanking({ lento }) {
 // pelo SW e o Playwright deixa de os ver: a interceção das escritas falhava em
 // silêncio (medido no 1º "antes": o PATCH da ausência e o POST do Diagnóstico
 // chegaram a produção). O app da loja também não usa o SW.
-async function novoContexto(navegador, sessao, { amostrar = true } = {}) {
+async function novoContexto(navegador, sessao, { amostrar = true, viewport = null } = {}) {
   const contexto = await navegador.newContext({
     ...IPHONE,
+    ...(viewport ? { viewport } : {}),
     ...(amostrar ? {} : { serviceWorkers: 'block' }),
     storageState: sessao ? { cookies: [], origins: [{ origin: BASE, localStorage: sessao }] } : undefined,
   });
@@ -1618,6 +1619,244 @@ async function cenaRodada14a(navegador, sessao) {
   };
 }
 
+/**
+ * RODADA 14B — o fim do sorteio como prêmio, e UM caminho para compartilhar.
+ *
+ * Três passagens pela mesma página:
+ *   A) quem SORTEOU (o euSorteei entra por history.state, exatamente como o
+ *      Jogo.jsx o manda no navigate): 6 quadros a contar do instante do jackpot
+ *      (a classe .premio entra no mesmo tick do jackpot.mp3) e o card com o
+ *      botão que sobe aos 5,1 s;
+ *   B) um sorteio 9x9 — o /api/games/:id é reescrito para 18 jogadores: o botão
+ *      cai fora da tela e a pílula-guia tem de aparecer, rolar até ele e sumir;
+ *   C) quem abre o resultado DEPOIS: o estado final, sem o pulso forte.
+ */
+function medirCompartilhar14b() {
+  const btn = document.querySelector('.smaq .compartilhar__btn');
+  const maq = document.querySelector('.smaq .maq');
+  const base = {
+    premio: !!maq?.classList.contains('premio'),
+    calmo: !!maq?.classList.contains('premioCalmo'),
+    barraFixa: !!document.querySelector('.sorteio-barra'),
+    antigos: [...document.querySelectorAll('button')].filter((b) => /^(salvar|compartilhar|compartilhar times)$/i.test((b.innerText || '').trim())).length,
+    molduras: document.querySelectorAll('.smaq .grupos .mmold').length,
+  };
+  if (!btn) return { ...base, achou: false };
+  const r = btn.getBoundingClientRect(); const cs = getComputedStyle(btn); const wrap = btn.parentElement;
+  return {
+    ...base,
+    achou: true,
+    texto: btn.innerText.trim(),
+    caixa: `${Math.round(r.width)}x${Math.round(r.height)}`,
+    cor: cs.color, fundo: cs.backgroundColor, borda: cs.borderColor,
+    pulsoForte: btn.classList.contains('pulse-active') && wrap.classList.contains('pulse-glow'),
+    glow: wrap.classList.contains('cta-gold-glow'),
+    visivel: r.top >= 0 && r.bottom <= window.innerHeight,
+    topo: Math.round(r.top), fundoTela: window.innerHeight,
+    timesLinha: [...document.querySelectorAll('.smaq .compartilhar__time')].map((b) => b.innerText.trim()),
+  };
+}
+function medirPilula14b() {
+  const p = document.querySelector('.smaqx-pilula');
+  if (!p) return { achou: false };
+  const b = p.querySelector('button') || p;
+  const r = b.getBoundingClientRect(); const rp = p.getBoundingClientRect(); const cs = getComputedStyle(b);
+  return {
+    achou: true,
+    texto: b.innerText.trim(),
+    altura: Math.round(r.height),
+    desvioDoCentro: Math.round((rp.left + rp.right) / 2 - window.innerWidth / 2),
+    ateOFundo: Math.round(window.innerHeight - rp.bottom),
+    cor: cs.color, fundo: cs.backgroundColor, borda: cs.borderColor,
+  };
+}
+
+/**
+ * Carimbos tirados DENTRO da página (vai por addInitScript): marca quando
+ * .premio entra na máquina, quando vira .premioCalmo, quando o botão sobe e
+ * quando o título e o flash existem. É o relógio que vale — o de fora anda
+ * atrasado por cada captura.
+ */
+function carimbosR14b() {
+  const m = (window.__r14b = {});
+  const agora = () => Math.round(performance.now());
+  new MutationObserver((lista) => {
+    for (const mu of lista) {
+      if (mu.type === 'childList') {
+        for (const n of mu.addedNodes) if (n.nodeType === 1 && n.classList?.contains('smaqx-flash') && m.flash == null) m.flash = agora();
+        continue;
+      }
+      const cl = mu.target.classList;
+      if (cl.contains('maq')) {
+        if (cl.contains('premio') && m.premio == null) m.premio = agora();
+        if (cl.contains('premioCalmo') && m.calmo == null) m.calmo = agora();
+      }
+      if (cl.contains('compartilhar') && cl.contains('on') && m.botao == null) m.botao = agora();
+      if (cl.contains('fimtxt') && cl.contains('on') && m.titulo == null) m.titulo = agora();
+    }
+  // `document`, não `documentElement`: o init script corre antes de haver <html>.
+  }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+}
+
+async function cenaRodada14b(navegador, sessao) {
+  const jogo = await acharJogoSorteado(navegador, sessao);
+  if (!jogo) return { semJogo: true };
+  const ROTA = `/equipa/${TIME}/jogo/${jogo.id}/sorteio`;
+  const erros = [];
+  const saida = { jogo: jogo.id, erros };
+
+  // ── A) quem sorteou: a sequência do prêmio e o card com o botão ──
+  {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await travarEscritas(contexto);
+    // O React Router lê history.state.usr ao arrancar: semear aqui é o mesmo
+    // que ter chegado pelo navigate(..., { state: { euSorteei: true } }).
+    await contexto.addInitScript(() => {
+      if (/\/sorteio$/.test(location.pathname)) history.replaceState({ usr: { euSorteei: true }, key: 'r14b', idx: 0 }, '');
+    });
+    await contexto.addInitScript(carimbosR14b);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`A: ${e.message}`));
+    await pagina.goto(`${BASE}${ROTA}`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.smaq .maq', { timeout: 30000 });
+    await pagina.waitForSelector('.smaq .maq.premio', { timeout: 90000 });
+    const t0 = Date.now();
+    const noInstante = await pagina.evaluate(() => ({
+      flash: !!document.querySelector('.smaqx-flash'),
+      titulo: !!document.querySelector('.smaq .fimtxt.on'),
+      veu: !!document.querySelector('.smaq .palcoStage.veuTotal'),
+    }));
+    const quadros = [];
+    const alvos = [0, 250, 600, 1100, 1900, 3300];
+    let meio = null;
+    for (let i = 0; i < alvos.length; i += 1) {
+      const falta = alvos[i] - (Date.now() - t0);
+      if (falta > 0) await espera(falta);
+      if (i === 2) {
+        meio = await pagina.evaluate(() => {
+          const raios = document.querySelector('.smaq .premioRaios'); const mq = document.querySelector('.smaq .mq');
+          return {
+            raiosOpacidade: raios ? getComputedStyle(raios).opacity : null,
+            raiosAnimacao: raios ? getComputedStyle(raios).animationName : null,
+            lampada: mq ? getComputedStyle(mq).animationName : null,
+            moedas: !!document.querySelector('canvas'),
+          };
+        });
+      }
+      const ms = Date.now() - t0;
+      const nome = `premio-${i + 1}-${String(ms).padStart(4, '0')}ms`;
+      await pagina.screenshot({ path: arquivoCaptura(nome) });
+      quadros.push({ ms, captura: `${ETIQUETA}-${nome}.png` });
+    }
+    await pagina.waitForSelector('.smaq .compartilhar.on', { timeout: 20000 }).catch(() => {});
+    const botaoAosMs = Date.now() - t0;
+    await espera(800);
+    let botao = await pagina.evaluate(medirCompartilhar14b);
+    await pagina.screenshot({ path: arquivoCaptura('card-botao') });
+    let rolado = null;
+    if (botao.achou && !botao.visivel) {
+      await pagina.evaluate(() => document.querySelector('.smaq .compartilhar__btn')?.scrollIntoView({ block: 'center' }));
+      await espera(700);
+      botao = await pagina.evaluate(medirCompartilhar14b);
+      await pagina.screenshot({ path: arquivoCaptura('card-botao-rolado') });
+      rolado = `${ETIQUETA}-card-botao-rolado.png`;
+    }
+    const marcas = await pagina.evaluate(() => window.__r14b || {});
+    await contexto.close();
+    saida.premio = { noInstante, meio, quadros, botaoAosMs, marcas, botao, rolado };
+  }
+
+  // ── A2) o relógio limpo: a mesma cerimónia sem captura nenhuma. Cada quadro
+  //    a 3x trava a página ~0,5-1 s e atrasa os temporizadores do prêmio; aqui
+  //    só se lê o relógio da página — é o número que vale para "3,0 s" e "5,1 s".
+  {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await travarEscritas(contexto);
+    await contexto.addInitScript(carimbosR14b);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`A2: ${e.message}`));
+    await pagina.goto(`${BASE}${ROTA}`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.smaq .maq', { timeout: 30000 });
+    await pagina.waitForSelector('.smaq .compartilhar.on', { timeout: 90000 }).catch(() => {});
+    saida.relogio = await pagina.evaluate(() => window.__r14b || {});
+    await contexto.close();
+  }
+
+  // ── B) 9x9: o botão fora da tela e a pílula-guia ──
+  // Em dois tamanhos: no 430×932 o bloco dos times de 18 jogadores ainda cabe
+  // (o .gruposWrap rola por dentro a partir de 520 px) e o botão fica na tela —
+  // a pílula NÃO deve aparecer; no 390×844 (iPhone 15/14/13, o tamanho mais
+  // comum) o botão cai abaixo da dobra e a pílula tem de aparecer, rolar e sumir.
+  const passagem9x9 = async (viewport, sufixo) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, viewport });
+    await travarEscritas(contexto);
+    await contexto.route('**/api/games/*', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const resposta = await route.fetch();
+      const json = await resposta.json().catch(() => null);
+      const tr = json?.game?.times_resultado;
+      if (!tr?.times?.length) return route.fulfill({ response: resposta });
+      const base = tr.times.flatMap((t) => t.jogadores || []);
+      const jog = (i) => {
+        const j = base[i % base.length];
+        return { ...j, id: `${j.id || 'j'}-${i}`, nome: i < base.length ? j.nome : `${j.nome} ${Math.floor(i / base.length) + 1}` };
+      };
+      const t1 = tr.times[1] || { ...tr.times[0], nome: 'Time B' };
+      json.game.times_resultado = {
+        ...tr,
+        times: [
+          { ...tr.times[0], jogadores: Array.from({ length: 9 }, (_, i) => jog(i)) },
+          { ...t1, jogadores: Array.from({ length: 9 }, (_, i) => jog(9 + i)) },
+        ],
+        reservas: [],
+      };
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+    });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`B ${sufixo}: ${e.message}`));
+    await pagina.goto(`${BASE}${ROTA}`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.smaq .maq', { timeout: 30000 });
+    await pagina.waitForSelector('.smaq .compartilhar.on', { timeout: 150000 }).catch(() => {});
+    await espera(1000);
+    const antes = await pagina.evaluate(medirCompartilhar14b);
+    const pilula = await pagina.evaluate(medirPilula14b);
+    const captura = `9x9-${sufixo}-${pilula.achou ? 'pilula' : 'sem-pilula'}`;
+    await pagina.screenshot({ path: arquivoCaptura(captura) });
+    let depoisDoToque = null;
+    if (pilula.achou) {
+      await pagina.click('.smaqx-pilula button').catch((e) => erros.push(`B ${sufixo} toque: ${e.message}`));
+      await espera(1100);
+      depoisDoToque = { botao: await pagina.evaluate(medirCompartilhar14b), pilula: await pagina.evaluate(medirPilula14b) };
+      await pagina.screenshot({ path: arquivoCaptura(`9x9-${sufixo}-rolou`) });
+    }
+    await contexto.close();
+    return { tela: `${viewport.width}x${viewport.height}`, captura: `${ETIQUETA}-${captura}.png`, antes, pilula, depoisDoToque };
+  };
+  saida.nove = [
+    await passagem9x9({ width: 430, height: 932 }, '430x932'),
+    await passagem9x9({ width: 390, height: 844 }, '390x844'),
+  ];
+
+  // ── C) quem abre depois: o estado final ──
+  {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`C: ${e.message}`));
+    await pagina.goto(`${BASE}${ROTA}`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.smaq .maq', { timeout: 30000 });
+    await pagina.waitForSelector('.smaq .compartilhar.on', { timeout: 90000 }).catch(() => {});
+    await espera(2500);
+    const final = await pagina.evaluate(medirCompartilhar14b);
+    const pilula = await pagina.evaluate(medirPilula14b);
+    await pagina.screenshot({ path: arquivoCaptura('estado-final-depois') });
+    await contexto.close();
+    saida.depois = { final, pilula };
+  }
+
+  return saida;
+}
+
 async function cenaRodada12c(navegador, sessao) {
   const jogo = await acharJogoSorteado(navegador, sessao);
   const telas = [];
@@ -2074,6 +2313,49 @@ try {
       console.log(`   ${ok(r.clacs.n > 0)} clac: ${r.clacs.n} toques (um por jogador revelado) · vol ${r.clacs.vol}`);
       console.log(`   ${ok(r.jackpot.n === 1)} jackpot: ${r.jackpot.n} toque(s) · vol ${r.jackpot.vol} · aos ${r.jackpot.t} ms`);
       if (r.desconhecidos.length) console.log(`   FALHA · som fora do kit: ${r.desconhecidos.join(', ')}`);
+    }
+  }
+
+  if (CENAS.includes('rodada14b')) {
+    const r = await cenaRodada14b(navegador, sessao);
+    saida.rodada14b = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    console.log('\n[iphone] RODADA 14B · o fim do sorteio como prêmio');
+    if (r.semJogo) {
+      console.log('   sem jogo sorteado nesta conta — não medido.');
+    } else {
+      const p = r.premio;
+      console.log(`   no instante do jackpot: flash ${p.noInstante.flash ? 'na tela' : 'já passou'} · título ${ok(p.noInstante.titulo)} · véu ${ok(p.noInstante.veu)}`);
+      if (p.meio) console.log(`   a meio: raios opacidade ${p.meio.raiosOpacidade} (${p.meio.raiosAnimacao}) · lâmpada ${p.meio.lampada} · moedas ${ok(p.meio.moedas)}`);
+      console.log(`   quadros (relógio da captura, ~1 s por quadro a 3x): ${p.quadros.map((q) => `${q.ms} ms`).join(' · ')}`);
+      const mk = p.marcas || {};
+      const dt = (k) => (mk[k] != null && mk.premio != null ? `${((mk[k] - mk.premio) / 1000).toFixed(2)} s` : '—');
+      console.log(`   relógio da página durante as capturas (cada quadro trava a página): flash ${dt('flash')} · título ${dt('titulo')} · brilho suave ${dt('calmo')} · botão ${dt('botao')}`);
+      const rl = r.relogio || {};
+      const dl = (k) => (rl[k] != null && rl.premio != null ? (rl[k] - rl.premio) / 1000 : null);
+      const perto = (v, alvo) => v != null && Math.abs(v - alvo) <= 0.15;
+      const s = (v) => (v == null ? '—' : `${v.toFixed(2)} s`);
+      console.log(`   ${ok(perto(dl('calmo'), 3.0) && perto(dl('botao'), 5.1))} relógio limpo (sem capturas), a contar do jackpot: flash ${s(dl('flash'))} · título ${s(dl('titulo'))} · brilho suave ${s(dl('calmo'))} (esperado 3,00) · botão ${s(dl('botao'))} (esperado 5,10)`);
+      const b = p.botao;
+      console.log(`   ${ok(b.achou && b.caixa.endsWith('x46') && b.pulsoForte && b.glow)} botão de quem sorteou: "${b.texto}" ${b.caixa} · pulso forte ${b.pulsoForte ? 'sim' : 'não'} · glow ${b.glow ? 'sim' : 'não'} · ${b.visivel ? 'na tela' : `fora da tela (topo ${b.topo}/${b.fundoTela})`}${p.rolado ? ' · rolado em ' + p.rolado : ''}`);
+      console.log(`   cor ${b.cor} · fundo ${b.fundo} · borda ${b.borda} · linha dos times: ${b.timesLinha.join(' | ')}`);
+      console.log(`   ${ok(!b.barraFixa && b.antigos === 0)} sem barra fixa (${b.barraFixa ? 'ainda existe' : 'saiu'}) · botões antigos Salvar/Compartilhar: ${b.antigos} · marquise ${b.calmo ? 'em brilho suave' : b.premio ? 'ainda em sequência' : 'sem prêmio'}`);
+
+      for (const n of r.nove) {
+        console.log(`   9x9 @ ${n.tela}: ${n.antes.molduras} molduras · botão ${n.antes.visivel ? `na tela (topo ${n.antes.topo}/${n.antes.fundoTela})` : `FORA da tela (topo ${n.antes.topo}/${n.antes.fundoTela})`} · ${n.captura}`);
+        if (n.pilula.achou) {
+          const pi = n.pilula;
+          console.log(`      ${ok(!n.antes.visivel && pi.altura === 44 && Math.abs(pi.desvioDoCentro) <= 2)} pílula: "${pi.texto}" · ${pi.altura}px · desvio do centro ${pi.desvioDoCentro}px · ${pi.ateOFundo}px até o fundo · cor ${pi.cor} · borda ${pi.borda}`);
+          const d = n.depoisDoToque;
+          console.log(`      ${ok(d && d.botao.visivel && !d.pilula.achou)} tocou: botão ${d?.botao.visivel ? 'entrou na tela' : 'continua fora'} · pílula ${d?.pilula.achou ? 'ainda aí' : 'sumiu'}`);
+        } else {
+          console.log(`      ${ok(n.antes.visivel)} sem pílula ${n.antes.visivel ? '(o botão já estava na tela — certo)' : '(e o botão está fora da tela — ERRADO)'}`);
+        }
+      }
+
+      const dp = r.depois;
+      console.log(`   ${ok(dp.final.calmo && !dp.final.pulsoForte && dp.final.glow)} quem abre depois: marquise ${dp.final.calmo ? 'em brilho suave' : 'SEM brilho suave'} · pulso forte ${dp.final.pulsoForte ? 'SIM (errado)' : 'não'} · glow ${dp.final.glow ? 'sim' : 'não'} · pílula ${dp.pilula.achou ? 'na tela' : 'não'} (botão ${dp.final.visivel ? 'na tela' : 'fora'})`);
+      if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
     }
   }
 
