@@ -2,18 +2,107 @@
 // versão Story 9:16 (1080×1920) para o Instagram. Tudo no cliente, sem servidor.
 import { urlAsset, urlImagem, nomeJogador } from './avatar';
 import { getFrameColor } from './frameColors';
+import { registarFasesCromo } from '../lib/diagnostico';
+import { respirar } from '../lib/ritmo';
 
-// Carrega uma imagem; devolve null se falhar (evita tainting do canvas).
+// ─── Cronómetro de fases (FLUIDEZ 2, 16-set) ─────────────────────────────────
+// Cada composição diz quanto custou cada passo. Sem isto, "o canvas leva 8,8 s"
+// não aponta para conserto nenhum — com isto vê-se que o custo é o blur por
+// software, não o desenho. Os números vão para a caixa-preta (lib/diagnostico)
+// e aparecem na tela de Diagnóstico como "cromo: fases".
+function cronometro() {
+  let t = performance.now();
+  const fases = [];
+  return {
+    fases,
+    marca(fase) {
+      const agora = performance.now();
+      fases.push({ fase, ms: agora - t });
+      t = agora;
+    },
+    // Um número medido POR DENTRO de uma fase (a maior fatia de um laço, por
+    // exemplo). Não mexe no relógio: não é tempo que passou a mais, é tempo que
+    // já está contado noutra fase, visto com mais pormenor.
+    anotar(fase, ms) {
+      fases.push({ fase, ms, detalhe: true });
+    },
+  };
+}
+
+// ─── Imagens decodificadas UMA vez por sessão (FLUIDEZ 2) ────────────────────
+// Medido no WebKit: descodificar o avatar custa 78 ms e o stadium_bg 35 ms — e
+// acontecia A CADA composição. O preview de 3 camadas da /figurinha constrói
+// três cards em paralelo e descodificava o MESMO fundo três vezes.
+//
+// O cache guarda a PROMESSA, não a imagem: dois pedidos simultâneos do mesmo
+// ficheiro (exactamente o caso das 3 camadas) partilham uma descodificação em
+// vez de dispararem três. Morre com a aba, como deve.
+const imagensEmCache = new Map();
+
 function carregarImagem(src, crossOrigin) {
-  return new Promise((resolve) => {
-    if (!src) return resolve(null);
+  if (!src) return Promise.resolve(null);
+  const chave = `${crossOrigin ? 'x|' : '-|'}${src}`;
+  const guardada = imagensEmCache.get(chave);
+  if (guardada) return guardada;
+  const promessa = new Promise((resolve) => {
     const img = new Image();
     if (crossOrigin) img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img.naturalWidth > 0 ? img : null);
-    img.onerror = () => resolve(null);
+    img.onload = () => {
+      if (img.naturalWidth <= 0) return resolve(null);
+      // decode() tira a descodificação do quadro em que a imagem é DESENHADA:
+      // sem isto o primeiro drawImage paga-a inteira, dentro do desenho.
+      if (typeof img.decode !== 'function') return resolve(img);
+      img.decode().then(() => resolve(img), () => resolve(img));
+    };
+    img.onerror = () => {
+      // Falha não fica em cache: uma imagem que falhou por rede tem de poder ser
+      // tentada de novo na composição seguinte.
+      imagensEmCache.delete(chave);
+      resolve(null);
+    };
     img.src = src;
   });
+  imagensEmCache.set(chave, promessa);
+  return promessa;
 }
+
+/** Canvas em memória do tamanho pedido. */
+function canvasAuxiliar(w, h) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w));
+  c.height = Math.max(1, Math.round(h));
+  return c;
+}
+
+// Manda descodificar o asset do fundo ANTES de se esperar pelo avatar. Os dois
+// ficheiros não se conhecem: em série custavam a soma (62 + 78 ms medidos), em
+// paralelo custam o maior dos dois. Os fundos Neutro e Aura não têm asset.
+function adiantarFundo(fundo) {
+  if (fundo === 'preto' || fundo === 'aura') return;
+  if (fundo === 'golden' || fundo === 'royal') carregarImagem(PALETAS_PREMIUM[fundo].chapa, false);
+  else if (fundo === 'gradiente') carregarImagem('/futty-logo-flat.webp', false);
+  else carregarImagem('/stadium_bg.webp', false);
+}
+
+// ─── O que É caro no WebKit, medido (FLUIDEZ 2) ──────────────────────────────
+// A primeira suspeita era o `ctx.filter = blur(...)`. Medido em micro-bancada,
+// com a rasterização FORÇADA (`getImageData` a seguir a cada operação, senão o
+// WebKit adia tudo e o cronómetro marca zero), é o contrário do que se pensava:
+//
+//   blur(1.2px) sobre 500×750 ............  1 ms
+//   blur(56px)  sobre 364×439 ............  0 ms
+//   drawImage ampliado 2× com suavização .. 22 ms
+//   drawImage 1:1 .........................  1 ms
+//
+// O desfoque é acelerado; ampliar é que custa. O que custava os 725 ms que a
+// fase `epico:blur` mostrava era o LAÇO DOS HEXÁGONOS — milhares de `stroke()`
+// que o WebKit só rasteriza quando alguém lhe pede os pixéis, e a conta caía no
+// primeiro passo que os pedia. Daí a fase cara mudar de sítio conforme o fundo.
+//
+// Conclusão que manda no resto deste ficheiro: o conserto não é tirar desfoques
+// (isso mudava o desenho e não poupava nada) — é NÃO REFAZER trabalho. O padrão
+// do Épico e o glow do Aura ficam em cache, as imagens descodificam uma vez, e o
+// laço dos hexágonos respira entre linhas para não segurar a tela.
 
 function canvasParaBlob(canvas) {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
@@ -56,24 +145,41 @@ export function desenharFundoNeutro(ctx, W, H) {
 // base escura da casa + aura dourada elíptica ATRÁS do jogador. Valores COPIADOS do palco
 // selado (330×470; glow box 300×344; ellipse 50%×48% @ 50%,45%; stops .55/.24/.07/0 @
 // 0/34/56/78%; blur 46) e só reescalados ao 2:3 do cromo. NÃO toca no palco selado.
-export function desenharFundoAura(ctx, W, H, ehQuadrado = false) {
-  // a) base escura da casa (#050810), gradiente vertical subtil.
-  const base = ctx.createLinearGradient(0, 0, 0, H);
-  base.addColorStop(0, '#0a0a12');
-  base.addColorStop(0.55, '#070812');
-  base.addColorStop(1, '#050609');
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, W, H);
+// FLUIDEZ 2 (16-set) — o glow desfocado é PRÉ-DESENHADO, uma vez por sessão.
+//
+// Medido no WebKit: o `ctx.filter = blur(56px)` a transferir o glow para um card
+// de 600×600 custava 785 ms de thread principal, numa fatia só. Era a fase mais
+// cara de todo o canvas.
+//
+// A solução vem da natureza do próprio desenho: o glow é uma elipse de gradiente
+// radial DESFOCADA — ou seja, uma mancha suave, sem um único detalhe fino. Uma
+// imagem dessas desenhada a 160 px e ampliada para 600 é indistinguível da
+// desenhada a 600, porque não há lá nada que a ampliação possa borrar. E o
+// desfoque custa área × raio: a 160 px, com o raio na mesma proporção, sai por
+// ~2% do que custava.
+//
+// Fica em cache por PROPORÇÃO (o card 2:3 e o retrato quadrado têm caixas de
+// glow diferentes), não por tamanho: como tudo no desenho escala com W, a mesma
+// mancha serve qualquer resolução.
+const LARGURA_GLOW = 160;
+const glowAuraCache = new Map();
 
-  // b) glow desenhado num offscreen do tamanho do "glow box" (300/330 × 344/470 do palco).
-  const gw = Math.max(2, Math.round(W * (300 / 330)));
-  const gh = Math.max(2, Math.round(H * (344 / 470)));
-  const off = document.createElement('canvas');
-  off.width = gw; off.height = gh;
-  const octx = off.getContext('2d');
+function glowAura(razaoCaixa) {
+  const chave = razaoCaixa.toFixed(4);
+  const guardado = glowAuraCache.get(chave);
+  if (guardado) return guardado;
+  const gw = LARGURA_GLOW;
+  const gh = Math.max(2, Math.round(gw * razaoCaixa));
+  const raio = gw * (46 / 300); // o mesmo 46/330 do card, agora em fracção da caixa
+  // O desfoque sangra para fora da caixa: sem esta folga o glow saía com as
+  // bordas cortadas a direito, que é um defeito visível.
+  const folga = Math.ceil(raio * 3);
+  const c = canvasAuxiliar(gw + folga * 2, gh + folga * 2);
+  const octx = c.getContext('2d');
+  octx.filter = `blur(${raio}px)`;
   octx.save();
-  octx.translate(gw * 0.5, gh * 0.45);     // centro da elipse @ 50%,45% do box
-  octx.scale(gw * 0.5, gh * 0.48);          // raios 50%×48% do box
+  octx.translate(folga + gw * 0.5, folga + gh * 0.45); // centro da elipse @ 50%,45% do box
+  octx.scale(gw * 0.5, gh * 0.48);                      // raios 50%×48% do box
   // DOSE glow ×2 (mesmo desenho, dobra opacity/spread): alphas dobrados (clamp) e
   // stops empurrados para fora (mais alcance). Base seladas: .55/.24/.07 @ 0/34/56/78.
   const g = octx.createRadialGradient(0, 0, 0, 0, 0, 1);
@@ -84,14 +190,28 @@ export function desenharFundoAura(ctx, W, H, ehQuadrado = false) {
   octx.fillStyle = g;
   octx.beginPath(); octx.arc(0, 0, 1, 0, Math.PI * 2); octx.fill();
   octx.restore();
+  const pronto = { canvas: c, folgaFrac: folga / gw };
+  glowAuraCache.set(chave, pronto);
+  return pronto;
+}
 
-  // c) transfere com o MESMO blur (46 no palco de 330 → 46/330 da largura do card). O
-  //    centro do box senta a 44% (translate(-50%,-50%) top:44% do glow selado).
+export function desenharFundoAura(ctx, W, H, ehQuadrado = false) {
+  // a) base escura da casa (#050810), gradiente vertical subtil.
+  const base = ctx.createLinearGradient(0, 0, 0, H);
+  base.addColorStop(0, '#0a0a12');
+  base.addColorStop(0.55, '#070812');
+  base.addColorStop(1, '#050609');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, H);
+
+  // b) glow do tamanho do "glow box" (300/330 × 344/470 do palco), já desfocado.
+  const gw = Math.max(2, Math.round(W * (300 / 330)));
+  const gh = Math.max(2, Math.round(H * (344 / 470)));
+  const { canvas: pronto, folgaFrac } = glowAura(gh / gw);
+  // c) o centro do box senta a 44% (translate(-50%,-50%) top:44% do glow selado).
   const cy = (ehQuadrado ? 0.42 : 0.44) * H;
-  ctx.save();
-  ctx.filter = `blur(${W * (46 / 330)}px)`;
-  ctx.drawImage(off, W * 0.5 - gw / 2, cy - gh / 2);
-  ctx.restore();
+  const folga = folgaFrac * gw;
+  ctx.drawImage(pronto, W * 0.5 - gw / 2 - folga, cy - gh / 2 - folga, gw + folga * 2, gh + folga * 2);
 }
 
 // Fundos PREMIUM em chapa foil (GOLDEN, ROYAL, ...) — MESMO pipeline partilhado
@@ -153,7 +273,7 @@ function desenharGlintPico(ctx, cx, cy, r, k, pal) {
 //    é montra a propósito (ordem do dono), pode exagerar mais que o card real.
 //  - false — nenhum (camada de fundo do PREVIEW da Figurinha; a "mina" vive num
 //    overlay CSS animado ali, 2-4 acesos de cada vez).
-export async function desenharFundoPremium(ctx, W, H, cor, { glints = 'pico' } = {}) {
+export async function desenharFundoPremium(ctx, W, H, cor, { glints = 'pico', cron = null } = {}) {
   const pal = PALETAS_PREMIUM[cor];
   const k = W / 400;
   // base escura por baixo, caso a chapa falhe a carregar (nunca fica buraco).
@@ -162,22 +282,55 @@ export async function desenharFundoPremium(ctx, W, H, cor, { glints = 'pico' } =
   ctx.fillStyle = base; ctx.fillRect(0, 0, W, H);
   // a) chapa foil (cover).
   const chapa = await carregarImagem(pal.chapa, false);
+  cron?.marca('fundo:decodificar');
   if (chapa) {
     const s = Math.max(W / chapa.naturalWidth, H / chapa.naturalHeight);
     const dw = chapa.naturalWidth * s, dh = chapa.naturalHeight * s;
     ctx.drawImage(chapa, (W - dw) / 2, (H - dh) / 2, dw, dh);
   }
+  cron?.marca('fundo:desenhar');
   // b) poeira de cristal.
   if (glints) {
     const pontos = glints === 'discreto' ? PREMIUM_GLINTS_DISCRETO : PREMIUM_GLINTS;
     const boost = glints === 'vitrine' ? 1.7 : 1;
     for (const [xf, yf, r] of pontos) desenharGlintPico(ctx, xf * W, yf * H, r * k * boost, k, pal);
+    cron?.marca('glints');
   }
 }
 // Wrappers finos — GOLDEN (1º fundo premium) e ROYAL (o par de luxo, roxo #8b5cf6 +
 // prata fria) só passam a cor; o pipeline é o mesmo, código partilhado.
 export const desenharFundoGolden = (ctx, W, H, opts) => desenharFundoPremium(ctx, W, H, 'golden', opts);
 export const desenharFundoRoyal = (ctx, W, H, opts) => desenharFundoPremium(ctx, W, H, 'royal', opts);
+
+// Fundo "Estádio" — a fotografia do estádio em cover. Extraído para função (era
+// um `else` solto dentro do construirCard) para poder ser cronometrado como os
+// outros e partilhar o mesmo cache de imagem.
+export async function desenharFundoEstadio(ctx, W, H, { ehQuadrado = false, cron = null } = {}) {
+  const k = W / 400;
+  const bg = await carregarImagem('/stadium_bg.webp', false);
+  cron?.marca('fundo:decodificar');
+  if (bg) {
+    const scale = Math.max(W / bg.naturalWidth, H / bg.naturalHeight);
+    const sw = bg.naturalWidth * scale;
+    const sh = bg.naturalHeight * scale;
+    // O card 2:3 tem o MESMO rácio do stadium_bg (832×1248 = 2:3) → cover exacto,
+    // sem excedente, refletores no topo visíveis. O QUADRADO gera 300px de excedente
+    // vertical; centrar (0.5) cortava os refletores. Ancora ao topo (corta só 0.22 do
+    // excedente em cima, 0.78 em baixo) para os DOIS refletores ficarem atrás/ao lado
+    // da cabeça — a relva perdida em baixo fica tapada pelo corpo do jogador.
+    // Para o card, biasTopo=0.5 e o excedente é 0 → −(sh−H)·0.5 = (H−sh)/2, idêntico.
+    const biasTopo = ehQuadrado ? 0.22 : 0.5;
+    ctx.drawImage(bg, (W - sw) / 2, -(sh - H) * biasTopo, sw, sh);
+  } else {
+    const g = ctx.createRadialGradient(W / 2, 0, 40 * k, W / 2, 0, H);
+    g.addColorStop(0, '#1b2433');
+    g.addColorStop(0.7, '#0a0d14');
+    g.addColorStop(1, '#05070b');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  cron?.marca('fundo:desenhar');
+}
 
 // Fundo "Épico" — honeycomb alinhado ao ângulo do F + monograma como marca de água,
 // placa 3D (pseudo-perspectiva), luz central e vinheta. EXPORTADO para o tile da UI
@@ -187,22 +340,38 @@ export const desenharFundoRoyal = (ctx, W, H, opts) => desenharFundoPremium(ctx,
 // `intensidade` multiplica SÓ o alpha das arestas do honeycomb. O card usa 1 (a
 // discrição desenhada); o tile de 120×120 usa 3.0, senão o padrão desaparece na
 // miniatura — a mesma geometria, legível à escala a que é vista.
-export async function desenharFundoEpico(ctx, W, H, { intensidade = 1 } = {}) {
-  const k = W / 400; // mesma convenção do card: os valores fixos escalam com a largura
+// FLUIDEZ 2 (16-set) — o padrão do Épico é construído UMA vez por tamanho.
+//
+// Medido no WebKit: `epico:blur` custava 725 ms no card e 659 ms no cromo — a
+// fase mais cara depois do Aura. E era refeita a cada composição, apesar de o
+// desenho ser DETERMINÍSTICO (seed fixa 20240): o mesmo tamanho dá sempre
+// exactamente os mesmos pixéis.
+//
+// Duas mudanças: o desfoque passa a ser por faixas (ver desfocarPorFaixas — o
+// mesmo resultado, em fatias de poucos ms) e a camada pronta fica em cache. A
+// segunda figurinha com fundo Épico não desenha um hexágono sequer.
+//
+// Três entradas chegam: o cromo do Início, o card do download e o tile do
+// seletor de fundos. Cada uma é um canvas com alpha, por isso não se deixa
+// crescer sem conta.
+const MAX_PADROES = 3;
+const epicoPadraoCache = new Map();
 
-  // a) Base: vertical muito escuro, quase monocromático (nítida).
-  desenharBaseEscura(ctx, W, H);
-
-  // b) PADRÃO num canvas OFFSCREEN → transferido com blur (só o padrão desfoca;
-  //    base, luz e vinheta ficam nítidas). Seed FIXA → determinístico.
+async function padraoEpico(W, H, intensidade, cron) {
+  const chave = `${Math.round(W)}|${Math.round(H)}|${intensidade}`;
+  const guardado = epicoPadraoCache.get(chave);
+  if (guardado) {
+    cron?.marca('epico:cache');
+    return guardado;
+  }
+  const k = W / 400;
   const fLogo = await carregarImagem('/futty-logo-flat.webp', false);
+  cron?.marca('fundo:decodificar');
   // Offscreen 25% MAIOR que o card: a pseudo-perspectiva (skew) desloca as bordas
   // e, sem esta folga, ficariam faixas sem padrão nos limites do card.
-  const off = document.createElement('canvas');
   const OW = Math.ceil(W * 1.25);
   const OH = Math.ceil(H * 1.25);
-  off.width = OW;
-  off.height = OH;
+  const off = canvasAuxiliar(OW, OH);
   const octx = off.getContext('2d');
   octx.lineWidth = 1 * k;
   let seed = 20240;
@@ -222,7 +391,31 @@ export async function desenharFundoEpico(ctx, W, H, { intensidade = 1 } = {}) {
   octx.rotate(ANGULO_F);
   octx.translate(0, alvoY + R);
   const M = Math.hypot(OW, OH) / 2 + 2 * R;
+  // Este laço é o passo caro do Épico: milhares de `stroke()`. E o WebKit não os
+  // desenha quando os pede — grava-os numa lista e rasteriza tudo de uma vez
+  // quando alguém lhe pede os pixéis. Por isso respirar sozinho não chegava: o
+  // laço ficava rápido e a conta inteira (367 ms, medidos) caía depois, na
+  // transferência, numa fatia só.
+  //
+  // O `getImageData` de 1 pixel obriga a rasterizar o que está pendente. A cada
+  // 4 linhas, isso paga o desenho daquelas 4 linhas ali mesmo, e o `respirar` a
+  // seguir devolve a tela ao browser. Como o resultado fica em cache, isto
+  // acontece UMA vez por tamanho, não a cada figurinha.
+  const LINHAS_POR_FATIA = 4;
+  let desdeORespiro = 0;
+  let maiorFatia = 0;
+  let fatiaAbriu = performance.now();
   for (let row = -Math.ceil(M / passoY); row * passoY <= M; row++) {
+    desdeORespiro += 1;
+    if (desdeORespiro >= LINHAS_POR_FATIA) {
+      desdeORespiro = 0;
+      octx.getImageData(0, 0, 1, 1);
+      maiorFatia = Math.max(maiorFatia, performance.now() - fatiaAbriu);
+      // O estado do contexto é do canvas, não da pilha de chamadas: o save/
+      // translate/rotate feitos acima sobrevivem ao await.
+      await respirar();
+      fatiaAbriu = performance.now();
+    }
     for (let col = -Math.ceil(M / passoX); col * passoX <= M; col++) {
       const cx = col * passoX + (Math.abs(row % 2) ? passoX / 2 : 0);
       const cy = row * passoY;
@@ -258,19 +451,41 @@ export async function desenharFundoEpico(ctx, W, H, { intensidade = 1 } = {}) {
     }
   }
   octx.restore();
-  // Transfere: blur + PSEUDO-PERSPECTIVA (canto sup-direito "para trás"), pivô no centro.
-  ctx.save();
-  ctx.filter = `blur(${1.2 * k}px)`;
-  ctx.translate(W / 2, H / 2);
+  octx.getImageData(0, 0, 1, 1); // fecha a última fatia antes de medir
+  maiorFatia = Math.max(maiorFatia, performance.now() - fatiaAbriu);
+  cron?.marca('epico:favos');
+  cron?.anotar('epico:maiorFatia', maiorFatia);
+
+  // Transfere para a camada final: blur + PSEUDO-PERSPECTIVA (canto sup-direito
+  // "para trás"), pivô no centro. O desfoque fica numa chamada só — medido a
+  // 1 ms no WebKit (ver a nota sobre o que é caro, no topo do ficheiro).
+  const camada = canvasAuxiliar(W, H);
+  const cctx = camada.getContext('2d');
+  cctx.filter = `blur(${1.2 * k}px)`;
+  cctx.translate(W / 2, H / 2);
   // FASE C — pseudo-perspectiva mais assumida: skews b -0.06 → -0.085 e c 0.05 → 0.07
   // (~+40%). A ROTAÇÃO do padrão fica nos 14.52° do futty-logo-flat.png (fase 3.33) —
   // a fonte canónica. Medi fresco o F do kit fotografado e deu 15.52°, mas o Δ de 1° é
   // ruído: o logo no kit tem 51x61px, está impresso em tecido curvo e com sombra. Um
   // grau, num padrão com blur 1.2px e alpha 0.065, ninguém vê — e alinhar a marca pela
   // fotografia do produto em vez do vector seria ancorá-la no derivado.
-  ctx.transform(1.02, -0.085, 0.07, 0.98, 0, 0);
-  ctx.drawImage(off, -OW / 2, -OH / 2);
-  ctx.restore();
+  cctx.transform(1.02, -0.085, 0.07, 0.98, 0, 0);
+  cctx.drawImage(off, -OW / 2, -OH / 2);
+  cron?.marca('epico:blur');
+
+  if (epicoPadraoCache.size >= MAX_PADROES) {
+    epicoPadraoCache.delete(epicoPadraoCache.keys().next().value);
+  }
+  epicoPadraoCache.set(chave, camada);
+  return camada;
+}
+
+export async function desenharFundoEpico(ctx, W, H, { intensidade = 1, cron = null } = {}) {
+  // a) Base: vertical muito escuro, quase monocromático (nítida).
+  desenharBaseEscura(ctx, W, H);
+
+  // b) PADRÃO desfocado (só ele desfoca; base, luz e vinheta ficam nítidas).
+  ctx.drawImage(await padraoEpico(W, H, intensidade, cron), 0, 0);
 
   // c) Luz radial central suave atrás do peito/rosto.
   const luz = ctx.createRadialGradient(W / 2, H * 0.38, 0, W / 2, H * 0.38, H * 0.5);
@@ -282,6 +497,7 @@ export async function desenharFundoEpico(ctx, W, H, { intensidade = 1 } = {}) {
 
   // d) Vinheta — a partilhada com o neutro (ver desenharVinheta).
   desenharVinheta(ctx, W, H);
+  cron?.marca('fundo:desenhar');
 }
 
 // Desenha o card 2:3 num canvas próprio (largura×altura). `k` escala os valores
@@ -333,7 +549,7 @@ function desenharUmSelo(cx, x, y, w, tier, label) {
   cx.restore();
 }
 
-async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [], fundoGlints = 'pico' }) {
+async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [], fundoGlints = 'pico', cron = null }) {
   const W = largura;
   const H = altura;
   const k = largura / 400;
@@ -348,10 +564,14 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingQuality = 'high';
 
+  // O fundo começa a descodificar já, para não esperar a vez depois do avatar.
+  adiantarFundo(fundo);
+
   // Garante que a Rajdhani está carregada antes de medir/desenhar texto.
   if (document.fonts?.ready) {
     try { await document.fonts.ready; } catch { /* ignora */ }
   }
+  cron?.marca('fontes');
 
   // Octógono partilhado (fonte de verdade do recorte e do frame). m = inset.
   const cut = 32 * k;
@@ -394,6 +614,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   const avatarUrl = fotoOverride || (jogador?.avatar_url ? urlImagem(urlAsset(jogador.avatar_url), 512) : null);
   const ehAbsoluto = avatarUrl && /^https?:\/\//i.test(avatarUrl);
   const avatar = avatarUrl ? await carregarImagem(avatarUrl, ehAbsoluto) : null;
+  cron?.marca('avatar:decodificar');
 
   // Geometria do NOME (fonte única): baseline + tamanho da fonte + topo da placa.
   // O corte do avatar deriva daqui, por isso descer o nome desce o palco inteiro.
@@ -677,41 +898,23 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // FASE 3.51 — 'preto' (label "Neutro") era #000 puro e destoava do épico. Passa a
     // partilhar a base escura: mesmo gradiente + vinheta, sem honeycomb/F/luz.
     desenharFundoNeutro(ctx, W, H);
+    cron?.marca('fundo:desenhar');
   } else if (fundo === 'gradiente') {
-    await desenharFundoEpico(ctx, W, H);
+    await desenharFundoEpico(ctx, W, H, { cron });
   } else if (fundo === 'aura') {
     // Aura da vitrine (glow selado replicado). Sem holofotes de estádio (o palco
     // selado não os tem) — guardado no passo 2.
     desenharFundoAura(ctx, W, H, ehQuadrado);
+    cron?.marca('fundo:desenhar');
   } else if (fundo === 'golden' || fundo === 'royal') {
     // GOLDEN/ROYAL premium — chapa foil + poeira de cristal (atrás do avatar), MESMO
     // pipeline (desenharFundoPremium). No PREVIEW (apenasMoldura) a chapa entra SEM
     // glints baked → a "mina" vive no overlay animado (z3); no card completo
     // (download) os glints saem NO PICO (frame mais rico).
     const desenhar = fundo === 'golden' ? desenharFundoGolden : desenharFundoRoyal;
-    await desenhar(ctx, W, H, { glints: apenasMoldura ? false : fundoGlints });
+    await desenhar(ctx, W, H, { glints: apenasMoldura ? false : fundoGlints, cron });
   } else {
-    const bg = await carregarImagem('/stadium_bg.webp', false);
-    if (bg) {
-      const scale = Math.max(W / bg.naturalWidth, H / bg.naturalHeight);
-      const sw = bg.naturalWidth * scale;
-      const sh = bg.naturalHeight * scale;
-      // O card 2:3 tem o MESMO rácio do stadium_bg (832×1248 = 2:3) → cover exacto,
-      // sem excedente, refletores no topo visíveis. O QUADRADO gera 300px de excedente
-      // vertical; centrar (0.5) cortava os refletores. Ancora ao topo (corta só 0.22 do
-      // excedente em cima, 0.78 em baixo) para os DOIS refletores ficarem atrás/ao lado
-      // da cabeça — a relva perdida em baixo fica tapada pelo corpo do jogador.
-      // Para o card, biasTopo=0.5 e o excedente é 0 → −(sh−H)·0.5 = (H−sh)/2, idêntico.
-      const biasTopo = ehQuadrado ? 0.22 : 0.5;
-      ctx.drawImage(bg, (W - sw) / 2, -(sh - H) * biasTopo, sw, sh);
-    } else {
-      const g = ctx.createRadialGradient(W / 2, 0, 40 * k, W / 2, 0, H);
-      g.addColorStop(0, '#1b2433');
-      g.addColorStop(0.7, '#0a0d14');
-      g.addColorStop(1, '#05070b');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-    }
+    await desenharFundoEstadio(ctx, W, H, { ehQuadrado, cron });
   }
 
   // 2. HOLOFOTES — só nos fundos de estádio; Aura e as chapas premium (Golden/Royal)
@@ -724,6 +927,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
     }
+    cron?.marca('holofotes');
   }
 
   // 3. AVATAR — só no card completo. Na camada apenasMoldura é omitido (o jogador
@@ -732,6 +936,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // moldura: sem avatar nem iniciais de fallback.
   } else if (avatar) {
     desenharAvatar();
+    cron?.marca('avatar:desenhar');
   } else {
     // Sem foto: NÃO tapar o fundo escolhido (dourado/aura/épico…) com um retângulo
     // opaco — a Figurinha mostra o fundo premium por inteiro nesta situação; o
@@ -769,7 +974,10 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // antes do frame). No preview são a camada de topo (apenasPlacaNome), por isso
   // na moldura são omitidos aqui. No QUADRADO não há placa nem nome no PNG: o nome
   // vive em texto livre no Início, por baixo do cromo.
-  if (!apenasMoldura && !ehQuadrado) desenharPlacaNome();
+  if (!apenasMoldura && !ehQuadrado) {
+    desenharPlacaNome();
+    cron?.marca('texto');
+  }
 
   // Fim do conteúdo recortado → remove o clip octogonal. O frame já é inset e as
   // faíscas ficam soltas por cima, sem recorte.
@@ -778,7 +986,10 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // 6. FRAME — FASE 3.46: no card completo continua a desenhar-se aqui (depois do
   // avatar). Na camada `apenasMoldura` deixa de o ser: passou para a camada de topo
   // do preview (apenasPlacaNome), para o preview e o download ficarem idênticos.
-  if (!apenasMoldura) desenharFrame();
+  if (!apenasMoldura) {
+    desenharFrame();
+    cron?.marca('moldura');
+  }
 
   desenharSelos(); // selos de honra no card completo (download/partilha levam-nos)
 
@@ -788,11 +999,38 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
 // Figurinha normal: card 2:3 a 400×600 → PNG completo (com jogador). Usado no
 // Baixar/Compartilhar (uma imagem só). Com formato:'quadrado' devolve o RETRATO
 // quadrado 600×600 (sem placa/nome) que o Início mostra — mesma moldura e fundos.
+// FLUIDEZ 2 (16-set) — o retrato QUADRADO passa a ser gerado no tamanho a que
+// vai ser VISTO, não sempre a 600×600.
+//
+// O cromo do Início é um elemento de tela, e a sua largura vem do CSS
+// (`.cromo-inicio`, que depende da altura do aparelho): num iPhone 15 Pro Max dá
+// 236 px, num iPhone SE dá 99 px. A 600×600 fixos, o SE gerava 6× mais pixéis do
+// que mostra — e cada pixel a mais é rasterização e codificação de PNG.
+//
+// Tecto de 600 (o tamanho canónico de sempre — nunca se gera MAIOR do que o que
+// já se desenhava) e piso de 300, para o cromo nunca sair mole se a medição da
+// tela vier errada. O card 2:3 do download não entra aqui: ali o tamanho é o
+// produto, não uma medida de tela.
+const LADO_MAX_CROMO = 600;
+const LADO_MIN_CROMO = 300;
+
+function ladoDoCromo(larguraExibida) {
+  if (!larguraExibida || !Number.isFinite(larguraExibida)) return LADO_MAX_CROMO;
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+  const alvo = Math.round(larguraExibida * dpr);
+  return Math.max(LADO_MIN_CROMO, Math.min(LADO_MAX_CROMO, alvo));
+}
+
 export async function gerarFigurinhaCanvas(opts = {}) {
   const quadrado = opts.formato === 'quadrado';
-  const dim = quadrado ? { largura: 600, altura: 600 } : { largura: 400, altura: 600 };
-  const canvas = await construirCard({ ...opts, ...dim });
-  return canvasParaBlob(canvas);
+  const lado = quadrado ? ladoDoCromo(opts.larguraExibida) : 0;
+  const dim = quadrado ? { largura: lado, altura: lado } : { largura: 400, altura: 600 };
+  const cron = cronometro();
+  const canvas = await construirCard({ ...opts, ...dim, cron });
+  const blob = await canvasParaBlob(canvas);
+  cron.marca('toBlob');
+  registarFasesCromo(`${quadrado ? 'cromo' : 'figurinha'}/${opts.fundo || 'estadio'}`, cron.fases);
+  return blob;
 }
 
 // Três camadas para o preview do studio, para o avatar inteiro não tapar nada:
@@ -804,15 +1042,19 @@ export async function gerarFigurinhaCanvas(opts = {}) {
 // a linha fina desenha-se POR CIMA dele, exactamente como no card único do download.
 // Ordem no preview: fundo (z2) → partículas (z3) → jogador (z4) → placa+frame (z5).
 export async function gerarCamadasFigurinha(opts = {}) {
+  const cron = cronometro();
   const [molduraCanvas, jogadorCanvas, placaCanvas] = await Promise.all([
-    construirCard({ ...opts, largura: 400, altura: 600, apenasMoldura: true }),
+    construirCard({ ...opts, largura: 400, altura: 600, apenasMoldura: true, cron }),
     construirCard({ ...opts, largura: 400, altura: 600, apenasAvatar: true }),
     construirCard({ ...opts, largura: 400, altura: 600, apenasPlacaNome: true }),
   ]);
+  cron.marca('camadas');
   const [fundoBlob, jogadorBlob, placaBlob] = await Promise.all([
     canvasParaBlob(molduraCanvas),
     canvasParaBlob(jogadorCanvas),
     canvasParaBlob(placaCanvas),
   ]);
+  cron.marca('toBlob');
+  registarFasesCromo(`camadas/${opts.fundo || 'estadio'}`, cron.fases);
   return { fundoBlob, jogadorBlob, placaBlob };
 }
