@@ -59,6 +59,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { deflateSync } from 'node:zlib';
 import { webkit } from 'playwright';
 
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -537,6 +538,399 @@ async function cenaAviso(navegador, sessao) {
   return { passos, comRsvp: { ...comRsvp, captura: path.relative(RAIZ, capturaRsvp) }, escritas };
 }
 
+// ─── Cena "resenha": varredura estado a estado ────────────────────────────────
+// Rodada 9, item 3. O Pedro no iPhone: "ao adicionar uma foto a tela aumenta e
+// fica desproporcional". O WebKit faz isso quando ALGUMA coisa fica mais larga
+// que a tela: ele alarga a viewport para caber e encolhe a página inteira. Aqui
+// passa-se por cada estado da Resenha e mede-se, em cada um, a largura rolável,
+// a escala da viewport, o elemento que passa da borda e as imagens sem travão.
+//
+// As fotos são sintéticas (geradas aqui, servidas por interceção) para as
+// proporções serem exatas: 3:4 (retrato) e 16:9 (paisagem). Nada é publicado —
+// toda escrita é interceptada, o upload devolve a URL falsa.
+function crc32(buf) {
+  let c = ~0;
+  for (let i = 0; i < buf.length; i++) {
+    c ^= buf[i];
+    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+  }
+  return ~c >>> 0;
+}
+function pedacoPng(tipo, dados) {
+  const t = Buffer.from(tipo, 'ascii');
+  const tamanho = Buffer.alloc(4);
+  tamanho.writeUInt32BE(dados.length);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([t, dados])));
+  return Buffer.concat([tamanho, t, dados, crc]);
+}
+/** PNG sólido w×h (sem dependências): serve para dar proporção exata a um <img>. */
+function pngSolido(w, h, [r, g, b]) {
+  const bruto = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) {
+    const off = y * (w * 3 + 1);
+    bruto[off] = 0; // filtro "none"
+    for (let x = 0; x < w; x++) {
+      // Faixas: dá para ver de olho se a imagem foi esticada.
+      const claro = (y >> 5) % 2 === 0;
+      bruto[off + 1 + x * 3] = claro ? r : Math.round(r * 0.55);
+      bruto[off + 2 + x * 3] = claro ? g : Math.round(g * 0.55);
+      bruto[off + 3 + x * 3] = claro ? b : Math.round(b * 0.55);
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8; ihdr[9] = 2; // 8 bits, RGB
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pedacoPng('IHDR', ihdr),
+    pedacoPng('IDAT', deflateSync(bruto)),
+    pedacoPng('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+const FOTO_RETRATO = 'https://futty-foto.invalid/retrato.png'; // 900×1200 (3:4)
+const FOTO_PAISAGEM = 'https://futty-foto.invalid/paisagem.png'; // 1600×900 (16:9)
+const PALAVRA_LONGA = 'Panegirico' + 'supercalifragilistico'.repeat(2) + 'desconcertante'; // 60+ letras sem espaço
+
+// Vigia a largura da página DURANTE uma ação (o alargamento do WebKit pode ser
+// só um instante: um retrato de 4032×3024 a entrar no DOM alarga, o layout
+// acerta, e a captura a seguir já não vê nada. É esse instante que o Pedro vê).
+function vigiarLargura(larguraAparelho) {
+  const reg = { maxRolavel: 0, maxViewport: 0, minEscala: 9, amostras: 0, pior: null };
+  window.__futtyLargura = reg;
+  const tique = () => {
+    const se = document.scrollingElement;
+    const rol = se ? se.scrollWidth : 0;
+    reg.amostras += 1;
+    reg.maxViewport = Math.max(reg.maxViewport, window.innerWidth);
+    if (window.visualViewport) reg.minEscala = Math.min(reg.minEscala, window.visualViewport.scale);
+    if (rol > reg.maxRolavel) {
+      reg.maxRolavel = rol;
+      if (rol > larguraAparelho + 0.5 && document.body) {
+        let pior = null;
+        for (const el of document.body.getElementsByTagName('*')) {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.right <= larguraAparelho + 0.5) continue;
+          if (pior && r.right <= pior.right) continue;
+          pior = { right: r.right, el };
+        }
+        if (pior) {
+          const cls = typeof pior.el.className === 'string' ? pior.el.className : '';
+          reg.pior = `${pior.el.tagName.toLowerCase()}${cls ? `.${cls.trim().split(/\s+/).slice(0, 2).join('.')}` : ''} direita ${Math.round(pior.right)}px`;
+        }
+      }
+    }
+    reg.temporizador = setTimeout(tique, 50);
+  };
+  tique();
+}
+
+// Roda DENTRO da página: tudo o que este item pede medir num estado.
+function medidasDoEstado(larguraAparelho) {
+  const descrever = (el) => {
+    const cls = typeof el.className === 'string' ? el.className : el.getAttribute('class') || '';
+    return `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${cls ? `.${cls.trim().split(/\s+/).slice(0, 2).join('.')}` : ''}`;
+  };
+  const caminho = (el) => {
+    const partes = [];
+    for (let n = el; n && n !== document.body && partes.length < 5; n = n.parentElement) partes.unshift(descrever(n));
+    return partes.join(' > ');
+  };
+  const recortado = (el) => {
+    for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+      if (getComputedStyle(n).overflowX !== 'visible') return true;
+    }
+    return false;
+  };
+  // Quem passa da borda direita da TELA (não da innerWidth: quando algo
+  // transborda, o WebKit alarga a própria viewport e nada mais "passa").
+  const passamDaBorda = [];
+  for (const el of document.body.getElementsByTagName('*')) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.right <= larguraAparelho + 0.5) continue;
+    const cs = getComputedStyle(el);
+    if (cs.position === 'fixed' || recortado(el)) continue;
+    passamDaBorda.push({ caminho: caminho(el), direita: Math.round(r.right), largura: Math.round(r.width) });
+  }
+  passamDaBorda.sort((a, b) => b.direita - a.direita);
+
+  // Imagens sem travão: sem max-width que a prenda, sem height:auto ou sem
+  // proporção reservada (o que faz a página saltar quando a foto chega).
+  const imagens = [...document.images]
+    .filter((img) => img.getClientRects().length > 0)
+    .map((img) => {
+      const cs = getComputedStyle(img);
+      const r = img.getBoundingClientRect();
+      // Larga demais: sem max-width E sem largura fixa — cresce com a foto.
+      const podeCrescer = cs.maxWidth === 'none' && cs.width === 'auto';
+      // Sem lugar reservado: altura livre, sem proporção e sem width/height no
+      // atributo — é o que faz a página saltar quando a imagem finalmente chega.
+      const temAtributos = !!(img.getAttribute('width') && img.getAttribute('height'));
+      const semReserva = cs.height === 'auto' && cs.aspectRatio === 'auto' && !temAtributos;
+      return {
+        caminho: caminho(img),
+        caixa: `${Math.round(r.width)}x${Math.round(r.height)}`,
+        natural: `${img.naturalWidth}x${img.naturalHeight}`,
+        maxWidth: cs.maxWidth, largura: cs.width, altura: cs.height, aspectRatio: cs.aspectRatio,
+        atributos: `${img.getAttribute('width') || '-'}x${img.getAttribute('height') || '-'}`,
+        ok: !podeCrescer && !semReserva,
+        motivo: podeCrescer ? 'sem max-width e sem largura fixa' : semReserva ? 'sem altura reservada (salta quando chega)' : null,
+        passaDaBorda: r.right > larguraAparelho + 0.5,
+      };
+    });
+
+  const se = document.scrollingElement;
+  return {
+    larguraRolavel: se ? se.scrollWidth : null,
+    larguraViewport: window.innerWidth,
+    alturaViewport: window.innerHeight,
+    escala: window.visualViewport ? Number(window.visualViewport.scale.toFixed(3)) : null,
+    passamDaBorda: passamDaBorda.slice(0, 4),
+    imagens: imagens.filter((i) => !i.ok || i.passaDaBorda),
+    totalImagens: imagens.length,
+  };
+}
+
+// Molda a resposta do feed: acrescenta no topo os posts que o item 3 pede
+// (retrato, paisagem, vídeo, anúncio oficial, texto longo com palavra de 60
+// letras) copiando a FORMA de um post real — nada de inventar campos.
+function moldarFeed(json, { retrato, paisagem, palavra }) {
+  // O /api/feed devolve { items: [...] } misturando jogos e posts (kind).
+  const itens = json?.items || [];
+  const base = itens.find((i) => i.kind === 'post');
+  if (!base) return json;
+  const agora = Date.now();
+  const clone = (i, extra) => JSON.parse(JSON.stringify({
+    ...base,
+    created_at: new Date(agora - i * 1000).toISOString(),
+    media: [], conteudo: null, tipo: 'post',
+    ...extra,
+  }));
+  const novos = [
+    clone(0, { id: 'varredura-retrato', body: 'Foto em retrato 3:4.', media: [{ url: retrato, media_type: 'image' }] }),
+    clone(1, { id: 'varredura-paisagem', body: 'Foto em paisagem 16:9.', media: [{ url: paisagem, media_type: 'image' }] }),
+    clone(2, { id: 'varredura-texto', body: `Texto comprido para a varredura. ${palavra} ${'palavra '.repeat(40)}`.trim() }),
+    clone(3, { id: 'varredura-video', body: 'Vídeo por link. https://www.youtube.com/watch?v=dQw4w9WgXcQ' }),
+    clone(4, { id: 'varredura-anuncio', tipo: 'anuncio', body: 'Comunicado oficial do time para a varredura.' }),
+  ];
+  return { ...json, items: [...novos, ...itens] };
+}
+
+async function cenaResenha(navegador, sessao, { largura, altura, rotulo }) {
+  const retrato = pngSolido(900, 1200, [212, 160, 23]);
+  const paisagem = pngSolido(1600, 900, [139, 92, 246]);
+  // 12 MP: o tamanho que o iPhone 15 Pro Max grava numa foto normal.
+  const fotoGrande = pngSolido(4032, 3024, [94, 234, 212]);
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  // O upload devolve a foto sintética em vez de gravar no banco.
+  await travarEscritas(contexto, (rota) => (rota.endsWith('/feed/upload') ? { url: FOTO_RETRATO, media_type: 'image' } : null));
+  await contexto.route('**/futty-foto.invalid/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: route.request().url().includes('paisagem') ? paisagem : retrato }));
+  // A conta demo não tem campanha ativa e o AdCard não renderiza sem uma. Serve-se
+  // uma aqui (texto longo de propósito) para o estado "anúncio entre posts" existir.
+  await contexto.route('**/api/ads?**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ad: { id: 'varredura-ad', texto: 'Chuteira nova com desconto para o time inteiro', sub: 'Patrocinador oficial da varredura do iPhone', cta: 'Ver oferta', link: 'https://exemplo.invalid' } }),
+    }));
+  let feedMoldado = 0;
+  await contexto.route('**/api/feed*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const resposta = await route.fetch();
+    const json = await resposta.json().catch(() => null);
+    if (!json?.items) return route.fulfill({ response: resposta });
+    feedMoldado += 1;
+    return route.fulfill({ response: resposta, json: moldarFeed(json, { retrato: FOTO_RETRATO, paisagem: FOTO_PAISAGEM, palavra: PALAVRA_LONGA }) });
+  });
+
+  const pagina = await contexto.newPage();
+  await pagina.setViewportSize({ width: largura, height: altura });
+  const estados = [];
+  const erros = [];
+  pagina.on('pageerror', (e) => erros.push(e.message));
+
+  const medir = async (nome, { rolarPara = null } = {}) => {
+    if (rolarPara) await rolarPara();
+    await espera(500);
+    const m = await pagina.evaluate(medidasDoEstado, largura);
+    const arquivo = path.join(PASTA, `${ETIQUETA}-resenha-${rotulo}-${nome}.png`);
+    await pagina.screenshot({ path: arquivo });
+    estados.push({ estado: nome, ...m, captura: path.relative(RAIZ, arquivo) });
+    return m;
+  };
+  const tocar = async (seletor, { forca = false } = {}) => {
+    const l = typeof seletor === 'string' ? pagina.locator(seletor).first() : seletor;
+    if (!(await l.count())) return false;
+    await l.scrollIntoViewIfNeeded().catch(() => {});
+    const acao = forca ? l.click({ force: true, timeout: 8000 }) : l.tap({ timeout: 8000 });
+    const ok = await acao.then(() => true, () => false);
+    await espera(700);
+    return ok;
+  };
+  // Um passo que falha não pode derrubar a varredura inteira: fica registado e
+  // a medição continua nos outros estados.
+  const passo = async (nome, fn) => {
+    try { await fn(); } catch (e) { erros.push(`passo ${nome}: ${e.message.split('\n')[0]}`); }
+  };
+
+  await pagina.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('button:has-text("Solte a resenha")', { timeout: 30000 });
+  await espera(2500);
+  await medir('feed-topo');
+
+  // ── Compositor: vazio → com texto → com foto (retrato e paisagem) ──────────
+  await tocar(pagina.locator('button', { hasText: /^Solte a resenha/ }).first());
+  await medir('compositor-vazio');
+  const ta = pagina.locator('textarea[placeholder^="Escreva sua resenha"]').first();
+  await ta.fill(`Resenha de teste com uma palavra sem espaços: ${PALAVRA_LONGA} — e mais texto para encher.`);
+  await medir('compositor-texto');
+
+  // Escolher foto → CropModal (portal). Retrato 3:4, paisagem 16:9 e uma foto
+  // do tamanho que o iPhone tira mesmo (4032×3024, 12 MP) — é "adicionar uma
+  // foto" de verdade, e é aí que o Pedro diz que a tela aumenta.
+  for (const [nome, prop, buffer] of [['retrato', '3:4', retrato], ['paisagem', '16:9', paisagem], ['iphone12mp', '4:3', fotoGrande]]) {
+    await pagina.evaluate(vigiarLargura, largura);
+    await pagina.setInputFiles('input[type="file"]', { name: `${nome}.png`, mimeType: 'image/png', buffer });
+    await pagina.waitForSelector('[role="dialog"][aria-label="Recortar imagem"]', { timeout: 30000 });
+    await espera(1500);
+    const vigia = await pagina.evaluate(() => {
+      const r = window.__futtyLargura || {};
+      clearTimeout(r.temporizador);
+      return { maxRolavel: r.maxRolavel, maxViewport: r.maxViewport, minEscala: r.minEscala === 9 ? null : Number((r.minEscala || 0).toFixed(3)), amostras: r.amostras, pior: r.pior };
+    });
+    await tocar(pagina.locator('[role="dialog"] button', { hasText: new RegExp(`^${prop}$`) }).first(), { forca: true });
+    const m = await medir(`crop-${nome}`);
+    const geo = await pagina.evaluate(() => {
+      const d = document.querySelector('[role="dialog"][aria-label="Recortar imagem"]');
+      const r = d.getBoundingClientRect();
+      const chips = [...d.querySelectorAll('button')].map((b) => b.getBoundingClientRect());
+      const fila = chips.length ? { esquerda: Math.round(Math.min(...chips.map((c) => c.left))), direita: Math.round(Math.max(...chips.map((c) => c.right))) } : null;
+      const rodape = d.lastElementChild?.getBoundingClientRect();
+      return {
+        cartao: `${Math.round(r.width)}x${Math.round(r.height)} em (${Math.round(r.left)}, ${Math.round(r.top)})`,
+        cabeNaTela: r.width <= window.innerWidth + 0.5 && r.height <= window.innerHeight + 0.5,
+        chips: fila,
+        chipsCabem: fila ? fila.esquerda >= 0 && fila.direita <= window.innerWidth : null,
+        rodapeAbaixoDaDobra: rodape ? Math.round(rodape.bottom - window.innerHeight) : null,
+      };
+    });
+    estados[estados.length - 1].crop = geo;
+    estados[estados.length - 1].vigia = vigia;
+    if (m.passamDaBorda.length || geo.chipsCabem === false || vigia.maxRolavel > largura + 1) estados[estados.length - 1].suspeito = true;
+    await tocar(pagina.locator('[role="dialog"] button', { hasText: /^Confirmar$/ }).first(), { forca: true });
+    await espera(1200);
+    await medir(`compositor-foto-${nome}`);
+  }
+
+  // ── Teclado aberto: a tela encolhe e o compositor tem de continuar visível ──
+  await pagina.setViewportSize({ width: largura, height: 500 });
+  await ta.tap().catch(() => {});
+  await espera(600);
+  const comTeclado = await medir('compositor-teclado');
+  estados[estados.length - 1].teclado = await pagina.evaluate(() => {
+    const t = document.querySelector('textarea[placeholder^="Escreva sua resenha"]');
+    const nav = document.querySelector('.bottom-nav');
+    const rt = t?.getBoundingClientRect();
+    const rn = nav?.getBoundingClientRect();
+    return {
+      compositorVisivel: !!rt && rt.top < window.innerHeight && rt.bottom > 0,
+      barraVisivel: !!rn && rn.top < window.innerHeight && rn.bottom <= window.innerHeight + 1,
+      compositor: rt ? `${Math.round(rt.top)}→${Math.round(rt.bottom)}` : null,
+      barra: rn ? `${Math.round(rn.top)}→${Math.round(rn.bottom)}` : null,
+      altura: window.innerHeight,
+    };
+  });
+  void comTeclado;
+  await pagina.setViewportSize({ width: largura, height: altura });
+  await espera(400);
+  await tocar(pagina.locator('button[aria-label="Fechar"]').first(), { forca: true });
+
+  // ── Posts: retrato, paisagem, texto longo, vídeo, anúncio oficial ─────────
+  await passo('posts', async () => {
+  for (const [nome, texto] of [
+    ['post-retrato', 'Foto em retrato 3:4.'],
+    ['post-paisagem', 'Foto em paisagem 16:9.'],
+    ['post-texto-longo', 'Texto comprido para a varredura.'],
+    ['post-video', 'Vídeo por link.'],
+    ['post-anuncio', 'Comunicado oficial do time'],
+  ]) {
+    // Centra o CARD do post (não o div mais interno que contém o texto).
+    await pagina.evaluate((t) => {
+      const alvo = [...document.querySelectorAll('.feed-card')].find((c) => (c.innerText || '').includes(t));
+      (alvo || document.body).scrollIntoView({ block: 'center' });
+    }, texto).catch(() => {});
+    await espera(700);
+    await medir(nome);
+  }
+  });
+
+  // ── Reações, comentários, campo de comentário focado ───────────────────────
+  await passo('reacoes', async () => {
+    await tocar(pagina.locator('button[aria-label="Reagir"]').first());
+    await medir('reacoes-aberto');
+    await pagina.keyboard.press('Escape').catch(() => {});
+    await espera(300);
+  });
+  await passo('comentarios', async () => {
+    // Um post REAL com comentários (os sintéticos da varredura não têm fio) —
+    // "Ver todos os N comentários" só aparece em quem já tem 3 ou mais.
+    const comFio = pagina.locator('button', { hasText: /^Ver todos os \d+ comentários$/ }).first();
+    const verComentarios = (await comFio.count())
+      ? comFio
+      : pagina.locator('button', { hasText: /^(Comentar|Responder)$/ }).last();
+    if (!(await tocar(verComentarios))) return;
+    await espera(900);
+    await medir('comentarios-abertos');
+    const campo = pagina.locator('textarea[placeholder^="Escreva um comentário"]').first();
+    if (await campo.count()) {
+      await campo.scrollIntoViewIfNeeded();
+      await campo.tap();
+      await campo.fill(`Comentário com ${PALAVRA_LONGA} dentro.`);
+      await medir('comentario-focado');
+    }
+    await tocar(pagina.locator('button[aria-label="Fechar"]').first(), { forca: true });
+  });
+
+  // ── Imagem em tela cheia ───────────────────────────────────────────────────
+  await passo('imagem-tela-cheia', async () => {
+    const foto = pagina.locator('button[style*="zoom-in"] img').first();
+    if (!(await foto.count())) return;
+    await foto.scrollIntoViewIfNeeded();
+    await foto.click({ force: true });
+    await espera(900);
+    await medir('imagem-tela-cheia');
+    // Fecha-se no clique do próprio overlay (não tem Escape nem botão).
+    await pagina.locator('[role="dialog"][aria-label="Imagem"]').click({ position: { x: 8, y: 8 }, force: true, timeout: 8000 }).catch(() => {});
+    await espera(500);
+  });
+
+  // ── Modal de denúncia ──────────────────────────────────────────────────────
+  await passo('denuncia', async () => {
+    if (!(await tocar(pagina.locator('button[aria-label="Opções"]').first()))) return;
+    if (!(await tocar(pagina.locator('button', { hasText: /^Denunciar$/ }).first(), { forca: true }))) return;
+    await espera(700);
+    await medir('modal-denuncia');
+    await tocar(pagina.locator('button', { hasText: /^(Cancelar|Fechar)$/ }).first(), { forca: true });
+  });
+
+  // ── Anúncio (AdCard) entre os posts ────────────────────────────────────────
+  await passo('anuncio', async () => {
+    const anuncio = pagina.locator('span', { hasText: /^Publicidade$/ }).first();
+    if (!(await anuncio.count())) return;
+    await anuncio.scrollIntoViewIfNeeded({ timeout: 8000 }).catch(() => {});
+    await medir('anuncio-no-feed');
+  });
+
+  // ── Fim da lista (tudo pintado) ────────────────────────────────────────────
+  await medir('feed-fundo', { rolarPara: () => pagina.evaluate(() => window.scrollTo(0, document.scrollingElement.scrollHeight)) });
+
+  await contexto.close();
+  return { rotulo, feedMoldado, tela: `${largura}x${altura}`, estados, erros };
+}
+
 // ─── Cena "fixos": position:fixed que não ancora na TELA ──────────────────────
 // Rodada 9, item 4. O mesmo defeito do modal de votar: um `position: fixed`
 // dentro do [data-page] pode ancorar na PÁGINA em vez da tela — basta um
@@ -843,6 +1237,29 @@ try {
     for (const p of a.passos) console.log(`   ${p.passo}: botões [${p.bloco.botoes?.join(' · ')}]${p.dialogo ? ` · diálogo "${p.dialogo}"` : ''} → ${p.captura}`);
     console.log(`   com RSVP aberto: card ${a.comRsvp.rsvpCard ? 'sim' : 'não'} · botões [${a.comRsvp.botoes?.join(' · ')}] → ${a.comRsvp.captura}`);
     console.log(`   escritas interceptadas: ${a.escritas.map((e) => `${e.metodo} ${e.rota} ${e.corpo || ''}`).join(' | ') || 'nenhuma'}`);
+  }
+
+  if (CENAS.includes('resenha2')) {
+    const varreduras = [];
+    for (const [rotulo, largura, altura] of [['430', 430, 932], ['se', 375, 667]]) {
+      const v = await cenaResenha(navegador, sessao, { largura, altura, rotulo });
+      varreduras.push(v);
+      console.log(`\n[iphone] varredura da Resenha · ${v.tela}`);
+      console.log(`   feed moldado ${v.feedMoldado}x (posts sintéticos: retrato, paisagem, texto longo, vídeo, anúncio oficial)`);
+      console.log('   estado                     rolável  escala  passa da borda / imagem sem travão');
+      for (const e of v.estados) {
+        const largo = e.larguraRolavel > largura + 1 || (e.escala != null && e.escala < 0.99);
+        const culpa = e.passamDaBorda.length
+          ? `${e.passamDaBorda[0].caminho} (direita ${e.passamDaBorda[0].direita}px)`
+          : e.imagens.length ? `${e.imagens.length} img sem travão: ${e.imagens[0].caminho.split(' > ').pop()} ${e.imagens[0].caixa} (${e.imagens[0].motivo || 'passa da borda'})` : '—';
+        console.log(`   ${e.estado.padEnd(26)} ${String(e.larguraRolavel).padEnd(8)} ${String(e.escala).padEnd(7)} ${largo ? 'LARGO ' : ''}${culpa}`);
+        if (e.vigia) console.log(`       vigia durante a escolha da foto: máx rolável ${e.vigia.maxRolavel}px · máx viewport ${e.vigia.maxViewport}px · menor escala ${e.vigia.minEscala} · ${e.vigia.amostras} amostras${e.vigia.pior ? ` · pior: ${e.vigia.pior}` : ''}`);
+        if (e.crop) console.log(`       crop: cartão ${e.crop.cartao} · cabe na tela ${e.crop.cabeNaTela ? 'sim' : 'NÃO'} · chips ${e.crop.chips?.esquerda}–${e.crop.chips?.direita} cabem ${e.crop.chipsCabem ? 'sim' : 'NÃO'} · rodapé ${e.crop.rodapeAbaixoDaDobra}px da dobra`);
+        if (e.teclado) console.log(`       teclado: altura ${e.teclado.altura} · compositor ${e.teclado.compositor} visível ${e.teclado.compositorVisivel ? 'sim' : 'NÃO'} · barra ${e.teclado.barra} visível ${e.teclado.barraVisivel ? 'sim' : 'NÃO'}`);
+      }
+      if (v.erros.length) console.log(`   erros de JS: ${v.erros.join(' | ')}`);
+    }
+    saida.resenha2 = varreduras;
   }
 
   if (CENAS.includes('fixos')) {
