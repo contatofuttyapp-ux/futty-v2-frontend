@@ -274,9 +274,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
         while (caixa.offsetWidth > alvo && fs > 13) { fs -= 1; caixa.style.setProperty('--fs', `${fs}px`); }
       }
       q('.palcoStage').classList.add('veuTotal'); ft.classList.add('on');
-      // O time inteiro acabou de aparecer: o MESMO efeito de revelação do
-      // jogador, mais alto (Rodada 12C — é um efeito só, para os dois casos).
-      SomSorteio.revelar(0.5);
+      // O time inteiro acabou de aparecer: efeito próprio de fecho, separado
+      // da revelação por jogador (Rodada 12D — o dono quis os dois de volta).
+      SomSorteio.fecharTime();
       await sleep(1700); if (!vivo) return;
       ft.classList.remove('on'); q('.palcoStage').classList.remove('veuTotal');
       await sleep(200); ft.innerHTML = ''; await sleep(220); if (!vivo) return;
@@ -358,7 +358,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     // (a pessoa acabou de escolher ouvir; sem retorno nenhum parece quebrado).
     const onSom = () => { const on = SomSorteio.toggle(); if (on) SomSorteio.revelar(0.2); pintarSom(); };
     somBtn.addEventListener('click', onSom); pintarSom();
-    // 13-set: o autoTeste dá load() nos 5 sons para logar "SOM OK 5/5" — 2 MB
+    // 13-set: o autoTeste dá load() nos 3 sons para logar "SOM OK 3/3" — 135 KB
     // baixados ao abrir a cerimônia, inclusive com o som desligado, que é o
     // padrão. Fica só em desenvolvimento; em produção os sons entram um a um,
     // no primeiro uso (o el() do somSorteio.js já é preguiçoso).

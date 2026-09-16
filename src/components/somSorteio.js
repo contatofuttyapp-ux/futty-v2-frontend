@@ -4,24 +4,28 @@
 // e jamais mexem nos players de áudio diretamente.
 //
 // RODADA 12C (16-set) — O SORTEIO NÃO TEM MÚSICA (lei do dono, CLAUDE.md).
+// RODADA 12D (16-set) — o fecho de cada time ganha efeito próprio, separado da
+// revelação por jogador: voltou o sorteio-finalizado.mp3 (tinha saído na 12C
+// por achar-se dispensável; o dono pediu de volta — "o som de quando o time é
+// sorteado"). O Hud UI.MP3 fica só com a revelação de cada jogador.
 //
-// Ficam DOIS efeitos, e só dois:
+// Ficam TRÊS efeitos:
 //   giro      — o tique da "slot machine" enquanto sorteia (em loop, pára no fim)
-//   revelacao — o efeito de quando um time/jogador aparece
+//   revelacao — um jogador aparece no rolo, por jogador
+//   fecho     — o time inteiro fica pronto (mais alto que os dois acima)
 //
-// Saíram três arquivos (1,84 MB fora do app, lei do app leve): a trilha de fundo
-// (trilha-chiptune.mp3, 1,54 MB — era a música), a fanfarra do fim (Victory.MP3,
-// 231 KB — também música) e o baque do véu (sorteio-finalizado.mp3, 28 KB — o
-// efeito de revelação passou a ser um só, o mesmo do jogador e do time). Com eles
-// saiu a API que os servia: iniciar/cartaoVeu/cartaoVeuSai/vitoria/vitoriaTocando
-// e os stamps, que existiam para cronometrar a trilha contra a Victory.
+// Seguem fora do app (1,77 MB, lei do app leve): a trilha de fundo
+// (trilha-chiptune.mp3, 1,54 MB — era a música) e a fanfarra do fim
+// (Victory.MP3, 231 KB — também música). Com elas saiu a API que as servia:
+// iniciar/cartaoVeu/cartaoVeuSai/vitoria/vitoriaTocando e os stamps, que
+// existiam para cronometrar a trilha contra a Victory.
 //
 // Os toques de interface (alavanca, sair, salvar, compartilhar) também saíram: a
-// lei diz DOIS efeitos, e um clique de botão não é nem tique nem revelação.
+// lei diz efeitos de sorteio, e um clique de botão não é nenhum dos três.
 //
 // Ficheiros reais em public/sons/ (Pixabay Content License — ver docs/licencas.md).
 // API: ligado(get) · escolhido(get) · toggle · ligarPorOmissao · desfazerOmissao
-//   · girar/girarLento/pararGiro · revelar · silenciar · autoTeste
+//   · girar/girarLento/pararGiro · revelar · fecharTime · silenciar · autoTeste
 // ═══════════════════════════════════════════════════════════════════════════════
 import { urlAsset } from '../utils/avatar';
 
@@ -32,10 +36,12 @@ import { urlAsset } from '../utils/avatar';
 const CAMINHOS = {
   giro:      '/sons/slot-machine.mp3',
   revelacao: '/sons/Hud UI.MP3',
+  fecho:     '/sons/sorteio-finalizado.mp3',
 };
 const KIT = {
   giro:      { src: urlAsset(CAMINHOS.giro),      vol: 0.45, loop: true  },
   revelacao: { src: urlAsset(CAMINHOS.revelacao), vol: 0.28, loop: false },
+  fecho:     { src: urlAsset(CAMINHOS.fecho),     vol: 0.50, loop: false },
 };
 const CHAVE_SOM = 'futty_sorteio_som';
 const els = {}, falhou = {};
@@ -110,7 +116,8 @@ const SomSorteio = {
   girarLento() { const a = els.giro; if (a && !a.paused) { try { a.playbackRate = 0.72; } catch { /* ignore */ } } },
   pararGiro() { stop('giro'); },
   /**
-   * A REVELAÇÃO: um jogador saiu do rolo, ou o time inteiro acabou de aparecer.
+   * A REVELAÇÃO: um jogador saiu do rolo (o fecho do time inteiro é o
+   * `fecharTime`, Rodada 12D).
    *
    * Multi-shot (um Audio novo por toque) porque numa vaga de rolos isto dispara
    * de 130 em 130 ms — um elemento só cortaria o anterior a cada revelação.
@@ -124,8 +131,23 @@ const SomSorteio = {
       const p = a.play(); if (p && p.catch) p.catch(() => {});
     } catch { /* ignore */ }
   },
+  /**
+   * O FECHO: o time inteiro acabou de aparecer (Rodada 12D). Efeito próprio,
+   * diferente da revelação por jogador — não é multi-shot porque só dispara
+   * uma vez por time, mas segue o mesmo Audio-novo-a-cada-toque por
+   * simplicidade e para não brigar com um replay rápido da cerimônia.
+   */
+  fecharTime(vol) {
+    if (!ligado || falhou.fecho) return;
+    try {
+      const a = new Audio(KIT.fecho.src);
+      a.volume = vol || KIT.fecho.vol;
+      a.addEventListener('error', () => { falhou.fecho = true; });
+      const p = a.play(); if (p && p.catch) p.catch(() => {});
+    } catch { /* ignore */ }
+  },
   silenciar() { Object.keys(KIT).forEach(stop); },
-  // AUTO-TESTE: confirma que os ficheiros carregam. Loga "SOM OK 2/2".
+  // AUTO-TESTE: confirma que os ficheiros carregam. Loga "SOM OK 3/3".
   async autoTeste() {
     const ks = Object.keys(KIT); let ok = 0; const falhas = [];
     await Promise.all(ks.map((k) => new Promise((res) => {
