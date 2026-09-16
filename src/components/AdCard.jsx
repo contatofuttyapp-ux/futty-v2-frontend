@@ -54,9 +54,17 @@ export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adPr
 
   if (!pronto || !ad) return null; // página OFF ou sem campanha → nada
 
-  const box = variant === 'banner'
-    ? { ...BASE, height: 72, borderRadius: 10, boxShadow: '0 -4px 20px rgba(0,0,0,0.6)' }
-    : { ...BASE, height: 100, borderRadius: 8 };
+  // RODADA 12A — 'banner320x100' é a medida IAB padrão (a "large mobile
+  // banner"), para a página do sorteio. Uma campanha comprada em qualquer rede
+  // vem nesta proporção e entra sem recorte. Vai por aspect-ratio e não por
+  // altura fixa: a caixa reserva o lugar antes de a imagem chegar (nada salta) e
+  // encolhe junto com a largura em telas estreitas, sem nunca passar dos 360.
+  const iab = variant === 'banner320x100';
+  const box = iab
+    ? { ...BASE, aspectRatio: '3.2', borderRadius: 8 }
+    : variant === 'banner'
+      ? { ...BASE, height: 72, borderRadius: 10, boxShadow: '0 -4px 20px rgba(0,0,0,0.6)' }
+      : { ...BASE, height: 100, borderRadius: 8 };
 
   const clicar = () => {
     apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'cli' }) }).catch(() => {});
@@ -66,7 +74,7 @@ export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adPr
   const conteudo = ad.imagem_url ? (
     // A imagem da campanha costuma ser de outra origem — urlImagem devolve-a
     // intacta, mas se um dia a campanha vier do nosso Storage já pede o tamanho certo.
-    <img src={urlImagem(ad.imagem_url, 512)} alt={ad.texto || ''} width={390} height={100} decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    <img src={urlImagem(ad.imagem_url, 512)} alt={ad.texto || ''} width={iab ? 320 : 390} height={100} decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
   ) : (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', height: '100%', padding: '0 14px', boxSizing: 'border-box' }}>
       <Icon name="anuncio" size={22} color="#d4a017" />
@@ -78,14 +86,30 @@ export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adPr
     </div>
   );
 
-  return (
+  const caixa = (
     <div style={box}>
       <button type="button" onClick={clicar} style={{ display: 'block', width: '100%', height: '100%', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
         {conteudo}
       </button>
-      <span style={{ position: 'absolute', top: 0, right: 0, fontSize: 8, letterSpacing: '.08em', color: 'rgba(255,255,255,0.4)', background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '0 8px 0 4px', textTransform: 'uppercase' }}>
+      {/* No 320×100 o rótulo sai de cima da criação: a medida é padrão de
+          mercado e a arte comprada ocupa-a inteira — um selo sobreposto taparia
+          parte do que o anunciante pagou. Fica por fora, acima. */}
+      {iab ? null : (
+        <span style={{ position: 'absolute', top: 0, right: 0, fontSize: 8, letterSpacing: '.08em', color: 'rgba(255,255,255,0.4)', background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '0 8px 0 4px', textTransform: 'uppercase' }}>
+          Publicidade
+        </span>
+      )}
+    </div>
+  );
+
+  if (!iab) return caixa;
+
+  return (
+    <div style={{ width: '100%', maxWidth: 360, margin: '0 auto' }}>
+      <div style={{ fontSize: 8, letterSpacing: '.08em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 3 }}>
         Publicidade
-      </span>
+      </div>
+      {caixa}
     </div>
   );
 }

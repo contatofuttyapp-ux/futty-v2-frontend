@@ -12,6 +12,7 @@ import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio, { MARCA_TIME } from '../components/CerimoniaSorteio';
 import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
+import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -120,7 +121,19 @@ export default function SorteioShow() {
               data={dataCartaz}
               aoComecar={() => setTerminou(false)}
               aoTerminar={() => setTerminou(true)}
+              bannerInterno={false}
             />
+
+            {/* RODADA 12A — o espaço de publicidade da página do sorteio: IAB
+                320×100, servido com pagina='sorteio' (toggle do dono no
+                Gabinete, filtro etário fail-closed no servidor). Só depois da
+                cerimónia: durante ela a tela é para olhar. Sem campanha o
+                AdCard devolve null e não fica buraco nem promessa na tela. */}
+            {terminou ? (
+              <div style={{ marginTop: 18 }}>
+                <AdCard pagina="sorteio" variant="banner320x100" />
+              </div>
+            ) : null}
 
             {/* partilha (§9): o link fica aqui; a imagem dos times e os 9:16
                 mudaram-se para a barra presa ao fundo (ver abaixo). */}

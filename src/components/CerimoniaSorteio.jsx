@@ -106,7 +106,13 @@ function BannerSorteio() {
   );
 }
 
-export default function CerimoniaSorteio({ resultado, autoStart = true, aoComecar, aoTerminar, equipa, data }) {
+/**
+ * `bannerInterno` (Rodada 12A): a página do sorteio passou a ter o seu próprio
+ * slot IAB 320×100, servido pelo AdCard e só depois da cerimónia acabar — dois
+ * anúncios na mesma tela seriam duas impressões pela mesma vista. Quem tem slot
+ * próprio passa `false`; o /p/ e o Campeonato continuam com a faixa de sempre.
+ */
+export default function CerimoniaSorteio({ resultado, autoStart = true, aoComecar, aoTerminar, equipa, data, bannerInterno = true }) {
   const rootRef = useRef(null);
   // props estáveis para o efeito (que corre 1x); um re-sorteio remonta via key no consumidor.
   const cbRef = useRef(aoTerminar);
@@ -464,7 +470,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
       </div>
       {/* BannerAd — servido a valer (/api/ads?pagina=sorteio); toggle do dono + menores
           fail-closed no servidor. Sem campanha/OFF → não aparece. */}
-      <BannerSorteio />
+      {bannerInterno ? <BannerSorteio /> : null}
       <div className="saltar"><button type="button">» concluir já</button></div>
       <div className="toast" />
     </div>
