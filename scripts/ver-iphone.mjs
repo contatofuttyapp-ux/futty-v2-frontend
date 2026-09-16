@@ -1500,6 +1500,164 @@ async function cenaRodada12a(navegador, sessao) {
   return { jogo, cromo, ranking, presenca, sorteio };
 }
 
+// ─── Cena "rodada12c" (16-set): publicidade nas 5 telas, vitrine e mudo ───────
+// A campanha de prévia já está ligada de verdade no Gabinete (backend, 12B/12C),
+// por isso aqui NÃO se serve anúncio nenhum por interceção: o que a cena mede é
+// o que o app recebe da API real. As escritas continuam travadas.
+
+/** Mede o slot de publicidade visível na tela (o AdCard, em qualquer variante). */
+function medirAnuncio() {
+  // A arte da campanha de prévia — é o que a pessoa vê, e mede o SLOT em si.
+  // Medir pelo rótulo "Publicidade" media o wrapper: na variante 320×100 o
+  // rótulo fica FORA da caixa, acima dela, e somava os seus 13 px à altura
+  // (dava proporção 2.87 onde o slot é 3.2).
+  const img = [...document.images].find((i) => (i.currentSrc || '').includes('/ads/'));
+  if (!img) return null;
+  const r = img.getBoundingClientRect();
+  const rotulo = [...document.querySelectorAll('span, div')].some((el) => (el.textContent || '').trim().toLowerCase() === 'publicidade' && el.children.length === 0);
+  return {
+    largura: Math.round(r.width),
+    altura: Math.round(r.height),
+    proporcao: r.height ? Number((r.width / r.height).toFixed(2)) : null,
+    naTela: r.top < window.innerHeight && r.bottom > 0 && r.width > 0,
+    topo: Math.round(r.top),
+    temRotulo: rotulo,
+    src: img.currentSrc.replace(/^https?:\/\/[^/]+/, '').slice(0, 45),
+  };
+}
+
+async function telaComAnuncio(navegador, sessao, { nome, rota, prepararFn = null }) {
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto);
+  const pagina = await contexto.newPage();
+  const erros = [];
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('main, .smaq', { timeout: 30000 }).catch(() => {});
+  if (prepararFn) await prepararFn(pagina).catch((e) => erros.push(`preparar: ${e.message}`));
+  // Espera a ARTE da campanha entrar no DOM em vez de um tempo fixo: com 4,4 s
+  // o Início ainda não a tinha (o anúncio vem dentro do /api/inicio) e a cena
+  // dava "sem anúncio" numa tela que o tinha — apanhado na 1ª passagem.
+  await pagina.waitForSelector('img[src*="/ads/"]', { timeout: 20000 }).catch(() => {});
+
+  // Rola até o anúncio, se ele estiver abaixo da dobra (Figurinha e Ranking).
+  const rolou = await pagina.evaluate(() => {
+    const img = [...document.images].find((i) => (i.currentSrc || '').includes('/ads/'));
+    if (!img) return false;
+    img.scrollIntoView({ block: 'center' });
+    return true;
+  });
+  await espera(900);
+  const anuncio = await pagina.evaluate(medirAnuncio);
+  const arquivo = arquivoCaptura(`ad-${nome}`);
+  await pagina.screenshot({ path: arquivo });
+  await contexto.close();
+  return { nome, rota, anuncio, rolou, captura: path.relative(RAIZ, arquivo), erros };
+}
+
+async function cenaRodada12c(navegador, sessao) {
+  const jogo = await acharJogoSorteado(navegador, sessao);
+  const telas = [];
+
+  telas.push(await telaComAnuncio(navegador, sessao, { nome: 'inicio', rota: '/home' }));
+  telas.push(await telaComAnuncio(navegador, sessao, { nome: 'resenha', rota: '/feed' }));
+  telas.push(await telaComAnuncio(navegador, sessao, { nome: 'ranking', rota: `/equipa/${TIME}/ranking` }));
+  telas.push(await telaComAnuncio(navegador, sessao, { nome: 'figurinha', rota: '/figurinha' }));
+  if (jogo) {
+    telas.push(await telaComAnuncio(navegador, sessao, {
+      nome: 'sorteio',
+      rota: `/equipa/${TIME}/jogo/${jogo.id}/sorteio`,
+      // A cerimónia tem de ACABAR para o slot aparecer (Rodada 12A).
+      prepararFn: async (pagina) => {
+        const saltar = pagina.locator('.saltar button');
+        if (await saltar.count()) await saltar.click({ force: true }).catch(() => {});
+        await pagina.waitForSelector('.sorteio-barra', { timeout: 25000 }).catch(() => {});
+        await espera(1500);
+      },
+    }));
+  }
+
+  // ── O botão de mudo durante a cerimónia (lei nova do som) ──
+  let mudo = null;
+  if (jogo) {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    await pagina.goto(`${BASE}/equipa/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.smaq', { timeout: 30000 });
+    await espera(2500); // a cerimónia está a correr: é ESTE o momento que a lei cobre
+    mudo = await pagina.evaluate(() => {
+      const b = document.querySelector('.somBtn');
+      if (!b) return { achou: false };
+      const r = b.getBoundingClientRect();
+      const cs = getComputedStyle(b);
+      return {
+        achou: true,
+        caixa: `${Math.round(r.width)}x${Math.round(r.height)}`,
+        naTela: r.top >= 0 && r.left >= 0 && r.bottom <= window.innerHeight && r.right <= window.innerWidth,
+        ligado: b.classList.contains('on'),
+        titulo: b.getAttribute('title'),
+        cor: cs.color,
+        // Contraste contra o fundo próprio (o mudo tem de se LER durante a festa).
+        fundo: cs.backgroundColor,
+        rotulo: b.getAttribute('aria-label'),
+      };
+    });
+    await pagina.screenshot({ path: arquivoCaptura('mudo-durante-cerimonia') });
+    await contexto.close();
+  }
+
+  // ── O botão da vitrine no Perfil + o destino do cromo do Início ──
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto);
+  const pagina = await contexto.newPage();
+  await pagina.goto(`${BASE}/perfil`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('main', { timeout: 30000 });
+  await espera(3000);
+  const vitrine = await pagina.evaluate(() => {
+    const link = [...document.querySelectorAll('a')].find((a) => /vitrine/i.test(a.innerText || ''));
+    if (!link) return { achou: false };
+    const r = link.getBoundingClientRect();
+    return {
+      achou: true,
+      texto: link.innerText.trim(),
+      destino: link.getAttribute('href'),
+      naTela: r.top >= 0 && r.bottom <= window.innerHeight && r.width > 0,
+      caixa: `${Math.round(r.width)}x${Math.round(r.height)}`,
+      dourado: getComputedStyle(link).borderColor,
+    };
+  });
+  await pagina.screenshot({ path: arquivoCaptura('perfil-botao-vitrine') });
+
+  // O cromo do Início tem de apontar para a mesma vitrine.
+  await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('.cromo-inicio', { timeout: 30000 }).catch(() => {});
+  await espera(2500);
+  const cromo = await pagina.evaluate(() => {
+    const el = document.querySelector('.cromo-inicio');
+    return el ? { destino: el.getAttribute('href'), rotulo: el.getAttribute('aria-label') } : { destino: null };
+  });
+
+  // E a vitrine em si: abre, mede o voltar e volta.
+  let voltar = null;
+  if (cromo.destino) {
+    await pagina.locator('.cromo-inicio').click({ force: true }).catch(() => {});
+    await espera(3000);
+    const naVitrine = pagina.url().replace(BASE, '');
+    await pagina.screenshot({ path: arquivoCaptura('vitrine-aberta') });
+    const tipoBotao = await pagina.evaluate(() => {
+      const b = document.querySelector('.topbar-back');
+      return b ? b.tagName.toLowerCase() : null;
+    });
+    await pagina.locator('.topbar-back').click({ force: true }).catch(() => {});
+    await espera(2000);
+    voltar = { naVitrine, tipoBotao, voltouPara: pagina.url().replace(BASE, '') };
+  }
+  await contexto.close();
+
+  return { jogo, telas, mudo, vitrine, cromo, voltar };
+}
+
 mkdirSync(PASTA, { recursive: true });
 const navegador = await webkit.launch();
 try {
@@ -1664,6 +1822,35 @@ try {
       if (s.erros.length) console.log(`   erros de JS: ${s.erros.join(' | ')}`);
     } else {
       console.log('\n[iphone] RODADA 12A · itens 2, 3, 4: sem jogo sorteado nesta conta — não medidos.');
+    }
+  }
+
+  if (CENAS.includes('rodada12c')) {
+    const r = await cenaRodada12c(navegador, sessao);
+    saida.rodada12c = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+
+    console.log('\n[iphone] RODADA 12C · publicidade nas 5 telas (campanha real do Gabinete, sem interceção)');
+    for (const t of r.telas) {
+      const a = t.anuncio;
+      console.log(`   ${t.nome.padEnd(10)} ${ok(!!a && a.naTela)} ${a ? `${a.largura}x${a.altura}px · proporção ${a.proporcao} · rótulo ${a.temRotulo ? 'sim' : 'NÃO'} · na tela ${a.naTela}` : 'sem anúncio na tela'}`);
+      console.log(`   ${' '.repeat(10)} ${t.captura}${t.erros.length ? ` · erros: ${t.erros.join(' | ')}` : ''}`);
+    }
+
+    console.log('\n[iphone] RODADA 12C · botão de mudo durante a cerimônia (lei nova do som)');
+    if (r.mudo?.achou) {
+      console.log(`   ${ok(r.mudo.naTela)} caixa ${r.mudo.caixa} · na tela ${r.mudo.naTela} · ligado ${r.mudo.ligado} · "${r.mudo.titulo}"`);
+      console.log(`   cor ${r.mudo.cor} sobre ${r.mudo.fundo} · aria-label "${r.mudo.rotulo}"`);
+    } else {
+      console.log('   FALHA · não achei o botão de som na cerimônia');
+    }
+
+    console.log('\n[iphone] RODADA 12C · vitrine do jogador');
+    console.log(`   ${ok(r.vitrine.achou)} botão no Perfil: ${r.vitrine.achou ? `"${r.vitrine.texto}" → ${r.vitrine.destino} · ${r.vitrine.caixa} · borda ${r.vitrine.dourado}` : 'não achei'}`);
+    console.log(`   ${ok(/\/jogador\//.test(r.cromo.destino || ''))} cromo do Início → ${r.cromo.destino} ("${r.cromo.rotulo}")`);
+    if (r.voltar) {
+      const voltouBem = r.voltar.voltouPara === '/home';
+      console.log(`   ${ok(voltouBem)} voltar: abriu ${r.voltar.naVitrine} (botão <${r.voltar.tipoBotao}>) → voltou para ${r.voltar.voltouPara} (esperado /home, de onde se veio)`);
     }
   }
 
