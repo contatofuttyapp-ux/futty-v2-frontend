@@ -1019,18 +1019,6 @@ function TabMembros({ slug, meId, showToast }) {
     }
   }
 
-  // Alterna categoria linha <-> GR (optimista).
-  async function toggleGR(m) {
-    const nova = m.categoria === 'GR' ? 'linha' : 'GR';
-    setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, categoria: nova } : x)));
-    try {
-      await apiFetch(`/api/teams/${slug}/membros/${m.user_id}`, { method: 'PATCH', body: JSON.stringify({ categoria: nova }) });
-    } catch (e) {
-      setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, categoria: m.categoria } : x)));
-      showToast(e.message, 'error');
-    }
-  }
-
   async function zerarVotos(m) {
     try {
       const r = await apiFetch(`/api/teams/${slug}/votos/${m.user_id}`, { method: 'DELETE' });
@@ -1053,15 +1041,17 @@ function TabMembros({ slug, meId, showToast }) {
     }
   }
 
-  // Altera a posição de um membro (optimista) via endpoint dedicado.
-  async function setPosicao(m, pos) {
-    if ((m.posicao || null) === pos) return;
-    const anterior = m.posicao || null;
-    setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, posicao: pos } : x)));
+  // Liga/desliga o goleiro de um membro (optimista) via endpoint dedicado.
+  // Rodada 10B: `goleiro` é o campo único (grava categoria) — este botão e o
+  // chip do próprio jogador (Equipa.jsx) nunca mais podem discordar.
+  async function setGoleiro(m, ligado) {
+    if (!!m.goleiro === ligado) return;
+    const anterior = !!m.goleiro;
+    setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, goleiro: ligado } : x)));
     try {
-      await apiFetch(`/api/equipas/${slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ posicao: pos, user_id: m.user_id }) });
+      await apiFetch(`/api/equipas/${slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ goleiro: ligado, user_id: m.user_id }) });
     } catch (e) {
-      setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, posicao: anterior } : x)));
+      setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, goleiro: anterior } : x)));
       showToast(e.message, 'error');
     }
   }
@@ -1118,15 +1108,6 @@ function TabMembros({ slug, meId, showToast }) {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => toggleGR(m)}
-              aria-pressed={m.categoria === 'GR'}
-              title="Goleiro"
-              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${m.categoria === 'GR' ? 'var(--purple)' : '#333'}`, background: m.categoria === 'GR' ? 'rgba(124,58,237,0.18)' : 'transparent', color: m.categoria === 'GR' ? '#b69cff' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
-            >
-              GR
-            </button>
             <button
               type="button"
               onClick={() => togglePostar(m)}
@@ -1190,22 +1171,20 @@ function TabMembros({ slug, meId, showToast }) {
             </div>
 
             {/* Rodada 9: goleiro ou linha, mais nada. Ligado, os jogos deste time
-                já nascem com ele no gol (o jogador ainda desliga em cada jogo). */}
+                já nascem com ele no gol (o jogador ainda desliga em cada jogo).
+                Rodada 10B: único controlo de goleiro do admin (a pastilha "GR"
+                que ficava na fila de cima escrevia a mesma coluna por outra
+                rota — virou duplicidade e saiu). */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-              {(() => {
-                const ehGoleiro = m.posicao === 'GL';
-                return (
-                  <button
-                    type="button"
-                    onClick={() => setPosicao(m, ehGoleiro ? null : 'GL')}
-                    aria-pressed={ehGoleiro}
-                    style={{ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${ehGoleiro ? '#d4a017' : '#333'}`, background: ehGoleiro ? 'rgba(212,160,23,0.15)' : 'transparent', color: ehGoleiro ? '#d4a017' : 'var(--text-dim)' }}
-                  >
-                    Goleiro
-                  </button>
-                );
-              })()}
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{m.posicao === 'GL' ? '' : LABEL_LINHA}</span>
+              <button
+                type="button"
+                onClick={() => setGoleiro(m, !m.goleiro)}
+                aria-pressed={!!m.goleiro}
+                style={{ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${m.goleiro ? '#d4a017' : '#333'}`, background: m.goleiro ? 'rgba(212,160,23,0.15)' : 'transparent', color: m.goleiro ? '#d4a017' : 'var(--text-dim)' }}
+              >
+                Goleiro
+              </button>
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{m.goleiro ? '' : LABEL_LINHA}</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>

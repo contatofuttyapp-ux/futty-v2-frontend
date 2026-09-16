@@ -102,7 +102,9 @@ export default function Equipa() {
   const [toast, setToast] = useState(null);
 
   const meuId = me?.user?.id;
-  const souGoleiroNoTime = members.find((m) => m.id === meuId)?.posicao === 'GL';
+  // Rodada 10B: `goleiro` é o campo único (fonte: team_members.categoria) —
+  // a pastilha "GR" do admin e este chip nunca mais podem discordar.
+  const souGoleiroNoTime = !!members.find((m) => m.id === meuId)?.goleiro;
 
   // Onboarding: 1ª vez de um jogador que não fundou a equipa (não-admin, sem
   // avatar ainda) e que nunca o dispensou (localStorage por equipa).
@@ -123,12 +125,12 @@ export default function Equipa() {
     localStorage.setItem('futty_cta_figurinha', '1');
   }
 
-  // Liga/desliga o goleiro do time ('GL' ou null — Rodada 9, não há mais posições).
-  async function escolherPosicao(pos) {
+  // Liga/desliga o goleiro do time (Rodada 10B: booleano só, grava categoria).
+  async function escolherGoleiro(ligado) {
     if (posBusy) return;
     setPosBusy(true);
     try {
-      await apiFetch(`/api/equipas/${slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ posicao: pos }) });
+      await apiFetch(`/api/equipas/${slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ goleiro: ligado }) });
       await reload();
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
@@ -147,7 +149,7 @@ export default function Equipa() {
     if (!souGoleiroNoTime && localStorage.getItem('futty_pref_gr') === 'GL') {
       localStorage.removeItem('futty_pref_gr');
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot pós-onboarding
-      escolherPosicao('GL');
+      escolherGoleiro(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corre 1x quando team+me carregam
   }, [team, meuId]);
@@ -252,7 +254,7 @@ export default function Equipa() {
                   aria-pressed={souGoleiroNoTime}
                   className={`chip ${souGoleiroNoTime ? 'chip--active' : ''}`}
                   disabled={posBusy}
-                  onClick={() => escolherPosicao(souGoleiroNoTime ? null : 'GL')}
+                  onClick={() => escolherGoleiro(!souGoleiroNoTime)}
                   style={souGoleiroNoTime ? undefined : { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' }}
                 >
                   Sou goleiro neste time
@@ -304,7 +306,7 @@ export default function Equipa() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{nomeExibicao(m)}</div>
                   </div>
-                  {m.posicao === 'GL' ? <Badge45 gold>GR</Badge45> : null}
+                  {m.goleiro ? <Badge45 gold>GR</Badge45> : null}
                   <Badge45 gold={m.role === 'admin'}>{m.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45>
                 </div>
               ))}
