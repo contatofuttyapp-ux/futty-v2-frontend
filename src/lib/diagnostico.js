@@ -385,7 +385,14 @@ export function marcarPintura() {
   // VELOCIDADE 8 — a 1ª tela a pintar é o sinal de partida do resto (ver
   // aposPrimeiraPintura). E se essa tela for o Início, o instante fica no
   // arranque: é o "c ms" do resumo.
-  if (arranque.inicioMs == null && nav.rota === '/home') {
+  //
+  // Só DENTRO da janela de arranque. Sem esta guarda o número mentia: se a
+  // pessoa sai do Início antes de ele pintar (ou entra o app por outra rota), a
+  // marca calhava na visita SEGUINTE ao Início e o resumo dizia "Início 12608
+  // ms" — que não é o arranque de coisa nenhuma. Apanhado a medir isto no
+  // WebKit. Fora da janela, o Início é uma navegação como as outras e aparece na
+  // lista de telas; aqui fica "—", que é a verdade.
+  if (arranque.inicioMs == null && nav.rota === '/home' && performance.now() < FASE_ARRANQUE_MS) {
     arranque.inicioMs = Math.round(performance.now());
   }
   anunciarPrimeiraPintura();
