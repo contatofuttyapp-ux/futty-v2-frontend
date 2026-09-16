@@ -1259,21 +1259,31 @@ export default function Figurinha() {
           {avisoErro}
 
           {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os
-              botões do topo (40px) → hierarquia: topo = configurar, fundo = agir. */}
+              botões do topo (40px) → hierarquia: topo = configurar, fundo = agir.
+
+              VELOCIDADE 8 (16-set) — NO APP FICA UM BOTÃO SÓ. Os dois faziam
+              exactamente a MESMA coisa: no nativo não existe "baixar" (o <a
+              download> é ignorado pelo WKWebView), por isso tanto o "Salvar /
+              compartilhar" como o "Compartilhar" caíam em salvarOuCompartilhar
+              e abriam a mesma folha do sistema — a folha que já tem "Salvar
+              imagem" lá dentro. Dois botões para uma ação não são uma escolha,
+              são uma dúvida: a pessoa pára a decidir qual é qual, e qualquer
+              que escolha vê o mesmo ecrã. Fica o dourado, à largura toda.
+              Na WEB os dois continuam, porque lá são mesmo coisas diferentes:
+              "Baixar" grava o ficheiro, "Compartilhar" abre o navigator.share. */}
           <div style={{ display: 'flex', gap: 12 }}>
-            {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente.
-                No app (Rodada 8A) não há "baixar": abre a folha de compartilhar, que
-                tem "Salvar imagem" — daí o rótulo. Mais longo, vai sem ícone, sem
-                quebrar linha e com letra que acompanha a tela (cabe de 360 a 430 px). */}
-            <button
-              type="button"
-              className="btn btn--purple-outline hud-corners"
-              style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...(appNativo ? { whiteSpace: 'nowrap', paddingLeft: 8, paddingRight: 8, fontSize: 'clamp(12px, 3.5vw, 14px)' } : null) }}
-              disabled={busy}
-              onClick={baixar}
-            >
-              {appNativo ? null : <Download size={16} />} {busy ? 'Gerando…' : appNativo ? 'Salvar / compartilhar' : 'Baixar'}
-            </button>
+            {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente. */}
+            {appNativo ? null : (
+              <button
+                type="button"
+                className="btn btn--purple-outline hud-corners"
+                style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                disabled={busy}
+                onClick={baixar}
+              >
+                <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
+              </button>
+            )}
             {/* FASE 3.47 — CTA dourado partilhado com o "Assinar Pro" dos Planos:
                 gradiente, texto, altura, glow e shine vivem em .cta-gold/.cta-gold-glow
                 (app.css). O glow fica no wrapper SEM clip porque o clip-path do botão
@@ -1286,7 +1296,7 @@ export default function Figurinha() {
                 disabled={busy}
                 onClick={partilhar}
               >
-                <Share2 size={16} /> Compartilhar
+                <Share2 size={16} /> {busy ? 'Gerando…' : 'Compartilhar'}
               </button>
             </div>
           </div>
