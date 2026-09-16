@@ -1,11 +1,27 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// SOM SELADO — módulo isolado do som do sorteio (transplante da bancada v8.19).
+// SOM SELADO — módulo isolado do som do sorteio.
 // LEI: alterações VISUAIS NUNCA tocam neste módulo. As animações CHAMAM a API abaixo
-// e jamais mexem nos players de áudio diretamente. Exclusão mútua por AÇÃO (sem portão
-// de estado frágil que se possa "prender" — a causa das 2 regressões na bancada).
+// e jamais mexem nos players de áudio diretamente.
+//
+// RODADA 12C (16-set) — O SORTEIO NÃO TEM MÚSICA (lei do dono, CLAUDE.md).
+//
+// Ficam DOIS efeitos, e só dois:
+//   giro      — o tique da "slot machine" enquanto sorteia (em loop, pára no fim)
+//   revelacao — o efeito de quando um time/jogador aparece
+//
+// Saíram três arquivos (1,84 MB fora do app, lei do app leve): a trilha de fundo
+// (trilha-chiptune.mp3, 1,54 MB — era a música), a fanfarra do fim (Victory.MP3,
+// 231 KB — também música) e o baque do véu (sorteio-finalizado.mp3, 28 KB — o
+// efeito de revelação passou a ser um só, o mesmo do jogador e do time). Com eles
+// saiu a API que os servia: iniciar/cartaoVeu/cartaoVeuSai/vitoria/vitoriaTocando
+// e os stamps, que existiam para cronometrar a trilha contra a Victory.
+//
+// Os toques de interface (alavanca, sair, salvar, compartilhar) também saíram: a
+// lei diz DOIS efeitos, e um clique de botão não é nem tique nem revelação.
+//
 // Ficheiros reais em public/sons/ (Pixabay Content License — ver docs/licencas.md).
-// API mínima: ligado(get) · toggle · autoTeste · iniciar · girar/girarLento/pararGiro
-//   · toque · cartaoVeu/cartaoVeuSai · vitoria · vitoriaTocando · silenciar · stamps
+// API: ligado(get) · escolhido(get) · toggle · ligarPorOmissao · desfazerOmissao
+//   · girar/girarLento/pararGiro · revelar · silenciar · autoTeste
 // ═══════════════════════════════════════════════════════════════════════════════
 import { urlAsset } from '../utils/avatar';
 
@@ -14,18 +30,12 @@ import { urlAsset } from '../utils/avatar';
 // ficam em cache. Aqui vão SEM o %20 de antes — o urlAsset faz o encodeURI,
 // e codificar duas vezes daria "Hud%2520UI.MP3".
 const CAMINHOS = {
-  trilha:  '/sons/trilha-chiptune.mp3',
-  giro:    '/sons/slot-machine.mp3',
-  hud:     '/sons/Hud UI.MP3',
-  veu:     '/sons/sorteio-finalizado.mp3',
-  vitoria: '/sons/Victory.MP3',
+  giro:      '/sons/slot-machine.mp3',
+  revelacao: '/sons/Hud UI.MP3',
 };
 const KIT = {
-  trilha:  { src: urlAsset(CAMINHOS.trilha),  vol: 0.16, loop: true  },
-  giro:    { src: urlAsset(CAMINHOS.giro),    vol: 0.45, loop: true  },
-  hud:     { src: urlAsset(CAMINHOS.hud),     vol: 0.28, loop: false },
-  veu:     { src: urlAsset(CAMINHOS.veu),     vol: 0.55, loop: false },
-  vitoria: { src: urlAsset(CAMINHOS.vitoria), vol: 0.55, loop: false },
+  giro:      { src: urlAsset(CAMINHOS.giro),      vol: 0.45, loop: true  },
+  revelacao: { src: urlAsset(CAMINHOS.revelacao), vol: 0.28, loop: false },
 };
 const CHAVE_SOM = 'futty_sorteio_som';
 const els = {}, falhou = {};
@@ -40,7 +50,6 @@ try {
   escolheu = guardado != null;
   ligado = guardado === '1';
 } catch { /* SSR/priv */ }
-let ts = { trilhaStart: 0, trilhaStop: 0, vitoriaStart: 0, vitoriaEnd: 0 };
 
 function el(k) {
   if (falhou[k]) return null;
@@ -52,17 +61,7 @@ function el(k) {
   }
   return els[k];
 }
-function play(k) { const a = el(k); if (!a) return null; try { const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch { /* ignore */ } return a; }
 function stop(k) { const a = els[k]; if (a) { try { a.pause(); a.currentTime = 0; } catch { /* ignore */ } } }
-function fade(k, ms) {
-  const a = els[k]; if (!a || a.paused) return;
-  const v0 = KIT[k].vol, t0 = Date.now();
-  const iv = setInterval(() => {
-    const t = (Date.now() - t0) / ms;
-    if (t >= 1) { a.pause(); a.volume = v0; clearInterval(iv); }
-    else a.volume = v0 * (1 - t);
-  }, 50);
-}
 
 const SomSorteio = {
   get ligado() { return ligado; },
@@ -94,8 +93,7 @@ const SomSorteio = {
    *
    * Sem isto, `ligado` ficava verdadeiro para o resto da SESSÃO: quem sorteava
    * um jogo e a seguir abria o resultado de outro — ou a vista pública /p/ —
-   * ouvia som numa tela que a lei manda entregar muda. Quem escolheu alguma
-   * coisa pelo caminho manda, e nada aqui lhe toca.
+   * ouvia som numa tela que a lei manda entregar muda.
    */
   desfazerOmissao() {
     if (escolheu) return ligado;
@@ -103,17 +101,7 @@ const SomSorteio = {
     this.silenciar();
     return false;
   },
-  // ARRANQUE: a trilha (cama) entra em loop, baixa. Idempotente. Limpa restos de festa.
-  iniciar() {
-    if (!ligado) return;
-    stop('vitoria'); stop('veu');
-    const a = el('trilha'); if (!a) return;
-    try {
-      a.volume = KIT.trilha.vol;
-      if (a.paused) { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => {}); }
-      ts.trilhaStart = Date.now();
-    } catch { /* ignore */ }
-  },
+  // O TIQUE: entra com o rolo a girar, em loop, e pára quando ele pára.
   girar() {
     if (!ligado) return;
     const a = el('giro'); if (!a) return;
@@ -121,38 +109,23 @@ const SomSorteio = {
   },
   girarLento() { const a = els.giro; if (a && !a.paused) { try { a.playbackRate = 0.72; } catch { /* ignore */ } } },
   pararGiro() { stop('giro'); },
-  // TOQUES de interface (multi-shot): cada um é um Audio novo.
-  toque(vol) {
-    if (!ligado || falhou.hud) return;
-    try { const a = new Audio(KIT.hud.src); a.volume = vol || KIT.hud.vol; a.addEventListener('error', () => { falhou.hud = true; }); const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch { /* ignore */ }
+  /**
+   * A REVELAÇÃO: um jogador saiu do rolo, ou o time inteiro acabou de aparecer.
+   *
+   * Multi-shot (um Audio novo por toque) porque numa vaga de rolos isto dispara
+   * de 130 em 130 ms — um elemento só cortaria o anterior a cada revelação.
+   */
+  revelar(vol) {
+    if (!ligado || falhou.revelacao) return;
+    try {
+      const a = new Audio(KIT.revelacao.src);
+      a.volume = vol || KIT.revelacao.vol;
+      a.addEventListener('error', () => { falhou.revelacao = true; });
+      const p = a.play(); if (p && p.catch) p.catch(() => {});
+    } catch { /* ignore */ }
   },
-  // O CARTÃO: o baque do véu (curto). v8.20 — TOCA (a revelação); não é cortado.
-  cartaoVeu() { if (!ligado) return; play('veu'); },
-  cartaoVeuSai(ms) { fade('veu', ms || 150); },
-  // A VITÓRIA (balanço antigo): mata a trilha (fade) e, ~260ms depois, entra a Victory.
-  // Exclusão mútua por AÇÃO DIRETA — sem portão. Devolve o gap (ms).
-  vitoria() {
-    if (!ligado) return 0;
-    const a = els.trilha;
-    if (a && !a.paused) fade('trilha', 200);
-    ts.trilhaStop = Date.now();
-    const GAP = 260;
-    setTimeout(() => {
-      const v = el('vitoria'); if (!v) return;
-      try {
-        v.volume = KIT.vitoria.vol; v.currentTime = 0;
-        v.onended = () => { ts.vitoriaEnd = Date.now(); };
-        const p = v.play(); if (p && p.catch) p.catch(() => {});
-        ts.vitoriaStart = Date.now();
-      } catch { /* ignore */ }
-    }, GAP);
-    return GAP;
-  },
-  vitoriaTocando() { const v = els.vitoria; return !!(v && !v.paused && !v.ended); },
-  silenciar() { ['trilha', 'giro', 'veu', 'vitoria'].forEach(stop); },
-  stamps() { return { ...ts }; },
-  resetStamps() { ts = { trilhaStart: 0, trilhaStop: 0, vitoriaStart: 0, vitoriaEnd: 0 }; },
-  // AUTO-TESTE: confirma que os 5 ficheiros carregam. Loga "SOM OK 5/5".
+  silenciar() { Object.keys(KIT).forEach(stop); },
+  // AUTO-TESTE: confirma que os ficheiros carregam. Loga "SOM OK 2/2".
   async autoTeste() {
     const ks = Object.keys(KIT); let ok = 0; const falhas = [];
     await Promise.all(ks.map((k) => new Promise((res) => {

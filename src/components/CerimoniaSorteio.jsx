@@ -232,7 +232,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
         const v = vis(jogs[r], ti); rolos[r].classList.add('stop');
         const rev = rolos[r].querySelector('.rev');
         rev.innerHTML = `<img src="${esc(v.img)}"><span class="nm">${esc(v.nome)}</span>`;
-        rev.classList.add('on'); SomSorteio.toque(0.22);
+        rev.classList.add('on'); SomSorteio.revelar(0.22);
         if (!saltarFlag) await sleep(130);
       }
       if (!saltarFlag) await sleep(430);
@@ -259,7 +259,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
       }
     }
 
-    // — o final: cartão (véu no interior) + Victory + lock-in + molduras vivas
+    // — o final: cartão (véu no interior) + lock-in + molduras vivas
     async function finalLockIn() {
       const quem = q('.quem'); quem.textContent = '';
       maq.classList.remove('giroOn', 'accel', 'burst', 'dim');
@@ -274,7 +274,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
         while (caixa.offsetWidth > alvo && fs > 13) { fs -= 1; caixa.style.setProperty('--fs', `${fs}px`); }
       }
       q('.palcoStage').classList.add('veuTotal'); ft.classList.add('on');
-      SomSorteio.cartaoVeu(); SomSorteio.vitoria();
+      // O time inteiro acabou de aparecer: o MESMO efeito de revelação do
+      // jogador, mais alto (Rodada 12C — é um efeito só, para os dois casos).
+      SomSorteio.revelar(0.5);
       await sleep(1700); if (!vivo) return;
       ft.classList.remove('on'); q('.palcoStage').classList.remove('veuTotal');
       await sleep(200); ft.innerHTML = ''; await sleep(220); if (!vivo) return;
@@ -288,8 +290,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
         m.style.setProperty('--bdl', `${(((i * 53) % 9) * 0.06).toFixed(2)}s`);
         m.classList.add('vivo');
       });
-      const t0 = Date.now();
-      if (SomSorteio.ligado) { await sleep(320); while (vivo && SomSorteio.vitoriaTocando() && Date.now() - t0 < 30000) await sleep(120); } else { await sleep(4000); }
+      // Rodada 12C: sem a Victory, a festa das molduras deixa de esperar por
+      // música nenhuma — dura o mesmo com o som ligado ou desligado.
+      await sleep(4000);
       molds.forEach((m) => m.classList.remove('vivo'));
     }
 
@@ -304,7 +307,6 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     }
     async function corpo() {
       const lv = q('.lever'); lv.classList.remove('pull'); void lv.offsetWidth; lv.classList.add('pull');
-      SomSorteio.toque(0.32); SomSorteio.iniciar();
       q('.palcoStage').classList.remove('veuTotal'); montarGrupos(); q('.fimtxt').classList.remove('on');
       if (reduzido) { preencherTudo(); return; }
       q('.saltar').classList.add('on');
@@ -352,7 +354,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     if (ligouPorOmissao) SomSorteio.ligarPorOmissao();
     const somBtn = q('.somBtn');
     const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clique p/ ligar)'; };
-    const onSom = () => { const on = SomSorteio.toggle(); if (on) { SomSorteio.toque(0.2); SomSorteio.iniciar(); } pintarSom(); };
+    // Ao LIGAR, um toque do efeito de revelação serve de prova de que há som
+    // (a pessoa acabou de escolher ouvir; sem retorno nenhum parece quebrado).
+    const onSom = () => { const on = SomSorteio.toggle(); if (on) SomSorteio.revelar(0.2); pintarSom(); };
     somBtn.addEventListener('click', onSom); pintarSom();
     // 13-set: o autoTeste dá load() nos 5 sons para logar "SOM OK 5/5" — 2 MB
     // baixados ao abrir a cerimônia, inclusive com o som desligado, que é o
@@ -383,7 +387,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     const saltarBtn = q('.saltar button'); const onSaltar = () => { saltarFlag = true; }; saltarBtn.addEventListener('click', onSaltar);
 
     // ── X de saída (volta à página do jogo) ──
-    const sairX = q('.sairX'); const onSair = () => { SomSorteio.toque(0.2); if (window.history.length > 1) window.history.back(); }; sairX.addEventListener('click', onSair);
+    const sairX = q('.sairX'); const onSair = () => { if (window.history.length > 1) window.history.back(); }; sairX.addEventListener('click', onSair);
 
     // ── botões C3: Guardar (cartaz) + Compartilhar (link /p/) ──
     let toastT = null;
@@ -394,7 +398,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     let aGuardar = false;
     const onGuardar = async () => {
       if (aGuardar) return;
-      aGuardar = true; SomSorteio.toque(0.24); mostrarToast('Gerando o cartaz…');
+      aGuardar = true; mostrarToast('Gerando o cartaz…');
       try {
         // No app a entrega é a folha de compartilhar (Rodada 8A); fechada sem
         // escolher nada, não se diz "salvo".
@@ -405,7 +409,6 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
       } finally { aGuardar = false; }
     };
     const onComp = async () => {
-      SomSorteio.toque(0.24);
       try { await navigator.clipboard.writeText(linkP); } catch {
         const t = document.createElement('textarea'); t.value = linkP; document.body.appendChild(t); t.select();
         try { document.execCommand('copy'); } catch { /* */ } t.remove();
