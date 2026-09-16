@@ -46,7 +46,7 @@ export function urlAsset(caminho) {
   const s = String(caminho).trim();
   if (s.startsWith('http://') || s.startsWith('https://')) return s;
   if (PASTAS_REMOTAS.some((p) => s.startsWith(p))) {
-    // encode trata espaços e acentos (ex.: "Hud UI.MP3", "Peixe boi.png").
+    // encode trata espaços e acentos (ex.: "Peixe boi.png", "Onça.png").
     const base = baseAssets() || (typeof window !== 'undefined' ? window.location.origin : '');
     return `${base}${encodeURI(s)}`;
   }

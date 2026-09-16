@@ -1555,6 +1555,69 @@ async function telaComAnuncio(navegador, sessao, { nome, rota, prepararFn = null
   return { nome, rota, anuncio, rolou, captura: path.relative(RAIZ, arquivo), erros };
 }
 
+/**
+ * RODADA 14A — a linha do tempo do som da cerimônia.
+ *
+ * Ninguém ouve um teste automático, então a prova é outra: instrumenta o
+ * `Audio.prototype.play` ANTES do app carregar e registra o que foi tocado,
+ * quando e em que volume. Se o trem de tiques alterna as 3 variantes, se o clac
+ * sai a cada jogador e se o jackpot sai uma vez só no fim, aparece aqui.
+ */
+async function cenaRodada14a(navegador, sessao) {
+  const jogo = await acharJogoSorteado(navegador, sessao);
+  if (!jogo) return { semJogo: true };
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await travarEscritas(contexto);
+  await contexto.addInitScript(() => {
+    // Quem só ABRE o resultado recebe a tela muda (lei do som) — para medir o
+    // som é preciso ser alguém que escolheu ouvir neste aparelho.
+    try { localStorage.setItem('futty_sorteio_som', '1'); } catch { /* ignore */ }
+    const t0 = Date.now();
+    window.__toques = [];
+    const original = window.Audio.prototype.play;
+    window.Audio.prototype.play = function instrumentado(...args) {
+      try {
+        window.__toques.push({
+          som: String(this.src || '').split('/').pop(),
+          vol: Math.round(this.volume * 100) / 100,
+          t: Date.now() - t0,
+        });
+      } catch { /* ignore */ }
+      return original.apply(this, args);
+    };
+  });
+
+  const pagina = await contexto.newPage();
+  await pagina.goto(`${BASE}/equipa/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('.smaq', { timeout: 30000 });
+  // A cerimônia inteira: a barra do sorteio só aparece quando ela acaba.
+  await pagina.waitForSelector('.sorteio-barra', { timeout: 90000 }).catch(() => {});
+  await espera(1500);
+  const toques = await pagina.evaluate(() => window.__toques || []);
+  await contexto.close();
+
+  const doTipo = (re) => toques.filter((x) => re.test(x.som));
+  const tiques = doTipo(/^tique-/);
+  const clacs = doTipo(/^clac/);
+  const jackpots = doTipo(/^jackpot/);
+  // Alternância: o trem tem de girar 1→2→3, nunca repetir a mesma variante em
+  // seguida (era o que fazia soar máquina de escrever).
+  let repetidos = 0;
+  for (let i = 1; i < tiques.length; i += 1) if (tiques[i].som === tiques[i - 1].som) repetidos += 1;
+  const espacos = tiques.slice(1).map((x, i) => x.t - tiques[i].t).filter((d) => d > 0 && d < 400);
+  const medio = espacos.length ? Math.round(espacos.reduce((a, b) => a + b, 0) / espacos.length) : 0;
+
+  return {
+    jogo: jogo.id,
+    total: toques.length,
+    tiques: { n: tiques.length, variantes: [...new Set(tiques.map((x) => x.som))].sort(), repetidos, espacoMedio: medio, vol: tiques[0]?.vol ?? null },
+    clacs: { n: clacs.length, vol: clacs[0]?.vol ?? null },
+    jackpot: { n: jackpots.length, vol: jackpots[0]?.vol ?? null, t: jackpots[0]?.t ?? null },
+    desconhecidos: [...new Set(toques.filter((x) => !/^(tique-|clac|jackpot)/.test(x.som)).map((x) => x.som))],
+  };
+}
+
 async function cenaRodada12c(navegador, sessao) {
   const jogo = await acharJogoSorteado(navegador, sessao);
   const telas = [];
@@ -1996,6 +2059,22 @@ try {
       console.log(`   cor ${v.cor} · fundo ${v.fundo} · borda ${v.borda}`);
     }
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
+  if (CENAS.includes('rodada14a')) {
+    const r = await cenaRodada14a(navegador, sessao);
+    saida.rodada14a = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    console.log('\n[iphone] RODADA 14A · som do sorteio (Audio.play instrumentado)');
+    if (r.semJogo) {
+      console.log('   sem jogo sorteado nesta conta — não medido.');
+    } else {
+      const t = r.tiques;
+      console.log(`   ${ok(t.n > 0 && t.variantes.length === 3 && t.repetidos === 0)} tique: ${t.n} toques · variantes ${t.variantes.join(' ')} · repetidos em seguida ${t.repetidos} · ~${t.espacoMedio} ms entre tiques · vol ${t.vol}`);
+      console.log(`   ${ok(r.clacs.n > 0)} clac: ${r.clacs.n} toques (um por jogador revelado) · vol ${r.clacs.vol}`);
+      console.log(`   ${ok(r.jackpot.n === 1)} jackpot: ${r.jackpot.n} toque(s) · vol ${r.jackpot.vol} · aos ${r.jackpot.t} ms`);
+      if (r.desconhecidos.length) console.log(`   FALHA · som fora do kit: ${r.desconhecidos.join(', ')}`);
+    }
   }
 
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);

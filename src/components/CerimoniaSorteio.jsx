@@ -232,7 +232,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
         const v = vis(jogs[r], ti); rolos[r].classList.add('stop');
         const rev = rolos[r].querySelector('.rev');
         rev.innerHTML = `<img src="${esc(v.img)}"><span class="nm">${esc(v.nome)}</span>`;
-        rev.classList.add('on'); SomSorteio.revelar(0.22);
+        rev.classList.add('on'); SomSorteio.revelar();
         if (!saltarFlag) await sleep(130);
       }
       if (!saltarFlag) await sleep(430);
@@ -356,12 +356,12 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clique p/ ligar)'; };
     // Ao LIGAR, um toque do efeito de revelação serve de prova de que há som
     // (a pessoa acabou de escolher ouvir; sem retorno nenhum parece quebrado).
-    const onSom = () => { const on = SomSorteio.toggle(); if (on) SomSorteio.revelar(0.2); pintarSom(); };
+    const onSom = () => { const on = SomSorteio.toggle(); if (on) SomSorteio.revelar(); pintarSom(); };
     somBtn.addEventListener('click', onSom); pintarSom();
-    // 13-set: o autoTeste dá load() nos 3 sons para logar "SOM OK 3/3" — 135 KB
+    // 13-set: o autoTeste dá load() nos 5 sons para logar "SOM OK 5/5" — 43 KB
     // baixados ao abrir a cerimônia, inclusive com o som desligado, que é o
     // padrão. Fica só em desenvolvimento; em produção os sons entram um a um,
-    // no primeiro uso (o el() do somSorteio.js já é preguiçoso).
+    // no primeiro uso (as rodas do somSorteio.js nascem preguiçosas).
     if (import.meta.env.DEV) SomSorteio.autoTeste();
 
     // ── ALAVANCA: arrasto (mola) + tap + teclado ──

@@ -1,50 +1,47 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // SOM SELADO — módulo isolado do som do sorteio.
 // LEI: alterações VISUAIS NUNCA tocam neste módulo. As animações CHAMAM a API abaixo
-// e jamais mexem nos players de áudio diretamente.
+// e jamais mexem nos players de áudio diretamente — volumes inclusive: quem pede
+// um efeito não escolhe o quão alto ele sai.
 //
-// RODADA 12C (16-set) — O SORTEIO NÃO TEM MÚSICA (lei do dono, CLAUDE.md).
-// RODADA 12D (16-set) — o fecho de cada time ganha efeito próprio, separado da
-// revelação por jogador: voltou o sorteio-finalizado.mp3 (tinha saído na 12C
-// por achar-se dispensável; o dono pediu de volta — "o som de quando o time é
-// sorteado"). O Hud UI.MP3 fica só com a revelação de cada jogador.
+// RODADA 14A (16-set) — OS SONS SÃO NOSSOS. Os três efeitos deixaram de ser
+// arquivos de banco de sons e passaram a nascer em código: `scripts/gerar-sons.mjs`
+// sintetiza onda a onda e o `ffmpeg-static` encoda. Direito autoral 100% nosso,
+// receita e semente em SONS.md (raiz do frontend). Nada baixado, nada de IA de
+// música — nem material "CC0", que continua sendo de terceiros.
 //
-// Ficam TRÊS efeitos:
-//   giro      — o tique da "slot machine" enquanto sorteia (em loop, pára no fim)
-//   revelacao — um jogador aparece no rolo, por jogador
-//   fecho     — o time inteiro fica pronto (mais alto que os dois acima)
+// O SORTEIO NÃO TEM MÚSICA (lei do dono, CLAUDE.md). Ficam TRÊS efeitos:
+//   tique   — o rolo passando um símbolo, em trem enquanto gira (3 variantes)
+//   clac    — o rolo TRAVANDO: um jogador apareceu
+//   jackpot — os times ficaram prontos: a máquina acabou de dar prêmio
 //
-// Seguem fora do app (1,77 MB, lei do app leve): a trilha de fundo
-// (trilha-chiptune.mp3, 1,54 MB — era a música) e a fanfarra do fim
-// (Victory.MP3, 231 KB — também música). Com elas saiu a API que as servia:
-// iniciar/cartaoVeu/cartaoVeuSai/vitoria/vitoriaTocando e os stamps, que
-// existiam para cronometrar a trilha contra a Victory.
+// O tique mudou de natureza na 14A: era um MP3 longo em loop (slot-machine.mp3),
+// agora é um trem de tiques curtos disparado por temporizador, alternando as 3
+// variantes. É o que permite o rolo desacelerar de verdade — `girarLento` espaça
+// os tiques em vez de arrastar o playbackRate de uma gravação.
 //
-// Os toques de interface (alavanca, sair, salvar, compartilhar) também saíram: a
-// lei diz efeitos de sorteio, e um clique de botão não é nenhum dos três.
+// Fora do app (FORA-DO-APP, com linha no MANIFESTO): a trilha e a Victory, que
+// eram música; e agora os três arquivos de banco que estes cinco substituem.
 //
-// Ficheiros reais em public/sons/ (Pixabay Content License — ver docs/licencas.md).
 // API: ligado(get) · escolhido(get) · toggle · ligarPorOmissao · desfazerOmissao
 //   · girar/girarLento/pararGiro · revelar · fecharTime · silenciar · autoTeste
 // ═══════════════════════════════════════════════════════════════════════════════
 import { urlAsset } from '../utils/avatar';
 
-// 13-set: os caminhos passam por urlAsset(). Na web não muda nada (mesma
-// origem); no app nativo os sons não viajam dentro do pacote, vêm da web e
-// ficam em cache. Aqui vão SEM o %20 de antes — o urlAsset faz o encodeURI,
-// e codificar duas vezes daria "Hud%2520UI.MP3".
-const CAMINHOS = {
-  giro:      '/sons/slot-machine.mp3',
-  revelacao: '/sons/Hud UI.MP3',
-  fecho:     '/sons/sorteio-finalizado.mp3',
-};
-const KIT = {
-  giro:      { src: urlAsset(CAMINHOS.giro),      vol: 0.45, loop: true  },
-  revelacao: { src: urlAsset(CAMINHOS.revelacao), vol: 0.28, loop: false },
-  fecho:     { src: urlAsset(CAMINHOS.fecho),     vol: 0.50, loop: false },
-};
+// Os caminhos passam por urlAsset(): na web é a mesma origem; no app nativo os
+// sons não viajam dentro do pacote, vêm do site e ficam em cache.
+const TIQUES = ['/sons/tique-1.mp3', '/sons/tique-2.mp3', '/sons/tique-3.mp3'];
+const CAMINHOS = { clac: '/sons/clac.mp3', jackpot: '/sons/jackpot.mp3' };
+// Volumes da lei (Rodada 14A). Vivem AQUI, não em quem chama.
+const VOL = { tique: 0.5, clac: 0.7, jackpot: 1.0 };
+// Espaçamento do trem de tiques. O rolo leva 0,34-0,50 s por volta de 6 símbolos
+// (o --sd do CSS), ou seja ~60-80 ms por símbolo: 70 ms solto e 115 ms depois de
+// desacelerar é o que soa como a mesma máquina perdendo força.
+const PASSO_RAPIDO = 70;
+const PASSO_LENTO = 115;
+
 const CHAVE_SOM = 'futty_sorteio_som';
-const els = {}, falhou = {};
+const falhou = {};
 let ligado = false;
 // RODADA 12A — "nunca escolheu" e "escolheu desligado" deixam de ser a mesma
 // coisa. Os dois davam som desligado, mas só o primeiro pode ser sobreposto pelo
@@ -57,17 +54,47 @@ try {
   ligado = guardado === '1';
 } catch { /* SSR/priv */ }
 
-function el(k) {
-  if (falhou[k]) return null;
-  if (!els[k]) {
-    const K = KIT[k], a = new Audio(K.src);
-    a.loop = !!K.loop; a.volume = K.vol;
-    a.addEventListener('error', () => { falhou[k] = true; });
-    els[k] = a;
+/**
+ * Cada efeito tem uma roda de players. Um elemento só não serve: o clac dispara
+ * de 130 em 130 ms e dura 120, o tique de 70 em 70 e dura 60 — reaproveitar o
+ * mesmo Audio cortaria o toque anterior. Com 3 na roda, cada um só volta a ser
+ * usado depois de já ter acabado, e ninguém aloca Audio dentro do laço.
+ */
+function roda(chave, fontes, tamanho) {
+  const els = [];
+  for (let i = 0; i < tamanho; i += 1) {
+    const a = new Audio(urlAsset(fontes[i % fontes.length]));
+    a.preload = 'auto';
+    a.addEventListener('error', () => { falhou[chave] = true; });
+    els.push(a);
   }
-  return els[k];
+  return els;
 }
-function stop(k) { const a = els[k]; if (a) { try { a.pause(); a.currentTime = 0; } catch { /* ignore */ } } }
+
+const rodas = {};
+let volta = {};
+function tocar(chave, fontes, tamanho, vol) {
+  if (!ligado || falhou[chave]) return;
+  try {
+    if (!rodas[chave]) { rodas[chave] = roda(chave, fontes, tamanho); volta[chave] = 0; }
+    const els = rodas[chave];
+    const a = els[volta[chave] % els.length];
+    volta[chave] += 1;
+    a.volume = vol;
+    a.currentTime = 0;
+    const p = a.play(); if (p && p.catch) p.catch(() => {});
+  } catch { /* ignore */ }
+}
+
+// ── o trem de tiques ──────────────────────────────────────────────────────────
+let temporizador = null;
+function trem(passo) {
+  if (temporizador) clearInterval(temporizador);
+  temporizador = setInterval(() => tocar('tique', TIQUES, 3, VOL.tique), passo);
+}
+function pararTrem() {
+  if (temporizador) { clearInterval(temporizador); temporizador = null; }
+}
 
 const SomSorteio = {
   get ligado() { return ligado; },
@@ -107,61 +134,44 @@ const SomSorteio = {
     this.silenciar();
     return false;
   },
-  // O TIQUE: entra com o rolo a girar, em loop, e pára quando ele pára.
+  // O TIQUE: entra com o rolo a girar e só pára quando ele pára.
   girar() {
     if (!ligado) return;
-    const a = el('giro'); if (!a) return;
-    try { a.playbackRate = 0.85; a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => {}); setTimeout(() => { try { a.playbackRate = 1; } catch { /* ignore */ } }, 320); } catch { /* ignore */ }
+    tocar('tique', TIQUES, 3, VOL.tique);
+    trem(PASSO_RAPIDO);
   },
-  girarLento() { const a = els.giro; if (a && !a.paused) { try { a.playbackRate = 0.72; } catch { /* ignore */ } } },
-  pararGiro() { stop('giro'); },
-  /**
-   * A REVELAÇÃO: um jogador saiu do rolo (o fecho do time inteiro é o
-   * `fecharTime`, Rodada 12D).
-   *
-   * Multi-shot (um Audio novo por toque) porque numa vaga de rolos isto dispara
-   * de 130 em 130 ms — um elemento só cortaria o anterior a cada revelação.
-   */
-  revelar(vol) {
-    if (!ligado || falhou.revelacao) return;
-    try {
-      const a = new Audio(KIT.revelacao.src);
-      a.volume = vol || KIT.revelacao.vol;
-      a.addEventListener('error', () => { falhou.revelacao = true; });
-      const p = a.play(); if (p && p.catch) p.catch(() => {});
-    } catch { /* ignore */ }
+  /** O rolo perdendo força: o mesmo tique, mais espaçado. */
+  girarLento() {
+    if (!ligado || !temporizador) return;
+    trem(PASSO_LENTO);
   },
-  /**
-   * O FECHO: o time inteiro acabou de aparecer (Rodada 12D). Efeito próprio,
-   * diferente da revelação por jogador — não é multi-shot porque só dispara
-   * uma vez por time, mas segue o mesmo Audio-novo-a-cada-toque por
-   * simplicidade e para não brigar com um replay rápido da cerimônia.
-   */
-  fecharTime(vol) {
-    if (!ligado || falhou.fecho) return;
-    try {
-      const a = new Audio(KIT.fecho.src);
-      a.volume = vol || KIT.fecho.vol;
-      a.addEventListener('error', () => { falhou.fecho = true; });
-      const p = a.play(); if (p && p.catch) p.catch(() => {});
-    } catch { /* ignore */ }
+  pararGiro() { pararTrem(); },
+  /** O CLAC: o rolo travou e um jogador apareceu. */
+  revelar() { tocar('clac', [CAMINHOS.clac], 3, VOL.clac); },
+  /** O JACKPOT: os times ficaram prontos. Um só por cerimônia. */
+  fecharTime() { tocar('jackpot', [CAMINHOS.jackpot], 1, VOL.jackpot); },
+  silenciar() {
+    pararTrem();
+    Object.values(rodas).forEach((els) => els.forEach((a) => {
+      try { a.pause(); a.currentTime = 0; } catch { /* ignore */ }
+    }));
   },
-  silenciar() { Object.keys(KIT).forEach(stop); },
-  // AUTO-TESTE: confirma que os ficheiros carregam. Loga "SOM OK 3/3".
+  // AUTO-TESTE: confirma que os ficheiros carregam. Loga "SOM OK 5/5".
   async autoTeste() {
-    const ks = Object.keys(KIT); let ok = 0; const falhas = [];
-    await Promise.all(ks.map((k) => new Promise((res) => {
-      const a = new Audio(KIT[k].src); let done = false;
-      const fin = (good) => { if (done) return; done = true; if (good) ok += 1; else falhas.push(KIT[k].src); res(); };
+    const fontes = [...TIQUES, CAMINHOS.clac, CAMINHOS.jackpot];
+    let ok = 0; const falhas = [];
+    await Promise.all(fontes.map((src) => new Promise((res) => {
+      const a = new Audio(urlAsset(src)); let done = false;
+      const fin = (good) => { if (done) return; done = true; if (good) ok += 1; else falhas.push(src); res(); };
       a.addEventListener('canplaythrough', () => fin(true), { once: true });
       a.addEventListener('loadedmetadata', () => fin(true), { once: true });
       a.addEventListener('error', () => fin(false), { once: true });
       setTimeout(() => fin(a.readyState >= 1), 3500);
       try { a.load(); } catch { fin(false); }
     })));
-    const msg = `SOM ${ok === ks.length ? 'OK' : 'FALHA'} ${ok}/${ks.length}` + (falhas.length ? (` — faltam: ${falhas.join(', ')}`) : '');
+    const msg = `SOM ${ok === fontes.length ? 'OK' : 'FALHA'} ${ok}/${fontes.length}` + (falhas.length ? (` — faltam: ${falhas.join(', ')}`) : '');
     console.log(msg);
-    return { ok, total: ks.length, falhas, msg };
+    return { ok, total: fontes.length, falhas, msg };
   },
 };
 
