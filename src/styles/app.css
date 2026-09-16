@@ -734,6 +734,13 @@
     8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
     calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
   );
+  opacity: 0.55;
+}
+
+/* A respiração fica só nos primeiros (ver Ranking.jsx): num time de 60, animar
+   50 camadas recortadas para sempre é carga contínua na tela que esta rodada
+   veio desafogar — e ninguém vê piscar o que está muito abaixo da dobra. */
+.rank-row-esqueleto--respira {
   animation: rankEsqueletoRespira 1.4s ease-in-out infinite;
 }
 
@@ -743,7 +750,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rank-row-esqueleto { animation: none; opacity: 0.6; }
+  .rank-row-esqueleto--respira { animation: none; }
 }
 
 /* Aviso de revotação: material do cânone (véu branco 3% sobre o tom roxo, como a

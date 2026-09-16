@@ -302,8 +302,13 @@ export default function Ranking() {
                     não como carregamento. O esqueleto tem a altura exata da
                     linha, por isso a rolagem já nasce do tamanho certo e nada
                     salta quando a linha real ocupa o lugar. */}
-                {ranking.slice(linhasADesenhar.length).map((p) => (
-                  <div key={`esqueleto-${p.user_id}`} className="rank-row-esqueleto" aria-hidden="true" />
+                {ranking.slice(linhasADesenhar.length).map((p, i) => (
+                  // Só os primeiros respiram. Todos reservam a altura — é para
+                  // isso que existem —, mas animar 50 camadas com clip-path para
+                  // sempre, num time grande, é carga contínua na tela que esta
+                  // rodada quer desafogar. Os que estão fora do alcance da
+                  // rolagem não têm quem os veja piscar.
+                  <div key={`esqueleto-${p.user_id}`} className={`rank-row-esqueleto ${i < 6 ? 'rank-row-esqueleto--respira' : ''}`} aria-hidden="true" />
                 ))}
               </ListaRanking>
             )}

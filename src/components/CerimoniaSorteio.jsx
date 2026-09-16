@@ -345,8 +345,11 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
 
     // ── som (opt-in, lembrado) ──
     // Rodada 12A: antes de pintar o botão, quem sorteou ganha o som ligado — só
-    // se nunca escolheu nada neste aparelho.
-    if (euSorteei && SOM_PADRAO_QUEM_SORTEIA) SomSorteio.ligarPorOmissao();
+    // se nunca escolheu nada neste aparelho. O `ligouPorOmissao` fica guardado
+    // para o cleanup o desfazer: senão o som ficava ligado para o resto da
+    // sessão e vazava para as telas que têm de nascer mudas.
+    const ligouPorOmissao = euSorteei && SOM_PADRAO_QUEM_SORTEIA && !SomSorteio.escolhido;
+    if (ligouPorOmissao) SomSorteio.ligarPorOmissao();
     const somBtn = q('.somBtn');
     const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clique p/ ligar)'; };
     const onSom = () => { const on = SomSorteio.toggle(); if (on) { SomSorteio.toque(0.2); SomSorteio.iniciar(); } pintarSom(); };
@@ -420,6 +423,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     return () => {
       vivo = true; vivo = false;
       timers.forEach((id) => clearTimeout(id)); clones.forEach((c) => c.remove());
+      // Rodada 12A: o som que esta cerimónia ligou sozinha morre com ela. Se a
+      // pessoa tocou no botão pelo caminho, a escolha dela fica (o
+      // desfazerOmissao não mexe em quem já escolheu).
+      if (ligouPorOmissao) SomSorteio.desfazerOmissao();
       SomSorteio.silenciar();
       somBtn.removeEventListener('click', onSom);
       lever.removeEventListener('pointerdown', onDown); lever.removeEventListener('pointermove', onMove);

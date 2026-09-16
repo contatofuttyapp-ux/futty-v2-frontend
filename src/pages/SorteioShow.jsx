@@ -3,9 +3,9 @@
 // (jogo → countdown → Ver sorteio). Cada visita reproduz a cerimónia completa,
 // replay ilimitado e EXACTO (a seed vive em times_resultado).
 // Partilha (§9): LINK público (/p/:slug/:gameId) + IMAGEM 9:16 por equipa.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { apiFetch } from '../lib/api';
 import LoadingFutty from '../components/LoadingFutty';
@@ -20,8 +20,18 @@ const RAJ = "'Rajdhani', sans-serif";
 
 export default function SorteioShow() {
   const { slug, id } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   // Rodada 12A: só quem chegou aqui pelo botão "Sortear" traz isto (ver Jogo.jsx).
-  const euSorteei = !!useLocation().state?.euSorteei;
+  // Lido UMA vez e apagado do histórico a seguir: o state vive na entrada do
+  // histórico, e voltaria a valer se a pessoa recuasse e avançasse, ou se o
+  // WebView recarregasse a rota ao retomar o app — som ligado sem ninguém ter
+  // tocado em "Sortear", que é o oposto do que a regra diz.
+  const [euSorteei] = useState(() => !!location.state?.euSorteei);
+  useEffect(() => {
+    if (euSorteei) navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- corre uma vez, na montagem
+  }, []);
   const { data, loading } = useApi(`/api/games/${id}`);
   const [toast, setToast] = useState(null);
   const [termoAberto, setTermoAberto] = useState(false);
@@ -30,6 +40,12 @@ export default function SorteioShow() {
   // fim, a barra entra presa ao fundo da tela. `false` outra vez se a pessoa
   // puxar a alavanca para repetir.
   const [terminou, setTerminou] = useState(false);
+  // O anúncio, ao contrário da barra, NÃO pode ir e voltar: o AdCard conta a
+  // impressão ao montar, e a alavanca (que repete a cerimónia) montava-o outra
+  // vez a cada corrida — cinco repetições, seis impressões pela mesma vista.
+  // Por isso este estado só cresce: o slot entra no fim da primeira cerimónia e
+  // fica.
+  const [jaTerminou, setJaTerminou] = useState(false);
   const [gerando, setGerando] = useState(false);
   const game = data?.game;
   const resultado = game?.times_resultado;
@@ -122,7 +138,7 @@ export default function SorteioShow() {
               equipa={data?.team?.nome || ''}
               data={dataCartaz}
               aoComecar={() => setTerminou(false)}
-              aoTerminar={() => setTerminou(true)}
+              aoTerminar={() => { setTerminou(true); setJaTerminou(true); }}
               bannerInterno={false}
               euSorteei={euSorteei}
             />
@@ -132,7 +148,7 @@ export default function SorteioShow() {
                 Gabinete, filtro etário fail-closed no servidor). Só depois da
                 cerimónia: durante ela a tela é para olhar. Sem campanha o
                 AdCard devolve null e não fica buraco nem promessa na tela. */}
-            {terminou ? (
+            {jaTerminou ? (
               <div style={{ marginTop: 18 }}>
                 <AdCard pagina="sorteio" variant="banner320x100" />
               </div>

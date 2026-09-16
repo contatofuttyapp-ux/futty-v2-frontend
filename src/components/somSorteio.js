@@ -88,6 +88,21 @@ const SomSorteio = {
     ligado = true;
     return true;
   },
+  /**
+   * Desfaz o `ligarPorOmissao` quando a cerimónia sai de cena sem ninguém ter
+   * tocado no botão de som (Rodada 12A).
+   *
+   * Sem isto, `ligado` ficava verdadeiro para o resto da SESSÃO: quem sorteava
+   * um jogo e a seguir abria o resultado de outro — ou a vista pública /p/ —
+   * ouvia som numa tela que a lei manda entregar muda. Quem escolheu alguma
+   * coisa pelo caminho manda, e nada aqui lhe toca.
+   */
+  desfazerOmissao() {
+    if (escolheu) return ligado;
+    ligado = false;
+    this.silenciar();
+    return false;
+  },
   // ARRANQUE: a trilha (cama) entra em loop, baixa. Idempotente. Limpa restos de festa.
   iniciar() {
     if (!ligado) return;

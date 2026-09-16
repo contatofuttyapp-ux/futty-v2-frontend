@@ -184,7 +184,11 @@ let lacoLigado = false;
 //
 // Agora esse tempo é medido à parte, e nenhum intervalo que atravesse uma ida ao
 // segundo plano conta como travada.
-const segundoPlano = { vezes: 0, msTotal: 0, maiorMs: 0 };
+// Acima disto nenhum quadro é trabalho nosso: é o sistema a ter parado o app.
+// O pior engasgo verdadeiro medido em campo foi 6,4 s (build 20, o cromo a
+// compor); 15 s dá folga de sobra sem deixar passar uma suspensão.
+const QUADRO_IMPOSSIVEL_MS = 15000;
+const segundoPlano = { vezes: 0, msTotal: 0, maiorMs: 0, semEvento: 0 };
 let escondidoEm = null;
 let voltouEm = -Infinity;
 let visibilidadeLigada = false;
@@ -266,7 +270,16 @@ function registarTravada(gap, fim) {
   // O intervalo atravessou uma ida ao segundo plano (ou ainda estamos lá): o
   // relógio parou por decisão do sistema, não por trabalho nosso. Já foi contado
   // em `segundoPlano` pelo ouvinte de visibilidade — aqui só não vira travada.
-  if (voltouEm > inicio || (typeof document !== 'undefined' && document.hidden)) return;
+  //
+  // O teto é a rede para quando o `visibilitychange` NÃO chega: o WKWebView
+  // suspenso com o ecrã bloqueado é um caso conhecido no Capacitor, e sem isto o
+  // "pior 96003 ms" do build 21 voltava por outra porta. Nenhum trabalho nosso
+  // segura a thread principal por mais de QUADRO_IMPOSSIVEL_MS — o pior medido
+  // em campo foi 6,4 s.
+  if (voltouEm > inicio || gap > QUADRO_IMPOSSIVEL_MS || (typeof document !== 'undefined' && document.hidden)) {
+    if (gap > QUADRO_IMPOSSIVEL_MS) segundoPlano.semEvento += 1;
+    return;
+  }
   const ms = Math.round(gap);
   const fase = faseAgora(inicio);
   travadas.leves += 1;
@@ -614,8 +627,11 @@ function medirLargura() {
     largura = { aparelho, maiorViewport: viewport, maiorRolavel: rolavel, maiorTransbordo: Math.max(0, passou), rota: window.location.pathname, em: null, orientacao: agora };
     return;
   }
-  largura.aparelho = aparelho;
+  // O `aparelho` guarda-se JUNTO com o transbordo, não a cada medição: se fosse
+  // sobrescrito sempre, virar o telefone depois de um transbordo dava uma linha
+  // com dois momentos diferentes — "aparelho 932px (retrato) · passou 40px".
   if (passou > largura.maiorTransbordo) {
+    largura.aparelho = aparelho;
     largura.maiorTransbordo = passou;
     largura.maiorViewport = viewport;
     largura.maiorRolavel = rolavel;
@@ -805,6 +821,7 @@ export function limparDiagnostico() {
   segundoPlano.vezes = 0;
   segundoPlano.msTotal = 0;
   segundoPlano.maiorMs = 0;
+  segundoPlano.semEvento = 0;
   orientacao.mudancas = 0;
   medirLargura();
 }
