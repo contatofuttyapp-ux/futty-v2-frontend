@@ -295,6 +295,16 @@ export default function Ranking() {
                 {linhasADesenhar.map((p, idx) => (
                   <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
                 ))}
+                {/* RODADA 12A — as linhas que ainda não montaram ficam como
+                    esqueleto, nunca como espaço vazio. A lista entra de 5 em 5
+                    (useListaProgressiva) e até aqui quem rolava depressa via a
+                    lista acabar a meio e voltar a crescer — lê-se como defeito,
+                    não como carregamento. O esqueleto tem a altura exata da
+                    linha, por isso a rolagem já nasce do tamanho certo e nada
+                    salta quando a linha real ocupa o lugar. */}
+                {ranking.slice(linhasADesenhar.length).map((p) => (
+                  <div key={`esqueleto-${p.user_id}`} className="rank-row-esqueleto" aria-hidden="true" />
+                ))}
               </ListaRanking>
             )}
           </>

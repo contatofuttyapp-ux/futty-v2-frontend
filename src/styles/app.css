@@ -716,6 +716,33 @@
   margin-top: 12px;
 }
 
+/* RODADA 12A — o lugar de uma linha do ranking que ainda não montou.
+
+   A altura é a da .rank-row fechada à conta (12px de padding + 48px de avatar +
+   12px + 2px de borda = 74px, com o box-sizing:border-box global): a lista nasce
+   do tamanho final e nada salta quando a linha real ocupa o lugar. Mesmo
+   material e mesmo recorte a 45° das linhas de verdade, só sem conteúdo — um
+   cinza estranho à paleta leria como erro, não como espera. */
+.rank-row-esqueleto {
+  height: 74px;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02)), var(--bg-elev);
+  border: 1px solid var(--border);
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+  );
+  animation: rankEsqueletoRespira 1.4s ease-in-out infinite;
+}
+
+@keyframes rankEsqueletoRespira {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-row-esqueleto { animation: none; opacity: 0.6; }
+}
+
 /* Aviso de revotação: material do cânone (véu branco 3% sobre o tom roxo, como a
    .rank-row põe sobre --bg-elev) + etiqueta HUD (Rajdhani). Cantos a 45° via
    .hud-corners no use site, a mesma aresta de 8px das linhas por baixo. */
