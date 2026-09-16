@@ -167,6 +167,9 @@ export default function Jogo() {
     ? confirmadosTodos.filter((p) => rsvpConfirmados.includes(p.user_id))
     : confirmadosTodos;
   const porTimeEfectivo = jogadoresPorTime ?? game?.jogadores_por_time ?? 5;
+  // "Confirmados suficientes" = dá para encher dois times. Abaixo disso o botão
+  // continua lá (o admin pode sortear com menos), só não chama o toque.
+  const podeSortear = !game?.sorteio_realizado && confirmados.length >= porTimeEfectivo * 2;
   const estouConfirmado = !!meuEstado?.confirmado;
   const souGoleiro = !!meuEstado?.goleiro;
 
@@ -434,16 +437,23 @@ export default function Jogo() {
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {isAdmin && confirmacao !== 're-sorteio' && (
-                <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => game.sorteio_realizado ? setConfirmacao('re-sorteio') : sortear()} disabled={busy}>
-                  {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
-                </button>
+                // RODADA 12A — com gente confirmada para dois times, sortear é A
+                // ação da página: pulsa. Já sorteado, o destaque passa ao "Ver
+                // sorteio" ao lado (duas coisas a pulsar não destacam nenhuma).
+                <span className={podeSortear ? 'pulse-glow' : ''} style={{ display: 'flex' }}>
+                  <button type="button" className={`btn btn--sm hud-corners-s cta-gold ${podeSortear ? 'pulse-active' : ''}`} style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => game.sorteio_realizado ? setConfirmacao('re-sorteio') : sortear()} disabled={busy}>
+                    {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
+                  </button>
+                </span>
               )}
               {/* LEI: jogo manual/histórico (times à mão → sem seed) NÃO abre cerimónia.
                   Só o sorteio (com seed) tem replay/"Ver sorteio". */}
               {game.sorteio_realizado && game.times_resultado?.seed != null && (
-                <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => navigate(`/equipa/${slug}/jogo/${id}/sorteio`)}>
-                  Ver sorteio
-                </button>
+                <span className="pulse-glow" style={{ display: 'flex' }}>
+                  <button type="button" className="btn btn--sm hud-corners-s cta-gold pulse-active" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => navigate(`/equipa/${slug}/jogo/${id}/sorteio`)}>
+                    Ver sorteio
+                  </button>
+                </span>
               )}
               {isAdmin && game.sorteio_realizado && !editando && (
                 <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setEditando(true)}>

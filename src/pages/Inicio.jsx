@@ -326,9 +326,16 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
                 {going ? 'Vai jogar' : notGoing ? 'Não vai' : 'Sem resposta'}
               </span>
             </span>
-            <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => onVerSorteio(game)}>
-              Ver sorteio
-            </button>
+            {/* RODADA 12A — ver o sorteio é a ação mais importante do app; o
+                card tinha-a como um botão qualquer. Mesmo par do "Vou" aqui ao
+                lado: o glow no wrapper (drop-shadow atravessa o recorte a 45°),
+                o .pulse-active no botão (a metade dele que anima a borda
+                sobrevive ao clip-path). */}
+            <span className="pulse-glow" style={{ display: 'flex' }}>
+              <button type="button" className="btn btn--purple btn--sm hud-corners-s pulse-active tab-shine" onClick={() => onVerSorteio(game)}>
+                Ver sorteio
+              </button>
+            </span>
           </div>
         ) : (
           <div className="gcard__presence">

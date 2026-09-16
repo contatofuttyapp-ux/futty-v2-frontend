@@ -2389,17 +2389,22 @@
   flex: 1;
 }
 
-.pbtn-pulse {
-  animation: pbtnPulseGlow 2.6s ease-in-out infinite;
+/* .pulse-glow é o mesmo par para qualquer botão com cantos a 45° fora da linha
+   de presença — o "Ver sorteio" e o "Sortear" da Rodada 12A. Põe-se num wrapper
+   à volta do botão, que leva o .pulse-active. */
+.pbtn-pulse,
+.pulse-glow {
+  animation: pulseGlowDourado 2.6s ease-in-out infinite;
 }
 
-@keyframes pbtnPulseGlow {
+@keyframes pulseGlowDourado {
   0%, 100% { filter: drop-shadow(0 0 4px rgba(212, 160, 23, 0.2)); }
   50%      { filter: drop-shadow(0 0 10px rgba(212, 160, 23, 0.5)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pbtn-pulse { animation: none; }
+  .pbtn-pulse,
+  .pulse-glow { animation: none; }
 }
 
 /* Vou / Não vou. Sem border-radius: levam .hud-corners-s no use site e o
