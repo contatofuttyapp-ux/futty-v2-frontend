@@ -10,10 +10,19 @@
 import { useEffect, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
-import { marcarNavegacao, agendarPintura, definirInfoApp } from '../lib/diagnostico';
+import { marcarNavegacao, agendarPintura, definirInfoApp, marcarReactMontado } from '../lib/diagnostico';
 
 export default function MedidorNavegacao() {
   const { pathname } = useLocation();
+
+  // VELOCIDADE 8 — o 1º commit da árvore inteira. Os efeitos de layout correm
+  // de baixo para cima depois do commit, e este componente está na raiz (App.jsx,
+  // dentro do BrowserRouter): quando esta linha corre, o React já montou tudo.
+  // É o "b ms" do resumo do arranque — o que a compilação custou fica antes
+  // dele (marcarArranque, no main.jsx), e o que a 1ª tela custa vem depois.
+  useLayoutEffect(() => {
+    marcarReactMontado();
+  }, []);
 
   // useLayoutEffect: corre depois do render da rota nova e ANTES de o browser
   // desenhar — é o ponto mais próximo do "toque" que dá para marcar aqui.

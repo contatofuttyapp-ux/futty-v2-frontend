@@ -65,6 +65,29 @@ function linhaDeMarcas(marcas) {
   return partes.join(' · ');
 }
 
+// Velocidade 8 — "travadas >100 ms: n (pior x ms, fase y)".
+function linhaDeTravadas(t) {
+  if (!t) return null;
+  if (!t.leves) return 'Travadas: nenhuma (nenhum quadro passou de 50 ms)';
+  const pior = t.pior ? ` (pior ${t.pior.ms} ms, ${t.pior.fase})` : '';
+  return `Travadas >100 ms: ${t.graves}${pior} · >50 ms: ${t.leves}`;
+}
+
+// As fases por ordem de gravidade — é onde o conserto tem de ir.
+function linhaDeFases(t) {
+  const fases = Object.entries(t?.porFase || {}).sort((a, b) => b[1] - a[1]);
+  return fases.length ? fases.map(([nome, n]) => `${nome} ${n}`).join(' · ') : null;
+}
+
+// Velocidade 8 — "arranque: compilação a ms, React b ms, Início c ms".
+function linhaDeArranque(a) {
+  if (!a || a.compilacaoMs == null) return null;
+  const partes = [`compilação ${a.compilacaoMs} ms`];
+  if (a.reactMs != null) partes.push(`React ${a.reactMs} ms`);
+  if (a.inicioMs != null) partes.push(`Início ${a.inicioMs} ms`);
+  return `Arranque: ${partes.join(', ')}`;
+}
+
 // Rota sem a query, e encurtada pela ponta ESQUERDA: o que distingue
 // /api/teams/<slug>/ranking de /api/teams/<slug>/jogos está no fim.
 function rotaCurta(rota) {
@@ -141,6 +164,42 @@ export default function Diagnostico() {
           <Numero rotulo="Motor" stat={resumo.motor} />
           <Numero rotulo="Rede" stat={resumo.rede} />
           <Numero rotulo="Tela na frente" stat={resumo.pintura} />
+        </div>
+
+        {/* ─── Fluidez (VELOCIDADE 8) ───
+            Uma travada é um quadro que demorou mais do que devia: acima de 50 ms
+            a rolagem sente-se aos solavancos, acima de 100 ms a pessoa vê a tela
+            parar. A FASE é o que aponta para o conserto — travar no arranque, no
+            pré-aquecimento ou ao trocar de tela são três problemas diferentes. */}
+        <div className="hud-corners-s" style={CARTAO}>
+          <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>
+            Fluidez
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.7, color: '#c9c2d6', wordBreak: 'break-word' }}>
+            {linhaDeTravadas(resumo.travadas)}
+            {linhaDeFases(resumo.travadas) ? (
+              <>
+                <br />
+                <span style={{ color: 'var(--text-dim)' }}>Por fase: {linhaDeFases(resumo.travadas)}</span>
+              </>
+            ) : null}
+            {linhaDeArranque(resumo.arranque) ? (
+              <>
+                <br />
+                {linhaDeArranque(resumo.arranque)}
+              </>
+            ) : null}
+          </div>
+          {resumo.travadas?.piores?.length ? (
+            <div style={{ marginTop: 8, display: 'grid', gap: 3 }}>
+              {resumo.travadas.piores.slice(0, 6).map((t, i) => (
+                <div key={i} style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                  <span style={{ color: t.ms >= 250 ? '#f8b4b4' : '#f0c94a', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>{t.ms} ms</span>
+                  {' · '}{t.fase}{' · aos '}{(t.em / 1000).toFixed(1)}s
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="hud-corners-s" style={CARTAO}>

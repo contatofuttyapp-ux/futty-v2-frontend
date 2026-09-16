@@ -96,8 +96,7 @@ export function marcarDadosDaTela() {
 
 /** Mudança de rota — o relógio do "toque" parte aqui. */
 export function marcarNavegacao(rota) {
-  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null };
-  vigiarQuadros(navegacaoAberta);
+  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null, quadroAnterior: null };
   // Largura: nem todo transbordo dispara resize — mede também 1 s e 3 s depois
   // de cada troca de tela, quando os dados e as imagens já assentaram.
   if (typeof window !== 'undefined') {
@@ -132,27 +131,169 @@ export function marcarInstante(nome) {
   nav.marcas[nome] = ms;
 }
 
-// Quadros: um laço de requestAnimationFrame só enquanto a tela não pinta (teto de
-// 10 s). É isto que separa "a tela esperou alguma coisa" de "a tela travou".
-function vigiarQuadros(nav) {
-  if (typeof requestAnimationFrame === 'undefined') return;
+// ─── Medidor de travadas (VELOCIDADE 8, 16-set) ──────────────────────────────
+// O Pedro, build 19: "quando atualizo ou reinstalo, a primeira vez trava muito
+// até fluir; depois flui bem; mesmo assim às vezes engasga ao trocar de página".
+// "Trava" não é medida: isto transforma-o em número. UM laço de
+// requestAnimationFrame para o app inteiro (o de antes nascia e morria a cada
+// navegação) conta os quadros que demoraram mais do que deviam e — o que
+// interessa mesmo — diz em que FASE do app cada travada caiu. Sem a fase,
+// "travou 900 ms" não aponta para nenhum conserto.
+//
+// O mesmo laço alimenta as marcas finas da navegação (quadro1/quadroMaior da
+// Rodada 8A): é a mesma leitura, não vale a pena fazê-la duas vezes.
+const QUADRO_LEVE_MS = 50;   // > 50 ms: a rolagem já se sente aos solavancos
+const QUADRO_GRAVE_MS = 100; // > 100 ms: a pessoa vê a tela parar
+const FASE_ARRANQUE_MS = 10000;
+const FASE_NAVEGACAO_MS = 2000;
+// Depois do último toque/rolagem, o dedo ainda está na tela: a travada é de rolagem.
+const FASE_ROLAGEM_MS = 150;
+// Quantas travadas graves ficam guardadas com detalhe (a pior de todas fica sempre).
+const MAX_TRAVADAS = 12;
+
+const travadas = { leves: 0, graves: 0, pior: null, porFase: {}, piores: [] };
+let ultimoGesto = -Infinity;
+let preaquecendo = false;
+let lacoLigado = false;
+
+/** O pré-aquecimento avisa quando começa e quando acaba (lib/preaquecerDados.js). */
+export function marcarPreaquecimento(aCorrer) {
+  preaquecendo = !!aCorrer;
+}
+
+// A fase mais ESPECÍFICA ganha. A ordem não é a da lista do pedido, é a que dá
+// resposta útil: o dedo na tela é o caso mais concreto; o pré-aquecimento vem
+// antes do arranque porque corre DENTRO dos primeiros 10 s e seria engolido por
+// ele; e o arranque vem antes da navegação porque a 1ª navegação acontece no
+// instante 0 e levaria a culpa do arranque inteiro.
+function faseAgora(em) {
+  if (em - ultimoGesto < FASE_ROLAGEM_MS) return 'rolagem';
+  if (preaquecendo) return 'pré-aquecimento';
+  if (em < FASE_ARRANQUE_MS) return 'arranque';
+  const nav = navegacaoAberta;
+  if (nav && em - nav.t0 < FASE_NAVEGACAO_MS) return `navegação ${nav.rota}`;
+  return 'outro';
+}
+
+function registarTravada(gap, fim) {
+  const ms = Math.round(gap);
+  const fase = faseAgora(fim - gap);
+  travadas.leves += 1;
+  travadas.porFase[fase] = (travadas.porFase[fase] || 0) + 1;
+  if (ms < QUADRO_GRAVE_MS) return;
+  travadas.graves += 1;
+  const registo = { ms, fase, em: Math.round(fim - gap) };
+  if (!travadas.pior || ms > travadas.pior.ms) travadas.pior = registo;
+  guardarPior(registo);
+}
+
+// Lista das piores, ordenada — não as últimas: uma travada de 1,2 s no arranque
+// não pode ser empurrada para fora por doze de 110 ms na rolagem.
+function guardarPior(registo) {
+  travadas.piores.push(registo);
+  travadas.piores.sort((a, b) => b.ms - a.ms);
+  if (travadas.piores.length > MAX_TRAVADAS) travadas.piores.length = MAX_TRAVADAS;
+}
+
+function ligarMedidorDeQuadros() {
+  if (lacoLigado || typeof requestAnimationFrame === 'undefined') return;
+  lacoLigado = true;
   let anterior = null;
   const laco = (agora) => {
-    if (navegacaoAberta !== nav) return;
-    const ms = Math.round(agora - nav.t0);
-    if (anterior == null) {
-      nav.marcas.quadro1 = Math.max(0, ms);
-    } else {
-      const gap = Math.round(agora - anterior);
-      if (gap > (nav.marcas.quadroMaior || 0)) {
-        nav.marcas.quadroMaior = gap;
-        nav.marcas.quadroMaiorEm = Math.max(0, Math.round(anterior - nav.t0));
+    if (anterior != null) {
+      const gap = agora - anterior;
+      if (gap > QUADRO_LEVE_MS) registarTravada(gap, agora);
+      // Marcas finas da navegação em curso (Rodada 8A), enquanto ela não pinta.
+      const nav = navegacaoAberta;
+      if (nav && nav.msPintura == null && agora - nav.t0 < JANELA_DA_NAVEGACAO_MS) {
+        if (nav.quadroAnterior == null) nav.marcas.quadro1 = Math.max(0, Math.round(agora - nav.t0));
+        else if (Math.round(gap) > (nav.marcas.quadroMaior || 0)) {
+          nav.marcas.quadroMaior = Math.round(gap);
+          nav.marcas.quadroMaiorEm = Math.max(0, Math.round(anterior - nav.t0));
+        }
+        nav.quadroAnterior = agora;
       }
     }
     anterior = agora;
-    if (nav.msPintura == null && ms < JANELA_DA_NAVEGACAO_MS) requestAnimationFrame(laco);
+    requestAnimationFrame(laco);
   };
   requestAnimationFrame(laco);
+}
+
+// ─── Marcas do arranque (VELOCIDADE 8) ───────────────────────────────────────
+// `compilacaoMs` é o performance.now() lido na PRIMEIRA linha do corpo do
+// main.jsx. Por ser ESM, nessa altura todos os módulos importados já foram
+// buscados, lidos e executados — ou seja, o número é HTML + download + parse +
+// COMPILAÇÃO de tudo o que está no modulepreload. É o custo que o Pedro sente
+// na primeira abertura depois de instalar/atualizar, quando o WebKit ainda não
+// tem cache de bytecode nenhum.
+const arranque = { compilacaoMs: null, reactMs: null, inicioMs: null };
+
+/** Chamado na 1ª linha do main.jsx. Também liga o medidor de travadas. */
+export function marcarArranque(ms) {
+  if (arranque.compilacaoMs == null) arranque.compilacaoMs = Math.round(ms);
+  ligarMedidorDeQuadros();
+  ouvirGestos();
+}
+
+/** A árvore do React commitou pela 1ª vez (efeito de layout do MedidorNavegacao). */
+export function marcarReactMontado() {
+  if (arranque.reactMs == null && typeof performance !== 'undefined') {
+    arranque.reactMs = Math.round(performance.now());
+  }
+}
+
+// Gestos: servem à fase "rolagem" e ao ritmo do pré-aquecimento (lib/ritmo.js).
+let gestosLigados = false;
+const ouvintesDeGesto = new Set();
+
+function ouvirGestos() {
+  if (gestosLigados || typeof window === 'undefined') return;
+  gestosLigados = true;
+  const marcar = () => {
+    ultimoGesto = performance.now();
+    for (const fn of ouvintesDeGesto) fn(ultimoGesto);
+  };
+  for (const evento of ['touchstart', 'scroll', 'keydown', 'pointerdown', 'wheel']) {
+    window.addEventListener(evento, marcar, { passive: true, capture: true });
+  }
+}
+
+/** Avisa a cada toque/rolagem/tecla. Devolve a função que cancela. */
+export function aoGesto(fn) {
+  ouvirGestos();
+  ouvintesDeGesto.add(fn);
+  return () => ouvintesDeGesto.delete(fn);
+}
+
+/** Instante do último toque/rolagem/tecla (performance.now()); -Infinity se nenhum. */
+export function ultimoGestoEm() {
+  return ultimoGesto;
+}
+
+// ─── "A 1ª tela já pintou" ───────────────────────────────────────────────────
+// Quem sabe disto é o marcarPintura() logo abaixo, e é o sinal de partida de
+// tudo o que tem de esperar pela tela: o pré-aquecimento (dados, imagens e
+// chunks das abas), o cromo do Início e o Sentry.
+let jaPintou = false;
+const ouvintesDePintura = [];
+
+/** Corre `fn` depois da 1ª pintura (já pintou: no próximo microtask). */
+export function aposPrimeiraPintura(fn) {
+  if (jaPintou) {
+    Promise.resolve().then(fn);
+    return;
+  }
+  ouvintesDePintura.push(fn);
+}
+
+function anunciarPrimeiraPintura() {
+  if (jaPintou) return;
+  jaPintou = true;
+  const fila = ouvintesDePintura.splice(0);
+  for (const fn of fila) {
+    try { fn(); } catch { /* um ouvinte a falhar não trava os outros */ }
+  }
 }
 
 // O maior intervalo entre instantes seguidos, da troca de rota até à pintura.
@@ -241,6 +382,13 @@ export function marcarPintura() {
   nav.registo = registo;
   guardar(navegacoes, registo);
   medirLargura();
+  // VELOCIDADE 8 — a 1ª tela a pintar é o sinal de partida do resto (ver
+  // aposPrimeiraPintura). E se essa tela for o Início, o instante fica no
+  // arranque: é o "c ms" do resumo.
+  if (arranque.inicioMs == null && nav.rota === '/home') {
+    arranque.inicioMs = Math.round(performance.now());
+  }
+  anunciarPrimeiraPintura();
 }
 
 /**
@@ -404,6 +552,17 @@ export function lerDiagnostico() {
       // Velocidade 7B: { aparelho, maiorViewport, maiorRolavel, rota, em } — se a
       // maior largura passar da do aparelho, a página encolheu em campo.
       largura,
+      // Velocidade 8: quantos quadros passaram do tempo e em que fase do app.
+      travadas: {
+        leves: travadas.leves,
+        graves: travadas.graves,
+        pior: travadas.pior,
+        porFase: { ...travadas.porFase },
+        piores: [...travadas.piores],
+      },
+      // Velocidade 8: compilação = HTML + download + execução de tudo o que está
+      // no modulepreload; React = 1º commit da árvore; Início = 1ª pintura do /home.
+      arranque: { ...arranque },
     },
     preaquecimento,
     chamadas: [...chamadas],
@@ -421,5 +580,12 @@ export function limparDiagnostico() {
   preaquecimento = null;
   navegacaoAberta = null;
   largura = null;
+  // As travadas zeram; as marcas do ARRANQUE não — aconteceram uma vez nesta
+  // abertura e não voltam a acontecer, zerá-las era perder o número de vez.
+  travadas.leves = 0;
+  travadas.graves = 0;
+  travadas.pior = null;
+  travadas.porFase = {};
+  travadas.piores.length = 0;
   medirLargura();
 }

@@ -3,11 +3,21 @@ import { createRoot } from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import './index.css'
 import App from './App.jsx'
-import { observarImagens, vigiarLargura } from './lib/diagnostico'
+import { marcarArranque, observarImagens, vigiarLargura } from './lib/diagnostico'
+
+// VELOCIDADE 8 (16-set) — PRIMEIRA LINHA DO CORPO, de propósito. Em ESM os
+// imports acima já foram buscados, lidos e EXECUTADOS quando esta linha corre,
+// por isso este performance.now() é o custo inteiro de pôr o app de pé antes de
+// uma única linha nossa: HTML + download + parse + compilação de tudo o que
+// está no modulepreload do index.html. É o número que explica o "a primeira vez
+// trava muito até fluir" — na 1ª abertura depois de instalar/atualizar o WebKit
+// compila tudo sem cache de bytecode. Também é aqui que o medidor de travadas
+// liga, para não perder nenhum quadro do arranque.
+marcarArranque(performance.now());
 
 // Marca de versão do bundle — permite confirmar na consola que o tab serve o
 // código novo (stale check). Bump manual quando importa distinguir uma sessão.
-const FUTTY_BUILD = 'resenha-embed-inline-v3';
+const FUTTY_BUILD = 'velocidade-8';
 console.log(`[Futty] build: ${FUTTY_BUILD}`);
 
 // Error tracking (só em produção; DSN via VITE_SENTRY_DSN).

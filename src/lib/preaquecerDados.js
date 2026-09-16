@@ -16,7 +16,7 @@
 //   · qualquer falha é silenciosa — isto é adiantamento, nunca uma dependência.
 import { apiFetch } from './api';
 import { gravarCache, lerCacheComIdade } from './cacheLocal';
-import { registarPreaquecimento } from './diagnostico';
+import { marcarPreaquecimento, registarPreaquecimento } from './diagnostico';
 import { urlImagem } from '../utils/avatar';
 
 // Quantas imagens baixam ao mesmo tempo. 4 é o que o browser faria sozinho numa
@@ -103,6 +103,10 @@ export function preaquecer(userId, dadosInicio) {
 
   emRepouso(async () => {
     const t0 = Date.now();
+    // Enquanto isto corre, o medidor de travadas atribui a este trabalho
+    // qualquer quadro perdido — é assim que se prova (ou se ilibam) as imagens
+    // em segundo plano como causa do engasgo.
+    marcarPreaquecimento(true);
     const slug = dadosInicio?.teams?.teams?.[0]?.slug || null;
     const payloads = [dadosInicio];
     let itens = 0;
@@ -167,6 +171,7 @@ export function preaquecer(userId, dadosInicio) {
     for (const u of urls) tarefas.push(() => baixarImagem(urlImagem(u, 128), false));
 
     const imagens = await emLotes(tarefas, IMAGENS_EM_PARALELO);
+    marcarPreaquecimento(false);
     registarPreaquecimento({ itens, imagens, ms: Date.now() - t0 });
   });
 }
