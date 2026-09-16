@@ -1,0 +1,126 @@
+// Futty v2.0 — O ritmo do trabalho em segundo plano (VELOCIDADE 8, 16-set).
+//
+// O PROBLEMA, medido: tudo o que o app faz "quando o aparelho estiver parado"
+// usava requestIdleCallback. O Safari NÃO TEM requestIdleCallback — nem o do
+// iPhone, nem o WebView do app da loja. Então caía sempre no setTimeout de
+// reserva (1500 ms no pré-aquecimento de dados, 1200 ms no dos chunks das abas),
+// que não é "parado": é "daqui a um bocado", olhe o aparelho para o que estiver
+// a olhar. E daqui a um bocado é exactamente quando a pessoa está a tocar na
+// tela pela primeira vez. Daí o "às vezes engasga".
+//
+// "Parado de verdade" aqui é uma coisa só: a 1ª tela já pintou E passaram N
+// segundos sem um toque, uma rolagem ou uma tecla. Quem tem essa informação é o
+// lib/diagnostico.js (é ele que marca a pintura e que já ouve os gestos para
+// atribuir as travadas) — aqui só se lê.
+//
+// E há um caso especial: a PRIMEIRA abertura de uma versão nova. É a única em
+// que o WebKit não tem cache de bytecode nenhum e tem de compilar tudo outra
+// vez; é a abertura de que o Pedro se queixa. Nessa, tudo o que é adiantamento
+// espera mais 5 s. A chave de versão é o nome do ficheiro de entrada, que leva
+// o hash do conteúdo — muda sozinho a cada build, sem ninguém ter de se lembrar
+// de bumpar nada.
+import { aoGesto, aposPrimeiraPintura, ultimoGestoEm } from './diagnostico';
+
+// Quanto tempo sem gesto conta como "parado". 3 s é o pedido do dono.
+const PARADO_MS = 3000;
+// Depois de um toque no meio do trabalho, pausa antes de continuar.
+const PAUSA_APOS_GESTO_MS = 1500;
+// O que a 1ª abertura de uma versão nova espera A MAIS.
+const EXTRA_VERSAO_NOVA_MS = 5000;
+const CHAVE_VERSAO = 'futty:versao-vista';
+
+/** Nome do ficheiro de entrada (leva o hash do build). Serve de chave de versão. */
+function versaoDoBuild() {
+  if (typeof document === 'undefined') return 'sem-documento';
+  const src = document.querySelector('script[type="module"][src]')?.getAttribute('src');
+  // Em dev o src é /src/main.jsx (sem hash) — aí não há "versão nova" que
+  // interesse, e tudo bem: o extra é para o app da loja.
+  return src ? src.split('/').pop() : 'sem-entrada';
+}
+
+let ehVersaoNova = null;
+
+/**
+ * É a 1ª vez que este aparelho abre ESTE build? Lê e grava uma vez por sessão.
+ * Falha de storage (modo privado) → trata como versão nova: esperar a mais é o
+ * lado seguro do engano.
+ */
+export function primeiraAberturaDaVersao() {
+  if (ehVersaoNova != null) return ehVersaoNova;
+  const agora = versaoDoBuild();
+  try {
+    ehVersaoNova = localStorage.getItem(CHAVE_VERSAO) !== agora;
+    localStorage.setItem(CHAVE_VERSAO, agora);
+  } catch {
+    ehVersaoNova = true;
+  }
+  return ehVersaoNova;
+}
+
+/**
+ * Corre `fn` quando o aparelho estiver parado de verdade: 1ª pintura feita e
+ * `paradoMs` sem toque/rolagem/tecla. Cada gesto REARMA a espera — se a pessoa
+ * está a usar o app, isto simplesmente não corre, e é assim que tem de ser.
+ *
+ * @param {() => void} fn
+ * @param {{ paradoMs?: number, contarVersaoNova?: boolean }} [opts]
+ *   contarVersaoNova: na 1ª abertura de um build novo, espera mais 5 s.
+ * @returns {() => void} cancela o agendamento.
+ */
+export function quandoParado(fn, { paradoMs = PARADO_MS, contarVersaoNova = true } = {}) {
+  if (typeof window === 'undefined') {
+    fn();
+    return () => {};
+  }
+  let cancelado = false;
+  let temporizador = null;
+  let largarGestos = null;
+
+  const espera = paradoMs + (contarVersaoNova && primeiraAberturaDaVersao() ? EXTRA_VERSAO_NOVA_MS : 0);
+
+  const cancelar = () => {
+    cancelado = true;
+    if (temporizador != null) window.clearTimeout(temporizador);
+    if (largarGestos) largarGestos();
+  };
+
+  const armar = () => {
+    if (cancelado) return;
+    if (temporizador != null) window.clearTimeout(temporizador);
+    temporizador = window.setTimeout(() => {
+      if (cancelado) return;
+      cancelar();
+      fn();
+    }, espera);
+  };
+
+  aposPrimeiraPintura(() => {
+    if (cancelado) return;
+    largarGestos = aoGesto(armar); // cada gesto rearma a contagem do zero
+    armar();
+  });
+
+  return cancelar;
+}
+
+/** Devolve a thread ao browser entre dois passos. Um setTimeout(0) é um quadro. */
+export function respirar() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Se a pessoa mexeu na tela agora mesmo, espera. É o travão que se põe ENTRE os
+ * passos de um trabalho longo: o `quandoParado` só decide quando começar, e um
+ * aquecimento de 20 imagens dura bem mais do que o toque seguinte demora a
+ * chegar.
+ */
+export async function esperarSeOcupado(pausaMs = PAUSA_APOS_GESTO_MS) {
+  if (typeof performance === 'undefined') return;
+  // Pode haver toques encavalitados — espera até se passar a pausa inteira
+  // desde o ÚLTIMO deles.
+  for (let voltas = 0; voltas < 60; voltas += 1) {
+    const desde = performance.now() - ultimoGestoEm();
+    if (desde >= pausaMs) return;
+    await new Promise((resolve) => setTimeout(resolve, pausaMs - desde));
+  }
+}

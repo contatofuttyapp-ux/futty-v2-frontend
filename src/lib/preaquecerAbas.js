@@ -6,9 +6,18 @@
 // Na web isso é uma ida à rede; no app é leitura de disco mais o custo de
 // executar o módulo — menos, mas ainda o suficiente para o toque parecer morto.
 //
-// Aqui as quatro vizinhas do Início são carregadas quando o browser está PARADO,
-// depois da primeira tela já estar desenhada. O requestIdleCallback é que
-// garante isso: nunca disputa com o que a pessoa está a ver agora.
+// Aqui as quatro vizinhas do Início são carregadas quando o aparelho está
+// PARADO, depois da primeira tela já estar desenhada.
+//
+// VELOCIDADE 8 (16-set) — "parado" era requestIdleCallback com setTimeout(1200)
+// de reserva. O Safari não tem requestIdleCallback: no iPhone era sempre o
+// setTimeout, e 1,2 s depois de abrir o app cinco chunks de JS chegavam ao
+// mesmo tempo para serem COMPILADOS — em cima do primeiro toque da pessoa.
+// Destes cinco, quatro são telas que ela talvez nem visite. É o mais caro dos
+// trabalhos de segundo plano (compilar é trabalho de thread principal; uma
+// imagem pelo menos descodifica-se de lado), por isso é o que mais tinha a
+// ganhar em esperar. Agora quem decide é o lib/ritmo.js, e as abas entram UMA
+// DE CADA VEZ, com um toque a mandar parar entre elas.
 //
 // As mesmas funções servem o lazy() em App.jsx — é de propósito. O registo de
 // módulos do browser devolve sempre a MESMA promessa para o mesmo import(), por
@@ -19,6 +28,8 @@
 // (`jaCarregado()`). O React.lazy suspende na primeira renderização sempre que
 // recebe uma promessa — mesmo já resolvida — e ainda segura o fallback ~300 ms;
 // com o módulo em mãos, utils/lazyComRetry.js entrega-o sem suspender.
+import { esperarSeOcupado, quandoParado, respirar } from './ritmo';
+
 function lembrar(importar) {
   let modulo = null;
   const carregar = () => (modulo ? Promise.resolve(modulo) : importar().then((m) => { modulo = m; return m; }));
@@ -48,19 +59,22 @@ export function preaquecerAbas() {
   if (jaPediu || typeof window === 'undefined') return () => {};
   jaPediu = true;
 
-  // requestIdleCallback não existe no Safari anterior ao 16.4, e o piso do app
-  // é o iOS 15 — daí o setTimeout como alternativa. 1200 ms é depois de a
-  // primeira tela estar desenhada e das chamadas dela terem partido.
-  const agendar = window.requestIdleCallback || ((fn) => window.setTimeout(fn, 1200));
-  const cancelar = window.cancelIdleCallback || window.clearTimeout;
-
-  const id = agendar(() => {
-    // Falhar aqui não é erro de ninguém: é só um chunk que será buscado no
-    // toque, como era antes. Nunca pode borbulhar para a tela.
-    ABAS.forEach((carregar) => {
-      carregar().catch(() => {});
-    });
+  let parado = false;
+  const cancelar = quandoParado(async () => {
+    for (const carregar of ABAS) {
+      if (parado) return;
+      // Um toque entre duas abas manda esperar: compilar o chunk seguinte pode
+      // muito bem ser o que come o quadro do toque que a pessoa acabou de dar.
+      await esperarSeOcupado();
+      await respirar();
+      // Falhar aqui não é erro de ninguém: é só um chunk que será buscado no
+      // toque, como era antes. Nunca pode borbulhar para a tela.
+      await carregar().catch(() => {});
+    }
   });
 
-  return () => cancelar.call(window, id);
+  return () => {
+    parado = true;
+    cancelar();
+  };
 }

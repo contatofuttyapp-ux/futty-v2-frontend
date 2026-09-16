@@ -15,6 +15,7 @@ import { plural } from '../utils/plural';
 import { gerarFigurinhaCanvas } from '../utils/figurinhaCanvas';
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha } from '../lib/diagnostico';
+import { quandoParado } from '../lib/ritmo';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
@@ -527,10 +528,32 @@ export default function Inicio() {
     //
     // Agora quem manda é o relógio: passados 400 ms sem resposta do cache,
     // desenha-se na mesma. Perde-se o atalho, nunca a figurinha.
+    //
+    // VELOCIDADE 8 (16-set) — o CANVAS espera o aparelho parar. Os dois atalhos
+    // (memória e IndexedDB) continuam imediatos: são baratos e é deles que vem
+    // o cromo instantâneo de quem já abriu o app antes. O que espera é só o
+    // desenho de verdade — decodificar o avatar e o fundo e compor um canvas de
+    // 600×600 é de um a três segundos de thread principal no celular, e fazê-lo
+    // por cima do primeiro toque é meio caminho para o engasgo.
+    //
+    // Sem o extra da versão nova, ao contrário do pré-aquecimento: o cromo é o
+    // que a pessoa está a OLHAR, não um adiantamento para depois. Mais 5 s a ver
+    // a foto de prévia seria trocar um defeito por outro.
     let desenhou = false;
+    let largarEspera = null;
+    // Em que instante o desenho começou mesmo — a vigia dos 4 s conta a partir
+    // daqui, senão a espera por "parado" disparava um alarme falso.
+    let comecouEm = null;
     function desenhar() {
       if (!vivo || desenhou) return;
       desenhou = true;
+      largarEspera = quandoParado(() => {
+        if (!vivo) return;
+        comecouEm = Date.now();
+        compor();
+      }, { contarVersaoNova: false });
+    }
+    function compor() {
       gerarCromoDataURL(opts, chave, user.id)
         .then((url) => {
           if (!vivo) return;
@@ -563,15 +586,27 @@ export default function Inicio() {
       })
       .catch(desenhar);
 
-    // Rede de segurança: se ao fim de 4 s ainda não há cromo no ecrã, foi o
-    // próprio canvas que não chegou ao fim (decodificar avatar e fundo é o
+    // Rede de segurança: se ao fim de 4 s A DESENHAR ainda não há cromo no ecrã,
+    // foi o próprio canvas que não chegou ao fim (decodificar avatar e fundo é o
     // passo caro). Fica registado para se ver no Gabinete — é a diferença
     // entre "o cromo demora" e "o cromo não vem".
-    const vigia = setTimeout(() => {
-      if (vivo && !cromoCache.get(chave)) registarFalha('cromo', 'sem-cromo-4s');
-    }, 4000);
+    //
+    // Velocidade 8: a vigia conta a partir do INÍCIO do desenho, não da montagem
+    // — agora o canvas espera o aparelho parar, e contar da montagem daria um
+    // alarme falso sempre que a pessoa estivesse a mexer na tela.
+    const vigia = setInterval(() => {
+      if (!vivo || cromoCache.get(chave)) return;
+      if (comecouEm && Date.now() - comecouEm > 4000) {
+        registarFalha('cromo', 'sem-cromo-4s');
+        clearInterval(vigia);
+      }
+    }, 1000);
 
-    return () => { vivo = false; clearTimeout(vigia); };
+    return () => {
+      vivo = false;
+      clearInterval(vigia);
+      if (largarEspera) largarEspera();
+    };
   }, [user, cromoAvatarEhIA, cromoFundo, avatarGenericoEscolha, nome]);
 
   // A foto que segura o lugar do cromo enquanto ele não existe: a mesma imagem

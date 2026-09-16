@@ -17,11 +17,13 @@
 import { apiFetch } from './api';
 import { gravarCache, lerCacheComIdade } from './cacheLocal';
 import { marcarPreaquecimento, registarPreaquecimento } from './diagnostico';
+import { esperarSeOcupado, quandoParado, respirar } from './ritmo';
 import { urlImagem } from '../utils/avatar';
 
-// Quantas imagens baixam ao mesmo tempo. 4 é o que o browser faria sozinho numa
-// lista; mais do que isso rouba banda ao que a pessoa está mesmo a ver.
-const IMAGENS_EM_PARALELO = 4;
+// VELOCIDADE 8 (16-set) — 4 → 2. Quatro imagens ao mesmo tempo não é só banda:
+// são quatro descodificações a disputar a thread com a tela que a pessoa está a
+// tocar. Duas adiantam quase tanto e não se sentem.
+const IMAGENS_EM_PARALELO = 2;
 // Teto de imagens por aquecimento: um time grande tem 30+ avatares e não vale
 // a pena descer todos — as primeiras são as que aparecem nas listas.
 const MAX_IMAGENS = 24;
@@ -37,11 +39,12 @@ export function esquecerPreaquecimento() {
   jaCorreu = false;
 }
 
-function emRepouso(fn) {
-  if (typeof window === 'undefined') return;
-  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(fn, { timeout: 4000 });
-  else setTimeout(fn, 1500);
-}
+// VELOCIDADE 8 — O emRepouso() de antes usava requestIdleCallback e caía num
+// setTimeout(1500) quando ele não existe. O Safari NÃO TEM requestIdleCallback:
+// no iPhone era SEMPRE o setTimeout, ou seja, isto arrancava 1,5 s depois do
+// Início — em cima do primeiro toque da pessoa. Agora quem decide é o
+// lib/ritmo.js: 1ª pintura feita + 3 s sem toque nenhum (mais 5 s na primeira
+// abertura de uma versão nova, que é a pior de todas).
 
 // Ligação fraca ou "poupar dados" → não se gasta megabyte nenhum a adivinhar.
 function ligacaoPermite() {
@@ -84,6 +87,11 @@ function baixarImagem(url, crossOrigin) {
 async function emLotes(tarefas, tamanho) {
   let feitas = 0;
   for (let i = 0; i < tarefas.length; i += tamanho) {
+    // Antes de CADA lote: se a pessoa mexeu na tela, espera 1,5 s. O
+    // quandoParado só decide quando começar; um aquecimento de 20 imagens dura
+    // muito mais do que o toque seguinte demora a chegar.
+    await esperarSeOcupado();
+    await respirar();
     const lote = tarefas.slice(i, i + tamanho).map((t) => t());
     const r = await Promise.all(lote);
     feitas += r.filter(Boolean).length;
@@ -101,7 +109,7 @@ export function preaquecer(userId, dadosInicio) {
   jaCorreu = true;
   if (!ligacaoPermite()) return;
 
-  emRepouso(async () => {
+  quandoParado(async () => {
     const t0 = Date.now();
     // Enquanto isto corre, o medidor de travadas atribui a este trabalho
     // qualquer quadro perdido — é assim que se prova (ou se ilibam) as imagens
@@ -130,6 +138,11 @@ export function preaquecer(userId, dadosInicio) {
         payloads.push(recente.dados);
         continue;
       }
+      // Entre cada passo: um toque manda esperar, e um setTimeout(0) devolve a
+      // thread ao browser antes de gravar o próximo payload no cache (que é
+      // JSON.stringify de um objeto grande — trabalho síncrono a valer).
+      await esperarSeOcupado();
+      await respirar();
       try {
         const d = await apiFetch(rota, { segundoPlano: true });
         gravarCache(userId, chave, moldar(d));
