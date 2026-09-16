@@ -892,8 +892,11 @@ export default function Feed() {
   // feed. Antes o AdCard só era montado entre o 3º e o 4º item da lista, por
   // isso o pedido dele só começava depois do /api/feed inteiro ter chegado e
   // sido pintado — duas idas a São Paulo em fila por uma faixa de 100 px.
-  // `pagina='inicio'` de propósito: é a página configurada no Gabinete.
-  const { ad: adFeed, pronto: adPronto } = useAd('inicio');
+  //
+  // RODADA 12C: a página passa a ser 'resenha' (era 'inicio' emprestado, por
+  // não existir toggle próprio). Agora o dono liga e desliga esta tela sem
+  // mexer no Início — eram duas decisões presas numa chave só.
+  const { ad: adFeed, pronto: adPronto } = useAd('resenha');
 
   const [items, setItems] = useState(null); // null = ainda não há nada para mostrar
   const [erro, setErro] = useState('');

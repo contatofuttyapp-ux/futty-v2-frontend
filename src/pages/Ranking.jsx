@@ -1,17 +1,19 @@
 // Futty v2.0 — Ranking (modelo definitivo): voto por jogador (meias estrelas),
 // nota exibida 6-10, score por categoria. Sem jogo de votação nem períodos.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { marcarInstante } from '../lib/diagnostico';
 import { useApi } from '../hooks/useApi';
+import { useAd } from '../hooks/useAd';
 import { useSessao } from '../context/SessaoContext';
 import { useRanking } from '../hooks/useRanking';
 import { useListaProgressiva } from '../hooks/useListaProgressiva';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { nomeExibicao } from '../utils/nomeExibicao';
+import AdCard from '../components/AdCard';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import EstadoErroRede from '../components/EstadoErroRede';
@@ -179,6 +181,10 @@ export default function Ranking() {
   // devolve-a inteira à primeira — dividir o que já cabe num quadro só
   // acrescentava um quadro de espera.
   const linhasADesenhar = useListaProgressiva(ranking, ranking.length > 15 ? 10 : ranking.length);
+  // Rodada 12C: o anúncio é pedido no topo da tela, em paralelo com o ranking —
+  // o mesmo motivo da Resenha (ver useAd): montado no meio da lista, o pedido
+  // dele só partiria depois de a lista inteira ter pintado.
+  const { ad: adRanking, pronto: adPronto } = useAd('ranking');
   const { teams, votacaoStatus } = useSessao();
   // votacaoStatus do SessaoContext já é da equipa PRINCIPAL (teams[0], 1x por
   // sessão) — só dispara pedido próprio quando esta página é de OUTRA equipa.
@@ -293,7 +299,18 @@ export default function Ranking() {
             ) : (
               <ListaRanking ranking={ranking}>
                 {linhasADesenhar.map((p, idx) => (
-                  <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
+                  // RODADA 12C — o anúncio entra DEPOIS do pódio: o top-3 é a
+                  // razão de a pessoa abrir esta tela, e nada se mete entre o
+                  // primeiro e o terceiro. Da 4ª linha em diante já é lista, e
+                  // aí a faixa cabe sem atravessar o assunto.
+                  idx === 2 ? (
+                    <Fragment key={p.user_id}>
+                      <RankRow p={p} idx={idx} slug={slug} onVote={openVote} />
+                      <AdCard pagina="ranking" variant="banner320x100" ad={adRanking} prontoExterno={adPronto} />
+                    </Fragment>
+                  ) : (
+                    <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
+                  )
                 ))}
                 {/* RODADA 12A — as linhas que ainda não montaram ficam como
                     esqueleto, nunca como espaço vazio. A lista entra de 5 em 5

@@ -343,11 +343,24 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCamb
   );
 }
 
-const NOMES_PAGINA = { inicio: 'Início', sorteio: 'Sorteio in-app', p: 'Pública /p/' };
+// As telas com espaço de publicidade. Rodada 12C (16-set): entraram Resenha,
+// Ranking e Figurinha — a Resenha pedia o anúncio do Início emprestado (não dava
+// para ligar uma sem a outra) e as outras duas não tinham slot nenhum.
+// A ordem aqui é a ordem em que aparecem na tela do dono.
+const NOMES_PAGINA = {
+  inicio: 'Início',
+  resenha: 'Resenha',
+  ranking: 'Ranking',
+  figurinha: 'Figurinha',
+  sorteio: 'Sorteio in-app',
+  p: 'Pública /p/',
+};
+// Uma campanha nova nasce marcada só no Início — o dono liga as outras à mão.
+const PAGINAS_NOVA_CAMPANHA = Object.fromEntries(Object.keys(NOMES_PAGINA).map((pg) => [pg, pg === 'inicio']));
 
 // ─── ABA "ANÚNCIOS" ──────────────────────────────────────────────────────────
 function AbaAnuncios({ op, pub, onSalvarOp }) {
-  const [novaCamp, setNovaCamp] = useState({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
+  const [novaCamp, setNovaCamp] = useState({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { ...PAGINAS_NOVA_CAMPANHA } });
   const ativoGeral = op.ads_ativo !== false;
 
   function addCampanha() {
@@ -355,7 +368,7 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
     const paginas = Object.entries(novaCamp.paginas).filter(([, v2]) => v2).map(([k]) => k);
     const c = { id: uid(), nome: novaCamp.nome.trim(), anunciante: novaCamp.anunciante.trim(), texto: novaCamp.texto.trim() || novaCamp.nome.trim(), sub: novaCamp.anunciante.trim(), cta: 'Ver', link: novaCamp.link.trim(), cls: novaCamp.cls, inicio: '', fim: novaCamp.fim.trim(), paginas, estado: 'ativa' };
     onSalvarOp('campanhas', [...(op.campanhas || []), c]);
-    setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { inicio: true, sorteio: false, p: false } });
+    setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { ...PAGINAS_NOVA_CAMPANHA } });
   }
   const setEstadoCamp = (id, estado) => onSalvarOp('campanhas', op.campanhas.map((c) => (c.id === id ? { ...c, estado } : c)));
   const delCamp = (id) => onSalvarOp('campanhas', op.campanhas.filter((c) => c.id !== id));

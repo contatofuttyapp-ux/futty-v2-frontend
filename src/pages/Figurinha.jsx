@@ -9,6 +9,7 @@ import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw } from
 import { apiFetch, apiUpload } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useAd } from '../hooks/useAd';
 import { usePerfil } from '../context/PerfilContext';
 import { lerCacheComIdade, gravarCache } from '../lib/cacheLocal';
 import { nomeJogador, urlAsset, urlImagem } from '../utils/avatar';
@@ -19,6 +20,7 @@ import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenh
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { ehAppNativo, salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
+import AdCard from '../components/AdCard';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
 import FuttyLogo from '../components/FuttyLogo';
@@ -264,6 +266,9 @@ export default function Figurinha() {
   // num microtask, e essa chegada tardia recomeçava o desenho do cromo). Os
   // selos nunca seguram a tela: sem cache, o cromo desenha sem eles e redesenha
   // uma vez quando o /api/me/selos chegar.
+  // Rodada 12C: anúncio pedido no topo da tela, em paralelo com o resto (mesmo
+  // motivo da Resenha e do Ranking — ver useAd).
+  const { ad: adFigurinha, pronto: adPronto } = useAd('figurinha');
   const [selos, setSelos] = useState(() => lerCacheComIdade(userId, 'selos')?.dados ?? []);
   const [selosDoUsuario, setSelosDoUsuario] = useState(userId);
   if (selosDoUsuario !== userId) {
@@ -1299,6 +1304,14 @@ export default function Figurinha() {
                 <Share2 size={16} /> {busy ? 'Gerando…' : 'Compartilhar'}
               </button>
             </div>
+          </div>
+
+          {/* RODADA 12C — o anúncio entra DEPOIS da linha de ações, nunca antes
+              da figurinha: esta tela é a figurinha, e uma faixa por cima dela
+              venderia o lugar errado. Aqui já se rolou uma dobra, a figurinha
+              foi vista e a ação principal foi tomada. */}
+          <div style={{ marginTop: 18 }}>
+            <AdCard pagina="figurinha" variant="banner320x100" ad={adFigurinha} prontoExterno={adPronto} />
           </div>
 
           {/* SELOS DE HONRA (Vaga 11C) — SECÇÃO PRÓPRIA full-width, ABAIXO da linha
