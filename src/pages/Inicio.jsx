@@ -14,7 +14,7 @@ import { formatDateTime, formatRating } from '../utils/format';
 import { plural } from '../utils/plural';
 import { gerarFigurinhaCanvas, enquadrarAvatar } from '../utils/figurinhaCanvas';
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
-import { registarFalha, aposPrimeiraPintura } from '../lib/diagnostico';
+import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
@@ -660,6 +660,9 @@ export default function Inicio() {
       // 600×600 para uma tela que mostra 99 px é rasterizar e codificar seis
       // vezes mais pixéis do que se vê (ver ladoDoCromo).
       const larguraExibida = refCromo.current?.getBoundingClientRect().width || null;
+      // Rodada 12A: enquanto o canvas compõe, qualquer quadro perdido fica
+      // anotado com esta tarefa. É o que faltava à travada de 5,7 s do build 21.
+      const fimDaTarefa = tarefaEmCurso('cromo:compor');
       gerarCromoDataURL({ ...opts, larguraExibida }, chave, user.id)
         .then((url) => {
           if (!vivo) return;
@@ -669,7 +672,8 @@ export default function Inicio() {
         .catch((e) => {
           console.error('[cromo]', e);
           registarFalha('cromo', 'erro', e?.message);
-        });
+        })
+        .finally(fimDaTarefa);
     }
 
     // Guardado da última abertura: se a composição é a mesma, os pixéis seriam

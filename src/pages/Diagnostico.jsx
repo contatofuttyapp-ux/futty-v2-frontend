@@ -214,6 +214,16 @@ export default function Diagnostico() {
                 {linhaDeArranque(resumo.arranque)}
               </>
             ) : null}
+            {/* Rodada 12A: o tempo com o app noutra coisa, separado das travadas
+                (ver o porquê em lib/diagnostico.js). */}
+            {resumo.segundoPlano?.vezes ? (
+              <>
+                <br />
+                <span style={{ color: 'var(--text-dim)' }}>
+                  Em segundo plano: {resumo.segundoPlano.vezes}× · {(resumo.segundoPlano.msTotal / 1000).toFixed(1)}s no total (não conta como travada)
+                </span>
+              </>
+            ) : null}
           </div>
           {resumo.travadas?.piores?.length ? (
             <div style={{ marginTop: 8, display: 'grid', gap: 3 }}>
@@ -221,6 +231,9 @@ export default function Diagnostico() {
                 <div key={i} style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                   <span style={{ color: t.ms >= 250 ? '#f8b4b4' : '#f0c94a', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>{t.ms} ms</span>
                   {' · '}{t.fase}{' · aos '}{(t.em / 1000).toFixed(1)}s
+                  {/* Rodada 12A: o que estava a correr. "arranque" sozinho não
+                      aponta para conserto nenhum; "arranque · cromo:compor" sim. */}
+                  {t.tarefas?.length ? <span style={{ color: '#b69cff' }}>{' · '}{t.tarefas.join(', ')}</span> : null}
                 </div>
               ))}
             </div>
@@ -248,14 +261,16 @@ export default function Diagnostico() {
                 Imagens: {resumo.imagens.n} · média {resumo.imagens.mediaMs}ms · {resumo.imagens.pctDoCache}% do cache
               </>
             ) : null}
-            {/* Velocidade 7B: se a maior largura vista passar da do aparelho, a página encolheu. */}
+            {/* Velocidade 7B + Rodada 12A: o que conta é o transbordo contra a
+                tela NA ORIENTAÇÃO da altura — deitado, 932 em 932 é zero. */}
             {resumo.largura ? (
               <>
                 <br />
-                Largura: aparelho {resumo.largura.aparelho}px · maior vista {Math.max(resumo.largura.maiorViewport, resumo.largura.maiorRolavel)}px
-                {Math.max(resumo.largura.maiorViewport, resumo.largura.maiorRolavel) > resumo.largura.aparelho ? (
-                  <span style={{ color: '#f8b4b4' }}> · passou em {rotaCurta(resumo.largura.rota)}</span>
-                ) : null}
+                Largura: aparelho {resumo.largura.aparelho}px ({resumo.largura.orientacao})
+                {resumo.largura.maiorTransbordo > 0 ? (
+                  <span style={{ color: '#f8b4b4' }}> · passou {resumo.largura.maiorTransbordo}px em {rotaCurta(resumo.largura.rota)}</span>
+                ) : ' · nada passou da tela'}
+                {resumo.orientacao?.mudancas ? ` · virou ${resumo.orientacao.mudancas}×` : ''}
               </>
             ) : null}
             {linhaDePreaquecimento(preaquecimento) ? (

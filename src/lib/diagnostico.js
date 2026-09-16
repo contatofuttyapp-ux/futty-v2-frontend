@@ -174,6 +174,74 @@ let ultimoGesto = -Infinity;
 let preaquecendo = false;
 let lacoLigado = false;
 
+// RODADA 12A (16-set) — o app em segundo plano não é uma travada.
+//
+// O build 21 veio com "pior 96003 ms" no relatório. Não houve travada nenhuma: o
+// Pedro trocou de app e o requestAnimationFrame PAROU, como o WebKit manda. O
+// intervalo entre o último quadro antes de sair e o primeiro à volta é o tempo
+// com o telefone noutra coisa — e entrava na conta como o pior engasgo de todos,
+// afogando os números verdadeiros.
+//
+// Agora esse tempo é medido à parte, e nenhum intervalo que atravesse uma ida ao
+// segundo plano conta como travada.
+const segundoPlano = { vezes: 0, msTotal: 0, maiorMs: 0 };
+let escondidoEm = null;
+let voltouEm = -Infinity;
+let visibilidadeLigada = false;
+
+function ouvirVisibilidade() {
+  if (visibilidadeLigada || typeof document === 'undefined') return;
+  visibilidadeLigada = true;
+  document.addEventListener('visibilitychange', () => {
+    const agora = performance.now();
+    if (document.hidden) {
+      escondidoEm = agora;
+      return;
+    }
+    voltouEm = agora;
+    if (escondidoEm == null) return;
+    const ms = Math.round(agora - escondidoEm);
+    escondidoEm = null;
+    segundoPlano.vezes += 1;
+    segundoPlano.msTotal += ms;
+    if (ms > segundoPlano.maiorMs) segundoPlano.maiorMs = ms;
+  });
+}
+
+// ─── Tarefa em curso (RODADA 12A) ────────────────────────────────────────────
+// A fase diz QUANDO a travada caiu; isto diz o que estava a correr. No build 21
+// ficou uma travada de 5,7 s aos 9,9 s do arranque marcada só como "arranque" —
+// e "arranque" não aponta para conserto nenhum. Quem faz trabalho que pode
+// segurar a thread abre uma tarefa e fecha-a no fim; o que estiver aberto no
+// instante do quadro perdido fica anotado com ele.
+const tarefas = new Map(); // nome -> quantas vezes aberta (aninhamento)
+
+/**
+ * Abre uma tarefa. Devolve a função que a fecha — chamar duas vezes não faz mal.
+ * Ex.: `const fim = tarefaEmCurso('cromo:compor'); … fim();`
+ */
+export function tarefaEmCurso(nome) {
+  tarefas.set(nome, (tarefas.get(nome) || 0) + 1);
+  let fechada = false;
+  return () => {
+    if (fechada) return;
+    fechada = true;
+    const resto = (tarefas.get(nome) || 0) - 1;
+    if (resto > 0) tarefas.set(nome, resto);
+    else tarefas.delete(nome);
+  };
+}
+
+function tarefasAgora() {
+  const lista = [...tarefas.keys()];
+  // Os loaders já sabem o que segura a tela, e 'codigo' é exactamente o chunk da
+  // rota a ser buscado e COMPILADO — uma das tarefas que interessa ver aqui.
+  for (const motivo of loadersAtivos.keys()) lista.push(`loader:${motivo}`);
+  const nav = navegacaoAberta;
+  if (nav && nav.msPintura == null) lista.push(`rota:${nav.rota}`);
+  return lista.length ? lista : null;
+}
+
 /** O pré-aquecimento avisa quando começa e quando acaba (lib/preaquecerDados.js). */
 export function marcarPreaquecimento(aCorrer) {
   preaquecendo = !!aCorrer;
@@ -194,13 +262,18 @@ function faseAgora(em) {
 }
 
 function registarTravada(gap, fim) {
+  const inicio = fim - gap;
+  // O intervalo atravessou uma ida ao segundo plano (ou ainda estamos lá): o
+  // relógio parou por decisão do sistema, não por trabalho nosso. Já foi contado
+  // em `segundoPlano` pelo ouvinte de visibilidade — aqui só não vira travada.
+  if (voltouEm > inicio || (typeof document !== 'undefined' && document.hidden)) return;
   const ms = Math.round(gap);
-  const fase = faseAgora(fim - gap);
+  const fase = faseAgora(inicio);
   travadas.leves += 1;
   travadas.porFase[fase] = (travadas.porFase[fase] || 0) + 1;
   if (ms < QUADRO_GRAVE_MS) return;
   travadas.graves += 1;
-  const registo = { ms, fase, em: Math.round(fim - gap) };
+  const registo = { ms, fase, em: Math.round(inicio), tarefas: tarefasAgora() };
   if (!travadas.pior || ms > travadas.pior.ms) travadas.pior = registo;
   guardarPior(registo);
 }
@@ -255,6 +328,7 @@ export function marcarArranque(ms) {
   if (arranque.compilacaoMs == null) arranque.compilacaoMs = Math.round(ms);
   ligarMedidorDeQuadros();
   ouvirGestos();
+  ouvirVisibilidade();
 }
 
 /** A árvore do React commitou pela 1ª vez (efeito de layout do MedidorNavegacao). */
@@ -494,21 +568,59 @@ function registarImagem(entrada) {
 // aparelho, a maior viewport e a maior largura rolável vistas, e em que tela.
 let largura = null;
 
+// RODADA 12A — o telefone virado não é um transbordo.
+//
+// O build 21 trouxe "maior vista 932px" num aparelho de 430: era o iPhone
+// deitado. Em paisagem os lados TROCAM, e a largura do aparelho passa a ser o
+// lado maior da tela — comparar sempre com o lado menor transformava cada
+// rotação num alarme, e um alarme que toca sozinho deixa de se ler.
+//
+// A orientação passa a ficar no relatório: sem ela, "932px em /feed" não se
+// distingue de um card que rebentou a tela, que é o defeito que isto caça.
+const orientacao = { mudancas: 0, atual: null, jaEsteveDeitado: false };
+
+function deitado() {
+  return typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
+}
+
+/** A largura da tela NA ORIENTAÇÃO ATUAL — é contra isto que se mede o transbordo. */
+function larguraDoAparelho() {
+  const tela = typeof window !== 'undefined' ? window.screen : null;
+  if (!tela?.width || !tela?.height) return Math.round(window.innerWidth);
+  const lados = [tela.width, tela.height];
+  return Math.round(deitado() ? Math.max(...lados) : Math.min(...lados));
+}
+
 function medirLargura() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const agora = deitado() ? 'paisagem' : 'retrato';
+  if (orientacao.atual == null) orientacao.atual = agora;
+  else if (orientacao.atual !== agora) {
+    orientacao.mudancas += 1;
+    orientacao.atual = agora;
+  }
+  if (agora === 'paisagem') orientacao.jaEsteveDeitado = true;
+
+  const aparelho = larguraDoAparelho();
   const viewport = Math.round(window.innerWidth);
   // Mede também POR DENTRO da guarda (overflow-x: clip em #root/[data-page]): a
   // página já não encolhe, mas o que passar da largura continua a aparecer aqui.
   const pagina = document.querySelector('[data-page] > *');
   const rolavel = Math.round(Math.max((document.scrollingElement || document.documentElement)?.scrollWidth || 0, pagina?.scrollWidth || 0));
+  // Quanto passou da tela NESTA orientação. Deitado, 932 em 932 é zero.
+  const passou = Math.max(viewport, rolavel) - aparelho;
+
   if (!largura) {
-    largura = { aparelho: window.screen?.width ?? viewport, maiorViewport: viewport, maiorRolavel: rolavel, rota: window.location.pathname, em: null };
+    largura = { aparelho, maiorViewport: viewport, maiorRolavel: rolavel, maiorTransbordo: Math.max(0, passou), rota: window.location.pathname, em: null, orientacao: agora };
     return;
   }
-  if (viewport > largura.maiorViewport || rolavel > largura.maiorRolavel) {
-    largura.maiorViewport = Math.max(largura.maiorViewport, viewport);
-    largura.maiorRolavel = Math.max(largura.maiorRolavel, rolavel);
+  largura.aparelho = aparelho;
+  if (passou > largura.maiorTransbordo) {
+    largura.maiorTransbordo = passou;
+    largura.maiorViewport = viewport;
+    largura.maiorRolavel = rolavel;
     largura.rota = window.location.pathname;
+    largura.orientacao = agora;
     largura.em = new Date().toISOString();
   }
 }
@@ -519,6 +631,9 @@ export function vigiarLargura() {
   medirLargura();
   window.addEventListener('resize', medirLargura, { passive: true });
   window.visualViewport?.addEventListener('resize', medirLargura, { passive: true });
+  // A rotação chega antes do resize em alguns aparelhos; medir nas duas garante
+  // que a orientação nova já está no sítio quando a largura for lida.
+  window.addEventListener('orientationchange', medirLargura, { passive: true });
 }
 
 /** Liga o observador de imagens. Chamado uma vez, no arranque do app. */
@@ -635,10 +750,16 @@ export function lerDiagnostico() {
           bytes: imagens.reduce((a, i) => a + i.bytes, 0),
         }
         : null,
-      // Velocidade 7B: { aparelho, maiorViewport, maiorRolavel, rota, em } — se a
-      // maior largura passar da do aparelho, a página encolheu em campo.
+      // Velocidade 7B + Rodada 12A: { aparelho, maiorViewport, maiorRolavel,
+      // maiorTransbordo, rota, orientacao, em }. O que conta é o maiorTransbordo
+      // (quanto passou da tela NA ORIENTAÇÃO da altura): acima de zero, alguma
+      // coisa rebentou a largura em campo.
       largura,
-      // Velocidade 8: quantos quadros passaram do tempo e em que fase do app.
+      // Rodada 12A: quantas vezes o aparelho virou. Sem isto, uma largura de
+      // paisagem no relatório não se distingue de um card que rebentou a tela.
+      orientacao: { ...orientacao },
+      // Velocidade 8 + Rodada 12A: quantos quadros passaram do tempo, em que
+      // fase do app e com que TAREFA a correr (ver tarefaEmCurso).
       travadas: {
         leves: travadas.leves,
         graves: travadas.graves,
@@ -646,6 +767,10 @@ export function lerDiagnostico() {
         porFase: { ...travadas.porFase },
         piores: [...travadas.piores],
       },
+      // Rodada 12A: tempo com o app noutra coisa. NÃO entra nas travadas — o
+      // requestAnimationFrame para em segundo plano e o intervalo de volta
+      // aparecia como o pior engasgo de todos (96 s no build 21).
+      segundoPlano: { ...segundoPlano },
       // Velocidade 8: compilação = HTML + download + execução de tudo o que está
       // no modulepreload; React = 1º commit da árvore; Início = 1ª pintura do /home.
       arranque: { ...arranque },
@@ -677,5 +802,9 @@ export function limparDiagnostico() {
   travadas.pior = null;
   travadas.porFase = {};
   travadas.piores.length = 0;
+  segundoPlano.vezes = 0;
+  segundoPlano.msTotal = 0;
+  segundoPlano.maiorMs = 0;
+  orientacao.mudancas = 0;
   medirLargura();
 }

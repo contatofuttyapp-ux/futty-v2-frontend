@@ -16,7 +16,7 @@
 //   · qualquer falha é silenciosa — isto é adiantamento, nunca uma dependência.
 import { apiFetch } from './api';
 import { gravarCache, lerCacheComIdade } from './cacheLocal';
-import { marcarPreaquecimento, registarPreaquecimento, marcarPreaquecimentoAgendado } from './diagnostico';
+import { marcarPreaquecimento, registarPreaquecimento, marcarPreaquecimentoAgendado, tarefaEmCurso } from './diagnostico';
 import { esperarSeOcupado, quandoParado, respirar } from './ritmo';
 import { urlImagem } from '../utils/avatar';
 
@@ -143,6 +143,11 @@ export function preaquecer(userId, dadosInicio) {
       // JSON.stringify de um objeto grande — trabalho síncrono a valer).
       await esperarSeOcupado();
       await respirar();
+      // Rodada 12A: o passo fica anotado em qualquer travada que caia aqui. O
+      // caro não é esperar a rede, é o gravarCache logo abaixo (JSON.stringify
+      // de um payload grande é trabalho síncrono a valer) — e sem o nome do
+      // passo o relatório dizia só "pré-aquecimento".
+      const fimDaTarefa = tarefaEmCurso(`preaquecimento:${chave}`);
       try {
         const d = await apiFetch(rota, { segundoPlano: true });
         gravarCache(userId, chave, moldar(d));
@@ -150,6 +155,8 @@ export function preaquecer(userId, dadosInicio) {
         itens += 1;
       } catch {
         /* silencioso: isto é adiantamento, não uma dependência */
+      } finally {
+        fimDaTarefa();
       }
     }
 
