@@ -4,9 +4,15 @@
 // completar o login do Google (a Google recusa OAuth dentro de WebView desde 2021).
 // O retorno chega pelo esquema com.futty.app://auth/callback, capturado globalmente
 // por components/DeepLinkListener.jsx — não pelo chamador desta função.
+//
+// VELOCIDADE 8 (16-set): o cliente chega por obterSupabase(). Não é capricho —
+// o DeepLinkListener está montado na RAIZ e importa daqui a constante
+// CALLBACK_URL_NATIVO; com o `import { supabase }` estático, essa constante de
+// 40 caracteres arrastava os 200 KB do supabase-js para o modulepreload do
+// arranque. Um import estático não se paga por símbolo, paga-se por módulo.
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
-import { supabase } from './supabase';
+import { obterSupabase } from './supabaseAsync';
 
 // Mesmo host que o AndroidManifest regista no intent-filter (auth) e que
 // DeepLinkListener.jsx reconhece. Fixo — no nativo não há "from" por rota: a app
@@ -19,6 +25,7 @@ export const CALLBACK_URL_NATIVO = 'com.futty.app://auth/callback';
  * mesmo { error } de sempre do signInWithOAuth (que já navega o browser sozinho).
  */
 export async function entrarComGoogle({ redirectTo }) {
+  const supabase = await obterSupabase();
   if (Capacitor.isNativePlatform()) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

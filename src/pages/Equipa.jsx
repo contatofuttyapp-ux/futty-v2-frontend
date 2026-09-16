@@ -1,7 +1,7 @@
 // Futty v2.0 — Detalhe da equipa + membros + convite (hub no cânone, transversal lote 1).
 // Lógica intacta; render no material da casa: vidro + hud-corners + chips 45° + Rajdhani
 // + .cta-gold. Posição do jogador em DESTAQUE (regra: o próprio decide; GR no roxo).
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { usePerfil } from '../context/PerfilContext';
@@ -18,9 +18,17 @@ import SilhuetaJogador from '../components/SilhuetaJogador';
 import EscudoEquipa from '../components/EscudoEquipa';
 import Toast from '../components/Toast';
 import Icon from '../components/Icon';
-import OnboardingModal from '../components/OnboardingModal';
 import ModeracaoFila from '../components/ModeracaoFila';
 import '../styles/app.css';
+
+// VELOCIDADE 8 (16-set) — EM LAZY. É o único ponto do app que usa framer-motion
+// (AnimatePresence, para o slide entre os 3 passos) e só aparece a quem entra
+// numa equipa pela PRIMEIRA vez. Com o import estático, o chunk do framer era
+// partilhado por tanta gente que o empacotador lhe encostou o jsx-runtime — e a
+// partir daí os 54 chunks que escrevem JSX importavam-no, o que punha o framer
+// no modulepreload do arranque sem ninguém na raiz o ter pedido. Em lazy ele
+// vira uma folha: só desce quando o modal abre mesmo.
+const OnboardingModal = lazy(() => import('../components/OnboardingModal'));
 
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
@@ -357,7 +365,13 @@ export default function Equipa() {
         )}
       </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
-      {mostrarOnboarding ? <OnboardingModal teamNome={team.nome} onClose={fecharOnboarding} /> : null}
+      {/* Sem fallback: o modal é um extra por cima da equipa já desenhada — um F
+          de carregamento por meio segundo seria mais ruído do que ajuda. */}
+      {mostrarOnboarding ? (
+        <Suspense fallback={null}>
+          <OnboardingModal teamNome={team.nome} onClose={fecharOnboarding} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

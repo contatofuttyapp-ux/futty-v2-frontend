@@ -1,6 +1,6 @@
 // Futty v2.0 — Contexto de autenticação (sessão Supabase)
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { obterSupabase } from '../lib/supabaseAsync';
 import { limparCacheLocal } from '../lib/cacheLocal';
 import { esquecerPreaquecimento } from '../lib/preaquecerDados';
 import { limparCromos } from '../lib/cromoCache';
@@ -50,21 +50,35 @@ export function AuthProvider({ children }) {
   // Com sessão guardada não há nada por saber: o arranque não mostra loading.
   const [loading, setLoading] = useState(!inicial);
 
+  // VELOCIDADE 8 (16-set) — o supabase-js chega por import dinâmico (ver
+  // lib/supabaseAsync.js). O download começa aqui, no mesmo instante em que
+  // começava antes; o que sai do caminho é a COMPILAÇÃO de 201 KB antes da 1ª
+  // pintura. A sessão que desenha a 1ª tela já veio do localStorage, síncrona,
+  // lá em cima (sessaoGuardada) — este efeito só confirma e passa a ouvir.
   useEffect(() => {
-    // Sessão inicial
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
+    let vivo = true;
+    let subscricao = null;
+
+    obterSupabase().then((supabase) => {
+      if (!vivo) return;
+      // Sessão inicial
+      supabase.auth.getSession().then(({ data }) => {
+        if (!vivo) return;
+        setSession(data.session);
+        setLoading(false);
+      });
+
+      // Subscrição a alterações de auth (login/logout/refresh)
+      subscricao = supabase.auth.onAuthStateChange((_event, newSession) => {
+        setSession(newSession);
+      }).data.subscription;
+      if (!vivo) subscricao.unsubscribe();
     });
 
-    // Subscrição a alterações de auth (login/logout/refresh)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      vivo = false;
+      if (subscricao) subscricao.unsubscribe();
+    };
   }, []);
 
   const value = {
@@ -76,10 +90,11 @@ export function AuthProvider({ children }) {
     // render, o perfil/equipas de quem saiu. O cromo do Início (14-set,
     // "Velocidade 4") mora em IndexedDB e não em localStorage, por isso tem de
     // ser apagado à parte — é a cara da pessoa, seria o pior a sobrar.
-    signOut: () => {
+    signOut: async () => {
       limparCacheLocal();
       esquecerPreaquecimento();
       limparCromos().catch(() => {});
+      const supabase = await obterSupabase();
       return supabase.auth.signOut();
     },
   };

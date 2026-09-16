@@ -1,9 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import * as Sentry from '@sentry/react'
 import './index.css'
 import App from './App.jsx'
 import { marcarArranque, observarImagens, vigiarLargura } from './lib/diagnostico'
+import { prepararSentry } from './lib/sentryTardio'
 
 // VELOCIDADE 8 (16-set) — PRIMEIRA LINHA DO CORPO, de propósito. Em ESM os
 // imports acima já foram buscados, lidos e EXECUTADOS quando esta linha corre,
@@ -20,15 +20,10 @@ marcarArranque(performance.now());
 const FUTTY_BUILD = 'velocidade-8';
 console.log(`[Futty] build: ${FUTTY_BUILD}`);
 
-// Error tracking (só em produção; DSN via VITE_SENTRY_DSN).
-Sentry.init({
-  dsn: import.meta.env.VITE_SENTRY_DSN,
-  environment: import.meta.env.MODE,
-  enabled: import.meta.env.PROD,
-  tracesSampleRate: 0.1, // 10% de traces
-  replaysSessionSampleRate: 0,
-  replaysOnErrorSampleRate: 0,
-})
+// Error tracking (só em produção; DSN via VITE_SENTRY_DSN). VELOCIDADE 8: o
+// módulo chega 3 s depois da 1ª pintura; até lá uma fila guarda os erros para
+// não se perder nenhum (lib/sentryTardio.js).
+prepararSentry();
 
 // Velocidade 6B: passa a contar quantas imagens do proxy vieram do cache do
 // aparelho — é o número que diz se o ganho é real no celular de verdade.

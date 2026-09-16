@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
-import { supabase } from '../lib/supabase';
+import { obterSupabase } from '../lib/supabaseAsync';
 import { CALLBACK_URL_NATIVO } from '../lib/googleAuth';
 
 export default function DeepLinkListener() {
@@ -36,6 +36,11 @@ export default function DeepLinkListener() {
         }
         const code = params.get('code');
         if (!code) return;
+        // Velocidade 8: este componente está montado na RAIZ, por isso um import
+        // estático do supabase-js aqui punha-o de volta no modulepreload. Ele só
+        // é preciso quando um link de retorno chega mesmo — e nessa altura o
+        // AuthProvider já o pediu há muito.
+        const supabase = await obterSupabase();
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           console.warn('[deepLink] exchangeCodeForSession falhou:', error.message);

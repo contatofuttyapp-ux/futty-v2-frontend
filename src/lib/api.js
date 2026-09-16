@@ -1,6 +1,6 @@
 // Futty v2.0 — Cliente da API backend (com JWT do utilizador)
 import { Capacitor } from '@capacitor/core';
-import { supabase } from './supabase';
+import { obterSupabase } from './supabaseAsync';
 import { registarChamada, lerServerTiming, marcarDadosDaTela } from './diagnostico';
 
 // VELOCIDADE 4 — de onde sai o /api depende de onde a tela está a correr:
@@ -46,6 +46,11 @@ const getsEmVoo = new Map();
 // `segundoPlano: true` (pré-aquecimento): a chamada não conta como dados da tela
 // no Diagnóstico.
 export async function apiFetch(path, { segundoPlano = false, ...options } = {}) {
+  // VELOCIDADE 8: o cliente chega por import dinâmico (lib/supabaseAsync.js).
+  // Aqui já se está dentro de uma função assíncrona que ia esperar pelo
+  // getSession de qualquer maneira — o await a mais não custa ida à rede
+  // nenhuma, e o AuthProvider já pediu o módulo na montagem.
+  const supabase = await obterSupabase();
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -108,6 +113,7 @@ async function pedir(path, options, token, segundoPlano) {
 // Upload genérico (multipart) para qualquer endpoint. Não usa apiFetch porque
 // este força Content-Type JSON (o browser tem de definir o boundary sozinho).
 export async function apiUpload(path, file, field = 'file') {
+  const supabase = await obterSupabase();
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -139,6 +145,7 @@ export async function apiUpload(path, file, field = 'file') {
 // NÃO usa apiFetch porque este força Content-Type JSON, que parte o FormData
 // (o browser tem de definir o boundary do multipart sozinho).
 export async function uploadFile(file) {
+  const supabase = await obterSupabase();
   const {
     data: { session },
   } = await supabase.auth.getSession();

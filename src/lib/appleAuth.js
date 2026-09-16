@@ -11,7 +11,9 @@
 // isso o DeepLinkListener não participa deste fluxo.
 import { Capacitor } from '@capacitor/core';
 import { SignInWithApple } from '@capacitor-community/apple-sign-in';
-import { supabase } from './supabase';
+// Velocidade 8: por obterSupabase(), como o googleAuth — o supabase-js não pode
+// voltar ao modulepreload por um caminho de import estático qualquer.
+import { obterSupabase } from './supabaseAsync';
 import { apiFetch } from './api';
 
 // O mesmo bundle id do projeto Xcode. No Supabase tem de estar em
@@ -102,6 +104,7 @@ export async function entrarComApple() {
       return { error: new Error('A Apple não devolveu o token de identidade.') };
     }
 
+    const supabase = await obterSupabase();
     const { error } = await supabase.auth.signInWithIdToken({
       provider: 'apple',
       token: response.identityToken,
