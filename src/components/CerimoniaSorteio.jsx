@@ -8,6 +8,7 @@
 // selado no giro, véu re-escopado ao interior + cartão fit-to-width, lock-in + molduras vivas
 // na Victory, som selado (somSorteio.js, opt-in off), reserva neutro, X de saída, botões C3.
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Share2 } from 'lucide-react';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { apiFetch } from '../lib/api';
@@ -141,6 +142,33 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
   const btnRef = useRef(null);
   // O toast da máquina nasce dentro do efeito; os botões (React) falam com ele por aqui.
   const toastRef = useRef(() => {});
+  // RODADA 14B — a pílula-guia do rodapé (só quando o botão está fora da tela).
+  // null = escondida; { base } = na tela, com `base` a dizer onde assenta: acima
+  // da bottom-nav quando ela existe (Campeonato), ou null para a safe-area
+  // (CSS) na página do sorteio, que não tem nav.
+  const [pilula, setPilula] = useState(null);
+
+  // Terminado o prêmio (o botão só entra depois dele), se o botão de compartilhar
+  // não está na tela — sorteio grande, 18 jogadores — uma pílula no rodapé aponta
+  // para ele. Some sozinha quando o botão entra em vista e não volta nesse
+  // sorteio; a alavanca esconde o botão (compartilharOn=false esconde a pílula
+  // no render) e este efeito rearma tudo para a corrida seguinte.
+  useEffect(() => {
+    const el = btnRef.current;
+    if (!compartilharOn || !el || typeof IntersectionObserver === 'undefined') return undefined;
+    let jaViu = false;
+    const io = new IntersectionObserver(([entrada]) => {
+      if (entrada.isIntersecting) { jaViu = true; setPilula(null); io.disconnect(); return; }
+      if (jaViu) return;
+      const nav = document.querySelector('.bottom-nav');
+      setPilula({ base: nav ? Math.round(nav.getBoundingClientRect().height) + 10 : null });
+    }, { threshold: 0.5 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [compartilharOn]);
+  function irAoBotao() {
+    btnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   useEffect(() => {
     const root = rootRef.current;
@@ -546,6 +574,16 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
           ))}
         </div>
       </div>
+      {/* A pílula vai por portal ao body: dentro do [data-page] um ancestral com
+          transform/filter prenderia o `fixed` à página. */}
+      {pilula && compartilharOn ? createPortal(
+        <div className="smaqx-pilula" style={pilula.base != null ? { bottom: pilula.base } : undefined}>
+          <button type="button" className="btn hud-corners-s cta-gold smaqx-pilula__btn" onClick={irAoBotao} aria-label="Rolar até o botão de compartilhar os times">
+            <Share2 size={16} /> ↓ Compartilhar os times
+          </button>
+        </div>,
+        document.body,
+      ) : null}
       {/* BannerAd — servido a valer (/api/ads?pagina=sorteio); toggle do dono + menores
           fail-closed no servidor. Sem campanha/OFF → não aparece. */}
       {bannerInterno ? <BannerSorteio /> : null}
