@@ -735,7 +735,11 @@ export default function Figurinha() {
   // de ~450px transbordava e empurrava o F para baixo. Aqui o centro é o do CARD, e
   // quem o dá é o placeItems:center do próprio overlay.
   const overlayGerando = (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 8, clipPath: CLIP_OCTOGONO, background: 'rgba(5,8,16,0.75)', backdropFilter: 'blur(6px)', display: 'grid', placeItems: 'center' }}>
+    // Velocidade 8: sem backdrop-filter. Este overlay fica por cima do card
+    // ENQUANTO o F de carregamento se pinta — ou seja, o compositor teria de
+    // refazer o desfoque a cada quadro da animação, e o que está por baixo é a
+    // figurinha parada. 0,75 + blur ≈ 0,92 chapado no mesmo tom.
+    <div style={{ position: 'absolute', inset: 0, zIndex: 8, clipPath: CLIP_OCTOGONO, background: 'rgba(5,8,16,0.92)', display: 'grid', placeItems: 'center' }}>
       {erroIA ? (
         <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
           {/* LEI DO F: logo oficial transparente (FuttyLogo SVG), estático no erro.
@@ -1339,7 +1343,9 @@ export default function Figurinha() {
           aria-modal="true"
           aria-label="Sua foto"
           onClick={() => setModalFoto(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          /* Velocidade 8: a 0,85 de preto por cima, o blur de 4px não se via —
+             pagava-se uma camada de composição de ecrã inteiro para nada. */
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}

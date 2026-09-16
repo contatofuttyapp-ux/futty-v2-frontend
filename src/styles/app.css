@@ -1687,9 +1687,17 @@
    animação só encena a entrada, e se ela não correr por qualquer motivo a página
    aparece na mesma. É a diferença que importa — nenhum JS precisa de terminar
    para o conteúdo ser visto. */
+/* VELOCIDADE 8 (16-set) — SÓ OPACIDADE. O deslize de 8 px custava, a cada troca
+   de tela, promover a página inteira a camada própria e recompô-la a cada quadro
+   — e a tela inteira, no iPhone 15 Pro Max, é 430×932 a 3x, ou seja 3,6 milhões
+   de pixéis por quadro. Oito pixéis de deslize não pagam isso, e é o momento em
+   que o Pedro diz que "engasga ao trocar de página".
+   De lambuja resolve de vez o `position: fixed` com chão falso: sem transform no
+   keyframe, a .page-transition nunca pode ser containing block de ninguém —
+   a razão pela qual a Rodada 9 teve de trocar `both` por `backwards`. */
 @keyframes pageEntra {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 /* `backwards`, não `both` (Rodada 9). Com `both` o keyframe final ficava
    CONGELADO no elemento para sempre — e um `transform: none` animado resolve-se
@@ -2583,8 +2591,13 @@
 .cer-float { animation: cerBob 4.8s ease-in-out infinite; will-change: transform; }
 @keyframes cerBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 /* jackpot roxo em cinema */
+/* Velocidade 8 (16-set): o estado PARADO já não declara backdrop-filter. Um
+   `blur(0)` não desfoca nada — mas declarar backdrop-filter num elemento fixo de
+   ecrã inteiro obriga o WebKit a manter uma raiz de composição para ele durante
+   a cerimónia inteira, que é o momento mais animado do app. O `.on` fica como
+   está: é o palco selado do sorteio. */
 .cer-jack { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; pointer-events: none;
-  opacity: 0; transition: opacity .4s; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  opacity: 0; transition: opacity .4s; }
 .cer-jack.on { opacity: 1; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65);
   background: rgba(10,8,18,0.35); }
 .cer-jack__t { font-family: 'Rajdhani', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: .18em; text-align: center;

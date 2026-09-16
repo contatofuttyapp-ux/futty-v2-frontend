@@ -103,6 +103,31 @@ export function quandoParado(fn, { paradoMs = PARADO_MS, contarVersaoNova = true
   return cancelar;
 }
 
+// ─── Animações param quando ninguém está a ver (VELOCIDADE 8) ────────────────
+// O fundo aurora (4 blobs com filter: blur(161px), a cada um 40-60% da tela, a
+// derivar e a rodar para sempre) está montado no Layout, ou seja em TODAS as
+// rotas. É a maior conta de desenho contínua do app — e continuava a correr com
+// o app em segundo plano ou com a tela bloqueada, a gastar bateria a desenhar
+// para ninguém.
+//
+// O CSS não sabe o que é document.hidden, por isso marca-se o <html> e o
+// index.css trata do resto (`html[data-oculto]`). Para tudo, não só o fundo:
+// escondido é escondido, nada do que pare pode mudar de aspeto — e não há no app
+// um único sítio a depender de `animationend` para avançar (conferido).
+let vigiaLigada = false;
+
+/** Liga a vigia de visibilidade. Chamada uma vez, no arranque. */
+export function pararAnimacoesForaDeVista() {
+  if (vigiaLigada || typeof document === 'undefined') return;
+  vigiaLigada = true;
+  const aplicar = () => {
+    if (document.hidden) document.documentElement.setAttribute('data-oculto', '');
+    else document.documentElement.removeAttribute('data-oculto');
+  };
+  document.addEventListener('visibilitychange', aplicar);
+  aplicar();
+}
+
 /** Devolve a thread ao browser entre dois passos. Um setTimeout(0) é um quadro. */
 export function respirar() {
   return new Promise((resolve) => setTimeout(resolve, 0));

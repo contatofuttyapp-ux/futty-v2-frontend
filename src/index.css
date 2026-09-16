@@ -171,6 +171,19 @@ body {
   .aurora-particle { animation: none; opacity: var(--aurora-po, 0.11); }
 }
 
+/* VELOCIDADE 8 (16-set) — com o app em segundo plano ou a tela bloqueada, nada
+   se anima. O `data-oculto` é posto no <html> por lib/ritmo.js a ouvir o
+   visibilitychange; o CSS não tem como ver o document.hidden sozinho.
+   Vale para TODAS as animações de propósito: se ninguém está a ver, nada do que
+   parar pode mudar de aspeto — e não há no app um sítio sequer a depender de
+   `animationend` para avançar de estado. `paused` (e não `none`) é o que faz a
+   animação retomar de onde ficou quando a pessoa volta, sem saltos. */
+html[data-oculto] *,
+html[data-oculto] *::before,
+html[data-oculto] *::after {
+  animation-play-state: paused !important;
+}
+
 /* O conteúdo fica acima da aurora (z0). */
 #root {
   position: relative;

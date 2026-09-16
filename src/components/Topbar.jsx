@@ -17,7 +17,22 @@ function HudTopbar({ hud, back }) {
   const textRef = useRef(null);
   const [stepX, setStepX] = useState(128); // unidades do viewBox (default até medir)
 
+  // VELOCIDADE 8 (16-set) — mede UMA VEZ POR MONTAGEM, não a cada rota.
+  //
+  // Duas coisas mudaram. Primeira: as deps eram [hud], e como a Topbar é
+  // remontada a cada troca de tela (o PageTransition leva key={pathname}),
+  // TODA navegação voltava a ligar um ResizeObserver, a pedir dois
+  // getBoundingClientRect (que forçam layout síncrono) e a pendurar-se outra vez
+  // no document.fonts.ready — em cima do momento em que a tela nova está a
+  // pintar. Segunda: o ResizeObserver dispara SEMPRE uma vez ao observar, logo a
+  // seguir ao medir() de arranque: eram duas medições iguais por montagem, e a
+  // segunda podia ainda disparar um setState a meio da pintura.
+  //
+  // Agora: uma medição na montagem, e só se volta a medir se a largura do SVG
+  // mudar de verdade (rodar o telemóvel) ou quando as fontes assentarem — que é
+  // quando o fim do texto muda de sítio, o único motivo real para remedir.
   useLayoutEffect(() => {
+    let largura = 0;
     const medir = () => {
       const svg = svgRef.current;
       const txt = textRef.current;
@@ -25,14 +40,29 @@ function HudTopbar({ hud, back }) {
       const s = svg.getBoundingClientRect();
       const t = txt.getBoundingClientRect();
       if (s.width <= 0) return;
+      largura = s.width;
       const fimTexto = t.right - s.left + 6; // fim de "FIGURINHA" + 6px de respiro
       setStepX(Math.max(20, Math.min(360, (fimTexto / s.width) * 400)));
     };
     medir();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
+
+    let vivo = true;
+    const ro = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver((entradas) => {
+        // O disparo de cortesia do observe() traz a mesma largura que acabámos
+        // de ler: não é uma mudança, e remedir aí é trabalho puro.
+        const nova = entradas[0]?.contentRect?.width;
+        if (nova && Math.abs(nova - largura) > 0.5) medir();
+      })
+      : null;
     if (ro && svgRef.current) ro.observe(svgRef.current);
-    if (document.fonts?.ready) document.fonts.ready.then(medir).catch(() => {});
-    return () => ro && ro.disconnect();
+    // A promessa do fonts.ready já está resolvida da 2ª tela em diante; o
+    // `vivo` é o que impede um setState depois de a Topbar desmontar.
+    if (document.fonts?.ready) document.fonts.ready.then(() => { if (vivo) medir(); }).catch(() => {});
+    return () => {
+      vivo = false;
+      if (ro) ro.disconnect();
+    };
   }, [hud]);
 
   const stepEnd = Math.min(400, stepX + 9); // rampa de 45° com ~9 unidades de largura

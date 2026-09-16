@@ -157,8 +157,14 @@ function ReacoesCompacto({ contagem, minha, pickerAberto, setPickerAberto, toggl
           className="reac-picker hud-corners-s"
           style={{
             position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, display: 'flex', gap: 10,
-            background: 'rgba(20,20,24,0.72)', border: '1px solid rgba(255,255,255,0.12)', padding: '7px 12px', zIndex: 30,
-            backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 8px 22px rgba(0,0,0,0.55)',
+            // VELOCIDADE 8 (16-set) — SEM backdrop-filter. Um backdrop-filter
+            // obriga o compositor a ler o que está por trás e a desfocá-lo a cada
+            // quadro; aqui está dentro de uma LISTA que rola, e o pano de fundo é
+            // sempre o mesmo escuro da casa — o desfoque não tinha nada para
+            // mostrar. O tom fica: 0,72 + blur sobre #050810 dá praticamente o
+            // mesmo cinzento que 0,96 chapado.
+            background: 'rgba(20,20,24,0.96)', border: '1px solid rgba(255,255,255,0.12)', padding: '7px 12px', zIndex: 30,
+            boxShadow: '0 8px 22px rgba(0,0,0,0.55)',
           }}
         >
           {EMOJIS.map((emoji) => (

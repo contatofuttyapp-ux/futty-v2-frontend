@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { marcarArranque, observarImagens, vigiarLargura } from './lib/diagnostico'
 import { prepararSentry } from './lib/sentryTardio'
+import { pararAnimacoesForaDeVista } from './lib/ritmo'
 
 // VELOCIDADE 8 (16-set) — PRIMEIRA LINHA DO CORPO, de propósito. Em ESM os
 // imports acima já foram buscados, lidos e EXECUTADOS quando esta linha corre,
@@ -29,6 +30,9 @@ prepararSentry();
 // aparelho — é o número que diz se o ganho é real no celular de verdade.
 observarImagens();
 vigiarLargura();
+// Velocidade 8: com o app fora de vista, nada se anima (o fundo aurora é a maior
+// conta de desenho contínua do app e está em todas as rotas).
+pararAnimacoesForaDeVista();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
