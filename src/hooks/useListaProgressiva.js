@@ -26,12 +26,25 @@ function mudou(a, b) {
   return a[0] !== b[0] || a[a.length - 1] !== b[b.length - 1];
 }
 
+// FLUIDEZ 2 (16-set) — o "resto" deixa de ser UMA leva.
+//
+// A Velocidade 8 partiu a lista em duas: os primeiros já, o resto dois quadros
+// depois. Só que "o resto" continuava a ser um commit único — numa Resenha com
+// 20 posts, o segundo commit monta 14 cartões de uma vez, cada um com avatar,
+// foto, barra de reações e prévia de comentários. É menos mau do que 20 num só
+// quadro, mas ainda é um quadro que a pessoa sente.
+//
+// Agora o resto entra de 5 em 5, com um quadro entre lotes. Cinco porque é
+// pouco mais do que cabe numa tela de telemóvel: grande o suficiente para a
+// lista não demorar a completar-se, pequeno o suficiente para nenhum lote
+// segurar a tela.
+const POR_LOTE = 5;
+
 /**
  * @param {Array} itens - a lista inteira, já filtrada e ordenada.
  * @param {number} primeiros - quantos entram no 1º commit.
- * @returns {Array} a fatia a desenhar agora (a lista inteira, dois quadros
- *   depois). Listas curtas passam inteiras à primeira — dividir em duas levas
- *   uma lista que já cabe num quadro só acrescentava um quadro de espera.
+ * @returns {Array} a fatia a desenhar agora. Listas curtas passam inteiras à
+ *   primeira — dividir uma lista que já cabe num quadro só acrescentava espera.
  */
 export function useListaProgressiva(itens, primeiros = 6) {
   const lista = itens || VAZIO;
@@ -62,17 +75,24 @@ export function useListaProgressiva(itens, primeiros = 6) {
       startTransition(() => setLimite(Number.MAX_SAFE_INTEGER));
       return undefined;
     }
-    let segundo = null;
-    const primeiro = requestAnimationFrame(() => {
-      segundo = requestAnimationFrame(() => {
-        startTransition(() => setLimite(Number.MAX_SAFE_INTEGER));
-      });
+    // Dois quadros até ao 1º lote (o primeiro ainda cai antes do desenho, o
+    // segundo já corre com a 1ª leva pintada), e um quadro entre lotes.
+    let pedido = null;
+    let vivo = true;
+    const maisUmLote = () => {
+      if (!vivo) return;
+      startTransition(() => setLimite((n) => n + POR_LOTE));
+    };
+    pedido = requestAnimationFrame(() => {
+      pedido = requestAnimationFrame(maisUmLote);
     });
     return () => {
-      cancelAnimationFrame(primeiro);
-      if (segundo != null) cancelAnimationFrame(segundo);
+      vivo = false;
+      if (pedido != null) cancelAnimationFrame(pedido);
     };
-  }, [faltam]);
+    // `limite` na lista de dependências de propósito: cada lote que entra
+    // reagenda o seguinte, até `faltam` ficar falso e o efeito parar sozinho.
+  }, [faltam, limite]);
 
   return faltam ? lista.slice(0, limite) : lista;
 }

@@ -1036,7 +1036,7 @@ export default function Feed() {
                     <div
                       key={`item-${item.kind}-${item.id}`}
                       id={`feed-item-${item.id}`}
-                      className={item.kind === 'post' && item.id === novoPostId ? 'post-recem' : undefined}
+                      className={`feed-item${item.kind === 'post' && item.id === novoPostId ? ' post-recem' : ''}`}
                       style={{ minWidth: 0, maxWidth: '100%' }}
                     >
                       {inner}

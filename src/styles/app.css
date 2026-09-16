@@ -2825,6 +2825,15 @@
 
 /* P2-11 — post recém-publicado: brilho dourado que se apaga em 2s (não mexe no layout,
    só box-shadow em anel). Respeita reduce-motion. */
+/* FLUIDEZ 2 (16-set) — cada cartão da Resenha é uma ilha.
+   `contain: layout paint` diz ao motor que nada dentro do cartão afecta o que
+   está fora dele, nem transborda: um cartão que muda (uma reação, uma imagem a
+   chegar) deixa de obrigar a recalcular a lista inteira.
+   `content-visibility: auto` salta layout e desenho dos cartões fora da tela, e
+   o `contain-intrinsic-size` guarda a altura que eles tinham, para a barra de
+   rolagem não saltar. 420px é a altura típica de um post com foto. */
+.feed-item{contain:layout paint;content-visibility:auto;contain-intrinsic-size:auto 420px}
+
 .post-recem{border-radius:12px;animation:postRecem 2s ease-out 1}
 @keyframes postRecem{
   0%{box-shadow:0 0 0 2px rgba(212,160,23,.85), 0 0 26px 4px rgba(212,160,23,.45)}
