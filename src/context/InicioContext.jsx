@@ -16,8 +16,16 @@ import { usePerfil } from './PerfilContext';
 import { useSessao } from './SessaoContext';
 import { lerCache, gravarCache } from '../lib/cacheLocal';
 import { preaquecer } from '../lib/preaquecerDados';
+import { aoVoltar } from '../lib/regresso';
 
 const CACHE_CHAVE = 'inicio';
+
+// VELOCIDADE 8 (16-set) — quando o app volta do segundo plano, a partir de que
+// idade vale a pena ir buscar o Início outra vez. 60 s: abaixo disso a tela é
+// praticamente a mesma e o pedido só gastava rede; acima, pode já haver jogo
+// novo, presença confirmada ou resultado lançado. Foi o que o Pedro apanhou no
+// build 19: horas com o app aberto, nenhum jogo novo à vista.
+const IDADE_PARA_RECARREGAR_MS = 60000;
 
 const InicioContext = createContext(null);
 
@@ -38,6 +46,9 @@ export function InicioProvider({ children }) {
   // Guarda contra corrida: uma resposta tardia (efeito de montagem ou um
   // reload() anterior) não pode pisar o estado de um pedido mais recente.
   const geracaoRef = useRef(0);
+  // Quando o /api/inicio respondeu pela última vez. É a idade disto que decide
+  // se vale a pena recarregar quando o app volta à frente.
+  const ultimaCargaRef = useRef(0);
 
   // reload() exposto ao contexto — para consumidores chamarem a partir de
   // handlers (ex.: depois de uma ação falhar), nunca a partir de um efeito.
@@ -46,6 +57,7 @@ export function InicioProvider({ children }) {
     try {
       const d = await apiFetch('/api/inicio');
       if (geracaoRef.current !== minhaGeracao) return null;
+      ultimaCargaRef.current = Date.now();
       setDados(d);
       setErro('');
       // O /api/me do AuthGuard já correu antes de qualquer rota montar (é ele
@@ -109,6 +121,7 @@ export function InicioProvider({ children }) {
     apiFetch('/api/inicio')
       .then((d) => {
         if (!ativo || geracaoRef.current !== minhaGeracao) return;
+        ultimaCargaRef.current = Date.now();
         setDados(d);
         setErro('');
         if (d?.me) hidratarPerfil(d.me);
@@ -132,6 +145,19 @@ export function InicioProvider({ children }) {
       ativo = false;
     };
   }, [userId, hidratarPerfil, hidratarTeams, hidratarVotacaoStatus]);
+
+  // VELOCIDADE 8 (16-set) — o app voltou à frente. Se o último /api/inicio já
+  // tem mais de 60 s, busca-se outra vez POR TRÁS: `carregar()` troca os dados
+  // quando a resposta chegar e `carregando` continua falso (só é verdade sem
+  // dados nenhuns), por isso a pessoa nunca vê um F de carregamento — vê a tela
+  // que deixou e, um instante depois, a tela actualizada.
+  useEffect(() => {
+    if (!userId) return undefined;
+    return aoVoltar(() => {
+      if (Date.now() - ultimaCargaRef.current < IDADE_PARA_RECARREGAR_MS) return;
+      carregar();
+    });
+  }, [userId, carregar]);
 
   const value = { dados, carregando, erro, reload: carregar };
   return <InicioContext.Provider value={value}>{children}</InicioContext.Provider>;

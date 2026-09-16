@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApi } from './useApi';
 import { useAuth } from './useAuth';
 import { lerCacheComIdade, gravarCache } from '../lib/cacheLocal';
+import { aoVoltar } from '../lib/regresso';
 
 const FRESCO_PADRAO_MS = 30000;
 
@@ -106,6 +107,25 @@ export function useApiComCache(path, cacheKey, opts = {}) {
       console.warn(`[useApiComCache] ${path} falhou, mantendo cache:`, error);
     }
   }, [error, doCache, path]);
+
+  // VELOCIDADE 8 (16-set) — o app voltou à frente: a aba que está na tela
+  // revalida, se o que ela mostra já passou da janela de frescor. A idade lê-se
+  // do cache OUTRA VEZ (não do `doCache` em estado): aquela foi medida no
+  // instante da montagem e não envelhece sozinha — o app pode ter passado uma
+  // hora em segundo plano com o mesmo objeto em memória.
+  //
+  // reloadBase(), não reload(): o `forcado` é para o "puxar para atualizar" da
+  // pessoa e, uma vez ligado, desliga a janela de frescor para o resto da vida
+  // do componente. Uma revalidação de fundo não deve deixar essa marca. E não
+  // acende loading nenhum (ver useApi.reload): a tela não pisca.
+  useEffect(() => {
+    if (!path || !cacheKey || !userId) return undefined;
+    return aoVoltar(() => {
+      const agora = lerCacheComIdade(userId, cacheKey);
+      if (agora && frescoMs > 0 && agora.idadeMs < frescoMs) return;
+      reloadBase();
+    });
+  }, [path, cacheKey, userId, frescoMs, reloadBase]);
 
   // reload() explícito tem de furar a janela de frescor.
   const reload = useCallback(async () => {
