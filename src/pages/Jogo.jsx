@@ -129,8 +129,11 @@ export default function Jogo() {
       await apiFetch(`/api/games/${id}/sortear`, { method: 'POST', body: JSON.stringify(body) });
       // Junta os dados do jogo (local/data) ao resultado fresco (times_resultado).
       await reload();
-      // A cerimónia corre na PÁGINA do sorteio (SPEC §13d)
-      navigate(`/equipa/${slug}/jogo/${id}/sorteio`);
+      // A cerimónia corre na PÁGINA do sorteio (SPEC §13d). `euSorteei` (Rodada
+      // 12A) diz à cerimónia que quem chega ali acabou de pedir o sorteio — é a
+      // única vista que pode nascer com som. Vai no state da navegação, não na
+      // URL: o link partilhado nunca pode trazer isto colado.
+      navigate(`/equipa/${slug}/jogo/${id}/sorteio`, { state: { euSorteei: true } });
     } catch (err) {
       setActionError(err.message);
     } finally {

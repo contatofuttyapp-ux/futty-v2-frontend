@@ -91,11 +91,15 @@
     font-size:21px;background:linear-gradient(180deg,#fff7d8,#f5d060 45%,#c8940f); 
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
     filter:drop-shadow(0 0 5px rgba(245,224,112,.8)) drop-shadow(0 0 14px rgba(139,92,246,.5))}
-.smaq .somBtn{position:absolute;right:10px;top:10px;z-index:8;width:30px;height:26px;display:grid;place-items:center;cursor:pointer;
-    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.18);color:#8a8a98;
+/* RODADA 12A — o mudo tem de se ver DURANTE a cerimónia: com o som ligado por
+   omissão para quem sorteia, calar é uma saída que a pessoa pode precisar em
+   dois segundos (de noite, no trabalho). Era 30×26 em cinza-fantasma sobre uma
+   máquina cheia de luzes. Agora é 38×32, com o contraste do véu por baixo. */
+.smaq .somBtn{position:absolute;right:10px;top:10px;z-index:8;width:38px;height:32px;display:grid;place-items:center;cursor:pointer;
+    background:rgba(8,6,16,.72);border:1px solid rgba(255,255,255,.34);color:#d8d8e4;
     clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)}
-.smaq .somBtn.on{color:#f0c94a;border-color:#d4a017;background:rgba(212,160,23,.1)}
-.smaq .somBtn svg{width:15px;height:15px}
+.smaq .somBtn.on{color:#f0c94a;border-color:#d4a017;background:rgba(212,160,23,.14)}
+.smaq .somBtn svg{width:18px;height:18px}
 .smaq .somBtn .waves{display:none}
 .smaq .somBtn.on .waves{display:block}
 .smaq .janela{position:relative;background:rgba(0,0,0,.55);border:1px solid rgba(139,92,246,.4);

@@ -27,9 +27,19 @@ const KIT = {
   veu:     { src: urlAsset(CAMINHOS.veu),     vol: 0.55, loop: false },
   vitoria: { src: urlAsset(CAMINHOS.vitoria), vol: 0.55, loop: false },
 };
+const CHAVE_SOM = 'futty_sorteio_som';
 const els = {}, falhou = {};
 let ligado = false;
-try { ligado = localStorage.getItem('futty_sorteio_som') === '1'; } catch { /* SSR/priv */ }
+// RODADA 12A — "nunca escolheu" e "escolheu desligado" deixam de ser a mesma
+// coisa. Os dois davam som desligado, mas só o primeiro pode ser sobreposto pelo
+// padrão de quem toca em "Sortear": quem desligou à mão desligou, e o app não
+// tem o direito de voltar a ligar sozinho.
+let escolheu = false;
+try {
+  const guardado = localStorage.getItem(CHAVE_SOM);
+  escolheu = guardado != null;
+  ligado = guardado === '1';
+} catch { /* SSR/priv */ }
 let ts = { trilhaStart: 0, trilhaStop: 0, vitoriaStart: 0, vitoriaEnd: 0 };
 
 function el(k) {
@@ -56,11 +66,27 @@ function fade(k, ms) {
 
 const SomSorteio = {
   get ligado() { return ligado; },
+  /** A pessoa já decidiu sobre o som neste aparelho? (Rodada 12A) */
+  get escolhido() { return escolheu; },
   toggle(v) {
     ligado = (v === undefined) ? !ligado : !!v;
-    try { localStorage.setItem('futty_sorteio_som', ligado ? '1' : '0'); } catch { /* ignore */ }
+    escolheu = true;
+    try { localStorage.setItem(CHAVE_SOM, ligado ? '1' : '0'); } catch { /* ignore */ }
     if (!ligado) this.silenciar();
     return ligado;
+  },
+  /**
+   * Liga o som por omissão para quem acabou de tocar em "Sortear" (Rodada 12A).
+   *
+   * NÃO grava nada: o localStorage guarda a escolha da PESSOA, e um padrão
+   * gravado vazava para as aberturas seguintes — inclusive as de quem só abre o
+   * resultado pelo link, que tem de continuar em silêncio. Quem já escolheu
+   * alguma coisa neste aparelho manda, ligado ou desligado.
+   */
+  ligarPorOmissao() {
+    if (escolheu) return ligado;
+    ligado = true;
+    return true;
   },
   // ARRANQUE: a trilha (cama) entra em loop, baixa. Idempotente. Limpa restos de festa.
   iniciar() {

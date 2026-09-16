@@ -49,6 +49,18 @@ const SIMB = [
 ];
 const MBPOS = [[20, 2], [80, 2], [2, 40], [97, 40], [2, 72], [97, 72]];
 
+// RODADA 12A — som ligado para QUEM SORTEIA.
+//
+// A lei da casa é "som é opt-in, desligado por omissão", e ela continua de pé
+// para toda a gente que abre um resultado: pelo link, pela lista de jogos, por
+// notificação. A excepção é uma só — quem acabou de tocar em "Sortear" pediu o
+// espectáculo naquele segundo, e entregá-lo mudo é entregá-lo pela metade.
+//
+// Fica atrás desta constante porque é o dono que decide se a excepção existe:
+// `false` devolve o app ao comportamento antigo sem tocar em mais nada. E nunca
+// sobrepõe uma escolha já feita no aparelho (ver SomSorteio.ligarPorOmissao).
+const SOM_PADRAO_QUEM_SORTEIA = true;
+
 // O MESMO RNG do backend (utils/sorteio.js) — a seed partilhada é o contrato do replay.
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -112,7 +124,7 @@ function BannerSorteio() {
  * anúncios na mesma tela seriam duas impressões pela mesma vista. Quem tem slot
  * próprio passa `false`; o /p/ e o Campeonato continuam com a faixa de sempre.
  */
-export default function CerimoniaSorteio({ resultado, autoStart = true, aoComecar, aoTerminar, equipa, data, bannerInterno = true }) {
+export default function CerimoniaSorteio({ resultado, autoStart = true, aoComecar, aoTerminar, equipa, data, bannerInterno = true, euSorteei = false }) {
   const rootRef = useRef(null);
   // props estáveis para o efeito (que corre 1x); um re-sorteio remonta via key no consumidor.
   const cbRef = useRef(aoTerminar);
@@ -332,6 +344,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
     }, 80); timers.add(idFrame);
 
     // ── som (opt-in, lembrado) ──
+    // Rodada 12A: antes de pintar o botão, quem sorteou ganha o som ligado — só
+    // se nunca escolheu nada neste aparelho.
+    if (euSorteei && SOM_PADRAO_QUEM_SORTEIA) SomSorteio.ligarPorOmissao();
     const somBtn = q('.somBtn');
     const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clique p/ ligar)'; };
     const onSom = () => { const on = SomSorteio.toggle(); if (on) { SomSorteio.toque(0.2); SomSorteio.iniciar(); } pintarSom(); };
@@ -429,7 +444,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoComeca
         <div className="fx raios" />
         <div className="palco"><div className="maqbox">
           <div className="maq clip8">
-            <div className="somBtn" title="Som (desligado por padrão)">
+            <div className="somBtn" role="button" tabIndex={0} aria-label="Ligar ou desligar o som" title="Som (desligado por padrão)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
                 <path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" stroke="none" />
                 <g className="waves"><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 6a9 9 0 0 1 0 12" /></g>

@@ -5,7 +5,7 @@
 // Partilha (§9): LINK público (/p/:slug/:gameId) + IMAGEM 9:16 por equipa.
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { apiFetch } from '../lib/api';
 import LoadingFutty from '../components/LoadingFutty';
@@ -20,6 +20,8 @@ const RAJ = "'Rajdhani', sans-serif";
 
 export default function SorteioShow() {
   const { slug, id } = useParams();
+  // Rodada 12A: só quem chegou aqui pelo botão "Sortear" traz isto (ver Jogo.jsx).
+  const euSorteei = !!useLocation().state?.euSorteei;
   const { data, loading } = useApi(`/api/games/${id}`);
   const [toast, setToast] = useState(null);
   const [termoAberto, setTermoAberto] = useState(false);
@@ -122,6 +124,7 @@ export default function SorteioShow() {
               aoComecar={() => setTerminou(false)}
               aoTerminar={() => setTerminou(true)}
               bannerInterno={false}
+              euSorteei={euSorteei}
             />
 
             {/* RODADA 12A — o espaço de publicidade da página do sorteio: IAB
