@@ -8,6 +8,7 @@ import { marcarInstante } from '../lib/diagnostico';
 import { useApi } from '../hooks/useApi';
 import { useSessao } from '../context/SessaoContext';
 import { useRanking } from '../hooks/useRanking';
+import { useListaProgressiva } from '../hooks/useListaProgressiva';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -170,6 +171,14 @@ export default function Ranking() {
   // e useApi(null) já não disparam pedido nenhum com slug ausente.
   const semTime = !slug;
   const { ranking, loading, error, reload } = useRanking(slug);
+  // VELOCIDADE 8 (16-set) — listas grandes pintam em duas levas. As 10 primeiras
+  // são as que cabem na tela (e são as caras: o pódio leva moldura, glow e
+  // flutuação); o resto entra dois quadros depois. Os relatórios do iPhone dão
+  // 1389, 1866 e 2121 ms para pintar esta tela com 23 linhas.
+  // Só divide acima de 15 linhas: abaixo disso a 1ª leva é a lista toda e o hook
+  // devolve-a inteira à primeira — dividir o que já cabe num quadro só
+  // acrescentava um quadro de espera.
+  const linhasADesenhar = useListaProgressiva(ranking, ranking.length > 15 ? 10 : ranking.length);
   const { teams, votacaoStatus } = useSessao();
   // votacaoStatus do SessaoContext já é da equipa PRINCIPAL (teams[0], 1x por
   // sessão) — só dispara pedido próprio quando esta página é de OUTRA equipa.
@@ -283,7 +292,7 @@ export default function Ranking() {
               </div>
             ) : (
               <ListaRanking ranking={ranking}>
-                {ranking.map((p, idx) => (
+                {linhasADesenhar.map((p, idx) => (
                   <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
                 ))}
               </ListaRanking>

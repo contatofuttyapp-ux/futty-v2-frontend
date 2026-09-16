@@ -14,6 +14,7 @@ import { usePerfil } from '../context/PerfilContext';
 import { useTeams } from '../hooks/useTeam';
 import { useAd } from '../hooks/useAd';
 import { useApiComCache } from '../hooks/useApiComCache';
+import { useListaProgressiva } from '../hooks/useListaProgressiva';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import Reacoes from '../components/Reacoes';
 import Comentarios from '../components/Comentarios';
@@ -925,6 +926,13 @@ export default function Feed() {
     () => (items || []).filter((i) => selectedTeam === 'all' || i.team_id === selectedTeam),
     [items, selectedTeam]
   );
+  // VELOCIDADE 8 (16-set) — os 6 primeiros no 1º commit, o resto dois quadros
+  // depois. Um card da Resenha não é uma linha de texto: traz avatar, foto,
+  // reações e a prévia de até 2 comentários (com mais avatares) — vinte deles no
+  // mesmo commit é uma leva de layout e pintura que segura a tela inteira.
+  // Os comentários em si já não montavam fechados (Comentarios devolve null
+  // quando `visivel` é falso, e os efeitos dele saem cedo) — confirmado.
+  const aDesenhar = useListaProgressiva(filtrados, 6);
 
   async function apagarPost(id) {
     setErro('');
@@ -1001,7 +1009,7 @@ export default function Feed() {
                   <p className="muted">Ainda não há jogos na resenha.</p>
                 </div>
               ) : (
-                filtrados.map((item, i) => {
+                aDesenhar.map((item, i) => {
                   const equipa = teams.find((t) => t.id === item.team_id);
                   const ehAdmin = equipa?.role === 'admin';
                   const slug = equipa?.slug || item.team_slug || null;

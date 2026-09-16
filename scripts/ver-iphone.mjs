@@ -1131,6 +1131,18 @@ async function umaVisitaRanking(navegador, sessao, { comCache }) {
   await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('.bottom-nav__tab--ranking', { timeout: 30000 });
   await pagina.waitForSelector('.games-label, .home-empty', { timeout: 30000 });
+  // Velocidade 8 (16-set): esperar que a aba já aponte para o TIME. O marcador
+  // (.games-label) pode aparecer com `teams` ainda vazio, e nessa janela o href
+  // da aba é "/ranking" (a rota sem slug, que mostra "crie o seu time"). Tocar
+  // aí levava a cena para a tela errada e ela morria num timeout de 30 s à
+  // espera de uma .rank-row que nunca ia existir — apanhado 3 vezes em 5 nesta
+  // máquina, onde o backend, o servidor da build e o WebKit disputam a mesma
+  // CPU. Não era defeito do app (confirmado à parte); era a bancada a medir
+  // outra coisa. Teto de 5 s para não trocar um timeout por outro.
+  await pagina
+    .locator('.bottom-nav__tab--ranking[href*="/equipa/"]')
+    .waitFor({ timeout: 5000 })
+    .catch(() => {});
   // No relatório do build 18 o toque veio 214 ms depois de o /api/inicio voltar
   // (o Início já tinha pintado do cache) — antes do pré-aquecimento (1,5 s).
   // force: sem a espera de "elemento parado" do Playwright, que com quadros
