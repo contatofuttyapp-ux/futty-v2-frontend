@@ -252,10 +252,11 @@ function observadorRanking({ lento }) {
 // pelo SW e o Playwright deixa de os ver: a interceção das escritas falhava em
 // silêncio (medido no 1º "antes": o PATCH da ausência e o POST do Diagnóstico
 // chegaram a produção). O app da loja também não usa o SW.
-async function novoContexto(navegador, sessao, { amostrar = true, viewport = null } = {}) {
+async function novoContexto(navegador, sessao, { amostrar = true, viewport = null, extra = {} } = {}) {
   const contexto = await navegador.newContext({
     ...IPHONE,
     ...(viewport ? { viewport } : {}),
+    ...extra,
     ...(amostrar ? {} : { serviceWorkers: 'block' }),
     storageState: sessao ? { cookies: [], origins: [{ origin: BASE, localStorage: sessao }] } : undefined,
   });
@@ -1857,6 +1858,198 @@ async function cenaRodada14b(navegador, sessao) {
   return saida;
 }
 
+/**
+ * RODADA 16B — a luz do prêmio, segunda versão (17-set).
+ * O dono reprovou no aparelho a chuva de moedas (canvas-confetti) e os raios
+ * cônicos a girar atrás dos avatares. No lugar: 3 varreduras de brilho, pulsos
+ * de glow nas bordas (retângulo + avatares) nos três ataques do jackpot e 10
+ * pontos de brilho em cruz em posições fixas. Aqui:
+ *   A) quem sorteou: 6 quadros a contar do instante do jackpot; a meio, a prova
+ *      de que NADA gira no interior (nenhum elemento com rotação na matriz de
+ *      transform nem animação de nome rotativo), nenhum <canvas> de moedas, e
+ *      shine/glints/pulsos a correr; no fim, o estado calmo;
+ *   B) quem abre depois: só o estado final (marquise suave, glow suave, botão
+ *      com glow e sem pulso forte);
+ *   C) movimento reduzido: flash + brilho suave, e mais nada a mexer.
+ */
+/** Carimbos do prêmio: quando .premio entrou e quando o WebKit pintou os frames seguintes. */
+function carimbos16b() {
+  const m = (window.__r16b = { frames: [] });
+  const agora = () => Math.round(performance.now() * 10) / 10;
+  new MutationObserver((lista) => {
+    for (const mu of lista) {
+      const cl = mu.target.classList;
+      if (cl?.contains('maq') && cl.contains('premio') && m.premio == null) {
+        m.premio = agora();
+        const tique = () => requestAnimationFrame((ts) => { m.frames.push(Math.round(ts * 10) / 10); if (m.frames.length < 8) tique(); });
+        tique();
+      }
+      if (cl?.contains('maq') && cl.contains('premioCalmo') && m.calmo == null) m.calmo = agora();
+    }
+  }).observe(document, { subtree: true, attributes: true, attributeFilter: ['class'] });
+}
+function medirLuz16b() {
+  const q = (s) => document.querySelector(s);
+  const qa = (s) => [...document.querySelectorAll(s)];
+  const op = (el, pseudo) => (el ? Math.round(parseFloat(getComputedStyle(el, pseudo).opacity) * 100) / 100 : null);
+  const an = (el, pseudo) => (el ? getComputedStyle(el, pseudo).animationName : null);
+  const maq = q('.smaq .maq');
+  // O relógio da própria luz: currentTime da animação do glow (0 = o 1º pulso).
+  const animGlow = q('.smaq .premioGlow')?.getAnimations?.()[0];
+  const relogioLuz = animGlow ? Math.round(animGlow.currentTime) : null;
+  const c = window.__r16b || {};
+  const carimbos = {
+    desdeClasse: c.premio != null ? Math.round(performance.now() - c.premio) : null,
+    primeiroFrame: c.frames?.[0] != null && c.premio != null ? Math.round(c.frames[0] - c.premio) : null,
+    calmo: c.calmo != null && c.premio != null ? Math.round(c.calmo - c.premio) : null,
+  };
+  // "Nada gira dentro do retângulo": a varredura do shine é skewX (b = 0 na
+  // matriz); qualquer rotação dá b ≠ 0. E nenhuma animação com nome rotativo.
+  const girando = qa('.smaq .interior, .smaq .interior *').filter((el) => {
+    const c = getComputedStyle(el);
+    if (/gira|rot|spin/i.test(c.animationName)) return true;
+    const m = c.transform.match(/^matrix\(([^)]+)\)/);
+    return !!m && Math.abs(parseFloat(m[1].split(',')[1])) > 0.001;
+  }).map((el) => String(el.getAttribute('class') || el.tagName).slice(0, 40));
+  const glints = qa('.smaq .premioGlints i');
+  const molds = qa('.smaq .grupos .mmold');
+  const glow = q('.smaq .premioGlow');
+  // A banda da varredura: onde está o centro dela (em % da largura do interior)
+  // e se está DENTRO do retângulo neste instante — geometria, não captura.
+  const ri = q('.smaq .interior')?.getBoundingClientRect();
+  const banda = (el) => {
+    const r = el.getBoundingClientRect();
+    return {
+      anim: an(el), op: op(el),
+      centro: ri ? Math.round((((r.left + r.right) / 2 - ri.left) / ri.width) * 100) : null,
+      dentro: !!ri && r.right > ri.left + 4 && r.left < ri.right - 4,
+    };
+  };
+  return {
+    premio: !!maq?.classList.contains('premio'),
+    calmo: !!maq?.classList.contains('premioCalmo'),
+    relogioLuz,
+    carimbos,
+    raios: !!q('.smaq .premioRaios'),
+    canvas: !!q('canvas'),
+    girando,
+    shine: qa('.smaq .premioShine i').map(banda),
+    glints: { n: glints.length, acesos: glints.filter((el) => op(el) > 0.05).length, anim: glints[0] ? an(glints[0]) : null },
+    glow: { anim: an(glow), op: op(glow) },
+    avatares: { n: molds.length, anim: molds[0] ? an(molds[0], '::after') : null, op: molds[0] ? op(molds[0], '::after') : null },
+  };
+}
+async function cenaRodada16b(navegador, sessao) {
+  const jogo = await acharJogoSorteado(navegador, sessao);
+  if (!jogo) return { semJogo: true };
+  const ROTA = `/equipa/${TIME}/jogo/${jogo.id}/sorteio`;
+  const erros = [];
+  const saida = { jogo: jogo.id, erros };
+
+  // ── A) quem sorteou: 6 quadros do momento final, UM por cerimónia ──
+  // Uma captura no WebKit trava a página 1-3 s (mesmo a 1x): seis capturas na
+  // mesma cerimónia empurravam os últimos quadros para depois dos 3 s do prêmio.
+  // Então cada quadro é uma cerimónia inteira (a seed repete a mesma) com uma
+  // única captura no instante pedido, e as medidas de dentro da página vão
+  // colhidas nesse mesmo instante, antes da captura. A última cerimónia segue
+  // até ao fim para medir o estado calmo.
+  //
+  // O instante é do RELÓGIO DA LUZ (Animation.currentTime do pulso do glow),
+  // não do relógio da classe: neste WebKit sem GPU cada frame com o véu
+  // desfocado leva ~450 ms e o relógio da animação corre ~450 ms à frente do da
+  // classe (o start time vem do frame anterior, já velho). No iPhone os dois
+  // coincidem a um frame. O 1º quadro é o primeiro frame pintado depois de
+  // .premio, seja lá que hora da luz for.
+  const quadros = [];
+  // Seis quadros a 1x (a sequência) e dois ampliados a 3x só da máquina (a meio
+  // da 2ª varredura e durante a 3ª, com as cartas já reveladas). Os ampliados
+  // pedem cerimónia própria: uma segunda captura na mesma cerimónia sairia
+  // ~1,5 s atrasada. --quadros 1,4,7 corre só esses (iteração rápida).
+  const TODOS = [{ luz: null }, { luz: 500 }, { luz: 950 }, { luz: 1500 }, { luz: 2200 }, { luz: 2750 }, { luz: 1300, zoom: true }, { luz: 2300, zoom: true }];
+  const pedidos = opcao('quadros', '').split(',').map((s) => Number(s)).filter((n) => n >= 1 && n <= TODOS.length);
+  const alvos = pedidos.length ? pedidos.map((n) => TODOS[n - 1]) : TODOS;
+  let final = null; let botao = null; let marcas = null;
+  for (let i = 0; i < alvos.length; i += 1) {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await travarEscritas(contexto);
+    await contexto.addInitScript(() => {
+      if (/\/sorteio$/.test(location.pathname)) history.replaceState({ usr: { euSorteei: true }, key: 'r16b', idx: 0 }, '');
+    });
+    await contexto.addInitScript(carimbosR14b);
+    await contexto.addInitScript(carimbos16b);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`A${i + 1}: ${e.message}`));
+    await pagina.goto(`${BASE}${ROTA}`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.smaq .maq', { timeout: 30000 });
+    await pagina.waitForSelector('.smaq .maq.premio', { timeout: 90000 });
+    const alvo = alvos[i];
+    if (alvo.luz == null) {
+      await pagina.evaluate(() => new Promise((r) => requestAnimationFrame(() => r())));
+    } else {
+      await pagina.waitForFunction((luzAlvo) => {
+        const a = document.querySelector('.smaq .premioGlow')?.getAnimations?.()[0];
+        return !!a && a.currentTime >= luzAlvo;
+      }, alvo.luz, { polling: 40, timeout: 15000 }).catch(() => {});
+    }
+    const luz = await pagina.evaluate(medirLuz16b);
+    const ms = luz.relogioLuz ?? 0;
+    const k = TODOS.indexOf(alvo) + 1;
+    const nome = alvo.zoom ? `premio-zoom-${k}-luz${String(ms).padStart(4, '0')}ms` : `premio-${k}-luz${String(ms).padStart(4, '0')}ms`;
+    if (alvo.zoom) {
+      const caixa = await pagina.evaluate(() => { const r = document.querySelector('.smaq .maq')?.getBoundingClientRect(); return r ? { x: r.left - 12, y: r.top - 12, width: r.width + 24, height: r.height + 24 } : null; });
+      await pagina.screenshot({ path: arquivoCaptura(nome), ...(caixa ? { clip: caixa } : {}) });
+    } else {
+      await pagina.screenshot({ path: arquivoCaptura(nome), scale: 'css' });
+    }
+    quadros.push({ k, alvo: alvo.luz, zoom: !!alvo.zoom, ms, captura: `${ETIQUETA}-${nome}.png`, luz });
+    if (i === alvos.length - 1) {
+      await pagina.waitForSelector('.smaq .compartilhar.on', { timeout: 20000 }).catch(() => {});
+      await espera(900);
+      final = await pagina.evaluate(medirLuz16b);
+      botao = await pagina.evaluate(medirCompartilhar14b);
+      await pagina.screenshot({ path: arquivoCaptura('estado-final-quem-sorteou') });
+      marcas = await pagina.evaluate(() => window.__r14b || {});
+    }
+    await contexto.close();
+  }
+  saida.premio = { quadros, final, botao, marcas };
+
+  // ── B) quem abre depois: só o estado final ──
+  {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`B: ${e.message}`));
+    await pagina.goto(`${BASE}${ROTA}`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.smaq .maq', { timeout: 30000 });
+    await pagina.waitForSelector('.smaq .compartilhar.on', { timeout: 90000 }).catch(() => {});
+    await espera(2500);
+    const luz = await pagina.evaluate(medirLuz16b);
+    const botao = await pagina.evaluate(medirCompartilhar14b);
+    await pagina.screenshot({ path: arquivoCaptura('estado-final-depois') });
+    await contexto.close();
+    saida.depois = { luz, botao };
+  }
+
+  // ── C) movimento reduzido: flash + brilho suave, e nada mais ──
+  {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { reducedMotion: 'reduce' } });
+    await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`C: ${e.message}`));
+    await pagina.goto(`${BASE}${ROTA}`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.smaq .maq', { timeout: 30000 });
+    await pagina.waitForSelector('.smaq .compartilhar.on', { timeout: 30000 }).catch(() => {});
+    await espera(1200);
+    const luz = await pagina.evaluate(medirLuz16b);
+    await pagina.screenshot({ path: arquivoCaptura('movimento-reduzido') });
+    await contexto.close();
+    saida.reduzido = luz;
+  }
+
+  return saida;
+}
+
 async function cenaRodada12c(navegador, sessao) {
   const jogo = await acharJogoSorteado(navegador, sessao);
   const telas = [];
@@ -2355,6 +2548,48 @@ try {
 
       const dp = r.depois;
       console.log(`   ${ok(dp.final.calmo && !dp.final.pulsoForte && dp.final.glow)} quem abre depois: marquise ${dp.final.calmo ? 'em brilho suave' : 'SEM brilho suave'} · pulso forte ${dp.final.pulsoForte ? 'SIM (errado)' : 'não'} · glow ${dp.final.glow ? 'sim' : 'não'} · pílula ${dp.pilula.achou ? 'na tela' : 'não'} (botão ${dp.final.visivel ? 'na tela' : 'fora'})`);
+      if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    }
+  }
+
+  if (CENAS.includes('rodada16b')) {
+    const r = await cenaRodada16b(navegador, sessao);
+    saida.rodada16b = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    console.log('\n[iphone] RODADA 16B · a luz do prêmio, segunda versão');
+    if (r.semJogo) {
+      console.log('   sem jogo sorteado nesta conta — não medido.');
+    } else {
+      const p = r.premio; const f = p.final;
+      const nomes = (l) => l.shine.map((s) => s.anim).join('/');
+      // Os reprovados têm de estar fora em TODOS os quadros — o pior deles manda.
+      const pior = p.quadros.map((q) => q.luz).reduce((a, b) => (b.raios || b.canvas || b.girando.length ? b : a), p.quadros[0].luz);
+      console.log(`   ${ok(!pior.raios && !pior.canvas && pior.girando.length === 0)} reprovados fora (nos 6 quadros): raios ${pior.raios ? 'AINDA NO DOM' : 'não existem'} · canvas de moedas ${pior.canvas ? 'AINDA APARECE' : 'não aparece'} · elementos a girar no interior: ${pior.girando.length}${pior.girando.length ? ` (${pior.girando.join(', ')})` : ''}`);
+      // Durante o prêmio (quadros antes dos 3 s), as três luzes têm de estar a correr.
+      const aCorrer = (l) => l.premio && l.shine.length === 3 && l.shine.every((s) => s.anim === 'premioShine')
+        && l.glints.n >= 8 && l.glints.n <= 12 && l.glints.anim === 'premioGlint'
+        && l.glow.anim === 'premioPulso3' && l.avatares.n > 0 && l.avatares.anim === 'premioPulso3';
+      const noPremio = p.quadros.filter((q) => q.luz.premio);
+      console.log(`   ${ok(noPremio.length >= Math.min(5, p.quadros.length) && noPremio.every((q) => aCorrer(q.luz)))} as três luzes a correr nos ${noPremio.length} quadros com .premio (shine premioShine ×3 · 10 glints premioGlint · glow e avatares premioPulso3)`);
+      const comBanda = p.quadros.filter((q) => q.luz.shine.some((s) => s.dentro));
+      console.log(`   ${ok(comBanda.length > 0)} a varredura atravessa o retângulo: banda dentro em ${comBanda.length} quadro(s) (${comBanda.map((q) => `${q.ms} ms: banda ${q.luz.shine.findIndex((s) => s.dentro) + 1} no centro ${q.luz.shine.find((s) => s.dentro)?.centro}%`).join(' · ') || '—'})`);
+      for (const q of p.quadros) {
+        const l = q.luz; const c = l.carimbos;
+        const bandas = l.shine.map((s, j) => (s.dentro ? `${j + 1}@${s.centro}%` : null)).filter(Boolean).join(',') || 'fora';
+        console.log(`      quadro ${q.k}${q.zoom ? ' (3x)' : ''} · luz aos ${q.ms} ms${q.alvo == null ? ' (1º frame pintado)' : ` (alvo ${q.alvo})`} · classe há ${c.desdeClasse} ms · 1º frame ${c.primeiroFrame >= 0 ? '+' : ''}${c.primeiroFrame} ms · ${l.premio ? 'premio' : l.calmo ? `premioCalmo (aos ${c.calmo} ms)` : 'sem estado'} · banda ${bandas} · glints acesos ${l.glints.acesos}/${l.glints.n} · glow ${l.glow.op} · avatares ${l.avatares.op} · ${q.captura}`);
+      }
+      // O temporizador dos 3 s conta do relógio da classe e as capturas a 3x
+      // travam a página: aqui sai sempre um pouco acima de 3000 — o número
+      // limpo é o da 14B (relógio sem capturas), que continua a valer.
+      if (f.carimbos?.calmo != null) console.log(`   brilho suave (.premioCalmo) aos ${f.carimbos.calmo} ms da classe (3000 + o que as capturas travaram)`);
+      const calmo = (l) => l.calmo && !l.premio && l.shine.every((s) => s.anim === 'none') && l.glints.acesos === 0
+        && l.glow.op > 0.2 && l.glow.op < 0.6 && l.avatares.op > 0.1 && l.avatares.op < 0.5 && l.girando.length === 0;
+      const resumo = (l) => `${l.calmo ? 'premioCalmo' : 'SEM premioCalmo'}${l.premio ? ' + premio (errado)' : ''} · shine ${nomes(l)} · glints acesos ${l.glints.acesos} · glow ${l.glow.op} · avatares ${l.avatares.op} · a girar ${l.girando.length}`;
+      console.log(`   ${ok(calmo(f))} estado final de quem sorteou: ${resumo(f)} · botão pulso forte ${p.botao.pulsoForte ? 'sim' : 'não'} · glow ${p.botao.glow ? 'sim' : 'não'}`);
+      const d = r.depois;
+      console.log(`   ${ok(calmo(d.luz) && !d.botao.pulsoForte && d.botao.glow)} quem abre depois: ${resumo(d.luz)} · botão pulso forte ${d.botao.pulsoForte ? 'SIM (errado)' : 'não'} · glow ${d.botao.glow ? 'sim' : 'não'}`);
+      const z = r.reduzido;
+      console.log(`   ${ok(z.calmo && !z.premio && z.shine.every((s) => s.anim === 'none') && z.glints.acesos === 0 && z.girando.length === 0 && z.glow.op > 0.2)} movimento reduzido: ${resumo(z)}`);
       if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
     }
   }

@@ -14,7 +14,6 @@ import { urlAsset, urlImagem } from '../utils/avatar';
 import { apiFetch } from '../lib/api';
 import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
-import { celebrarPremioSorteio, prepararConfetti } from '../hooks/useConfetti';
 import SomSorteio from './somSorteio';
 import '../styles/app.css';
 import '../styles/sorteio-maquina.css';
@@ -52,6 +51,14 @@ const SIMB = [
   { t: 'av', src: urlAsset(`${ASSET}v9-astronauta.webp`) },
 ];
 const MBPOS = [[20, 2], [80, 2], [2, 40], [97, 40], [2, 72], [97, 72]];
+// RODADA 16B — os pontos de brilho do prêmio: [x%, y%, atraso s, tamanho px], em
+// posições FIXAS do interior, ao redor das cartas. Dez, não mais: elegantes,
+// nunca partículas a cair (a chuva de moedas foi reprovada pelo dono).
+const GLINTS = [
+  [7, 24, 0.15, 22], [93, 20, 0.35, 18], [50, 15, 0.60, 26], [12, 47, 0.85, 18],
+  [88, 43, 1.05, 24], [5, 69, 1.30, 18], [95, 73, 1.50, 22], [30, 60, 1.70, 16],
+  [72, 86, 1.85, 20], [24, 91, 1.95, 18],
+];
 
 // RODADA 12A — som ligado para QUEM SORTEIA.
 //
@@ -300,13 +307,16 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       const id = setTimeout(() => { f.remove(); clones.delete(f); }, 400); timers.add(id);
     }
     // — RODADA 14B: O PRÊMIO. Corre UMA vez, no instante em que "TIMES SORTEADOS"
-    //   acende — o mesmo instante do jackpot.mp3. Marquise em sequência, raios,
-    //   moedas e título são o estado .premio (CSS); aos 3 s vira .premioCalmo, o
-    //   brilho suave que fica. Nada disto roda enquanto a cerimónia ainda sorteia.
+    //   acende — o mesmo instante do jackpot.mp3. Marquise em sequência, título,
+    //   varreduras de brilho, pulsos de glow e pontos de brilho são o estado
+    //   .premio (só CSS); aos 3 s vira .premioCalmo, o brilho suave que fica.
+    //   Nada disto roda enquanto a cerimónia ainda sorteia.
+    //   RODADA 16B: a chuva de moedas (canvas-confetti) e os raios a girar atrás
+    //   dos avatares saíram — reprovados pelo dono no aparelho. Esta tela não
+    //   importa mais a biblioteca de confete.
     function premioAbrir() {
       maq.classList.remove('premioCalmo'); maq.classList.add('premio');
       flashTela();
-      celebrarPremioSorteio(2500);
       const idCalmo = setTimeout(() => { if (vivo) { maq.classList.remove('premio'); maq.classList.add('premioCalmo'); } }, 3000);
       timers.add(idCalmo);
       // O botão de compartilhar sobe 1,5 s depois de o jackpot acabar (3,6 s):
@@ -370,8 +380,6 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       maq.classList.remove('premio', 'premioCalmo');
       // Movimento reduzido: sem cerimónia, e do prêmio só o flash e o brilho suave.
       if (reduzido) { preencherTudo(); flashTela(); maq.classList.add('premioCalmo'); return; }
-      // As moedas vêm de um chunk próprio; pedi-lo agora dá ~10 s de avanço ao jackpot.
-      prepararConfetti();
       q('.saltar').classList.add('on');
       for (let t = 0; t < times.length; t += 1) {
         await girarTime(t); if (saltarFlag) { preencherTudo(); return; } if (!vivo) return;
@@ -532,8 +540,6 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
               <div className="letreiro"><span>Sorteio</span></div>
             </div></div>
             <div className="interior">
-              {/* Rodada 14B — os raios do prêmio, atrás do bloco dos times. */}
-              <div className="premioRaios" />
               <div className="interiorConteudo">
                 <div className="janela">
                   <span className="quem" />
@@ -545,11 +551,25 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
                   <div className="resv"><div className="rhead">Reserva · ordem do banco</div><div className="rrow" /></div>
                 </div>
               </div>
+              {/* Rodada 16B — a luz do prêmio, por cima do bloco dos times e por
+                  baixo do título: 3 varreduras de brilho na diagonal e 10 pontos
+                  de brilho em cruz, em posições fixas. Só CSS (transform/opacity),
+                  e o estado natural dos dois é invisível — sem .premio não se vê. */}
+              <div className="premioShine" aria-hidden="true"><i /><i /><i /></div>
+              <div className="premioGlints" aria-hidden="true">
+                {GLINTS.map(([x, y, d, s], i) => (
+                  <i key={i} style={{ '--x': `${x}%`, '--y': `${y}%`, '--d': `${d}s`, '--s': `${s}px` }} />
+                ))}
+              </div>
               <div className="fimtxt" />
             </div>
             <div className="baseluz"><div className="fila base1" /><div className="fila base2" /></div>
             <span className="placaFutty">Futty</span>
             <div className="maqveu" />
+            {/* Rodada 16B — o glow dourado das bordas do retângulo: pulsa 3 vezes com
+                o jackpot e assenta no brilho suave. Por dentro, porque o clip-path
+                da .maq cortaria qualquer sombra por fora. */}
+            <div className="premioGlow" aria-hidden="true" />
           </div>
           <div className="lever6 lever" title="Puxar o F = repetir a cerimônia">
             <div className="l6-grip"><div className="l6-knob"><img src="/futty-logo-flat.webp" alt="F" /></div></div>

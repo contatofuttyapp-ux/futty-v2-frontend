@@ -30,40 +30,11 @@ async function confetti(opcoes) {
   }
 }
 
-/** Aquece a biblioteca antes da festa — quem sabe que vai precisar chama cedo. */
-export function prepararConfetti() {
-  pedirConfetti().catch(() => {});
-}
+// RODADA 16B (17-set): a chuva de moedas do prêmio do sorteio (F, Rodada 14B)
+// saiu — reprovada pelo dono no aparelho. A cerimónia do sorteio deixou de
+// importar este arquivo; a biblioteca continua a servir as outras festas.
 
 const FESTA = ['#d4a017', '#f5e070', '#8b5cf6', '#a78bfa', '#ffffff'];
-const MOEDAS = ['#f5e070', '#f0c94a', '#d4a017', '#fff7d8', '#c8940f'];
-
-// F) O PRÊMIO do sorteio (Rodada 14B) — chuva de moedas douradas a cair do topo
-// da tela por `duracaoMs`. Redondas (a moeda vista de frente), a cambalear na
-// queda; rajadas curtas em posições sorteadas para não virar cortina. Quem pede
-// movimento reduzido não recebe moeda nenhuma (é a lei do item 1: só o flash).
-export function celebrarPremioSorteio(duracaoMs = 2500) {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const fim = Date.now() + duracaoMs;
-  const rajada = () => {
-    if (Date.now() >= fim) return;
-    confetti({
-      particleCount: 7,
-      angle: 270,
-      spread: 55,
-      startVelocity: 22,
-      gravity: 1.15,
-      drift: (Math.random() - 0.5) * 0.8,
-      ticks: 210,
-      scalar: 0.95,
-      shapes: ['circle'],
-      colors: MOEDAS,
-      origin: { x: 0.08 + Math.random() * 0.84, y: -0.06 },
-    });
-    setTimeout(rajada, 110);
-  };
-  rajada();
-}
 
 // A) Sorteio realizado — dois canhões laterais (dourado + roxo).
 export function celebrarSorteio() {
