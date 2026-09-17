@@ -2,11 +2,25 @@
 
 **Gerado por código, sem material de terceiros.**
 
-Criados em **16 de setembro de 2026** (Rodada 14A). Os cinco efeitos de
-`public/sons/` nascem inteiros em `scripts/gerar-sons.mjs`: síntese em Float32
+Criados em **16 de setembro de 2026** (Rodada 14A) e reafinados em **17 de
+setembro de 2026** (Rodada 16A, avaliação do dono no aparelho). Os cinco efeitos
+de `public/sons/` nascem inteiros em `scripts/gerar-sons.mjs`: síntese em Float32
 (mono, 44,1 kHz) → WAV 16 bits → MP3 pelo `ffmpeg-static`. Nenhum arquivo
 baixado, nenhuma biblioteca de áudio, nenhuma IA de música, nenhuma amostra de
 terceiros — nem de bancos "CC0". O direito autoral é **100% nosso**.
+
+O que a 16A mudou, e por quê (o dono ouviu o build 24 no iPhone):
+
+- **Tique** — o lado mecânico estava bom, mas o digital quase não aparecia.
+  Agora as duas camadas estão em pé de igualdade: o mesmo clique de máquina mais
+  um tom de **tecla de videogame** a −6 dB dele.
+- **Jackpot** — o trecho mais longo descia de tom no fim e soava a **derrota**.
+  Lei nova do dono: **no jackpot nada desce — toda frase sobe ou fica.** O som
+  foi rearranjado como uma escada e a geração agora **falha** se a linha descer
+  (a prova está mais abaixo).
+- **Clac** — intocado, e de propósito: como a semente não mudou e cada tique
+  consome exatamente as mesmas 46 tiragens de antes, o `clac.mp3` sai **bit a
+  bit igual** ao da 14A (MD5 `b06c5105d9d17b9355c436f3aff5ce41`).
 
 Para refazer os arquivos:
 
@@ -36,14 +50,22 @@ fora e o app busca do site em tempo de execução (`urlAsset`).
 
 ### Tique (≈ 60 ms) — o rolo passando um símbolo
 
-Mecânico com um toque digital, "teclas trocando". Duas camadas:
+**Máquina e videogame ao mesmo tempo** (16A). Duas camadas de igual peso:
 
-1. **O clique** — 1 ms de impulso de ruído com rampa descendente, passado por um
-   passa-banda biquad (receita RBJ) na faixa mecânica, e um decaimento
-   exponencial de ~7 ms. O centro do filtro é o que muda entre as variantes:
-   **2600 / 3000 / 3450 Hz** (Q = 1,1), cada um com ±3% de sorteio.
-2. **O blip digital** — onda quadrada de **1120 / 1200 / 1285 Hz** (±1%), 15 ms,
-   decaimento de 4 ms. É o "toque digital" por cima do clique mecânico.
+1. **O clique mecânico** — 1 ms de impulso de ruído com rampa descendente,
+   passado por um passa-banda biquad (receita RBJ) na faixa mecânica, e um
+   decaimento exponencial de ~7 ms. O centro do filtro é o que muda entre as
+   variantes: **2600 / 3000 / 3450 Hz** (Q = 1,1), cada um com ±3% de sorteio.
+2. **O tom de tecla** — metade onda **quadrada**, metade **triangular**, em
+   **1600 / 1900 / 2200 Hz** (±0,5%), **30 ms**, ataque instantâneo (uma
+   amostra, sem rampa) e cauda de 7 ms. A amplitude é medida contra a camada de
+   baixo: **metade do pico do clique, ou seja −6 dB**, como o dono pediu.
+   A cauda é curta de propósito — o tom é quatro vezes mais longo que o clique,
+   e com cauda maior viraria um bip solto em vez de "máquina + videogame".
+
+Medido nos MP3 prontos, nos primeiros 40 ms: o pico do espectro cai exatamente
+em 1600 / 1900 / 2200 Hz, um por variante. O transiente mais alto do arquivo
+continua sendo o clique de metal (é ele que define o pico normalizado).
 
 As três variantes existem para o trem de tiques não soar de máquina de escrever
 elétrica: o app alterna 1 → 2 → 3 a cada tique.
@@ -60,22 +82,55 @@ Peso primeiro, metal por cima:
 
 ### Jackpot (3,6 s) — a slot machine que acabou de dar prêmio
 
-Quatro movimentos. O timbre de sino de todos eles vem da mesma função: seno
-fundamental + harmônicos 2× e 3× + um parcial **inarmônico em 4,2×** e outro em
-5,4×, cada parcial decaindo mais rápido que o de baixo. O inarmônico é o que
-separa "sino" de "flauta" — metal real vibra fora da série harmônica.
+**Lei do dono (16A): nada desce.** Cada movimento entra mais agudo que o
+anterior, e o arranjo é uma escada. O timbre de sino vem da mesma função de
+sempre: seno fundamental + harmônicos 2× e 3× + um parcial **inarmônico em 4,2×**
+e outro em 5,4×, cada parcial decaindo mais rápido que o de baixo. O inarmônico é
+o que separa "sino" de "flauta" — metal real vibra fora da série harmônica.
 
-1. **Arpejo ascendente** (0 → 0,45 s) — Dó maior, **C5-E5-G5-C6-E6-G6**
+1. **Arpejo ascendente de sinos** (0 → 0,50 s) — Dó maior, **C5-E5-G5-C6-E6-G6**
    (523,25 / 659,25 / 783,99 / 1046,50 / 1318,51 / 1567,98 Hz), 90 ms entre
-   notas, cada uma com 1,25 s de cauda e **subindo em volume** (0,42 → 0,73).
-2. **Ding-ding-ding** (0,72 / 0,91 / 1,10 s) — três batidas em C6, mais
-   brilhantes e mais secas que as do arpejo.
-3. **Chuva de moedas** (1,15 → 2,75 s) — 36 impactos de ruído em passa-banda com
-   tom sorteado entre **3 e 6 kHz** (Q = 2,2) mais um tilintar tonal por cima.
-   Os instantes saem da **CDF inversa de uma triangular**: a densidade cresce
-   até o meio da janela e cai depois, e as moedas do miolo batem mais forte.
-4. **Acorde de fecho** (2,40 s) — Dó maior sustentado em sinos (C5-E5-G5-C6),
-   entradas escalonadas de 12 ms, ~1,2 s de cauda.
+   notas, **subindo em volume** (0,40 → 0,69). As caudas são curtas e encurtam
+   com a altura (0,46 → 0,31 s): na 14A o sino de uma nota velha ainda soava
+   depois de a frase ter subido, e o tom "voltava para trás".
+2. **Voz de videogame** (0 → 1,35 s) — por cima do arpejo, nas **mesmas** notas,
+   staccato de 85 ms, e depois **C7 (2093 Hz) segurada** por 0,86 s. É ela que
+   sustenta o tom entre o arpejo e a chuva. Timbre de chip: quadrada de 25% de
+   ciclo somada a uma triangular, mas a quadrada entra por harmônicos ímpares
+   **limitados** (3º a 0,30 e 5º a 0,15) — assim a fundamental continua sendo a
+   nota mais forte do espectro, no celular e na medição.
+3. **Chuva de moedas ASCENDENTE** (1,20 → 2,70 s) — 46 impactos de ruído em
+   passa-banda estreito (Q = 5) com tilintar tonal por cima. O tom **sai do
+   instante**, nunca de sorteio: sobe de **2,5 kHz a 6 kHz** em oitavas iguais no
+   tempo. A densidade **cresce até o fim** (instantes pela CDF inversa de uma
+   densidade linear crescente, x = √u) e o volume acompanha (0,62 → 1,02).
+4. **Fecho** (2,55 → 3,60 s) — primeiro a **varredura para cima**: uma oitava em
+   150 ms (G7 → G8, 3136 → 6272 Hz), com a fase acumulada amostra a amostra e de
+   propósito **discreta** (0,20) — ela passa por baixo da chuva, que nesse
+   instante já está nos 5,5 kHz. Depois o **acorde de Dó maior brilhante**
+   (C6-E6-G6-C7 em sinos, entradas de 12 ms, ~1,0 s de sustain) com uma quadrada
+   em C7 e a **quinta três oitavas acima (G8, 6271,93 Hz)** a segurar o brilho na
+   altura onde a chuva terminou. As vozes graves entram repartidas (0,30 cada):
+   no fecho, 71% da energia está no acorde (900-2500 Hz) e 16% no brilho de
+   6,3 kHz — ouve-se um acorde com brilho por cima, não um chiado.
+
+#### A prova de que nada desce
+
+`scripts/prova-tom.mjs` mede o **MP3 já pronto** (não o buffer): ffmpeg devolve
+PCM, o arquivo é cortado em janelas de **50 ms** com Hann, cada janela passa por
+uma **FFT de 4096** (radix-2, escrita ali; nenhuma dependência nova) e o pico do
+espectro entre 250 Hz e 9 kHz é afinado por interpolação parabólica. Janelas
+abaixo de −38 dB da mais forte não contam como "tom".
+
+A regra: cada janela com tom tem de vir **igual ou mais aguda** que a anterior
+(3% de folga para o jitter da FFT). `node scripts/gerar-sons.mjs` desenha a linha
+em `scripts/capturas/16a-jackpot-tom.png` e **sai com erro** se houver uma queda.
+
+Medido na versão que ficou: 523 → 1568 Hz (arpejo), patamar em 2093 Hz (o C7
+segurado), rampa de 2,7 a 6,3 kHz (as moedas) e patamar final em 6272 Hz (o
+fecho). **Zero quedas** em 70 janelas com tom. Para comparar, o jackpot da 14A
+tinha **10 quedas** — a pior de 4047 Hz para 524 Hz aos 2,40 s, que é exatamente
+o "tan tan tan tan que soa a derrota" que o dono apontou.
 
 ## Regras que valem para todos
 

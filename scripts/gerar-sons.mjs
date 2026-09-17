@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ═══════════════════════════════════════════════════════════════════════════════
-// GERADOR DOS SONS DO SORTEIO — Rodada 14A (16-set-2026)
+// GERADOR DOS SONS DO SORTEIO — Rodada 16A (17-set-2026; nasceu na 14A, 16-set)
 //
 // Direito autoral 100% nosso: cada efeito nasce AQUI, em código. Nenhum arquivo
 // baixado, nenhuma biblioteca de áudio, nenhuma IA de música. A semente é fixa,
@@ -11,6 +11,18 @@
 // Caminho: síntese em Float32 (mono, 44,1 kHz) → WAV 16 bits → ffmpeg-static
 // (já nas devDependencies) → MP3 96 kbps. A receita de cada som está em SONS.md,
 // na raiz do frontend — é o registro de autoria.
+//
+// O que a 16A mudou (avaliação do dono no aparelho, build 24):
+//   • TIQUE — o lado digital quase não aparecia. Agora são duas camadas em pé de
+//     igualdade: o clique mecânico (como estava) e um tom de TECLA de videogame
+//     a -6 dB dele, 1,6 / 1,9 / 2,2 kHz conforme a variante.
+//   • JACKPOT — o "tan tan tan tan" descia de tom no fim e soava a derrota.
+//     Lei nova: no jackpot NADA desce; toda frase sobe ou fica. Foi rearranjado
+//     e a prova sai em gráfico (scripts/prova-tom.mjs) — se a linha descer, esta
+//     geração FALHA.
+//   • CLAC — inalterado, e de propósito: a semente continua a mesma e cada tique
+//     consome exatamente as mesmas 46 tiragens de antes, então o clac sai
+//     bit a bit igual ao da 14A.
 // ═══════════════════════════════════════════════════════════════════════════════
 import { writeFileSync, statSync, mkdirSync, unlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -18,10 +30,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ffmpeg from 'ffmpeg-static';
+import { lerMp3, serieDeTom, desenharGrafico } from './prova-tom.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '..');
 const DESTINO = path.join(RAIZ, 'public', 'sons');
+const CAPTURAS = path.join(AQUI, 'capturas');
 
 const TAXA = 44100;      // Hz
 // Lei do app leve: 96 kbps. Os degraus abaixo existem só para o jackpot: a 96
@@ -31,7 +45,7 @@ const TAXA = 44100;      // Hz
 // 96 kbps ESTÉREO (48 por canal) de todo som que o app já usava.
 const DEGRAUS = ['96k', '80k', '64k'];
 const TETO_BYTES = 40 * 1024;
-const SEMENTE = 14021606; // Rodada 14A · 16-set — fixa, é o que torna isto reproduzível
+const SEMENTE = 14021606; // fixa desde a 14A — é o que torna isto reproduzível
 
 // ── ferramentas de síntese ────────────────────────────────────────────────────
 
@@ -54,6 +68,12 @@ function somar(destino, fonte, inicioSeg, ganho = 1) {
     if (j >= 0 && j < destino.length) destino[j] += fonte[i] * ganho;
   }
 }
+
+const pico = (buf) => {
+  let p = 0;
+  for (let i = 0; i < buf.length; i += 1) p = Math.max(p, Math.abs(buf[i]));
+  return p;
+};
 
 /** Passa-banda biquad (receita RBJ) — é o que dá "corpo" ao ruído branco. */
 function passaBanda(entrada, f0, q) {
@@ -104,13 +124,40 @@ function sino(seg, f, { brilho = 1, curva = 4.5 } = {}) {
   return b;
 }
 
+/**
+ * Voz de videogame — a que grita "passou de fase".
+ * Quadrada de 25% de ciclo (o timbre nasal de chip) somada a uma triangular,
+ * mas a quadrada entra por harmônicos ímpares LIMITADOS (3º e 5º), não pela
+ * onda crua: assim a fundamental continua sendo a nota mais forte do espectro.
+ * Isso não é enfeite — é o que faz a prova de tom medir a NOTA e não o 3º
+ * harmônico, e é o que mantém a frase legível no altofalante do celular.
+ */
+function vozChip(seg, f, { ataque = 0.002, queda = null } = {}) {
+  const b = criar(seg);
+  const tau = queda ?? seg / 3;
+  for (let i = 0; i < b.length; i += 1) {
+    const t = i / TAXA;
+    const w = 2 * Math.PI * f * t;
+    // quadrada 25% aproximada: ímpares com peso decrescente, fundamental dona
+    const quadrada = Math.sin(w) + 0.30 * Math.sin(3 * w) + 0.15 * Math.sin(5 * w);
+    // triangular pela série (ímpares em 1/n², sinal alternado)
+    const tri = Math.sin(w) - Math.sin(3 * w) / 9 + Math.sin(5 * w) / 25;
+    const env = Math.min(1, t / ataque) * Math.exp(-t / tau) * (1 - t / seg);
+    b[i] = (0.72 * quadrada + 0.45 * tri) * env;
+  }
+  return b;
+}
+
 // ── os três efeitos ───────────────────────────────────────────────────────────
 
 /**
  * TIQUE (~60 ms) — o rolo da slot machine passando um símbolo.
- * Mecânico com um toque digital: clique de impulso filtrado em 2-4 kHz mais um
- * blip de onda quadrada curtíssimo, como teclas trocando. As 3 variantes mudam
- * de tom para o trem de tiques não soar de máquina de escrever elétrica.
+ * DUAS camadas em pé de igualdade, que é o pedido do dono na 16A:
+ *   1) máquina — o clique de impulso filtrado na faixa mecânica (2,6-3,45 kHz);
+ *   2) videogame — um tom de TECLA (quadrada + triangular) de 1,6 / 1,9 / 2,2 kHz,
+ *      30 ms, ataque instantâneo, a -6 dB do pico do clique.
+ * As 3 variantes mudam as duas camadas juntas, para o trem de tiques não soar
+ * de máquina de escrever elétrica.
  */
 function gerarTique(variante, rnd) {
   const DUR = 0.060;
@@ -125,14 +172,23 @@ function gerarTique(variante, rnd) {
   for (let i = 0; i < buf.length; i += 1) {
     buf[i] += clique[i] * Math.exp((-i / TAXA) / 0.007) * 1.6;
   }
+  const picoClique = pico(buf);
 
-  // 2) o blip digital: quadrada ~1,2 kHz, 15 ms, decaimento rápido
-  const fBlip = [1120, 1200, 1285][variante] * (0.99 + rnd() * 0.02);
-  const nBlip = Math.round(0.015 * TAXA);
-  for (let i = 0; i < nBlip; i += 1) {
+  // 2) o tom de tecla: 30 ms, ataque instantâneo (uma amostra), cauda de 7 ms.
+  // Mistura meio a meio quadrada e triangular — é o "bip" de console por cima
+  // do clique de metal. Amplitude = metade do pico do clique, ou seja -6 dB.
+  const fTecla = [1600, 1900, 2200][variante] * (0.995 + rnd() * 0.01);
+  const nTecla = Math.round(0.030 * TAXA);
+  for (let i = 0; i < nTecla; i += 1) {
     const t = i / TAXA;
-    const quadrada = Math.sin(2 * Math.PI * fBlip * t) >= 0 ? 1 : -1;
-    buf[i] += quadrada * 0.30 * Math.exp(-t / 0.004);
+    const w = 2 * Math.PI * fTecla * t;
+    const quadrada = Math.sin(w) >= 0 ? 1 : -1;
+    const tri = (2 / Math.PI) * Math.asin(Math.sin(w));
+    // cauda de 7 ms: o tom é quatro vezes mais longo que o clique, então a -6 dB
+    // de PICO ele ainda sobe muito em energia — a cauda curta é o que mantém o
+    // clique de metal por cima, em vez de um bip solto.
+    const env = Math.exp(-t / 0.007) * (1 - i / nTecla);
+    buf[i] += (0.5 * quadrada + 0.5 * tri) * picoClique * 0.5 * env;
   }
   return buf;
 }
@@ -140,7 +196,7 @@ function gerarTique(variante, rnd) {
 /**
  * CLAC (~120 ms) — o rolo TRAVANDO, quando o jogador aparece.
  * Peso primeiro (seno varrendo 90 → 60 Hz: a massa parando), metal por cima
- * (clique curto em 5,2 kHz: a trava encaixando).
+ * (clique curto em 5,2 kHz: a trava encaixando). Intocado desde a 14A.
  */
 function gerarClac(rnd) {
   const DUR = 0.120;
@@ -163,55 +219,93 @@ function gerarClac(rnd) {
   return buf;
 }
 
-/** Uma moeda caindo: ruído filtrado num tom aleatório de 3-6 kHz + tilintar. */
-function moeda(rnd) {
+/**
+ * Uma moeda caindo — agora com o tom MANDADO de fora (nunca sorteado para
+ * baixo): ruído em passa-banda estreito no tom pedido mais o tilintar tonal.
+ */
+function moeda(f, rnd) {
   const DUR = 0.055;
-  const f = 3000 + rnd() * 3000;
-  const fil = passaBanda(ruido(DUR, rnd), f, 2.2);
+  const fil = passaBanda(ruido(DUR, rnd), f, 5);
   const b = criar(DUR);
   for (let i = 0; i < b.length; i += 1) {
     const t = i / TAXA;
-    b[i] = fil[i] * Math.exp(-t / 0.010) * 1.4
-         + Math.sin(2 * Math.PI * f * t) * 0.22 * Math.exp(-t / 0.016);
+    b[i] = fil[i] * Math.exp(-t / 0.009) * 1.5
+         + Math.sin(2 * Math.PI * f * t) * 0.40 * Math.exp(-t / 0.014);
   }
   return b;
 }
 
 /**
- * JACKPOT (~3,6 s) — a slot machine que ACABOU de dar prêmio.
- * Quatro movimentos: arpejo subindo (Dó maior), ding-ding-ding, chuva de moedas
- * e um acorde de sino sustentado fechando.
+ * JACKPOT (3,6 s) — a slot machine que ACABOU de dar prêmio, e que NUNCA desce.
+ *
+ * Quatro movimentos, cada um mais agudo que o anterior — a linha do gráfico é
+ * uma escada que só sobe:
+ *   A) 0,00-0,50  arpejo de sinos C5→G6 (o da 14A, com as caudas graves mais
+ *                 curtas: cauda comprida no grave faz o tom "voltar para trás");
+ *   B) 0,00-1,35  a voz de videogame por cima, nas mesmas notas, terminando em
+ *                 C7 SEGURADA — é ela que sustenta o tom entre o arpejo e a chuva;
+ *   C) 1,20-2,70  chuva de moedas ASCENDENTE: o tom de cada impacto sai do
+ *                 instante (2,5 → 6 kHz), nunca de sorteio, e a densidade cresce
+ *                 até o fim da cascata;
+ *   D) 2,55-3,60  fecho: varredura de uma oitava para CIMA (G7→G8) e acorde de
+ *                 Dó maior brilhante, com a quinta três oitavas acima (G8) a
+ *                 segurar o brilho — o acorde sustenta sem puxar o tom para baixo.
  */
 function gerarJackpot(rnd) {
   const DUR = 3.6;
   const buf = criar(DUR);
 
-  // A) arpejo ascendente C5-E5-G5-C6-E6-G6, 90 ms entre notas, subindo em volume
+  // A) arpejo ascendente C5-E5-G5-C6-E6-G6, 90 ms entre notas, subindo em volume.
+  // Caudas CURTAS e cada vez mais curtas (0,46 → 0,31 s): na 14A o sino de uma
+  // nota velha continuava a soar depois de a frase já ter subido, e o tom
+  // "voltava para trás" — era metade do que o dono ouviu como derrota.
   const NOTAS = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
   NOTAS.forEach((f, i) => {
-    somar(buf, sino(1.25, f), i * 0.090, 0.42 + i * 0.062);
+    somar(buf, sino(0.46 - i * 0.03, f, { curva: 3.8 }), i * 0.090, 0.40 + i * 0.058);
   });
 
-  // B) "ding-ding-ding" — 3 batidas de sino, mais brilhantes e mais secas
-  for (let i = 0; i < 3; i += 1) {
-    somar(buf, sino(0.85, 1046.50, { brilho: 1.35, curva: 5.2 }), 0.72 + i * 0.19, 0.62);
-  }
+  // B) a voz de videogame: as mesmas seis notas, staccato, e o C7 segurado.
+  NOTAS.forEach((f, i) => {
+    somar(buf, vozChip(0.085, f, { queda: 0.055 }), i * 0.090, 0.30 + i * 0.045);
+  });
+  somar(buf, vozChip(0.86, 2093.00, { queda: 0.42 }), 0.54, 0.62);
 
-  // C) chuva de moedas — 36 impactos numa densidade triangular (cresce e cai).
-  // Os instantes saem da CDF inversa da triangular: mais moedas onde a densidade
-  // é maior, sem sortear o mesmo instante duas vezes.
-  const MOEDAS = 36, T0 = 1.15, T1 = 2.75;
+  // C) chuva de moedas — 40 impactos de 1,20 s a 2,70 s.
+  // O tom sobe com o instante (2,5 → 6 kHz, em oitavas iguais no tempo) e a
+  // densidade cresce: os instantes vêm da CDF inversa de uma densidade linear
+  // crescente (x = √u), então cada moeda cai mais perto da seguinte.
+  const MOEDAS = 46, T0 = 1.20, T1 = 2.70, F0 = 2500, F1 = 6000;
   for (let i = 0; i < MOEDAS; i += 1) {
     const u = (i + 0.5) / MOEDAS;
-    const x = u < 0.5 ? Math.sqrt(u / 2) : 1 - Math.sqrt((1 - u) / 2);
-    const pico = 1 - Math.abs(x - 0.5) * 0.8; // as do miolo batem mais forte
-    somar(buf, moeda(rnd), T0 + (T1 - T0) * x, 0.95 * pico);
+    const x = Math.sqrt(u);
+    const f = F0 * (F1 / F0) ** x;
+    somar(buf, moeda(f, rnd), T0 + (T1 - T0) * x, 0.62 + 0.40 * x);
   }
 
-  // D) o fecho: acorde de Dó maior em sinos, ~1,2 s de cauda
-  [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-    somar(buf, sino(1.2, f, { brilho: 0.9, curva: 3.4 }), 2.40 + i * 0.012, 0.40);
+  // D) o fecho. Primeiro a varredura: uma oitava para cima em 150 ms (G7→G8),
+  // com a fase acumulada (uma varredura ingênua estala na emenda).
+  const nVar = Math.round(0.150 * TAXA);
+  const varredura = criar(0.150);
+  let fase = 0;
+  for (let i = 0; i < nVar; i += 1) {
+    const x = i / nVar;
+    const f = 3135.96 * 2 ** x;
+    fase += (2 * Math.PI * f) / TAXA;
+    // de propósito discreta: ela passa POR BAIXO da chuva, que nesse instante
+    // já está nos 5,5 kHz. Mais alta do que isto e o tom dominante cairia dos
+    // 5,5 kHz da chuva para os 3,1 kHz do início da varredura.
+    varredura[i] = (Math.sin(fase) + 0.25 * Math.sin(3 * fase)) * Math.min(1, x * 6) * 0.20;
+  }
+  somar(buf, varredura, 2.55, 1);
+
+  // Acorde de Dó maior brilhante, ~1,0 s de sustain. As vozes graves entram
+  // repartidas (nenhuma sozinha manda no espectro) e a quinta em G8 segura o
+  // brilho lá em cima, na altura onde a chuva de moedas terminou.
+  [1046.50, 1318.51, 1567.98, 2093.00].forEach((f, i) => {
+    somar(buf, sino(1.02, f, { brilho: 1.15, curva: 3.0 }), 2.70 + i * 0.012, 0.30);
   });
+  somar(buf, sino(0.96, 6271.93, { brilho: 0.55, curva: 2.6 }), 2.70, 0.50);
+  somar(buf, vozChip(0.90, 2093.00, { queda: 0.50 }), 2.70, 0.30);
 
   return buf;
 }
@@ -220,10 +314,9 @@ function gerarJackpot(rnd) {
 
 /** Normaliza o pico para -1 dBFS. Nada clipa e nada sai baixo demais. */
 function normalizar(buf, dBFS = -1) {
-  let pico = 0;
-  for (let i = 0; i < buf.length; i += 1) pico = Math.max(pico, Math.abs(buf[i]));
-  if (pico === 0) return buf;
-  const ganho = (10 ** (dBFS / 20)) / pico;
+  const p = pico(buf);
+  if (p === 0) return buf;
+  const ganho = (10 ** (dBFS / 20)) / p;
   for (let i = 0; i < buf.length; i += 1) buf[i] *= ganho;
   return buf;
 }
@@ -279,6 +372,7 @@ function escrever(nome, amostras) {
 // ── principal ─────────────────────────────────────────────────────────────────
 
 mkdirSync(DESTINO, { recursive: true });
+mkdirSync(CAPTURAS, { recursive: true });
 console.log(`[sons] sintetizando em ${path.relative(RAIZ, DESTINO)} · ${DEGRAUS[0]} mono · semente ${SEMENTE}\n`);
 
 const rnd = mulberry32(SEMENTE);
@@ -297,4 +391,18 @@ if (acima.length) {
   console.error(`[sons] FALHA: ${acima.map((f) => f.nome).join(', ')} acima do teto de ${TETO_BYTES / 1024} KB.`);
   process.exit(1);
 }
-console.log('[sons] todos dentro do teto de 40 KB. Receita em SONS.md.');
+
+// Prova do dono (16A): a frequência dominante do jackpot sobe ou fica, nunca
+// desce. Medida no MP3 já pronto — não no buffer — e desenhada em PNG.
+const grafico = path.join(CAPTURAS, '16a-jackpot-tom.png');
+const serie = serieDeTom(lerMp3(path.join(DESTINO, 'jackpot.mp3')));
+const prova = desenharGrafico(serie, grafico, 'JACKPOT - TOM DOMINANTE (FFT 50 MS)');
+console.log(`[sons] prova de tom: ${path.relative(RAIZ, grafico)} · ${prova.fortes}/${prova.total} janelas com tom`);
+if (!prova.ok) {
+  console.error(`[sons] FALHA: o jackpot DESCE de tom em ${prova.quedas.length} ponto(s):`);
+  for (const q of prova.quedas) {
+    console.error(`        ${q.de.toFixed(2)}s ${Math.round(q.hzDe)} Hz → ${q.para.toFixed(2)}s ${Math.round(q.hzPara)} Hz`);
+  }
+  process.exit(1);
+}
+console.log('[sons] a linha do jackpot sobe ou fica — nenhuma queda. Receita em SONS.md.');
