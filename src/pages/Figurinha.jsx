@@ -83,15 +83,16 @@ const KIT_IMG = {
   'elite-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit4-elite-gold.png',
   'royal-purple': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit5-royal-purple.png',
 };
-// Os 4 kits do lançamento (31-jul, dono): mesmo design, cores diferentes.
-// GRÁTIS = só o Dark Gold (a identidade da casa em todo card compartilhado).
-// Os outros 3 são pagos (estado 'pro' → cadeado para free, mesma régua do backend).
+// Os 5 kits do lançamento (31-jul, dono): mesmo design, cores diferentes. Este
+// seletor só existe para quem já tem Brilhante — o cadeado de cada tile é
+// DIREITO (crédito ou pacote do time, ver escolherKit), não plano; `estado`
+// só distingue 'breve' (kit sem asset, nem aparece) dos demais.
 const KITS_FIGURINHA = [
   { id: 'dark-gold', nome: 'Dark Gold', base: '#0d0d12', acento: '#d4a017', estado: 'ativo' },
-  { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'pro' },
-  { id: 'white-gold', nome: 'White Gold', base: '#f8f5f0', acento: '#d4a017', estado: 'pro' },
-  { id: 'elite-gold', nome: 'Elite Gold', base: '#d4a017', acento: '#0d0d12', estado: 'pro' },
-  { id: 'royal-purple', nome: 'Royal Purple', base: '#8b5cf6', acento: '#0d0d12', estado: 'pro' },
+  { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'ativo' },
+  { id: 'white-gold', nome: 'White Gold', base: '#f8f5f0', acento: '#d4a017', estado: 'ativo' },
+  { id: 'elite-gold', nome: 'Elite Gold', base: '#d4a017', acento: '#0d0d12', estado: 'ativo' },
+  { id: 'royal-purple', nome: 'Royal Purple', base: '#8b5cf6', acento: '#0d0d12', estado: 'ativo' },
 ];
 
 // Partículas de luz do fundo "estádio" (valores fixos por partícula → o
@@ -299,15 +300,6 @@ export default function Figurinha() {
     setAvisoPedido(r.ok ? 'Pedido enviado — a gente ativa e avisa.' : r.erro);
     if (r.ok) setBrilhante(await estadoBrilhantes());
   }
-  // (l) Dias até a quota renovar. O backend zera a contagem quando o MÊS muda
-  // (avatar_ia_reset < início do mês corrente) → a renovação é o dia 1 do mês seguinte.
-  // O cálculo de datas é impuro (Date), por isso corre UMA vez no initializer do
-  // useState, não no corpo do render. A contagem só aparece se o /api/me trouxer
-  // avatar_ia_reset; senão omite-se.
-  const [diasAteRenovar] = useState(() =>
-    Math.max(1, Math.ceil((Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1) - Date.now()) / 86400000)),
-  );
-  const diasParaRenovar = me?.user?.avatar_ia_reset ? diasAteRenovar : null;
   // SELOS DE HONRA (Vaga 11C): busca os selos do utilizador; mostra no cromo os 2
   // de maior prioridade que NÃO estejam ocultos (olhinho, persistido). Vêm já
   // ordenados por prioridade (campeonato > ranking) do backend.
@@ -581,16 +573,24 @@ export default function Figurinha() {
       setFotoLocal(null);
       recarregarPerfilGlobal();
     } catch (err) {
-      if (err?.status === 403) setLimiteIA(true);
-      else setErro(err?.message || 'Não foi possível gerar o avatar IA.');
+      // SEM_DIREITO (22-set) não é o "limite" morto — mostrar o card de quota
+      // (que mandaria "Ver Brilhantes" para um 403 que já significa isso)
+      // seria só ruído; o card comum já está pronto, é só revelar. `subirFoto`
+      // só chama esta função quando já há direito confirmado, mas o direito
+      // pode ter acabado entre a checagem e a resposta (corrida rara) — cai
+      // aqui na mesma, sem erro na tela.
+      if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(setBrilhante);
+      else if (err?.status === 403) setLimiteIA(true); // 403 sem código conhecido (defensivo)
+      else setErro(err?.message || 'Não foi possível gerar sua Brilhante.');
     } finally {
       setGerandoIA(false);
-      setEstreiaFase('pronto'); // mostra o cromo (com avatar IA ou a foto)
+      setEstreiaFase('pronto'); // mostra o cromo (com Brilhante ou a foto)
     }
   }
 
   // Trocar foto: preview local imediato + upload para o servidor.
-  // Na estreia, dispara automaticamente a geração do avatar IA.
+  // Na estreia, dispara automaticamente a geração da Brilhante — só quando já
+  // há direito (crédito ou pacote do time); sem ele, a comum já está pronta.
   // Núcleo do upload, reutilizado pelo "tentar de novo" (P1-5). `emEstreia` decide
   // se dispara a geração IA automática a seguir.
   async function subirFoto(file, emEstreia) {
@@ -607,8 +607,15 @@ export default function Figurinha() {
       setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url ?? data.avatar_url, avatar_url: data.avatar_url } } : m));
       setUploadFoto(false);
       ultimoFicheiro.current = null;
-      if (emEstreia) await gerarAvatarIAEstreia(); // auto-trigger
-      else setFotoTrocadaSemGerar(true); // fora da estreia, quem decide gerar é o próprio usuário
+      if (emEstreia) {
+        // SPEC-FIGURINHA-3 (22-set): a estreia só tenta gerar a Brilhante com
+        // direito confirmado (crédito ou pacote do time) — sem isso o POST
+        // dava 403 SEM_DIREITO e a tela mostrava o card de "limite" (que nem
+        // existe mais). Sem direito, a comum já está pronta (o upload acima
+        // gravou foto_url): só falta revelar o cromo, sem tentar nem errar.
+        if (temDireitoDeGerar) await gerarAvatarIAEstreia();
+        else setEstreiaFase('pronto');
+      } else setFotoTrocadaSemGerar(true); // fora da estreia, quem decide gerar é o próprio usuário
     } catch (err) {
       // P1-5 — mensagem accionável (rede/tamanho/formato) + retry inline, não um erro cru.
       setUploadErro(mensagemUploadFoto(err));
@@ -762,8 +769,9 @@ export default function Figurinha() {
     }
   }
 
-  // A2 — toque num kit da grelha. Três caminhos: trancado por plano → /planos;
-  // já gerado (slot) → VESTE via PUT (não gasta quota); sem slot → confirma e gera.
+  // A2 — toque num kit da grelha. Três caminhos: já gerado (slot) → VESTE via
+  // PUT (não gasta direito); sem slot e sem direito → /planos; sem slot e com
+  // direito → confirma e gera.
   async function escolherKit(kit) {
     if (kit.estado === 'breve' || kit.id === kitAtivo || gerandoIA) return;
     // 22-set: o cadeado deixou de ser por PLANO e passou a ser por DIREITO
@@ -781,7 +789,12 @@ export default function Figurinha() {
       }
       return;
     }
-    // Sem slot → gastar 1 geração é irreversível: pede confirmação primeiro.
+    // Sem slot: só dá para gerar com direito. Sem ele, a resposta é /planos —
+    // nunca um confirm() que ia terminar em 403 SEM_DIREITO. "Minha Brilhante"
+    // é o destaque certo: é o único produto que deixa escolher o uniforme (o
+    // pacote do time fixa um só, do dono).
+    if (!temDireitoDeGerar) return navigate('/planos?destaque=minha');
+    // Gastar 1 geração é irreversível: pede confirmação primeiro.
     if (!window.confirm(`Gerar o kit ${kit.nome}? Usa 1 das suas gerações IA.`)) return;
     await gerarAvatarIA(kit.id);
   }
@@ -953,13 +966,13 @@ export default function Figurinha() {
             ) : estreiaFase === 'gerando' ? (
               <>
                 <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando sua figurinha… <EstrelaIA size={14} color="#fff" /></h2>
-                <p style={{ fontSize: 13, color: 'var(--label-color)', margin: 0 }}>Pode demorar até 30 segundos</p>
+                <p style={{ fontSize: 13, color: 'var(--label-color)', margin: 0 }}>Leva uns 45 segundos</p>
               </>
             ) : (
               <>
                 <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: '#fff', margin: 0 }}>Seu card está pronto!</h2>
                 {limiteIA ? (
-                  <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Limite de gerações IA atingido: mostramos o card com sua foto.</p>
+                  <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Não deu para gerar agora: mostramos o card com sua foto.</p>
                 ) : null}
                 <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={partilharCromo}>
                   <Share2 size={18} /> Compartilhar agora
@@ -1320,16 +1333,17 @@ export default function Figurinha() {
             </div>
           ) : null}
 
-          {/* (l) QUOTA (403) — card da família HUD, não um banner de erro. */}
+          {/* (l) 403 sem código conhecido — defensivo: hoje o motor só devolve
+              EMAIL_NAO_CONFIRMADO ou SEM_DIREITO (cada um com seu próprio
+              card), tratados ANTES deste no catch. Isto é o que sobra se um
+              dia aparecer um terceiro — mensagem digna, nunca "limite do mês"
+              (não há limite mensal desde 22-set). */}
           {limiteIA ? (
             <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Você atingiu o limite deste mês</span>
-              {diasParaRenovar != null ? (
-                <span style={{ fontSize: 12, color: 'var(--label-color)' }}>Renova em {diasParaRenovar} {diasParaRenovar === 1 ? 'dia' : 'dias'}</span>
-              ) : null}
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Não deu para gerar agora</span>
               <Link to="/planos" className="btn btn--purple hud-corners" style={{ marginTop: 4, height: 38, paddingLeft: 18, paddingRight: 18, fontSize: 13, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-                Ver planos
+                Ver Brilhantes
               </Link>
             </div>
           ) : null}
@@ -1411,7 +1425,6 @@ export default function Figurinha() {
                 // pra outro fundo e tentar voltar, sel vira false e o cadeado aparece.
                 // Os 6 são de quem tem Brilhante (§4) — e este seletor só existe
                 // com Brilhante. Nenhum cadeado aqui desde 22-set.
-                const bloqueado = false;
                 return (
                   <button
                     key={f.k}
@@ -1442,17 +1455,6 @@ export default function Figurinha() {
                       border: sel ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
                       filter: sel ? 'none' : 'saturate(0.7) brightness(0.85)',
                     }}>
-                      {/* Cadeado + PRO no fundo premium para quem não assina (o desejo vende). */}
-                      {bloqueado ? (
-                        <>
-                          <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#fff', background: 'rgba(0,0,0,0.34)' }}>
-                            <Lock size={14} />
-                          </span>
-                          <span style={{ position: 'absolute', top: 3, right: 3, padding: '1px 4px', borderRadius: 5, background: '#d4a017', color: '#0d0d12', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 800, letterSpacing: '0.05em' }}>
-                            PRO
-                          </span>
-                        </>
-                      ) : null}
                     </div>
                     {/* Nome */}
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: sel ? '#fff' : 'var(--label-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1471,7 +1473,7 @@ export default function Figurinha() {
                   "em breve" na tela. */}
               {KITS_FIGURINHA.filter((kit) => kit.estado !== 'breve').map((kit) => {
                 // A2 — estados reais: VESTIDO (kit_ativo) | GERADO (tem slot, 1 toque veste)
-                // | GERÁVEL (activo sem slot → custa 1 geração) | trancado por plano.
+                // | GERÁVEL (sem slot, com direito → custa 1 geração) | trancado por direito.
                 const vestido = kit.id === kitAtivo;
                 const gerado = slotsKits.includes(kit.id);
                 // Cadeado por DIREITO, não por plano (ver nota em escolherKit):
@@ -1513,14 +1515,13 @@ export default function Figurinha() {
                           <EstrelaIA size={7} color="#d4a017" /> 1 geração
                         </span>
                       ) : null}
-                      {pro ? (
+                      {/* BUG real desta varredura: isto chamava-se `pro` (variável que não
+                          existe mais desde que o cadeado virou DIREITO) — a aba Uniforme
+                          quebrava com ReferenceError sempre que alguém a abria. Só o
+                          cadeado fica; o rótulo "PRO" não existe desde 22-set. */}
+                      {bloqueado ? (
                         <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#fff' }}>
                           <Lock size={14} />
-                        </span>
-                      ) : null}
-                      {pro ? (
-                        <span style={{ position: 'absolute', top: 3, right: 3, padding: '1px 4px', borderRadius: 5, background: '#d4a017', color: '#0d0d12', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 800, letterSpacing: '0.05em' }}>
-                          PRO
                         </span>
                       ) : null}
                     </div>
@@ -1702,7 +1703,7 @@ export default function Figurinha() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'linear-gradient(90deg, rgba(139,92,246,0.18), rgba(212,160,23,0.12))', border: '1px solid rgba(139,92,246,0.4)', boxShadow: '0 0 12px rgba(212,160,23,0.22)' }}>
                   <img
                     src={urlImagem(urlAsset(me?.user?.avatar_url), 128, { quadrado: true })}
-                    alt="Avatar IA"
+                    alt="Brilhante"
                     width={48}
                     height={48}
                     decoding="async"
@@ -1711,13 +1712,13 @@ export default function Figurinha() {
                   />
                   <div style={{ display: 'grid', gap: 3 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#d4a017' }}>
-                      <EstrelaIA size={14} color="#d4a017" /> Avatar IA ativo
+                      <EstrelaIA size={14} color="#d4a017" /> Brilhante ativa
                     </span>
                     <span style={{ fontSize: 11, color: 'var(--label-color)' }}>Gerado a partir desta foto</span>
                   </div>
                 </div>
               ) : (
-                <p style={{ margin: 0, textAlign: 'center', fontSize: 12, color: 'var(--label-color)' }}>Você ainda não gerou seu avatar IA.</p>
+                <p style={{ margin: 0, textAlign: 'center', fontSize: 12, color: 'var(--label-color)' }}>Você ainda não gerou sua Brilhante.</p>
               )}
             </div>
 

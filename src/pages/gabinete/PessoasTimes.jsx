@@ -1,11 +1,18 @@
 // Futty v2.0 — Gabinete 2.0, aba "Pessoas & times". Extraído de Super.jsx
-// (11-set) sem mudar comportamento: lista de usuários (suspender/plano),
-// lista de times (suspender/excluir), fila de denúncias (decidir). A rota
-// /super passa a redirecionar para /gabinete?aba=pessoas — ver Super.jsx.
+// (11-set) sem mudar comportamento: lista de usuários (suspender), lista de
+// times (suspender/excluir), fila de denúncias (decidir). A rota /super passa
+// a redirecionar para /gabinete?aba=pessoas — ver Super.jsx.
 //
-// LEI DO DONO: a Super age sobre a PLATAFORMA (contas, planos, suspensão),
+// LEI DO DONO: a Super age sobre a PLATAFORMA (contas, times, suspensão),
 // NUNCA sobre o CONTEÚDO. Moderação de conteúdo só pelo caminho registado
 // (denúncias → triagem → decisão em log append-only).
+//
+// 22-set (SPEC-FIGURINHA-3): a coluna "Plano" (Free/Pro/Elite, editável) saiu
+// — não geria mais nada desde que o direito de gerar passou a ser crédito ou
+// pacote do time. No lugar, créditos e Brilhante são só CONSULTA; para dar
+// crédito ou ativar um pacote, a rota é a aba "Brilhantes" (routes/gabinete.js),
+// que também resolve o pedido pendente da pessoa — duplicar a escrita aqui
+// deixaria duas portas para a mesma coisa desalinharem.
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
@@ -13,7 +20,6 @@ import { urlImagem } from '../../utils/avatar';
 import EstadoErroRede from '../../components/EstadoErroRede';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
-const PLANOS = ['free', 'pro', 'elite'];
 const PAGE_SIZE = 50;
 
 const btn = {
@@ -42,23 +48,6 @@ function TabUsers({ showMsg }) {
   const users = data?.users || [];
   const total = data?.total || 0;
 
-  async function mudarPlano(u, plano) {
-    const atual = u.plan || 'free';
-    if (plano === atual) return;
-    if (!window.confirm(`Mudar o plano de ${u.email} de "${atual}" para "${plano}"?`)) {
-      reload();
-      return;
-    }
-    try {
-      await apiFetch(`/api/super/users/${u.id}/plano`, { method: 'PATCH', body: JSON.stringify({ plano }) });
-      showMsg('Plano atualizado.');
-      reload();
-    } catch (err) {
-      showMsg(err.message, true);
-      reload();
-    }
-  }
-
   async function definirSuspensao(u, suspenso) {
     const verbo = suspenso ? 'suspender' : 'reativar';
     if (!window.confirm(`Confirma ${verbo} a conta de ${u.email}?`)) return;
@@ -83,7 +72,7 @@ function TabUsers({ showMsg }) {
             <tr>
               <th style={th}>Nome</th>
               <th style={th}>Email</th>
-              <th style={th}>Plano</th>
+              <th style={th}>Brilhante</th>
               <th style={th}>Estado</th>
               <th style={th}>Ações</th>
             </tr>
@@ -94,9 +83,8 @@ function TabUsers({ showMsg }) {
                 <td style={td}>{u.nome || '-'}{u.is_super_admin ? ' (super)' : ''}</td>
                 <td style={td}>{u.email}</td>
                 <td style={td}>
-                  <select value={u.plan || 'free'} onChange={(e) => mudarPlano(u, e.target.value)} style={{ ...btn, padding: '5px 8px', fontSize: 16 }}>
-                    {PLANOS.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
+                  {u.tem_brilhante ? <span style={{ color: '#d4a017', fontWeight: 700 }}>✨ tem</span> : <span style={{ color: 'var(--text-dim)' }}>—</span>}
+                  {u.brilhante_creditos > 0 ? <span style={{ color: 'var(--text-dim)', marginLeft: 6 }}>· {u.brilhante_creditos} crédito{u.brilhante_creditos === 1 ? '' : 's'}</span> : null}
                 </td>
                 <td style={td}>
                   {u.suspenso

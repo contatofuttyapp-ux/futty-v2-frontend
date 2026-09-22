@@ -381,11 +381,13 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
   return (
     <div>
       {/* Regra de 15-set (dono): publicidade passou a valer para todos os planos —
-          Pro/Elite veem metade das oportunidades elegíveis, nunca zero; Free vê
-          todas. Determinístico por usuário+dia (services/inicio.js#metadeDasVezes),
-          não depende de configuração aqui. */}
+          Pro/Elite veem metade das oportunidades elegíveis, nunca zero. 22-set
+          (SPEC-FIGURINHA-3): Free/Pro/Elite saíram das telas sem nunca terem
+          cobrado nada, e ninguém tem `plan` pago hoje — na prática todo mundo
+          vê. A régua de metade (services/inicio.js#metadeDasVezes) fica no
+          código, dormente, para quando existirem planos pagos de anúncios. */}
       <p style={{ ...muted, marginBottom: 14 }}>
-        Publicidade em todos os planos: Free vê sempre que houver campanha elegível; Pro e Elite veem metade das vezes, nunca zero.
+        Todos veem anúncios; a regra de metade fica para quando houver planos pagos de anúncios.
       </p>
 
       <h2 style={sectionH2}>Interruptor geral</h2>

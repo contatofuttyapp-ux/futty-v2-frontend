@@ -9,7 +9,8 @@
 // desativado: cria um pedido de ativação de verdade, que o dono resolve no
 // Gabinete. A regra da casa é que o botão diga a verdade — e "a gente ativa e
 // avisa" é verdade.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Check, Lock } from 'lucide-react';
 import Topbar from '../components/Topbar';
 import { PRODUTOS } from '../lib/planos';
@@ -46,12 +47,22 @@ export default function Planos() {
   const [aPedir, setAPedir] = useState(null); // id do produto com pedido em voo
   const [aviso, setAviso] = useState(null); // { tipo, texto }
   const [timeEscolhido, setTimeEscolhido] = useState(null); // só quando há mais de um
+  // Chegada de um uniforme trancado na Figurinha (?destaque=minha): rola até o
+  // card certo e realça-o, em vez de largar a pessoa numa lista de três sem
+  // dizer qual resolve o que ela veio resolver — nunca um beco.
+  const [searchParams] = useSearchParams();
+  const destaque = searchParams.get('destaque');
+  const refDestaque = useRef(null);
 
   useEffect(() => {
     let vivo = true;
     estadoBrilhantes().then((e) => { if (vivo) setEstado(e); });
     return () => { vivo = false; };
   }, []);
+
+  useEffect(() => {
+    if (destaque && estado) refDestaque.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [destaque, estado]);
 
   // Os times onde a pessoa é dona — é deles que falam o pacote e o manto.
   // BLOCO 2: com mais de um, ela escolhe (o pedido leva o teamId certo, senão o
@@ -104,7 +115,7 @@ export default function Planos() {
         ))}
       </div>
       <main className="app-main" style={{ position: 'relative', zIndex: 1, paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 12 }}>
-        {/* Topbar → cards, directo. Cards EMPILHADOS, ordem Free → Pro → Elite.
+        {/* Topbar → cards, directo. Cards EMPILHADOS, ordem pacote → manto → minha.
             Layout compacto para caber sem scroll em viewports normais. */}
         <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
           {/* Cabeçalho curto: o que estas três coisas são, em uma linha. */}
@@ -137,9 +148,11 @@ export default function Planos() {
             const faltaTime = p.soDono && !meuTime;
             const faltaPacote = p.exigePacote && !meuTime?.brilhante_ativo;
             const atual = jaAtivo;
+            const destacado = p.id === destaque && !atual;
             const heroi = p.id === 'pacote'; // herói da página → levitação subtil
             const card = (
               <div
+                ref={destacado ? refDestaque : undefined}
                 className="hud-corners"
                 style={{
                   position: 'relative',
@@ -159,10 +172,16 @@ export default function Planos() {
                   // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da
                   // figurinha. INTOCADO pela 3.63: a borda/glow do plano actual é
                   // hierarquia, não material. Só a borda NEUTRA adopta a do Perfil.
-                  border: atual ? '2px solid #d4a017' : '1.2px solid rgba(255, 255, 255, 0.06)',
-                  boxShadow: atual ? '0 0 14px rgba(212,160,23,0.45)' : 'none',
+                  border: atual ? '2px solid #d4a017' : destacado ? '2px solid rgba(212,160,23,0.6)' : '1.2px solid rgba(255, 255, 255, 0.06)',
+                  boxShadow: atual ? '0 0 14px rgba(212,160,23,0.45)' : destacado ? '0 0 14px rgba(212,160,23,0.3)' : 'none',
                 }}
               >
+                {/* Realce de chegada (?destaque=): não é "já é seu", só "é este". */}
+                {destacado ? (
+                  <div className="hud-corners-s" role="status" style={{ padding: '7px 10px', fontSize: 11.5, lineHeight: 1.35, textAlign: 'center', color: '#f0c94a', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)' }}>
+                    Escolher o uniforme é aqui
+                  </div>
+                ) : null}
                 {/* Losango decorativo discreto no card destacado. */}
                 {atual ? (
                   <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 9, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />

@@ -81,6 +81,9 @@ const ARQUIVO_SESSAO = opcao('sessao', null);
 // e por isso lê um ficheiro com as três sessões — o que o backend escreve em
 // scripts/_bench/time-de-prova.js.
 const ARQUIVO_SESSOES = opcao('sessoes', path.join(RAIZ, 'scripts', 'capturas', 'sessao-time.json'));
+// Varredura geral (5 contas: novo/membro/dono/super/convidado) — arquivo
+// separado do de cima para as duas cenas de time nunca se confundirem.
+const ARQUIVO_SESSOES_VARREDURA = opcao('sessoes-varredura', path.join(RAIZ, 'scripts', 'capturas', 'sessao-varredura.json'));
 const CENAS = opcao('cenas', 'arranque,ranking,resenha').split(',').map((c) => c.trim()).filter(Boolean);
 const LENTO = args.includes('--lento');
 const PASTA = path.join(RAIZ, 'scripts', 'capturas');
@@ -2186,6 +2189,331 @@ async function cenaRodada17(navegador, sessao) {
 //
 // Custa uma geração real (~US$0,11). O resto é grátis.
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// VARREDURA GERAL PÓS-FIGURINHA 3 (22-set) — três cenas:
+//
+//   1. cenaCriarTime       dono cria o 1º time pela UI, ganha o presente do
+//                          criador, gera a Brilhante real (~US$0,11)
+//   2. cenaConviteRecusa   convidado entra pelo link, pede "Minha Brilhante",
+//                          o super recusa com motivo, o recado volta no
+//                          Início e na Figurinha — sem gerar nada (grátis)
+//   3. cenaVarreduraRotas  crawler genérico: 1 sessão, N rotas concretas,
+//                          checa título, saída, links quebrados, PT-PT,
+//                          "undefined"/"null"/"NaN" e overflow em 430px
+//
+// As sessões vêm de scripts/_bench/contas-varredura.js (backend): um JSON só
+// com as 5 contas (novo/membro/dono/super/convidado).
+// ═══════════════════════════════════════════════════════════════════════════
+async function abrirComoSessao(navegador, sessao, papel, erros, textoDialogo) {
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(`${papel}: ${e.message}`));
+  // window.prompt (recusar, no Gabinete) só aceita COM o texto; window.confirm
+  // (ativar pacote etc.) aceita sem argumento.
+  pagina.on('dialog', (d) => {
+    if (d.type() === 'prompt' && textoDialogo) d.accept(textoDialogo).catch(() => {});
+    else d.accept().catch(() => {});
+  });
+  return { contexto, pagina, texto: () => pagina.locator('body').innerText().catch(() => '') };
+}
+
+async function cenaCriarTime(navegador, sessoes) {
+  const PASTA_V = path.join(PASTA, 'varredura');
+  mkdirSync(PASTA_V, { recursive: true });
+  const foto = (nome) => path.join(PASTA_V, `${ETIQUETA}-criar-time-${nome}.png`);
+  const erros = [];
+  const passos = {};
+  const geracoes = [];
+  const FOTO_PESSOA = path.join(RAIZ, '..', '..', 'BANCADA-FOTOS', 'Gui.jpeg');
+
+  const { contexto, pagina, texto } = await abrirComoSessao(navegador, sessoes.dono, 'dono', erros);
+  pagina.on('request', (r) => { if (r.url().includes('/api/me/avatar/ai')) geracoes.push(Date.now()); });
+
+  // A conta "dono" nasce SEM onboarding feito de propósito: o próprio pedido é
+  // "cadastro → figurinha comum → criar time → presente → Brilhante", a cadeia
+  // inteira. O onboarding NÃO gera nada (SPEC-FIGURINHA-3 §3) — só a comum.
+  await pagina.goto(`${BASE}/onboarding`, { waitUntil: 'domcontentloaded' });
+  await espera(3000);
+  await pagina.screenshot({ path: foto('0a-onboarding') });
+  await pagina.locator('button', { hasText: /Começar/i }).first().click().catch(() => {});
+  await espera(1200);
+  await pagina.locator('input[type="file"]').first().setInputFiles(FOTO_PESSOA);
+  await espera(2500);
+  await pagina.screenshot({ path: foto('0b-crop') });
+  await pagina.locator('button', { hasText: /^Confirmar/i }).first().click().catch(() => {});
+  await espera(9000);
+  passos.geracoesNoCadastro = geracoes.length; // tem de ser 0
+  await pagina.locator('button', { hasText: /^Continuar/i }).first().click().catch(() => {});
+  await espera(1500);
+  await pagina.locator('input').first().fill('DONO').catch(() => {});
+  await espera(400);
+  await pagina.locator('button', { hasText: /^Entrar/i }).first().click().catch(() => {});
+  await espera(6000);
+  passos.saiuDoOnboarding = !/onboarding/.test(pagina.url());
+  await pagina.screenshot({ path: foto('0c-inicio-comum') });
+
+  await pagina.goto(`${BASE}/criar-equipa`, { waitUntil: 'domcontentloaded' });
+  await espera(3000);
+  await pagina.locator('input').first().fill('Varredura FC');
+  await espera(300);
+  await pagina.screenshot({ path: foto('1-nome') });
+  await pagina.locator('button', { hasText: /^Continuar$/ }).first().click(); // passo 1 → 2
+  await espera(700);
+  await pagina.locator('button', { hasText: /^Continuar$/ }).first().click(); // passo 2 → 3
+  await espera(700);
+  await pagina.screenshot({ path: foto('2-modo') });
+
+  const [respCriar] = await Promise.all([
+    pagina.waitForResponse((r) => r.url().includes('/api/teams') && r.request().method() === 'POST'),
+    pagina.locator('button', { hasText: /Criar o time/i }).first().click(),
+  ]);
+  const corpoCriar = await respCriar.json().catch(() => null);
+  passos.teamSlug = corpoCriar?.team?.slug || null;
+  passos.presenteNaAPI = !!corpoCriar?.presente_brilhante;
+
+  await espera(2500);
+  const naPasso4 = await texto();
+  passos.chegouPasso4 = /Chame o seu time/i.test(naPasso4);
+  passos.ganhouBrilhanteNaTela = /Você ganhou uma Figurinha Brilhante/i.test(naPasso4);
+  await pagina.screenshot({ path: foto('3-presente') });
+
+  if (passos.ganhouBrilhanteNaTela) {
+    await pagina.locator('button', { hasText: /Gerar agora/i }).first().click();
+    await espera(3500);
+    passos.foiParaFigurinha = /\/figurinha/.test(pagina.url());
+    const naFigurinha = await texto();
+    passos.figurinhaTemBotaoGerar = /Gerar minha Brilhante/i.test(naFigurinha);
+    await pagina.screenshot({ path: foto('4-figurinha-antes') });
+    if (passos.figurinhaTemBotaoGerar) {
+      await pagina.locator('button', { hasText: /Gerar minha Brilhante/i }).first().click();
+      await espera(2500);
+      await pagina.screenshot({ path: foto('5-gerando') });
+      await pagina.waitForFunction(
+        () => !/sendo criad[ao]/i.test(document.body.innerText),
+        null,
+        { timeout: 120_000 },
+      ).catch((e) => erros.push(`espera da geração: ${e.message.split('\n')[0]}`));
+      await espera(2000);
+      const depois = await texto();
+      passos.brilhanteGerada = !/Gerar minha Brilhante/i.test(depois);
+      await pagina.screenshot({ path: foto('6-brilhante-pronta') });
+    }
+  }
+  passos.geracoesTotais = geracoes.length;
+  await contexto.close();
+  return { erros, passos, geracoes: geracoes.length };
+}
+
+async function cenaConviteRecusa(navegador, sessoes, teamSlugDono) {
+  const PASTA_V = path.join(PASTA, 'varredura');
+  mkdirSync(PASTA_V, { recursive: true });
+  const foto = (nome) => path.join(PASTA_V, `${ETIQUETA}-convite-${nome}.png`);
+  const erros = [];
+  const passos = {};
+  const MOTIVO = 'Pagamento não recebido (prova da varredura).';
+
+  // 1. DONO gera o convite — a mesma rota que o botão do Admin chama.
+  const dono = await abrirComoSessao(navegador, sessoes.dono, 'dono', erros);
+  await dono.pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await espera(1500);
+  const token = await dono.pagina.evaluate(async (slug) => {
+    const chave = Object.keys(localStorage).find((k) => k.includes('auth-token'));
+    const acesso = JSON.parse(localStorage.getItem(chave)).access_token;
+    const r = await fetch(`/api/teams/${slug}/convite`, { method: 'POST', headers: { Authorization: `Bearer ${acesso}` } });
+    const j = await r.json();
+    return j.token || null;
+  }, teamSlugDono);
+  passos.conviteGerado = !!token;
+  await dono.contexto.close();
+
+  // 2. CONVIDADO entra pelo link.
+  const conv = await abrirComoSessao(navegador, sessoes.convidado, 'convidado', erros);
+  await conv.pagina.goto(`${BASE}/convite/${token}`, { waitUntil: 'domcontentloaded' });
+  await espera(3000);
+  await conv.pagina.screenshot({ path: foto('1-convite') });
+  const noConvite = await conv.texto();
+  passos.convitePaginaOk = !/\bundefined\b|\bnull\b|\bNaN\b/i.test(noConvite);
+  const botaoEntrar = conv.pagina.locator('button', { hasText: /Entrar no time|Aceitar/i }).first();
+  passos.temBotaoEntrar = (await botaoEntrar.count()) > 0;
+  if (passos.temBotaoEntrar) {
+    await botaoEntrar.click().catch((e) => erros.push(`aceitar convite: ${e.message.split('\n')[0]}`));
+    await espera(3000);
+  }
+  passos.entrouNoTime = pagUrlTem(conv.pagina, `/equipa/${teamSlugDono}`);
+  await conv.pagina.screenshot({ path: foto('2-entrou') });
+
+  // 3. Início do convidado: card comum (figurinha pronta na hora, sem Brilhante).
+  await conv.pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await espera(5000);
+  await conv.pagina.screenshot({ path: foto('3-inicio') });
+
+  // 4. Planos → pede "Minha Brilhante".
+  await conv.pagina.goto(`${BASE}/planos`, { waitUntil: 'domcontentloaded' });
+  await espera(4000);
+  const botaoMinha = conv.pagina.locator('button', { hasText: /Quero a minha/i }).first();
+  if (await botaoMinha.count()) {
+    // Mesma armadilha do bloco 1 (cartões levitam de propósito): sem o scroll
+    // ao centro, o clique forçado acerta a barra de navegação fixa por baixo.
+    await botaoMinha.evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {});
+    await espera(900);
+    await botaoMinha.click({ force: true }).catch((e) => erros.push(`pedir minha: ${e.message.split('\n')[0]}`));
+    await espera(3000);
+  }
+  const depoisDoPedido = await conv.texto();
+  passos.pedidoEnviado = /Pedido enviado/i.test(depoisDoPedido);
+  await conv.pagina.screenshot({ path: foto('4-pedido') });
+  await conv.contexto.close();
+
+  // 5. SUPER recusa com motivo, no Gabinete.
+  const chefe = await abrirComoSessao(navegador, sessoes.super, 'super', erros, MOTIVO);
+  await chefe.pagina.goto(`${BASE}/gabinete?aba=brilhantes`, { waitUntil: 'domcontentloaded' });
+  await espera(6000);
+  const naFilaAntes = await chefe.texto();
+  passos.pedidoNaFila = naFilaAntes.includes('varredura-convidado@futtymock.com');
+  await chefe.pagina.screenshot({ path: foto('5-gabinete-fila') });
+  const botaoRecusar = chefe.pagina.locator('button', { hasText: /^Recusar$/i }).first();
+  passos.temBotaoRecusar = (await botaoRecusar.count()) > 0;
+  if (passos.temBotaoRecusar) {
+    await botaoRecusar.click();
+    await espera(2500);
+  }
+  const depoisRecusa = await chefe.texto();
+  passos.saiuDaFila = !depoisRecusa.includes('varredura-convidado@futtymock.com');
+  await chefe.pagina.screenshot({ path: foto('6-gabinete-recusado') });
+  await chefe.contexto.close();
+
+  // 6. CONVIDADO volta: vê o recado com o motivo, no Início e na Figurinha.
+  const conv2 = await abrirComoSessao(navegador, sessoes.convidado, 'convidado-volta', erros);
+  await conv2.pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await espera(5000);
+  const inicioFinal = await conv2.texto();
+  passos.recadoNoInicio = inicioFinal.includes(MOTIVO);
+  await conv2.pagina.screenshot({ path: foto('7-inicio-recado') });
+  await conv2.pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await espera(5000);
+  const figurinhaFinal = await conv2.texto();
+  passos.recadoNaFigurinha = figurinhaFinal.includes(MOTIVO);
+  await conv2.pagina.screenshot({ path: foto('8-figurinha-recado') });
+  await conv2.contexto.close();
+
+  return { erros, passos };
+}
+function pagUrlTem(pagina, trecho) {
+  return pagina.url().includes(trecho);
+}
+
+// Rotas concretas de App.jsx (22-set, varredura pós-Figurinha 3). IDs reais de
+// dados demo já existentes (domingueira-fc-demo, vila-olimpica-fc-demo-vila) —
+// só leitura em toda a lista, nada aqui clica em nada. `/jogo/:id/sorteio`
+// fica de fora de propósito: sortear é uma ação real sobre o jogo pendente do
+// time demo, que outras cenas (rodada14a) usam — não se arrisca aqui.
+function montarRotasVarredura(incluirEstaticas) {
+  const TIME_A = 'domingueira-fc-demo';
+  const JOGO_A = 'f2ea1dd4-6ef7-47c6-b0fc-feabc05a8595'; // já sorteado
+  const JOGADOR_A = 'e99d15ee-f728-491c-9f9a-908469ffa787';
+  const TIME_B = 'vila-olimpica-fc-demo-vila';
+  // O campeonato "Vaga 11B" (N times) vive em Storage (utils/campeonatoStore.js),
+  // não na tabela `campeonatos` (026, 2 times fixos, intocada). Um id daquela
+  // tabela aqui dava "Campeonato não encontrado" — achado desta varredura, no
+  // MEU dado de prova, não no produto (ver ONDE-ESTAMOS.md).
+  const CAMPEONATO_B = '11c1e8c8-4faa-4367-bdfc-7a6a6d6497e6'; // "em_curso", pontos corridos
+  const rotas = [
+    { path: '/home', nome: 'home' },
+    { path: '/onboarding', nome: 'onboarding' },
+    { path: '/criar-equipa', nome: 'criar-equipa' },
+    { path: `/equipa/${TIME_A}`, nome: 'equipa' },
+    { path: `/equipa/${TIME_A}/jogos`, nome: 'equipa-jogos' },
+    { path: `/equipa/${TIME_A}/ranking`, nome: 'equipa-ranking' },
+    { path: '/ranking', nome: 'ranking-global' },
+    { path: `/equipa/${TIME_B}/campeonato`, nome: 'campeonato-lista' },
+    { path: `/equipa/${TIME_B}/campeonato/${CAMPEONATO_B}`, nome: 'campeonato-um' },
+    { path: `/equipa/${TIME_A}/jogador/${JOGADOR_A}`, nome: 'jogador-perfil' },
+    { path: `/equipa/${TIME_A}/jogo/novo`, nome: 'jogo-novo' },
+    { path: `/equipa/${TIME_A}/jogo/${JOGO_A}`, nome: 'jogo-um' },
+    { path: `/admin/${TIME_A}`, nome: 'admin' },
+    { path: '/feed', nome: 'feed' },
+    { path: '/figurinha', nome: 'figurinha' },
+    { path: '/diagnostico', nome: 'diagnostico' },
+    { path: '/perfil', nome: 'perfil' },
+    { path: '/planos', nome: 'planos' },
+    { path: '/alterar-password', nome: 'alterar-password' },
+    { path: '/explorar', nome: 'explorar' },
+    { path: '/super', nome: 'super' },
+    { path: '/gabinete', nome: 'gabinete' },
+    { path: '/rota-que-nao-existe-de-verdade', nome: '404' },
+    { path: '/convite/token-invalido-xyz', nome: 'convite-invalido' },
+    { path: `/p/${TIME_A}/${JOGO_A}`, nome: 'sorteio-publico' },
+    { path: `/p/campeonato/${TIME_B}/${CAMPEONATO_B}`, nome: 'campeonato-publico' },
+  ];
+  // Estáticas — não variam com a conta logada; entram só na 1ª leva (--papel novo).
+  if (incluirEstaticas) {
+    rotas.push(
+      { path: '/login', nome: 'login' },
+      { path: '/register', nome: 'register' },
+      { path: '/forgot-password', nome: 'forgot-password' },
+      { path: '/termos', nome: 'termos' },
+      { path: '/privacidade', nome: 'privacidade' },
+      { path: '/excluir-conta', nome: 'excluir-conta' },
+    );
+  }
+  return rotas;
+}
+
+// Marcadores de PT-PT (regra da casa: nunca "tu/ecrã/ficheiro/equipa") e de
+// lixo de render ("undefined"/"null"/"NaN" aparecendo como TEXTO na tela).
+const RE_PTPT = /\bficheiros?\b|\becrãs?\b|\bequipas?\b|\bestás\b|\bfazes\b|\btu\b|\bteu\b|\btua\b|\bteus\b|\btuas\b|\bpodes\b|\bqueres\b/gi;
+const RE_LIXO = /\bundefined\b|\bnull\b|\bNaN\b/g;
+
+async function cenaVarreduraRotas(navegador, sessao, papel, rotas) {
+  const PASTA_V = path.join(PASTA, 'varredura');
+  mkdirSync(PASTA_V, { recursive: true });
+  const erros = [];
+  const achados = [];
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  pagina.on('dialog', (d) => d.dismiss().catch(() => {})); // crawler nunca confirma nada às cegas
+
+  for (const { path: rota, nome } of rotas) {
+    try {
+      await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await espera(2200);
+      const dados = await pagina.evaluate(() => {
+        const texto = document.body.innerText || '';
+        const largura = document.documentElement.clientWidth;
+        const scrollW = document.documentElement.scrollWidth;
+        const linksInternos = [...document.querySelectorAll('a[href^="/"]')].map((a) => a.getAttribute('href'));
+        // Nav do app OU um link/botão de saída explícito nas telas PÚBLICAS
+        // (sem nav): "← "/"voltar"/"início"/"página inicial", um "✕"/"×" de
+        // fechar, ou um link para "/", "/home" ou "/explorar".
+        const temSaida = !!document.querySelector('.bottom-nav, nav, [class*="topbar"], [class*="Topbar"]')
+          || [...document.querySelectorAll('a,button')].some((el) => {
+            const t = (el.textContent || '').trim();
+            return /^(← |voltar|início|ir para a página inicial|procurar times)/i.test(t) || t === '✕' || t === '×'
+              || /fechar|close/i.test(el.getAttribute('aria-label') || '');
+          })
+          || [...document.querySelectorAll('a[href]')].some((a) => ['/', '/home', '/explorar'].includes(a.getAttribute('href')));
+        return { titulo: document.title, texto: texto.slice(0, 8000), overflow: scrollW > largura + 4, scrollW, largura, linksInternos, temSaida };
+      });
+      achados.push({
+        rota, nome,
+        titulo: dados.titulo,
+        overflow: dados.overflow ? `scrollWidth ${dados.scrollW} > viewport ${dados.largura}` : null,
+        temSaida: dados.temSaida,
+        ptpt: [...new Set((dados.texto.match(RE_PTPT) || []).map((s) => s.toLowerCase()))],
+        lixo: [...new Set(dados.texto.match(RE_LIXO) || [])],
+        linksInternos: [...new Set(dados.linksInternos)],
+        urlFinal: pagina.url().replace(BASE, ''),
+      });
+      await pagina.screenshot({ path: path.join(PASTA_V, `${ETIQUETA}-${papel}-${nome}.png`) }).catch((e) => erros.push(`captura ${nome}: ${e.message.split('\n')[0]}`));
+    } catch (e) {
+      achados.push({ rota, nome, erroCarregar: e.message.split('\n')[0] });
+    }
+  }
+  await contexto.close();
+  return { erros, achados };
+}
+
 async function cenaFigurinha3Pacote(navegador, sessoes) {
   const PASTA_P = path.join(PASTA, 'figurinha3-pacote');
   mkdirSync(PASTA_P, { recursive: true });
@@ -2693,9 +3021,11 @@ mkdirSync(PASTA, { recursive: true });
 const navegador = await webkit.launch();
 try {
   console.log(`[iphone] ${ETIQUETA} · ${BASE} · WebKit ${navegador.version()} · 430×932 @3x · cenas ${CENAS.join(',')}${LENTO ? ' · lento' : ''}`);
-  // A cena do pacote traz as SUAS sessões (--sessoes) e não toca na conta demo.
-  // Sem esta saída, pedir só essa cena obrigava a um login que não serve a nada.
-  const soPacote = CENAS.length === 1 && CENAS[0] === 'figurinha3-pacote' && !ARQUIVO_SESSAO;
+  // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
+  // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
+  // um login que não serve a nada.
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura'];
+  const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
     : ARQUIVO_SESSAO
@@ -3077,6 +3407,61 @@ try {
       if (r.erros.some((e) => e.includes('espera da geração'))) console.log('   ATENÇÃO: a espera pela geração estourou o tempo — ver capturas 10/11');
     } else {
       console.log(`   ${ok(true)} botão "Gerar minha Brilhante" escondido sem direito (esta conta não tem crédito/pacote)`);
+    }
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
+  if (CENAS.includes('criar-time')) {
+    const sessoes = JSON.parse(readFileSync(ARQUIVO_SESSOES_VARREDURA, 'utf8'));
+    const r = await cenaCriarTime(navegador, sessoes);
+    saida['criar-time'] = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    const p = r.passos;
+    console.log('\n[iphone] VARREDURA · cadastro → figurinha comum → criar time → presente do criador → Brilhante');
+    console.log(`   ${ok(p.saiuDoOnboarding && p.geracoesNoCadastro === 0)} cadastro dá a comum sem gerar IA: saiu do onboarding ${p.saiuDoOnboarding} · chamadas de IA ${p.geracoesNoCadastro}`);
+    console.log(`   ${ok(p.teamSlug)} time criado: slug "${p.teamSlug}"`);
+    console.log(`   ${ok(p.presenteNaAPI && p.ganhouBrilhanteNaTela)} presente do criador: API ${p.presenteNaAPI} · banner na tela ${p.ganhouBrilhanteNaTela}`);
+    console.log(`   ${ok(p.foiParaFigurinha && p.figurinhaTemBotaoGerar)} "Gerar agora" leva à Figurinha com o botão dourado: ${p.foiParaFigurinha} / ${p.figurinhaTemBotaoGerar}`);
+    console.log(`   ${ok(p.brilhanteGerada && p.geracoesTotais === 1)} Brilhante gerada (1 chamada real): ${p.brilhanteGerada} · chamadas ${p.geracoesTotais}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    console.log(`   >>> guarde o slug "${p.teamSlug}" — precisa dele para: node scripts/_bench/contas-varredura.js --entrar-membro`);
+  }
+
+  if (CENAS.includes('convite-recusa')) {
+    const sessoes = JSON.parse(readFileSync(ARQUIVO_SESSOES_VARREDURA, 'utf8'));
+    const teamSlugDono = opcao('time-dono', null);
+    if (!teamSlugDono) throw new Error('convite-recusa precisa de --time-dono <slug> (o time que a cena "criar-time" criou)');
+    const r = await cenaConviteRecusa(navegador, sessoes, teamSlugDono);
+    saida['convite-recusa'] = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    const p = r.passos;
+    console.log('\n[iphone] VARREDURA · convite → membro entra → pedido → recusa → recado');
+    console.log(`   ${ok(p.conviteGerado)} convite gerado: ${p.conviteGerado}`);
+    console.log(`   ${ok(p.convitePaginaOk && p.temBotaoEntrar)} tela do convite ok (sem lixo) ${p.convitePaginaOk} · botão "Entrar no time" ${p.temBotaoEntrar}`);
+    console.log(`   ${ok(p.entrouNoTime)} convidado entrou no time: ${p.entrouNoTime}`);
+    console.log(`   ${ok(p.pedidoEnviado)} pediu "Minha Brilhante" nos Planos: ${p.pedidoEnviado}`);
+    console.log(`   ${ok(p.pedidoNaFila && p.temBotaoRecusar)} Gabinete lista o pedido com botão Recusar: fila ${p.pedidoNaFila} · botão ${p.temBotaoRecusar}`);
+    console.log(`   ${ok(p.saiuDaFila)} pedido saiu da fila ao recusar: ${p.saiuDaFila}`);
+    console.log(`   ${ok(p.recadoNoInicio && p.recadoNaFigurinha)} recado do motivo volta para o convidado: Início ${p.recadoNoInicio} · Figurinha ${p.recadoNaFigurinha}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
+  if (CENAS.includes('varredura')) {
+    const sessoes = JSON.parse(readFileSync(ARQUIVO_SESSOES_VARREDURA, 'utf8'));
+    const papel = opcao('papel', null);
+    if (!papel || !sessoes[papel]) throw new Error('varredura precisa de --papel <novo|membro|dono|super>');
+    const rotas = montarRotasVarredura(papel === 'novo');
+    const r = await cenaVarreduraRotas(navegador, sessoes[papel], papel, rotas);
+    saida[`varredura-${papel}`] = r;
+    console.log(`\n[iphone] VARREDURA DE ROTAS · ${papel} · ${r.achados.length} rota(s)`);
+    for (const a of r.achados) {
+      const flags = [];
+      if (a.erroCarregar) flags.push(`ERRO AO CARREGAR: ${a.erroCarregar}`);
+      if (a.overflow) flags.push(`OVERFLOW: ${a.overflow}`);
+      if (a.ptpt?.length) flags.push(`PT-PT: ${a.ptpt.join(', ')}`);
+      if (a.lixo?.length) flags.push(`LIXO: ${a.lixo.join(', ')}`);
+      if (a.temSaida === false) flags.push('SEM SAÍDA VISÍVEL');
+      console.log(`   ${flags.length ? 'FALHA' : 'OK'} ${a.rota.padEnd(48)} título "${a.titulo || '—'}"${flags.length ? ` — ${flags.join(' · ')}` : ''}`);
     }
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
