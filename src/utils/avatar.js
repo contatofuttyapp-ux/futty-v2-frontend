@@ -70,11 +70,17 @@ const DEGRAUS = [128, 256, 512, 1024];
  * mais próximo (o motor faz o mesmo, mas assim o URL — e logo a chave do cache
  * do browser — é sempre um dos quatro).
  */
-export function urlImagem(url, w) {
+export function urlImagem(url, w, { quadrado = false } = {}) {
   const s = String(url ?? '').trim();
   if (!s || !s.includes('/api/media/')) return s;
   const alvo = DEGRAUS.reduce((melhor, d) => (Math.abs(d - w) < Math.abs(melhor - w) ? d : melhor), DEGRAUS[0]);
-  return `${s}${s.includes('?') ? '&' : '?'}w=${alvo}`;
+  // `sq=1` — recorte central QUADRADO no servidor (SPEC-FIGURINHA-3 §3). A
+  // figurinha comum é a foto 2:3 da pessoa; os avatares pequenos mostram-na
+  // num círculo/octógono. Cortar no motor poupa um terço dos bytes e escolhe a
+  // região pelo rosto (position: attention), não pelo centro geométrico — que
+  // num retrato cai no peito. OPT-IN: o mesmo proxy serve escudos de time, e
+  // um escudo largo cortado ao meio seria um defeito.
+  return `${s}${s.includes('?') ? '&' : '?'}w=${alvo}${quadrado ? '&sq=1' : ''}`;
 }
 
 /** Atalho: resolve o caminho E escolhe o tamanho, na mesma chamada. */

@@ -582,7 +582,7 @@ export function octagonoCSS() {
   return 8;
 }
 
-async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [], fundoGlints = 'pico', cron = null }) {
+async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [], fundoGlints = 'pico', modo = 'brilhante', cron = null }) {
   const W = largura;
   const H = altura;
   const k = largura / 400;
@@ -591,6 +591,13 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // logo as diagonais ficam a 45° mesmo com H=W) — só muda o enquadramento do avatar
   // e o gradiente inferior. O 'card' 2:3 fica pixel-igual (nenhum ramo o toca).
   const ehQuadrado = formato === 'quadrado';
+  // 'comum' (SPEC-FIGURINHA-3 §3, 22-set) — a figurinha GRÁTIS: a foto da
+  // pessoa COMO ELA É, com o fundo dela, a preencher o card inteiro (cover),
+  // sem IA, sem recorte de fundo e sem os fundos da casa. Mesma moldura, mesma
+  // placa, mesmo 2:3 da Brilhante — é o mesmo álbum, e essa é a razão de ser.
+  // 'brilhante' é tudo o que existia antes deste dia: avatar recortado a
+  // flutuar sobre o fundo escolhido, dentro do octógono.
+  const ehComum = modo === 'comum';
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -644,7 +651,11 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
 
   // Avatar (carregado uma vez; usado tanto no card completo como na camada só-avatar).
   const nome = nomeJogador(jogador);
-  const avatarUrl = fotoOverride || (jogador?.avatar_url ? urlImagem(urlAsset(jogador.avatar_url), 512) : null);
+  // Na COMUM a base é a FOTO (foto_url), não o avatar: o avatar_url de quem não
+  // tem Brilhante é a própria foto, mas quem TEM uma Brilhante e olha para o
+  // card comum (o preview do bloco "Vire Brilhante") tem de ver a foto, não a arte.
+  const origemImagem = ehComum ? (jogador?.foto_url || jogador?.avatar_url) : jogador?.avatar_url;
+  const avatarUrl = fotoOverride || (origemImagem ? urlImagem(urlAsset(origemImagem), 512) : null);
   const ehAbsoluto = avatarUrl && /^https?:\/\//i.test(avatarUrl);
   const avatar = avatarUrl ? await carregarImagem(avatarUrl, ehAbsoluto) : null;
   cron?.marca('avatar:decodificar');
@@ -658,6 +669,21 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // Desenha o avatar real com enquadramento/zoom/posição fixos. Corte LIMPO (sem
   // fade) exactamente na linha onde a placa começa — a placa cobre a linha de corte.
   const desenharAvatar = () => {
+    // COMUM: a foto preenche o card inteiro (object-fit: cover) e vai até à
+    // borda — quem manda no recorte é o CropModal 2:3 do cadastro, não um
+    // enquadramento nosso. Sem sombra (não há nada a flutuar: a foto É o
+    // fundo) e sem inset (o frame desenha-se por cima, como numa moldura de
+    // retrato de verdade). O clip octogonal do conteúdo já está ativo.
+    if (ehComum) {
+      const escala = Math.max(W / avatar.naturalWidth, H / avatar.naturalHeight);
+      const dw = avatar.naturalWidth * escala;
+      const dh = avatar.naturalHeight * escala;
+      // Alinhado ao TOPO quando a foto sobra em altura: numa 2:3 com margem, o
+      // que sobra é chão, não cabeça (a regra de sempre — a coroa nunca é comida).
+      ctx.drawImage(avatar, (W - dw) / 2, dh > H ? 0 : (H - dh) / 2, dw, dh);
+      return;
+    }
+
     // A conta do enquadramento vive em enquadrarAvatar (topo do ficheiro): a
     // prévia em DOM do Início usa a MESMA, senão a troca saltava à vista.
     const { dx, dy, dw, dh } = enquadrarAvatar({
@@ -907,8 +933,14 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     return canvas;
   }
 
-  // 1. FUNDO
-  if (fundo === 'preto') {
+  // 1. FUNDO — na COMUM não há: a foto é o fundo (§3: "a foto como ela é, com
+  // o fundo dela"). Só se pinta um preto por baixo, para o caso de a foto
+  // falhar a carregar e as iniciais precisarem de contraste.
+  if (ehComum) {
+    ctx.fillStyle = '#0a0a12';
+    ctx.fillRect(0, 0, W, H);
+    cron?.marca('fundo:desenhar');
+  } else if (fundo === 'preto') {
     // FASE 3.51 — 'preto' (label "Neutro") era #000 puro e destoava do épico. Passa a
     // partilhar a base escura: mesmo gradiente + vinheta, sem honeycomb/F/luz.
     desenharFundoNeutro(ctx, W, H);
@@ -932,8 +964,9 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   }
 
   // 2. HOLOFOTES — só nos fundos de estádio; Aura e as chapas premium (Golden/Royal)
-  // são luz própria (glow / foil), sem holofotes por cima.
-  if (fundo !== 'aura' && fundo !== 'golden' && fundo !== 'royal') {
+  // são luz própria (glow / foil), sem holofotes por cima. Na COMUM também não:
+  // a luz da foto é a que estava lá quando a pessoa a tirou.
+  if (!ehComum && fundo !== 'aura' && fundo !== 'golden' && fundo !== 'royal') {
     for (const cx of [W * 0.25, W * 0.75]) {
       const g = ctx.createRadialGradient(cx, 0, 0, cx, 0, W * 0.5);
       g.addColorStop(0, 'rgba(255,255,220,0.12)');

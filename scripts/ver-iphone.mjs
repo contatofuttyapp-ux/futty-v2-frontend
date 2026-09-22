@@ -2158,6 +2158,134 @@ async function cenaRodada17(navegador, sessao) {
   };
 }
 
+// ═══ FIGURINHA 3 — comum grátis, Brilhante por direito (22-set) ═══
+//
+// O percurso de quem chega hoje: cadastro → foto → figurinha COMUM na hora
+// (sem esperar IA, sem custo) → o bloco "Vire Brilhante" no lugar dos
+// seletores → Planos com os três produtos → pedido de ativação.
+//
+// Corre com uma conta DESCARTÁVEL e vazia (backend:
+// scripts/_bench/conta-de-prova.js escreve a sessão), porque a conta demo tem
+// a Brilhante das lojas e não pode ser desfeita para provar a comum.
+//
+// SEM a migração 054 aplicada (é o Pedro que a aplica), a metade PAGA do
+// percurso não existe: ninguém tem direito, o botão dourado não aparece e o
+// pedido responde 503 digno. A cena regista o que encontrar em vez de fingir.
+async function cenaFigurinha3(navegador, sessao) {
+  const PASTA_F3 = path.join(PASTA, 'figurinha3');
+  mkdirSync(PASTA_F3, { recursive: true });
+  const foto = (nome) => path.join(PASTA_F3, `${ETIQUETA}-${nome}.png`);
+  const erros = [];
+  const FOTO_PESSOA = path.join(RAIZ, '..', '..', 'BANCADA-FOTOS', 'Gui.jpeg');
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+
+  // Toda chamada à geração paga fica registada: o cadastro NÃO pode disparar
+  // nenhuma (é o coração da spec — antes disparava uma por pessoa).
+  const geracoes = [];
+  pagina.on('request', (r) => {
+    if (r.url().includes('/api/me/avatar/ai')) geracoes.push({ aos: Date.now(), metodo: r.method() });
+  });
+
+  const texto = () => pagina.locator('body').innerText().catch(() => '');
+  const passos = {};
+
+  // ── 1. CADASTRO: a tela da foto ──
+  await pagina.goto(`${BASE}/onboarding`, { waitUntil: 'domcontentloaded' });
+  await espera(3500);
+  await pagina.screenshot({ path: foto('1-onboarding') });
+  // O passo 2 é o da foto; o botão "Começar" leva lá.
+  await pagina.locator('button', { hasText: /Começar/i }).first().click().catch(() => {});
+  await espera(1200);
+  await pagina.screenshot({ path: foto('2-onboarding-foto') });
+
+  // ── 2. A FOTO → CropModal 2:3 → figurinha comum na hora ──
+  await pagina.locator('input[type="file"]').first().setInputFiles(FOTO_PESSOA);
+  await espera(2500);
+  const noCrop = await texto();
+  passos.cropTem23 = /2:3/.test(noCrop);
+  passos.cropTem11 = /1:1/.test(noCrop);
+  await pagina.screenshot({ path: foto('3-crop-2x3') });
+  await pagina.locator('button', { hasText: /^Confirmar/i }).first().click().catch(() => {});
+  await espera(9000); // upload real (grátis)
+  passos.geracoesNoCadastro = geracoes.length;
+  await pagina.screenshot({ path: foto('4-foto-no-cadastro') });
+
+  // ── 2b. CONCLUIR o cadastro: nome → Entrar → Início ──
+  // Sem isto o OnboardingGate devolve qualquer rota de volta a /onboarding, e
+  // a prova mede a tela de boas-vindas em vez da Figurinha (foi o que deu na
+  // primeira corrida desta cena).
+  await pagina.locator('button', { hasText: /^Continuar/i }).first().click().catch(() => {});
+  await espera(1500);
+  await pagina.locator('input').first().fill('PROVA').catch(() => {});
+  await espera(400);
+  await pagina.screenshot({ path: foto('4b-nome') });
+  await pagina.locator('button', { hasText: /^Entrar/i }).first().click().catch(() => {});
+  await espera(9000); // conclui + navega para o Início
+  passos.saiuDoOnboarding = !/onboarding/.test(pagina.url());
+  await pagina.screenshot({ path: foto('4c-inicio-apos-cadastro') });
+
+  // ── 3. FIGURINHA: card comum, sem seletores, com "Vire Brilhante" ──
+  await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await espera(7000);
+  const naFigurinha = await texto();
+  passos.temVireBrilhante = /Vire Brilhante/i.test(naFigurinha);
+  passos.temSeletorFundo = /FUNDO/.test(naFigurinha) && /UNIFORME/.test(naFigurinha);
+  passos.temTrocarFoto = /Trocar foto/i.test(naFigurinha);
+  passos.temBotaoGerar = /Gerar minha Brilhante/i.test(naFigurinha);
+  passos.temSoAMinha = /Só a minha/i.test(naFigurinha);
+  await pagina.screenshot({ path: foto('5-figurinha-comum') });
+
+  // ── 4. INÍCIO: cromo comum, sem "Complete sua figurinha" ──
+  await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await espera(7000);
+  const noInicio = await texto();
+  passos.inicioCompleteFigurinha = /Complete sua figurinha/i.test(noInicio);
+  passos.inicioSendoCriada = /sendo criada/i.test(noInicio);
+  passos.inicioCartaoDourado = /tem uma Figurinha Brilhante para gerar/i.test(noInicio);
+  await pagina.screenshot({ path: foto('6-inicio-comum') });
+
+  // ── 5. PLANOS → "Brilhantes": os três produtos ──
+  await pagina.goto(`${BASE}/planos`, { waitUntil: 'domcontentloaded' });
+  await espera(4000);
+  const nosPlanos = await texto();
+  passos.planosTitulo = /BRILHANTES/.test(nosPlanos);
+  passos.planosTresProdutos = ['Brilhantes do time', 'Manto próprio', 'Minha Brilhante'].every((p) => nosPlanos.includes(p));
+  passos.planosPorJogador = /por jogador/i.test(nosPlanos);
+  passos.planosSemProElite = !/\bPro\b|\bElite\b/.test(nosPlanos);
+  passos.planosSemEmBreve = !/em breve/i.test(nosPlanos);
+  await pagina.screenshot({ path: foto('7-planos-brilhantes') });
+
+  // ── 6. PEDIDO de ativação ──
+  const botaoMinha = pagina.locator('button', { hasText: /Quero a minha/i }).first();
+  if (await botaoMinha.count()) {
+    // Rolar ATÉ ao botão antes de clicar: o terceiro cartão fica por baixo da
+    // barra de navegação fixa, e um clique forçado nessas coordenadas acerta na
+    // barra (a primeira corrida foi parar ao Ranking em vez de pedir).
+    // `block: 'center'` e não scrollIntoViewIfNeeded(): este último encosta o
+    // elemento à borda de baixo, que é onde vive a barra de navegação fixa —
+    // e o clique forçado acertava nela (as duas corridas anteriores foram
+    // parar ao Ranking). Ao centro, não há nada por cima.
+    await botaoMinha.evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {});
+    await espera(900);
+    // `force`: os cartões levitam de propósito (.planos-sway/.planos-bob) e o
+    // Playwright recusa clicar no que nunca fica quieto. Está visível e ativo —
+    // só flutua.
+    await botaoMinha.click({ force: true }).catch((e) => erros.push(`clique no pedido: ${e.message.split('\n')[0]}`));
+    await espera(3500);
+    passos.urlDepoisDoPedido = pagina.url().replace(BASE, '');
+  }
+  const depoisDoPedido = await texto();
+  passos.pedidoEnviado = /Pedido enviado/i.test(depoisDoPedido);
+  passos.pedidoMensagemDigna = /Pedido enviado|não deu|mais tarde/i.test(depoisDoPedido);
+  await pagina.screenshot({ path: foto('8-pedido') });
+
+  await contexto.close();
+  return { erros, passos, geracoes: geracoes.length };
+}
+
 async function cenaRodada12c(navegador, sessao) {
   const jogo = await acharJogoSorteado(navegador, sessao);
   const telas = [];
@@ -2717,6 +2845,27 @@ try {
     console.log(`   ${ok(r.faixaFigurinha.temSendoCriado && r.faixaFigurinha.temTexto45s)} Figurinha mostra "sendo criado" com "leva uns 45 segundos": ${JSON.stringify(r.faixaFigurinha)}`);
     console.log(`   ${ok(r.faixaInicio.temSendoCriada && !r.faixaInicio.temCompleteSuaFigurinha)} Início A MEIO da geração: "sendo criada" ${r.faixaInicio.temSendoCriada} · "Complete sua figurinha" (não pode aparecer) ${r.faixaInicio.temCompleteSuaFigurinha}`);
     console.log(`   estado final: botão "${r.final?.texto}" dourado ${r.final?.dourado} (deve ser não — voltou a idle)`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
+  if (CENAS.includes('figurinha3')) {
+    const r = await cenaFigurinha3(navegador, sessao);
+    saida.figurinha3 = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    const p = r.passos;
+    console.log('\n[iphone] FIGURINHA 3 · comum grátis, Brilhante por direito');
+    console.log(`   ${ok(p.cropTem23 && !p.cropTem11)} cadastro recorta em 2:3 (e só 2:3): 2:3 ${p.cropTem23} · 1:1 ${p.cropTem11}`);
+    console.log(`   ${ok(r.geracoes === 0)} o cadastro NÃO gera IA: ${r.geracoes} chamada(s) a /api/me/avatar/ai`);
+    console.log(`   ${ok(p.temTrocarFoto)} "Trocar foto" sempre presente: ${p.temTrocarFoto}`);
+    console.log(`   ${ok(p.temVireBrilhante)} bloco "Vire Brilhante" na comum: ${p.temVireBrilhante} · "Só a minha" ${p.temSoAMinha}`);
+    console.log(`   ${ok(!p.temSeletorFundo)} sem seletor de fundo/uniforme na comum: seletores ${p.temSeletorFundo ? 'AINDA APARECEM' : 'fora'}`);
+    console.log(`   ${ok(!p.inicioCompleteFigurinha)} Início sem "Complete sua figurinha" (já há foto): ${p.inicioCompleteFigurinha ? 'AINDA APARECE' : 'fora'}`);
+    console.log(`   ${ok(!p.inicioSendoCriada)} Início sem "sendo criada" (nada a gerar): ${p.inicioSendoCriada ? 'APARECE' : 'fora'}`);
+    console.log(`   cartão dourado "tem uma Brilhante para gerar": ${p.inicioCartaoDourado} (só com direito — pede a migração 054)`);
+    console.log(`   ${ok(p.planosTitulo && p.planosTresProdutos)} Planos vira "Brilhantes" com os 3 produtos: título ${p.planosTitulo} · produtos ${p.planosTresProdutos} · "por jogador" ${p.planosPorJogador}`);
+    console.log(`   ${ok(p.planosSemProElite && p.planosSemEmBreve)} sem Pro/Elite e sem "em breve": Pro/Elite fora ${p.planosSemProElite} · "em breve" fora ${p.planosSemEmBreve}`);
+    console.log(`   ${ok(p.pedidoMensagemDigna)} pedido responde com mensagem digna: enviado ${p.pedidoEnviado}`);
+    console.log(`   ${ok(p.temBotaoGerar === false)} botão "Gerar minha Brilhante" escondido sem direito: ${p.temBotaoGerar ? 'APARECEU (errado)' : 'escondido'}`);
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 

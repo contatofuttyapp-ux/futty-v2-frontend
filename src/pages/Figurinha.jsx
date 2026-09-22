@@ -18,6 +18,8 @@ import { normalizarFoto } from '../utils/normalizarFoto';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
+import { estadoBrilhantes, pedirAtivacao } from '../lib/brilhantes';
+import { PRODUTOS, MINHA_GERACOES } from '../lib/planos';
 import { ehAppNativo, salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import AdCard from '../components/AdCard';
@@ -243,10 +245,19 @@ export default function Figurinha() {
   // um avatar IA confirmado (foto_url e avatar_url existem e são diferentes —
   // logo após o upload o backend grava a foto crua em ambos, então é igual).
   const fotoOriginal = me?.user?.foto_url || null;
+  // `avatarEhIA` = TEM BRILHANTE. Continua a ser a mesma conta de sempre (o
+  // avatar_url é diferente da foto só quando a IA gerou alguma coisa), mas
+  // desde 22-set o nome da coisa mudou: SPEC-FIGURINHA-3.
   const avatarEhIA = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
-  // Jogador "de card": leva avatar_url se for avatar IA; caso contrário, veste o
-  // genérico da casa (escolhido ou rodízio por id, 31-jul) em vez de ficar sem avatar.
-  const jogadorCard = avatarEhIA ? jogador : { ...jogador, avatar_url: avatarGenericoUrl(jogador.id, avatarGenericoEscolha) };
+  // MODO DO CARD (§3/§4): com Brilhante, o card de sempre (avatar recortado
+  // sobre o fundo escolhido). Sem Brilhante mas COM foto, a figurinha COMUM —
+  // a foto como ela é, na mesma moldura. Sem foto nenhuma, o genérico da casa
+  // continua a ser o convite (nunca um buraco).
+  const modoCard = avatarEhIA ? 'brilhante' : 'comum';
+  const temFoto = !!fotoOriginal;
+  const jogadorCard = avatarEhIA || temFoto
+    ? jogador
+    : { ...jogador, avatar_url: avatarGenericoUrl(jogador.id, avatarGenericoEscolha) };
   // A2 — kit vestido + kits já gerados (slots). Vindos do GET /api/me.
   const kitAtivo = me?.user?.kit_ativo || 'dark-gold';
   const slotsKits = me?.slots || [];
@@ -255,6 +266,30 @@ export default function Figurinha() {
   // falta: foto nova já subiu, ainda não gerou. Fora dessa janela (idle, ou já
   // gerando) continua roxo — dourado é reservado para "toque aqui agora".
   const brilharGerar = fotoTrocadaSemGerar && !gerandoIA;
+  // DIREITO DE GERAR (SPEC-FIGURINHA-3 §5) — quem pode gerar uma Brilhante e
+  // com que uniforme. Carregado uma vez ao abrir a tela; recarregado depois de
+  // gerar (o crédito baixa) e depois de pedir ativação.
+  const [brilhante, setBrilhante] = useState(null); // null = ainda a carregar
+  const temDireitoDeGerar = !!brilhante?.direito?.fonte;
+  const kitDoTime = brilhante?.direito?.fonte === 'time' ? brilhante.direito.kit_id : null;
+  const creditos = brilhante?.creditos ?? 0;
+  const meuTimeBrilhante = (brilhante?.times || []).find((t) => t.sou_dono) || null;
+  const [pedindo, setPedindo] = useState(null);
+  const [avisoPedido, setAvisoPedido] = useState(null);
+
+  useEffect(() => {
+    let vivo = true;
+    estadoBrilhantes().then((e) => { if (vivo) setBrilhante(e); });
+    return () => { vivo = false; };
+  }, []);
+
+  async function pedirBrilhante(produto) {
+    setPedindo(produto);
+    const r = await pedirAtivacao(produto, produto === 'minha' ? null : meuTimeBrilhante?.id);
+    setPedindo(null);
+    setAvisoPedido(r.ok ? 'Pedido enviado — a gente ativa e avisa.' : r.erro);
+    if (r.ok) setBrilhante(await estadoBrilhantes());
+  }
   // (l) Dias até a quota renovar. O backend zera a contagem quando o MÊS muda
   // (avatar_ia_reset < início do mês corrente) → a renovação é o dia 1 do mês seguinte.
   // O cálculo de datas é impuro (Date), por isso corre UMA vez no initializer do
@@ -311,7 +346,7 @@ export default function Figurinha() {
   }
   const selosVisiveis = selos.filter((s) => !selosOcultos.has(s.id)).slice(0, 2);
   const selosKey = selosVisiveis.map((s) => `${s.id}:${s.tier}`).join('|');
-  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom, selos: selosVisiveis.map((s) => ({ tier: s.tier, label: s.label })) };
+  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom, modo: modoCard, selos: selosVisiveis.map((s) => ({ tier: s.tier, label: s.label })) };
 
   // Pré-selecciona as escolhas guardadas a partir do `perfil` já carregado
   // pelo PerfilContext — 1x só, quando ele chega (guard por ref: o `perfil`
@@ -449,7 +484,10 @@ export default function Figurinha() {
     gerar();
     // selosKey: regenera o cromo quando os selos visíveis mudam (chegam da API ou
     // o utilizador oculta/mostra no olhinho). me?.user?.id: a 1ª geração espera o perfil.
-  }, [me?.user?.id, fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, avatarGenericoEscolha, estreiaFase, selosKey]);
+  // `jogador?.foto_url` entra nas deps por causa do modo COMUM (22-set): ali a
+  // base do card é a FOTO, e trocá-la tem de repintar o cromo — no modo
+  // brilhante quem muda é o avatar_url, que já estava aqui.
+  }, [me?.user?.id, fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, jogador?.foto_url, avatarGenericoEscolha, estreiaFase, selosKey]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => () => { if (fundoUrl) URL.revokeObjectURL(fundoUrl); }, [fundoUrl]);
@@ -658,6 +696,9 @@ export default function Figurinha() {
       } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
       recarregarPerfilGlobal();
+      // O direito acabou de ser gasto (crédito a menos, ou a linha do pacote):
+      // relê, para o contador e o botão dourado contarem a verdade.
+      estadoBrilhantes().then(setBrilhante);
       setFotoTrocadaSemGerar(false); // gerou (ou reutilizou de propósito) — some o pulso
       // reutilizado:true (motor, build 9) — o slot deste kit já valia para a
       // foto atual e não gerou de novo. Sem aviso, parecia que o toque no
@@ -667,7 +708,15 @@ export default function Figurinha() {
       // EMAIL_NAO_CONFIRMADO: gate anti-abuso (11-ago) — mesmo status 403 do limite
       // de quota, por isso tem de ser verificado PRIMEIRO (código distingue os dois).
       if (err?.code === 'EMAIL_NAO_CONFIRMADO') setEmailNaoConfirmado(true);
-      else if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano → card de quota
+      // SEM_DIREITO (22-set, SPEC-FIGURINHA-3) — também 403, mas não é limite
+      // nenhum: é o direito que acabou (ou o pacote do time que não existe).
+      // Recarrega o estado para o bloco "Vire Brilhante" aparecer sozinho; o
+      // card de quota do plano NÃO serve aqui, e mostrá-lo seria mentir.
+      else if (err?.code === 'SEM_DIREITO') {
+        estadoBrilhantes().then(setBrilhante);
+        setErroIAmsg(err.message);
+        setErroIA(true);
+      } else if (err?.status === 403) setLimiteIA(true); // gate antigo de plano (morto, fica de rede)
       else {
         // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO / IA_INDISPONIVEL / FOTO_DESATUALIZADA:
         // causas acionáveis com mensagem digna própria, em vez do genérico
@@ -680,7 +729,7 @@ export default function Figurinha() {
         // de cá — é esperar uns segundos e tocar de novo, e o botão de repetir
         // do overlay já está lá. Resto (fal fora do ar, etc.) mantém o genérico
         // com retry, que já cobre bem o transitório.
-        if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL', 'FOTO_DESATUALIZADA'].includes(err?.code)) setErroIAmsg(err.message);
+        if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL', 'FOTO_DESATUALIZADA', 'SEM_DIREITO'].includes(err?.code)) setErroIAmsg(err.message);
         setErroIA(true); // qualquer falha → estado de erro com retry no overlay
       }
     } finally {
@@ -944,7 +993,7 @@ export default function Figurinha() {
 
                     {/* Fundo vivo — partículas ENTRE o fundo e o jogador (caem atrás dele).
                         Estádio E Gradiente (chuva dourada sobre a carta gold). */}
-                    {fundo === 'estadio' || fundo === 'gradiente' ? (
+                    {avatarEhIA && (fundo === 'estadio' || fundo === 'gradiente') ? (
                       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 3, containerType: 'size', mixBlendMode: 'screen', clipPath: CLIP_OCTOGONO }}>
                         {FUTTY_PARTICULAS.map((p, i) => {
                           // Sobre o facetado escuro: brancas → branco-quente; douradas
@@ -1064,11 +1113,14 @@ export default function Figurinha() {
             cima do botão já dizendo "Gerando…" — duas mensagens discordando. */}
         {gerandoIA ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <FuttyLoader size={14} label={null} /> Seu avatar está sendo criado… leva uns 45 segundos
+            <FuttyLoader size={14} label={null} /> Sua Brilhante está sendo criada… leva uns 45 segundos
           </div>
         ) : fotoLocal ? (
+          // SPEC-FIGURINHA-3: trocar a foto já MUDA a figurinha comum na hora —
+          // não há nada a gerar. A linha só convida a gerar a Brilhante quando
+          // há direito; senão diz o que aconteceu de facto.
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <Check size={14} /> Foto carregada, gere seu avatar
+            <Check size={14} /> {temDireitoDeGerar ? 'Foto trocada, gere sua Brilhante' : 'Foto trocada — sua figurinha já mudou'}
           </div>
         ) : null}
 
@@ -1113,8 +1165,16 @@ export default function Figurinha() {
               >
                 <Camera size={16} /> {jogador.avatar_url ? 'Trocar foto' : 'Adicionar foto'}
               </button>
-              {jogador.avatar_url || gerandoIA ? (
-                brilharGerar ? (
+              {/* SPEC-FIGURINHA-3 §7: "Trocar foto" SEMPRE (à esquerda); o botão
+                  de gerar só existe para quem tem DIREITO. Sem direito, o que
+                  aparece por baixo é o bloco "Vire Brilhante" — não um botão
+                  que só serve para levar um 403 na cara. */}
+              {!temFoto ? (
+                <div style={{ flex: 1, fontSize: 12, color: 'var(--label-color)', textAlign: 'center', alignSelf: 'center' }}>
+                  Adicione uma foto para começar
+                </div>
+              ) : !temDireitoDeGerar && !gerandoIA ? null : (
+                brilharGerar || (temDireitoDeGerar && !avatarEhIA) ? (
                   // RODADA 17 — EXACTAMENTE a receita do "Ver sorteio" (Inicio.jsx
                   // ~337): o glow fica no WRAPPER, em drop-shadow (filter não é
                   // cortado pelo clip-path); o pulso de BORDA fica no botão (essa
@@ -1131,7 +1191,7 @@ export default function Figurinha() {
                       disabled={gerandoIA || uploadFoto}
                       onClick={gerarAvatarIA}
                     >
-                      <EstrelaIA size={16} color="#f0c94a" /> Gerar Avatar IA
+                      <EstrelaIA size={16} color="#f0c94a" /> Gerar minha Brilhante
                     </button>
                   </span>
                 ) : (
@@ -1148,17 +1208,26 @@ export default function Figurinha() {
                       </>
                     ) : (
                       <>
-                        <EstrelaIA size={16} color="#ffffff" /> Gerar Avatar IA
+                        <EstrelaIA size={16} color="#ffffff" /> Gerar minha Brilhante
                       </>
                     )}
                   </button>
                 )
-              ) : (
-                <div style={{ flex: 1, fontSize: 12, color: 'var(--label-color)', textAlign: 'center', alignSelf: 'center' }}>
-                  Adicione uma foto para gerar o avatar IA
-                </div>
               )}
             </div>
+            {/* Contador de gerações restantes (§7). Só com crédito: no pacote do
+                time a conta é "uma por time", não um saldo — e um número a
+                descer sem necessidade só assusta. */}
+            {creditos > 0 ? (
+              <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
+                {creditos === 1 ? 'Resta 1 geração' : `Restam ${creditos} gerações`}
+                {kitDoTime ? ' · o uniforme do time vem por conta do pacote' : ' · uniforme à sua escolha'}
+              </span>
+            ) : kitDoTime && !avatarEhIA ? (
+              <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
+                Sua Brilhante vem pelo pacote do time, no uniforme que o dono escolheu
+              </span>
+            ) : null}
             {/* "Pode demorar até 30 segundos" (própria, sob o botão) saiu nesta
                 rodada: virou redundante e desatualizada com a mensagem nova
                 acima da linha ("Seu avatar está sendo criado… leva uns 45
@@ -1166,6 +1235,73 @@ export default function Figurinha() {
                 em duas passadas. Duas legendas de tempo diferentes ao mesmo
                 tempo (30s aqui, 45s ali) confundia mais do que ajudava. */}
           </div>
+
+          {/* VIRE BRILHANTE ✨ (SPEC-FIGURINHA-3 §3/§7) — o único bloco que
+              substitui os seletores de fundo/uniforme na figurinha comum. Um
+              exemplo FIXO (o modelo fictício da conta demo, nunca gerado na
+              hora: gerar um exemplo custaria US$0,11 por pessoa que abrisse a
+              tela) e os dois caminhos. `loading="lazy"` + WebP no dobro do
+              tamanho de exibição, como manda a lei do app leve (14-set). */}
+          {!avatarEhIA && temFoto && !temDireitoDeGerar && brilhante ? (
+            <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '16px', display: 'grid', gap: 12 }}>
+              <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <img
+                  src={urlAsset('/avatares/exemplo-brilhante.webp')}
+                  alt="Exemplo de Figurinha Brilhante"
+                  width={72}
+                  height={108}
+                  loading="lazy"
+                  decoding="async"
+                  style={{ width: 72, height: 108, objectFit: 'cover', flexShrink: 0, clipPath: CLIP_OCTOGONO, border: '1.5px solid rgba(212,160,23,0.55)' }}
+                />
+                <div style={{ display: 'grid', gap: 5, minWidth: 0 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 17, color: '#f0c94a' }}>
+                    <Lock size={14} /> Vire Brilhante ✨
+                  </span>
+                  <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
+                    Sua figurinha vira arte no uniforme do Futty, com os 6 fundos liberados.
+                  </span>
+                </div>
+              </div>
+              {avisoPedido ? (
+                <div className="hud-corners-s" role="status" style={{ padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: '#f0c94a', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.45)' }}>
+                  {avisoPedido}
+                </div>
+              ) : null}
+              <div style={{ display: 'grid', gap: 8 }}>
+                {/* Dono de time vê o pacote primeiro: é o que resolve o time
+                    inteiro, e é a venda maior. */}
+                {meuTimeBrilhante && !meuTimeBrilhante.brilhante_ativo ? (
+                  <span className="cta-gold-glow" style={{ display: 'flex' }}>
+                    <button
+                      type="button"
+                      className="btn hud-corners cta-gold"
+                      style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
+                      disabled={pedindo === 'pacote'}
+                      onClick={() => pedirBrilhante('pacote')}
+                    >
+                      {pedindo === 'pacote'
+                        ? 'Enviando…'
+                        : `Ativar para o meu time · ${PRODUTOS[0].preco} · ${PRODUTOS[0].porJogador}`}
+                    </button>
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn btn--purple hud-corners"
+                  style={{ width: '100%', fontSize: 12.5 }}
+                  disabled={pedindo === 'minha'}
+                  onClick={() => pedirBrilhante('minha')}
+                >
+                  {pedindo === 'minha' ? 'Enviando…' : `Só a minha · ${PRODUTOS[2].preco} · ${MINHA_GERACOES} gerações`}
+                </button>
+                <Link to="/planos" style={{ fontSize: 11.5, color: 'var(--label-color)', textAlign: 'center', textDecoration: 'none' }}>
+                  Ver o que cada um dá →
+                </Link>
+              </div>
+            </div>
+          ) : null}
 
           {/* (l) QUOTA (403) — card da família HUD, não um banner de erro. */}
           {limiteIA ? (
@@ -1203,7 +1339,13 @@ export default function Figurinha() {
             </div>
           ) : null}
 
-          {/* Tab strip */}
+          {/* Tab strip — SÓ com Brilhante (SPEC-FIGURINHA-3 §3: "sem seletor de
+              fundo nem de uniforme" na comum). Os fundos são composição no
+              card, custo zero, mas são um prémio de quem pagou; e o uniforme
+              não existe numa foto sem IA. No lugar deles fica o bloco "Vire
+              Brilhante", logo acima. */}
+          {avatarEhIA ? (
+          <>
           <div style={{ display: 'flex', gap: 6 }}>
             {TABS.map((t) => {
               const on = activeTab === t.k;
@@ -1456,6 +1598,8 @@ export default function Figurinha() {
                 </div>
               </div>
           ) : null}
+          </>
+          ) : null}
         </div>
       </main>
 
@@ -1538,7 +1682,7 @@ export default function Figurinha() {
                 /* (j) Badge com glow dourado suave — mesma família dos dots. */
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'linear-gradient(90deg, rgba(139,92,246,0.18), rgba(212,160,23,0.12))', border: '1px solid rgba(139,92,246,0.4)', boxShadow: '0 0 12px rgba(212,160,23,0.22)' }}>
                   <img
-                    src={urlImagem(urlAsset(me?.user?.avatar_url), 128)}
+                    src={urlImagem(urlAsset(me?.user?.avatar_url), 128, { quadrado: true })}
                     alt="Avatar IA"
                     width={48}
                     height={48}

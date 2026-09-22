@@ -76,7 +76,6 @@ export default function Onboarding() {
   const [enviando, setEnviando] = useState(false);
   const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
   const ultimoBlob = useRef(null); // retém o blob p/ "tentar de novo" sem recortar
-  const figurinhaIAEmVooRef = useRef(false); // evita empilhar POST /api/me/avatar/ai
   const [nome, setNome] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [toast, setToast] = useState(null);
@@ -90,38 +89,16 @@ export default function Onboarding() {
     setCropFile(await normalizarFoto(f));
   }
 
-  // Figurinha automática do cadastro (12-set): dispara assim que a foto sobe,
-  // SEM esperar — o usuário segue para nome/posição enquanto ela é gerada em
-  // fundo. Fire-and-forget de propósito (.catch silencioso): se falhar, o
-  // Início mostra "não deu certo" e oferece trocar de foto — não trava aqui.
-  // Não empilha: se a pessoa trocar a foto de novo ENQUANTO a 1ª geração ainda
-  // está em voo, não dispara uma 2ª.
-  function dispararFigurinhaIA() {
-    if (figurinhaIAEmVooRef.current) return;
-    figurinhaIAEmVooRef.current = true;
-    try {
-      sessionStorage.setItem('futty_figurinha_gerando', '1');
-    } catch {
-      /* priv */
-    }
-    // FOTO_DESATUALIZADA (22-set): o motor tem uma trava de hash — se a foto
-    // que ele baixou ainda não for a que acabou de subir, ele RECUSA gerar em
-    // vez de fazer a figurinha da foto errada. Aqui no cadastro não há botão
-    // nenhum para a pessoa tocar (a geração é automática e invisível), por isso
-    // a resposta digna é tentar outra vez sozinho, uma só vez, passados 4 s.
-    // Sem isto, um atraso de propagação de segundos deixava o cadastro com a
-    // figurinha marcada como falhada para sempre.
-    const pedir = () => apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold', origem: 'cadastro' }) });
-    pedir()
-      .catch((e) => {
-        if (e?.code !== 'FOTO_DESATUALIZADA') throw e;
-        return new Promise((r) => setTimeout(r, 4000)).then(pedir);
-      })
-      .catch(() => {})
-      .finally(() => {
-        figurinhaIAEmVooRef.current = false;
-      });
-  }
+  // O CADASTRO NÃO GERA NADA (SPEC-FIGURINHA-3 §3, 22-set). A figurinha que
+  // nasce aqui é a COMUM: a foto da pessoa na moldura, custo zero, pronta no
+  // instante em que a foto sobe. A geração automática de IA de 12-set saiu —
+  // era o item mais caro do app a nascer de graça em cada cadastro (US$0,11),
+  // para quem talvez nunca pagasse. A Brilhante passa a ter dono: crédito
+  // comprado, presente de quem cria time, ou pacote do time.
+  //
+  // O que ficou no lugar: nada. Não há o que esperar, por isso também não há
+  // marcador de "gerando" nem retry de FOTO_DESATUALIZADA — a trava de hash
+  // continua no motor, mas só a Brilhante passa por ela.
 
   // Crop confirmado → sobe já (POST /api/me/avatar) e a foto CAI na moldura.
   // P1-5 — em vez de um toast cru e passageiro, o erro fica INLINE na moldura com
@@ -138,7 +115,6 @@ export default function Onboarding() {
       const res = await apiUpload('/api/me/avatar', file, 'avatar');
       setAvatarUrl(res.avatar_url || res.foto_url || null);
       ultimoBlob.current = null;
-      dispararFigurinhaIA();
     } catch (e) {
       setUploadErro(mensagemUploadFoto(e));
     } finally {
@@ -285,7 +261,11 @@ export default function Onboarding() {
       </main>
 
       {cropFile ? (
-        <CropModal file={cropFile} aspect={1} aspectos={[{ k: '1:1', v: 1 }]} onConfirm={subirRecorte} onCancel={() => setCropFile(null)} />
+        // 2:3, a proporção do card (SPEC-FIGURINHA-3 §3): a figurinha comum é
+        // esta foto na moldura, e o que a pessoa enquadra aqui é exatamente o
+        // que ela vai ver no álbum. Uma proporção só — escolher entre 1:1 e
+        // 16:9 aqui seria escolher um card torto.
+        <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} onConfirm={subirRecorte} onCancel={() => setCropFile(null)} />
       ) : null}
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>

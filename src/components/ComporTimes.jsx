@@ -13,7 +13,7 @@ const CORES_PADRAO = ['#d4a017', '#8b5cf6', '#aab4c8', '#c2652e', '#35b6a8', '#d
 
 // Avatar pequeno (foto ou silhueta-casa) para chips de jogador.
 function MiniAvatar({ p, size = 20 }) {
-  if (p.avatar_url) return <img src={urlImagem(urlAsset(p.avatar_url), 128)} alt="" width={size} height={size} decoding="async" loading="lazy" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top' }} />;
+  if (p.avatar_url) return <img src={urlImagem(urlAsset(p.avatar_url), 128, { quadrado: true })} alt="" width={size} height={size} decoding="async" loading="lazy" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top' }} />;
   // LEI DA SILHUETA: pessoa sem foto = silhueta-casa angulosa (nunca círculo com inicial).
   return <span style={{ width: size, height: size, display: 'grid', placeItems: 'center', color: 'rgba(201,182,255,0.9)' }}><SilhuetaJogador size="92%" interrogacao={false} /></span>;
 }

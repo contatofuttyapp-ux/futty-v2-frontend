@@ -30,7 +30,7 @@ const RAJ = "'Rajdhani', sans-serif";
 // Sem foto, mas com identidade (userId), mostra o avatar genérico da casa — nunca
 // a silhueta "?".
 function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 36 }) {
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>

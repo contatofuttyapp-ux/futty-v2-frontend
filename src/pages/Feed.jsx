@@ -93,7 +93,7 @@ function LinkVitrine({ teamSlug, userId, style, children }) {
 // ─── Avatar — moldura V1 do cânone (.avatar-frame), única na página ────────────
 function FeedAvatar({ avatarUrl, size = 48 }) {
   const [falhou, setFalhou] = useState(false);
-  const src = avatarUrl ? urlImagem(assetUrl(avatarUrl), 128) : null;
+  const src = avatarUrl ? urlImagem(assetUrl(avatarUrl), 128, { quadrado: true }) : null;
   return (
     <span className="avatar-frame" style={{ width: size, height: size, flexShrink: 0 }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>

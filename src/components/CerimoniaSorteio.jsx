@@ -199,7 +199,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     //   ti < 0 → RESERVA (silhueta cinza-aço).
     const vis = (j, ti) => ({
       nome: (j.convidado ? '· ' : '') + (j.nome || '?'),
-      img: j.avatar_url ? urlImagem(urlAsset(j.avatar_url), 128) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
+      img: j.avatar_url ? urlImagem(urlAsset(j.avatar_url), 128, { quadrado: true }) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
     });
 
     // — moldura de um jogador (innerHTML; corre dentro de .smaq → estilos aplicam).

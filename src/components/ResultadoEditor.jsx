@@ -21,7 +21,7 @@ function jaComecouJogo(game) {
 
 function MiniAvatar({ nome, avatarUrl }) {
   const [falhou, setFalhou] = useState(false);
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128) : null;
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : null;
   return (
     <div style={{ width: 32, height: 32, borderRadius: 6, overflow: 'hidden', background: '#15151a', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
       {src && !falhou ? (

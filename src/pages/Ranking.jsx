@@ -29,7 +29,7 @@ const marcarImagem = () => marcarInstante('imagem');
 // Moldura de avatar do cânone (V1): quadrado + cantos-L dourados + interior no material
 // da casa + véu. Moldura única da página — rows, pódio e modal partilham-na.
 function FrameAvatar({ avatarUrl, size = 48 }) {
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128) : null;
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : null;
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>

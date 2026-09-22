@@ -554,6 +554,11 @@ export default function Inicio() {
   // preso mostrando "sendo criada" para sempre.
   const figurinhaGerando = figurinhaStatus === 'gerando' || (figurinhaSessaoMarcada && !figurinhaStatus);
   const figurinhaFalhou = figurinhaStatus === 'falhou';
+  // DIREITO À BRILHANTE — vem no mesmo /api/inicio (routes/inicio.js), sem
+  // pedido extra. `podeGerarBrilhante` = tem direito, tem foto e ainda não tem
+  // a Brilhante: é exactamente quem vê o cartão dourado.
+  const brilhanteDireito = inicio?.dados?.brilhante || null;
+  const podeGerarBrilhante = !!brilhanteDireito?.fonte && !!user?.foto_url && !cromoAvatarEhIA;
 
   // Limpa o sessionStorage assim que sair de 'gerando' — sincronizado DURANTE
   // o render (mesmo padrão de MeuPerfil.jsx), não num efeito.
@@ -604,15 +609,23 @@ export default function Inicio() {
   useEffect(() => {
     if (!user) return undefined;
     let vivo = true;
-    // Sem avatar IA: veste o genérico da casa (escolhido ou rodízio por id).
+    // Com Brilhante, o cromo de sempre. Sem Brilhante mas com FOTO, a figurinha
+    // COMUM (SPEC-FIGURINHA-3 §3): a mesma foto, a mesma moldura, o mesmo
+    // álbum. Sem foto nenhuma, o genérico da casa continua a ser o convite.
     const jogadorCard = cromoAvatarEhIA
       ? { ...user, avatar_url: urlImagem(user.avatar_url, 512) }
-      : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha) };
+      : user?.foto_url
+        ? { ...user, foto_url: urlImagem(user.foto_url, 512) }
+        : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha) };
+    const modoCromo = !cromoAvatarEhIA && user?.foto_url ? 'comum' : 'brilhante';
     // fundoGlints:'discreto' — o cromo do Início é um OBJECTO estático (nunca em
     // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
     // download nem a montra do tile do seletor — densidade de repouso própria.
-    const opts = { jogador: jogadorCard, fundo: cromoFundo, corFrame: 'dourado', avatarZoom: 1.1, formato: 'quadrado', fundoGlints: 'discreto' };
-    const chave = `q|${jogadorCard.avatar_url || '-'}|${cromoFundo}|${nome}`;
+    const opts = { jogador: jogadorCard, fundo: cromoFundo, corFrame: 'dourado', avatarZoom: 1.1, formato: 'quadrado', fundoGlints: 'discreto', modo: modoCromo };
+    // O modo entra na chave: a mesma pessoa com a mesma foto desenha DUAS
+    // coisas diferentes antes e depois de ter Brilhante, e servir o cromo
+    // errado do cache seria o bug de 22-set outra vez, por outra porta.
+    const chave = `q|${modoCromo}|${jogadorCard.avatar_url || jogadorCard.foto_url || '-'}|${cromoFundo}|${nome}`;
 
     const naMemoria = cromoCache.get(chave);
     if (naMemoria) {
@@ -730,14 +743,18 @@ export default function Inicio() {
       if (quadro2 != null) cancelAnimationFrame(quadro2);
     };
   }, [user, cromoAvatarEhIA, cromoFundo, avatarGenericoEscolha, nome]);
+  // NB: `user` inteiro já está nas deps — trocar a foto muda o objecto e
+  // repinta o cromo comum sem precisar de `user.foto_url` à parte.
 
   // A foto que segura o lugar do cromo enquanto ele não existe: a mesma imagem
   // que o canvas vai usar por baixo, então a troca não salta.
   const previaCromo = cromoAvatarEhIA
     ? urlImagem(urlAsset(user?.avatar_url), 512)
-    : user
-      ? avatarGenericoUrl(user.id, avatarGenericoEscolha)
-      : '';
+    : user?.foto_url
+      ? urlImagem(urlAsset(user.foto_url), 512) // figurinha comum: a prévia é a própria foto
+      : user
+        ? avatarGenericoUrl(user.id, avatarGenericoEscolha)
+        : '';
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
@@ -1016,11 +1033,11 @@ export default function Inicio() {
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.4)' }}>
             <span className="figurinha-gerando-moldura" style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.5)', background: '#101012' }}>
               {user?.foto_url ? (
-                <img src={urlImagem(urlAsset(user.foto_url), 128)} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Sua figurinha está sendo criada…</span>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Sua Brilhante está sendo criada…</span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>leva uns 45 segundos</span>
             </span>
           </div>
@@ -1028,7 +1045,7 @@ export default function Inicio() {
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
             <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(248,113,113,0.5)', background: '#101012', overflow: 'hidden' }}>
               {user?.foto_url ? (
-                <img src={urlImagem(urlAsset(user.foto_url), 128)} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </span>
             {/* Texto neutro (14-set): 'falhou' também cobre IA_INDISPONIVEL (motor
@@ -1041,10 +1058,36 @@ export default function Inicio() {
           </div>
         ) : null}
 
-        {/* CARD PERSISTENTE — sem foto não há cromo: moldura V1 vazia + convite.
+        {/* VOCÊ TEM UMA BRILHANTE PARA GERAR ✨ (SPEC-FIGURINHA-3 §5/§7) — quem
+            tem direito e ainda não gerou vê isto. É daqui que sai a GERAÇÃO
+            PREGUIÇOSA do pacote do time: ninguém é gerado em lote quando o
+            time ativa; cada pessoa é gerada quando abre o app, e quem nunca
+            abre não custa nada. O toque leva à Figurinha, onde o botão dourado
+            está à espera — não se dispara uma geração paga sem alguém pedir. */}
+        {!figurinhaGerando && !figurinhaFalhou && podeGerarBrilhante ? (
+          <Link to="/figurinha" className="hud-corners cta-gold-glow" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.55)', textDecoration: 'none', color: 'inherit' }}>
+            <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.6)', background: '#101012' }}>
+              {user?.foto_url ? (
+                <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : null}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, color: '#f0c94a' }}>Você tem uma Figurinha Brilhante para gerar ✨</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                {brilhanteDireito?.fonte === 'time' ? 'Cortesia do pacote do seu time' : 'Leva uns 45 segundos'}
+              </span>
+            </span>
+            <span className="btn btn--sm hud-corners-s cta-gold" style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }}>Gerar</span>
+          </Link>
+        ) : null}
+
+        {/* CARD PERSISTENTE — sem FOTO não há cromo: moldura V1 vazia + convite.
             Sem X: persiste até haver foto (a estratégia "quase-obrigatória" do
-            onboarding dia-1). Substitui o antigo CTA dispensável quando não há avatar. */}
-        {figurinhaGerando || figurinhaFalhou ? null : !meLoading && user && !user.avatar_url ? (
+            onboarding dia-1).
+            22-set: a condição passou de `!user.avatar_url` para `!user.foto_url`.
+            Quem tem foto já tem figurinha (a comum) — continuar a pedir "complete
+            sua figurinha" a quem acabou de a completar era o convite a mentir. */}
+        {figurinhaGerando || figurinhaFalhou ? null : !meLoading && user && !user.foto_url ? (
           <Link to="/figurinha" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,160,23,0.4)', textDecoration: 'none', color: 'inherit' }}>
             <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
               <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: '#101012', border: '1.5px solid rgba(212,160,23,0.5)', clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)' }}>
@@ -1081,8 +1124,10 @@ export default function Inicio() {
                 baixo. Sem time não há vitrine (ela vive dentro de um time): aí
                 o destino é a Figurinha, e sem conta nenhuma, criar o time. */}
             <CromoInicio cromo={cromo} previa={previaCromo} fundo={cromoFundo} nome={nome} refCromo={refCromo} destino={destinoCromo.to} destinoLabel={destinoCromo.label} />
-            {/* Trocar visual — só quando o card veste o genérico (sem avatar IA). */}
-            {!cromoAvatarEhIA ? (
+            {/* Trocar visual — só quando o card veste o GENÉRICO (sem Brilhante
+                e sem foto). Com foto, o card é a figurinha comum e não há
+                visual alternativo para trocar: quem manda é a foto. */}
+            {!cromoAvatarEhIA && !user?.foto_url ? (
               <button
                 type="button"
                 className="hud-corners-s"

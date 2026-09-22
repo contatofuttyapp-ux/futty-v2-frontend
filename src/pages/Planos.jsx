@@ -1,46 +1,24 @@
-// Futty v2.0 — Planos (/planos): Free / Pro / Elite lado a lado.
-// Pagamentos = SÓ via IAP das lojas (Apple/Google) — decisão final do dono (SPEC-INFRA).
-// Stripe foi removido; o botão diz a verdade: pagamento ainda não existe nesta versão.
-import { Check } from 'lucide-react';
-import { usePerfil } from '../context/PerfilContext';
+// Futty v2.0 — Brilhantes (/planos): os três produtos da Figurinha Brilhante.
+//
+// SPEC-FIGURINHA-3 (22-set): Free/Pro/Elite saíram — nunca chegaram a cobrar
+// nada e prometiam "avatares IA por mês" num modelo que a casa abandonou. No
+// lugar ficam três compras de uma vez só (pacote do time, manto próprio, minha
+// Brilhante), cuja tabela vive em lib/planos.js.
+//
+// Enquanto o pagamento da loja não existe, o botão NÃO diz "em breve" nem fica
+// desativado: cria um pedido de ativação de verdade, que o dono resolve no
+// Gabinete. A regra da casa é que o botão diga a verdade — e "a gente ativa e
+// avisa" é verdade.
+import { useEffect, useState } from 'react';
+import { Check, Lock } from 'lucide-react';
 import Topbar from '../components/Topbar';
-import Icon from '../components/Icon';
-import { LIMITES_IA } from '../lib/planos';
-import { precos } from '../utils/precos';
+import { PRODUTOS } from '../lib/planos';
+import { estadoBrilhantes, pedirAtivacao, temPedidoPendente } from '../lib/brilhantes';
 import '../styles/app.css';
-
-// Preço por REGIÃO (ver utils/precos.js) — nunca real e euro ao mesmo tempo.
-// Os valores mostram o preço-alvo; a cobrança real será via IAP da loja
-// (App Store/Play), a definir na vaga "App nas lojas".
-const PLANOS = [
-  {
-    id: 'free',
-    nome: 'Free',
-    preco: 'Grátis',
-    features: ['Sorteio', 'Ranking', 'Resenha', `${LIMITES_IA.free} avatares IA`],
-    botao: null,
-  },
-  {
-    id: 'pro',
-    nome: 'Pro',
-    icone: 'estrela', // asset da casa — substitui o ★ do texto
-    preco: precos.pro,
-    features: ['Tudo do Free', `${LIMITES_IA.pro} avatares IA/mês`, 'Menos anúncios', 'Frames exclusivos', 'Badge dourado'],
-    botao: 'Assinar Pro',
-  },
-  {
-    id: 'elite',
-    nome: 'Elite',
-    icone: 'coroa', // asset da casa (/icons/coroa.svg), tingido a dourado — substitui o emoji 👑
-    preco: precos.elite,
-    features: ['Tudo do Pro', `${LIMITES_IA.elite} avatares IA/mês`, 'Kit Elite dourado'],
-    botao: 'Assinar Elite',
-  },
-];
 
 // FASE A — durações do sway por card. Não partilham divisores comuns úteis, por isso as
 // três oscilações nunca caem em fase: a página respira em vez de pulsar em bloco.
-const SWAY_DUR = { free: '7.1s', pro: '8.3s', elite: '9.7s' };
+const SWAY_DUR = { pacote: '7.1s', manto: '9.7s', minha: '8.3s' };
 
 // Atmosfera: partículas douradas de fundo. Valores fixos por partícula → nunca sincronizam.
 //
@@ -64,14 +42,39 @@ const PLANOS_PARTICULAS = [
 ];
 
 export default function Planos() {
-  const { perfil: me } = usePerfil();
-  const planoAtual = me?.user?.plan || 'free';
+  const [estado, setEstado] = useState(null); // null = a carregar
+  const [aPedir, setAPedir] = useState(null); // id do produto com pedido em voo
+  const [aviso, setAviso] = useState(null); // { tipo, texto }
+
+  useEffect(() => {
+    let vivo = true;
+    estadoBrilhantes().then((e) => { if (vivo) setEstado(e); });
+    return () => { vivo = false; };
+  }, []);
+
+  // O time onde a pessoa é dona — é dele que falam o pacote e o manto. Com mais
+  // de um, o primeiro: escolher entre times é tela do bloco 2 (o Gabinete), e
+  // inventar um seletor aqui seria adiantar-me à decisão do dono.
+  const meuTime = (estado?.times || []).find((t) => t.sou_dono) || null;
+
+  async function pedir(produto) {
+    const teamId = produto === 'minha' ? null : meuTime?.id;
+    setAPedir(produto);
+    const r = await pedirAtivacao(produto, teamId);
+    setAPedir(null);
+    if (r.ok) {
+      setAviso({ tipo: 'ok', texto: 'Pedido enviado — a gente ativa e avisa.' });
+      setEstado(await estadoBrilhantes()); // o cartão passa a mostrar "pedido enviado"
+    } else {
+      setAviso({ tipo: 'erro', texto: r.erro });
+    }
+  }
 
   return (
     <div className="app-shell">
       {/* Linguagem da Figurinha: topbar HUD (wordmark dourado + linha com degrau 45°).
           `back` mantido — esta página não está na bottom nav. */}
-      <Topbar hud="PLANOS" back="/perfil" />
+      <Topbar hud="BRILHANTES" back="/perfil" />
       {/* paddings do .app-main apertados (default 32/64 = 96px de espaço morto): os 3
           cards + CTAs passam a caber sem scroll em 390×844 e 430×932. O padding
           inferior mantém folga para a bottom nav fixa (75px). */}
@@ -101,9 +104,35 @@ export default function Planos() {
         {/* Topbar → cards, directo. Cards EMPILHADOS, ordem Free → Pro → Elite.
             Layout compacto para caber sem scroll em viewports normais. */}
         <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
-          {PLANOS.map((p) => {
-            const atual = planoAtual === p.id;
-            const heroi = p.id === 'pro'; // herói da página → levitação subtil
+          {/* Cabeçalho curto: o que estas três coisas são, em uma linha. */}
+          <p style={{ fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.72)', textAlign: 'center', margin: '0 0 2px' }}>
+            Sua figurinha comum é grátis, sempre. A <b style={{ color: '#f0c94a' }}>Brilhante</b> é a versão em arte,
+            feita por IA no uniforme do Futty.
+          </p>
+          {aviso ? (
+            <div
+              className="hud-corners-s"
+              role="status"
+              style={{
+                padding: '10px 12px', fontSize: 13, lineHeight: 1.45, textAlign: 'center',
+                color: aviso.tipo === 'ok' ? '#f0c94a' : '#f8b4b4',
+                background: aviso.tipo === 'ok' ? 'rgba(212,160,23,0.1)' : 'rgba(248,113,113,0.1)',
+                border: `1px solid ${aviso.tipo === 'ok' ? 'rgba(212,160,23,0.5)' : 'rgba(248,113,113,0.5)'}`,
+              }}
+            >
+              {aviso.texto}
+            </div>
+          ) : null}
+          {PRODUTOS.map((p) => {
+            // Pacote e manto são do dono do time; sem time próprio, o cartão
+            // aparece na mesma (é o que faz a pessoa querer criar um) mas com o
+            // botão a explicar o que falta, em vez de um botão morto.
+            const pendente = temPedidoPendente(estado?.pedidos, p.id, p.id === 'minha' ? null : meuTime?.id);
+            const jaAtivo = p.id === 'pacote' ? !!meuTime?.brilhante_ativo : p.id === 'manto' ? !!meuTime?.manto_proprio : false;
+            const faltaTime = p.soDono && !meuTime;
+            const faltaPacote = p.exigePacote && !meuTime?.brilhante_ativo;
+            const atual = jaAtivo;
+            const heroi = p.id === 'pacote'; // herói da página → levitação subtil
             const card = (
               <div
                 className="hud-corners"
@@ -136,18 +165,12 @@ export default function Planos() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#fff' }}>{p.nome}</span>
-                    {/* Elite: a coroa cintila raro (1.2s a cada ~7s). Pro: ícone estático. */}
-                    {p.icone ? (
-                      <span className={p.id === 'elite' ? 'planos-coroa-twinkle' : undefined}>
-                        <Icon name={p.icone} size={19} color="#d4a017" />
-                      </span>
-                    ) : null}
                   </span>
-                  {atual ? (
+                  {atual || pendente ? (
                     // FASE 3.49 — cantos 45° (.hud-corners-s) em vez do radius-pill:
                     // era o último elemento redondo órfão da linguagem HUD.
                     <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#d4a017', border: '1px solid rgba(212,160,23,0.5)', padding: '3px 8px', whiteSpace: 'nowrap' }}>
-                      Plano atual
+                      {atual ? 'Já é seu' : 'Pedido enviado'}
                     </span>
                   ) : null}
                 </div>
@@ -158,7 +181,15 @@ export default function Planos() {
                     #d4a017 sobre o pico do blob DOURADO cai a 3.42 — dourado sobre
                     dourado, abaixo do AA 4.5. A sombra devolve-lhe a leitura sem mexer na
                     opacidade do card. */}
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{p.preco}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{p.preco}</span>
+                  {/* Os DOIS números no pacote (spec §2): o total assusta, o por
+                      jogador explica. R$2 por cabeça é a conta que a pessoa faz. */}
+                  {p.porJogador ? (
+                    <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)' }}>· {p.porJogador}</span>
+                  ) : null}
+                </div>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>{p.resumo}</p>
 
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 5, flex: 1 }}>
                   {p.features.map((f) => (
@@ -168,31 +199,31 @@ export default function Planos() {
                   ))}
                 </ul>
 
-                {/* Pagamentos = só via IAP das lojas (decisão do dono, SPEC-INFRA).
-                    Botão desativado que diz a verdade em vez de "em breve" —
-                    sem CTA clicável até a vaga "App nas lojas" ligar o IAP real.
-                    Escondido no plano actual. */}
-                {p.botao && !atual ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="hud-corners"
-                    style={{
-                      width: '100%',
-                      textAlign: 'center',
-                      padding: '10px 12px',
-                      fontSize: 12.5,
-                      lineHeight: 1.4,
-                      color: 'rgba(255,255,255,0.55)',
-                      border: '1.2px dashed rgba(255,255,255,0.18)',
-                      background: 'rgba(255,255,255,0.02)',
-                      cursor: 'not-allowed',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    Pagamento ainda não disponível nesta versão
-                  </button>
-                ) : null}
+                {/* O BOTÃO FAZ UMA COISA VERDADEIRA (spec §2): cria o pedido que
+                    o dono resolve no Gabinete. Só fica sem ação quando falta um
+                    passo anterior — e aí diz QUAL, em vez de "em breve". */}
+                {atual ? null : pendente ? (
+                  <div className="hud-corners" style={{ width: '100%', textAlign: 'center', padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, color: '#f0c94a', border: '1.2px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>
+                    Pedido enviado — a gente ativa e avisa
+                  </div>
+                ) : faltaTime || faltaPacote ? (
+                  <div className="hud-corners" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, color: 'rgba(255,255,255,0.6)', border: '1.2px dashed rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.02)' }}>
+                    <Lock size={14} style={{ flexShrink: 0 }} />
+                    {faltaTime ? 'Só para quem criou um time' : 'Precisa do pacote do time primeiro'}
+                  </div>
+                ) : (
+                  <span className="cta-gold-glow" style={{ display: 'flex' }}>
+                    <button
+                      type="button"
+                      className="btn hud-corners cta-gold"
+                      style={{ flex: 1, fontSize: 13 }}
+                      disabled={aPedir === p.id}
+                      onClick={() => pedir(p.id)}
+                    >
+                      {aPedir === p.id ? 'Enviando…' : p.botao}
+                    </button>
+                  </span>
+                )}
               </div>
             );
             // FASE A — SUSPENSÃO. Os três cards ganham sombra no chão + sway; só o Pro
