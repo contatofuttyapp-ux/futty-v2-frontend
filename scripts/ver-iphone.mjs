@@ -2282,6 +2282,40 @@ async function cenaFigurinha3(navegador, sessao) {
   passos.pedidoMensagemDigna = /Pedido enviado|não deu|mais tarde/i.test(depoisDoPedido);
   await pagina.screenshot({ path: foto('8-pedido') });
 
+  // ── 7. CAMINHO PAGO — só quando a conta TEM direito (migração 054 aplicada
+  // e um crédito dado por fora, ver scripts/_bench/conta-de-prova.js
+  // --credito). Sem isto a cena pararia no pedido, como nas corridas sem
+  // migração; com crédito, prova-se o resto: botão dourado → geração V6 REAL
+  // (~US$0,11) → os 6 fundos liberados. ──
+  if (passos.temBotaoGerar) {
+    await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await espera(4000);
+    await pagina.screenshot({ path: foto('9-antes-de-gerar') });
+
+    await pagina.locator('button', { hasText: /Gerar minha Brilhante/i }).first().click();
+    await espera(2500);
+    passos.mostrouSendoCriado = /sendo criad[ao]/i.test(await texto());
+    await pagina.screenshot({ path: foto('10-gerando') });
+
+    // Espera a geração acabar: o botão some (avatarEhIA passa a true e a
+    // Figurinha deixa de mostrar "Gerar minha Brilhante" nesse estado) ou o
+    // texto "sendo criado" desaparece. Até 120 s — a V6 direta mede ~17 s,
+    // mas a rota real soma auditor de coroa + rede; folga para um retry.
+    await pagina.waitForFunction(
+      () => !/sendo criad[ao]/i.test(document.body.innerText),
+      null,
+      { timeout: 120_000 },
+    ).catch((e) => erros.push(`espera da geração: ${e.message.split('\n')[0]}`));
+    await espera(2000);
+
+    const depoisDeGerar = await texto();
+    passos.geracoesTotais = geracoes.length; // 1 = só esta; script não gerou mais nenhuma
+    passos.temOs6Fundos = ['Neutro', 'Épico', 'Estádio', 'Aura', 'Golden', 'Royal'].every((f) => depoisDeGerar.includes(f));
+    passos.aindaMostraVireBrilhante = /Vire Brilhante/i.test(depoisDeGerar);
+    passos.aindaMostraBotaoGerar = /Gerar minha Brilhante/i.test(depoisDeGerar);
+    await pagina.screenshot({ path: foto('11-brilhante-gerada') });
+  }
+
   await contexto.close();
   return { erros, passos, geracoes: geracoes.length };
 }
@@ -2855,9 +2889,19 @@ try {
     const p = r.passos;
     console.log('\n[iphone] FIGURINHA 3 · comum grátis, Brilhante por direito');
     console.log(`   ${ok(p.cropTem23 && !p.cropTem11)} cadastro recorta em 2:3 (e só 2:3): 2:3 ${p.cropTem23} · 1:1 ${p.cropTem11}`);
-    console.log(`   ${ok(r.geracoes === 0)} o cadastro NÃO gera IA: ${r.geracoes} chamada(s) a /api/me/avatar/ai`);
+    // `p.geracoesNoCadastro` (contado logo após a foto do onboarding, ANTES de
+    // qualquer navegação seguinte) — não `r.geracoes`, que é o total da cena
+    // inteira e inclui de propósito a geração paga do passo 7 quando há
+    // crédito. Confundir os dois foi um bug desta prova, não do produto: a
+    // 1ª corrida (sem crédito) escondia o erro porque os dois números davam
+    // iguais (zero) pela razão errada.
+    console.log(`   ${ok(p.geracoesNoCadastro === 0)} o cadastro NÃO gera IA: ${p.geracoesNoCadastro} chamada(s) a /api/me/avatar/ai (${r.geracoes} no total da cena)`);
     console.log(`   ${ok(p.temTrocarFoto)} "Trocar foto" sempre presente: ${p.temTrocarFoto}`);
-    console.log(`   ${ok(p.temVireBrilhante)} bloco "Vire Brilhante" na comum: ${p.temVireBrilhante} · "Só a minha" ${p.temSoAMinha}`);
+    // Com crédito dado por fora (--credito), o bloco correto É o botão
+    // dourado, não "Vire Brilhante" — os dois são mutuamente exclusivos por
+    // desenho (Figurinha.jsx: !temDireitoDeGerar). Um XOR, não um "tem de ter
+    // os dois"; o log de baixo (secção do botão) diz qual apareceu e se bate.
+    console.log(`   ${ok(p.temVireBrilhante !== p.temBotaoGerar)} "Vire Brilhante" XOR botão dourado: Vire Brilhante ${p.temVireBrilhante} · botão dourado ${p.temBotaoGerar} · "Só a minha" ${p.temSoAMinha}`);
     console.log(`   ${ok(!p.temSeletorFundo)} sem seletor de fundo/uniforme na comum: seletores ${p.temSeletorFundo ? 'AINDA APARECEM' : 'fora'}`);
     console.log(`   ${ok(!p.inicioCompleteFigurinha)} Início sem "Complete sua figurinha" (já há foto): ${p.inicioCompleteFigurinha ? 'AINDA APARECE' : 'fora'}`);
     console.log(`   ${ok(!p.inicioSendoCriada)} Início sem "sendo criada" (nada a gerar): ${p.inicioSendoCriada ? 'APARECE' : 'fora'}`);
@@ -2865,7 +2909,16 @@ try {
     console.log(`   ${ok(p.planosTitulo && p.planosTresProdutos)} Planos vira "Brilhantes" com os 3 produtos: título ${p.planosTitulo} · produtos ${p.planosTresProdutos} · "por jogador" ${p.planosPorJogador}`);
     console.log(`   ${ok(p.planosSemProElite && p.planosSemEmBreve)} sem Pro/Elite e sem "em breve": Pro/Elite fora ${p.planosSemProElite} · "em breve" fora ${p.planosSemEmBreve}`);
     console.log(`   ${ok(p.pedidoMensagemDigna)} pedido responde com mensagem digna: enviado ${p.pedidoEnviado}`);
-    console.log(`   ${ok(p.temBotaoGerar === false)} botão "Gerar minha Brilhante" escondido sem direito: ${p.temBotaoGerar ? 'APARECEU (errado)' : 'escondido'}`);
+    if (p.temBotaoGerar) {
+      // CAMINHO PAGO — a conta tem crédito (ver --credito em conta-de-prova.js):
+      // botão dourado apareceu, e a cena clicou e esperou a geração REAL.
+      console.log(`   OK botão dourado "Gerar minha Brilhante" apareceu com direito (crédito/pacote)`);
+      console.log(`   ${ok(!p.aindaMostraBotaoGerar && !p.aindaMostraVireBrilhante)} depois de gerar: botão some (virou Brilhante) ${!p.aindaMostraBotaoGerar} · "Vire Brilhante" não volta ${!p.aindaMostraVireBrilhante}`);
+      console.log(`   ${ok(p.temOs6Fundos)} os 6 fundos liberados: ${p.temOs6Fundos}`);
+      if (r.erros.some((e) => e.includes('espera da geração'))) console.log('   ATENÇÃO: a espera pela geração estourou o tempo — ver capturas 10/11');
+    } else {
+      console.log(`   ${ok(true)} botão "Gerar minha Brilhante" escondido sem direito (esta conta não tem crédito/pacote)`);
+    }
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
