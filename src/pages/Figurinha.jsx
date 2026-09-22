@@ -18,7 +18,7 @@ import { normalizarFoto } from '../utils/normalizarFoto';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
-import { estadoBrilhantes, pedirAtivacao } from '../lib/brilhantes';
+import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
 import { PRODUTOS, MINHA_GERACOES } from '../lib/planos';
 import { ehAppNativo, salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
@@ -73,9 +73,6 @@ const TABS = [
   { k: 'fundo', label: 'Fundo' },
   { k: 'uniforme', label: 'Uniforme' },
 ];
-
-// Planos que destrancam os kits 'pro'. Qualquer outro (free, null, futuros) vê cadeado.
-const PLANOS_COM_KITS = ['pro', 'elite'];
 
 // Kits do card. Assets em bucket PÚBLICO 'kits' (app assets, não PII — o tijolo 1C
 // privatizou avatars e partia estas thumbnails). dark-gold e dark-purple ativos/livres.
@@ -276,6 +273,18 @@ export default function Figurinha() {
   const meuTimeBrilhante = (brilhante?.times || []).find((t) => t.sou_dono) || null;
   const [pedindo, setPedindo] = useState(null);
   const [avisoPedido, setAvisoPedido] = useState(null);
+  // BLOCO 2 — o recado do pedido SOBREVIVE a fechar o app: vem do estado
+  // gravado, não só do clique desta sessão. Pendente diz que está na fila;
+  // recusado diz o motivo que o dono escreveu no Gabinete; ativado não aparece
+  // aqui de todo — quem foi ativado já vê o botão dourado, e um recado sobre um
+  // pedido resolvido só ia competir com ele.
+  const pedidoPacote = pedidoDoProduto(brilhante?.pedidos, 'pacote', meuTimeBrilhante?.id);
+  const pedidoMinha = pedidoDoProduto(brilhante?.pedidos, 'minha');
+  const candidatos = [pedidoPacote, pedidoMinha].filter(Boolean);
+  const pedidoVivo = candidatos.find((p) => p.estado === 'pendente') || candidatos[0] || null;
+  const recadoPedido = avisoPedido
+    || (pedidoVivo?.estado === 'pendente' ? 'Pedido enviado — a gente ativa e avisa.' : null)
+    || (pedidoVivo?.estado === 'recusado' ? (pedidoVivo.motivo || 'Este pedido não seguiu.') : null);
 
   useEffect(() => {
     let vivo = true;
@@ -757,11 +766,11 @@ export default function Figurinha() {
   // já gerado (slot) → VESTE via PUT (não gasta quota); sem slot → confirma e gera.
   async function escolherKit(kit) {
     if (kit.estado === 'breve' || kit.id === kitAtivo || gerandoIA) return;
-    // O cadeado segue a REGRA DE PLANO pura, sem excepção para is_super_admin: a conta
-    // de teste é super-admin, e queremos que o UI mostre exactamente o que um free vê.
-    // O backend continua a isentar o super-admin — gerar via API mantém-se possível.
-    const planoUser = me?.user?.plan || 'free';
-    if (kit.estado === 'pro' && !PLANOS_COM_KITS.includes(planoUser)) return navigate('/planos');
+    // 22-set: o cadeado deixou de ser por PLANO e passou a ser por DIREITO
+    // (§5). Vestir um uniforme que já se gerou é sempre livre (slot, custo
+    // zero); gerar um novo precisa de crédito ou do pacote do time — e é isso
+    // que /planos resolve. Um membro do pacote via o PRÓPRIO uniforme do time
+    // trancado, porque o dark-purple estava marcado "pro".
     if (slotsKits.includes(kit.id)) {
       try {
         const data = await apiFetch('/api/me/kit', { method: 'PUT', body: JSON.stringify({ kit: kit.id }) });
@@ -786,12 +795,12 @@ export default function Figurinha() {
   // vale para esta sessão e não se estraga o ecrã por causa de uma preferência.
   async function escolherFundo(k) {
     if (k === fundo) return;
-    // GATE PREMIUM (mesmo padrão dos kits): fundo premium exige plano pago (ou super).
-    // O backend é a verdade (barra o PATCH); aqui só encaminhamos para /planos.
-    const def = FUNDOS.find((f) => f.k === k);
-    const planoUser = me?.user?.plan || 'free';
-    const ehSuper = !!me?.user?.is_super_admin;
-    if (def?.premium && !ehSuper && !PLANOS_COM_KITS.includes(planoUser)) return navigate('/planos');
+    // 22-set (SPEC-FIGURINHA-3 §4/§9): os 6 fundos vêm COM a Brilhante — são
+    // composição do card, custo zero. O gate antigo era por plano (Pro/Elite),
+    // e os planos saíram das telas: um membro do pacote do time via o Aura
+    // trancado no card que o time acabou de pagar, com "Os 6 fundos liberados"
+    // escrito na compra. Sem Brilhante não há seletor nenhum, portanto chegar
+    // aqui já significa ter direito ao fundo.
     // Guarda o anterior para reverter se o PATCH falhar (build 9, achado real:
     // constraint do Royal sem a migração aplicada dava 500 — o tile ficava
     // marcado no fundo novo com o banco silenciosamente no antigo).
@@ -1264,9 +1273,17 @@ export default function Figurinha() {
                   </span>
                 </div>
               </div>
-              {avisoPedido ? (
-                <div className="hud-corners-s" role="status" style={{ padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: '#f0c94a', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.45)' }}>
-                  {avisoPedido}
+              {recadoPedido ? (
+                // Recusa fala em branco, não em dourado: o dourado desta tela é
+                // convite ("dá para ter"), e um não pintado de convite mente.
+                <div
+                  className="hud-corners-s"
+                  role="status"
+                  style={pedidoVivo?.estado === 'recusado' && !avisoPedido
+                    ? { padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.14)' }
+                    : { padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: '#f0c94a', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.45)' }}
+                >
+                  {recadoPedido}
                 </div>
               ) : null}
               <div style={{ display: 'grid', gap: 8 }}>
@@ -1392,8 +1409,9 @@ export default function Figurinha() {
                 // antes do gate) não vê cadeado no que já é seu; o cadeado é só para quem
                 // tentaria EQUIPAR agora. O gate real (escolherFundo) não muda: ao trocar
                 // pra outro fundo e tentar voltar, sel vira false e o cadeado aparece.
-                const planoUser = me?.user?.plan || 'free';
-                const bloqueado = f.premium && !sel && !me?.user?.is_super_admin && !PLANOS_COM_KITS.includes(planoUser);
+                // Os 6 são de quem tem Brilhante (§4) — e este seletor só existe
+                // com Brilhante. Nenhum cadeado aqui desde 22-set.
+                const bloqueado = false;
                 return (
                   <button
                     key={f.k}
@@ -1456,11 +1474,12 @@ export default function Figurinha() {
                 // | GERÁVEL (activo sem slot → custa 1 geração) | trancado por plano.
                 const vestido = kit.id === kitAtivo;
                 const gerado = slotsKits.includes(kit.id);
-                const planoUser = me?.user?.plan || 'free';
-                // Cadeado pela regra de plano pura — ver nota em escolherKit().
-                const pro = kit.estado === 'pro' && !PLANOS_COM_KITS.includes(planoUser);
-                const geravel = !pro && !gerado;
-                const bloqueado = pro;
+                // Cadeado por DIREITO, não por plano (ver nota em escolherKit):
+                // o que já está gerado veste-se sempre; o resto só com crédito
+                // ou pacote do time.
+                const semDireito = !gerado && !temDireitoDeGerar;
+                const geravel = !semDireito && !gerado;
+                const bloqueado = semDireito;
                 return (
                   <button
                     key={kit.id}

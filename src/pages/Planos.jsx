@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { Check, Lock } from 'lucide-react';
 import Topbar from '../components/Topbar';
 import { PRODUTOS } from '../lib/planos';
-import { estadoBrilhantes, pedirAtivacao, temPedidoPendente } from '../lib/brilhantes';
+import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
 import '../styles/app.css';
 
 // FASE A — durações do sway por card. Não partilham divisores comuns úteis, por isso as
@@ -45,6 +45,7 @@ export default function Planos() {
   const [estado, setEstado] = useState(null); // null = a carregar
   const [aPedir, setAPedir] = useState(null); // id do produto com pedido em voo
   const [aviso, setAviso] = useState(null); // { tipo, texto }
+  const [timeEscolhido, setTimeEscolhido] = useState(null); // só quando há mais de um
 
   useEffect(() => {
     let vivo = true;
@@ -52,10 +53,12 @@ export default function Planos() {
     return () => { vivo = false; };
   }, []);
 
-  // O time onde a pessoa é dona — é dele que falam o pacote e o manto. Com mais
-  // de um, o primeiro: escolher entre times é tela do bloco 2 (o Gabinete), e
-  // inventar um seletor aqui seria adiantar-me à decisão do dono.
-  const meuTime = (estado?.times || []).find((t) => t.sou_dono) || null;
+  // Os times onde a pessoa é dona — é deles que falam o pacote e o manto.
+  // BLOCO 2: com mais de um, ela escolhe (o pedido leva o teamId certo, senão o
+  // dono de dois times pagava o pacote do time errado). Com um só, nada muda:
+  // seletor nenhum, que seria uma pergunta sem alternativa.
+  const meusTimes = (estado?.times || []).filter((t) => t.sou_dono);
+  const meuTime = meusTimes.find((t) => t.id === timeEscolhido) || meusTimes[0] || null;
 
   async function pedir(produto) {
     const teamId = produto === 'minha' ? null : meuTime?.id;
@@ -127,7 +130,9 @@ export default function Planos() {
             // Pacote e manto são do dono do time; sem time próprio, o cartão
             // aparece na mesma (é o que faz a pessoa querer criar um) mas com o
             // botão a explicar o que falta, em vez de um botão morto.
-            const pendente = temPedidoPendente(estado?.pedidos, p.id, p.id === 'minha' ? null : meuTime?.id);
+            const pedido = pedidoDoProduto(estado?.pedidos, p.id, p.id === 'minha' ? null : meuTime?.id);
+            const pendente = pedido?.estado === 'pendente';
+            const recusado = pedido?.estado === 'recusado' ? pedido : null;
             const jaAtivo = p.id === 'pacote' ? !!meuTime?.brilhante_ativo : p.id === 'manto' ? !!meuTime?.manto_proprio : false;
             const faltaTime = p.soDono && !meuTime;
             const faltaPacote = p.exigePacote && !meuTime?.brilhante_ativo;
@@ -198,6 +203,29 @@ export default function Planos() {
                     </li>
                   ))}
                 </ul>
+
+                {/* Dona de mais de um time: qual deles leva o pacote. O cartão
+                    inteiro segue a escolha (o "Já é seu" e o "Pedido enviado"
+                    são do time selecionado, não de um qualquer). */}
+                {p.soDono && meusTimes.length > 1 && !atual ? (
+                  <label style={{ display: 'grid', gap: 4, fontSize: 11.5, color: 'rgba(255,255,255,0.6)' }}>
+                    Para qual time?
+                    <select
+                      value={meuTime?.id || ''}
+                      onChange={(e) => setTimeEscolhido(e.target.value)}
+                      style={{ fontSize: 16, color: '#e8e8ef', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.16)', padding: '7px 8px', borderRadius: 6 }}
+                    >
+                      {meusTimes.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                    </select>
+                  </label>
+                ) : null}
+                {/* Recusado: o motivo que o dono escreveu no Gabinete. Uma recusa
+                    sem explicação é uma porta batida na cara. */}
+                {!pendente && recusado ? (
+                  <div className="hud-corners-s" role="status" style={{ padding: '9px 11px', fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                    {recusado.motivo || 'Este pedido não seguiu.'}
+                  </div>
+                ) : null}
 
                 {/* O BOTÃO FAZ UMA COISA VERDADEIRA (spec §2): cria o pedido que
                     o dono resolve no Gabinete. Só fica sem ação quando falta um

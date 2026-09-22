@@ -19,6 +19,7 @@ import { apiFetch } from '../lib/api';
 import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 import PessoasTimes from './gabinete/PessoasTimes';
+import Brilhantes from './gabinete/Brilhantes';
 import { MOSTRAR_AVANCADO } from '../config/flags';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -72,6 +73,7 @@ function Card6({ n, legenda, sub }) {
 const ABAS = [
   { k: 'visao', label: 'Visão geral' },
   { k: 'pessoas', label: 'Pessoas & times' },
+  { k: 'brilhantes', label: 'Brilhantes' },
   { k: 'dinheiro', label: 'Dinheiro' },
   { k: 'anuncios', label: 'Anúncios' },
   { k: 'seguranca', label: 'Segurança' },
@@ -166,6 +168,7 @@ export default function Gabinete() {
           <div className="gab2-content">
             {aba === 'visao' && <AbaVisaoGeral dados={dados} />}
             {aba === 'pessoas' && <PessoasTimes showMsg={showMsg} />}
+            {aba === 'brilhantes' && <Brilhantes showMsg={showMsg} />}
             {aba === 'dinheiro' && (
               <AbaDinheiro
                 dados={dados}

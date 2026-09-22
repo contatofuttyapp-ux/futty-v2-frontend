@@ -559,6 +559,14 @@ export default function Inicio() {
   // a Brilhante: é exactamente quem vê o cartão dourado.
   const brilhanteDireito = inicio?.dados?.brilhante || null;
   const podeGerarBrilhante = !!brilhanteDireito?.fonte && !!user?.foto_url && !cromoAvatarEhIA;
+  // Pedido de ativação vivo (bloco 2): a pendente manda à frente da recusa —
+  // quem pediu de novo depois de um não está a seguir em frente, e a tela
+  // acompanha em vez de insistir no não.
+  const pedidosBrilhante = inicio?.dados?.pedidos_brilhante || [];
+  const pedidoBrilhante = pedidosBrilhante.find((p) => p.estado === 'pendente') || pedidosBrilhante[0] || null;
+  const recadoBrilhante = !pedidoBrilhante ? null : pedidoBrilhante.estado === 'pendente'
+    ? { texto: 'Pedido enviado — a gente ativa e avisa ✨', recusado: false }
+    : { texto: pedidoBrilhante.motivo || 'Seu pedido de Brilhante não seguiu.', recusado: true };
 
   // Limpa o sessionStorage assim que sair de 'gerando' — sincronizado DURANTE
   // o render (mesmo padrão de MeuPerfil.jsx), não num efeito.
@@ -1078,6 +1086,16 @@ export default function Inicio() {
               </span>
             </span>
             <span className="btn btn--sm hud-corners-s cta-gold" style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }}>Gerar</span>
+          </Link>
+        ) : null}
+
+        {/* RECADO DO PEDIDO (bloco 2) — só para quem AINDA não tem direito: com
+            direito, o cartão dourado acima é o que importa e este recado só
+            competiria com ele. Pendente diz que está na fila; recusado diz o
+            motivo que o dono escreveu. Ativado nunca chega aqui: vira direito. */}
+        {!podeGerarBrilhante && recadoBrilhante ? (
+          <Link to="/planos" className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: recadoBrilhante.recusado ? 'rgba(255,255,255,0.75)' : '#f0c94a', background: recadoBrilhante.recusado ? 'rgba(255,255,255,0.03)' : 'rgba(212,160,23,0.08)', border: `1px solid ${recadoBrilhante.recusado ? 'rgba(255,255,255,0.14)' : 'rgba(212,160,23,0.45)'}` }}>
+            {recadoBrilhante.texto}
           </Link>
         ) : null}
 

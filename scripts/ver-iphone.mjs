@@ -77,6 +77,10 @@ const ARQUIVO_SENHA = opcao('senha', path.join(RAIZ, '..', '..', 'LOJA', 'demo-s
 const TIME = opcao('time', 'domingueira-fc-demo');
 const ETIQUETA = opcao('etiqueta', 'antes');
 const ARQUIVO_SESSAO = opcao('sessao', null);
+// A cena do PACOTE tem três pessoas (dono pede, super-admin ativa, membro gera)
+// e por isso lê um ficheiro com as três sessões — o que o backend escreve em
+// scripts/_bench/time-de-prova.js.
+const ARQUIVO_SESSOES = opcao('sessoes', path.join(RAIZ, 'scripts', 'capturas', 'sessao-time.json'));
 const CENAS = opcao('cenas', 'arranque,ranking,resenha').split(',').map((c) => c.trim()).filter(Boolean);
 const LENTO = args.includes('--lento');
 const PASTA = path.join(RAIZ, 'scripts', 'capturas');
@@ -2171,6 +2175,156 @@ async function cenaRodada17(navegador, sessao) {
 // SEM a migração 054 aplicada (é o Pedro que a aplica), a metade PAGA do
 // percurso não existe: ninguém tem direito, o botão dourado não aparece e o
 // pedido responde 503 digno. A cena regista o que encontrar em vez de fingir.
+// ═══════════════════════════════════════════════════════════════════════════
+// FIGURINHA 3 — BLOCO 2: o pacote do time, de ponta a ponta.
+//
+// Três pessoas, três contextos do navegador (sessões separadas, como na vida):
+//   1. o DONO abre os Planos e pede a ativação do pacote;
+//   2. o SUPER-ADMIN vê o pedido no Gabinete e ativa com o uniforme escolhido;
+//   3. o MEMBRO faz o cadastro (figurinha comum, grátis), vê o cartão dourado
+//      no Início e gera a Brilhante — no uniforme DO TIME, não num à escolha.
+//
+// Custa uma geração real (~US$0,11). O resto é grátis.
+// ═══════════════════════════════════════════════════════════════════════════
+async function cenaFigurinha3Pacote(navegador, sessoes) {
+  const PASTA_P = path.join(PASTA, 'figurinha3-pacote');
+  mkdirSync(PASTA_P, { recursive: true });
+  const foto = (nome) => path.join(PASTA_P, `${ETIQUETA}-${nome}.png`);
+  const erros = [];
+  const FOTO_PESSOA = path.join(RAIZ, '..', '..', 'BANCADA-FOTOS', 'Gui.jpeg');
+  const KIT = 'Dark Purple'; // o uniforme que o dono escolhe no Gabinete
+  const passos = {};
+  const geracoes = [];
+
+  /** Uma aba por pessoa, com a sessão dela. */
+  async function abrirComo(papel) {
+    const contexto = await novoContexto(navegador, sessoes[papel], { amostrar: false });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${papel}: ${e.message}`));
+    pagina.on('request', (r) => { if (r.url().includes('/api/me/avatar/ai')) geracoes.push(papel); });
+    // O Gabinete confirma com window.confirm — sem isto o Playwright cancela.
+    pagina.on('dialog', (d) => d.accept().catch(() => {}));
+    return { contexto, pagina, texto: () => pagina.locator('body').innerText().catch(() => '') };
+  }
+
+  // ── 1. O DONO PEDE O PACOTE (Planos) ──
+  const dono = await abrirComo('dono');
+  await dono.pagina.goto(`${BASE}/planos`, { waitUntil: 'domcontentloaded' });
+  await espera(5000);
+  await dono.pagina.screenshot({ path: foto('1-dono-planos') });
+  const botaoPacote = dono.pagina.locator('button', { hasText: /Ativar para o meu time/i }).first();
+  passos.donoVeOPacote = (await botaoPacote.count()) > 0;
+  if (passos.donoVeOPacote) {
+    // `block:'center'` + `force`: os cartões levitam de propósito e o terceiro
+    // fica debaixo da barra fixa (as duas armadilhas já apanhadas no bloco 1).
+    await botaoPacote.evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {});
+    await espera(800);
+    await botaoPacote.click({ force: true }).catch((e) => erros.push(`clique do dono: ${e.message.split('\n')[0]}`));
+    await espera(4000);
+  }
+  const textoDono = await dono.texto();
+  passos.pedidoEnviado = /Pedido enviado/i.test(textoDono);
+  await dono.pagina.screenshot({ path: foto('2-dono-pedido-enviado') });
+  await dono.contexto.close();
+
+  // ── 2. O SUPER-ADMIN ATIVA NO GABINETE ──
+  const chefe = await abrirComo('super');
+  await chefe.pagina.goto(`${BASE}/gabinete?aba=brilhantes`, { waitUntil: 'domcontentloaded' });
+  await espera(7000);
+  const noGabinete = await chefe.texto();
+  passos.gabineteTemAba = /Brilhantes/i.test(noGabinete);
+  passos.gabineteVeOPedido = /Pacote do time/i.test(noGabinete);
+  passos.gabineteMostraQuemPediu = /prova-pacote-dono@futtymock\.com/i.test(noGabinete);
+  await chefe.pagina.screenshot({ path: foto('3-gabinete-pedido') });
+
+  // O uniforme dos 25 é escolhido aqui, no select da linha do pedido.
+  const seletor = chefe.pagina.locator('select').first();
+  if (await seletor.count()) await seletor.selectOption({ label: KIT }).catch((e) => erros.push(`uniforme: ${e.message.split('\n')[0]}`));
+  await espera(500);
+  await chefe.pagina.screenshot({ path: foto('4-gabinete-uniforme') });
+
+  const botaoAtivar = chefe.pagina.locator('button', { hasText: /^Ativar pacote$/i }).first();
+  passos.gabineteTemBotaoAtivar = (await botaoAtivar.count()) > 0;
+  if (passos.gabineteTemBotaoAtivar) {
+    await botaoAtivar.click().catch((e) => erros.push(`ativar: ${e.message.split('\n')[0]}`));
+    await espera(6000);
+  }
+  const depoisDeAtivar = await chefe.texto();
+  passos.gabineteDizAtivo = /ativo/i.test(depoisDeAtivar);
+  passos.gabineteMostraUniforme = depoisDeAtivar.includes(KIT);
+  passos.gabineteZeroGeradas = /\b0\/25\b/.test(depoisDeAtivar); // ativar não gera em lote
+  await chefe.pagina.screenshot({ path: foto('5-gabinete-ativado') });
+  await chefe.contexto.close();
+
+  // ── 3. O MEMBRO: cadastro (comum, grátis) → cartão dourado → Brilhante ──
+  const membro = await abrirComo('membro');
+  await membro.pagina.goto(`${BASE}/onboarding`, { waitUntil: 'domcontentloaded' });
+  await espera(3500);
+  await membro.pagina.locator('button', { hasText: /Começar/i }).first().click().catch(() => {});
+  await espera(1200);
+  await membro.pagina.locator('input[type="file"]').first().setInputFiles(FOTO_PESSOA);
+  await espera(2500);
+  await membro.pagina.locator('button', { hasText: /^Confirmar/i }).first().click().catch(() => {});
+  await espera(9000);
+  passos.geracoesNoCadastro = geracoes.length; // tem de ser 0: cadastro não gera
+  await membro.pagina.locator('button', { hasText: /^Continuar/i }).first().click().catch(() => {});
+  await espera(1500);
+  await membro.pagina.locator('input').first().fill('MEMBRO').catch(() => {});
+  await espera(400);
+  await membro.pagina.locator('button', { hasText: /^Entrar/i }).first().click().catch(() => {});
+  await espera(9000);
+  await membro.pagina.screenshot({ path: foto('6-membro-cadastrado') });
+
+  // O Início é o gatilho da geração preguiçosa: o cartão dourado aparece
+  // porque o time ativou, não porque a pessoa comprou nada.
+  await membro.pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await espera(8000);
+  const noInicio = await membro.texto();
+  passos.membroVeCartaoDourado = /tem uma Figurinha Brilhante para gerar/i.test(noInicio);
+  passos.cartaoDizCortesia = /Cortesia do pacote do seu time/i.test(noInicio);
+  await membro.pagina.screenshot({ path: foto('7-membro-cartao-dourado') });
+
+  await membro.pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await espera(5000);
+  const naFigurinha = await membro.texto();
+  passos.membroTemBotaoGerar = /Gerar minha Brilhante/i.test(naFigurinha);
+  passos.figurinhaDizUniformeDoTime = /uniforme que o dono escolheu/i.test(naFigurinha);
+  await membro.pagina.screenshot({ path: foto('8-membro-antes-de-gerar') });
+
+  if (passos.membroTemBotaoGerar) {
+    await membro.pagina.locator('button', { hasText: /Gerar minha Brilhante/i }).first().click();
+    await espera(2500);
+    passos.mostrouSendoCriada = /sendo criad[ao]/i.test(await membro.texto());
+    await membro.pagina.screenshot({ path: foto('9-membro-gerando') });
+    await membro.pagina.waitForFunction(
+      () => !/sendo criad[ao]/i.test(document.body.innerText),
+      null,
+      { timeout: 150_000 }, // V6 mede ~17 s; a rota real soma auditor de coroa e rede
+    ).catch((e) => erros.push(`espera da geração: ${e.message.split('\n')[0]}`));
+    await espera(2500);
+    const depois = await membro.texto();
+    passos.temOs6Fundos = ['Neutro', 'Épico', 'Estádio', 'Aura', 'Golden', 'Royal'].every((f) => depois.includes(f));
+    passos.aindaMostraBotaoGerar = /Gerar minha Brilhante/i.test(depois);
+    await membro.pagina.screenshot({ path: foto('10-membro-brilhante') });
+  }
+  passos.geracoesTotais = geracoes.length;
+  await membro.contexto.close();
+
+  // ── 4. O GABINETE FECHA A CONTA: 1/25 e o custo REAL ──
+  const chefe2 = await abrirComo('super');
+  await chefe2.pagina.goto(`${BASE}/gabinete?aba=brilhantes`, { waitUntil: 'domcontentloaded' });
+  await espera(7000);
+  const fim = await chefe2.texto();
+  passos.gabineteConta1de25 = /\b1\/25\b/.test(fim);
+  passos.gabineteMostraCusto = /US\$0\.1\d/.test(fim); // ~US$0,11 da V6
+  passos.gabineteSemPedidoPendente = /Nenhum pedido esperando/i.test(fim);
+  passos.custoNaTela = (fim.match(/US\$0\.\d+/) || [])[0] || null;
+  await chefe2.pagina.screenshot({ path: foto('11-gabinete-1-de-25') });
+  await chefe2.contexto.close();
+
+  return { erros, passos, geracoes: geracoes.length };
+}
+
 async function cenaFigurinha3(navegador, sessao) {
   const PASTA_F3 = path.join(PASTA, 'figurinha3');
   mkdirSync(PASTA_F3, { recursive: true });
@@ -2539,10 +2693,15 @@ mkdirSync(PASTA, { recursive: true });
 const navegador = await webkit.launch();
 try {
   console.log(`[iphone] ${ETIQUETA} · ${BASE} · WebKit ${navegador.version()} · 430×932 @3x · cenas ${CENAS.join(',')}${LENTO ? ' · lento' : ''}`);
-  const { sessao, camposLogin } = ARQUIVO_SESSAO
-    ? { sessao: JSON.parse(readFileSync(ARQUIVO_SESSAO, 'utf8')), camposLogin: null }
-    : await entrar(navegador);
-  console.log(`[iphone] sessão ${ARQUIVO_SESSAO ? `de ${ARQUIVO_SESSAO}` : `de ${EMAIL}`} ok · time ${TIME}`);
+  // A cena do pacote traz as SUAS sessões (--sessoes) e não toca na conta demo.
+  // Sem esta saída, pedir só essa cena obrigava a um login que não serve a nada.
+  const soPacote = CENAS.length === 1 && CENAS[0] === 'figurinha3-pacote' && !ARQUIVO_SESSAO;
+  const { sessao, camposLogin } = soPacote
+    ? { sessao: null, camposLogin: null }
+    : ARQUIVO_SESSAO
+      ? { sessao: JSON.parse(readFileSync(ARQUIVO_SESSAO, 'utf8')), camposLogin: null }
+      : await entrar(navegador);
+  if (!soPacote) console.log(`[iphone] sessão ${ARQUIVO_SESSAO ? `de ${ARQUIVO_SESSAO}` : `de ${EMAIL}`} ok · time ${TIME}`);
   const saida = { etiqueta: ETIQUETA, base: BASE, webkit: navegador.version(), cenas: CENAS };
 
   if (CENAS.includes('arranque')) {
@@ -2919,6 +3078,27 @@ try {
     } else {
       console.log(`   ${ok(true)} botão "Gerar minha Brilhante" escondido sem direito (esta conta não tem crédito/pacote)`);
     }
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
+  if (CENAS.includes('figurinha3-pacote')) {
+    const sessoes = JSON.parse(readFileSync(ARQUIVO_SESSOES, 'utf8'));
+    const r = await cenaFigurinha3Pacote(navegador, sessoes);
+    saida['figurinha3-pacote'] = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    const p = r.passos;
+    console.log('\n[iphone] FIGURINHA 3 · BLOCO 2 — pacote do time de ponta a ponta');
+    console.log(`   ${ok(p.donoVeOPacote && p.pedidoEnviado)} dono pede a ativação nos Planos: botão ${p.donoVeOPacote} · "Pedido enviado" ${p.pedidoEnviado}`);
+    console.log(`   ${ok(p.gabineteTemAba && p.gabineteVeOPedido && p.gabineteMostraQuemPediu)} Gabinete lista o pedido: aba ${p.gabineteTemAba} · produto ${p.gabineteVeOPedido} · quem pediu ${p.gabineteMostraQuemPediu}`);
+    console.log(`   ${ok(p.gabineteDizAtivo && p.gabineteMostraUniforme)} ativação com uniforme escolhido: ativo ${p.gabineteDizAtivo} · Dark Purple na tela ${p.gabineteMostraUniforme}`);
+    console.log(`   ${ok(p.gabineteZeroGeradas)} ativar NÃO gera em lote (0/25 logo após ativar): ${p.gabineteZeroGeradas}`);
+    console.log(`   ${ok(p.geracoesNoCadastro === 0)} cadastro do membro não gera IA: ${p.geracoesNoCadastro} chamada(s)`);
+    console.log(`   ${ok(p.membroVeCartaoDourado)} membro vê o cartão dourado no Início: ${p.membroVeCartaoDourado} · "cortesia do pacote" ${p.cartaoDizCortesia}`);
+    console.log(`   ${ok(p.membroTemBotaoGerar && p.figurinhaDizUniformeDoTime)} Figurinha diz que o uniforme é o do time: botão ${p.membroTemBotaoGerar} · frase ${p.figurinhaDizUniformeDoTime}`);
+    console.log(`   ${ok(p.geracoesTotais === 1)} uma geração só na cena inteira: ${p.geracoesTotais}`);
+    console.log(`   ${ok(!p.aindaMostraBotaoGerar && p.temOs6Fundos)} Brilhante gerada: botão some ${!p.aindaMostraBotaoGerar} · os 6 fundos ${p.temOs6Fundos}`);
+    console.log(`   ${ok(p.gabineteConta1de25 && p.gabineteMostraCusto)} Gabinete fecha a conta: 1/25 ${p.gabineteConta1de25} · custo real na tela ${p.custoNaTela || '—'}`);
+    console.log(`   ${ok(p.gabineteSemPedidoPendente)} o pedido saiu da fila ao ser atendido: ${p.gabineteSemPedidoPendente}`);
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 

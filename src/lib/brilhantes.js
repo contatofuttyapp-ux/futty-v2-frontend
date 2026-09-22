@@ -35,7 +35,18 @@ export async function pedirAtivacao(produto, teamId = null) {
   }
 }
 
-/** Já existe um pedido pendente deste produto (para este time)? */
+/**
+ * O pedido que vale a pena mostrar para este produto (e este time): a pendente
+ * manda à frente da recusa, porque pedir de novo depois de uma recusa é a
+ * pessoa a seguir em frente — a tela tem de acompanhar, não insistir no não.
+ * Devolve o pedido (com `estado` e `motivo`) ou null.
+ */
+export function pedidoDoProduto(pedidos, produto, teamId = null) {
+  const meus = (pedidos || []).filter((p) => p.produto === produto && (teamId ? p.team_id === teamId : true));
+  return meus.find((p) => p.estado === 'pendente') || meus.find((p) => p.estado === 'recusado') || null;
+}
+
+/** Já existe um pedido PENDENTE deste produto (para este time)? */
 export function temPedidoPendente(pedidos, produto, teamId = null) {
-  return (pedidos || []).some((p) => p.produto === produto && (teamId ? p.team_id === teamId : true));
+  return pedidoDoProduto(pedidos, produto, teamId)?.estado === 'pendente';
 }
