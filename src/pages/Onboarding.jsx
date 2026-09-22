@@ -104,7 +104,19 @@ export default function Onboarding() {
     } catch {
       /* priv */
     }
-    apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold', origem: 'cadastro' }) })
+    // FOTO_DESATUALIZADA (22-set): o motor tem uma trava de hash — se a foto
+    // que ele baixou ainda não for a que acabou de subir, ele RECUSA gerar em
+    // vez de fazer a figurinha da foto errada. Aqui no cadastro não há botão
+    // nenhum para a pessoa tocar (a geração é automática e invisível), por isso
+    // a resposta digna é tentar outra vez sozinho, uma só vez, passados 4 s.
+    // Sem isto, um atraso de propagação de segundos deixava o cadastro com a
+    // figurinha marcada como falhada para sempre.
+    const pedir = () => apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold', origem: 'cadastro' }) });
+    pedir()
+      .catch((e) => {
+        if (e?.code !== 'FOTO_DESATUALIZADA') throw e;
+        return new Promise((r) => setTimeout(r, 4000)).then(pedir);
+      })
       .catch(() => {})
       .finally(() => {
         figurinhaIAEmVooRef.current = false;

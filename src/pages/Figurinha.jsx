@@ -595,13 +595,18 @@ export default function Figurinha() {
       if (err?.code === 'EMAIL_NAO_CONFIRMADO') setEmailNaoConfirmado(true);
       else if (err?.status === 403) setLimiteIA(true); // limite de gerações do plano → card de quota
       else {
-        // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO / IA_INDISPONIVEL: causas acionáveis
-        // com mensagem digna própria, em vez do genérico "não deu desta vez".
-        // IA_INDISPONIVEL (14-set: fal recusou por chave/crédito, falha do MOTOR)
-        // usa a mensagem que já vem do backend — nunca sugere "tente outra foto",
-        // porque o problema não é a foto. Resto (fal fora do ar, etc.) mantém o
-        // genérico com retry, que já cobre bem o transitório.
-        if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL'].includes(err?.code)) setErroIAmsg(err.message);
+        // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO / IA_INDISPONIVEL / FOTO_DESATUALIZADA:
+        // causas acionáveis com mensagem digna própria, em vez do genérico
+        // "não deu desta vez". IA_INDISPONIVEL (14-set: fal recusou por
+        // chave/crédito, falha do MOTOR) usa a mensagem que já vem do backend —
+        // nunca sugere "tente outra foto", porque o problema não é a foto.
+        // FOTO_DESATUALIZADA (22-set) é a trava de hash do motor: a foto que
+        // ele baixou ainda não era a que acabou de subir, e ele recusou gerar
+        // em vez de fazer a figurinha da foto errada. Nada a corrigir do lado
+        // de cá — é esperar uns segundos e tocar de novo, e o botão de repetir
+        // do overlay já está lá. Resto (fal fora do ar, etc.) mantém o genérico
+        // com retry, que já cobre bem o transitório.
+        if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL', 'FOTO_DESATUALIZADA'].includes(err?.code)) setErroIAmsg(err.message);
         setErroIA(true); // qualquer falha → estado de erro com retry no overlay
       }
     } finally {
