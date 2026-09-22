@@ -184,7 +184,7 @@ export default function Figurinha() {
   // página precisa de merges finos — slots, kit_ativo, avatar_url — que o card
   // usa de imediato, sem esperar round-trip) e as escolhas guardadas
   // (fundo/avatar genérico/fase da estreia).
-  const { perfil, erro: erroPerfil, recarregar: recarregarPerfilGlobal } = usePerfil();
+  const { perfil, erro: erroPerfil, deCache: perfilDeCache, recarregar: recarregarPerfilGlobal } = usePerfil();
   const { session } = useAuth();
   const userId = session?.user?.id || null;
 
@@ -337,6 +337,46 @@ export default function Figurinha() {
       ativo = false;
     };
   }, [perfil, erroPerfil]);
+
+  // O ESPELHO TEM DE OUVIR O DADO FRESCO UMA VEZ (22-set, relato do dono: "no
+  // Início já deu certo, na Figurinha ainda está a foto antiga").
+  //
+  // O efeito acima semeia `me` com o PRIMEIRO `perfil` que chega — e o
+  // PerfilContext entrega primeiro o CACHE LOCAL deste aparelho
+  // (stale-while-revalidate) e só depois a resposta do /api/me. O guard por ref
+  // existe por bom motivo (o flow da estreia não pode reiniciar a meio), mas
+  // apanhava também a actualização: o cromo desta página ficava preso na
+  // figurinha gravada no cache, enquanto o Início — que lê o contexto directo —
+  // já mostrava a nova. Quem nunca tinha aberto o app naquele aparelho via o
+  // certo; quem já tinha, via o antigo. Daí parecer coisa de PC contra celular.
+  //
+  // Sincroniza-se só o que vem do servidor e não se edita aqui. Fundo, zoom e
+  // avatar genérico ficam como o utilizador os deixou. E se houver acção local
+  // em voo (upload, geração, foto por gerar), ela é mais nova do que este
+  // fresco — desiste-se sem aplicar, para não desfazer o que ele acabou de fazer.
+  const frescoAplicadoRef = useRef(false);
+  useEffect(() => {
+    if (frescoAplicadoRef.current || perfilDeCache || !perfil) return undefined;
+    frescoAplicadoRef.current = true;
+    if (gerandoIA || uploadFoto || fotoLocal) return undefined;
+    // Adiado ao microtask, como o efeito de semeadura acima: setState síncrono
+    // no corpo do efeito dispara cascading renders.
+    let ativo = true;
+    Promise.resolve().then(() => {
+      if (!ativo) return;
+      setMe((m) => (m ? {
+        ...m,
+        user: {
+          ...m.user,
+          foto_url: perfil.user?.foto_url ?? m.user?.foto_url,
+          avatar_url: perfil.user?.avatar_url ?? m.user?.avatar_url,
+          kit_ativo: perfil.user?.kit_ativo ?? m.user?.kit_ativo,
+        },
+        slots: perfil.slots ?? m.slots,
+      } : perfil));
+    });
+    return () => { ativo = false; };
+  }, [perfil, perfilDeCache, gerandoIA, uploadFoto, fotoLocal]);
 
   // Liberta o objectURL da foto local (ao trocar/desmontar).
   useEffect(() => {
