@@ -1675,6 +1675,13 @@
   aspect-ratio: 2 / 3;
 }
 .fig-io-btn { height: 40px; }
+/* RODADA 17 — quando o "Gerar Avatar IA" vira o CTA dourado (.cta-gold, que
+   sozinho vale 46px de altura própria), .fig-io-btn TEM de ganhar o empate:
+   a linha ao lado do "Trocar foto" não pode saltar de altura só porque o
+   botão pulsou dourado. Duas classes na seletor (especificidade 0,0,2,0)
+   ganham de .cta-gold sozinho (0,0,1,0) INDEPENDENTE da ordem no ficheiro —
+   sem isto, dependeria de qual das duas regras vem depois aqui embaixo. */
+.fig-io-btn.cta-gold { height: 40px; }
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CROMO DO INÍCIO. O retrato QUADRADO da /figurinha (600×600, sem placa), reduzido
@@ -1965,6 +1972,7 @@
    normais). Build 9: revoga o tier anterior, que aceitava rolagem. */
 @media (max-height: 700px) {
   .fig-io-btn { height: 34px; }
+  .fig-io-btn.cta-gold { height: 34px; }
 }
 
 /* Figurinha studio — grade do seletor (fundo/uniforme) PADRONIZADA (15-set): os dois

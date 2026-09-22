@@ -250,6 +250,11 @@ export default function Figurinha() {
   // A2 — kit vestido + kits já gerados (slots). Vindos do GET /api/me.
   const kitAtivo = me?.user?.kit_ativo || 'dark-gold';
   const slotsKits = me?.slots || [];
+  // RODADA 17 — o botão "Gerar Avatar IA" vira o CTA dourado (receita do "Ver
+  // sorteio", Inicio.jsx) exactamente na janela em que ele é a única ação que
+  // falta: foto nova já subiu, ainda não gerou. Fora dessa janela (idle, ou já
+  // gerando) continua roxo — dourado é reservado para "toque aqui agora".
+  const brilharGerar = fotoTrocadaSemGerar && !gerandoIA;
   // (l) Dias até a quota renovar. O backend zera a contagem quando o MÊS muda
   // (avatar_ia_reset < início do mês corrente) → a renovação é o dia 1 do mês seguinte.
   // O cálculo de datas é impuro (Date), por isso corre UMA vez no initializer do
@@ -510,6 +515,16 @@ export default function Figurinha() {
   // Geração IA durante a estreia: ao concluir (ou falhar), revela o cromo.
   // Declarada antes de subirFoto porque este chama-a no auto-trigger da estreia.
   async function gerarAvatarIAEstreia() {
+    // RODADA 17 — mesmo marcador do Onboarding (dispararFigurinhaIA): o Início
+    // lê isto no PRÓPRIO useState inicial (uma vez, ao montar), por isso tem
+    // de estar gravado ANTES do POST — se a pessoa for para lá enquanto isto
+    // ainda corre, o Início já nasce sabendo que há uma geração em voo, em vez
+    // de mostrar o CTA normal por um instante até o status 'gerando' chegar.
+    try {
+      sessionStorage.setItem('futty_figurinha_gerando', '1');
+    } catch {
+      /* priv */
+    }
     setGerandoIA(true);
     setErro('');
     setLimiteIA(false);
@@ -618,6 +633,15 @@ export default function Figurinha() {
   async function gerarAvatarIA(kitId) {
     if (gerandoIA) return;
     const kit = typeof kitId === 'string' ? kitId : kitAtivo;
+    // RODADA 17 — mesmo marcador de gerarAvatarIAEstreia/dispararFigurinhaIA
+    // (Onboarding): cobre a TROCA de foto/uniforme, não só o cadastro. Antes
+    // do POST — é o que o Início lê ao montar, se a pessoa sair desta tela
+    // enquanto a geração ainda corre.
+    try {
+      sessionStorage.setItem('futty_figurinha_gerando', '1');
+    } catch {
+      /* priv */
+    }
     setGerandoIA(true);
     setErro('');
     setLimiteIA(false);
@@ -1033,8 +1057,16 @@ export default function Figurinha() {
         {/* (Faixa "Avatar IA ativo · Ver foto" removida na FASE 3.21 — a informação
             passou toda para o modal "A tua foto", aberto pelo botão Trocar foto.) */}
 
-        {/* Foto subida mas ainda sem avatar IA gerado (a foto não entra no card). */}
-        {fotoLocal ? (
+        {/* Foto subida mas ainda sem avatar IA gerado (a foto não entra no card).
+            RODADA 17 — gerandoIA vem PRIMEIRO: fotoLocal só é limpo no sucesso/
+            falha de gerarAvatarIA (não no início), então sem esta ordem as duas
+            geração já em curso mostrava "Foto carregada, gere seu avatar" por
+            cima do botão já dizendo "Gerando…" — duas mensagens discordando. */}
+        {gerandoIA ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
+            <FuttyLoader size={14} label={null} /> Seu avatar está sendo criado… leva uns 45 segundos
+          </div>
+        ) : fotoLocal ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
             <Check size={14} /> Foto carregada, gere seu avatar
           </div>
@@ -1081,33 +1113,58 @@ export default function Figurinha() {
               >
                 <Camera size={16} /> {jogador.avatar_url ? 'Trocar foto' : 'Adicionar foto'}
               </button>
-              {jogador.avatar_url ? (
-                <button
-                  type="button"
-                  className={`btn btn--purple fig-io-btn hud-corners${fotoTrocadaSemGerar && !gerandoIA ? ' pulse-active' : ''}`}
-                  style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                  disabled={gerandoIA || uploadFoto}
-                  onClick={gerarAvatarIA}
-                >
-                  {gerandoIA ? (
-                    <>
-                      <FuttyLoader size={22} label={null} /> Gerando…
-                    </>
-                  ) : (
-                    <>
-                      <EstrelaIA size={16} color="#ffffff" /> Gerar Avatar IA
-                    </>
-                  )}
-                </button>
+              {jogador.avatar_url || gerandoIA ? (
+                brilharGerar ? (
+                  // RODADA 17 — EXACTAMENTE a receita do "Ver sorteio" (Inicio.jsx
+                  // ~337): o glow fica no WRAPPER, em drop-shadow (filter não é
+                  // cortado pelo clip-path); o pulso de BORDA fica no botão (essa
+                  // metade sobrevive ao recorte a 45° do hud-corners). fig-io-btn
+                  // continua nas duas classes só para a ALTURA: .cta-gold sozinho
+                  // vale 46px e quebraria a linha com "Trocar foto" (40px, 34px em
+                  // ecrãs curtos) — o par .fig-io-btn.cta-gold no app.css resolve
+                  // esse empate de especificidade a favor da grade existente.
+                  <span className="cta-gold-glow pulse-glow" style={{ flex: 1, display: 'flex' }}>
+                    <button
+                      type="button"
+                      className="btn hud-corners fig-io-btn cta-gold pulse-active"
+                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                      disabled={gerandoIA || uploadFoto}
+                      onClick={gerarAvatarIA}
+                    >
+                      <EstrelaIA size={16} color="#f0c94a" /> Gerar Avatar IA
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn--purple fig-io-btn hud-corners"
+                    style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    disabled={gerandoIA || uploadFoto}
+                    onClick={gerarAvatarIA}
+                  >
+                    {gerandoIA ? (
+                      <>
+                        <FuttyLoader size={22} label={null} /> Gerando…
+                      </>
+                    ) : (
+                      <>
+                        <EstrelaIA size={16} color="#ffffff" /> Gerar Avatar IA
+                      </>
+                    )}
+                  </button>
+                )
               ) : (
                 <div style={{ flex: 1, fontSize: 12, color: 'var(--label-color)', textAlign: 'center', alignSelf: 'center' }}>
                   Adicione uma foto para gerar o avatar IA
                 </div>
               )}
             </div>
-            {gerandoIA ? (
-              <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>Pode demorar até 30 segundos</span>
-            ) : null}
+            {/* "Pode demorar até 30 segundos" (própria, sob o botão) saiu nesta
+                rodada: virou redundante e desatualizada com a mensagem nova
+                acima da linha ("Seu avatar está sendo criado… leva uns 45
+                segundos"), que já cobre gerandoIA com o tempo real do motor
+                em duas passadas. Duas legendas de tempo diferentes ao mesmo
+                tempo (30s aqui, 45s ali) confundia mais do que ajudava. */}
           </div>
 
           {/* (l) QUOTA (403) — card da família HUD, não um banner de erro. */}

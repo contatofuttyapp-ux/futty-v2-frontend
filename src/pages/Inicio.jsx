@@ -544,7 +544,15 @@ export default function Inicio() {
     }
   });
   const figurinhaStatus = user?.figurinha_status || null;
-  const figurinhaGerando = figurinhaStatus === 'gerando' || (figurinhaSessaoMarcada && !figurinhaStatus && !user?.avatar_url);
+  // RODADA 17 — `&& !user?.avatar_url` saiu: só cobria o cadastro (1ª figurinha
+  // de todas, sem avatar_url nenhum ainda). Numa TROCA de foto/uniforme
+  // (Figurinha.jsx, gerarAvatarIA) o usuário já tem avatar_url — o antigo — e
+  // essa condição bloqueava o marcador exactamente no caso que ele existe para
+  // cobrir: navegar para o Início enquanto a geração ainda corre, antes de o
+  // /api/me fresco confirmar 'gerando'. O marcador continua a sumir sozinho
+  // (linhas abaixo) assim que figurinhaStatus sai de 'gerando' — nunca fica
+  // preso mostrando "sendo criada" para sempre.
+  const figurinhaGerando = figurinhaStatus === 'gerando' || (figurinhaSessaoMarcada && !figurinhaStatus);
   const figurinhaFalhou = figurinhaStatus === 'falhou';
 
   // Limpa o sessionStorage assim que sair de 'gerando' — sincronizado DURANTE
@@ -998,9 +1006,12 @@ export default function Inicio() {
           </div>
         ) : null}
 
-        {/* Figurinha automática do cadastro (12-set): enquanto a IA gera em fundo,
-            mostra a foto da pessoa com um brilho dourado passando em vez do CTA
-            normal — sem isso pareceria que nada está acontecendo por ~30s. */}
+        {/* Figurinha automática do cadastro (12-set) e QUALQUER geração daqui em
+            diante (RODADA 17: troca de foto/uniforme dispara o mesmo marcador,
+            ver figurinhaGerando acima) — enquanto a IA gera em fundo, mostra a
+            foto da pessoa com um brilho dourado passando em vez do CTA normal —
+            sem isso pareceria que nada está acontecendo por ~45s (motor em duas
+            passadas, 22-set). */}
         {figurinhaGerando ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.4)' }}>
             <span className="figurinha-gerando-moldura" style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.5)', background: '#101012' }}>
@@ -1010,7 +1021,7 @@ export default function Inicio() {
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Sua figurinha está sendo criada…</span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>leva uns 30 segundos</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>leva uns 45 segundos</span>
             </span>
           </div>
         ) : figurinhaFalhou ? (

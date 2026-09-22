@@ -2050,6 +2050,114 @@ async function cenaRodada16b(navegador, sessao) {
   return saida;
 }
 
+// ═══ RODADA 17 — botão dourado pós-foto + "sendo criada" em toda geração ═══
+//
+// Ponta a ponta, sem interceptar nenhuma escrita: troca a foto (upload real,
+// grátis) → confere o botão "Gerar Avatar IA" dourado e pulsando → toca nele
+// (geração REAL, ~US$0,05) → confere que a Figurinha mostra "sendo criado" →
+// vai ao Início NO MEIO da geração e confere "Sua figurinha está sendo
+// criada…" (não o card "Complete sua figurinha") → espera acabar → volta e
+// confere a figurinha nova. Quem chama isto tem de repor a conta demo depois
+// (scripts/_bench/repor-estado-demo.js no backend — tem modo sem custo).
+async function cenaRodada17(navegador, sessao) {
+  const FOTO_NOVA = path.join(RAIZ, '..', '..', 'BANCADA-FOTOS', 'Gui.jpeg');
+  const PASTA_R17 = path.join(PASTA, 'rodada-17');
+  mkdirSync(PASTA_R17, { recursive: true });
+  const foto = (nome) => path.join(PASTA_R17, `${ETIQUETA}-${nome}.png`);
+  const erros = [];
+
+  // futty_figurinha_estreia marcado: a conta demo já tem foto/figurinha, mas
+  // sem o flag cairia no fluxo de 1ª visita (outra tela, ver Figurinha.jsx).
+  const contexto = await novoContexto(navegador, [...sessao, { name: 'futty_figurinha_estreia', value: '1' }], { amostrar: false });
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+
+  // Compara com "Trocar foto" (mede as duas ao mesmo tempo): a prova de que a
+  // grade não mudou é numérica, não só visual.
+  const medirBotao = () => pagina.evaluate(() => {
+    const btnGerar = [...document.querySelectorAll('button')].find((b) => /Gerar Avatar IA|Gerando/.test(b.textContent || ''));
+    const btnTrocar = [...document.querySelectorAll('button')].find((b) => /Trocar foto|Adicionar foto/.test(b.textContent || ''));
+    if (!btnGerar) return null;
+    const cs = getComputedStyle(btnGerar);
+    const wrapper = btnGerar.closest('.cta-gold-glow');
+    const wcs = wrapper ? getComputedStyle(wrapper) : null;
+    const r = btnGerar.getBoundingClientRect();
+    const rTrocar = btnTrocar?.getBoundingClientRect();
+    return {
+      texto: btnGerar.textContent.trim().replace(/\s+/g, ' '),
+      dourado: btnGerar.classList.contains('cta-gold'),
+      pulsaBorda: btnGerar.classList.contains('pulse-active'),
+      temWrapperGlowPulse: !!wrapper && wrapper.classList.contains('pulse-glow'),
+      filtroWrapperAtivo: wcs ? wcs.filter !== 'none' : null,
+      altura: Math.round(r.height),
+      alturaTrocarFoto: rTrocar ? Math.round(rTrocar.height) : null,
+      direita: Math.round(r.right),
+      larguraViewport: window.innerWidth,
+      // scrollWidth > innerWidth = algo empurrou a página para o lado (o
+      // defeito real que o overflow-x:clip existe para conter — Velocidade 7B).
+      scrollWidthDoc: document.scrollingElement?.scrollWidth ?? null,
+    };
+  });
+  const lerFaixa = () => pagina.evaluate(() => document.body.innerText);
+
+  // ── 1) estado inicial (o que a conta demo já tinha) ──
+  await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('button', { timeout: 30000 }).catch(() => {});
+  await espera(2500);
+  const inicial = await medirBotao();
+  await pagina.screenshot({ path: foto('1-inicial') });
+
+  // ── 2) trocar a foto ──
+  await pagina.locator('button', { hasText: /Trocar foto|Adicionar foto/ }).first().click().catch(() => {});
+  await espera(500);
+  await pagina.locator('input[type="file"]').first().setInputFiles(FOTO_NOVA);
+  await espera(9000); // upload real (grátis) + resposta
+  const posFoto = await medirBotao();
+  await pagina.screenshot({ path: foto('2-botao-dourado') });
+  // Zoom no botão: prova visual de que o glow não estoura nem é cortado pelo
+  // overflow-x:clip de #root/[data-page] (index.css, Velocidade 7B).
+  const caixaBotao = await pagina.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find((b) => /Gerar Avatar IA/.test(b.textContent || ''));
+    const r = btn?.getBoundingClientRect();
+    return r ? { x: Math.max(0, r.left - 28), y: Math.max(0, r.top - 28), width: Math.min(window.innerWidth, r.width + 56), height: r.height + 56 } : null;
+  });
+  if (caixaBotao) await pagina.screenshot({ path: foto('2b-botao-dourado-zoom'), clip: caixaBotao });
+
+  // ── 3) tocar em Gerar ──
+  await pagina.locator('button', { hasText: /Gerar Avatar IA/ }).first().click();
+  await espera(2500);
+  const gerando = await medirBotao();
+  const faixaFigurinha = await lerFaixa();
+  await pagina.screenshot({ path: foto('3-figurinha-sendo-criado') });
+
+  // ── 4) ir ao Início NO MEIO da geração ──
+  const foiPorNav1 = await pagina.locator('nav a', { hasText: 'Início' }).first().click().then(() => true).catch(() => false);
+  if (!foiPorNav1) await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await espera(2500);
+  const faixaInicio = await lerFaixa();
+  await pagina.screenshot({ path: foto('4-inicio-sendo-criada') });
+
+  // ── 5) espera a geração acabar (polling do próprio Início, até 3 min) e volta ──
+  await pagina.waitForFunction(() => !/sendo criada/i.test(document.body.innerText), null, { timeout: 190000 }).catch(() => {});
+  await espera(2000);
+  const foiPorNav2 = await pagina.locator('nav a', { hasText: 'Figurinha' }).first().click().then(() => true).catch(() => false);
+  if (!foiPorNav2) await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await espera(4000);
+  const final = await medirBotao();
+  await pagina.screenshot({ path: foto('5-figurinha-nova') });
+
+  await contexto.close();
+  return {
+    erros,
+    inicial,
+    posFoto,
+    gerando,
+    faixaFigurinha: { temSendoCriado: /sendo criado/i.test(faixaFigurinha), temTexto45s: /45 segundos/.test(faixaFigurinha) },
+    faixaInicio: { temSendoCriada: /sendo criada/i.test(faixaInicio), temCompleteSuaFigurinha: /Complete sua figurinha/i.test(faixaInicio) },
+    final,
+  };
+}
+
 async function cenaRodada12c(navegador, sessao) {
   const jogo = await acharJogoSorteado(navegador, sessao);
   const telas = [];
@@ -2592,6 +2700,24 @@ try {
       console.log(`   ${ok(z.calmo && !z.premio && z.shine.every((s) => s.anim === 'none') && z.glints.acesos === 0 && z.girando.length === 0 && z.glow.op > 0.2)} movimento reduzido: ${resumo(z)}`);
       if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
     }
+  }
+
+  if (CENAS.includes('rodada17')) {
+    const r = await cenaRodada17(navegador, sessao);
+    saida.rodada17 = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    console.log('\n[iphone] RODADA 17 · botão dourado pós-foto + "sendo criada" em toda geração');
+    console.log(`   estado inicial: botão "${r.inicial?.texto}" · dourado ${r.inicial?.dourado ? 'sim (ERRADO — nada mudou ainda)' : 'não'}`);
+    const g = r.posFoto;
+    const receitaCompleta = !!g?.dourado && !!g?.pulsaBorda && !!g?.temWrapperGlowPulse && !!g?.filtroWrapperAtivo;
+    console.log(`   ${ok(receitaCompleta)} pós-troca de foto: botão "${g?.texto}" dourado ${g?.dourado} · pulso na borda ${g?.pulsaBorda} · wrapper com glow+pulso ${g?.temWrapperGlowPulse} · filtro do glow ativo ${g?.filtroWrapperAtivo}`);
+    console.log(`   ${ok(g?.altura === g?.alturaTrocarFoto)} mesma altura que "Trocar foto": Gerar ${g?.altura}px vs Trocar foto ${g?.alturaTrocarFoto}px`);
+    console.log(`   ${ok(g?.direita <= g?.larguraViewport && g?.scrollWidthDoc <= g?.larguraViewport)} não estoura a tela: botão termina em ${g?.direita}px (viewport ${g?.larguraViewport}px) · scrollWidth do documento ${g?.scrollWidthDoc}px`);
+    console.log(`   ${ok(!r.gerando?.dourado && r.gerando?.texto === 'Gerando…')} ao tocar Gerar: botão volta a "${r.gerando?.texto}" (roxo, sem pulso dourado)`);
+    console.log(`   ${ok(r.faixaFigurinha.temSendoCriado && r.faixaFigurinha.temTexto45s)} Figurinha mostra "sendo criado" com "leva uns 45 segundos": ${JSON.stringify(r.faixaFigurinha)}`);
+    console.log(`   ${ok(r.faixaInicio.temSendoCriada && !r.faixaInicio.temCompleteSuaFigurinha)} Início A MEIO da geração: "sendo criada" ${r.faixaInicio.temSendoCriada} · "Complete sua figurinha" (não pode aparecer) ${r.faixaInicio.temCompleteSuaFigurinha}`);
+    console.log(`   estado final: botão "${r.final?.texto}" dourado ${r.final?.dourado} (deve ser não — voltou a idle)`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
