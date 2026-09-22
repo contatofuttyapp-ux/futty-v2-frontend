@@ -315,12 +315,22 @@ export default function Figurinha() {
   useEffect(() => {
     if (inicializadoRef.current) return undefined;
     if (!perfil && !erroPerfil) return undefined;
-    inicializadoRef.current = true;
     // Adiado ao microtask (mesmo padrão do PerfilContext): setState síncrono
     // no corpo do efeito dispara cascading renders.
+    //
+    // O `inicializadoRef` é marcado DENTRO do microtask, não antes dele
+    // (22-set). Marcá-lo aqui fora deixava a página vazia em `npm run dev`: o
+    // StrictMode monta, desmonta e remonta cada efeito, e o cleanup da
+    // primeira montagem punha `ativo = false` antes de o microtask correr — o
+    // setMe nunca acontecia, e na remontagem o guard já estava fechado.
+    // Resultado: `me` ficava null para sempre e a Figurinha abria a pedir
+    // "Adicionar foto" numa conta que tem foto e figurinha. Em produção não
+    // aparecia (uma montagem só), mas o dev e o LIGAR-FUTTY.bat são onde a
+    // casa testa — uma tela que mente na bancada não serve de bancada.
     let ativo = true;
     Promise.resolve().then(() => {
       if (!ativo) return;
+      inicializadoRef.current = true;
       if (perfil) {
         setMe(perfil);
         if (perfil?.user?.fundo_figurinha) setFundo(perfil.user.fundo_figurinha);
