@@ -69,13 +69,16 @@ export function primeiraAberturaDaVersao() {
  *   saber distinguir "não correu" de "está à espera, e isso é o esperado".
  * @returns {() => void} cancela o agendamento.
  */
-export function quandoParado(fn, { paradoMs = PARADO_MS, contarVersaoNova = true, aoAgendar = null } = {}) {
+export function quandoParado(fn, {
+  paradoMs = PARADO_MS, contarVersaoNova = true, aoAgendar = null, esperaMaximaMs = null,
+} = {}) {
   if (typeof window === 'undefined') {
     fn();
     return () => {};
   }
   let cancelado = false;
   let temporizador = null;
+  let prazoMaximo = null;
   let largarGestos = null;
 
   const espera = paradoMs + (contarVersaoNova && primeiraAberturaDaVersao() ? EXTRA_VERSAO_NOVA_MS : 0);
@@ -84,23 +87,42 @@ export function quandoParado(fn, { paradoMs = PARADO_MS, contarVersaoNova = true
   const cancelar = () => {
     cancelado = true;
     if (temporizador != null) window.clearTimeout(temporizador);
+    if (prazoMaximo != null) window.clearTimeout(prazoMaximo);
     if (largarGestos) largarGestos();
+  };
+
+  const correr = () => {
+    if (cancelado) return;
+    cancelar();
+    fn();
   };
 
   const armar = () => {
     if (cancelado) return;
     if (temporizador != null) window.clearTimeout(temporizador);
-    temporizador = window.setTimeout(() => {
-      if (cancelado) return;
-      cancelar();
-      fn();
-    }, espera);
+    temporizador = window.setTimeout(correr, espera);
   };
 
   aposPrimeiraPintura(() => {
     if (cancelado) return;
     largarGestos = aoGesto(armar); // cada gesto rearma a contagem do zero
     armar();
+    // VELOCIDADE 9 (23-set) — o TETO.
+    //
+    // "Cada gesto rearma do zero" tinha um buraco que só um relatório de uso
+    // real mostrava: quem está mesmo a usar o app nunca fica 3 s quieto, e
+    // então isto NUNCA corria. O relatório do build 28 apanhou-o em flagrante —
+    // `preaquecimento: "adiado (toques)"`, previsto para os 28,7 s de sessão,
+    // com a pessoa a trocar de tela nove vezes em vinte segundos. Resultado: as
+    // quatro abas pagavam o chunk no toque ("esperou: código", ~300 ms cada) e
+    // os dados vinham todos do zero.
+    //
+    // Agora há um prazo: passado `esperaMaximaMs` desde a primeira pintura,
+    // corre à mesma. O trabalho em si continua a ceder a vez entre passos
+    // (`esperarSeOcupado`), por isso não volta o problema que a Velocidade 8
+    // arrumou — cinco chunks em cima do primeiro toque. É a diferença entre
+    // "só quando estiver parado" e "assim que der, sem atropelar".
+    if (esperaMaximaMs != null) prazoMaximo = window.setTimeout(correr, esperaMaximaMs);
   });
 
   return cancelar;

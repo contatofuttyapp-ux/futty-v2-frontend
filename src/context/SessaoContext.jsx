@@ -203,9 +203,19 @@ export function SessaoProvider({ children }) {
     gravarCache(userIdRef.current, CACHE_TEAMS, novasTeams);
   }, []);
 
-  const hidratarVotacaoStatus = useCallback((status) => {
+  // VELOCIDADE 9 (23-set) — `slug` passa a vir de quem hidrata.
+  //
+  // A marca "já tentei para este time" era lida de `teamsRef.current`, e quem
+  // hidrata (InicioContext) chama `hidratarTeams` e `hidratarVotacaoStatus` no
+  // MESMO instante: a ref ainda tem o valor anterior — numa abertura fria, uma
+  // lista vazia. A marca ficava `null`, e quando os times entravam o efeito de
+  // baixo via "slug diferente do que tentei" e pedia o votacao-status outra
+  // vez — exactamente o dado que o /api/inicio tinha acabado de trazer. Não se
+  // via no Início (lá o efeito não corre); aparecia na tela SEGUINTE, uma ida a
+  // São Paulo ao mudar para a Resenha.
+  const hidratarVotacaoStatus = useCallback((status, slug = undefined) => {
     setVotacaoStatus(status ?? null);
-    votacaoTentadaParaRef.current = teamsRef.current[0]?.slug || null;
+    votacaoTentadaParaRef.current = (slug !== undefined ? slug : teamsRef.current[0]?.slug) || null;
     gravarCache(userIdRef.current, CACHE_VOTACAO, status ?? null);
   }, []);
 

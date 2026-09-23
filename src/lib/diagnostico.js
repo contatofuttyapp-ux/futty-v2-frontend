@@ -80,15 +80,34 @@ export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = nu
  * entravam aqui, e o Ranking aparecia com "dados em 436 ms" que nem eram dele.
  */
 export function marcarDadosDaTela() {
-  if (navegacaoAberta && performance.now() - navegacaoAberta.t0 < JANELA_DA_NAVEGACAO_MS) {
-    navegacaoAberta.msDados = Math.round(performance.now() - navegacaoAberta.t0);
-    // Rodada 8A: dados que chegam DEPOIS da pintura também entram no registo já
-    // guardado. Antes ficava "dados —" e o doCache nunca podia ser verdade (o
-    // registo copiava o msDados no instante da pintura, quando ainda era null):
-    // "pintaram do cache: 0" em todos os relatórios.
-    const registo = navegacaoAberta.registo;
-    if (registo) {
-      registo.msDados = navegacaoAberta.msDados;
+  if (!navegacaoAberta || performance.now() - navegacaoAberta.t0 >= JANELA_DA_NAVEGACAO_MS) return;
+  const nav = navegacaoAberta;
+  const ms = Math.round(performance.now() - nav.t0);
+
+  // VELOCIDADE 9 (23-set) — `msDados` era "a última leitura que chegou nesta
+  // rota", e ia sendo empurrada para a frente enquanto a pessoa MEXIA na tela.
+  // O relatório do build 28 trouxe "/figurinha dados 5260 ms" e não era espera
+  // nenhuma: a tela abriu em 1,1 s e os 4 s seguintes foram o dono a tocar em
+  // três fundos — cada toque manda um PATCH /api/me e uma releitura atrás. O
+  // número mandava consertar a coisa errada.
+  //
+  // A abertura acaba no primeiro toque DESTA navegação: daí para a frente o que
+  // chega é consequência do que a pessoa fez, não custo de abrir. Fica guardado
+  // à parte (`msDadosAposToque`) — é trabalho real, mas de outra natureza.
+  if (nav.gestoEm == null && ultimoToque > nav.t0) nav.gestoEm = ultimoToque;
+  const depoisDoToque = nav.gestoEm != null;
+  if (depoisDoToque) nav.msDadosAposToque = ms;
+  else nav.msDados = ms;
+
+  // Rodada 8A: dados que chegam DEPOIS da pintura também entram no registo já
+  // guardado. Antes ficava "dados —" e o doCache nunca podia ser verdade (o
+  // registo copiava o msDados no instante da pintura, quando ainda era null):
+  // "pintaram do cache: 0" em todos os relatórios.
+  const registo = nav.registo;
+  if (registo) {
+    if (depoisDoToque) registo.msDadosAposToque = nav.msDadosAposToque;
+    else {
+      registo.msDados = nav.msDados;
       registo.doCache = registo.msPintura < registo.msDados;
     }
   }
@@ -114,7 +133,7 @@ export function marcarNavegacao(rota) {
   const primeiraIdaAoInicio = rota === '/home' && !jaHouveInicio;
   if (rota === '/home') jaHouveInicio = true;
   if (arranque.entrouPor == null) arranque.entrouPor = rota;
-  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null, quadroAnterior: null, primeiraIdaAoInicio };
+  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msDadosAposToque: null, gestoEm: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null, quadroAnterior: null, primeiraIdaAoInicio };
   // Largura: nem todo transbordo dispara resize — mede também 1 s e 3 s depois
   // de cada troca de tela, quando os dados e as imagens já assentaram.
   if (typeof window !== 'undefined') {
@@ -171,6 +190,11 @@ const MAX_TRAVADAS = 12;
 
 const travadas = { leves: 0, graves: 0, pior: null, porFase: {}, piores: [] };
 let ultimoGesto = -Infinity;
+// Velocidade 9: só DEDO/tecla — `ultimoGesto` inclui `scroll`, e o app rola
+// sozinho ao trocar de tela (subir ao topo). Para atribuir travadas à rolagem
+// isso é o certo; para saber se a PESSOA já mexeu (ver marcarDadosDaTela) daria
+// falso positivo em toda navegação.
+let ultimoToque = -Infinity;
 let preaquecendo = false;
 let lacoLigado = false;
 
@@ -358,8 +382,10 @@ const ouvintesDeGesto = new Set();
 function ouvirGestos() {
   if (gestosLigados || typeof window === 'undefined') return;
   gestosLigados = true;
-  const marcar = () => {
+  const marcar = (e) => {
     ultimoGesto = performance.now();
+    // `isTrusted` separa o dedo do `scrollTo` do próprio app (ver ultimoToque).
+    if (e?.type !== 'scroll' && e?.isTrusted !== false) ultimoToque = ultimoGesto;
     for (const fn of ouvintesDeGesto) fn(ultimoGesto);
   };
   for (const evento of ['touchstart', 'scroll', 'keydown', 'pointerdown', 'wheel']) {
@@ -476,6 +502,9 @@ export function marcarPintura() {
     msPintura: nav.msPintura,
     // Pode ficar null: telas que pintam sem pedir nada.
     msDados: nav.msDados,
+    // Velocidade 9: leituras que a PESSOA provocou depois de a tela abrir
+    // (tocar num fundo, votar). Não é custo de abertura — ver marcarDadosDaTela.
+    msDadosAposToque: nav.msDadosAposToque,
     // Que loaders a pintura esperou (vazio = nenhum) e, desde a Rodada 8A, o
     // maior intervalo entre instantes seguidos até a pintura.
     esperou: [...nav.esperou, ...(intervalo ? [intervalo] : [])],
@@ -742,7 +771,15 @@ function estatistica(valores) {
   return { n: v.length, media: Math.round(soma / v.length), pior: Math.max(...v) };
 }
 
-/** Tudo o que a tela de Diagnóstico mostra e o relatório envia. */
+/**
+ * Tudo o que a tela de Diagnóstico mostra e o relatório envia.
+ *
+ * Velocidade 9: fica também pendurado no `window` (`__futtyDiagnostico`) para a
+ * bancada do iPhone simulado (scripts/ver-iphone.mjs) ler os MESMOS números que
+ * o relatório do dono traz, em vez de raspar texto da tela. Só leitura, só
+ * medições — nada de sessão nem de dados de pessoa que já não estivesse no
+ * relatório que o próprio app envia.
+ */
 export function lerDiagnostico() {
   return {
     versaoRelatorio: 1,
@@ -825,3 +862,8 @@ export function limparDiagnostico() {
   orientacao.mudancas = 0;
   medirLargura();
 }
+
+// A bancada do iPhone simulado lê daqui (ver scripts/ver-iphone.mjs, cena
+// `velocidade9`). Sem isto a prova antes/depois teria de raspar o texto da tela
+// de Diagnóstico — frágil, e sem as marcas finas por navegação.
+if (typeof window !== 'undefined') window.__futtyDiagnostico = lerDiagnostico;

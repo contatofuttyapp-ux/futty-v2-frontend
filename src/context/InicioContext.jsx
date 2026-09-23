@@ -15,6 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from './PerfilContext';
 import { useSessao } from './SessaoContext';
 import { lerCache, gravarCache } from '../lib/cacheLocal';
+import { semearAds } from '../lib/ads';
 import { preaquecer } from '../lib/preaquecerDados';
 import { aoVoltar } from '../lib/regresso';
 
@@ -68,7 +69,13 @@ export function InicioProvider({ children }) {
       // Mesma lógica para o SessaoContext — teams/votacao_status já vieram
       // neste payload, sem o SessaoContext precisar do seu próprio /api/teams.
       if (d?.teams?.teams) hidratarTeams(d.teams.teams);
-      if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status);
+      // O slug vai junto (Velocidade 9): sem ele o SessaoContext não sabe a que
+      // time este status pertence e volta a pedi-lo na tela seguinte.
+      if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status, d?.teams?.teams?.[0]?.slug ?? null);
+      // Velocidade 9: os slots de publicidade de TODAS as telas vieram aqui —
+      // nenhuma delas precisa de pedir o seu (lib/ads.js). Só do dado FRESCO:
+      // anúncio de cache podia ser de uma campanha que já acabou.
+      if (d?.ads) semearAds(d.ads);
       gravarCache(userId, CACHE_CHAVE, d);
       return d;
     } catch (e) {
@@ -114,7 +121,7 @@ export function InicioProvider({ children }) {
         // fresco (ver comentário em PerfilContext.hidratar).
         if (doCache?.me) hidratarPerfil(doCache.me, { deCache: true });
         if (doCache?.teams?.teams) hidratarTeams(doCache.teams.teams);
-        if (doCache?.votacao_status !== undefined) hidratarVotacaoStatus(doCache.votacao_status);
+        if (doCache?.votacao_status !== undefined) hidratarVotacaoStatus(doCache.votacao_status, doCache?.teams?.teams?.[0]?.slug ?? null);
       });
     }
 
@@ -126,7 +133,8 @@ export function InicioProvider({ children }) {
         setErro('');
         if (d?.me) hidratarPerfil(d.me);
         if (d?.teams?.teams) hidratarTeams(d.teams.teams);
-        if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status);
+        if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status, d?.teams?.teams?.[0]?.slug ?? null);
+        if (d?.ads) semearAds(d.ads); // Velocidade 9 — ver `carregar()`
         gravarCache(userId, CACHE_CHAVE, d);
         // IDEIA DO DONO (Velocidade 6B): com o Início já pintado, o app aproveita
         // o aparelho parado para baixar os dados e as imagens das outras abas.

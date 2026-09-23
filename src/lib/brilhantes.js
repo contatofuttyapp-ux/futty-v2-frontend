@@ -9,9 +9,13 @@ import { apiFetch } from './api';
  * a migração 054 aplicada. Sem resposta, devolve "ninguém tem nada", que é
  * exatamente o que o app deve mostrar nesse caso.
  */
-export async function estadoBrilhantes() {
+export async function estadoBrilhantes({ segundoPlano = false } = {}) {
   try {
-    return await apiFetch('/api/brilhantes/estado');
+    // `segundoPlano` (Velocidade 9): revalidação por trás, com a tela já aberta
+    // a partir do que o /api/inicio trouxe. Marca a chamada como de fundo no
+    // diagnóstico — não é espera de ninguém, e não pode entrar na conta de
+    // "dados" da tela.
+    return await apiFetch('/api/brilhantes/estado', { segundoPlano });
   } catch {
     return { direito: { fonte: null, team_id: null, kit_id: null }, creditos: 0, times: [], pedidos: [] };
   }

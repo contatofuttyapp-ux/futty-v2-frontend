@@ -193,5 +193,9 @@ export function preaquecer(userId, dadosInicio) {
     const imagens = await emLotes(tarefas, IMAGENS_EM_PARALELO);
     marcarPreaquecimento(false);
     registarPreaquecimento({ itens, imagens, ms: Date.now() - t0 });
-  }, { aoAgendar: marcarPreaquecimentoAgendado });
+    // Velocidade 9: teto de 9 s. O relatório do build 28 mostrou este trabalho
+    // "adiado (toques)" a sessão inteira — e a Figurinha, logo a seguir, a
+    // pagar 540 ms pelos selos que já estariam em casa. Os passos continuam a
+    // ceder a vez entre si (esperarSeOcupado), por isso correr não atropela.
+  }, { aoAgendar: marcarPreaquecimentoAgendado, esperaMaximaMs: 9000 });
 }

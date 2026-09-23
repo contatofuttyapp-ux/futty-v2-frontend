@@ -11,7 +11,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Share2 } from 'lucide-react';
 import { urlAsset, urlImagem } from '../utils/avatar';
-import { apiFetch } from '../lib/api';
+import { useAd } from '../hooks/useAd';
+import { registarEventoAd } from '../lib/ads';
 import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import SomSorteio from './somSorteio';
@@ -105,20 +106,17 @@ const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</
 // BannerAd do sorteio — agora SERVIDO a valer (/api/ads?pagina=sorteio): respeita o
 // toggle do dono (default OFF) e o filtro etário fail-closed no servidor. Mantém o look
 // selado da .faixaAd; conta impressão/clique. Sem campanha OU página OFF → não aparece.
+// VELOCIDADE 9 (23-set): lê a loja da sessão (lib/ads.js) como o AdCard — este
+// banner era o último sítio com pedido próprio por tela, e a cerimónia do
+// sorteio é justamente onde uma ida à rede a mais se sente.
 function BannerSorteio() {
-  const [ad, setAd] = useState(null);
-  const [pronto, setPronto] = useState(false);
+  const { ad, pronto } = useAd('sorteio');
   const impRef = useRef(null);
   useEffect(() => {
-    let vivo = true;
-    apiFetch('/api/ads?pagina=sorteio').then((r) => { if (vivo) { setAd(r?.ad || null); setPronto(true); } }).catch(() => { if (vivo) setPronto(true); });
-    return () => { vivo = false; };
-  }, []);
-  useEffect(() => {
-    if (ad && ad.id && impRef.current !== ad.id) { impRef.current = ad.id; apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'imp' }) }).catch(() => {}); }
+    if (ad && ad.id && impRef.current !== ad.id) { impRef.current = ad.id; registarEventoAd(ad.id, 'imp'); }
   }, [ad]);
   if (!pronto || !ad) return null;
-  const clicar = () => { apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'cli' }) }).catch(() => {}); if (ad.link) window.open(ad.link, '_blank', 'noopener'); };
+  const clicar = () => { registarEventoAd(ad.id, 'cli'); if (ad.link) window.open(ad.link, '_blank', 'noopener'); };
   return (
     <div className="faixaAd" role="button" tabIndex={0} onClick={clicar} style={{ cursor: 'pointer' }}>
       <span className="publab">Pub.</span>

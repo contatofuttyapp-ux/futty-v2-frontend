@@ -212,8 +212,9 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
               onClick={() => onOpenImage(foto)}
               style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: '#000', cursor: 'zoom-in' }}
             >
-              {/* Foto de post: lazy; os atributos só reservam a proporção, o CSS manda no tamanho. */}
-              <img src={urlImagem(foto, 1024)} alt="" width={390} height={420} loading="lazy" decoding="async" style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
+              {/* Foto de post: lazy; os atributos só reservam a proporção, o CSS manda no tamanho.
+                  Velocidade 9: 512 na lista (o toque abre o original). */}
+              <img src={urlImagem(foto, 512)} alt="" width={390} height={420} loading="lazy" decoding="async" style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
             </button>
           ) : null}
 
@@ -550,7 +551,13 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
             <video src={assetUrl(media[0].url)} controls style={{ width: '100%', maxHeight: 460, borderRadius: 10, display: 'block', background: '#000' }} />
           ) : (
             <button type="button" onClick={() => onOpenImage(assetUrl(media[0].url))} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block', width: '100%' }}>
-              <img src={urlImagem(assetUrl(media[0].url), 1024)} alt="" width={362} height={460} loading="lazy" decoding="async" style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
+              {/* VELOCIDADE 9: 512, não 1024. A caixa tem 362 pt de largura —
+                  1024 é quatro vezes mais pixels para descodificar do que o
+                  que cabe, e essa descodificação é na thread principal, a meio
+                  da rolagem. O toque abre o ORIGINAL em tela cheia (onOpenImage
+                  leva a url sem `w`), por isso ninguém perde detalhe nenhum:
+                  perde-se só o que estava a ser deitado fora na miniatura. */}
+              <img src={urlImagem(assetUrl(media[0].url), 512)} alt="" width={362} height={460} loading="lazy" decoding="async" style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
             </button>
           )}
         </div>

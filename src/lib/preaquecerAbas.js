@@ -60,6 +60,10 @@ export function preaquecerAbas() {
   jaPediu = true;
 
   let parado = false;
+  // Velocidade 9: com teto de 6 s. Os chunks das abas são o adiantamento mais
+  // barato que existe (o do Feed são 49 KB) e o mais rentável — sem eles, cada
+  // primeira ida a uma aba espera ~300 ms só pelo ficheiro, com a tela antiga à
+  // frente. Esperar por silêncio absoluto era esperar para sempre.
   const cancelar = quandoParado(async () => {
     for (const carregar of ABAS) {
       if (parado) return;
@@ -71,7 +75,11 @@ export function preaquecerAbas() {
       // toque, como era antes. Nunca pode borbulhar para a tela.
       await carregar().catch(() => {});
     }
-  });
+    // 4 s: na bancada com latência de Lisboa, 6 s ainda chegavam tarde — a
+    // primeira ida à Resenha continuava a esperar pelo ficheiro ("esperou:
+    // código"). O trabalho por aba é pequeno (o maior chunk são 49 KB) e cede a
+    // vez a cada toque, por isso antecipar não atropela nada.
+  }, { esperaMaximaMs: 4000 });
 
   return () => {
     parado = true;

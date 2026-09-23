@@ -5,24 +5,25 @@
 // /api/feed inteiro ter chegado e a lista ter sido pintada. Duas idas a São
 // Paulo em fila por uma faixa de 100 px.
 //
-// Com este hook a tela pede o anúncio no seu próprio topo, em paralelo com o
-// resto, e passa-o ao AdCard por prop. Onde o anúncio já vem no payload
-// agregado (o Início traz `ad` dentro do /api/inicio), não se pede nada.
+// VELOCIDADE 9 (23-set): deixou de haver pedido POR TELA. Os slots das cinco
+// páginas vêm todos juntos — dentro do /api/inicio, ou de um `/api/ads/sessao`
+// para quem não entrou pelo Início — e ficam em lib/ads.js por alguns minutos.
+// Este hook só lê de lá; quando já há resposta em mãos (o caso normal a partir
+// da segunda tela), devolve o anúncio no primeiro render, sem rede nenhuma.
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../lib/api';
+import { adsProntos, assinarAds, garantirAds, lerAd } from '../lib/ads';
 
 export function useAd(pagina = 'inicio', { ativo = true } = {}) {
-  const [ad, setAd] = useState(null);
-  const [pronto, setPronto] = useState(false);
+  const [versao, setVersao] = useState(0);
 
   useEffect(() => {
     if (!ativo) return undefined;
-    let vivo = true;
-    apiFetch(`/api/ads?pagina=${encodeURIComponent(pagina)}`)
-      .then((r) => { if (vivo) { setAd(r?.ad || null); setPronto(true); } })
-      .catch(() => { if (vivo) setPronto(true); });
-    return () => { vivo = false; };
-  }, [pagina, ativo]);
+    const largar = assinarAds(() => setVersao((n) => n + 1));
+    garantirAds();
+    return largar;
+  }, [ativo, pagina]);
 
-  return { ad, pronto };
+  // `versao` entra na conta para o React voltar a ler quando a loja mudar.
+  void versao;
+  return { ad: ativo ? lerAd(pagina) : null, pronto: !ativo || adsProntos() };
 }

@@ -176,6 +176,47 @@ function EstrelaIA({ size = 16, color = '#d4a017', style }) {
   );
 }
 
+// ─── O que a Figurinha aproveita do Início (VELOCIDADE 9, 23-set) ────────────
+//
+// Esta tela abria com três pedidos: o anúncio, os selos e /api/brilhantes/estado
+// (539 + 540 + 606 ms no relatório do build 28 — de Lisboa, tudo distância).
+// Nenhum dos três traz novidade nenhuma para quem chegou aqui pelo Início: o
+// /api/inicio já traz o direito, os créditos, os pedidos vivos e — desde esta
+// rodada — as colunas do pacote em cada time. Fica tudo no cache de sessão, com
+// a mesma chave que o InicioContext usa; daqui só se lê.
+const FRESCOR_DO_INICIO_MS = 60000;
+
+/** Idade (ms) do payload de /api/inicio guardado, ou null se não houver. */
+function idadeDoInicio(userId) {
+  return lerCacheComIdade(userId, 'inicio')?.idadeMs ?? null;
+}
+
+/**
+ * O mesmo formato que `estadoBrilhantes()` devolve, montado a partir do
+ * /api/inicio guardado. Sem payload (ou sem o direito lá dentro) devolve null e
+ * a tela pede como antes.
+ */
+function brilhanteDoInicio(userId) {
+  const d = lerCacheComIdade(userId, 'inicio')?.dados;
+  if (!d?.brilhante) return null;
+  const times = (d.teams?.teams || []).map((t) => ({
+    id: t.id,
+    nome: t.nome,
+    slug: t.slug,
+    sou_dono: t.role === 'admin',
+    brilhante_ativo: !!t.brilhante_ativo,
+    brilhante_kit: t.brilhante_kit || null,
+    brilhante_limite: Number(t.brilhante_limite) || 25,
+    manto_proprio: !!t.manto_proprio,
+  }));
+  return {
+    direito: { fonte: d.brilhante.fonte, team_id: d.brilhante.team_id, kit_id: d.brilhante.kit_id },
+    creditos: d.brilhante.creditos || 0,
+    times,
+    pedidos: d.pedidos_brilhante || [],
+  };
+}
+
 export default function Figurinha() {
   const navigate = useNavigate();
   // Velocidade 2 (12-set): esta página tinha o seu próprio GET /api/me — o
@@ -184,7 +225,7 @@ export default function Figurinha() {
   // página precisa de merges finos — slots, kit_ativo, avatar_url — que o card
   // usa de imediato, sem esperar round-trip) e as escolhas guardadas
   // (fundo/avatar genérico/fase da estreia).
-  const { perfil, erro: erroPerfil, deCache: perfilDeCache, recarregar: recarregarPerfilGlobal } = usePerfil();
+  const { perfil, erro: erroPerfil, deCache: perfilDeCache, recarregar: recarregarPerfilGlobal, hidratar: hidratarPerfilGlobal } = usePerfil();
   const { session } = useAuth();
   const userId = session?.user?.id || null;
 
@@ -273,7 +314,10 @@ export default function Figurinha() {
   // DIREITO DE GERAR (SPEC-FIGURINHA-3 §5) — quem pode gerar uma Brilhante e
   // com que uniforme. Carregado uma vez ao abrir a tela; recarregado depois de
   // gerar (o crédito baixa) e depois de pedir ativação.
-  const [brilhante, setBrilhante] = useState(null); // null = ainda a carregar
+  // VELOCIDADE 9 (23-set): nasce com o que o /api/inicio já trouxe (cache de
+  // sessão), em vez de null. Era o terceiro pedido desta tela — 606 ms de
+  // Lisboa no relatório do build 28 — para saber coisas que estavam em casa.
+  const [brilhante, setBrilhante] = useState(() => brilhanteDoInicio(userId));
   const temDireitoDeGerar = !!brilhante?.direito?.fonte;
   const kitDoTime = brilhante?.direito?.fonte === 'time' ? brilhante.direito.kit_id : null;
   const creditos = brilhante?.creditos ?? 0;
@@ -295,9 +339,14 @@ export default function Figurinha() {
 
   useEffect(() => {
     let vivo = true;
-    estadoBrilhantes().then((e) => { if (vivo) setBrilhante(e); });
+    // Com o estado semeado pelo Início recente, não se pede nada: a tela abre
+    // com a resposta certa e sem rede. Fora dessa janela revalida-se — em
+    // SEGUNDO PLANO, para não entrar na conta de "dados" de quem já tem tela.
+    const idade = idadeDoInicio(userId);
+    if (brilhanteDoInicio(userId) && idade != null && idade < FRESCOR_DO_INICIO_MS) return () => { vivo = false; };
+    estadoBrilhantes({ segundoPlano: true }).then((e) => { if (vivo && e) setBrilhante(e); });
     return () => { vivo = false; };
-  }, []);
+  }, [userId]);
 
   async function pedirBrilhante(produto) {
     setPedindo(produto);
@@ -331,8 +380,16 @@ export default function Figurinha() {
     const doCache = comIdade?.dados ?? null;
     // Velocidade 6B: mesma janela de frescor do useApiComCache. Se o
     // pré-aquecimento acabou de trazer os selos, não se pedem outra vez.
-    if (comIdade && comIdade.idadeMs < 30000) return () => { ativo = false; };
-    apiFetch('/api/me/selos')
+    //
+    // Velocidade 9: a janela sobe de 30 s para 5 minutos NESTA tela. Um selo é
+    // uma conquista (campeonato, 1º do ranking) — não muda enquanto a pessoa
+    // escolhe um fundo. Com 30 s, abrir a Figurinha um minuto depois do Início
+    // pagava 540 ms por dois emblemas que já estavam em casa. Fora da janela,
+    // revalida por trás: o cromo desenha com os selos do cache e redesenha uma
+    // vez se algum tiver mudado.
+    const frescos = comIdade && comIdade.idadeMs < 5 * 60 * 1000;
+    if (frescos) return () => { ativo = false; };
+    apiFetch('/api/me/selos', { segundoPlano: !!doCache })
       .then((d) => {
         if (!ativo) return;
         setSelos(d.selos || []);
@@ -789,7 +846,7 @@ export default function Figurinha() {
       try {
         const data = await apiFetch('/api/me/kit', { method: 'PUT', body: JSON.stringify({ kit: kit.id }) });
         setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit } } : m));
-        recarregarPerfilGlobal();
+        aplicarNoPerfilGlobal({ avatar_url: data.avatar_url, kit_ativo: data.kit });
       } catch {
         setErroIA(true);
       }
@@ -805,6 +862,24 @@ export default function Figurinha() {
     await gerarAvatarIA(kit.id);
   }
 
+  // VELOCIDADE 9 (23-set) — escrever no perfil SEM o reler a seguir.
+  //
+  // O relatório do build 28 trouxe seis `/api/me` seguidos (530/311/279/276/
+  // 380/305 ms) e a leitura óbvia — "polling" — estava errada: eram três PARES
+  // PATCH+GET. Cada toque num fundo gravava a preferência e chamava
+  // `recarregarPerfilGlobal()` atrás, que é um GET /api/me inteiro para saber
+  // uma coisa que o próprio toque acabou de decidir. Numa tela feita para
+  // experimentar fundos e uniformes, isso é meia ida a São Paulo por toque.
+  //
+  // `hidratar` põe o mesmo estado no contexto (e no cache local) sem rede. A
+  // releitura só se justifica quando a escrita muda coisas que não sabemos —
+  // é o caso da geração de figurinha, que mexe em créditos e estado; essas
+  // continuam a chamar `recarregarPerfilGlobal()`.
+  function aplicarNoPerfilGlobal(campos) {
+    if (!perfil) return;
+    hidratarPerfilGlobal({ ...perfil, user: { ...perfil.user, ...campos } });
+  }
+
   // Rodada 18 — interruptor "Mostrar minha foto" / "Mostrar minha figurinha"
   // (modal "Sua foto"): troca o que o card mostra sem apagar nada — a
   // figurinha continua no slot, sempre. avatarEhIA já diz qual dos dois está
@@ -815,7 +890,7 @@ export default function Figurinha() {
     try {
       const data = await apiFetch('/api/me/avatar/modo', { method: 'PUT', body: JSON.stringify({ modo }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
-      recarregarPerfilGlobal();
+      aplicarNoPerfilGlobal({ avatar_url: data.avatar_url });
     } catch (e) {
       setErro(e?.message || 'Não foi possível trocar o card.');
     } finally {
@@ -846,7 +921,7 @@ export default function Figurinha() {
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ fundo_figurinha: k }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, fundo_figurinha: k } } : m));
-      recarregarPerfilGlobal();
+      aplicarNoPerfilGlobal({ fundo_figurinha: k });
     } catch (e) {
       setFundo(anterior); // nunca fica com o tile marcado e o banco diferente
       setToast({ tipo: 'error', mensagem: e?.message || 'Não foi possível trocar o fundo agora.' });
@@ -859,7 +934,7 @@ export default function Figurinha() {
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ avatar_generico: k }) });
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_generico: k } } : m));
-      recarregarPerfilGlobal();
+      aplicarNoPerfilGlobal({ avatar_generico: k });
     } catch { /* preferência: não vale um erro no ecrã */ }
   }
 

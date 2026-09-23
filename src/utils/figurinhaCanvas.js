@@ -84,6 +84,13 @@ function adiantarFundo(fundo) {
   else carregarImagem('/stadium_bg.webp', false);
 }
 
+// VELOCIDADE 9 (23-set): quem manda a foto do cromo à frente é o
+// context/PerfilContext.jsx, mal o perfil aparece (inclusive vindo do cache
+// local, antes de qualquer rede) — com um `new Image()` na MESMA URL que o
+// `construirCard` pede aqui em baixo (urlImagem(…, 512)). O adiantamento tem de
+// viver lá, não aqui: importar este módulo no arranque para poupar um decode
+// seria pôr o desenhador inteiro no caminho da primeira pintura.
+
 // ─── O que É caro no WebKit, medido (FLUIDEZ 2) ──────────────────────────────
 // A primeira suspeita era o `ctx.filter = blur(...)`. Medido em micro-bancada,
 // com a rasterização FORÇADA (`getImageData` a seguir a cada operação, senão o

@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
 import { lerCache, gravarCache } from '../lib/cacheLocal';
+import { urlAsset, urlImagem } from '../utils/avatar';
 
 const CACHE_CHAVE = 'me';
 // Quanto se espera pela hidratação vinda do /api/inicio antes de pedir /api/me
@@ -15,6 +16,33 @@ const CACHE_CHAVE = 'me';
 const ESPERA_HIDRATACAO_MS = 3000;
 
 const PerfilContext = createContext(null);
+
+/**
+ * VELOCIDADE 9 (23-set) — põe a foto do cromo a caminho assim que se sabe qual
+ * é, sem esperar pela tela.
+ *
+ * O relatório do build 28 trouxe `cromo · avatar:decodificar 458 ms` como a
+ * fase mais cara de compor o cromo do Início — e a maior parte disso é a ida a
+ * São Paulo, não a descodificação: o pedido da imagem só partia quando a
+ * composição chegava à linha do avatar, bem depois do arranque. Aqui ele parte
+ * com o perfil (incluindo o do cache local, antes de qualquer rede).
+ *
+ * É de propósito um `new Image()` e não o `carregarImagem` do
+ * utils/figurinhaCanvas: importar o canvas aqui punha um módulo grande no
+ * chunk do arranque, para poupar um decode de 512 px. O que interessa — os
+ * bytes — fica no cache do browser, e a composição encontra-os lá.
+ */
+function adiantarFotoDoCromo(user) {
+  const origem = user?.avatar_url || user?.foto_url;
+  if (!origem || typeof Image === 'undefined') return;
+  try {
+    // Mesma URL que utils/figurinhaCanvas pede (512 px pelo proxy) — se for
+    // outra, o adiantamento não serve para nada.
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = urlImagem(urlAsset(origem), 512);
+  } catch { /* adiantamento: falhar aqui não pode estragar o arranque */ }
+}
 
 export function PerfilProvider({ children }) {
   const { session } = useAuth();
@@ -67,6 +95,12 @@ export function PerfilProvider({ children }) {
     // ~240ms mesmo já com tudo centralizado num pedido só por sessão.
     const doCache = lerCache(userId, CACHE_CHAVE);
     if (doCache) {
+      // VELOCIDADE 9: a foto do cromo começa a ser baixada AQUI — no arranque,
+      // a partir do cache, antes de qualquer resposta do motor. Era a fase mais
+      // cara de compor o cromo do Início (458 ms no relatório do build 28), e
+      // quase toda ela era a ida a São Paulo a começar tarde. Ver
+      // `adiantarFotoDoCromo`.
+      adiantarFotoDoCromo(doCache?.user);
       Promise.resolve().then(() => {
         if (!ativo) return;
         setPerfil(doCache);
@@ -185,6 +219,7 @@ export function PerfilProvider({ children }) {
   // que ainda não foi confirmada pelo servidor nesta carga.
   const hidratar = useCallback((data, opts = {}) => {
     if (!data || !userIdRef.current) return;
+    adiantarFotoDoCromo(data?.user); // Velocidade 9 — ver a nota na carga inicial
     setPerfil(data);
     setErro(null);
     setErroCode(null);

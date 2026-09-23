@@ -86,6 +86,10 @@ const ARQUIVO_SESSOES = opcao('sessoes', path.join(RAIZ, 'scripts', 'capturas', 
 const ARQUIVO_SESSOES_VARREDURA = opcao('sessoes-varredura', path.join(RAIZ, 'scripts', 'capturas', 'sessao-varredura.json'));
 const CENAS = opcao('cenas', 'arranque,ranking,resenha').split(',').map((c) => c.trim()).filter(Boolean);
 const LENTO = args.includes('--lento');
+// VELOCIDADE 9 — atraso artificial por pedido à /api, para a bancada sentir o
+// que o dono sente de Lisboa (o piso medido Lisboa↔São Paulo é ~400 ms de ida e
+// volta; ver "Velocidade 6" no ONDE-ESTAMOS). 0 = rede local, sem atraso.
+const LATENCIA_MS = Number(opcao('latencia', '400')) || 0;
 const PASTA = path.join(RAIZ, 'scripts', 'capturas');
 const LARGURA_APARELHO = 430;
 const AMOSTRAGEM_MS = 6000;
@@ -3106,6 +3110,154 @@ async function cenaRodada18(navegador, sessao) {
   };
 }
 
+// ═══ VELOCIDADE 9 — o percurso do dono, medido com a distância dele ═══
+//
+// O relatório do build 28 veio de Lisboa: motor 77 ms de média, rede 458. Numa
+// bancada local a rede é zero e todo defeito de cascata desaparece — uma tela
+// que faz três pedidos em fila parece igual a uma que faz um. Por isso aqui
+// cada chamada à /api leva `LATENCIA_MS` de atraso antes de sair.
+//
+// O percurso é o MESMO do relatório (Início → Resenha → Ranking → jogador →
+// Figurinha → Início → Perfil) e os números saem do diagnóstico do próprio app
+// (window.__futtyDiagnostico), não de um cronómetro da bancada: é o mesmo
+// instrumento que o dono envia, portanto antes e depois são comparáveis com o
+// que ele vê.
+async function cenaVelocidade9(navegador, sessao) {
+  const PASTA_V9 = path.join(PASTA, 'velocidade-9');
+  mkdirSync(PASTA_V9, { recursive: true });
+  const foto = (nome) => path.join(PASTA_V9, `${ETIQUETA}-${nome}.png`);
+  const erros = [];
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  if (LATENCIA_MS > 0) {
+    await contexto.route('**/api/**', async (route) => {
+      await espera(LATENCIA_MS);
+      return route.continue();
+    });
+  }
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+
+  // Todo pedido à API, com o instante — serve para contar por tela e para ver
+  // quem esperou por quem (o `em` é relativo ao início da cena).
+  const t0 = Date.now();
+  const pedidos = [];
+  pagina.on('request', (r) => {
+    const u = new URL(r.url());
+    if (!u.pathname.startsWith('/api/')) return;
+    pedidos.push({
+      rota: u.pathname + (u.search || ''),
+      metodo: r.method(),
+      midia: u.pathname.startsWith('/api/media/'),
+      em: Date.now() - t0,
+    });
+  });
+
+  // Navegação tem de ser SEMPRE dentro do app (toque na barra de baixo): um
+  // `goto` recarrega tudo e o que se mediria era outro arranque frio, não uma
+  // troca de tela. `force` porque as linhas do Ranking animam ao entrar e o
+  // Playwright ficaria à espera de elas "assentarem" para sempre.
+  const tocar = async (seletor, texto) => {
+    const alvo = texto ? pagina.locator(seletor, { hasText: texto }).first() : pagina.locator(seletor).first();
+    if (!(await alvo.count())) return false;
+    return alvo.click({ force: true, timeout: 8000 }).then(() => true, () => false);
+  };
+  const irPara = async (rotulo, acao, { esperaMs = 2600 } = {}) => {
+    const ok = await acao();
+    if (!ok) erros.push(`não consegui tocar para chegar a ${rotulo}`);
+    await espera(esperaMs);
+    await pagina.screenshot({ path: foto(rotulo) });
+    return ok;
+  };
+
+  // 1) Arranque frio: contexto novo = cache do WebKit vazio, como quem acabou
+  //    de instalar. A rota inicial é "/" (o app decide para onde vai).
+  await pagina.goto(`${BASE}/`, { waitUntil: 'commit' });
+  await espera(5200);
+  await pagina.screenshot({ path: foto('1-inicio') });
+
+  // 2) Resenha + rolagem de verdade (a travada de 819 ms do relatório era aqui).
+  await irPara('2-resenha', () => tocar('nav a', 'Resenha'));
+  // Rola a Resenha inteira em passos, com um quadro entre eles — é onde o
+  // medidor de travadas atribui a fase "rolagem". (O WebKit móvel do Playwright
+  // não tem `mouse.wheel`; rola-se o elemento que de facto rola.)
+  const rolarUmPouco = (px) => pagina.evaluate((d) => {
+    const doc = document.scrollingElement || document.documentElement;
+    const candidatos = [doc, ...document.querySelectorAll('main, .app-main, [data-page]')];
+    const alvo = candidatos.find((el) => el && el.scrollHeight > el.clientHeight + 40) || doc;
+    alvo.scrollBy(0, d);
+    return { rolou: alvo === doc ? 'documento' : alvo.className || alvo.tagName, topo: alvo.scrollTop };
+  }, px);
+  let rolagem = null;
+  for (let i = 0; i < 14; i += 1) {
+    rolagem = await rolarUmPouco(700).catch(() => null);
+    await espera(200);
+  }
+  // Quantos cartões a Resenha chegou a montar (a meta da rodada fala em 60).
+  const cartoesNaResenha = await pagina.locator('.feed-item').count().catch(() => null);
+  await pagina.screenshot({ path: foto('3-resenha-rolada') });
+
+  // 3) Ranking do time → 4) ficha de um jogador → 5) Figurinha.
+  await irPara('4-ranking', () => tocar('nav a', 'Ranking'));
+  await irPara('5-jogador', () => tocar('a[href*="/jogador/"]'));
+  // A ficha do jogador é tela funda: não tem a barra de baixo. Volta-se por
+  // onde se veio (history back é troca de tela, não recarga).
+  await pagina.goBack({ waitUntil: 'commit' }).catch(() => {});
+  await espera(1200);
+  await irPara('6-figurinha', () => tocar('nav a', 'Figurinha'), { esperaMs: 3200 });
+
+  // 6) Volta ao Início (tela quente) e 7) Perfil.
+  await irPara('7-inicio-volta', () => tocar('nav a', 'Início'));
+  await irPara('8-perfil', () => tocar('nav a', 'Perfil'));
+
+  // O diagnóstico do próprio app: as mesmas navegações/chamadas/travadas que o
+  // relatório do iPhone traz.
+  const diag = await pagina.evaluate(() => (window.__futtyDiagnostico ? window.__futtyDiagnostico() : null));
+  await contexto.close();
+
+  const api = pedidos.filter((p) => !p.midia);
+  return {
+    erros,
+    latenciaMs: LATENCIA_MS,
+    rolagem,
+    cartoesNaResenha,
+    pedidos: { api: api.length, midia: pedidos.length - api.length, lista: api },
+    diag,
+  };
+}
+
+/**
+ * Tabela por tela: dados, pintura, pedidos, travadas.
+ *
+ * Os pedidos vêm da lista do PRÓPRIO app (`diag.chamadas`, com carimbo de
+ * tempo) e são atribuídos à tela que estava aberta quando partiram. O `em` de
+ * uma navegação é o instante da PINTURA, por isso o início dela é
+ * `em − msPintura` — sem isso os pedidos caíam todos na tela anterior.
+ */
+function tabelaVelocidade9(r) {
+  const navs = r.diag?.navegacoes || [];
+  const chamadas = r.diag?.chamadas || [];
+  const inicios = navs.map((n) => new Date(n.em).getTime() - (n.msPintura || 0));
+  return navs.map((n, i) => {
+    const de = inicios[i];
+    const ate = i + 1 < inicios.length ? inicios[i + 1] : Infinity;
+    const minhas = chamadas.filter((c) => {
+      const t = new Date(c.em).getTime();
+      return t >= de && t < ate;
+    });
+    return {
+      rota: n.rota,
+      dados: n.msDados,
+      dadosAposToque: n.msDadosAposToque ?? null,
+      pintura: n.msPintura,
+      doCache: !!n.doCache,
+      esperou: (n.esperou || []).join(' · '),
+      pedidos: minhas.length,
+      rotas: minhas.map((c) => `${c.metodo === 'GET' ? '' : `${c.metodo} `}${c.rota}`),
+    };
+  });
+}
+
 mkdirSync(PASTA, { recursive: true });
 const navegador = await webkit.launch();
 try {
@@ -3458,6 +3610,37 @@ try {
     console.log(`   ${ok(r.faixaInicio.temSendoCriada && !r.faixaInicio.temCompleteSuaFigurinha)} Início A MEIO da geração: "sendo criada" ${r.faixaInicio.temSendoCriada} · "Complete seu card" (não pode aparecer) ${r.faixaInicio.temCompleteSuaFigurinha}`);
     console.log(`   estado final: botão "${r.final?.texto}" dourado ${r.final?.dourado} (deve ser não — voltou a idle)`);
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
+  if (CENAS.includes('velocidade9')) {
+    const r = await cenaVelocidade9(navegador, sessao);
+    saida.velocidade9 = r;
+    const d = r.diag;
+    console.log(`\n[iphone] VELOCIDADE 9 · percurso do dono com ${r.latenciaMs} ms de latência por pedido`);
+    if (!d) {
+      console.log('   FALHA: window.__futtyDiagnostico não existe — o build não tem a porta da bancada.');
+    } else {
+      const n = (x) => (x == null ? '—' : String(x));
+      console.log(`   resumo: ${d.resumo.total?.n || 0} chamadas · total médio ${n(d.resumo.total?.media)} ms · motor ${n(d.resumo.motor?.media)} · rede ${n(d.resumo.rede?.media)}`);
+      console.log(`   arranque: compilação ${n(d.resumo.arranque?.compilacaoMs)} · React ${n(d.resumo.arranque?.reactMs)} · Início ${n(d.resumo.arranque?.inicioMs)} ms`);
+      console.log(`   travadas: ${d.resumo.travadas?.graves || 0} graves / ${d.resumo.travadas?.leves || 0} leves · pior ${n(d.resumo.travadas?.pior?.ms)} ms (${d.resumo.travadas?.pior?.fase || '—'})`);
+      console.log(`   por fase: ${JSON.stringify(d.resumo.travadas?.porFase || {})}`);
+      // A meta da rodada é sobre ROLAR: nenhuma travada > 200 ms com o dedo na tela.
+      const naRolagem = (d.resumo.travadas?.piores || []).filter((t) => t.fase === 'rolagem');
+      const piorRolagem = naRolagem.length ? Math.max(...naRolagem.map((t) => t.ms)) : 0;
+      console.log(`   rolagem: ${r.cartoesNaResenha ?? '—'} cartões na Resenha · ${d.resumo.travadas?.porFase?.rolagem || 0} travadas · pior ${piorRolagem || '—'} ms`);
+      console.log(`   pré-aquecimento: ${d.preaquecimento?.estado || '—'}`);
+      console.log('   ┌─ tela ──────────────────────────────┬─ dados ─┬ pintura ┬ pedidos ┬ esperou');
+      for (const l of tabelaVelocidade9(r)) {
+        const rota = l.rota.length > 35 ? `${l.rota.slice(0, 32)}...` : l.rota.padEnd(35);
+        const dados = `${n(l.dados)}${l.dadosAposToque ? `+${l.dadosAposToque}` : ''}`;
+        console.log(`   │ ${rota} │ ${dados.padStart(7)} │ ${n(l.pintura).padStart(7)} │ ${String(l.pedidos).padStart(7)} │ ${l.esperou}`);
+        if (l.rotas.length) console.log(`   │     ${l.rotas.join(', ')}`);
+      }
+      console.log(`   pedidos à API nesta corrida: ${r.pedidos.api} (+ ${r.pedidos.midia} de mídia)`);
+    }
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    console.log(`   capturas em scripts/capturas/velocidade-9/ (etiqueta ${ETIQUETA})`);
   }
 
   if (CENAS.includes('rodada18')) {

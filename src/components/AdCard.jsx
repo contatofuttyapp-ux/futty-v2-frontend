@@ -7,9 +7,10 @@
 // o anúncio já veio dentro de GET /api/inicio (11-set, "1 pedido só") — lê de lá
 // em vez de disparar o seu próprio GET /api/ads. O POST /api/ads/evento de
 // impressão/clique mantém-se sempre, para qualquer origem do anúncio.
-import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../lib/api';
+import { useEffect, useRef } from 'react';
 import { useInicio } from '../context/InicioContext';
+import { useAd } from '../hooks/useAd';
+import { registarEventoAd } from '../lib/ads';
 import { urlImagem } from '../utils/avatar';
 import Icon from './Icon';
 
@@ -29,26 +30,19 @@ export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adPr
   const vemDeFora = adProp !== undefined;
   const usaDoInicio = !vemDeFora && inicio !== null && pagina === 'inicio';
 
-  const [adProprio, setAdProprio] = useState(null);
-  const [prontoProprio, setProntoProprio] = useState(false);
   const impRef = useRef(null);
+  // Velocidade 9: sem prop e fora do Início, lê-se a loja da sessão (lib/ads.js)
+  // em vez de pedir um anúncio só para esta tela.
+  const daLoja = useAd(pagina, { ativo: !usaDoInicio && !vemDeFora });
 
-  useEffect(() => {
-    if (usaDoInicio || vemDeFora) return undefined; // já há anúncio — não duplica o pedido
-    let vivo = true;
-    apiFetch(`/api/ads?pagina=${encodeURIComponent(pagina)}`)
-      .then((r) => { if (vivo) { setAdProprio(r?.ad || null); setProntoProprio(true); } })
-      .catch(() => { if (vivo) setProntoProprio(true); });
-    return () => { vivo = false; };
-  }, [pagina, usaDoInicio, vemDeFora]);
-
-  const ad = vemDeFora ? adProp : usaDoInicio ? inicio.dados?.ad?.ad ?? null : adProprio;
-  const pronto = vemDeFora ? (prontoExterno ?? true) : usaDoInicio ? !inicio.carregando : prontoProprio;
+  const ad = vemDeFora ? adProp : usaDoInicio ? inicio.dados?.ad?.ad ?? null : daLoja.ad;
+  const pronto = vemDeFora ? (prontoExterno ?? true) : usaDoInicio ? !inicio.carregando : daLoja.pronto;
 
   useEffect(() => {
     if (ad && ad.id && impRef.current !== ad.id) {
       impRef.current = ad.id; // conta 1 impressão por anúncio servido
-      apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'imp' }) }).catch(() => {});
+      // Vai para a fila (sai em lote, fora do caminho de pintura).
+      registarEventoAd(ad.id, 'imp');
     }
   }, [ad]);
 
@@ -67,7 +61,7 @@ export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adPr
       : { ...BASE, height: 100, borderRadius: 8 };
 
   const clicar = () => {
-    apiFetch('/api/ads/evento', { method: 'POST', body: JSON.stringify({ id: ad.id, tipo: 'cli' }) }).catch(() => {});
+    registarEventoAd(ad.id, 'cli'); // clique sai já (costuma abrir outra app)
     if (ad.link) window.open(ad.link, '_blank', 'noopener');
   };
 
