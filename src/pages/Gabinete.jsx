@@ -73,7 +73,7 @@ function Card6({ n, legenda, sub }) {
 const ABAS = [
   { k: 'visao', label: 'Visão geral' },
   { k: 'pessoas', label: 'Pessoas & times' },
-  { k: 'brilhantes', label: 'Brilhantes' },
+  { k: 'brilhantes', label: 'Figurinhas' },
   { k: 'dinheiro', label: 'Dinheiro' },
   { k: 'anuncios', label: 'Anúncios' },
   { k: 'seguranca', label: 'Segurança' },

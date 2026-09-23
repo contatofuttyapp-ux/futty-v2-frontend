@@ -88,7 +88,7 @@ export default function Planos() {
     <div className="app-shell">
       {/* Linguagem da Figurinha: topbar HUD (wordmark dourado + linha com degrau 45°).
           `back` mantido — esta página não está na bottom nav. */}
-      <Topbar hud="BRILHANTES" back="/perfil" />
+      <Topbar hud="FIGURINHAS" back="/perfil" />
       {/* paddings do .app-main apertados (default 32/64 = 96px de espaço morto): os 3
           cards + CTAs passam a caber sem scroll em 390×844 e 430×932. O padding
           inferior mantém folga para a bottom nav fixa (75px). */}
@@ -120,7 +120,7 @@ export default function Planos() {
         <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
           {/* Cabeçalho curto: o que estas três coisas são, em uma linha. */}
           <p style={{ fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.72)', textAlign: 'center', margin: '0 0 2px' }}>
-            Sua figurinha comum é grátis, sempre. A <b style={{ color: '#f0c94a' }}>Brilhante</b> é a versão em arte,
+            Seu card com a foto é grátis, sempre. A <b style={{ color: '#f0c94a' }}>figurinha</b> é a versão em arte,
             feita por IA no uniforme do Futty.
           </p>
           {aviso ? (

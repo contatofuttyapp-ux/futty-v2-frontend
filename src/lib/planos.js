@@ -42,11 +42,11 @@ export const MINHA_GERACOES = 2;
 export const PRODUTOS = [
   {
     id: 'pacote',
-    nome: 'Brilhantes do time',
+    nome: 'Figurinhas do time',
     preco: preco(tabela.pacote),
     // Os DOIS números na tela, como a spec pede: o total e o que dá por cabeça.
     porJogador: `${preco(tabela.pacote / PACOTE_JOGADORES)} por jogador`,
-    resumo: `Uma Figurinha Brilhante para cada jogador, até ${PACOTE_JOGADORES}.`,
+    resumo: `Uma figurinha para cada jogador, até ${PACOTE_JOGADORES}.`,
     features: [
       `Até ${PACOTE_JOGADORES} jogadores`,
       'Todos com o mesmo uniforme, escolhido por você',
@@ -60,7 +60,7 @@ export const PRODUTOS = [
     id: 'manto',
     nome: 'Manto próprio',
     preco: `+${preco(tabela.manto)}`,
-    resumo: 'O uniforme do seu time nas Brilhantes, no lugar dos 5 do Futty.',
+    resumo: 'O uniforme do seu time nas figurinhas, no lugar dos 5 do Futty.',
     features: [
       'Cores e escudo do seu time',
       `Vale para os ${PACOTE_JOGADORES} do pacote`,
@@ -73,7 +73,7 @@ export const PRODUTOS = [
   },
   {
     id: 'minha',
-    nome: 'Minha Brilhante',
+    nome: 'Minha Figurinha',
     preco: preco(tabela.minha),
     resumo: `${MINHA_GERACOES} gerações para você, no uniforme que escolher.`,
     features: [

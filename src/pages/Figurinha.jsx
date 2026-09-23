@@ -211,6 +211,7 @@ export default function Figurinha() {
   const [reenviarBusy, setReenviarBusy] = useState(false);
   const [reenviarFeito, setReenviarFeito] = useState(false);
   const [modalFoto, setModalFoto] = useState(false); // modal "A tua foto" (foto actual + estado IA + carregar nova)
+  const [trocandoModo, setTrocandoModo] = useState(false); // Rodada 18: PUT /api/me/avatar/modo em voo
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
@@ -247,6 +248,11 @@ export default function Figurinha() {
   // avatar_url é diferente da foto só quando a IA gerou alguma coisa), mas
   // desde 22-set o nome da coisa mudou: SPEC-FIGURINHA-3.
   const avatarEhIA = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
+  // Rodada 18: existe uma figurinha (mesmo que o card esteja em modo 'foto'
+  // agora). kit_ativo sobrevive à troca de modo — só a geração o muda — por
+  // isso é o sinal certo para "há algo para o interruptor escolher", ao
+  // contrário de avatarEhIA, que só diz o que está ativo NESTE instante.
+  const temFigurinhaAlguma = !!me?.user?.kit_ativo;
   // MODO DO CARD (§3/§4): com Brilhante, o card de sempre (avatar recortado
   // sobre o fundo escolhido). Sem Brilhante mas COM foto, a figurinha COMUM —
   // a foto como ela é, na mesma moldura. Sem foto nenhuma, o genérico da casa
@@ -581,7 +587,7 @@ export default function Figurinha() {
       // aqui na mesma, sem erro na tela.
       if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(setBrilhante);
       else if (err?.status === 403) setLimiteIA(true); // 403 sem código conhecido (defensivo)
-      else setErro(err?.message || 'Não foi possível gerar sua Brilhante.');
+      else setErro(err?.message || 'Não foi possível gerar sua figurinha.');
     } finally {
       setGerandoIA(false);
       setEstreiaFase('pronto'); // mostra o cromo (com Brilhante ou a foto)
@@ -797,6 +803,24 @@ export default function Figurinha() {
     // Gastar 1 geração é irreversível: pede confirmação primeiro.
     if (!window.confirm(`Gerar o kit ${kit.nome}? Usa 1 das suas gerações IA.`)) return;
     await gerarAvatarIA(kit.id);
+  }
+
+  // Rodada 18 — interruptor "Mostrar minha foto" / "Mostrar minha figurinha"
+  // (modal "Sua foto"): troca o que o card mostra sem apagar nada — a
+  // figurinha continua no slot, sempre. avatarEhIA já diz qual dos dois está
+  // ativo agora, então um toque no modo já ativo não faz nada.
+  async function trocarModo(modo) {
+    if (trocandoModo || (modo === 'figurinha') === avatarEhIA) return;
+    setTrocandoModo(true);
+    try {
+      const data = await apiFetch('/api/me/avatar/modo', { method: 'PUT', body: JSON.stringify({ modo }) });
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
+      recarregarPerfilGlobal();
+    } catch (e) {
+      setErro(e?.message || 'Não foi possível trocar o card.');
+    } finally {
+      setTrocandoModo(false);
+    }
   }
 
   // O fundo é uma PREFERÊNCIA PERSISTIDA, e faltava-lhe metade do laço: a coluna
@@ -1135,14 +1159,14 @@ export default function Figurinha() {
             cima do botão já dizendo "Gerando…" — duas mensagens discordando. */}
         {gerandoIA ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <FuttyLoader size={14} label={null} /> Sua Brilhante está sendo criada… leva uns 45 segundos
+            <FuttyLoader size={14} label={null} /> Sua figurinha está sendo criada… leva uns 45 segundos
           </div>
         ) : fotoLocal ? (
           // SPEC-FIGURINHA-3: trocar a foto já MUDA a figurinha comum na hora —
           // não há nada a gerar. A linha só convida a gerar a Brilhante quando
           // há direito; senão diz o que aconteceu de facto.
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <Check size={14} /> {temDireitoDeGerar ? 'Foto trocada, gere sua Brilhante' : 'Foto trocada — sua figurinha já mudou'}
+            <Check size={14} /> {temDireitoDeGerar ? 'Foto trocada, gere sua figurinha' : 'Foto trocada — sua foto já mudou'}
           </div>
         ) : null}
 
@@ -1213,7 +1237,7 @@ export default function Figurinha() {
                       disabled={gerandoIA || uploadFoto}
                       onClick={gerarAvatarIA}
                     >
-                      <EstrelaIA size={16} color="#f0c94a" /> Gerar minha Brilhante
+                      <EstrelaIA size={16} color="#f0c94a" /> Gerar minha figurinha
                     </button>
                   </span>
                 ) : (
@@ -1230,7 +1254,7 @@ export default function Figurinha() {
                       </>
                     ) : (
                       <>
-                        <EstrelaIA size={16} color="#ffffff" /> Gerar minha Brilhante
+                        <EstrelaIA size={16} color="#ffffff" /> Gerar minha figurinha
                       </>
                     )}
                   </button>
@@ -1247,7 +1271,7 @@ export default function Figurinha() {
               </span>
             ) : kitDoTime && !avatarEhIA ? (
               <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
-                Sua Brilhante vem pelo pacote do time, no uniforme que o dono escolheu
+                Sua figurinha vem pelo pacote do time, no uniforme que o dono escolheu
               </span>
             ) : null}
             {/* "Pode demorar até 30 segundos" (própria, sob o botão) saiu nesta
@@ -1270,7 +1294,7 @@ export default function Figurinha() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <img
                   src={urlAsset('/avatares/exemplo-brilhante.webp')}
-                  alt="Exemplo de Figurinha Brilhante"
+                  alt="Exemplo de figurinha"
                   width={72}
                   height={108}
                   loading="lazy"
@@ -1279,10 +1303,10 @@ export default function Figurinha() {
                 />
                 <div style={{ display: 'grid', gap: 5, minWidth: 0 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 17, color: '#f0c94a' }}>
-                    <Lock size={14} /> Vire Brilhante ✨
+                    <Lock size={14} /> Vire figurinha ✨
                   </span>
                   <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
-                    Sua figurinha vira arte no uniforme do Futty, com os 6 fundos liberados.
+                    Sua foto vira uma figurinha de verdade, no uniforme do Futty, com os 6 fundos liberados.
                   </span>
                 </div>
               </div>
@@ -1343,7 +1367,7 @@ export default function Figurinha() {
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Não deu para gerar agora</span>
               <Link to="/planos" className="btn btn--purple hud-corners" style={{ marginTop: 4, height: 38, paddingLeft: 18, paddingRight: 18, fontSize: 13, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-                Ver Brilhantes
+                Ver Figurinhas
               </Link>
             </div>
           ) : null}
@@ -1679,6 +1703,49 @@ export default function Figurinha() {
               <path d="M0 5 H70 L75 1 H200" stroke="url(#modalhudline)" strokeWidth="1" fill="none" />
             </svg>
 
+            {/* Rodada 18 — interruptor "Mostrar minha foto" / "Mostrar minha
+                figurinha": só aparece pra quem já tem uma figurinha gerada
+                (mesmo que o card esteja mostrando a foto agora). Um toque
+                troca avatar_url na hora — a prévia abaixo segue junto. */}
+            {temFigurinhaAlguma ? (
+              <div role="radiogroup" aria-label="O que o card mostra" style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!avatarEhIA}
+                  disabled={trocandoModo}
+                  onClick={() => trocarModo('foto')}
+                  className="hud-corners-s"
+                  style={{
+                    flex: 1, padding: '9px 6px', fontSize: 12, fontWeight: 700, cursor: trocandoModo ? 'default' : 'pointer',
+                    background: !avatarEhIA ? 'rgba(212,160,23,0.14)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${!avatarEhIA ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.14)'}`,
+                    color: !avatarEhIA ? '#f0c94a' : 'rgba(255,255,255,0.75)',
+                    opacity: trocandoModo ? 0.6 : 1,
+                  }}
+                >
+                  Mostrar minha foto
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={avatarEhIA}
+                  disabled={trocandoModo}
+                  onClick={() => trocarModo('figurinha')}
+                  className="hud-corners-s"
+                  style={{
+                    flex: 1, padding: '9px 6px', fontSize: 12, fontWeight: 700, cursor: trocandoModo ? 'default' : 'pointer',
+                    background: avatarEhIA ? 'rgba(212,160,23,0.14)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${avatarEhIA ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.14)'}`,
+                    color: avatarEhIA ? '#f0c94a' : 'rgba(255,255,255,0.75)',
+                    opacity: trocandoModo ? 0.6 : 1,
+                  }}
+                >
+                  Mostrar minha figurinha
+                </button>
+              </div>
+            ) : null}
+
             {/* Preview da foto actual (cantos 45° coerentes com o sistema visual) */}
             {fotoOriginal ? (
               // contain + fundo escuro sólido → mostra a pessoa INTEIRA, sem cortar topo/base.
@@ -1696,14 +1763,15 @@ export default function Figurinha() {
               <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--label-color)', fontSize: 13 }}>Você ainda não tem foto.</div>
             )}
 
-            {/* Estado do avatar IA (reaproveita avatarEhIA) */}
+            {/* Estado do card — prévia ao vivo do que os outros veem (Rodada
+                18: muda na hora com o interruptor acima, sem esperar reload). */}
             <div style={{ marginTop: 14 }}>
               {avatarEhIA ? (
                 /* (j) Badge com glow dourado suave — mesma família dos dots. */
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'linear-gradient(90deg, rgba(139,92,246,0.18), rgba(212,160,23,0.12))', border: '1px solid rgba(139,92,246,0.4)', boxShadow: '0 0 12px rgba(212,160,23,0.22)' }}>
                   <img
                     src={urlImagem(urlAsset(me?.user?.avatar_url), 128, { quadrado: true })}
-                    alt="Brilhante"
+                    alt="Figurinha"
                     width={48}
                     height={48}
                     decoding="async"
@@ -1712,13 +1780,29 @@ export default function Figurinha() {
                   />
                   <div style={{ display: 'grid', gap: 3 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#d4a017' }}>
-                      <EstrelaIA size={14} color="#d4a017" /> Brilhante ativa
+                      <EstrelaIA size={14} color="#d4a017" /> Figurinha ativa
                     </span>
                     <span style={{ fontSize: 11, color: 'var(--label-color)' }}>Gerado a partir desta foto</span>
                   </div>
                 </div>
+              ) : temFigurinhaAlguma ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                  <img
+                    src={urlImagem(urlAsset(me?.user?.avatar_url), 128, { quadrado: true })}
+                    alt="Sua foto"
+                    width={48}
+                    height={48}
+                    decoding="async"
+                    loading="lazy"
+                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid rgba(255,255,255,0.2)', flex: 'none', background: '#0d0d12' }}
+                  />
+                  <div style={{ display: 'grid', gap: 3 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Mostrando sua foto</span>
+                    <span style={{ fontSize: 11, color: 'var(--label-color)' }}>Sua figurinha continua guardada</span>
+                  </div>
+                </div>
               ) : (
-                <p style={{ margin: 0, textAlign: 'center', fontSize: 12, color: 'var(--label-color)' }}>Você ainda não gerou sua Brilhante.</p>
+                <p style={{ margin: 0, textAlign: 'center', fontSize: 12, color: 'var(--label-color)' }}>Você ainda não gerou sua figurinha.</p>
               )}
             </div>
 

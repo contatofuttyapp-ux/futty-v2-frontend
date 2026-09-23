@@ -1102,7 +1102,7 @@ function TabMembros({ slug, meId, showToast }) {
                 </span>
                 {m.tem_brilhante ? (
                   <span style={{ fontSize: 10, fontWeight: 800, color: '#d4a017', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
-                    ✨ Brilhante
+                    ✨ Figurinha
                   </span>
                 ) : null}
               </div>

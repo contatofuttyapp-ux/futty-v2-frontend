@@ -253,7 +253,7 @@ export default function MeuPerfil() {
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email || ''}</div>
             <Link to="/planos" style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 700, color: 'var(--neon)' }}>
-              Ver Brilhantes →
+              Ver Figurinhas →
             </Link>
           </div>
         </div>

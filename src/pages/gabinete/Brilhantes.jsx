@@ -73,14 +73,14 @@ export default function Brilhantes({ showMsg }) {
   function ativarPacote(teamId, nome) {
     const kitId = kitPorTime[teamId] || kits[0];
     if (!kitId) { showMsg('Sem uniformes disponíveis no motor.', true); return; }
-    if (!window.confirm(`Ativar as Brilhantes do ${nome} no uniforme ${nomeKit(kitId)}?\n\nTodos os jogadores geram nesse uniforme. Ninguém é gerado agora — cada um gera quando abrir o app.`)) return;
+    if (!window.confirm(`Ativar as figurinhas do ${nome} no uniforme ${nomeKit(kitId)}?\n\nTodos os jogadores geram nesse uniforme. Ninguém é gerado agora — cada um gera quando abrir o app.`)) return;
     agir(`pacote-${teamId}`, '/api/super/gabinete/brilhantes/ativar-pacote', { teamId, kitId }, 'Pacote ativado e time avisado.');
   }
 
   function darCreditos(userId, email) {
     const quantidade = Number(creditoPorPessoa[userId] ?? 2);
     if (!Number.isInteger(quantidade) || quantidade < 1) { showMsg('Quantidade inválida.', true); return; }
-    if (!window.confirm(`Dar ${quantidade} crédito(s) de Brilhante a ${email}?`)) return;
+    if (!window.confirm(`Dar ${quantidade} crédito(s) de figurinha a ${email}?`)) return;
     agir(`credito-${userId}`, '/api/super/gabinete/brilhantes/creditos', { userId, quantidade }, 'Créditos dados e pessoa avisada.');
   }
 
@@ -103,11 +103,11 @@ export default function Brilhantes({ showMsg }) {
   }
 
   if (error) return <EstadoErroRede onRepetir={reload} />;
-  if (loading || !data) return <div style={{ padding: 20, color: 'var(--text-dim)', fontSize: 13 }}>Carregando Brilhantes…</div>;
+  if (loading || !data) return <div style={{ padding: 20, color: 'var(--text-dim)', fontSize: 13 }}>Carregando Figurinhas…</div>;
 
   if (data.indisponivel) {
     return (
-      <Secao titulo="Brilhantes" sub="Ativação de pacotes, créditos e pedidos">
+      <Secao titulo="Figurinhas" sub="Ativação de pacotes, créditos e pedidos">
         <div style={{ fontSize: 13, color: '#f0c94a', lineHeight: 1.5 }}>
           {data.motivo || 'Ainda não dá para ler os pedidos.'}
           <div style={{ color: 'var(--text-dim)', marginTop: 6 }}>
@@ -243,7 +243,7 @@ export default function Brilhantes({ showMsg }) {
       </Secao>
 
       {/* ── 3. PESSOAS COM CRÉDITO ── */}
-      <Secao titulo={`Pessoas com crédito (${pessoas.length})`} sub="Cada crédito é uma Brilhante por gerar, no uniforme que a pessoa escolher">
+      <Secao titulo={`Pessoas com crédito (${pessoas.length})`} sub="Cada crédito é uma figurinha por gerar, no uniforme que a pessoa escolher">
         {pessoas.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Ninguém com crédito agora.</div>
         ) : (

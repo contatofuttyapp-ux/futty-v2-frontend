@@ -72,7 +72,7 @@ function TabUsers({ showMsg }) {
             <tr>
               <th style={th}>Nome</th>
               <th style={th}>Email</th>
-              <th style={th}>Brilhante</th>
+              <th style={th}>Figurinha</th>
               <th style={th}>Estado</th>
               <th style={th}>Ações</th>
             </tr>

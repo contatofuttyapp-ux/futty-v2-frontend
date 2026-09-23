@@ -2063,7 +2063,7 @@ async function cenaRodada16b(navegador, sessao) {
 // grátis) → confere o botão "Gerar Avatar IA" dourado e pulsando → toca nele
 // (geração REAL, ~US$0,05) → confere que a Figurinha mostra "sendo criado" →
 // vai ao Início NO MEIO da geração e confere "Sua figurinha está sendo
-// criada…" (não o card "Complete sua figurinha") → espera acabar → volta e
+// criada…" (não o card "Complete seu card") → espera acabar → volta e
 // confere a figurinha nova. Quem chama isto tem de repor a conta demo depois
 // (scripts/_bench/repor-estado-demo.js no backend — tem modo sem custo).
 async function cenaRodada17(navegador, sessao) {
@@ -2160,7 +2160,7 @@ async function cenaRodada17(navegador, sessao) {
     posFoto,
     gerando,
     faixaFigurinha: { temSendoCriado: /sendo criado/i.test(faixaFigurinha), temTexto45s: /45 segundos/.test(faixaFigurinha) },
-    faixaInicio: { temSendoCriada: /sendo criada/i.test(faixaInicio), temCompleteSuaFigurinha: /Complete sua figurinha/i.test(faixaInicio) },
+    faixaInicio: { temSendoCriada: /sendo criada/i.test(faixaInicio), temCompleteSuaFigurinha: /Complete seu card/i.test(faixaInicio) },
     final,
   };
 }
@@ -2168,7 +2168,7 @@ async function cenaRodada17(navegador, sessao) {
 // ═══ FIGURINHA 3 — comum grátis, Brilhante por direito (22-set) ═══
 //
 // O percurso de quem chega hoje: cadastro → foto → figurinha COMUM na hora
-// (sem esperar IA, sem custo) → o bloco "Vire Brilhante" no lugar dos
+// (sem esperar IA, sem custo) → o bloco "Vire figurinha" no lugar dos
 // seletores → Planos com os três produtos → pedido de ativação.
 //
 // Corre com uma conta DESCARTÁVEL e vazia (backend:
@@ -2274,7 +2274,7 @@ async function cenaCriarTime(navegador, sessoes) {
   await espera(2500);
   const naPasso4 = await texto();
   passos.chegouPasso4 = /Chame o seu time/i.test(naPasso4);
-  passos.ganhouBrilhanteNaTela = /Você ganhou uma Figurinha Brilhante/i.test(naPasso4);
+  passos.ganhouBrilhanteNaTela = /Você ganhou uma figurinha/i.test(naPasso4);
   await pagina.screenshot({ path: foto('3-presente') });
 
   if (passos.ganhouBrilhanteNaTela) {
@@ -2282,10 +2282,10 @@ async function cenaCriarTime(navegador, sessoes) {
     await espera(3500);
     passos.foiParaFigurinha = /\/figurinha/.test(pagina.url());
     const naFigurinha = await texto();
-    passos.figurinhaTemBotaoGerar = /Gerar minha Brilhante/i.test(naFigurinha);
+    passos.figurinhaTemBotaoGerar = /Gerar minha figurinha/i.test(naFigurinha);
     await pagina.screenshot({ path: foto('4-figurinha-antes') });
     if (passos.figurinhaTemBotaoGerar) {
-      await pagina.locator('button', { hasText: /Gerar minha Brilhante/i }).first().click();
+      await pagina.locator('button', { hasText: /Gerar minha figurinha/i }).first().click();
       await espera(2500);
       await pagina.screenshot({ path: foto('5-gerando') });
       await pagina.waitForFunction(
@@ -2295,7 +2295,7 @@ async function cenaCriarTime(navegador, sessoes) {
       ).catch((e) => erros.push(`espera da geração: ${e.message.split('\n')[0]}`));
       await espera(2000);
       const depois = await texto();
-      passos.brilhanteGerada = !/Gerar minha Brilhante/i.test(depois);
+      passos.brilhanteGerada = !/Gerar minha figurinha/i.test(depois);
       await pagina.screenshot({ path: foto('6-brilhante-pronta') });
     }
   }
@@ -2560,7 +2560,7 @@ async function cenaFigurinha3Pacote(navegador, sessoes) {
   await chefe.pagina.goto(`${BASE}/gabinete?aba=brilhantes`, { waitUntil: 'domcontentloaded' });
   await espera(7000);
   const noGabinete = await chefe.texto();
-  passos.gabineteTemAba = /Brilhantes/i.test(noGabinete);
+  passos.gabineteTemAba = /Figurinhas/i.test(noGabinete);
   passos.gabineteVeOPedido = /Pacote do time/i.test(noGabinete);
   passos.gabineteMostraQuemPediu = /prova-pacote-dono@futtymock\.com/i.test(noGabinete);
   await chefe.pagina.screenshot({ path: foto('3-gabinete-pedido') });
@@ -2608,19 +2608,19 @@ async function cenaFigurinha3Pacote(navegador, sessoes) {
   await membro.pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
   await espera(8000);
   const noInicio = await membro.texto();
-  passos.membroVeCartaoDourado = /tem uma Figurinha Brilhante para gerar/i.test(noInicio);
+  passos.membroVeCartaoDourado = /tem uma figurinha para gerar/i.test(noInicio);
   passos.cartaoDizCortesia = /Cortesia do pacote do seu time/i.test(noInicio);
   await membro.pagina.screenshot({ path: foto('7-membro-cartao-dourado') });
 
   await membro.pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
   await espera(5000);
   const naFigurinha = await membro.texto();
-  passos.membroTemBotaoGerar = /Gerar minha Brilhante/i.test(naFigurinha);
+  passos.membroTemBotaoGerar = /Gerar minha figurinha/i.test(naFigurinha);
   passos.figurinhaDizUniformeDoTime = /uniforme que o dono escolheu/i.test(naFigurinha);
   await membro.pagina.screenshot({ path: foto('8-membro-antes-de-gerar') });
 
   if (passos.membroTemBotaoGerar) {
-    await membro.pagina.locator('button', { hasText: /Gerar minha Brilhante/i }).first().click();
+    await membro.pagina.locator('button', { hasText: /Gerar minha figurinha/i }).first().click();
     await espera(2500);
     passos.mostrouSendoCriada = /sendo criad[ao]/i.test(await membro.texto());
     await membro.pagina.screenshot({ path: foto('9-membro-gerando') });
@@ -2632,7 +2632,7 @@ async function cenaFigurinha3Pacote(navegador, sessoes) {
     await espera(2500);
     const depois = await membro.texto();
     passos.temOs6Fundos = ['Neutro', 'Épico', 'Estádio', 'Aura', 'Golden', 'Royal'].every((f) => depois.includes(f));
-    passos.aindaMostraBotaoGerar = /Gerar minha Brilhante/i.test(depois);
+    passos.aindaMostraBotaoGerar = /Gerar minha figurinha/i.test(depois);
     await membro.pagina.screenshot({ path: foto('10-membro-brilhante') });
   }
   passos.geracoesTotais = geracoes.length;
@@ -2709,14 +2709,14 @@ async function cenaFigurinha3(navegador, sessao) {
   passos.saiuDoOnboarding = !/onboarding/.test(pagina.url());
   await pagina.screenshot({ path: foto('4c-inicio-apos-cadastro') });
 
-  // ── 3. FIGURINHA: card comum, sem seletores, com "Vire Brilhante" ──
+  // ── 3. FIGURINHA: card comum, sem seletores, com "Vire figurinha" ──
   await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
   await espera(7000);
   const naFigurinha = await texto();
-  passos.temVireBrilhante = /Vire Brilhante/i.test(naFigurinha);
+  passos.temVireBrilhante = /Vire figurinha/i.test(naFigurinha);
   passos.temSeletorFundo = /FUNDO/.test(naFigurinha) && /UNIFORME/.test(naFigurinha);
   passos.temTrocarFoto = /Trocar foto/i.test(naFigurinha);
-  passos.temBotaoGerar = /Gerar minha Brilhante/i.test(naFigurinha);
+  passos.temBotaoGerar = /Gerar minha figurinha/i.test(naFigurinha);
   passos.temSoAMinha = /Só a minha/i.test(naFigurinha);
   await pagina.screenshot({ path: foto('5-figurinha-comum') });
 
@@ -2724,17 +2724,17 @@ async function cenaFigurinha3(navegador, sessao) {
   await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
   await espera(7000);
   const noInicio = await texto();
-  passos.inicioCompleteFigurinha = /Complete sua figurinha/i.test(noInicio);
+  passos.inicioCompleteFigurinha = /Complete seu card/i.test(noInicio);
   passos.inicioSendoCriada = /sendo criada/i.test(noInicio);
-  passos.inicioCartaoDourado = /tem uma Figurinha Brilhante para gerar/i.test(noInicio);
+  passos.inicioCartaoDourado = /tem uma figurinha para gerar/i.test(noInicio);
   await pagina.screenshot({ path: foto('6-inicio-comum') });
 
   // ── 5. PLANOS → "Brilhantes": os três produtos ──
   await pagina.goto(`${BASE}/planos`, { waitUntil: 'domcontentloaded' });
   await espera(4000);
   const nosPlanos = await texto();
-  passos.planosTitulo = /BRILHANTES/.test(nosPlanos);
-  passos.planosTresProdutos = ['Brilhantes do time', 'Manto próprio', 'Minha Brilhante'].every((p) => nosPlanos.includes(p));
+  passos.planosTitulo = /FIGURINHAS/.test(nosPlanos);
+  passos.planosTresProdutos = ['Figurinhas do time', 'Manto próprio', 'Minha Figurinha'].every((p) => nosPlanos.includes(p));
   passos.planosPorJogador = /por jogador/i.test(nosPlanos);
   passos.planosSemProElite = !/\bPro\b|\bElite\b/.test(nosPlanos);
   passos.planosSemEmBreve = !/em breve/i.test(nosPlanos);
@@ -2774,13 +2774,13 @@ async function cenaFigurinha3(navegador, sessao) {
     await espera(4000);
     await pagina.screenshot({ path: foto('9-antes-de-gerar') });
 
-    await pagina.locator('button', { hasText: /Gerar minha Brilhante/i }).first().click();
+    await pagina.locator('button', { hasText: /Gerar minha figurinha/i }).first().click();
     await espera(2500);
     passos.mostrouSendoCriado = /sendo criad[ao]/i.test(await texto());
     await pagina.screenshot({ path: foto('10-gerando') });
 
     // Espera a geração acabar: o botão some (avatarEhIA passa a true e a
-    // Figurinha deixa de mostrar "Gerar minha Brilhante" nesse estado) ou o
+    // Figurinha deixa de mostrar "Gerar minha figurinha" nesse estado) ou o
     // texto "sendo criado" desaparece. Até 120 s — a V6 direta mede ~17 s,
     // mas a rota real soma auditor de coroa + rede; folga para um retry.
     await pagina.waitForFunction(
@@ -2793,8 +2793,8 @@ async function cenaFigurinha3(navegador, sessao) {
     const depoisDeGerar = await texto();
     passos.geracoesTotais = geracoes.length; // 1 = só esta; script não gerou mais nenhuma
     passos.temOs6Fundos = ['Neutro', 'Épico', 'Estádio', 'Aura', 'Golden', 'Royal'].every((f) => depoisDeGerar.includes(f));
-    passos.aindaMostraVireBrilhante = /Vire Brilhante/i.test(depoisDeGerar);
-    passos.aindaMostraBotaoGerar = /Gerar minha Brilhante/i.test(depoisDeGerar);
+    passos.aindaMostraVireBrilhante = /Vire figurinha/i.test(depoisDeGerar);
+    passos.aindaMostraBotaoGerar = /Gerar minha figurinha/i.test(depoisDeGerar);
     await pagina.screenshot({ path: foto('11-brilhante-gerada') });
   }
 
@@ -3015,6 +3015,95 @@ async function cenaRodada13(navegador, sessao) {
   await contexto2.close();
 
   return { presenca, verSorteio, erros };
+}
+
+// ═══ RODADA 18 — "Mostrar minha foto" / "Mostrar minha figurinha" ═══
+//
+// A conta demo já tem foto E figurinha (usada nas provas anteriores) — nada
+// aqui gera nada nem gasta direito, só exercita o interruptor nela. Termina
+// devolvendo o modo a 'figurinha': outras cenas e a revisão da loja contam
+// com essa conta mostrando a figurinha.
+async function cenaRodada18(navegador, sessao) {
+  const PASTA_R18 = path.join(PASTA, 'rodada-18');
+  mkdirSync(PASTA_R18, { recursive: true });
+  const foto = (nome) => path.join(PASTA_R18, `${ETIQUETA}-${nome}.png`);
+  const erros = [];
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  const texto = () => pagina.locator('body').innerText().catch(() => '');
+  const abrirModalFoto = async () => {
+    await pagina.locator('button', { hasText: /Trocar foto/i }).first().click();
+    await espera(500);
+  };
+  const fecharModalFoto = async () => {
+    await pagina.locator('button[aria-label="Fechar"]').first().click().catch(() => {});
+    await espera(300);
+  };
+
+  // ── 1) Figurinha, "Sua foto": estado inicial — a conta já mostra a figurinha ──
+  await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('button', { timeout: 30000 }).catch(() => {});
+  await espera(1500);
+  await abrirModalFoto();
+  const modalInicial = await texto();
+  await pagina.screenshot({ path: foto('1-modal-figurinha-ativa') });
+
+  // ── 2) "Mostrar minha foto" — espera a resposta da rota nova e confere a prévia ──
+  const [respModoFoto] = await Promise.all([
+    pagina.waitForResponse((r) => r.url().includes('/api/me/avatar/modo') && r.request().method() === 'PUT'),
+    pagina.locator('button', { hasText: /^Mostrar minha foto$/i }).first().click(),
+  ]);
+  await espera(600);
+  const modalMostrandoFoto = await texto();
+  await pagina.screenshot({ path: foto('2-modal-mostrando-foto') });
+
+  // ── 3) fecha o modal — Início já é outra rota (SPA): tem de refletir sozinho ──
+  await fecharModalFoto();
+  const foiInicio = await pagina.locator('nav a', { hasText: 'Início' }).first().click().then(() => true, () => false);
+  if (!foiInicio) await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await espera(2000);
+  await pagina.screenshot({ path: foto('3-inicio-com-foto') });
+
+  // ── 4) Ranking — mesma conta, mesmo avatar_url, sem tocar em Ranking.jsx ──
+  await pagina.goto(`${BASE}/equipa/${TIME}/ranking`, { waitUntil: 'domcontentloaded' });
+  await espera(2000);
+  await pagina.screenshot({ path: foto('4-ranking-com-foto') });
+
+  // ── 5) Feed — idem, sem tocar no componente ──
+  await pagina.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded' });
+  await espera(2000);
+  await pagina.screenshot({ path: foto('5-feed-com-foto') });
+
+  // ── 6) volta e escolhe "Mostrar minha figurinha" de novo (restaura a conta) ──
+  await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await espera(1500);
+  await abrirModalFoto();
+  const [respModoFigurinha] = await Promise.all([
+    pagina.waitForResponse((r) => r.url().includes('/api/me/avatar/modo') && r.request().method() === 'PUT'),
+    pagina.locator('button', { hasText: /^Mostrar minha figurinha$/i }).first().click(),
+  ]);
+  await espera(600);
+  const modalFigurinhaDeVolta = await texto();
+  await pagina.screenshot({ path: foto('6-modal-figurinha-de-volta') });
+  await fecharModalFoto();
+  await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await espera(2000);
+  await pagina.screenshot({ path: foto('7-inicio-com-figurinha-de-volta') });
+
+  await contexto.close();
+  return {
+    erros,
+    passos: {
+      temInterruptorInicial: /Mostrar minha foto/i.test(modalInicial) && /Mostrar minha figurinha/i.test(modalInicial),
+      figurinhaAtivaNoInicio: /Figurinha ativa/i.test(modalInicial),
+      modoFotoStatus: respModoFoto.status(),
+      mostrandoFotoNaHora: /Mostrando sua foto/i.test(modalMostrandoFoto),
+      modoFigurinhaStatus: respModoFigurinha.status(),
+      figurinhaDeVoltaNaHora: /Figurinha ativa/i.test(modalFigurinhaDeVolta),
+    },
+  };
 }
 
 mkdirSync(PASTA, { recursive: true });
@@ -3366,8 +3455,22 @@ try {
     console.log(`   ${ok(g?.direita <= g?.larguraViewport && g?.scrollWidthDoc <= g?.larguraViewport)} não estoura a tela: botão termina em ${g?.direita}px (viewport ${g?.larguraViewport}px) · scrollWidth do documento ${g?.scrollWidthDoc}px`);
     console.log(`   ${ok(!r.gerando?.dourado && r.gerando?.texto === 'Gerando…')} ao tocar Gerar: botão volta a "${r.gerando?.texto}" (roxo, sem pulso dourado)`);
     console.log(`   ${ok(r.faixaFigurinha.temSendoCriado && r.faixaFigurinha.temTexto45s)} Figurinha mostra "sendo criado" com "leva uns 45 segundos": ${JSON.stringify(r.faixaFigurinha)}`);
-    console.log(`   ${ok(r.faixaInicio.temSendoCriada && !r.faixaInicio.temCompleteSuaFigurinha)} Início A MEIO da geração: "sendo criada" ${r.faixaInicio.temSendoCriada} · "Complete sua figurinha" (não pode aparecer) ${r.faixaInicio.temCompleteSuaFigurinha}`);
+    console.log(`   ${ok(r.faixaInicio.temSendoCriada && !r.faixaInicio.temCompleteSuaFigurinha)} Início A MEIO da geração: "sendo criada" ${r.faixaInicio.temSendoCriada} · "Complete seu card" (não pode aparecer) ${r.faixaInicio.temCompleteSuaFigurinha}`);
     console.log(`   estado final: botão "${r.final?.texto}" dourado ${r.final?.dourado} (deve ser não — voltou a idle)`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
+  if (CENAS.includes('rodada18')) {
+    const r = await cenaRodada18(navegador, sessao);
+    saida.rodada18 = r;
+    const ok = (bom) => (bom ? 'OK' : 'FALHA');
+    const p = r.passos;
+    console.log('\n[iphone] RODADA 18 · mostrar minha foto / mostrar minha figurinha');
+    console.log(`   ${ok(p.temInterruptorInicial && p.figurinhaAtivaNoInicio)} modal abre com o interruptor e a figurinha ativa: interruptor ${p.temInterruptorInicial} · "Figurinha ativa" ${p.figurinhaAtivaNoInicio}`);
+    console.log(`   ${ok(p.modoFotoStatus === 200 && p.mostrandoFotoNaHora)} "Mostrar minha foto": PUT /api/me/avatar/modo → ${p.modoFotoStatus} · prévia "Mostrando sua foto" na hora ${p.mostrandoFotoNaHora}`);
+    console.log(`   Início/Ranking/Feed com a foto: capturas 3, 4 e 5 (conferir a olho — os três já leem avatar_url sozinhos, nada mexido neles)`);
+    console.log(`   ${ok(p.modoFigurinhaStatus === 200 && p.figurinhaDeVoltaNaHora)} "Mostrar minha figurinha" de volta: PUT → ${p.modoFigurinhaStatus} · "Figurinha ativa" na hora ${p.figurinhaDeVoltaNaHora}`);
+    console.log('   Sorteio não entrou nesta cena (precisa de um sorteio ativo no time demo) — Ranking e Feed já provam que a leitura de avatar_url fora da Figurinha/Início segue igual.');
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
@@ -3387,26 +3490,26 @@ try {
     console.log(`   ${ok(p.geracoesNoCadastro === 0)} o cadastro NÃO gera IA: ${p.geracoesNoCadastro} chamada(s) a /api/me/avatar/ai (${r.geracoes} no total da cena)`);
     console.log(`   ${ok(p.temTrocarFoto)} "Trocar foto" sempre presente: ${p.temTrocarFoto}`);
     // Com crédito dado por fora (--credito), o bloco correto É o botão
-    // dourado, não "Vire Brilhante" — os dois são mutuamente exclusivos por
+    // dourado, não "Vire figurinha" — os dois são mutuamente exclusivos por
     // desenho (Figurinha.jsx: !temDireitoDeGerar). Um XOR, não um "tem de ter
     // os dois"; o log de baixo (secção do botão) diz qual apareceu e se bate.
-    console.log(`   ${ok(p.temVireBrilhante !== p.temBotaoGerar)} "Vire Brilhante" XOR botão dourado: Vire Brilhante ${p.temVireBrilhante} · botão dourado ${p.temBotaoGerar} · "Só a minha" ${p.temSoAMinha}`);
+    console.log(`   ${ok(p.temVireBrilhante !== p.temBotaoGerar)} "Vire figurinha" XOR botão dourado: Vire figurinha ${p.temVireBrilhante} · botão dourado ${p.temBotaoGerar} · "Só a minha" ${p.temSoAMinha}`);
     console.log(`   ${ok(!p.temSeletorFundo)} sem seletor de fundo/uniforme na comum: seletores ${p.temSeletorFundo ? 'AINDA APARECEM' : 'fora'}`);
-    console.log(`   ${ok(!p.inicioCompleteFigurinha)} Início sem "Complete sua figurinha" (já há foto): ${p.inicioCompleteFigurinha ? 'AINDA APARECE' : 'fora'}`);
+    console.log(`   ${ok(!p.inicioCompleteFigurinha)} Início sem "Complete seu card" (já há foto): ${p.inicioCompleteFigurinha ? 'AINDA APARECE' : 'fora'}`);
     console.log(`   ${ok(!p.inicioSendoCriada)} Início sem "sendo criada" (nada a gerar): ${p.inicioSendoCriada ? 'APARECE' : 'fora'}`);
-    console.log(`   cartão dourado "tem uma Brilhante para gerar": ${p.inicioCartaoDourado} (só com direito — pede a migração 054)`);
-    console.log(`   ${ok(p.planosTitulo && p.planosTresProdutos)} Planos vira "Brilhantes" com os 3 produtos: título ${p.planosTitulo} · produtos ${p.planosTresProdutos} · "por jogador" ${p.planosPorJogador}`);
+    console.log(`   cartão dourado "tem uma figurinha para gerar": ${p.inicioCartaoDourado} (só com direito — pede a migração 054)`);
+    console.log(`   ${ok(p.planosTitulo && p.planosTresProdutos)} Planos vira "Figurinhas" com os 3 produtos: título ${p.planosTitulo} · produtos ${p.planosTresProdutos} · "por jogador" ${p.planosPorJogador}`);
     console.log(`   ${ok(p.planosSemProElite && p.planosSemEmBreve)} sem Pro/Elite e sem "em breve": Pro/Elite fora ${p.planosSemProElite} · "em breve" fora ${p.planosSemEmBreve}`);
     console.log(`   ${ok(p.pedidoMensagemDigna)} pedido responde com mensagem digna: enviado ${p.pedidoEnviado}`);
     if (p.temBotaoGerar) {
       // CAMINHO PAGO — a conta tem crédito (ver --credito em conta-de-prova.js):
       // botão dourado apareceu, e a cena clicou e esperou a geração REAL.
-      console.log(`   OK botão dourado "Gerar minha Brilhante" apareceu com direito (crédito/pacote)`);
-      console.log(`   ${ok(!p.aindaMostraBotaoGerar && !p.aindaMostraVireBrilhante)} depois de gerar: botão some (virou Brilhante) ${!p.aindaMostraBotaoGerar} · "Vire Brilhante" não volta ${!p.aindaMostraVireBrilhante}`);
+      console.log(`   OK botão dourado "Gerar minha figurinha" apareceu com direito (crédito/pacote)`);
+      console.log(`   ${ok(!p.aindaMostraBotaoGerar && !p.aindaMostraVireBrilhante)} depois de gerar: botão some (virou Brilhante) ${!p.aindaMostraBotaoGerar} · "Vire figurinha" não volta ${!p.aindaMostraVireBrilhante}`);
       console.log(`   ${ok(p.temOs6Fundos)} os 6 fundos liberados: ${p.temOs6Fundos}`);
       if (r.erros.some((e) => e.includes('espera da geração'))) console.log('   ATENÇÃO: a espera pela geração estourou o tempo — ver capturas 10/11');
     } else {
-      console.log(`   ${ok(true)} botão "Gerar minha Brilhante" escondido sem direito (esta conta não tem crédito/pacote)`);
+      console.log(`   ${ok(true)} botão "Gerar minha figurinha" escondido sem direito (esta conta não tem crédito/pacote)`);
     }
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
@@ -3439,7 +3542,7 @@ try {
     console.log(`   ${ok(p.conviteGerado)} convite gerado: ${p.conviteGerado}`);
     console.log(`   ${ok(p.convitePaginaOk && p.temBotaoEntrar)} tela do convite ok (sem lixo) ${p.convitePaginaOk} · botão "Entrar no time" ${p.temBotaoEntrar}`);
     console.log(`   ${ok(p.entrouNoTime)} convidado entrou no time: ${p.entrouNoTime}`);
-    console.log(`   ${ok(p.pedidoEnviado)} pediu "Minha Brilhante" nos Planos: ${p.pedidoEnviado}`);
+    console.log(`   ${ok(p.pedidoEnviado)} pediu "Minha Figurinha" nos Planos: ${p.pedidoEnviado}`);
     console.log(`   ${ok(p.pedidoNaFila && p.temBotaoRecusar)} Gabinete lista o pedido com botão Recusar: fila ${p.pedidoNaFila} · botão ${p.temBotaoRecusar}`);
     console.log(`   ${ok(p.saiuDaFila)} pedido saiu da fila ao recusar: ${p.saiuDaFila}`);
     console.log(`   ${ok(p.recadoNoInicio && p.recadoNaFigurinha)} recado do motivo volta para o convidado: Início ${p.recadoNoInicio} · Figurinha ${p.recadoNaFigurinha}`);

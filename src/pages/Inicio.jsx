@@ -566,7 +566,7 @@ export default function Inicio() {
   const pedidoBrilhante = pedidosBrilhante.find((p) => p.estado === 'pendente') || pedidosBrilhante[0] || null;
   const recadoBrilhante = !pedidoBrilhante ? null : pedidoBrilhante.estado === 'pendente'
     ? { texto: 'Pedido enviado — a gente ativa e avisa ✨', recusado: false }
-    : { texto: pedidoBrilhante.motivo || 'Seu pedido de Brilhante não seguiu.', recusado: true };
+    : { texto: pedidoBrilhante.motivo || 'Seu pedido de figurinha não seguiu.', recusado: true };
 
   // Limpa o sessionStorage assim que sair de 'gerando' — sincronizado DURANTE
   // o render (mesmo padrão de MeuPerfil.jsx), não num efeito.
@@ -1045,7 +1045,7 @@ export default function Inicio() {
               ) : null}
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Sua Brilhante está sendo criada…</span>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Sua figurinha está sendo criada…</span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>leva uns 45 segundos</span>
             </span>
           </div>
@@ -1080,7 +1080,7 @@ export default function Inicio() {
               ) : null}
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, color: '#f0c94a' }}>Você tem uma Figurinha Brilhante para gerar ✨</span>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, color: '#f0c94a' }}>Você tem uma figurinha para gerar ✨</span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                 {brilhanteDireito?.fonte === 'time' ? 'Cortesia do pacote do seu time' : 'Leva uns 45 segundos'}
               </span>
@@ -1113,14 +1113,14 @@ export default function Inicio() {
               </span>
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Complete sua figurinha</span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Sua figurinha fica pronta na hora.</span>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Complete seu card</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Seu card com a foto fica pronto na hora.</span>
             </span>
             <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 11, color: '#f0c94a', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>Adicionar →</span>
           </Link>
         ) : ctaFigurinha ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
-            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Crie sua figurinha</span>
+            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Complete seu card</span>
             <Link to="/figurinha" className="btn btn--purple btn--sm hud-corners-s" onClick={dispensarCtaFigurinha}>Ir para Figurinha</Link>
             <button type="button" aria-label="Fechar" onClick={dispensarCtaFigurinha} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>

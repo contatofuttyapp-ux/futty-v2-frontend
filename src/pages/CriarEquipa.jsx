@@ -263,7 +263,7 @@ export default function CriarEquipa() {
             {ganhouBrilhante ? (
               <div className="hud-corners" style={{ marginTop: 22, padding: '14px 16px', display: 'grid', gap: 10, justifyItems: 'center', textAlign: 'center', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.55)' }}>
                 <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 16, color: '#f0c94a' }}>
-                  Você ganhou uma Figurinha Brilhante ✨
+                  Você ganhou uma figurinha ✨
                 </span>
                 <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
                   Sua figurinha em arte, no uniforme do Futty. É de graça, por ter criado o time.
