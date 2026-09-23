@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 13-set: era #FFFFFF. O foreground é o F com fundo transparente, então a
-         placa branca aparecia por baixo em qualquer launcher que recorte em
-         círculo. Agora é o azul-quase-preto da marca. -->
-    <color name="ic_launcher_background">#050810</color>
+    <!-- 23-set: quem desenha o background do ícone adaptativo agora é o mipmap
+         PNG (vinheta+aro, ver ic_launcher.xml) — este valor não é mais lido por
+         nenhuma tela de ícone. Fica só como registo, atualizado para a mesma
+         vinheta (#0b0a12) em vez do azul antigo (#050810), para não mentir a
+         quem vier ler esta cor depois achando que ainda é ela quem manda. -->
+    <color name="ic_launcher_background">#0b0a12</color>
 </resources>

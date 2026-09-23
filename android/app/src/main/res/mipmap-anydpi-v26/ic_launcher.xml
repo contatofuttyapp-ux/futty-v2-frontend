@@ -2,11 +2,13 @@
 <!-- 13-set — ícone adaptativo refeito. Antes: background branco em PNG e um
      foreground que já trazia o fundo escuro chapado, os dois com inset de 16,7%.
      Em launcher redondo saía um quadradão escuro a flutuar no branco.
-     Agora: background é cor sólida (preenche 100%, como manda a regra — quem
-     recorta é a máscara do launcher) e o foreground é só o F, transparente, já
-     com o respiro da safe zone (66dp de 108) embutido no PNG. -->
+     23-set — "ouro vivo + aro" (scripts/_bench/aplicar-icone.js, backend): o
+     background voltou a ser PNG (não @color), mas por outro motivo — é a
+     vinheta #0b0a12→#1a1826 com o aro dourado da moldura da figurinha, que uma
+     cor chapada não desenha. O foreground continua só o F, transparente, com
+     o respiro da safe zone (66dp de 108) embutido no PNG. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background" />
+    <background android:drawable="@mipmap/ic_launcher_background" />
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />
     <!-- Android 13+: ícone temático. O sistema descarta a cor e tinge a silhueta
          com a paleta do papel de parede. -->
