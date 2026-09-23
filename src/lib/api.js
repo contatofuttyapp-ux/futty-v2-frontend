@@ -113,6 +113,13 @@ async function pedir(path, options, token, segundoPlano) {
 // Upload genérico (multipart) para qualquer endpoint. Não usa apiFetch porque
 // este força Content-Type JSON (o browser tem de definir o boundary sozinho).
 export async function apiUpload(path, file, field = 'file') {
+  return apiUploadCampos(path, { [field]: file });
+}
+
+// RODADA 19 — variante com vários campos (ex.: "avatar" + "original" no
+// mesmo pedido) e método à escolha (POST/PUT). apiUpload acima passou a ser
+// um atalho desta para não duplicar a lógica de sessão/erro.
+export async function apiUploadCampos(path, campos, { method = 'POST' } = {}) {
   const supabase = await obterSupabase();
   const {
     data: { session },
@@ -120,12 +127,14 @@ export async function apiUpload(path, file, field = 'file') {
 
   getsEmVoo.clear(); // escrita: ver a nota de getsEmVoo
   const fd = new FormData();
-  fd.append(field, file);
+  for (const [campo, arquivo] of Object.entries(campos)) {
+    if (arquivo) fd.append(campo, arquivo);
+  }
 
   const headers = {};
   if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { method: 'POST', headers, body: fd });
+  const res = await fetch(`${API_URL}${path}`, { method, headers, body: fd });
   let body = null;
   try {
     body = await res.json();

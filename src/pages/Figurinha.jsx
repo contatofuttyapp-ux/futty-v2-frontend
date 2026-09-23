@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw } from 'lucide-react';
-import { apiFetch, apiUpload } from '../lib/api';
+import { apiFetch, apiUpload, apiUploadCampos } from '../lib/api';
+import CropModal from '../components/CropModal';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useAd } from '../hooks/useAd';
@@ -275,6 +276,18 @@ export default function Figurinha() {
   const [goldenTile, setGoldenTile] = useState(null); // render real do fundo Golden p/ o tile
   const [royalTile, setRoyalTile] = useState(null); // render real do fundo Royal p/ o tile
   const fileRef = useRef(null);
+  // RODADA 19 — enquadrar dentro de "Trocar foto". cropFile alimenta o
+  // CropModal nos dois fluxos ("Escolher outra foto" e "Ajustar
+  // enquadramento"); cropModo decide o que "Confirmar" faz. origParaEnviar só
+  // é usado no modo 'nova' (a normalizada vai junto do recorte como a "original").
+  const [cropFile, setCropFile] = useState(null);
+  const [cropModo, setCropModo] = useState('nova'); // 'nova' | 'ajustar'
+  const [ajustandoEnquadramento, setAjustandoEnquadramento] = useState(false);
+  const origParaEnviar = useRef(null);
+  // "Minhas figurinhas" (histórico, até 6) — carregado quando o modal "Sua
+  // foto" abre; usandoHistoricoId é o id em voo (PUT /historico/:id).
+  const [historico, setHistorico] = useState([]);
+  const [usandoHistoricoId, setUsandoHistoricoId] = useState(null);
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
@@ -655,21 +668,34 @@ export default function Figurinha() {
   // Na estreia, dispara automaticamente a geração da Brilhante — só quando já
   // há direito (crédito ou pacote do time); sem ele, a comum já está pronta.
   // Núcleo do upload, reutilizado pelo "tentar de novo" (P1-5). `emEstreia` decide
-  // se dispara a geração IA automática a seguir.
-  async function subirFoto(file, emEstreia) {
+  // se dispara a geração IA automática a seguir. RODADA 19: `file` já é o
+  // RECORTE (saído do CropModal); `original` (opcional) é a foto de antes do
+  // recorte, mandada junto para "Ajustar enquadramento" mais tarde.
+  async function subirFoto(file, emEstreia, original) {
     setFotoLocal(URL.createObjectURL(file)); // preview imediato
     if (emEstreia) setEstreiaFase('gerando');
     setUploadFoto(true);
     setErro('');
     setUploadErro(null);
     try {
-      const data = await apiUpload('/api/me/avatar', file, 'avatar');
+      const data = original
+        ? await apiUploadCampos('/api/me/avatar', { avatar: file, original })
+        : await apiUpload('/api/me/avatar', file, 'avatar');
       // foto_url = a nova foto (fonte da próxima geração). avatar_url = o que o card
       // mostra: o backend PRESERVA o avatar IA antigo se existir (senão espelha a foto),
       // por isso o card mantém o avatar antigo até o utilizador gerar de novo.
-      setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url ?? data.avatar_url, avatar_url: data.avatar_url } } : m));
+      setMe((m) => (m ? {
+        ...m,
+        user: {
+          ...m.user,
+          foto_url: data.foto_url ?? data.avatar_url,
+          avatar_url: data.avatar_url,
+          foto_original_url: data.foto_original_url ?? m.user.foto_original_url ?? null,
+        },
+      } : m));
       setUploadFoto(false);
       ultimoFicheiro.current = null;
+      origParaEnviar.current = null;
       if (emEstreia) {
         // SPEC-FIGURINHA-3 (22-set): a estreia só tenta gerar a Brilhante com
         // direito confirmado (crédito ou pacote do time) — sem isso o POST
@@ -687,21 +713,116 @@ export default function Figurinha() {
     }
   }
 
+  // RODADA 19 — "Ajustar enquadramento": regrava só o recorte (PUT), sem
+  // mandar original nenhuma (a que já está guardada não muda).
+  async function enviarRecorte(blob) {
+    const file = new File([blob], 'recorte.jpg', { type: 'image/jpeg' });
+    setFotoLocal(URL.createObjectURL(file));
+    setUploadFoto(true);
+    setErro('');
+    setUploadErro(null);
+    try {
+      const data = await apiUploadCampos('/api/me/avatar/recorte', { recorte: file }, { method: 'PUT' });
+      setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url, avatar_url: data.avatar_url } } : m));
+      setUploadFoto(false);
+      setToast({ tipo: 'success', mensagem: 'Enquadramento atualizado!' });
+    } catch (err) {
+      setUploadErro(mensagemUploadFoto(err));
+      setUploadFoto(false);
+    }
+  }
+
+  // Escolhe o ficheiro (galeria/câmera) e abre o CropModal 2:3 — igual ao
+  // Onboarding. A normalizada segue guardada em origParaEnviar: se o recorte
+  // for confirmado, ela vai junto como a "original" (foto_original_url).
   async function onPickFile(e) {
     const file = e.target.files?.[0];
     e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
     if (!file) return;
-    setModalFoto(false); // fecha o modal "A tua foto" ao escolher — revela o fluxo upload→gerar
-    // Sem CropModal aqui (Figurinha sobe direto) — normaliza antes do upload,
-    // mesmo ponto onde o Onboarding normaliza antes do recorte.
+    setModalFoto(false); // fecha o modal "Sua foto" ao escolher — revela o CropModal
     const normalizada = await normalizarFoto(file);
-    ultimoFicheiro.current = normalizada;
-    await subirFoto(normalizada, estreiaFase === 'foto');
+    origParaEnviar.current = normalizada;
+    setCropModo('nova');
+    setCropFile(normalizada);
   }
 
-  // "Tentar de novo" (P1-5): repete o upload com a MESMA foto, sem re-seleccionar.
+  // "Ajustar enquadramento": reabre o CropModal sobre a foto ORIGINAL
+  // guardada (foto_original_url). Fail-safe (fotos de antes desta rodada, ou
+  // sem a migração 057): sem original, reabre sobre o RECORTE atual — dá
+  // para aproximar, não para recuperar área perdida no primeiro recorte.
+  async function abrirAjustarEnquadramento() {
+    const fonte = jogador.foto_original_url || fotoOriginal;
+    if (!fonte) return;
+    setAjustandoEnquadramento(true);
+    setErro('');
+    try {
+      const resp = await fetch(urlImagem(urlAsset(fonte), 1600));
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      origParaEnviar.current = null; // não é upload de foto nova — não manda "original"
+      setCropModo('ajustar');
+      setModalFoto(false);
+      setCropFile(new File([blob], 'ajustar.jpg', { type: blob.type || 'image/jpeg' }));
+    } catch (e) {
+      console.error('[figurinha] abrir ajustar enquadramento falhou:', e.message);
+      setErro('Não foi possível abrir sua foto para ajustar. Tente de novo.');
+    } finally {
+      setAjustandoEnquadramento(false);
+    }
+  }
+
+  // Confirmar do CropModal — um só ponto, os dois fluxos ("Escolher outra
+  // foto" e "Ajustar enquadramento") só diferem no que fazem com o recorte.
+  async function aoConfirmarCrop(blob) {
+    setCropFile(null);
+    if (cropModo === 'ajustar') {
+      await enviarRecorte(blob);
+      return;
+    }
+    const original = origParaEnviar.current;
+    ultimoFicheiro.current = blob;
+    await subirFoto(blob, estreiaFase === 'foto', original);
+  }
+  function aoCancelarCrop() {
+    setCropFile(null);
+    origParaEnviar.current = null;
+  }
+
+  // "Tentar de novo" (P1-5): repete o upload com o MESMO recorte (+ original,
+  // se havia), sem passar pelo CropModal de novo.
   function repetirUpload() {
-    if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto');
+    if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto', origParaEnviar.current);
+  }
+
+  // RODADA 19 — "Minhas figurinhas": até 6, mais recente primeiro. Recarrega
+  // toda vez que o modal "Sua foto" abre (pode ter mudado desde a última).
+  function carregarHistorico() {
+    return apiFetch('/api/me/avatar/historico')
+      .then((data) => data?.items || [])
+      .catch(() => []); // galeria some sozinha — não é motivo pra tela de erro
+  }
+  useEffect(() => {
+    if (!modalFoto) return undefined;
+    let vivo = true;
+    carregarHistorico().then((items) => { if (vivo) setHistorico(items); });
+    return () => { vivo = false; };
+  }, [modalFoto]);
+
+  async function usarDoHistorico(item) {
+    if (usandoHistoricoId) return;
+    setUsandoHistoricoId(item.id);
+    setErro('');
+    try {
+      const data = await apiFetch(`/api/me/avatar/historico/${item.id}`, { method: 'PUT' });
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit } } : m));
+      setFotoLocal(null); // mostra o avatar_url novo (não o preview local de upload)
+      recarregarPerfilGlobal();
+      setToast({ tipo: 'success', mensagem: 'Figurinha aplicada!' });
+    } catch (err) {
+      setErro(err?.message || 'Não foi possível usar essa figurinha.');
+    } finally {
+      setUsandoHistoricoId(null);
+    }
   }
 
   // Aviso de erro partilhado (P1-5): erro de upload com mensagem accionável +
@@ -1881,21 +2002,81 @@ export default function Figurinha() {
               )}
             </div>
 
-            {/* Carregar nova foto — dispara o input file real (fecha o modal em onPickFile) */}
-            <button
-              type="button"
-              className="btn btn--purple"
-              style={{ width: '100%', height: 46, marginTop: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14 }}
-              disabled={uploadFoto || gerandoIA}
-              onClick={() => fileRef.current?.click()}
-            >
-              <Camera size={16} /> Carregar nova foto
-            </button>
+            {/* RODADA 19 — "Minhas figurinhas": até 6, miniaturas + "Usar esta"
+                (sem custo — troca avatar_url/kit_ativo, respeita card_modo).
+                Some sozinha sem histórico (conta nova, ou 057 por aplicar). */}
+            {historico.length ? (
+              <div style={{ marginTop: 16 }}>
+                <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--label-color)' }}>
+                  Minhas figurinhas
+                </p>
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+                  {historico.map((item) => {
+                    const emUso = item.avatar_url === me?.user?.avatar_url;
+                    const carregando = usandoHistoricoId === item.id;
+                    return (
+                      <div key={item.id} style={{ flex: '0 0 auto', width: 72, display: 'grid', gap: 4, justifyItems: 'center' }}>
+                        <img
+                          src={urlImagem(urlAsset(item.avatar_url), 128, { quadrado: true })}
+                          alt="Figurinha antiga"
+                          width={64}
+                          height={64}
+                          style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: `1px solid ${emUso ? 'rgba(212,160,23,0.7)' : 'rgba(255,255,255,0.16)'}`, background: '#0d0d12' }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn--sm hud-corners-s"
+                          style={{ width: '100%', fontSize: 10, padding: '4px 2px', opacity: emUso ? 0.6 : 1 }}
+                          disabled={emUso || carregando || !!usandoHistoricoId}
+                          onClick={() => usarDoHistorico(item)}
+                        >
+                          {emUso ? 'Em uso' : carregando ? '…' : 'Usar esta'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Duas ações (decisão do dono, 23-set): "Escolher outra foto" leva
+                ao CropModal 2:3 de sempre; "Ajustar enquadramento" reabre o
+                MESMO CropModal sobre a foto original guardada, sem upload novo.
+                A 2ª só existe havendo foto (nada para ajustar sem ela). */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button
+                type="button"
+                className="btn btn--purple"
+                style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13 }}
+                disabled={uploadFoto || gerandoIA}
+                onClick={() => fileRef.current?.click()}
+              >
+                <Camera size={16} /> Escolher outra foto
+              </button>
+              {temFoto ? (
+                <button
+                  type="button"
+                  className="btn btn--purple-outline"
+                  style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13 }}
+                  disabled={uploadFoto || gerandoIA || ajustandoEnquadramento}
+                  onClick={abrirAjustarEnquadramento}
+                >
+                  <RefreshCw size={16} /> {ajustandoEnquadramento ? 'Abrindo…' : 'Ajustar enquadramento'}
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>,
         document.body
           )
         : null}
+
+      {/* RODADA 19 — o mesmo CropModal do Onboarding, para "Escolher outra
+          foto" (cropModo='nova') e "Ajustar enquadramento" (cropModo='ajustar');
+          só o que aoConfirmarCrop faz com o resultado muda entre os dois. */}
+      {cropFile ? (
+        <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} onConfirm={aoConfirmarCrop} onCancel={aoCancelarCrop} />
+      ) : null}
     </div>
   );
 }

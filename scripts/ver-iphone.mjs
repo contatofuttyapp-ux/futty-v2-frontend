@@ -3782,11 +3782,124 @@ try {
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
+  if (CENAS.includes('rodada19')) {
+    const r = await cenaRodada19(navegador);
+    saida.rodada19 = r;
+    console.log('\n[iphone] RODADA 19 — enquadrar dentro de Trocar foto, Minhas figurinhas, miniatura pelo topo');
+    for (const c of r.capturas) console.log(`   ${c.ok ? 'OK' : 'FALHA'} ${c.nome} — ${c.arquivo}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
 } finally {
   await navegador.close();
+}
+
+// ─── Cena "rodada19" (23-set): enquadrar dentro de "Trocar foto", Minhas
+// figurinhas (histórico), miniatura quadrada pelo topo. Lê a sessão gravada
+// por scripts/_bench/prova-rodada19.js (backend) — conta já membro de
+// domingueira-fc-demo, confirmada em 3 jogos (Ranking já pode listá-la).
+async function cenaRodada19(navegador) {
+  const arqSessao = path.join(RAIZ, 'scripts', 'capturas', 'sessao-rodada19.json');
+  const sessao = JSON.parse(readFileSync(arqSessao, 'utf8'));
+  const pasta = path.join(PASTA, 'rodada-19');
+  mkdirSync(pasta, { recursive: true });
+  const arq = (nome) => path.join(pasta, `${nome}.png`);
+  // A foto-problema da bancada anterior (achado: miniatura quadrada mostrava
+  // o pulso, não o rosto) — mesmo arquivo, para prova direta do antes/depois.
+  const FOTO_PROBLEMA = path.join(RAIZ, '..', '..', 'BANCADA-FOTOS', 'Menor K churras.jpeg');
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  const pagina = await contexto.newPage();
+  const erros = [];
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  pagina.on('dialog', (d) => d.accept().catch(() => {}));
+
+  const capturas = [];
+  const capturar = async (nome, fn) => {
+    try {
+      await fn();
+      capturas.push({ nome, ok: true, arquivo: path.relative(RAIZ, arq(nome)) });
+    } catch (e) {
+      capturas.push({ nome, ok: false, arquivo: e.message.split('\n')[0] });
+    }
+  };
+
+  await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 5000 }).catch(() => {});
+  await pagina.locator('button', { hasText: /Trocar foto|Adicionar foto/ }).first().click();
+  await pagina.getByRole('dialog', { name: 'Sua foto' }).waitFor({ timeout: 15000 });
+
+  // (a) modal "Sua foto" — os dois botões novos + "Minhas figurinhas" (vazia:
+  // conta nova, nunca gerou nenhuma — não é erro, é o estado esperado).
+  await capturar('a-modal-sua-foto', async () => {
+    await espera(400);
+    await pagina.screenshot({ path: arq('a-modal-sua-foto') });
+  });
+
+  // (b) "Escolher outra foto" -> CropModal 2:3 sobre a foto-problema.
+  await capturar('b-crop-escolher', async () => {
+    await pagina.locator('button', { hasText: /Escolher outra foto/ }).click();
+    const arquivoInput = pagina.locator('input[type="file"][accept="image/*"]').first();
+    await arquivoInput.setInputFiles(FOTO_PROBLEMA);
+    await pagina.getByRole('dialog', { name: 'Recortar imagem' }).waitFor({ timeout: 15000 });
+    await pagina.locator('[role="dialog"] button', { hasText: /^Confirmar$/ }).waitFor({ timeout: 10000 });
+    await espera(500); // cropper terminou de posicionar a imagem
+    await pagina.screenshot({ path: arq('b-crop-escolher') });
+  });
+
+  // Confirma o recorte — sobe avatar + original juntos. O card grande só
+  // repinta depois de o canvas BUSCAR a imagem nova pelo proxy (Figurinha.jsx,
+  // useEffect com jogador.avatar_url nas deps) e desenhar as camadas — esperar
+  // só o upload não basta (achado desta rodada: 1,5s fixo pegava o card a
+  // meio da repintura, ainda com o kit genérico). networkidle cobre as
+  // buscas do canvas sem apostar em qual delas é "a certa".
+  await capturar('c-foto-trocada', async () => {
+    await pagina.locator('[role="dialog"] button', { hasText: /^Confirmar$/ }).click();
+    await pagina.getByText(/Foto trocada|Adicione uma foto/).waitFor({ timeout: 8000 }).catch(() => {});
+    await pagina.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    await espera(1500); // canvas a desenhar as camadas depois das imagens chegarem
+    await pagina.screenshot({ path: arq('c-foto-trocada') });
+  });
+
+  // (d) "Ajustar enquadramento" — reabre o CropModal (fail-safe: sem original
+  // gravada ainda — migração 057 por aplicar —, reabre sobre o recorte atual).
+  await capturar('d-crop-ajustar', async () => {
+    await pagina.locator('button', { hasText: /Trocar foto|Adicionar foto/ }).first().click();
+    await pagina.getByRole('dialog', { name: 'Sua foto' }).waitFor({ timeout: 15000 });
+    await pagina.locator('button', { hasText: /Ajustar enquadramento/ }).click();
+    await pagina.getByRole('dialog', { name: 'Recortar imagem' }).waitFor({ timeout: 15000 });
+    // mexe no zoom, pra provar que é o MESMO cropper interativo, não um atalho.
+    const zoom = pagina.locator('input[type="range"]');
+    await zoom.fill('1.6').catch(() => {});
+    await espera(400);
+    await pagina.screenshot({ path: arq('d-crop-ajustar') });
+  });
+
+  // Confirma o reenquadramento — PUT /avatar/recorte, sem upload de original.
+  // Mesma nota da (c): espera a rede assentar antes do canvas repintar.
+  await capturar('e-enquadramento-ajustado', async () => {
+    await pagina.locator('[role="dialog"] button', { hasText: /^Confirmar$/ }).click();
+    await pagina.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    await espera(1500);
+    await pagina.screenshot({ path: arq('e-enquadramento-ajustado') });
+  });
+
+  // (f) Ranking — a miniatura quadrada da MESMA foto-problema, agora pelo
+  // topo (proxy `sq=1` + CSS `object-position:50% 0%`): tem de mostrar o
+  // rosto, não o pulso/relógio como na bancada anterior.
+  await capturar('f-ranking-miniatura', async () => {
+    await pagina.goto(`${BASE}/equipa/domingueira-fc-demo/ranking`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.rank-row', { timeout: 20000 });
+    await pagina.getByText('Rodada19').scrollIntoViewIfNeeded().catch(() => {});
+    await espera(400);
+    await pagina.screenshot({ path: arq('f-ranking-miniatura'), fullPage: true });
+  });
+
+  await contexto.close();
+  return { pasta, capturas, erros };
 }
 
 // ─── Cena "cerimonia-mista" (23-set): sorteio com jogadores de foto e de
