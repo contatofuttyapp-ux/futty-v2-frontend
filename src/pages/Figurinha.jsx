@@ -303,10 +303,13 @@ export default function Figurinha() {
   // desde 22-set o nome da coisa mudou: SPEC-FIGURINHA-3.
   const avatarEhIA = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
   // Rodada 18: existe uma figurinha (mesmo que o card esteja em modo 'foto'
-  // agora). kit_ativo sobrevive à troca de modo — só a geração o muda — por
-  // isso é o sinal certo para "há algo para o interruptor escolher", ao
+  // agora) — o sinal certo para "há algo para o interruptor escolher", ao
   // contrário de avatarEhIA, que só diz o que está ativo NESTE instante.
-  const temFigurinhaAlguma = !!me?.user?.kit_ativo;
+  // RODADA 20 (achado da 19): era `!!kit_ativo`, mas kit_ativo é só "qual
+  // uniforme", não "já gerou" — toda conta nova aparecia com o interruptor
+  // sem nunca ter gerado nada. tem_figurinha vem calculado do servidor
+  // (services/inicio.js), que sabe de verdade se existe alguma figurinha.
+  const temFigurinhaAlguma = !!me?.user?.tem_figurinha;
   // MODO DO CARD (§3/§4): com Brilhante, o card de sempre (avatar recortado
   // sobre o fundo escolhido). Sem Brilhante mas COM foto, a figurinha COMUM —
   // a foto como ela é, na mesma moldura. Sem foto nenhuma, o genérico da casa

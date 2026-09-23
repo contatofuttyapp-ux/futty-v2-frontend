@@ -56,7 +56,7 @@
 //     (sessão pronta de outra conta de TESTE, em vez do login da demo-loja:
 //      [{ "name": "sb-<ref>-auth-token", "value": "<json da sessão>" }])
 // Capturas e JSON em scripts/capturas/ (fora do git).
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
@@ -3790,6 +3790,14 @@ try {
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
+  if (CENAS.includes('rodada20')) {
+    const r = await cenaRodada20(navegador);
+    saida.rodada20 = r;
+    console.log('\n[iphone] RODADA 20 — convite reutilizável + interruptor da conta nova');
+    for (const c of r.capturas) console.log(`   ${c.ok ? 'OK' : 'FALHA'} ${c.nome} — ${c.arquivo}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
@@ -3991,4 +3999,95 @@ async function cenaCerimoniaMista(navegador) {
 
   await contexto.close();
   return { seed: estado.seed, pasta, capturas, erros };
+}
+
+// ─── Cena "rodada20" (23-set): convite reutilizável (30 dias, várias
+// entradas pelo MESMO link) + interruptor "Mostrar minha foto/figurinha"
+// correto numa conta nova. Lê o estado/sessões gravados por
+// scripts/_bench/prova-rodada20.js (backend) — 4 sessões próprias (cada
+// captura abre e fecha o SEU contexto, papéis diferentes não se misturam).
+async function cenaRodada20(navegador) {
+  const pastaSessoes = path.join(RAIZ, 'scripts', 'capturas');
+  const estado = JSON.parse(readFileSync(path.join(pastaSessoes, 'estado-rodada20.json'), 'utf8'));
+  const pasta = path.join(PASTA, 'rodada-20');
+  mkdirSync(pasta, { recursive: true });
+  const arq = (nome) => path.join(pasta, `${nome}.png`);
+  const erros = [];
+  const capturas = [];
+  const capturar = async (nome, fn) => {
+    try {
+      await fn();
+      capturas.push({ nome, ok: true, arquivo: path.relative(RAIZ, arq(nome)) });
+    } catch (e) {
+      capturas.push({ nome, ok: false, arquivo: e.message.split('\n')[0] });
+    }
+  };
+
+  async function abrir(nomeSessao) {
+    const sessao = JSON.parse(readFileSync(path.join(pastaSessoes, `sessao-rodada20-${nomeSessao}.json`), 'utf8'));
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${nomeSessao}: ${e.message}`));
+    pagina.on('dialog', (d) => d.accept().catch(() => {}));
+    return { contexto, pagina };
+  }
+  async function fecharCookies(pagina) {
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
+  }
+
+  // (a) Equipa — texto novo + link gerado na hora (capitão, admin do time).
+  await capturar('a-equipa-link-novo', async () => {
+    const { contexto, pagina } = await abrir('capitao');
+    await pagina.goto(`${BASE}/equipa/${estado.teamSlug}`, { waitUntil: 'domcontentloaded' });
+    await fecharCookies(pagina);
+    await pagina.getByText('Convidar jogador').waitFor({ timeout: 15000 });
+    await pagina.locator('button', { hasText: /Gerar link de convite/ }).click();
+    await pagina.locator('strong', { hasText: 'Link de convite' }).waitFor({ timeout: 10000 });
+    await espera(400);
+    await pagina.screenshot({ path: arq('a-equipa-link-novo'), fullPage: true });
+    await contexto.close();
+  });
+
+  // (b) Convite JÁ usado por outra conta ("primeiro", na bancada) — "segundo"
+  // ainda entra pelo MESMO link (a prova central desta rodada).
+  await capturar('b-convite-reutilizado', async () => {
+    const { contexto, pagina } = await abrir('segundo');
+    await pagina.goto(`${BASE}/convite/${estado.tokenUsado}`, { waitUntil: 'domcontentloaded' });
+    await fecharCookies(pagina);
+    const botao = pagina.locator('button', { hasText: /Entrar no time/ });
+    await botao.waitFor({ timeout: 15000 });
+    await botao.click();
+    await espera(1500);
+    await pagina.screenshot({ path: arq('b-convite-reutilizado') });
+    await contexto.close();
+  });
+
+  // (c) Figurinha, conta NOVA (só subiu foto, nunca gerou nada): SEM o
+  // interruptor "Mostrar minha foto/figurinha".
+  await capturar('c-figurinha-sem-interruptor', async () => {
+    const { contexto, pagina } = await abrir('nova');
+    await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await fecharCookies(pagina);
+    await pagina.locator('button', { hasText: /Trocar foto|Adicionar foto/ }).first().click();
+    await pagina.getByRole('dialog', { name: 'Sua foto' }).waitFor({ timeout: 15000 });
+    await espera(400);
+    await pagina.screenshot({ path: arq('c-figurinha-sem-interruptor') });
+    await contexto.close();
+  });
+
+  // (d) Figurinha, demo-loja (figurinha pronta): COM o interruptor.
+  await capturar('d-figurinha-com-interruptor', async () => {
+    const arqSessaoDemo = path.join(pastaSessoes, 'sessao-rodada20-demo.json');
+    if (!existsSync(arqSessaoDemo)) throw new Error('sessão da demo-loja não gravada nesta bancada (LOJA/demo-senha.txt ausente?)');
+    const { contexto, pagina } = await abrir('demo');
+    await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await fecharCookies(pagina);
+    await pagina.locator('button', { hasText: /Trocar foto|Adicionar foto/ }).first().click();
+    await pagina.getByRole('dialog', { name: 'Sua foto' }).waitFor({ timeout: 15000 });
+    await espera(400);
+    await pagina.screenshot({ path: arq('d-figurinha-com-interruptor') });
+    await contexto.close();
+  });
+
+  return { pasta, capturas, erros };
 }

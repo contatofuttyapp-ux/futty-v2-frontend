@@ -10,7 +10,6 @@ import '../styles/app.css';
 const MOTIVOS = {
   nao_encontrado: 'Este convite não existe.',
   expirado: 'Este convite expirou.',
-  usado: 'Este convite já foi usado.',
 };
 
 export default function Convite() {

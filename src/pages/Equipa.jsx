@@ -315,7 +315,7 @@ export default function Equipa() {
 
             <SecLabel>Convidar jogador</SecLabel>
             <p className="muted" style={{ fontSize: 13, margin: '0 0 10px' }}>
-              Gere um link de convite (válido 7 dias, uso único) para compartilhar com novos jogadores.
+              Gere o link do time e mande no grupo: o mesmo link serve para todo mundo, vale 30 dias e você pode revogar quando quiser.
             </p>
             <button
               type="button"

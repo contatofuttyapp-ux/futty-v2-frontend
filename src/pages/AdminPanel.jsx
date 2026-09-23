@@ -1355,6 +1355,9 @@ function TabConvites({ slug, showToast }) {
               Criado por <b style={{ color: '#fff' }}>{c.criado_por_nome || 'alguém'}</b> · {haQuantoTempo(c.created_at)}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Expira em {diasAte(c.expires_at)} dias</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+              {c.usos > 0 ? `${c.usos} ${c.usos === 1 ? 'entrou' : 'entraram'} por este link` : 'ninguém entrou ainda'}
+            </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {linkDe(c.token).slice(0, 20)}…
             </div>
