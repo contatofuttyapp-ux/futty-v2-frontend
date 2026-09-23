@@ -3773,9 +3773,109 @@ try {
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
+  if (CENAS.includes('cerimonia-mista')) {
+    const r = await cenaCerimoniaMista(navegador);
+    saida['cerimonia-mista'] = r;
+    console.log('\n[iphone] CERIMÔNIA COM TIME MISTO (Prova Mista, 23-set)');
+    console.log(`   semente ${r.seed} · pasta ${path.relative(RAIZ, r.pasta)}`);
+    for (const c of r.capturas) console.log(`   ${c.ok ? 'OK' : 'FALHA'} ${c.nome} — ${c.arquivo}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
 } finally {
   await navegador.close();
+}
+
+// ─── Cena "cerimonia-mista" (23-set): sorteio com jogadores de foto e de
+// figurinha lado a lado, montado por scripts/_bench/prova-mista.js (backend).
+// Lê o estado/sessão gravados por aquele script — não cria nem sorteia nada
+// aqui, só reproduz e captura a cerimônia real (replay exacto pela seed).
+async function cenaCerimoniaMista(navegador) {
+  const arqEstado = path.join(RAIZ, 'scripts', 'capturas', 'estado-prova-mista.json');
+  const arqSessao = path.join(RAIZ, 'scripts', 'capturas', 'sessao-prova-mista.json');
+  const estado = JSON.parse(readFileSync(arqEstado, 'utf8'));
+  const sessao = JSON.parse(readFileSync(arqSessao, 'utf8'));
+  const pasta = path.join(PASTA, 'cerimonia-mista');
+  mkdirSync(pasta, { recursive: true });
+  const arq = (nome) => path.join(pasta, `${nome}.png`);
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { acceptDownloads: true } });
+  const pagina = await contexto.newPage();
+  const erros = [];
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  pagina.on('dialog', (d) => d.accept().catch(() => {}));
+
+  const capturas = [];
+  const capturar = async (nome, fn) => {
+    try {
+      await fn();
+      capturas.push({ nome, ok: true, arquivo: path.relative(RAIZ, arq(nome)) });
+    } catch (e) {
+      capturas.push({ nome, ok: false, arquivo: e.message.split('\n')[0] });
+    }
+  };
+
+  const rotaSorteio = `/equipa/${estado.teamSlug}/jogo/${estado.gameId}/sorteio`;
+  await pagina.goto(`${BASE}${rotaSorteio}`, { waitUntil: 'domcontentloaded' });
+  // Fecha o banner de cookies cedo — senão fica sobreposto em todas as capturas.
+  await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 5000 }).catch(() => {});
+
+  // (a) a slot machine no meio do sorteio — 1ª leva de rolos já a girar.
+  await capturar('a-slot-machine', async () => {
+    await pagina.waitForSelector('.rolos .rolo', { timeout: 20000 });
+    await espera(900); // meio do giro, não o 1º quadro
+    await pagina.screenshot({ path: arq('a-slot-machine') });
+  });
+
+  // (b) o momento do prêmio — TIMES SORTEADOS + os dois times revelados.
+  // Janela estreita: o texto entra letra a letra (stagger 70ms × 15 + anim
+  // 500ms, settle ~1,48s) e começa a sair aos 1,7s (finalLockIn) — 1,55s
+  // pega todas as letras já formadas e ainda opacas (achado desta rodada:
+  // nada de errado no produto, só a captura cedo/tarde demais).
+  await capturar('b-premio', async () => {
+    await pagina.waitForSelector('.maq.premio', { timeout: 30000 });
+    await espera(1550);
+    await pagina.screenshot({ path: arq('b-premio') });
+  });
+
+  // (c) o retângulo final dos times, já assentado (molduras "vivo" = fim do lock-in).
+  await capturar('c-retangulo-final', async () => {
+    await pagina.waitForSelector('.mmold.vivo', { timeout: 15000 });
+    await pagina.locator('.grupos').scrollIntoViewIfNeeded().catch(() => {});
+    await espera(300);
+    await pagina.screenshot({ path: arq('c-retangulo-final') });
+  });
+
+  // (d) a imagem de "Compartilhar os times" — cartaz 1080×1920, baixado direto (sem modal).
+  await capturar('d-compartilhar', async () => {
+    const botao = pagina.locator('.compartilhar__btn');
+    await botao.scrollIntoViewIfNeeded();
+    const [download] = await Promise.all([
+      pagina.waitForEvent('download', { timeout: 20000 }),
+      botao.click({ force: true }),
+    ]);
+    await download.saveAs(arq('d-compartilhar'));
+  });
+
+  // (e) Ranking — fotos e figurinhas nas linhas.
+  await capturar('e-ranking', async () => {
+    await pagina.goto(`${BASE}/equipa/${estado.teamSlug}/ranking`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('.rank-row', { timeout: 20000 });
+    await espera(500);
+    await pagina.screenshot({ path: arq('e-ranking'), fullPage: true });
+  });
+
+  // (f) lista de presença do jogo (confirmados, com GR/C marcados).
+  await capturar('f-presenca', async () => {
+    await pagina.goto(`${BASE}/equipa/${estado.teamSlug}/jogo/${estado.gameId}`, { waitUntil: 'domcontentloaded' });
+    await pagina.getByText(/^Confirmados/).waitFor({ timeout: 20000 });
+    await espera(300);
+    await pagina.screenshot({ path: arq('f-presenca'), fullPage: true });
+  });
+
+  await contexto.close();
+  return { seed: estado.seed, pasta, capturas, erros };
 }
