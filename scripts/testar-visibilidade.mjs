@@ -16,10 +16,21 @@
 // o valor final em `none` — e o F passa a centrar-se na ÁREA da página, não no
 // viewport. Corrigido renderizando LoadingFutty (e os outros fixed/modais) via
 // portal directo em document.body (ver a nota em components/LoadingFutty.jsx).
-// Este ficheiro testa os DOIS: visibilidade da página E centragem do loader.
+//
+// HOTFIX (23-set) — terceiro bug da MESMA família, tela preta após login com
+// Google no Chrome: a página nascia com document.hidden=true (aba em 2º plano
+// durante o redirect do OAuth), e a pausa geral de animações (index.css,
+// `html[data-oculto]`, VELOCIDADE 8) prendia a entrada de [data-page]
+// (`.page-transition`) em opacity 0 — nascida já pausada, nunca correu um só
+// quadro. Um `page.goto()` normal não reproduz isto (a aba do teste nasce
+// sempre visível); os dois cenários novos (ver `medirRecuperacaoDeOculto`)
+// forçam document.hidden/data-oculto ANTES de a app correr.
+//
+// Este ficheiro testa os TRÊS: visibilidade da página, centragem do loader, e
+// recuperação de um arranque escondido.
 //
 // Sobe o preview do dist sozinho, abre as rotas públicas (sem login, é
-// justamente o visitante sem sessão que apanhava os dois bugs — com sessão o
+// justamente o visitante sem sessão que apanhava os bugs — com sessão o
 // "/" salta para /home e não passa por aqui) em vários tamanhos de tela.
 // Corre no `npm run build`, portanto também no CI do iPhone.
 //
@@ -172,6 +183,89 @@ async function medirLoadingCentrado(browser, rota, tamanho) {
   return { ...r, erros };
 }
 
+// HOTFIX (23-set) — os dois cenários que reproduzem a tela preta do Chrome.
+// Nos dois o critério é o mesmo: opacidade EFETIVA de [data-page] chega a 1
+// em até 300 ms, sem gesto nenhum além do próprio evento de visibilidade (ou
+// nem isso, no segundo caso) — não pode depender de a pessoa mexer na aba
+// outra vez para "destravar".
+const CENARIOS_OCULTO = ['hidden-no-arranque', 'nasce-com-data-oculto'];
+
+/**
+ * 'hidden-no-arranque' — document.hidden é forçado a true ANTES de qualquer
+ * script da app correr (mesmo instante em que lib/ritmo.js lê document.hidden
+ * pela 1ª vez, em pararAnimacoesForaDeVista) — a app corre o arranque inteiro
+ * a pensar que está em 2º plano, tal como no redirect do OAuth. Só depois "a
+ * pessoa volta à aba": document.hidden volta a false e dispara-se
+ * visibilitychange, o mesmo evento que o browser dispararia a valer.
+ *
+ * 'nasce-com-data-oculto' — o atributo que a pausa geral de index.css usa é
+ * posto direto no <html>, e fica lá a medição inteira (nunca se simula
+ * "voltar a ficar visível"). Testa a EXCLUSÃO de seletores em index.css
+ * isoladamente: mesmo preso em "oculto" para sempre, o conteúdo tem de
+ * aparecer sozinho, porque a animação de entrada nunca devia ter sido
+ * pausada. Se este cenário só passasse com o primeiro, a rede de segurança
+ * de lib/ritmo.js estaria a disfarçar uma exclusão que não funciona.
+ */
+async function medirRecuperacaoDeOculto(browser, rota, cenario) {
+  const ctx = await browser.newContext();
+  await ctx.addInitScript((cenarioNoBrowser) => {
+    if (cenarioNoBrowser === 'hidden-no-arranque') {
+      Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    } else {
+      document.addEventListener(
+        'DOMContentLoaded',
+        () => document.documentElement.setAttribute('data-oculto', ''),
+        { once: true }
+      );
+    }
+  }, cenario);
+
+  const pagina = await ctx.newPage();
+  const erros = [];
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  await pagina.goto(BASE + rota.path, { waitUntil: 'load' });
+
+  // [data-page] só nasce quando o chunk lazy da rota resolve — está DENTRO do
+  // Suspense (App.jsx), não no fallback. O tempo de rede/chunk não é o que se
+  // quer medir aqui (varia por rota — apanhado no /login, cujo chunk é maior
+  // que o da LandingPage); os 300 ms do teto começam a contar só a partir de
+  // a página já estar montada, achando ou não achando o elemento.
+  await pagina.waitForSelector('[data-page]', { timeout: 5000 }).catch(() => null);
+
+  if (cenario === 'hidden-no-arranque') {
+    // Tempo de sobra para a animação ficar presa, como em produção, antes de
+    // "a pessoa voltar à aba".
+    await pagina.waitForTimeout(400);
+    await pagina.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+  }
+  // 'nasce-com-data-oculto': data-oculto fica no <html> a medição toda —
+  // de propósito, não se dispara visibilitychange nenhum aqui.
+
+  const t0 = Date.now();
+  let efetiva = 0;
+  for (;;) {
+    efetiva = await pagina.evaluate(() => {
+      const el = document.querySelector('[data-page]');
+      if (!el) return 0;
+      let e = 1;
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        e *= Number(getComputedStyle(n).opacity);
+      }
+      return e;
+    });
+    if (efetiva >= 0.99 || Date.now() - t0 >= 300) break;
+    await pagina.waitForTimeout(20);
+  }
+  const ms = Date.now() - t0;
+  await ctx.close();
+  return { efetiva, ms, erros };
+}
+
 const servidor = await subirServidor();
 let browser;
 try {
@@ -237,6 +331,22 @@ try {
         }
         if (c.erros.length) falhas.push(`${etiqueta}: erro de JS durante a suspensão — ${c.erros.join(' | ')}`);
       }
+    }
+
+    // HOTFIX (23-set) — os dois cenários de arranque escondido. Não dependem
+    // do tamanho da tela (é sobre animation-play-state, não layout), por isso
+    // correm uma vez por rota, fora do loop de TAMANHOS.
+    for (const cenario of CENARIOS_OCULTO) {
+      const etiquetaOculto = `${rota.path} · ${cenario}`;
+      const o = await medirRecuperacaoDeOculto(browser, rota, cenario);
+      if (o.efetiva < 0.99) {
+        falhas.push(
+          `${etiquetaOculto}: NÃO recuperou — opacidade efetiva ${o.efetiva.toFixed(3)} depois de ${o.ms}ms (teto 300ms).`
+        );
+      } else {
+        console.log(`[visibilidade] ok  ${etiquetaOculto} — opacidade efetiva 1 em ${o.ms}ms.`);
+      }
+      if (o.erros.length) falhas.push(`${etiquetaOculto}: erro de JS — ${o.erros.join(' | ')}`);
     }
   }
 } finally {

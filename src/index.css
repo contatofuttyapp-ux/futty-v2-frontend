@@ -188,11 +188,37 @@ body {
 /* VELOCIDADE 8 (16-set) — com o app em segundo plano ou a tela bloqueada, nada
    se anima. O `data-oculto` é posto no <html> por lib/ritmo.js a ouvir o
    visibilitychange; o CSS não tem como ver o document.hidden sozinho.
-   Vale para TODAS as animações de propósito: se ninguém está a ver, nada do que
-   parar pode mudar de aspeto — e não há no app um sítio sequer a depender de
-   `animationend` para avançar de estado. `paused` (e não `none`) é o que faz a
-   animação retomar de onde ficou quando a pessoa volta, sem saltos. */
-html[data-oculto] *,
+   Vale para TODAS as animações DECORATIVAS: se ninguém está a ver, nada do que
+   parar pode mudar de aspeto. `paused` (e não `none`) é o que faz a animação
+   retomar de onde ficou quando a pessoa volta, sem saltos. */
+/* HOTFIX (23-set) — tela preta após login com Google no Chrome. Esta regra
+   pausa TUDO, e é isso que a torna perigosa para uma classe de animação
+   específica: as de ENTRADA DE CONTEÚDO (fade de opacity 0 → 1 ao montar, com
+   `animation-fill-mode: backwards`/`both`). Se um desses elementos nasce com
+   `document.hidden = true` (aba em 2º plano durante o redirect do OAuth, ou
+   qualquer outra forma de a página montar escondida), esta regra pausa a
+   animação em currentTime 0 ANTES de ela correr um só quadro — e o
+   `backwards`/`both` mantém o elemento no estado "antes de começar", que é
+   invisível. Sem outro gesto a acontecer, fica assim para sempre: conteúdo no
+   DOM, tela preta. Violação direta da lei "Visibilidade nunca depende de
+   animação JS" (CLAUDE.md) — só que aqui quem prende é o PRÓPRIO CSS, pausado
+   pela nossa regra.
+   Busca em app.css por keyframes com opacity de 0 a 1: das que decidem se
+   CONTEÚDO aparece (excluídas abaixo) — `.page-transition` (pageEntra, todas
+   as rotas), `.inicio-reveal`/`.page-reveal` (inicioReveal, Início e a maioria
+   das outras páginas), `.fig-card-enter` (figCardIn, o card da Figurinha),
+   `.perfil-tile` (perfilTile, os blocos de estatística do Jogador) — e das que
+   são só efeito visual e continuam pausáveis: aurora (index.css, acima),
+   shine/glint/twinkle (cardShine, nomeShine, futtyFrameShine, ctaGlint,
+   figGlint*, futtyDotTwinkle, planosCoroaTwinkle), pulso/respiração
+   (heroicPulse, cromo-previa-pulso, homeBreath, silRespira, rankEsqueletoRespira),
+   e tudo da Cerimónia do Sorteio (cerLuz/cerClunk/cerFlash/cerChase/cerBob/
+   cerSeg/cerCoin, campConfete, campCoin) — nenhuma delas esconde conteúdo: só
+   atrasa um brilho, o que não é o mesmo defeito.
+   As de entrada de conteúdo ficam de fora desta pausa: melhor uma animação de
+   180 ms a correr com a aba escondida (custo zero de bateria — dura menos que
+   o olho vê) do que o risco de a página nunca mais aparecer. */
+html[data-oculto] *:not(.page-transition):not(.inicio-reveal):not(.page-reveal):not(.fig-card-enter):not(.perfil-tile),
 html[data-oculto] *::before,
 html[data-oculto] *::after {
   animation-play-state: paused !important;

@@ -1748,16 +1748,32 @@
    em `matrix(1, 0, 0, 1, 0, 0)`, que não move nada mas faz da página o "chão" de
    todo `position: fixed` lá dentro. Era isso que atirava o banner do Jogo para
    3051 px (fora da tela), punha o toast do sorteio abaixo da dobra e fazia o
-   fundo dos Planos rolar com a página. `backwards` só aplica o estado inicial
-   ANTES de a animação começar: no fim o elemento volta ao seu próprio estilo
-   (opacity 1, transform none) — mesma entrada, mesmo desenho, sem chão falso.
-   A lei do build 11 continua de pé: o estado natural é VISÍVEL. */
+   fundo dos Planos rolar com a página. Registo histórico — ver o hotfix abaixo,
+   que troca `backwards` por `none`: sem transform nenhum no keyframe desde a
+   Velocidade 8, nenhum dos dois fill-mode tem chão falso para congelar. */
+/* HOTFIX (23-set) — tela preta após login com Google no Chrome, reproduzida
+   pela Freaky. Medido em futtyapp.com.br/home: o conteúdo estava no DOM, mas
+   `.page-transition` tinha opacity 0 porque a animação nascia PAUSADA em
+   currentTime 0 — a página montou com document.hidden=true (aba em 2º plano
+   durante o redirect do OAuth) e a regra de index.css (`html[data-oculto] *`)
+   pausou `pageEntra` antes de ela correr um só quadro. Com `backwards`, o
+   estado "antes de começar" é `from { opacity: 0 }` — e paused-no-nascimento
+   FICA nesse estado antes de começar, para sempre, porque nunca chega a haver
+   um quadro rodado que o tire de lá.
+   `none` é a correção: o "antes de começar" deixa de ter estado próprio — o
+   elemento mostra o seu estilo normal (opacity 1, nenhuma outra regra define
+   `.page-transition { opacity: ... }`), e a animação só ACRESCENTA o fade de
+   180 ms enquanto de facto corre. Junto com a exclusão em index.css (que impede
+   este congelamento de acontecer) e a rede de segurança em lib/ritmo.js
+   (`pararAnimacoesForaDeVista`, que termina qualquer entrada pendurada ao
+   voltar a ficar visível) — a lei do build 11 continua de pé: o estado natural
+   é VISÍVEL, e agora vale também para o caso "nasceu escondida". */
 .page-transition {
-  animation: pageEntra 0.18s ease-out backwards;
+  animation: pageEntra 0.18s ease-out none;
 }
 @media (prefers-reduced-motion: reduce) {
-  /* Só o fade, sem deslize — e mais curto. */
-  .page-transition { animation: inicioReveal 0.12s ease-out both; }
+  /* Só o fade, sem deslize — e mais curto. Mesmo hotfix: `none`, não `both`. */
+  .page-transition { animation: inicioReveal 0.12s ease-out none; }
 }
 
 .cromo-inicio {

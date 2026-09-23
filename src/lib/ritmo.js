@@ -136,18 +136,45 @@ export function quandoParado(fn, {
 // para ninguém.
 //
 // O CSS não sabe o que é document.hidden, por isso marca-se o <html> e o
-// index.css trata do resto (`html[data-oculto]`). Para tudo, não só o fundo:
-// escondido é escondido, nada do que pare pode mudar de aspeto — e não há no app
-// um único sítio a depender de `animationend` para avançar (conferido).
+// index.css trata do resto (`html[data-oculto]`). Para as DECORATIVAS, não só
+// o fundo: escondido é escondido, nada do que pare pode mudar de aspeto.
+//
+// EXCEÇÃO (hotfix 23-set, tela preta após login com Google no Chrome) — as
+// animações de ENTRADA DE CONTEÚDO (`.page-transition` e as outras listadas em
+// index.css) já saem de baixo da pausa geral por seletor: `html[data-oculto]`
+// nem chega a tocar-lhes. Não há no app um sítio a depender de `animationend`
+// para AVANÇAR ESTADO (isso continua verdade) — mas há sítios cuja
+// VISIBILIDADE dependia de a animação correr até ao fim, e essa é a diferença
+// que este hotfix trata.
 let vigiaLigada = false;
+
+// As mesmas classes excluídas da pausa em index.css — mantidas aqui para a
+// rede de segurança abaixo, não para decidir a pausa (isso é só CSS).
+const SELETORES_ENTRADA_DE_CONTEUDO = '.page-transition, .inicio-reveal, .page-reveal, .fig-card-enter, .perfil-tile';
 
 /** Liga a vigia de visibilidade. Chamada uma vez, no arranque. */
 export function pararAnimacoesForaDeVista() {
   if (vigiaLigada || typeof document === 'undefined') return;
   vigiaLigada = true;
   const aplicar = () => {
-    if (document.hidden) document.documentElement.setAttribute('data-oculto', '');
-    else document.documentElement.removeAttribute('data-oculto');
+    if (document.hidden) {
+      document.documentElement.setAttribute('data-oculto', '');
+      return;
+    }
+    document.documentElement.removeAttribute('data-oculto');
+    // REDE DE SEGURANÇA (hotfix 23-set) — a exclusão em index.css já impede
+    // estas animações de nascerem pausadas; isto é o cinto por cima do fio: se
+    // por qualquer motivo uma ficou a meio (outra aba a pausar globalmente,
+    // uma corrida rara), `.finish()` salta-a para o fim (opacity 1, o que a
+    // animação tiver definido como estado final) assim que a página volta a
+    // ficar visível — em vez de confiar que ela retoma sozinha.
+    document.querySelectorAll(SELETORES_ENTRADA_DE_CONTEUDO).forEach((el) => {
+      try {
+        el.getAnimations().forEach((a) => a.finish());
+      } catch {
+        /* rede de segurança: um elemento a falhar não pode travar os outros */
+      }
+    });
   };
   document.addEventListener('visibilitychange', aplicar);
   aplicar();
