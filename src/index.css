@@ -217,8 +217,13 @@ body {
    atrasa um brilho, o que não é o mesmo defeito.
    As de entrada de conteúdo ficam de fora desta pausa: melhor uma animação de
    180 ms a correr com a aba escondida (custo zero de bateria — dura menos que
-   o olho vê) do que o risco de a página nunca mais aparecer. */
-html[data-oculto] *:not(.page-transition):not(.inicio-reveal):not(.page-reveal):not(.fig-card-enter):not(.perfil-tile),
+   o olho vê) do que o risco de a página nunca mais aparecer.
+   FICOU DE FORA na varredura original (achado no mesmo dia, hotfix separado):
+   `.anim-slide-in` (notifSlide, `backwards` — os cards da Resenha em /feed e o
+   card do jogo no Início) e `.futty-lockup-f` (futtyLockupIn, `both` — o F da
+   LandingPage). Mesmo defeito (conteúdo preso em opacity 0), mesma correção:
+   entram na exclusão. */
+html[data-oculto] *:not(.page-transition):not(.inicio-reveal):not(.page-reveal):not(.fig-card-enter):not(.perfil-tile):not(.anim-slide-in):not(.futty-lockup-f),
 html[data-oculto] *::before,
 html[data-oculto] *::after {
   animation-play-state: paused !important;

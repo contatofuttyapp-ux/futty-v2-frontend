@@ -211,7 +211,7 @@ function brilhanteDoInicio(userId) {
     manto_proprio: !!t.manto_proprio,
   }));
   return {
-    direito: { fonte: d.brilhante.fonte, team_id: d.brilhante.team_id, kit_id: d.brilhante.kit_id },
+    direito: { fonte: d.brilhante.fonte, team_id: d.brilhante.team_id, kit_id: d.brilhante.kit_id, restantes: d.brilhante.restantes || 0 },
     creditos: d.brilhante.creditos || 0,
     times,
     pedidos: d.pedidos_brilhante || [],
@@ -238,6 +238,10 @@ export default function Figurinha() {
   const [fotoLocal, setFotoLocal] = useState(null);
   const [uploadFoto, setUploadFoto] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
+  // RODADA 21 — kit escolhido na grelha que ainda não foi pintado: abre o
+  // diálogo "Pintar no uniforme X?" em vez do window.confirm() de antes (não
+  // tem como levar o "N gerações" nem o "~45s" no texto de um confirm nativo).
+  const [kitParaPintar, setKitParaPintar] = useState(null);
   const [limiteIA, setLimiteIA] = useState(false);
   const [erroIA, setErroIA] = useState(false); // falha da geração (≠ 403) → estado de erro no overlay
   const [erroIAmsg, setErroIAmsg] = useState(''); // mensagem específica (ex.: foto inválida); vazio = texto genérico
@@ -335,8 +339,12 @@ export default function Figurinha() {
   // Lisboa no relatório do build 28 — para saber coisas que estavam em casa.
   const [brilhante, setBrilhante] = useState(() => brilhanteDoInicio(userId));
   const temDireitoDeGerar = !!brilhante?.direito?.fonte;
-  const kitDoTime = brilhante?.direito?.fonte === 'time' ? brilhante.direito.kit_id : null;
-  const creditos = brilhante?.creditos ?? 0;
+  const fonteDireito = brilhante?.direito?.fonte || null;
+  const kitDoTime = fonteDireito === 'time' ? brilhante.direito.kit_id : null;
+  // RODADA 21 — gerações que sobram no direito ESCOLHIDO (créditos, ou o que
+  // falta no pacote do time): é o "N" do contador e do diálogo de confirmação.
+  // Antes só existia para crédito (o pacote não tinha saldo, era 1 tiro só).
+  const restantesDireito = brilhante?.direito?.restantes ?? 0;
   const meuTimeBrilhante = (brilhante?.times || []).find((t) => t.sou_dono) || null;
   const [pedindo, setPedindo] = useState(null);
   const [avisoPedido, setAvisoPedido] = useState(null);
@@ -977,13 +985,19 @@ export default function Figurinha() {
       return;
     }
     // Sem slot: só dá para gerar com direito. Sem ele, a resposta é /planos —
-    // nunca um confirm() que ia terminar em 403 SEM_DIREITO. "Minha Brilhante"
+    // nunca um diálogo que ia terminar em 403 SEM_DIREITO. "Minha Brilhante"
     // é o destaque certo: é o único produto que deixa escolher o uniforme (o
     // pacote do time fixa um só, do dono).
     if (!temDireitoDeGerar) return navigate('/planos?destaque=minha');
-    // Gastar 1 geração é irreversível: pede confirmação primeiro.
-    if (!window.confirm(`Gerar o kit ${kit.nome}? Usa 1 das suas gerações IA.`)) return;
-    await gerarAvatarIA(kit.id);
+    // Gastar 1 geração é irreversível: pede confirmação no diálogo próprio
+    // (ver kitParaPintar, perto do fim do componente) — nunca sem avisar.
+    setKitParaPintar(kit);
+  }
+
+  async function confirmarPintura() {
+    const kit = kitParaPintar;
+    setKitParaPintar(null);
+    if (kit) await gerarAvatarIA(kit.id);
   }
 
   // VELOCIDADE 9 (23-set) — escrever no perfil SEM o reler a seguir.
@@ -1460,12 +1474,12 @@ export default function Figurinha() {
                 )
               )}
             </div>
-            {/* Contador de gerações restantes (§7). Só com crédito: no pacote do
-                time a conta é "uma por time", não um saldo — e um número a
-                descer sem necessidade só assusta. */}
-            {creditos > 0 ? (
+            {/* Contador de gerações restantes (RODADA 21, §7). Desde a 059 o
+                pacote do time também tem saldo (3 por jogador, não "uma por
+                time") — o contador passou a valer para os dois direitos. */}
+            {restantesDireito > 0 ? (
               <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
-                {creditos === 1 ? 'Resta 1 geração' : `Restam ${creditos} gerações`}
+                {restantesDireito === 1 ? 'Resta 1 geração' : `Restam ${restantesDireito} gerações`}
                 {kitDoTime ? ' · o uniforme do time vem por conta do pacote' : ' · uniforme à sua escolha'}
               </span>
             ) : kitDoTime && !avatarEhIA ? (
@@ -1687,24 +1701,46 @@ export default function Figurinha() {
                 );
               })}
             </div>
+          ) : fonteDireito === 'time' ? (
+            // RODADA 21 — pacote do time: SEM seletor (o uniforme é o que o
+            // dono fixou; trocar o SEU é a Minha Figurinha, produto à parte).
+            // O que existe aqui é "Refazer" enquanto sobrar geração do pacote
+            // — nunca uma grelha que ia terminar em 403 pra quase todo kit.
+            <div className="hud-corners" style={{ padding: '18px 16px', display: 'grid', gap: 10, justifyItems: 'center', textAlign: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
+                Sua figurinha vem pelo pacote do time, no uniforme{' '}
+                <strong style={{ color: '#fff' }}>{KITS_FIGURINHA.find((k) => k.id === kitDoTime)?.nome || kitDoTime}</strong>{' '}
+                que o dono escolheu.
+              </span>
+              {restantesDireito > 0 ? (
+                <button
+                  type="button"
+                  className="btn btn--purple hud-corners"
+                  style={{ minWidth: 180 }}
+                  disabled={gerandoIA}
+                  onClick={() => setKitParaPintar(KITS_FIGURINHA.find((k) => k.id === kitDoTime) || { id: kitDoTime, nome: kitDoTime })}
+                >
+                  Refazer ({restantesDireito} restante{restantesDireito === 1 ? '' : 's'})
+                </button>
+              ) : null}
+            </div>
           ) : (
             // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile
             // em app.css, nota de 15-set) — mesma largura total, mesmo tile, mesmo gap,
             // mesmo padding lateral, mesma rolagem horizontal.
             <div className="fig-seletor-grade">
               {/* Achado 1 (roteiro 10-set): kit ainda não lançado nem aparece — nada de
-                  "em breve" na tela. */}
-              {KITS_FIGURINHA.filter((kit) => kit.estado !== 'breve').map((kit) => {
+                  "em breve" na tela. RODADA 21: sem direito nenhum, só os já
+                  pintados aparecem — o resto é o bloco "Vire figurinha" logo
+                  abaixo da grelha, não tiles trancados sem saída. */}
+              {KITS_FIGURINHA.filter((kit) => kit.estado !== 'breve' && (temDireitoDeGerar || slotsKits.includes(kit.id))).map((kit) => {
                 // A2 — estados reais: VESTIDO (kit_ativo) | GERADO (tem slot, 1 toque veste)
-                // | GERÁVEL (sem slot, com direito → custa 1 geração) | trancado por direito.
+                // | GERÁVEL (sem slot, com direito → custa 1 geração). Chegar
+                // aqui sem direito só é possível já sendo GERADO (o filter
+                // acima corta o resto) — por isso não existe mais "bloqueado".
                 const vestido = kit.id === kitAtivo;
                 const gerado = slotsKits.includes(kit.id);
-                // Cadeado por DIREITO, não por plano (ver nota em escolherKit):
-                // o que já está gerado veste-se sempre; o resto só com crédito
-                // ou pacote do time.
-                const semDireito = !gerado && !temDireitoDeGerar;
-                const geravel = !semDireito && !gerado;
-                const bloqueado = semDireito;
+                const geravel = !gerado;
                 return (
                   <button
                     key={kit.id}
@@ -1716,7 +1752,7 @@ export default function Figurinha() {
                     disabled={gerandoIA}
                   >
                     {/* Thumbnail quadrado */}
-                    <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, opacity: bloqueado ? 0.45 : 1, border: vestido ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: vestido ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
+                    <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, border: vestido ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: vestido ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
                       {KIT_IMG[kit.id] ? (
                         // Enquadramento (reparo do look): o cover cortava a camisa a meio.
                         // Ancora ao topo + desce + reduz a escala → vê-se o corte da gola e
@@ -1732,24 +1768,16 @@ export default function Figurinha() {
                           <Check size={10} strokeWidth={3} />
                         </span>
                       ) : null}
-                      {/* Gerável (activo, sem slot): avisa que custa 1 geração. */}
+                      {/* Gerável (activo, sem slot): avisa que custa 1 geração e que ainda
+                          não foi pintado — RODADA 21, selo pedido na spec. */}
                       {geravel ? (
                         <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.75)', color: '#d4a017', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                          <EstrelaIA size={7} color="#d4a017" /> 1 geração
-                        </span>
-                      ) : null}
-                      {/* BUG real desta varredura: isto chamava-se `pro` (variável que não
-                          existe mais desde que o cadeado virou DIREITO) — a aba Uniforme
-                          quebrava com ReferenceError sempre que alguém a abria. Só o
-                          cadeado fica; o rótulo "PRO" não existe desde 22-set. */}
-                      {bloqueado ? (
-                        <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#fff' }}>
-                          <Lock size={14} />
+                          <EstrelaIA size={7} color="#d4a017" /> pintar · 1 geração
                         </span>
                       ) : null}
                     </div>
                     {/* Nome */}
-                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: bloqueado ? 'var(--label-color)' : '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {kit.nome}
                     </span>
                   </button>
@@ -1757,6 +1785,26 @@ export default function Figurinha() {
               })}
             </div>
           )}
+
+          {/* RODADA 21 — zero gerações e não é o pacote do time (que já tem o
+              seu próprio recado, acima): o convite compacto para "Minha
+              Figurinha", no lugar dos tiles trancados que saíram da grelha. */}
+          {activeTab === 'uniforme' && fonteDireito !== 'time' && !temDireitoDeGerar ? (
+            <div className="hud-corners" style={{ padding: '12px 14px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center', background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.35)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#f0c94a' }}>
+                <Lock size={13} /> Vire figurinha ✨
+              </span>
+              <button
+                type="button"
+                className="btn btn--purple hud-corners"
+                style={{ width: '100%', fontSize: 12.5 }}
+                disabled={pedindo === 'minha'}
+                onClick={() => pedirBrilhante('minha')}
+              >
+                {pedindo === 'minha' ? 'Enviando…' : `Só a minha · ${PRODUTOS[2].preco} · ${MINHA_GERACOES} gerações`}
+              </button>
+            </div>
+          ) : null}
 
           {avisoErro}
 
@@ -2080,6 +2128,37 @@ export default function Figurinha() {
       {cropFile ? (
         <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} onConfirm={aoConfirmarCrop} onCancel={aoCancelarCrop} />
       ) : null}
+
+      {/* RODADA 21 — "Pintar no uniforme X?" antes de qualquer geração nova
+          (SPEC-FIGURINHA-3 §2). Mesmo padrão do DenunciaModal (modal-overlay/
+          modal-card, portal no body); fecha ao tocar fora, igual aos outros. */}
+      {kitParaPintar
+        ? createPortal(
+            <div className="modal-overlay" role="presentation" onClick={() => !gerandoIA && setKitParaPintar(null)}>
+              <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-card__inner" style={{ textAlign: 'center', display: 'grid', gap: 12, padding: '18px 16px 16px' }}>
+                  <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, margin: 0 }}>
+                    Pintar no uniforme {kitParaPintar.nome}?
+                  </h2>
+                  <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+                    Usa 1 das suas {restantesDireito === 1 ? '1 geração' : `${restantesDireito} gerações`} · leva ~45 s
+                  </p>
+                  <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
+                    <span className="cta-gold-glow" style={{ display: 'flex' }}>
+                      <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} onClick={confirmarPintura}>
+                        Pintar
+                      </button>
+                    </span>
+                    <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%' }} onClick={() => setKitParaPintar(null)}>
+                      Agora não
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

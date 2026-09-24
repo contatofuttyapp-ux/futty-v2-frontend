@@ -150,7 +150,9 @@ let vigiaLigada = false;
 
 // As mesmas classes excluídas da pausa em index.css — mantidas aqui para a
 // rede de segurança abaixo, não para decidir a pausa (isso é só CSS).
-const SELETORES_ENTRADA_DE_CONTEUDO = '.page-transition, .inicio-reveal, .page-reveal, .fig-card-enter, .perfil-tile';
+// .anim-slide-in e .futty-lockup-f entraram no hotfix "cards invisíveis" (23-set,
+// mesma família da tela preta acima, caso que tinha ficado de fora).
+const SELETORES_ENTRADA_DE_CONTEUDO = '.page-transition, .inicio-reveal, .page-reveal, .fig-card-enter, .perfil-tile, .anim-slide-in, .futty-lockup-f';
 
 /** Liga a vigia de visibilidade. Chamada uma vez, no arranque. */
 export function pararAnimacoesForaDeVista() {

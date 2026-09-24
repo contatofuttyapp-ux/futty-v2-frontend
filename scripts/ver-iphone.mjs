@@ -3798,6 +3798,14 @@ try {
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
+  if (CENAS.includes('rodada21')) {
+    const r = await cenaRodada21(navegador);
+    saida.rodada21 = r;
+    console.log('\n[iphone] RODADA 21 — gerações generosas + uniformes guardados');
+    for (const c of r.capturas) console.log(`   ${c.ok ? 'OK' : 'FALHA'} ${c.nome} — ${c.arquivo}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
@@ -4087,6 +4095,95 @@ async function cenaRodada20(navegador) {
     await espera(400);
     await pagina.screenshot({ path: arq('d-figurinha-com-interruptor') });
     await contexto.close();
+  });
+
+  return { pasta, capturas, erros };
+}
+
+// ─── Cena "rodada21" (24-set): gerações generosas + uniformes guardados. Lê a
+// sessão gravada por scripts/_bench/prova-rodada21.js (backend) — conta com 3
+// créditos, o kit dark-gold já pintado (os outros 4 por pintar), super-admin.
+async function cenaRodada21(navegador) {
+  const arqSessao = path.join(RAIZ, 'scripts', 'capturas', 'sessao-rodada21.json');
+  const sessao = JSON.parse(readFileSync(arqSessao, 'utf8'));
+  const pasta = path.join(PASTA, 'rodada-21');
+  mkdirSync(pasta, { recursive: true });
+  const arq = (nome) => path.join(pasta, `${nome}.png`);
+  const erros = [];
+  const capturas = [];
+  const capturar = async (nome, fn) => {
+    try {
+      await fn();
+      capturas.push({ nome, ok: true, arquivo: path.relative(RAIZ, arq(nome)) });
+    } catch (e) {
+      capturas.push({ nome, ok: false, arquivo: e.message.split('\n')[0] });
+    }
+  };
+  const fecharCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  pagina.on('dialog', (d) => d.accept().catch(() => {}));
+
+  await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await fecharCookies(pagina);
+  await pagina.locator('button', { hasText: /^(Fundo|Uniforme)$/ }).first().waitFor({ timeout: 20000 });
+
+  // (a) aba Uniforme: contador "Restam 3 gerações" + selo "pintar · 1 geração"
+  // nos kits ainda não pintados, dark-gold com o Check de "vestido".
+  await capturar('a-uniforme-contador-selo', async () => {
+    await pagina.locator('button', { hasText: /^Uniforme$/ }).click();
+    await espera(600);
+    await pagina.screenshot({ path: arq('a-uniforme-contador-selo') });
+  });
+
+  // (b) toca num kit por pintar -> diálogo "Pintar no uniforme X? Usa 1 das
+  // suas N gerações · leva ~45 s" com [Pintar] / [Agora não].
+  await capturar('b-dialogo-confirmacao', async () => {
+    await pagina.locator('button[aria-label="Dark Purple"]').click();
+    await pagina.locator('[role="dialog"]').filter({ hasText: 'Pintar no uniforme' }).waitFor({ timeout: 8000 });
+    await espera(300);
+    await pagina.screenshot({ path: arq('b-dialogo-confirmacao') });
+    // "Agora não" — a bancada não pode gastar a geração de verdade.
+    await pagina.locator('button', { hasText: /^Agora não$/ }).click();
+    await espera(300);
+  });
+
+  // (c) toca no kit JÁ pintado (dark-gold): troca instantânea, sem diálogo,
+  // sem "Gerando…" — o crédito continua 3 (nada foi debitado).
+  await capturar('c-troca-instantanea', async () => {
+    await pagina.locator('button[aria-label="Dark Gold"]').click();
+    await espera(600);
+    await pagina.screenshot({ path: arq('c-troca-instantanea') });
+  });
+  await contexto.close();
+
+  // (d) Planos — os números novos: "3 gerações por jogador" no pacote, "10
+  // gerações" na Minha Figurinha.
+  await capturar('d-planos-numeros-novos', async () => {
+    const c2 = await novoContexto(navegador, sessao, { amostrar: false });
+    const p2 = await c2.newPage();
+    p2.on('pageerror', (e) => erros.push(e.message));
+    await p2.goto(`${BASE}/planos`, { waitUntil: 'domcontentloaded' });
+    await fecharCookies(p2);
+    await p2.getByText('Figurinhas do time').waitFor({ timeout: 15000 });
+    await espera(400);
+    await p2.screenshot({ path: arq('d-planos-numeros-novos'), fullPage: true });
+    await c2.close();
+  });
+
+  // (e) Gabinete → Figurinhas: campo "Dar crédito a um e-mail".
+  await capturar('e-gabinete-email', async () => {
+    const c3 = await novoContexto(navegador, sessao, { amostrar: false });
+    const p3 = await c3.newPage();
+    p3.on('pageerror', (e) => erros.push(e.message));
+    await p3.goto(`${BASE}/gabinete?aba=brilhantes`, { waitUntil: 'domcontentloaded' });
+    await fecharCookies(p3);
+    await p3.getByText('Dar crédito a um e-mail').waitFor({ timeout: 15000 });
+    await espera(400);
+    await p3.screenshot({ path: arq('e-gabinete-email') });
+    await c3.close();
   });
 
   return { pasta, capturas, erros };

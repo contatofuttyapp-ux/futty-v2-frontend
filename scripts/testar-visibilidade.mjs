@@ -266,6 +266,159 @@ async function medirRecuperacaoDeOculto(browser, rota, cenario) {
   return { efetiva, ms, erros };
 }
 
+// HOTFIX (24-set, Rodada 21) — quarto bug da MESMA família: os cards
+// `.anim-slide-in` da Resenha (/feed) e do card do jogo no Início (/home)
+// nasciam presos em opacity 0 pela MESMA pausa geral (VELOCIDADE 8) — a
+// classe tinha ficado de fora da exclusão de index.css/lib/ritmo.js quando o
+// HOTFIX de 23-set corrigiu só [data-page]. Achado ao varrer o resto do app
+// pela mesma classe de defeito (opacity:0 + backwards/both).
+//
+// Ao contrário do HOTFIX de 23-set, estas duas rotas exigem sessão — sem
+// backend de verdade: a sessão nasce pronta no localStorage (a MESMA "sessão
+// otimista", síncrona, que context/AuthContext.jsx lê antes de qualquer rede
+// — ver a nota `sessaoGuardada()` lá) e as respostas da API são
+// interceptadas com o mínimo de dados para cada tela montar UM card
+// `.anim-slide-in` (um post-anúncio na Resenha, um jogo no Início) — não um
+// backend de mentira completo, só o que basta para não confiar em produção
+// alguma durante o build.
+const SUPABASE_REF = 'ynzmjcvqdljffgbeqglh'; // o mesmo VITE_SUPABASE_URL do .env — ver AuthContext.jsx
+const FAKE_USER_ID = '99999999-9999-4999-8999-999999999999';
+
+function sessaoFalsa() {
+  const agora = Math.floor(Date.now() / 1000);
+  return {
+    access_token: 'token-de-teste-visibilidade',
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: agora + 3600, // longe o bastante do supabase-js nunca tentar um refresh de verdade
+    refresh_token: 'refresh-de-teste-visibilidade',
+    user: {
+      id: FAKE_USER_ID,
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: 'teste-visibilidade@futty.local',
+      email_confirmed_at: new Date().toISOString(),
+      app_metadata: { provider: 'email' },
+      user_metadata: {},
+      created_at: new Date().toISOString(),
+    },
+  };
+}
+
+const TIME_FALSO = { id: 'time-teste-vis', nome: 'Time Teste', slug: 'time-teste-vis', logo_url: null, pedidos_pendentes: 0, role: 'membro' };
+const ME_FALSO = { id: FAKE_USER_ID, nome_jogador: 'Jogador Teste', avatar_url: null, foto_url: null, birthdate: '1990-01-01', kit_ativo: null, tem_figurinha: false };
+const ME_ENVELOPE = { user: ME_FALSO, stats: {}, slots: [] };
+
+const INICIO_FALSO = {
+  me: { user: ME_FALSO, stats: {} },
+  teams: { teams: [TIME_FALSO] },
+  convites: {
+    games: [
+      {
+        id: 'jogo-teste-vis',
+        name: 'Pelada de teste',
+        team_name: TIME_FALSO.nome,
+        team_id: TIME_FALSO.id,
+        date: new Date(Date.now() + 86400000).toISOString(),
+        status: 'open',
+        user_status: null,
+        confirmed_count: 3,
+      },
+    ],
+  },
+  pedidos: [],
+  votacoes_pendentes: [],
+  denuncias_desfechos: [],
+  votacao_status: null,
+  campeonato: null,
+  rsvp: null,
+  ad: { ad: null },
+  ads: null,
+  brilhante: { fonte: null, team_id: null, kit_id: null, creditos: 0, restantes: 0 },
+  pedidos_brilhante: [],
+};
+
+const FEED_FALSO = {
+  items: [
+    {
+      kind: 'post',
+      tipo: 'anuncio', // AnuncioCard: o post .anim-slide-in mais simples de montar (sem imagem, sem reações)
+      id: 'post-teste-vis',
+      team_id: TIME_FALSO.id,
+      conteudo: { titulo: 'Teste de visibilidade', mensagem: 'Card de teste do script de visibilidade.' },
+      criado_em: new Date().toISOString(),
+    },
+  ],
+};
+
+/**
+ * Mede a opacidade efetiva de um card `.anim-slide-in` numa rota AUTENTICADA,
+ * montada com `data-oculto` no <html> desde o DOMContentLoaded — persistente
+ * pela medição inteira, como 'nasce-com-data-oculto' em
+ * medirRecuperacaoDeOculto: prova a EXCLUSÃO em index.css sozinha, sem
+ * depender de um visibilitychange disparar.
+ */
+async function medirCardEscondidoAutenticado(browser, path, seletorCard, respostasApi) {
+  const ctx = await browser.newContext();
+  const erros = [];
+
+  await ctx.addInitScript(
+    ({ ref, sessao }) => {
+      localStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify(sessao));
+      document.addEventListener('DOMContentLoaded', () => document.documentElement.setAttribute('data-oculto', ''), { once: true });
+    },
+    { ref: SUPABASE_REF, sessao: sessaoFalsa() }
+  );
+
+  // Nunca deixa a réplica real do Supabase Auth responder — a sessão já
+  // nasceu pronta acima; qualquer pedido até lá fica pendurado (nunca
+  // resolve), o que é inofensivo: nada no app espera por ele dentro da
+  // janela de 1 s desta medição.
+  await ctx.route(`https://${SUPABASE_REF}.supabase.co/**`, () => new Promise(() => {}));
+  for (const [padrao, corpo] of Object.entries(respostasApi)) {
+    await ctx.route(`**${padrao}`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(corpo) }));
+  }
+
+  const pagina = await ctx.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  await pagina.goto(BASE + path, { waitUntil: 'load' });
+  await pagina.waitForSelector(seletorCard, { timeout: 5000 }).catch(() => null);
+
+  const t0 = Date.now();
+  let achou = false;
+  let efetiva = 0;
+  for (;;) {
+    const r = await pagina.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return { achou: false, efetiva: 0 };
+      let e = 1;
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        e *= Number(getComputedStyle(n).opacity);
+      }
+      return { achou: true, efetiva: e };
+    }, seletorCard);
+    achou = r.achou;
+    efetiva = r.efetiva;
+    if ((achou && efetiva >= 0.99) || Date.now() - t0 >= 1000) break;
+    await pagina.waitForTimeout(20);
+  }
+  const ms = Date.now() - t0;
+  await ctx.close();
+  return { achou, efetiva, ms, erros };
+}
+
+// /api/teams (SessaoContext, ver a nota lá): fonte de `useTeams()` em
+// QUALQUER rota — em /home o InicioContext hidrata-o mais cedo a partir de
+// /api/inicio, mas o pedido próprio existe sempre; sem interceção, Feed.jsx
+// lia `teams: []` do 404 do preview e caía no estado "sem time" (achado ao
+// rodar este teste pela 1ª vez: o card nem chegava a montar).
+const TEAMS_FALSO = { teams: [TIME_FALSO] };
+
+const CENARIOS_AUTENTICADOS = [
+  { etiqueta: '/feed · card da Resenha', path: '/feed', seletor: '.anim-slide-in', respostas: { '/api/me': ME_ENVELOPE, '/api/teams': TEAMS_FALSO, '/api/feed': FEED_FALSO } },
+  { etiqueta: '/home · card do jogo', path: '/home', seletor: '.anim-slide-in', respostas: { '/api/me': ME_ENVELOPE, '/api/teams': TEAMS_FALSO, '/api/inicio': INICIO_FALSO } },
+];
+
 const servidor = await subirServidor();
 let browser;
 try {
@@ -348,6 +501,21 @@ try {
       }
       if (o.erros.length) falhas.push(`${etiquetaOculto}: erro de JS — ${o.erros.join(' | ')}`);
     }
+  }
+
+  // HOTFIX (24-set, Rodada 21) — /feed e /home, autenticados, data-oculto
+  // desde o arranque. Uma vez só (não depende de tamanho de tela nem de
+  // rota pública — ver a nota grande em medirCardEscondidoAutenticado).
+  for (const cen of CENARIOS_AUTENTICADOS) {
+    const a = await medirCardEscondidoAutenticado(browser, cen.path, cen.seletor, cen.respostas);
+    if (!a.achou) {
+      falhas.push(`${cen.etiqueta}: ${cen.seletor} nunca apareceu no DOM — a tela não montou (ver erros de JS abaixo, se houver).`);
+    } else if (a.efetiva < 0.99) {
+      falhas.push(`${cen.etiqueta}: NÃO recuperou — opacidade efetiva ${a.efetiva.toFixed(3)} depois de ${a.ms}ms (teto 1000ms).`);
+    } else {
+      console.log(`[visibilidade] ok  ${cen.etiqueta} — opacidade efetiva 1 em ${a.ms}ms.`);
+    }
+    if (a.erros.length) falhas.push(`${cen.etiqueta}: erro de JS — ${a.erros.join(' | ')}`);
   }
 } finally {
   await browser.close();

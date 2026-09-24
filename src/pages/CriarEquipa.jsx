@@ -10,6 +10,7 @@ import { apiFetch } from '../lib/api';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import { copiarTexto } from '../utils/clipboard';
+import { PRESENTE_CRIADOR_GERACOES } from '../lib/planos';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -263,10 +264,10 @@ export default function CriarEquipa() {
             {ganhouBrilhante ? (
               <div className="hud-corners" style={{ marginTop: 22, padding: '14px 16px', display: 'grid', gap: 10, justifyItems: 'center', textAlign: 'center', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.55)' }}>
                 <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 16, color: '#f0c94a' }}>
-                  Você ganhou uma figurinha ✨
+                  Você ganhou {PRESENTE_CRIADOR_GERACOES} gerações ✨
                 </span>
                 <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
-                  Sua figurinha em arte, no uniforme do Futty. É de graça, por ter criado o time.
+                  {PRESENTE_CRIADOR_GERACOES} gerações de figurinha para você, no uniforme que escolher. É de graça, por ter criado o time.
                 </span>
                 <span className="cta-gold-glow" style={{ display: 'flex', width: '100%' }}>
                   <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1, fontSize: 13 }} onClick={() => navigate('/figurinha')}>

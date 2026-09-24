@@ -17,7 +17,7 @@ export async function estadoBrilhantes({ segundoPlano = false } = {}) {
     // "dados" da tela.
     return await apiFetch('/api/brilhantes/estado', { segundoPlano });
   } catch {
-    return { direito: { fonte: null, team_id: null, kit_id: null }, creditos: 0, times: [], pedidos: [] };
+    return { direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0, times: [], pedidos: [] };
   }
 }
 

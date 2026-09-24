@@ -54,6 +54,10 @@ export default function Brilhantes({ showMsg }) {
   // Ativação do pacote: o uniforme é escolhido aqui, time a time.
   const [kitPorTime, setKitPorTime] = useState({});
   const [creditoPorPessoa, setCreditoPorPessoa] = useState({});
+  // RODADA 21 — "Dar crédito a um e-mail": quem ainda não tem pedido nem
+  // crédito nenhum não aparece em nenhuma das duas listas abaixo.
+  const [emailCredito, setEmailCredito] = useState('');
+  const [quantidadeEmail, setQuantidadeEmail] = useState(10);
 
   const kits = data?.kits || [];
 
@@ -78,10 +82,22 @@ export default function Brilhantes({ showMsg }) {
   }
 
   function darCreditos(userId, email) {
-    const quantidade = Number(creditoPorPessoa[userId] ?? 2);
+    const quantidade = Number(creditoPorPessoa[userId] ?? 10);
     if (!Number.isInteger(quantidade) || quantidade < 1) { showMsg('Quantidade inválida.', true); return; }
     if (!window.confirm(`Dar ${quantidade} crédito(s) de figurinha a ${email}?`)) return;
     agir(`credito-${userId}`, '/api/super/gabinete/brilhantes/creditos', { userId, quantidade }, 'Créditos dados e pessoa avisada.');
+  }
+
+  // RODADA 21 — mesma rota, mas SEM userId em mãos: quem ainda não pediu nada
+  // (0 créditos, nenhum pedido) não está em nenhuma das listas que o Gabinete
+  // já lê; o servidor resolve o e-mail para userId (routes/gabinete.js).
+  function darCreditosPorEmail() {
+    const email = emailCredito.trim();
+    const quantidade = Number(quantidadeEmail);
+    if (!email) { showMsg('Escreva o e-mail.', true); return; }
+    if (!Number.isInteger(quantidade) || quantidade < 1) { showMsg('Quantidade inválida.', true); return; }
+    if (!window.confirm(`Dar ${quantidade} crédito(s) de figurinha a ${email}?`)) return;
+    agir(`credito-email-${email}`, '/api/super/gabinete/brilhantes/creditos', { email, quantidade }, 'Créditos dados e pessoa avisada.');
   }
 
   async function recusar(pedidoId) {
@@ -172,7 +188,7 @@ export default function Brilhantes({ showMsg }) {
                         ) : null}
                         {p.produto === 'minha' ? (
                           <button type="button" style={btnGold} disabled={emCurso === `credito-${p.user_id}`} onClick={() => darCreditos(p.user_id, p.email || 'esta pessoa')}>
-                            {emCurso === `credito-${p.user_id}` ? '…' : 'Dar 2 créditos'}
+                            {emCurso === `credito-${p.user_id}` ? '…' : 'Dar 10 créditos'}
                           </button>
                         ) : null}
                         {p.fase2 ? <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>Sem ativação ainda</span> : null}
@@ -242,7 +258,30 @@ export default function Brilhantes({ showMsg }) {
         )}
       </Secao>
 
-      {/* ── 3. PESSOAS COM CRÉDITO ── */}
+      {/* ── 3. DAR CRÉDITO A UM E-MAIL — RODADA 21: quem ainda não pediu nada
+          (0 créditos, nenhum pedido) não aparece em nenhuma lista acima nem
+          abaixo; este é o único jeito de ativar essa pessoa. ── */}
+      <Secao titulo="Dar crédito a um e-mail" sub="Para quem ainda não pediu nada e não tem crédito — não está em nenhuma lista acima">
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            type="email"
+            placeholder="email@pessoa.com"
+            style={{ ...inp, flex: '1 1 220px', minWidth: 180 }}
+            value={emailCredito}
+            onChange={(e) => setEmailCredito(e.target.value)}
+          />
+          <input
+            type="number" min="1" max="25" style={{ ...inp, width: 64 }}
+            value={quantidadeEmail}
+            onChange={(e) => setQuantidadeEmail(e.target.value)}
+          />
+          <button type="button" style={btnGold} disabled={emCurso === `credito-email-${emailCredito.trim()}`} onClick={darCreditosPorEmail}>
+            {emCurso === `credito-email-${emailCredito.trim()}` ? '…' : 'Dar créditos'}
+          </button>
+        </div>
+      </Secao>
+
+      {/* ── 4. PESSOAS COM CRÉDITO ── */}
       <Secao titulo={`Pessoas com crédito (${pessoas.length})`} sub="Cada crédito é uma figurinha por gerar, no uniforme que a pessoa escolher">
         {pessoas.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Ninguém com crédito agora.</div>
@@ -267,7 +306,7 @@ export default function Brilhantes({ showMsg }) {
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <input
                           type="number" min="1" max="25" style={{ ...inp, width: 64 }}
-                          value={creditoPorPessoa[u.id] ?? 2}
+                          value={creditoPorPessoa[u.id] ?? 10}
                           onChange={(e) => setCreditoPorPessoa((c) => ({ ...c, [u.id]: e.target.value }))}
                         />
                         <button type="button" style={btn} disabled={emCurso === `credito-${u.id}`} onClick={() => darCreditos(u.id, u.email)}>
