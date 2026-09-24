@@ -17,7 +17,7 @@ const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 }
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
 const ULTIMA_ATUALIZACAO = '13 de setembro de 2026 (v2)';
-const CONTATO = 'contatofuttyapp@gmail.com';
+const CONTATO = 'contato@futtyapp.com';
 
 export default function Privacidade() {
   return (

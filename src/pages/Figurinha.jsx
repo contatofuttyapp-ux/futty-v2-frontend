@@ -1475,7 +1475,7 @@ export default function Figurinha() {
               )}
             </div>
             {/* Contador de gerações restantes (RODADA 21, §7). Desde a 059 o
-                pacote do time também tem saldo (3 por jogador, não "uma por
+                pacote do time também tem saldo (5 por jogador, não "uma por
                 time") — o contador passou a valer para os dois direitos. */}
             {restantesDireito > 0 ? (
               <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>

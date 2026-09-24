@@ -10,7 +10,7 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ol = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const CONTATO = 'contatofuttyapp@gmail.com';
+const CONTATO = 'contato@futtyapp.com';
 
 export default function ExcluirConta() {
   return (

@@ -3806,6 +3806,14 @@ try {
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
+  if (CENAS.includes('rodada22')) {
+    const r = await cenaRodada22(navegador, sessao);
+    saida.rodada22 = r;
+    console.log('\n[iphone] RODADA 22 — 5 gerações por jogador + e-mail dos Termos');
+    for (const c of r.capturas) console.log(`   ${c.ok ? 'OK' : 'FALHA'} ${c.nome} — ${c.arquivo}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
@@ -4159,8 +4167,8 @@ async function cenaRodada21(navegador) {
   });
   await contexto.close();
 
-  // (d) Planos — os números novos: "3 gerações por jogador" no pacote, "10
-  // gerações" na Minha Figurinha.
+  // (d) Planos — os números do pacote (por jogador) e da Minha Figurinha (10
+  // gerações). Sem número fixo aqui: mudou de 3 para 5 na Rodada 22.
   await capturar('d-planos-numeros-novos', async () => {
     const c2 = await novoContexto(navegador, sessao, { amostrar: false });
     const p2 = await c2.newPage();
@@ -4185,6 +4193,72 @@ async function cenaRodada21(navegador) {
     await p3.screenshot({ path: arq('e-gabinete-email') });
     await c3.close();
   });
+
+  return { pasta, capturas, erros };
+}
+
+// ─── Cena "rodada22" (24-set): o pacote do time passa a "5 gerações por
+// jogador" (Planos) e o contato vira contato@futtyapp.com nas três telas
+// públicas que o mostram (Termos, Privacidade, Excluir conta). Só leitura: usa
+// a sessão da demo (o /planos exige login) e nenhuma escrita; nenhuma geração
+// de IA (custo zero).
+async function cenaRodada22(navegador, sessao) {
+  const pasta = path.join(PASTA, 'rodada-22');
+  mkdirSync(pasta, { recursive: true });
+  const arq = (nome) => path.join(pasta, `${nome}.png`);
+  const erros = [];
+  const capturas = [];
+  const capturar = async (nome, fn) => {
+    try {
+      await fn();
+      capturas.push({ nome, ok: true, arquivo: path.relative(RAIZ, arq(nome)) });
+    } catch (e) {
+      capturas.push({ nome, ok: false, arquivo: e.message.split('\n')[0] });
+    }
+  };
+  const fecharCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
+
+  // (a) Planos: "5 gerações por jogador" — e nenhum "3 gerações por jogador" sobrando.
+  await capturar('a-planos-5-por-jogador', async () => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(e.message));
+    await pagina.goto(`${BASE}/planos`, { waitUntil: 'domcontentloaded' });
+    await fecharCookies(pagina);
+    await pagina.getByText('Figurinhas do time').first().waitFor({ timeout: 15000 });
+    await pagina.getByText(/5 gerações por jogador/).first().waitFor({ timeout: 5000 });
+    const texto = await pagina.evaluate(() => document.body.innerText);
+    if (/3 gerações por jogador/.test(texto)) throw new Error('sobrou "3 gerações por jogador" na tela');
+    await espera(400);
+    await pagina.screenshot({ path: arq('a-planos-5-por-jogador'), fullPage: true });
+    await contexto.close();
+  });
+
+  // (b)(c)(d) O e-mail novo nas três telas públicas — sem sessão, e sem o
+  // Gmail antigo em lugar nenhum da tela.
+  const publicas = [
+    ['b-termos-contato', '/termos', '16. Contato'],
+    ['c-privacidade-contato', '/privacidade', '12. Contato'],
+    ['d-excluir-conta-contato', '/excluir-conta', 'Não consegue entrar no app?'],
+  ];
+  for (const [nome, rota, ancora] of publicas) {
+    await capturar(nome, async () => {
+      const contexto = await novoContexto(navegador, null, { amostrar: false });
+      const pagina = await contexto.newPage();
+      pagina.on('pageerror', (e) => erros.push(e.message));
+      await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+      await fecharCookies(pagina);
+      const titulo = pagina.getByText(ancora).first();
+      await titulo.waitFor({ timeout: 15000 });
+      await pagina.locator('a[href="mailto:contato@futtyapp.com"]').first().waitFor({ timeout: 5000 });
+      const texto = await pagina.evaluate(() => document.body.innerText);
+      if (/contatofuttyapp@gmail\.com/i.test(texto)) throw new Error('ainda aparece contatofuttyapp@gmail.com na tela');
+      await titulo.scrollIntoViewIfNeeded();
+      await espera(400);
+      await pagina.screenshot({ path: arq(nome) });
+      await contexto.close();
+    });
+  }
 
   return { pasta, capturas, erros };
 }

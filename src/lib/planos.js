@@ -1,16 +1,16 @@
 // Futty v2.0 — FONTE ÚNICA dos produtos da Figurinha Brilhante
-// (SPEC-FIGURINHA-3 §2, decisão do dono 22-set; números da Rodada 21, 24-set).
+// (SPEC-FIGURINHA-3 §2, decisão do dono 22-set; números das Rodadas 21 e 22, 24-set).
 //
 // Substituiu os planos Free/Pro/Elite e o `LIMITES_IA` por plano: nenhum dos
 // dois chegou a cobrar nada, e a figurinha de IA passou a nascer paga em vez
 // de nascer de graça em cada cadastro. O que se vende agora são três coisas
 // concretas, uma vez cada (sem mensalidade):
 //
-//   pacote  R$49,90  3 gerações por jogador do time (fazer, refazer, provar
-//                    outro uniforme), até 25 jogadores, todos no mesmo
-//                    uniforme escolhido pelo dono. Quem entrar depois também
-//                    ganha. Pior caso (75 gerações): −R$2,60; caso real
-//                    (~40% usado): lucro ~57%.
+//   pacote  R$49,90  5 gerações por jogador do time (fazer e refazer), até 25
+//                    jogadores, todos no mesmo uniforme escolhido pelo dono —
+//                    sem seletor de uniforme para o jogador. Quem entrar
+//                    depois também ganha. Pior caso (125 gerações = US$14):
+//                    −R$32,60 no Brasil, UE empata; caso real: lucro ~28%.
 //   manto   R$49,90  o uniforme do PRÓPRIO time nas Brilhantes dos 25 (fase 2,
 //                    depois das lojas). Só faz sentido com o pacote.
 //   minha   R$9,90   10 gerações para a própria pessoa, uniforme à escolha
@@ -40,7 +40,7 @@ const preco = (v) => `${tabela.simbolo}${v.toFixed(2).replace('.', ',')}`;
 /** Quantos jogadores o pacote cobre (igual a `teams.brilhante_limite`). */
 export const PACOTE_JOGADORES = 25;
 /** Gerações por jogador no pacote (igual a `teams.brilhante_por_jogador`, migração 059). */
-export const PACOTE_GERACOES_POR_JOGADOR = 3;
+export const PACOTE_GERACOES_POR_JOGADOR = 5;
 /** Quantas gerações a "Minha Brilhante" dá (igual ao que o Gabinete credita). */
 export const MINHA_GERACOES = 10;
 /** O presente único de quem cria o time (igual a PRESENTE_CRIADOR_CREDITOS do motor). */
@@ -56,7 +56,7 @@ export const PRODUTOS = [
     resumo: `${PACOTE_GERACOES_POR_JOGADOR} gerações por jogador, até ${PACOTE_JOGADORES}.`,
     features: [
       `Até ${PACOTE_JOGADORES} jogadores`,
-      `${PACOTE_GERACOES_POR_JOGADOR} gerações por jogador (fazer, refazer, provar outro uniforme)`,
+      `${PACOTE_GERACOES_POR_JOGADOR} gerações por jogador (fazer e refazer)`,
       'Todos com o mesmo uniforme, escolhido por você',
       'Quem entrar depois também ganha',
       'Os 6 fundos liberados',

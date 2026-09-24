@@ -12,7 +12,7 @@ const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 }
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
 const ULTIMA_ATUALIZACAO = '31 de julho de 2026';
-const CONTATO = 'contatofuttyapp@gmail.com';
+const CONTATO = 'contato@futtyapp.com';
 
 export default function Termos() {
   return (
