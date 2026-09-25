@@ -3265,7 +3265,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3865,6 +3865,18 @@ try {
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada28') || CENAS.includes('rodada-28')) {
+    const r = await cenaRodada28(navegador);
+    saida.rodada28 = r;
+    console.log('\n[iphone] RODADA 28 — card com a foto, sessão, 13+, Diagnóstico, telemetria (servidor local)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.telemetria.length) console.log(`   telemetria enviada: ${r.telemetria.map((t) => `${t.tela} ${t.ms_util} ms`).join(' · ')}`);
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
     if (falhas) process.exitCode = 1;
   }
@@ -5686,4 +5698,391 @@ async function cenaRodada27(navegador) {
 
   verificar('sem erro de JS na página', erros.filter((x) => !/^(item|captura|superfície|enquadramento|toque)/.test(x)).length === 0, erros.join(' | '));
   return { pasta, verificacoes, capturas, erros, medidas };
+}
+
+// ─── Cena "rodada28" (25-set): produto, sessão, cadastro 13+, Diagnóstico, telemetria ───────────
+// Prova pela tela, em servidor LOCAL (nunca a produção — CLAUDE.md, 25-set), o que a Rodada 28 mudou:
+//   A · card com a FOTO (conta no estado da "foto do Google": avatar_url ≠ foto_url sem ser figurinha):
+//       sem seletor de fundos; a foto cobre a moldura (camada do jogador opaca em todo o octógono) e o
+//       zoom tem piso nisso (o "−" nasce travado); grade de uniformes com o 1º liberado e os outros com
+//       cadeado → Planos (sem preço); Baixar/Compartilhar voltaram. Conta do pacote: o uniforme do
+//       time é o 1º, pintável, com aviso — e a cena NÃO pinta (toca em "Agora não");
+//   B · "Sair" só deste aparelho (outro aparelho da mesma conta continua dentro); 401 do motor: renova e
+//       repete; 401 de novo → login com "Sua sessão terminou", e o Início nunca diz "Bem-vindo ao Futty.";
+//   C · cadastro com menos de 13 anos: o formulário não chama o signUp; o onboarding pede a data antes da
+//       foto — adulto segue, menor vê o login com "O Futty é para maiores de 13 anos";
+//   D · Perfil sem Diagnóstico; /diagnostico só para o super-admin, pelo Gabinete;
+//   E · telemetria: uma vez por tela, sem Authorization, só os campos combinados, telas como padrão;
+//   H · Gabinete: aba Figurinhas com jogadores/gerações; aba Velocidade.
+// Precisa de backend/scripts/_bench/prova-rodada28.js rodado antes. Escreve de verdade no banco
+// (datas de nascimento, onboarding, contas @futtymock) — custo de IA zero.
+//   node scripts/ver-iphone.mjs --url http://127.0.0.1:5228 --cenas rodada28 --etiqueta r28
+async function cenaRodada28(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada28 escreve no banco: só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-28');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada28.json'), 'utf8'));
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const seguir = (pagina, rotulo) => pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+  const contexto = async (sessao) => {
+    const c = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await c.addInitScript(() => {
+      try {
+        localStorage.setItem('futty_figurinha_estreia', '1');
+        localStorage.setItem('futty_tour_done', '1');
+      } catch { /* nada */ }
+    });
+    return c;
+  };
+  const aceitarCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+  const barra = (pagina) => pagina.locator('nav[aria-label="Navegação principal"]');
+  const texto = (pagina) => pagina.locator('body').innerText().catch(() => '');
+  const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+  // A camada do jogador (2ª <img> do card do studio) é opaca em todo o miolo do octógono? E um resumo
+  // dos pixéis, para saber se o zoom mudou o desenho.
+  const coberturaDaFoto = () => {
+    const imgs = [...document.querySelectorAll('.fig-studio-card .fig-sway > img')];
+    const camada = imgs[1];
+    if (!camada || !camada.complete || !camada.naturalWidth) return null;
+    const c = document.createElement('canvas');
+    c.width = camada.naturalWidth;
+    c.height = camada.naturalHeight;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(camada, 0, 0);
+    const { width: W, height: H } = c;
+    const d = ctx.getImageData(0, 0, W, H).data;
+    let total = 0;
+    let opacos = 0;
+    let soma = 0;
+    for (let y = Math.round(H * 0.09); y < H * 0.91; y += 8) {
+      for (let x = Math.round(W * 0.09); x < W * 0.91; x += 8) {
+        const i = (y * W + x) * 4;
+        total += 1;
+        if (d[i + 3] > 250) opacos += 1;
+        soma += d[i] + 2 * d[i + 1] + 3 * d[i + 2];
+      }
+    }
+    return { total, frac: +(opacos / total).toFixed(3), assinatura: soma };
+  };
+  const esperarCard = async (pagina, ms = 30000) => {
+    const limite = Date.now() + ms;
+    let ultimo = null;
+    while (Date.now() < limite) {
+      ultimo = await pagina.evaluate(coberturaDaFoto).catch(() => null);
+      if (ultimo && ultimo.total > 0 && ultimo.frac > 0) return ultimo;
+      await espera(400);
+    }
+    return ultimo;
+  };
+  const mudouDesenho = async (pagina, antes, ms = 15000) => {
+    const limite = Date.now() + ms;
+    while (Date.now() < limite) {
+      const agora = await pagina.evaluate(coberturaDaFoto).catch(() => null);
+      if (agora && antes && agora.assinatura !== antes.assinatura) return agora;
+      await espera(300);
+    }
+    return null;
+  };
+
+  const telemetria = []; // POST /api/telemetria que saíram do aparelho
+  const ouvirTelemetria = (pagina) => pagina.on('request', (r) => {
+    if (!r.url().includes('/api/telemetria') || r.method() !== 'POST') return;
+    let corpo = null;
+    try { corpo = JSON.parse(r.postData() || 'null'); } catch { /* registra cru */ }
+    telemetria.push({ corpo, autorizacao: r.headers().authorization || null, bruto: (r.postData() || '').slice(0, 600) });
+  });
+
+  // ── A · card com a foto (conta "foto": sem direito, dono de time sem pacote) ──
+  const cA = await contexto(fx.foto);
+  try {
+    const pagina = await cA.newPage();
+    seguir(pagina, 'A-foto');
+    ouvirTelemetria(pagina);
+    const inicioResp = pagina.waitForResponse((r) => new URL(r.url()).pathname === '/api/inicio' && r.ok(), { timeout: 30000 }).catch(() => null);
+    await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    const inicio = await (await inicioResp)?.json().catch(() => null);
+    const u = inicio?.me?.user || {};
+    verificar('A · o motor diz figurinha_ativa=false para a foto (mesmo com avatar_url ≠ foto_url)', u.figurinha_ativa === false && !!u.avatar_url && u.avatar_url !== u.foto_url, JSON.stringify({ figurinha_ativa: u.figurinha_ativa }));
+    await pagina.locator('.cromo-inicio').first().waitFor({ timeout: 20000 }).catch(() => {});
+    await espera(2500);
+    await capturar(pagina, 'A0-inicio');
+
+    await barra(pagina).locator('a', { hasText: 'Figurinha' }).click();
+    await pagina.waitForURL('**/figurinha', { timeout: 15000 });
+    const card = await esperarCard(pagina);
+    await espera(800);
+    verificar('A1 · card com a foto: sem seletor de fundos (nem a aba Fundo)', (await pagina.getByRole('button', { name: /^Fundo$/ }).count()) === 0);
+    verificar('A2 · a foto cobre a moldura: a camada do jogador é opaca em todo o miolo do octógono', card && card.frac >= 0.999, JSON.stringify(card));
+    const afastar = pagina.getByRole('button', { name: 'Afastar a foto' });
+    const aproximar = pagina.getByRole('button', { name: 'Aproximar a foto' });
+    verificar('A2 · zoom da foto: o "−" nasce travado (piso = cobre a moldura por completo)', await afastar.isDisabled().catch(() => false));
+    await capturar(pagina, 'A1-figurinha-foto');
+    await aproximar.click();
+    const aproximado = await mudouDesenho(pagina, card);
+    verificar('A2 · "+" aproxima (o desenho muda) e a foto continua a cobrir tudo', aproximado && aproximado.frac >= 0.999, JSON.stringify(aproximado));
+    verificar('A2 · depois do "+", o "−" destrava', await afastar.isEnabled().catch(() => false));
+    for (let i = 0; i < 6; i += 1) {
+      if (await aproximar.isEnabled().catch(() => false)) await aproximar.click().catch(() => {});
+    }
+    await espera(1500);
+    verificar('A2 · o "+" para no máximo (40%)', await aproximar.isDisabled().catch(() => false));
+    const noMaximo = await pagina.evaluate(coberturaDaFoto).catch(() => null);
+    verificar('A2 · no zoom máximo a foto ainda cobre tudo', noMaximo && noMaximo.frac >= 0.999, JSON.stringify(noMaximo));
+    await capturar(pagina, 'A2-zoom-maximo');
+    for (let i = 0; i < 6; i += 1) {
+      if (await afastar.isEnabled().catch(() => false)) await afastar.click().catch(() => {});
+    }
+    await espera(1200);
+    verificar('A2 · o "−" volta a travar no piso', await afastar.isDisabled().catch(() => false));
+
+    const tiles = pagina.locator('[data-grade="uniformes"] button');
+    const estados = await tiles.evaluateAll((els) => els.map((b) => ({ estado: b.dataset.estado, nome: b.getAttribute('aria-label') })));
+    verificar('A3 · grade de uniformes: 5 tiles, o 1º liberado (Dark Gold) e os outros 4 com cadeado', estados.length === 5 && estados[0].estado === 'livre' && /Dark Gold/.test(estados[0].nome) && estados.slice(1).every((e) => e.estado === 'trancado' && /bloqueado/.test(e.nome)), JSON.stringify(estados));
+    const t = await texto(pagina);
+    verificar('A3 · sem "Pedir a minha" e sem "em breve" na tela', !/Pedir a minha/i.test(t) && !/em breve/i.test(t));
+    verificar('A · Baixar e Compartilhar voltaram ao card com a foto', /Compartilhar/.test(t) && /Baixar/.test(t));
+    await pagina.locator('[data-grade="uniformes"]').evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {});
+    await espera(600);
+    await capturar(pagina, 'A3-uniformes');
+    await tiles.nth(2).click();
+    await pagina.waitForURL(/\/planos\?destaque=minha/, { timeout: 15000 }).catch(() => {});
+    verificar('A3 · tocar num cadeado abre os Planos (Minha figurinha em destaque)', /\/planos\?destaque=minha/.test(pagina.url()), pagina.url().replace(BASE, ''));
+    await espera(1500);
+    verificar('A3 · Planos sem preço', !/R\$|€/.test(await texto(pagina)));
+    await capturar(pagina, 'A4-planos');
+
+    // E · mais telas para a telemetria: o Ranking do time (o slug na URL), o Início e o Perfil.
+    await pagina.goto(`${BASE}/equipa/${fx.times.sem.slug}/ranking`, { waitUntil: 'domcontentloaded' });
+    await espera(3500);
+    await barra(pagina).locator('a', { hasText: 'Início' }).click().catch(() => {});
+    await espera(3000);
+    await barra(pagina).locator('a', { hasText: 'Perfil' }).click().catch(() => {});
+    await pagina.waitForURL('**/perfil', { timeout: 15000 }).catch(() => {});
+    await espera(2500);
+    verificar('D · Perfil sem o botão Diagnóstico', !/Diagnóstico/.test(await texto(pagina)));
+    await capturar(pagina, 'D1-perfil');
+    await pagina.goto(`${BASE}/diagnostico`, { waitUntil: 'domcontentloaded' });
+    await pagina.getByText('Sem permissão').first().waitFor({ timeout: 15000 }).catch(() => {});
+    verificar('D · /diagnostico para quem não é super-admin: "Sem permissão"', /Sem permissão/.test(await texto(pagina)));
+    await capturar(pagina, 'D2-diagnostico-sem-permissao');
+  } catch (e) {
+    erros.push(`A: ${e.message.split('\n')[0]}`);
+  } finally {
+    await cA.close().catch(() => {});
+  }
+
+  // E · o que saiu do aparelho
+  const enviados = telemetria.filter((x) => x.corpo);
+  const telas = enviados.map((x) => x.corpo.tela);
+  const CAMPOS = ['aparelho', 'chamadas', 'ms_util', 'plataforma', 'rede', 'tela', 'versao_app'];
+  verificar('E · telemetria saiu (uma por tela fechada)', enviados.length >= 3, telas.join(', '));
+  verificar('E · no máximo uma vez por tela', new Set(telas).size === telas.length, telas.join(', '));
+  verificar('E · só os campos combinados', enviados.length > 0 && enviados.every((x) => JSON.stringify(Object.keys(x.corpo).sort()) === JSON.stringify(CAMPOS)), enviados.map((x) => Object.keys(x.corpo).join('|')).join(' ; '));
+  verificar('E · sem Authorization', enviados.every((x) => !x.autorizacao));
+  const brutoTodo = enviados.map((x) => x.bruto).join(' ');
+  verificar('E · nada que identifique: sem slug do time, sem id, sem e-mail', !brutoTodo.includes(fx.times.sem.slug) && !UUID.test(brutoTodo) && !/@/.test(brutoTodo), brutoTodo.slice(0, 300));
+  verificar('E · a tela do Ranking sai como padrão (/equipa/:slug/ranking)', telas.includes('/equipa/:slug/ranking'), telas.join(', '));
+
+  // ── A · conta do pacote do time (Dark Purple): o 1º uniforme é o do time e é pintável ──
+  const cP = await contexto(fx.pacote);
+  try {
+    const pagina = await cP.newPage();
+    seguir(pagina, 'A-pacote');
+    await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await esperarCard(pagina);
+    await espera(1500);
+    const tiles = pagina.locator('[data-grade="uniformes"] button');
+    const estados = await tiles.evaluateAll((els) => els.map((b) => ({ estado: b.dataset.estado, nome: b.getAttribute('aria-label') })));
+    verificar('A3 · pacote do time: o 1º é o uniforme do time (Dark Purple), pintável; os outros com cadeado', estados.length === 5 && estados[0].estado === 'geravel' && /Dark Purple/.test(estados[0].nome) && estados.slice(1).every((e) => e.estado === 'trancado'), JSON.stringify(estados));
+    verificar('A · com direito, o botão "Gerar minha figurinha" aparece', await pagina.getByRole('button', { name: /Gerar minha figurinha/ }).first().isVisible().catch(() => false));
+    await capturar(pagina, 'A5-pacote');
+    await tiles.first().click();
+    const dialogo = pagina.getByRole('dialog');
+    await dialogo.first().waitFor({ timeout: 10000 }).catch(() => {});
+    const textoDialogo = await dialogo.first().innerText().catch(() => '');
+    verificar('A3 · tocar no uniforme do time pede confirmação ("Pintar no uniforme Dark Purple? … 5 gerações")', /Pintar no uniforme Dark Purple/.test(textoDialogo) && /5 gerações/.test(textoDialogo), textoDialogo.replace(/\s+/g, ' '));
+    await capturar(pagina, 'A6-pacote-confirmar');
+    await pagina.getByRole('button', { name: 'Agora não' }).click(); // a cena não pinta nada
+  } catch (e) {
+    erros.push(`A-pacote: ${e.message.split('\n')[0]}`);
+  } finally {
+    await cP.close().catch(() => {});
+  }
+
+  // ── D/H · o super-admin: Gabinete (Figurinhas, Velocidade, Diagnóstico) ──
+  const cS = await contexto(fx.super);
+  try {
+    const pagina = await cS.newPage();
+    seguir(pagina, 'super');
+    await pagina.goto(`${BASE}/gabinete?aba=brilhantes`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await pagina.getByText(/Times \(/).first().waitFor({ timeout: 30000 }).catch(() => {});
+    await espera(1000);
+    const tb = await texto(pagina);
+    // Os cabeçalhos da tabela saem em caixa alta pelo CSS, e o innerText devolve o texto como é visto.
+    verificar('H · aba Figurinhas: colunas Jogadores e Gerações, time do pacote na lista', /Jogadores/i.test(tb) && /Gerações/i.test(tb) && /Prova R28 Pacote/.test(tb));
+    await capturar(pagina, 'H1-gabinete-figurinhas');
+    await pagina.goto(`${BASE}/gabinete?aba=velocidade`, { waitUntil: 'domcontentloaded' });
+    await pagina.getByText('Velocidade no aparelho de quem usa').first().waitFor({ timeout: 30000 }).catch(() => {});
+    verificar('E · Gabinete: aba Velocidade abre (só agregados)', /Velocidade no aparelho de quem usa/.test(await texto(pagina)));
+    await capturar(pagina, 'E1-gabinete-velocidade');
+    await pagina.getByRole('link', { name: /Diagnóstico deste aparelho/ }).first().click();
+    await pagina.waitForURL('**/diagnostico', { timeout: 15000 }).catch(() => {});
+    await pagina.getByText(/O que este aparelho mediu/).first().waitFor({ timeout: 15000 }).catch(() => {});
+    verificar('D · super-admin chega ao Diagnóstico pelo Gabinete', /O que este aparelho mediu/.test(await texto(pagina)));
+    await capturar(pagina, 'D3-diagnostico-super');
+  } catch (e) {
+    erros.push(`super: ${e.message.split('\n')[0]}`);
+  } finally {
+    await cS.close().catch(() => {});
+  }
+
+  // ── C · cadastro com menos de 13 anos ──
+  const dezAnos = `${new Date().getUTCFullYear() - 10}-06-15`;
+  const cR = await navegador.newContext({ ...IPHONE, serviceWorkers: 'block' });
+  try {
+    const pagina = await cR.newPage();
+    seguir(pagina, 'C-register');
+    let signups = 0;
+    pagina.on('request', (r) => { if (/\/auth\/v1\/signup/.test(r.url())) signups += 1; });
+    await pagina.goto(`${BASE}/register`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await pagina.fill('#email', `prova-r28-registro-${Date.now()}@futtymock.com`);
+    await pagina.fill('#password', 'Prova!R28-registro');
+    await pagina.fill('#confirm', 'Prova!R28-registro');
+    await pagina.fill('#birthdate', dezAnos);
+    await pagina.locator('input[type="checkbox"]').check();
+    await pagina.locator('button[type="submit"]').click();
+    await pagina.getByText('O Futty é para maiores de 13 anos.').first().waitFor({ timeout: 8000 }).catch(() => {});
+    verificar('C · cadastro por e-mail com 10 anos: "O Futty é para maiores de 13 anos." e o signUp nem sai', /O Futty é para maiores de 13 anos\./.test(await texto(pagina)) && signups === 0, `signups: ${signups}`);
+    await capturar(pagina, 'C1-cadastro-menor');
+  } catch (e) {
+    erros.push(`C-register: ${e.message.split('\n')[0]}`);
+  } finally {
+    await cR.close().catch(() => {});
+  }
+
+  const passarPeloNascimento = async (sessao, data, rotulo) => {
+    const c = await contexto(sessao);
+    const pagina = await c.newPage();
+    seguir(pagina, rotulo);
+    await pagina.goto(`${BASE}/onboarding`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await pagina.getByRole('button', { name: /Começar/i }).click({ timeout: 20000 });
+    const pediu = await pagina.getByText(/QUANDO VOCÊ/).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
+    await capturar(pagina, `${rotulo}-pergunta`);
+    await pagina.fill('#onb-nascimento', data);
+    await pagina.getByRole('button', { name: /Continuar/i }).click();
+    return { c, pagina, pediu };
+  };
+  try {
+    const { c, pagina, pediu } = await passarPeloNascimento(fx.adulto, '1995-05-10', 'C2-adulto');
+    const foto = await pagina.getByText(/SUA FIGURINHA/).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+    verificar('C · onboarding de Google/Apple pede a data ANTES da foto; adulto segue para a foto', pediu && foto);
+    await capturar(pagina, 'C2-adulto-segue');
+    await c.close();
+  } catch (e) {
+    erros.push(`C-adulto: ${e.message.split('\n')[0]}`);
+  }
+  try {
+    const { c, pagina, pediu } = await passarPeloNascimento(fx.menor, dezAnos, 'C3-menor');
+    await pagina.waitForURL('**/login', { timeout: 20000 }).catch(() => {});
+    await espera(800);
+    const t = await texto(pagina);
+    verificar('C · menor de 13 no onboarding: sai para o login com "O Futty é para maiores de 13 anos. A conta não foi criada."', pediu && /\/login/.test(pagina.url()) && /maiores de 13 anos\. A conta não foi criada/.test(t), pagina.url().replace(BASE, ''));
+    await capturar(pagina, 'C3-menor-login');
+    await c.close();
+  } catch (e) {
+    erros.push(`C-menor: ${e.message.split('\n')[0]}`);
+  }
+
+  // ── B · "Sair" só deste aparelho ──
+  try {
+    const c1 = await contexto(fx.fotoSair);
+    const p1 = await c1.newPage();
+    seguir(p1, 'B-sair');
+    await p1.goto(`${BASE}/perfil`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(p1);
+    await p1.getByText('Sair da conta').first().click({ timeout: 20000 });
+    await p1.locator('.modal-card button', { hasText: 'Sair da conta' }).click({ timeout: 10000 });
+    await p1.waitForURL((url) => ['/', '/login'].includes(new URL(url).pathname), { timeout: 20000 }).catch(() => {});
+    const saiu = ['/', '/login'].includes(new URL(p1.url()).pathname);
+    await capturar(p1, 'B1-saiu-deste-aparelho');
+    await c1.close();
+    const c2 = await contexto(fx.fotoOutro);
+    const p2 = await c2.newPage();
+    seguir(p2, 'B-outro');
+    const inicioOutro = p2.waitForResponse((r) => new URL(r.url()).pathname === '/api/inicio', { timeout: 30000 }).catch(() => null);
+    await p2.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    const r = await inicioOutro;
+    await espera(1500);
+    verificar('B · "Sair" num aparelho não derruba o outro aparelho da mesma conta', saiu && r && r.status() === 200 && /\/home$/.test(p2.url()), `saiu: ${saiu} · /api/inicio no outro: ${r?.status()} · url ${p2.url().replace(BASE, '')}`);
+    await capturar(p2, 'B2-outro-aparelho-segue');
+    await c2.close();
+  } catch (e) {
+    erros.push(`B-sair: ${e.message.split('\n')[0]}`);
+  }
+
+  // ── B · 401 do motor: renova e repete; recusado de novo → login com aviso, nunca "crie seu time" ──
+  const c4 = await contexto(fx.foto401);
+  try {
+    await c4.addInitScript(() => {
+      window.__viuBemVindo = false;
+      new MutationObserver(() => {
+        if (!window.__viuBemVindo && document.body && /Bem-vindo ao Futty\./.test(document.body.innerText || '')) window.__viuBemVindo = true;
+      }).observe(document, { childList: true, subtree: true, characterData: true });
+    });
+    let recusar = 1; // só o 1º /api/inicio leva 401
+    let recusarTudo = false;
+    await c4.route('**/api/**', async (route) => {
+      const u = new URL(route.request().url());
+      if (u.pathname.startsWith('/api/media/') || u.pathname === '/api/telemetria' || route.request().method() === 'OPTIONS') return route.fallback();
+      if (recusarTudo || (u.pathname === '/api/inicio' && recusar > 0)) {
+        if (!recusarTudo) recusar -= 1;
+        return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: 'Sessão inválida.' }) });
+      }
+      return route.fallback();
+    });
+    const pagina = await c4.newPage();
+    seguir(pagina, 'B-401');
+    const inicioOk = pagina.waitForResponse((r) => new URL(r.url()).pathname === '/api/inicio' && r.status() === 200, { timeout: 30000 }).catch(() => null);
+    await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    const ok = await inicioOk;
+    await espera(1500);
+    verificar('B · 401 uma vez: o app renova a sessão e repete — o Início abre, sem ir ao login', ok && /\/home$/.test(pagina.url()), pagina.url().replace(BASE, ''));
+    await capturar(pagina, 'B3-renovou-e-repetiu');
+
+    recusarTudo = true;
+    await pagina.reload({ waitUntil: 'domcontentloaded' });
+    await pagina.waitForURL('**/login', { timeout: 30000 }).catch(() => {});
+    await espera(1000);
+    const t = await texto(pagina);
+    const viuBemVindo = await pagina.evaluate(() => window.__viuBemVindo === true).catch(() => null);
+    verificar('B · 401 de novo com a sessão renovada: vai para o login com "Sua sessão terminou. Entre de novo."', /\/login/.test(pagina.url()) && /Sua sessão terminou\. Entre de novo\./.test(t), pagina.url().replace(BASE, ''));
+    verificar('B · em nenhum momento o Início disse "Bem-vindo ao Futty." (crie seu time) por causa do 401', viuBemVindo === false, `viu: ${viuBemVindo}`);
+    const sobrou = await pagina.evaluate(() => Object.keys(localStorage).filter((k) => /^sb-.+-auth-token$|^futty_cache_v1:/.test(k))).catch(() => ['?']);
+    verificar('B · a sessão e o cache da conta saíram do aparelho', sobrou.length === 0, sobrou.join(', '));
+    await capturar(pagina, 'B4-login-sessao-terminou');
+  } catch (e) {
+    erros.push(`B-401: ${e.message.split('\n')[0]}`);
+  } finally {
+    await c4.close().catch(() => {});
+  }
+
+  verificar('sem erro de JS nas páginas', erros.length === 0, erros.join(' | '));
+  return { pasta, verificacoes, capturas, erros, telemetria: enviados.map((x) => x.corpo) };
 }
