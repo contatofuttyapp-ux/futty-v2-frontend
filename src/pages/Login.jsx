@@ -25,17 +25,22 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   // RODADA 28 — avisos curtos, uma vez só: a sessão acabou sem a pessoa pedir (AuthContext: 401 do
   // motor, refresh recusado) ou o cadastro parou nos 13 anos (Onboarding: o motor apagou a conta).
+  // A marca só é LIDA aqui e apagada no efeito, depois de a tela montar: o Login chega por import
+  // dinâmico e o React 19 renderiza-o duas vezes antes de fixar a tela (medido na cena rodada28) —
+  // apagada na 1ª renderização, a 2ª, que é a que fica, nascia sem o aviso.
   const [aviso] = useState(() => {
     try {
-      const menor = sessionStorage.getItem('futty_menor13') === '1';
-      const terminou = sessionStorage.getItem('futty_sessao_terminou') === '1';
-      sessionStorage.removeItem('futty_menor13');
-      sessionStorage.removeItem('futty_sessao_terminou');
-      if (menor) return { tipo: 'error', texto: 'O Futty é para maiores de 13 anos. A conta não foi criada.' };
-      if (terminou) return { tipo: 'success', texto: 'Sua sessão terminou. Entre de novo.' };
+      if (sessionStorage.getItem('futty_menor13') === '1') return { tipo: 'error', texto: 'O Futty é para maiores de 13 anos. A conta não foi criada.' };
+      if (sessionStorage.getItem('futty_sessao_terminou') === '1') return { tipo: 'success', texto: 'Sua sessão terminou. Entre de novo.' };
     } catch { /* modo privado: sem aviso */ }
     return null;
   });
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem('futty_menor13');
+      sessionStorage.removeItem('futty_sessao_terminou');
+    } catch { /* modo privado */ }
+  }, []);
 
   // Rede de segurança para "já está autenticado": cobre chegar aqui já logado
   // (link direto, voltar pelo histórico) e o login nativo pela Apple/Google, cuja
