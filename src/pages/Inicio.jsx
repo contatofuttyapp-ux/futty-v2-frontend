@@ -26,6 +26,7 @@ import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
+import EstadoErroRede from '../components/EstadoErroRede';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
@@ -427,7 +428,7 @@ function EmptyState() {
 
 export default function Inicio() {
   const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil, hidratar: hidratarPerfil } = usePerfil();
-  const { teams, loading: teamsLoading } = useTeams();
+  const { teams, loading: teamsLoading, error: teamsErro } = useTeams();
   // Início (11-set): 1 pedido só (GET /api/inicio, via Layout.jsx que monta o
   // InicioProvider só nesta rota) alimenta jogos, RSVP, campeonato, pedidos,
   // votações pendentes, desfechos de denúncia e o anúncio — em vez dos ~9
@@ -878,7 +879,11 @@ export default function Inicio() {
   });
   if (proximosJogos.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
 
-  const noTeams = !teamsLoading && teams.length === 0;
+  // RODADA 28 (bug visto 25-set no Chrome): com a sessão morta o /api/inicio devolvia 401 e o Início
+  // dizia "Bem-vindo, crie seu time" a quem TEM time. "Sem time" só depois de uma resposta que diga
+  // isso; falha sem dado nenhum é erro com "Tentar de novo" (e 401 já vai para o login, lib/api.js).
+  const semDadosPorErro = !!inicio.erro && !dadosInicio;
+  const noTeams = !teamsLoading && !teamsErro && !semDadosPorErro && teams.length === 0;
 
   // Rodada 12C: para onde o cromo leva. A vitrine vive DENTRO de um time (a
   // rota é /equipa/:slug/jogador/:id), por isso só existe com time e com
@@ -1206,9 +1211,11 @@ export default function Inicio() {
           </div>
         </div>
 
-        {(error || inicio.erro) && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error || inicio.erro}</div>}
+        {(error || (inicio.erro && !semDadosPorErro)) && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error || inicio.erro}</div>}
 
-        {noTeams ? (
+        {semDadosPorErro ? (
+          <EstadoErroRede compacto mensagem="Não deu para carregar o Início agora." onRepetir={() => inicio.reload()} />
+        ) : noTeams ? (
           <EmptyState />
         ) : (
           <>

@@ -23,6 +23,17 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // RODADA 28 — a sessão acabou sem a pessoa pedir (AuthContext: 401 do motor, refresh recusado):
+  // aviso curto, uma vez só.
+  const [sessaoTerminou] = useState(() => {
+    try {
+      const marcada = sessionStorage.getItem('futty_sessao_terminou') === '1';
+      sessionStorage.removeItem('futty_sessao_terminou');
+      return marcada;
+    } catch {
+      return false;
+    }
+  });
 
   // Rede de segurança para "já está autenticado": cobre chegar aqui já logado
   // (link direto, voltar pelo histórico) e o login nativo pela Apple/Google, cuja
@@ -84,6 +95,9 @@ export default function Login() {
           <p className="auth-subtitle">Entre na sua conta para continuar.</p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
+            {sessaoTerminou && !error && (
+              <div role="status" className="auth-alert auth-alert--success hud-corners-s">Sua sessão terminou. Entre de novo.</div>
+            )}
             {error && (
               <div className="auth-alert auth-alert--error hud-corners-s">{error}</div>
             )}

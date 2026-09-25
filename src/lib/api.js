@@ -42,6 +42,15 @@ export { urlAsset as assetUrl } from '../utils/avatar';
 // num GET que saiu antes do voto e devolver a lista velha.
 const getsEmVoo = new Map();
 
+// RODADA 28 — 401 do motor quer dizer "a sessão acabou" (saiu de todos os aparelhos noutro lugar,
+// conta apagada, refresh revogado): o motor só o devolve quando o Supabase recusou o token (com o
+// Supabase fora do ar é 503). Quem decide o que fazer é o AuthContext — renova UMA vez; se não der,
+// sai só deste aparelho e o login avisa porquê. Registro, não import: o AuthContext já importa isto.
+let aoSessaoInvalida = null;
+export function registrarSessaoInvalida(fn) {
+  aoSessaoInvalida = fn;
+}
+
 // Faz um pedido autenticado à API, anexando o access token da sessão Supabase.
 // `segundoPlano: true` (pré-aquecimento): a chamada não conta como dados da tela
 // no Diagnóstico.
@@ -78,81 +87,62 @@ export async function apiFetch(path, { segundoPlano = false, ...options } = {}) 
 }
 
 async function pedir(path, options, token, segundoPlano) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  // Rodada 28: no máximo duas voltas — a 2ª só depois de a sessão ter sido renovada por um 401.
+  for (let volta = 0; ; volta += 1) {
+    // Upload (FormData): o browser põe o Content-Type com o boundary sozinho.
+    const headers = options.body instanceof FormData ? { ...(options.headers || {}) } : { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
-  // VELOCIDADE 4 — a caixa-preta mede AQUI, no único sítio por onde todas as
-  // chamadas passam. Só rota, estado e tempos; nunca corpo nem token.
-  const t0 = performance.now();
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
-  const ms = performance.now() - t0;
-  const { motorMs, edgeMs } = lerServerTiming(res.headers.get('Server-Timing'));
-  registarChamada({ rota: path, metodo: (options.method || 'GET').toUpperCase(), status: res.status, ms, motorMs, edgeMs, segundoPlano });
+    // VELOCIDADE 4 — a caixa-preta mede AQUI, no único sítio por onde todas as
+    // chamadas passam. Só rota, estado e tempos; nunca corpo nem token.
+    const t0 = performance.now();
+    const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    const ms = performance.now() - t0;
+    const { motorMs, edgeMs } = lerServerTiming(res.headers.get('Server-Timing'));
+    registarChamada({ rota: path, metodo: (options.method || 'GET').toUpperCase(), status: res.status, ms, motorMs, edgeMs, segundoPlano });
 
-  let body = null;
-  try {
-    body = await res.json();
-  } catch {
-    // resposta sem corpo JSON
-  }
+    if (res.status === 401 && token && aoSessaoInvalida) {
+      token = await aoSessaoInvalida(volta > 0);
+      if (token) continue;
+    }
 
-  if (!res.ok) {
-    const err = new Error(body?.error || `Erro ${res.status}`);
-    err.status = res.status;
-    err.code = body?.code || null; // ex.: 'CONTA_SUSPENSA' → o AuthGuard distingue
-    throw err;
+    let body = null;
+    try {
+      body = await res.json();
+    } catch {
+      // resposta sem corpo JSON
+    }
+
+    if (!res.ok) {
+      const err = new Error(body?.error || `Erro ${res.status}`);
+      err.status = res.status;
+      err.code = body?.code || null; // ex.: 'CONTA_SUSPENSA' → o AuthGuard distingue; 'FOTO_FRACA' → mensagemUploadFoto
+      throw err;
+    }
+    return body;
   }
-  return body;
 }
 
-// Upload genérico (multipart) para qualquer endpoint. Não usa apiFetch porque
-// este força Content-Type JSON (o browser tem de definir o boundary sozinho).
+// Upload genérico (multipart) para qualquer endpoint.
 export async function apiUpload(path, file, field = 'file') {
   return apiUploadCampos(path, { [field]: file });
 }
 
 // RODADA 19 — variante com vários campos (ex.: "avatar" + "original" no
-// mesmo pedido) e método à escolha (POST/PUT). apiUpload acima passou a ser
-// um atalho desta para não duplicar a lógica de sessão/erro.
+// mesmo pedido) e método à escolha (POST/PUT). RODADA 28: passa pelo mesmo
+// apiFetch de tudo (sessão, 401, caixa-preta — o tempo do upload da foto entra
+// no Diagnóstico e na telemetria); era uma segunda cópia da lógica de sessão.
 export async function apiUploadCampos(path, campos, { method = 'POST' } = {}) {
-  const supabase = await obterSupabase();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  getsEmVoo.clear(); // escrita: ver a nota de getsEmVoo
   const fd = new FormData();
   for (const [campo, arquivo] of Object.entries(campos)) {
     if (arquivo) fd.append(campo, arquivo);
   }
-
-  const headers = {};
-  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-
-  const res = await fetch(`${API_URL}${path}`, { method, headers, body: fd });
-  let body = null;
-  try {
-    body = await res.json();
-  } catch {
-    // sem corpo JSON
-  }
-  if (!res.ok) {
-    const err = new Error(body?.error || `Erro ${res.status}`);
-    err.status = res.status;
-    err.code = body?.code || null; // ex.: 'FOTO_FRACA' → mensagemUploadFoto distingue
-    throw err;
-  }
-  return body;
+  return apiFetch(path, { method, body: fd });
 }
 
 // Upload de um ficheiro (multipart) para /api/feed/upload → { url, media_type }.
-// Passa pelo mesmo caminho dos outros uploads (sessão, escrita esvazia o mapa de GETs, erro com status e
-// código): eram duas cópias da mesma lógica, e o arranque tem teto de peso (verificar-dist).
 export function uploadFile(file) {
   return apiUploadCampos('/api/feed/upload', { file });
 }

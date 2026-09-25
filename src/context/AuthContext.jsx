@@ -4,8 +4,31 @@ import { obterSupabase } from '../lib/supabaseAsync';
 import { limparCacheLocal } from '../lib/cacheLocal';
 import { esquecerPreaquecimento } from '../lib/preaquecerDados';
 import { limparCromos } from '../lib/cromoCache';
+import { registrarSessaoInvalida } from '../lib/api';
+import { criarTratador401, sairDesteAparelho } from '../lib/sessao';
 
 const AuthContext = createContext(null);
+
+// Celular compartilhado (13-set): ao sair, nada da conta fica no aparelho — o cache local, o
+// pré-aquecimento e o cromo do Início (IndexedDB), que é a cara da pessoa.
+function limparAparelho() {
+  limparCacheLocal();
+  esquecerPreaquecimento();
+  limparCromos().catch(() => {});
+}
+
+// RODADA 28 — a sessão acabou SEM a pessoa pedir (outro aparelho saiu de todos, conta apagada,
+// refresh revogado). O aparelho é limpo e o login explica porquê (Login.jsx lê esta marca).
+let saidaPedida = false;
+function sessaoTerminou() {
+  if (saidaPedida) return;
+  limparAparelho();
+  try { sessionStorage.setItem('futty_sessao_terminou', '1'); } catch { /* modo privado: sai sem o aviso */ }
+}
+
+// O motor disse 401: renova uma vez; se não der, sai só deste aparelho (regras em lib/sessao.js).
+// A saída dispara o SIGNED_OUT abaixo, que limpa o aparelho e deixa o aviso para o login.
+registrarSessaoInvalida(criarTratador401(obterSupabase));
 
 // VELOCIDADE 5 (14-set) — SESSÃO OTIMISTA.
 //
@@ -45,7 +68,7 @@ function sessaoGuardada() {
 }
 
 export function AuthProvider({ children }) {
-  const inicial = sessaoGuardada();
+  const [inicial] = useState(sessaoGuardada);
   const [session, setSession] = useState(inicial);
   // Com sessão guardada não há nada por saber: o arranque não mostra loading.
   const [loading, setLoading] = useState(!inicial);
@@ -62,14 +85,22 @@ export function AuthProvider({ children }) {
     obterSupabase().then((supabase) => {
       if (!vivo) return;
       // Sessão inicial
-      supabase.auth.getSession().then(({ data }) => {
+      supabase.auth.getSession().then(({ data, error }) => {
         if (!vivo) return;
-        setSession(data.session);
+        // Rodada 28: sem rede no arranque, a sessão guardada fica (as telas abrem do cache); só
+        // quando o Supabase RECUSOU a renovação é que ela acabou — e aí o login diz porquê.
+        const semRede = error?.name === 'AuthRetryableFetchError';
+        if (inicial && !data.session && !semRede) sessaoTerminou();
+        setSession(data.session ?? (semRede ? inicial : null));
         setLoading(false);
       });
 
       // Subscrição a alterações de auth (login/logout/refresh)
-      subscricao = supabase.auth.onAuthStateChange((_event, newSession) => {
+      subscricao = supabase.auth.onAuthStateChange((evento, newSession) => {
+        if (evento === 'SIGNED_OUT') {
+          sessaoTerminou();
+          saidaPedida = false;
+        }
         setSession(newSession);
       }).data.subscription;
       if (!vivo) subscricao.unsubscribe();
@@ -79,7 +110,7 @@ export function AuthProvider({ children }) {
       vivo = false;
       if (subscricao) subscricao.unsubscribe();
     };
-  }, []);
+  }, [inicial]);
 
   const value = {
     session,
@@ -87,15 +118,14 @@ export function AuthProvider({ children }) {
     loading,
     // Celular compartilhado (13-set): limpa o cache local ANTES do signOut —
     // a próxima conta que entrar neste aparelho não pode ver, nem por 1
-    // render, o perfil/equipas de quem saiu. O cromo do Início (14-set,
-    // "Velocidade 4") mora em IndexedDB e não em localStorage, por isso tem de
-    // ser apagado à parte — é a cara da pessoa, seria o pior a sobrar.
+    // render, o perfil/equipas de quem saiu.
+    // RODADA 28: "Sair" é SÓ deste aparelho (scope local). O padrão do Supabase
+    // é 'global', que derrubava a sessão da pessoa em TODOS os aparelhos — o
+    // Pedro trocou de conta no celular e o Gabinete da Freaky no Chrome morreu.
     signOut: async () => {
-      limparCacheLocal();
-      esquecerPreaquecimento();
-      limparCromos().catch(() => {});
-      const supabase = await obterSupabase();
-      return supabase.auth.signOut();
+      saidaPedida = true;
+      limparAparelho();
+      return sairDesteAparelho(obterSupabase);
     },
   };
 
