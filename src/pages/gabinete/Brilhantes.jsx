@@ -31,6 +31,12 @@ function fmtData(iso) {
   if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+/** "2026-09" → "set/2026". */
+function fmtMes(aaaaMm) {
+  const [a, m] = String(aaaaMm || '').split('-').map(Number);
+  return a && m ? `${MESES[m - 1]}/${a}` : aaaaMm;
+}
 /** "dark-gold" → "Dark Gold". O catálogo é do motor (KITS_IA); o nome bonito sai daqui. */
 function nomeKit(id) {
   return String(id || '').split('-').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
@@ -206,7 +212,7 @@ export default function Brilhantes({ showMsg }) {
       </Secao>
 
       {/* ── 2. TIMES: quem tem pacote, quanto usou e quanto custou de verdade ── */}
-      <Secao titulo={`Times (${times.length})`} sub="Com pacote ativo ou com pedido em cima da mesa. Custo real da fal, somado por time.">
+      <Secao titulo={`Times (${times.length})`} sub="Com pacote ativo ou com pedido em cima da mesa. Custo real da fal, somado geração a geração, por time e por mês (horário de Brasília).">
         {times.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum time com pacote ou pedido.</div>
         ) : (
@@ -215,7 +221,7 @@ export default function Brilhantes({ showMsg }) {
               <thead>
                 <tr>
                   <th style={th}>Time</th><th style={th}>Pacote</th><th style={th}>Uniforme</th>
-                  <th style={th}>Geradas</th><th style={th}>Custo real</th><th style={th}>Ação</th>
+                  <th style={th}>Jogadores</th><th style={th}>Gerações</th><th style={th}>Custo real</th><th style={th}>Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,11 +237,27 @@ export default function Brilhantes({ showMsg }) {
                         : <span style={{ color: 'var(--text-dim)' }}>só pedido</span>}
                     </td>
                     <td style={td}>{t.brilhante_kit ? nomeKit(t.brilhante_kit) : <span style={{ color: 'var(--text-dim)' }}>—</span>}</td>
+                    {/* Rodada 28: jogadores (vagas do pacote usadas, de 25) e gerações (cada um pode
+                        refazer até 5) são coisas diferentes — antes "geradas" contava pessoas. */}
+                    <td style={td}>{t.jogadores ?? 0}/{t.limite}</td>
                     <td style={td}>
-                      {t.geradas}/{t.limite}
-                      {t.geradas_sem_custo ? <span style={{ fontSize: 11, color: 'var(--text-dim)' }}> · {t.geradas_sem_custo} sem custo gravado</span> : null}
+                      {t.geradas}
+                      {t.geradas_sem_custo ? <span style={{ fontSize: 11, color: 'var(--text-dim)' }}> · {t.geradas_sem_custo} jogador(es) sem custo gravado</span> : null}
                     </td>
-                    <td style={td}>US${t.custo_usd.toFixed(2)}</td>
+                    <td style={td}>
+                      <div>US${t.custo_usd.toFixed(2)}</div>
+                      {Array.isArray(t.custo_por_mes) && t.custo_por_mes.length ? (
+                        <div style={{ display: 'grid', gap: 2, marginTop: 4, fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                          {t.custo_por_mes.map((m) => (
+                            <span key={m.mes}>
+                              {fmtMes(m.mes)}: US${m.custo_usd.toFixed(2)} · {m.geracoes} {m.geracoes === 1 ? 'geração' : 'gerações'}{m.sem_custo ? ` (${m.sem_custo} sem custo)` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      ) : t.custo_por_mes === null ? (
+                        <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-dim)' }}>por mês: falta a migração 063</div>
+                      ) : null}
+                    </td>
                     <td style={td}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                         <select
