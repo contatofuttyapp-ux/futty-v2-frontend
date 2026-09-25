@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { entrarComGoogle } from '../lib/googleAuth';
 import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
+import { dataDeNascimentoValida, menorQueIdadeMinima, MSG_MENOR } from '../utils/idade';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
@@ -66,6 +67,15 @@ export default function Register() {
     }
     if (!birthdate) {
       setError('Data de nascimento é obrigatória.');
+      return;
+    }
+    if (!dataDeNascimentoValida(birthdate)) {
+      setError('Data de nascimento inválida.');
+      return;
+    }
+    // Rodada 28 (LGPD art. 14): abaixo de 13 anos a conta não é criada — nem chega ao Supabase.
+    if (menorQueIdadeMinima(birthdate)) {
+      setError(MSG_MENOR);
       return;
     }
     if (!aceite) {

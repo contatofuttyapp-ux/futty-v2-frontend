@@ -3,6 +3,7 @@
 // com as cláusulas de proteção novas (fotos de terceiros, uso aceitável, créditos,
 // limitação de responsabilidade, lei e foro).
 // 25-set: §7 sem cobrança por enquanto; o texto anterior fica em CLAUSULA_PAGAMENTO_FUTURA.
+// 25-set (Rodada 28, LGPD art. 14): §2 diz como a idade mínima é conferida no cadastro.
 import { Link } from 'react-router-dom';
 import '../styles/app.css';
 
@@ -55,8 +56,10 @@ export default function Termos() {
 
         <h2 style={h2}>2. Elegibilidade</h2>
         <p style={p}>
-          Você precisa de pelo menos 13 anos para criar uma conta. Menores de 13 anos não
-          podem usar o Futty. Menores de idade contam com proteções específicas no app: o
+          O Futty é para maiores de 13 anos: você precisa de pelo menos 13 anos para criar
+          uma conta, e menores de 13 anos não podem usar o Futty. A data de nascimento é
+          pedida no cadastro (por e-mail, Google ou Apple) e, abaixo dessa idade, a conta não
+          é criada. Menores de idade contam com proteções específicas no app: o
           rosto aparece sempre em silhueta nas páginas públicas e publicidade classificada
           como 18+ nunca é exibida. Ao se cadastrar, você confirma que as informações
           fornecidas são verdadeiras. O Futty não verifica a veracidade dos dados.

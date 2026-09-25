@@ -23,16 +23,18 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // RODADA 28 — a sessão acabou sem a pessoa pedir (AuthContext: 401 do motor, refresh recusado):
-  // aviso curto, uma vez só.
-  const [sessaoTerminou] = useState(() => {
+  // RODADA 28 — avisos curtos, uma vez só: a sessão acabou sem a pessoa pedir (AuthContext: 401 do
+  // motor, refresh recusado) ou o cadastro parou nos 13 anos (Onboarding: o motor apagou a conta).
+  const [aviso] = useState(() => {
     try {
-      const marcada = sessionStorage.getItem('futty_sessao_terminou') === '1';
+      const menor = sessionStorage.getItem('futty_menor13') === '1';
+      const terminou = sessionStorage.getItem('futty_sessao_terminou') === '1';
+      sessionStorage.removeItem('futty_menor13');
       sessionStorage.removeItem('futty_sessao_terminou');
-      return marcada;
-    } catch {
-      return false;
-    }
+      if (menor) return { tipo: 'error', texto: 'O Futty é para maiores de 13 anos. A conta não foi criada.' };
+      if (terminou) return { tipo: 'success', texto: 'Sua sessão terminou. Entre de novo.' };
+    } catch { /* modo privado: sem aviso */ }
+    return null;
   });
 
   // Rede de segurança para "já está autenticado": cobre chegar aqui já logado
@@ -95,8 +97,8 @@ export default function Login() {
           <p className="auth-subtitle">Entre na sua conta para continuar.</p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
-            {sessaoTerminou && !error && (
-              <div role="status" className="auth-alert auth-alert--success hud-corners-s">Sua sessão terminou. Entre de novo.</div>
+            {aviso && !error && (
+              <div role="status" className={`auth-alert auth-alert--${aviso.tipo} hud-corners-s`}>{aviso.texto}</div>
             )}
             {error && (
               <div className="auth-alert auth-alert--error hud-corners-s">{error}</div>

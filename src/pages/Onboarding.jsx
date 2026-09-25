@@ -3,12 +3,16 @@
 // nunca passam aqui). Pede SÓ o que o dia-1 usa — equipa entra-se/cria-se no Início.
 // Foto: selfie (capture="user") OU galeria → CropModal da casa (1:1) → POST /api/me/avatar.
 // "Deixar para depois" só aparece aos ~4s; quem salta leva o card persistente no Início.
+// RODADA 28 (LGPD art. 14): quem chega sem data de nascimento (Google/Apple não a trazem) passa
+// por "Quando você nasceu?" ANTES da foto. Menor de 13: o motor apaga a conta e o login explica.
 import { useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
+import { dataDeNascimentoValida } from '../utils/idade';
 import { usePerfil } from '../context/PerfilContext';
+import { useAuth } from '../hooks/useAuth';
 import FuttyLogo from '../components/FuttyLogo';
 import CropModal from '../components/CropModal';
 import Toast from '../components/Toast';
@@ -70,7 +74,12 @@ function MolduraFoto({ src, size = 170 }) {
 
 export default function Onboarding() {
   const { perfil, hidratar, recarregar: recarregarPerfil } = usePerfil();
-  const [passo, setPasso] = useState(1);
+  const { signOut } = useAuth();
+  const [passo, setPasso] = useState(1); // 1 · 'nascimento' · 2 · 3
+  const [nascimento, setNascimento] = useState('');
+  const [salvandoNascimento, setSalvandoNascimento] = useState(false);
+  const [erroNascimento, setErroNascimento] = useState('');
+  const precisaNascimento = !perfil?.user?.birthdate;
   const [cropFile, setCropFile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null); // preenchida após upload
   const [enviando, setEnviando] = useState(false);
@@ -122,6 +131,35 @@ export default function Onboarding() {
     }
   }
 
+  // RODADA 28 — "Quando você nasceu?". Quem decide é o motor (PATCH /api/me): 13 anos ou mais, a data
+  // fica e segue para a foto; menos de 13, ele apaga a conta (403 MENOR_DE_13) — aqui só se sai do
+  // aparelho, e o login diz "O Futty é para maiores de 13 anos".
+  async function confirmarNascimento() {
+    const v = dataDeNascimentoValida(nascimento);
+    if (!v) {
+      setErroNascimento('Data de nascimento inválida.');
+      return;
+    }
+    setSalvandoNascimento(true);
+    setErroNascimento('');
+    try {
+      await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ birthdate: v }) });
+      if (perfil) hidratar({ ...perfil, user: { ...perfil.user, birthdate: v } });
+      setPasso(2);
+    } catch (e) {
+      if (e.code === 'NASCIMENTO_JA_DEFINIDO') {
+        setPasso(2); // a data já veio do cadastro por e-mail
+      } else if (e.code === 'MENOR_DE_13') {
+        try { sessionStorage.setItem('futty_menor13', '1'); } catch { /* sem o aviso */ }
+        await signOut();
+      } else {
+        setErroNascimento(e.message || 'Não deu para salvar a data. Tente de novo.');
+      }
+    } finally {
+      setSalvandoNascimento(false);
+    }
+  }
+
   // Fim: nome de jogador (PATCH /api/me). A pergunta "Você é goleiro?" saiu do
   // cadastro (Rodada 8A, decisão do dono): o sorteio só usa game_players.goleiro,
   // marcado na confirmação de presença (Jogo.jsx, "Sou goleiro (GR)") ou pelo admin.
@@ -149,6 +187,12 @@ export default function Onboarding() {
       if (base) hidratar({ ...base, user: { ...base.user, onboarding_completo: true } });
       window.location.assign('/home');
     } catch (e) {
+      // Rodada 28: data de menor de 13 que veio do cadastro por e-mail — o motor apagou a conta.
+      if (e.code === 'MENOR_DE_13') {
+        try { sessionStorage.setItem('futty_menor13', '1'); } catch { /* sem o aviso */ }
+        await signOut();
+        return;
+      }
       setToast({ tipo: 'error', mensagem: e.message });
       setSalvando(false);
     }
@@ -156,9 +200,10 @@ export default function Onboarding() {
 
   const prog = (
     <div style={{ position: 'absolute', top: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 8, zIndex: 3 }}>
-      {[1, 2, 3].map((n) => (
-        <i key={n} style={{ width: 26, height: 3, background: n <= passo ? 'linear-gradient(90deg,#d4a017,#f0c94a)' : 'rgba(255,255,255,0.12)', boxShadow: n <= passo ? '0 0 8px rgba(212,160,23,0.5)' : 'none' }} />
-      ))}
+      {[1, 2, 3].map((n) => {
+        const aceso = n <= (passo === 'nascimento' ? 1 : passo);
+        return <i key={n} style={{ width: 26, height: 3, background: aceso ? 'linear-gradient(90deg,#d4a017,#f0c94a)' : 'rgba(255,255,255,0.12)', boxShadow: aceso ? '0 0 8px rgba(212,160,23,0.5)' : 'none' }} />;
+      })}
     </div>
   );
 
@@ -177,7 +222,35 @@ export default function Onboarding() {
               feito para quem <b style={{ color: '#f0c94a' }}>joga de verdade</b>
             </div>
             <div style={{ width: '100%', maxWidth: 290, marginTop: 38 }}>
-              <Cta cheio onClick={() => setPasso(2)}>Começar</Cta>
+              <Cta cheio onClick={() => setPasso(precisaNascimento ? 'nascimento' : 2)}>Começar</Cta>
+            </div>
+          </>
+        )}
+
+        {passo === 'nascimento' && (
+          <>
+            <Titulo size={24}>QUANDO VOCÊ<br />NASCEU?</Titulo>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
+              Pedimos a data de nascimento para seguir as regras de idade da LGPD.
+            </p>
+            <div style={{ width: '100%', maxWidth: 290 }}>
+              <label htmlFor="onb-nascimento" style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Data de nascimento</label>
+              <input
+                id="onb-nascimento"
+                type="date"
+                className="input input--hud"
+                value={nascimento}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => { setNascimento(e.target.value); setErroNascimento(''); }}
+                autoComplete="bday"
+                style={{ width: '100%', fontFamily: RAJ, fontSize: 17, fontWeight: 700, textAlign: 'center' }}
+              />
+              {erroNascimento ? (
+                <div role="alert" style={{ marginTop: 10, fontSize: 13, color: '#f8b4b4', textAlign: 'center', lineHeight: 1.45 }}>{erroNascimento}</div>
+              ) : null}
+              <div style={{ marginTop: 26 }}>
+                <Cta cheio onClick={confirmarNascimento} disabled={!nascimento || salvandoNascimento}>{salvandoNascimento ? 'Salvando…' : 'Continuar'}</Cta>
+              </div>
             </div>
           </>
         )}

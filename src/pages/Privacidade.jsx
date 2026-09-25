@@ -111,7 +111,9 @@ export default function Privacidade() {
 
         <h2 style={h2}>5. Menores de idade</h2>
         <p style={p}>
-          O Futty exige idade mínima de 13 anos para criar conta. Para proteger quem é menor
+          O Futty é para maiores de 13 anos. A data de nascimento é pedida no cadastro (por
+          e-mail, Google ou Apple) e, abaixo de 13 anos, a conta não é criada: nada fica
+          guardado. Para proteger quem é menor
           de 18: o rosto de menores <span style={strong}>nunca aparece</span> em páginas
           públicas (sem login), aparece sempre como silhueta. Publicidade classificada como
           18+ nunca é mostrada a uma conta menor de idade, e essa regra falha sempre para o
