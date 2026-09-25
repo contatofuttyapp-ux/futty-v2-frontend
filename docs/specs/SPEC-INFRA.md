@@ -29,11 +29,16 @@ a uma origem e a um plano (grátis).
    upload/store, com cache de "já garantido" por instância) OU um script de setup
    corrido uma vez à mão. Dois buckets hoje: `avatars`, `campeonatos`.
 
-3. **Rate-limit** — `express-rate-limit` (`apiLimiter` 200/15min, `strictLimiter`
-   20/15min em `/api/me/avatar`) usa **store em memória**. Entre instâncias
-   serverless a contagem não é partilhada → limite deixa de valer.
-   → Trocar por store partilhado (Upstash Redis / Vercel KV) OU rate-limit da
-   própria Vercel (WAF/edge). Reavaliar limites com a fase Segurança.
+3. **Rate-limit** — `express-rate-limit` (`backend/middleware/limiters.js`, tetos
+   num lugar só em `limitesPara`; desde o Hotfix 25, 25-set): toda a `/api` em DOIS
+   baldes, cada pedido num só — **1500/15 min por IP** (chave `CF-Connecting-IP`;
+   quem não tem sessão conhecida) e **600/15 min por sessão** (quem o motor já
+   validou); **avatar 20/15 min por sessão** (`/api/me/avatar[/ai]`); **mídia
+   2000/15 min por IP real** (`/api/media`, fora dos baldes gerais); telemetria
+   anônima **300/15 min por IP** (`/api/telemetria`, Rodada 28, também fora). O
+   store é **em memória por instância**: no Cloud Run, com mais de uma instância
+   o teto efetivo multiplica-se — aceitável hoje (min-instances 1).
+   → Se virar problema: store partilhado (Redis) ou regra de WAF na Cloudflare.
 
 4. **Ficheiros estáticos do disco** — `server.js` serve `/uploads`,
    `/public/avatares`, `/public/logos`, `/public` via `express.static` (disco do
@@ -45,7 +50,8 @@ a uma origem e a um plano (grátis).
 
 5. **Envs** — mover `SUPABASE_*`, `FAL_KEY`, `STRIPE_*`, `VAPID_*`, `FRONTEND_URL`,
    `CORS_ORIGINS` do Railway para as **Environment Variables da Vercel** (por
-   ambiente: Production/Preview). O `SUPABASE_SERVICE_KEY` é secreto — só server-side.
+   ambiente: Production/Preview). A chave secreta do Supabase (`SUPABASE_SECRET_KEY`,
+   `sb_secret_…`; a antiga era `SUPABASE_SERVICE_KEY`, Rodada 28) é só server-side.
 
 6. **CORS** — hoje `server.js:52-70` permite localhost + `.app.github.dev` +
    `CORS_ORIGINS`. Com frontend e backend na **mesma origem Vercel**, o grosso dos
