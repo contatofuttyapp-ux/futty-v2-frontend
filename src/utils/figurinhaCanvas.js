@@ -591,11 +591,45 @@ export function enquadrarAvatar({ W, H, nw, nh, avatarZoom = 1, ehQuadrado = fal
 // margem o que sobra é chão, não cabeça (a regra de sempre — a coroa nunca é comida). O recorte 2:3 do
 // CropModal já é o enquadramento que a pessoa escolheu; num card 2:3 ele aparece inteiro, num quadrado
 // aparece o quadrado do topo dele.
-export function enquadrarFotoComum({ W, H, nw, nh }) {
+//
+// RODADA 28 — zoom (−/+) na Figurinha. O PISO é 1 = a foto cobre a moldura por completo (nunca faixa
+// vazia, nunca a borda da foto à mostra); acima disso aproxima em torno do rosto — o centro na
+// horizontal e o terço de cima na vertical, onde o CropModal pede o rosto — sem nunca descobrir a
+// borda. Com zoom 1 a conta é EXATAMENTE a de antes: o enquadramento salvo continua a ser o de todas
+// as telas (o Início e a prévia dele usam sempre 1).
+const ANCORA_DO_ROSTO_Y = 1 / 3;
+export function enquadrarFotoComum({ W, H, nw, nh, zoom = 1 }) {
   const escala = Math.max(W / nw, H / nh);
-  const dw = nw * escala;
-  const dh = nh * escala;
-  return { dx: (W - dw) / 2, dy: dh > H ? 0 : (H - dh) / 2, dw, dh };
+  const dw1 = nw * escala;
+  const dh1 = nh * escala;
+  const dx1 = (W - dw1) / 2;
+  const dy1 = dh1 > H ? 0 : (H - dh1) / 2;
+  const z = Math.max(1, Number(zoom) || 1);
+  if (z === 1) return { dx: dx1, dy: dy1, dw: dw1, dh: dh1 };
+  const dw = dw1 * z;
+  const dh = dh1 * z;
+  // O ponto da foto que estava sob a âncora continua sob ela; depois, trava para a foto seguir a cobrir.
+  const ax = W / 2;
+  const ay = H * ANCORA_DO_ROSTO_Y;
+  const dentro = (v, min) => Math.min(0, Math.max(min, v));
+  return {
+    dx: dentro(ax - ((ax - dx1) / dw1) * dw, W - dw),
+    dy: dentro(ay - ((ay - dy1) / dh1) * dh, H - dh),
+    dw,
+    dh,
+  };
+}
+
+/**
+ * RODADA 28 — o card mostra AGORA uma figurinha (IA)? Quem diz é o motor (`figurinha_ativa`, pela regra
+ * única do nome do arquivo — backend/utils/figurinhaRegra.js). As telas decidiam por foto_url ≠
+ * avatar_url, e a foto do Google em avatar_url entrava no card como figurinha: seletor de fundos, zoom
+ * abaixo da moldura, faixas vazias. A conta antiga só vale para uma resposta guardada de antes desta
+ * rodada, sem o campo, até o /api/me fresco chegar.
+ */
+export function mostraFigurinha(user) {
+  if (typeof user?.figurinha_ativa === 'boolean') return user.figurinha_ativa;
+  return !!user?.foto_url && !!user?.avatar_url && user.foto_url !== user.avatar_url;
 }
 
 /** O recorte octogonal do card, em percentagem — para o clip-path do CSS. */
@@ -605,7 +639,7 @@ export function octagonoCSS() {
   return 8;
 }
 
-async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [], fundoGlints = 'pico', modo = 'brilhante', cron = null }) {
+async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo = 'estadio', corFrame = 'dourado', fotoOverride = null, avatarZoom = 1, fotoZoom = 1, apenasAvatar = false, apenasMoldura = false, apenasPlacaNome = false, formato = 'card', selos = [], fundoGlints = 'pico', modo = 'brilhante', cron = null }) {
   const W = largura;
   const H = altura;
   const k = largura / 400;
@@ -698,8 +732,9 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // fundo) e sem inset (o frame desenha-se por cima, como numa moldura de
     // retrato de verdade). O clip octogonal do conteúdo já está ativo.
     if (ehComum) {
-      // Alinhado ao TOPO quando a foto sobra em altura (enquadrarFotoComum, acima do construirCard).
-      const { dx, dy, dw, dh } = enquadrarFotoComum({ W, H, nw: avatar.naturalWidth, nh: avatar.naturalHeight });
+      // Alinhado ao TOPO quando a foto sobra em altura (enquadrarFotoComum, acima do construirCard);
+      // o zoom (Rodada 28) só aproxima — nunca abaixo de cobrir a moldura.
+      const { dx, dy, dw, dh } = enquadrarFotoComum({ W, H, nw: avatar.naturalWidth, nh: avatar.naturalHeight, zoom: fotoZoom });
       ctx.drawImage(avatar, dx, dy, dw, dh);
       return;
     }
@@ -921,9 +956,32 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     }
   };
 
+  // 4. GRADIENTE INFERIOR (depois do avatar). No card é suave (0.72) porque a placa
+  // dá o contraste. No QUADRADO não há placa: um gradiente curto (0.84→H) e de alpha
+  // moderada (0.55) só assenta o avatar na base, sem escurecer o peito.
+  const desenharGradienteInferior = () => {
+    if (ehQuadrado) {
+      const gb = ctx.createLinearGradient(0, H * 0.84, 0, H);
+      gb.addColorStop(0, 'rgba(0,0,0,0)');
+      gb.addColorStop(1, 'rgba(0,0,0,0.55)');
+      ctx.fillStyle = gb;
+      ctx.fillRect(0, H * 0.84, W, H * 0.16);
+    } else {
+      const gb = ctx.createLinearGradient(0, H * 0.74, 0, H);
+      gb.addColorStop(0, 'rgba(0,0,0,0)');
+      gb.addColorStop(1, 'rgba(0,0,0,0.72)');
+      ctx.fillStyle = gb;
+      ctx.fillRect(0, H * 0.74, W, H * 0.26);
+    }
+  };
+
   // MODO CAMADA SÓ-AVATAR: canvas transparente, desenha só o avatar real.
   if (apenasAvatar) {
     if (avatar) desenharAvatar();
+    // RODADA 28 — na COMUM a foto cobre o card inteiro: o gradiente de baixo, que no PNG baixado vem
+    // POR CIMA da foto, tem de vir nesta camada. Na camada do fundo ele ficava escondido atrás da foto
+    // e a prévia da Figurinha saía mais clara que o card que a pessoa baixa e compartilha.
+    if (ehComum && avatar) desenharGradienteInferior();
     ctx.restore();
     return canvas;
   }
@@ -1020,22 +1078,9 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.restore();
   }
 
-  // 4. GRADIENTE INFERIOR (depois do avatar). No card é suave (0.72) porque a placa
-  // dá o contraste. No QUADRADO não há placa: um gradiente curto (0.84→H) e de alpha
-  // moderada (0.55) só assenta o avatar na base, sem escurecer o peito.
-  if (ehQuadrado) {
-    const gb = ctx.createLinearGradient(0, H * 0.84, 0, H);
-    gb.addColorStop(0, 'rgba(0,0,0,0)');
-    gb.addColorStop(1, 'rgba(0,0,0,0.55)');
-    ctx.fillStyle = gb;
-    ctx.fillRect(0, H * 0.84, W, H * 0.16);
-  } else {
-    const gb = ctx.createLinearGradient(0, H * 0.74, 0, H);
-    gb.addColorStop(0, 'rgba(0,0,0,0)');
-    gb.addColorStop(1, 'rgba(0,0,0,0.72)');
-    ctx.fillStyle = gb;
-    ctx.fillRect(0, H * 0.74, W, H * 0.26);
-  }
+  // 4. GRADIENTE INFERIOR (depois do avatar) — ver desenharGradienteInferior. Na camada de fundo
+  // da prévia da COMUM ele não entra: vai com a foto (camada apenasAvatar), por cima dela.
+  if (!(ehComum && apenasMoldura)) desenharGradienteInferior();
 
   // 4b + 5. PLACA + NOME — no card completo desenham-se aqui (depois do avatar,
   // antes do frame). No preview são a camada de topo (apenasPlacaNome), por isso

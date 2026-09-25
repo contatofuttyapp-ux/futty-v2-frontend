@@ -20,7 +20,7 @@ import { nomeJogador, urlAsset, urlImagem } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
 import { getFrameColor } from '../utils/frameColors';
-import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal } from '../utils/figurinhaCanvas';
+import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
 import { produtoPorId } from '../lib/planos';
@@ -141,6 +141,9 @@ const CLIP_OCTOGONO = 'polygon(8% 0, 92% 0, 100% 5.3%, 100% 94.7%, 92% 100%, 8% 
 // o degrau de 80% deixou de existir. Qualquer valor abaixo é normalizado no arranque.
 const ZOOM_MIN = 0.99;
 const ZOOM_MAX = 1.43;
+// RODADA 28 — zoom do card com a FOTO: 1 = a foto cobre a moldura por completo (o piso — nunca faixa
+// vazia nem borda à mostra, ver enquadrarFotoComum); cada toque aproxima 10%, até 40%.
+const FOTO_ZOOM_MAX = 1.4;
 
 // Nome de ficheiro seguro a partir do nome do jogador.
 function ficheiroNome(nome, sufixo = '') {
@@ -273,6 +276,9 @@ export default function Figurinha() {
   // Clamp defensivo no arranque: normaliza qualquer valor fora de [ZOOM_MIN, ZOOM_MAX]
   // (ex.: um 0.88 herdado) para dentro dos limites novos.
   const [avatarZoom, setAvatarZoom] = useState(() => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, 1.1)));
+  // Rodada 28: o do card com a foto. Só da vista e do que se baixa/compartilha daqui — o enquadramento
+  // salvo (Trocar foto → Ajustar enquadramento) continua a ser o de todas as telas; volta a 1 com foto nova.
+  const [fotoZoom, setFotoZoom] = useState(1);
   // Flow de estreia (1ª visita sem foto/avatar): null = a decidir, 'foto' |
   // 'gerando' | 'pronto' = ecrãs A/B/C, 'fim' = studio normal.
   const [estreiaFase, setEstreiaFase] = useState(() => (localStorage.getItem('futty_figurinha_estreia') ? 'fim' : null));
@@ -307,10 +313,10 @@ export default function Figurinha() {
   // um avatar IA confirmado (foto_url e avatar_url existem e são diferentes —
   // logo após o upload o backend grava a foto crua em ambos, então é igual).
   const fotoOriginal = me?.user?.foto_url || null;
-  // `avatarEhIA` = TEM BRILHANTE. Continua a ser a mesma conta de sempre (o
-  // avatar_url é diferente da foto só quando a IA gerou alguma coisa), mas
-  // desde 22-set o nome da coisa mudou: SPEC-FIGURINHA-3.
-  const avatarEhIA = !!fotoOriginal && !!me?.user?.avatar_url && fotoOriginal !== me.user.avatar_url;
+  // `avatarEhIA` = o card mostra AGORA uma figurinha (IA). RODADA 28: quem diz é o motor
+  // (`figurinha_ativa`, pelo nome do arquivo — mostraFigurinha). Era foto_url ≠ avatar_url, e a foto
+  // do Google em avatar_url virava "figurinha": seletor de fundos e zoom abaixo da moldura numa foto.
+  const avatarEhIA = mostraFigurinha(me?.user);
   // Rodada 18: existe uma figurinha (mesmo que o card esteja em modo 'foto'
   // agora) — o sinal certo para "há algo para o interruptor escolher", ao
   // contrário de avatarEhIA, que só diz o que está ativo NESTE instante.
@@ -325,6 +331,15 @@ export default function Figurinha() {
   // continua a ser o convite (nunca um buraco).
   const modoCard = avatarEhIA ? 'brilhante' : 'comum';
   const temFoto = !!fotoOriginal;
+  // RODADA 28 — o "Tamanho −/+" serve aos dois cards: na figurinha é o tamanho do jogador recortado; na
+  // FOTO é o zoom da foto, com piso em "cobre a moldura por completo" (o − para em 1).
+  const zoomDaFoto = !avatarEhIA && temFoto;
+  const zoomNoMinimo = zoomDaFoto ? fotoZoom <= 1 : avatarZoom <= ZOOM_MIN;
+  const zoomNoMaximo = zoomDaFoto ? fotoZoom >= FOTO_ZOOM_MAX : avatarZoom >= ZOOM_MAX;
+  function mudarZoom(sentido) {
+    if (zoomDaFoto) setFotoZoom((z) => Math.min(FOTO_ZOOM_MAX, Math.max(1, +(z + sentido * 0.1).toFixed(2))));
+    else setAvatarZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(z + sentido * 0.11).toFixed(2))));
+  }
   const jogadorCard = avatarEhIA || temFoto
     ? jogador
     : { ...jogador, avatar_url: avatarGenericoUrl(jogador.id, avatarGenericoEscolha) };
@@ -367,6 +382,93 @@ export default function Figurinha() {
   // recusado diz o motivo que o dono escreveu no Gabinete; ativado não aparece
   // aqui de todo — quem foi ativado já vê o botão dourado, e um recado sobre um
   // pedido resolvido só ia competir com ele.
+  // RODADA 28 — A GRADE DE UNIFORMES (a mesma .fig-seletor-grade dos fundos), igual nos dois cards. No
+  // card com a FOTO ela substitui o "Pedir a minha": o 1º liberado — o uniforme do time quando há pacote
+  // ativo, senão o padrão — e os demais com cadeado, que levam a Planos → Figurinhas (lá, no app da
+  // loja, sem preço: ehNativo). Nada de "em breve". Estado de cada tile:
+  //   vestido  — o card mostra este uniforme agora (✓)
+  //   pintado  — já foi gerado: um toque veste, grátis (Rodada 21, uniformes guardados)
+  //   geravel  — o direito da pessoa pinta este (crédito: qualquer um; pacote: o do time) — com aviso
+  //   livre    — o 1º liberado, mas ainda sem geração: leva aos Planos, sem cadeado
+  //   trancado — cadeado: leva aos Planos
+  const timeComPacote = (brilhante?.times || []).find((t) => t.brilhante_ativo && t.brilhante_kit) || null;
+  const kitLiberado = kitDoTime || timeComPacote?.brilhante_kit || KITS_FIGURINHA[0].id;
+  const temCredito = fonteDireito === 'credito' || (brilhante?.creditos || 0) > 0;
+  function estadoDoKit(kit) {
+    if (avatarEhIA && kit.id === kitAtivo) return 'vestido';
+    if (slotsKits.includes(kit.id)) return 'pintado';
+    if (temCredito || (fonteDireito === 'time' && kit.id === kitDoTime)) return 'geravel';
+    return kit.id === kitLiberado ? 'livre' : 'trancado';
+  }
+  const kitsDaGrade = KITS_FIGURINHA.filter((k) => k.estado !== 'breve').sort((a, b) => (b.id === kitLiberado) - (a.id === kitLiberado));
+  function tocarUniforme(kit) {
+    const estado = estadoDoKit(kit);
+    if (estado === 'vestido' || gerandoIA) return;
+    if (estado === 'pintado' || estado === 'geravel') {
+      escolherKit(kit);
+      return;
+    }
+    // O dono de um time sem pacote vê o pacote em destaque (resolve o time inteiro); o resto, a Minha.
+    const destaque = estado === 'livre' && meuTimeBrilhante && !meuTimeBrilhante.brilhante_ativo ? 'pacote' : 'minha';
+    navigate(`/planos?destaque=${destaque}`);
+  }
+  function gradeDeUniformes() {
+    return (
+      <div className="fig-seletor-grade" data-grade="uniformes">
+        {kitsDaGrade.map((kit) => {
+          const estado = estadoDoKit(kit);
+          const trancado = estado === 'trancado';
+          return (
+            <button
+              key={kit.id}
+              type="button"
+              className="fig-seletor-tile"
+              onClick={() => tocarUniforme(kit)}
+              aria-label={trancado ? `${kit.nome} (bloqueado)` : kit.nome}
+              aria-pressed={estado === 'vestido'}
+              data-estado={estado}
+              disabled={gerandoIA}
+            >
+              {/* Thumbnail quadrado */}
+              <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, border: estado === 'vestido' ? '2px solid #d4a017' : estado === 'livre' || estado === 'geravel' ? '1px solid rgba(212,160,23,0.55)' : '1px solid var(--border-subtle)', filter: estado === 'vestido' ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
+                {KIT_IMG[kit.id] ? (
+                  // Enquadramento (reparo do look): o cover cortava a camisa a meio.
+                  // Ancora ao topo + desce + reduz a escala → vê-se o corte da gola e
+                  // o padrão da manga de relance, com a maior parte da camisa visível.
+                  <img
+                    src={KIT_IMG[kit.id]}
+                    alt=""
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 10%', transform: 'scale(0.82) translateY(7%)', transformOrigin: '50% 0%' }}
+                  />
+                ) : null}
+                {estado === 'vestido' ? (
+                  <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: '#d4a017', color: '#0d0d12', display: 'grid', placeItems: 'center' }}>
+                    <Check size={10} strokeWidth={3} />
+                  </span>
+                ) : null}
+                {/* Gerável (com direito, sem slot): avisa que custa 1 geração — Rodada 21. */}
+                {estado === 'geravel' ? (
+                  <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.75)', color: '#d4a017', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    <EstrelaIA size={7} color="#d4a017" /> pintar · 1 geração
+                  </span>
+                ) : null}
+                {trancado ? (
+                  <span aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(5,8,16,0.55)', color: '#f0c94a' }}>
+                    <Lock size={16} />
+                  </span>
+                ) : null}
+              </div>
+              {/* Nome */}
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: trancado ? 'var(--label-color)' : '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {kit.nome}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   const pedidoPacote = pedidoDoProduto(brilhante?.pedidos, 'pacote', meuTimeBrilhante?.id);
   const pedidoMinha = pedidoDoProduto(brilhante?.pedidos, 'minha');
   const candidatos = [pedidoPacote, pedidoMinha].filter(Boolean);
@@ -458,7 +560,7 @@ export default function Figurinha() {
   // entra nas deps do efeito de pintura de propósito: quem o dispara é a troca do
   // foto_url que chega no mesmo lote (setMe + setFotoLocal), e limpar o preview depois
   // não precisa repintar nada.
-  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom, modo: modoCard, fotoOverride: modoCard === 'comum' ? fotoLocal : null, selos: selosVisiveis.map((s) => ({ tier: s.tier, label: s.label })) };
+  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom, fotoZoom: modoCard === 'comum' ? fotoZoom : 1, modo: modoCard, fotoOverride: modoCard === 'comum' ? fotoLocal : null, selos: selosVisiveis.map((s) => ({ tier: s.tier, label: s.label })) };
 
   // Pré-selecciona as escolhas guardadas a partir do `perfil` já carregado
   // pelo PerfilContext — 1x só, quando ele chega (guard por ref: o `perfil`
@@ -533,6 +635,9 @@ export default function Figurinha() {
           foto_url: perfil.user?.foto_url ?? m.user?.foto_url,
           avatar_url: perfil.user?.avatar_url ?? m.user?.avatar_url,
           kit_ativo: perfil.user?.kit_ativo ?? m.user?.kit_ativo,
+          // Rodada 28: o que o card mostra anda junto com o avatar_url.
+          figurinha_ativa: perfil.user?.figurinha_ativa ?? m.user?.figurinha_ativa,
+          tem_figurinha: perfil.user?.tem_figurinha ?? m.user?.tem_figurinha,
         },
         slots: perfil.slots ?? m.slots,
       } : perfil));
@@ -599,7 +704,7 @@ export default function Figurinha() {
   // `jogador?.foto_url` entra nas deps por causa do modo COMUM (22-set): ali a
   // base do card é a FOTO, e trocá-la tem de repintar o cromo — no modo
   // brilhante quem muda é o avatar_url, que já estava aqui.
-  }, [me?.user?.id, fundo, avatarZoom, avatarEhIA, jogador?.avatar_url, jogador?.foto_url, avatarGenericoEscolha, estreiaFase, selosKey]);
+  }, [me?.user?.id, fundo, avatarZoom, fotoZoom, avatarEhIA, jogador?.avatar_url, jogador?.foto_url, avatarGenericoEscolha, estreiaFase, selosKey]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => () => { if (fundoUrl) URL.revokeObjectURL(fundoUrl); }, [fundoUrl]);
@@ -680,7 +785,7 @@ export default function Figurinha() {
     setLimiteIA(false);
     try {
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold' }) });
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa } } : m));
       setFotoLocal(null);
       recarregarPerfilGlobal();
     } catch (err) {
@@ -730,6 +835,7 @@ export default function Figurinha() {
           foto_url: data.foto_url ?? data.avatar_url,
           avatar_url: data.avatar_url,
           foto_original_url: data.foto_original_url ?? m.user.foto_original_url ?? null,
+          figurinha_ativa: data.figurinha_ativa,
         },
       } : m));
       // O contexto do perfil também aprende a foto nova, sem rede: sem isto, sair da
@@ -738,7 +844,9 @@ export default function Figurinha() {
         foto_url: data.foto_url ?? data.avatar_url,
         avatar_url: data.avatar_url,
         foto_original_url: data.foto_original_url ?? me?.user?.foto_original_url ?? null,
+        figurinha_ativa: data.figurinha_ativa,
       });
+      setFotoZoom(1); // foto nova: o zoom volta a "cobre a moldura"
       setFotoLocal(URL.createObjectURL(file)); // 200 confirmado: agora sim o preview e a linha "Foto trocada"
       setUploadFoto(false);
       ultimoFicheiro.current = null;
@@ -771,8 +879,9 @@ export default function Figurinha() {
     setUploadErro(null);
     try {
       const data = await apiUploadCampos('/api/me/avatar/recorte', { recorte: file }, { method: 'PUT' });
-      setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url, avatar_url: data.avatar_url } } : m));
-      aplicarNoPerfilGlobal({ foto_url: data.foto_url, avatar_url: data.avatar_url });
+      setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa } } : m));
+      aplicarNoPerfilGlobal({ foto_url: data.foto_url, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa });
+      setFotoZoom(1); // enquadramento novo: é ele que manda, o zoom volta ao piso
       setFotoLocal(URL.createObjectURL(file)); // só depois do 200, como em subirFoto
       setUploadFoto(false);
       ultimoRecorte.current = null;
@@ -869,7 +978,7 @@ export default function Figurinha() {
     setErro('');
     try {
       const data = await apiFetch(`/api/me/avatar/historico/${item.id}`, { method: 'PUT' });
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit } } : m));
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa } } : m));
       setFotoLocal(null); // mostra o avatar_url novo (não o preview local de upload)
       recarregarPerfilGlobal();
       setToast({ tipo: 'success', mensagem: 'Figurinha aplicada!' });
@@ -951,7 +1060,7 @@ export default function Figurinha() {
       // Guarda o avatar, o kit vestido e regista o slot novo (sem duplicar).
       setMe((m) => (m ? {
         ...m,
-        user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit },
+        user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa },
         slots: [...new Set([...(m.slots || []), data.kit])],
       } : m));
       setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
@@ -1017,7 +1126,9 @@ export default function Figurinha() {
   // PUT (não gasta direito); sem slot e sem direito → /planos; sem slot e com
   // direito → confirma e gera.
   async function escolherKit(kit) {
-    if (kit.estado === 'breve' || kit.id === kitAtivo || gerandoIA) return;
+    // Rodada 28: "já vestido" só vale com a figurinha no card — no card com a FOTO nenhum uniforme está
+    // vestido (kit_ativo nasce 'dark-gold' pelo default da coluna), e tocar nele tem de pintar/vestir.
+    if (kit.estado === 'breve' || (avatarEhIA && kit.id === kitAtivo) || gerandoIA) return;
     // 22-set: o cadeado deixou de ser por PLANO e passou a ser por DIREITO
     // (§5). Vestir um uniforme que já se gerou é sempre livre (slot, custo
     // zero); gerar um novo precisa de crédito ou do pacote do time — e é isso
@@ -1026,8 +1137,8 @@ export default function Figurinha() {
     if (slotsKits.includes(kit.id)) {
       try {
         const data = await apiFetch('/api/me/kit', { method: 'PUT', body: JSON.stringify({ kit: kit.id }) });
-        setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit } } : m));
-        aplicarNoPerfilGlobal({ avatar_url: data.avatar_url, kit_ativo: data.kit });
+        setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa } } : m));
+        aplicarNoPerfilGlobal({ avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa });
       } catch {
         setErroIA(true);
       }
@@ -1076,8 +1187,8 @@ export default function Figurinha() {
     setTrocandoModo(true);
     try {
       const data = await apiFetch('/api/me/avatar/modo', { method: 'PUT', body: JSON.stringify({ modo }) });
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url } } : m));
-      aplicarNoPerfilGlobal({ avatar_url: data.avatar_url });
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa } } : m));
+      aplicarNoPerfilGlobal({ avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa });
     } catch (e) {
       setErro(e?.message || 'Não foi possível trocar o card.');
     } finally {
@@ -1449,25 +1560,25 @@ export default function Figurinha() {
         {/* 2. CONTROLOS — tabs + painel + detalhes */}
         <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
           {/* FASE 3.36 — Zoom saiu de cima do card: linha discreta ABAIXO, à direita.
-              Mesma família visual das tabs. Limites e função iguais (90–130%). */}
-          {avatarEhIA && !fotoLocal ? (
+              Mesma família visual das tabs. RODADA 28: também no card com a FOTO (ver zoomDaFoto). */}
+          {(avatarEhIA || temFoto) && !fotoLocal ? (
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, height: 26, marginTop: -4, marginBottom: -6 }}>
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)', marginRight: 2 }}>Tamanho</span>
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)', marginRight: 2 }}>{zoomDaFoto ? 'Zoom' : 'Tamanho'}</span>
               <button
                 type="button"
-                aria-label="Reduzir tamanho do avatar"
+                aria-label={zoomDaFoto ? 'Afastar a foto' : 'Reduzir tamanho do avatar'}
                 className="fig-zoom-btn hud-corners-s"
-                onClick={() => setAvatarZoom((z) => Math.max(ZOOM_MIN, +(z - 0.11).toFixed(2)))}
-                disabled={avatarZoom <= ZOOM_MIN}
+                onClick={() => mudarZoom(-1)}
+                disabled={zoomNoMinimo}
               >
                 <Minus size={14} />
               </button>
               <button
                 type="button"
-                aria-label="Aumentar tamanho do avatar"
+                aria-label={zoomDaFoto ? 'Aproximar a foto' : 'Aumentar tamanho do avatar'}
                 className="fig-zoom-btn hud-corners-s"
-                onClick={() => setAvatarZoom((z) => Math.min(ZOOM_MAX, +(z + 0.11).toFixed(2)))}
-                disabled={avatarZoom >= ZOOM_MAX}
+                onClick={() => mudarZoom(1)}
+                disabled={zoomNoMaximo}
               >
                 <Plus size={14} />
               </button>
@@ -1556,12 +1667,14 @@ export default function Figurinha() {
                 tempo (30s aqui, 45s ali) confundia mais do que ajudava. */}
           </div>
 
-          {/* VIRE BRILHANTE ✨ (SPEC-FIGURINHA-3 §3/§7) — o único bloco que
-              substitui os seletores de fundo/uniforme na figurinha comum. Um
-              exemplo FIXO (o modelo fictício da conta demo, nunca gerado na
-              hora: gerar um exemplo custaria US$0,11 por pessoa que abrisse a
-              tela) e os dois caminhos. `loading="lazy"` + WebP no dobro do
-              tamanho de exibição, como manda a lei do app leve (14-set). */}
+          {/* VIRE BRILHANTE ✨ (SPEC-FIGURINHA-3 §3/§7) — o convite do card com a
+              FOTO para quem ainda não tem geração. Um exemplo FIXO (o modelo
+              fictício da conta demo, nunca gerado na hora: gerar um exemplo
+              custaria US$0,11 por pessoa que abrisse a tela). `loading="lazy"` +
+              WebP no dobro do tamanho de exibição (lei do app leve, 14-set).
+              RODADA 28: o "Pedir a minha" saiu daqui — a escolha agora é a grade
+              de uniformes logo abaixo (cadeado → Planos). Fica o pacote para o
+              dono do time: resolve o time inteiro. */}
           {!avatarEhIA && temFoto && !temDireitoDeGerar && brilhante ? (
             <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '16px', display: 'grid', gap: 12 }}>
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
@@ -1613,15 +1726,6 @@ export default function Figurinha() {
                     </button>
                   </span>
                 ) : null}
-                <button
-                  type="button"
-                  className="btn btn--purple hud-corners"
-                  style={{ width: '100%', fontSize: 12.5 }}
-                  disabled={pedindo === 'minha'}
-                  onClick={() => pedirBrilhante('minha')}
-                >
-                  {pedindo === 'minha' ? 'Enviando…' : produtoPorId('minha').botaoBloco}
-                </button>
                 <Link to="/planos" style={{ fontSize: 11.5, color: 'var(--label-color)', textAlign: 'center', textDecoration: 'none' }}>
                   Ver o que cada um dá →
                 </Link>
@@ -1666,11 +1770,12 @@ export default function Figurinha() {
             </div>
           ) : null}
 
-          {/* Tab strip — SÓ com Brilhante (SPEC-FIGURINHA-3 §3: "sem seletor de
-              fundo nem de uniforme" na comum). Os fundos são composição no
-              card, custo zero, mas são um prémio de quem pagou; e o uniforme
-              não existe numa foto sem IA. No lugar deles fica o bloco "Vire
-              Brilhante", logo acima. */}
+          {/* Tab strip — SÓ com a figurinha (SPEC-FIGURINHA-3 §3). Os fundos são composição
+              no card, custo zero, mas são um prêmio de quem pagou — e a foto já tem o fundo
+              dela. RODADA 28: só as abas ficam exclusivas daqui; o card com a FOTO ganha a grade
+              de uniformes (logo abaixo, no outro ramo), e as ações, o anúncio e os selos voltam a
+              valer para os dois (desde 22-set este bloco embrulhava também o Baixar/Compartilhar,
+              e o card com a foto não tinha como ser baixado nem compartilhado). */}
           {avatarEhIA ? (
           <>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -1784,84 +1889,20 @@ export default function Figurinha() {
               ) : null}
             </div>
           ) : (
-            // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile
-            // em app.css, nota de 15-set) — mesma largura total, mesmo tile, mesmo gap,
-            // mesmo padding lateral, mesma rolagem horizontal.
-            <div className="fig-seletor-grade">
-              {/* Achado 1 (roteiro 10-set): kit ainda não lançado nem aparece — nada de
-                  "em breve" na tela. RODADA 21: sem direito nenhum, só os já
-                  pintados aparecem — o resto é o bloco "Vire figurinha" logo
-                  abaixo da grelha, não tiles trancados sem saída. */}
-              {KITS_FIGURINHA.filter((kit) => kit.estado !== 'breve' && (temDireitoDeGerar || slotsKits.includes(kit.id))).map((kit) => {
-                // A2 — estados reais: VESTIDO (kit_ativo) | GERADO (tem slot, 1 toque veste)
-                // | GERÁVEL (sem slot, com direito → custa 1 geração). Chegar
-                // aqui sem direito só é possível já sendo GERADO (o filter
-                // acima corta o resto) — por isso não existe mais "bloqueado".
-                const vestido = kit.id === kitAtivo;
-                const gerado = slotsKits.includes(kit.id);
-                const geravel = !gerado;
-                return (
-                  <button
-                    key={kit.id}
-                    type="button"
-                    className="fig-seletor-tile"
-                    onClick={() => escolherKit(kit)}
-                    aria-label={kit.nome}
-                    aria-pressed={vestido}
-                    disabled={gerandoIA}
-                  >
-                    {/* Thumbnail quadrado */}
-                    <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, border: vestido ? '2px solid #d4a017' : '1px solid var(--border-subtle)', filter: vestido ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
-                      {KIT_IMG[kit.id] ? (
-                        // Enquadramento (reparo do look): o cover cortava a camisa a meio.
-                        // Ancora ao topo + desce + reduz a escala → vê-se o corte da gola e
-                        // o padrão da manga de relance, com a maior parte da camisa visível.
-                        <img
-                          src={KIT_IMG[kit.id]}
-                          alt={kit.nome}
-                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 10%', transform: 'scale(0.82) translateY(7%)', transformOrigin: '50% 0%' }}
-                        />
-                      ) : null}
-                      {vestido ? (
-                        <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: '#d4a017', color: '#0d0d12', display: 'grid', placeItems: 'center' }}>
-                          <Check size={10} strokeWidth={3} />
-                        </span>
-                      ) : null}
-                      {/* Gerável (activo, sem slot): avisa que custa 1 geração e que ainda
-                          não foi pintado — RODADA 21, selo pedido na spec. */}
-                      {geravel ? (
-                        <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.75)', color: '#d4a017', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                          <EstrelaIA size={7} color="#d4a017" /> pintar · 1 geração
-                        </span>
-                      ) : null}
-                    </div>
-                    {/* Nome */}
-                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {kit.nome}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile em app.css, nota de
+            // 15-set). RODADA 28: a mesma grade do card com a foto — o que não se pode pintar aparece com
+            // cadeado (leva aos Planos) em vez de sumir, e o "Pedir a minha" que ficava por baixo saiu.
+            gradeDeUniformes()
           )}
-
-          {/* RODADA 21 — zero gerações e não é o pacote do time (que já tem o
-              seu próprio recado, acima): o convite compacto para "Minha
-              Figurinha", no lugar dos tiles trancados que saíram da grelha. */}
-          {activeTab === 'uniforme' && fonteDireito !== 'time' && !temDireitoDeGerar ? (
-            <div className="hud-corners" style={{ padding: '12px 14px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center', background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.35)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#f0c94a' }}>
-                <Lock size={13} /> Vire figurinha ✨
+          </>
+          ) : temFoto ? (
+            // RODADA 28 — card com a FOTO: sem seletor de fundos (o fundo é o da própria foto) e, no lugar
+            // do "Pedir a minha", os uniformes — o 1º liberado, os outros com cadeado (ver gradeDeUniformes).
+            <div style={{ display: 'grid', gap: 8 }}>
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)' }}>
+                Uniforme da figurinha
               </span>
-              <button
-                type="button"
-                className="btn btn--purple hud-corners"
-                style={{ width: '100%', fontSize: 12.5 }}
-                disabled={pedindo === 'minha'}
-                onClick={() => pedirBrilhante('minha')}
-              >
-                {pedindo === 'minha' ? 'Enviando…' : produtoPorId('minha').botaoBloco}
-              </button>
+              {gradeDeUniformes()}
             </div>
           ) : null}
 
@@ -1947,8 +1988,6 @@ export default function Figurinha() {
                   })}
                 </div>
               </div>
-          ) : null}
-          </>
           ) : null}
         </div>
       </main>
@@ -2203,7 +2242,12 @@ export default function Figurinha() {
                     Pintar no uniforme {kitParaPintar.nome}?
                   </h2>
                   <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                    Usa 1 das suas {restantesDireito === 1 ? '1 geração' : `${restantesDireito} gerações`} · leva ~45 s
+                    {(() => {
+                      // Rodada 28: uniforme que não é o do pacote do time sai dos CRÉDITOS (o motor
+                      // usa o crédito para ele) — o número é o dos créditos, não o do pacote.
+                      const n = kitDoTime && kitParaPintar.id !== kitDoTime && temCredito ? (brilhante?.creditos ?? restantesDireito) : restantesDireito;
+                      return `Usa 1 das suas ${n === 1 ? '1 geração' : `${n} gerações`} · leva ~45 s`;
+                    })()}
                   </p>
                   <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
                     <span className="cta-gold-glow" style={{ display: 'flex' }}>

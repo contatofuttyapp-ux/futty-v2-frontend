@@ -14,7 +14,7 @@ import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
 import { plural } from '../utils/plural';
-import { gerarFigurinhaCanvas, enquadrarAvatar, enquadrarFotoComum } from '../utils/figurinhaCanvas';
+import { gerarFigurinhaCanvas, enquadrarAvatar, enquadrarFotoComum, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
@@ -551,8 +551,8 @@ export default function Inicio() {
   const stats = me?.stats;
   const nome = user?.nome_jogador || user?.nome || user?.email?.split('@')[0] || 'Jogador';
 
-  // Avatar IA confirmado (mesma regra da Figurinha): a foto CRUA nunca entra no cromo.
-  const cromoAvatarEhIA = !!user?.foto_url && !!user?.avatar_url && user.foto_url !== user.avatar_url;
+  // Figurinha IA no card agora? Quem diz é o motor (Rodada 28, mostraFigurinha) — mesma regra da Figurinha.
+  const cromoAvatarEhIA = mostraFigurinha(user);
   const cromoFundo = user?.fundo_figurinha || 'estadio';
   // Com Brilhante, o cromo de sempre; sem Brilhante mas com FOTO, a figurinha COMUM (a foto, a cobrir o
   // cromo); sem foto, o genérico da casa. Uma conta só: o canvas e a prévia em DOM leem a mesma.
