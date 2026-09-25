@@ -1,5 +1,18 @@
+import { execSync } from 'node:child_process'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+
+// RODADA 28 — a versão do SITE para a telemetria anônima de velocidade ("p50/p95 por versão" no
+// Gabinete): o commit do build. Na Cloudflare vem do ambiente dela; fora dela, do git; sem git, 'local'.
+// No app da loja quem manda é a versão do pacote (App.getInfo), não esta.
+function versaoWeb() {
+  if (process.env.CF_PAGES_COMMIT_SHA) return process.env.CF_PAGES_COMMIT_SHA.slice(0, 7)
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || 'local'
+  } catch {
+    return 'local'
+  }
+}
 
 // VELOCIDADE 5 (14-set) — abrir uma ligação nova (DNS + TCP + TLS) até São Paulo
 // custa uma ida e volta inteira, e até aqui essas três ligações só começavam no
@@ -102,6 +115,7 @@ function manualChunks(id) {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), preconectar(loadEnv(mode, process.cwd(), 'VITE_'))],
+  define: { __VERSAO_WEB__: JSON.stringify(versaoWeb()) },
   // host:true = escuta em 0.0.0.0 (além de localhost) — inofensivo pro uso normal
   // (localhost continua a funcionar igual); é o que deixa o telemóvel na mesma
   // wifi alcançar o dev server pelo IP da máquina (vaga do celular).

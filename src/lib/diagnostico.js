@@ -74,6 +74,9 @@ export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = nu
     em: new Date().toISOString(),
   });
 
+  // Rodada 28: as chamadas da TELA (não as do pré-aquecimento) seguem com ela para a telemetria.
+  const nav = navegacaoAberta;
+  if (nav && !segundoPlano && nav.chamadas.length < 40) nav.chamadas.push({ rota, ms, motorMs });
   if (metodo === 'GET' && !segundoPlano) marcarDadosDaTela();
 }
 
@@ -132,12 +135,20 @@ export function marcarDadosDaTela() {
 // número do que com um número de outra coisa.
 let jaHouveInicio = false;
 
+// Rodada 28: quem quer saber quando uma tela FECHA (a telemetria anônima, lib/telemetria.js, que
+// chega depois do arranque e se registra aqui). Fechar = começou outra navegação.
+let aoFecharTela = null;
+export function registrarFechoDeTela(fn) {
+  aoFecharTela = fn;
+}
+
 /** Mudança de rota — o relógio do "toque" parte aqui. */
 export function marcarNavegacao(rota) {
+  if (navegacaoAberta?.registo) aoFecharTela?.(navegacaoAberta);
   const primeiraIdaAoInicio = rota === '/home' && !jaHouveInicio;
   if (rota === '/home') jaHouveInicio = true;
   if (arranque.entrouPor == null) arranque.entrouPor = rota;
-  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msDadosAposToque: null, gestoEm: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null, quadroAnterior: null, primeiraIdaAoInicio };
+  navegacaoAberta = { rota, t0: performance.now(), msDados: null, msDadosAposToque: null, gestoEm: null, msPintura: null, esperou: new Set(loadersAtivos.keys()), marcas: {}, registo: null, quadroAnterior: null, primeiraIdaAoInicio, chamadas: [] };
   // Largura: nem todo transbordo dispara resize — mede também 1 s e 3 s depois
   // de cada troca de tela, quando os dados e as imagens já assentaram.
   if (typeof window !== 'undefined') {

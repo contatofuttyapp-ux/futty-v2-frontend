@@ -11,7 +11,7 @@
 import { useEffect, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
-import { marcarNavegacao, agendarPintura, definirInfoApp, marcarReactMontado } from '../lib/diagnostico';
+import { marcarNavegacao, agendarPintura, definirInfoApp, marcarReactMontado, aposPrimeiraPintura } from '../lib/diagnostico';
 
 export default function MedidorNavegacao() {
   const { pathname } = useLocation();
@@ -34,6 +34,11 @@ export default function MedidorNavegacao() {
   useEffect(() => {
     agendarPintura();
   }, [pathname]);
+
+  // Rodada 28: a telemetria anônima de velocidade chega depois da 1ª tela, fora do arranque.
+  useEffect(() => {
+    aposPrimeiraPintura(() => import('../lib/telemetria').catch(() => {}));
+  }, []);
 
   // Versão e build do app, uma vez. Só existe no nativo; na web fica vazio e o
   // relatório diz "web", que já é a informação que interessa.

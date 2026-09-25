@@ -8,6 +8,8 @@
 // Railway/Vercel), Resend e Sentry na lista de fornecedores, exclusão de conta
 // pelo próprio app (Perfil → Conta) como via principal.
 // v3 (25-set): sem pagamento por enquanto; o item da Apple / Google fica em CLAUSULA_PAGAMENTO_FUTURA.
+// v4 (25-set, Rodada 28): diagnóstico de desempenho anônimo (telemetria de velocidade, sem vínculo com a
+// identidade) e a idade mínima dita no cadastro.
 import { Link } from 'react-router-dom';
 import '../styles/app.css';
 
@@ -17,7 +19,7 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const ULTIMA_ATUALIZACAO = '25 de setembro de 2026 (v3)';
+const ULTIMA_ATUALIZACAO = '25 de setembro de 2026 (v4)';
 const CONTATO = 'contato@futtyapp.com';
 
 // CLAUSULA_PAGAMENTO_FUTURA: o item da seção 3 como estava até 25-set, guardado para o dia
@@ -52,7 +54,16 @@ export default function Privacidade() {
           <li>Dados de jogo: presenças confirmadas, votos recebidos, posição em campo, resultados</li>
           <li>Conteúdo que você publica na Resenha (posts, comentários, fotos)</li>
           <li>Localização aproximada <em>da sua equipe</em>, nunca a sua (ver seção 4)</li>
+          <li>Dados de desempenho do app, não vinculados à sua identidade (ver abaixo)</li>
         </ul>
+        <p style={{ ...p, marginTop: 6 }}>
+          <span style={strong}>Diagnóstico de desempenho:</span> para saber se o app está rápido no
+          aparelho de quem usa, ele envia quanto cada tela levou para abrir e quanto cada chamada ao
+          servidor demorou, com a versão do app, o sistema (iOS, Android ou web), o tipo de rede
+          quando o aparelho informa e uma faixa genérica de aparelho. São dados{' '}
+          <span style={strong}>não vinculados à sua identidade</span>: não levam nome, e-mail, conta,
+          endereço IP nem identificador do aparelho, e são apagados depois de 30 dias.
+        </p>
 
         <h2 style={h2}>2. Como usamos os dados</h2>
         <ul style={ul}>
