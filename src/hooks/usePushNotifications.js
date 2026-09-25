@@ -1,18 +1,10 @@
 // Futty v2.0 — Hook de notificações push (Web Push API).
 // estado: 'idle' | 'nao_suportado' | 'suportado' | 'subscrito' | 'negado'
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { apiFetch } from '../lib/api';
-
-// A chave VAPID vem em base64url; pushManager.subscribe exige um Uint8Array.
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = window.atob(base64);
-  const arr = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i += 1) arr[i] = raw.charCodeAt(i);
-  return arr;
-}
+import { sincronizarSubscricao, urlBase64ParaBytes } from '../lib/chavePush';
+import { quandoParado } from '../lib/ritmo';
 
 // Estado inicial derivado do browser (sem useEffect → evita set-state-in-effect).
 function estadoInicial() {
@@ -28,8 +20,36 @@ function estadoInicial() {
   return 'suportado';
 }
 
+// COFRE 25-set — o par VAPID do motor foi trocado, e uma subscrição de push nasce amarrada à chave com que foi
+// feita: as antigas passam a ser recusadas (403) sem a pessoa ver nada. Uma vez por abertura do app, quem já
+// autorizou as notificações e tem subscrição confere a chave que o motor serve hoje e, se mudou, se inscreve de novo
+// — em silêncio: a permissão já foi concedida, então nem pergunta nada nem mostra aviso. Ver lib/chavePush.js.
+// Corre com o aparelho PARADO (lib/ritmo: 1ª pintura feita + 3 s sem toque, no máximo 15 s): são dois pedidos e uma
+// ida ao push service que não podem competir com o /api/inicio nem com o primeiro toque da pessoa.
+// Falhou (sem rede, push service fora)? Tenta de novo da próxima vez que uma tela que usa o hook montar.
+let jaSincronizou = false;
+
+async function sincronizarChaveVapid() {
+  if (jaSincronizou) return;
+  jaSincronizou = true;
+  try {
+    if (estadoInicial() !== 'subscrito') return; // sem permissão (ou sem suporte / no nativo): nada a refazer
+    const reg = await navigator.serviceWorker.ready;
+    await sincronizarSubscricao({
+      subscricaoAtual: () => reg.pushManager.getSubscription(),
+      chaveDoMotor: async () => (await apiFetch('/api/push/vapid-public-key', { segundoPlano: true }))?.publicKey || null,
+      inscrever: (chave) => reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave }),
+      avisarMotor: (sub) => apiFetch('/api/push/subscribe', { method: 'POST', body: JSON.stringify(sub), segundoPlano: true }),
+    });
+  } catch {
+    jaSincronizou = false;
+  }
+}
+
 export function usePushNotifications() {
   const [estado, setEstado] = useState(estadoInicial);
+
+  useEffect(() => quandoParado(sincronizarChaveVapid, { esperaMaximaMs: 15000 }), []);
 
   async function subscrever() {
     try {
@@ -38,7 +58,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
+        applicationServerKey: urlBase64ParaBytes(publicKey),
       });
       await apiFetch('/api/push/subscribe', { method: 'POST', body: JSON.stringify(sub) });
       setEstado('subscrito');
