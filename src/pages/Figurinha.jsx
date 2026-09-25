@@ -264,6 +264,7 @@ export default function Figurinha() {
   const [erro, setErro] = useState('');
   const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
   const ultimoFicheiro = useRef(null); // retém a foto p/ "tentar de novo"
+  const ultimoRecorte = useRef(null); // idem, para o "Ajustar enquadramento" (PUT do recorte)
   // Zoom do avatar no card. Escala interna 0.88–1.43 (passo 0.11); exibida ÷1.1
   // → 80/90/100/110/120/130%. Base 1.1 = 100% exibido. Reinicia sempre a 110%.
   // Clamp defensivo no arranque: normaliza qualquer valor fora de [ZOOM_MIN, ZOOM_MAX]
@@ -435,7 +436,13 @@ export default function Figurinha() {
   }
   const selosVisiveis = selos.filter((s) => !selosOcultos.has(s.id)).slice(0, 2);
   const selosKey = selosVisiveis.map((s) => `${s.id}:${s.tier}`).join('|');
-  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom, modo: modoCard, selos: selosVisiveis.map((s) => ({ tier: s.tier, label: s.label })) };
+  // `fotoOverride` = o preview LOCAL da foto que o servidor acabou de confirmar (200):
+  // o card comum a pinta na hora, sem esperar a imagem nova voltar pelo proxy. Só na
+  // comum (a base é a foto); o card com figurinha continua vindo do avatar_url. Não
+  // entra nas deps do efeito de pintura de propósito: quem o dispara é a troca do
+  // foto_url que chega no mesmo lote (setMe + setFotoLocal), e limpar o preview depois
+  // não precisa repintar nada.
+  const opts = { jogador: jogadorCard, stats, fundo, corFrame, avatarZoom, modo: modoCard, fotoOverride: modoCard === 'comum' ? fotoLocal : null, selos: selosVisiveis.map((s) => ({ tier: s.tier, label: s.label })) };
 
   // Pré-selecciona as escolhas guardadas a partir do `perfil` já carregado
   // pelo PerfilContext — 1x só, quando ele chega (guard por ref: o `perfil`
@@ -676,7 +683,10 @@ export default function Figurinha() {
     }
   }
 
-  // Trocar foto: preview local imediato + upload para o servidor.
+  // Trocar foto: upload para o servidor e, CONFIRMADO o 200, preview local imediato.
+  // Antes o preview (e a linha "Foto trocada") nasciam ao escolher o arquivo, antes
+  // do upload: com o upload falhando a tela dizia que a foto já tinha mudado
+  // (Hotfix 26). Agora só há preview depois do 200; com erro, só o erro.
   // Na estreia, dispara automaticamente a geração da Brilhante — só quando já
   // há direito (crédito ou pacote do time); sem ele, a comum já está pronta.
   // Núcleo do upload, reutilizado pelo "tentar de novo" (P1-5). `emEstreia` decide
@@ -684,7 +694,7 @@ export default function Figurinha() {
   // RECORTE (saído do CropModal); `original` (opcional) é a foto de antes do
   // recorte, mandada junto para "Ajustar enquadramento" mais tarde.
   async function subirFoto(file, emEstreia, original) {
-    setFotoLocal(URL.createObjectURL(file)); // preview imediato
+    setFotoLocal(null); // some a confirmação de uma troca anterior enquanto esta corre
     if (emEstreia) setEstreiaFase('gerando');
     setUploadFoto(true);
     setErro('');
@@ -694,8 +704,9 @@ export default function Figurinha() {
         ? await apiUploadCampos('/api/me/avatar', { avatar: file, original })
         : await apiUpload('/api/me/avatar', file, 'avatar');
       // foto_url = a nova foto (fonte da próxima geração). avatar_url = o que o card
-      // mostra: o backend PRESERVA o avatar IA antigo se existir (senão espelha a foto),
-      // por isso o card mantém o avatar antigo até o utilizador gerar de novo.
+      // mostra: o backend PRESERVA a figurinha se houver uma (arquivo -ai- nosso) e
+      // senão espelha a foto nova, por isso o card comum muda na hora e o com figurinha
+      // mantém a figurinha até a pessoa gerar de novo.
       setMe((m) => (m ? {
         ...m,
         user: {
@@ -705,6 +716,14 @@ export default function Figurinha() {
           foto_original_url: data.foto_original_url ?? m.user.foto_original_url ?? null,
         },
       } : m));
+      // O contexto do perfil também aprende a foto nova, sem rede: sem isto, sair da
+      // tela e voltar (ou abrir o Início) semeava o card com o perfil de ANTES da troca.
+      aplicarNoPerfilGlobal({
+        foto_url: data.foto_url ?? data.avatar_url,
+        avatar_url: data.avatar_url,
+        foto_original_url: data.foto_original_url ?? me?.user?.foto_original_url ?? null,
+      });
+      setFotoLocal(URL.createObjectURL(file)); // 200 confirmado: agora sim o preview e a linha "Foto trocada"
       setUploadFoto(false);
       ultimoFicheiro.current = null;
       origParaEnviar.current = null;
@@ -729,14 +748,18 @@ export default function Figurinha() {
   // mandar original nenhuma (a que já está guardada não muda).
   async function enviarRecorte(blob) {
     const file = new File([blob], 'recorte.jpg', { type: 'image/jpeg' });
-    setFotoLocal(URL.createObjectURL(file));
+    ultimoRecorte.current = blob; // o "Tentar de novo" de um erro aqui repete ESTE recorte
+    setFotoLocal(null);
     setUploadFoto(true);
     setErro('');
     setUploadErro(null);
     try {
       const data = await apiUploadCampos('/api/me/avatar/recorte', { recorte: file }, { method: 'PUT' });
       setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url, avatar_url: data.avatar_url } } : m));
+      aplicarNoPerfilGlobal({ foto_url: data.foto_url, avatar_url: data.avatar_url });
+      setFotoLocal(URL.createObjectURL(file)); // só depois do 200, como em subirFoto
       setUploadFoto(false);
+      ultimoRecorte.current = null;
       setToast({ tipo: 'success', mensagem: 'Enquadramento atualizado!' });
     } catch (err) {
       setUploadErro(mensagemUploadFoto(err));
@@ -793,6 +816,7 @@ export default function Figurinha() {
     }
     const original = origParaEnviar.current;
     ultimoFicheiro.current = blob;
+    ultimoRecorte.current = null;
     await subirFoto(blob, estreiaFase === 'foto', original);
   }
   function aoCancelarCrop() {
@@ -801,9 +825,12 @@ export default function Figurinha() {
   }
 
   // "Tentar de novo" (P1-5): repete o upload com o MESMO recorte (+ original,
-  // se havia), sem passar pelo CropModal de novo.
+  // se havia), sem passar pelo CropModal de novo. Um erro do "Ajustar
+  // enquadramento" repete o PUT do recorte (antes o botão não fazia nada: só
+  // olhava para o arquivo do upload de foto nova).
   function repetirUpload() {
-    if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto', origParaEnviar.current);
+    if (ultimoRecorte.current) enviarRecorte(ultimoRecorte.current);
+    else if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto', origParaEnviar.current);
   }
 
   // RODADA 19 — "Minhas figurinhas": até 6, mais recente primeiro. Recarrega
@@ -838,9 +865,12 @@ export default function Figurinha() {
   }
 
   // Aviso de erro partilhado (P1-5): erro de upload com mensagem accionável +
-  // "tentar de novo" inline; senão, o erro genérico da página.
-  const avisoErro = uploadErro ? (
-    <div className="alert alert--error" style={{ margin: 0, display: 'grid', gap: 8, justifyItems: 'start' }}>
+  // "tentar de novo" inline; senão, o erro genérico da página. No studio o erro do
+  // upload sai SOB O CARD (`avisoUploadErro`), onde a pessoa está olhando, e o fim da
+  // página fica só com o genérico (`avisoErroGenerico`): Hotfix 26 — um erro que mora
+  // abaixo das abas ninguém vê, e a tela ainda dizia que a foto já tinha mudado.
+  const avisoUploadErro = uploadErro ? (
+    <div className="alert alert--error" role="alert" style={{ margin: 0, display: 'grid', gap: 8, justifyItems: 'start' }}>
       <span>{uploadErro.texto}</span>
       {uploadErro.podeRepetir ? (
         <button type="button" onClick={repetirUpload} disabled={uploadFoto} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }}>
@@ -848,9 +878,11 @@ export default function Figurinha() {
         </button>
       ) : null}
     </div>
-  ) : erro ? (
+  ) : null;
+  const avisoErroGenerico = !uploadErro && erro ? (
     <div className="alert alert--error" style={{ margin: 0 }}>{erro}</div>
   ) : null;
+  const avisoErro = avisoUploadErro || avisoErroGenerico;
 
   // Partilha do cromo no momento da estreia (imagem do card + texto viral).
   // No app (Rodada 8A) vai direto à folha de compartilhar do sistema: o
@@ -1349,7 +1381,7 @@ export default function Figurinha() {
                 acima) — não há mais empty state de silhueta a desenhar aqui. */}
             {gerandoIA || erroIA ? overlayGerando : null}
             {/* Trocar visual — só quando o card veste o genérico (sem avatar IA). */}
-            {!avatarEhIA && !fotoLocal && !gerandoIA && !erroIA ? (
+            {!avatarEhIA && !fotoLocal && !uploadFoto && !gerandoIA && !erroIA ? (
               <button
                 type="button"
                 className="hud-corners-s"
@@ -1370,11 +1402,20 @@ export default function Figurinha() {
             RODADA 17 — gerandoIA vem PRIMEIRO: fotoLocal só é limpo no sucesso/
             falha de gerarAvatarIA (não no início), então sem esta ordem as duas
             geração já em curso mostrava "Foto carregada, gere seu avatar" por
-            cima do botão já dizendo "Gerando…" — duas mensagens discordando. */}
+            cima do botão já dizendo "Gerando…" — duas mensagens discordando.
+            HOTFIX 26 — depois vêm o envio e o erro do upload, ANTES de "Foto
+            trocada": essa linha só existe depois do 200 (fotoLocal nasce lá), e
+            com o upload falhando a pessoa vê o erro aqui, sob o card. */}
         {gerandoIA ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
             <FuttyLoader size={14} label={null} /> Sua figurinha está sendo criada… leva uns 45 segundos
           </div>
+        ) : uploadFoto ? (
+          <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
+            <FuttyLoader size={14} label={null} /> Enviando sua foto…
+          </div>
+        ) : avisoUploadErro ? (
+          <div style={{ maxWidth: 460, margin: '0 auto 12px' }}>{avisoUploadErro}</div>
         ) : fotoLocal ? (
           // SPEC-FIGURINHA-3: trocar a foto já MUDA a figurinha comum na hora —
           // não há nada a gerar. A linha só convida a gerar a Brilhante quando
@@ -1805,7 +1846,7 @@ export default function Figurinha() {
             </div>
           ) : null}
 
-          {avisoErro}
+          {avisoErroGenerico}
 
           {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os
               botões do topo (40px) → hierarquia: topo = configurar, fundo = agir.

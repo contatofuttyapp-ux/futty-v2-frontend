@@ -3265,7 +3265,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3829,6 +3829,17 @@ try {
     const r = await cenaRodada24(navegador, sessao);
     saida.rodada24 = r;
     console.log('\n[iphone] RODADA 24 — sem pagamento por enquanto (site sem preço, Termos e Privacidade)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('hotfix26') || CENAS.includes('hotfix-26')) {
+    const r = await cenaHotfix26(navegador);
+    saida.hotfix26 = r;
+    console.log('\n[iphone] HOTFIX 26 — Trocar foto numa conta sem figurinha muda o card (servidor local)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -4544,4 +4555,226 @@ async function cenaRodada24(navegador, sessao) {
   await varrer('site', false, ['/home', '/perfil', '/feed', '/explorar', `/equipa/${TIME}`, `/equipa/${TIME}/ranking`, '/criar-equipa']);
 
   return { pasta, verificacoes, capturas, erros };
+}
+
+// ─── Cena "hotfix26" (25-set): "Trocar foto" numa conta SEM figurinha muda o card. ───
+// A conta vem de scripts/_bench/conta-hotfix26.js (backend), no estado do bug: foto_url e
+// um avatar_url DIFERENTE dela que não é figurinha nossa (o que a foto do Google deixava
+// lá). Esta cena ESCREVE de verdade (sobe uma foto ao motor local, que grava no Storage e no
+// banco de teste), por isso só roda contra servidor LOCAL. Faz o que o dono fez, pela tela:
+//   1. abre a Figurinha e lê o card. O sinal é o CONTEÚDO, não a animação do card: a fração
+//      de pixels magenta no miolo (a foto de prova é magenta listrada; nada do card da casa
+//      tem essa cor);
+//   2. Trocar foto → escolhe o arquivo → recorte → Confirmar, com o 1º envio FALHANDO de
+//      propósito (500 depois de 1,5 s): durante o envio, "Enviando sua foto…"; com o erro,
+//      a mensagem sob o card, "Foto trocada" AUSENTE e o card intacto;
+//   3. "Tentar de novo" (o envio de verdade): 200; o motor devolve avatar_url = foto_url (a
+//      foto nova), a linha "Foto trocada" aparece só agora e o card passa a mostrar a foto;
+//   4. sai para o Perfil e volta SEM recarregar: o card continua com a foto nova;
+//   5. contexto novo (só a sessão, cache frio): o card mostra a foto nova, vinda do servidor.
+// Nenhuma geração de IA (custo zero); toda escrita que não é o envio da foto é interceptada.
+function amostrarCardHotfix26() {
+  const raiz = document.querySelector('.fig-studio-card');
+  const camadas = raiz ? [...raiz.querySelectorAll('img')].filter((i) => i.complete && i.naturalWidth > 0) : [];
+  if (!camadas.length) return { camadas: 0, pixels: 0, magenta: 0 };
+  const L = 80;
+  const A = 120;
+  const tela = document.createElement('canvas');
+  tela.width = L;
+  tela.height = A;
+  const c2d = tela.getContext('2d', { willReadFrequently: true });
+  for (const img of camadas) c2d.drawImage(img, 0, 0, L, A); // ordem do DOM = ordem de empilhar
+  // O miolo do card, acima da placa do nome.
+  const { data } = c2d.getImageData(Math.round(L * 0.2), Math.round(A * 0.15), Math.round(L * 0.6), Math.round(A * 0.45));
+  let pixels = 0;
+  let magenta = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 200) continue;
+    pixels += 1;
+    const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+    if (r > 100 && r > b * 1.25 && b > g * 1.6 && g < 70) magenta += 1;
+  }
+  return { camadas: camadas.length, pixels, magenta: pixels ? +(magenta / pixels).toFixed(3) : 0 };
+}
+
+async function cenaHotfix26(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`hotfix26 sobe uma foto de verdade: só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'hotfix-26');
+  mkdirSync(pasta, { recursive: true });
+  const arq = (nome) => path.join(pasta, `${nome}.png`);
+  const sessao = JSON.parse(readFileSync(path.join(PASTA, 'sessao-hotfix26.json'), 'utf8'));
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const FOTO_NOVA = pngSolido(900, 1200, [235, 40, 150]); // magenta listrada, 3:4
+
+  // O caminho do objeto no Storage vive DENTRO do token do proxy (/api/media/<token>): é ele,
+  // e não a URL inteira (o token muda), que diz QUAL arquivo é.
+  const objeto = (url) => {
+    const m = String(url || '').match(/\/api\/media\/([A-Za-z0-9_-]+)/);
+    if (m) {
+      try {
+        const p = JSON.parse(Buffer.from(m[1].split('.')[0], 'base64url').toString()).p;
+        if (p) return p;
+      } catch { /* cai na URL sem a query */ }
+    }
+    return String(url || '').split('?')[0] || null;
+  };
+
+  const envios = []; // cada POST /api/me/avatar que chegou a ter resposta
+  const meLido = []; // cada GET /api/me: o estado do banco como o motor o entrega
+  const seguir = (pagina, rotulo) => {
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    pagina.on('console', (m) => { if (m.type() === 'error' && /\[preview\]/.test(m.text())) erros.push(`${rotulo}: ${m.text().slice(0, 160)}`); });
+    pagina.on('response', async (r) => {
+      const u = new URL(r.url());
+      if (u.pathname === '/api/me/avatar' && r.request().method() === 'POST') {
+        envios.push({ status: r.status(), corpo: await r.json().catch(() => null) });
+      } else if (u.pathname === '/api/me' && r.request().method() === 'GET' && r.ok()) {
+        const j = await r.json().catch(() => null);
+        if (j?.user) meLido.push({ avatar: objeto(j.user.avatar_url), foto: objeto(j.user.foto_url), temFigurinha: !!j.user.tem_figurinha });
+      }
+    });
+  };
+  const abrirContexto = async () => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    // Sem isto a conta cairia na estreia (1ª visita); o que se prova é o studio.
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_figurinha_estreia', '1'); } catch { /* nada */ } });
+    await travarEscritas(contexto);
+    return contexto;
+  };
+  const abrirFigurinha = async (pagina) => {
+    await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 4000 }).catch(() => {});
+    await pagina.getByRole('button', { name: /Trocar foto/ }).first().waitFor({ timeout: 30000 });
+  };
+  // Lê o card até o critério valer (a pintura é assíncrona: fontes, imagem, canvas, blob).
+  const lerCard = async (pagina, criterio, ms = 30000) => {
+    const limite = Date.now() + ms;
+    let ultimo = { camadas: 0, pixels: 0, magenta: 0 };
+    while (Date.now() < limite) {
+      ultimo = await pagina.evaluate(amostrarCardHotfix26).catch(() => ultimo);
+      if (criterio(ultimo)) return { ok: true, ...ultimo };
+      await espera(400);
+    }
+    return { ok: false, ...ultimo };
+  };
+  const capturar = async (pagina, nome) => {
+    await pagina.screenshot({ path: arq(nome) });
+    capturas.push(path.relative(RAIZ, arq(nome)));
+  };
+  const textoDaPagina = (pagina) => pagina.locator('body').innerText().catch(() => '');
+  const cardPintado = (a) => a.camadas >= 3 && a.pixels > 0;
+  const cardComAFoto = (a) => a.magenta >= 0.4;
+
+  const contexto = await abrirContexto();
+  try {
+    // O 1º envio de foto falha de propósito; o seguinte (o "Tentar de novo") vai ao motor de verdade.
+    // Registrada DEPOIS da que trava as escritas, por isso roda antes dela.
+    let falhasDeProposito = 1;
+    await contexto.route(/\/api\/me\/avatar(\?.*)?$/, async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      if (falhasDeProposito > 0) {
+        falhasDeProposito -= 1;
+        await espera(1500); // tempo de ver o "Enviando sua foto…"
+        return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Falha de propósito (cena hotfix26)' }) });
+      }
+      return route.continue();
+    });
+
+    const pagina = await contexto.newPage();
+    seguir(pagina, 'figurinha');
+
+    // ── 1. como a conta está ──
+    await abrirFigurinha(pagina);
+    const antes = await lerCard(pagina, cardPintado);
+    const meInicial = meLido.at(-1);
+    verificar('a conta está no estado do bug: avatar_url ≠ foto_url e sem figurinha', meInicial && meInicial.avatar !== meInicial.foto && meInicial.temFigurinha === false, JSON.stringify(meInicial));
+    verificar('antes de trocar: o card ainda não mostra a foto nova', antes.ok && antes.magenta <= 0.02, `camadas ${antes.camadas} · magenta ${antes.magenta}`);
+    await capturar(pagina, '1-antes');
+
+    // ── 2. Trocar foto, com o envio falhando ──
+    await pagina.getByRole('button', { name: /Trocar foto/ }).first().click();
+    await pagina.getByRole('dialog', { name: 'Sua foto' }).waitFor({ timeout: 15000 });
+    await pagina.locator('button', { hasText: /Escolher outra foto/ }).click();
+    await pagina.locator('input[type="file"][accept="image/*"]').first().setInputFiles({ name: 'foto-hotfix26.png', mimeType: 'image/png', buffer: FOTO_NOVA });
+    await pagina.getByRole('dialog', { name: 'Recortar imagem' }).waitFor({ timeout: 15000 });
+    await pagina.locator('[role="dialog"] button', { hasText: /^Confirmar$/ }).waitFor({ timeout: 10000 });
+    await espera(500); // o recortador terminou de posicionar a imagem
+    await pagina.locator('[role="dialog"] button', { hasText: /^Confirmar$/ }).click();
+
+    const apareceuEnviando = await pagina.getByText('Enviando sua foto…').first().waitFor({ timeout: 8000 }).then(() => true, () => false);
+    const textoEnviando = await textoDaPagina(pagina);
+    verificar('durante o envio: mostra "Enviando sua foto…" e ainda NÃO diz "Foto trocada"', apareceuEnviando && !/Foto trocada/i.test(textoEnviando), apareceuEnviando ? '' : 'não achou "Enviando sua foto…"');
+    await capturar(pagina, '2-enviando');
+
+    const caixaErro = pagina.locator('.alert.alert--error[role="alert"]');
+    await caixaErro.waitFor({ timeout: 15000 }).catch(() => {});
+    await espera(600);
+    const temErro = (await caixaErro.count()) > 0;
+    const textoDoErro = temErro ? (await caixaErro.first().innerText()).trim() : '';
+    const caixa = temErro ? await caixaErro.first().boundingBox() : null;
+    const cartao = await pagina.locator('.fig-studio-card').boundingBox();
+    const altura = pagina.viewportSize()?.height || 932;
+    const semFoto = await pagina.evaluate(amostrarCardHotfix26);
+    verificar('com o envio falhando: a mensagem de erro aparece SOB o card, à vista (sem rolar)', temErro && /Não consegui enviar a foto/.test(textoDoErro) && caixa && cartao && caixa.y >= cartao.y + cartao.height / 2 && caixa.y + caixa.height <= altura, temErro ? `"${textoDoErro.replace(/\s+/g, ' ')}" · caixa y ${Math.round(caixa?.y ?? -1)}–${Math.round((caixa?.y ?? 0) + (caixa?.height ?? 0))} de ${altura}` : 'sem caixa de erro');
+    verificar('com o envio falhando: a linha "Foto trocada" NÃO aparece', !/Foto trocada/i.test(await textoDaPagina(pagina)));
+    verificar('com o envio falhando: o card continua como estava', semFoto.magenta <= 0.02, `magenta ${semFoto.magenta}`);
+    verificar('com o envio falhando: "Tentar de novo" está à mão', await pagina.getByRole('button', { name: 'Tentar de novo' }).isVisible().catch(() => false));
+    await capturar(pagina, '3-erro-do-envio');
+
+    // ── 3. "Tentar de novo": o envio de verdade ──
+    const chegou = pagina.waitForResponse((r) => new URL(r.url()).pathname === '/api/me/avatar' && r.request().method() === 'POST' && r.status() === 200, { timeout: 90000 });
+    await pagina.getByRole('button', { name: 'Tentar de novo' }).click();
+    const resposta = await chegou;
+    const corpo = await resposta.json();
+    const fotoNova = objeto(corpo.foto_url);
+    const avatarNovo = objeto(corpo.avatar_url);
+    verificar('o motor devolve avatar_url = foto_url = a foto nova (e não a de antes)', fotoNova && fotoNova === avatarNovo && fotoNova !== meInicial?.foto && avatarNovo !== meInicial?.avatar, `foto ${fotoNova} · avatar ${avatarNovo}`);
+    verificar('a foto nova é arquivo de foto, não de figurinha (sem "-ai-" no nome)', !!fotoNova && !/-ai-/.test(fotoNova));
+    const apareceuTrocada = await pagina.getByText(/Foto trocada/).first().waitFor({ timeout: 8000 }).then(() => true, () => false);
+    verificar('com o 200: a linha "Foto trocada" aparece', apareceuTrocada);
+    verificar('com o 200: a mensagem de erro some', (await caixaErro.count()) === 0);
+    const depois = await lerCard(pagina, cardComAFoto);
+    verificar('com o 200: o card passa a mostrar a foto nova', depois.ok, `magenta ${antes.magenta} → ${depois.magenta}`);
+    await capturar(pagina, '4-foto-trocada');
+
+    // ── 4. sai e volta sem recarregar ──
+    const barra = pagina.locator('nav[aria-label="Navegação principal"]');
+    await barra.locator('a', { hasText: 'Perfil' }).click();
+    await pagina.waitForURL('**/perfil', { timeout: 15000 });
+    await espera(1500);
+    await barra.locator('a', { hasText: 'Figurinha' }).click();
+    await pagina.waitForURL('**/figurinha', { timeout: 15000 });
+    const voltou = await lerCard(pagina, cardComAFoto);
+    verificar('sair para o Perfil e voltar (sem recarregar): o card continua com a foto nova', voltou.ok, `magenta ${voltou.magenta}`);
+    await capturar(pagina, '5-de-volta');
+    await contexto.close();
+
+    // ── 5. contexto novo: só a sessão, cache frio ──
+    const contexto2 = await abrirContexto();
+    try {
+      const pagina2 = await contexto2.newPage();
+      seguir(pagina2, 'contexto-novo');
+      await abrirFigurinha(pagina2);
+      const frio = await lerCard(pagina2, cardComAFoto, 40000);
+      await espera(300); // o registro do /api/me é assíncrono
+      const meFinal = meLido.at(-1);
+      verificar('contexto novo (cache frio): o card mostra a foto nova', frio.ok, `magenta ${frio.magenta}`);
+      verificar('contexto novo: o motor entrega avatar_url = foto_url = a foto enviada, sem figurinha', meFinal && meFinal.avatar === fotoNova && meFinal.foto === fotoNova && meFinal.temFigurinha === false, JSON.stringify(meFinal));
+      await capturar(pagina2, '6-contexto-novo');
+    } finally {
+      await contexto2.close().catch(() => {});
+    }
+
+    verificar('dois envios: o 1º 500 (de propósito), o 2º 200', envios.length === 2 && envios[0].status === 500 && envios[1].status === 200, envios.map((e) => e.status).join(', '));
+    verificar('sem erro de JS nem de pintura do card', erros.length === 0, erros.join(' | '));
+  } finally {
+    await contexto.close().catch(() => {});
+  }
+
+  return { pasta, verificacoes, capturas, erros, envios: envios.map((e) => e.status) };
 }
