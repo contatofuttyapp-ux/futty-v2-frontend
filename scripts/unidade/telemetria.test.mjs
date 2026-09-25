@@ -110,3 +110,28 @@ test('ponta a ponta: uma vez por tela, sem Authorization nem cookie, na troca de
     assert.ok(!cabecalhos.includes('authorization'), 'a telemetria não pode levar a sessão');
   }
 });
+
+test('recarregar a página não manda de novo: a sessão é a aba (sessionStorage), não o módulo', async () => {
+  const guardado = new Map();
+  globalThis.sessionStorage = { getItem: (k) => guardado.get(k) ?? null, setItem: (k, v) => guardado.set(k, String(v)), removeItem: (k) => guardado.delete(k) };
+  try {
+    enviados.length = 0;
+    // 1ª abertura da aba: o Ranking pinta e fecha → vai.
+    await import('../../src/lib/telemetria.js?aba=1');
+    diag.marcarNavegacao('/ranking');
+    diag.marcarPintura();
+    diag.marcarNavegacao('/perfil'); // abre e a página recarrega antes de pintar
+    // Recarregou (módulo novo, memória vazia), mesma aba: o Ranking não volta a ir; o Perfil, que
+    // ainda não tinha ido, vai.
+    await import('../../src/lib/telemetria.js?aba=2');
+    diag.marcarNavegacao('/ranking');
+    diag.marcarPintura();
+    diag.marcarNavegacao('/perfil');
+    diag.marcarPintura();
+    diag.marcarNavegacao('/feed');
+    assert.deepEqual(enviados.map((e) => JSON.parse(e.opcoes.body).tela), ['/ranking', '/perfil']);
+    assert.deepEqual(JSON.parse(guardado.get('futty_telemetria_telas')), ['/ranking', '/perfil'], 'só o padrão da tela fica guardado');
+  } finally {
+    delete globalThis.sessionStorage;
+  }
+});

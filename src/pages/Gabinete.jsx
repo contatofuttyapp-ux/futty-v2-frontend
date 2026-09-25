@@ -870,8 +870,9 @@ function GabCSS() {
     .gab2-tab.ativa { background: rgba(212,160,23,.1); border-color: rgba(212,160,23,.4); color: #f0c94a; }
     .gab2-content { flex: 1; min-width: 0; padding-left: 20px; }
     @media (max-width: 820px) {
+      /* Rodada 28: sem o flex: 0 0 auto abaixo, os 190px da coluna do computador viravam ALTURA no celular (abas de ~180 px). */
       .gab2 { flex-direction: column; padding: 12px 14px 50px; }
-      .gab2-side { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid rgba(255,255,255,.08); padding: 0 0 10px; position: static; width: 100%; box-sizing: border-box; }
+      .gab2-side { flex: 0 0 auto; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid rgba(255,255,255,.08); padding: 0 0 10px; position: static; width: 100%; box-sizing: border-box; }
       .gab2-tab { flex: 0 0 auto; white-space: nowrap; }
       .gab2-content { padding-left: 0; padding-top: 14px; width: 100%; }
     }

@@ -102,15 +102,29 @@ function contexto() {
   };
 }
 
-// Uma vez por tela por sessão (a sessão é esta abertura do app).
+// Uma vez por tela por SESSÃO — a aba do site ou a abertura do app. Guardada na sessionStorage para
+// valer também depois de recarregar a página (a cena rodada28 viu o /home ir duas vezes); sem ela
+// (modo privado), vale a memória desta abertura.
+const CHAVE_ENVIADAS = 'futty_telemetria_telas';
 const enviadas = new Set();
+function jaEnviada(tela) {
+  try {
+    const guardadas = JSON.parse(sessionStorage.getItem(CHAVE_ENVIADAS) || '[]');
+    if (Array.isArray(guardadas)) for (const t of guardadas) if (typeof t === 'string') enviadas.add(t);
+  } catch { /* só a memória */ }
+  return enviadas.has(tela);
+}
+function marcarEnviada(tela) {
+  enviadas.add(tela);
+  try { sessionStorage.setItem(CHAVE_ENVIADAS, JSON.stringify([...enviadas])); } catch { /* só a memória */ }
+}
 
 // Corre DENTRO da troca de rota (lib/diagnostico.js → marcarNavegacao): nunca pode lançar.
 function aoFecharTela(nav) {
   try {
     const envio = montarEnvio(nav, contexto());
-    if (!envio || enviadas.has(envio.tela)) return;
-    enviadas.add(envio.tela);
+    if (!envio || jaEnviada(envio.tela)) return;
+    marcarEnviada(envio.tela);
     // Sem Authorization e sem cookie, de propósito. Falhar aqui não é problema de ninguém.
     fetch(destino(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify(envio) }).catch(() => {});
   } catch { /* medição: nunca derruba a navegação */ }
