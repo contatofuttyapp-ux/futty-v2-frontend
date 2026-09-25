@@ -3814,6 +3814,17 @@ try {
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
 
+  if (CENAS.includes('rodada23') || CENAS.includes('rodada-23')) {
+    const r = await cenaRodada23(navegador, sessao);
+    saida.rodada23 = r;
+    console.log('\n[iphone] RODADA 23 — sem preço no app da loja (Apple 3.1.1 / Google Payments)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
@@ -4261,4 +4272,164 @@ async function cenaRodada22(navegador, sessao) {
   }
 
   return { pasta, capturas, erros };
+}
+
+// ─── Cena "rodada23" (25-set): Loja Apple — sem preço no app da loja (Apple 3.1.1 /
+// Google Payments). A conta demo abre Planos e Figurinha duas vezes: como app da loja
+// (o Capacitor do navegador enxerga a plataforma "ios" pelo CapacitorCustomPlatform,
+// lido quando o módulo carrega) e como site. No app: nenhum R$, €, "comprar", "pagar"
+// ou "preço" nessas telas e sem "Manto próprio"; no site: os preços continuam. Nada
+// escreve no banco e nada gera figurinha. A conta demo já tem figurinha e créditos,
+// então o estado de cada tela é montado remendando dois GETs (/api/me e
+// /api/brilhantes/estado), senão o bloco "Vire figurinha" nem apareceria.
+// --url tem de servir uma build com VITE_API_URL VAZIO (`VITE_API_URL= vite build`): o
+// app "nativo" pede o /api ao endereço absoluto do motor, que o CORS do motor não
+// libera para localhost; vazio, o pedido volta ao mesmo endereço e passa pelo proxy
+// do preview. Depois, uma varredura de texto pelas outras telas, só como app.
+async function cenaRodada23(navegador, sessao) {
+  const pasta = path.join(PASTA, 'rodada-23');
+  mkdirSync(pasta, { recursive: true });
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const PROIBIDO = /R\$|€|comprar|pagar|pre[çc]o/i;
+  const fecharCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
+
+  const SEM_DIREITO = (j) => ({ ...j, direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0 });
+  const SEM_FIGURINHA = (j) => ({ ...j, user: { ...j.user, avatar_url: j.user.foto_url, tem_figurinha: false } });
+
+  async function abrir(nome, nativo, remendos = {}) {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await contexto.addInitScript((ehApp) => {
+      if (ehApp) window.CapacitorCustomPlatform = { name: 'ios' };
+      localStorage.setItem('futty_figurinha_estreia', '1');
+    }, nativo);
+    await travarEscritas(contexto);
+    // Registrada DEPOIS da que trava as escritas, por isso roda antes; o que não
+    // remenda segue adiante (fallback) até ela.
+    await contexto.route('**/api/**', async (route) => {
+      const pedido = route.request();
+      const remendo = pedido.method() === 'GET' ? remendos[new URL(pedido.url()).pathname] : null;
+      if (!remendo) return route.fallback();
+      const resposta = await route.fetch();
+      const headers = { ...resposta.headers() };
+      delete headers['content-encoding'];
+      delete headers['content-length'];
+      return route.fulfill({ status: resposta.status(), headers, json: remendo(await resposta.json()) });
+    });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${nome}: ${e.message}`));
+    return { contexto, pagina };
+  }
+
+  // Abre `rota`, prepara a tela, e devolve o texto e o HTML do `alvo`.
+  async function ler(nome, nativo, rota, { remendos, preparar, alvo }) {
+    const { contexto, pagina } = await abrir(nome, nativo, remendos);
+    try {
+      await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+      await fecharCookies(pagina);
+      await preparar(pagina);
+      await espera(600);
+      const conteudo = await alvo(pagina).evaluate((el) => ({ texto: el.innerText, html: el.outerHTML }));
+      const arquivo = path.join(pasta, `${nome}.png`);
+      await pagina.screenshot({ path: arquivo, fullPage: true });
+      capturas.push(path.relative(RAIZ, arquivo));
+      return conteudo;
+    } catch (e) {
+      verificar(`${nome}: a tela abriu`, false, e.message.split('\n')[0]);
+      return null;
+    } finally {
+      await contexto.close();
+    }
+  }
+
+  const minusculo = (s) => s.toLowerCase();
+  const semPreco = (nome, c) => {
+    const achado = c.html.match(PROIBIDO) || c.texto.match(PROIBIDO);
+    verificar(`${nome}: sem R$, €, comprar, pagar nem preço`, !achado, achado ? `achou "${achado[0]}"` : '');
+  };
+  const mostra = (nome, c, trecho) => verificar(`${nome}: mostra "${trecho}"`, minusculo(c.texto).includes(minusculo(trecho)));
+  const naoMostra = (nome, c, trecho) => verificar(`${nome}: não mostra "${trecho}"`, !minusculo(c.texto).includes(minusculo(trecho)));
+  const cartoes = (c) => (c.html.match(/class="planos-sway"/g) || []).length;
+
+  const blocoFigurinha = (pagina) => pagina.locator('.hud-corners', { hasText: 'Vire figurinha' }).first();
+
+  // (1) Planos, com a conta demo como ela é (dona do Domingueira FC, sem pedido).
+  for (const nativo of [true, false]) {
+    const nome = `planos-${nativo ? 'app' : 'site'}`;
+    const c = await ler(nome, nativo, '/planos', {
+      preparar: (pagina) => pagina.getByRole('button', { name: nativo ? 'Pedir ativação' : 'Ativar para o meu time' }).first().waitFor({ timeout: 25000 }),
+      alvo: (pagina) => pagina.locator('main').first(),
+    });
+    if (!c) continue;
+    if (nativo) {
+      semPreco(nome, c);
+      verificar(`${nome}: dois cartões (sem o manto próprio)`, cartoes(c) === 2, `${cartoes(c)} cartão(ões)`);
+      naoMostra(nome, c, 'Manto próprio');
+      for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
+    } else {
+      verificar(`${nome}: três cartões`, cartoes(c) === 3, `${cartoes(c)} cartão(ões)`);
+      for (const t of ['R$49,90', 'R$2,00 por jogador', 'R$9,90', 'Manto próprio', 'Ativar para o meu time', 'Quero a minha']) mostra(nome, c, t);
+    }
+  }
+
+  // (2) Figurinha, foto sem figurinha e sem gerações: o bloco "Vire figurinha" grande.
+  for (const nativo of [true, false]) {
+    const nome = `figurinha-bloco-${nativo ? 'app' : 'site'}`;
+    const c = await ler(nome, nativo, '/figurinha', {
+      remendos: { '/api/me': SEM_FIGURINHA, '/api/brilhantes/estado': SEM_DIREITO },
+      preparar: (pagina) => blocoFigurinha(pagina).waitFor({ timeout: 30000 }),
+      alvo: blocoFigurinha,
+    });
+    if (!c) continue;
+    if (nativo) {
+      semPreco(nome, c);
+      for (const t of ['Vire figurinha', 'Pedir ativação para o meu time', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
+    } else {
+      for (const t of ['Vire figurinha', 'Ativar para o meu time · R$49,90 · R$2,00 por jogador', 'Só a minha · R$9,90 · 10 gerações']) mostra(nome, c, t);
+    }
+  }
+
+  // (3) Figurinha com figurinha feita e sem gerações: aba Uniforme, o convite compacto.
+  for (const nativo of [true, false]) {
+    const nome = `figurinha-uniforme-${nativo ? 'app' : 'site'}`;
+    const c = await ler(nome, nativo, '/figurinha', {
+      remendos: { '/api/brilhantes/estado': SEM_DIREITO },
+      preparar: async (pagina) => {
+        await pagina.getByRole('button', { name: 'Uniforme' }).first().click({ timeout: 30000 });
+        await blocoFigurinha(pagina).waitFor({ timeout: 10000 });
+      },
+      alvo: blocoFigurinha,
+    });
+    if (!c) continue;
+    if (nativo) {
+      semPreco(nome, c);
+      for (const t of ['Vire figurinha', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
+    } else {
+      for (const t of ['Vire figurinha', 'Só a minha · R$9,90 · 10 gerações']) mostra(nome, c, t);
+    }
+  }
+
+  // (4) Varredura como app: as outras telas não mostram valor nem o nome antigo.
+  {
+    const { contexto, pagina } = await abrir('varredura-app', true);
+    const rotas = ['/home', '/perfil', '/feed', '/explorar', `/equipa/${TIME}`, `/equipa/${TIME}/ranking`, '/criar-equipa'];
+    for (const rota of rotas) {
+      try {
+        await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+        await fecharCookies(pagina);
+        await pagina.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+        await espera(1200);
+        const texto = await pagina.evaluate(() => document.body.innerText);
+        const achado = texto.match(/R\$|€|brilhante|comprar|pagar|pre[çc]o/i);
+        verificar(`app ${rota}: sem valor, "Brilhante", comprar, pagar nem preço`, !achado, achado ? `achou "${achado[0]}"` : `${texto.length} caracteres lidos`);
+      } catch (e) {
+        verificar(`app ${rota}: a tela abriu`, false, e.message.split('\n')[0]);
+      }
+    }
+    await contexto.close();
+  }
+
+  return { pasta, verificacoes, capturas, erros };
 }

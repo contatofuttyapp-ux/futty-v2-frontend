@@ -205,23 +205,27 @@ export default function Planos() {
                     #d4a017 sobre o pico do blob DOURADO cai a 3.42 — dourado sobre
                     dourado, abaixo do AA 4.5. A sombra devolve-lhe a leitura sem mexer na
                     opacidade do card. */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{p.preco}</span>
-                  {/* Os DOIS números no pacote (spec §2): o total assusta, o por
-                      jogador explica. R$2 por cabeça é a conta que a pessoa faz. */}
-                  {p.porJogador ? (
-                    <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)' }}>· {p.porJogador}</span>
-                  ) : null}
-                </div>
+                {p.preco ? (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{p.preco}</span>
+                    {/* Os DOIS números no pacote (spec §2): o total assusta, o por
+                        jogador explica. R$2 por cabeça é a conta que a pessoa faz. */}
+                    {p.porJogador ? (
+                      <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)' }}>· {p.porJogador}</span>
+                    ) : null}
+                  </div>
+                ) : null}
                 <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>{p.resumo}</p>
 
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 5, flex: 1 }}>
-                  {p.features.map((f) => (
-                    <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, lineHeight: 1.25, color: 'rgba(255,255,255,0.8)' }}>
-                      <Check size={15} color="#8b5cf6" style={{ flexShrink: 0 }} /> {f}
-                    </li>
-                  ))}
-                </ul>
+                {p.features ? (
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 5, flex: 1 }}>
+                    {p.features.map((f) => (
+                      <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, lineHeight: 1.25, color: 'rgba(255,255,255,0.8)' }}>
+                        <Check size={15} color="#8b5cf6" style={{ flexShrink: 0 }} /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
 
                 {/* Dona de mais de um time: qual deles leva o pacote. O cartão
                     inteiro segue a escolha (o "Já é seu" e o "Pedido enviado"

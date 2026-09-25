@@ -9,14 +9,9 @@
 // iOS: o "Salvar imagem" dessa folha grava nas Fotos dentro do processo do app,
 // e por isso o Info.plist precisa de NSPhotoLibraryAddUsageDescription — sem
 // esse texto o iOS fecha o app no toque.
-import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-
-/** true dentro do app da loja (iOS/Android); false no navegador. */
-export function ehAppNativo() {
-  return Capacitor.isNativePlatform();
-}
+import { ehNativo } from '../lib/plataforma';
 
 // Nome que serve de caminho no disco do aparelho: sem acento, sem barra, sem
 // espaço (um "/" no nome de um time viraria pasta e a gravação falhava).
@@ -73,7 +68,7 @@ export async function salvarOuCompartilhar(blob, nome, { titulo = 'Futty' } = {}
   if (!blob) throw new Error('Não foi possível gerar a imagem.');
   const arquivo = nomeSeguro(nome);
 
-  if (!Capacitor.isNativePlatform()) {
+  if (!ehNativo()) {
     baixarNaWeb(blob, arquivo);
     return 'baixou';
   }

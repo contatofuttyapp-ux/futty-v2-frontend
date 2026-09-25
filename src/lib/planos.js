@@ -25,6 +25,7 @@
 // 11-ago é poder de compra, não câmbio — por isso os valores em euro NÃO são a
 // conversão dos de real.
 import { precos } from '../utils/precos';
+import { ehNativo } from './plataforma';
 
 // A tabela em números, por moeda. `formatar` vive em utils/precos.js e devolve
 // "R$49,90/mês" — estes produtos são pagos UMA VEZ, por isso formata-se aqui,
@@ -46,7 +47,9 @@ export const MINHA_GERACOES = 10;
 /** O presente único de quem cria o time (igual a PRESENTE_CRIADOR_CREDITOS do motor). */
 export const PRESENTE_CRIADOR_GERACOES = 3;
 
-export const PRODUTOS = [
+// `botao` é o da tela Figurinhas; `botaoBloco` é o do bloco "Vire figurinha" da
+// Figurinha.
+const PRODUTOS_SITE = [
   {
     id: 'pacote',
     nome: 'Figurinhas do time',
@@ -62,6 +65,7 @@ export const PRODUTOS = [
       'Os 6 fundos liberados',
     ],
     botao: 'Ativar para o meu time',
+    botaoBloco: `Ativar para o meu time · ${preco(tabela.pacote)} · ${preco(tabela.pacote / PACOTE_JOGADORES)} por jogador`,
     soDono: true,
   },
   {
@@ -91,6 +95,32 @@ export const PRODUTOS = [
       'Os 6 fundos liberados',
     ],
     botao: 'Quero a minha',
+    botaoBloco: `Só a minha · ${preco(tabela.minha)} · ${MINHA_GERACOES} gerações`,
     soDono: false,
   },
 ];
+
+// App da loja (iOS/Android): sem valor, sem vitrine de itens e sem o manto
+// próprio. Os botões seguem criando o pedido de ativação — é pedido, não venda.
+const PRODUTOS_APP = [
+  {
+    id: 'pacote',
+    nome: 'Figurinhas do time',
+    resumo: 'O dono do time ativa para todo mundo.',
+    botao: 'Pedir ativação',
+    botaoBloco: 'Pedir ativação para o meu time',
+    soDono: true,
+  },
+  {
+    id: 'minha',
+    nome: 'Minha figurinha',
+    resumo: `${MINHA_GERACOES} gerações no uniforme que você escolher.`,
+    botao: 'Pedir a minha',
+    botaoBloco: `Pedir a minha · ${MINHA_GERACOES} gerações`,
+    soDono: false,
+  },
+];
+
+export const PRODUTOS = ehNativo() ? PRODUTOS_APP : PRODUTOS_SITE;
+
+export const produtoPorId = (id) => PRODUTOS.find((p) => p.id === id);

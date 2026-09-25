@@ -1,7 +1,10 @@
-// Capturas cruas para a Google Play: celular 360×780 a 3× (1080×2340), logado
-// como a conta de demonstração criada por backend/scripts/demo-loja.js.
-// Correr a partir de frontend/: `node scripts/loja/capturar-telas.mjs [--so=inicio,perfil] [--base=https://dev.futty.pages.dev]`
-// Saída: FUT/LOJA/cruas/<tela>.png
+// Capturas cruas para as lojas, logado como a conta de demonstração criada por
+// backend/scripts/demo-loja.js. Padrão (Google Play): celular 360×780 a 3× (1080×2340).
+// Correr a partir de frontend/: `node scripts/loja/capturar-telas.mjs [--so=inicio,perfil] [--base=https://dev.futty.pages.dev] [--tamanho=1290x2796] [--pasta=apple]`
+// Saída: FUT/LOJA/cruas/<tela>.png (com --pasta=apple: FUT/LOJA/apple/cruas/<tela>.png)
+// --tamanho=LxA (em pixels, múltiplos de 3) troca a viewport para L/3 × A/3 a 3× e o user agent para o do
+// iPhone. iPhone 6,7" da App Store: --tamanho=1290x2796.
+// Nenhuma tela sai se mostrar preço, "Brilhante" ou palavra de venda: o script aborta.
 import { readFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,9 +12,13 @@ import { chromium } from 'playwright';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const LOJA = resolve(AQUI, '..', '..', '..', '..', 'LOJA');
-const CRUAS = join(LOJA, 'cruas');
 const opcao = (nome) => (process.argv.find((a) => a.startsWith(`--${nome}=`)) || '').slice(nome.length + 3);
+const CRUAS = join(opcao('pasta') ? join(LOJA, opcao('pasta')) : LOJA, 'cruas');
 const BASE = opcao('base') || 'https://futty.pages.dev';
+const [LARGURA_PX, ALTURA_PX] = (opcao('tamanho') || '1080x2340').split('x').map(Number);
+if (!LARGURA_PX || !ALTURA_PX || LARGURA_PX % 3 || ALTURA_PX % 3) throw new Error('--tamanho=LARGURAxALTURA, em pixels e múltiplos de 3 (ex.: 1290x2796)');
+const UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
+const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7 Mobile/15E148 Safari/604.1';
 
 const estado = JSON.parse(readFileSync(join(LOJA, 'demo-estado.json'), 'utf8'));
 const senha = readFileSync(join(LOJA, 'demo-senha.txt'), 'utf8').match(/senha: (.+)/)[1].trim();
@@ -21,11 +28,11 @@ const quer = (tela) => !so.length || so.includes(tela);
 // Posição fictícia em Brasília (Asa Sul), só para o Explorar mostrar distâncias.
 // O app calcula a distância no aparelho; nada disto vai ao servidor.
 const CONTEXTO = {
-  viewport: { width: 360, height: 780 },
+  viewport: { width: LARGURA_PX / 3, height: ALTURA_PX / 3 },
   deviceScaleFactor: 3,
   isMobile: true,
   hasTouch: true,
-  userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
+  userAgent: opcao('tamanho') ? UA_IPHONE : UA_ANDROID,
   locale: 'pt-BR',
   timezoneId: 'America/Sao_Paulo',
   colorScheme: 'dark',
@@ -76,9 +83,13 @@ async function assentar(page, { minimo = 1800 } = {}) {
   console.warn('  ! a tela não assentou em 20 s; capturando mesmo assim');
 }
 
+const PROIBIDO = /R\$|€|brilhante|pre[çc]o|comprar|pagar/i;
+
 async function capturar(page, nome) {
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(300);
+  const achado = (await page.evaluate(() => document.body.innerText)).match(PROIBIDO);
+  if (achado) throw new Error(`${nome}: a tela mostra "${achado[0]}" e não vai para a loja`);
   await page.screenshot({ path: join(CRUAS, `${nome}.png`), type: 'png', animations: 'disabled', caret: 'hide' });
   console.log('✓', `${nome}.png`);
 }

@@ -20,8 +20,9 @@ import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
-import { PRODUTOS, MINHA_GERACOES } from '../lib/planos';
-import { ehAppNativo, salvarOuCompartilhar } from '../utils/salvarImagem';
+import { produtoPorId } from '../lib/planos';
+import { ehNativo } from '../lib/plataforma';
+import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import AdCard from '../components/AdCard';
 import Topbar from '../components/Topbar';
@@ -295,7 +296,7 @@ export default function Figurinha() {
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
-  const appNativo = ehAppNativo();
+  const appNativo = ehNativo();
   // GRUPO B 6a — `equipa` existia só para alimentar o PlayerCard, que saiu daqui.
   const frameHex = getFrameColor(corFrame).stroke;
   // Regra única: a foto CRUA nunca entra no card. Só entra o avatar quando é
@@ -861,7 +862,7 @@ export default function Figurinha() {
       const nome = ficheiroNome(nomeJogador(jogador));
       const file = blob ? new File([blob], nome, { type: 'image/png' }) : null;
       const payload = { title: 'Meu card Futty', text: 'Veja meu cartão de jogador no Futty ⚽' };
-      if (ehAppNativo()) {
+      if (ehNativo()) {
         await salvarOuCompartilhar(blob, nome, { titulo: payload.title });
       } else if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ ...payload, files: [file] });
@@ -1107,7 +1108,7 @@ export default function Figurinha() {
         return;
       }
       const file = new File([blob], ficheiroNome(nomeJogador(jogador)), { type: 'image/png' });
-      if (!ehAppNativo() && navigator.canShare && navigator.canShare({ files: [file] })) {
+      if (!ehNativo() && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: 'Minha figurinha Futty' });
       } else {
         await salvarOuCompartilhar(blob, file.name, { titulo: 'Minha figurinha Futty' });
@@ -1548,9 +1549,7 @@ export default function Figurinha() {
                       disabled={pedindo === 'pacote'}
                       onClick={() => pedirBrilhante('pacote')}
                     >
-                      {pedindo === 'pacote'
-                        ? 'Enviando…'
-                        : `Ativar para o meu time · ${PRODUTOS[0].preco} · ${PRODUTOS[0].porJogador}`}
+                      {pedindo === 'pacote' ? 'Enviando…' : produtoPorId('pacote').botaoBloco}
                     </button>
                   </span>
                 ) : null}
@@ -1561,7 +1560,7 @@ export default function Figurinha() {
                   disabled={pedindo === 'minha'}
                   onClick={() => pedirBrilhante('minha')}
                 >
-                  {pedindo === 'minha' ? 'Enviando…' : `Só a minha · ${PRODUTOS[2].preco} · ${MINHA_GERACOES} gerações`}
+                  {pedindo === 'minha' ? 'Enviando…' : produtoPorId('minha').botaoBloco}
                 </button>
                 <Link to="/planos" style={{ fontSize: 11.5, color: 'var(--label-color)', textAlign: 'center', textDecoration: 'none' }}>
                   Ver o que cada um dá →
@@ -1801,7 +1800,7 @@ export default function Figurinha() {
                 disabled={pedindo === 'minha'}
                 onClick={() => pedirBrilhante('minha')}
               >
-                {pedindo === 'minha' ? 'Enviando…' : `Só a minha · ${PRODUTOS[2].preco} · ${MINHA_GERACOES} gerações`}
+                {pedindo === 'minha' ? 'Enviando…' : produtoPorId('minha').botaoBloco}
               </button>
             </div>
           ) : null}
