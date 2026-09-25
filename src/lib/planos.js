@@ -27,6 +27,13 @@
 import { precos } from '../utils/precos';
 import { ehNativo } from './plataforma';
 
+// INTERRUPTOR ÚNICO DOS PREÇOS (25-set, dono: "sem pagamento por enquanto").
+// Em false, nenhuma tela do site nem do app mostra valor: as duas usam a lista
+// PRODUTOS_APP. PRODUTOS_SITE (com preços, manto próprio e "por jogador") fica
+// guardado aqui, intocado. Vira true no dia do dinheiro. O app da loja
+// (ehNativo) nunca mostra preço, mesmo com true, até a compra na loja existir.
+const PAGAMENTOS_ATIVOS = false;
+
 // A tabela em números, por moeda. `formatar` vive em utils/precos.js e devolve
 // "R$49,90/mês" — estes produtos são pagos UMA VEZ, por isso formata-se aqui,
 // sem o "/mês".
@@ -100,8 +107,9 @@ const PRODUTOS_SITE = [
   },
 ];
 
-// App da loja (iOS/Android): sem valor, sem vitrine de itens e sem o manto
-// próprio. Os botões seguem criando o pedido de ativação — é pedido, não venda.
+// Sem valor, sem vitrine de itens e sem o manto próprio: a lista do app da loja
+// (iOS/Android) e, com PAGAMENTOS_ATIVOS = false, também a do site. Os botões
+// criam o pedido de ativação — é pedido, não venda.
 const PRODUTOS_APP = [
   {
     id: 'pacote',
@@ -121,6 +129,6 @@ const PRODUTOS_APP = [
   },
 ];
 
-export const PRODUTOS = ehNativo() ? PRODUTOS_APP : PRODUTOS_SITE;
+export const PRODUTOS = PAGAMENTOS_ATIVOS && !ehNativo() ? PRODUTOS_SITE : PRODUTOS_APP;
 
 export const produtoPorId = (id) => PRODUTOS.find((p) => p.id === id);

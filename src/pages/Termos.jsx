@@ -2,6 +2,7 @@
 // Versão final para uso (31-jul): sem aviso de revisão jurídica, sem travessões,
 // com as cláusulas de proteção novas (fotos de terceiros, uso aceitável, créditos,
 // limitação de responsabilidade, lei e foro).
+// 25-set: §7 sem cobrança por enquanto; o texto anterior fica em CLAUSULA_PAGAMENTO_FUTURA.
 import { Link } from 'react-router-dom';
 import '../styles/app.css';
 
@@ -11,8 +12,29 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const ULTIMA_ATUALIZACAO = '31 de julho de 2026';
+const ULTIMA_ATUALIZACAO = '25 de setembro de 2026';
 const CONTATO = 'contato@futtyapp.com';
+
+// CLAUSULA_PAGAMENTO_FUTURA: o §7 como estava até 25-set, guardado para o dia em que
+// houver compra na loja. Para voltar: descomentar, trocar a cláusula "7. Cobrança" pela
+// constante e atualizar a data acima.
+//
+// const CLAUSULA_PAGAMENTO_FUTURA = (
+//   <>
+//     <h2 style={h2}>7. Planos, créditos e pagamento</h2>
+//     <p style={p}>
+//       O Futty tem um plano gratuito e produtos pagos. Pagamentos são processados
+//       exclusivamente pela loja de aplicativos (App Store ou Google Play). O Futty não
+//       processa cartões diretamente. Cancelamentos e reembolsos seguem a política da loja
+//       usada na compra.
+//     </p>
+//     <p style={{ ...p, marginTop: 6 }}>
+//       Créditos e itens comprados dentro do app não têm valor monetário fora do Futty, não
+//       são transferíveis entre contas e não podem ser trocados por dinheiro. Créditos
+//       comprados não expiram enquanto o serviço estiver ativo.
+//     </p>
+//   </>
+// );
 
 export default function Termos() {
   return (
@@ -92,17 +114,10 @@ export default function Termos() {
           Resenha, e a outra pessoa não é avisada.
         </p>
 
-        <h2 style={h2}>7. Planos, créditos e pagamento</h2>
+        <h2 style={h2}>7. Cobrança</h2>
         <p style={p}>
-          O Futty tem um plano gratuito e produtos pagos. Pagamentos são processados
-          exclusivamente pela loja de aplicativos (App Store ou Google Play). O Futty não
-          processa cartões diretamente. Cancelamentos e reembolsos seguem a política da loja
-          usada na compra.
-        </p>
-        <p style={{ ...p, marginTop: 6 }}>
-          Créditos e itens comprados dentro do app não têm valor monetário fora do Futty, não
-          são transferíveis entre contas e não podem ser trocados por dinheiro. Créditos
-          comprados não expiram enquanto o serviço estiver ativo.
+          O Futty não cobra nada dentro do app nesta versão. Quando houver compras, estes
+          termos serão atualizados e você será avisado no app.
         </p>
 
         <h2 style={h2}>8. Publicidade</h2>

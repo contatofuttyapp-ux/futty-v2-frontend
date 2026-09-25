@@ -3825,6 +3825,17 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
+  if (CENAS.includes('rodada24') || CENAS.includes('rodada-24')) {
+    const r = await cenaRodada24(navegador, sessao);
+    saida.rodada24 = r;
+    console.log('\n[iphone] RODADA 24 — sem pagamento por enquanto (site sem preço, Termos e Privacidade)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
@@ -4274,20 +4285,10 @@ async function cenaRodada22(navegador, sessao) {
   return { pasta, capturas, erros };
 }
 
-// ─── Cena "rodada23" (25-set): Loja Apple — sem preço no app da loja (Apple 3.1.1 /
-// Google Payments). A conta demo abre Planos e Figurinha duas vezes: como app da loja
-// (o Capacitor do navegador enxerga a plataforma "ios" pelo CapacitorCustomPlatform,
-// lido quando o módulo carrega) e como site. No app: nenhum R$, €, "comprar", "pagar"
-// ou "preço" nessas telas e sem "Manto próprio"; no site: os preços continuam. Nada
-// escreve no banco e nada gera figurinha. A conta demo já tem figurinha e créditos,
-// então o estado de cada tela é montado remendando dois GETs (/api/me e
-// /api/brilhantes/estado), senão o bloco "Vire figurinha" nem apareceria.
-// --url tem de servir uma build com VITE_API_URL VAZIO (`VITE_API_URL= vite build`): o
-// app "nativo" pede o /api ao endereço absoluto do motor, que o CORS do motor não
-// libera para localhost; vazio, o pedido volta ao mesmo endereço e passa pelo proxy
-// do preview. Depois, uma varredura de texto pelas outras telas, só como app.
-async function cenaRodada23(navegador, sessao) {
-  const pasta = path.join(PASTA, 'rodada-23');
+// Ajudantes das cenas "sem preço" (rodada23 e rodada24): abrem a tela como app da loja
+// (Capacitor simulado) ou como site, remendam GETs e juntam as verificações.
+function bancadaDePreco(navegador, sessao, nomePasta) {
+  const pasta = path.join(PASTA, nomePasta);
   mkdirSync(pasta, { recursive: true });
   const erros = [];
   const verificacoes = [];
@@ -4355,15 +4356,56 @@ async function cenaRodada23(navegador, sessao) {
 
   const blocoFigurinha = (pagina) => pagina.locator('.hud-corners', { hasText: 'Vire figurinha' }).first();
 
+  // Abre cada rota e confere que o texto da tela não traz valor, o nome antigo nem palavra de venda.
+  async function varrer(rotulo, nativo, rotas) {
+    const { contexto, pagina } = await abrir(`varredura-${rotulo}`, nativo);
+    for (const rota of rotas) {
+      try {
+        await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+        await fecharCookies(pagina);
+        await pagina.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+        await espera(1200);
+        const texto = await pagina.evaluate(() => document.body.innerText);
+        const achado = texto.match(/R\$|€|brilhante|comprar|pagar|pre[çc]o/i);
+        verificar(`${rotulo} ${rota}: sem valor, "Brilhante", comprar, pagar nem preço`, !achado, achado ? `achou "${achado[0]}"` : `${texto.length} caracteres lidos`);
+      } catch (e) {
+        verificar(`${rotulo} ${rota}: a tela abriu`, false, e.message.split('\n')[0]);
+      }
+    }
+    await contexto.close();
+  }
+
+  return { pasta, erros, verificacoes, capturas, verificar, abrir, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, SEM_DIREITO, SEM_FIGURINHA, fecharCookies };
+}
+
+// ─── Cena "rodada23" (25-set): Loja Apple — sem preço no app da loja (Apple 3.1.1 /
+// Google Payments). A conta demo abre Planos e Figurinha duas vezes: como app da loja
+// (o Capacitor do navegador enxerga a plataforma "ios" pelo CapacitorCustomPlatform,
+// lido quando o módulo carrega) e como site. No app: nenhum R$, €, "comprar", "pagar"
+// ou "preço" nessas telas e sem "Manto próprio"; no site: os preços continuam. Nada
+// escreve no banco e nada gera figurinha. A conta demo já tem figurinha e créditos,
+// então o estado de cada tela é montado remendando dois GETs (/api/me e
+// /api/brilhantes/estado), senão o bloco "Vire figurinha" nem apareceria.
+// --url tem de servir uma build com VITE_API_URL VAZIO (`VITE_API_URL= vite build`): o
+// app "nativo" pede o /api ao endereço absoluto do motor, que o CORS do motor não
+// libera para localhost; vazio, o pedido volta ao mesmo endereço e passa pelo proxy
+// do preview. Depois, uma varredura de texto pelas outras telas, só como app.
+async function cenaRodada23(navegador, sessao) {
+  const { pasta, erros, verificacoes, capturas, verificar, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, SEM_DIREITO, SEM_FIGURINHA } = bancadaDePreco(navegador, sessao, 'rodada-23');
+  // Desde a Rodada 24 o site só mostra preço com PAGAMENTOS_ATIVOS = true no build; sem
+  // --pagamentos ele tem de ser igual ao app.
+  const PAGAMENTOS = args.includes('--pagamentos');
+
   // (1) Planos, com a conta demo como ela é (dona do Domingueira FC, sem pedido).
   for (const nativo of [true, false]) {
+    const comPreco = !nativo && PAGAMENTOS;
     const nome = `planos-${nativo ? 'app' : 'site'}`;
     const c = await ler(nome, nativo, '/planos', {
-      preparar: (pagina) => pagina.getByRole('button', { name: nativo ? 'Pedir ativação' : 'Ativar para o meu time' }).first().waitFor({ timeout: 25000 }),
+      preparar: (pagina) => pagina.getByRole('button', { name: comPreco ? 'Ativar para o meu time' : 'Pedir ativação' }).first().waitFor({ timeout: 25000 }),
       alvo: (pagina) => pagina.locator('main').first(),
     });
     if (!c) continue;
-    if (nativo) {
+    if (!comPreco) {
       semPreco(nome, c);
       verificar(`${nome}: dois cartões (sem o manto próprio)`, cartoes(c) === 2, `${cartoes(c)} cartão(ões)`);
       naoMostra(nome, c, 'Manto próprio');
@@ -4383,7 +4425,7 @@ async function cenaRodada23(navegador, sessao) {
       alvo: blocoFigurinha,
     });
     if (!c) continue;
-    if (nativo) {
+    if (nativo || !PAGAMENTOS) {
       semPreco(nome, c);
       for (const t of ['Vire figurinha', 'Pedir ativação para o meu time', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
     } else {
@@ -4403,7 +4445,7 @@ async function cenaRodada23(navegador, sessao) {
       alvo: blocoFigurinha,
     });
     if (!c) continue;
-    if (nativo) {
+    if (nativo || !PAGAMENTOS) {
       semPreco(nome, c);
       for (const t of ['Vire figurinha', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
     } else {
@@ -4412,24 +4454,94 @@ async function cenaRodada23(navegador, sessao) {
   }
 
   // (4) Varredura como app: as outras telas não mostram valor nem o nome antigo.
+  await varrer('app', true, ['/home', '/perfil', '/feed', '/explorar', `/equipa/${TIME}`, `/equipa/${TIME}/ranking`, '/criar-equipa']);
+
+  return { pasta, verificacoes, capturas, erros };
+}
+
+// ─── Cena "rodada24" (25-set): "sem pagamento por enquanto". No SITE (sem Capacitor
+// simulado, contra a build de produção servida por `vite preview`) Planos e Figurinha não
+// mostram preço e usam a mesma lista do app; Termos e Privacidade trazem a cláusula nova e
+// a data de hoje, sem o texto de pagamento antigo. Nada escreve no banco e nada gera
+// figurinha (custo de IA zero). Depois, a varredura de texto pelas outras telas do site.
+async function cenaRodada24(navegador, sessao) {
+  const { pasta, erros, verificacoes, capturas, verificar, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, SEM_DIREITO, SEM_FIGURINHA } = bancadaDePreco(navegador, sessao, 'rodada-24');
+  const HOJE = '25 de setembro de 2026';
+
+  // (1) Planos no site.
   {
-    const { contexto, pagina } = await abrir('varredura-app', true);
-    const rotas = ['/home', '/perfil', '/feed', '/explorar', `/equipa/${TIME}`, `/equipa/${TIME}/ranking`, '/criar-equipa'];
-    for (const rota of rotas) {
-      try {
-        await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
-        await fecharCookies(pagina);
-        await pagina.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-        await espera(1200);
-        const texto = await pagina.evaluate(() => document.body.innerText);
-        const achado = texto.match(/R\$|€|brilhante|comprar|pagar|pre[çc]o/i);
-        verificar(`app ${rota}: sem valor, "Brilhante", comprar, pagar nem preço`, !achado, achado ? `achou "${achado[0]}"` : `${texto.length} caracteres lidos`);
-      } catch (e) {
-        verificar(`app ${rota}: a tela abriu`, false, e.message.split('\n')[0]);
-      }
+    const nome = 'planos-site';
+    const c = await ler(nome, false, '/planos', {
+      preparar: (pagina) => pagina.getByRole('button', { name: 'Pedir ativação' }).first().waitFor({ timeout: 25000 }),
+      alvo: (pagina) => pagina.locator('main').first(),
+    });
+    if (c) {
+      semPreco(nome, c);
+      verificar(`${nome}: dois cartões (sem o manto próprio)`, cartoes(c) === 2, `${cartoes(c)} cartão(ões)`);
+      naoMostra(nome, c, 'Manto próprio');
+      for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
     }
-    await contexto.close();
   }
+
+  // (2) Figurinha no site: o bloco "Vire figurinha" grande (foto sem figurinha, sem gerações).
+  {
+    const nome = 'figurinha-bloco-site';
+    const c = await ler(nome, false, '/figurinha', {
+      remendos: { '/api/me': SEM_FIGURINHA, '/api/brilhantes/estado': SEM_DIREITO },
+      preparar: (pagina) => blocoFigurinha(pagina).waitFor({ timeout: 30000 }),
+      alvo: blocoFigurinha,
+    });
+    if (c) {
+      semPreco(nome, c);
+      for (const t of ['Vire figurinha', 'Pedir ativação para o meu time', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
+    }
+  }
+
+  // (3) Figurinha no site: aba Uniforme, o convite compacto (figurinha feita, sem gerações).
+  {
+    const nome = 'figurinha-uniforme-site';
+    const c = await ler(nome, false, '/figurinha', {
+      remendos: { '/api/brilhantes/estado': SEM_DIREITO },
+      preparar: async (pagina) => {
+        await pagina.getByRole('button', { name: 'Uniforme' }).first().click({ timeout: 30000 });
+        await blocoFigurinha(pagina).waitFor({ timeout: 10000 });
+      },
+      alvo: blocoFigurinha,
+    });
+    if (c) {
+      semPreco(nome, c);
+      for (const t of ['Vire figurinha', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
+    }
+  }
+
+  // (4) Termos: §7 novo, sem o texto antigo, com a data de hoje.
+  {
+    const nome = 'termos';
+    const c = await ler(nome, false, '/termos', {
+      preparar: (pagina) => pagina.getByText('7. Cobrança').first().waitFor({ timeout: 25000 }),
+      alvo: (pagina) => pagina.locator('body'),
+    });
+    if (c) {
+      for (const t of ['7. Cobrança', 'O Futty não cobra nada dentro do app nesta versão. Quando houver compras, estes termos serão atualizados e você será avisado no app.', `Última atualização: ${HOJE}`]) mostra(nome, c, t);
+      for (const t of ['Planos, créditos e pagamento', 'produtos pagos', 'Pagamentos são processados', 'Créditos comprados', 'Cancelamentos e reembolsos', 'App Store ou Google Play']) naoMostra(nome, c, t);
+    }
+  }
+
+  // (5) Privacidade: o parágrafo novo no lugar do item Apple / Google, com a data de hoje.
+  {
+    const nome = 'privacidade';
+    const c = await ler(nome, false, '/privacidade', {
+      preparar: (pagina) => pagina.getByText('3. Com quem compartilhamos').first().waitFor({ timeout: 25000 }),
+      alvo: (pagina) => pagina.locator('body'),
+    });
+    if (c) {
+      for (const t of ['Pagamentos: o Futty não cobra nada dentro do app nesta versão, então não trata dados de pagamento. Quando houver compras, esta política será atualizada e você será avisado no app.', `Última atualização: ${HOJE} (v3)`]) mostra(nome, c, t);
+      for (const t of ['Apple / Google', 'processam os pagamentos na loja', 'confirmação da compra']) naoMostra(nome, c, t);
+    }
+  }
+
+  // (6) Varredura no site: as outras telas não mostram valor nem o nome antigo.
+  await varrer('site', false, ['/home', '/perfil', '/feed', '/explorar', `/equipa/${TIME}`, `/equipa/${TIME}/ranking`, '/criar-equipa']);
 
   return { pasta, verificacoes, capturas, erros };
 }

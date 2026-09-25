@@ -7,6 +7,7 @@
 // v2 (13-set): infraestrutura real (Cloud Run São Paulo + Cloudflare, não mais
 // Railway/Vercel), Resend e Sentry na lista de fornecedores, exclusão de conta
 // pelo próprio app (Perfil → Conta) como via principal.
+// v3 (25-set): sem pagamento por enquanto; o item da Apple / Google fica em CLAUSULA_PAGAMENTO_FUTURA.
 import { Link } from 'react-router-dom';
 import '../styles/app.css';
 
@@ -16,8 +17,16 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const ULTIMA_ATUALIZACAO = '13 de setembro de 2026 (v2)';
+const ULTIMA_ATUALIZACAO = '25 de setembro de 2026 (v3)';
 const CONTATO = 'contato@futtyapp.com';
+
+// CLAUSULA_PAGAMENTO_FUTURA: o item da seção 3 como estava até 25-set, guardado para o dia
+// em que houver compra na loja. Para voltar: descomentar, pôr a constante na lista da
+// seção 3, tirar o parágrafo "Pagamentos" que vem depois dela e atualizar a data acima.
+//
+// const CLAUSULA_PAGAMENTO_FUTURA = (
+//   <li><span style={strong}>Apple / Google</span>: processam os pagamentos na loja; o cartão fica com a loja, o Futty só recebe a confirmação da compra</li>
+// );
 
 export default function Privacidade() {
   return (
@@ -73,8 +82,12 @@ export default function Privacidade() {
           <li><span style={strong}>Sentry</span>: registro de erros técnicos, sem dados pessoais além do id da conta</li>
           <li><span style={strong}>fal.ai</span>: recebe só a foto enviada no momento de gerar o card, não vê o resto do seu perfil</li>
           <li><span style={strong}>Anthropic</span>: recebe só o conteúdo denunciado, para triagem automática, sem a sua identidade</li>
-          <li><span style={strong}>Apple / Google</span>: processam os pagamentos na loja; o cartão fica com a loja, o Futty só recebe a confirmação da compra</li>
         </ul>
+        <p style={{ ...p, marginTop: 6 }}>
+          <span style={strong}>Pagamentos:</span> o Futty não cobra nada dentro do app nesta
+          versão, então não trata dados de pagamento. Quando houver compras, esta política
+          será atualizada e você será avisado no app.
+        </p>
 
         <h2 style={h2}>4. Localização, a regra clara</h2>
         <p style={p}>
