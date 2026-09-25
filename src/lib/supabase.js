@@ -2,11 +2,13 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Rodada 28: a chave publishable nova (sb_publishable_…) manda; a anon antiga (JWT) só vale enquanto a
+// nova não estiver no ambiente do build. As duas convivem até as antigas serem desligadas no painel.
+const supabaseChave = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseChave) {
   throw new Error(
-    '[Futty] Faltam variáveis de ambiente VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY. Verifique o arquivo .env do frontend.'
+    '[Futty] Faltam variáveis de ambiente VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY (ou a antiga VITE_SUPABASE_ANON_KEY). Verifique o arquivo .env do frontend.'
   );
 }
 
@@ -16,6 +18,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // WebView do Capacitor nunca navega para a URL de retorno (ela é entregue via
 // appUrlOpen), então o detectSessionInUrl automático nunca dispara. Isso só
 // funciona com PKCE (o link traz `code`, não o token direto).
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseChave, {
   auth: { flowType: 'pkce' },
 });

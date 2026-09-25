@@ -44,6 +44,7 @@ jobs:
       - name: Conferir os segredos
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_ASSETS_URL: ${{ secrets.VITE_ASSETS_URL }}
@@ -55,17 +56,22 @@ jobs:
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
         run: |
           faltam=""
-          for nome in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_API_URL VITE_ASSETS_URL \
+          for nome in VITE_SUPABASE_URL VITE_API_URL VITE_ASSETS_URL \
                       APPSTORE_KEY_ID APPSTORE_ISSUER_ID APPSTORE_P8_BASE64 APPLE_TEAM_ID \
                       MATCH_PASSWORD MATCH_DEPLOY_KEY; do
             if [ -z "${!nome}" ]; then faltam="$faltam $nome"; fi
           done
+          # Rodada 28: a chave pública do Supabase pode vir no formato novo (publishable, preferida)
+          # ou no antigo (anon) enquanto as antigas não forem desligadas — basta uma das duas.
+          if [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ] && [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            faltam="$faltam VITE_SUPABASE_PUBLISHABLE_KEY"
+          fi
           if [ -n "$faltam" ]; then
             echo "::error::Faltam segredos no repositório:$faltam"
             echo "Settings -> Secrets and variables -> Actions -> New repository secret (ver IOS.md)"
             exit 1
           fi
-          echo "Os 10 segredos estão lá."
+          echo "Os segredos estão lá."
 
       # O Capacitor CLI exige Node >= 22.
       - name: Node 22
@@ -92,12 +98,14 @@ jobs:
       - name: Escrever o .env.production
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_ASSETS_URL: ${{ secrets.VITE_ASSETS_URL }}
         run: |
           cat > .env.production <<EOF
           VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+          VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
           VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
           VITE_API_URL=${VITE_API_URL}
           VITE_ASSETS_URL=${VITE_ASSETS_URL}
