@@ -1849,6 +1849,12 @@
   filter: drop-shadow(0 1% 6% rgba(0, 0, 0, 0.9));
 }
 
+/* RODADA 27 — a figurinha COMUM: a foto é o fundo (cover), sem sombra — o canvas também não a
+   desenha (não há nada a flutuar). A posição vem do enquadrarFotoComum, a mesma conta do canvas. */
+.cromo-previa__avatar--comum {
+  filter: none;
+}
+
 /* RODADA 12A — o lugar do cromo enquanto o avatar ainda não decodificou. Só a
    silhueta octogonal e o fundo escolhido: SEM a moldura dourada, porque uma
    moldura sozinha lê-se como cromo partido — o defeito que esta rodada corrige.

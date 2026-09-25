@@ -582,6 +582,22 @@ export function enquadrarAvatar({ W, H, nw, nh, avatarZoom = 1, ehQuadrado = fal
   return { dx: (W - dw) / 2, dy: EYE_Y - dh * EYE_FRAC, dw, dh };
 }
 
+// RODADA 27 — onde a foto da figurinha COMUM fica dentro do card. Era uma conta solta dentro do
+// construirCard; agora é uma função, porque a prévia em DOM do Início (PreviaCromo) tem de pôr a foto
+// no MESMO sítio que o canvas põe, senão a troca da prévia pelo cromo desenhado salta à vista (medido:
+// 47,9 px de desvio numa caixa de 184 px, porque a prévia usava a conta da Brilhante).
+//
+// A foto preenche o card inteiro (cover) e, quando sobra altura, fica alinhada ao TOPO: numa 2:3 com
+// margem o que sobra é chão, não cabeça (a regra de sempre — a coroa nunca é comida). O recorte 2:3 do
+// CropModal já é o enquadramento que a pessoa escolheu; num card 2:3 ele aparece inteiro, num quadrado
+// aparece o quadrado do topo dele.
+export function enquadrarFotoComum({ W, H, nw, nh }) {
+  const escala = Math.max(W / nw, H / nh);
+  const dw = nw * escala;
+  const dh = nh * escala;
+  return { dx: (W - dw) / 2, dy: dh > H ? 0 : (H - dh) / 2, dw, dh };
+}
+
 /** O recorte octogonal do card, em percentagem — para o clip-path do CSS. */
 export function octagonoCSS() {
   // cut = 32*k e k = W/400 → o corte é sempre 8% da LARGURA. Num quadrado é
@@ -682,12 +698,9 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // fundo) e sem inset (o frame desenha-se por cima, como numa moldura de
     // retrato de verdade). O clip octogonal do conteúdo já está ativo.
     if (ehComum) {
-      const escala = Math.max(W / avatar.naturalWidth, H / avatar.naturalHeight);
-      const dw = avatar.naturalWidth * escala;
-      const dh = avatar.naturalHeight * escala;
-      // Alinhado ao TOPO quando a foto sobra em altura: numa 2:3 com margem, o
-      // que sobra é chão, não cabeça (a regra de sempre — a coroa nunca é comida).
-      ctx.drawImage(avatar, (W - dw) / 2, dh > H ? 0 : (H - dh) / 2, dw, dh);
+      // Alinhado ao TOPO quando a foto sobra em altura (enquadrarFotoComum, acima do construirCard).
+      const { dx, dy, dw, dh } = enquadrarFotoComum({ W, H, nw: avatar.naturalWidth, nh: avatar.naturalHeight });
+      ctx.drawImage(avatar, dx, dy, dw, dh);
       return;
     }
 

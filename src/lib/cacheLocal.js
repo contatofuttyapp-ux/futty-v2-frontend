@@ -15,10 +15,10 @@
 // Nunca global: celular compartilhado não pode mostrar o perfil da conta
 // anterior — a chave leva o userId, e limparCacheLocal() (chamada no signOut
 // do AuthContext) apaga tudo.
-const PREFIXO = 'futty_cache_v1:';
+export const PREFIXO = 'futty_cache_v1:';
 const VALIDADE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 
-function chaveCompleta(userId, chave) {
+export function chaveCompleta(userId, chave) {
   return `${PREFIXO}${userId}:${chave}`;
 }
 

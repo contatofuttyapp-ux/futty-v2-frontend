@@ -17,7 +17,9 @@ export async function estadoBrilhantes({ segundoPlano = false } = {}) {
     // "dados" da tela.
     return await apiFetch('/api/brilhantes/estado', { segundoPlano });
   } catch {
-    return { direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0, times: [], pedidos: [] };
+    // indisponivel: a tela mostra 'ninguém tem nada', mas isto NÃO é uma resposta do servidor — quem guarda
+    // o estado (cacheCard.espelharBrilhantesNoInicio) não pode guardá-lo como verdade (Rodada 27).
+    return { direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0, times: [], pedidos: [], indisponivel: true };
   }
 }
 

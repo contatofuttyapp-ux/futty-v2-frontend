@@ -3265,7 +3265,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3833,6 +3833,28 @@ try {
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada27') || CENAS.includes('rodada-27')) {
+    const r = await cenaRodada27(navegador);
+    saida.rodada27 = r;
+    console.log(`\n[iphone] RODADA 27 — check-up da foto de verdade (${ETIQUETA}, servidor local, 390×844)`);
+    const m = r.medidas;
+    if (m.item1) console.log(`   item 1 · genérico: ${JSON.stringify(m.item1)}`);
+    if (m.item2) console.log(`   item 2 · tempos (ms): ${JSON.stringify(m.item2)}`);
+    for (const s of (m.item3?.superficies || []).filter((x) => x.regra && x.medido)) console.log(`   item 3 · ${s.ok ? 'OK   ' : 'FALHA'} ${s.nome} [${s.regra}] ${s.cssW}×${s.cssH} · mostra u ${s.medido?.u} v ${s.medido?.v} · esperado u ${s.esperado?.u} v ${s.esperado?.v} · desvio ${s.desvioPx} px`);
+    if (m.item3?.controle) console.log(`   item 3 · controle (o recorte no mesmo pipeline): ${JSON.stringify(m.item3.controle)}`);
+    if (m.item4?.tabela?.length) {
+      console.log(`   item 4 · resumo: ${JSON.stringify(m.item4.resumo)}`);
+      for (const t of m.item4.tabela) console.log(`            ${String(t.rota).padEnd(12)} pintura ${String(t.pintura).padStart(5)} ms · dados ${String(t.dados ?? '—').padStart(5)} ms · do cache ${t.doCache ? 'sim' : 'não'} · ${t.pedidos} pedido(s) [${(t.rotas || []).join(', ')}]`);
+      console.log(`            chamadas: ${JSON.stringify(m.item4.porRota)}`);
+    }
+    if (m.item5 && Object.keys(m.item5).length) console.log(`   item 5 · reenquadrar: ${JSON.stringify(m.item5)}`);
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros: ${r.erros.join(' | ')}`);
     if (falhas) process.exitCode = 1;
   }
 
@@ -4777,4 +4799,890 @@ async function cenaHotfix26(navegador) {
   }
 
   return { pasta, verificacoes, capturas, erros, envios: envios.map((e) => e.status) };
+}
+
+// ─── Cena "rodada27" (25-set): CHECK-UP DA FOTO DE VERDADE ───────────────────────
+// O que o dono relatou pelo celular, medido em servidor LOCAL (390×844) antes de corrigir:
+//   1. "Trocar visual" não muda o genérico de quem já tem foto; sem foto tem de trocar na
+//      hora, e Ranking/Presença/Início têm de mostrar o MESMO genérico escolhido;
+//   2. a foto demora a aparecer: tempo do POST, do clique em Confirmar até o card mostrar a
+//      foto nova, e até o Início, o Perfil e o Ranking mostrarem (cache de sessão);
+//   3. enquadramento: o que se recorta no CropModal 2:3 tem de ser o que cada tela mostra
+//      (card 2:3 = o recorte inteiro; quadrado e miniaturas = o quadrado do TOPO; cartão 3:4
+//      do sorteio = do topo, sem cortar as laterais), com tolerância de 2 px;
+//   4. troca de tela: o percurso Início → Figurinha → Resenha → Início no diagnóstico do app.
+//
+// O INSTRUMENTO DE ENQUADRAMENTO. A foto de prova é um GRADIENTE CINZA (R = G = B): num passe
+// o brilho é x/largura, no outro y/altura da imagem de origem, com um anel branco e um
+// quadrado de cor em cada canto só para o olho. Cinza porque o brilho é o que os codecs com
+// perda (JPEG do recorte, WebP do proxy) preservam melhor — no primeiro desenho, R e G
+// coloridos erravam ±2 níveis (±2 px num card) por causa da croma. Uma captura de qualquer
+// tela que mostre a foto diz, por regressão sobre o miolo, que janela do recorte ela mostra
+// (u0..u1 num passe, v0..v1 no outro). Independe de moldura, de véu e de placa: ficam fora
+// do miolo. Um CONTROLE mede o próprio recorte no mesmo pipeline (a imagem numa <img> de
+// 200×300): as telas se comparam com ele, não com a teoria, e o viés dos codecs some.
+//
+// Só roda contra servidor LOCAL e ESCREVE de verdade (sobe fotos, muda o genérico). Custo de IA
+// zero. Precisa de backend/scripts/_bench/time-rodada27.js rodado antes (as contas e o time).
+//   node scripts/ver-iphone.mjs --url http://127.0.0.1:5297 --cenas rodada27 --etiqueta antes
+//   --partes 1,2,4   (1 = genérico · 2 = foto: tempos, caches e enquadramento · 4 = troca de tela ·
+//                     5 = "Ajustar enquadramento" chega às telas · padrão: 1,2,4,5)
+
+/** PNG cinza w×h (brilho = x ou y, por `eixo`) com as marcas de borda/canto para o olho. */
+function pngGradiente(w, h, eixo) {
+  const bruto = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) {
+    const off = y * (w * 3 + 1);
+    bruto[off] = 0; // filtro "none"
+    for (let x = 0; x < w; x++) {
+      const nivel = Math.round((255 * (eixo === 'v' ? y / (h - 1) : x / (w - 1))));
+      let [r, g, b] = [nivel, nivel, nivel];
+      if ((x < 60 || x >= w - 60) && (y < 60 || y >= h - 60)) [r, g, b] = x < 60 ? (y < 60 ? [255, 0, 0] : [0, 0, 255]) : (y < 60 ? [0, 255, 0] : [255, 255, 0]);
+      else if (x < 6 || y < 6 || x >= w - 6 || y >= h - 6) [r, g, b] = [255, 255, 255];
+      const p = off + 1 + x * 3;
+      bruto[p] = r; bruto[p + 1] = g; bruto[p + 2] = b;
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8; ihdr[9] = 2; // 8 bits, RGB
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pedacoPng('IHDR', ihdr),
+    pedacoPng('IDAT', deflateSync(bruto)),
+    pedacoPng('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+// Roda DENTRO da página (addInitScript): as leituras que a cena repete. Nada aqui fala com o
+// motor nem muda o app; só olha o que já está desenhado (e marca o relógio do upload).
+function r27Instrumentar() {
+  const R = (window.__r27 = { previas: [], marcas: [] });
+  const agora = () => performance.timeOrigin + performance.now();
+  // Relógio do upload: toBlob (o recorte/JPEG sai do canvas) e o fetch do POST.
+  const toBlobOriginal = HTMLCanvasElement.prototype.toBlob;
+  HTMLCanvasElement.prototype.toBlob = function (cb, tipo, q) {
+    const w = this.width; const h = this.height;
+    R.marcas.push({ n: 'toBlob:ini', t: agora(), w, h, tipo });
+    return toBlobOriginal.call(this, (b) => { R.marcas.push({ n: 'toBlob:fim', t: agora(), w, h, tipo, bytes: b ? b.size : 0 }); cb(b); }, tipo, q);
+  };
+  const fetchOriginal = window.fetch;
+  window.fetch = function (...a) {
+    const u = String((a[0] && a[0].url) || a[0]);
+    if (/\/api\/me\/avatar(\?|$)/.test(u)) R.marcas.push({ n: 'fetch:avatar', t: agora(), metodo: (a[1] && a[1].method) || 'GET' });
+    return fetchOriginal.apply(this, a);
+  };
+  // O toque numa aba/link da barra: o relógio começa AQUI, não no click() do Playwright (que espera a
+  // acionabilidade do elemento antes de tocar — segundos numa máquina carregada — e inflava o "toque → tela").
+  document.addEventListener('click', (e) => {
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (a) R.marcas.push({ n: 'click:nav', t: agora(), href: a.getAttribute('href') });
+  }, true);
+  // Quando cada peça do cromo do Início entra no DOM (o instante em que o olho pode vê-la): a reserva
+  // (fundo escolhido), a prévia com a foto (só entra depois de decodificada) e o cromo desenhado.
+  R.transicoes = [];
+  // Hash barato de uma string longa (o cromo do Início é um data URL): tamanho + amostra a cada 7 caracteres.
+  R.hashDe = (s) => { const x = String(s || ''); let h = 0; for (let i = 0; i < x.length; i += 7) h = (h * 31 + x.charCodeAt(i)) >>> 0; return `${x.length}:${h}`; };
+  const jaVistos = new WeakSet();
+  const anotar = (n, el, extra) => { if (el && !jaVistos.has(el)) { jaVistos.add(el); R.transicoes.push({ n, t: agora(), ...extra }); } };
+  const vigiarTransicoes = () => new MutationObserver(() => {
+    anotar('inicio:reserva', document.querySelector('.cromo-previa__reserva'));
+    anotar('inicio:anel', document.querySelector('.cromo-previa'));
+    const pv = document.querySelector('.cromo-previa__avatar');
+    if (pv) anotar('inicio:previa', pv, { caminho: R.deToken(pv.getAttribute('src')) });
+    const cr = document.querySelector('.cromo-inicio img.fig-aura');
+    if (cr) anotar('inicio:cromo', cr, { hash: R.hashDe(cr.src) });
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  if (document.documentElement) vigiarTransicoes(); else document.addEventListener('DOMContentLoaded', vigiarTransicoes, { once: true });
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    if (/^Confirmar$/.test((b.textContent || '').trim())) R.marcas.push({ n: 'click:confirmar', t: agora() });
+    if (/^Escolher visual /.test(b.getAttribute('aria-label') || '')) R.marcas.push({ n: 'click:visual', t: agora() });
+  }, true);
+  // Recursos que o navegador carregou (mesmo do cache): quando começaram e quanto levaram.
+  R.recursos = (padrao) => performance.getEntriesByType('resource').filter((r) => new RegExp(padrao).test(r.name)).map((r) => ({ arquivo: r.name.split('/').pop().slice(0, 40), ini: Math.round(performance.timeOrigin + r.startTime), ms: Math.round(r.duration), bytes: r.transferSize }));
+  R.deToken = (src) => {
+    const m = String(src || '').match(/\/api\/media\/([A-Za-z0-9_-]+)/);
+    if (!m) return null;
+    try { return JSON.parse(atob(m[1].split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))).p || null; } catch { return null; }
+  };
+  // Empilha as fontes num canvas e classifica o miolo: `nova` = plano CINZA com brilho variando
+  // de verdade (a foto de prova); `antiga` = o verde liso da foto de partida.
+  R.analisar = (fonte, zona, larg = 64, alt = 96) => {
+    const cv = document.createElement('canvas');
+    cv.width = larg; cv.height = alt;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    for (const f of (Array.isArray(fonte) ? fonte : [fonte])) { try { cx.drawImage(f, 0, 0, larg, alt); } catch { /* imagem quebrada */ } }
+    const x0 = Math.round(larg * zona.x0); const y0 = Math.round(alt * zona.y0);
+    const { data } = cx.getImageData(x0, y0, Math.max(1, Math.round(larg * (zona.x1 - zona.x0))), Math.max(1, Math.round(alt * (zona.y1 - zona.y0))));
+    let n = 0; let cinza = 0; let verde = 0; let s = 0; let s2 = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 200) continue;
+      n += 1;
+      const r = data[i]; const g = data[i + 1]; const b = data[i + 2];
+      if (Math.abs(r - g) <= 14 && Math.abs(g - b) <= 14) { cinza += 1; s += g; s2 += g * g; }
+      if (Math.abs(r - 30) <= 26 && Math.abs(g - 150) <= 26 && Math.abs(b - 80) <= 26) verde += 1;
+    }
+    const desvio = cinza ? Math.sqrt(Math.max(0, s2 / cinza - (s / cinza) ** 2)) : 0;
+    return { n, nova: n && cinza / n > 0.7 && desvio > 18 ? cinza / n : 0, antiga: n ? verde / n : 0 };
+  };
+  const Z = { x0: 0.24, x1: 0.76, y0: 0.2, y1: 0.6 };
+  R.estadoCard = () => {
+    const raiz = document.querySelector('.fig-studio-card');
+    const camadas = raiz ? [...raiz.querySelectorAll('img')].filter((i) => i.complete && i.naturalWidth > 0) : [];
+    return camadas.length >= 3 ? { camadas: camadas.length, ...R.analisar(camadas, Z) } : { camadas: camadas.length, n: 0, nova: 0, antiga: 0 };
+  };
+  // As <img> do proxy vêm de OUTRA origem (o motor) e sem crossOrigin: desenhá-las num canvas sujaria o
+  // canvas. Lê-se o mesmo URL por fetch (CORS liberado) e desenha-se o bitmap. data:/blob: desenham direto.
+  R.fonteDe = async (im) => {
+    const src = im.currentSrc || im.src || '';
+    if (/^(data|blob):/.test(src)) return im;
+    try { const r = await fetch(src, { mode: 'cors' }); return await createImageBitmap(await r.blob()); } catch { return null; }
+  };
+  R.estadoInicio = async () => {
+    const final = document.querySelector('.cromo-inicio img.fig-aura');
+    if (final && final.complete && final.naturalWidth > 0) return { fase: 'cromo', ...R.analisar(await R.fonteDe(final), Z) };
+    const previa = document.querySelector('.cromo-previa__avatar');
+    if (previa && previa.complete && previa.naturalWidth > 0) { const f = await R.fonteDe(previa); return f ? { fase: 'previa', ...R.analisar(f, Z) } : { fase: 'previa', n: 0, nova: 0, antiga: 0 }; }
+    return { fase: document.querySelector('.cromo-previa__reserva') ? 'reserva' : 'nada', n: 0, nova: 0, antiga: 0 };
+  };
+  // A <img> de `seletorImg` dentro do elemento (`seletorLinha`) cujo texto tem `nome`.
+  R.estadoDaLinha = async (seletorLinha, nome, seletorImg) => {
+    const linha = [...document.querySelectorAll(seletorLinha)].find((e) => (e.innerText || '').includes(nome));
+    const im = linha?.querySelector(seletorImg);
+    if (!im || !im.complete || !im.naturalWidth) return { achou: !!linha, n: 0, nova: 0, antiga: 0 };
+    const f = await R.fonteDe(im);
+    return f ? { achou: true, ...R.analisar(f, Z) } : { achou: true, n: 0, nova: 0, antiga: 0 };
+  };
+  R.estadoDeImgs = async (seletor) => {
+    const ims = [...document.querySelectorAll(seletor)].filter((i) => i.complete && i.naturalWidth > 0);
+    if (!ims.length) return { achou: false, n: 0, nova: 0, antiga: 0 };
+    const f = await R.fonteDe(ims[0]);
+    return f ? { achou: true, ...R.analisar(f, Z) } : { achou: true, n: 0, nova: 0, antiga: 0 };
+  };
+  // Marca cada <img> que mostra a foto de caminho `caminho` (data-r27 = índice) e a descreve.
+  R.marcarFotos = (caminho) => {
+    document.querySelectorAll('[data-r27]').forEach((e) => e.removeAttribute('data-r27'));
+    const achadas = [];
+    for (const im of document.images) {
+      if (R.deToken(im.currentSrc || im.src) !== caminho) continue;
+      const r = im.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) continue;
+      const cadeia = [];
+      for (let e = im; e && cadeia.length < 6; e = e.parentElement) cadeia.push(typeof e.className === 'string' && e.className.trim() ? e.className.trim().split(/\s+/)[0] : e.tagName.toLowerCase());
+      im.setAttribute('data-r27', String(achadas.length));
+      achadas.push({ i: achadas.length, cadeia: cadeia.join(' < '), w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10, natW: im.naturalWidth, natH: im.naturalHeight });
+    }
+    return achadas;
+  };
+  R.caminhosNaTela = () => [...document.images].map((i) => R.deToken(i.currentSrc || i.src)).filter(Boolean);
+  // O controle: o recorte guardado, numa <img> de 200×300 fixa no canto (mesmo pipeline das telas).
+  R.controle = async (url) => {
+    const r = await fetch(url);
+    const blob = await r.blob();
+    const bmp = await createImageBitmap(blob);
+    document.querySelectorAll('#r27-controle').forEach((e) => e.remove());
+    const im = new Image();
+    im.id = 'r27-controle';
+    im.style.cssText = 'position:fixed;left:8px;top:8px;width:200px;height:300px;z-index:2147483647;object-fit:fill;background:#000';
+    im.setAttribute('data-r27', 'controle');
+    im.src = URL.createObjectURL(blob);
+    await im.decode();
+    document.body.appendChild(im);
+    return { natW: bmp.width, natH: bmp.height, tipo: blob.type };
+  };
+  // A janela do gradiente que uma captura (PNG em base64) mostra: mínimos quadrados do brilho
+  // contra x (eixo 'u') ou y (eixo 'v'), no miolo. `a`+`b` valem nas bordas da captura (0..1).
+  R.janela = async (b64, eixo, zona) => {
+    const bin = atob(b64); const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const bmp = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+    const W = bmp.width; const H = bmp.height;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(bmp, 0, 0);
+    const { data } = cx.getImageData(0, 0, W, H);
+    const N = 34; const xs = []; const ys = [];
+    for (let iy = 0; iy < N; iy++) {
+      for (let ix = 0; ix < N; ix++) {
+        const fx = zona.x0 + ((zona.x1 - zona.x0) * (ix + 0.5)) / N; const fy = zona.y0 + ((zona.y1 - zona.y0) * (iy + 0.5)) / N;
+        const x = Math.min(W - 1, Math.max(0, Math.round(fx * W - 0.5))); const y = Math.min(H - 1, Math.max(0, Math.round(fy * H - 0.5)));
+        const i = (y * W + x) * 4;
+        if (data[i + 3] < 250 || Math.abs(data[i] - data[i + 1]) > 14 || Math.abs(data[i + 1] - data[i + 2]) > 14) continue; // só o plano cinza
+        xs.push(eixo === 'v' ? (y + 0.5) / H : (x + 0.5) / W);
+        ys.push(data[i + 1] / 255);
+      }
+    }
+    if (xs.length < 60) return { ok: false, n: xs.length, W, H };
+    const n = xs.length; const mx = xs.reduce((a, b) => a + b, 0) / n; const my = ys.reduce((a, b) => a + b, 0) / n;
+    let sxx = 0; let sxy = 0;
+    for (let k = 0; k < n; k++) { sxx += (xs[k] - mx) ** 2; sxy += (xs[k] - mx) * (ys[k] - my); }
+    const a = sxy / sxx; const b = my - a * mx;
+    let res = 0;
+    for (let k = 0; k < n; k++) res += (ys[k] - (a * xs[k] + b)) ** 2;
+    return { ok: true, n, W, H, ini: b, fim: a + b, res: Math.sqrt(res / n) };
+  };
+  // A prévia em DOM do Início dura poucas centenas de ms: guarda a geometria no instante em que aparece.
+  const vigiarPrevia = () => new MutationObserver(() => {
+    const im = document.querySelector('.cromo-previa__avatar');
+    // A caixa EXTERNA do cromo (o anel dourado incluído): é o que o canvas cobre com a foto — a moldura desenha-se por cima.
+    const dentro = document.querySelector('.cromo-previa');
+    if (!im || !dentro) return;
+    const a = im.getBoundingClientRect(); const c = dentro.getBoundingClientRect();
+    const chave = `${im.getAttribute('src')}|${Math.round(a.left)}|${Math.round(a.top)}|${Math.round(a.width)}`;
+    if (R.previas.some((p) => p.chave === chave)) return;
+    R.previas.push({ chave, t: agora(), img: { l: a.left - c.left, t: a.top - c.top, w: a.width, h: a.height }, caixa: { w: c.width, h: c.height }, nat: { w: im.naturalWidth, h: im.naturalHeight }, src: (im.getAttribute('src') || '').slice(-60) });
+  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'src', 'class'] });
+  // O documento ainda não existe quando o script de início roda: só se liga ao observador depois.
+  if (document.documentElement) vigiarPrevia(); else document.addEventListener('DOMContentLoaded', vigiarPrevia, { once: true });
+}
+
+async function cenaRodada27(navegador) {
+  // (constantes DENTRO da função: o bloco principal deste arquivo roda antes de os const do módulo serem avaliados)
+  const R27_VIEWPORT = { width: 390, height: 844 };
+  const R27_ZONA = { x0: 0.24, x1: 0.76, y0: 0.2, y1: 0.6 };
+  const R27_FOTO = { w: 900, h: 1200 }; // 3:4 de propósito: o recorte 2:3 tira 50 px de cada lado
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada27 sobe fotos e muda o genérico de verdade: só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-27', ETIQUETA);
+  mkdirSync(pasta, { recursive: true });
+  const arq = (nome) => path.join(pasta, `${nome}.png`);
+  const sessoes = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada27.json'), 'utf8'));
+  const SLUG = sessoes.time.slug;
+  const JOGO = sessoes.jogo.id;
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const medidas = {};
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome, opcoes = {}) => {
+    try {
+      await pagina.screenshot({ path: arq(nome), ...opcoes });
+      capturas.push(path.relative(RAIZ, arq(nome)));
+    } catch (e) { erros.push(`captura ${nome}: ${e.message.split('\n')[0]}`); }
+  };
+  const PARTES = new Set(opcao('partes', '1,2,4,5').split(',').map((p) => p.trim()));
+  const ms = (a, b) => (a != null && b != null ? Math.round(b - a) : null);
+  const r1 = (n) => Math.round(n * 10) / 10;
+
+  // Cada bloco tem o SEU contexto (cache do app frio, só a sessão). O genérico e a foto mudam
+  // de verdade no motor local; as escritas que não interessam (impressão de anúncio) passam.
+  const abrir = async (papel, { semMovimento = false } = {}) => {
+    const contexto = await novoContexto(navegador, sessoes[papel], { amostrar: false, viewport: R27_VIEWPORT, extra: { timezoneId: 'America/Sao_Paulo', ...(semMovimento ? { reducedMotion: 'reduce' } : {}) } });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_figurinha_estreia', '1'); localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    await contexto.addInitScript(r27Instrumentar);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${papel}: ${e.message}`));
+    return { contexto, pagina };
+  };
+  const cookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+  const aba = (pagina, rotulo) => pagina.locator('nav[aria-label="Navegação principal"] a', { hasText: rotulo });
+  const esperarAte = async (fn, { ms: limite = 20000, passo = 60 } = {}) => {
+    const t0 = Date.now();
+    for (;;) {
+      const v = await fn().catch(() => null);
+      if (v) return { ok: true, ms: Date.now() - t0, v };
+      if (Date.now() - t0 > limite) return { ok: false, ms: Date.now() - t0, v: null };
+      await espera(passo);
+    }
+  };
+  const caminhoDoToken = (url) => { const m = /\/api\/media\/([A-Za-z0-9_-]+)/.exec(url || ''); try { return JSON.parse(Buffer.from(m[1].split('.')[0], 'base64url').toString()).p; } catch { return null; } };
+  // Injeta CSS que tira o que se sobrepõe às fotos (véu, cantos, luz, placa): mede-se a imagem, não a moldura.
+  const SEM_SOBREPOSICOES = '.avatar-frame__veil,.avatar-frame__lc,.fig-light,.fig-name-glow,.fig-frame-shine,.fig-dot-twinkle,.mmold .nm,.mmold .mb,.mmold .fr::before,.pavatar::after,.pavatar::before{display:none!important}';
+  // A troca de verdade, pela tela: Trocar foto → Escolher outra foto → recorte → Confirmar. Devolve os relógios.
+  const trocarFotoPelaTela = async (pagina, buffer, nomeArquivo) => {
+    await pagina.getByRole('button', { name: /Trocar foto/ }).first().click();
+    await pagina.getByRole('dialog', { name: 'Sua foto' }).waitFor({ timeout: 15000 });
+    await pagina.locator('button', { hasText: /Escolher outra foto/ }).click();
+    const tEscolheu = Date.now();
+    await pagina.locator('input[type="file"][accept="image/*"]').first().setInputFiles({ name: nomeArquivo, mimeType: 'image/png', buffer });
+    await pagina.getByRole('dialog', { name: 'Recortar imagem' }).waitFor({ timeout: 20000 });
+    const confirmar = pagina.locator('[role="dialog"] button', { hasText: /^Confirmar$/ });
+    await confirmar.waitFor({ timeout: 10000 });
+    await esperarAte(async () => confirmar.isEnabled(), { ms: 10000 });
+    await espera(600); // o recortador terminou de posicionar
+    const tConfirmar = Date.now();
+    const resposta = pagina.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/api/me/avatar', { timeout: 120000 });
+    await confirmar.click();
+    return { tEscolheu, tConfirmar, resposta };
+  };
+
+  // A assinatura do card = as camadas em miniatura, resumidas num número (muda quando o desenho muda).
+  const assinaturaDoCard = (pg) => pg.evaluate(() => {
+    const cv = document.createElement('canvas'); cv.width = 32; cv.height = 48;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    for (const im of document.querySelectorAll('.fig-studio-card img')) { try { cx.drawImage(im, 0, 0, 32, 48); } catch { /* nada */ } }
+    const d = cx.getImageData(0, 0, 32, 48).data; let h = 0;
+    for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7) >>> 0;
+    return h;
+  });
+
+  // ════════════════ 1. TROCAR VISUAL (genérico) ════════════════
+  const item1 = {};
+  let alvoGenerico = 'f2';
+  let arquivoDoAlvo = 'avatar-generico-f-2.png';
+  medidas.item1 = item1;
+  if (PARTES.has('1')) try {
+    // 1a. Conta COM foto: o botão existe? O que acontece se tocar?
+    const A = await abrir('foto');
+    await A.pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await cookies(A.pagina);
+    await A.pagina.getByRole('button', { name: /Trocar foto/ }).first().waitFor({ timeout: 30000 });
+    await esperarAte(async () => (await A.pagina.evaluate(() => window.__r27.estadoCard())).antiga > 0.6, { ms: 25000 });
+    const botao = A.pagina.getByRole('button', { name: 'Trocar visual do card' });
+    item1.comFoto = { botaoVisivel: (await botao.count()) > 0 };
+    await capturar(A.pagina, '1a-com-foto-antes');
+    if (item1.comFoto.botaoVisivel) {
+      const antes = await assinaturaDoCard(A.pagina);
+      await botao.first().click();
+      await A.pagina.getByRole('dialog', { name: 'Escolher visual do card' }).waitFor({ timeout: 8000 });
+      await A.pagina.getByRole('button', { name: 'Escolher visual f3' }).click();
+      await espera(3500);
+      const depois = await assinaturaDoCard(A.pagina);
+      item1.comFoto.mudouAlgo = antes !== depois;
+      await capturar(A.pagina, '1a-com-foto-depois-de-escolher');
+    }
+    verificar('com foto: o botão "Trocar visual do card" NÃO aparece (a foto manda; o genérico não tem onde aparecer)', !item1.comFoto.botaoVisivel, item1.comFoto.botaoVisivel ? `aparece e, tocando em f2, o card ${item1.comFoto.mudouAlgo ? 'mudou' : 'NÃO mudou nada'}` : '');
+    await A.contexto.close();
+
+    // 1b. Conta SEM foto: o botão existe, troca na hora, e as outras telas seguem o mesmo genérico.
+    const B = await abrir('semfoto');
+    const patches = [];
+    const pedidosGenericos = [];
+    B.pagina.on('request', (r) => { if (r.method() === 'PATCH' && new URL(r.url()).pathname === '/api/me') patches.push({ t: Date.now(), corpo: r.postData() }); });
+    B.pagina.on('request', (r) => { const m = /avatar-generico-(?:f-)?d.png/.exec(r.url()); if (m) pedidosGenericos.push({ arquivo: m[0], ini: Date.now(), fim: null }); });
+    B.pagina.on('requestfinished', (r) => { const m = /avatar-generico-(?:f-)?d.png/.exec(r.url()); if (m) { const p = [...pedidosGenericos].reverse().find((x) => x.arquivo === m[0] && x.fim == null); if (p) p.fim = Date.now(); } });
+    await B.pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await cookies(B.pagina);
+    await B.pagina.getByRole('button', { name: /Adicionar foto|Trocar foto/ }).first().waitFor({ timeout: 30000 });
+    const cardPintado = await esperarAte(async () => (await B.pagina.evaluate(() => window.__r27.estadoCard())).camadas >= 3, { ms: 25000 });
+    await espera(600);
+    const botaoB = B.pagina.getByRole('button', { name: 'Trocar visual do card' });
+    const genericoAtual = await B.pagina.evaluate(async () => {
+      const chave = Object.keys(localStorage).find((k) => /^sb-.+-auth-token$/.test(k));
+      const r = await fetch('/api/me', { headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem(chave)).access_token}` } });
+      return (await r.json()).user.avatar_generico;
+    });
+    // O alvo é sempre um genérico que ainda NÃO está escolhido (a conta guarda a escolha entre as corridas).
+    alvoGenerico = genericoAtual === 'f2' ? 'f3' : 'f2';
+    arquivoDoAlvo = `avatar-generico-${alvoGenerico.replace('f', 'f-')}.png`;
+    item1.semFoto = { botaoVisivel: (await botaoB.count()) > 0, cardPintado: cardPintado.ok, genericoAntes: genericoAtual, alvo: alvoGenerico };
+    verificar('sem foto: o botão "Trocar visual do card" aparece', item1.semFoto.botaoVisivel);
+    if (item1.semFoto.botaoVisivel) {
+      const assinatura = () => assinaturaDoCard(B.pagina);
+      const antes = await assinatura();
+      await capturar(B.pagina, '1b-sem-foto-antes');
+      const tEscolha = Date.now();
+      await botaoB.first().click();
+      await B.pagina.getByRole('dialog', { name: 'Escolher visual do card' }).waitFor({ timeout: 8000 });
+      await B.pagina.getByRole('button', { name: `Escolher visual ${alvoGenerico}` }).click();
+      const mudou = await esperarAte(async () => (await assinatura()) !== antes, { ms: 12000, passo: 50 });
+      const tMudou = Date.now();
+      const cliqueVisual = (await B.pagina.evaluate(() => window.__r27.marcas)).filter((m) => m.n === 'click:visual').at(-1)?.t ?? tEscolha;
+      item1.semFoto.cardTrocouEmMs = mudou.ok ? Math.round(tMudou - cliqueVisual) : null;
+      item1.semFoto.recursosDoGenerico = await B.pagina.evaluate(() => window.__r27.recursos('avatar-generico-'));
+      item1.semFoto.patchEnviado = patches.some((p) => /avatar_generico/.test(p.corpo || ''));
+      item1.semFoto.fasesDoCard = (await B.pagina.evaluate(() => (window.__futtyDiagnostico ? window.__futtyDiagnostico().resumo.cromo : null)).catch(() => null))?.['camadas/estadio'] ?? null;
+      await espera(1500);
+      await capturar(B.pagina, '1b-sem-foto-depois');
+      verificar('sem foto: escolher outro visual troca o card na hora, sem recarregar (≤ 1,5 s)', mudou.ok && item1.semFoto.cardTrocouEmMs <= 1500, mudou.ok ? `${item1.semFoto.cardTrocouEmMs} ms` : 'o card não mudou');
+      verificar('sem foto: o PATCH avatar_generico chegou ao motor', item1.semFoto.patchEnviado);
+    }
+    await B.contexto.close();
+
+    // 1c. O genérico escolhido vale nas outras telas (contexto novo: só o que o motor guardou).
+    const C = await abrir('semfoto');
+    const arquivosGenericos = new Set();
+    C.pagina.on('request', (r) => { const m = /avatar-generico-(?:f-)?\d\.png/.exec(r.url()); if (m) arquivosGenericos.add(m[0]); });
+    await C.pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await cookies(C.pagina);
+    await esperarAte(async () => (await C.pagina.evaluate(() => window.__r27.estadoInicio())).fase === 'cromo' || arquivosGenericos.size > 0, { ms: 20000 });
+    await espera(2500);
+    item1.inicioPediu = [...arquivosGenericos];
+    verificar(`Início (contexto novo): usa o genérico escolhido (${alvoGenerico}) e nenhum outro`, arquivosGenericos.has(arquivoDoAlvo) && [...arquivosGenericos].every((a) => a === arquivoDoAlvo), [...arquivosGenericos].join(', ') || 'nenhum arquivo genérico pedido');
+    await capturar(C.pagina, '1c-inicio-generico');
+    await C.pagina.goto(`${BASE}/equipa/${SLUG}/ranking`, { waitUntil: 'domcontentloaded' });
+    await C.pagina.waitForSelector('.rank-row', { timeout: 25000 });
+    await espera(800);
+    item1.ranking = await C.pagina.evaluate(() => {
+      const linha = [...document.querySelectorAll('.rank-row')].find((e) => (e.innerText || '').includes('SEM27'));
+      const im = linha?.querySelector('.avatar-frame__fill img');
+      return { achouLinha: !!linha, src: im ? (im.currentSrc || im.src) : null, silhueta: !!linha && !im };
+    });
+    await capturar(C.pagina, '1c-ranking', { fullPage: true });
+    verificar(`Ranking: a linha de quem escolheu o genérico mostra o genérico escolhido (${alvoGenerico})`, String(item1.ranking.src || '').endsWith(arquivoDoAlvo), item1.ranking.silhueta ? 'mostra a silhueta "?" da casa' : String(item1.ranking.src).split('/').pop());
+    await C.pagina.goto(`${BASE}/equipa/${SLUG}/jogo/${JOGO}`, { waitUntil: 'domcontentloaded' });
+    await C.pagina.getByText(/^Confirmados/).waitFor({ timeout: 25000 });
+    await espera(800);
+    item1.presenca = await C.pagina.evaluate(() => [...document.images].filter((i) => /avatar-generico-/.test(i.currentSrc || i.src)).map((i) => (i.currentSrc || i.src).replace(/^.*\//, '')));
+    await capturar(C.pagina, '1c-presenca', { fullPage: true });
+    verificar(`Presença: a lista mostra o genérico escolhido (${alvoGenerico}) para quem o escolheu`, item1.presenca.includes(arquivoDoAlvo), item1.presenca.join(', ') || 'nenhum genérico na tela');
+    await C.contexto.close();
+  } catch (e) { erros.push(`item1: ${e.message.split('\n')[0]}`); verificar('item 1 rodou até o fim', false, e.message.split('\n')[0]); }
+
+  // ════════════════ 2 e 3. FOTO: LATÊNCIA, CACHES E ENQUADRAMENTO ════════════════
+  const item2 = {};
+  const item3 = { superficies: [] };
+  medidas.item2 = item2;
+  medidas.item3 = item3;
+  let caminhoNovo = null;
+  let caminhoAntigo = null;
+  if (PARTES.has('2')) try {
+    const D = await abrir('foto');
+    const pagina = D.pagina;
+    const posts = [];
+    pagina.on('request', (r) => { if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/me/avatar') posts.push({ ini: Date.now(), fim: null, status: null }); });
+    pagina.on('requestfinished', async (r) => {
+      if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/me/avatar') {
+        const p = posts.at(-1);
+        if (p) { p.fim = Date.now(); p.status = (await r.response())?.status() ?? null; }
+      }
+    });
+    // Aquece como uma pessoa: Início, Ranking e Figurinha (enche os caches de sessão com a foto ANTIGA).
+    await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await cookies(pagina);
+    const antigoInicio = await esperarAte(async () => (await pagina.evaluate(() => window.__r27.estadoInicio())).antiga > 0.6, { ms: 30000 });
+    verificar('partida: o Início mostra a foto de partida (verde lisa)', antigoInicio.ok);
+    caminhoAntigo = await pagina.evaluate(async () => {
+      const chave = Object.keys(localStorage).find((k) => /^sb-.+-auth-token$/.test(k));
+      const r = await fetch('/api/me', { headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem(chave)).access_token}` } });
+      return window.__r27.deToken((await r.json()).user.foto_url);
+    });
+    await capturar(pagina, '2-inicio-antes');
+    await aba(pagina, 'Ranking').click();
+    await pagina.waitForSelector('.rank-row', { timeout: 25000 });
+    const rankAntigo = await esperarAte(async () => (await pagina.evaluate(() => window.__r27.estadoDaLinha('.rank-row', 'FOTO27', '.avatar-frame__fill img'))).antiga > 0.6, { ms: 15000 });
+    verificar('partida: o Ranking mostra a foto de partida na linha de FOTO27', rankAntigo.ok);
+    await aba(pagina, 'Figurinha').click();
+    await pagina.getByRole('button', { name: /Trocar foto/ }).first().waitFor({ timeout: 30000 });
+    await esperarAte(async () => (await pagina.evaluate(() => window.__r27.estadoCard())).antiga > 0.6, { ms: 25000 });
+
+    const trocou = await trocarFotoPelaTela(pagina, pngGradiente(R27_FOTO.w, R27_FOTO.h, 'u'), 'gradiente-u.png');
+    // Um laço só: o card (camadas) e a linha "Foto trocada", a cada 60 ms.
+    let tCard = null; let tLinha = null;
+    const limite = Date.now() + 90000;
+    while (Date.now() < limite && (tCard == null || tLinha == null)) {
+      const est = await pagina.evaluate(() => ({ card: window.__r27.estadoCard(), linha: /Foto trocada/.test(document.body.innerText) })).catch(() => null);
+      if (est) {
+        if (tCard == null && est.card.nova > 0) tCard = Date.now();
+        if (tLinha == null && est.linha) tLinha = Date.now();
+      }
+      await espera(60);
+    }
+    const resp = await trocou.resposta;
+    const corpo = await resp.json();
+    caminhoNovo = caminhoDoToken(corpo.foto_url);
+    const post = posts.at(-1) || {};
+    const marcas = await pagina.evaluate(() => window.__r27.marcas);
+    const cliqueConfirmar = marcas.filter((m) => m.n === 'click:confirmar').at(-1)?.t ?? trocou.tConfirmar;
+    const recorte = marcas.find((m) => m.n === 'toBlob:ini' && /jpeg/.test(m.tipo || '') && m.w >= 700 && m.t >= cliqueConfirmar - 50);
+    const recorteFim = marcas.find((m) => m.n === 'toBlob:fim' && /jpeg/.test(m.tipo || '') && m.w >= 700 && m.t >= cliqueConfirmar - 50);
+    const fetchAvatar = marcas.find((m) => m.n === 'fetch:avatar' && m.t >= cliqueConfirmar - 50);
+    item2.postMs = ms(post.ini, post.fim);
+    item2.cliqueAtePostMs = ms(cliqueConfirmar, post.ini);
+    item2.cliqueAteToBlobMs = recorte ? Math.round(recorte.t - cliqueConfirmar) : null;
+    item2.toBlobMs = recorte && recorteFim ? Math.round(recorteFim.t - recorte.t) : null;
+    item2.toBlobAteFetchMs = recorteFim && fetchAvatar ? Math.round(fetchAvatar.t - recorteFim.t) : null;
+    item2.recorteBytes = recorteFim ? recorteFim.bytes : null;
+    item2.cliqueAteCardMs = ms(cliqueConfirmar, tCard);
+    item2.respostaAteCardMs = ms(post.fim, tCard);
+    item2.cliqueAteLinhaMs = ms(cliqueConfirmar, tLinha);
+    item2.escolherAteConfirmarMs = ms(trocou.tEscolheu, trocou.tConfirmar);
+    await capturar(pagina, '2-figurinha-depois');
+    verificar('a resposta traz a foto nova (caminho do arquivo mudou)', !!caminhoNovo && caminhoNovo !== caminhoAntigo && /-\d+\.jpg$/.test(caminhoNovo), String(caminhoNovo));
+
+    // Início: sem recarregar (toque na barra), a foto nova aparece sem passar pela antiga?
+    const seqInicio = [];
+    const tNavInicio = Date.now();
+    await aba(pagina, 'Início').click();
+    const limiteI = Date.now() + 40000;
+    let tNovaInicio = null;
+    while (Date.now() < limiteI && tNovaInicio == null) {
+      const est = await pagina.evaluate(() => window.__r27.estadoInicio()).catch(() => null);
+      if (est) {
+        const foto = est.nova > 0 ? 'nova' : est.antiga > 0.6 ? 'antiga' : '-';
+        if (!seqInicio.length || seqInicio.at(-1).estado !== `${est.fase}:${foto}`) seqInicio.push({ t: Date.now() - tNavInicio, estado: `${est.fase}:${foto}` });
+        if (foto === 'nova') tNovaInicio = Date.now();
+      }
+      await espera(40);
+    }
+    item2.inicioMs = ms(tNavInicio, tNovaInicio);
+    item2.inicioSequencia = seqInicio.map((s) => `${s.t}ms ${s.estado}`).join(' → ');
+    // Os mesmos instantes, medidos DENTRO da página a partir do TOQUE (sem a espera do click() do Playwright
+    // nem o intervalo do amostrador): é o que o olho de quem toca na aba vê.
+    const dentro = await pagina.evaluate(() => ({ toques: window.__r27.marcas.filter((m) => m.n === 'click:nav'), tr: window.__r27.transicoes })).catch(() => null);
+    if (dentro?.toques?.length) {
+      const toque = dentro.toques.at(-1).t;
+      const desde = (fn) => { const x = dentro.tr.find((y) => y.t >= toque && fn(y)); return x ? Math.round(x.t - toque) : null; };
+      item2.inicioDesdeToque = {
+        anelMs: desde((y) => y.n === 'inicio:anel' || y.n === 'inicio:reserva'),
+        reservaMs: desde((y) => y.n === 'inicio:reserva'),
+        previaMs: desde((y) => y.n === 'inicio:previa'),
+        previaNovaMs: desde((y) => y.n === 'inicio:previa' && !!caminhoNovo && y.caminho === caminhoNovo),
+        cromoMs: desde((y) => y.n === 'inicio:cromo'),
+        previaComFotoAntiga: dentro.tr.some((y) => y.t >= toque && y.n === 'inicio:previa' && !!caminhoAntigo && y.caminho === caminhoAntigo),
+      };
+    }
+    item2.inicioPassouPelaAntiga = seqInicio.some((s) => s.estado.endsWith(':antiga'));
+    await capturar(pagina, '2-inicio-depois');
+
+    // Perfil: a foto nova aparece sem recarregar?
+    const tNavPerfil = Date.now();
+    await aba(pagina, 'Perfil').click();
+    const seqPerfil = [];
+    let tNovaPerfil = null;
+    const limiteP = Date.now() + 20000;
+    while (Date.now() < limiteP && tNovaPerfil == null) {
+      const e = await pagina.evaluate(() => window.__r27.estadoDeImgs('.pavatar img')).catch(() => null);
+      if (e && e.achou) {
+        const foto = e.nova > 0 ? 'nova' : e.antiga > 0.6 ? 'antiga' : '-';
+        if (!seqPerfil.length || seqPerfil.at(-1).estado !== foto) seqPerfil.push({ t: Date.now() - tNavPerfil, estado: foto });
+        if (foto === 'nova') tNovaPerfil = Date.now();
+      }
+      await espera(50);
+    }
+    item2.perfilMs = ms(tNavPerfil, tNovaPerfil);
+    item2.perfilSequencia = seqPerfil.map((x) => `${x.t}ms ${x.estado}`).join(' → ');
+    item2.perfilPassouPelaAntiga = seqPerfil.some((x) => x.estado === 'antiga');
+    await capturar(pagina, '2-perfil-depois');
+
+    // Ranking: o cache de sessão (30 s) ainda segura a foto antiga?
+    const tNavRanking = Date.now();
+    await aba(pagina, 'Ranking').click();
+    await pagina.waitForSelector('.rank-row', { timeout: 25000 });
+    const seqRanking = [];
+    let tNovaRanking = null;
+    const limiteR = Date.now() + 45000;
+    while (Date.now() < limiteR && tNovaRanking == null) {
+      const e = await pagina.evaluate(() => window.__r27.estadoDaLinha('.rank-row', 'FOTO27', '.avatar-frame__fill img')).catch(() => null);
+      if (e && e.achou) {
+        const foto = e.nova > 0 ? 'nova' : e.antiga > 0.6 ? 'antiga' : '-';
+        if (!seqRanking.length || seqRanking.at(-1).estado !== foto) seqRanking.push({ t: Date.now() - tNavRanking, estado: foto });
+        if (foto === 'nova') tNovaRanking = Date.now();
+      }
+      await espera(100);
+    }
+    item2.rankingMs = ms(tNavRanking, tNovaRanking);
+    item2.rankingSequencia = seqRanking.map((s) => `${s.t}ms ${s.estado}`).join(' → ');
+    item2.rankingPassouPelaAntiga = seqRanking.some((x) => x.estado === 'antiga');
+    await capturar(pagina, '2-ranking-depois');
+    const diag = await pagina.evaluate(() => (window.__futtyDiagnostico ? window.__futtyDiagnostico() : null)).catch(() => null);
+    item2.fasesDoCard = diag?.resumo?.cromo ?? null;
+    item2.navegacoes = (diag?.navegacoes || []).map((n) => `${n.rota} pintura ${n.msPintura} ms · dados ${n.msDados ?? '—'} ms · cache ${n.doCache ? 'sim' : 'não'}`);
+    item2.chamadasDoApp = (diag?.chamadas || []).filter((c) => !String(c.rota).startsWith('/api/media/')).map((c) => `${c.metodo === 'GET' ? '' : `${c.metodo} `}${c.rota} ${c.ms} ms (motor ${c.motorMs ?? '—'})`);
+    await D.contexto.close();
+
+    verificar('o card da Figurinha mostra a foto nova até 400 ms depois da resposta do POST', item2.respostaAteCardMs != null && item2.respostaAteCardMs <= 400, `POST ${item2.postMs} ms; resposta → card ${item2.respostaAteCardMs} ms`);
+    verificar('o Início mostra a foto nova SEM passar pela antiga (sem piscar o velho)', tNovaInicio != null && !item2.inicioPassouPelaAntiga, item2.inicioSequencia);
+    verificar('o Início mostra a foto nova em até 1,5 s depois do toque na aba', item2.inicioMs != null && item2.inicioMs <= 1500, `${item2.inicioMs} ms`);
+    verificar('o Perfil mostra a foto nova ao entrar, sem passar pela antiga', item2.perfilMs != null && item2.perfilMs <= 1500 && !item2.perfilPassouPelaAntiga, `${item2.perfilMs} ms · ${item2.perfilSequencia}`);
+    verificar('o Ranking (cache de sessão) mostra a foto nova ao voltar, sem passar pela antiga', item2.rankingMs != null && item2.rankingMs <= 3000 && !item2.rankingPassouPelaAntiga, item2.rankingSequencia);
+
+    // ─── 3. ENQUADRAMENTO ───
+    // Dois passes: o brilho carrega u (esquerda→direita) no 1º e v (topo→base) no 2º. Cada passe mede,
+    // num contexto NOVO (cache frio: só o que o motor entrega), a janela que cada tela mostra.
+    const passe = async (eixo, caminho) => {
+      const E = await abrir('foto', { semMovimento: true });
+      const ep = E.pagina;
+      const janelaDe = async (loc) => {
+        const png = await loc.screenshot({ animations: 'disabled' });
+        const caixa = await loc.boundingBox();
+        const j = await ep.evaluate(([b64, e, z]) => window.__r27.janela(b64, e, z), [png.toString('base64'), eixo, R27_ZONA]);
+        return { ...j, cssW: caixa?.width ?? null, cssH: caixa?.height ?? null };
+      };
+      const registrar = (nome, dados) => {
+        let s = item3.superficies.find((x) => x.nome === nome);
+        if (!s) { s = { nome }; item3.superficies.push(s); }
+        Object.assign(s, dados);
+      };
+      const paraAsFotos = async (pg) => {
+        await pg.addStyleTag({ content: SEM_SOBREPOSICOES });
+        return pg.evaluate((c) => window.__r27.marcarFotos(c), caminho);
+      };
+      const medir = async (nome, regra, loc, extra = {}) => {
+        try {
+          const j = await janelaDe(loc);
+          if (!j.ok) { registrar(nome, { regra, ...extra, [`${eixo}Ok`]: false }); return; }
+          registrar(nome, { regra, cssW: r1(j.cssW), cssH: r1(j.cssH), ...extra, [eixo]: [j.ini, j.fim], [`${eixo}Res`]: j.res });
+        } catch (err) { erros.push(`superfície ${nome}: ${err.message.split('\n')[0]}`); }
+      };
+      await ep.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+      await cookies(ep);
+      // O controle: o recorte guardado na mesma tela, no mesmo pipeline, 200×300.
+      const urlFoto = await ep.evaluate(async () => {
+        const chave = Object.keys(localStorage).find((k) => /^sb-.+-auth-token$/.test(k));
+        const r = await fetch('/api/me', { headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem(chave)).access_token}` } });
+        return (await r.json()).user.foto_url;
+      });
+      const dadosControle = await ep.evaluate((u) => window.__r27.controle(u), urlFoto);
+      await medir('CONTROLE · o recorte guardado', 'R1', ep.locator('[data-r27="controle"]'), { natural: `${dadosControle.natW}×${dadosControle.natH}` });
+      item3.recorteNatural = { w: dadosControle.natW, h: dadosControle.natH };
+
+      // Figurinha: o card 2:3 (camadas em canvas).
+      await ep.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+      await ep.addStyleTag({ content: SEM_SOBREPOSICOES });
+      await ep.getByRole('button', { name: /Trocar foto/ }).first().waitFor({ timeout: 30000 });
+      await esperarAte(async () => (await ep.evaluate(() => window.__r27.estadoCard())).nova > 0.6, { ms: 25000 });
+      await espera(700);
+      await medir('Figurinha · card', 'R1', ep.locator('.fig-studio-card'));
+      if (eixo === 'u') await capturar(ep, '3-figurinha');
+
+      // Início: o cromo (canvas quadrado) e, se der para flagrar, a prévia em DOM.
+      await ep.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+      await ep.addStyleTag({ content: SEM_SOBREPOSICOES });
+      await esperarAte(async () => (await ep.evaluate(() => window.__r27.estadoInicio())).fase === 'cromo', { ms: 30000 });
+      await espera(500);
+      await medir('Início · cromo', 'R2', ep.locator('.cromo-inicio img.fig-aura'));
+      if (eixo === 'u') await capturar(ep, '3-inicio');
+      const previas = await ep.evaluate(() => window.__r27.previas);
+      if (previas.length && eixo === 'u') item3.previa = previas.at(-1);
+
+      // Ranking, Presença/Sorteio (jogo) e Perfil: cada <img> que mostra a foto, achada pelo caminho do arquivo.
+      const rotuloDa = (cadeia) => {
+        if (/avatar-frame__fill/.test(cadeia)) return { rotulo: 'miniatura em moldura', regra: 'R2' };
+        if (/pavatar/.test(cadeia)) return { rotulo: 'avatar', regra: 'R2' };
+        if (/mmold|^img < fr\b/.test(cadeia)) return { rotulo: 'cartão 3:4 do sorteio', regra: 'R3' };
+        if (/\brev\b|scel|rolo/.test(cadeia)) return { rotulo: 'rolo do sorteio 3:4', regra: 'R3' };
+        return { rotulo: 'outra', regra: 'R2' };
+      };
+      const paginas = [
+        { nome: 'Ranking', url: `/equipa/${SLUG}/ranking`, espera: async () => { await ep.waitForSelector('.rank-row', { timeout: 25000 }); } },
+        { nome: 'Presença', url: `/equipa/${SLUG}/jogo/${JOGO}`, espera: async () => { await ep.getByText(/^Confirmados/).waitFor({ timeout: 25000 }); } },
+        { nome: 'Sorteio', url: `/equipa/${SLUG}/jogo/${JOGO}/sorteio`, espera: async () => { await ep.waitForSelector('.mmold img', { timeout: 40000 }); } },
+        { nome: 'Perfil', url: '/perfil', espera: async () => { await ep.waitForSelector('.pavatar img', { timeout: 25000 }); } },
+      ];
+      for (const pg of paginas) {
+        try {
+          await ep.goto(`${BASE}${pg.url}`, { waitUntil: 'domcontentloaded' });
+          await pg.espera();
+          await espera(900);
+          const fotos = await paraAsFotos(ep);
+          if (eixo === 'u') {
+            const naTela = await ep.evaluate(() => window.__r27.caminhosNaTela());
+            registrar(`pág. ${pg.nome}`, { fotosNovas: fotos.length, fotosAntigasNaTela: caminhoAntigo ? naTela.filter((c) => c === caminhoAntigo).length : null });
+          }
+          if (!fotos.length) { verificar(`enquadramento · ${pg.nome}: a foto nova aparece na tela`, false, 'nenhuma <img> com a foto nova'); continue; }
+          for (const f of fotos) {
+            const { rotulo, regra } = rotuloDa(f.cadeia);
+            await medir(`${pg.nome} · ${rotulo} ${f.w}×${f.h}`, regra, ep.locator(`[data-r27="${f.i}"]`), { cadeia: f.cadeia, natural: `${f.natW}×${f.natH}` });
+          }
+          if (eixo === 'u') await capturar(ep, `3-${pg.nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')}`, { fullPage: true });
+        } catch (err) { erros.push(`enquadramento ${pg.nome}: ${err.message.split('\n')[0]}`); verificar(`enquadramento · ${pg.nome}: percorreu (${eixo})`, false, err.message.split('\n')[0]); }
+      }
+      await E.contexto.close();
+    };
+
+    if (caminhoNovo) {
+      await passe('u', caminhoNovo);
+      // 2º passe: outra foto (gradiente em v), trocada pela mesma tela.
+      const G = await abrir('foto');
+      await G.pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+      await cookies(G.pagina);
+      await G.pagina.getByRole('button', { name: /Trocar foto/ }).first().waitFor({ timeout: 30000 });
+      const trocou2 = await trocarFotoPelaTela(G.pagina, pngGradiente(R27_FOTO.w, R27_FOTO.h, 'v'), 'gradiente-v.png');
+      const caminhoV = caminhoDoToken((await (await trocou2.resposta).json()).foto_url);
+      await esperarAte(async () => (await G.pagina.evaluate(() => /Foto trocada/.test(document.body.innerText))), { ms: 30000 });
+      await G.contexto.close();
+      if (caminhoV) await passe('v', caminhoV);
+
+      // Fecha as contas: janela esperada de cada regra, em relação ao CONTROLE (o próprio recorte, no mesmo pipeline).
+      const ctl = item3.superficies.find((s) => s.nome.startsWith('CONTROLE'));
+      if (ctl?.u && ctl?.v) {
+        const [cu0, cu1] = ctl.u; const [cv0, cv1] = ctl.v;
+        const proporcao = (item3.recorteNatural.w / item3.recorteNatural.h); // largura/altura do recorte
+        const regras = {
+          R1: { u: [cu0, cu1], v: [cv0, cv1], rotulo: 'card 2:3 = o recorte inteiro' },
+          R2: { u: [cu0, cu1], v: [cv0, cv0 + (cv1 - cv0) * proporcao], rotulo: 'quadrado = o quadrado do TOPO do recorte' },
+          R3: { u: [cu0, cu1], v: [cv0, cv0 + (cv1 - cv0) * Math.min(1, proporcao / 0.75)], rotulo: 'cartão 3:4 = do topo, com todas as laterais' },
+        };
+        item3.regras = regras;
+        item3.controle = { u: ctl.u.map((n) => +n.toFixed(4)), v: ctl.v.map((n) => +n.toFixed(4)), teoria: { u: [50 / 900, 850 / 900], v: [0, 1] } };
+        verificar('recorte: o CropModal 2:3 guardou o meio da foto (u ≈ 5,6%–94,4%, v ≈ 0–100%, 800×1200)', Math.abs(cu0 - 50 / 900) < 0.012 && Math.abs(cu1 - 850 / 900) < 0.012 && Math.abs(cv0) < 0.012 && Math.abs(cv1 - 1) < 0.012 && item3.recorteNatural.w === 800 && item3.recorteNatural.h === 1200, `u ${cu0.toFixed(3)}–${cu1.toFixed(3)} · v ${cv0.toFixed(3)}–${cv1.toFixed(3)} · ${item3.recorteNatural.w}×${item3.recorteNatural.h}`);
+        for (const s of item3.superficies) {
+          if (!s.regra || s.nome.startsWith('CONTROLE')) continue;
+          const e = regras[s.regra];
+          if (!s.u || !s.v) { s.ok = false; s.motivo = 'sem gradiente legível'; verificar(`enquadramento · ${s.nome}: janela legível`, false, `u ${s.u ? 'ok' : 'ilegível'} · v ${s.v ? 'ok' : 'ilegível'}`); continue; }
+          const dpx = [
+            (Math.abs(s.u[0] - e.u[0]) / (e.u[1] - e.u[0])) * s.cssW, (Math.abs(s.u[1] - e.u[1]) / (e.u[1] - e.u[0])) * s.cssW,
+            (Math.abs(s.v[0] - e.v[0]) / (e.v[1] - e.v[0])) * s.cssH, (Math.abs(s.v[1] - e.v[1]) / (e.v[1] - e.v[0])) * s.cssH,
+          ];
+          s.desvioPx = r1(Math.max(...dpx));
+          s.medido = { u: `${s.u[0].toFixed(3)}–${s.u[1].toFixed(3)}`, v: `${s.v[0].toFixed(3)}–${s.v[1].toFixed(3)}` };
+          s.esperado = { u: `${e.u[0].toFixed(3)}–${e.u[1].toFixed(3)}`, v: `${e.v[0].toFixed(3)}–${e.v[1].toFixed(3)}` };
+          s.ok = s.desvioPx <= 2;
+          verificar(`enquadramento · ${s.nome} (${e.rotulo}): desvio ≤ 2 px`, s.ok, `desvio ${s.desvioPx} px · mostra u ${s.medido.u} v ${s.medido.v} · esperado u ${s.esperado.u} v ${s.esperado.v}`);
+        }
+        // A prévia em DOM do Início: geometria do <img> dentro da caixa (fração do recorte, sem pixels).
+        if (item3.previa) {
+          const p = item3.previa;
+          const u0 = Math.max(0, -p.img.l / p.img.w); const u1 = Math.min(1, (p.caixa.w - p.img.l) / p.img.w);
+          const v0 = Math.max(0, -p.img.t / p.img.h); const v1 = Math.min(1, (p.caixa.h - p.img.t) / p.img.h);
+          const ev1 = Math.min(1, proporcao); // o quadrado do topo, em fração da altura do recorte
+          const dpx = [Math.abs(u0) * p.caixa.w, Math.abs(u1 - 1) * p.caixa.w, (Math.abs(v0) / ev1) * p.caixa.h, (Math.abs(v1 - ev1) / ev1) * p.caixa.h];
+          const desvio = r1(Math.max(...dpx));
+          const cobre = p.img.l <= 0.5 && p.img.t <= 0.5 && p.img.l + p.img.w >= p.caixa.w - 0.5 && p.img.t + p.img.h >= p.caixa.h - 0.5;
+          item3.superficies.push({ nome: 'Início · prévia em DOM (enquanto o cromo compõe)', regra: 'R2', cssW: r1(p.caixa.w), cssH: r1(p.caixa.h), medido: { u: `${u0.toFixed(3)}–${u1.toFixed(3)}`, v: `${v0.toFixed(3)}–${v1.toFixed(3)} (do recorte)` }, esperado: { u: '0.000–1.000', v: `0.000–${ev1.toFixed(3)} (do recorte)` }, foto: { l: Math.round(p.img.l), t: Math.round(p.img.t), w: Math.round(p.img.w), h: Math.round(p.img.h) }, cobreACaixa: cobre, desvioPx: desvio, ok: desvio <= 2 && cobre });
+          verificar('enquadramento · Início · prévia em DOM: a foto ocupa a caixa como o cromo desenhado (quadrado do topo)', desvio <= 2 && cobre, `foto ${Math.round(p.img.w)}×${Math.round(p.img.h)} em (${Math.round(p.img.l)}, ${Math.round(p.img.t)}) numa caixa ${Math.round(p.caixa.w)}×${Math.round(p.caixa.h)} · desvio ${desvio} px${cobre ? '' : ' · NÃO cobre a caixa'}`);
+        } else {
+          item3.previaNaoFlagrada = true;
+        }
+        // Ninguém mostra a foto ANTIGA depois da troca (a lista de sorteados guardava uma cópia da URL).
+        for (const s of item3.superficies.filter((x) => x.nome.startsWith('pág. '))) {
+          if (s.fotosAntigasNaTela != null) verificar(`${s.nome}: nenhuma imagem mostra a foto ANTIGA`, s.fotosAntigasNaTela === 0, s.fotosAntigasNaTela ? `${s.fotosAntigasNaTela} imagem(ns) com a foto antiga` : '');
+        }
+      } else {
+        verificar('enquadramento: o controle (o próprio recorte) foi lido nos dois passes', false, 'sem gradiente legível no controle');
+      }
+    }
+  } catch (e) { erros.push(`item2/3: ${e.message.split('\n')[0]}`); verificar('itens 2 e 3 rodaram até o fim', false, e.message.split('\n')[0]); }
+
+  // ════════════════ 4. TROCA DE TELA (diagnóstico do próprio app) ════════════════
+  const item4 = {};
+  medidas.item4 = item4;
+  if (PARTES.has('4')) try {
+    const F = await abrir('foto');
+    if (LATENCIA_MS > 0 && args.includes('--latencia')) {
+      await F.contexto.route('**/api/**', async (route) => { await espera(LATENCIA_MS); return route.continue(); });
+    }
+    const pagina = F.pagina;
+    const pedidos = [];
+    const t0 = Date.now();
+    pagina.on('request', (r) => { const u = new URL(r.url()); if (u.pathname.startsWith('/api/')) pedidos.push({ rota: u.pathname, midia: u.pathname.startsWith('/api/media/'), metodo: r.method(), em: Date.now() - t0 }); });
+    await pagina.goto(`${BASE}/`, { waitUntil: 'commit' });
+    await espera(5200);
+    await cookies(pagina);
+    const percurso = [['Figurinha', 3200], ['Resenha', 2800], ['Início', 2800]];
+    for (const [rotulo, esperaMs] of percurso) {
+      await aba(pagina, rotulo).click({ force: true, timeout: 8000 }).catch((e) => erros.push(`toque em ${rotulo}: ${e.message.split('\n')[0]}`));
+      await espera(esperaMs);
+    }
+    await capturar(pagina, '4-fim-do-percurso');
+    const diag = await pagina.evaluate(() => (window.__futtyDiagnostico ? window.__futtyDiagnostico() : null));
+    await F.contexto.close();
+    item4.latenciaMs = LATENCIA_MS > 0 && args.includes('--latencia') ? LATENCIA_MS : 0;
+    item4.tabela = diag ? tabelaVelocidade9({ diag }) : [];
+    item4.resumo = diag ? { motor: diag.resumo.motor, rede: diag.resumo.rede, total: diag.resumo.total, pintura: diag.resumo.pintura, pinturasDoCache: diag.resumo.pinturasDoCache, navegacoes: diag.resumo.navegacoes } : null;
+    item4.chamadasApi = pedidos.filter((p) => !p.midia).length;
+    item4.chamadasMidia = pedidos.filter((p) => p.midia).length;
+    item4.porRota = {};
+    for (const p of pedidos.filter((x) => !x.midia)) { const k = `${p.metodo === 'GET' ? '' : `${p.metodo} `}${p.rota}`; item4.porRota[k] = (item4.porRota[k] || 0) + 1; }
+    item4.fasesDoCromo = diag?.resumo?.cromo ?? null;
+    verificar('percurso Início → Figurinha → Resenha → Início: o diagnóstico do app registrou as navegações', item4.tabela.length >= 4, `${item4.tabela.length} navegações`);
+  } catch (e) { erros.push(`item4: ${e.message.split('\n')[0]}`); verificar('item 4 rodou até o fim', false, e.message.split('\n')[0]); }
+
+  // ════════════════ 5. AJUSTAR ENQUADRAMENTO: o recorte novo chega a TODAS as telas ════════════════
+  // "Não sei se o reenquadramento chega ao Início" (dono, 25-set). Um contexto só do começo ao fim — é o cache de
+  // sessão que se testa: sobe uma foto (gradiente), aquece Início, Ranking e Perfil com ela, REENQUADRA pela tela
+  // (Trocar foto → Ajustar enquadramento → zoom 2 → Confirmar: PUT do recorte) e olha, em cada tela, QUAL arquivo a
+  // <img> mostra (e, no Início, se o cromo desenhado é outro). Zoom 2 muda o recorte de verdade: metade da largura.
+  const item5 = {};
+  medidas.item5 = item5;
+  if (PARTES.has('5')) try {
+    const J = await abrir('foto');
+    const pj = J.pagina;
+    const lerCaminho = () => pj.evaluate(async () => {
+      const chave = Object.keys(localStorage).find((k) => /^sb-.+-auth-token$/.test(k));
+      const r = await fetch('/api/me', { headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem(chave)).access_token}` } });
+      return window.__r27.deToken((await r.json()).user.foto_url);
+    });
+    const caminhoNaLinha = () => pj.evaluate(() => {
+      const linha = [...document.querySelectorAll('.rank-row')].find((e) => (e.innerText || '').includes('FOTO27'));
+      const im = linha?.querySelector('.avatar-frame__fill img');
+      return im && im.complete && im.naturalWidth > 0 ? window.__r27.deToken(im.currentSrc || im.src) : null;
+    });
+    const caminhoNoPerfil = () => pj.evaluate(() => {
+      const im = document.querySelector('.pavatar img');
+      return im && im.complete && im.naturalWidth > 0 ? window.__r27.deToken(im.currentSrc || im.src) : null;
+    });
+    // 5.0 uma foto com gradiente (o cromo uniforme não mudaria de pixels ao reenquadrar), pela tela
+    await pj.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await cookies(pj);
+    await pj.getByRole('button', { name: /Trocar foto/ }).first().waitFor({ timeout: 30000 });
+    const subida = await trocarFotoPelaTela(pj, pngGradiente(R27_FOTO.w, R27_FOTO.h, 'u'), 'gradiente-u.png');
+    await subida.resposta;
+    await esperarAte(async () => pj.evaluate(() => /Foto trocada/.test(document.body.innerText)), { ms: 30000 });
+    const caminhoPartida = await lerCaminho();
+    // 5.1 aquece as três telas com o recorte de PARTIDA
+    await aba(pj, 'Início').click();
+    const cromoPartida = await esperarAte(async () => pj.evaluate(() => { const i = document.querySelector('.cromo-inicio img.fig-aura'); return i && i.complete && i.naturalWidth > 0 ? window.__r27.hashDe(i.src) : null; }), { ms: 40000 });
+    await aba(pj, 'Ranking').click();
+    await pj.waitForSelector('.rank-row', { timeout: 25000 });
+    const linhaPartida = await esperarAte(caminhoNaLinha, { ms: 20000 });
+    await aba(pj, 'Perfil').click();
+    const perfilPartida = await esperarAte(caminhoNoPerfil, { ms: 20000 });
+    item5.partida = { caminho: caminhoPartida, inicioHash: cromoPartida.v, ranking: linhaPartida.v, perfil: perfilPartida.v };
+    verificar('reenquadrar · partida: Início, Ranking e Perfil mostram o recorte de partida', cromoPartida.ok && linhaPartida.v === caminhoPartida && perfilPartida.v === caminhoPartida, `ranking ${linhaPartida.v === caminhoPartida ? 'ok' : 'outro'} · perfil ${perfilPartida.v === caminhoPartida ? 'ok' : 'outro'}`);
+
+    // 5.2 reenquadra pela tela
+    await aba(pj, 'Figurinha').click();
+    await pj.getByRole('button', { name: /Trocar foto/ }).first().waitFor({ timeout: 30000 });
+    await esperarAte(async () => (await pj.evaluate(() => window.__r27.estadoCard())).camadas >= 3, { ms: 25000 });
+    const assinaturaAntes = await assinaturaDoCard(pj);
+    await pj.getByRole('button', { name: /Trocar foto/ }).first().click();
+    await pj.getByRole('dialog', { name: 'Sua foto' }).waitFor({ timeout: 15000 });
+    await pj.getByRole('button', { name: /Ajustar enquadramento/ }).click();
+    await pj.getByRole('dialog', { name: 'Recortar imagem' }).waitFor({ timeout: 25000 });
+    const confirmar = pj.locator('[role="dialog"] button', { hasText: /^Confirmar$/ });
+    await esperarAte(async () => confirmar.isEnabled(), { ms: 15000 });
+    await espera(800);
+    await pj.locator('[role="dialog"] input[type="range"]').fill('2');
+    await espera(700);
+    const put = pj.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === '/api/me/avatar/recorte', { timeout: 60000 });
+    const tConfirmar = Date.now();
+    await confirmar.click();
+    const respPut = await put;
+    const tPut = Date.now();
+    const caminhoReenquadrado = caminhoDoToken((await respPut.json()).foto_url);
+    item5.putMs = tPut - tConfirmar;
+    item5.caminho = caminhoReenquadrado;
+    verificar('reenquadrar · o PUT do recorte devolveu um arquivo novo', respPut.status() === 200 && !!caminhoReenquadrado && caminhoReenquadrado !== caminhoPartida, `${respPut.status()} · ${item5.putMs} ms · ${caminhoReenquadrado === caminhoPartida ? 'MESMO arquivo' : 'arquivo novo'}`);
+    const cardMudou = await esperarAte(async () => (await assinaturaDoCard(pj)) !== assinaturaAntes, { ms: 15000, passo: 50 });
+    item5.respostaAteCardMs = cardMudou.ok ? Date.now() - tPut : null;
+    verificar('reenquadrar · o card da Figurinha muda com o recorte novo', cardMudou.ok, cardMudou.ok ? `${item5.respostaAteCardMs} ms depois da resposta` : 'o card não mudou');
+    await capturar(pj, '5-figurinha-reenquadrada');
+
+    // 5.3 cada tela, de volta, pelo cache de sessão: o arquivo mostrado é o NOVO, e o antigo nunca reaparece
+    const seguir = async (leitura, rotulo) => {
+      const seq = []; const t0 = Date.now(); let tNovo = null;
+      while (Date.now() - t0 < 25000 && tNovo == null) {
+        const c = await leitura().catch(() => null);
+        if (c) {
+          const e = c === caminhoReenquadrado ? 'novo' : c === caminhoPartida ? 'antigo' : 'outro';
+          if (!seq.length || seq.at(-1).e !== e) seq.push({ t: Date.now() - t0, e });
+          if (e === 'novo') tNovo = Date.now();
+        }
+        await espera(40);
+      }
+      return { rotulo, ms: tNovo ? tNovo - t0 : null, sequencia: seq.map((s) => `${s.t}ms ${s.e}`).join(' → '), passouPeloAntigo: seq.some((s) => s.e === 'antigo') };
+    };
+    // Início: o cromo desenhado tem de ser OUTRO (hash) e a prévia, se aparecer, já com o arquivo novo
+    await aba(pj, 'Início').click();
+    const tI = Date.now();
+    const cromoNovo = await esperarAte(async () => pj.evaluate((h0) => { const i = document.querySelector('.cromo-inicio img.fig-aura'); if (!i || !i.complete || !i.naturalWidth) return null; const h = window.__r27.hashDe(i.src); return h !== h0 ? h : null; }, cromoPartida.v), { ms: 30000, passo: 40 });
+    const dentro = await pj.evaluate(() => ({ toques: window.__r27.marcas.filter((m) => m.n === 'click:nav'), tr: window.__r27.transicoes })).catch(() => null);
+    const toqueI = dentro?.toques?.at(-1)?.t;
+    item5.inicio = {
+      cromoNovoMs: cromoNovo.ok ? Date.now() - tI : null,
+      previaNovaMs: toqueI ? (() => { const x = dentro.tr.find((y) => y.t >= toqueI && y.n === 'inicio:previa' && y.caminho === caminhoReenquadrado); return x ? Math.round(x.t - toqueI) : null; })() : null,
+      previaAntiga: !!toqueI && dentro.tr.some((y) => y.t >= toqueI && y.n === 'inicio:previa' && y.caminho === caminhoPartida),
+      cromoAntigoVisivel: !!toqueI && dentro.tr.some((y) => y.t >= toqueI && y.n === 'inicio:cromo' && y.hash === cromoPartida.v),
+    };
+    await capturar(pj, '5-inicio-reenquadrado');
+    await aba(pj, 'Perfil').click();
+    item5.perfil = await seguir(caminhoNoPerfil, 'Perfil');
+    await capturar(pj, '5-perfil-reenquadrado');
+    await aba(pj, 'Ranking').click();
+    await pj.waitForSelector('.rank-row', { timeout: 25000 });
+    item5.ranking = await seguir(caminhoNaLinha, 'Ranking');
+    await capturar(pj, '5-ranking-reenquadrado');
+    await J.contexto.close();
+    verificar('reenquadrar · o Início mostra o cromo NOVO (outro desenho), sem voltar ao de partida', item5.inicio.cromoNovoMs != null && !item5.inicio.cromoAntigoVisivel && !item5.inicio.previaAntiga, `cromo novo em ${item5.inicio.cromoNovoMs} ms · prévia nova ${item5.inicio.previaNovaMs ?? '—'} ms · cromo antigo visível: ${item5.inicio.cromoAntigoVisivel ? 'SIM' : 'não'} · prévia antiga: ${item5.inicio.previaAntiga ? 'SIM' : 'não'}`);
+    verificar('reenquadrar · o Perfil mostra o arquivo novo, sem passar pelo antigo', item5.perfil.ms != null && !item5.perfil.passouPeloAntigo, `${item5.perfil.ms} ms · ${item5.perfil.sequencia}`);
+    verificar('reenquadrar · o Ranking (cache de sessão) mostra o arquivo novo, sem passar pelo antigo', item5.ranking.ms != null && !item5.ranking.passouPeloAntigo, `${item5.ranking.ms} ms · ${item5.ranking.sequencia}`);
+  } catch (e) { erros.push(`item5: ${e.message.split('\n')[0]}`); verificar('item 5 rodou até o fim', false, e.message.split('\n')[0]); }
+
+  verificar('sem erro de JS na página', erros.filter((x) => !/^(item|captura|superfície|enquadramento|toque)/.test(x)).length === 0, erros.join(' | '));
+  return { pasta, verificacoes, capturas, erros, medidas };
 }

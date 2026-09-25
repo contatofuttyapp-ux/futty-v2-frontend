@@ -76,10 +76,13 @@ export function urlImagem(url, w, { quadrado = false } = {}) {
   const alvo = DEGRAUS.reduce((melhor, d) => (Math.abs(d - w) < Math.abs(melhor - w) ? d : melhor), DEGRAUS[0]);
   // `sq=1` — recorte central QUADRADO no servidor (SPEC-FIGURINHA-3 §3). A
   // figurinha comum é a foto 2:3 da pessoa; os avatares pequenos mostram-na
-  // num círculo/octógono. Cortar no motor poupa um terço dos bytes e escolhe a
-  // região pelo rosto (position: attention), não pelo centro geométrico — que
-  // num retrato cai no peito. OPT-IN: o mesmo proxy serve escudos de time, e
-  // um escudo largo cortado ao meio seria um defeito.
+  // num círculo/octógono. Cortar no motor poupa um terço dos bytes e corta a
+  // partir do TOPO do recorte (position: top), não do centro geométrico — que
+  // num retrato cai no peito. É o quadrado do topo do 2:3 que a pessoa enquadrou,
+  // o mesmo que o cromo do Início desenha (Rodada 27 provou os dois pixel a pixel).
+  // OPT-IN: o mesmo proxy serve escudos de time, e um escudo largo cortado ao
+  // meio seria um defeito. NUNCA em molduras que não são quadradas (3:4 da
+  // cerimônia do sorteio): lá o cover cortaria as laterais.
   return `${s}${s.includes('?') ? '&' : '?'}w=${alvo}${quadrado ? '&sq=1' : ''}`;
 }
 

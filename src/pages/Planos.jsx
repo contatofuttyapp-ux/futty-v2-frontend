@@ -15,6 +15,8 @@ import { Check, Lock } from 'lucide-react';
 import Topbar from '../components/Topbar';
 import { PRODUTOS } from '../lib/planos';
 import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
+import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
+import { useAuth } from '../hooks/useAuth';
 import '../styles/app.css';
 
 // FASE A — durações do sway por card. Não partilham divisores comuns úteis, por isso as
@@ -43,6 +45,8 @@ const PLANOS_PARTICULAS = [
 ];
 
 export default function Planos() {
+  const { session } = useAuth();
+  const userId = session?.user?.id || null;
   const [estado, setEstado] = useState(null); // null = a carregar
   const [aPedir, setAPedir] = useState(null); // id do produto com pedido em voo
   const [aviso, setAviso] = useState(null); // { tipo, texto }
@@ -78,7 +82,10 @@ export default function Planos() {
     setAPedir(null);
     if (r.ok) {
       setAviso({ tipo: 'ok', texto: 'Pedido enviado — a gente ativa e avisa.' });
-      setEstado(await estadoBrilhantes()); // o cartão passa a mostrar "pedido enviado"
+      const novo = await estadoBrilhantes();
+      setEstado(novo); // o cartão passa a mostrar "pedido enviado"
+      // Rodada 27: a Figurinha abre a partir do Início guardado — que ainda não sabe deste pedido.
+      if (!novo.indisponivel) espelharBrilhantesNoInicio(userId, novo);
     } else {
       setAviso({ tipo: 'erro', texto: r.erro });
     }

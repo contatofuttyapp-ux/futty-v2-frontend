@@ -12,6 +12,7 @@ import { useRanking } from '../hooks/useRanking';
 import { useListaProgressiva } from '../hooks/useListaProgressiva';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset, urlImagem } from '../utils/avatar';
+import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import AdCard from '../components/AdCard';
 import LoadingFutty from '../components/LoadingFutty';
@@ -28,8 +29,10 @@ const marcarImagem = () => marcarInstante('imagem');
 
 // Moldura de avatar do cânone (V1): quadrado + cantos-L dourados + interior no material
 // da casa + véu. Moldura única da página — rows, pódio e modal partilham-na.
-function FrameAvatar({ avatarUrl, size = 48 }) {
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : null;
+// Sem foto nem figurinha, mas com identidade (userId), mostra o avatar genérico que a pessoa ESCOLHEU —
+// o mesmo da Presença, da Equipa e do Início — e nunca a silhueta "?" (Rodada 27: o Ranking ignorava a escolha).
+function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 48 }) {
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
@@ -85,7 +88,7 @@ function RankRow({ p, idx, slug, onVote }) {
           )}
         </div>
         <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${nomeShow}`} style={{ lineHeight: 0 }}>
-          <FrameAvatar nome={nomeShow} avatarUrl={p.avatar_url} size={avSize} />
+          <FrameAvatar nome={nomeShow} avatarUrl={p.avatar_url} userId={p.user_id} avatarGenerico={p.avatar_generico} size={avSize} />
         </Link>
         <div className="rank-info">
           <div className="rank-name" style={nomeFs ? { fontSize: nomeFs } : undefined}>
@@ -342,7 +345,7 @@ export default function Ranking() {
           <div className="modal-card modal-card--hud" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-card__inner">
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                <FrameAvatar nome={nomeExibicao(voteModal)} avatarUrl={voteModal.avatar_url} size={64} />
+                <FrameAvatar nome={nomeExibicao(voteModal)} avatarUrl={voteModal.avatar_url} userId={voteModal.user_id} avatarGenerico={voteModal.avatar_generico} size={64} />
               </div>
               <h2 style={{ fontSize: 18, marginBottom: 14 }}>{nomeExibicao(voteModal)}</h2>
               <MeiaEstrelas value={modalNota} onChange={setModalNota} />

@@ -150,30 +150,9 @@ export async function apiUploadCampos(path, campos, { method = 'POST' } = {}) {
   return body;
 }
 
-// Upload de um ficheiro (multipart) para /api/feed/upload.
-// NÃO usa apiFetch porque este força Content-Type JSON, que parte o FormData
-// (o browser tem de definir o boundary do multipart sozinho).
-export async function uploadFile(file) {
-  const supabase = await obterSupabase();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  getsEmVoo.clear(); // escrita: ver a nota de getsEmVoo
-  const fd = new FormData();
-  fd.append('file', file);
-
-  const headers = {};
-  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-
-  const res = await fetch(`${API_URL}/api/feed/upload`, { method: 'POST', headers, body: fd });
-
-  let body = null;
-  try {
-    body = await res.json();
-  } catch {
-    // sem corpo JSON
-  }
-  if (!res.ok) throw new Error(body?.error || `Erro ${res.status}`);
-  return body; // { url, media_type }
+// Upload de um ficheiro (multipart) para /api/feed/upload → { url, media_type }.
+// Passa pelo mesmo caminho dos outros uploads (sessão, escrita esvazia o mapa de GETs, erro com status e
+// código): eram duas cópias da mesma lógica, e o arranque tem teto de peso (verificar-dist).
+export function uploadFile(file) {
+  return apiUploadCampos('/api/feed/upload', { file });
 }

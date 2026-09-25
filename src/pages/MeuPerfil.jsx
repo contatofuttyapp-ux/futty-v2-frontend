@@ -11,6 +11,8 @@ import { limparCacheLocal } from '../lib/cacheLocal';
 import { useAuth } from '../hooks/useAuth';
 import { useApiComCache } from '../hooks/useApiComCache';
 import { usePerfil } from '../context/PerfilContext';
+// Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
+import '../lib/alinharCard';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';

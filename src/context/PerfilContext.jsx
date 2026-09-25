@@ -17,6 +17,19 @@ const ESPERA_HIDRATACAO_MS = 3000;
 
 const PerfilContext = createContext(null);
 
+// RODADA 27 — quem alinha os caches guardados com um perfil confirmado (lib/cacheCard.js) só faz falta
+// QUANDO o card muda, então mora fora do arranque (o teto de 320 KiB do verificar-dist é de JS que o WebKit
+// compila antes da 1ª tela) e se REGISTRA aqui ao carregar — junto das telas em que o card muda (Figurinha,
+// Início, Perfil; ver lib/alinharCard.js). Import dinâmico custava ~1 KiB de cola de pré-carga no arranque.
+// Sem registro (nenhuma dessas telas abriu) não há o que alinhar: nada mudou.
+let alinhador = null;
+// eslint-disable-next-line react-refresh/only-export-components
+export function registrarAlinhador(fn) {
+  alinhador = fn;
+}
+// Perfis que vieram do CACHE e o servidor ainda não confirmou (o objeto em si é a marca — sem estado à parte).
+const deCacheSet = new WeakSet();
+
 /**
  * VELOCIDADE 9 (23-set) — põe a foto do cromo a caminho assim que se sabe qual
  * é, sem esperar pela tela.
@@ -72,6 +85,33 @@ export function PerfilProvider({ children }) {
     userIdRef.current = userId;
   }, [userId]);
 
+  // RODADA 27 — o perfil em exibição AGORA (não o que o último render viu). Duas coisas dependem disto:
+  // saber se o rosto mudou quando chega um perfil confirmado (lib/cacheCard.js) e a guarda de hidratar() —
+  // o cache nunca pisa um dado confirmado (deCacheSet diz se o que está em exibição veio do cache).
+  const perfilRef = useRef(null);
+
+  // Um perfil CONFIRMADO pelo servidor (ou por uma ação da própria pessoa, que vale o mesmo) chegou:
+  // grava o cache `me` e alinha os outros caches com ele (foto nova no Início, no Ranking, no Feed...).
+  // Sem isto o Início hidratava o perfil a partir do `me` VELHO que guardava dentro do próprio cache,
+  // e pintava o cromo antigo até o /api/inicio responder (medido: 3,9 s).
+  // `doInicio`: o `me` veio DENTRO do /api/inicio, que o InicioContext grava por conta própria.
+  const aceitarPerfilFresco = useCallback((id, data, doInicio) => {
+    const anterior = perfilRef.current;
+    perfilRef.current = data;
+    gravarCache(id, CACHE_CHAVE, data);
+    alinhador?.(id, data, anterior, doInicio);
+  }, []);
+
+  // O perfil, a ausência de erro e a origem (cache ou servidor) andam sempre juntos — quatro sítios
+  // repetiam as mesmas cinco linhas (e cada uma custa bytes no arranque, que tem teto).
+  const mostrarPerfil = useCallback((id, data, doCache) => {
+    setPerfil(data);
+    setErro(null);
+    setErroCode(null);
+    setCarregadoParaId(id);
+    setDeCache(doCache);
+  }, []);
+
   // Carga inicial ao autenticar (login/arranque com sessão); limpa ao sair. Chave =
   // user.id, não o access_token — o token renova-se (~1h) sem precisar recarregar.
   useEffect(() => {
@@ -79,6 +119,7 @@ export function PerfilProvider({ children }) {
     if (!userId) {
       Promise.resolve().then(() => {
         if (!ativo) return;
+        perfilRef.current = null;
         setPerfil(null);
         setErro(null);
         setErroCode(null);
@@ -103,11 +144,9 @@ export function PerfilProvider({ children }) {
       adiantarFotoDoCromo(doCache?.user);
       Promise.resolve().then(() => {
         if (!ativo) return;
-        setPerfil(doCache);
-        setErro(null);
-        setErroCode(null);
-        setCarregadoParaId(userId);
-        setDeCache(true);
+        perfilRef.current = doCache;
+        deCacheSet.add(doCache);
+        mostrarPerfil(userId, doCache, true);
       });
     }
 
@@ -131,12 +170,8 @@ export function PerfilProvider({ children }) {
           apiFetch('/api/me')
             .then((data) => {
               if (!ativo || userIdRef.current !== userId) return;
-              setPerfil(data);
-              setErro(null);
-              setErroCode(null);
-              setCarregadoParaId(userId);
-              setDeCache(false);
-              gravarCache(userId, CACHE_CHAVE, data);
+              aceitarPerfilFresco(userId, data);
+              mostrarPerfil(userId, data, false);
             })
             .catch(() => {});
           return atual;
@@ -148,12 +183,8 @@ export function PerfilProvider({ children }) {
     apiFetch('/api/me')
       .then((data) => {
         if (!ativo) return;
-        setPerfil(data);
-        setErro(null);
-        setErroCode(null);
-        setCarregadoParaId(userId);
-        setDeCache(false); // dado fresco chegou — gates já podem decidir
-        gravarCache(userId, CACHE_CHAVE, data);
+        aceitarPerfilFresco(userId, data);
+        mostrarPerfil(userId, data, false); // dado fresco chegou — gates já podem decidir
       })
       .catch((e) => {
         if (!ativo) return;
@@ -173,7 +204,7 @@ export function PerfilProvider({ children }) {
     return () => {
       ativo = false;
     };
-  }, [userId]);
+  }, [userId, aceitarPerfilFresco, mostrarPerfil]);
 
   // recarregar() exposto ao contexto — para consumidores chamarem a partir de
   // handlers (após guardar dados, trocar avatar, gerar avatar IA, etc.), nunca a
@@ -184,11 +215,11 @@ export function PerfilProvider({ children }) {
     try {
       const data = await apiFetch('/api/me');
       if (userIdRef.current !== idDoPedido) return null; // ficou obsoleto
+      aceitarPerfilFresco(idDoPedido, data);
       setPerfil(data);
       setErro(null);
       setErroCode(null);
       setDeCache(false); // recarga explícita É o dado fresco
-      gravarCache(idDoPedido, CACHE_CHAVE, data);
       return data;
     } catch (e) {
       if (userIdRef.current !== idDoPedido) return null;
@@ -196,7 +227,7 @@ export function PerfilProvider({ children }) {
       setErroCode(e.code || null);
       return null;
     }
-  }, [userId]);
+  }, [userId, aceitarPerfilFresco]);
 
   // Hidratação externa (11-set): o InicioContext já traz `me` dentro do payload
   // agregado de /api/inicio — em vez de disparar um /api/me próprio, ele chama
@@ -217,19 +248,26 @@ export function PerfilProvider({ children }) {
   // partir do cache do Início reabriria o MESMO bug do onboarding em loop por
   // uma porta diferente. `deCache: true` marca explicitamente uma hidratação
   // que ainda não foi confirmada pelo servidor nesta carga.
+  //
+  // RODADA 27 — duas regras novas:
+  //   · o cache NUNCA pisa um dado confirmado. O Início hidratava o perfil com o `me` do próprio
+  //     cache toda vez que montava; quem acabara de trocar a foto na Figurinha via o cromo ANTIGO
+  //     voltar por ~2 s (o perfil confirmado, com a foto nova, era trocado pelo velho);
+  //   · `opts.doInicio`: o `me` veio dentro do /api/inicio, que o InicioContext grava sozinho.
   const hidratar = useCallback((data, opts = {}) => {
-    if (!data || !userIdRef.current) return;
+    if (!data || !userIdRef.current || (opts.deCache && perfilRef.current && !deCacheSet.has(perfilRef.current))) return;
     adiantarFotoDoCromo(data?.user); // Velocidade 9 — ver a nota na carga inicial
-    setPerfil(data);
-    setErro(null);
-    setErroCode(null);
-    setCarregadoParaId(userIdRef.current);
-    setDeCache(!!opts.deCache);
-    // Só regrava o cache do PerfilContext com dado CONFIRMADO fresco — uma
-    // hidratação deCache:true (cache do Início) não pode sobrescrever um
-    // cache de `me` que já esteja mais actualizado do que ela própria.
-    if (!opts.deCache) gravarCache(userIdRef.current, CACHE_CHAVE, data);
-  }, []);
+    if (opts.deCache) {
+      perfilRef.current = data;
+      deCacheSet.add(data);
+    } else {
+      // Só regrava o cache do PerfilContext com dado CONFIRMADO fresco — uma
+      // hidratação deCache:true (cache do Início) não pode sobrescrever um
+      // cache de `me` que já esteja mais actualizado do que ela própria.
+      aceitarPerfilFresco(userIdRef.current, data, opts.doInicio);
+    }
+    mostrarPerfil(userIdRef.current, data, !!opts.deCache);
+  }, [aceitarPerfilFresco, mostrarPerfil]);
 
   const value = {
     perfil,

@@ -65,7 +65,8 @@ export function InicioProvider({ children }) {
       // que decide se a conta está suspensa) — isto não evita ESSE pedido, mas
       // mantém o PerfilContext fresco com o `me` que /api/inicio acabou de
       // trazer, sem o Início disparar um /api/me próprio por cima.
-      if (d?.me) hidratarPerfil(d.me);
+      // doInicio: este `me` vem no payload que este contexto grava logo abaixo (Rodada 27).
+      if (d?.me) hidratarPerfil(d.me, { doInicio: true });
       // Mesma lógica para o SessaoContext — teams/votacao_status já vieram
       // neste payload, sem o SessaoContext precisar do seu próprio /api/teams.
       if (d?.teams?.teams) hidratarTeams(d.teams.teams);
@@ -131,7 +132,7 @@ export function InicioProvider({ children }) {
         ultimaCargaRef.current = Date.now();
         setDados(d);
         setErro('');
-        if (d?.me) hidratarPerfil(d.me);
+        if (d?.me) hidratarPerfil(d.me, { doInicio: true });
         if (d?.teams?.teams) hidratarTeams(d.teams.teams);
         if (d?.votacao_status !== undefined) hidratarVotacaoStatus(d.votacao_status, d?.teams?.teams?.[0]?.slug ?? null);
         if (d?.ads) semearAds(d.ads); // Velocidade 9 — ver `carregar()`

@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { RefreshCw, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { usePerfil } from '../context/PerfilContext';
+// Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
+import '../lib/alinharCard';
 import { useInicio } from '../context/InicioContext';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -12,7 +14,7 @@ import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
 import { plural } from '../utils/plural';
-import { gerarFigurinhaCanvas, enquadrarAvatar } from '../utils/figurinhaCanvas';
+import { gerarFigurinhaCanvas, enquadrarAvatar, enquadrarFotoComum } from '../utils/figurinhaCanvas';
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
@@ -136,16 +138,21 @@ function fundoDaPrevia(fundo) {
 // Uma espera sem fim não é transição, é defeito — a mesma lição da Velocidade 5.
 const PRAZO_AVATAR_MS = 1500;
 
-function PreviaCromo({ previa, fundo }) {
+// RODADA 27 — o anel dourado da prévia: o conteúdo mora `inset: 1.75%` dentro dele (app.css,
+// .cromo-previa__dentro), que é o corpo grosso do frame do canvas (7*k, k = lado/400).
+const INSET_DO_ANEL = 1.75;
+
+function PreviaCromo({ previa, fundo, modo = 'brilhante' }) {
   const [avatar, setAvatar] = useState(null);
   const [semEspera, setSemEspera] = useState(!previa);
-  // Prévia nova (a pessoa trocou o avatar genérico): volta à área reservada.
+  // Prévia nova (a pessoa trocou o avatar genérico, ou a foto): volta à área reservada.
   // Ajuste DURANTE o render — o padrão oficial do React para estado derivado de
   // props, o mesmo que o useListaProgressiva usa. Num efeito corria tarde de
   // mais e a composição antiga chegava a pintar com a foto errada.
-  const [vista, setVista] = useState(previa);
-  if (vista !== previa) {
-    setVista(previa);
+  const chaveDaPrevia = `${modo}|${previa}`;
+  const [vista, setVista] = useState(chaveDaPrevia);
+  if (vista !== chaveDaPrevia) {
+    setVista(chaveDaPrevia);
     setAvatar(null);
     setSemEspera(!previa);
   }
@@ -161,6 +168,22 @@ function PreviaCromo({ previa, fundo }) {
     img.decode()
       .then(() => {
         if (!vivo || !img.naturalWidth) return;
+        if (modo === 'comum') {
+          // A figurinha COMUM é a foto como ela é, a cobrir o cromo todo (cover, do topo) — a MESMA
+          // conta do canvas (enquadrarFotoComum). Antes a prévia usava a da Brilhante (o avatar
+          // recortado, pequeno, com os olhos a 34 %) e a foto aparecia 129×194 numa caixa de 184: a
+          // troca pelo cromo desenhado saltava (47,9 px medidos). O canvas põe a foto por baixo da
+          // moldura, a prévia dentro do anel — daí a conversão das coordenadas do cromo para as do anel.
+          const { dx, dy, dw, dh } = enquadrarFotoComum({ W: 100, H: 100, nw: img.naturalWidth, nh: img.naturalHeight });
+          const k = 100 / (100 - 2 * INSET_DO_ANEL);
+          setAvatar({
+            left: `${(dx - INSET_DO_ANEL) * k}%`,
+            top: `${(dy - INSET_DO_ANEL) * k}%`,
+            width: `${dw * k}%`,
+            height: `${dh * k}%`,
+          });
+          return;
+        }
         // W=H=100 → o resultado já vem em percentagem do lado do cromo.
         const { dx, dy, dw, dh } = enquadrarAvatar({
           W: 100, H: 100, nw: img.naturalWidth, nh: img.naturalHeight, avatarZoom: 1.1, ehQuadrado: true,
@@ -169,7 +192,7 @@ function PreviaCromo({ previa, fundo }) {
       })
       .catch(() => { if (vivo) setSemEspera(true); });
     return () => { vivo = false; clearTimeout(prazo); };
-  }, [previa]);
+  }, [previa, modo]);
 
   if (!avatar && !semEspera) {
     return <div className="cromo-previa__reserva" style={fundoDaPrevia(fundo)} aria-hidden="true" />;
@@ -182,7 +205,7 @@ function PreviaCromo({ previa, fundo }) {
         {avatar ? (
           // decoding="sync": os pixéis já estão decodificados acima, então este
           // <img> pinta no mesmo quadro em que a moldura aparece.
-          <img src={previa} alt="" decoding="sync" className="cromo-previa__avatar" style={avatar} />
+          <img src={previa} alt="" decoding="sync" className={`cromo-previa__avatar${modo === 'comum' ? ' cromo-previa__avatar--comum' : ''}`} style={avatar} />
         ) : (
           <div className="cromo-previa__silhueta">
             <SilhuetaJogador size="58%" color="rgba(240,201,74,0.5)" interrogacao={false} />
@@ -194,7 +217,7 @@ function PreviaCromo({ previa, fundo }) {
   );
 }
 
-function CromoInicio({ cromo, previa, fundo, nome, refCromo, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
+function CromoInicio({ cromo, previa, modoPrevia, fundo, nome, refCromo, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
   return (
     <Link to={destino} ref={refCromo} data-tour="player-card" className="cromo-inicio" aria-label={destinoLabel}>
       {/* Sombra no chão — contra-fase com o bob: encolhe quando o cromo sobe. */}
@@ -208,7 +231,7 @@ function CromoInicio({ cromo, previa, fundo, nome, refCromo, destino = '/figurin
           {cromo ? (
             <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" decoding="async" fetchpriority="high" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
           ) : (
-            <PreviaCromo previa={previa} fundo={fundo} />
+            <PreviaCromo previa={previa} fundo={fundo} modo={modoPrevia} />
           )}
         </div>
       </div>
@@ -403,7 +426,7 @@ function EmptyState() {
 }
 
 export default function Inicio() {
-  const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil } = usePerfil();
+  const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil, hidratar: hidratarPerfil } = usePerfil();
   const { teams, loading: teamsLoading } = useTeams();
   // Início (11-set): 1 pedido só (GET /api/inicio, via Layout.jsx que monta o
   // InicioProvider só nesta rota) alimenta jogos, RSVP, campeonato, pedidos,
@@ -530,6 +553,9 @@ export default function Inicio() {
   // Avatar IA confirmado (mesma regra da Figurinha): a foto CRUA nunca entra no cromo.
   const cromoAvatarEhIA = !!user?.foto_url && !!user?.avatar_url && user.foto_url !== user.avatar_url;
   const cromoFundo = user?.fundo_figurinha || 'estadio';
+  // Com Brilhante, o cromo de sempre; sem Brilhante mas com FOTO, a figurinha COMUM (a foto, a cobrir o
+  // cromo); sem foto, o genérico da casa. Uma conta só: o canvas e a prévia em DOM leem a mesma.
+  const modoDoCromo = !cromoAvatarEhIA && user?.foto_url ? 'comum' : 'brilhante';
 
   // Figurinha automática do cadastro (12-set): o Onboarding dispara a geração
   // em fundo e marca o sessionStorage; aqui o Início mostra "criando..." em vez
@@ -599,9 +625,12 @@ export default function Inicio() {
     setAvatarGenericoOverride(key);
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ avatar_generico: key }) });
-      // Achado 4: invalida o PerfilContext partilhado — outras páginas (Perfil,
-      // Figurinha) que leem o avatar genérico sem override próprio ficam frescas.
-      recarregarPerfil();
+      // Achado 4: o PerfilContext partilhado aprende a escolha — outras páginas (Perfil, Figurinha,
+      // Ranking) que leem o avatar genérico sem override próprio ficam frescas. RODADA 27: sem reler o
+      // /api/me inteiro (a escolha é o que o PATCH acabou de gravar); o hidratar também alinha os
+      // caches do Ranking e do Feed com o genérico novo (lib/cacheCard.js).
+      if (me?.user) hidratarPerfil({ ...me, user: { ...me.user, avatar_generico: key } });
+      else recarregarPerfil();
     } catch (e) {
       setAvatarGenericoOverride(anterior);
       setToast({ msg: e.message || 'Não deu para salvar.', tipo: 'error' });
@@ -625,7 +654,7 @@ export default function Inicio() {
       : user?.foto_url
         ? { ...user, foto_url: urlImagem(user.foto_url, 512) }
         : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha) };
-    const modoCromo = !cromoAvatarEhIA && user?.foto_url ? 'comum' : 'brilhante';
+    const modoCromo = modoDoCromo;
     // fundoGlints:'discreto' — o cromo do Início é um OBJECTO estático (nunca em
     // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
     // download nem a montra do tile do seletor — densidade de repouso própria.
@@ -750,7 +779,7 @@ export default function Inicio() {
       if (quadro1 != null) cancelAnimationFrame(quadro1);
       if (quadro2 != null) cancelAnimationFrame(quadro2);
     };
-  }, [user, cromoAvatarEhIA, cromoFundo, avatarGenericoEscolha, nome]);
+  }, [user, cromoAvatarEhIA, cromoFundo, avatarGenericoEscolha, nome, modoDoCromo]);
   // NB: `user` inteiro já está nas deps — trocar a foto muda o objecto e
   // repinta o cromo comum sem precisar de `user.foto_url` à parte.
 
@@ -1141,7 +1170,7 @@ export default function Inicio() {
                 a figurinha continua a um toque, na aba Figurinha da barra de
                 baixo. Sem time não há vitrine (ela vive dentro de um time): aí
                 o destino é a Figurinha, e sem conta nenhuma, criar o time. */}
-            <CromoInicio cromo={cromo} previa={previaCromo} fundo={cromoFundo} nome={nome} refCromo={refCromo} destino={destinoCromo.to} destinoLabel={destinoCromo.label} />
+            <CromoInicio cromo={cromo} previa={previaCromo} modoPrevia={modoDoCromo} fundo={cromoFundo} nome={nome} refCromo={refCromo} destino={destinoCromo.to} destinoLabel={destinoCromo.label} />
             {/* Trocar visual — só quando o card veste o GENÉRICO (sem Brilhante
                 e sem foto). Com foto, o card é a figurinha comum e não há
                 visual alternativo para trocar: quem manda é a foto. */}

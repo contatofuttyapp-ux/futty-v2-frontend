@@ -13,6 +13,9 @@ import { useAuth } from '../hooks/useAuth';
 import { useAd } from '../hooks/useAd';
 import { usePerfil } from '../context/PerfilContext';
 import { lerCacheComIdade, gravarCache } from '../lib/cacheLocal';
+// Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
+import '../lib/alinharCard';
+import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
 import { nomeJogador, urlAsset, urlImagem } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
@@ -340,6 +343,15 @@ export default function Figurinha() {
   // sessão), em vez de null. Era o terceiro pedido desta tela — 606 ms de
   // Lisboa no relatório do build 28 — para saber coisas que estavam em casa.
   const [brilhante, setBrilhante] = useState(() => brilhanteDoInicio(userId));
+  // Rodada 27: o estado que chega do servidor (depois de gerar, de pedir ativação) também vai para o
+  // Início guardado — a Figurinha nasce a partir dele (brilhanteDoInicio), e sem isto o contador
+  // "N gerações restantes" abria com o número de ANTES de gerar. Uma resposta que falhou (o
+  // estadoBrilhantes devolve "ninguém tem nada" e marca indisponivel) não vira verdade guardada.
+  const aplicarBrilhante = (e) => {
+    if (!e) return;
+    setBrilhante(e);
+    if (!e.indisponivel) espelharBrilhantesNoInicio(userId, e);
+  };
   const temDireitoDeGerar = !!brilhante?.direito?.fonte;
   const fonteDireito = brilhante?.direito?.fonte || null;
   const kitDoTime = fonteDireito === 'time' ? brilhante.direito.kit_id : null;
@@ -370,7 +382,11 @@ export default function Figurinha() {
     // SEGUNDO PLANO, para não entrar na conta de "dados" de quem já tem tela.
     const idade = idadeDoInicio(userId);
     if (brilhanteDoInicio(userId) && idade != null && idade < FRESCOR_DO_INICIO_MS) return () => { vivo = false; };
-    estadoBrilhantes({ segundoPlano: true }).then((e) => { if (vivo && e) setBrilhante(e); });
+    estadoBrilhantes({ segundoPlano: true }).then((e) => {
+      if (!vivo || !e) return;
+      setBrilhante(e);
+      if (!e.indisponivel) espelharBrilhantesNoInicio(userId, e); // Rodada 27 — ver aplicarBrilhante
+    });
     return () => { vivo = false; };
   }, [userId]);
 
@@ -379,7 +395,7 @@ export default function Figurinha() {
     const r = await pedirAtivacao(produto, produto === 'minha' ? null : meuTimeBrilhante?.id);
     setPedindo(null);
     setAvisoPedido(r.ok ? 'Pedido enviado — a gente ativa e avisa.' : r.erro);
-    if (r.ok) setBrilhante(await estadoBrilhantes());
+    if (r.ok) aplicarBrilhante(await estadoBrilhantes());
   }
   // SELOS DE HONRA (Vaga 11C): busca os selos do utilizador; mostra no cromo os 2
   // de maior prioridade que NÃO estejam ocultos (olhinho, persistido). Vêm já
@@ -674,7 +690,7 @@ export default function Figurinha() {
       // só chama esta função quando já há direito confirmado, mas o direito
       // pode ter acabado entre a checagem e a resposta (corrida rara) — cai
       // aqui na mesma, sem erro na tela.
-      if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(setBrilhante);
+      if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(aplicarBrilhante);
       else if (err?.status === 403) setLimiteIA(true); // 403 sem código conhecido (defensivo)
       else setErro(err?.message || 'Não foi possível gerar sua figurinha.');
     } finally {
@@ -942,7 +958,7 @@ export default function Figurinha() {
       recarregarPerfilGlobal();
       // O direito acabou de ser gasto (crédito a menos, ou a linha do pacote):
       // relê, para o contador e o botão dourado contarem a verdade.
-      estadoBrilhantes().then(setBrilhante);
+      estadoBrilhantes().then(aplicarBrilhante);
       setFotoTrocadaSemGerar(false); // gerou (ou reutilizou de propósito) — some o pulso
       // reutilizado:true (motor, build 9) — o slot deste kit já valia para a
       // foto atual e não gerou de novo. Sem aviso, parecia que o toque no
@@ -957,7 +973,7 @@ export default function Figurinha() {
       // Recarrega o estado para o bloco "Vire Brilhante" aparecer sozinho; o
       // card de quota do plano NÃO serve aqui, e mostrá-lo seria mentir.
       else if (err?.code === 'SEM_DIREITO') {
-        estadoBrilhantes().then(setBrilhante);
+        estadoBrilhantes().then(aplicarBrilhante);
         setErroIAmsg(err.message);
         setErroIA(true);
       } else if (err?.status === 403) setLimiteIA(true); // gate antigo de plano (morto, fica de rede)
@@ -1380,8 +1396,11 @@ export default function Figurinha() {
             {/* Sem avatar IA o card já veste o genérico da casa (ver `jogadorCard`
                 acima) — não há mais empty state de silhueta a desenhar aqui. */}
             {gerandoIA || erroIA ? overlayGerando : null}
-            {/* Trocar visual — só quando o card veste o genérico (sem avatar IA). */}
-            {!avatarEhIA && !fotoLocal && !uploadFoto && !gerandoIA && !erroIA ? (
+            {/* Trocar visual — só quando o card veste o genérico da casa: sem Brilhante E SEM FOTO.
+                RODADA 27 (25-set, conta backup no celular): com foto o card mostra a foto, o
+                genérico não aparece em lugar nenhum e o botão "não mudava nada" — era um botão
+                sem efeito. Sem foto, a escolha vale para todas as telas (Início, Ranking, Presença). */}
+            {!avatarEhIA && !temFoto && !fotoLocal && !uploadFoto && !gerandoIA && !erroIA ? (
               <button
                 type="button"
                 className="hud-corners-s"
@@ -2041,7 +2060,10 @@ export default function Figurinha() {
                  #0d0d12 lêem como moldura intencional, não como corte. */
               <div className="hud-corners" style={{ width: '100%', background: '#0d0d12' }}>
                 <img
-                  src={urlImagem(urlAsset(fotoOriginal), 512)}
+                  // Rodada 27: logo depois de trocar a foto/o enquadramento o preview é o LOCAL (o recorte
+                  // que o servidor acabou de confirmar). Trocar só o src deixava a foto ANTIGA na tela
+                  // até o derivado novo chegar pelo proxy.
+                  src={fotoLocal || urlImagem(urlAsset(fotoOriginal), 512)}
                   alt="Sua foto"
                   style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '46vh', objectFit: 'contain', display: 'block', margin: '0 auto' }}
                 />

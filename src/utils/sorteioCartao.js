@@ -45,8 +45,10 @@ function carregarImagem(src) {
     img.src = src;
   });
 }
-// object-fit: cover dentro de (dx,dy,dw,dh); focoY = object-position vertical (0..1)
-function desenharCover(cx, img, dx, dy, dw, dh, focoY = 0.08) {
+// object-fit: cover dentro de (dx,dy,dw,dh); focoY = object-position vertical (0..1). RODADA 27: 0 = do TOPO
+// do recorte, como o CSS da cerimônia (object-position 50% 0%) e o canvas do cromo — os 0,08 de antes
+// deslocavam a foto do que a pessoa enquadrou (e cada tela, um pouco diferente da outra).
+function desenharCover(cx, img, dx, dy, dw, dh, focoY = 0) {
   const ir = img.width / img.height; const dr = dw / dh;
   let sw; let sh; let sx; let sy;
   if (ir > dr) { sh = img.height; sw = sh * dr; sx = (img.width - sw) / 2; sy = 0; }
@@ -116,7 +118,7 @@ function desenharCartaoJogador(cx, x, y, w, h, cor, nome, img) {
   cx.save(); chanfro(cx, x, y, w, h); cx.clip();
   cx.fillStyle = '#0b0b11'; cx.fillRect(x, y, w, h);
   const fh = h * 0.78;
-  if (img) desenharCover(cx, img, x, y, w, fh, 0.08);
+  if (img) desenharCover(cx, img, x, y, w, fh, 0);
   const py = y + fh; const ph = h - fh;
   const pg = cx.createLinearGradient(0, py, 0, py + ph);
   pg.addColorStop(0, '#15121d'); pg.addColorStop(1, '#0a0810');

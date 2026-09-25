@@ -195,9 +195,12 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
 
     // — visual de um jogador real: foto (urlAsset) ou silhueta da cor (privacidade).
     //   ti < 0 → RESERVA (silhueta cinza-aço).
+    //   RODADA 27: a foto vem no 2:3 do recorte (SEM quadrado): as molduras são 3:4 e o CSS as cobre do
+    //   topo (object-position 50% 0%), então aparecem as laterais inteiras e o topo do recorte — o que a
+    //   pessoa enquadrou. Com sq=1 o servidor mandava o quadrado do topo e o cover cortava 25% das laterais.
     const vis = (j, ti) => ({
       nome: (j.convidado ? '· ' : '') + (j.nome || '?'),
-      img: j.avatar_url ? urlImagem(urlAsset(j.avatar_url), 128, { quadrado: true }) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
+      img: j.avatar_url ? urlImagem(urlAsset(j.avatar_url), 128) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
     });
 
     // — moldura de um jogador (innerHTML; corre dentro de .smaq → estilos aplicam).
