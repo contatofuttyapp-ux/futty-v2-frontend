@@ -254,13 +254,15 @@ function AnimatedRoutes() {
               </AuthGuard>
             }
           />
-          {/* VELOCIDADE 4 — a caixa-preta do app, aberta a toda gente durante o
-              teste: quem sente a lentidão é quem tem o aparelho na mão. */}
+          {/* VELOCIDADE 4 — a caixa-preta do app. RODADA 28: só o super-admin, pelo
+              Gabinete; o número de todo mundo vem da telemetria anônima (sem botão). */}
           <Route
             path="/diagnostico"
             element={
               <AuthGuard>
-                <Diagnostico />
+                <SuperAdminGuard>
+                  <Diagnostico />
+                </SuperAdminGuard>
               </AuthGuard>
             }
           />

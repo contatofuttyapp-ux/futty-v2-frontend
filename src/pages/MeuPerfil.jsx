@@ -137,9 +137,10 @@ export default function MeuPerfil() {
 
   // Abre o cliente de email; se não houver, mostra o email para copiar.
   function relatarProblema() {
-    window.location.href = 'mailto:suporte@futty.app?subject=Problema%20no%20Futty';
+    // Rodada 28: suporte@futty.app era um domínio que não é nosso — o e-mail da casa é o dos Termos.
+    window.location.href = 'mailto:contato@futtyapp.com?subject=Problema%20no%20Futty';
     setTimeout(() => {
-      showToast('Email: suporte@futty.app', 'info');
+      showToast('E-mail: contato@futtyapp.com', 'info');
     }, 500);
   }
 
@@ -508,12 +509,8 @@ export default function MeuPerfil() {
               Painel de administração
             </ContaRow>
           ) : null}
-          {/* VELOCIDADE 4 — aberta a toda gente durante o teste, de propósito:
-              o número da lentidão tem de vir do aparelho de quem a sente. */}
-          <ContaRow onClick={() => navigate('/diagnostico')} cor="#8b5cf6">
-            <Icon name="definicoes" size={20} color="#d4a017" />
-            Diagnóstico
-          </ContaRow>
+          {/* RODADA 28 — o Diagnóstico saiu daqui: o número de todo mundo vem da
+              telemetria anônima; a tela ficou para o super-admin, dentro do Gabinete. */}
           {souSuperAdmin ? (
             <ContaRow onClick={() => navigate('/gabinete')} cor="#8b5cf6">
               <Icon name="definicoes" size={20} color="#d4a017" />

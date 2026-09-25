@@ -9,11 +9,12 @@
 //   REDE  — o que sobra. É a distância a cobrar: de Lisboa a São Paulo são
 //           ~250 ms de ida e volta, e nenhum código nosso encurta isso.
 //
-// Fica visível para toda gente durante o teste, de propósito: quem sente a
-// lentidão é quem tem o aparelho na mão, e é de lá que o número tem de vir.
+// RODADA 28 — só o super-admin chega aqui (App.jsx: SuperAdminGuard), pelo
+// Gabinete. Para toda gente, quem traz o número do aparelho agora é a telemetria
+// anônima de velocidade (lib/telemetria.js → Gabinete, aba Velocidade), sem botão.
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { lerDiagnostico, limparDiagnostico } from '../lib/diagnostico';
+import { lerDiagnostico, limparDiagnostico } from '../lib/diagnosticoRelatorio';
 import { lerUltimoErro, limparUltimoErro } from '../lib/ultimoErro';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
@@ -154,7 +155,7 @@ export default function Diagnostico() {
 
   return (
     <div className="app-shell page-reveal">
-      <Topbar hud="DIAGNÓSTICO" back="/perfil" />
+      <Topbar hud="DIAGNÓSTICO" back="/gabinete" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, display: 'grid', gap: 16 }}>
         <p className="muted" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
           O que este aparelho mediu nesta sessão. <b style={{ color: '#f0c94a' }}>Motor</b> é o tempo do

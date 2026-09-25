@@ -10,10 +10,14 @@
 //   rede   — total menos motor. É o que a distância cobra: Lisboa→São Paulo
 //            são ~250 ms de ida e volta, e nenhum código nosso muda isso.
 //
-// Nada disto sai do aparelho sozinho: só quando a pessoa toca em "Enviar
-// relatório" na tela de Diagnóstico. Nunca guarda corpo de pedido nem token —
-// só rota, estado e tempos.
-import { Capacitor } from '@capacitor/core';
+// O relatório inteiro só sai do aparelho quando alguém toca em "Enviar
+// relatório" na tela de Diagnóstico (Rodada 28: só o super-admin, pelo Gabinete).
+// Nunca guarda corpo de pedido nem token — só rota, estado e tempos.
+//
+// RODADA 28 — este arquivo vive no arranque do app (o teto é 320 KiB) e agora só
+// COLETA. Quem MONTA o relatório (médias, aparelho, o objeto que a tela mostra) é
+// lib/diagnosticoRelatorio.js, que só chega quando a tela de Diagnóstico abre ou a
+// bancada pede — ninguém mais precisava daqueles bytes antes da 1ª tela.
 
 const MAX = 50;
 
@@ -566,21 +570,6 @@ export function marcarPreaquecimentoAgendado(esperaMs) {
   preaquecimentoEspera = esperaMs;
 }
 
-/** O que dizer sobre o pré-aquecimento no relatório. */
-function lerPreaquecimento() {
-  if (preaquecimento) return preaquecimento;
-  if (preaquecimentoEspera == null) return null;
-  const desdeOGesto = ultimoGesto === -Infinity ? null : Math.round(performance.now() - ultimoGesto);
-  return {
-    estado: 'adiado (toques)',
-    esperaMs: preaquecimentoEspera,
-    desdeOUltimoGestoMs: desdeOGesto,
-    // Quando vai correr, se a pessoa não voltar a tocar. Em ms desde a abertura,
-    // como as outras marcas do arranque.
-    previstoEmMs: ultimoGesto === -Infinity ? null : Math.round(ultimoGesto + preaquecimentoEspera),
-  };
-}
-
 // Imagens do proxy: quantas, quanto tempo, e quantas vieram do cache do browser.
 // `transferSize === 0` numa entrada de performance significa exatamente isso —
 // o pedido existiu, mas não gastou rede. É o número que diz se a Velocidade 6B
@@ -749,92 +738,13 @@ export function definirInfoApp(info) {
   infoApp = info || null;
 }
 
-function aparelho() {
-  const c = typeof navigator !== 'undefined' ? navigator.connection : null;
-  return {
-    plataforma: Capacitor.getPlatform(),
-    nativo: Capacitor.isNativePlatform(),
-    appVersao: infoApp?.version || null,
-    appBuild: infoApp?.build || null,
-    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-    idioma: typeof navigator !== 'undefined' ? navigator.language : null,
-    // Só o Chrome/Android costuma ter isto; no iOS vem vazio e tudo bem.
-    ligacao: c ? { tipo: c.effectiveType || null, descidaMbps: c.downlink ?? null, rttMs: c.rtt ?? null, poupanca: !!c.saveData } : null,
-    ecra: typeof window !== 'undefined' ? { largura: window.innerWidth, altura: window.innerHeight, dpr: window.devicePixelRatio } : null,
-  };
-}
-
-function estatistica(valores) {
-  const v = valores.filter((n) => typeof n === 'number' && Number.isFinite(n));
-  if (!v.length) return null;
-  const soma = v.reduce((a, b) => a + b, 0);
-  return { n: v.length, media: Math.round(soma / v.length), pior: Math.max(...v) };
-}
-
 /**
- * Tudo o que a tela de Diagnóstico mostra e o relatório envia.
- *
- * Velocidade 9: fica também pendurado no `window` (`__futtyDiagnostico`) para a
- * bancada do iPhone simulado (scripts/ver-iphone.mjs) ler os MESMOS números que
- * o relatório do dono traz, em vez de raspar texto da tela. Só leitura, só
- * medições — nada de sessão nem de dados de pessoa que já não estivesse no
- * relatório que o próprio app envia.
+ * RODADA 28 — o estado cru da caixa-preta, para quem monta o relatório fora do arranque
+ * (lib/diagnosticoRelatorio.js). As listas e objetos são os PRÓPRIOS daqui: quem lê copia
+ * antes de guardar. Nada de sessão nem de dados de pessoa — só medições.
  */
-export function lerDiagnostico() {
-  return {
-    versaoRelatorio: 1,
-    em: new Date().toISOString(),
-    aparelho: aparelho(),
-    resumo: {
-      total: estatistica(chamadas.map((c) => c.ms)),
-      motor: estatistica(chamadas.map((c) => c.motorMs)),
-      rede: estatistica(chamadas.map((c) => c.redeMs)),
-      pintura: estatistica(navegacoes.map((n) => n.msPintura)),
-      // Quantas telas pintaram sem esperar pela rede.
-      pinturasDoCache: navegacoes.filter((n) => n.doCache).length,
-      navegacoes: navegacoes.length,
-      falhas: falhas.length,
-      // Velocidade 6B: "imagens: n, média ms, % do cache".
-      imagens: imagens.length
-        ? {
-          n: imagens.length,
-          mediaMs: Math.round(imagens.reduce((a, i) => a + i.ms, 0) / imagens.length),
-          pctDoCache: Math.round((imagens.filter((i) => i.doCache).length / imagens.length) * 100),
-          bytes: imagens.reduce((a, i) => a + i.bytes, 0),
-        }
-        : null,
-      // Velocidade 7B + Rodada 12A: { aparelho, maiorViewport, maiorRolavel,
-      // maiorTransbordo, rota, orientacao, em }. O que conta é o maiorTransbordo
-      // (quanto passou da tela NA ORIENTAÇÃO da altura): acima de zero, alguma
-      // coisa rebentou a largura em campo.
-      largura,
-      // Rodada 12A: quantas vezes o aparelho virou. Sem isto, uma largura de
-      // paisagem no relatório não se distingue de um card que rebentou a tela.
-      orientacao: { ...orientacao },
-      // Velocidade 8 + Rodada 12A: quantos quadros passaram do tempo, em que
-      // fase do app e com que TAREFA a correr (ver tarefaEmCurso).
-      travadas: {
-        leves: travadas.leves,
-        graves: travadas.graves,
-        pior: travadas.pior,
-        porFase: { ...travadas.porFase },
-        piores: [...travadas.piores],
-      },
-      // Rodada 12A: tempo com o app noutra coisa. NÃO entra nas travadas — o
-      // requestAnimationFrame para em segundo plano e o intervalo de volta
-      // aparecia como o pior engasgo de todos (96 s no build 21).
-      segundoPlano: { ...segundoPlano },
-      // Velocidade 8: compilação = HTML + download + execução de tudo o que está
-      // no modulepreload; React = 1º commit da árvore; Início = 1ª pintura do /home.
-      arranque: { ...arranque },
-      // Fluidez 2: quanto cada fase do canvas custou, por cenário.
-      cromo: lerFasesCromo(),
-    },
-    preaquecimento: lerPreaquecimento(),
-    chamadas: [...chamadas],
-    navegacoes: [...navegacoes],
-    falhas: [...falhas],
-  };
+export function estadoDaCaixaPreta() {
+  return { chamadas, navegacoes, falhas, imagens, travadas, segundoPlano, arranque, orientacao, largura, preaquecimento, preaquecimentoEspera, ultimoGesto, infoApp };
 }
 
 /** Zera a caixa-preta (botão "Limpar" na tela de Diagnóstico). */
@@ -865,5 +775,7 @@ export function limparDiagnostico() {
 
 // A bancada do iPhone simulado lê daqui (ver scripts/ver-iphone.mjs, cena
 // `velocidade9`). Sem isto a prova antes/depois teria de raspar o texto da tela
-// de Diagnóstico — frágil, e sem as marcas finas por navegação.
-if (typeof window !== 'undefined') window.__futtyDiagnostico = lerDiagnostico;
+// de Diagnóstico — frágil, e sem as marcas finas por navegação. Rodada 28: devolve
+// uma PROMESSA (o montador do relatório chega sob demanda); o page.evaluate da
+// bancada espera por ela sozinho.
+if (typeof window !== 'undefined') window.__futtyDiagnostico = () => import('./diagnosticoRelatorio').then((m) => m.lerDiagnostico());

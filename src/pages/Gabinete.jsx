@@ -153,7 +153,11 @@ export default function Gabinete() {
       <main className="app-main gab2-main" style={{ maxWidth: 1320, padding: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '20px 20px 0' }}>
           <h1 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 26, margin: 0 }}>Gabinete <span style={{ color: '#f0c94a' }}>do Dono</span></h1>
-          <Link to="/home" style={{ fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none' }}>← Início</Link>
+          <span style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
+            {/* Rodada 28: a caixa-preta DESTE aparelho mora aqui (saiu do Perfil de todo mundo). */}
+            <Link to="/diagnostico" style={{ fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none' }}>Diagnóstico deste aparelho</Link>
+            <Link to="/home" style={{ fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none' }}>← Início</Link>
+          </span>
         </div>
 
         <div className="gab2">

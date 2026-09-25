@@ -5184,7 +5184,8 @@ async function cenaRodada27(navegador) {
       item1.semFoto.cardTrocouEmMs = mudou.ok ? Math.round(tMudou - cliqueVisual) : null;
       item1.semFoto.recursosDoGenerico = await B.pagina.evaluate(() => window.__r27.recursos('avatar-generico-'));
       item1.semFoto.patchEnviado = patches.some((p) => /avatar_generico/.test(p.corpo || ''));
-      item1.semFoto.fasesDoCard = (await B.pagina.evaluate(() => (window.__futtyDiagnostico ? window.__futtyDiagnostico().resumo.cromo : null)).catch(() => null))?.['camadas/estadio'] ?? null;
+      // Rodada 28: o gancho devolve uma promessa (o montador do relatório chega sob demanda).
+      item1.semFoto.fasesDoCard = (await B.pagina.evaluate(async () => (window.__futtyDiagnostico ? (await window.__futtyDiagnostico()).resumo.cromo : null)).catch(() => null))?.['camadas/estadio'] ?? null;
       await espera(1500);
       await capturar(B.pagina, '1b-sem-foto-depois');
       verificar('sem foto: escolher outro visual troca o card na hora, sem recarregar (≤ 1,5 s)', mudou.ok && item1.semFoto.cardTrocouEmMs <= 1500, mudou.ok ? `${item1.semFoto.cardTrocouEmMs} ms` : 'o card não mudou');

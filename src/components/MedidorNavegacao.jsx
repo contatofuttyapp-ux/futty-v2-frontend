@@ -6,7 +6,8 @@
 //
 // O relógio parte na mudança de rota e para quando a tela REAL está desenhada
 // (não o loader: ver loaderEntrou/loaderSaiu em lib/diagnostico.js). A leitura
-// sai na tela Perfil → Diagnóstico.
+// sai na tela de Diagnóstico (super-admin, pelo Gabinete) e, sem nome nenhum, na
+// telemetria anônima de velocidade (Rodada 28, lib/telemetria.js).
 import { useEffect, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
