@@ -54,6 +54,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
+          VITE_RC_APPLE_KEY: ${{ secrets.VITE_RC_APPLE_KEY }}
         run: |
           faltam=""
           for nome in VITE_SUPABASE_URL VITE_API_URL VITE_ASSETS_URL \
@@ -70,6 +71,11 @@ jobs:
             echo "::error::Faltam segredos no repositório:$faltam"
             echo "Settings -> Secrets and variables -> Actions -> New repository secret (ver IOS.md)"
             exit 1
+          fi
+          # Pagamentos P2: sem a chave pública do RevenueCat o app sai SEM loja (segue no "Pedir
+          # ativação"). Não trava o build — só avisa, para ninguém mandar à Apple sem querer assim.
+          if [ -z "$VITE_RC_APPLE_KEY" ]; then
+            echo "::warning::VITE_RC_APPLE_KEY em falta: este build sai sem a loja (compras desligadas no app)."
           fi
           echo "Os segredos estão lá."
 
@@ -102,6 +108,9 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_ASSETS_URL: ${{ secrets.VITE_ASSETS_URL }}
+          # Pagamentos P2: chaves PÚBLICAS do SDK do RevenueCat (vão dentro do app, como a do Supabase).
+          VITE_RC_APPLE_KEY: ${{ secrets.VITE_RC_APPLE_KEY }}
+          VITE_RC_GOOGLE_KEY: ${{ secrets.VITE_RC_GOOGLE_KEY }}
         run: |
           cat > .env.production <<EOF
           VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
@@ -109,6 +118,8 @@ jobs:
           VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
           VITE_API_URL=${VITE_API_URL}
           VITE_ASSETS_URL=${VITE_ASSETS_URL}
+          VITE_RC_APPLE_KEY=${VITE_RC_APPLE_KEY}
+          VITE_RC_GOOGLE_KEY=${VITE_RC_GOOGLE_KEY}
           EOF
           echo "Escrito com $(wc -l < .env.production) variáveis."
 

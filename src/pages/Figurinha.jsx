@@ -15,6 +15,8 @@ import { usePerfil } from '../context/PerfilContext';
 import { lerCacheComIdade, gravarCache } from '../lib/cacheLocal';
 // Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
+// Pagamentos P2: liga a loja (SDK do RevenueCat) à conta — esta aba é pré-carregada em ócio.
+import '../lib/ligarLoja';
 import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
 import { nomeJogador, urlAsset, urlImagem } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';

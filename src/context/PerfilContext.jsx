@@ -27,6 +27,16 @@ let alinhador = null;
 export function registrarAlinhador(fn) {
   alinhador = fn;
 }
+// PAGAMENTOS P2 — a loja (lib/loja.js, SDK do RevenueCat) também mora fora do arranque e se registra aqui
+// quando a Figurinha ou os Planos carregam (lib/ligarLoja.js). Daqui só sai a conta da vez: o id ao entrar
+// (configura o SDK com o users.id), null ao sair (logOut — compras de duas contas nunca se misturam).
+let loja = null;
+let contaDaLoja;
+// eslint-disable-next-line react-refresh/only-export-components
+export function registrarLoja(fn) {
+  loja = fn;
+  if (contaDaLoja !== undefined) fn(contaDaLoja);
+}
 // Perfis que vieram do CACHE e o servidor ainda não confirmou (o objeto em si é a marca — sem estado à parte).
 const deCacheSet = new WeakSet();
 
@@ -83,6 +93,8 @@ export function PerfilProvider({ children }) {
   const userIdRef = useRef(userId);
   useEffect(() => {
     userIdRef.current = userId;
+    contaDaLoja = userId;
+    loja?.(userId);
   }, [userId]);
 
   // RODADA 27 — o perfil em exibição AGORA (não o que o último render viu). Duas coisas dependem disto:

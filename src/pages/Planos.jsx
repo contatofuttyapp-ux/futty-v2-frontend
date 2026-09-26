@@ -16,6 +16,7 @@ import Topbar from '../components/Topbar';
 import { PRODUTOS } from '../lib/planos';
 import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
 import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
+import '../lib/ligarLoja';
 import { useAuth } from '../hooks/useAuth';
 import '../styles/app.css';
 
