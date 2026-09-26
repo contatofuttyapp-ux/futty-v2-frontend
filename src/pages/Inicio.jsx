@@ -594,6 +594,9 @@ export default function Inicio() {
   const recadoBrilhante = !pedidoBrilhante ? null : pedidoBrilhante.estado === 'pendente'
     ? { texto: 'Pedido enviado — a gente ativa e avisa ✨', recusado: false }
     : { texto: pedidoBrilhante.motivo || 'Seu pedido de figurinha não seguiu.', recusado: true };
+  // PAGAMENTOS P2 — o pacote comprado na loja chega sem uniforme quando o time não tinha um, e sem
+  // uniforme ninguém do time gera. Enquanto faltar, o dono vê o recado (os times vêm no /api/inicio).
+  const timeSemUniforme = (inicio?.dados?.teams?.teams || []).find((t) => t.role === 'admin' && t.brilhante_ativo && !t.brilhante_kit) || null;
 
   // Limpa o sessionStorage assim que sair de 'gerando' — sincronizado DURANTE
   // o render (mesmo padrão de MeuPerfil.jsx), não num efeito.
@@ -1127,6 +1130,13 @@ export default function Inicio() {
             direito, o cartão dourado acima é o que importa e este recado só
             competiria com ele. Pendente diz que está na fila; recusado diz o
             motivo que o dono escreveu. Ativado nunca chega aqui: vira direito. */}
+        {/* P2 — pacote ativo sem uniforme: o dono escolhe e o time inteiro passa a poder gerar. */}
+        {timeSemUniforme ? (
+          <Link to={`/planos?uniforme=${timeSemUniforme.id}`} className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
+            Falta escolher o uniforme das figurinhas do {timeSemUniforme.nome} — o time só gera depois disso. Escolher →
+          </Link>
+        ) : null}
+
         {!podeGerarBrilhante && recadoBrilhante ? (
           <Link to="/planos" className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: recadoBrilhante.recusado ? 'rgba(255,255,255,0.75)' : '#f0c94a', background: recadoBrilhante.recusado ? 'rgba(255,255,255,0.03)' : 'rgba(212,160,23,0.08)', border: `1px solid ${recadoBrilhante.recusado ? 'rgba(255,255,255,0.14)' : 'rgba(212,160,23,0.45)'}` }}>
             {recadoBrilhante.texto}

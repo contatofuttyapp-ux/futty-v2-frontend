@@ -24,8 +24,10 @@ import { normalizarFoto } from '../utils/normalizarFoto';
 import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
-import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
-import { produtoPorId } from '../lib/planos';
+import { estadoBrilhantes, pedidoDoProduto } from '../lib/brilhantes';
+import { produtoDoPedido } from '../lib/planos';
+import { lojaLigada as calcularLojaLigada, produtosDaLoja } from '../lib/loja';
+import { KIT_IMG, KITS_FIGURINHA } from '../utils/kitsFigurinha';
 import { ehNativo } from '../lib/plataforma';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
@@ -81,26 +83,8 @@ const TABS = [
   { k: 'uniforme', label: 'Uniforme' },
 ];
 
-// Kits do card. Assets em bucket PÚBLICO 'kits' (app assets, não PII — o tijolo 1C
-// privatizou avatars e partia estas thumbnails). dark-gold e dark-purple ativos/livres.
-const KIT_IMG = {
-  'dark-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit1-dark-gold.png',
-  'dark-purple': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit2-dark-purple.png',
-  'white-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit3-white-gold.png',
-  'elite-gold': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit4-elite-gold.png',
-  'royal-purple': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit5-royal-purple.png',
-};
-// Os 5 kits do lançamento (31-jul, dono): mesmo design, cores diferentes. Este
-// seletor só existe para quem já tem Brilhante — o cadeado de cada tile é
-// DIREITO (crédito ou pacote do time, ver escolherKit), não plano; `estado`
-// só distingue 'breve' (kit sem asset, nem aparece) dos demais.
-const KITS_FIGURINHA = [
-  { id: 'dark-gold', nome: 'Dark Gold', base: '#0d0d12', acento: '#d4a017', estado: 'ativo' },
-  { id: 'dark-purple', nome: 'Dark Purple', base: '#0d0d12', acento: '#8b5cf6', estado: 'ativo' },
-  { id: 'white-gold', nome: 'White Gold', base: '#f8f5f0', acento: '#d4a017', estado: 'ativo' },
-  { id: 'elite-gold', nome: 'Elite Gold', base: '#d4a017', acento: '#0d0d12', estado: 'ativo' },
-  { id: 'royal-purple', nome: 'Royal Purple', base: '#8b5cf6', acento: '#0d0d12', estado: 'ativo' },
-];
+// Os 5 uniformes (KIT_IMG + KITS_FIGURINHA) moram em utils/kitsFigurinha.js desde o P2: a escolha
+// do uniforme do pacote do time (components/EscolherUniformeTime.jsx) usa o mesmo catálogo.
 
 // Partículas de luz do fundo "estádio" (valores fixos por partícula → o
 // movimento nunca sincroniza). left/size fixos, cores alternadas, dur/delay variados.
@@ -224,6 +208,8 @@ function brilhanteDoInicio(userId) {
     creditos: d.brilhante.creditos || 0,
     times,
     pedidos: d.pedidos_brilhante || [],
+    // Pagamentos P2: o motor diz se a loja está ligada (PAGAMENTOS_ATIVOS) — vem no mesmo /api/inicio.
+    loja_pronta: !!d.brilhante.loja_pronta,
   };
 }
 
@@ -254,6 +240,7 @@ export default function Figurinha() {
   const [limiteIA, setLimiteIA] = useState(false);
   const [erroIA, setErroIA] = useState(false); // falha da geração (≠ 403) → estado de erro no overlay
   const [erroIAmsg, setErroIAmsg] = useState(''); // mensagem específica (ex.: foto inválida); vazio = texto genérico
+  const [semGeracoes, setSemGeracoes] = useState(false); // o erro foi SEM_DIREITO (as gerações acabaram)
   // Toast curto e genérico (build 9): { mensagem, tipo }. Dois usos — aviso
   // quando /avatar/ai reutiliza o slot (mesma foto de antes, sem isto o botão
   // "carregava e nada acontecia"), e erro do PATCH de fundo (ver escolherFundo).
@@ -377,8 +364,25 @@ export default function Figurinha() {
   // Antes só existia para crédito (o pacote não tinha saldo, era 1 tiro só).
   const restantesDireito = brilhante?.direito?.restantes ?? 0;
   const meuTimeBrilhante = (brilhante?.times || []).find((t) => t.sou_dono) || null;
-  const [pedindo, setPedindo] = useState(null);
-  const [avisoPedido, setAvisoPedido] = useState(null);
+  // PAGAMENTOS P2 — com a loja ligada (o motor diz `loja_pronta`, é o app nativo e o SDK do RevenueCat
+  // tem a chave: lib/loja.js#lojaLigada) os convites desta tela dizem "Comprar · preço", com o preço
+  // que a LOJA formata; sem ela, o texto do pedido de ativação. Os dois levam ao MESMO lugar,
+  // /planos?destaque=… — é lá que se compra ou se pede. Nunca as duas coisas juntas numa tela.
+  const lojaLigada = calcularLojaLigada(brilhante);
+  const [precosDaLoja, setPrecosDaLoja] = useState(null); // { minha: { priceString }, pacote: … }
+  useEffect(() => {
+    if (!lojaLigada) return undefined;
+    let vivo = true;
+    produtosDaLoja().then((r) => { if (vivo && r?.produtos) setPrecosDaLoja(r.produtos); });
+    return () => { vivo = false; };
+  }, [lojaLigada]);
+  /** O texto do convite de um produto — o mesmo verbo do botão dos Planos. */
+  function textoDoConvite(produto) {
+    if (!lojaLigada) return produtoDoPedido(produto)?.botaoBloco || 'Pedir ativação';
+    const preco = precosDaLoja?.[produto]?.priceString;
+    const verbo = produto === 'pacote' ? 'Comprar para o meu time' : 'Comprar';
+    return preco ? `${verbo} · ${preco}` : verbo;
+  }
   // BLOCO 2 — o recado do pedido SOBREVIVE a fechar o app: vem do estado
   // gravado, não só do clique desta sessão. Pendente diz que está na fila;
   // recusado diz o motivo que o dono escreveu no Gabinete; ativado não aparece
@@ -403,6 +407,8 @@ export default function Figurinha() {
     return kit.id === kitLiberado ? 'livre' : 'trancado';
   }
   const kitsDaGrade = KITS_FIGURINHA.filter((k) => k.estado !== 'breve').sort((a, b) => (b.id === kitLiberado) - (a.id === kitLiberado));
+  // O dono de um time sem pacote vê o pacote em destaque (resolve o time inteiro); o resto, a Minha.
+  const destaqueDoKit = (estado) => (estado === 'livre' && meuTimeBrilhante && !meuTimeBrilhante.brilhante_ativo ? 'pacote' : 'minha');
   function tocarUniforme(kit) {
     const estado = estadoDoKit(kit);
     if (estado === 'vestido' || gerandoIA) return;
@@ -410,9 +416,7 @@ export default function Figurinha() {
       escolherKit(kit);
       return;
     }
-    // O dono de um time sem pacote vê o pacote em destaque (resolve o time inteiro); o resto, a Minha.
-    const destaque = estado === 'livre' && meuTimeBrilhante && !meuTimeBrilhante.brilhante_ativo ? 'pacote' : 'minha';
-    navigate(`/planos?destaque=${destaque}`);
+    navigate(`/planos?destaque=${destaqueDoKit(estado)}`);
   }
   function gradeDeUniformes() {
     return (
@@ -426,7 +430,8 @@ export default function Figurinha() {
               type="button"
               className="fig-seletor-tile"
               onClick={() => tocarUniforme(kit)}
-              aria-label={trancado ? `${kit.nome} (bloqueado)` : kit.nome}
+              // P2: o tile trancado diz o que o toque faz, com o mesmo texto do convite (Comprar · preço / Pedir).
+              aria-label={trancado ? `${kit.nome} (bloqueado) · ${textoDoConvite(destaqueDoKit(estado))}` : kit.nome}
               aria-pressed={estado === 'vestido'}
               data-estado={estado}
               disabled={gerandoIA}
@@ -475,9 +480,10 @@ export default function Figurinha() {
   const pedidoMinha = pedidoDoProduto(brilhante?.pedidos, 'minha');
   const candidatos = [pedidoPacote, pedidoMinha].filter(Boolean);
   const pedidoVivo = candidatos.find((p) => p.estado === 'pendente') || candidatos[0] || null;
-  const recadoPedido = avisoPedido
-    || (pedidoVivo?.estado === 'pendente' ? 'Pedido enviado — a gente ativa e avisa.' : null)
-    || (pedidoVivo?.estado === 'recusado' ? (pedidoVivo.motivo || 'Este pedido não seguiu.') : null);
+  // Com a loja ligada a tela vende, não fala de pedidos (P2: nunca as duas coisas juntas).
+  const recadoPedido = lojaLigada ? null
+    : (pedidoVivo?.estado === 'pendente' ? 'Pedido enviado — a gente ativa e avisa.' : null)
+      || (pedidoVivo?.estado === 'recusado' ? (pedidoVivo.motivo || 'Este pedido não seguiu.') : null);
 
   useEffect(() => {
     let vivo = true;
@@ -494,13 +500,6 @@ export default function Figurinha() {
     return () => { vivo = false; };
   }, [userId]);
 
-  async function pedirBrilhante(produto) {
-    setPedindo(produto);
-    const r = await pedirAtivacao(produto, produto === 'minha' ? null : meuTimeBrilhante?.id);
-    setPedindo(null);
-    setAvisoPedido(r.ok ? 'Pedido enviado — a gente ativa e avisa.' : r.erro);
-    if (r.ok) aplicarBrilhante(await estadoBrilhantes());
-  }
   // SELOS DE HONRA (Vaga 11C): busca os selos do utilizador; mostra no cromo os 2
   // de maior prioridade que NÃO estejam ocultos (olhinho, persistido). Vêm já
   // ordenados por prioridade (campeonato > ranking) do backend.
@@ -1056,6 +1055,7 @@ export default function Figurinha() {
     setLimiteIA(false);
     setErroIA(false);
     setErroIAmsg('');
+    setSemGeracoes(false);
     setEmailNaoConfirmado(false);
     try {
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit }) });
@@ -1086,6 +1086,9 @@ export default function Figurinha() {
       else if (err?.code === 'SEM_DIREITO') {
         estadoBrilhantes().then(aplicarBrilhante);
         setErroIAmsg(err.message);
+        // P2: com a loja ligada o overlay troca o "Tentar novamente" (que daria o mesmo 403) por
+        // "Suas gerações acabaram. Comprar mais?" → Planos, com a Minha Figurinha em destaque.
+        setSemGeracoes(true);
         setErroIA(true);
       } else if (err?.status === 403) setLimiteIA(true); // gate antigo de plano (morto, fica de rede)
       else {
@@ -1294,7 +1297,22 @@ export default function Figurinha() {
     // refazer o desfoque a cada quadro da animação, e o que está por baixo é a
     // figurinha parada. 0,75 + blur ≈ 0,92 chapado no mesmo tom.
     <div style={{ position: 'absolute', inset: 0, zIndex: 8, clipPath: CLIP_OCTOGONO, background: 'rgba(5,8,16,0.92)', display: 'grid', placeItems: 'center' }}>
-      {erroIA ? (
+      {erroIA && semGeracoes && lojaLigada ? (
+        // P2 — as gerações acabaram e a loja está ligada: tentar de novo daria o mesmo 403, então o
+        // caminho é comprar mais (Planos, Minha Figurinha em destaque). "Agora não" só fecha.
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
+          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Suas gerações acabaram. Comprar mais?</span>
+          <span className="cta-gold-glow" style={{ display: 'flex' }}>
+            <button type="button" className="btn hud-corners cta-gold" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={() => navigate('/planos?destaque=minha')}>
+              Comprar mais
+            </button>
+          </span>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => { setErroIA(false); setSemGeracoes(false); }}>
+            Agora não
+          </button>
+        </div>
+      ) : erroIA ? (
         <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
           {/* LEI DO F: logo oficial transparente (FuttyLogo SVG), estático no erro.
               O antigo /futty-logo-metallic.png (fundo preto sólido) está BANIDO. */}
@@ -1705,7 +1723,7 @@ export default function Figurinha() {
                 <div
                   className="hud-corners-s"
                   role="status"
-                  style={pedidoVivo?.estado === 'recusado' && !avisoPedido
+                  style={pedidoVivo?.estado === 'recusado'
                     ? { padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.14)' }
                     : { padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: '#f0c94a', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.45)' }}
                 >
@@ -1714,17 +1732,30 @@ export default function Figurinha() {
               ) : null}
               <div style={{ display: 'grid', gap: 8 }}>
                 {/* Dono de time vê o pacote primeiro: é o que resolve o time
-                    inteiro, e é a venda maior. */}
+                    inteiro, e é a venda maior. P2: o botão leva aos Planos com o
+                    pacote em destaque — lá se compra (loja ligada) ou se pede. */}
                 {meuTimeBrilhante && !meuTimeBrilhante.brilhante_ativo ? (
                   <span className="cta-gold-glow" style={{ display: 'flex' }}>
                     <button
                       type="button"
                       className="btn hud-corners cta-gold"
                       style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
-                      disabled={pedindo === 'pacote'}
-                      onClick={() => pedirBrilhante('pacote')}
+                      onClick={() => navigate('/planos?destaque=pacote')}
                     >
-                      {pedindo === 'pacote' ? 'Enviando…' : produtoPorId('pacote').botaoBloco}
+                      {textoDoConvite('pacote')}
+                    </button>
+                  </span>
+                ) : null}
+                {/* P2: pacote ativo sem uniforme (comprado na loja) — ninguém gera até o dono escolher. */}
+                {meuTimeBrilhante?.brilhante_ativo && !meuTimeBrilhante.brilhante_kit ? (
+                  <span className="cta-gold-glow" style={{ display: 'flex' }}>
+                    <button
+                      type="button"
+                      className="btn hud-corners cta-gold"
+                      style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
+                      onClick={() => navigate(`/planos?uniforme=${meuTimeBrilhante.id}`)}
+                    >
+                      Escolher o uniforme do time
                     </button>
                   </span>
                 ) : null}

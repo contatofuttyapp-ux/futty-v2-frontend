@@ -64,6 +64,15 @@ export function criarLoja({ Purchases: sdk, plataforma, chaves, apiFetch: api })
     return plataforma() !== 'web' && !!chave() && !falhou;
   }
 
+  /**
+   * A tela vende? Só com as três coisas: o motor ligou a loja (`loja_pronta` no /api/brilhantes/estado
+   * e no /api/inicio — PAGAMENTOS_ATIVOS, liga sem build novo), é o app nativo e o SDK tem a chave.
+   * Senão, a tela fica no pedido de ativação. Nunca as duas coisas juntas.
+   */
+  function lojaLigada(estado) {
+    return !!estado?.loja_pronta && lojaDisponivel();
+  }
+
   // configure/logIn/logOut nunca correm ao mesmo tempo: a troca de conta espera a anterior.
   function emFila(fn) {
     const vez = fila.then(fn, fn);
@@ -226,7 +235,7 @@ export function criarLoja({ Purchases: sdk, plataforma, chaves, apiFetch: api })
     }
   }
 
-  return { lojaDisponivel, iniciarLoja, sairDaLoja, produtosDaLoja, comprar, restaurar, sincronizarAposCompra };
+  return { lojaDisponivel, lojaLigada, iniciarLoja, sairDaLoja, produtosDaLoja, comprar, restaurar, sincronizarAposCompra };
 }
 
 const loja = criarLoja({
@@ -236,4 +245,4 @@ const loja = criarLoja({
   apiFetch,
 });
 
-export const { lojaDisponivel, iniciarLoja, sairDaLoja, produtosDaLoja, comprar, restaurar, sincronizarAposCompra } = loja;
+export const { lojaDisponivel, lojaLigada, iniciarLoja, sairDaLoja, produtosDaLoja, comprar, restaurar, sincronizarAposCompra } = loja;

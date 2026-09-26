@@ -212,10 +212,18 @@ export function aquecerImagensDoRosto(user, anterior) {
  */
 export function espelharBrilhantesNoInicio(userId, estado) {
   if (!userId || !ehObjeto(estado?.direito)) return false;
+  // Pagamentos P2: o pacote comprado (ou o uniforme escolhido) muda o TIME — o recado "falta escolher
+  // o uniforme" do Início lê os times guardados. Só os campos do pacote; o resto do time fica como está.
+  const doEstado = new Map((Array.isArray(estado.times) ? estado.times : []).filter(ehObjeto).map((t) => [t.id, t]));
+  const comPacote = (t) => {
+    const e = ehObjeto(t) && doEstado.get(t.id);
+    return e ? { ...t, brilhante_ativo: !!e.brilhante_ativo, brilhante_kit: e.brilhante_kit || null, manto_proprio: !!e.manto_proprio } : t;
+  };
   return emendarCache(userId, 'inicio', (dados) => {
     if (!ehObjeto(dados)) return undefined;
     return {
       ...dados,
+      ...(doEstado.size && Array.isArray(dados.teams?.teams) ? { teams: { ...dados.teams, teams: dados.teams.teams.map(comPacote) } } : {}),
       brilhante: {
         ...(ehObjeto(dados.brilhante) ? dados.brilhante : {}),
         fonte: estado.direito.fonte ?? null,
@@ -223,6 +231,8 @@ export function espelharBrilhantesNoInicio(userId, estado) {
         kit_id: estado.direito.kit_id ?? null,
         restantes: estado.direito.restantes ?? 0,
         creditos: estado.creditos ?? 0,
+        // Pagamentos P2: o motor diz se a loja está ligada — a Figurinha nasce deste cache.
+        ...(estado.loja_pronta != null ? { loja_pronta: !!estado.loja_pronta } : {}),
       },
       pedidos_brilhante: Array.isArray(estado.pedidos) ? estado.pedidos : (dados.pedidos_brilhante || []),
     };

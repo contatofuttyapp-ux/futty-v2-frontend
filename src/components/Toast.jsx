@@ -1,4 +1,6 @@
 // Futty v2.0 — Toast simples no topo do ecrã (auto-dismiss 3s com fade).
+// Pagamentos P2: `acao` opcional ({ rotulo, aoTocar }) — um botão dentro do toast (ex.: "Tentar de
+// novo" depois de uma compra que falhou). Com ação o toast fica 6 s, para dar tempo de tocar.
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -8,7 +10,7 @@ const CORES = {
   info: 'var(--text-dim)',
 };
 
-export default function Toast({ mensagem, tipo = 'info', onClose }) {
+export default function Toast({ mensagem, tipo = 'info', onClose, acao = null }) {
   const [saindo, setSaindo] = useState(false);
 
   // P3-15 — mensagens sucessivas atropelavam-se: a 2ª herdava o fade da 1ª e sumia
@@ -20,14 +22,15 @@ export default function Toast({ mensagem, tipo = 'info', onClose }) {
     setSaindo(false);
   }
 
+  const duracao = acao ? 6000 : 3000;
   useEffect(() => {
-    const t1 = setTimeout(() => setSaindo(true), 2600); // inicia o fade
-    const t2 = setTimeout(() => onClose?.(), 3000); // remove
+    const t1 = setTimeout(() => setSaindo(true), duracao - 400); // inicia o fade
+    const t2 = setTimeout(() => onClose?.(), duracao); // remove
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [mensagem, tipo, onClose]);
+  }, [mensagem, tipo, onClose, duracao]);
 
   if (!mensagem) return null;
   const cor = CORES[tipo] || CORES.info;
@@ -62,6 +65,15 @@ export default function Toast({ mensagem, tipo = 'info', onClose }) {
       }}
     >
       {mensagem}
+      {acao ? (
+        <button
+          type="button"
+          onClick={() => { acao.aoTocar(); onClose?.(); }}
+          style={{ display: 'block', margin: '8px auto 0', padding: '6px 14px', fontSize: 13, fontWeight: 700, color: '#0d0d12', background: cor, border: 'none', borderRadius: 8, cursor: 'pointer' }}
+        >
+          {acao.rotulo}
+        </button>
+      ) : null}
     </div>,
     document.body
   );

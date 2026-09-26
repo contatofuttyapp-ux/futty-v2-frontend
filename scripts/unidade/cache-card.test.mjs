@@ -198,6 +198,19 @@ test('espelharBrilhantesNoInicio: escreve o estado no formato do /api/inicio, pr
   assert.equal(espelharBrilhantesNoInicio(OUTRO, estado), false, 'sem Início guardado nesta conta não há o que espelhar');
 });
 
+test('espelharBrilhantesNoInicio (P2): o pacote comprado e o uniforme escolhido chegam aos times guardados, e o loja_pronta ao brilhante', () => {
+  const time = { id: 't1', nome: 'Missa', role: 'admin', slug: 'missa', brilhante_ativo: false, brilhante_kit: null, manto_proprio: false, pedidos_pendentes: 2 };
+  const outro = { id: 't2', nome: 'Outro', role: 'member', brilhante_ativo: false, brilhante_kit: null };
+  gravarComCarimbo(EU, 'inicio', { teams: { teams: [time, outro] }, brilhante: { fonte: null, creditos: 0, restantes: 0 }, pedidos_brilhante: [] }, EM_ANTIGO);
+  const estado = { direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0, loja_pronta: true, times: [{ id: 't1', brilhante_ativo: true, brilhante_kit: 'dark-purple', manto_proprio: false }], pedidos: [] };
+  assert.equal(espelharBrilhantesNoInicio(EU, estado), true);
+  const d = lerCacheComIdade(EU, 'inicio').dados;
+  assert.deepEqual(d.teams.teams[0], { ...time, brilhante_ativo: true, brilhante_kit: 'dark-purple' }, 'só os campos do pacote mudam; role, slug e o resto ficam');
+  assert.deepEqual(d.teams.teams[1], outro, 'o time que o estado não traz fica como estava');
+  assert.equal(d.brilhante.loja_pronta, true);
+  assert.equal(emDe(EU, 'inicio'), EM_ANTIGO);
+});
+
 test('aquecerImagensDoRosto: só o que é NOVO, no proxy, nos 4 tamanhos das telas (512 com e sem CORS, 128 quadrado, 128)', async () => {
   const antes = { avatar_url: foto('velha'), foto_url: foto('velha') };
   const depois = { avatar_url: foto('nova'), foto_url: foto('nova') };
