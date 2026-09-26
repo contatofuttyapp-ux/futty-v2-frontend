@@ -281,7 +281,13 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCamb
   const hoje = hojeISO();
   const custosVencidos = custos.filter((c) => !c.pago && c.proxima_data && c.proxima_data < hoje).length;
   const burn = custos.reduce((s, c) => s + valorMensal(c), 0); // fmtEUR já mostra 2 casas
-  const receita = 0; // sem IAP e sem receita de anúncios ainda — nunca inventa número
+  // Pagamentos P2 — a receita das LOJAS no mês (/resumo, bloco dinheiro, P1): a soma do que o RevenueCat
+  // converteu para US$ nas compras creditadas em PRODUÇÃO. É BRUTA (a loja ainda fica com 15–30%). null =
+  // a migração 064 não correu: aí a tela diz isso em vez de mostrar 0. Anúncios ainda não têm fonte.
+  const d = dados.dinheiro;
+  const receitaUsd = d.receita_mes ?? null;
+  const receita = receitaUsd == null ? 0 : receitaUsd * cambio;
+  const porProduto = d.por_produto || { minha: 0, pacote: 0, manto: 0 };
 
   return (
     <div>
@@ -340,14 +346,38 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCamb
         <button type="button" style={btn} onClick={onSalvarCambio}>Salvar câmbio</button>
       </div>
 
+      <h2 style={sectionH2}>Receita das lojas (mês)</h2>
+      {receitaUsd == null ? (
+        <div style={{ ...CARD, padding: 16 }}>
+          <span style={muted}>Ainda sem dados de compras: a migração 064 não foi aplicada no Supabase.</span>
+        </div>
+      ) : (
+        <div style={{ ...CARD, padding: 16, display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+          <div>
+            <div style={bigNum}>{fmtUSD(receitaUsd)}</div>
+            <span style={muted}>receita bruta · ≈ {fmtEUR(receita)}</span>
+          </div>
+          <div><div style={bigNum}>{d.compras_mes ?? 0}</div><span style={muted}>compras (produção)</span></div>
+          <div>
+            <div style={{ ...bigNum, fontSize: 18 }}>{porProduto.minha} · {porProduto.pacote} · {porProduto.manto}</div>
+            <span style={muted}>Minha · Time · Manto</span>
+          </div>
+          {d.reembolsadas_mes ? <div><div style={{ ...bigNum, color: '#fda4af' }}>{d.reembolsadas_mes}</div><span style={muted}>reembolsadas</span></div> : null}
+          {d.concessoes_mes ? <div><div style={bigNum}>{d.concessoes_mes}</div><span style={muted}>cortesias do Gabinete (R$0)</span></div> : null}
+          {/* Sandbox é teste (conta de teste da Apple/Google): fica à parte, em cinza, fora da receita. */}
+          <div style={{ color: CORES.cinza }}><div style={{ ...bigNum, color: CORES.cinza }}>{d.sandbox_mes ?? 0}</div><span style={{ ...muted, color: CORES.cinza }}>sandbox (teste, fora da receita)</span></div>
+        </div>
+      )}
+      <p style={{ ...muted, marginTop: 8 }}>Bruta: a loja fica com 15–30% antes de pagar. Detalhe compra a compra na aba Figurinhas.</p>
+
       <h2 style={sectionH2}>Burn & margem</h2>
       <div style={{ ...CARD, padding: 16 }}>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div><div style={{ ...bigNum, color: '#fda4af' }}>{fmtEUR(burn)}</div><span style={muted}>custos fixos / mês</span></div>
-          <div><div style={bigNum}>{fmtEUR(receita)}</div><span style={muted}>receita (IAP + anúncios)</span></div>
-          <div><div style={{ ...bigNum, color: '#fda4af' }}>-{fmtEUR(burn - receita)}</div><span style={muted}>margem líquida</span></div>
+          <div><div style={bigNum}>{fmtEUR(receita)}</div><span style={muted}>receita bruta das lojas (anúncios ainda sem fonte)</span></div>
+          <div><div style={{ ...bigNum, color: receita >= burn ? '#7bd88f' : '#fda4af' }}>{receita >= burn ? '' : '-'}{fmtEUR(Math.abs(receita - burn))}</div><span style={muted}>margem (receita bruta − custos)</span></div>
         </div>
-        <p style={{ ...muted, marginTop: 10 }}>Tudo em euros; receita das lojas será convertida quando existir.</p>
+        <p style={{ ...muted, marginTop: 10 }}>Tudo em euros; a receita das lojas vem em US$ do RevenueCat e é convertida pelo câmbio acima.</p>
       </div>
     </div>
   );
@@ -739,13 +769,14 @@ function pareceSegredo(texto) {
 
 function BlocoAcessos({ acessos, setAcessos, onSalvar, showMsg }) {
   function editar(i, campo, valor) {
-    if (campo === 'obs' && pareceSegredo(valor)) {
+    // P2: o custo (texto livre, ex.: "€7,24 (US$99/ano)") passa pela mesma trava que a observação.
+    if ((campo === 'obs' || campo === 'custo_eur') && pareceSegredo(valor)) {
       showMsg('Senhas não entram aqui. Guarde no Gerenciador de Senhas do Google.', true);
       return;
     }
     setAcessos(acessos.map((a, k) => (k === i ? { ...a, [campo]: valor } : a)));
   }
-  function add() { setAcessos([...acessos, { id: uid(), servico: '', para_que: '', site: '', entra_com: '', obs: '' }]); }
+  function add() { setAcessos([...acessos, { id: uid(), servico: '', para_que: '', site: '', entra_com: '', custo_eur: '', obs: '' }]); }
   function del(i) { setAcessos(acessos.filter((_, k) => k !== i)); }
 
   return (
@@ -753,13 +784,14 @@ function BlocoAcessos({ acessos, setAcessos, onSalvar, showMsg }) {
       <h2 style={sectionH2}>Acessos & contas</h2>
       <p style={{ ...muted, margin: '0 0 10px' }}>Só o caminho e a conta. Senhas ficam no Gerenciador de Senhas do Google (conta contatofuttyapp).</p>
       <div style={{ ...CARD, overflowX: 'auto', padding: 10 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 920 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1040 }}>
           <thead>
             <tr>
               <th style={th}>Serviço</th>
               <th style={th}>Pra que serve</th>
               <th style={th}>Site</th>
               <th style={th}>Entra com</th>
+              <th style={th}>Custo €/mês</th>
               <th style={th}>Observação</th>
               <th style={th} />
             </tr>
@@ -780,6 +812,7 @@ function BlocoAcessos({ acessos, setAcessos, onSalvar, showMsg }) {
                   </div>
                 </td>
                 <td style={{ ...td, width: 170 }}><input style={inp} value={a.entra_com || ''} onChange={(e) => editar(i, 'entra_com', e.target.value)} /></td>
+                <td style={{ ...td, width: 130 }}><input style={inp} value={a.custo_eur || ''} onChange={(e) => editar(i, 'custo_eur', e.target.value)} placeholder="vazio = grátis" /></td>
                 <td style={td}><input style={inp} value={a.obs || ''} onChange={(e) => editar(i, 'obs', e.target.value)} /></td>
                 <td style={{ ...td, width: 30 }}><span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => del(i)}>✕</span></td>
               </tr>

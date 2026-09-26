@@ -10,6 +10,9 @@
 //
 // O manto próprio é fase 2 (§8): o pedido aparece na fila com etiqueta e sem
 // botão de ativar. Nada que finja funcionar — regra da casa.
+//
+// Pagamentos P2: a tabela "Compras" (as últimas 50 do motor, P1) — loja, Gabinete e eventos ignorados, com o
+// sandbox em cinza (é teste, fica fora da receita).
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
@@ -36,6 +39,23 @@ const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'o
 function fmtMes(aaaaMm) {
   const [a, m] = String(aaaaMm || '').split('-').map(Number);
   return a && m ? `${MESES[m - 1]}/${a}` : aaaaMm;
+}
+const NOME_LOJA = { app_store: 'App Store', play_store: 'Google Play', promo: 'Promoção', gabinete: 'Gabinete', outra: 'Outra loja' };
+const COR_ESTADO = { creditada: '#7bd88f', reembolsada: '#fda4af', ignorada: 'var(--text-dim)' };
+/** O preço como a pessoa pagou (moeda da compra); US$ é o que soma na receita. */
+function fmtPreco(c) {
+  if (c.loja === 'gabinete') return 'cortesia';
+  if (c.preco == null) return '—';
+  try {
+    return c.moeda ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: c.moeda }).format(c.preco) : String(c.preco);
+  } catch {
+    return `${c.preco} ${c.moeda || ''}`.trim();
+  }
+}
+function fmtDataHora(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 /** "dark-gold" → "Dark Gold". O catálogo é do motor (KITS_IA); o nome bonito sai daqui. */
 function nomeKit(id) {
@@ -143,6 +163,7 @@ export default function Brilhantes({ showMsg }) {
   const pedidos = data.pedidos || [];
   const times = data.times || [];
   const pessoas = data.pessoas || [];
+  const compras = data.compras; // null = migração 064 por correr
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
@@ -205,6 +226,51 @@ export default function Brilhantes({ showMsg }) {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Secao>
+
+      {/* ── P2. COMPRAS: as últimas 50 (loja, Gabinete e eventos ignorados). Sandbox em cinza. ── */}
+      <Secao titulo={`Compras${Array.isArray(compras) ? ` (${compras.length})` : ''}`} sub="As últimas 50, a mais nova primeiro. Sandbox (teste) em cinza, fora da receita. Detalhe do mês na aba Dinheiro.">
+        {compras === null || compras === undefined ? (
+          <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Sem dados de compras: a migração 064 não foi aplicada no Supabase.</div>
+        ) : compras.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhuma compra ainda.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={th}>Quem</th><th style={th}>Produto</th><th style={th}>Loja</th><th style={th}>Preço</th>
+                  <th style={th}>Ambiente</th><th style={th}>Estado</th><th style={th}>Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compras.map((c) => {
+                  const sandbox = c.ambiente === 'sandbox';
+                  return (
+                    <tr key={c.id} style={sandbox ? { opacity: 0.5 } : undefined}>
+                      <td style={td}>
+                        <div style={{ fontWeight: 700 }}>{c.nome || '—'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{c.email || (c.user_id ? c.user_id.slice(0, 8) : 'pessoa desconhecida')}</div>
+                      </td>
+                      <td style={td}>
+                        {c.produto_label || '—'}
+                        {c.time ? <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{c.time}</div> : null}
+                      </td>
+                      <td style={td}>{NOME_LOJA[c.loja] || c.loja}</td>
+                      <td style={td}>
+                        <div>{fmtPreco(c)}</div>
+                        {c.preco_usd != null && c.loja !== 'gabinete' ? <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>US${Number(c.preco_usd).toFixed(2)}</div> : null}
+                      </td>
+                      <td style={{ ...td, color: sandbox ? 'var(--text-dim)' : undefined }}>{sandbox ? 'sandbox' : 'produção'}</td>
+                      <td style={{ ...td, color: COR_ESTADO[c.estado] || undefined }}>{c.estado}</td>
+                      <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDataHora(c.criada_em)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
