@@ -180,7 +180,7 @@ export function canvasCartaoCampeao(campeonato) {
   // rodapé
   cx.fillStyle = 'rgba(255,255,255,0.42)';
   cx.font = '600 42px Rajdhani, sans-serif';
-  cx.fillText('futty.app', W / 2, H - 96);
+  cx.fillText('futtyapp.com.br', W / 2, H - 96);
   return cv;
 }
 
@@ -256,7 +256,7 @@ export function canvasCartaoPodio(campeonato) {
 
   cx.fillStyle = 'rgba(255,255,255,0.42)';
   cx.font = '600 42px Rajdhani, sans-serif';
-  cx.fillText('futty.app', W / 2, H - 96);
+  cx.fillText('futtyapp.com.br', W / 2, H - 96);
   return cv;
 }
 

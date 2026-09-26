@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
 import SeloHonra from '../components/SeloHonra';
 import { urlAsset, urlImagem } from '../utils/avatar';
+import { mostraFigurinha } from '../utils/figurinhaCanvas';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import EscudoEquipa from '../components/EscudoEquipa';
@@ -150,7 +151,7 @@ export default function JogadorPerfil() {
   const notaShow = prefersReduce ? (notaAlvo ?? 0) : notaAnim;
 
   const nomeShow = jogador?.nome_jogador || jogador?.nome || 'Jogador';
-  const ehRecorte = !!(jogador?.avatar_url && jogador?.foto_url && jogador.avatar_url !== jogador.foto_url);
+  const ehRecorte = mostraFigurinha(jogador);
   const imgSrc = jogador?.avatar_url ? urlAsset(jogador.avatar_url) : null;
 
   // Anel: fracção = nota/10 (nota exibida 6-10). Sem nota → anel vazio.
