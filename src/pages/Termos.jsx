@@ -3,6 +3,9 @@
 // com as cláusulas de proteção novas (fotos de terceiros, uso aceitável, créditos,
 // limitação de responsabilidade, lei e foro).
 // 25-set: §7 sem cobrança por enquanto; o texto anterior fica em CLAUSULA_PAGAMENTO_FUTURA.
+// 26-set (Pagamentos P2): §7 volta a falar de compras. A CLAUSULA_PAGAMENTO_FUTURA, revista para os
+// produtos de hoje (compras avulsas e consumíveis pela App Store / Google Play, sem assinatura), entrou
+// no lugar do "7. Cobrança" e saiu do comentário.
 // 25-set (Rodada 28, LGPD art. 14): §2 diz como a idade mínima é conferida no cadastro.
 import { Link } from 'react-router-dom';
 import '../styles/app.css';
@@ -13,29 +16,8 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const ULTIMA_ATUALIZACAO = '25 de setembro de 2026';
+const ULTIMA_ATUALIZACAO = '26 de setembro de 2026';
 const CONTATO = 'contato@futtyapp.com';
-
-// CLAUSULA_PAGAMENTO_FUTURA: o §7 como estava até 25-set, guardado para o dia em que
-// houver compra na loja. Para voltar: descomentar, trocar a cláusula "7. Cobrança" pela
-// constante e atualizar a data acima.
-//
-// const CLAUSULA_PAGAMENTO_FUTURA = (
-//   <>
-//     <h2 style={h2}>7. Planos, créditos e pagamento</h2>
-//     <p style={p}>
-//       O Futty tem um plano gratuito e produtos pagos. Pagamentos são processados
-//       exclusivamente pela loja de aplicativos (App Store ou Google Play). O Futty não
-//       processa cartões diretamente. Cancelamentos e reembolsos seguem a política da loja
-//       usada na compra.
-//     </p>
-//     <p style={{ ...p, marginTop: 6 }}>
-//       Créditos e itens comprados dentro do app não têm valor monetário fora do Futty, não
-//       são transferíveis entre contas e não podem ser trocados por dinheiro. Créditos
-//       comprados não expiram enquanto o serviço estiver ativo.
-//     </p>
-//   </>
-// );
 
 export default function Termos() {
   return (
@@ -117,10 +99,39 @@ export default function Termos() {
           Resenha, e a outra pessoa não é avisada.
         </p>
 
-        <h2 style={h2}>7. Cobrança</h2>
+        <h2 style={h2}>7. Compras dentro do app</h2>
         <p style={p}>
-          O Futty não cobra nada dentro do app nesta versão. Quando houver compras, estes
-          termos serão atualizados e você será avisado no app.
+          Usar o Futty é grátis, e o seu card com a foto também. Algumas coisas são vendidas
+          à parte, dentro do app:
+        </p>
+        <ul style={ul}>
+          <li><span style={strong}>Minha Figurinha</span>: 10 gerações de figurinha para você, no uniforme que escolher.</li>
+          <li><span style={strong}>Figurinhas do time</span>: 5 gerações por jogador, para até 25 jogadores do time, todos no uniforme escolhido pelo dono do time. Só o dono do time compra.</li>
+          <li><span style={strong}>Manto próprio</span>: o uniforme do seu time nas figurinhas, desenhado pela equipe do Futty depois da compra, a partir das cores e do escudo do time, e conferido antes de valer. Exige as Figurinhas do time.</li>
+        </ul>
+        <p style={{ ...p, marginTop: 6 }}>
+          São compras avulsas, pagas uma vez só: não há assinatura nem cobrança recorrente. O
+          pagamento é feito exclusivamente pela App Store (Apple) ou pelo Google Play (Google),
+          na sua conta da loja, e o preço é o que a loja mostra no momento da compra, na moeda
+          da sua conta. O Futty não recebe nem guarda dados do seu cartão. Se você tem menos de
+          18 anos, peça autorização ao seu responsável antes de comprar.
+        </p>
+        <p style={{ ...p, marginTop: 6 }}>
+          As gerações são itens consumíveis: cada geração usada é gasta, e uma geração que sai
+          com defeito evidente não é descontada (ver a seção 4). Gerações não usadas não viram
+          dinheiro, não podem ser transferidas para outra conta e continuam na sua conta enquanto
+          o serviço estiver ativo. As gerações das Figurinhas do time pertencem ao time e valem
+          para os jogadores dele.
+        </p>
+        <p style={{ ...p, marginTop: 6 }}>
+          Reembolsos são pedidos à loja em que a compra foi feita, segundo a política dela.
+          Quando a loja reembolsa uma compra, o que ela liberou deixa de valer: o seu saldo perde
+          as gerações daquela compra (sem ficar negativo) e o pacote do time comprado nela é
+          desativado. As figurinhas já geradas continuam suas. A opção{' '}
+          <span style={strong}>Restaurar compras</span> recupera uma compra paga que ainda não
+          tenha chegado à sua conta; o que já foi creditado não é creditado de novo. Os preços
+          podem mudar, sem afetar as compras já feitas. Nada disto afasta os seus direitos de
+          consumidor (ver a seção 13).
         </p>
 
         <h2 style={h2}>8. Publicidade</h2>

@@ -10,6 +10,9 @@
 // v3 (25-set): sem pagamento por enquanto; o item da Apple / Google fica em CLAUSULA_PAGAMENTO_FUTURA.
 // v4 (25-set, Rodada 28): diagnóstico de desempenho anônimo (telemetria de velocidade, sem vínculo com a
 // identidade) e a idade mínima dita no cadastro.
+// v5 (26-set, Pagamentos P2): compras no app. A loja (Apple / Google) processa o pagamento e o Futty nunca vê
+// o cartão; o RevenueCat entra na lista de fornecedores; guardamos só transação, produto, valor, moeda e data.
+// A CLAUSULA_PAGAMENTO_FUTURA (o item Apple / Google) voltou, revista, à seção 3.
 import { Link } from 'react-router-dom';
 import '../styles/app.css';
 
@@ -19,16 +22,8 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const ULTIMA_ATUALIZACAO = '25 de setembro de 2026 (v4)';
+const ULTIMA_ATUALIZACAO = '26 de setembro de 2026 (v5)';
 const CONTATO = 'contato@futtyapp.com';
-
-// CLAUSULA_PAGAMENTO_FUTURA: o item da seção 3 como estava até 25-set, guardado para o dia
-// em que houver compra na loja. Para voltar: descomentar, pôr a constante na lista da
-// seção 3, tirar o parágrafo "Pagamentos" que vem depois dela e atualizar a data acima.
-//
-// const CLAUSULA_PAGAMENTO_FUTURA = (
-//   <li><span style={strong}>Apple / Google</span>: processam os pagamentos na loja; o cartão fica com a loja, o Futty só recebe a confirmação da compra</li>
-// );
 
 export default function Privacidade() {
   return (
@@ -55,6 +50,7 @@ export default function Privacidade() {
           <li>Conteúdo que você publica na Resenha (posts, comentários, fotos)</li>
           <li>Localização aproximada <em>da sua equipe</em>, nunca a sua (ver seção 4)</li>
           <li>Dados de desempenho do app, não vinculados à sua identidade (ver abaixo)</li>
+          <li>Dados das compras feitas no app: produto, valor, moeda, data, loja e o identificador da transação (nunca dados de cartão)</li>
         </ul>
         <p style={{ ...p, marginTop: 6 }}>
           <span style={strong}>Diagnóstico de desempenho:</span> para saber se o app está rápido no
@@ -72,11 +68,13 @@ export default function Privacidade() {
           <li>Mostrar estatísticas, ranking e histórico do seu grupo</li>
           <li>Enviar notificações sobre jogos, sorteios e votações</li>
           <li>Triagem de denúncias de conteúdo, para manter o app seguro</li>
+          <li>Creditar as compras feitas no app e atender pedidos de reembolso</li>
         </ul>
         <p style={{ ...p, marginTop: 6 }}>
           <span style={strong}>Base legal:</span> o tratamento se baseia no seu consentimento,
           dado no momento do cadastro, que pode ser revogado a qualquer momento pedindo a
-          eliminação da conta. Seguimos a LGPD (Lei Geral de Proteção de Dados, Brasil). Os
+          eliminação da conta. Para as compras, a base legal é a execução do contrato de compra
+          que você fez. Seguimos a LGPD (Lei Geral de Proteção de Dados, Brasil). Os
           mesmos direitos valem para usuários em Portugal e em qualquer outro país.
         </p>
 
@@ -93,11 +91,14 @@ export default function Privacidade() {
           <li><span style={strong}>Sentry</span>: registro de erros técnicos, sem dados pessoais além do id da conta</li>
           <li><span style={strong}>fal.ai</span>: recebe só a foto enviada no momento de gerar o card, não vê o resto do seu perfil</li>
           <li><span style={strong}>Anthropic</span>: recebe só o conteúdo denunciado, para triagem automática, sem a sua identidade</li>
+          <li><span style={strong}>Apple / Google</span>: processam os pagamentos na App Store e no Google Play; o cartão e os dados de cobrança ficam com a loja, e o Futty só recebe a confirmação da compra</li>
+          <li><span style={strong}>RevenueCat</span>: confirma para o Futty as compras feitas nas lojas; recebe o identificador da sua conta no Futty, os dados da compra, o time a que o pacote se destina e os dados técnicos do aparelho necessários para confirmar a compra, nunca o cartão</li>
         </ul>
         <p style={{ ...p, marginTop: 6 }}>
-          <span style={strong}>Pagamentos:</span> o Futty não cobra nada dentro do app nesta
-          versão, então não trata dados de pagamento. Quando houver compras, esta política
-          será atualizada e você será avisado no app.
+          <span style={strong}>Pagamentos:</span> o pagamento é feito na App Store ou no Google
+          Play, e o Futty nunca vê o seu cartão. De cada compra guardamos só o identificador da
+          transação, o produto, o valor, a moeda e a data, para creditá-la, atender reembolsos e
+          cumprir obrigações legais.
         </p>
 
         <h2 style={h2}>4. Localização, a regra clara</h2>
@@ -143,6 +144,7 @@ export default function Privacidade() {
         <ul style={{ ...ul, marginTop: 6 }}>
           <li>Cópias de segurança podem reter dados apagados por até 30 dias antes de serem sobrescritas.</li>
           <li>Registros de moderação e denúncias podem ser mantidos mesmo após a eliminação da conta, pelo tempo necessário para segurança e cumprimento de obrigações legais.</li>
+          <li>Registros de compras (identificador da transação, produto, valor, moeda e data) podem ser mantidos após a eliminação da conta, sem os seus dados de perfil, pelo prazo exigido pela legislação fiscal.</li>
         </ul>
 
         <h2 style={h2}>8. Cookies e armazenamento local</h2>

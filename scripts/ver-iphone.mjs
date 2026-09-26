@@ -4342,7 +4342,10 @@ function bancadaDePreco(navegador, sessao, nomePasta) {
   const PROIBIDO = /R\$|€|comprar|pagar|pre[çc]o/i;
   const fecharCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
 
-  const SEM_DIREITO = (j) => ({ ...j, direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0 });
+  // P2 (26-set): as cenas "sem preço" fixam a loja DESLIGADA no estado (loja_pronta: false) — o resultado não
+  // depende do PAGAMENTOS_ATIVOS do motor local nem de a build ter a chave do RevenueCat.
+  const SEM_DIREITO = (j) => ({ ...j, direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0, loja_pronta: false });
+  const SEM_LOJA = (j) => ({ ...j, loja_pronta: false });
   const SEM_FIGURINHA = (j) => ({ ...j, user: { ...j.user, avatar_url: j.user.foto_url, tem_figurinha: false } });
 
   async function abrir(nome, nativo, remendos = {}) {
@@ -4400,6 +4403,13 @@ function bancadaDePreco(navegador, sessao, nomePasta) {
   const cartoes = (c) => (c.html.match(/class="planos-sway"/g) || []).length;
 
   const blocoFigurinha = (pagina) => pagina.locator('.hud-corners', { hasText: 'Vire figurinha' }).first();
+  const gradeUniformes = (pagina) => pagina.locator('[data-grade="uniformes"]').first();
+  // P2: o tile trancado da grade diz, no aria-label, o mesmo texto do convite (sem loja: o do pedido).
+  const trancadosDizemOConvite = (nome, c) => {
+    const rotulos = [...c.html.matchAll(/aria-label="([^"]*\(bloqueado\)[^"]*)"/g)].map((m) => m[1]);
+    const semConvite = rotulos.filter((r) => !/· (Pedir a minha · 10 gerações|Pedir ativação para o meu time)$/.test(r));
+    verificar(`${nome}: tile trancado diz o convite do pedido`, !semConvite.length, rotulos.length ? `${rotulos.length} trancado(s)${semConvite.length ? `; sem convite: ${semConvite.join(' | ')}` : ''}` : 'nenhum tile trancado (todos pintados)');
+  };
 
   // Abre cada rota e confere que o texto da tela não traz valor, o nome antigo nem palavra de venda.
   async function varrer(rotulo, nativo, rotas) {
@@ -4420,48 +4430,44 @@ function bancadaDePreco(navegador, sessao, nomePasta) {
     await contexto.close();
   }
 
-  return { pasta, erros, verificacoes, capturas, verificar, abrir, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, SEM_DIREITO, SEM_FIGURINHA, fecharCookies };
+  return { pasta, erros, verificacoes, capturas, verificar, abrir, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, gradeUniformes, trancadosDizemOConvite, SEM_DIREITO, SEM_LOJA, SEM_FIGURINHA, fecharCookies };
 }
 
-// ─── Cena "rodada23" (25-set): Loja Apple — sem preço no app da loja (Apple 3.1.1 /
-// Google Payments). A conta demo abre Planos e Figurinha duas vezes: como app da loja
-// (o Capacitor do navegador enxerga a plataforma "ios" pelo CapacitorCustomPlatform,
-// lido quando o módulo carrega) e como site. No app: nenhum R$, €, "comprar", "pagar"
-// ou "preço" nessas telas e sem "Manto próprio"; no site: os preços continuam. Nada
-// escreve no banco e nada gera figurinha. A conta demo já tem figurinha e créditos,
-// então o estado de cada tela é montado remendando dois GETs (/api/me e
-// /api/brilhantes/estado), senão o bloco "Vire figurinha" nem apareceria.
+// ─── Cena "rodada23" (25-set; textos de 26-set, Pagamentos P2): Loja Apple — sem preço no app
+// da loja enquanto a loja não está ligada (Apple 3.1.1 / Google Payments). A conta demo abre Planos e
+// Figurinha duas vezes: como app da loja (o Capacitor do navegador enxerga a plataforma "ios" pelo
+// CapacitorCustomPlatform, lido quando o módulo carrega) e como site. Nas duas: nenhum R$, €,
+// "comprar", "pagar" ou "preço" nessas telas e sem "Manto próprio" — o pedido de ativação.
+// P2: o interruptor PAGAMENTOS_ATIVOS saiu do frontend (o --pagamentos morreu com ele). A loja só
+// aparece no app nativo com o motor ligado (loja_pronta) E a chave do RevenueCat no build; estas
+// cenas fixam loja_pronta: false no estado, então valem com qualquer build e qualquer motor local.
+// Nada escreve no banco e nada gera figurinha. A conta demo já tem figurinha e créditos, então o
+// estado de cada tela é montado remendando dois GETs (/api/me e /api/brilhantes/estado), senão o
+// bloco "Vire figurinha" nem apareceria.
 // --url tem de servir uma build com VITE_API_URL VAZIO (`VITE_API_URL= vite build`): o
 // app "nativo" pede o /api ao endereço absoluto do motor, que o CORS do motor não
 // libera para localhost; vazio, o pedido volta ao mesmo endereço e passa pelo proxy
 // do preview. Depois, uma varredura de texto pelas outras telas, só como app.
 async function cenaRodada23(navegador, sessao) {
-  const { pasta, erros, verificacoes, capturas, verificar, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, SEM_DIREITO, SEM_FIGURINHA } = bancadaDePreco(navegador, sessao, 'rodada-23');
-  // Desde a Rodada 24 o site só mostra preço com PAGAMENTOS_ATIVOS = true no build; sem
-  // --pagamentos ele tem de ser igual ao app.
-  const PAGAMENTOS = args.includes('--pagamentos');
+  const { pasta, erros, verificacoes, capturas, verificar, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, gradeUniformes, trancadosDizemOConvite, SEM_DIREITO, SEM_LOJA, SEM_FIGURINHA } = bancadaDePreco(navegador, sessao, 'rodada-23');
 
   // (1) Planos, com a conta demo como ela é (dona do Domingueira FC, sem pedido).
   for (const nativo of [true, false]) {
-    const comPreco = !nativo && PAGAMENTOS;
     const nome = `planos-${nativo ? 'app' : 'site'}`;
     const c = await ler(nome, nativo, '/planos', {
-      preparar: (pagina) => pagina.getByRole('button', { name: comPreco ? 'Ativar para o meu time' : 'Pedir ativação' }).first().waitFor({ timeout: 25000 }),
+      remendos: { '/api/brilhantes/estado': SEM_LOJA },
+      preparar: (pagina) => pagina.getByRole('button', { name: 'Pedir ativação' }).first().waitFor({ timeout: 25000 }),
       alvo: (pagina) => pagina.locator('main').first(),
     });
     if (!c) continue;
-    if (!comPreco) {
-      semPreco(nome, c);
-      verificar(`${nome}: dois cartões (sem o manto próprio)`, cartoes(c) === 2, `${cartoes(c)} cartão(ões)`);
-      naoMostra(nome, c, 'Manto próprio');
-      for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
-    } else {
-      verificar(`${nome}: três cartões`, cartoes(c) === 3, `${cartoes(c)} cartão(ões)`);
-      for (const t of ['R$49,90', 'R$2,00 por jogador', 'R$9,90', 'Manto próprio', 'Ativar para o meu time', 'Quero a minha']) mostra(nome, c, t);
-    }
+    semPreco(nome, c);
+    verificar(`${nome}: dois cartões (sem o manto próprio)`, cartoes(c) === 2, `${cartoes(c)} cartão(ões)`);
+    for (const t of ['Manto próprio', 'Restaurar compras']) naoMostra(nome, c, t);
+    for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
   }
 
-  // (2) Figurinha, foto sem figurinha e sem gerações: o bloco "Vire figurinha" grande.
+  // (2) Figurinha, foto sem figurinha e sem gerações: o bloco "Vire figurinha" grande. Desde a
+  // Rodada 28 ele traz só o convite do pacote para a dona do time (a Minha virou a grade).
   for (const nativo of [true, false]) {
     const nome = `figurinha-bloco-${nativo ? 'app' : 'site'}`;
     const c = await ler(nome, nativo, '/figurinha', {
@@ -4470,32 +4476,25 @@ async function cenaRodada23(navegador, sessao) {
       alvo: blocoFigurinha,
     });
     if (!c) continue;
-    if (nativo || !PAGAMENTOS) {
-      semPreco(nome, c);
-      for (const t of ['Vire figurinha', 'Pedir ativação para o meu time', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
-    } else {
-      for (const t of ['Vire figurinha', 'Ativar para o meu time · R$49,90 · R$2,00 por jogador', 'Só a minha · R$9,90 · 10 gerações']) mostra(nome, c, t);
-    }
+    semPreco(nome, c);
+    for (const t of ['Vire figurinha', 'Pedir ativação para o meu time', 'Ver o que cada um dá']) mostra(nome, c, t);
   }
 
-  // (3) Figurinha com figurinha feita e sem gerações: aba Uniforme, o convite compacto.
+  // (3) Figurinha com figurinha feita e sem gerações: aba Uniforme. Desde a Rodada 28 o convite é a
+  // grade de uniformes (o cadeado leva aos Planos); P2: o tile trancado diz o texto do convite.
   for (const nativo of [true, false]) {
     const nome = `figurinha-uniforme-${nativo ? 'app' : 'site'}`;
     const c = await ler(nome, nativo, '/figurinha', {
       remendos: { '/api/brilhantes/estado': SEM_DIREITO },
       preparar: async (pagina) => {
         await pagina.getByRole('button', { name: 'Uniforme' }).first().click({ timeout: 30000 });
-        await blocoFigurinha(pagina).waitFor({ timeout: 10000 });
+        await gradeUniformes(pagina).waitFor({ timeout: 10000 });
       },
-      alvo: blocoFigurinha,
+      alvo: gradeUniformes,
     });
     if (!c) continue;
-    if (nativo || !PAGAMENTOS) {
-      semPreco(nome, c);
-      for (const t of ['Vire figurinha', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
-    } else {
-      for (const t of ['Vire figurinha', 'Só a minha · R$9,90 · 10 gerações']) mostra(nome, c, t);
-    }
+    semPreco(nome, c);
+    trancadosDizemOConvite(nome, c);
   }
 
   // (4) Varredura como app: as outras telas não mostram valor nem o nome antigo.
@@ -4504,26 +4503,29 @@ async function cenaRodada23(navegador, sessao) {
   return { pasta, verificacoes, capturas, erros };
 }
 
-// ─── Cena "rodada24" (25-set): "sem pagamento por enquanto". No SITE (sem Capacitor
-// simulado, contra a build de produção servida por `vite preview`) Planos e Figurinha não
-// mostram preço e usam a mesma lista do app; Termos e Privacidade trazem a cláusula nova e
-// a data de hoje, sem o texto de pagamento antigo. Nada escreve no banco e nada gera
-// figurinha (custo de IA zero). Depois, a varredura de texto pelas outras telas do site.
+// ─── Cena "rodada24" (25-set; textos de 26-set, Pagamentos P2): o SITE continua sem vender. No
+// SITE (sem Capacitor simulado, contra a build de produção servida por `vite preview`) Planos e
+// Figurinha não mostram preço e usam a mesma lista do app (o pedido de ativação) — a loja só existe
+// no app nativo. Termos e Privacidade trazem as cláusulas de compra do P2 (compras avulsas pela App
+// Store / Google Play, RevenueCat na lista de fornecedores) e a data de hoje, sem o "não cobra nada"
+// de 25-set. Nada escreve no banco e nada gera figurinha (custo de IA zero). Depois, a varredura de
+// texto pelas outras telas do site.
 async function cenaRodada24(navegador, sessao) {
-  const { pasta, erros, verificacoes, capturas, verificar, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, SEM_DIREITO, SEM_FIGURINHA } = bancadaDePreco(navegador, sessao, 'rodada-24');
-  const HOJE = '25 de setembro de 2026';
+  const { pasta, erros, verificacoes, capturas, verificar, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, gradeUniformes, trancadosDizemOConvite, SEM_DIREITO, SEM_LOJA, SEM_FIGURINHA } = bancadaDePreco(navegador, sessao, 'rodada-24');
+  const HOJE = '26 de setembro de 2026';
 
   // (1) Planos no site.
   {
     const nome = 'planos-site';
     const c = await ler(nome, false, '/planos', {
+      remendos: { '/api/brilhantes/estado': SEM_LOJA },
       preparar: (pagina) => pagina.getByRole('button', { name: 'Pedir ativação' }).first().waitFor({ timeout: 25000 }),
       alvo: (pagina) => pagina.locator('main').first(),
     });
     if (c) {
       semPreco(nome, c);
       verificar(`${nome}: dois cartões (sem o manto próprio)`, cartoes(c) === 2, `${cartoes(c)} cartão(ões)`);
-      naoMostra(nome, c, 'Manto próprio');
+      for (const t of ['Manto próprio', 'Restaurar compras']) naoMostra(nome, c, t);
       for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
     }
   }
@@ -4538,41 +4540,42 @@ async function cenaRodada24(navegador, sessao) {
     });
     if (c) {
       semPreco(nome, c);
-      for (const t of ['Vire figurinha', 'Pedir ativação para o meu time', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
+      for (const t of ['Vire figurinha', 'Pedir ativação para o meu time', 'Ver o que cada um dá']) mostra(nome, c, t);
     }
   }
 
-  // (3) Figurinha no site: aba Uniforme, o convite compacto (figurinha feita, sem gerações).
+  // (3) Figurinha no site: aba Uniforme (figurinha feita, sem gerações) — desde a Rodada 28 o convite
+  // é a grade; P2: o tile trancado diz o texto do convite.
   {
     const nome = 'figurinha-uniforme-site';
     const c = await ler(nome, false, '/figurinha', {
       remendos: { '/api/brilhantes/estado': SEM_DIREITO },
       preparar: async (pagina) => {
         await pagina.getByRole('button', { name: 'Uniforme' }).first().click({ timeout: 30000 });
-        await blocoFigurinha(pagina).waitFor({ timeout: 10000 });
+        await gradeUniformes(pagina).waitFor({ timeout: 10000 });
       },
-      alvo: blocoFigurinha,
+      alvo: gradeUniformes,
     });
     if (c) {
       semPreco(nome, c);
-      for (const t of ['Vire figurinha', 'Pedir a minha · 10 gerações']) mostra(nome, c, t);
+      trancadosDizemOConvite(nome, c);
     }
   }
 
-  // (4) Termos: §7 novo, sem o texto antigo, com a data de hoje.
+  // (4) Termos: §7 de compras (P2), sem o "não cobra nada" de 25-set, com a data de hoje.
   {
     const nome = 'termos';
     const c = await ler(nome, false, '/termos', {
-      preparar: (pagina) => pagina.getByText('7. Cobrança').first().waitFor({ timeout: 25000 }),
+      preparar: (pagina) => pagina.getByText('7. Compras dentro do app').first().waitFor({ timeout: 25000 }),
       alvo: (pagina) => pagina.locator('body'),
     });
     if (c) {
-      for (const t of ['7. Cobrança', 'O Futty não cobra nada dentro do app nesta versão. Quando houver compras, estes termos serão atualizados e você será avisado no app.', `Última atualização: ${HOJE}`]) mostra(nome, c, t);
-      for (const t of ['Planos, créditos e pagamento', 'produtos pagos', 'Pagamentos são processados', 'Créditos comprados', 'Cancelamentos e reembolsos', 'App Store ou Google Play']) naoMostra(nome, c, t);
+      for (const t of ['7. Compras dentro do app', 'São compras avulsas, pagas uma vez só: não há assinatura nem cobrança recorrente.', 'pela App Store (Apple) ou pelo Google Play (Google)', 'Reembolsos são pedidos à loja em que a compra foi feita', 'Gerações não usadas não viram dinheiro', `Última atualização: ${HOJE}`]) mostra(nome, c, t);
+      for (const t of ['7. Cobrança', 'O Futty não cobra nada dentro do app nesta versão', 'Planos, créditos e pagamento']) naoMostra(nome, c, t);
     }
   }
 
-  // (5) Privacidade: o parágrafo novo no lugar do item Apple / Google, com a data de hoje.
+  // (5) Privacidade (v5, P2): a loja processa o pagamento, o Futty nunca vê o cartão, RevenueCat na lista.
   {
     const nome = 'privacidade';
     const c = await ler(nome, false, '/privacidade', {
@@ -4580,8 +4583,8 @@ async function cenaRodada24(navegador, sessao) {
       alvo: (pagina) => pagina.locator('body'),
     });
     if (c) {
-      for (const t of ['Pagamentos: o Futty não cobra nada dentro do app nesta versão, então não trata dados de pagamento. Quando houver compras, esta política será atualizada e você será avisado no app.', `Última atualização: ${HOJE} (v3)`]) mostra(nome, c, t);
-      for (const t of ['Apple / Google', 'processam os pagamentos na loja', 'confirmação da compra']) naoMostra(nome, c, t);
+      for (const t of ['Pagamentos: o pagamento é feito na App Store ou no Google Play, e o Futty nunca vê o seu cartão.', 'Apple / Google', 'RevenueCat', 'Dados das compras feitas no app', `Última atualização: ${HOJE} (v5)`]) mostra(nome, c, t);
+      for (const t of ['o Futty não cobra nada dentro do app nesta versão']) naoMostra(nome, c, t);
     }
   }
 
