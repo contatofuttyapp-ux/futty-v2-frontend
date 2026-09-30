@@ -3881,6 +3881,17 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
+  if (CENAS.includes('rodada29a-excluir')) {
+    const r = await cenaRodada29aExcluir(navegador, sessao);
+    saida.rodada29aExcluir = r;
+    console.log('\n[iphone] RODADA 29A (A) — Excluir conta no iPhone (servidor local, sem confirmar de verdade)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
@@ -6088,4 +6099,111 @@ async function cenaRodada28(navegador) {
 
   verificar('sem erro de JS nas páginas', erros.length === 0, erros.join(' | '));
   return { pasta, verificacoes, capturas, erros, telemetria: enviados.map((x) => x.corpo) };
+}
+
+// ─── Cena "rodada29a-excluir" (30-set): Excluir conta no iPhone (Rodada 29A, parte A). ─────────────────
+// O achado do Pedro: o botão "Excluir de vez" só ligava com EXCLUIR em maiúsculas e o teclado do iPhone
+// corrige a palavra — a Apple exige exclusão fácil de concluir. Aqui abre a folha, toca no botão com o
+// campo vazio (tem de dizer "Digite EXCLUIR acima" e focar o campo), encolhe a tela como o teclado faz,
+// digita "excluir" em minúsculas e confere que o botão liga e que a folha continua inteira à vista.
+// NUNCA CONFIRMA: o botão "Excluir de vez" não é tocado, e toda escrita à /api é interceptada — a
+// verificação final exige zero DELETE. A conta demo (a do revisor da loja) não é apagada.
+async function cenaRodada29aExcluir(navegador, sessao) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29a-excluir só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29a');
+  mkdirSync(pasta, { recursive: true });
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `excluir-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+
+  const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+  await contexto.addInitScript(() => {
+    try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ }
+  });
+  const escritas = await travarEscritas(contexto);
+  const pagina = await contexto.newPage();
+  pagina.on('pageerror', (e) => erros.push(e.message));
+
+  await pagina.goto(`${BASE}/perfil`, { waitUntil: 'domcontentloaded' });
+  await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 4000 }).catch(() => {});
+  const linha = pagina.locator('button', { hasText: /^Excluir conta$/ }).first();
+  await linha.waitFor({ timeout: 30000 });
+  await linha.scrollIntoViewIfNeeded();
+  await linha.tap();
+  const dialogo = pagina.locator('[role="dialog"][aria-label="Excluir minha conta"]');
+  await dialogo.waitFor({ timeout: 8000 });
+  const botao = dialogo.locator('button').first();
+  const campo = dialogo.locator('input');
+  await espera(400);
+  await capturar(pagina, '1-aberta');
+
+  const estadoBotao = () => botao.evaluate((b) => ({
+    texto: b.textContent.trim(),
+    desabilitado: b.disabled,
+    ariaDisabled: b.getAttribute('aria-disabled'),
+    fundo: getComputedStyle(b).backgroundColor,
+    cor: getComputedStyle(b).color,
+  }));
+
+  const vazio = await estadoBotao();
+  verificar('campo vazio: o botão aparece e diz "Digite EXCLUIR acima"', vazio.texto === 'Digite EXCLUIR acima', `texto "${vazio.texto}"`);
+  verificar('campo vazio: o botão não é `disabled` mudo (aria-disabled=true)', vazio.desabilitado === false && vazio.ariaDisabled === 'true', `disabled ${vazio.desabilitado} · aria-disabled ${vazio.ariaDisabled}`);
+
+  // aria-disabled=true: o Playwright recusa agir num botão assim sem `force`; o dedo de verdade toca.
+  await botao.tap({ force: true });
+  await espera(300);
+  const focadoPorToque = await pagina.evaluate(() => document.activeElement?.tagName === 'INPUT' && document.activeElement.placeholder === 'EXCLUIR');
+  verificar('tocar no botão com o campo vazio foca o campo', focadoPorToque);
+
+  // O teclado do iPhone come ~40% da tela: a folha tem de continuar inteira na parte que sobra.
+  await pagina.setViewportSize({ width: 430, height: 500 });
+  await espera(700);
+  const geometria = () => pagina.evaluate(() => {
+    const d = document.querySelector('[role="dialog"][aria-label="Excluir minha conta"]');
+    const b = d?.querySelector('button');
+    const i = d?.querySelector('input');
+    const r = (el) => { const x = el.getBoundingClientRect(); return { topo: Math.round(x.top), base: Math.round(x.bottom) }; };
+    return { altura: window.innerHeight, folha: d && r(d), botao: b && r(b), campo: i && r(i) };
+  });
+  const teclado = await geometria();
+  const dentro = (r, h) => !!r && r.topo >= 0 && r.base <= h;
+  verificar('teclado aberto (tela de 500 px): a folha cabe inteira na tela', dentro(teclado.folha, teclado.altura), JSON.stringify(teclado.folha));
+  verificar('teclado aberto: o botão continua à vista', dentro(teclado.botao, teclado.altura), JSON.stringify(teclado.botao));
+  verificar('teclado aberto: o campo continua à vista', dentro(teclado.campo, teclado.altura), JSON.stringify(teclado.campo));
+  await capturar(pagina, '2-teclado-campo-vazio');
+
+  await campo.focus();
+  await pagina.keyboard.type('excluir');
+  await espera(400);
+  const minusculo = await estadoBotao();
+  verificar('"excluir" em minúsculas liga o botão ("Excluir de vez")', minusculo.texto === 'Excluir de vez' && minusculo.ariaDisabled === 'false', `texto "${minusculo.texto}" · aria-disabled ${minusculo.ariaDisabled} · fundo ${minusculo.fundo}`);
+  verificar('o botão ligado muda de cor (fundo vermelho cheio)', minusculo.fundo !== vazio.fundo, `${vazio.fundo} → ${minusculo.fundo}`);
+  const ligado = await geometria();
+  verificar('teclado aberto com o botão ligado: ainda à vista', dentro(ligado.botao, ligado.altura), JSON.stringify(ligado.botao));
+  await capturar(pagina, '3-minusculo-liga');
+
+  for (const [digitado, deveValer] of [['Excluir ', true], ['EXCLUIR', true], ['excluirr', false], ['exclui', false]]) {
+    await campo.fill(digitado);
+    await espera(150);
+    const s = await estadoBotao();
+    verificar(`"${digitado}" ${deveValer ? 'vale' : 'não vale'}`, (s.texto === 'Excluir de vez') === deveValer, `texto "${s.texto}"`);
+  }
+
+  await pagina.setViewportSize({ width: 430, height: 932 });
+  await dialogo.locator('button', { hasText: /^Cancelar$/ }).tap();
+  await espera(300);
+  verificar('Cancelar fecha a folha', (await dialogo.count()) === 0);
+
+  const apagou = escritas.filter((e) => e.metodo === 'DELETE');
+  verificar('nenhuma exclusão foi pedida ao motor (SEM confirmar de verdade)', apagou.length === 0, `escritas interceptadas: ${escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | ') || 'nenhuma'}`);
+  await contexto.close();
+  return { verificacoes, capturas, escritas, erros, pasta };
 }

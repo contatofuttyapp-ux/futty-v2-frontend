@@ -3,7 +3,7 @@
 //
 // VAGA 2 (B2) — a página entra no cânone: topbar HUD (a mesma da Figurinha e dos
 // Planos), cantos a 45° em vez do radius 12, Rajdhani no que é estrutura.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -17,6 +17,7 @@ import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
 import { nomeExibicao } from '../utils/nomeExibicao';
+import { CONFIRMACAO_EXCLUIR, confirmacaoExcluirValida } from '../utils/confirmarExclusao';
 import { useI18n } from '../context/I18nContext';
 import { nomeIdioma, MOSTRAR_IDIOMA } from '../lib/i18n';
 // O UploadComCrop saiu com a secção de personalizar (o upload de foto vive na
@@ -108,6 +109,9 @@ export default function MeuPerfil() {
   const [sheetExcluir, setSheetExcluir] = useState(false);
   const [confirmExcluir, setConfirmExcluir] = useState('');
   const [excluindo, setExcluindo] = useState(false);
+  const campoExcluirRef = useRef(null);
+  // Rodada 29A: "excluir", "Excluir " e "EXCLUIR" valem (o teclado do iPhone corrige a palavra).
+  const confirmacaoOk = confirmacaoExcluirValida(confirmExcluir);
 
   function showToast(mensagem, tipo = 'success') {
     setToast({ mensagem, tipo });
@@ -151,10 +155,13 @@ export default function MeuPerfil() {
   // pela mesma razão de sempre: o próximo a entrar neste aparelho não pode
   // ver, nem por 1 render, dados de uma conta que acabou de deixar de existir.
   async function excluirConta() {
-    if (confirmExcluir !== 'EXCLUIR' || excluindo) return;
+    if (excluindo) return;
+    // Botão sem `disabled` mudo: enquanto a palavra não bate, tocar nele leva a pessoa ao campo.
+    if (!confirmacaoOk) { campoExcluirRef.current?.focus(); return; }
     setExcluindo(true);
     try {
-      await apiFetch('/api/me', { method: 'DELETE', body: JSON.stringify({ confirmacao: 'EXCLUIR' }) });
+      // O motor exige 'EXCLUIR' exato: manda sempre a constante, nunca o que a pessoa digitou.
+      await apiFetch('/api/me', { method: 'DELETE', body: JSON.stringify({ confirmacao: CONFIRMACAO_EXCLUIR }) });
       limparCacheLocal();
       await signOut();
       navigate('/', { state: { toast: 'Conta excluída. Até a próxima pelada.' } });
@@ -664,7 +671,9 @@ export default function MeuPerfil() {
       {/* Bottom sheet "Excluir conta" — mesmo padrão do sheet de idioma (portal
           para o <body>, painel encostado em baixo; ver nota longa acima de
           sheetIdioma sobre o porquê do portal). Fechar por fora fica ativo
-          mesmo aqui: é reversível até o clique em "Excluir de vez". */}
+          mesmo aqui: é reversível até o clique em "Excluir de vez".
+          Rodada 29A: com o teclado aberto a folha não some — o painel nunca passa de
+          100dvh, o texto rola dentro dele e o botão fica num rodapé que não rola. */}
       {sheetExcluir ? createPortal(
         <div
           className="modal-overlay"
@@ -678,28 +687,45 @@ export default function MeuPerfil() {
             aria-modal="true"
             aria-label="Excluir minha conta"
             onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', background: '#16161c', borderTop: '1px solid rgba(239,68,68,0.35)', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+            style={{
+              width: '100%', maxHeight: '100dvh', display: 'flex', flexDirection: 'column',
+              background: '#16161c', borderTop: '1px solid rgba(239,68,68,0.35)',
+            }}
           >
-            <div aria-hidden="true" style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)', margin: '10px auto 6px' }} />
-            <div style={{ padding: '4px 20px 20px' }}>
-              <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.04em', color: '#f87171', margin: '10px 0 10px' }}>
-                Excluir minha conta
-              </h2>
-              <p style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.65)', margin: '0 0 16px' }}>
-                Isso apaga seu perfil, sua figurinha, suas fotos e suas participações. Times em que você é o único membro são apagados; os outros continuam com o time. Não dá para desfazer.
-              </p>
-              <label style={{ display: 'grid', gap: 6, marginBottom: 16 }}>
-                <span style={labelStyle}>Digite EXCLUIR para confirmar</span>
-                <input
-                  value={confirmExcluir}
-                  onChange={(e) => setConfirmExcluir(e.target.value)}
-                  placeholder="EXCLUIR"
-                  autoCapitalize="characters"
-                  disabled={excluindo}
-                  className="hud-corners-s"
-                  style={inputStyle}
-                />
-              </label>
+            <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+              <div aria-hidden="true" style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)', margin: '10px auto 6px' }} />
+              <div style={{ padding: '4px 20px 12px' }}>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.04em', color: '#f87171', margin: '10px 0 10px' }}>
+                  Excluir minha conta
+                </h2>
+                <p style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.65)', margin: '0 0 16px' }}>
+                  Isso apaga seu perfil, sua figurinha, suas fotos e suas participações. Times em que você é o único membro são apagados; os outros continuam com o time. Não dá para desfazer.
+                </p>
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <span style={labelStyle}>Digite EXCLUIR para confirmar</span>
+                  <input
+                    ref={campoExcluirRef}
+                    value={confirmExcluir}
+                    onChange={(e) => setConfirmExcluir(e.target.value)}
+                    // Com o teclado subindo, leva o campo para a vista (espera a animação do teclado).
+                    onFocus={(e) => {
+                      const campo = e.currentTarget;
+                      setTimeout(() => campo.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
+                    }}
+                    placeholder="EXCLUIR"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    autoComplete="off"
+                    spellCheck={false}
+                    enterKeyHint="done"
+                    disabled={excluindo}
+                    className="hud-corners-s"
+                    style={inputStyle}
+                  />
+                </label>
+              </div>
+            </div>
+            <div style={{ flex: '0 0 auto', padding: '8px 20px', paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))' }}>
               <button
                 type="button"
                 className="btn hud-corners-s"
@@ -710,15 +736,16 @@ export default function MeuPerfil() {
                   fontWeight: 700,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
-                  background: confirmExcluir === 'EXCLUIR' ? 'var(--danger)' : 'rgba(239,68,68,0.12)',
+                  background: confirmacaoOk ? 'var(--danger)' : 'rgba(239,68,68,0.12)',
                   border: '1px solid rgba(239,68,68,0.5)',
-                  color: confirmExcluir === 'EXCLUIR' ? '#fff' : 'rgba(255,255,255,0.35)',
-                  cursor: confirmExcluir === 'EXCLUIR' && !excluindo ? 'pointer' : 'not-allowed',
+                  color: confirmacaoOk ? '#fff' : 'rgba(255,255,255,0.55)',
+                  cursor: excluindo ? 'wait' : 'pointer',
                 }}
-                disabled={confirmExcluir !== 'EXCLUIR' || excluindo}
+                aria-disabled={!confirmacaoOk || excluindo}
+                disabled={excluindo}
                 onClick={excluirConta}
               >
-                {excluindo ? 'Excluindo…' : 'Excluir de vez'}
+                {excluindo ? 'Excluindo…' : confirmacaoOk ? 'Excluir de vez' : 'Digite EXCLUIR acima'}
               </button>
               <button
                 type="button"
