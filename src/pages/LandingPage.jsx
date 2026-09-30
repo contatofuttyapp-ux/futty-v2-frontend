@@ -10,10 +10,22 @@ import FuttyLockup from '../components/FuttyLockup';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import Toast from '../components/Toast';
+import AviseMe, { AviseMeForm } from './AviseMe';
 import '../styles/app.css';
 
-export default function LandingPage() {
+/**
+ * A página inicial do site. `soAviseMe` (a rota /avise-me, destino dos links das redes) mostra só a página do Avise-me —
+ * o mesmo chunk lazy, sem um `import()` a mais no arranque do app.
+ */
+export default function LandingPage({ soAviseMe = false }) {
+  return soAviseMe ? <AviseMe /> : <PaginaInicial />;
+}
+
+function PaginaInicial() {
   const [erro, setErro] = useState('');
+  // Rodada 29B (F): o bloco "Avise-me" entrou na tela. No celular normal tudo continua numa tela só; em tela curta
+  // (iPhone SE) o F encolhe e, se ainda assim não couber, a página rola em vez de cortar o formulário.
+  const [tamanhoF] = useState(() => (typeof window !== 'undefined' && window.innerHeight < 760 ? 112 : 176));
   // Toast de passagem (ex.: "Conta excluída..." depois de MeuPerfil.jsx
   // navegar para "/" com state) — location.state some numa próxima
   // navegação, por isso é lido só uma vez no estado inicial.
@@ -38,22 +50,22 @@ export default function LandingPage() {
   }
 
   return (
-    <div style={{ height: '100dvh', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ height: '100dvh', overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
       {/* Deriva lenta de fundo — só transform, por cima da aurora global */}
       <div className="landing-drift" aria-hidden="true" />
 
       <div
         style={{
-          height: '100%',
+          minHeight: '100%',
           maxWidth: 430,
           margin: '0 auto',
-          padding: '0 24px',
+          padding: '20px 24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
-          gap: 26,
+          gap: 22,
           position: 'relative',
         }}
       >
@@ -61,7 +73,7 @@ export default function LandingPage() {
         <div style={{ position: 'relative', display: 'grid', placeItems: 'center' }}>
           <span className="landing-glow" aria-hidden="true" />
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <FuttyLockup size={176} wordmark={false} />
+            <FuttyLockup size={tamanhoF} wordmark={false} />
           </div>
         </div>
 
@@ -142,6 +154,11 @@ export default function LandingPage() {
           >
             Já tenho conta → <span style={{ color: '#d4a017' }}>Entrar</span>
           </Link>
+        </div>
+
+        {/* Rodada 29B (F): quem chega das redes e ainda não pode baixar o app deixa o e-mail. */}
+        <div style={{ width: '100%', maxWidth: 320, borderTop: '1px solid rgba(255,255,255,0.10)', paddingTop: 18 }}>
+          <AviseMeForm origemPadrao="site" />
         </div>
       </div>
 

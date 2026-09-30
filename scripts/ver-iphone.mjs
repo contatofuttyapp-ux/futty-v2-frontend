@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3984,6 +3984,17 @@ try {
     const r = await cenaRodada29bOrganiza(navegador);
     saida.rodada29bOrganiza = r;
     console.log('\n[iphone] RODADA 29B (E) — "só organizo": criar time, painel, Início, jogo e página do time (servidor local; motor lido de verdade, joga/eu_jogo trocados por cima)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29b-avise')) {
+    const r = await cenaRodada29bAvise(navegador);
+    saida.rodada29bAvise = r;
+    console.log('\n[iphone] RODADA 29B (F) — "Avise-me": bloco na página inicial, /avise-me e aba do Gabinete (servidor local; POST e lista fabricados)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7719,6 +7730,182 @@ async function cenaRodada29bOrganiza(navegador) {
     verificar('Time (só organiza): a lista de membros marca "ORGANIZA"', /ORGANIZA/.test(t));
     await capturar(pagina, '8-equipa-so-organizo');
     await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29b-avise" (30-set): a lista "Avise-me" — bloco na página inicial, página /avise-me e aba do Gabinete
+// (Rodada 29B, parte F). O POST /api/avise-me é respondido AQUI (nenhum e-mail entra na lista de verdade: a migração 068
+// não está aplicada) e o Gabinete lê uma lista fabricada. Só servidor LOCAL.
+async function cenaRodada29bAvise(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29b-avise só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29b');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `avise-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const T = { titulo: 'Quero ser avisado quando o Futty chegar nas lojas', botao: 'Quero ser avisado', consent: 'Ao enviar, você autoriza o Futty a usar seu e-mail só para avisar do lançamento.', sair: 'Você pode sair da lista quando quiser.' };
+
+  const abrir = async (rota, { sessao = null, viewport = null, resposta = null, rotas = [] } = {}, rotulo) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, viewport, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    const envios = [];
+    await travarEscritas(contexto, (caminho, metodo, corpo) => {
+      if (metodo === 'POST' && caminho === '/api/avise-me') { try { envios.push(JSON.parse(corpo || '{}')); } catch { /* nada */ } return { ok: true }; }
+      return null;
+    });
+    if (resposta) {
+      await contexto.route('**/api/avise-me', (route) => (route.request().method() === 'POST'
+        ? route.fulfill({ status: resposta.status, contentType: 'application/json', body: JSON.stringify(resposta.corpo) })
+        : route.fallback()));
+    }
+    for (const [teste, fn] of rotas) await contexto.route(teste, fn);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    return { contexto, pagina, envios };
+  };
+  const formulario = (p) => p.locator('[data-avise-me="form"]');
+  const texto = (p) => p.locator('body').innerText();
+
+  // 1) a página inicial pública: o bloco, sem rolar, e o envio
+  {
+    const { contexto, pagina, envios } = await abrir('/', {}, 'landing');
+    await formulario(pagina).waitFor({ timeout: 30000 });
+    await espera(700);
+    const t = await texto(pagina);
+    verificar(`a página inicial tem o bloco "${T.titulo}"`, t.includes(T.titulo));
+    verificar('…com e-mail, botão, UMA linha de consentimento (LGPD) e "Você pode sair da lista quando quiser."', await pagina.locator('input[type="email"]').count() === 1 && t.includes(T.botao) && t.includes(T.consent) && t.includes(T.sair));
+    const tela = await pagina.evaluate(() => {
+      const raiz = document.querySelector('[data-page]')?.firstElementChild || document.body;
+      const rolavel = [...document.querySelectorAll('div')].find((d) => getComputedStyle(d).overflowY === 'auto' && d.scrollHeight > 0 && d.querySelector('[data-avise-me]'));
+      return { rolavel: rolavel ? { cabe: rolavel.scrollHeight <= rolavel.clientHeight + 1, altura: rolavel.scrollHeight, janela: rolavel.clientHeight } : null, horizontal: document.scrollingElement.scrollWidth <= window.innerWidth + 1, raiz: !!raiz };
+    });
+    verificar('no celular normal (430×932) continua tudo numa tela só: sem rolagem vertical nem horizontal', tela.rolavel?.cabe === true && tela.horizontal, JSON.stringify(tela));
+    const isca = await pagina.evaluate(() => { const i = document.querySelector('input[name="site"]'); const r = i.getBoundingClientRect(); return { tab: i.tabIndex, oculto: i.getAttribute('aria-hidden'), foraDaTela: r.right < 0 || r.left < -1000 }; });
+    verificar('a isca de robô (campo "site") está fora da tela, fora do teclado e escondida de leitor de tela', isca.tab === -1 && isca.oculto === 'true' && isca.foraDaTela, JSON.stringify(isca));
+    await capturar(pagina, '1-landing');
+
+    // e-mail torto: a tela avisa e nada é enviado
+    await pagina.locator('input[type="email"]').fill('maria@');
+    await pagina.locator('button[type="submit"]').tap();
+    await espera(500);
+    verificar('e-mail torto: "Esse e-mail não parece certo. Confira e tente de novo." e nenhum envio', (await texto(pagina)).includes('Esse e-mail não parece certo. Confira e tente de novo.') && envios.length === 0);
+    await pagina.locator('input[type="email"]').fill('');
+    await pagina.locator('button[type="submit"]').tap();
+    await espera(400);
+    verificar('e-mail vazio: "Escreva seu e-mail."', (await texto(pagina)).includes('Escreva seu e-mail.') && envios.length === 0);
+
+    // e-mail certo
+    await pagina.locator('input[type="email"]').fill('Maria@Gmail.com');
+    await pagina.locator('button[type="submit"]').tap();
+    await pagina.locator('[data-avise-me="feito"]').waitFor({ timeout: 10000 }).catch(() => {});
+    verificar('enviar manda POST /api/avise-me { email, origem: "site", site: "" } (a isca vazia)', envios.length === 1 && envios[0].email === 'Maria@Gmail.com' && envios[0].origem === 'site' && envios[0].site === '', JSON.stringify(envios));
+    const feito = await texto(pagina);
+    verificar('depois de enviar: "Anotado! A gente avisa você por e-mail quando o Futty chegar nas lojas." e a linha de sair da lista', feito.includes('Anotado! A gente avisa você por e-mail quando o Futty chegar nas lojas.') && feito.includes(T.sair));
+    verificar('o formulário some (não dá para mandar duas vezes sem querer)', (await formulario(pagina).count()) === 0);
+    await capturar(pagina, '2-landing-anotado');
+    await contexto.close();
+  }
+
+  // 1b) tela curta (iPhone SE): o F encolhe e o formulário continua ao alcance (a página rola em vez de cortar)
+  {
+    const { contexto, pagina } = await abrir('/', { viewport: { width: 375, height: 667 } }, 'landing-curta');
+    await formulario(pagina).waitFor({ timeout: 30000 });
+    await espera(600);
+    await pagina.locator('button[type="submit"]').scrollIntoViewIfNeeded();
+    const visivel = await pagina.locator('button[type="submit"]').evaluate((b) => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight && r.width > 100; });
+    verificar('tela curta (375×667): o botão do Avise-me fica alcançável (rolando) e dentro da largura', visivel && (await pagina.evaluate(() => document.scrollingElement.scrollWidth <= window.innerWidth + 1)));
+    await capturar(pagina, '3-landing-tela-curta');
+    await contexto.close();
+  }
+
+  // 1c) o motor recusa (sem a migração 068): a tela diz e deixa tentar de novo
+  {
+    const { contexto, pagina } = await abrir('/', { resposta: { status: 503, corpo: { error: 'Ainda não estamos recebendo e-mails. Tente de novo mais tarde.' } } }, 'landing-503');
+    await formulario(pagina).waitFor({ timeout: 30000 });
+    await pagina.locator('input[type="email"]').fill('maria@gmail.com');
+    await pagina.locator('button[type="submit"]').tap();
+    await pagina.getByText('Ainda não estamos recebendo e-mails.').waitFor({ timeout: 8000 }).catch(() => {});
+    verificar('o motor responde 503: a tela mostra a mensagem do motor e o formulário continua (dá para tentar de novo)', (await texto(pagina)).includes('Ainda não estamos recebendo e-mails. Tente de novo mais tarde.') && (await formulario(pagina).count()) === 1);
+    await contexto.close();
+  }
+
+  // 2) a página /avise-me (destino dos links das redes), com utm
+  {
+    const { contexto, pagina, envios } = await abrir('/avise-me?utm_source=Instagram&utm_campaign=bio', {}, 'pagina');
+    await formulario(pagina).waitFor({ timeout: 30000 });
+    await espera(600);
+    const t = await texto(pagina);
+    verificar('/avise-me: a página do destino tem o título, o texto e o formulário', t.includes('O seu time.') && t.includes('O Futty está chegando nas lojas') && t.includes(T.botao) && t.includes(T.consent));
+    await capturar(pagina, '4-pagina-avise-me');
+    await pagina.locator('input[type="email"]').fill('joao@exemplo.com.br');
+    await pagina.locator('button[type="submit"]').tap();
+    await pagina.locator('[data-avise-me="feito"]').waitFor({ timeout: 10000 }).catch(() => {});
+    verificar('/avise-me com utm: a origem vai como "Instagram:bio" (o motor põe em minúsculas)', envios.length === 1 && envios[0].origem === 'Instagram:bio', JSON.stringify(envios));
+    await contexto.close();
+    const sem = await abrir('/avise-me', {}, 'pagina-sem-utm');
+    await formulario(sem.pagina).waitFor({ timeout: 30000 });
+    await sem.pagina.locator('input[type="email"]').fill('ana@exemplo.com');
+    await sem.pagina.locator('button[type="submit"]').tap();
+    await sem.pagina.locator('[data-avise-me="feito"]').waitFor({ timeout: 10000 }).catch(() => {});
+    verificar('/avise-me sem utm: a origem é "avise-me"', sem.envios.length === 1 && sem.envios[0].origem === 'avise-me', JSON.stringify(sem.envios));
+    await sem.contexto.close();
+  }
+
+  // 3) Gabinete: a aba "Avise-me" (super-admin) com a contagem e o CSV
+  {
+    const lista = { indisponivel: false, total: 3, por_origem: [{ origem: 'instagram:bio', total: 2 }, { origem: 'site', total: 1 }], recentes: [
+      { id: 'a', email: 'joao@exemplo.com.br', origem: 'instagram:bio', criado_em: '2026-09-30T20:00:00.000Z' },
+      { id: 'b', email: 'maria@gmail.com', origem: 'site', criado_em: '2026-09-30T19:00:00.000Z' },
+      { id: 'c', email: 'ana@exemplo.com', origem: 'instagram:bio', criado_em: '2026-09-29T19:00:00.000Z' },
+    ] };
+    const CSV = 'email,origem,criado_em\r\njoao@exemplo.com.br,instagram:bio,2026-09-30T20:00:00.000Z\r\n';
+    let pediuCsv = false;
+    const { contexto, pagina } = await abrir('/gabinete?aba=avise', {
+      sessao: fx.super,
+      rotas: [[(u) => u.pathname.endsWith('/api/super/gabinete/avise-me'), (route) => {
+        const u = new URL(route.request().url());
+        if (u.searchParams.get('formato') === 'csv') {
+          pediuCsv = true;
+          return route.fulfill({ status: 200, contentType: 'text/csv; charset=utf-8', headers: { 'access-control-allow-origin': '*', 'content-disposition': 'attachment; filename="avise-me-2026-09-30.csv"' }, body: CSV });
+        }
+        return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(lista) });
+      }]],
+    }, 'gabinete');
+    await pagina.locator('[data-avise-me-gabinete="lista"]').waitFor({ timeout: 40000 });
+    await espera(600);
+    const t = await texto(pagina);
+    verificar('Gabinete: existe a aba "Avise-me" e ela mostra a contagem (3 e-mails)', /Avise-me/.test(t) && (await pagina.locator('[data-total]').innerText()).trim() === '3');
+    verificar('Gabinete: "De onde vieram" (instagram:bio 2, site 1) e "Os mais recentes" com os e-mails', /instagram:bio/.test(t) && /joao@exemplo\.com\.br/.test(t) && /De onde vieram/.test(t) && /Os mais recentes/.test(t));
+    await capturar(pagina, '5-gabinete-avise-me');
+    const [download] = await Promise.all([
+      pagina.waitForEvent('download', { timeout: 15000 }).catch(() => null),
+      pagina.getByRole('button', { name: /Baixar CSV/ }).click(),
+    ]);
+    verificar('Gabinete: "Baixar CSV (todos)" baixa o arquivo avise-me-AAAA-MM-DD.csv', !!download && /^avise-me-\d{4}-\d{2}-\d{2}\.csv$/.test(download.suggestedFilename()) && pediuCsv, download ? download.suggestedFilename() : 'sem download');
+    if (download) {
+      const caminhoCsv = await download.path();
+      verificar('…e o conteúdo é o CSV do motor (cabeçalho email,origem,criado_em)', !!caminhoCsv && readFileSync(caminhoCsv, 'utf8').startsWith('email,origem,criado_em'));
+    }
+    await contexto.close();
+    const sem068 = await abrir('/gabinete?aba=avise', {
+      sessao: fx.super,
+      rotas: [[(u) => u.pathname.endsWith('/api/super/gabinete/avise-me'), (route) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ indisponivel: true, motivo: 'A migração 068 ainda não foi aplicada no Supabase.', total: 0, por_origem: [], recentes: [] }) })]],
+    }, 'gabinete-sem-068');
+    await sem068.pagina.locator('[data-avise-me-gabinete="indisponivel"]').waitFor({ timeout: 40000 }).catch(() => {});
+    verificar('Gabinete sem a migração 068: a aba diz "A migração 068 ainda não foi aplicada no Supabase."', (await texto(sem068.pagina)).includes('A migração 068 ainda não foi aplicada no Supabase.'));
+    await sem068.contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
 }

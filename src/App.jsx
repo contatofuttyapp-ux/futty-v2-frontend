@@ -119,6 +119,9 @@ function AnimatedRoutes() {
           <Route path="/termos" element={<Termos />} />
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/excluir-conta" element={<ExcluirConta />} />
+          {/* Rodada 29B (F): /avise-me sai do MESMO chunk lazy da página inicial (soAviseMe) — uma rota nova com import()
+              próprio custava 172 B do arranque, que tem teto de 320 KiB. */}
+          <Route path="/avise-me" element={<LandingPage soAviseMe />} />
           <Route path="/convite/:token" element={<ConviteRoute />} />
           {/* Vista pública do sorteio (sem login) */}
           <Route path="/p/campeonato/:slug/:id" element={<CampeonatoPublico />} />
