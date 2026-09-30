@@ -81,11 +81,9 @@ function manualChunks(id) {
   // "futtyMonograma": 201 KB com o nome dos 700 bytes dos caminhos do F. O nome
   // mentia e mandava consertar a coisa errada. Agora o arquivo diz o que é.
   if (p.includes('/@supabase/')) return 'vendor-supabase'
-  // VELOCIDADE 8 — o react SOBE para aqui, à frente do framer-motion. Ficava em
-  // último e o rolldown enfiava o `react/cjs/react-jsx-runtime` no chunk do
-  // motion; a partir daí TODOS os 54 chunks que escrevem JSX importavam o
-  // vendor-motion, e era isso — não um import nosso — que punha o framer no
-  // modulepreload do arranque. (@sentry continua acima: o caminho
+  // VELOCIDADE 8 — o react fica à frente dos demais grupos: o rolldown enfiava o
+  // `react/cjs/react-jsx-runtime` no último grupo declarado, e todo chunk que
+  // escreve JSX passava a importar esse grupo. (@sentry continua acima: o caminho
   // .../@sentry/react/ também contém "react".)
   if (
     p.includes('/react-router-dom/') ||
@@ -97,15 +95,10 @@ function manualChunks(id) {
   ) {
     return 'vendor-react'
   }
-  // O framer-motion JÁ NÃO TEM GRUPO PRÓPRIO (Velocidade 8). Um grupo do
-  // manualChunks é um chunk FORÇADO: existe e é importado por quem precisa dele,
-  // e o rolldown encostava-lhe o embrulho CJS do `react/jsx-runtime` (o
-  // `require` preguiçoso, que não passa por esta função e por isso nenhuma regra
-  // daqui o alcança). Resultado: 55 chunks importavam "vendor-motion" só para
-  // escrever JSX, e ele ia no modulepreload do arranque. Sem o grupo, o
-  // framer-motion segue o caminho natural — só o OnboardingModal o alcança, e
-  // esse está em lazy (ver pages/Equipa.jsx): vira uma folha que só desce quando
-  // o modal abre.
+  // O framer-motion saiu do projeto (Rodada 29B, parte 0): nenhuma tela o usa,
+  // a transição de página é CSS. Não recriar um grupo "vendor-motion" aqui — um
+  // grupo do manualChunks é um chunk forçado e, na Velocidade 8, arrastou 55
+  // chunks (e o modulepreload do arranque) só por causa do `react/jsx-runtime`.
   if (p.includes('/lucide-react/')) return 'vendor-icons'
   if (p.includes('/recharts/') || p.includes('/d3-') || p.includes('/victory-vendor/')) return 'vendor-charts'
   if (p.includes('/lottie-react/') || p.includes('/lottie-web/')) return 'vendor-lottie'
