@@ -96,8 +96,9 @@ export default function Convite() {
     setError('');
     setAccepting(true);
     try {
-      const { team } = await apiFetch(`/api/convite/${token}/aceitar`, { method: 'POST' });
-      navigate(`/equipa/${team.slug}`, { replace: true });
+      const { team, jaMembro } = await apiFetch(`/api/convite/${token}/aceitar`, { method: 'POST' });
+      // `primeiraEntrada`: a página do time abre as boas-vindas (Rodada 29B, C) — só para quem acabou de entrar.
+      navigate(`/equipa/${team.slug}`, { replace: true, state: jaMembro ? undefined : { primeiraEntrada: true } });
     } catch (err) {
       setError(err.message);
       setAccepting(false);

@@ -2,7 +2,7 @@
 // Lógica intacta; render no material da casa: vidro + hud-corners + chips 45° + Rajdhani
 // + .cta-gold. Posição do jogador em DESTAQUE (regra: o próprio decide; GR no roxo).
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { usePerfil } from '../context/PerfilContext';
 import { useTeam } from '../hooks/useTeam';
@@ -21,14 +21,9 @@ import ModeracaoFila from '../components/ModeracaoFila';
 import EscolhaLinhaGol, { TEXTO_APOIO_LINHA_GOL } from '../components/EscolhaLinhaGol';
 import '../styles/app.css';
 
-// VELOCIDADE 8 (16-set) — EM LAZY. É o único ponto do app que usa framer-motion
-// (AnimatePresence, para o slide entre os 3 passos) e só aparece a quem entra
-// numa equipa pela PRIMEIRA vez. Com o import estático, o chunk do framer era
-// partilhado por tanta gente que o empacotador lhe encostou o jsx-runtime — e a
-// partir daí os 54 chunks que escrevem JSX importavam-no, o que punha o framer
-// no modulepreload do arranque sem ninguém na raiz o ter pedido. Em lazy ele
-// vira uma folha: só desce quando o modal abre mesmo.
-const OnboardingModal = lazy(() => import('../components/OnboardingModal'));
+// Rodada 29B (C) — EM LAZY: as boas-vindas só aparecem a quem entra num time pela PRIMEIRA vez (uma página, um
+// botão; substituíram o modal de 3 passos e o tour do Início) e não têm motivo para pesar no arranque.
+const BoasVindasTime = lazy(() => import('../components/BoasVindasTime'));
 
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
@@ -73,6 +68,7 @@ function Badge45({ children, gold }) {
 export default function Equipa() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { team, members, loading, error, reload } = useTeam(slug);
   const { perfil: me } = usePerfil();
   const [confirmarSaida, setConfirmarSaida] = useState(false);
@@ -106,23 +102,27 @@ export default function Equipa() {
   // a pastilha "GR" do admin e este chip nunca mais podem discordar.
   const souGoleiroNoTime = !!members.find((m) => m.id === meuId)?.goleiro;
 
-  // Onboarding: 1ª vez de um jogador que não fundou a equipa (não-admin, sem
-  // avatar ainda) e que nunca o dispensou (localStorage por equipa).
+  // Boas-vindas (Rodada 29B, C): 1ª vez de um jogador que não fundou a equipa — logo depois de aceitar o convite
+  // (a página do convite manda `state.primeiraEntrada`) ou, como antes, sem avatar ainda — e que nunca as dispensou
+  // (localStorage por equipa, a mesma marca do modal antigo).
   const [onboardingDispensado, setOnboardingDispensado] = useState(false);
   const onboardingKey = team ? `futty_onboarding_${team.id}` : null;
+  const entrouAgora = !!location.state?.primeiraEntrada;
   const mostrarOnboarding =
     !!team &&
     !!me &&
     team.role !== 'admin' &&
-    !me?.user?.avatar_url &&
+    (entrouAgora || !me?.user?.avatar_url) &&
     !onboardingDispensado &&
     !(onboardingKey && localStorage.getItem(onboardingKey));
 
-  function fecharOnboarding() {
+  function fecharOnboarding({ mudou, erro } = {}) {
     if (onboardingKey) localStorage.setItem(onboardingKey, '1');
     setOnboardingDispensado(true);
     // Ativa o banner CTA da figurinha no Início (mostra uma vez).
     localStorage.setItem('futty_cta_figurinha', '1');
+    if (mudou) reload();
+    if (erro) setToast({ tipo: 'error', mensagem: `Não deu para salvar sua posição: ${erro}` });
   }
 
   // Liga/desliga o goleiro do time (Rodada 10B: booleano só, grava categoria).
@@ -367,7 +367,7 @@ export default function Equipa() {
           de carregamento por meio segundo seria mais ruído do que ajuda. */}
       {mostrarOnboarding ? (
         <Suspense fallback={null}>
-          <OnboardingModal teamNome={team.nome} onClose={fecharOnboarding} />
+          <BoasVindasTime team={team} slug={slug} goleiroInicial={souGoleiroNoTime} onClose={fecharOnboarding} />
         </Suspense>
       ) : null}
     </div>

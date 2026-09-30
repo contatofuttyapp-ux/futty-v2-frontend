@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3951,6 +3951,17 @@ try {
     const r = await cenaRodada29bUniformes(navegador);
     saida.rodada29bUniformes = r;
     console.log('\n[iphone] RODADA 29B (B) — a grade de uniformes para os três direitos (servidor local; contas de prova; escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29b-boasvindas')) {
+    const r = await cenaRodada29bBoasVindas(navegador);
+    saida.rodada29bBoasVindas = r;
+    console.log('\n[iphone] RODADA 29B (C) — boas-vindas do time: uma página, um botão (servidor local; contas de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7085,6 +7096,177 @@ async function cenaRodada29bUniformes(navegador) {
     const put = escritas.find((e) => e.metodo === 'PUT' && e.rota === '/api/me/kit');
     verificar('tocar no uniforme pintado veste na hora: PUT /api/me/kit com white-gold, sem diálogo de geração', !!put && /white-gold/.test(put.corpo || '') && (await pagina.getByRole('dialog').count()) === 0, put ? `${put.metodo} ${put.rota} ${put.corpo}` : 'nenhum PUT');
     verificar('nenhum POST de geração saiu (a cena não pinta nada)', !escritas.some((e) => e.metodo === 'POST' && /\/api\/me\/avatar\/ai/.test(e.rota)), escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
+    await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29b-boasvindas" (30-set): o onboarding do time em UMA página e UM botão (Rodada 29B, parte C). ──
+// Contas de prova (scripts/_bench/prova-rodada29b.js): `novato` (membro do time grátis, sem foto) e `membroFoto` (membro,
+// com foto). O OnboardingModal de 3 passos e o tour de 3 balões do Início saíram; entra o BoasVindasTime. Toda escrita à
+// /api é interceptada (o "No gol" manda o PATCH de posição, respondido aqui). Só servidor LOCAL.
+async function cenaRodada29bBoasVindas(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29b-boasvindas só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29b');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const slug = fx.times.gratis.slug;
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `boasvindas-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const VELHOS = /Próximo →|Bem-vindo ao|Sua figurinha\b.*foto e a IA|Confirme sua presença/;
+
+  // `limpo`: sem marcas de "já visto" (a cena é a PRIMEIRA entrada). O som e a mídia são contados por um gancho.
+  const abrir = async (sessao, rotulo, { extra = {}, rota = `/equipa/${slug}`, espera: esp = true } = {}) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo', ...extra } });
+    await contexto.addInitScript(() => {
+      window.__som = { audio: 0, contexto: 0 };
+      const A = window.Audio;
+      window.Audio = function (...a) { window.__som.audio += 1; return new A(...a); };
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (C) { const N = function (...a) { window.__som.contexto += 1; return new C(...a); }; window.AudioContext = N; window.webkitAudioContext = N; }
+    });
+    const escritas = await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    if (esp) await pagina.locator('.bv').waitFor({ timeout: 30000 });
+    await espera(900);
+    return { contexto, pagina, escritas };
+  };
+
+  // 1) primeira entrada (novato, sem foto): a página única
+  {
+    const { contexto, pagina, escritas } = await abrir(fx.novato, 'novato');
+    const r = await pagina.evaluate(() => {
+      const d = document.querySelector('.bv');
+      const luzes = [...d.querySelectorAll('.bv-luz')];
+      const cores = luzes.map((l) => getComputedStyle(l).backgroundColor);
+      const caixa = d.getBoundingClientRect();
+      const botoes = [...d.querySelectorAll('button')];
+      return {
+        nome: d.querySelector('.bv-nome')?.textContent?.trim(),
+        frase: d.querySelector('.bv-frase')?.textContent?.trim(),
+        chips: [...d.querySelectorAll('.bv-posicao button')].map((b) => ({ t: b.textContent.trim(), ativo: b.getAttribute('aria-pressed') === 'true' })),
+        botoes: botoes.length,
+        acoes: botoes.filter((b) => b.classList.contains('btn')).map((b) => b.textContent.trim()),
+        fechar: !!d.querySelector('[aria-label="Fechar"]'),
+        luzes: luzes.length,
+        coresDistintas: [...new Set(cores)],
+        alternadas: cores.every((c, i) => i === 0 || c !== cores[i - 1]),
+        animacao: luzes.length ? getComputedStyle(luzes[0]).animationName : null,
+        caixa: { w: Math.round(caixa.width), h: Math.round(caixa.height), cabe: caixa.bottom <= window.innerHeight && caixa.top >= 0 },
+        texto: d.innerText,
+        imgs: [...d.querySelectorAll('img')].length,
+        media: d.querySelectorAll('video,audio,canvas,picture,svg image').length,
+        som: window.__som,
+        midiaNaRede: performance.getEntriesByType('resource').filter((e) => /\.(mp4|webm|gif|lottie|mp3|wav|m4a)(\?|$)/i.test(e.name)).map((e) => e.name),
+      };
+    });
+    verificar('a página abre na 1ª entrada, com o nome do time e a frase da casa', !!r.nome && r.frase === 'Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.', JSON.stringify({ nome: r.nome, frase: r.frase }));
+    verificar('o chip "Jogo na linha / No gol": padrão linha', r.chips.length === 2 && r.chips[0].t === 'Jogo na linha' && r.chips[0].ativo && r.chips[1].t === 'No gol' && !r.chips[1].ativo, JSON.stringify(r.chips));
+    verificar('UM botão só ("Vamos lá") e nenhum "Fechar"/X', r.acoes.length === 1 && r.acoes[0] === 'Vamos lá' && !r.fechar, JSON.stringify({ acoes: r.acoes, fechar: r.fechar }));
+    verificar('os passos velhos saíram (nada de "Próximo →", "Bem-vindo ao…", "Confirme sua presença")', !VELHOS.test(r.texto), r.texto.replace(/\s+/g, ' ').slice(0, 140));
+    verificar('faixa de luzes: 24 bolinhas, roxo/amarelo alternando', r.luzes === 24 && r.coresDistintas.length === 2 && r.alternadas, JSON.stringify({ luzes: r.luzes, cores: r.coresDistintas }));
+    verificar('as luzes piscam em sequência (animação CSS "bv-pisca" rodando)', r.animacao === 'bv-pisca', String(r.animacao));
+    verificar('0 KB de mídia: sem vídeo, áudio, GIF, lottie nem imagem de animação', r.media === 0 && r.midiaNaRede.length === 0, JSON.stringify({ media: r.media, rede: r.midiaNaRede }));
+    verificar('sem som: nenhum Audio/AudioContext criado (não há gesto)', r.som.audio === 0 && r.som.contexto === 0, JSON.stringify(r.som));
+    verificar('a página cabe na tela do iPhone (430×932) sem rolar', r.caixa.cabe, JSON.stringify(r.caixa));
+    await capturar(pagina, '1-primeira-entrada');
+
+    // escolhe "No gol" e toca "Vamos lá": PATCH de posição, marca de visto, CTA da figurinha
+    await pagina.locator('.bv-posicao button', { hasText: 'No gol' }).tap();
+    const ativoDepois = await pagina.locator('.bv-posicao button[aria-pressed="true"]').allInnerTexts();
+    verificar('tocar em "No gol" troca o chip ativo', ativoDepois.length === 1 && ativoDepois[0].trim() === 'No gol', JSON.stringify(ativoDepois));
+    await espera(450); // a troca do chip leva 0,15 s de transição
+    await capturar(pagina, '2-no-gol');
+    await pagina.locator('.bv button.cta-gold').tap();
+    await pagina.locator('.bv').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
+    const patch = escritas.find((e) => e.metodo === 'PATCH' && e.rota === `/api/equipas/${slug}/membros/posicao`);
+    verificar('"Vamos lá" com "No gol" grava o PATCH de posição que já existia ({ goleiro: true })', !!patch && JSON.parse(patch.corpo || '{}').goleiro === true, patch ? `${patch.rota} ${patch.corpo}` : escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
+    verificar('a página fecha', (await pagina.locator('.bv').count()) === 0);
+    const marcas = await pagina.evaluate(() => ({
+      visto: Object.keys(localStorage).filter((k) => k.startsWith('futty_onboarding_')).map((k) => [k, localStorage.getItem(k)]),
+      cta: localStorage.getItem('futty_cta_figurinha'),
+    }));
+    verificar('marca "visto" no mesmo lugar do modal antigo (futty_onboarding_<time>) e liga o CTA da figurinha', marcas.visto.length === 1 && marcas.visto[0][1] === '1' && marcas.cta === '1', JSON.stringify(marcas));
+    await capturar(pagina, '3-depois');
+    // voltar à página do time: não abre de novo
+    await pagina.reload({ waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    await espera(3500);
+    verificar('depois de "visto" a página não volta', (await pagina.locator('.bv').count()) === 0);
+    await contexto.close();
+  }
+
+  // 2) "Vamos lá" sem mexer no chip: nada é gravado (linha já é o padrão)
+  {
+    const { contexto, pagina, escritas } = await abrir(fx.novato, 'novato-linha');
+    await pagina.locator('.bv button.cta-gold').tap();
+    await pagina.locator('.bv').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
+    verificar('"Vamos lá" sem mexer no chip não grava posição (linha é o padrão)', !escritas.some((e) => e.metodo === 'PATCH' && /posicao/.test(e.rota)), escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | ') || 'nenhuma escrita');
+    await contexto.close();
+  }
+
+  // 3) prefers-reduced-motion: as luzes ficam paradas
+  {
+    const { contexto, pagina } = await abrir(fx.novato, 'novato-reduzido', { extra: { reducedMotion: 'reduce' } });
+    const a = await pagina.evaluate(() => { const l = document.querySelectorAll('.bv-luz'); return { n: l.length, animacao: getComputedStyle(l[0]).animationName, opacidades: [...new Set([...l].map((x) => getComputedStyle(x).opacity))] }; });
+    verificar('reduced-motion: as luzes ficam PARADAS (sem animação) e acesas', a.n === 24 && a.animacao === 'none' && a.opacidades.length === 1 && Number(a.opacidades[0]) > 0.5, JSON.stringify(a));
+    await capturar(pagina, '4-reduzido');
+    await contexto.close();
+  }
+
+  // 4) quem já tem foto e visita o time por conta própria: nada de página (só logo depois de aceitar um convite)
+  {
+    const { contexto, pagina } = await abrir(fx.membroFoto, 'membro-foto', { esp: false, espera: false });
+    await espera(4000);
+    verificar('membro com foto, visita comum ao time: a página não abre', (await pagina.locator('.bv').count()) === 0);
+    await contexto.close();
+  }
+
+  // 5) aceitar um convite (POST interceptado) leva ao time COM as boas-vindas, mesmo para quem tem foto
+  {
+    const contexto = await novoContexto(navegador, fx.membroFoto, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await travarEscritas(contexto, (caminho, metodo) => (metodo === 'POST' && caminho.endsWith('/aceitar') ? { team: { slug, nome: 'Prova R29B Grátis' } } : null));
+    await contexto.route('**/api/convite/*', async (route) => {
+      const u = new URL(route.request().url());
+      if (route.request().method() !== 'GET' || u.pathname.endsWith('/aceitar')) return route.fallback();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valido: true, motivo: null, autenticado: true, jaMembro: false, convidadoPor: 'Tonhão', expires_at: new Date(Date.now() + 86400000).toISOString(), usos: 1, membros: 3, proximoJogo: null, cidade: null, team: { nome: 'Prova R29B Grátis', slug, cor: 'verde', logo_url: null, cor_fundo: null } }) });
+    });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`convite: ${e.message}`));
+    await pagina.goto(`${BASE}/convite/token-de-prova`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    await pagina.locator('button.convite__cta', { hasText: 'Entrar no time' }).tap({ timeout: 30000 });
+    await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
+    verificar('aceitar o convite leva ao time e abre as boas-vindas (mesmo com foto)', (await pagina.locator('.bv').count()) === 1 && pagina.url().endsWith(`/equipa/${slug}`), pagina.url().replace(BASE, ''));
+    await capturar(pagina, '5-apos-convite');
+    await contexto.close();
+  }
+
+  // 6) o tour de 3 balões do Início saiu: sem as marcas de "já visto", nada de balão
+  {
+    const contexto = await novoContexto(navegador, fx.novato, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`inicio: ${e.message}`));
+    await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    await espera(6000);
+    const t = await pagina.locator('body').innerText();
+    const marcadores = await pagina.evaluate(() => document.querySelectorAll('[data-tour]').length);
+    verificar('Início sem o tour: nenhum balão ("Este é o seu card…") e nenhum [data-tour] no DOM', !/Este é o seu card|Nunca perca um jogo|Explore o ranking, a resenha/.test(t) && marcadores === 0, JSON.stringify({ marcadores }));
+    await capturar(pagina, '6-inicio-sem-tour');
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };

@@ -22,7 +22,6 @@ import RSVPCard from '../components/RSVPCard';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
-import ProductTour from '../components/ProductTour';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import AdCard from '../components/AdCard';
@@ -221,7 +220,7 @@ function PreviaCromo({ previa, fundo, modo = 'brilhante' }) {
 
 function CromoInicio({ cromo, previa, modoPrevia, fundo, nome, refCromo, destino = '/figurinha', destinoLabel = 'Ver e personalizar minha figurinha' }) {
   return (
-    <Link to={destino} ref={refCromo} data-tour="player-card" className="cromo-inicio" aria-label={destinoLabel}>
+    <Link to={destino} ref={refCromo} className="cromo-inicio" aria-label={destinoLabel}>
       {/* Sombra no chão — contra-fase com o bob: encolhe quando o cromo sobe. */}
       <div
         className="fig-shadow"
@@ -505,11 +504,6 @@ export default function Inicio() {
     localStorage.removeItem('futty_cta_figurinha');
     setCtaFigurinha(false);
   }
-
-  // Onboarding (product tour) — só na primeira vez. O "já vi" definitivo vive no
-  // USER (server, via /api/me → tour_inicio_visto); o localStorage é só um atalho
-  // local. Assim o tour NÃO reaparece noutro dispositivo nem ao limpar o localStorage.
-  const [tourDoneLocal, setTourDone] = useState(() => !!localStorage.getItem('futty_tour_done'));
 
   // "Ver sorteio": a cerimónia corre na PÁGINA do sorteio (SPEC-SORTEIO §13d).
   function verSorteio(game) {
@@ -1275,7 +1269,7 @@ export default function Inicio() {
             </div>
 
             {/* Jogos */}
-            <div data-tour="jogos-section">
+            <div>
               <div className="games-label">Próximos Jogos</div>
             {rsvpAbertoNoProximo ? (
               <RSVPCard gameId={nextId} prazo={rsvpInfo.rsvp_prazo} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
@@ -1327,7 +1321,7 @@ export default function Inicio() {
             {/* Achado 8: jogos já encerrados saem do "Próximos Jogos" e ficam aqui,
                 no máximo 3, mais recente primeiro. */}
             {!loadingGames && ultimosJogos.length > 0 ? (
-              <div style={{ marginTop: 16 }} data-tour="ultimos-jogos-section">
+              <div style={{ marginTop: 16 }}>
                 <div className="games-label">Últimos Jogos</div>
                 {ultimosJogos.map((g) => (
                   <GameCard key={g.id} game={g} busy={false} isNext={false} onPresence={onPresence} onVerSorteio={verSorteio} />
@@ -1395,18 +1389,6 @@ export default function Inicio() {
         escolhaActual={avatarGenericoEscolha}
         onEscolher={escolherAvatarGenerico}
       />
-
-      {/* Onboarding (primeira visita) — só se NEM o server NEM o local o dão como visto. */}
-      {!tourDoneLocal && user && !user.tour_inicio_visto && (
-        <ProductTour
-          onDone={() => {
-            localStorage.setItem('futty_tour_done', '1');
-            setTourDone(true);
-            // Persiste no user (server) — não volta a aparecer noutro dispositivo.
-            apiFetch('/api/me/tour-visto', { method: 'POST' }).catch(() => {});
-          }}
-        />
-      )}
     </div>
   );
 }
