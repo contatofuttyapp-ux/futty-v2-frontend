@@ -11,6 +11,8 @@ import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import { avisoLogoRecusado, motivoDoLogo } from '../utils/logoTime';
 import { copiarTexto } from '../utils/clipboard';
+import CampoCidadeLazy from '../components/CampoCidadeLazy';
+import { avisoDaCidade } from '../utils/cidades';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -72,6 +74,9 @@ export default function CriarEquipa() {
   const [passo, setPasso] = useState(1);
   const [nome, setNome] = useState('');
   const [cidade, setCidade] = useState('');
+  // Rodada 29B (D): a escolha da lista ({ cidade, uf, pais, lat, lng, origem: 'lista' }) — null enquanto a pessoa digita.
+  const [cidadeEscolha, setCidadeEscolha] = useState(null);
+  const [avisoCidade, setAvisoCidade] = useState(null); // depois de criar: { tipo: 'ok' | 'aviso', texto } sobre a cidade
   const [mostrarGols, setMostrarGols] = useState(true);
   const [modo, setModo] = useState('privado'); // privado | publico_aprovacao | publico_aberto
   const [team, setTeam] = useState(null); // criada no fim do passo 3
@@ -126,8 +131,10 @@ export default function CriarEquipa() {
       // Sem cor no body: o backend cai para o fallback interno ('verde'); muda-se
       // depois nas definições do admin (decisão: cor despromovida, SPEC-EQUIPAS).
       const bodyCriar = { nome: nome.trim() };
-      if (cidade.trim()) bodyCriar.cidade = cidade.trim();
-      const { team: t } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
+      // Cidade da lista: manda o pacote todo (o motor guarda a coordenada da lista, sem Nominatim). Digitada: só o texto.
+      if (cidade.trim()) Object.assign(bodyCriar, cidadeEscolha || { cidade: cidade.trim() });
+      const { team: t, geo } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
+      setAvisoCidade(avisoDaCidade(geo, cidade.trim()));
       // P2-12: a equipa já existe aqui. Se o PATCH das definições falhar, NÃO
       // dizer "erro a criar" — a equipa nasceu; segue-se para convites e avisa-se
       // que a definição ficou por aplicar (ajusta-se no admin).
@@ -200,7 +207,7 @@ export default function CriarEquipa() {
             <Lbl>Nome do time</Lbl>
             <input className="input input--hud" value={nome} maxLength={40} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 16 }} />
             <Lbl>Cidade</Lbl>
-            <input className="input input--hud" value={cidade} maxLength={100} onChange={(e) => setCidade(e.target.value)} placeholder="Ex: Brasília" style={{ width: '100%', fontFamily: RAJ, fontSize: 16 }} />
+            <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); }} placeholder="Ex: Brasília" />
             <p className="texto-apoio">
               É assim que jogadores perto de você encontram o time. Só a cidade, nunca o endereço.
             </p>
@@ -289,6 +296,15 @@ export default function CriarEquipa() {
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Chame o seu time</h1>
             <p className="texto-apoio" style={{ marginBottom: 14 }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. O link é válido 7 dias. Você pode pular este passo.</p>
+            {avisoCidade ? (
+              avisoCidade.tipo === 'ok' ? (
+                <p className="texto-apoio" data-aviso-cidade="ok" style={{ marginTop: 0, marginBottom: 14 }}>{avisoCidade.texto}</p>
+              ) : (
+                <div role="status" data-aviso-cidade="aviso" className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
+                  {avisoCidade.texto}
+                </div>
+              )
+            ) : null}
             {avisoLogo ? (
               <div role="status" className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
                 {avisoLogo}

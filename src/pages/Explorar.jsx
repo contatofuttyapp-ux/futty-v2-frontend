@@ -12,6 +12,8 @@ import Topbar from '../components/Topbar';
 import EscudoEquipa from '../components/EscudoEquipa';
 import Toast from '../components/Toast';
 import { plural } from '../utils/plural';
+import CampoCidadeLazy from '../components/CampoCidadeLazy';
+import { timeCasaPorCidade } from '../utils/cidades';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -43,6 +45,8 @@ export default function Explorar() {
   const [loading, setLoading] = useState(true);
   const [pesquisa, setPesquisa] = useState('');
   const [geoPedida, setGeoPedida] = useState(false);
+  const [zona, setZona] = useState(''); // Rodada 29B (D): a cidade da pessoa, escolhida na lista (ou digitada)
+  const [zonaEscolhida, setZonaEscolhida] = useState(false);
   const [posUser, setPosUser] = useState(null); // {lat,lng} SÓ em memória — nunca enviada/guardada
   const [raio, setRaio] = useState(null); // km (null = sem filtro de distância)
   const [busy, setBusy] = useState(null); // slug em processamento
@@ -67,10 +71,13 @@ export default function Explorar() {
     };
   }, []);
 
+  // Rodada 29B (D): time SEM coordenada (a cidade dele nenhuma lista nem o Nominatim achou) aparece para quem escreve
+  // a cidade EXATAMENTE — sem acento, maiúscula nem espaço sobrando (mesma regra do motor).
   const filtradasTexto = equipas.filter(
     (e) =>
       e.nome.toLowerCase().includes(pesquisa.toLowerCase()) ||
-      (e.localizacao || '').toLowerCase().includes(pesquisa.toLowerCase())
+      (e.localizacao || '').toLowerCase().includes(pesquisa.toLowerCase()) ||
+      timeCasaPorCidade(e, pesquisa)
   );
   // Camada de distância (client-side): só entra se houver posição do utilizador + raio.
   // Equipas sem geo ficam de FORA da busca por distância, mas visíveis no modo normal.
@@ -105,8 +112,8 @@ export default function Explorar() {
   // Alternativa: a cidade do UTILIZADOR, geocodificada NO BROWSER (não passa pelo nosso
   // servidor). A posição resultante fica só em memória.
   async function usarCidade() {
-    const cidade = pesquisa.trim();
-    if (!cidade) { setToast({ tipo: 'info', mensagem: 'Escreva sua cidade na busca acima.' }); return; }
+    const cidade = zona.trim();
+    if (!cidade) { setToast({ tipo: 'info', mensagem: 'Escreva sua cidade no campo acima.' }); return; }
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cidade)}`, { headers: { Accept: 'application/json' } });
       const arr = await r.json();
@@ -176,11 +183,31 @@ export default function Explorar() {
           </span>
         </button>
 
-        {/* Alternativa à permissão do browser: usar a cidade escrita (geocodificada NO
-            browser, nunca no nosso servidor). */}
-        <button type="button" onClick={usarCidade} style={{ width: '100%', marginTop: 8, padding: '9px 12px', border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', clipPath: CLIP_S, color: '#c9c2d6', fontFamily: RAJ, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em' }}>
-          …ou usar a cidade escrita acima como minha zona
-        </button>
+        {/* Alternativa à permissão do browser: a MINHA cidade (Rodada 29B, D). Da lista (Brasil e Portugal) o ponto vem
+            da própria lista, na hora, sem chamada externa; fora dela o botão abaixo a geocodifica NO browser (nunca no
+            nosso servidor). A posição resultante fica só em memória. */}
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontFamily: RAJ, fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: '#c9c2d6', marginBottom: 6 }}>…ou escolha sua cidade</div>
+          <CampoCidadeLazy
+            valor={zona}
+            aoMudar={(texto, escolha) => {
+              setZona(texto);
+              setZonaEscolhida(!!escolha);
+              if (escolha) {
+                setPosUser({ lat: escolha.lat, lng: escolha.lng });
+                setGeoPedida(true);
+                if (!raio) setRaio(10);
+                setToast({ tipo: 'success', mensagem: `Sua zona: ${texto}` });
+              }
+            }}
+            placeholder="Sua cidade (Brasil ou Portugal)"
+          />
+          {zona.trim() && !zonaEscolhida ? (
+            <button type="button" onClick={usarCidade} style={{ width: '100%', marginTop: 8, padding: '9px 12px', border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', clipPath: CLIP_S, color: '#c9c2d6', fontFamily: RAJ, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em' }}>
+              Não está na lista? Usar "{zona.trim()}" como minha zona
+            </button>
+          ) : null}
+        </div>
 
         {/* Raio real — só aparece quando há posição (do browser ou da cidade). */}
         {posUser ? (

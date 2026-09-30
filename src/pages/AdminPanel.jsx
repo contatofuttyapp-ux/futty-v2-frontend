@@ -21,6 +21,8 @@ import NumberStepper from '../components/NumberStepper';
 import RegistarJornada from '../components/RegistarJornada';
 import { nomeCampeao } from '../utils/campeonato';
 import { celebrarCerveja } from '../hooks/useConfetti';
+import CampoCidadeLazy from '../components/CampoCidadeLazy';
+import { avisoDaCidade } from '../utils/cidades';
 import '../styles/app.css';
 
 // Opções de cor de fundo do avatar da equipa (sem logo) e de visibilidade.
@@ -637,6 +639,11 @@ function TabEquipa({ slug, team, showToast }) {
   const [cor, setCor] = useState(team.cor || 'verde');
   const [localizacao, setLocalizacao] = useState(team.localizacao || '');
   const [cidade, setCidade] = useState(team.cidade || '');
+  // Rodada 29B (D): escolha da lista (null enquanto digita), o último texto GUARDADO (só se manda a cidade quando mudou)
+  // e o que o motor disse da cidade depois de salvar ({ tipo: 'ok' | 'aviso', texto }).
+  const [cidadeEscolha, setCidadeEscolha] = useState(null);
+  const [cidadeGuardada, setCidadeGuardada] = useState(team.cidade || '');
+  const [avisoCidade, setAvisoCidade] = useState(null);
   const [descricao, setDescricao] = useState(team.descricao || '');
   const [logoUrl, setLogoUrl] = useState(team.logo_url || null);
   const [previewLogo, setPreviewLogo] = useState(null);
@@ -718,11 +725,19 @@ function TabEquipa({ slug, team, showToast }) {
     if (saving) return;
     setSaving(true);
     try {
-      // cidade só vai no corpo se foi ESCRITA (senão preservava-se '' e apagava a geo
-      // sem querer — o texto não se guarda, só o ponto arredondado).
-      // cidade guarda-se e round-trips; enviar sempre (vazio = sair da busca por distância).
-      const corpo = { nome: nome.trim(), cor, localizacao: localizacao.trim(), cidade: cidade.trim(), descricao: descricao.trim() };
-      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify(corpo) });
+      // Rodada 29B (D): a cidade só vai no corpo quando MUDOU (antes ia a cada "Salvar" e geocodificava de novo).
+      // Da lista: o pacote todo (o motor usa a coordenada da lista); digitada: só o texto; vazia: sai da busca.
+      const corpo = { nome: nome.trim(), cor, localizacao: localizacao.trim(), descricao: descricao.trim() };
+      const mudouCidade = cidade.trim() !== cidadeGuardada.trim();
+      if (mudouCidade) Object.assign(corpo, cidade.trim() ? (cidadeEscolha || { cidade: cidade.trim() }) : { cidade: '' });
+      const r = await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify(corpo) });
+      if (mudouCidade) {
+        setAvisoCidade(avisoDaCidade(r?.geo, cidade.trim()));
+        const guardada = r?.team?.cidade ?? cidade.trim();
+        setCidade(guardada || '');
+        setCidadeGuardada(guardada || '');
+        setCidadeEscolha(null);
+      }
       showToast('Time atualizado!');
     } catch (e) {
       showToast(e.message, 'error');
@@ -764,13 +779,16 @@ function TabEquipa({ slug, team, showToast }) {
 
       {/* GEO — opt-in implícito (preencher = consentir). Texto obrigatório junto ao campo.
           O nome da cidade é guardado + mostrado; do ponto guarda-se só o arredondado. */}
-      <label style={{ display: 'grid', gap: 6 }}>
+      <div style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Cidade <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· busca por proximidade</span></span>
-        <input value={cidade} onChange={(e) => setCidade(e.target.value.slice(0, 100))} placeholder="Ex: Brasília" style={inputStyle} />
+        <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setAvisoCidade(null); }} placeholder="Ex: Brasília" className="" style={inputStyle} />
+        {avisoCidade ? (
+          <span role="status" data-aviso-cidade={avisoCidade.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: avisoCidade.tipo === 'ok' ? '#7bd88f' : '#f0c94a' }}>{avisoCidade.texto}</span>
+        ) : null}
         <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>
           Aparece na busca por proximidade. O endereço exato nunca é mostrado, só a zona aproximada. Apague para sair da busca por distância.
         </span>
-      </label>
+      </div>
 
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Descrição</span>

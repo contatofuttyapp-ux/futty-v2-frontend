@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3962,6 +3962,17 @@ try {
     const r = await cenaRodada29bBoasVindas(navegador);
     saida.rodada29bBoasVindas = r;
     console.log('\n[iphone] RODADA 29B (C) — boas-vindas do time: uma página, um botão (servidor local; contas de prova; escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29b-cidades')) {
+    const r = await cenaRodada29bCidades(navegador);
+    saida.rodada29bCidades = r;
+    console.log('\n[iphone] RODADA 29B (D) — cidade com sugestão: criar time, painel do time e Explorar (servidor local; escritas e Nominatim interceptados)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7267,6 +7278,223 @@ async function cenaRodada29bBoasVindas(navegador) {
     const marcadores = await pagina.evaluate(() => document.querySelectorAll('[data-tour]').length);
     verificar('Início sem o tour: nenhum balão ("Este é o seu card…") e nenhum [data-tour] no DOM', !/Este é o seu card|Nunca perca um jogo|Explore o ranking, a resenha/.test(t) && marcadores === 0, JSON.stringify({ marcadores }));
     await capturar(pagina, '6-inicio-sem-tour');
+    await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29b-cidades" (30-set): o campo "Cidade" com sugestão — criar time, painel do time e Explorar
+// (Rodada 29B, parte D). Contas de prova (scripts/_bench/prova-rodada29b.js): `gratis` é dono do time prova-r29b-gratis.
+// Toda escrita à /api é interceptada (o POST/PATCH da cidade é respondido aqui, como o motor responderia) e o Nominatim
+// do navegador também. A lista vem de public/dados/cidades.json, servida pelo servidor local. Só servidor LOCAL.
+async function cenaRodada29bCidades(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29b-cidades só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29b');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const slug = fx.times.gratis.slug;
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `cidades-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const corpoJson = (e) => { try { return JSON.parse(e?.corpo || 'null'); } catch { return null; } };
+
+  // Abre uma tela com as escritas travadas, o Nominatim do navegador falso e contadores de rede.
+  const abrir = async (rota, { extra = () => null, rotas = [], espere }, rotulo) => {
+    const contexto = await novoContexto(navegador, fx.gratis, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    const escritas = await travarEscritas(contexto, extra);
+    const nominatim = [];
+    await contexto.route('https://nominatim.openstreetmap.org/**', (route) => {
+      nominatim.push(route.request().url());
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify([{ lat: '35.0116', lon: '135.7681' }]) });
+    });
+    for (const [padrao, resposta] of rotas) await contexto.route(padrao, (route) => (route.request().method() === 'GET' ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(resposta) }) : route.fallback()));
+    const listaBaixada = [];
+    const pagina = await contexto.newPage();
+    pagina.on('request', (r) => { if (r.url().includes('/dados/cidades.json')) listaBaixada.push(r.url()); });
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    await espere(pagina);
+    await espera(700);
+    return { contexto, pagina, escritas, nominatim, listaBaixada };
+  };
+  const sugestoes = (pagina) => pagina.locator('[data-sugestoes-cidade] button');
+  const textos = async (pagina) => (await sugestoes(pagina).allInnerTexts()).map((t) => t.trim());
+  const escolher = async (pagina, digitado, rotuloEsperado) => {
+    const campo = pagina.locator('input[role="combobox"]').first();
+    await campo.tap();
+    await campo.fill(digitado);
+    await sugestoes(pagina).first().waitFor({ timeout: 15000 });
+    const lista = await textos(pagina);
+    await sugestoes(pagina).filter({ hasText: new RegExp(`^${rotuloEsperado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).first().tap();
+    await espera(500);
+    return { lista, valor: await campo.inputValue() };
+  };
+  const criarAteOFim = async (pagina, nome) => {
+    await pagina.locator('input[placeholder^="ex.:"]').fill(nome);
+    return pagina;
+  };
+  const seguirCriacao = async (pagina) => {
+    await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
+    await espera(500);
+    await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
+    await espera(500);
+    await pagina.locator('button', { hasText: /Criar o time/i }).first().tap();
+    await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
+    await espera(400);
+  };
+  const respostaDoPost = (geo) => (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' }, ...(geo ? { geo } : {}) } : null);
+  const esperarCriar = (pagina) => pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
+
+  // 1) criar time — cidade DA LISTA: manda o pacote todo, e "Encontramos: …" no fim
+  {
+    const { contexto, pagina, escritas, nominatim, listaBaixada } = await abrir('/criar-equipa', { extra: respostaDoPost({ encontrada: true, nomeOficial: 'São Paulo, SP' }), espere: esperarCriar }, 'criar-lista');
+    verificar('a lista NÃO é buscada ao abrir a tela (só quando o campo ganha foco)', listaBaixada.length === 0, `${listaBaixada.length} pedido(s)`);
+    await criarAteOFim(pagina, 'Time da Lista');
+    const r = await escolher(pagina, 'SAO pau', 'São Paulo, SP');
+    verificar('ao focar o campo a lista é buscada, uma vez', listaBaixada.length === 1, `${listaBaixada.length} pedido(s)`);
+    verificar('"SAO pau" (sem acento, maiúscula) sugere "São Paulo, SP", com no máximo 8 sugestões', r.lista.includes('São Paulo, SP') && r.lista.length <= 8, r.lista.join(' | '));
+    verificar('escolher preenche o campo com "São Paulo, SP" e fecha a lista', r.valor === 'São Paulo, SP' && (await sugestoes(pagina).count()) === 0, r.valor);
+    await capturar(pagina, '1-criar-escolhida');
+    await seguirCriacao(pagina);
+    const post = corpoJson(escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/teams'));
+    verificar('o POST leva { cidade, uf, pais, lat, lng, origem: "lista" } (o motor usa a coordenada da lista)', post && post.cidade === 'São Paulo' && post.uf === 'SP' && post.pais === 'BR' && post.origem === 'lista' && Number.isFinite(post.lat) && Number.isFinite(post.lng) && post.lat < -23 && post.lat > -24, JSON.stringify(post));
+    verificar('nenhuma chamada ao Nominatim (a cidade da lista é instantânea)', nominatim.length === 0, String(nominatim.length));
+    const t = await pagina.locator('body').innerText();
+    verificar('passo 4 diz "Encontramos: São Paulo, SP"', t.includes('Encontramos: São Paulo, SP'), (t.match(/Encontramos[^\n]*/) || ['sem aviso'])[0]);
+    await capturar(pagina, '2-criar-encontramos');
+    await contexto.close();
+  }
+
+  // 2) criar time — cidade FORA da lista, o motor não acha: o texto fica e a tela avisa
+  {
+    const { contexto, pagina, escritas, listaBaixada } = await abrir('/criar-equipa', { extra: respostaDoPost({ encontrada: false }), espere: esperarCriar }, 'criar-nao-achou');
+    await criarAteOFim(pagina, 'Time Perdido');
+    const campo = pagina.locator('input[role="combobox"]').first();
+    await campo.tap();
+    await campo.fill('Vila Xyzzy');
+    await espera(900);
+    verificar('texto fora da lista: nenhuma sugestão aparece', (await sugestoes(pagina).count()) === 0 && listaBaixada.length === 1);
+    await seguirCriacao(pagina);
+    const post = corpoJson(escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/teams'));
+    verificar('o POST leva só o texto digitado (sem origem, sem coordenada): o motor tenta o Nominatim', post && post.cidade === 'Vila Xyzzy' && !('origem' in post) && !('lat' in post), JSON.stringify(post));
+    const aviso = await pagina.locator('[data-aviso-cidade="aviso"]').innerText().catch(() => '');
+    verificar('passo 4: "Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente \'Vila Xyzzy\'."', aviso.trim() === "Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente 'Vila Xyzzy'.", aviso.trim());
+    await capturar(pagina, '3-criar-nao-achou');
+    await contexto.close();
+  }
+
+  // 3) criar time — fora da lista, o Nominatim acha: "Encontramos: <nome oficial>"
+  {
+    const { contexto, pagina } = await abrir('/criar-equipa', { extra: respostaDoPost({ encontrada: true, nomeOficial: 'Kyoto, Kyoto Prefecture' }), espere: esperarCriar }, 'criar-nominatim');
+    await criarAteOFim(pagina, 'Time de Kyoto');
+    const campo = pagina.locator('input[role="combobox"]').first();
+    await campo.tap();
+    await campo.fill('Kyoto');
+    await espera(500);
+    await seguirCriacao(pagina);
+    const t = await pagina.locator('body').innerText();
+    verificar('fora da lista, achada pelo Nominatim: "Encontramos: Kyoto, Kyoto Prefecture"', t.includes('Encontramos: Kyoto, Kyoto Prefecture'));
+    await contexto.close();
+  }
+
+  // 4) painel do time (config): a cidade só vai quando MUDOU; da lista manda o pacote; o aviso aparece no campo
+  {
+    const patches = []; // o registro do travarEscritas trunca o corpo em 200 caracteres; aqui vai inteiro
+    const extra = (rota, metodo, corpo) => {
+      if (metodo !== 'PATCH' || rota !== `/api/teams/${slug}`) return null;
+      let c = {}; try { c = JSON.parse(corpo || '{}'); } catch { /* nada */ }
+      patches.push(c);
+      if (c.origem === 'lista') return { team: { cidade: `${c.cidade}, ${c.uf}` }, geo: { encontrada: true, nomeOficial: `${c.cidade}, ${c.uf}` } };
+      if (c.cidade === 'Vila Xyzzy') return { team: { cidade: 'Vila Xyzzy' }, geo: { encontrada: false } };
+      return { team: {} };
+    };
+    const { contexto, pagina } = await abrir(`/admin/${slug}?tab=equipa`, { extra, espere: (p) => p.locator('input[role="combobox"]').first().waitFor({ timeout: 30000 }) }, 'painel');
+    const campo = pagina.locator('input[role="combobox"]').first();
+    verificar('painel: o campo abre com a cidade guardada ("Brasília")', (await campo.inputValue()) === 'Brasília');
+    await pagina.getByRole('button', { name: /^Salvar$/ }).first().tap();
+    await espera(1200);
+    const sem = patches[patches.length - 1];
+    verificar('painel: salvar sem mexer na cidade NÃO manda a cidade (nada de geocodificar de novo)', sem && !('cidade' in sem) && !('lat' in sem), JSON.stringify(sem));
+    const r = await escolher(pagina, 'belo hor', 'Belo Horizonte, MG');
+    verificar('painel: "belo hor" sugere "Belo Horizonte, MG"', r.lista.includes('Belo Horizonte, MG'), r.lista.join(' | '));
+    await pagina.getByRole('button', { name: /^Salvar$/ }).first().tap();
+    await pagina.locator('[data-aviso-cidade="ok"]').waitFor({ timeout: 10000 }).catch(() => {});
+    const patch = patches[patches.length - 1];
+    verificar('painel: o PATCH leva a escolha da lista (origem "lista", coordenada da lista)', patch && patch.cidade === 'Belo Horizonte' && patch.uf === 'MG' && patch.origem === 'lista' && Number.isFinite(patch.lat), JSON.stringify(patch));
+    const ok = await pagina.locator('[data-aviso-cidade="ok"]').innerText().catch(() => '');
+    verificar('painel: "Encontramos: Belo Horizonte, MG" debaixo do campo', ok.trim() === 'Encontramos: Belo Horizonte, MG', ok.trim());
+    await capturar(pagina, '4-painel-encontramos');
+    await campo.fill('Vila Xyzzy');
+    await pagina.getByRole('button', { name: /^Salvar$/ }).first().tap();
+    await pagina.locator('[data-aviso-cidade="aviso"]').waitFor({ timeout: 10000 }).catch(() => {});
+    const av = await pagina.locator('[data-aviso-cidade="aviso"]').innerText().catch(() => '');
+    verificar('painel: cidade que ninguém acha → o aviso de que o time só aparece para quem escrever exatamente', av.trim() === "Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente 'Vila Xyzzy'.", av.trim());
+    await capturar(pagina, '5-painel-nao-achou');
+    await contexto.close();
+  }
+
+  // 5) Explorar: a minha cidade da lista vira a zona na hora (sem Nominatim); time sem ponto casa por texto exato
+  {
+    const times = [
+      { id: 'a', nome: 'Alfa FC', slug: 'alfa-fc', cor: 'azul', cidade: 'Lisboa, Portugal', cidade_normalizada: 'lisboa', geo_lat: 38.72, geo_lng: -9.14, membro_count: 12, modo_visibilidade: 'publico_aberto', ja_membro: false, pedido_pendente: false },
+      { id: 'b', nome: 'Planalto United', slug: 'planalto-united', cor: 'verde', cidade: 'Brasília', cidade_normalizada: 'brasilia', geo_lat: null, geo_lng: null, membro_count: 9, modo_visibilidade: 'publico_aberto', ja_membro: false, pedido_pendente: false },
+      { id: 'c', nome: 'Gion Kickers', slug: 'gion-kickers', cor: 'vermelho', cidade: 'Kyoto', cidade_normalizada: 'kyoto', geo_lat: null, geo_lng: null, membro_count: 5, modo_visibilidade: 'publico_aprovacao', ja_membro: false, pedido_pendente: false },
+    ];
+    const visiveis = (p) => p.locator('main').innerText().then((t) => ['Alfa FC', 'Planalto United', 'Gion Kickers'].filter((n) => t.includes(n)));
+    const esperarLista = (p) => p.getByText('Times abertos').first().waitFor({ timeout: 30000 });
+    const { contexto, pagina, nominatim, listaBaixada } = await abrir('/explorar', { rotas: [['**/api/teams/explorar', { teams: times }]], espere: esperarLista }, 'explorar');
+    await pagina.getByText('Alfa FC').first().waitFor({ timeout: 20000 });
+    verificar('Explorar: os 3 times aparecem sem busca', (await visiveis(pagina)).length === 3);
+    verificar('Explorar: a lista de cidades não é buscada ao abrir a tela', listaBaixada.length === 0);
+
+    // busca por texto: só o time SEM ponto casa pela cidade, e só se for exatamente igual
+    const busca = pagina.locator('input[placeholder^="Cidade ou nome"]');
+    await busca.fill('BRASILIA');
+    await espera(400);
+    verificar('busca "BRASILIA": o time sem ponto da cidade "Brasília" aparece (e só ele)', JSON.stringify(await visiveis(pagina)) === JSON.stringify(['Planalto United']), JSON.stringify(await visiveis(pagina)));
+    await capturar(pagina, '6-explorar-busca-texto');
+    await busca.fill('brasil');
+    await espera(400);
+    verificar('busca "brasil" (pedaço): ninguém casa — "exatamente"', (await visiveis(pagina)).length === 0);
+    await busca.fill('  Kyoto ');
+    await espera(400);
+    verificar('busca "  Kyoto " (espaços): o time sem ponto de Kyoto aparece', JSON.stringify(await visiveis(pagina)) === JSON.stringify(['Gion Kickers']), JSON.stringify(await visiveis(pagina)));
+    await busca.fill('lisboa');
+    await espera(400);
+    verificar('busca "lisboa": o time COM ponto não casa por texto da cidade (a distância é que manda)', (await visiveis(pagina)).length === 0, JSON.stringify(await visiveis(pagina)));
+    await busca.fill('');
+    await espera(300);
+
+    // minha cidade, da lista: a zona vale na hora
+    const r = await escolher(pagina, 'lisb', 'Lisboa, Portugal');
+    verificar('Explorar: "lisb" sugere "Lisboa, Portugal" (a lista foi buscada uma vez, no foco)', r.lista.includes('Lisboa, Portugal') && listaBaixada.length === 1, `${r.lista.join(' | ')} · ${listaBaixada.length} pedido(s)`);
+    await espera(600);
+    const t = await pagina.locator('body').innerText();
+    verificar('Explorar: escolher a cidade da lista liga a zona (toast "Sua zona: Lisboa, Portugal" + raio de busca)', /Raio de busca/i.test(t) && t.includes('Sua zona: Lisboa, Portugal'), (t.match(/Sua zona[^\n]*/) || ['sem toast'])[0]);
+    verificar('Explorar: sem chamada ao Nominatim (o ponto veio da lista)', nominatim.length === 0, String(nominatim.length));
+    const dist = await pagina.locator('main').innerText();
+    verificar('Explorar: com a zona em Lisboa só o time com ponto perto fica (Alfa FC, "a N km"); os sem ponto saem da busca por distância', dist.includes('Alfa FC') && !dist.includes('Planalto United') && !dist.includes('Gion Kickers') && /a (<1|\d+) km/.test(dist), (dist.match(/a (<1|\d+) km/) || ['sem distância'])[0]);
+    await capturar(pagina, '7-explorar-zona-lisboa');
+
+    // cidade que não está na lista: o botão usa o Nominatim do navegador (como antes)
+    const campo = pagina.locator('input[role="combobox"]').first();
+    await campo.fill('Kyoto');
+    await espera(500);
+    const botao = pagina.getByRole('button', { name: /Não está na lista\? Usar "Kyoto" como minha zona/ });
+    verificar('Explorar: texto fora da lista oferece "Não está na lista? Usar \\"Kyoto\\" como minha zona"', (await botao.count()) === 1);
+    await botao.tap();
+    await espera(1200);
+    verificar('Explorar: esse botão chama o Nominatim UMA vez (fora da lista, como antes)', nominatim.length === 1, String(nominatim.length));
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };

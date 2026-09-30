@@ -16,7 +16,7 @@ import { existsSync, rmSync, statSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DIST = new URL('../dist/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const REMOVER = ['avatares', 'sorteio-assets', 'sons'];
+const REMOVER = ['avatares', 'sorteio-assets', 'sons', 'dados'];
 
 function tamanho(dir) {
   let total = 0;

@@ -20,12 +20,12 @@ const CORES_VALIDAS = ['verde', 'azul', 'vermelho', 'preto'];
 // e os fundos que entram em canvas. O resto da mídia é buscado da web na hora e
 // fica em cache no aparelho (Cache-Control immutable — ver public/_headers).
 //
-// Só estas três pastas. As imagens de fundo da figurinha (stadium_bg,
+// Só estas pastas (Rodada 29B, D: + /dados/, a lista de cidades do campo "Cidade", ~230 KB). As imagens de fundo da figurinha (stadium_bg,
 // futty-logo-flat, as chapas) continuam DENTRO do app de propósito: elas entram
 // em canvas com crossOrigin desligado, e servi-las de outra origem contaminaria
 // o canvas — o toBlob() passaria a lançar e o download da figurinha morria.
 // São 457 KB; não vale o risco.
-const PASTAS_REMOTAS = ['/avatares/', '/sorteio-assets/', '/sons/'];
+const PASTAS_REMOTAS = ['/avatares/', '/sorteio-assets/', '/sons/', '/dados/'];
 
 // Base da mídia no nativo. Na web fica vazio: mesma origem, como sempre foi.
 function baseAssets() {
