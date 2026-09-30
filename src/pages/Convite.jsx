@@ -1,10 +1,11 @@
 // Futty v2.0 — Página de convite: aceitar entrada numa equipa
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { apiFetch, assetUrl } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import FuttyLogo from '../components/FuttyLogo';
 import { colorOf, initials } from '../utils/teamColors';
+import { urlImagem } from '../utils/avatar';
 import '../styles/app.css';
 
 const MOTIVOS = {
@@ -153,11 +154,15 @@ export default function Convite() {
               <div
                 style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '8px 0 24px' }}
               >
+                {/* Rodada 29A (item 1/11): o motor agora manda `logo_url` e `cor_fundo`. Com logo, ele toma o lugar das
+                    iniciais; sem logo, tudo como era. (O redesenho da página fica para a 29B.) */}
                 <div
                   className="team-avatar team-avatar--lg"
-                  style={{ background: c.hex, color: c.text }}
+                  style={team?.logo_url ? { background: team.cor_fundo || '#1a1a2e', overflow: 'hidden' } : { background: c.hex, color: c.text }}
                 >
-                  {initials(team?.nome)}
+                  {team?.logo_url ? (
+                    <img src={urlImagem(assetUrl(team.logo_url), 256)} alt={`Logo do ${team.nome}`} decoding="async" style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover' }} />
+                  ) : initials(team?.nome)}
                 </div>
                 <div className="team-card__name" style={{ fontSize: 20 }}>
                   {team?.nome}

@@ -3266,7 +3266,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29a-convite'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3928,6 +3928,17 @@ try {
     const r = await cenaRodada29aLogo(navegador, sessao);
     saida.rodada29aLogo = r;
     console.log('\n[iphone] RODADA 29A (H) — logo do time na criação (servidor local; POSTs interceptados)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29a-convite')) {
+    const r = await cenaRodada29aConvite(navegador);
+    saida.rodada29aConvite = r;
+    console.log('\n[iphone] RODADA 29A (I) — a página do convite mostra o logo do time (servidor local; resposta do convite fabricada)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -6714,6 +6725,74 @@ async function cenaRodada29aLogo(navegador, sessao) {
     await ate4(pagina);
     verificar('sem logo: nenhum envio de logo', enviosLogo.length === 0, String(enviosLogo.length));
     verificar('sem logo: nenhum aviso de logo no passo 4', !/Logo não aceito|Logo do time enviado/.test(await corpo(pagina)));
+    await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29a-convite" (30-set): a página do convite mostra o logo do time (Rodada 29A, parte I). ────
+// GET /api/convite/:token é respondido aqui (nenhum convite real é tocado). Com `logo_url` o logo toma o lugar das
+// iniciais; sem logo, as iniciais de sempre. O desenho novo da página fica para a 29B.
+async function cenaRodada29aConvite(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29a-convite só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29a');
+  mkdirSync(pasta, { recursive: true });
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const logo = pngSolido(256, 256, [212, 160, 23]);
+
+  const abrir = async (time, nome) => {
+    const contexto = await novoContexto(navegador, null, { amostrar: false });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    await travarEscritas(contexto);
+    await contexto.route('https://logo.invalid/**', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: logo }));
+    await contexto.route('**/api/convite/*', async (route) => {
+      const u = new URL(route.request().url());
+      if (route.request().method() !== 'GET' || u.pathname.endsWith('/aceitar')) return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ valido: true, motivo: null, autenticado: false, jaMembro: false, convidadoPor: 'Tonhão', expires_at: new Date(Date.now() + 86400000).toISOString(), usos: 3, team: time }),
+      });
+    });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${nome}: ${e.message}`));
+    await pagina.goto(`${BASE}/convite/token-de-prova`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
+    await pagina.getByText('Várzea FC').first().waitFor({ timeout: 20000 });
+    await espera(800);
+    return { contexto, pagina };
+  };
+
+  {
+    const { contexto, pagina } = await abrir({ nome: 'Várzea FC', slug: 'varzea-fc', cor: 'azul', logo_url: 'https://logo.invalid/logo.png', cor_fundo: '#1a1a2e' }, 'com-logo');
+    const r = await pagina.evaluate(() => {
+      const caixa = document.querySelector('.team-avatar--lg');
+      const img = caixa?.querySelector('img');
+      return { temImg: !!img, carregou: !!img && img.complete && img.naturalWidth > 0, alt: img?.alt || null, textoNaCaixa: (caixa?.textContent || '').trim(), larg: caixa ? Math.round(caixa.getBoundingClientRect().width) : null };
+    });
+    verificar('com logo: a caixa mostra a IMAGEM do logo', r.temImg && r.carregou, JSON.stringify(r));
+    verificar('com logo: as iniciais "VF" não aparecem', r.textoNaCaixa === '', `texto "${r.textoNaCaixa}"`);
+    verificar('com logo: o texto alternativo é "Logo do Várzea FC"', r.alt === 'Logo do Várzea FC', String(r.alt));
+    const arq = path.join(pasta, 'convite-1-com-logo.png');
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+    await contexto.close();
+  }
+  {
+    const { contexto, pagina } = await abrir({ nome: 'Várzea FC', slug: 'varzea-fc', cor: 'azul', logo_url: null, cor_fundo: null }, 'sem-logo');
+    const r = await pagina.evaluate(() => {
+      const caixa = document.querySelector('.team-avatar--lg');
+      return { temImg: !!caixa?.querySelector('img'), textoNaCaixa: (caixa?.textContent || '').trim() };
+    });
+    verificar('sem logo: continuam as iniciais "VF" e nenhuma imagem', !r.temImg && r.textoNaCaixa === 'VF', JSON.stringify(r));
+    const arq = path.join(pasta, 'convite-2-sem-logo.png');
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
