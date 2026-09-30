@@ -4,11 +4,12 @@
 // Passos: (1) nome + preview do escudo-iniciais ao vivo → POST /api/teams ·
 // (2) toggles "como funciona" (mostrar_gols persiste; artilheiro/destaque = em breve) ·
 // (3) política de entrada → PATCH modo_visibilidade · (4) convites (link + WhatsApp).
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { apiFetch, apiUpload } from '../lib/api';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
+import { avisoLogoRecusado, motivoDoLogo } from '../utils/logoTime';
 import { copiarTexto } from '../utils/clipboard';
 import '../styles/app.css';
 
@@ -74,10 +75,40 @@ export default function CriarEquipa() {
   const [mostrarGols, setMostrarGols] = useState(true);
   const [modo, setModo] = useState('privado'); // privado | publico_aprovacao | publico_aberto
   const [team, setTeam] = useState(null); // criada no fim do passo 3
+  const [logoArquivo, setLogoArquivo] = useState(null);
+  const [logoPrevia, setLogoPrevia] = useState(null);
+  const [avisoLogo, setAvisoLogo] = useState(''); // depois de criar: a moderação recusou o logo (o time nasceu igual)
+  const [logoEnviado, setLogoEnviado] = useState(false);
+  const logoInputRef = useRef(null);
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    if (!logoArquivo) return undefined;
+    const url = URL.createObjectURL(logoArquivo);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a prévia é um object URL: nasce e é solto aqui
+    setLogoPrevia(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logoArquivo]);
+
+  function aoEscolherLogo(e) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    const motivo = motivoDoLogo(arquivo);
+    if (motivo) {
+      setToast({ tipo: 'error', mensagem: motivo });
+      return;
+    }
+    setLogoArquivo(arquivo);
+  }
+
+  function tirarLogo() {
+    setLogoArquivo(null);
+    setLogoPrevia(null);
+  }
 
   // Passo 3 → cria a equipa de uma vez (nome+cidade → POST; flags → PATCH) e segue p/ convites.
   async function criarESeguir() {
@@ -108,6 +139,16 @@ export default function CriarEquipa() {
           await apiFetch(`/api/teams/${t.slug}`, { method: 'PATCH', body: JSON.stringify(patch) });
         } catch {
           setToast({ tipo: 'error', mensagem: 'Time criado, mas a definição (gols/visibilidade) falhou. Ajuste no admin.' });
+        }
+      }
+      // Logo (opcional): só depois de o time existir. Se a moderação recusar, o time fica criado do mesmo jeito
+      // e o passo 4 avisa — o logo se troca depois no painel do time.
+      if (logoArquivo) {
+        try {
+          await apiUpload(`/api/teams/${t.slug}/logo`, logoArquivo, 'logo');
+          setLogoEnviado(true);
+        } catch (err) {
+          setAvisoLogo(avisoLogoRecusado(err?.message));
         }
       }
       setTeam(t);
@@ -163,11 +204,24 @@ export default function CriarEquipa() {
             <p className="texto-apoio">
               É assim que jogadores perto de você encontram o time. Só a cidade, nunca o endereço.
             </p>
-            <div style={{ width: 110, height: 110, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 38, color: '#fff', background: 'rgba(255,255,255,0.04)', border: '2.5px solid #8b5cf6', margin: '22px auto 6px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
-              {iniciais(nome)}
+            <Lbl>Logo do time (opcional)</Lbl>
+            {/* Prévia REDONDA do logo; sem logo, o escudo com as iniciais (nasce enquanto você escreve o nome). */}
+            {logoPrevia ? (
+              <img src={logoPrevia} alt="Prévia do logo do time" width={110} height={110} style={{ display: 'block', width: 110, height: 110, borderRadius: '50%', objectFit: 'cover', margin: '8px auto 6px', border: '2.5px solid #8b5cf6', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }} />
+            ) : (
+              <div style={{ width: 110, height: 110, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 38, color: '#fff', background: 'rgba(255,255,255,0.04)', border: '2.5px solid #8b5cf6', margin: '8px auto 6px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
+                {iniciais(nome)}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
+              <button type="button" className="chip" onClick={() => logoInputRef.current?.click()} style={{ color: '#f0c94a', borderColor: 'rgba(212,160,23,0.5)', background: 'rgba(212,160,23,0.08)' }}>
+                {logoArquivo ? 'Trocar logo' : 'Escolher logo'}
+              </button>
+              {logoArquivo ? <button type="button" className="chip" onClick={tirarLogo}>Tirar</button> : null}
             </div>
-            <p className="texto-apoio texto-apoio--centro" style={{ maxWidth: 290, marginTop: 0 }}>
-              seu escudo: as iniciais são sua marca; carregue o <b style={{ color: '#c9a24a' }}>logo do time</b> no painel de admin (com moderação).
+            <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={aoEscolherLogo} style={{ display: 'none' }} />
+            <p className="texto-apoio texto-apoio--centro" style={{ maxWidth: 300 }}>
+              PNG, JPG ou WEBP, até 2 MB. Passa por uma conferência. Sem logo, o escudo usa as iniciais.
             </p>
             <div style={{ marginTop: 24 }}>
               <Cta cheio disabled={!nome.trim()} onClick={() => setPasso(2)}>Continuar</Cta>
@@ -235,6 +289,13 @@ export default function CriarEquipa() {
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Chame o seu time</h1>
             <p className="texto-apoio" style={{ marginBottom: 14 }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. O link é válido 7 dias. Você pode pular este passo.</p>
+            {avisoLogo ? (
+              <div role="status" className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
+                {avisoLogo}
+              </div>
+            ) : logoEnviado ? (
+              <p className="texto-apoio" style={{ marginTop: 0, marginBottom: 14 }}>Logo do time enviado ✓</p>
+            ) : null}
             {inviteLink ? (
               <>
                 <Lbl>Link de convite</Lbl>

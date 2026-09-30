@@ -3924,6 +3924,17 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
+  if (CENAS.includes('rodada29a-logo')) {
+    const r = await cenaRodada29aLogo(navegador, sessao);
+    saida.rodada29aLogo = r;
+    console.log('\n[iphone] RODADA 29A (H) — logo do time na criação (servidor local; POSTs interceptados)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
   if (CENAS.includes('rodada29a-csp')) {
     const r = await cenaRodada29aCsp(navegador, sessao);
     saida.rodada29aCsp = r;
@@ -6590,6 +6601,119 @@ async function cenaRodada29aLinhaGol(navegador, sessao) {
       const patch = escritas.find((e) => e.metodo === 'PATCH' && /\/api\/equipas\/.+\/membros\/posicao$/.test(e.rota));
       verificar('perfil: tocar manda PATCH .../membros/posicao com o valor trocado', !!patch && JSON.parse(patch.corpo || '{}').goleiro === !/no gol/.test(antes), patch ? `${patch.rota} ${patch.corpo}` : 'nenhum PATCH');
     }
+    await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29a-logo" (30-set): logo do time na criação (Rodada 29A, parte H). ─────────────────────
+// Passo 1 do wizard: campo opcional, prévia redonda, 2 MB, png/jpg/webp. Depois do POST /api/teams: POST
+// /api/teams/:slug/logo; se a moderação recusar, o time nasce igual e o passo 4 avisa. NADA chega ao banco:
+// o POST /api/teams e o do logo são respondidos aqui (o de recusa, com o 403 que o motor daria).
+async function cenaRodada29aLogo(navegador, sessao) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29a-logo só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29a');
+  mkdirSync(pasta, { recursive: true });
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `logo-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const png = pngSolido(256, 256, [212, 160, 23]);
+
+  const abrir = async (respostaLogo) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    const escritas = await travarEscritas(contexto, (rota, metodo) => (
+      metodo === 'POST' && rota === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' } } : null
+    ));
+    const enviosLogo = [];
+    await contexto.route('**/api/teams/*/logo', async (route) => {
+      const pedido = route.request();
+      if (pedido.method() !== 'POST') return route.fallback();
+      enviosLogo.push({ tipo: pedido.headers()['content-type'] || '', campoLogo: (pedido.postData() || '').includes('name="logo"'), url: pedido.url() });
+      return route.fulfill(respostaLogo);
+    });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(e.message));
+    await pagina.goto(`${BASE}/criar-equipa`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
+    await pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
+    return { contexto, pagina, escritas, enviosLogo };
+  };
+  const ate4 = async (pagina) => {
+    await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
+    await espera(500);
+    await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
+    await espera(500);
+    await pagina.locator('button', { hasText: /Criar o time/i }).first().tap();
+    await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
+    await espera(400);
+  };
+  const corpo = (pagina) => pagina.locator('body').innerText();
+
+  // A) logo aceito
+  {
+    const { contexto, pagina, escritas, enviosLogo } = await abrir({ status: 200, contentType: 'application/json', body: JSON.stringify({ logo_url: 'https://exemplo.invalid/logo.png' }) });
+    await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova');
+    verificar('passo 1: o campo "Logo do time (opcional)" existe', /logo do time \(opcional\)/i.test(await corpo(pagina)));
+    verificar('passo 1: o texto velho "no painel de admin" saiu', !/carregue o logo do time no painel de admin/i.test(await corpo(pagina)));
+    await pagina.locator('input[type="file"]').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
+    await pagina.locator('img[alt="Prévia do logo do time"]').waitFor({ timeout: 8000 });
+    const previa = await pagina.evaluate(() => {
+      const i = document.querySelector('img[alt="Prévia do logo do time"]');
+      const c = getComputedStyle(i);
+      const r = i.getBoundingClientRect();
+      return { raio: c.borderTopLeftRadius, w: Math.round(r.width), h: Math.round(r.height), carregou: i.complete && i.naturalWidth > 0 };
+    });
+    verificar('passo 1: a prévia é redonda (raio 50%) e a imagem carregou', previa.carregou && /50%|55px/.test(previa.raio) && previa.w === previa.h, JSON.stringify(previa));
+    await capturar(pagina, '1-previa');
+    await ate4(pagina);
+    verificar('criou o time (POST /api/teams interceptado)', escritas.some((e) => e.metodo === 'POST' && e.rota === '/api/teams'), escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
+    verificar('enviou o logo DEPOIS do time, em multipart, para /api/teams/time-de-prova/logo', enviosLogo.length === 1 && /multipart\/form-data/.test(enviosLogo[0].tipo) && /\/api\/teams\/time-de-prova\/logo$/.test(enviosLogo[0].url) && enviosLogo[0].campoLogo, JSON.stringify(enviosLogo));
+    verificar('passo 4: "Logo do time enviado ✓"', (await corpo(pagina)).includes('Logo do time enviado'));
+    await capturar(pagina, '2-aceito');
+    await contexto.close();
+  }
+
+  // B) moderação recusa: o time nasce igual e a tela avisa
+  {
+    const { contexto, pagina, enviosLogo } = await abrir({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'Esta imagem não é permitida.' }) });
+    await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova');
+    await pagina.locator('input[type="file"]').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
+    await pagina.locator('img[alt="Prévia do logo do time"]').waitFor({ timeout: 8000 });
+    await ate4(pagina);
+    const t = await corpo(pagina);
+    verificar('recusa: o time foi criado mesmo assim (passo 4 aberto)', /Time de Prova/.test(t) && /está criado/.test(t));
+    verificar('recusa: "Logo não aceito: Esta imagem não é permitida. Você pode tentar outro no painel do time."', t.includes('Logo não aceito: Esta imagem não é permitida. Você pode tentar outro no painel do time.'), t.split('\n').find((l) => /Logo não aceito/.test(l)) || 'sem aviso');
+    verificar('recusa: uma só tentativa de envio', enviosLogo.length === 1, String(enviosLogo.length));
+    await capturar(pagina, '3-recusado');
+    await contexto.close();
+  }
+
+  // C) sem logo: nada é enviado; tipo errado e arquivo grande são barrados na hora
+  {
+    const { contexto, pagina, enviosLogo } = await abrir({ status: 200, contentType: 'application/json', body: '{}' });
+    await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova');
+    await pagina.locator('input[type="file"]').setInputFiles({ name: 'logo.gif', mimeType: 'image/gif', buffer: Buffer.from('GIF89a') });
+    await espera(500);
+    verificar('gif é barrado: "Use uma imagem PNG, JPG ou WEBP."', (await corpo(pagina)).includes('Use uma imagem PNG, JPG ou WEBP.'));
+    verificar('gif barrado: sem prévia', (await pagina.locator('img[alt="Prévia do logo do time"]').count()) === 0);
+    await pagina.locator('input[type="file"]').setInputFiles({ name: 'grande.png', mimeType: 'image/png', buffer: Buffer.concat([png, Buffer.alloc(3 * 1024 * 1024)]) });
+    await espera(500);
+    verificar('3 MB é barrado: "O logo pode ter no máximo 2 MB."', (await corpo(pagina)).includes('O logo pode ter no máximo 2 MB.'));
+    // Aviso de erro fica até tocar (Rodada 29A, E): a pessoa toca nele, como faria, e segue.
+    await pagina.locator('.futty-toast').tap();
+    await espera(400);
+    await ate4(pagina);
+    verificar('sem logo: nenhum envio de logo', enviosLogo.length === 0, String(enviosLogo.length));
+    verificar('sem logo: nenhum aviso de logo no passo 4', !/Logo não aceito|Logo do time enviado/.test(await corpo(pagina)));
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
