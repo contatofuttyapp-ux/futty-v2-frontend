@@ -3913,6 +3913,17 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
+  if (CENAS.includes('rodada29a-linhagol')) {
+    const r = await cenaRodada29aLinhaGol(navegador, sessao);
+    saida.rodada29aLinhaGol = r;
+    console.log('\n[iphone] RODADA 29A (G) — linha ou gol à vista: card do jogador no time + "Meus times" no Perfil (escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
   if (CENAS.includes('rodada29a-csp')) {
     const r = await cenaRodada29aCsp(navegador, sessao);
     saida.rodada29aCsp = r;
@@ -6498,6 +6509,87 @@ async function cenaRodada29aApoio(navegador, sessao) {
     verificar(`${nome}: todos com 13 px e linha 1,5 (19,5 px)`, itens.every((i) => i.fonte === '13px' && i.linha === '19.5px'), itens.filter((i) => i.fonte !== '13px' || i.linha !== '19.5px').map((i) => `"${i.texto}" ${i.fonte}/${i.linha}`).join(' | '));
     verificar(`${nome}: nenhum passa de 34 em (442 px) e todos em bloco`, itens.every((i) => i.largura <= 442 && i.bloco === 'block'), itens.filter((i) => i.largura > 442 || i.bloco !== 'block').map((i) => `"${i.texto}" ${i.largura}px ${i.bloco}`).join(' | '));
     verificar(`${nome}: sem rolagem lateral`, medidas.larguraRolavel <= medidas.larguraTela, `${medidas.larguraRolavel} × ${medidas.larguraTela}`);
+    await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29a-linhagol" (30-set): linha ou gol à vista (Rodada 29A, parte G). ────────────────────
+// Na página do time a escolha sobe para o card do próprio jogador, no topo; o Perfil ganha "Meus times".
+// A escrita (PATCH /api/equipas/:slug/membros/posicao) é interceptada: a cena confere o CORPO enviado.
+async function cenaRodada29aLinhaGol(navegador, sessao) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29a-linhagol só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29a');
+  mkdirSync(pasta, { recursive: true });
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `linhagol-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const abrir = async (rota) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); localStorage.setItem('futty_onboarding_x', '1'); } catch { /* nada */ } });
+    const escritas = await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(e.message));
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
+    return { contexto, pagina, escritas };
+  };
+  const RE = /^Você joga (na linha|no gol) · trocar$/;
+
+  // 1) página do time
+  {
+    const { contexto, pagina, escritas } = await abrir(`/equipa/${TIME}`);
+    const chip = pagina.locator('button', { hasText: RE }).first();
+    await chip.waitFor({ timeout: 30000 });
+    await espera(600);
+    const antes = (await chip.innerText()).trim();
+    const y = await pagina.evaluate(() => {
+      const chipEl = [...document.querySelectorAll('button')].find((b) => /^Você joga (na linha|no gol) · trocar$/.test(b.textContent.trim()));
+      const jogos = [...document.querySelectorAll('a')].find((a) => /Jogos/i.test(a.textContent) && /\/jogos$/.test(a.getAttribute('href') || ''));
+      const apoio = chipEl?.closest('.hud-corners')?.querySelector('.texto-apoio')?.textContent?.trim() || null;
+      return { chip: chipEl?.getBoundingClientRect().top ?? null, jogos: jogos?.getBoundingClientRect().top ?? null, apoio, secaoAntiga: /Goleiro ou linha: você decide/.test(document.body.innerText) };
+    });
+    verificar('time: o texto do botão é "Você joga na linha/no gol · trocar"', RE.test(antes), antes);
+    verificar('time: o botão fica no topo, acima de "Jogos"', y.chip != null && y.jogos != null && y.chip < y.jogos, `botão y=${Math.round(y.chip)} · Jogos y=${Math.round(y.jogos)}`);
+    verificar('time: texto de apoio "Vale para os sorteios deste time. Dá para mudar em cada jogo."', y.apoio === 'Vale para os sorteios deste time. Dá para mudar em cada jogo.', String(y.apoio));
+    verificar('time: a seção antiga "Goleiro ou linha: você decide" saiu', !y.secaoAntiga);
+    await capturar(pagina, '1-time');
+    await chip.tap();
+    await espera(800);
+    const patch = escritas.find((e) => e.metodo === 'PATCH' && e.rota === `/api/equipas/${TIME}/membros/posicao`);
+    const eraGol = /no gol/.test(antes);
+    verificar('time: tocar manda PATCH .../membros/posicao com o valor trocado', !!patch && JSON.parse(patch.corpo || '{}').goleiro === !eraGol, patch ? patch.corpo : escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
+    await contexto.close();
+  }
+
+  // 2) Perfil: "Meus times"
+  {
+    const { contexto, pagina, escritas } = await abrir('/perfil');
+    const titulo = pagina.getByText('Meus times', { exact: true }).first();
+    await titulo.waitFor({ timeout: 30000 });
+    await titulo.scrollIntoViewIfNeeded();
+    await espera(1500);
+    const chips = pagina.locator('button', { hasText: RE });
+    const n = await chips.count();
+    verificar('perfil: a seção "Meus times" tem a escolha por time', n >= 1, `${n} botão(ões)`);
+    const apoio = await pagina.evaluate(() => [...document.querySelectorAll('.texto-apoio')].map((e) => e.textContent.trim()).filter((t) => /sorteios/.test(t)));
+    verificar('perfil: texto de apoio dos sorteios', apoio.length >= 1, apoio.join(' | '));
+    await capturar(pagina, '2-perfil');
+    if (n) {
+      const antes = (await chips.first().innerText()).trim();
+      await chips.first().tap();
+      await espera(900);
+      const patch = escritas.find((e) => e.metodo === 'PATCH' && /\/api\/equipas\/.+\/membros\/posicao$/.test(e.rota));
+      verificar('perfil: tocar manda PATCH .../membros/posicao com o valor trocado', !!patch && JSON.parse(patch.corpo || '{}').goleiro === !/no gol/.test(antes), patch ? `${patch.rota} ${patch.corpo}` : 'nenhum PATCH');
+    }
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };

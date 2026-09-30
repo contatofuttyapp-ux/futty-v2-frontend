@@ -13,7 +13,7 @@ import { useApiComCache } from '../hooks/useApiComCache';
 import { usePerfil } from '../context/PerfilContext';
 // Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
-import { useTeams } from '../hooks/useTeam';
+import { useTeam, useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { formatRating } from '../utils/format';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -25,6 +25,7 @@ import { nomeIdioma, MOSTRAR_IDIOMA } from '../lib/i18n';
 // o avatar — só não o deixa clicar.
 import PlayerAvatar from '../components/PlayerAvatar';
 import Topbar from '../components/Topbar';
+import EscolhaLinhaGol from '../components/EscolhaLinhaGol';
 import Icon from '../components/Icon';
 import Toast from '../components/Toast';
 import LoadingFutty from '../components/LoadingFutty';
@@ -58,6 +59,41 @@ function SecLabel({ children }) {
   return (
     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '1.5px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', margin: '22px 0 8px' }}>
       {children}
+    </div>
+  );
+}
+
+// Rodada 29A (G): uma linha de "Meus times" — o time e a escolha "Você joga na linha/no gol · trocar".
+// Lê o time pela MESMA chave de cache da página do time (`team:<slug>`), então as duas telas nunca discordam;
+// depois de gravar, recarrega essa chave. O estado (`goleiro`) vem de team_members.categoria, no motor.
+function LinhaMeuTime({ time, meuId, semBorda, aoErro }) {
+  const { members, loading, reload } = useTeam(time.slug);
+  const [ocupado, setOcupado] = useState(false);
+  const eu = members.find((m) => m.id === meuId);
+
+  async function trocar(ligado) {
+    if (ocupado) return;
+    setOcupado(true);
+    try {
+      await apiFetch(`/api/equipas/${time.slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ goleiro: ligado }) });
+      await reload();
+    } catch (e) {
+      aoErro(e.message || 'Não foi possível trocar agora.');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderBottom: semBorda ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
+      <Link to={`/equipa/${time.slug}`} style={{ minWidth: 0, flex: 1, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+        {time.nome}
+      </Link>
+      {eu ? (
+        <EscolhaLinhaGol goleiro={!!eu.goleiro} ocupado={ocupado} aoTrocar={trocar} />
+      ) : (
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{loading ? '…' : ''}</span>
+      )}
     </div>
   );
 }
@@ -423,6 +459,20 @@ export default function MeuPerfil() {
                 <span aria-hidden="true" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 18, lineHeight: 1 }}>›</span>
               </button>
             </div>
+          </>
+        ) : null}
+
+        {/* SECÇÃO MEUS TIMES (Rodada 29A): a escolha linha/gol de cada time, à vista. Antes só existia num chip
+            dentro da página do time e o dono não a achou. Vale para os sorteios de cada time. */}
+        {teams.length ? (
+          <>
+            <SecLabel>Meus times</SecLabel>
+            <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
+              {teams.map((t, i) => (
+                <LinhaMeuTime key={t.id || t.slug} time={t} meuId={perfil.user.id} semBorda={i === teams.length - 1} aoErro={(m) => showToast(m, 'error')} />
+              ))}
+            </div>
+            <p className="texto-apoio">Vale para os sorteios de cada time. Dá para mudar em cada jogo.</p>
           </>
         ) : null}
 

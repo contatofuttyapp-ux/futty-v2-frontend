@@ -8,7 +8,6 @@ import { usePerfil } from '../context/PerfilContext';
 import { useTeam } from '../hooks/useTeam';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
-import { LABEL_LINHA } from '../utils/posicoes';
 import { copiarTexto } from '../utils/clipboard';
 import { plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -19,6 +18,7 @@ import EscudoEquipa from '../components/EscudoEquipa';
 import Toast from '../components/Toast';
 import Icon from '../components/Icon';
 import ModeracaoFila from '../components/ModeracaoFila';
+import EscolhaLinhaGol, { TEXTO_APOIO_LINHA_GOL } from '../components/EscolhaLinhaGol';
 import '../styles/app.css';
 
 // VELOCIDADE 8 (16-set) — EM LAZY. É o único ponto do app que usa framer-motion
@@ -227,6 +227,23 @@ export default function Equipa() {
               {team.role ? <Badge45 gold={team.role === 'admin'}>{team.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45> : null}
             </div>
 
+            {/* O card do PRÓPRIO jogador, no topo (Rodada 29A): linha ou gol, escrito por extenso.
+                Antes era um chip no meio da página e ninguém o achava. Rodada 10B: `goleiro` é o campo
+                único (team_members.categoria) — a pastilha "GR" do admin e esta escolha nunca discordam.
+                Rodada 9: ligado, cada jogo deste time já nasce com você no gol. */}
+            {meuId && members.some((m) => m.id === meuId) ? (
+              <div className="hud-corners" style={{ ...VIDRO, clipPath: CLIP, marginTop: 10, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <FrameAvatar avatarUrl={me?.user?.avatar_url} userId={meuId} avatarGenerico={me?.user?.avatar_generico} size={44} />
+                  <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 6, justifyItems: 'start' }}>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, lineHeight: 1.1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeExibicao(me.user)}</div>
+                    <EscolhaLinhaGol goleiro={souGoleiroNoTime} ocupado={posBusy} aoTrocar={escolherGoleiro} />
+                  </div>
+                </div>
+                <p className="texto-apoio">{TEXTO_APOIO_LINHA_GOL}</p>
+              </div>
+            ) : null}
+
             {/* Acções principais */}
             <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
               <Link to={`/equipa/${slug}/jogos`} className="btn hud-corners-s cta-gold" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
@@ -243,27 +260,6 @@ export default function Equipa() {
                 </Link>
               </div>
             )}
-
-            {/* Goleiro ou linha — Rodada 9: um chip só, o próprio jogador decide.
-                Ligado, cada jogo deste time já nasce com você no gol. */}
-            <SecLabel>Goleiro ou linha: você decide</SecLabel>
-            <div style={{ ...VIDRO, clipPath: CLIP, padding: '14px 12px' }}>
-              <div className="chips-row" style={{ justifyContent: 'center' }}>
-                <button
-                  type="button"
-                  aria-pressed={souGoleiroNoTime}
-                  className={`chip ${souGoleiroNoTime ? 'chip--active' : ''}`}
-                  disabled={posBusy}
-                  onClick={() => escolherGoleiro(!souGoleiroNoTime)}
-                  style={souGoleiroNoTime ? undefined : { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' }}
-                >
-                  Sou goleiro neste time
-                </button>
-              </div>
-              <p style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', margin: '10px 0 0' }}>
-                {souGoleiroNoTime ? 'Você entra no gol nos sorteios deste time. Dá para desligar em cada jogo.' : LABEL_LINHA}
-              </p>
-            </div>
 
             {team.role === 'admin' && pedidos.length > 0 && (
               <>
