@@ -341,7 +341,7 @@ export default function MeuPerfil() {
             </span>
             {/* Hint discreto: fecha o circuito perfil → cromo. Leitura, não estrutura
                 → fica no --sans (var(--sans)), como manda a régua. */}
-            <span style={{ fontFamily: 'var(--sans)', fontSize: 11, lineHeight: 1.3, color: 'rgba(255,255,255,0.4)' }}>
+            <span className="texto-apoio" style={{ fontFamily: 'var(--sans)', marginTop: 0 }}>
               É esse o nome que aparece na sua figurinha.
             </span>
           </label>
@@ -437,7 +437,7 @@ export default function MeuPerfil() {
                 <Icon name="cadeado" size={20} color="#d4a017" />
                 Mostrar meu rosto em links públicos
               </span>
-              <span style={{ fontSize: 12, lineHeight: 1.45, color: 'rgba(255,255,255,0.4)', paddingLeft: 32 }}>
+              <span className="texto-apoio" style={{ marginTop: 0, paddingLeft: 32 }}>
                 Seu rosto aparece em links públicos de sorteio. Desligue aqui se preferir silhueta.
               </span>
             </span>

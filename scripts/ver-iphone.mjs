@@ -3902,6 +3902,17 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
+  if (CENAS.includes('rodada29a-apoio')) {
+    const r = await cenaRodada29aApoio(navegador, sessao);
+    saida.rodada29aApoio = r;
+    console.log('\n[iphone] RODADA 29A (F) — textos de apoio (.texto-apoio) nas telas (servidor local, só leitura)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   avisos/erros: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
   if (CENAS.includes('rodada29a-csp')) {
     const r = await cenaRodada29aCsp(navegador, sessao);
     saida.rodada29aCsp = r;
@@ -6433,5 +6444,61 @@ async function cenaRodada29aToast(navegador, sessao) {
     await contexto.close();
   }
 
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29a-apoio" (30-set): os textos de apoio (.texto-apoio) nas telas (Rodada 29A, parte F). ──────
+// Confere, tela a tela, que cada texto de apoio tem 13 px, altura de linha 1,5, largura máxima de 34 em, cor apagada
+// e que a tela não ganhou rolagem lateral. Só leitura (toda escrita é interceptada).
+async function cenaRodada29aApoio(navegador, sessao) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29a-apoio só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29a');
+  mkdirSync(pasta, { recursive: true });
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const telas = [
+    ['explorar', '/explorar', async () => {}],
+    ['perfil', '/perfil', async () => {}],
+    ['planos', '/planos', async () => {}],
+    ['figurinha', '/figurinha', async () => {}],
+    ['equipa', `/equipa/${TIME}`, async () => {}],
+    ['criar-time-1', '/criar-equipa', async () => {}],
+    ['criar-time-2', '/criar-equipa', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
+    ['criar-time-3', '/criar-equipa', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
+  ];
+  for (const [nome, rota, preparar] of telas) {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${nome}: ${e.message}`));
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
+    await espera(2500);
+    await preparar(pagina).catch((e) => erros.push(`${nome}: preparar — ${e.message.split('\n')[0]}`));
+    await espera(800);
+    const medidas = await pagina.evaluate(() => ({
+      larguraRolavel: document.documentElement.scrollWidth,
+      larguraTela: window.innerWidth,
+      itens: [...document.querySelectorAll('.texto-apoio')].map((el) => {
+        const c = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        return { texto: el.textContent.trim().slice(0, 48), fonte: c.fontSize, linha: c.lineHeight, cor: c.color, largura: Math.round(r.width), maxLargura: c.maxWidth, bloco: c.display };
+      }),
+    }));
+    const arq = path.join(pasta, `apoio-${nome}.png`);
+    await pagina.screenshot({ path: arq, fullPage: false });
+    capturas.push(path.relative(RAIZ, arq));
+    const itens = medidas.itens;
+    verificar(`${nome}: tem texto de apoio na tela`, itens.length > 0, `${itens.length} texto(s)`);
+    verificar(`${nome}: todos com 13 px e linha 1,5 (19,5 px)`, itens.every((i) => i.fonte === '13px' && i.linha === '19.5px'), itens.filter((i) => i.fonte !== '13px' || i.linha !== '19.5px').map((i) => `"${i.texto}" ${i.fonte}/${i.linha}`).join(' | '));
+    verificar(`${nome}: nenhum passa de 34 em (442 px) e todos em bloco`, itens.every((i) => i.largura <= 442 && i.bloco === 'block'), itens.filter((i) => i.largura > 442 || i.bloco !== 'block').map((i) => `"${i.texto}" ${i.largura}px ${i.bloco}`).join(' | '));
+    verificar(`${nome}: sem rolagem lateral`, medidas.larguraRolavel <= medidas.larguraTela, `${medidas.larguraRolavel} × ${medidas.larguraTela}`);
+    await contexto.close();
+  }
   return { verificacoes, capturas, erros, pasta };
 }

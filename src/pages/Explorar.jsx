@@ -172,7 +172,7 @@ export default function Explorar() {
             <b style={{ fontFamily: RAJ, fontSize: 13, color: '#e4d9ff', letterSpacing: '0.04em', display: 'block' }}>
               {geoPedida ? 'Localização ativa' : 'Usar minha localização'}
             </b>
-            <span style={{ fontSize: 10, color: '#9a8fc0' }}>opt-in: se recusar, você busca por cidade; sua posição nunca sai do celular</span>
+            <span className="texto-apoio" style={{ marginTop: 2 }}>Opcional. Se recusar, você busca pela cidade. Sua posição nunca sai do celular.</span>
           </span>
         </button>
 
@@ -252,8 +252,8 @@ export default function Explorar() {
           ))
         )}
 
-        <p style={{ fontSize: 10, color: '#8a8a98', textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>
-          a distância será sempre do TIME (ponto aproximado declarado pelo admin), nunca de pessoas
+        <p className="texto-apoio" style={{ marginTop: 16 }}>
+          Distância medida do ponto aproximado do time, nunca de pessoas.
         </p>
       </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}

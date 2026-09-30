@@ -155,18 +155,18 @@ export default function CriarEquipa() {
         {passo === 1 && (
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Dê nome ao seu time</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O escudo nasce das iniciais. Veja-o se formar enquanto você escreve.</p>
+            <p className="texto-apoio" style={{ marginBottom: 14 }}>O escudo nasce das iniciais. Veja-o se formar enquanto você escreve.</p>
             <Lbl>Nome do time</Lbl>
             <input className="input input--hud" value={nome} maxLength={40} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 16 }} />
             <Lbl>Cidade</Lbl>
             <input className="input input--hud" value={cidade} maxLength={100} onChange={(e) => setCidade(e.target.value)} placeholder="Ex: Brasília" style={{ width: '100%', fontFamily: RAJ, fontSize: 16 }} />
-            <p className="muted" style={{ fontSize: 11, margin: '6px 0 0', lineHeight: 1.5 }}>
+            <p className="texto-apoio">
               É assim que jogadores perto de você encontram o time. Só a cidade, nunca o endereço.
             </p>
             <div style={{ width: 110, height: 110, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 38, color: '#fff', background: 'rgba(255,255,255,0.04)', border: '2.5px solid #8b5cf6', margin: '22px auto 6px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
               {iniciais(nome)}
             </div>
-            <p className="muted" style={{ fontSize: 11, textAlign: 'center', maxWidth: 290, margin: '0 auto', lineHeight: 1.5 }}>
+            <p className="texto-apoio texto-apoio--centro" style={{ maxWidth: 290, marginTop: 0 }}>
               seu escudo: as iniciais são sua marca; carregue o <b style={{ color: '#c9a24a' }}>logo do time</b> no painel de admin (com moderação).
             </p>
             <div style={{ marginTop: 24 }}>
@@ -178,12 +178,12 @@ export default function CriarEquipa() {
         {passo === 2 && (
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Como funciona o seu time?</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Cada escolha mostra o efeito. Você pode mudar tudo depois no painel de admin.</p>
+            <p className="texto-apoio" style={{ marginBottom: 14 }}>Cada escolha mostra o efeito. Você pode mudar tudo depois no painel de admin.</p>
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
               <MiniRadar n={mostrarGols ? 5 : 3} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Mostrar gols</div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
+                <div className="texto-apoio" style={{ marginTop: 2 }}>
                   {mostrarGols ? 'radar de 5 eixos + tile Gols e troféu Artilheiro' : 'radar cai para 3: presença · vitórias · destaque'}
                 </div>
               </div>
@@ -192,14 +192,14 @@ export default function CriarEquipa() {
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Artilheiro do dia</div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>troféu no fim de cada jogo</div>
+                <div className="texto-apoio" style={{ marginTop: 2 }}>troféu no fim de cada jogo</div>
               </div>
               <Toggle on disabled />
             </div>
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Destaque do dia</div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>o MVP votado pelo time</div>
+                <div className="texto-apoio" style={{ marginTop: 2 }}>o MVP votado pelo time</div>
               </div>
               <Toggle on disabled />
             </div>
@@ -213,7 +213,7 @@ export default function CriarEquipa() {
         {passo === 3 && (
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Aceita novos membros?</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Como se entra no seu time.</p>
+            <p className="texto-apoio" style={{ marginBottom: 14 }}>Como se entra no seu time.</p>
             {[
               { k: 'privado', t: 'Fechado', d: 'só por convite do admin' },
               { k: 'publico_aprovacao', t: 'Com aprovação', d: 'pedem no Explorar, você aprova' },
@@ -221,7 +221,7 @@ export default function CriarEquipa() {
             ].map((o) => (
               <button key={o.k} type="button" onClick={() => setModo(o.k)} style={{ ...VIDRO, clipPath: CLIP, display: 'block', width: '100%', textAlign: 'left', padding: '12px 14px', marginBottom: 8, cursor: 'pointer', borderColor: modo === o.k ? 'rgba(212,160,23,0.65)' : 'rgba(255,255,255,0.10)', background: modo === o.k ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)', color: 'inherit' }}>
                 <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 14, display: 'block', color: modo === o.k ? '#f0c94a' : '#fff' }}>{o.t}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{o.d}</span>
+                <span className="texto-apoio" style={{ marginTop: 2 }}>{o.d}</span>
               </button>
             ))}
             <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
@@ -234,7 +234,7 @@ export default function CriarEquipa() {
         {passo === 4 && team && (
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Chame o seu time</h1>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. O link é válido 7 dias. Você pode pular este passo.</p>
+            <p className="texto-apoio" style={{ marginBottom: 14 }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. O link é válido 7 dias. Você pode pular este passo.</p>
             {inviteLink ? (
               <>
                 <Lbl>Link de convite</Lbl>

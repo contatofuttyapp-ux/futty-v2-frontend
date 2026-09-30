@@ -400,3 +400,22 @@ select {
     transition: none;
   }
 }
+
+/* Texto de apoio (Rodada 29A, 30-set): a frase de ajuda que fica debaixo de um campo ou de um título. Um tamanho
+   só (13 px), cor apagada, largura máxima de ~34 em (não vira uma linha comprida), altura de linha 1,5 e
+   alinhada ao campo a que se refere (à esquerda; `--centro` para as telas que centram o bloco). `display: block`
+   porque o `max-width` e a margem de cima não valem em <span> solto. Frases curtas. */
+.texto-apoio {
+  display: block;
+  max-width: 34em;
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.texto-apoio--centro {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}

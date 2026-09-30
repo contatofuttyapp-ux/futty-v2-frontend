@@ -314,7 +314,7 @@ export default function Equipa() {
             </div>
 
             <SecLabel>Convidar jogador</SecLabel>
-            <p className="muted" style={{ fontSize: 13, margin: '0 0 10px' }}>
+            <p className="texto-apoio" style={{ marginTop: 0, marginBottom: 10 }}>
               Gere o link do time e mande no grupo: o mesmo link serve para todo mundo, vale 30 dias e você pode revogar quando quiser.
             </p>
             <button
@@ -345,7 +345,7 @@ export default function Equipa() {
               {confirmarSaida ? (
                 <div style={{ ...VIDRO, clipPath: CLIP, padding: '14px 16px', borderColor: 'rgba(248,113,113,0.35)' }}>
                   <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#fda4af' }}>Você vai sair de {team.nome}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-dim)', margin: '6px 0 12px', lineHeight: 1.5 }}>
+                  <div className="texto-apoio texto-apoio--centro" style={{ marginBottom: 12 }}>
                     Sua história (jogos, notas, prêmios) fica; você sai do ranking e dos próximos jogos. Para voltar, pede entrada de novo.
                   </div>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>

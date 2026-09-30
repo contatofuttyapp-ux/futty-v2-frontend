@@ -1383,7 +1383,7 @@ export default function Figurinha() {
             ) : estreiaFase === 'gerando' ? (
               <>
                 <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando sua figurinha… <EstrelaIA size={14} color="#fff" /></h2>
-                <p style={{ fontSize: 13, color: 'var(--label-color)', margin: 0 }}>Leva uns 45 segundos</p>
+                <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Leva uns 45 segundos</p>
               </>
             ) : (
               <>
@@ -1786,7 +1786,7 @@ export default function Figurinha() {
             <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Confirme seu e-mail para gerar</span>
-              <span style={{ fontSize: 12, color: 'var(--label-color)' }}>Enviamos um link de confirmação quando você criou a conta.</span>
+              <span className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Enviamos um link de confirmação quando você criou a conta.</span>
               {reenviarFeito ? (
                 <span style={{ fontSize: 12, color: '#7bd88f' }}>E-mail reenviado, confira sua caixa de entrada.</span>
               ) : (
@@ -1998,7 +1998,7 @@ export default function Figurinha() {
           {selos.length ? (
               <div style={{ marginTop: 22 }}>
                 <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: '.06em', color: '#f0c94a', textTransform: 'uppercase', marginBottom: 4 }}>Selos de honra</div>
-                <p className="muted" style={{ fontSize: 11, margin: '0 0 12px', lineHeight: 1.4 }}>Toque no olho para mostrar/ocultar no card (máx 2). A honra fica sempre na sua vitrine.</p>
+                <p className="texto-apoio" style={{ marginTop: 0, marginBottom: 12 }}>Toque no olho para mostrar ou ocultar no card (máx. 2). A honra fica sempre na sua vitrine.</p>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {selos.map((s) => {
                     const oculto = selosOcultos.has(s.id);

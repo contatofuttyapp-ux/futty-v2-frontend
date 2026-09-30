@@ -291,7 +291,7 @@ export default function Planos() {
             Layout compacto para caber sem scroll em viewports normais. */}
         <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
           {/* Cabeçalho curto: o que estas três coisas são, em uma linha. */}
-          <p style={{ fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.72)', textAlign: 'center', margin: '0 0 2px' }}>
+          <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0, marginBottom: 2 }}>
             Seu card com a foto é grátis, sempre. A <b style={{ color: '#f0c94a' }}>figurinha</b> é a versão em arte,
             feita por IA no uniforme do Futty.
           </p>
@@ -405,7 +405,7 @@ export default function Planos() {
                     ) : null}
                   </div>
                 ) : null}
-                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>{p.resumo}</p>
+                <p className="texto-apoio" style={{ marginTop: 0 }}>{p.resumo}</p>
 
                 {p.features ? (
                   <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 5, flex: 1 }}>
