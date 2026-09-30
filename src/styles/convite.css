@@ -1,0 +1,192 @@
+/* Futty v2.0 — Rodada 29B (A): a página do convite. Centrada, sem cartão: a marca no alto, o logo do time grande no meio,
+   o nome em destaque, três fatos e UM botão. Só o Convite importa este arquivo (chunk lazy) — fora do arranque. */
+
+.convite {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: calc(28px + env(safe-area-inset-top, 0px)) 24px calc(28px + env(safe-area-inset-bottom, 0px));
+  background: #050810;
+  text-align: center;
+}
+/* Dois halos parados, os mesmos do cânone do login (dourado em cima à esquerda, roxo embaixo à direita). */
+.convite::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 50% at 50% 28%, rgba(212, 160, 23, 0.13), transparent 70%),
+    radial-gradient(60% 50% at 85% 95%, rgba(139, 92, 246, 0.1), transparent 70%);
+  pointer-events: none;
+}
+.convite__col {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* A marca: o mesmo lockup do e-mail — F dourado + FUTTY espaçado, dourado chapado. */
+.convite__marca {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 30px;
+}
+.convite__marca-nome {
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  padding-left: 0.42em; /* o espaçamento depois da última letra descentraliza; isto devolve */
+  color: #d4a017;
+}
+
+.convite__escudo {
+  width: 136px;
+  height: 136px;
+  border-radius: 34px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1.5px solid rgba(212, 160, 23, 0.45);
+  box-shadow: 0 0 64px -12px rgba(212, 160, 23, 0.4), 0 18px 40px -18px rgba(0, 0, 0, 0.9);
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.convite__escudo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: cover;
+}
+.convite__escudo--vazio {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  animation: conviteRespira 1.4s ease-in-out infinite;
+}
+@keyframes conviteRespira {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.convite__nome {
+  margin: 22px 0 0;
+  max-width: 100%;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.convite__frase {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  max-width: 30em;
+  text-wrap: balance;
+}
+.convite__titulo {
+  margin: 0;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #d4a017;
+}
+
+.convite__fatos {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.convite__fato {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #e4e4ea;
+}
+.convite__fato svg {
+  flex: none;
+  color: #d4a017;
+}
+
+.convite__acoes {
+  width: 100%;
+  margin-top: 30px;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+.convite__cta {
+  width: 100%;
+  height: 52px;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+.convite__sec {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+}
+.convite__ja-tenho {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 10px;
+}
+.convite__ja-tenho:hover,
+.convite__ja-tenho:active {
+  color: #f0c94a;
+  text-decoration: underline;
+}
+.convite__aviso {
+  width: 100%;
+  margin: 26px 0 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: var(--neon);
+}
+.convite__erro {
+  width: 100%;
+  margin: 22px 0 0;
+}
+.convite__espera {
+  margin: 22px 0 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .convite__escudo--vazio { animation: none; opacity: 0.8; }
+}

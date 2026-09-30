@@ -1,9 +1,10 @@
 // Futty v2.0 — Início: o cromo, chips de equipas, próximos jogos e publicidade.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { RefreshCw, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { tomarConvitePendente } from '../lib/convitePendente';
 import { usePerfil } from '../context/PerfilContext';
 // Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
@@ -427,6 +428,13 @@ function EmptyState() {
 }
 
 export default function Inicio() {
+  // Rodada 29B (A): quem tocou em "Criar conta e entrar" no convite passou pelo cadastro e chegou aqui — o bilhete que a
+  // página do convite deixou no aparelho a devolve ao convite (uma vez só; sem bilhete, nada acontece).
+  const navigate = useNavigate();
+  useEffect(() => {
+    const token = tomarConvitePendente();
+    if (token) navigate(`/convite/${token}`, { replace: true });
+  }, [navigate]);
   const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil, hidratar: hidratarPerfil } = usePerfil();
   const { teams, loading: teamsLoading, error: teamsErro } = useTeams();
   // Início (11-set): 1 pedido só (GET /api/inicio, via Layout.jsx que monta o

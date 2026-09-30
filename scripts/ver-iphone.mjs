@@ -3266,7 +3266,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29a-convite'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3935,10 +3935,10 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
-  if (CENAS.includes('rodada29a-convite')) {
-    const r = await cenaRodada29aConvite(navegador);
-    saida.rodada29aConvite = r;
-    console.log('\n[iphone] RODADA 29A (I) — a página do convite mostra o logo do time (servidor local; resposta do convite fabricada)');
+  if (CENAS.includes('rodada29b-convite')) {
+    const r = await cenaRodada29bConvite(navegador, sessao);
+    saida.rodada29bConvite = r;
+    console.log('\n[iphone] RODADA 29B (A) — a página do convite refeita (servidor local; resposta do convite fabricada, escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -6730,25 +6730,40 @@ async function cenaRodada29aLogo(navegador, sessao) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29a-convite" (30-set): a página do convite mostra o logo do time (Rodada 29A, parte I). ────
-// GET /api/convite/:token é respondido aqui (nenhum convite real é tocado). Com `logo_url` o logo toma o lugar das
-// iniciais; sem logo, as iniciais de sempre. O desenho novo da página fica para a 29B.
-async function cenaRodada29aConvite(navegador) {
+// ─── Cena "rodada29b-convite" (30-set): a página do convite refeita (Rodada 29B, parte A). ──────────────────
+// GET /api/convite/:token é respondido aqui (nenhum convite real é tocado) e toda escrita é interceptada. Estados:
+// válido com logo, sem logo, sem fatos (time novo), expirado, já membro, logado que ainda não é membro; e o caminho
+// "Criar conta e entrar" (bilhete no aparelho → Início devolve ao convite). Substitui a cena rodada29a-convite, que
+// conferia o desenho antigo (cartão à esquerda, wordmark roxo, iniciais num quadrado azul).
+async function cenaRodada29bConvite(navegador, sessao) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
-    throw new Error(`rodada29a-convite só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+    throw new Error(`rodada29b-convite só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
   }
-  const pasta = path.join(PASTA, 'rodada-29a');
+  const pasta = path.join(PASTA, 'rodada-29b');
   mkdirSync(pasta, { recursive: true });
   const erros = [];
   const verificacoes = [];
   const capturas = [];
   const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
   const logo = pngSolido(256, 256, [212, 160, 23]);
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `convite-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const TIME_COM_LOGO = { nome: 'Várzea FC', slug: 'varzea-fc', cor: 'azul', logo_url: 'https://logo.invalid/logo.png', cor_fundo: '#1a1a2e' };
+  const TIME_SEM_LOGO = { nome: 'Várzea FC', slug: 'varzea-fc', cor: 'azul', logo_url: null, cor_fundo: null };
+  const EM_3_DIAS = new Date(Date.now() + 3 * 86400000).toISOString();
 
-  const abrir = async (time, nome) => {
-    const contexto = await novoContexto(navegador, null, { amostrar: false });
-    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
-    await travarEscritas(contexto);
+  const abrir = async ({ time, resposta = {}, logado = false, inicial = {}, rota = '/convite/token-de-prova' }, nome) => {
+    const contexto = await novoContexto(navegador, logado ? sessao : null, { amostrar: false });
+    await contexto.addInitScript((ini) => {
+      try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ }
+      for (const [k, v] of Object.entries(ini)) { try { localStorage.setItem(k, v); } catch { /* nada */ } }
+    }, inicial);
+    const escritas = await travarEscritas(contexto, (caminho, metodo) => (
+      metodo === 'POST' && caminho.endsWith('/aceitar') ? { team: { slug: 'varzea-fc', nome: 'Várzea FC' } } : null
+    ));
     await contexto.route('https://logo.invalid/**', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: logo }));
     await contexto.route('**/api/convite/*', async (route) => {
       const u = new URL(route.request().url());
@@ -6756,44 +6771,159 @@ async function cenaRodada29aConvite(navegador) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ valido: true, motivo: null, autenticado: false, jaMembro: false, convidadoPor: 'Tonhão', expires_at: new Date(Date.now() + 86400000).toISOString(), usos: 3, team: time }),
+        body: JSON.stringify({
+          valido: true, motivo: null, autenticado: logado, jaMembro: false, convidadoPor: 'Tonhão',
+          expires_at: new Date(Date.now() + 86400000).toISOString(), usos: 3,
+          membros: 21, proximoJogo: EM_3_DIAS, cidade: 'Belo Horizonte',
+          ...resposta, team: time,
+        }),
       });
     });
     const pagina = await contexto.newPage();
     pagina.on('pageerror', (e) => erros.push(`${nome}: ${e.message}`));
-    await pagina.goto(`${BASE}/convite/token-de-prova`, { waitUntil: 'domcontentloaded' });
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
-    await pagina.getByText('Várzea FC').first().waitFor({ timeout: 20000 });
-    await espera(800);
-    return { contexto, pagina };
+    await pagina.locator('[data-convite]').waitFor({ timeout: 30000 });
+    await pagina.waitForFunction(() => !/Validando convite/.test(document.body.innerText), null, { timeout: 20000 });
+    await espera(900);
+    return { contexto, pagina, escritas };
   };
+  const corpo = (pagina) => pagina.locator('body').innerText();
 
+  // 1) válido, com logo, sem conta
   {
-    const { contexto, pagina } = await abrir({ nome: 'Várzea FC', slug: 'varzea-fc', cor: 'azul', logo_url: 'https://logo.invalid/logo.png', cor_fundo: '#1a1a2e' }, 'com-logo');
+    const { contexto, pagina } = await abrir({ time: TIME_COM_LOGO }, 'com-logo');
     const r = await pagina.evaluate(() => {
-      const caixa = document.querySelector('.team-avatar--lg');
-      const img = caixa?.querySelector('img');
-      return { temImg: !!img, carregou: !!img && img.complete && img.naturalWidth > 0, alt: img?.alt || null, textoNaCaixa: (caixa?.textContent || '').trim(), larg: caixa ? Math.round(caixa.getBoundingClientRect().width) : null };
+      const meio = (el) => { if (!el) return null; const b = el.getBoundingClientRect(); return Math.round(b.left + b.width / 2); };
+      const caixa = (el) => { if (!el) return null; const b = el.getBoundingClientRect(); return { w: Math.round(b.width), h: Math.round(b.height), y: Math.round(b.top) }; };
+      const escudo = document.querySelector('.convite__escudo');
+      const img = escudo?.querySelector('img');
+      const nome = document.querySelector('.convite__nome');
+      const cta = document.querySelector('.convite__cta');
+      const marca = document.querySelector('.convite__marca');
+      const cor = (el) => (el ? getComputedStyle(el).color : null);
+      return {
+        larguraTela: window.innerWidth,
+        rolavel: document.scrollingElement.scrollWidth,
+        temImg: !!img, carregou: !!img && img.complete && img.naturalWidth > 0, alt: img?.alt || null,
+        textoEscudo: (escudo?.textContent || '').trim(),
+        escudo: caixa(escudo), marcaY: caixa(marca)?.y,
+        centros: { escudo: meio(escudo), nome: meio(nome), cta: meio(cta), marca: meio(marca) },
+        nomeTexto: nome?.textContent?.trim(),
+        frase: document.querySelector('.convite__frase')?.textContent?.trim(),
+        fatos: [...document.querySelectorAll('.convite__fato')].map((e) => e.textContent.trim()),
+        cta: cta?.textContent?.trim(),
+        jaTenho: [...document.querySelectorAll('a.convite__ja-tenho')].map((a) => ({ t: a.textContent.trim(), href: a.getAttribute('href') })),
+        marcaTexto: document.querySelector('.convite__marca-nome')?.textContent?.trim(),
+        marcaCor: cor(document.querySelector('.convite__marca-nome')),
+        wordmarkRoxo: !!document.querySelector('img[src*="futty-wordmark"]'),
+        tituloVelho: /Convite para um time/.test(document.body.innerText),
+        cartaoVelho: !!document.querySelector('.auth-card'),
+      };
     });
-    verificar('com logo: a caixa mostra a IMAGEM do logo', r.temImg && r.carregou, JSON.stringify(r));
-    verificar('com logo: as iniciais "VF" não aparecem', r.textoNaCaixa === '', `texto "${r.textoNaCaixa}"`);
-    verificar('com logo: o texto alternativo é "Logo do Várzea FC"', r.alt === 'Logo do Várzea FC', String(r.alt));
-    const arq = path.join(pasta, 'convite-1-com-logo.png');
-    await pagina.screenshot({ path: arq });
-    capturas.push(path.relative(RAIZ, arq));
+    const meio = r.larguraTela / 2;
+    verificar('com logo: o escudo mostra a IMAGEM do logo (carregou) e as iniciais não aparecem', r.temImg && r.carregou && r.textoEscudo === '', JSON.stringify({ temImg: r.temImg, carregou: r.carregou, texto: r.textoEscudo }));
+    verificar('com logo: texto alternativo "Logo do Várzea FC"', r.alt === 'Logo do Várzea FC', String(r.alt));
+    verificar('o logo é GRANDE (≥ 120 px) e quadrado', r.escudo && r.escudo.w >= 120 && r.escudo.w === r.escudo.h, JSON.stringify(r.escudo));
+    verificar('centrado: marca, escudo, nome e botão têm o centro no meio da tela (±2 px)', Object.values(r.centros).every((c) => c != null && Math.abs(c - meio) <= 2), JSON.stringify({ meio, ...r.centros }));
+    verificar('o nome do time está em destaque (h1 "Várzea FC")', r.nomeTexto === 'Várzea FC', String(r.nomeTexto));
+    verificar('frase: "Tonhão te convidou para o Várzea FC"', r.frase === 'Tonhão te convidou para o Várzea FC', String(r.frase));
+    verificar('três fatos: 21 jogadores · próximo jogo · cidade', r.fatos.length === 3 && r.fatos[0] === '21 jogadores' && /^Próximo jogo /.test(r.fatos[1]) && r.fatos[2] === 'Belo Horizonte', JSON.stringify(r.fatos));
+    verificar('botão único "Criar conta e entrar" (deslogado)', r.cta === 'Criar conta e entrar', String(r.cta));
+    verificar('link discreto "já tenho conta" que vai ao login', r.jaTenho.length === 1 && r.jaTenho[0].t === 'já tenho conta' && r.jaTenho[0].href === '/login', JSON.stringify(r.jaTenho));
+    verificar('marca: "FUTTY" dourado espaçado, e nada do wordmark roxo antigo', r.marcaTexto === 'FUTTY' && /rgb\(212, 160, 23\)/.test(r.marcaCor || '') && !r.wordmarkRoxo, JSON.stringify({ t: r.marcaTexto, cor: r.marcaCor, wordmark: r.wordmarkRoxo }));
+    verificar('o molde velho saiu (sem cartão do login, sem "Convite para um time")', !r.cartaoVelho && !r.tituloVelho);
+    verificar('sem rolagem lateral (430 px)', r.rolavel <= r.larguraTela + 1, `${r.rolavel} × ${r.larguraTela}`);
+    await capturar(pagina, '1-com-logo');
+
+    // "Criar conta e entrar": deixa o bilhete no aparelho e leva ao cadastro
+    await pagina.locator('button.convite__cta').tap();
+    await pagina.waitForURL('**/register', { timeout: 15000 });
+    const bilhete = await pagina.evaluate(() => localStorage.getItem('futty_convite_pendente'));
+    verificar('"Criar conta e entrar" leva a /register', /\/register$/.test(pagina.url()));
+    verificar('…e deixa o bilhete com o token do convite', !!bilhete && JSON.parse(bilhete).token === 'token-de-prova', String(bilhete));
     await contexto.close();
   }
+
+  // 2) sem logo: as iniciais
   {
-    const { contexto, pagina } = await abrir({ nome: 'Várzea FC', slug: 'varzea-fc', cor: 'azul', logo_url: null, cor_fundo: null }, 'sem-logo');
+    const { contexto, pagina } = await abrir({ time: TIME_SEM_LOGO }, 'sem-logo');
     const r = await pagina.evaluate(() => {
-      const caixa = document.querySelector('.team-avatar--lg');
-      return { temImg: !!caixa?.querySelector('img'), textoNaCaixa: (caixa?.textContent || '').trim() };
+      const e = document.querySelector('.convite__escudo');
+      return { temImg: !!e?.querySelector('img'), texto: (e?.textContent || '').trim(), larg: e ? Math.round(e.getBoundingClientRect().width) : null };
     });
-    verificar('sem logo: continuam as iniciais "VF" e nenhuma imagem', !r.temImg && r.textoNaCaixa === 'VF', JSON.stringify(r));
-    const arq = path.join(pasta, 'convite-2-sem-logo.png');
-    await pagina.screenshot({ path: arq });
-    capturas.push(path.relative(RAIZ, arq));
+    verificar('sem logo: iniciais "VF" grandes e nenhuma imagem', !r.temImg && r.texto === 'VF' && r.larg >= 120, JSON.stringify(r));
+    await capturar(pagina, '2-sem-logo');
     await contexto.close();
+  }
+
+  // 3) time novo: sem jogo marcado e sem cidade → um fato só, sem buraco
+  {
+    const { contexto, pagina } = await abrir({ time: TIME_COM_LOGO, resposta: { membros: 1, proximoJogo: null, cidade: null } }, 'time-novo');
+    const fatos = await pagina.evaluate(() => [...document.querySelectorAll('.convite__fato')].map((e) => e.textContent.trim()));
+    verificar('time novo: só "1 jogador" (sem jogo marcado nem cidade)', fatos.length === 1 && fatos[0] === '1 jogador', JSON.stringify(fatos));
+    await capturar(pagina, '3-time-novo');
+    await contexto.close();
+    const { contexto: c2, pagina: p2 } = await abrir({ time: TIME_COM_LOGO, resposta: { membros: undefined, proximoJogo: undefined, cidade: undefined } }, 'motor-antigo');
+    const lista = await p2.evaluate(() => document.querySelectorAll('.convite__fatos').length);
+    verificar('motor antigo (sem os campos): nenhuma lista de fatos vazia na tela', lista === 0, String(lista));
+    await c2.close();
+  }
+
+  // 4) expirado
+  {
+    const { contexto, pagina } = await abrir({ time: TIME_COM_LOGO, resposta: { valido: false, motivo: 'expirado' } }, 'expirado');
+    const t = await corpo(pagina);
+    verificar('expirado: "Convite inválido" + "Este convite expirou."', /Convite inválido/i.test(t) && t.includes('Este convite expirou.'), t.slice(0, 160).replace(/\n/g, ' | '));
+    verificar('expirado: sai pela porta certa (login para entrar no time + Explorar)', t.includes('Faça login para entrar em Várzea FC') && t.includes('Procurar times no Explorar'));
+    verificar('expirado: nenhum "Criar conta e entrar"', !t.includes('Criar conta e entrar'));
+    await capturar(pagina, '4-expirado');
+    await contexto.close();
+  }
+
+  // 5) já membro (logado)
+  {
+    const { contexto, pagina } = await abrir({ time: TIME_COM_LOGO, logado: true, resposta: { autenticado: true, jaMembro: true } }, 'ja-membro');
+    const r = await pagina.evaluate(() => ({
+      aviso: document.querySelector('.convite__aviso')?.textContent?.trim(),
+      cta: document.querySelector('.convite__cta')?.textContent?.trim(),
+      href: document.querySelector('a.convite__cta')?.getAttribute('href'),
+      criar: /Criar conta e entrar/.test(document.body.innerText),
+    }));
+    verificar('já membro: "Você já é membro deste time." e "Ir para o time" (link para /equipa/varzea-fc)', r.aviso === 'Você já é membro deste time.' && r.cta === 'Ir para o time' && r.href === '/equipa/varzea-fc' && !r.criar, JSON.stringify(r));
+    await capturar(pagina, '5-ja-membro');
+    await contexto.close();
+  }
+
+  // 6) logado, ainda não é membro: "Entrar no time" aceita (POST interceptado)
+  {
+    const { contexto, pagina, escritas } = await abrir({ time: TIME_COM_LOGO, logado: true, resposta: { autenticado: true } }, 'logado');
+    const r = await pagina.evaluate(() => ({ cta: document.querySelector('.convite__cta')?.textContent?.trim(), jaTenho: document.querySelectorAll('.convite__ja-tenho').length }));
+    verificar('logado: botão "Entrar no time" e sem "já tenho conta"', r.cta === 'Entrar no time' && r.jaTenho === 0, JSON.stringify(r));
+    await capturar(pagina, '6-logado');
+    await pagina.locator('button.convite__cta').tap();
+    await espera(1200);
+    const post = escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/convite/token-de-prova/aceitar');
+    verificar('"Entrar no time" manda POST /api/convite/:token/aceitar', !!post, escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | ') || 'nenhuma escrita');
+    await contexto.close();
+  }
+
+  // 7) o bilhete devolve a pessoa ao convite quando ela chega ao Início (depois do cadastro)
+  {
+    const r7 = await abrir({
+      time: TIME_COM_LOGO, logado: true, resposta: { autenticado: true },
+      inicial: { futty_convite_pendente: JSON.stringify({ token: 'token-de-prova', em: Date.now() }) },
+      rota: '/home',
+    }, 'bilhete').catch((e) => ({ erro: e }));
+    const { contexto, pagina } = r7;
+    if (contexto) {
+      verificar('bilhete: ao chegar no Início a pessoa é devolvida a /convite/token-de-prova', /\/convite\/token-de-prova$/.test(pagina.url()), pagina.url());
+      const restou = await pagina.evaluate(() => localStorage.getItem('futty_convite_pendente'));
+      verificar('bilhete: usado uma vez, é apagado', restou === null, String(restou));
+      await contexto.close();
+    } else {
+      verificar('bilhete: a cena abriu', false, String(r7.erro));
+    }
   }
   return { verificacoes, capturas, erros, pasta };
 }

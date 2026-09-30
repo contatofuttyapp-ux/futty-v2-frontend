@@ -1,17 +1,53 @@
-// Futty v2.0 — Página de convite: aceitar entrada numa equipa
+// Futty v2.0 — Página de convite: aceitar entrada numa equipa.
+// Rodada 29B (A): refeita inteira. Centrada, sem cartão; marca atual no alto (F dourado + FUTTY espaçado, o lockup do
+// e-mail); o logo do time grande no centro; nome em destaque; três fatos; UM botão. O desenho vive em convite.css.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { MapPin, Users } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import FuttyLogo from '../components/FuttyLogo';
 import { colorOf, initials } from '../utils/teamColors';
 import { urlImagem } from '../utils/avatar';
+import { fatosDoConvite, fraseDoConvite } from '../utils/convite';
+import { guardarConvitePendente } from '../lib/convitePendente';
 import '../styles/app.css';
+import '../styles/convite.css';
 
 const MOTIVOS = {
   nao_encontrado: 'Este convite não existe.',
   expirado: 'Este convite expirou.',
 };
+
+// O calendário não está entre os ícones que o arranque já carrega (lucide vive num chunk de arranque com teto de
+// 320 KiB): aqui vai como traço inline, no mesmo desenho 24×24 do lucide, e custa só o chunk desta página.
+function IconeCalendario({ size = 15 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 2v4M16 2v4M3 10h18" />
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+    </svg>
+  );
+}
+const ICONE_DO_FATO = {
+  membros: <Users size={15} aria-hidden="true" />,
+  jogo: <IconeCalendario />,
+  cidade: <MapPin size={15} aria-hidden="true" />,
+};
+
+/** O escudo do time: o logo, e as iniciais só quando não há logo. `vazio` = esqueleto enquanto o convite carrega. */
+function Escudo({ team, vazio = false }) {
+  if (vazio) return <div className="convite__escudo convite__escudo--vazio" aria-hidden="true" />;
+  const c = colorOf(team?.cor);
+  const temLogo = !!team?.logo_url;
+  return (
+    <div className="convite__escudo" style={temLogo ? { background: team.cor_fundo || '#1a1a2e' } : { background: c.hex, color: c.text }}>
+      {temLogo ? (
+        <img src={urlImagem(assetUrl(team.logo_url), 384)} alt={`Logo do ${team.nome}`} decoding="async" />
+      ) : initials(team?.nome)}
+    </div>
+  );
+}
 
 export default function Convite() {
   const { token } = useParams();
@@ -45,10 +81,16 @@ export default function Convite() {
     };
   }, [token, authLoading]);
 
+  // Sem conta: cadastro (o bilhete no aparelho traz a pessoa de volta a este convite depois da foto e do e-mail).
+  function criarContaEEntrar() {
+    guardarConvitePendente(token);
+    navigate('/register');
+  }
+
   async function aceitar() {
-    // Não autenticado → vai ao login e volta para este convite
+    // Não autenticado → cadastro, e volta para este convite
     if (!session) {
-      navigate('/login', { state: { from: { pathname: `/convite/${token}` } } });
+      criarContaEEntrar();
       return;
     }
     setError('');
@@ -89,124 +131,108 @@ export default function Convite() {
   }
 
   const team = info?.team;
-  const c = colorOf(team?.cor);
 
   // Saídas partilhadas pelos estados de convite morto (P1-2): pedir entrada (se
   // conhecemos a equipa) e/ou procurar no Explorar.
   const saidas = (alvo) => (
-    <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
-      {alvo ? (
-        pedidoEnviado ? (
-          <div className="alert" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: 'var(--neon)' }}>
-            Pedido enviado a {alvo.nome}. O admin decide, você vê o desfecho no Início.
-          </div>
-        ) : (
-          <button type="button" className="btn btn--primary" style={{ width: '100%' }} onClick={pedirEntrada} disabled={pedindo}>
-            {pedindo ? 'Enviando…' : session ? `Pedir entrada em ${alvo.nome}` : `Faça login para entrar em ${alvo.nome}`}
-          </button>
-        )
-      ) : null}
-      <Link to="/explorar" className="btn" style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.22)', color: 'var(--text-dim)' }}>
-        Procurar times no Explorar
-      </Link>
-      <Link to="/home" className="auth-footer" style={{ textAlign: 'center' }}>
+    <div className="convite__acoes">
+      <div className="convite__sec">
+        {alvo ? (
+          pedidoEnviado ? (
+            <div className="convite__aviso" style={{ margin: 0 }}>
+              Pedido enviado a {alvo.nome}. O admin decide, você vê o desfecho no Início.
+            </div>
+          ) : (
+            <button type="button" className="btn cta-gold convite__cta" onClick={pedirEntrada} disabled={pedindo}>
+              {pedindo ? 'Enviando…' : session ? `Pedir entrada em ${alvo.nome}` : `Faça login para entrar em ${alvo.nome}`}
+            </button>
+          )
+        ) : null}
+        <Link to="/explorar" className="btn" style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.22)', color: 'var(--text-dim)' }}>
+          Procurar times no Explorar
+        </Link>
+      </div>
+      <Link to="/home" className="convite__ja-tenho">
         Ir para a página inicial
       </Link>
     </div>
   );
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-card__inner">
-          <div className="auth-brand">
-<FuttyLogo variant="wordmark" size={28} color="#8b5cf6" />
-          </div>
+    <main className="convite" data-convite>
+      <div className="convite__col">
+        <div className="convite__marca" aria-label="Futty">
+          <FuttyLogo size={46} />
+          <span className="convite__marca-nome" aria-hidden="true">FUTTY</span>
+        </div>
 
-          {loading ? (
-            <p className="muted">Validando convite…</p>
-          ) : error ? (
-            <>
-              <h1 className="auth-title">Ups…</h1>
-              <div className="alert alert--error" style={{ marginTop: 12, marginBottom: 4 }}>
-                {error}
-              </div>
-              {saidas(info?.team)}
-            </>
-          ) : !info?.valido ? (
-            <>
-              <h1 className="auth-title">Convite inválido</h1>
-              <p className="auth-subtitle">
-                {MOTIVOS[info?.motivo] || 'Este convite não está disponível.'}
-                {info?.team ? ' Mas você ainda pode entrar no time:' : ''}
-              </p>
-              {saidas(info?.team)}
-            </>
-          ) : (
-            <>
-              <h1 className="auth-title">Convite para um time</h1>
-              <p className="auth-subtitle">
-                {info.convidadoPor
-                  ? `${info.convidadoPor} convidou você para entrar no time.`
-                  : 'Você foi convidado para entrar neste time.'}
-              </p>
+        {loading ? (
+          <>
+            <Escudo vazio />
+            <p className="convite__espera">Validando convite…</p>
+          </>
+        ) : error ? (
+          <>
+            <h1 className="convite__titulo">Ups…</h1>
+            <div className="alert alert--error convite__erro">{error}</div>
+            {saidas(info?.team)}
+          </>
+        ) : !info?.valido ? (
+          <>
+            {team ? <Escudo team={team} /> : null}
+            <h1 className="convite__titulo" style={{ marginTop: team ? 22 : 0 }}>Convite inválido</h1>
+            <p className="convite__frase">
+              {MOTIVOS[info?.motivo] || 'Este convite não está disponível.'}
+              {team ? ' Mas você ainda pode entrar no time:' : ''}
+            </p>
+            {saidas(team)}
+          </>
+        ) : (
+          <>
+            <Escudo team={team} />
+            <h1 className="convite__nome">{team?.nome}</h1>
+            <p className="convite__frase">{fraseDoConvite({ convidadoPor: info.convidadoPor, nomeTime: team?.nome })}</p>
 
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '8px 0 24px' }}
-              >
-                {/* Rodada 29A (item 1/11): o motor agora manda `logo_url` e `cor_fundo`. Com logo, ele toma o lugar das
-                    iniciais; sem logo, tudo como era. (O redesenho da página fica para a 29B.) */}
-                <div
-                  className="team-avatar team-avatar--lg"
-                  style={team?.logo_url ? { background: team.cor_fundo || '#1a1a2e', overflow: 'hidden' } : { background: c.hex, color: c.text }}
-                >
-                  {team?.logo_url ? (
-                    <img src={urlImagem(assetUrl(team.logo_url), 256)} alt={`Logo do ${team.nome}`} decoding="async" style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover' }} />
-                  ) : initials(team?.nome)}
-                </div>
-                <div className="team-card__name" style={{ fontSize: 20 }}>
-                  {team?.nome}
-                </div>
-              </div>
+            {(() => {
+              const fatos = fatosDoConvite(info);
+              return fatos.length ? (
+                <ul className="convite__fatos" aria-label="Sobre o time">
+                  {fatos.map((f) => (
+                    <li key={f.chave} className="convite__fato">
+                      {ICONE_DO_FATO[f.chave]}
+                      {f.texto}
+                    </li>
+                  ))}
+                </ul>
+              ) : null;
+            })()}
 
-              {error && (
-                <div className="alert alert--error" style={{ marginBottom: 16 }}>
-                  {error}
-                </div>
-              )}
+            {error && <div className="alert alert--error convite__erro">{error}</div>}
 
-              {info.jaMembro ? (
-                <>
-                  <div className="alert" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: 'var(--neon)' }}>
-                    Você já é membro deste time.
-                  </div>
-                  <Link
-                    to={`/equipa/${team?.slug}`}
-                    className="btn btn--primary"
-                    style={{ width: '100%', marginTop: 8 }}
-                  >
+            {info.jaMembro ? (
+              <>
+                <div className="convite__aviso">Você já é membro deste time.</div>
+                <div className="convite__acoes">
+                  <Link to={`/equipa/${team?.slug}`} className="btn cta-gold convite__cta">
                     Ir para o time
                   </Link>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  style={{ width: '100%' }}
-                  onClick={aceitar}
-                  disabled={accepting}
-                >
-                  {accepting
-                    ? 'Entrando…'
-                    : session
-                      ? 'Entrar no time'
-                      : 'Faça login para entrar'}
+                </div>
+              </>
+            ) : (
+              <div className="convite__acoes">
+                <button type="button" className="btn cta-gold convite__cta" onClick={aceitar} disabled={accepting}>
+                  {accepting ? 'Entrando…' : session ? 'Entrar no time' : 'Criar conta e entrar'}
                 </button>
-              )}
-            </>
-          )}
-        </div>
+                {!session && (
+                  <Link to="/login" state={{ from: { pathname: `/convite/${token}` } }} className="convite__ja-tenho">
+                    já tenho conta
+                  </Link>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </main>
   );
 }
