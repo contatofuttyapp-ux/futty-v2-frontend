@@ -106,7 +106,7 @@ export default function Termos() {
         </p>
         <ul style={ul}>
           <li><span style={strong}>Minha Figurinha</span>: 10 gerações de figurinha para você, no uniforme que escolher.</li>
-          <li><span style={strong}>Figurinhas do time</span>: 5 gerações por jogador, para até 25 jogadores do time, todos no uniforme escolhido pelo dono do time. Só o dono do time compra.</li>
+          <li><span style={strong}>Figurinhas do time</span>: 2 gerações por jogador, para até 25 jogadores do time, todos no uniforme escolhido pelo dono do time. Só o dono do time compra.</li>
           <li><span style={strong}>Manto próprio</span>: o uniforme do seu time nas figurinhas, desenhado pela equipe do Futty depois da compra, a partir das cores e do escudo do time, e conferido antes de valer. Exige as Figurinhas do time.</li>
         </ul>
         <p style={{ ...p, marginTop: 6 }}>

@@ -2278,7 +2278,8 @@ async function cenaCriarTime(navegador, sessoes) {
   await espera(2500);
   const naPasso4 = await texto();
   passos.chegouPasso4 = /Chame o seu time/i.test(naPasso4);
-  passos.ganhouBrilhanteNaTela = /Você ganhou uma figurinha/i.test(naPasso4);
+  // Rodada 29A: o presente do criador foi ABOLIDO — a cena agora exige que ele NÃO exista (API e tela).
+  passos.ganhouBrilhanteNaTela = /Você ganhou \d+ gerações|Gerar agora/i.test(naPasso4);
   await pagina.screenshot({ path: foto('3-presente') });
 
   if (passos.ganhouBrilhanteNaTela) {
@@ -3703,12 +3704,10 @@ try {
     saida['criar-time'] = r;
     const ok = (bom) => (bom ? 'OK' : 'FALHA');
     const p = r.passos;
-    console.log('\n[iphone] VARREDURA · cadastro → figurinha comum → criar time → presente do criador → Brilhante');
+    console.log('\n[iphone] VARREDURA · cadastro → figurinha comum → criar time (sem presente do criador desde a Rodada 29A)');
     console.log(`   ${ok(p.saiuDoOnboarding && p.geracoesNoCadastro === 0)} cadastro dá a comum sem gerar IA: saiu do onboarding ${p.saiuDoOnboarding} · chamadas de IA ${p.geracoesNoCadastro}`);
     console.log(`   ${ok(p.teamSlug)} time criado: slug "${p.teamSlug}"`);
-    console.log(`   ${ok(p.presenteNaAPI && p.ganhouBrilhanteNaTela)} presente do criador: API ${p.presenteNaAPI} · banner na tela ${p.ganhouBrilhanteNaTela}`);
-    console.log(`   ${ok(p.foiParaFigurinha && p.figurinhaTemBotaoGerar)} "Gerar agora" leva à Figurinha com o botão dourado: ${p.foiParaFigurinha} / ${p.figurinhaTemBotaoGerar}`);
-    console.log(`   ${ok(p.brilhanteGerada && p.geracoesTotais === 1)} Brilhante gerada (1 chamada real): ${p.brilhanteGerada} · chamadas ${p.geracoesTotais}`);
+    console.log(`   ${ok(!p.presenteNaAPI && !p.ganhouBrilhanteNaTela)} criar time NÃO dá geração de graça: API ${p.presenteNaAPI} · banner na tela ${p.ganhouBrilhanteNaTela} (esperado: false/false)`);
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
     console.log(`   >>> guarde o slug "${p.teamSlug}" — precisa dele para: node scripts/_bench/contas-varredura.js --entrar-membro`);
   }
@@ -3809,7 +3808,7 @@ try {
   if (CENAS.includes('rodada22')) {
     const r = await cenaRodada22(navegador, sessao);
     saida.rodada22 = r;
-    console.log('\n[iphone] RODADA 22 — 5 gerações por jogador + e-mail dos Termos');
+    console.log('\n[iphone] RODADA 22 — gerações por jogador (2 desde a Rodada 29A) + e-mail dos Termos');
     for (const c of r.capturas) console.log(`   ${c.ok ? 'OK' : 'FALHA'} ${c.nome} — ${c.arquivo}`);
     if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
   }
@@ -4275,8 +4274,8 @@ async function cenaRodada21(navegador) {
   return { pasta, capturas, erros };
 }
 
-// ─── Cena "rodada22" (24-set): o pacote do time passa a "5 gerações por
-// jogador" (Planos) e o contato vira contato@futtyapp.com nas três telas
+// ─── Cena "rodada22" (24-set; números da Rodada 29A): o pacote do time diz "2 gerações por
+// jogador" (Planos; eram 5) e o contato vira contato@futtyapp.com nas três telas
 // públicas que o mostram (Termos, Privacidade, Excluir conta). Só leitura: usa
 // a sessão da demo (o /planos exige login) e nenhuma escrita; nenhuma geração
 // de IA (custo zero).
@@ -4296,19 +4295,21 @@ async function cenaRodada22(navegador, sessao) {
   };
   const fecharCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
 
-  // (a) Planos: "5 gerações por jogador" — e nenhum "3 gerações por jogador" sobrando.
-  await capturar('a-planos-5-por-jogador', async () => {
+  // (a) Planos: "2 gerações por jogador" — e nenhum "3" nem "5 gerações por jogador" sobrando.
+  await capturar('a-planos-2-por-jogador', async () => {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false });
     const pagina = await contexto.newPage();
     pagina.on('pageerror', (e) => erros.push(e.message));
     await pagina.goto(`${BASE}/planos`, { waitUntil: 'domcontentloaded' });
     await fecharCookies(pagina);
     await pagina.getByText('Figurinhas do time').first().waitFor({ timeout: 15000 });
-    await pagina.getByText(/5 gerações por jogador/).first().waitFor({ timeout: 5000 });
+    await espera(800);
     const texto = await pagina.evaluate(() => document.body.innerText);
-    if (/3 gerações por jogador/.test(texto)) throw new Error('sobrou "3 gerações por jogador" na tela');
+    if (/[35] gerações por jogador/.test(texto)) throw new Error('sobrou "3/5 gerações por jogador" na tela');
+    // Só a vitrine da LOJA (app nativo com chave) diz quantas gerações por jogador; na web o pacote é "pedir ativação".
+    if (/gerações por jogador/.test(texto) && !/2 gerações por jogador/.test(texto)) throw new Error('o pacote não diz "2 gerações por jogador"');
     await espera(400);
-    await pagina.screenshot({ path: arq('a-planos-5-por-jogador'), fullPage: true });
+    await pagina.screenshot({ path: arq('a-planos-2-por-jogador'), fullPage: true });
     await contexto.close();
   });
 
@@ -5927,7 +5928,7 @@ async function cenaRodada28(navegador) {
     const dialogo = pagina.getByRole('dialog');
     await dialogo.first().waitFor({ timeout: 10000 }).catch(() => {});
     const textoDialogo = await dialogo.first().innerText().catch(() => '');
-    verificar('A3 · tocar no uniforme do time pede confirmação ("Pintar no uniforme Dark Purple? … 5 gerações")', /Pintar no uniforme Dark Purple/.test(textoDialogo) && /5 gerações/.test(textoDialogo), textoDialogo.replace(/\s+/g, ' '));
+    verificar('A3 · tocar no uniforme do time pede confirmação ("Pintar no uniforme Dark Purple? … N gerações")', /Pintar no uniforme Dark Purple/.test(textoDialogo) && /\d+ gerações/.test(textoDialogo), textoDialogo.replace(/\s+/g, ' '));
     await capturar(pagina, 'A6-pacote-confirmar');
     await pagina.getByRole('button', { name: 'Agora não' }).click(); // a cena não pinta nada
   } catch (e) {

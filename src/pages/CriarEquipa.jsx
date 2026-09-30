@@ -10,7 +10,6 @@ import { apiFetch } from '../lib/api';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import { copiarTexto } from '../utils/clipboard';
-import { PRESENTE_CRIADOR_GERACOES } from '../lib/planos';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -75,7 +74,6 @@ export default function CriarEquipa() {
   const [mostrarGols, setMostrarGols] = useState(true);
   const [modo, setModo] = useState('privado'); // privado | publico_aprovacao | publico_aberto
   const [team, setTeam] = useState(null); // criada no fim do passo 3
-  const [ganhouBrilhante, setGanhouBrilhante] = useState(false); // presente do criador (1ª vez)
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -98,12 +96,7 @@ export default function CriarEquipa() {
       // depois nas definições do admin (decisão: cor despromovida, SPEC-EQUIPAS).
       const bodyCriar = { nome: nome.trim() };
       if (cidade.trim()) bodyCriar.cidade = cidade.trim();
-      // `presente_brilhante` (SPEC-FIGURINHA-3 §2): o motor devolve true quando
-      // este é o PRIMEIRO time que a pessoa cria na vida — e nesse caso já lhe
-      // creditou uma Figurinha Brilhante. Presente e propaganda ao mesmo
-      // tempo: custa ~R$0,60 e é a forma mais barata de ela ver o produto.
-      const { team: t, presente_brilhante: presente } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
-      setGanhouBrilhante(!!presente);
+      const { team: t } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
       // P2-12: a equipa já existe aqui. Se o PATCH das definições falhar, NÃO
       // dizer "erro a criar" — a equipa nasceu; segue-se para convites e avisa-se
       // que a definição ficou por aplicar (ajusta-se no admin).
@@ -256,26 +249,6 @@ export default function CriarEquipa() {
             ) : (
               <Cta onClick={gerarConvite} disabled={busy}>{busy ? 'Gerando…' : 'Gerar link de convite'}</Cta>
             )}
-            {/* O PRESENTE (§2). Aparece depois do convite, não antes: quem
-                acabou de criar um time está a pensar em chamar a malta, e o
-                presente é o brinde que se encontra ao sair, não o que
-                interrompe. Sem "em breve" — o botão leva mesmo à Figurinha,
-                onde o botão dourado já está à espera. */}
-            {ganhouBrilhante ? (
-              <div className="hud-corners" style={{ marginTop: 22, padding: '14px 16px', display: 'grid', gap: 10, justifyItems: 'center', textAlign: 'center', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.55)' }}>
-                <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 16, color: '#f0c94a' }}>
-                  Você ganhou {PRESENTE_CRIADOR_GERACOES} gerações ✨
-                </span>
-                <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
-                  {PRESENTE_CRIADOR_GERACOES} gerações de figurinha para você, no uniforme que escolher. É de graça, por ter criado o time.
-                </span>
-                <span className="cta-gold-glow" style={{ display: 'flex', width: '100%' }}>
-                  <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1, fontSize: 13 }} onClick={() => navigate('/figurinha')}>
-                    Gerar agora
-                  </button>
-                </span>
-              </div>
-            ) : null}
             <div style={{ marginTop: 22 }}>
               <Cta cheio onClick={() => navigate(`/equipa/${team.slug}`)}>Ir para o time</Cta>
             </div>

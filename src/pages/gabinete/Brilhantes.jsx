@@ -378,7 +378,7 @@ export default function Brilhantes({ showMsg }) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={th}>Pessoa</th><th style={th}>Créditos</th><th style={th}>Presente do criador</th><th style={th}>Dar mais</th>
+                  <th style={th}>Pessoa</th><th style={th}>Créditos</th><th style={th}>Dar mais</th>
                 </tr>
               </thead>
               <tbody>
@@ -389,7 +389,6 @@ export default function Brilhantes({ showMsg }) {
                       <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{u.email}</div>
                     </td>
                     <td style={td}>{u.creditos}</td>
-                    <td style={td}>{u.presente_criador_em ? fmtData(u.presente_criador_em) : <span style={{ color: 'var(--text-dim)' }}>ainda não</span>}</td>
                     <td style={td}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <input

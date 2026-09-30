@@ -103,7 +103,7 @@ export default function Onboarding() {
   // instante em que a foto sobe. A geração automática de IA de 12-set saiu —
   // era o item mais caro do app a nascer de graça em cada cadastro (US$0,11),
   // para quem talvez nunca pagasse. A Brilhante passa a ter dono: crédito
-  // comprado, presente de quem cria time, ou pacote do time.
+  // comprado ou pacote do time (não há mais presente de quem cria time).
   //
   // O que ficou no lugar: nada. Não há o que esperar, por isso também não há
   // marcador de "gerando" nem retry de FOTO_DESATUALIZADA — a trava de hash

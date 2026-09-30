@@ -6,11 +6,12 @@
 // de nascer de graça em cada cadastro. O que se vende agora são três coisas
 // concretas, uma vez cada (sem mensalidade):
 //
-//   pacote  R$49,90  5 gerações por jogador do time (fazer e refazer), até 25
+//   pacote  R$49,90  2 gerações por jogador do time (fazer e refazer), até 25
 //                    jogadores, todos no mesmo uniforme escolhido pelo dono —
 //                    sem seletor de uniforme para o jogador. Quem entrar
-//                    depois também ganha. Pior caso (125 gerações = US$14):
-//                    −R$32,60 no Brasil, UE empata; caso real: lucro ~28%.
+//                    depois também ganha. Pior caso (50 gerações = US$5,60
+//                    contra US$8,18 que sobram depois da loja): lucro de 31%
+//                    (Rodada 29A, "nunca prejuízo" — com 5 por jogador dava −US$5,80).
 //   manto   R$49,90  o uniforme do PRÓPRIO time nas figurinhas dos 25 (desenhado
 //                    à mão depois da compra). Só faz sentido com o pacote.
 //   minha   R$9,90   10 gerações para a própria pessoa, uniforme à escolha
@@ -36,12 +37,10 @@ export const PRECOS_DE_REFERENCIA = {
 
 /** Quantos jogadores o pacote cobre (igual a `teams.brilhante_limite`). */
 export const PACOTE_JOGADORES = 25;
-/** Gerações por jogador no pacote (igual a `teams.brilhante_por_jogador`, migração 059). */
-export const PACOTE_GERACOES_POR_JOGADOR = 5;
+/** Gerações por jogador no pacote (igual a `teams.brilhante_por_jogador`, migração 065). */
+export const PACOTE_GERACOES_POR_JOGADOR = 2;
 /** Quantas gerações a "Minha Brilhante" dá (igual a MINHA_GERACOES do motor, utils/compras.js). */
 export const MINHA_GERACOES = 10;
-/** O presente único de quem cria o time (igual a PRESENTE_CRIADOR_CREDITOS do motor). */
-export const PRESENTE_CRIADOR_GERACOES = 3;
 
 // Loja ligada: nome, resumo e features. O preço entra na hora, vindo da loja (produtosDaTela).
 const PRODUTOS_LOJA = [
