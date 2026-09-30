@@ -2621,7 +2621,8 @@ async function cenaFigurinha3Pacote(navegador, sessoes) {
   await espera(5000);
   const naFigurinha = await membro.texto();
   passos.membroTemBotaoGerar = /Gerar minha figurinha/i.test(naFigurinha);
-  passos.figurinhaDizUniformeDoTime = /uniforme que o dono escolheu/i.test(naFigurinha);
+  // Rodada 29B (B): a frase "uniforme que o dono escolheu" saiu; o uniforme do time é o tile aberto (pintável) da grade.
+  passos.figurinhaDizUniformeDoTime = (await membro.pagina.locator('[data-grade="uniformes"] [data-estado="geravel"]').count()) === 1;
   await membro.pagina.screenshot({ path: foto('8-membro-antes-de-gerar') });
 
   if (passos.membroTemBotaoGerar) {
@@ -3266,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3764,7 +3765,7 @@ try {
     console.log(`   ${ok(p.gabineteZeroGeradas)} ativar NÃO gera em lote (0/25 logo após ativar): ${p.gabineteZeroGeradas}`);
     console.log(`   ${ok(p.geracoesNoCadastro === 0)} cadastro do membro não gera IA: ${p.geracoesNoCadastro} chamada(s)`);
     console.log(`   ${ok(p.membroVeCartaoDourado)} membro vê o cartão dourado no Início: ${p.membroVeCartaoDourado} · "cortesia do pacote" ${p.cartaoDizCortesia}`);
-    console.log(`   ${ok(p.membroTemBotaoGerar && p.figurinhaDizUniformeDoTime)} Figurinha diz que o uniforme é o do time: botão ${p.membroTemBotaoGerar} · frase ${p.figurinhaDizUniformeDoTime}`);
+    console.log(`   ${ok(p.membroTemBotaoGerar && p.figurinhaDizUniformeDoTime)} Figurinha mostra o uniforme do time aberto na grade: botão ${p.membroTemBotaoGerar} · tile ${p.figurinhaDizUniformeDoTime}`);
     console.log(`   ${ok(p.geracoesTotais === 1)} uma geração só na cena inteira: ${p.geracoesTotais}`);
     console.log(`   ${ok(!p.aindaMostraBotaoGerar && p.temOs6Fundos)} Brilhante gerada: botão some ${!p.aindaMostraBotaoGerar} · os 6 fundos ${p.temOs6Fundos}`);
     console.log(`   ${ok(p.gabineteConta1de25 && p.gabineteMostraCusto)} Gabinete fecha a conta: 1/25 ${p.gabineteConta1de25} · custo real na tela ${p.custoNaTela || '—'}`);
@@ -3939,6 +3940,17 @@ try {
     const r = await cenaRodada29bConvite(navegador, sessao);
     saida.rodada29bConvite = r;
     console.log('\n[iphone] RODADA 29B (A) — a página do convite refeita (servidor local; resposta do convite fabricada, escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29b-uniformes')) {
+    const r = await cenaRodada29bUniformes(navegador);
+    saida.rodada29bUniformes = r;
+    console.log('\n[iphone] RODADA 29B (B) — a grade de uniformes para os três direitos (servidor local; contas de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -5929,7 +5941,8 @@ async function cenaRodada28(navegador) {
 
     const tiles = pagina.locator('[data-grade="uniformes"] button');
     const estados = await tiles.evaluateAll((els) => els.map((b) => ({ estado: b.dataset.estado, nome: b.getAttribute('aria-label') })));
-    verificar('A3 · grade de uniformes: 5 tiles, o 1º liberado (Dark Gold) e os outros 4 com cadeado', estados.length === 5 && estados[0].estado === 'livre' && /Dark Gold/.test(estados[0].nome) && estados.slice(1).every((e) => e.estado === 'trancado' && /bloqueado/.test(e.nome)), JSON.stringify(estados));
+    // Rodada 29B (B): sem direito TODOS com cadeado (antes o 1º, o Dark Gold, vinha "livre" e sem cadeado).
+    verificar('A3 · grade de uniformes (grátis): 5 tiles, todos com cadeado', estados.length === 5 && estados.every((e) => e.estado === 'trancado' && /bloqueado/.test(e.nome)), JSON.stringify(estados));
     const t = await texto(pagina);
     verificar('A3 · sem "Pedir a minha" e sem "em breve" na tela', !/Pedir a minha/i.test(t) && !/em breve/i.test(t));
     verificar('A · Baixar e Compartilhar voltaram ao card com a foto', /Compartilhar/.test(t) && /Baixar/.test(t));
@@ -6924,6 +6937,155 @@ async function cenaRodada29bConvite(navegador, sessao) {
     } else {
       verificar('bilhete: a cena abriu', false, String(r7.erro));
     }
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29b-uniformes" (30-set): a grade de uniformes igual para os três direitos (Rodada 29B, parte B). ──
+// Contas de prova do backend (scripts/_bench/prova-rodada29b.js → scripts/capturas/sessao-rodada29b.json): grátis,
+// pacote do time (card com a foto e com a figurinha vestida) e Minha Figurinha (idem). Nada gera figurinha e toda
+// escrita à /api é interceptada (o toque num uniforme pintado manda PUT /api/me/kit, respondido aqui). Só servidor LOCAL.
+async function cenaRodada29bUniformes(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29b-uniformes só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29b');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `uniformes-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const VELHOS = /por conta do pacote|Sua figurinha vem pelo pacote|que o dono escolheu/i;
+
+  const abrir = async (sessao, rotulo, { aba = null } = {}) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await contexto.addInitScript(() => {
+      try { localStorage.setItem('futty_figurinha_estreia', '1'); localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ }
+    });
+    const escritas = await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    if (aba) await pagina.getByRole('button', { name: aba, exact: true }).click({ timeout: 30000 });
+    await pagina.locator('[data-grade="uniformes"]').waitFor({ timeout: 30000 });
+    await espera(1500);
+    await pagina.locator('[data-grade="uniformes"]').evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {});
+    await espera(500);
+    return { contexto, pagina, escritas };
+  };
+  const tiles = (pagina) => pagina.locator('[data-grade="uniformes"] button').evaluateAll((els) => els.map((b) => ({
+    estado: b.dataset.estado,
+    rotulo: b.getAttribute('aria-label') || '',
+    selo: b.querySelector('[data-selo="pintar"]')?.textContent?.replace(/\s+/g, ' ').trim() || null,
+    cadeado: !!b.querySelector('svg.lucide-lock'),
+    largura: Math.round(b.getBoundingClientRect().width),
+  })));
+  const texto = (pagina) => pagina.locator('body').innerText();
+  const soEstados = (lista) => lista.map((t) => t.estado).join(',');
+
+  // ── grátis: card com a FOTO, os cinco com cadeado ──
+  {
+    const { contexto, pagina } = await abrir(fx.gratis, 'gratis');
+    const t = await tiles(pagina);
+    verificar('grátis: 5 tiles, TODOS com cadeado (nem o primeiro fica livre)', t.length === 5 && t.every((x) => x.estado === 'trancado' && x.cadeado && /bloqueado/.test(x.rotulo)), soEstados(t));
+    verificar('grátis: nenhum selo de "pintar" na grade', t.every((x) => !x.selo));
+    verificar('grátis: mesma grade de sempre (.fig-seletor-grade, tiles de 76 px)', await pagina.locator('.fig-seletor-grade[data-grade="uniformes"]').count() === 1 && t.every((x) => x.largura === 76), JSON.stringify(t.map((x) => x.largura)));
+    verificar('grátis: nenhum texto velho do pacote', !VELHOS.test(await texto(pagina)));
+    await capturar(pagina, '1-gratis');
+    await pagina.locator('[data-grade="uniformes"] button').nth(3).click();
+    await pagina.waitForURL(/\/planos\?destaque=minha/, { timeout: 15000 }).catch(() => {});
+    verificar('grátis: tocar no cadeado leva a /planos?destaque=minha', /\/planos\?destaque=minha/.test(pagina.url()), pagina.url().replace(BASE, ''));
+    await contexto.close();
+  }
+
+  // ── pacote do time, card com a FOTO: o uniforme do time aberto, os outros com cadeado ──
+  {
+    const { contexto, pagina } = await abrir(fx.pacote, 'pacote');
+    const t = await tiles(pagina);
+    verificar('pacote: 5 tiles — o do time (Dark Purple) aberto e pintável, os outros 4 com cadeado', t.length === 5 && t[0].estado === 'geravel' && /Dark Purple/.test(t[0].rotulo) && t.slice(1).every((x) => x.estado === 'trancado' && x.cadeado), soEstados(t));
+    verificar('pacote: o tile aberto traz o selo "pintar · 1 geração" e "~45 s"', !!t[0].selo && /pintar · 1 geração/.test(t[0].selo) && /~45 s/.test(t[0].selo), String(t[0].selo));
+    verificar('pacote: nenhum texto velho ("o uniforme do time vem por conta do pacote")', !VELHOS.test(await texto(pagina)));
+    await capturar(pagina, '2-pacote');
+    await pagina.locator('[data-grade="uniformes"] button').first().click();
+    const dialogo = pagina.getByRole('dialog').first();
+    await dialogo.waitFor({ timeout: 10000 }).catch(() => {});
+    const d = await dialogo.innerText().catch(() => '');
+    verificar('pacote: tocar no uniforme do time mantém o aviso antes de pintar (Usa 1 das suas N gerações · ~45 s)', /Pintar no uniforme Dark Purple/.test(d) && /Usa 1 das suas \d+ gerações/.test(d) && /45 s/.test(d), d.replace(/\s+/g, ' '));
+    await pagina.getByRole('button', { name: 'Agora não' }).click();
+    await pagina.locator('[data-grade="uniformes"] button').nth(2).click();
+    await pagina.waitForURL(/\/planos\?destaque=minha/, { timeout: 15000 }).catch(() => {});
+    verificar('pacote: tocar no cadeado leva a /planos?destaque=minha', /\/planos\?destaque=minha/.test(pagina.url()), pagina.url().replace(BASE, ''));
+    await contexto.close();
+  }
+
+  // ── pacote do time, figurinha do time vestida: ✓ + "Refazer" pequeno embaixo ──
+  {
+    const { contexto, pagina } = await abrir(fx.pacoteFig, 'pacote-fig', { aba: 'Uniforme' });
+    const t = await tiles(pagina);
+    verificar('pacote com figurinha: o do time (Dark Purple) vestido e os outros 4 com cadeado', t.length === 5 && t[0].estado === 'vestido' && /Dark Purple/.test(t[0].rotulo) && t.slice(1).every((x) => x.estado === 'trancado'), soEstados(t));
+    const r = await pagina.locator('[data-acao="refazer"]').evaluateAll((els) => els.map((b) => {
+      const box = b.getBoundingClientRect();
+      const grade = document.querySelector('[data-grade="uniformes"]').getBoundingClientRect();
+      return { texto: b.textContent.trim(), altura: Math.round(box.height), fonte: parseFloat(getComputedStyle(b).fontSize), abaixoDaGrade: box.top >= grade.bottom - 1 };
+    }));
+    verificar('pacote com figurinha: "Refazer" é ação pequena (≤ 34 px, fonte ≤ 12 px) logo abaixo da grade', r.length === 1 && r[0].altura <= 34 && r[0].fonte <= 12 && r[0].abaixoDaGrade, JSON.stringify(r));
+    verificar('pacote com figurinha: o texto do "Refazer" diz o uniforme e as gerações que sobram', r.length === 1 && /^Refazer Dark Purple · \d+ gerações?$/.test(r[0].texto), r[0]?.texto);
+    verificar('pacote com figurinha: nenhum texto velho do pacote', !VELHOS.test(await texto(pagina)));
+    await capturar(pagina, '3-pacote-figurinha');
+    await pagina.locator('[data-acao="refazer"]').click();
+    const dialogo = pagina.getByRole('dialog').first();
+    await dialogo.waitFor({ timeout: 10000 }).catch(() => {});
+    const d = await dialogo.innerText().catch(() => '');
+    verificar('"Refazer" pede o mesmo aviso antes de gastar (Pintar no uniforme Dark Purple? · Usa 1 das suas N gerações)', /Pintar no uniforme Dark Purple/.test(d) && /Usa 1 das suas/.test(d), d.replace(/\s+/g, ' '));
+    await pagina.getByRole('button', { name: 'Agora não' }).click();
+    await contexto.close();
+  }
+
+  // ── Minha Figurinha, card com a FOTO: todos abertos, com o selo ──
+  {
+    const { contexto, pagina } = await abrir(fx.minha, 'minha');
+    const t = await tiles(pagina);
+    verificar('Minha Figurinha: 5 tiles, TODOS abertos, nenhum cadeado', t.length === 5 && t.every((x) => x.estado === 'geravel' && !x.cadeado), soEstados(t));
+    verificar('Minha Figurinha: cada tile traz o selo "pintar · 1 geração" e "~45 s"', t.every((x) => x.selo && /pintar · 1 geração/.test(x.selo) && /~45 s/.test(x.selo)), JSON.stringify(t.map((x) => x.selo)));
+    verificar('Minha Figurinha: o selo cabe no tile de 76 px (não vaza)', await pagina.locator('[data-selo="pintar"]').evaluateAll((els) => els.every((s) => s.getBoundingClientRect().width <= 76)));
+    const contador = await texto(pagina);
+    verificar('Minha Figurinha: contador de gerações sempre visível ("Restam 3 gerações")', /Restam 3 gerações/.test(contador), (contador.match(/Restam?[^\n]*/) || [''])[0]);
+    await capturar(pagina, '4-minha');
+    await pagina.locator('[data-grade="uniformes"] button').nth(2).click();
+    const dialogo = pagina.getByRole('dialog').first();
+    await dialogo.waitFor({ timeout: 10000 }).catch(() => {});
+    const d = await dialogo.innerText().catch(() => '');
+    verificar('Minha Figurinha: o aviso antes de pintar continua ("Usa 1 das suas 3 gerações · leva ~45 s")', /Usa 1 das suas 3 gerações/.test(d) && /45 s/.test(d), d.replace(/\s+/g, ' '));
+    await capturar(pagina, '4b-minha-aviso');
+    await pagina.getByRole('button', { name: 'Agora não' }).click();
+    await contexto.close();
+  }
+
+  // ── Minha Figurinha, figurinha vestida: ✓ · pintado · abertos · "Refazer" ──
+  {
+    const { contexto, pagina, escritas } = await abrir(fx.minhaFig, 'minha-fig', { aba: 'Uniforme' });
+    const t = await tiles(pagina);
+    const por = Object.fromEntries(t.map((x) => [x.rotulo.replace(/ ·.*$/, ''), x.estado]));
+    verificar('Minha Figurinha com figurinha: Dark Gold vestido, White Gold pintado, os outros 3 abertos (pintáveis)', t.length === 5 && por['Dark Gold'] === 'vestido' && por['White Gold'] === 'pintado' && ['Dark Purple', 'Elite Gold', 'Royal Purple'].every((k) => por[k] === 'geravel'), JSON.stringify(por));
+    verificar('Minha Figurinha com figurinha: só os não pintados têm selo (2 + o vestido e o pintado sem selo)', t.filter((x) => x.selo).length === 3, JSON.stringify(t.map((x) => !!x.selo)));
+    const refazer = await pagina.locator('[data-acao="refazer"]').innerText().catch(() => null);
+    verificar('Minha Figurinha com figurinha: "Refazer Dark Gold · 3 gerações" embaixo', refazer === 'Refazer Dark Gold · 3 gerações', String(refazer));
+    await capturar(pagina, '5-minha-figurinha');
+    // um uniforme já pintado veste na hora, grátis: PUT /api/me/kit (interceptado), sem aviso nem geração
+    const idxPintado = t.findIndex((x) => x.estado === 'pintado');
+    await pagina.locator('[data-grade="uniformes"] button').nth(idxPintado).click();
+    await espera(1200);
+    const put = escritas.find((e) => e.metodo === 'PUT' && e.rota === '/api/me/kit');
+    verificar('tocar no uniforme pintado veste na hora: PUT /api/me/kit com white-gold, sem diálogo de geração', !!put && /white-gold/.test(put.corpo || '') && (await pagina.getByRole('dialog').count()) === 0, put ? `${put.metodo} ${put.rota} ${put.corpo}` : 'nenhum PUT');
+    verificar('nenhum POST de geração saiu (a cena não pinta nada)', !escritas.some((e) => e.metodo === 'POST' && /\/api\/me\/avatar\/ai/.test(e.rota)), escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
+    await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
 }

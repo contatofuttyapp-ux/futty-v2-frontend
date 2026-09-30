@@ -28,6 +28,7 @@ import { estadoBrilhantes, pedidoDoProduto } from '../lib/brilhantes';
 import { produtoDoPedido } from '../lib/planos';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja } from '../lib/loja';
 import { KIT_IMG, KITS_FIGURINHA } from '../utils/kitsFigurinha';
+import { DESTINO_DO_CADEADO, SELO_PINTAR, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer } from '../utils/uniformesGrade';
 import { ehNativo } from '../lib/plataforma';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
@@ -388,36 +389,28 @@ export default function Figurinha() {
   // recusado diz o motivo que o dono escreveu no Gabinete; ativado não aparece
   // aqui de todo — quem foi ativado já vê o botão dourado, e um recado sobre um
   // pedido resolvido só ia competir com ele.
-  // RODADA 28 — A GRADE DE UNIFORMES (a mesma .fig-seletor-grade dos fundos), igual nos dois cards. No
-  // card com a FOTO ela substitui o "Pedir a minha": o 1º liberado — o uniforme do time quando há pacote
-  // ativo, senão o padrão — e os demais com cadeado, que levam a Planos → Figurinhas (lá, no app da
-  // loja, sem preço: ehNativo). Nada de "em breve". Estado de cada tile:
-  //   vestido  — o card mostra este uniforme agora (✓)
-  //   pintado  — já foi gerado: um toque veste, grátis (Rodada 21, uniformes guardados)
-  //   geravel  — o direito da pessoa pinta este (crédito: qualquer um; pacote: o do time) — com aviso
-  //   livre    — o 1º liberado, mas ainda sem geração: leva aos Planos, sem cadeado
-  //   trancado — cadeado: leva aos Planos
-  const timeComPacote = (brilhante?.times || []).find((t) => t.brilhante_ativo && t.brilhante_kit) || null;
-  const kitLiberado = kitDoTime || timeComPacote?.brilhante_kit || KITS_FIGURINHA[0].id;
+  // RODADA 29B (B) — A GRADE DE UNIFORMES (a mesma .fig-seletor-grade dos fundos) é sempre a mesma, nos dois cards
+  // e para os três casos; o que muda é o estado de cada tile, que sai do DIREITO (utils/uniformesGrade.js):
+  //   grátis — todos com cadeado; o toque leva à Minha Figurinha (Planos, sem preço no app da loja: ehNativo)
+  //   pacote — o uniforme do time aberto (pintável) e os outros com cadeado → Minha Figurinha
+  //   minha  — todos abertos; os ainda não pintados com o selo "pintar · 1 geração · ~45 s"
+  // Estados de tile: vestido (✓) · pintado (um toque veste, grátis) · geravel (confirma e gasta 1) · trancado.
+  // Nada de "em breve"; o pacote do time, para o dono, continua no convite "Vire figurinha" mais abaixo.
   const temCredito = fonteDireito === 'credito' || (brilhante?.creditos || 0) > 0;
+  const direitoDaGradeAgora = direitoDaGrade({ fonteDireito, creditos: brilhante?.creditos });
   function estadoDoKit(kit) {
-    if (avatarEhIA && kit.id === kitAtivo) return 'vestido';
-    if (slotsKits.includes(kit.id)) return 'pintado';
-    if (temCredito || (fonteDireito === 'time' && kit.id === kitDoTime)) return 'geravel';
-    return kit.id === kitLiberado ? 'livre' : 'trancado';
+    return estadoDoUniforme({ direito: direitoDaGradeAgora, kitId: kit.id, kitVestido: avatarEhIA ? kitAtivo : null, kitDoTime, slots: slotsKits });
   }
-  const kitsDaGrade = KITS_FIGURINHA.filter((k) => k.estado !== 'breve').sort((a, b) => (b.id === kitLiberado) - (a.id === kitLiberado));
-  // O dono de um time sem pacote vê o pacote em destaque (resolve o time inteiro); o resto, a Minha.
-  const destaqueDoKit = (estado) => (estado === 'livre' && meuTimeBrilhante && !meuTimeBrilhante.brilhante_ativo ? 'pacote' : 'minha');
+  const kitsDaGrade = ordemDaGrade(KITS_FIGURINHA.filter((k) => k.estado !== 'breve'), { direito: direitoDaGradeAgora, kitDoTime });
   function tocarUniforme(kit) {
-    const estado = estadoDoKit(kit);
-    if (estado === 'vestido' || gerandoIA) return;
-    if (estado === 'pintado' || estado === 'geravel') {
-      escolherKit(kit);
-      return;
-    }
-    navigate(`/planos?destaque=${destaqueDoKit(estado)}`);
+    if (gerandoIA) return;
+    const acao = acaoDoToque(estadoDoKit(kit));
+    if (acao === 'vestir' || acao === 'pintar') escolherKit(kit);
+    else if (acao === 'planos') navigate(DESTINO_DO_CADEADO);
   }
+  // "Refazer": ação pequena embaixo do uniforme atual (só com a figurinha no card e geração sobrando).
+  const kitDoCard = avatarEhIA ? KITS_FIGURINHA.find((k) => k.id === kitAtivo) || null : null;
+  const refazerAtual = !!kitDoCard && podeRefazer({ direito: direitoDaGradeAgora, kitVestido: kitAtivo, kitDoTime, restantes: restantesDireito, avatarEhIA });
   function gradeDeUniformes() {
     return (
       <div className="fig-seletor-grade" data-grade="uniformes">
@@ -431,13 +424,13 @@ export default function Figurinha() {
               className="fig-seletor-tile"
               onClick={() => tocarUniforme(kit)}
               // P2: o tile trancado diz o que o toque faz, com o mesmo texto do convite (Comprar · preço / Pedir).
-              aria-label={trancado ? `${kit.nome} (bloqueado) · ${textoDoConvite(destaqueDoKit(estado))}` : kit.nome}
+              aria-label={trancado ? `${kit.nome} (bloqueado) · ${textoDoConvite('minha')}` : estado === 'geravel' ? `${kit.nome} · ${SELO_PINTAR}` : kit.nome}
               aria-pressed={estado === 'vestido'}
               data-estado={estado}
               disabled={gerandoIA}
             >
               {/* Thumbnail quadrado */}
-              <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, border: estado === 'vestido' ? '2px solid #d4a017' : estado === 'livre' || estado === 'geravel' ? '1px solid rgba(212,160,23,0.55)' : '1px solid var(--border-subtle)', filter: estado === 'vestido' ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
+              <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, border: estado === 'vestido' ? '2px solid #d4a017' : estado === 'geravel' ? '1px solid rgba(212,160,23,0.55)' : '1px solid var(--border-subtle)', filter: estado === 'vestido' ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
                 {KIT_IMG[kit.id] ? (
                   // Enquadramento (reparo do look): o cover cortava a camisa a meio.
                   // Ancora ao topo + desce + reduz a escala → vê-se o corte da gola e
@@ -453,10 +446,12 @@ export default function Figurinha() {
                     <Check size={10} strokeWidth={3} />
                   </span>
                 ) : null}
-                {/* Gerável (com direito, sem slot): avisa que custa 1 geração — Rodada 21. */}
+                {/* Gerável (com direito, sem slot): avisa que custa 1 geração e quanto demora — Rodada 21 e 29B.
+                    O tile tem 76 px: o selo quebra em duas linhas ("pintar · 1 geração" / "~45 s"). */}
                 {estado === 'geravel' ? (
-                  <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.75)', color: '#d4a017', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    <EstrelaIA size={7} color="#d4a017" /> pintar · 1 geração
+                  <span data-selo="pintar" style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', display: 'grid', justifyItems: 'center', gap: 0, padding: '2px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.78)', color: '#d4a017', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, lineHeight: 1.15, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><EstrelaIA size={7} color="#d4a017" /> pintar · 1 geração</span>
+                    <span>~45 s</span>
                   </span>
                 ) : null}
                 {trancado ? (
@@ -1672,11 +1667,7 @@ export default function Figurinha() {
             {restantesDireito > 0 ? (
               <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
                 {restantesDireito === 1 ? 'Resta 1 geração' : `Restam ${restantesDireito} gerações`}
-                {kitDoTime ? ' · o uniforme do time vem por conta do pacote' : ' · uniforme à sua escolha'}
-              </span>
-            ) : kitDoTime && !avatarEhIA ? (
-              <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
-                Sua figurinha vem pelo pacote do time, no uniforme que o dono escolheu
+                {kitDoTime ? '' : ' · uniforme à sua escolha'}
               </span>
             ) : null}
             {/* "Pode demorar até 30 segundos" (própria, sob o botão) saiu nesta
@@ -1898,34 +1889,27 @@ export default function Figurinha() {
                 );
               })}
             </div>
-          ) : fonteDireito === 'time' ? (
-            // RODADA 21 — pacote do time: SEM seletor (o uniforme é o que o
-            // dono fixou; trocar o SEU é a Minha Figurinha, produto à parte).
-            // O que existe aqui é "Refazer" enquanto sobrar geração do pacote
-            // — nunca uma grelha que ia terminar em 403 pra quase todo kit.
-            <div className="hud-corners" style={{ padding: '18px 16px', display: 'grid', gap: 10, justifyItems: 'center', textAlign: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-              <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
-                Sua figurinha vem pelo pacote do time, no uniforme{' '}
-                <strong style={{ color: '#fff' }}>{KITS_FIGURINHA.find((k) => k.id === kitDoTime)?.nome || kitDoTime}</strong>{' '}
-                que o dono escolheu.
-              </span>
-              {restantesDireito > 0 ? (
-                <button
-                  type="button"
-                  className="btn btn--purple hud-corners"
-                  style={{ minWidth: 180 }}
-                  disabled={gerandoIA}
-                  onClick={() => setKitParaPintar(KITS_FIGURINHA.find((k) => k.id === kitDoTime) || { id: kitDoTime, nome: kitDoTime })}
-                >
-                  Refazer ({restantesDireito} restante{restantesDireito === 1 ? '' : 's'})
-                </button>
-              ) : null}
-            </div>
           ) : (
             // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile em app.css, nota de
-            // 15-set). RODADA 28: a mesma grade do card com a foto — o que não se pode pintar aparece com
-            // cadeado (leva aos Planos) em vez de sumir, e o "Pedir a minha" que ficava por baixo saiu.
-            gradeDeUniformes()
+            // 15-set). RODADA 29B: a MESMA grade nos três casos (grátis, pacote do time, Minha Figurinha) — o
+            // que não se pode pintar aparece com cadeado (leva à Minha Figurinha) em vez de sumir. No pacote
+            // já não há cartão de texto à parte ("o uniforme do time vem por conta do pacote" saiu): o
+            // uniforme do time é o tile aberto, e o "Refazer" virou ação pequena embaixo da grade.
+            <>
+              {gradeDeUniformes()}
+              {refazerAtual ? (
+                <button
+                  type="button"
+                  data-acao="refazer"
+                  className="btn btn--ghost btn--sm"
+                  style={{ justifySelf: 'center', fontSize: 12, padding: '4px 12px', opacity: 0.85 }}
+                  disabled={gerandoIA}
+                  onClick={() => setKitParaPintar(kitDoCard)}
+                >
+                  Refazer {kitDoCard.nome} · {restantesDireito === 1 ? '1 geração' : `${restantesDireito} gerações`}
+                </button>
+              ) : null}
+            </>
           )}
           </>
           ) : temFoto ? (
