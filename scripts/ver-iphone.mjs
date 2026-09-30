@@ -3891,6 +3891,16 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
+  if (CENAS.includes('rodada29a-csp')) {
+    const r = await cenaRodada29aCsp(navegador, sessao);
+    saida.rodada29aCsp = r;
+    console.log('\n[iphone] RODADA 29A (C) — violações da CSP em Report-Only (servidor local, build de produção)');
+    for (const t of r.telas) console.log(`   ${t.nome.padEnd(10)} ${t.rota} → ${t.urlFinal} · ${t.violacoes} violação(ões)`);
+    console.log(`   ${r.resumo.length} violação(ões) distinta(s):`);
+    for (const g of r.resumo) console.log(`   · ${g.diretiva} ← ${g.alvo} (${g.vezes}x em ${g.telas.join(', ')})`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+  }
+
   const arquivo = path.join(PASTA, `${ETIQUETA}.json`);
   writeFileSync(arquivo, JSON.stringify(saida, null, 2));
   console.log(`\n[iphone] detalhes em ${path.relative(RAIZ, arquivo)}`);
@@ -6207,4 +6217,84 @@ async function cenaRodada29aExcluir(navegador, sessao) {
   verificar('nenhuma exclusão foi pedida ao motor (SEM confirmar de verdade)', apagou.length === 0, `escritas interceptadas: ${escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | ') || 'nenhuma'}`);
   await contexto.close();
   return { verificacoes, capturas, escritas, erros, pasta };
+}
+
+// ─── Cena "rodada29a-csp" (30-set): violações da CSP em Report-Only (Rodada 29A, parte C). ─────────────
+// O `_headers` da Cloudflare só vale no ar; aqui ele é emulado: o cabeçalho Content-Security-Policy-Report-Only
+// é lido do próprio public/_headers (bloco `/*`) e posto na resposta de cada DOCUMENTO pelo Playwright. O servidor
+// tem de ser o BUILD (`vite preview`), não o `vite dev` (o dev usa scripts inline e WebSocket do HMR, que sujariam
+// a lista). Cada `securitypolicyviolation` da página entra na lista; nada é bloqueado — é só relatório.
+// Só leitura: toda escrita à /api é interceptada.
+async function cenaRodada29aCsp(navegador, sessao) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29a-csp só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const cabecalhos = readFileSync(path.join(RAIZ, 'public', '_headers'), 'utf8').split(/\r?\n/);
+  const inicio = cabecalhos.findIndex((l) => l.trim() === '/*');
+  if (inicio < 0) throw new Error('public/_headers sem bloco /*');
+  const geral = {};
+  for (const linha of cabecalhos.slice(inicio + 1)) {
+    if (!/^\s+\S/.test(linha)) break;
+    const i = linha.indexOf(':');
+    geral[linha.slice(0, i).trim()] = linha.slice(i + 1).trim();
+  }
+  const csp = geral['Content-Security-Policy-Report-Only'];
+  if (!csp) throw new Error('bloco /* sem Content-Security-Policy-Report-Only');
+
+  const pasta = path.join(PASTA, 'rodada-29a');
+  mkdirSync(pasta, { recursive: true });
+  const erros = [];
+  const violacoes = [];
+  const telas = [];
+  const rotas = [
+    ['login', '/login', false],
+    ['inicio', '/home', true],
+    ['perfil', '/perfil', true],
+    ['resenha', '/feed', true],
+    ['ranking', `/equipa/${TIME}/ranking`, true],
+    ['planos', '/planos', true],
+    ['figurinha', '/figurinha', true],
+    ['explorar', '/explorar', true],
+  ];
+
+  for (const [nome, rota, comSessao] of rotas) {
+    const contexto = await novoContexto(navegador, comSessao ? sessao : null, { amostrar: false });
+    await contexto.addInitScript(() => {
+      window.__csp = [];
+      document.addEventListener('securitypolicyviolation', (e) => {
+        window.__csp.push({ diretiva: e.effectiveDirective, bloqueado: e.blockedURI, arquivo: e.sourceFile || '', disposicao: e.disposition });
+      });
+      try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ }
+    });
+    await contexto.route('**/*', async (route) => {
+      if (route.request().resourceType() !== 'document') return route.fallback();
+      const resposta = await route.fetch();
+      return route.fulfill({ response: resposta, headers: { ...resposta.headers(), 'content-security-policy-report-only': csp } });
+    });
+    await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${nome}: ${e.message}`));
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    await espera(4500);
+    const dasTelas = await pagina.evaluate(() => window.__csp || []);
+    for (const v of dasTelas) violacoes.push({ tela: nome, ...v });
+    telas.push({ nome, rota, urlFinal: pagina.url().replace(BASE, ''), violacoes: dasTelas.length });
+    await contexto.close();
+  }
+
+  // Agrupa por diretiva + endereço bloqueado (sem o caminho do arquivo), com contagem e telas.
+  const grupos = new Map();
+  for (const v of violacoes) {
+    let alvo = v.bloqueado;
+    try { const u = new URL(v.bloqueado); alvo = `${u.origin}${u.pathname.startsWith('/api/media/') ? '/api/media/…' : ''}`; } catch { /* inline, eval, data, blob */ }
+    const chave = `${v.diretiva} ← ${alvo}`;
+    const g = grupos.get(chave) || { diretiva: v.diretiva, alvo, vezes: 0, telas: new Set() };
+    g.vezes += 1;
+    g.telas.add(v.tela);
+    grupos.set(chave, g);
+  }
+  const resumo = [...grupos.values()].map((g) => ({ diretiva: g.diretiva, alvo: g.alvo, vezes: g.vezes, telas: [...g.telas] }));
+  writeFileSync(path.join(pasta, 'csp-violacoes.json'), JSON.stringify({ csp, telas, resumo }, null, 2));
+  return { csp, telas, resumo, erros, pasta };
 }

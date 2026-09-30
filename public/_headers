@@ -8,6 +8,25 @@
 #      porque estes caminhos têm conteúdo fixo: quando a arte muda, muda o nome
 #      do arquivo (o /assets/ já vem com hash do Vite).
 
+# Segurança do site inteiro (Rodada 29A, 30-set; securityheaders.com deu D).
+#   · HSTS 1 ano: o navegador nunca mais abre o site em http.
+#   · X-Frame-Options: ninguém põe o Futty dentro de um iframe alheio (clickjacking).
+#   · Permissions-Policy: só a câmera (foto) e a localização (Explorar) do próprio site.
+#   · Referrer-Policy: já era o padrão da Cloudflare; aqui fica escrito.
+#   · CSP SÓ EM REPORT-ONLY: não bloqueia nada, só aparece no console como violação.
+#     Fica uma semana sem relatório e só então vira Content-Security-Policy de verdade.
+#     Se a lista mudar, os endereços (Supabase, motor, futtyapp.com.br) vêm de .env.production.
+#   · Este bloco vem PRIMEIRO de propósito: as regras de baixo só acrescentam cabeçalhos.
+# CORS `*` na raiz: NÃO vem de regra nossa (não há Access-Control-Allow-Origin em `/*` aqui) —
+# é o que a própria Cloudflare Pages põe em todo arquivo estático (conferido com curl -I em 30-set).
+# As regras de mídia abaixo continuam dizendo `*` de forma explícita, que é o que o app nativo precisa.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(self), payment=(), usb=()
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy-Report-Only: default-src 'self'; connect-src 'self' https://ynzmjcvqdljffgbeqglh.supabase.co https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br; img-src 'self' data: blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://futtyapp.com.br; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'
+
 # Saída do bundler — nome com hash, conteúdo nunca muda.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
