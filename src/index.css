@@ -222,8 +222,9 @@ body {
    `.anim-slide-in` (notifSlide, `backwards` — os cards da Resenha em /feed e o
    card do jogo no Início) e `.futty-lockup-f` (futtyLockupIn, `both` — o F da
    LandingPage). Mesmo defeito (conteúdo preso em opacity 0), mesma correção:
-   entram na exclusão. */
-html[data-oculto] *:not(.page-transition):not(.inicio-reveal):not(.page-reveal):not(.fig-card-enter):not(.perfil-tile):not(.anim-slide-in):not(.futty-lockup-f),
+   entram na exclusão. Rodada 29A: `.futty-toast` (components/Toast.jsx) também — um aviso que nasce com a aba
+   escondida não pode ficar preso em opacity 0. */
+html[data-oculto] *:not(.page-transition):not(.inicio-reveal):not(.page-reveal):not(.fig-card-enter):not(.perfil-tile):not(.anim-slide-in):not(.futty-lockup-f):not(.futty-toast),
 html[data-oculto] *::before,
 html[data-oculto] *::after {
   animation-play-state: paused !important;
@@ -315,3 +316,87 @@ select {
 /* VAGA 3 — lineReveal/lineShimmer removidos: eram as linhas decorativas do nome do
    Início, que saiu quando o cromo real (com a placa do nome) passou a ser o
    destaque. Zero consumidores. */
+
+/* Toast (Rodada 29A, 30-set) — o aviso de uma linha no MEIO da tela. Um componente só (components/Toast.jsx).
+   A entrada é @keyframes com o estado natural VISÍVEL (opacity 1 no CSS base): se a animação for pausada no
+   quadro 0 (ver `data-oculto` acima) o pior caso é o aviso aparecer sem animar — e `.futty-toast` está na lista
+   de exclusão daquela pausa, como as outras entradas de conteúdo. A saída é `transition` (não anima parado). */
+.futty-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 300;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 132px;
+  max-width: min(320px, 90vw);
+  padding: 14px 18px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  border-radius: 14px;
+  background: rgba(16, 16, 18, 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--toast-cor, var(--text-dim));
+  box-shadow: 0 14px 36px -10px rgba(0, 0, 0, 0.8);
+  color: #f2f2f6;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  animation: futtyToastEntra 180ms ease-out backwards;
+  transition: opacity 180ms ease, scale 180ms ease;
+}
+.futty-toast--saindo {
+  opacity: 0;
+  scale: 0.96;
+}
+.futty-toast--toque {
+  cursor: pointer;
+}
+.futty-toast__icone {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--toast-cor, var(--text-dim));
+  color: var(--toast-cor, var(--text-dim));
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+}
+.futty-toast__dica {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.futty-toast__acao {
+  margin-top: 2px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0d0d12;
+  background: var(--toast-cor, var(--text-dim));
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+/* `scale` (propriedade própria), não `transform`: o transform do aviso já leva o translate(-50%, -50%) do
+   centro, e o WebKit errava a posição do 1º quadro quando a keyframe repetia o translate em percentagem. */
+@keyframes futtyToastEntra {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .futty-toast {
+    animation: none;
+    transition: none;
+  }
+}

@@ -3891,6 +3891,17 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
+  if (CENAS.includes('rodada29a-toast')) {
+    const r = await cenaRodada29aToast(navegador, sessao);
+    saida.rodada29aToast = r;
+    console.log('\n[iphone] RODADA 29A (E) — avisos no meio da tela (servidor local, escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
   if (CENAS.includes('rodada29a-csp')) {
     const r = await cenaRodada29aCsp(navegador, sessao);
     saida.rodada29aCsp = r;
@@ -6297,4 +6308,130 @@ async function cenaRodada29aCsp(navegador, sessao) {
   const resumo = [...grupos.values()].map((g) => ({ diretiva: g.diretiva, alvo: g.alvo, vezes: g.vezes, telas: [...g.telas] }));
   writeFileSync(path.join(pasta, 'csp-violacoes.json'), JSON.stringify({ csp, telas, resumo }, null, 2));
   return { csp, telas, resumo, erros, pasta };
+}
+
+// ─── Cena "rodada29a-toast" (30-set): os avisos no MEIO da tela (Rodada 29A, parte E). ──────────────────
+// Usa o Perfil: "Salvar dados" (sucesso), o mesmo PATCH devolvendo 500 (erro) e "Relatar um problema" (info).
+// Toda escrita à /api é interceptada (nada chega ao banco); o 500 é fabricado aqui.
+async function cenaRodada29aToast(navegador, sessao) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29a-toast só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29a');
+  mkdirSync(pasta, { recursive: true });
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `toast-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+
+  const abrir = async (extra = {}, falharPatch = false) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    const escritas = await travarEscritas(contexto);
+    if (falharPatch) {
+      await contexto.route('**/api/me', async (route) => {
+        if (route.request().method() !== 'PATCH') return route.fallback();
+        return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Falha de teste da cena (não é real).' }) });
+      });
+    }
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(e.message));
+    await pagina.goto(`${BASE}/perfil`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 4000 }).catch(() => {});
+    await pagina.locator('button', { hasText: /^Salvar dados$/ }).first().waitFor({ timeout: 30000 });
+    return { contexto, pagina, escritas };
+  };
+  const medir = (pagina) => pagina.evaluate(() => {
+    const el = document.querySelector('.futty-toast');
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const c = getComputedStyle(el);
+    return {
+      centroX: Math.round(r.left + r.width / 2), centroY: Math.round(r.top + r.height / 2),
+      telaX: Math.round(window.innerWidth / 2), telaY: Math.round(window.innerHeight / 2),
+      largura: Math.round(r.width), opacidade: Number(c.opacity), blur: `${c.backdropFilter || ''} ${c.webkitBackdropFilter || ''}`.trim(),
+      icone: el.querySelector('.futty-toast__icone')?.textContent || '', texto: el.querySelector('.futty-toast__texto')?.textContent || '',
+      animacao: c.animationName, papel: el.getAttribute('role'), fundo: c.backgroundColor, pointerEvents: c.pointerEvents,
+    };
+  });
+  const salvar = (pagina) => pagina.locator('button', { hasText: /^Salvar dados$/ }).first().tap();
+  // O WebKit sem tela não gera quadros sozinho e a animação de entrada fica no quadro 0 (invisível): termina-a
+  // à mão (Web Animations) antes de medir/capturar — no aparelho os quadros não faltam.
+  const quadros = (pagina) => pagina.evaluate(() => { document.querySelectorAll('.futty-toast').forEach((e) => e.getAnimations().forEach((a) => a.finish())); });
+
+  // 1) sucesso: no centro, com ✓, desfoque, e some sozinho em ~2 s.
+  {
+    const { contexto, pagina, escritas } = await abrir();
+    await salvar(pagina);
+    await espera(350);
+    await quadros(pagina);
+    const m = await medir(pagina);
+    verificar('sucesso: o aviso aparece', !!m, m ? `"${m.texto}"` : 'nenhum .futty-toast');
+    if (m) {
+      verificar('sucesso: centrado na tela (±2 px)', Math.abs(m.centroX - m.telaX) <= 2 && Math.abs(m.centroY - m.telaY) <= 2, `centro ${m.centroX},${m.centroY} · tela ${m.telaX},${m.telaY}`);
+      verificar('sucesso: largura máxima 320', m.largura <= 320, `${m.largura}px`);
+      verificar('sucesso: ícone ✓', m.icone === '✓', m.icone);
+      verificar('sucesso: fundo escuro com desfoque', /blur\(8px\)/.test(m.blur), `${m.fundo} · ${m.blur}`);
+      verificar('sucesso: não intercepta toques (some sozinho)', m.pointerEvents === 'none', m.pointerEvents);
+    }
+    await capturar(pagina, '1-sucesso');
+    await espera(850);
+    verificar('sucesso: ainda visível com ~1,3 s', !!(await medir(pagina)));
+    await espera(1500);
+    verificar('sucesso: sumiu com ~2,8 s', !(await medir(pagina)));
+    verificar('sucesso: a escrita foi interceptada (PATCH /api/me, nada no banco)', escritas.some((e) => e.metodo === 'PATCH'), escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
+    await contexto.close();
+  }
+
+  // 2) erro: com !, fica até tocar, toque fecha em 180 ms.
+  {
+    const { contexto, pagina } = await abrir({}, true);
+    await salvar(pagina);
+    await espera(350);
+    await quadros(pagina);
+    const m = await medir(pagina);
+    verificar('erro: o aviso aparece com "!" e role=alert', !!m && m.icone === '!' && m.papel === 'alert', m ? `${m.icone} · ${m.papel} · "${m.texto}"` : 'nenhum');
+    await capturar(pagina, '2-erro');
+    await espera(4500);
+    verificar('erro: continua na tela depois de 4,8 s (fica até tocar)', !!(await medir(pagina)));
+    await pagina.locator('.futty-toast').tap();
+    await espera(450);
+    verificar('erro: tocar fecha (em ~180 ms)', !(await medir(pagina)));
+    await contexto.close();
+  }
+
+  // 3) info: no Explorar, "usar a cidade escrita" com o campo vazio pede para escrever a cidade (sem rede).
+  {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    await travarEscritas(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(e.message));
+    await pagina.goto(`${BASE}/explorar`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 4000 }).catch(() => {});
+    await pagina.locator('button', { hasText: /usar a cidade escrita/ }).first().tap({ timeout: 30000 });
+    await espera(350);
+    await quadros(pagina);
+    const m = await medir(pagina);
+    verificar('info: o aviso aparece com "i"', !!m && m.icone === 'i', m ? `${m.icone} · "${m.texto}"` : 'nenhum');
+    if (m) await capturar(pagina, '3-info');
+    await contexto.close();
+  }
+
+  // 4) prefers-reduced-motion: sem animação de entrada.
+  {
+    const { contexto, pagina } = await abrir({ reducedMotion: 'reduce' });
+    await salvar(pagina);
+    await espera(350);
+    const m = await medir(pagina);
+    verificar('reduced-motion: aparece sem animar (animation-name none)', !!m && m.animacao === 'none' && m.opacidade === 1, m ? `animação ${m.animacao} · opacidade ${m.opacidade}` : 'nenhum');
+    await contexto.close();
+  }
+
+  return { verificacoes, capturas, erros, pasta };
 }
