@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { urlAsset, urlImagem, iniciaisNome } from '../utils/avatar';
+import { avatarQuadrado, enquadroAvatar } from '../lib/enquadroAvatar';
 
 const NIVEIS = [
   { n: 0, label: 'Sem resultado' },
@@ -21,12 +22,12 @@ function jaComecouJogo(game) {
 
 function MiniAvatar({ nome, avatarUrl }) {
   const [falhou, setFalhou] = useState(false);
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : null;
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: avatarQuadrado(avatarUrl) }) : null;
   return (
     <div style={{ width: 32, height: 32, borderRadius: 6, overflow: 'hidden', background: '#15151a', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
       {src && !falhou ? (
         // minWidth/minHeight 0: item de grid — ver a nota em .pavatar img (app.css).
-        <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover', objectPosition: 'top center' }} />
+        <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover', objectPosition: enquadroAvatar(avatarUrl) }} />
       ) : (
         <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>{iniciaisNome(nome)}</span>
       )}

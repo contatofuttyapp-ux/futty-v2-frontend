@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { gerarCartaoCampeao, gerarCartaoPodio } from '../utils/campeonatoCartao';
 import { podioDe } from '../utils/campeonatoPodio';
 import { urlAsset, urlImagem } from '../utils/avatar';
+import { avatarQuadrado, enquadroAvatar } from '../lib/enquadroAvatar';
 import SilhuetaJogador from './SilhuetaJogador';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -223,7 +224,7 @@ export function CampeonatoPodio({ campeonato }) {
 
 // ---- Plantéis dos times (toque expande) ----
 function RetratoMini({ j }) {
-  if (j.avatar_url) return <img src={urlImagem(urlAsset(j.avatar_url), 128, { quadrado: true })} alt="" width={26} height={26} decoding="async" loading="lazy" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top' }} />;
+  if (j.avatar_url) return <img src={urlImagem(urlAsset(j.avatar_url), 128, { quadrado: avatarQuadrado(j.avatar_url) })} alt="" width={26} height={26} decoding="async" loading="lazy" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', objectPosition: enquadroAvatar(j.avatar_url) }} />;
   // LEI DA SILHUETA: pessoa sem foto = silhueta-casa angulosa (nunca círculo com inicial).
   return <span style={{ width: 26, height: 26, display: 'grid', placeItems: 'center', color: 'rgba(201,182,255,0.9)' }}><SilhuetaJogador size="92%" interrogacao={false} /></span>;
 }
