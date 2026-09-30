@@ -6506,16 +6506,20 @@ async function cenaRodada29aToast(navegador, sessao) {
     await contexto.close();
   }
 
-  // 3) info: no Explorar, "usar a cidade escrita" com o campo vazio pede para escrever a cidade (sem rede).
+  // 3) info: no Explorar, "Usar minha localização" num aparelho sem localização avisa (sem rede). Rodada 29B (D): o botão
+  //    "usar a cidade escrita" saiu do Explorar (virou o campo de cidade com sugestão); o aviso "i" é o mesmo.
   {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false });
-    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    await contexto.addInitScript(() => {
+      try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ }
+      Object.defineProperty(navigator, 'geolocation', { value: undefined, configurable: true });
+    });
     await travarEscritas(contexto);
     const pagina = await contexto.newPage();
     pagina.on('pageerror', (e) => erros.push(e.message));
     await pagina.goto(`${BASE}/explorar`, { waitUntil: 'domcontentloaded' });
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 4000 }).catch(() => {});
-    await pagina.locator('button', { hasText: /usar a cidade escrita/ }).first().tap({ timeout: 30000 });
+    await pagina.locator('button', { hasText: /Usar minha localização/ }).first().tap({ timeout: 30000 });
     await espera(350);
     await quadros(pagina);
     const m = await medir(pagina);

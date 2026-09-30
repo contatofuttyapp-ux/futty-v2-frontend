@@ -17,6 +17,10 @@
 #     Fica uma semana sem relatório e só então vira Content-Security-Policy de verdade.
 #     Se a lista mudar, os endereços (Supabase, motor, futtyapp.com.br) vêm de .env.production.
 #   · Este bloco vem PRIMEIRO de propósito: as regras de baixo só acrescentam cabeçalhos.
+#   · Rodada 29B (G): o motor entrou no img-src (a cena da 29A viu 13 violações em /api/media/…: as fotos vêm do Cloud Run, não do
+#     site); o Sentry entrou no connect-src — ele ESTÁ no build (chunk vendor-sentry, aceso 3 s depois da 1ª pintura quando o DSN
+#     existe) e manda os erros para o ingest dele. O DSN mora no ambiente da Cloudflare (VITE_SENTRY_DSN) e não sabemos a região
+#     daqui, então os três hosts de ingest (padrão, us e de). Continua Report-Only: só aparece no console, não bloqueia nada.
 # CORS `*` na raiz: NÃO vem de regra nossa (não há Access-Control-Allow-Origin em `/*` aqui) —
 # é o que a própria Cloudflare Pages põe em todo arquivo estático (conferido com curl -I em 30-set).
 # As regras de mídia abaixo continuam dizendo `*` de forma explícita, que é o que o app nativo precisa.
@@ -25,7 +29,7 @@
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: camera=(self), microphone=(), geolocation=(self), payment=(), usb=()
   Referrer-Policy: strict-origin-when-cross-origin
-  Content-Security-Policy-Report-Only: default-src 'self'; connect-src 'self' https://ynzmjcvqdljffgbeqglh.supabase.co https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br; img-src 'self' data: blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://futtyapp.com.br; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'
+  Content-Security-Policy-Report-Only: default-src 'self'; connect-src 'self' https://ynzmjcvqdljffgbeqglh.supabase.co https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; img-src 'self' data: blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'
 
 # Saída do bundler — nome com hash, conteúdo nunca muda.
 /assets/*
