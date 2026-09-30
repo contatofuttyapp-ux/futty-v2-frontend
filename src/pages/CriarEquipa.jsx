@@ -12,6 +12,7 @@ import Toast from '../components/Toast';
 import { avisoLogoRecusado, motivoDoLogo } from '../utils/logoTime';
 import { copiarTexto } from '../utils/clipboard';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
+import { EscolhaPapel } from '../components/EscolhaLinhaGol';
 import { avisoDaCidade } from '../utils/cidades';
 import '../styles/app.css';
 
@@ -78,6 +79,7 @@ export default function CriarEquipa() {
   const [cidadeEscolha, setCidadeEscolha] = useState(null);
   const [avisoCidade, setAvisoCidade] = useState(null); // depois de criar: { tipo: 'ok' | 'aviso', texto } sobre a cidade
   const [mostrarGols, setMostrarGols] = useState(true);
+  const [joga, setJoga] = useState(true); // Rodada 29B (E): "Eu jogo" (padrão) / "Só organizo o time"
   const [modo, setModo] = useState('privado'); // privado | publico_aprovacao | publico_aberto
   const [team, setTeam] = useState(null); // criada no fim do passo 3
   const [logoArquivo, setLogoArquivo] = useState(null);
@@ -133,8 +135,11 @@ export default function CriarEquipa() {
       const bodyCriar = { nome: nome.trim() };
       // Cidade da lista: manda o pacote todo (o motor guarda a coordenada da lista, sem Nominatim). Digitada: só o texto.
       if (cidade.trim()) Object.assign(bodyCriar, cidadeEscolha || { cidade: cidade.trim() });
-      const { team: t, geo } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
+      if (!joga) bodyCriar.joga = false;
+      const { team: t, geo, joga: jogaGravado } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
       setAvisoCidade(avisoDaCidade(geo, cidade.trim()));
+      // O motor sem a migração 067 cria o time com o criador jogando: a tela não finge que gravou o outro papel.
+      if (!joga && jogaGravado !== false) setToast({ tipo: 'info', mensagem: 'Time criado, mas "só organizo" ainda não está disponível — você entrou jogando. Dá para mudar depois.' });
       // P2-12: a equipa já existe aqui. Se o PATCH das definições falhar, NÃO
       // dizer "erro a criar" — a equipa nasceu; segue-se para convites e avisa-se
       // que a definição ficou por aplicar (ajusta-se no admin).
@@ -240,6 +245,10 @@ export default function CriarEquipa() {
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Como funciona o seu time?</h1>
             <p className="texto-apoio" style={{ marginBottom: 14 }}>Cada escolha mostra o efeito. Você pode mudar tudo depois no painel de admin.</p>
+            <div data-papel style={{ ...VIDRO, clipPath: CLIP, padding: 12, marginBottom: 10 }}>
+              <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Seu papel no time</div>
+              <EscolhaPapel joga={joga} aoTrocar={setJoga} />
+            </div>
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
               <MiniRadar n={mostrarGols ? 5 : 3} />
               <div style={{ flex: 1, minWidth: 0 }}>

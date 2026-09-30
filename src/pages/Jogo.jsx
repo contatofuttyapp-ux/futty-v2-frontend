@@ -155,6 +155,8 @@ export default function Jogo() {
 
   const { team, game, players, meuEstado } = data || {};
   const isAdmin = team?.role === 'admin';
+  // Rodada 29B (E): o motor diz (rsvp.eu_jogo) se a pessoa só organiza o time — aí não há presença a confirmar.
+  const soOrganizo = rsvpEstado?.eu_jogo === false;
   const golsResultado = data?.gols || [];
   // Times do sorteio (para nomes, jogadores do resultado e artilheiro).
   const timesSorteio = game?.times_resultado?.times || [];
@@ -255,6 +257,11 @@ export default function Jogo() {
 
             {/* Confirmação de presença */}
             <SecLabel>Sua presença</SecLabel>
+            {soOrganizo ? (
+              <div data-so-organizo style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px' }}>
+                <span className="muted">Você só organiza este time, então não entra na lista de presença nem no sorteio. Dá para mudar nas configurações do time.</span>
+              </div>
+            ) : (
             <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', flexWrap: 'wrap' }}>
               {posEspera != null && !estouConfirmado ? (
                 <span style={{ width: '100%', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: RAJ, color: 'var(--neon)', fontWeight: 700, fontSize: 13, letterSpacing: '0.03em' }}>
@@ -316,6 +323,7 @@ export default function Jogo() {
                 </>
               )}
             </div>
+            )}
 
             {/* Confirmados */}
             <SecLabel>Confirmados · {confirmados.length}</SecLabel>

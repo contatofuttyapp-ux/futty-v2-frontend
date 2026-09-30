@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3973,6 +3973,17 @@ try {
     const r = await cenaRodada29bCidades(navegador);
     saida.rodada29bCidades = r;
     console.log('\n[iphone] RODADA 29B (D) — cidade com sugestão: criar time, painel do time e Explorar (servidor local; escritas e Nominatim interceptados)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29b-organiza')) {
+    const r = await cenaRodada29bOrganiza(navegador);
+    saida.rodada29bOrganiza = r;
+    console.log('\n[iphone] RODADA 29B (E) — "só organizo": criar time, painel, Início, jogo e página do time (servidor local; motor lido de verdade, joga/eu_jogo trocados por cima)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7495,6 +7506,218 @@ async function cenaRodada29bCidades(navegador) {
     await botao.tap();
     await espera(1200);
     verificar('Explorar: esse botão chama o Nominatim UMA vez (fora da lista, como antes)', nominatim.length === 1, String(nominatim.length));
+    await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29b-organiza" (30-set): "Só organizo" — o papel de quem administra o time (Rodada 29B, parte E). ──
+// A migração 067 (team_members.joga) NÃO está aplicada no banco compartilhado, então esta cena lê as respostas REAIS do
+// motor local e troca `joga` / `eu_jogo` por cima (route.fetch + alteração do JSON) — o app é o mesmo, só o dado muda.
+// Toda escrita à /api é interceptada (o PATCH do papel e o POST da criação são respondidos aqui). Só servidor LOCAL.
+async function cenaRodada29bOrganiza(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29b-organiza só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29b');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const slug = fx.times.gratis.slug;
+  const jogoId = fx.jogo.id;
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `organiza-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const FUTURO = new Date(Date.now() + 3 * 86400000).toISOString();
+  const corpoCompleto = (e) => { try { return JSON.parse(e?.corpo || 'null'); } catch { return null; } };
+
+  // Abre uma tela; `alterar` = [[padrão da rota, (json) => void]] — a resposta real do motor, com o JSON alterado.
+  const abrir = async (rota, { extra = () => null, alterar = [], falharJoga = { ligado: false } } = {}, rotulo) => {
+    const contexto = await novoContexto(navegador, fx.gratis, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); localStorage.setItem('futty_figurinha_estreia', '1'); } catch { /* nada */ } });
+    const patches = [];
+    const escritas = await travarEscritas(contexto, (caminho, metodo, corpo) => {
+      if (metodo === 'PATCH' && /\/membros\/joga$/.test(caminho)) { try { patches.push(JSON.parse(corpo || '{}')); } catch { /* nada */ } return { ok: true }; }
+      return extra(caminho, metodo, corpo);
+    });
+    await contexto.route('**/api/equipas/*/membros/joga', (route) => {
+      if (route.request().method() !== 'PATCH' || !falharJoga.ligado) return route.fallback();
+      return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Essa opção ainda não está disponível. Tente de novo mais tarde.' }) });
+    });
+    for (const [padrao, fn] of alterar) {
+      await contexto.route(padrao, async (route) => {
+        if (route.request().method() !== 'GET') return route.fallback();
+        const r = await route.fetch();
+        const json = await r.json();
+        fn(json);
+        return route.fulfill({ response: r, json });
+      });
+    }
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    return { contexto, pagina, escritas, patches };
+  };
+  const texto = (pagina) => pagina.locator('body').innerText();
+  const esperarCriar = (pagina) => pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
+  const criarAtePapel = async (pagina, nome) => {
+    await esperarCriar(pagina);
+    await pagina.locator('input[placeholder^="ex.:"]').fill(nome);
+    await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
+    await pagina.locator('[data-escolha-papel]').waitFor({ timeout: 15000 });
+    await espera(400);
+  };
+  const terminarCriacao = async (pagina) => {
+    await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
+    await espera(500);
+    await pagina.locator('button', { hasText: /Criar o time/i }).first().tap();
+    await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
+    await espera(400);
+  };
+  const respostaDoPost = (joga) => (caminho, metodo) => (metodo === 'POST' && caminho === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' }, joga } : null);
+  const chips = (pagina, sel = '[data-escolha-papel]') => pagina.locator(`${sel} button`).evaluateAll((els) => els.map((b) => ({ t: b.textContent.trim(), ativo: b.getAttribute('aria-pressed') === 'true' })));
+
+  // 1) criar o time: "Eu jogo" (padrão) / "Só organizo o time" — com o texto que explica
+  {
+    const { contexto, pagina, escritas } = await abrir('/criar-equipa', { extra: respostaDoPost(false) }, 'criar-organiza');
+    await criarAtePapel(pagina, 'Time do Organizador');
+    const c = await chips(pagina);
+    verificar('criar time, passo 2: "Eu jogo" é o padrão e há "Só organizo o time"', c.length === 2 && c[0].t === 'Eu jogo' && c[0].ativo && c[1].t === 'Só organizo o time' && !c[1].ativo, JSON.stringify(c));
+    const t = await texto(pagina);
+    verificar('criar time: o texto de apoio explica (não entra na presença, no sorteio nem no ranking; nem vaga do pacote)', /não entra na lista de presença, no sorteio nem no ranking/.test(t) && /não ocupa vaga no pacote de figurinhas/.test(t) && /Dá para mudar depois/.test(t));
+    await capturar(pagina, '1-criar-papel');
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
+    await espera(450);
+    const c2 = await chips(pagina);
+    verificar('tocar em "Só organizo o time" troca o chip ativo', c2[1].ativo && !c2[0].ativo, JSON.stringify(c2));
+    await capturar(pagina, '2-criar-so-organizo');
+    await terminarCriacao(pagina);
+    const post = corpoCompleto(escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/teams'));
+    verificar('o POST /api/teams leva joga: false', post && post.joga === false && post.nome === 'Time do Organizador', JSON.stringify(post));
+    await contexto.close();
+  }
+  {
+    const { contexto, pagina, escritas } = await abrir('/criar-equipa', { extra: respostaDoPost(true) }, 'criar-joga');
+    await criarAtePapel(pagina, 'Time de Quem Joga');
+    await terminarCriacao(pagina);
+    const post = corpoCompleto(escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/teams'));
+    verificar('sem mexer no papel ("Eu jogo") o POST não manda joga (o criador joga, como sempre)', post && !('joga' in post), JSON.stringify(post));
+    await contexto.close();
+  }
+  {
+    // o motor sem a migração 067 cria o time com o criador jogando e responde joga: true
+    const { contexto, pagina } = await abrir('/criar-equipa', { extra: respostaDoPost(true) }, 'criar-sem-067');
+    await criarAtePapel(pagina, 'Time Sem 067');
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
+    await terminarCriacao(pagina);
+    await pagina.locator('.futty-toast').waitFor({ timeout: 8000 }).catch(() => {});
+    const aviso = await pagina.locator('.futty-toast').innerText().catch(() => '');
+    verificar('se o motor não gravou o papel, a tela diz a verdade (sem fingir que gravou)', /ainda não está disponível/.test(aviso) && /entrou jogando/.test(aviso), aviso.replace(/\s+/g, ' '));
+    await contexto.close();
+  }
+
+  // 2) painel do time: "Meu papel" muda na hora e reverte se o motor recusar
+  {
+    const falharJoga = { ligado: false };
+    const { contexto, pagina, patches } = await abrir(`/admin/${slug}?tab=equipa`, {
+      falharJoga,
+      alterar: [[new RegExp(`/api/teams/${slug}(\\?.*)?$`), (j) => { j.team.joga = false; }]],
+    }, 'painel');
+    await pagina.locator('[data-escolha-papel]').waitFor({ timeout: 30000 });
+    await espera(500);
+    const c = await chips(pagina);
+    verificar('painel: "Meu papel" abre com "Só organizo o time" marcado (o motor diz joga: false)', c.length === 2 && c[1].ativo && !c[0].ativo, JSON.stringify(c));
+    await capturar(pagina, '3-painel-so-organizo');
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Eu jogo' }).tap();
+    await espera(900);
+    verificar('painel: tocar em "Eu jogo" grava PATCH .../membros/joga { joga: true }', patches.length === 1 && patches[0].joga === true, JSON.stringify(patches));
+    verificar('painel: o aviso "Você voltou a jogar."', /Você voltou a jogar\./.test(await texto(pagina)));
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
+    await pagina.getByText('Agora você só organiza o time.').first().waitFor({ timeout: 6000 }).catch(() => {});
+    verificar('painel: tocar em "Só organizo o time" grava { joga: false } e avisa', patches.length === 2 && patches[1].joga === false && /Agora você só organiza o time\./.test(await texto(pagina)), JSON.stringify(patches));
+    // o motor recusa (sem a 067): o chip volta e o motivo aparece
+    falharJoga.ligado = true;
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Eu jogo' }).tap();
+    await espera(1200);
+    const depois = await chips(pagina);
+    verificar('painel: se o motor recusa, o chip VOLTA ao que era (não finge que trocou)', depois[1].ativo && !depois[0].ativo, JSON.stringify(depois));
+    verificar('painel: …e o motivo do motor aparece ("Essa opção ainda não está disponível…")', /Essa opção ainda não está disponível/.test(await texto(pagina)));
+    await capturar(pagina, '4-painel-recusado');
+    await contexto.close();
+  }
+
+  // 3) Início: quem só organiza não tem "Vou / Não vou" nem "Avisar que não vou", nem o cartão de presença
+  {
+    const jogos = (euJogo) => [{ id: 'g-prova', name: 'Racha de sábado', date: FUTURO, location: 'Quadra da prova 29B', confirmed_count: 3, status: 'scheduled', cancelado: false, user_status: null, team_id: fx.times.gratis.id, team_name: 'Prova R29B Grátis', team_slug: slug, ausente_proximo: false, eu_jogo: euJogo }];
+    const rsvpAberto = { rsvp_aberto: true, rsvp_prazo: FUTURO, rsvp_fechado: false, max_jogadores: null, lugares_disponiveis: null, cheio: false, confirmados: [], recusados: [], pendentes: [], espera: [], minha_posicao_espera: null };
+    const inicioCom = (euJogo) => [[/\/api\/inicio(\?.*)?$/, (j) => {
+      j.convites = { games: jogos(euJogo) };
+      j.rsvp = { ...rsvpAberto, eu_jogo: euJogo };
+      if (j.teams?.teams) for (const t of j.teams.teams) t.joga = euJogo;
+    }]];
+    const esperarJogo = (p) => p.getByText('Racha de sábado').first().waitFor({ timeout: 30000 });
+
+    const org = await abrir('/home', { alterar: inicioCom(false) }, 'inicio-organiza');
+    await esperarJogo(org.pagina);
+    await espera(800);
+    const t1 = await texto(org.pagina);
+    const botoes1 = await org.pagina.locator('button.pbtn, .gcard__presence button').count();
+    verificar('Início (só organiza): o card do jogo diz "Você só organiza este time." (a explicação completa vem uma vez, acima)', await org.pagina.locator('.gcard [data-so-organizo]').first().innerText().then((x) => x.trim() === 'Você só organiza este time.').catch(() => false));
+    verificar('Início (só organiza): nenhum "Vou" / "Não vou" (nem o cartão de presença, mesmo com o RSVP aberto)', botoes1 === 0 && !/^Vou$/m.test(t1) && !/^Não vou$/m.test(t1) && !/Confirme sua presença|Você vai\?/i.test(t1), `botões ${botoes1}`);
+    verificar('Início (só organiza): sem "Avisar que não vou"', !/Avisar que não vou/.test(t1));
+    verificar('Início (só organiza): a frase de apoio do próximo jogo ("Dá para mudar nas configurações do time.")', /Você só organiza este time, então não entra na lista de presença\. Dá para mudar nas configurações do time\./.test(t1));
+    await capturar(org.pagina, '5-inicio-so-organizo');
+    await org.contexto.close();
+
+    const joga = await abrir('/home', { alterar: inicioCom(true) }, 'inicio-joga');
+    await esperarJogo(joga.pagina);
+    await espera(800);
+    const t2 = await texto(joga.pagina);
+    verificar('Início (joga): tudo como sempre — "Vou" / "Não vou" presentes e nenhum aviso de organização', /Vou/.test(t2) && !t2.includes('Você só organiza este time'), '');
+    await capturar(joga.pagina, '6-inicio-joga');
+    await joga.contexto.close();
+  }
+
+  // 4) a tela do jogo: "Sua presença" vira a explicação para quem só organiza
+  {
+    const org = await abrir(`/equipa/${slug}/jogo/${jogoId}`, { alterar: [[new RegExp(`/api/jogos/${jogoId}/rsvp(\\?.*)?$`), (j) => { j.eu_jogo = false; }]] }, 'jogo-organiza');
+    await org.pagina.getByText('Sua presença').first().waitFor({ timeout: 30000 });
+    await espera(1200);
+    const t = await texto(org.pagina);
+    verificar('Jogo (só organiza): "Você só organiza este time, então não entra na lista de presença nem no sorteio."', t.includes('Você só organiza este time, então não entra na lista de presença nem no sorteio.'));
+    // o botão usa text-transform: uppercase — o innerText vem em caixa alta
+    verificar('Jogo (só organiza): sem "Confirmar presença"', !/confirmar presença/i.test(t));
+    await capturar(org.pagina, '7-jogo-so-organizo');
+    await org.contexto.close();
+    const joga = await abrir(`/equipa/${slug}/jogo/${jogoId}`, {}, 'jogo-joga');
+    await joga.pagina.getByText('Sua presença').first().waitFor({ timeout: 30000 });
+    await espera(1000);
+    verificar('Jogo (joga): "Confirmar presença" continua lá', /confirmar presença/i.test(await texto(joga.pagina)));
+    await joga.contexto.close();
+  }
+
+  // 5) a página do time: o card do jogador e a lista de membros
+  {
+    const { contexto, pagina } = await abrir(`/equipa/${slug}`, {
+      alterar: [[new RegExp(`/api/teams/${slug}(\\?.*)?$`), (j) => {
+        j.team.joga = false;
+        const eu = j.members.find((m) => m.role === 'admin');
+        if (eu) eu.joga = false;
+      }]],
+    }, 'equipa-organiza');
+    await pagina.locator('[data-so-organizo]').first().waitFor({ timeout: 30000 });
+    await espera(800);
+    const t = await texto(pagina);
+    verificar('Time (só organiza): o card do jogador diz "Você só organiza o time" (no lugar de "Você joga na linha · trocar")', t.includes('Você só organiza o time') && !/Você joga na linha/.test(t));
+    verificar('Time (só organiza): o texto explica que não entra na presença, no sorteio nem no ranking', t.includes('Você não entra na lista de presença, no sorteio nem no ranking.'));
+    verificar('Time (só organiza): a lista de membros marca "ORGANIZA"', /ORGANIZA/.test(t));
+    await capturar(pagina, '8-equipa-so-organizo');
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };

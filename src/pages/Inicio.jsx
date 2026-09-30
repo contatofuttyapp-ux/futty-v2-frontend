@@ -297,6 +297,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
   const isDrawn = game.status === 'drawn';
   const going = game.user_status === 'going';
   const notGoing = game.user_status === 'not_going';
+  const soOrganizo = game.eu_jogo === false; // Rodada 29B (E): só organiza este time — não responde presença
 
   return (
     // Wrapper e card separados porque o card passou a levar cantos a 45°: a ordem
@@ -348,7 +349,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="badge badge--sorteado hud-corners-s">Sorteado</span>
                 <span className="muted" style={{ fontSize: 13 }}>
-                  {going ? 'Vai jogar' : notGoing ? 'Não vai' : 'Sem resposta'}
+                  {soOrganizo ? 'Você organiza' : going ? 'Vai jogar' : notGoing ? 'Não vai' : 'Sem resposta'}
                 </span>
               </span>
             </div>
@@ -364,6 +365,10 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
               </button>
             </span>
           </>
+        ) : soOrganizo ? (
+          <div className="gcard__presence">
+            <span className="texto-apoio" data-so-organizo style={{ margin: 0 }}>Você só organiza este time.</span>
+          </div>
         ) : (
           <div className="gcard__presence">
             {/* O pulso do "Vou" é funcional (marca a acção disponível) e o
@@ -844,7 +849,9 @@ export default function Inicio() {
   const rsvpData = dadosInicio?.rsvp || null;
   const rsvpInfo = nextId ? { ...(rsvpData || { rsvp_aberto: false }), gameId: nextId } : null;
   // O RSVPCard do próximo jogo está na tela (e com ele o Vou / Não vou).
-  const rsvpAbertoNoProximo = !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado);
+  // Rodada 29B (E): quem só organiza o time não responde presença — nem o cartão, nem o aviso de ausência.
+  const proximoSoOrganizo = proximoJogo?.eu_jogo === false;
+  const rsvpAbertoNoProximo = !proximoSoOrganizo && !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado);
   // Sincronizado DURANTE o render (mesmo padrão de MeuPerfil.jsx), não num
   // efeito: `minhaResposta` continua editável localmente pelo RSVPCard
   // (onResposta={setMinhaResposta}) depois desta sincronização inicial.
@@ -1274,9 +1281,12 @@ export default function Inicio() {
             {rsvpAbertoNoProximo ? (
               <RSVPCard gameId={nextId} prazo={rsvpInfo.rsvp_prazo} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
             ) : null}
+            {proximoSoOrganizo ? (
+              <p className="texto-apoio" data-so-organizo>Você só organiza este time, então não entra na lista de presença. Dá para mudar nas configurações do time.</p>
+            ) : null}
             {/* Aviso de ausência (Rodada 8A). Com o RSVP aberto para ESTE jogo, some
                 — o card acima já tem Vou / Não vou, e é a resposta dele que vale. */}
-            {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo ? (
+            {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo && !proximoSoOrganizo ? (
               proximoJogo.ausente_proximo ? (
                 <div className="hud-corners-s" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 4px', padding: '8px 12px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
                   <Icon name="ausente" size={16} color="grey" />

@@ -22,6 +22,7 @@ import RegistarJornada from '../components/RegistarJornada';
 import { nomeCampeao } from '../utils/campeonato';
 import { celebrarCerveja } from '../hooks/useConfetti';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
+import { EscolhaPapel } from '../components/EscolhaLinhaGol';
 import { avisoDaCidade } from '../utils/cidades';
 import '../styles/app.css';
 
@@ -650,6 +651,8 @@ function TabEquipa({ slug, team, showToast }) {
   const [corFundo, setCorFundo] = useState(team.cor_fundo || '#1a1a2e');
   const [modo, setModo] = useState(team.modo_visibilidade || 'privado');
   const [mostrarGols, setMostrarGols] = useState(team.mostrar_gols !== false);
+  const [joga, setJoga] = useState(team.joga !== false); // Rodada 29B (E): "Eu jogo" / "Só organizo o time"
+  const [jogaOcupado, setJogaOcupado] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
@@ -694,6 +697,23 @@ function TabEquipa({ slug, team, showToast }) {
     } catch (err) {
       setModo(anterior);
       showToast(err.message, 'error');
+    }
+  }
+
+  // Meu papel (Rodada 29B, E): guarda logo ao tocar, como a visibilidade; reverte em erro (o motor diz o porquê).
+  async function guardarJoga(novo) {
+    if (jogaOcupado || novo === joga) return;
+    const anterior = joga;
+    setJoga(novo);
+    setJogaOcupado(true);
+    try {
+      await apiFetch(`/api/equipas/${slug}/membros/joga`, { method: 'PATCH', body: JSON.stringify({ joga: novo }) });
+      showToast(novo ? 'Você voltou a jogar.' : 'Agora você só organiza o time.');
+    } catch (err) {
+      setJoga(anterior);
+      showToast(err.message, 'error');
+    } finally {
+      setJogaOcupado(false);
     }
   }
 
@@ -749,6 +769,11 @@ function TabEquipa({ slug, team, showToast }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
     <div style={{ ...CARD, padding: 14, display: 'grid', gap: 14 }}>
+      <div style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Meu papel</span>
+        <EscolhaPapel joga={joga} ocupado={jogaOcupado} aoTrocar={guardarJoga} />
+      </div>
+
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Nome do time</span>
         <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 60))} style={inputStyle} />

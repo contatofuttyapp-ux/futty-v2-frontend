@@ -237,10 +237,18 @@ export default function Equipa() {
                   <FrameAvatar avatarUrl={me?.user?.avatar_url} userId={meuId} avatarGenerico={me?.user?.avatar_generico} size={44} />
                   <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 6, justifyItems: 'start' }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, lineHeight: 1.1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeExibicao(me.user)}</div>
-                    <EscolhaLinhaGol goleiro={souGoleiroNoTime} ocupado={posBusy} aoTrocar={escolherGoleiro} />
+                    {team.joga === false ? (
+                      <span className="chip" data-so-organizo style={{ color: '#f0c94a', borderColor: 'rgba(212,160,23,0.5)', background: 'rgba(212,160,23,0.08)' }}>Você só organiza o time</span>
+                    ) : (
+                      <EscolhaLinhaGol goleiro={souGoleiroNoTime} ocupado={posBusy} aoTrocar={escolherGoleiro} />
+                    )}
                   </div>
                 </div>
-                <p className="texto-apoio">{TEXTO_APOIO_LINHA_GOL}</p>
+                <p className="texto-apoio">
+                  {team.joga === false
+                    ? 'Você não entra na lista de presença, no sorteio nem no ranking. Dá para mudar nas configurações do time.'
+                    : TEXTO_APOIO_LINHA_GOL}
+                </p>
               </div>
             ) : null}
 
@@ -302,6 +310,7 @@ export default function Equipa() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{nomeExibicao(m)}</div>
                   </div>
+                  {m.joga === false ? <Badge45>ORGANIZA</Badge45> : null}
                   {m.goleiro ? <Badge45 gold>GR</Badge45> : null}
                   <Badge45 gold={m.role === 'admin'}>{m.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45>
                 </div>
