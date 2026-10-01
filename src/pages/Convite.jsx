@@ -163,7 +163,7 @@ export default function Convite() {
     <main className="convite" data-convite>
       <div className="convite__col">
         <div className="convite__marca" aria-label="Futty">
-          <FuttyLogo size={46} />
+          <FuttyLogo variant="icone" size={46} />
           <span className="convite__marca-nome" aria-hidden="true">FUTTY</span>
         </div>
 

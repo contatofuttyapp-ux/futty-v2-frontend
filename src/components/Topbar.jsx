@@ -175,7 +175,7 @@ export default function Topbar({ title = null, back = null, hud = null, backFall
           <BotaoVoltar back={back} backFallback={backFallback} className="topbar-back" size={22} />
         ) : !title ? (
           <Link to="/home" aria-label="Início" style={{ display: 'flex', alignItems: 'center' }}>
-            <FuttyLogo variant="flat" size={36} />
+            <FuttyLogo variant="icone" size={36} />
           </Link>
         ) : null}
         {title && <span className="topbar-title">{title}</span>}

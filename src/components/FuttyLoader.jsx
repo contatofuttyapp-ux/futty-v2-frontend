@@ -44,7 +44,7 @@ export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
     <div role="status" aria-live="polite" style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
       {/* FASE B — flutuação. As camadas (sombra no chão → bob → sway → svg) e o porquê
           de serem separadas estão explicados no app.css, em ".futty-f-bob". A mesma
-          estrutura vive no FuttyLockup: mesma física nos dois F. */}
+          estrutura vive no FuttyIconeFlutuante (landing): mesma física nas duas marcas. */}
       <div style={{ position: 'relative', width: size, height: size }}>
         <span
           className="futty-f-shadow"

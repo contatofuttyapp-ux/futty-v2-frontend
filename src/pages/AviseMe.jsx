@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import FuttyLockup from '../components/FuttyLockup';
+import FuttyIconeFlutuante from '../components/FuttyIconeFlutuante';
 import { TEXTOS_AVISE_ME, emailParecePronto, origemDaUrl } from '../utils/aviseMe';
 import '../styles/app.css';
 
@@ -96,7 +96,7 @@ export default function AviseMe() {
   return (
     <main style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 24px', position: 'relative' }}>
       <div style={{ width: '100%', maxWidth: 360, display: 'grid', gap: 22, justifyItems: 'center', textAlign: 'center' }}>
-        <FuttyLockup size={120} wordmark={false} />
+        <FuttyIconeFlutuante size={120} />
         <div style={{ display: 'grid', gap: 8 }}>
           <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 30, lineHeight: 1.1, color: '#fff', margin: 0 }}>
             O seu time.<br />A sua figurinha.

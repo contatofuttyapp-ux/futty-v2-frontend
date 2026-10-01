@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { entrarComGoogle } from '../lib/googleAuth';
 import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
-import FuttyLockup from '../components/FuttyLockup';
+import FuttyIconeFlutuante from '../components/FuttyIconeFlutuante';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import Toast from '../components/Toast';
@@ -73,7 +73,7 @@ function PaginaInicial() {
         <div style={{ position: 'relative', display: 'grid', placeItems: 'center' }}>
           <span className="landing-glow" aria-hidden="true" />
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <FuttyLockup size={tamanhoF} wordmark={false} />
+            <FuttyIconeFlutuante size={tamanhoF} />
           </div>
         </div>
 

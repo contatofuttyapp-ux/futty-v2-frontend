@@ -24,7 +24,7 @@ export default function SorteioPublico() {
         <SeletorIdiomaDiscreto style={{ position: 'absolute', top: 0, right: 16 }} />
         {/* marca no topo — isto é a montra */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 4 }}>
-          <FuttyLogo variant="flat" size={30} />
+          <FuttyLogo variant="icone" size={30} />
           <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, letterSpacing: '0.12em', color: '#f0c94a' }}>FUTTY</span>
         </div>
         <p style={{ fontFamily: RAJ, fontSize: 13, letterSpacing: '0.08em', color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 14px', textTransform: 'uppercase' }}>

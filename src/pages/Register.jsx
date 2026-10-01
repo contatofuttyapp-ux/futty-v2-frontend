@@ -160,7 +160,7 @@ export default function Register() {
           {/* O F metálico da boas-vindas, alinhado à esquerda como o resto da
               tela (título, linha, formulário) — um eixo só. */}
           <div className="auth-brand" style={{ opacity: 1, display: 'flex', justifyContent: 'flex-start' }}>
-            <FuttyLogo variant="metallic" size={40} />
+            <FuttyLogo variant="icone" size={40} />
           </div>
           <h1 className="auth-title">Crie a sua conta</h1>
           <div className="auth-rule" aria-hidden="true" />

@@ -69,7 +69,7 @@ export default function CampeonatoPublico() {
 function AuroraHeader({ nome }) {
   return (
     <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 8px', maxWidth: 460, margin: '0 auto', width: '100%' }}>
-      <FuttyLogo variant="flat" size={34} />
+      <FuttyLogo variant="icone" size={34} />
       <div>
         <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 18, color: '#f0c94a', letterSpacing: '.06em' }}>FUTTY</div>
         {nome ? <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{nome} · campeonato</div> : null}
