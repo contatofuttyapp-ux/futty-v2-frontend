@@ -16,7 +16,9 @@ import { existsSync, rmSync, statSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DIST = new URL('../dist/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const REMOVER = ['avatares', 'sorteio-assets', 'sons', 'dados'];
+// `.well-known` (Rodada 29B, bloco 3, C): os arquivos que o iOS/Android buscam NO SITE para ligar futtyapp.com.br ao app. Dentro
+// do pacote não servem a nada — e, ao contrário das outras pastas, o app nunca os pede (fica de fora de PASTAS_REMOTAS).
+const REMOVER = ['avatares', 'sorteio-assets', 'sons', 'dados', '.well-known'];
 
 function tamanho(dir) {
   let total = 0;

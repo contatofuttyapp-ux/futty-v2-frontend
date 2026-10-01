@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["M4ZMC5ZX8T.com.futty.app"],
+        "components": [
+          { "/": "/convite/*", "comment": "Link de convite do time (WhatsApp)" },
+          { "/": "/equipa/*", "comment": "Página do time e dos jogos" },
+          { "/": "/jogo/*", "comment": "Jogo" }
+        ]
+      }
+    ]
+  }
+}

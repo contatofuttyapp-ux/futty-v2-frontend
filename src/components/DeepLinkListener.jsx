@@ -1,5 +1,6 @@
 // Futty v2.0 — Captura o retorno do OAuth Google e dos links de e-mail (recuperar
-// senha) no app nativo (14-set, Android). Fica montado na raiz, dentro do
+// senha) no app nativo (14-set, Android) e, desde a Rodada 29B (C), os links https do
+// site (convite, time, jogo — lib/linkDoSite.js). Fica montado na raiz, dentro do
 // BrowserRouter (precisa de useNavigate) — mesmo padrão do RouteTitle.jsx: um
 // componente global que só existe pelo efeito, sem desenhar nada.
 //
@@ -15,6 +16,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { obterSupabase } from '../lib/supabaseAsync';
 import { CALLBACK_URL_NATIVO } from '../lib/googleAuth';
+import { caminhoDoLinkDoSite } from '../lib/linkDoSite';
 
 export default function DeepLinkListener() {
   const navigate = useNavigate();
@@ -23,6 +25,13 @@ export default function DeepLinkListener() {
     if (!Capacitor.isNativePlatform()) return undefined;
 
     const registo = CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
+      // Rodada 29B (C): link https do site (convite, time, jogo) — abre a mesma tela que o site abriria (lib/linkDoSite.js).
+      // Na abertura a frio o Capacitor guarda a URL até este ouvinte existir, e o roteador já está de pé.
+      const doSite = caminhoDoLinkDoSite(url);
+      if (doSite) {
+        navigate(doSite);
+        return;
+      }
       if (!url || !url.startsWith(CALLBACK_URL_NATIVO)) return; // não é nosso — ignora
       // Fecha a Custom Tab já aqui (best-effort): tanto no sucesso quanto no erro,
       // o utilizador não deve voltar a olhar para o navegador externo.
