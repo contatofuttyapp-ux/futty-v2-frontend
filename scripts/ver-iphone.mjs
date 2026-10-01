@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3951,6 +3951,17 @@ try {
     const r = await cenaRodada29bUniformes(navegador);
     saida.rodada29bUniformes = r;
     console.log('\n[iphone] RODADA 29B (B) — a grade de uniformes para os três direitos (servidor local; contas de prova; escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29b-pintura')) {
+    const r = await cenaRodada29bPintura(navegador);
+    saida.rodada29bPintura = r;
+    console.log('\n[iphone] RODADA 29B bloco 2 (A) — pintura em segundo plano + barra honesta (servidor local; a fal é simulada, custo zero)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7135,6 +7146,226 @@ async function cenaRodada29bUniformes(navegador) {
     verificar('nenhum POST de geração saiu (a cena não pinta nada)', !escritas.some((e) => e.metodo === 'POST' && /\/api\/me\/avatar\/ai/.test(e.rota)), escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
     await contexto.close();
   }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29b-pintura" (1-out): a pintura da figurinha em segundo plano e a barra HONESTA (Rodada 29B, bloco 2, A). ──
+// Conta de prova `minha` (Minha Figurinha, card com a foto, 3 créditos). A FAL É SIMULADA: o POST /api/me/avatar/ai e o
+// GET /api/figurinha/job/:id são respondidos aqui — nenhuma geração real, custo zero — e o "motor" da cena (`motor.atual`)
+// é quem diz em que pé a pintura está. Prova: o POST manda `assincrono` e a barra aparece na hora; etapas nomeadas; a barra
+// segura em 90% ("Finalizando…") e NUNCA chega a 100%; passados 90 s o aviso de demora; sair do app e voltar reencontra a
+// pintura; aba escondida não consulta e ao voltar consulta na hora; ao terminar o card vira figurinha; falha pede outra
+// foto sem barra presa; pintura que o motor não conhece não prende a tela. Só servidor LOCAL (CLAUDE.md, 25-set).
+async function cenaRodada29bPintura(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29b-pintura só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29b');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `pintura-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const JOB = '5e1f0c1e-0000-4000-8000-000000000001';
+  const PRONTA = 'https://fake.futty.test/figurinha-pronta.png';
+  const stand = readFileSync(new URL('../public/futty-logo-flat.png', import.meta.url)); // PNG com transparência: faz de "figurinha pronta"
+  const uid = JSON.parse(fx.minha.find((c) => /auth-token/.test(c.name)).value).user.id;
+  const GUARDADA = 'futty_pintura_em_curso';
+  const CORS = { 'access-control-allow-origin': '*' }; // a página (5229) e o motor (3129) são origens diferentes
+  const falhou = { estado: 'falhou', etapa: 'pintando', progresso: 0, estimativaSegundos: 40, decorridoSegundos: 30, avatar_url: null, erro: 'Não conseguimos gerar uma figurinha à altura com esta foto. Tente outra: de frente e bem iluminada.', code: 'FIGURINHA_DEFEITUOSA', status: 422 };
+  const pronta = { estado: 'pronta', etapa: 'pronta', progresso: 1, estimativaSegundos: 40, decorridoSegundos: 38, avatar_url: PRONTA, kit: 'dark-gold', figurinha_ativa: true };
+  const andamento = (etapa, decorridoSegundos) => ({ estado: 'em_andamento', etapa, progresso: 0, estimativaSegundos: 40, decorridoSegundos, avatar_url: null });
+
+  /** Abre a Figurinha da conta `minha` com o motor da pintura simulado por `motor.atual` (e `motor.fila` = respostas de uma vez). */
+  const abrir = async (motor, { guardada = null } = {}) => {
+    const contexto = await novoContexto(navegador, fx.minha, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await contexto.addInitScript(({ g, chave }) => {
+      try {
+        localStorage.setItem('futty_figurinha_estreia', '1');
+        localStorage.setItem('futty_tour_done', '1');
+        if (g && !localStorage.getItem(chave)) localStorage.setItem(chave, JSON.stringify(g));
+      } catch { /* nada */ }
+    }, { g: guardada, chave: GUARDADA });
+    await travarEscritas(contexto);
+    const log = { posts: [], gets: 0 };
+    await contexto.route('**/api/me/avatar/ai', (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      log.posts.push(route.request().postData() || '');
+      return route.fulfill({ status: 202, contentType: 'application/json', headers: CORS, body: JSON.stringify({ jobId: JOB, estimativaSegundos: 40 }) });
+    });
+    await contexto.route(`**/api/figurinha/job/${JOB}`, (route) => {
+      log.gets += 1;
+      const resposta = motor.fila?.length ? motor.fila.shift() : motor.atual;
+      if (resposta.http) return route.fulfill({ status: resposta.http, contentType: 'application/json', headers: CORS, body: JSON.stringify({ error: resposta.erro || 'erro' }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(resposta) });
+    });
+    await contexto.route(`${PRONTA}*`, (route) => route.fulfill({ status: 200, contentType: 'image/png', headers: { 'access-control-allow-origin': '*' }, body: stand }));
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => {
+      // Fechar o app no meio de uma consulta: o WebKit relata a consulta cortada pela navegação como "access control checks".
+      if (momento.m === 'fechar-e-voltar' && /due to access control checks/.test(e.message)) return;
+      erros.push(`[${momento.m}] ${e.message}`);
+    });
+    await pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    return { contexto, pagina, log };
+  };
+  const ler = (pagina) => pagina.evaluate(() => ({
+    pct: Number(document.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')),
+    rotulo: document.querySelector('[data-pintura="rotulo"]')?.textContent?.trim() || null,
+    etapas: [...document.querySelectorAll('[data-etapa-estado]')].map((e) => e.dataset.etapaEstado).join(','),
+    guardada: localStorage.getItem('futty_pintura_em_curso'),
+  }));
+  const ate = async (fn, ms = 9000) => {
+    const limite = Date.now() + ms;
+    while (Date.now() < limite) {
+      if (await fn()) return true;
+      await espera(150);
+    }
+    return false;
+  };
+  const momento = { m: 'início' };
+  const pendentes = [];
+  const nunca100 = async (pagina, rotulo) => {
+    for (let i = 0; i < 4; i += 1) { pendentes.push(`${rotulo}:${(await ler(pagina)).pct}`); await espera(350); }
+  };
+
+  // ── 1. A barra honesta, etapa por etapa ──
+  const motor = { atual: andamento('preparando', 1) };
+  const A = await abrir(motor);
+  const gerar = A.pagina.getByRole('button', { name: /Gerar minha figurinha/ }).first();
+  await gerar.waitFor({ timeout: 30000 });
+  const t0 = Date.now();
+  await gerar.click();
+  await A.pagina.locator('[data-pintura="barra"]').waitFor({ timeout: 15000 });
+  const msAteBarra = Date.now() - t0;
+  verificar('o POST sai com `assincrono: true` e o uniforme, e a barra aparece logo (o pedido não segura 45 s)', A.log.posts.length === 1 && /"assincrono":true/.test(A.log.posts[0]) && /"kit":"dark-gold"/.test(A.log.posts[0]) && msAteBarra < 5000, `${msAteBarra} ms · ${A.log.posts[0]}`);
+  await ate(async () => (await ler(A.pagina)).rotulo);
+  let v = await ler(A.pagina);
+  verificar('começa em "Preparando a foto…", barra perto de zero, 1ª etapa acesa', /^Preparando a foto/.test(v.rotulo) && v.pct <= 12 && v.etapas === 'atual,depois,depois,depois', JSON.stringify(v));
+  verificar('a pintura fica guardada no aparelho (para sobreviver a sair da tela)', !!v.guardada && /5e1f0c1e/.test(v.guardada), String(v.guardada).slice(0, 80));
+  await capturar(A.pagina, '1-preparando');
+  await nunca100(A.pagina, 'preparando');
+
+  // Uma consulta que falha (motor 503) não derruba a barra: a pintura segue lá e a próxima consulta resolve.
+  motor.fila = [{ http: 503, erro: 'indisponível' }];
+  motor.atual = andamento('pintando', 12);
+  await ate(async () => /^Pintando o uniforme/.test((await ler(A.pagina)).rotulo || ''), 12000);
+  v = await ler(A.pagina);
+  verificar('uma consulta que falha (503) não derruba a barra: a próxima traz "Pintando o uniforme…"', /^Pintando o uniforme/.test(v.rotulo) && v.etapas === 'feita,atual,depois,depois', JSON.stringify(v));
+  verificar('a barra acompanha o tempo do motor (12 s de 40 s → ~27%)', v.pct >= 22 && v.pct <= 40, `${v.pct}%`);
+  await capturar(A.pagina, '2-pintando');
+  await nunca100(A.pagina, 'pintando');
+
+  motor.atual = andamento('acabamento', 30);
+  await ate(async () => /^Acabamento/.test((await ler(A.pagina)).rotulo || ''));
+  v = await ler(A.pagina);
+  verificar('"Acabamento…" com as duas primeiras etapas feitas, barra por volta de 2/3', /^Acabamento/.test(v.rotulo) && v.etapas === 'feita,feita,atual,depois' && v.pct >= 60 && v.pct <= 75, JSON.stringify(v));
+  await nunca100(A.pagina, 'acabamento');
+
+  motor.atual = andamento('acabamento', 41);
+  await ate(async () => /^Finalizando/.test((await ler(A.pagina)).rotulo || ''));
+  v = await ler(A.pagina);
+  verificar('passado o tempo estimado: "Finalizando…" e a barra SEGURA em 90% (não passa)', /^Finalizando/.test(v.rotulo) && v.pct === 90, JSON.stringify(v));
+  await capturar(A.pagina, '3-finalizando');
+  await nunca100(A.pagina, 'finalizando');
+
+  motor.atual = andamento('acabamento', 95);
+  await ate(async () => /demorando mais que o normal/i.test((await ler(A.pagina)).rotulo || ''));
+  v = await ler(A.pagina);
+  verificar('passados 90 s: "Tá demorando mais que o normal, a gente te avisa quando ficar pronta"', /^Tá demorando mais que o normal, a gente te avisa quando ficar pronta$/.test(v.rotulo) && v.pct === 90, JSON.stringify(v));
+  await capturar(A.pagina, '4-demorando');
+  await nunca100(A.pagina, 'demorando');
+  verificar('NUNCA 100% antes de existir a imagem (todas as amostras ≤ 90)', pendentes.length >= 20 && pendentes.every((p) => Number(p.split(':')[1]) <= 90), pendentes.join(' '));
+  const textoCard = await A.pagina.locator('body').innerText();
+  verificar('o texto sob o card avisa que dá para sair da tela', /pode sair da tela, a gente avisa/.test(textoCard));
+
+  momento.m = 'aba';
+  // ── 2. Aba escondida não consulta; ao voltar, consulta na hora; visível, a cada ~3 s ──
+  const visibilidade = (pagina, estado) => pagina.evaluate((e) => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => e });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }, estado);
+  const antesVisivel = A.log.gets;
+  await espera(7100);
+  const consultasVisivel = A.log.gets - antesVisivel;
+  verificar('aba visível: o app consulta o motor a cada ~3 s (2 ou 3 consultas em 7 s)', consultasVisivel >= 2 && consultasVisivel <= 3, `${consultasVisivel} consultas`);
+  await visibilidade(A.pagina, 'hidden');
+  await espera(600); // uma consulta que já estava no ar termina
+  const antesEscondida = A.log.gets;
+  await espera(7000);
+  verificar('aba escondida: nenhuma consulta em 7 s', A.log.gets === antesEscondida, `${A.log.gets - antesEscondida} consultas`);
+  await visibilidade(A.pagina, 'visible');
+  await espera(900);
+  verificar('ao voltar para a aba, consulta NA HORA', A.log.gets === antesEscondida + 1, `${A.log.gets - antesEscondida} consulta(s) logo ao voltar`);
+
+  momento.m = 'fechar-e-voltar';
+  // ── 3. Fechar o app e abrir de novo reencontra a pintura (e a barra segue de onde estava) ──
+  await A.pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+  await A.pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+  await espera(1500);
+  const antesVolta = A.log.gets;
+  await A.pagina.goto(`${BASE}/figurinha`, { waitUntil: 'domcontentloaded' });
+  await A.pagina.locator('[data-pintura="barra"]').waitFor({ timeout: 30000 }).catch(() => {});
+  await ate(async () => A.log.gets > antesVolta, 8000);
+  v = await ler(A.pagina);
+  verificar('sair do app e voltar: a Figurinha reabre JÁ pintando (a barra está lá) e volta a consultar o motor', v.rotulo !== null && A.log.gets > antesVolta, `${v.rotulo} · ${A.log.gets - antesVolta} consulta(s)`);
+  await capturar(A.pagina, '5-voltou');
+
+  momento.m = 'pronta';
+  // ── 4. A pintura termina: o card vira figurinha, a barra e o marcador somem, sem erro ──
+  motor.atual = pronta;
+  await ate(async () => (await A.pagina.locator('[data-pintura="barra"]').count()) === 0, 9000);
+  await espera(1500);
+  v = await ler(A.pagina);
+  const corpo = await A.pagina.locator('body').innerText();
+  verificar('pronta: a barra some, o marcador guardado é apagado e nenhum erro aparece', v.rotulo === null && v.guardada === null && !/Não deu desta vez|Tente novamente/.test(corpo), JSON.stringify(v));
+  verificar('pronta: o card passou a ser a figurinha (o ajuste vira "Tamanho", não "Zoom")', /tamanho/i.test(corpo) && !/\bzoom\b/i.test(corpo));
+  await capturar(A.pagina, '6-pronta');
+  await A.contexto.close();
+
+  momento.m = 'falhou';
+  // ── 5. Falhou (cabeça cortada nas duas tentativas): mensagem de sempre, sem barra presa ──
+  const motorF = { atual: andamento('pintando', 20) };
+  const F = await abrir(motorF);
+  await F.pagina.getByRole('button', { name: /Gerar minha figurinha/ }).first().click({ timeout: 30000 });
+  await F.pagina.locator('[data-pintura="barra"]').waitFor({ timeout: 15000 });
+  motorF.atual = falhou;
+  await ate(async () => (await F.pagina.locator('[data-pintura="barra"]').count()) === 0 && /Tente outra/.test(await F.pagina.locator('body').innerText()), 9000);
+  v = await ler(F.pagina);
+  const corpoF = await F.pagina.locator('body').innerText();
+  verificar('falhou: pede outra foto com a mensagem de sempre ("Tente outra: de frente e bem iluminada") e oferece tentar de novo', /Tente outra: de frente e bem iluminada/.test(corpoF) && (await F.pagina.getByRole('button', { name: 'Tentar novamente' }).count()) === 1, '');
+  verificar('falhou: a barra e o marcador guardado somem (nada fica "pintando" para sempre)', v.rotulo === null && v.guardada === null, JSON.stringify(v));
+  await capturar(F.pagina, '7-falhou');
+  await F.contexto.close();
+
+  momento.m = 'voltou-pronta';
+  // ── 6. Fechou o app durante a pintura e ela terminou enquanto isso: ao voltar, a figurinha já está lá ──
+  const guardadaViva = { userId: uid, jobId: JOB, kit: 'dark-gold', estreia: false, estimativaSegundos: 40, iniciadaEm: Date.now() - 20000 };
+  const motorR = { atual: pronta };
+  const R = await abrir(motorR, { guardada: guardadaViva });
+  await ate(async () => /tamanho/i.test(await R.pagina.locator('body').innerText()), 20000);
+  v = await ler(R.pagina);
+  verificar('voltou depois de a pintura terminar (app fechado): o card já é a figurinha e o marcador foi apagado', v.guardada === null && /tamanho/i.test(await R.pagina.locator('body').innerText()), JSON.stringify(v));
+  await capturar(R.pagina, '8-voltou-pronta');
+  await R.contexto.close();
+
+  momento.m = '404';
+  // ── 7. Pintura que o motor não conhece (id velho, outra conta): não prende a tela ──
+  const motorN = { atual: { http: 404, erro: 'Pintura não encontrada.' } };
+  const N = await abrir(motorN, { guardada: { ...guardadaViva, iniciadaEm: Date.now() - 5000 } });
+  await ate(async () => /Não achamos essa pintura/.test(await N.pagina.locator('body').innerText()), 20000);
+  v = await ler(N.pagina);
+  verificar('404 do motor: a tela diz "Não achamos essa pintura", libera o botão e apaga o marcador', /Não achamos essa pintura/.test(await N.pagina.locator('body').innerText()) && v.guardada === null && v.rotulo === null, JSON.stringify(v));
+  await capturar(N.pagina, '9-nao-achou');
+  await N.contexto.close();
+
   return { verificacoes, capturas, erros, pasta };
 }
 

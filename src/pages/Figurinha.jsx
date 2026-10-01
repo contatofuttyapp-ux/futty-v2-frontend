@@ -29,6 +29,10 @@ import { produtoDoPedido } from '../lib/planos';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja } from '../lib/loja';
 import { KIT_IMG, KITS_FIGURINHA } from '../utils/kitsFigurinha';
 import { DESTINO_DO_CADEADO, SELO_PINTAR, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer } from '../utils/uniformesGrade';
+import {
+  INTERVALO_CONSULTA_MS, TETO_ACOMPANHAMENTO_MS, situacaoDaPintura, lerPinturaGuardada, gravarPinturaGuardada, limparPinturaGuardada,
+} from '../utils/progressoPintura';
+import BarraPintura from '../components/BarraPintura';
 import { ehNativo } from '../lib/plataforma';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
@@ -233,7 +237,13 @@ export default function Figurinha() {
   const corFrame = 'dourado';
   const [fotoLocal, setFotoLocal] = useState(null);
   const [uploadFoto, setUploadFoto] = useState(false);
-  const [gerandoIA, setGerandoIA] = useState(false);
+  // RODADA 29B (bloco 2, A) — a pintura roda em SEGUNDO PLANO no motor: o POST devolve um jobId e o app consulta
+  // GET /api/figurinha/job/:id. `pintura` = { jobId, kit, estreia, estimativaSegundos, etapa, decorridoMs, baseEm } (o
+  // decorridoMs do motor + o relógio local desde `baseEm`). Nasce do que ficou guardado no aparelho: quem saiu da tela
+  // (ou fechou o app) e volta reencontra a pintura — pronta, ou ainda correndo. `agora` é o relógio da barra.
+  const [pintura, setPintura] = useState(() => lerPinturaGuardada(userId));
+  const [agora, setAgora] = useState(() => Date.now());
+  const [gerandoIA, setGerandoIA] = useState(() => !!lerPinturaGuardada(userId));
   // RODADA 21 — kit escolhido na grelha que ainda não foi pintado: abre o
   // diálogo "Pintar no uniforme X?" em vez do window.confirm() de antes (não
   // tem como levar o "N gerações" nem o "~45s" no texto de um confirm nativo).
@@ -779,25 +789,39 @@ export default function Figurinha() {
     setGerandoIA(true);
     setErro('');
     setLimiteIA(false);
+    let emSegundoPlano = false;
     try {
-      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold' }) });
+      // RODADA 29B (bloco 2, A): o POST devolve `{ jobId }` na hora; quem conclui é acompanharPintura (aplicarPinturaPronta
+      // / aplicarPinturaFalhou). Sem jobId (resposta imediata) o fluxo é o de sempre.
+      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold', assincrono: true }) });
+      if (data.jobId) {
+        iniciarPintura(data, { kit: 'dark-gold', estreia: true });
+        emSegundoPlano = true;
+        return;
+      }
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa } } : m));
       setFotoLocal(null);
       recarregarPerfilGlobal();
     } catch (err) {
-      // SEM_DIREITO (22-set) não é o "limite" morto — mostrar o card de quota
-      // (que mandaria "Ver Brilhantes" para um 403 que já significa isso)
-      // seria só ruído; o card comum já está pronto, é só revelar. `subirFoto`
-      // só chama esta função quando já há direito confirmado, mas o direito
-      // pode ter acabado entre a checagem e a resposta (corrida rara) — cai
-      // aqui na mesma, sem erro na tela.
-      if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(aplicarBrilhante);
-      else if (err?.status === 403) setLimiteIA(true); // 403 sem código conhecido (defensivo)
-      else setErro(err?.message || 'Não foi possível gerar sua figurinha.');
+      tratarFalhaDaEstreia(err);
     } finally {
-      setGerandoIA(false);
-      setEstreiaFase('pronto'); // mostra o cromo (com Brilhante ou a foto)
+      if (!emSegundoPlano) {
+        setGerandoIA(false);
+        setEstreiaFase('pronto'); // mostra o cromo (com Brilhante ou a foto)
+      }
     }
+  }
+
+  // SEM_DIREITO (22-set) não é o "limite" morto — mostrar o card de quota
+  // (que mandaria "Ver Brilhantes" para um 403 que já significa isso)
+  // seria só ruído; o card comum já está pronto, é só revelar. `subirFoto`
+  // só chama a geração da estreia quando já há direito confirmado, mas o direito
+  // pode ter acabado entre a checagem e a resposta (corrida rara) — cai
+  // aqui na mesma, sem erro na tela. Serve ao POST e ao desfecho 'falhou' do job.
+  function tratarFalhaDaEstreia(err) {
+    if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(aplicarBrilhante);
+    else if (err?.status === 403) setLimiteIA(true); // 403 sem código conhecido (defensivo)
+    else setErro(err?.message || 'Não foi possível gerar sua figurinha.');
   }
 
   // Trocar foto: upload para o servidor e, CONFIRMADO o 200, preview local imediato.
@@ -1052,8 +1076,16 @@ export default function Figurinha() {
     setErroIAmsg('');
     setSemGeracoes(false);
     setEmailNaoConfirmado(false);
+    let emSegundoPlano = false;
     try {
-      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit }) });
+      // RODADA 29B (bloco 2, A): o POST devolve `{ jobId }` na hora e a pintura segue em segundo plano (ver
+      // acompanharPintura). Uniforme já pintado da mesma foto responde na hora com a figurinha, sem job.
+      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit, assincrono: true }) });
+      if (data.jobId) {
+        iniciarPintura(data, { kit });
+        emSegundoPlano = true;
+        return;
+      }
       // Guarda o avatar, o kit vestido e regista o slot novo (sem duplicar).
       setMe((m) => (m ? {
         ...m,
@@ -1071,40 +1103,163 @@ export default function Figurinha() {
       // botão não fez nada.
       if (data.reutilizado) setToast({ tipo: 'info', mensagem: 'Sua figurinha já estava pronta' });
     } catch (err) {
-      // EMAIL_NAO_CONFIRMADO: gate anti-abuso (11-ago) — mesmo status 403 do limite
-      // de quota, por isso tem de ser verificado PRIMEIRO (código distingue os dois).
-      if (err?.code === 'EMAIL_NAO_CONFIRMADO') setEmailNaoConfirmado(true);
-      // SEM_DIREITO (22-set, SPEC-FIGURINHA-3) — também 403, mas não é limite
-      // nenhum: é o direito que acabou (ou o pacote do time que não existe).
-      // Recarrega o estado para o bloco "Vire Brilhante" aparecer sozinho; o
-      // card de quota do plano NÃO serve aqui, e mostrá-lo seria mentir.
-      else if (err?.code === 'SEM_DIREITO') {
-        estadoBrilhantes().then(aplicarBrilhante);
-        setErroIAmsg(err.message);
-        // P2: com a loja ligada o overlay troca o "Tentar novamente" (que daria o mesmo 403) por
-        // "Suas gerações acabaram. Comprar mais?" → Planos, com a Minha Figurinha em destaque.
-        setSemGeracoes(true);
-        setErroIA(true);
-      } else if (err?.status === 403) setLimiteIA(true); // gate antigo de plano (morto, fica de rede)
-      else {
-        // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO / IA_INDISPONIVEL / FOTO_DESATUALIZADA:
-        // causas acionáveis com mensagem digna própria, em vez do genérico
-        // "não deu desta vez". IA_INDISPONIVEL (14-set: fal recusou por
-        // chave/crédito, falha do MOTOR) usa a mensagem que já vem do backend —
-        // nunca sugere "tente outra foto", porque o problema não é a foto.
-        // FOTO_DESATUALIZADA (22-set) é a trava de hash do motor: a foto que
-        // ele baixou ainda não era a que acabou de subir, e ele recusou gerar
-        // em vez de fazer a figurinha da foto errada. Nada a corrigir do lado
-        // de cá — é esperar uns segundos e tocar de novo, e o botão de repetir
-        // do overlay já está lá. Resto (fal fora do ar, etc.) mantém o genérico
-        // com retry, que já cobre bem o transitório.
-        if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL', 'FOTO_DESATUALIZADA', 'SEM_DIREITO'].includes(err?.code)) setErroIAmsg(err.message);
-        setErroIA(true); // qualquer falha → estado de erro com retry no overlay
-      }
+      tratarFalhaDaGeracao(err);
     } finally {
-      setGerandoIA(false);
+      if (!emSegundoPlano) setGerandoIA(false);
     }
   }
+
+  // O que a tela faz com cada falha da geração — serve ao POST (as validações seguem síncronas no motor) e ao
+  // desfecho 'falhou' da pintura em segundo plano: os códigos e as mensagens são os mesmos de antes do job.
+  function tratarFalhaDaGeracao(err) {
+    // EMAIL_NAO_CONFIRMADO: gate anti-abuso (11-ago) — mesmo status 403 do limite
+    // de quota, por isso tem de ser verificado PRIMEIRO (código distingue os dois).
+    if (err?.code === 'EMAIL_NAO_CONFIRMADO') setEmailNaoConfirmado(true);
+    // SEM_DIREITO (22-set, SPEC-FIGURINHA-3) — também 403, mas não é limite
+    // nenhum: é o direito que acabou (ou o pacote do time que não existe).
+    // Recarrega o estado para o bloco "Vire Brilhante" aparecer sozinho; o
+    // card de quota do plano NÃO serve aqui, e mostrá-lo seria mentir.
+    else if (err?.code === 'SEM_DIREITO') {
+      estadoBrilhantes().then(aplicarBrilhante);
+      setErroIAmsg(err.message);
+      // P2: com a loja ligada o overlay troca o "Tentar novamente" (que daria o mesmo 403) por
+      // "Suas gerações acabaram. Comprar mais?" → Planos, com a Minha Figurinha em destaque.
+      setSemGeracoes(true);
+      setErroIA(true);
+    } else if (err?.status === 403) setLimiteIA(true); // gate antigo de plano (morto, fica de rede)
+    else {
+      // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO / IA_INDISPONIVEL / FOTO_DESATUALIZADA / FIGURINHA_DEFEITUOSA:
+      // causas acionáveis com mensagem digna própria, em vez do genérico
+      // "não deu desta vez". IA_INDISPONIVEL (14-set: fal recusou por
+      // chave/crédito, falha do MOTOR) usa a mensagem que já vem do backend —
+      // nunca sugere "tente outra foto", porque o problema não é a foto.
+      // FOTO_DESATUALIZADA (22-set) é a trava de hash do motor: a foto que
+      // ele baixou ainda não era a que acabou de subir, e ele recusou gerar
+      // em vez de fazer a figurinha da foto errada. Nada a corrigir do lado
+      // de cá — é esperar uns segundos e tocar de novo, e o botão de repetir
+      // do overlay já está lá. Resto (fal fora do ar, etc.) mantém o genérico
+      // com retry, que já cobre bem o transitório.
+      if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL', 'FOTO_DESATUALIZADA', 'SEM_DIREITO', 'FIGURINHA_DEFEITUOSA', 'GERACAO_INTERROMPIDA'].includes(err?.code) || err?.mostrar) setErroIAmsg(err.message);
+      setErroIA(true); // qualquer falha → estado de erro com retry no overlay
+    }
+  }
+
+  // ── A PINTURA EM SEGUNDO PLANO (Rodada 29B, bloco 2, A) ──────────────────────────────────────────────
+  // O POST respondeu `{ jobId, estimativaSegundos }`: a barra começa e o app passa a consultar o motor.
+  function iniciarPintura(data, { kit, estreia = false }) {
+    const nova = {
+      jobId: data.jobId,
+      kit,
+      estreia,
+      estimativaSegundos: data.estimativaSegundos || 45,
+      etapa: 'preparando',
+      decorridoMs: 0,
+      baseEm: Date.now(),
+    };
+    gravarPinturaGuardada(userId, nova);
+    setAgora(Date.now());
+    setPintura(nova);
+  }
+
+  // A figurinha existe: o card troca (a animação de sempre), o direito já foi debitado pelo motor — relê.
+  function aplicarPinturaPronta(d, estreia) {
+    limparPinturaGuardada();
+    setMe((m) => (m ? {
+      ...m,
+      user: { ...m.user, avatar_url: d.avatar_url, kit_ativo: d.kit, figurinha_ativa: d.figurinha_ativa },
+      slots: [...new Set([...(m.slots || []), d.kit])],
+    } : m));
+    setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
+    recarregarPerfilGlobal();
+    estadoBrilhantes().then(aplicarBrilhante);
+    setFotoTrocadaSemGerar(false);
+    setPintura(null);
+    setGerandoIA(false);
+    if (estreia) setEstreiaFase((f) => (f === 'gerando' || f === 'foto' ? 'pronto' : f)); // mostra o cromo
+  }
+
+  // A pintura falhou (o motor não cobrou nada): os mesmos erros de sempre — cabeça cortada pede outra foto.
+  function aplicarPinturaFalhou(d, estreia) {
+    limparPinturaGuardada();
+    setPintura(null);
+    setGerandoIA(false);
+    const err = { code: d.code || null, status: d.status || 500, message: d.erro || '', mostrar: !!d.mostrar };
+    if (estreia) {
+      tratarFalhaDaEstreia(err);
+      setEstreiaFase((f) => (f === 'gerando' || f === 'foto' ? 'pronto' : f));
+    } else {
+      tratarFalhaDaGeracao(err);
+    }
+    // A pintura pode ter gastado um 'gerando' que o motor já marcou 'falhou': relê o perfil para o Início acompanhar.
+    recarregarPerfilGlobal();
+  }
+
+  // Segue a pintura: pergunta ao motor a cada 3 s enquanto a aba está visível e, ao voltar para ela, na hora.
+  // Sair da tela só pára as perguntas — a pintura continua no motor (e o push avisa se a pessoa saiu do app).
+  const jobAtual = pintura?.jobId || null;
+  const estreiaDoJob = !!pintura?.estreia;
+  const pintando = !!pintura;
+  useEffect(() => {
+    if (!jobAtual) return undefined;
+    let vivo = true;
+    let timer = null;
+    let emVoo = false;
+    const inicio = Date.now();
+    const visivel = () => typeof document === 'undefined' || document.visibilityState === 'visible';
+    const agendar = () => {
+      clearTimeout(timer);
+      if (vivo && visivel()) timer = setTimeout(consultar, INTERVALO_CONSULTA_MS);
+    };
+    async function consultar() {
+      if (!vivo || emVoo || !visivel()) return;
+      emVoo = true;
+      try {
+        const d = await apiFetch(`/api/figurinha/job/${jobAtual}`, { segundoPlano: true });
+        if (!vivo) return;
+        if (d.estado === 'pronta') { aplicarPinturaPronta(d, estreiaDoJob); return; }
+        if (d.estado === 'falhou') { aplicarPinturaFalhou(d, estreiaDoJob); return; }
+        setPintura((p) => (p && p.jobId === jobAtual
+          ? { ...p, etapa: d.etapa, estimativaSegundos: d.estimativaSegundos, decorridoMs: d.decorridoSegundos * 1000, baseEm: Date.now() }
+          : p));
+      } catch (err) {
+        if (!vivo) return;
+        // 404: o motor não conhece essa pintura (id velho guardado, outra conta) — não há o que esperar.
+        if (err?.status === 404) { aplicarPinturaFalhou({ erro: 'Não achamos essa pintura. Toque em gerar para tentar de novo.', mostrar: true }, estreiaDoJob); return; }
+        // Rede caiu ou o motor respondeu 5xx: a pintura segue lá — tenta de novo no próximo ciclo.
+      } finally {
+        emVoo = false;
+      }
+      if (Date.now() - inicio > TETO_ACOMPANHAMENTO_MS) {
+        aplicarPinturaFalhou({ erro: 'A pintura demorou demais. Toque em gerar para tentar de novo — nada foi cobrado.', mostrar: true }, estreiaDoJob);
+        return;
+      }
+      agendar();
+    }
+    const aoVoltar = () => { if (visivel()) consultar(); };
+    document.addEventListener('visibilitychange', aoVoltar);
+    consultar();
+    return () => {
+      vivo = false;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
+    // aplicarPinturaPronta/Falhou só usam setters e funções estáveis do contexto; o job e a estreia são o que muda a pintura.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobAtual, estreiaDoJob]);
+
+  // O relógio da barra: 4 vezes por segundo enquanto há pintura (o decorrido do motor + o tempo local desde a consulta).
+  useEffect(() => {
+    if (!pintando) return undefined;
+    const t = setInterval(() => setAgora(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [pintando]);
+  const situacaoPintura = pintura
+    ? situacaoDaPintura({
+      etapa: pintura.etapa,
+      decorridoMs: pintura.decorridoMs + Math.max(0, agora - pintura.baseEm),
+      estimativaSegundos: pintura.estimativaSegundos,
+    })
+    : null;
 
   // Reenvia o e-mail de confirmação (gate anti-abuso, 11-ago) — supabase.auth.resend
   // usa a MESMA sessão activa, não precisa senha nem novo login.
@@ -1317,6 +1472,13 @@ export default function Figurinha() {
             Tentar novamente
           </button>
         </div>
+      ) : situacaoPintura ? (
+        // RODADA 29B (bloco 2, A) — a barra HONESTA: avança pelo tempo típico até 90%, segura em "finalizando…" e
+        // nunca marca 100% antes de a imagem existir. O F continua pintando em cima.
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 14, padding: 12 }}>
+          <FuttyLoader size={96} label={null} />
+          <BarraPintura situacao={situacaoPintura} estimativaSegundos={pintura.estimativaSegundos} />
+        </div>
       ) : (
         <FuttyLoader size={129} label={null} />
       )}
@@ -1378,7 +1540,7 @@ export default function Figurinha() {
             ) : estreiaFase === 'gerando' ? (
               <>
                 <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando sua figurinha… <EstrelaIA size={14} color="#fff" /></h2>
-                <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Leva uns 45 segundos</p>
+                <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Leva uns {pintura?.estimativaSegundos || 45} segundos · pode sair da tela, a gente avisa</p>
               </>
             ) : (
               <>
@@ -1553,7 +1715,7 @@ export default function Figurinha() {
             com o upload falhando a pessoa vê o erro aqui, sob o card. */}
         {gerandoIA ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <FuttyLoader size={14} label={null} /> Sua figurinha está sendo criada… leva uns 45 segundos
+            <FuttyLoader size={14} label={null} /> Sua figurinha está sendo pintada… pode sair da tela, a gente avisa quando ficar pronta
           </div>
         ) : uploadFoto ? (
           <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
