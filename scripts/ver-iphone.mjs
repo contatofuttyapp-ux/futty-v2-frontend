@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3983,7 +3983,18 @@ try {
   if (CENAS.includes('rodada29b-boasvindas') || CENAS.includes('rodada29c-boasvindas')) {
     const r = await cenaRodada29bBoasVindas(navegador);
     saida.rodada29bBoasVindas = r;
-    console.log('\n[iphone] RODADA 29C — boas-vindas para todo mundo: convidado, criador e sem time, nas duas máquinas da prova (servidor local; contas de prova; escritas interceptadas)');
+    console.log('\n[iphone] RODADA 29C — boas-vindas do time: convidado e criador, nas duas máquinas da prova (servidor local; contas de prova; escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29d')) {
+    const r = await cenaRodada29d(navegador);
+    saida.rodada29d = r;
+    console.log('\n[iphone] RODADA 29D — onboarding em 3 páginas com o mini sorteio, o F no ícone do app, aceite com boas-vindas (servidor local; contas de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7497,11 +7508,11 @@ async function cenaRodada29bPesada(navegador) {
 }
 
 // ─── Cena "rodada29b-boasvindas" (30-set; refeita na Rodada 29C, 1-out — alias "rodada29c-boasvindas"): as boas-vindas ──
-// para todo mundo, em UMA página (components/BoasVindas.jsx). Contas de prova (scripts/_bench/prova-rodada29b.js): `novato`
-// (membro do time grátis, sem foto), `membroFoto` (membro, com foto) e `gratis` (dono do time grátis). As três variantes
-// (convidado, criador, sem time) e as duas máquinas da prova aprovada (deitada para time sem logo; quadrada, com dois anéis
-// contínuos, para logo, foto ou o F). Toda escrita à /api é interceptada (o "No gol" manda o PATCH de posição, o Criar time
-// manda o POST — respondidos aqui); o logo do time e o "sem time" entram por cima da resposta REAL do motor (route.fetch).
+// do time, em UMA página (components/BoasVindas.jsx). Contas de prova (scripts/_bench/prova-rodada29b.js): `novato`
+// (membro do time grátis, sem foto), `membroFoto` (membro, com foto) e `gratis` (dono do time grátis). As duas variantes
+// (convidado, criador — a de quem só baixou o app saiu na 29D) e as duas máquinas da prova aprovada (deitada para time sem
+// logo; quadrada, com dois anéis contínuos, para logo). Toda escrita à /api é interceptada (o "No gol" manda o PATCH de
+// posição, o Criar time manda o POST — respondidos aqui); o logo do time entra por cima da resposta REAL do motor (route.fetch).
 // Só servidor LOCAL.
 async function cenaRodada29bBoasVindas(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
@@ -7515,7 +7526,6 @@ async function cenaRodada29bBoasVindas(navegador) {
   const FRASES = {
     convidado: 'Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.',
     criador: 'Seu time está no ar. Chame a galera pelo link, confirme presença, sorteie e faça a figurinha de cada um.',
-    semTime: 'Bem-vindo ao Futty. Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.',
   };
   const erros = [];
   const verificacoes = [];
@@ -7638,21 +7648,9 @@ async function cenaRodada29bBoasVindas(navegador) {
       return route.fulfill({ response: resposta, json: { ...json, team: { ...json.team, logo_url: LOGO } } });
     });
   };
-  // "Sem time": o /api/inicio real com a lista de times vazia (e o /api/teams de reserva também vazio).
-  const semTimes = async (contexto) => {
-    await contexto.route('**/api/inicio*', async (route) => {
-      if (route.request().method() !== 'GET') return route.fallback();
-      const resposta = await route.fetch();
-      const json = await resposta.json().catch(() => null);
-      if (!json?.teams) return route.fulfill({ response: resposta });
-      return route.fulfill({ response: resposta, json: { ...json, teams: { ...json.teams, teams: [] } } });
-    });
-    await contexto.route('**/api/teams', (route) => (route.request().method() === 'GET' ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ teams: [] }) }) : route.fallback()));
-  };
   const marcasDe = (pagina) => pagina.evaluate(() => ({
     visto: Object.keys(localStorage).filter((k) => k.startsWith('futty_onboarding_')).map((k) => [k, localStorage.getItem(k)]),
     cta: localStorage.getItem('futty_cta_figurinha'),
-    app: localStorage.getItem('futty_boasvindas_app'),
   }));
 
   // 1) CONVIDADO, time SEM logo (novato, sem foto): a máquina DEITADA com o nome na janela
@@ -7788,44 +7786,7 @@ async function cenaRodada29bBoasVindas(navegador) {
     await contexto.close();
   }
 
-  // 7) SEM TIME, sem foto (novato): 1ª vez no Início com 0 times — máquina quadrada com o F real, primeiro nome embaixo
-  {
-    const { contexto, pagina } = await abrir(fx.novato, 'sem-time-f', { rota: '/home', antes: semTimes });
-    const r = await lerTela(pagina);
-    const fundo = await pagina.locator('body').innerText();
-    verificar('sem time: abre no Início com a frase de boas-vindas ao Futty e o EmptyState ("Comece por aqui") atrás', r.variante === 'semTime' && r.frase === FRASES.semTime && /Comece por aqui/.test(fundo), JSON.stringify({ variante: r.variante, frase: r.frase }));
-    verificar('sem foto → máquina quadrada com o F REAL (icone-app-144.png) na janela, nunca gerado', r.quadrada && /\/email\/icone-app-144\.png$/.test(r.img || '') && !r.imgFoto && r.luzes === 160, JSON.stringify({ quadrada: r.quadrada, img: r.img, luzes: r.luzes }));
-    verificar('o letreiro é o PRIMEIRO nome da pessoa, embaixo da máquina', r.nomeAbaixo && r.nome === 'NOVATO29' && r.nomeCabe, JSON.stringify({ nome: r.nome, abaixo: r.nomeAbaixo }));
-    verificar('dois botões: "Criar meu time" (dourado) e "Explorar peladas" (roxo contorno), sem chips, e a linha do convite', r.chips.length === 0 && r.botoes.length === 2 && r.botoes[0].t === 'Criar meu time' && r.botoes[0].ouro && r.botoes[1].t === 'Explorar peladas' && r.botoes[1].roxo && r.convite === 'Recebeu um convite? Abra o link que mandaram no grupo.', JSON.stringify({ botoes: r.botoes, convite: r.convite }));
-    verificar('sem time: a página cabe na tela do iPhone sem rolar', r.caixa.cabe, JSON.stringify(r.caixa));
-    await capturar(pagina, '7-sem-time-f');
-    await pagina.locator('.bv button.cta-gold').tap();
-    await pagina.waitForURL('**/criar-equipa', { timeout: 15000 }).catch(() => {});
-    const marcas = await marcasDe(pagina);
-    verificar('"Criar meu time" leva ao Criar time e marca futty_boasvindas_app=1 (uma vez por aparelho)', pagina.url().endsWith('/criar-equipa') && marcas.app === '1', JSON.stringify({ url: pagina.url().replace(BASE, ''), app: marcas.app }));
-    // Numa aba nova do mesmo aparelho (mesmo localStorage): navegar a aba velha para fora do Criar time cortava o POST da
-    // telemetria a meio e dava um "access control checks" de ruído no WebKit.
-    const outra = await contexto.newPage();
-    await outra.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
-    await espera(4000);
-    verificar('sem time: depois de marcada, a página não volta no Início', (await outra.locator('.bv').count()) === 0);
-    await contexto.close();
-  }
-
-  // 8) SEM TIME, com foto (membroFoto): a foto da pessoa na janela (miniatura quadrada), "Explorar peladas"
-  {
-    const { contexto, pagina } = await abrir(fx.membroFoto, 'sem-time-foto', { rota: '/home', antes: semTimes });
-    const r = await lerTela(pagina);
-    verificar('com foto → a foto da pessoa na janela (miniatura quadrada do motor, sq=1), com o chanfro da casa', r.quadrada && /\/api\/media\//.test(r.img || '') && /sq=1/.test(r.img || '') && r.imgFoto && r.nome === 'MEMBROFOTO29', JSON.stringify({ img: r.img, foto: r.imgFoto, nome: r.nome }));
-    await capturar(pagina, '8-sem-time-foto');
-    await pagina.locator('.bv button.btn--purple-outline').tap();
-    await pagina.waitForURL('**/explorar', { timeout: 15000 }).catch(() => {});
-    const marcas = await marcasDe(pagina);
-    verificar('"Explorar peladas" leva ao Explorar e marca futty_boasvindas_app=1', pagina.url().endsWith('/explorar') && marcas.app === '1', JSON.stringify({ url: pagina.url().replace(BASE, ''), app: marcas.app }));
-    await contexto.close();
-  }
-
-  // 9) quem TEM time não vê a tela do app no Início (novato de verdade: membro do time grátis)
+  // 7) quem TEM time: nada no Início (novato de verdade: membro do time grátis)
   {
     const { contexto, pagina } = await abrir(fx.novato, 'inicio-com-time', { rota: '/home', esp: false });
     await espera(4000);
@@ -7833,6 +7794,248 @@ async function cenaRodada29bBoasVindas(navegador) {
     const marcadores = await pagina.evaluate(() => document.querySelectorAll('[data-tour]').length);
     verificar('Início de quem tem time: sem boas-vindas do app, sem o tour antigo (nenhum balão, nenhum [data-tour])', (await pagina.locator('.bv').count()) === 0 && !/Este é o seu card|Nunca perca um jogo|Explore o ranking, a resenha/.test(t) && marcadores === 0, JSON.stringify({ marcadores }));
     await capturar(pagina, '9-inicio-com-time');
+    await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29d" (1-out): onboarding em 3 páginas com o mini sorteio, o F dentro do ícone do app, aceite de pedido ──
+// com boas-vindas. Contas de prova (scripts/_bench/prova-rodada29b.js): `novato` e `membroFoto` (membros do time grátis).
+// O Onboarding abre direto (a gate só manda PARA ele, nunca para fora); o "Entrar" (PATCH /api/me + POST onboarding-completo),
+// o convite (GET falso, POST aceitar) e o aceite do pedido (/api/inicio real com um pedido aprovado por cima) são
+// interceptados — nada chega ao banco. Só servidor LOCAL.
+async function cenaRodada29d(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29d só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29d');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const slug = fx.times.gratis.slug;
+  const NOMES = ['BRUNINHO', 'TIAGÃO', 'LÉO', 'PEDRÃO', 'NANDO', 'CAIO', 'RAFA', 'DUDU'];
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `r29d-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const aceitarCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+
+  // `inicial` corre antes da página (bilhete do convite no aparelho); `antes` regista rotas por cima; `respostas` responde às escritas.
+  const abrir = async (sessao, rotulo, rota, { extra = {}, inicial = null, antes = null, respostas = () => null } = {}) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo', ...extra } });
+    if (inicial) await contexto.addInitScript(inicial);
+    await contexto.addInitScript(() => {
+      window.__som = { audio: 0, contexto: 0 };
+      const A = window.Audio;
+      window.Audio = function (...a) { window.__som.audio += 1; return new A(...a); };
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (C) { const N = function (...a) { window.__som.contexto += 1; return new C(...a); }; window.AudioContext = N; window.webkitAudioContext = N; }
+    });
+    const escritas = await travarEscritas(contexto, respostas);
+    if (antes) await antes(contexto);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    return { contexto, pagina, escritas };
+  };
+  // O convite de prova: GET válido (time grátis, sem logo); o POST /aceitar é respondido pelas escritas travadas.
+  const rotasDoConvite = async (contexto) => {
+    await contexto.route('**/api/convite/*', async (route) => {
+      const u = new URL(route.request().url());
+      if (route.request().method() !== 'GET' || u.pathname.endsWith('/aceitar')) return route.fallback();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valido: true, motivo: null, autenticado: true, jaMembro: false, convidadoPor: 'Tonhão', expires_at: new Date(Date.now() + 86400000).toISOString(), usos: 1, membros: 3, proximoJogo: null, cidade: null, team: { nome: 'Prova R29B Grátis', slug, cor: 'verde', logo_url: null, cor_fundo: null } }) });
+    });
+  };
+  const respostaAceitar = (caminho, metodo) => (metodo === 'POST' && caminho.endsWith('/aceitar') ? { team: { slug, nome: 'Prova R29B Grátis' } } : null);
+  // O Início real com um pedido de entrada APROVADO por cima (o card "O admin aceitou seu pedido").
+  const comPedidoAceito = async (contexto) => {
+    await contexto.route('**/api/inicio*', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const resposta = await route.fetch();
+      const json = await resposta.json().catch(() => null);
+      if (!json) return route.fulfill({ response: resposta });
+      return route.fulfill({ response: resposta, json: { ...json, pedidos: { ...(json.pedidos || {}), pedidos: [{ id: 'pedido-de-prova', status: 'approved', team: { nome: 'Prova R29B Grátis', slug } }] } } });
+    });
+  };
+  const bilheteDoConvite = () => { try { localStorage.setItem('futty_convite_pendente', JSON.stringify({ token: 'token-de-prova', em: Date.now() })); } catch { /* nada */ } };
+
+  // Lê o mini sorteio: lâmpadas, rolos (girando/travado, o nome VISÍVEL pela transformação da tira), legenda, tamanho, mídia.
+  const lerMini = (pagina) => pagina.evaluate(() => {
+    const m = document.querySelector('.msq');
+    if (!m) return null;
+    const cs = (el) => getComputedStyle(el);
+    const luzes = [...m.querySelectorAll('.luz')];
+    const visivel = (rolo) => {
+      const strip = rolo.querySelector('.strip');
+      const nomes = [...strip.querySelectorAll('.n')].map((n) => n.textContent.trim());
+      const mm = /matrix\(([^)]+)\)/.exec(cs(strip).transform);
+      const ty = mm ? parseFloat(mm[1].split(',')[5]) : 0;
+      const idx = Math.round(-ty / 40);
+      return { nome: nomes[((idx % nomes.length) + nomes.length) % nomes.length], ty: Math.round(ty), animacao: cs(strip).animationName };
+    };
+    const maq = m.querySelector('.maq').getBoundingClientRect();
+    return {
+      luzes: luzes.length,
+      animacao: cs(luzes[0]).animationName,
+      opacidades: [...new Set(luzes.map((l) => cs(l).opacity))],
+      rolos: [...m.querySelectorAll('.rolo')].map((r) => ({ time: r.classList.contains('ouro') ? 'ouro' : 'roxo', quem: r.querySelector('.quem')?.textContent.trim(), travado: r.classList.contains('travado'), escolhido: r.dataset.escolhido || null, ...visivel(r) })),
+      nomesNaTira: [...new Set([...m.querySelectorAll('.n')].map((n) => n.textContent.trim()))],
+      legenda: m.querySelector('.msq-legenda')?.textContent.trim(),
+      largura: Math.round(maq.width),
+      altura: Math.round(maq.height),
+      media: m.querySelectorAll('video,audio,canvas,picture,img,svg image').length,
+    };
+  });
+  // Espera a máquina ter exatamente `n` rolos travados (MutationObserver na classe; 0 = voltou a girar).
+  const esperarTravados = (pagina, n, limiteMs = 8000) => pagina.evaluate(([alvo, limite]) => new Promise((res) => {
+    const t0 = performance.now();
+    const conta = () => document.querySelectorAll('.msq .rolo.travado').length;
+    if (conta() === alvo) return res({ ok: true, ms: 0 });
+    const obs = new MutationObserver(() => { if (conta() === alvo) { obs.disconnect(); res({ ok: true, ms: Math.round(performance.now() - t0) }); } });
+    obs.observe(document.querySelector('.msq'), { attributes: true, subtree: true, attributeFilter: ['class'] });
+    setTimeout(() => { obs.disconnect(); res({ ok: conta() === alvo, ms: null }); }, limite);
+  }), [n, limiteMs]);
+  const lerMarca = (pagina) => pagina.evaluate(() => ({
+    icones: [...document.querySelectorAll('[data-marca="icone"]')].map((s) => Math.round(s.getBoundingClientRect().width)),
+    soltos: document.querySelectorAll('svg[aria-label="Futty"]:not([data-marca="icone"])').length,
+    aura: !!document.querySelector('.landing-glow'),
+  }));
+  const lerProgresso = (pagina) => pagina.evaluate(() => {
+    const tracos = [...document.querySelectorAll('[data-progresso] i')];
+    return { n: tracos.length, acesos: tracos.filter((i) => getComputedStyle(i).backgroundImage !== 'none').length };
+  });
+  const texto = (pagina) => pagina.locator('body').innerText().catch(() => '');
+
+  // 1) O F dentro do ícone do app nas páginas de conta, no convite e na landing (com a aura atrás) — nenhum F solto
+  for (const [rota, rotulo, antes] of [['/login', 'login', null], ['/register', 'register', null], ['/forgot-password', 'esqueci-senha', null], ['/convite/token-de-prova', 'convite', rotasDoConvite], ['/', 'landing', null]]) {
+    const { contexto, pagina } = await abrir(null, rotulo, rota, { antes });
+    await pagina.locator('[data-marca="icone"]').first().waitFor({ timeout: 30000 }).catch(() => {});
+    await espera(600);
+    const m = await lerMarca(pagina);
+    verificar(`${rotulo}: a marca é o ícone do app (quadrado arredondado com o F) e não há F solto`, m.icones.length >= 1 && m.soltos === 0 && (rotulo !== 'landing' || m.aura), JSON.stringify(m));
+    if (rotulo === 'login' || rotulo === 'landing' || rotulo === 'convite') await capturar(pagina, `icone-${rotulo}`);
+    await contexto.close();
+  }
+
+  // 2) Onboarding SEM convite: passo 1 com o ícone (72 px), 3 traços, o mini sorteio girando → travando → girando; depois foto e nome
+  {
+    const { contexto, pagina, escritas } = await abrir(fx.novato, 'onboarding', '/onboarding');
+    await pagina.locator('.msq .maq').waitFor({ timeout: 30000 });
+    await espera(300);
+    const marca = await lerMarca(pagina);
+    const prog = await lerProgresso(pagina);
+    const r = await lerMini(pagina);
+    const t = await texto(pagina);
+    // ±2 px: o ícone flutua (bob/sway) e o getBoundingClientRect arredonda a 73 no meio do movimento.
+    verificar('passo 1: "BEM-VINDO AO FUTTY" com o ícone do app a 72 px (sem F solto) e 3 traços, o 1º aceso', /BEM-VINDO AO FUTTY/.test(t) && marca.icones.length === 1 && Math.abs(marca.icones[0] - 72) <= 2 && marca.soltos === 0 && prog.n === 3 && prog.acesos === 1, JSON.stringify({ marca, prog }));
+    verificar('o mini sorteio: caixa de ~290×160 na receita da máquina (réguas 22+22 e 24+24 = 92 lâmpadas em msqCalm)', r && Math.abs(r.largura - 290) <= 4 && r.altura >= 140 && r.altura <= 180 && r.luzes === 92 && r.animacao === 'msqCalm', JSON.stringify(r && { largura: r.largura, altura: r.altura, luzes: r.luzes, animacao: r.animacao }));
+    verificar('dois rolos, TIME OURO e TIME ROXO, girando (msqSpin) com os 8 nomes fictícios na tira', r && r.rolos.length === 2 && r.rolos[0].quem === 'Time Ouro' && r.rolos[1].quem === 'Time Roxo' && r.rolos.every((x) => !x.travado && x.animacao === 'msqSpin') && r.nomesNaTira.length === 8 && r.nomesNaTira.every((n) => NOMES.includes(n)), JSON.stringify(r && { rolos: r.rolos, nomes: r.nomesNaTira }));
+    verificar('legenda "Sorteio justo, ranking e a sua figurinha." e 0 KB de mídia', r && r.legenda === 'Sorteio justo, ranking e a sua figurinha.' && r.media === 0, JSON.stringify(r && { legenda: r.legenda, media: r.media }));
+    await capturar(pagina, 'onboarding-1-girando');
+    const t1 = await esperarTravados(pagina, 1, 4000);
+    const t2 = await esperarTravados(pagina, 2, 3000);
+    await espera(900); // a tira leva 0,7 s a assentar no nome
+    const travado = await lerMini(pagina);
+    verificar('os rolos travam um a um (ouro primeiro, roxo ~1 s depois) em dois nomes diferentes da lista', t1.ok && t2.ok && t2.ms >= 600 && t2.ms <= 1600 && travado.rolos.every((x) => x.travado && NOMES.includes(x.escolhido)) && travado.rolos[0].escolhido !== travado.rolos[1].escolhido, JSON.stringify({ t1, t2, escolhidos: travado.rolos.map((x) => x.escolhido) }));
+    verificar('o nome VISÍVEL em cada rolo é o sorteado (a tira assentou nele, sem animação)', travado.rolos.every((x) => x.nome === x.escolhido && x.animacao === 'none'), JSON.stringify(travado.rolos));
+    await capturar(pagina, 'onboarding-1-travado');
+    // Um ciclo inteiro medido na página (MutationObserver): recomeça a girar → trava os dois → recomeça de novo.
+    const ciclo = await pagina.evaluate(() => new Promise((res) => {
+      const conta = () => document.querySelectorAll('.msq .rolo.travado').length;
+      const marcas = [];
+      const alvos = [0, 2, 0];
+      const obs = new MutationObserver(() => {
+        if (conta() === alvos[marcas.length]) marcas.push(performance.now());
+        if (marcas.length === 3) { obs.disconnect(); res({ ok: true, seguraMs: Math.round(marcas[2] - marcas[1]), cicloMs: Math.round(marcas[2] - marcas[0]) }); }
+      });
+      obs.observe(document.querySelector('.msq'), { attributes: true, subtree: true, attributeFilter: ['class'] });
+      setTimeout(() => { obs.disconnect(); res({ ok: false, marcas: marcas.length }); }, 16000);
+    }));
+    verificar('segura o resultado ~2,6 s e recomeça: ciclo de 6 s em loop', ciclo.ok && ciclo.seguraMs >= 2000 && ciclo.seguraMs <= 3300 && ciclo.cicloMs >= 5500 && ciclo.cicloMs <= 6600, JSON.stringify(ciclo));
+    const som = await pagina.evaluate(() => window.__som);
+    verificar('sem som: nenhum Audio/AudioContext criado (não há gesto)', som.audio === 0 && som.contexto === 0, JSON.stringify(som));
+    await pagina.getByRole('button', { name: /^Começar$/ }).tap();
+    await pagina.getByText(/SUA FIGURINHA/).first().waitFor({ timeout: 15000 });
+    const prog2 = await lerProgresso(pagina);
+    verificar('"Começar" → passo 2 (foto), 2 de 3 traços acesos, sem o mini sorteio', prog2.n === 3 && prog2.acesos === 2 && (await pagina.locator('.msq').count()) === 0, JSON.stringify(prog2));
+    await capturar(pagina, 'onboarding-2-foto');
+    await espera(4300); // "deixar para depois" aparece aos ~4 s
+    await pagina.getByRole('button', { name: /deixar para depois/i }).tap();
+    await pagina.getByText(/COMO TE CHAMAM/).first().waitFor({ timeout: 15000 });
+    const prog3 = await lerProgresso(pagina);
+    verificar('"deixar para depois" → passo 3 (nome), 3 traços acesos', prog3.n === 3 && prog3.acesos === 3, JSON.stringify(prog3));
+    await capturar(pagina, 'onboarding-3-nome');
+    await pagina.locator('input[placeholder^="ex.:"]').fill('Prova 29D');
+    await pagina.getByRole('button', { name: /^Entrar$/ }).tap();
+    await pagina.waitForURL('**/home', { timeout: 30000 }).catch(() => {});
+    verificar('"Entrar" grava o nome e sela o onboarding (PATCH /api/me + POST onboarding-completo, interceptados) e vai ao Início', pagina.url().endsWith('/home') && escritas.some((e) => e.metodo === 'PATCH' && e.rota === '/api/me' && /Prova 29D/.test(e.corpo || '')) && escritas.some((e) => e.metodo === 'POST' && e.rota === '/api/me/onboarding-completo'), JSON.stringify({ url: pagina.url().replace(BASE, ''), escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
+    await contexto.close();
+  }
+
+  // 3) Onboarding COM convite pendente: começa na foto com 2 traços, sem sorteio; no fim o Início devolve ao convite → time → boas-vindas
+  {
+    const { contexto, pagina } = await abrir(fx.membroFoto, 'onboarding-convite', '/onboarding', { inicial: bilheteDoConvite, antes: rotasDoConvite, respostas: respostaAceitar });
+    await pagina.getByText(/SUA FIGURINHA/).first().waitFor({ timeout: 30000 }).catch(() => {});
+    await espera(400);
+    const prog = await lerProgresso(pagina);
+    const t = await texto(pagina);
+    verificar('com convite pendente o Onboarding começa na FOTO: 2 traços (1 aceso), sem "BEM-VINDO" nem mini sorteio', /SUA FIGURINHA/.test(t) && !/BEM-VINDO AO FUTTY/.test(t) && prog.n === 2 && prog.acesos === 1 && (await pagina.locator('.msq').count()) === 0 && /\/onboarding/.test(pagina.url()), JSON.stringify({ prog, url: pagina.url().replace(BASE, '') }));
+    await capturar(pagina, 'convite-1-foto');
+    await espera(4300);
+    await pagina.getByRole('button', { name: /deixar para depois/i }).tap();
+    await pagina.getByText(/COMO TE CHAMAM/).first().waitFor({ timeout: 15000 });
+    const prog2 = await lerProgresso(pagina);
+    verificar('passo do nome: os 2 traços acesos', prog2.n === 2 && prog2.acesos === 2, JSON.stringify(prog2));
+    await capturar(pagina, 'convite-2-nome');
+    await pagina.getByRole('button', { name: /^Entrar$/ }).tap();
+    await pagina.waitForURL('**/convite/token-de-prova', { timeout: 40000 }).catch(() => {});
+    verificar('"Entrar" → o Início toma o bilhete e devolve ao convite', pagina.url().endsWith('/convite/token-de-prova'), pagina.url().replace(BASE, ''));
+    await pagina.locator('button.convite__cta', { hasText: 'Entrar no time' }).tap({ timeout: 30000 });
+    await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
+    const variante = await pagina.locator('.bv').getAttribute('data-variante').catch(() => null);
+    verificar('"Entrar no time" → o time com as boas-vindas do convidado (3 telas no caminho do convite, sorteio só no time)', pagina.url().endsWith(`/equipa/${slug}`) && variante === 'convidado', JSON.stringify({ url: pagina.url().replace(BASE, ''), variante }));
+    await capturar(pagina, 'convite-3-boasvindas');
+    await contexto.close();
+  }
+
+  // 4) prefers-reduced-motion: rolos parados num resultado, lâmpadas a 0,7, nada gira
+  {
+    const { contexto, pagina } = await abrir(fx.novato, 'onboarding-reduzido', '/onboarding', { extra: { reducedMotion: 'reduce' } });
+    await pagina.locator('.msq .maq').waitFor({ timeout: 30000 });
+    await espera(600);
+    const r = await lerMini(pagina);
+    await espera(3200);
+    const depois = await lerMini(pagina);
+    verificar('reduced-motion: as 92 lâmpadas paradas a 0,7 e os dois rolos travados num resultado da lista, sem animação', r.luzes === 92 && r.animacao === 'none' && r.opacidades.length === 1 && Number(r.opacidades[0]) === 0.7 && r.rolos.every((x) => x.travado && x.animacao === 'none' && NOMES.includes(x.escolhido) && x.nome === x.escolhido), JSON.stringify({ animacao: r.animacao, opacidades: r.opacidades, rolos: r.rolos }));
+    verificar('reduced-motion: 3 s depois continua parado no mesmo resultado (sem ciclo)', depois.rolos.every((x, i) => x.travado && x.escolhido === r.rolos[i].escolhido), JSON.stringify(depois.rolos.map((x) => x.escolhido)));
+    await capturar(pagina, 'onboarding-reduzido');
+    await contexto.close();
+  }
+
+  // 5) Aceite de pedido: o card do Início leva ao time com as boas-vindas; a rota ?entrou=1 (notificação) também
+  {
+    const { contexto, pagina, escritas } = await abrir(fx.membroFoto, 'aceite', '/home', { antes: comPedidoAceito });
+    await pagina.getByText('O admin aceitou seu pedido').first().waitFor({ timeout: 30000 }).catch(() => {});
+    const t = await texto(pagina);
+    verificar('Início: o card "Você entrou na Prova R29B Grátis!" / "O admin aceitou seu pedido, bem-vindo."', /Você entrou na Prova R29B Grátis!/.test(t) && /O admin aceitou seu pedido, bem-vindo\./.test(t), t.replace(/\s+/g, ' ').slice(0, 160));
+    await capturar(pagina, 'aceite-1-inicio');
+    await pagina.getByRole('link', { name: /Ir ao time/i }).tap();
+    await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
+    const variante = await pagina.locator('.bv').getAttribute('data-variante').catch(() => null);
+    verificar('"Ir ao time" abre o time com as boas-vindas do convidado (membro COM foto: só o state.primeiraEntrada as abre) e dispensa o card', pagina.url().endsWith(`/equipa/${slug}`) && variante === 'convidado' && escritas.some((e) => e.metodo === 'DELETE' && e.rota === '/api/me/pedidos/pedido-de-prova'), JSON.stringify({ url: pagina.url().replace(BASE, ''), variante, escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
+    await capturar(pagina, 'aceite-2-boasvindas');
+    await contexto.close();
+  }
+  {
+    const { contexto, pagina } = await abrir(fx.membroFoto, 'entrou-1', `/equipa/${slug}?entrou=1`);
+    await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
+    const variante = await pagina.locator('.bv').getAttribute('data-variante').catch(() => null);
+    verificar('/equipa/:slug?entrou=1 (o link da notificação) abre as boas-vindas do convidado', variante === 'convidado', String(variante));
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
