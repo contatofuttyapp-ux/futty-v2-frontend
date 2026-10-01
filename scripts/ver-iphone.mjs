@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29g', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3872,7 +3872,7 @@ try {
   if (CENAS.includes('rodada28') || CENAS.includes('rodada-28')) {
     const r = await cenaRodada28(navegador);
     saida.rodada28 = r;
-    console.log('\n[iphone] RODADA 28 — card com a foto, sessão, 13+, Diagnóstico, telemetria (servidor local)');
+    console.log('\n[iphone] RODADA 28 — card com a foto, sessão, cadastro 18+, Diagnóstico, telemetria (servidor local)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -3995,6 +3995,17 @@ try {
     const r = await cenaRodada29d(navegador);
     saida.rodada29d = r;
     console.log('\n[iphone] RODADA 29D — onboarding em 3 páginas com o mini sorteio, o F no ícone do app, aceite com boas-vindas (servidor local; contas de prova; escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29g')) {
+    const r = await cenaRodada29g(navegador);
+    saida.rodada29g = r;
+    console.log('\n[iphone] RODADA 29G — o Futty é 18+: cadastro com menor e com maior, conta existente com 17 anos, Termos e Privacidade (servidor local; signUp e escritas interceptados)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -4247,7 +4258,7 @@ async function cenaCerimoniaMista(navegador) {
     await pagina.screenshot({ path: arq('e-ranking'), fullPage: true });
   });
 
-  // (f) lista de presença do jogo (confirmados, com GR/C marcados).
+  // (f) lista de presença do jogo (confirmados, com GOL/C marcados).
   await capturar('f-presenca', async () => {
     await pagina.goto(`${BASE}/equipa/${estado.teamSlug}/jogo/${estado.gameId}`, { waitUntil: 'domcontentloaded' });
     await pagina.getByText(/^Confirmados/).waitFor({ timeout: 20000 });
@@ -5880,7 +5891,7 @@ async function cenaRodada27(navegador) {
   return { pasta, verificacoes, capturas, erros, medidas };
 }
 
-// ─── Cena "rodada28" (25-set): produto, sessão, cadastro 13+, Diagnóstico, telemetria ───────────
+// ─── Cena "rodada28" (25-set): produto, sessão, cadastro 18+ (29G), Diagnóstico, telemetria ─────
 // Prova pela tela, em servidor LOCAL (nunca a produção — CLAUDE.md, 25-set), o que a Rodada 28 mudou:
 //   A · card com a FOTO (conta no estado da "foto do Google": avatar_url ≠ foto_url sem ser figurinha):
 //       sem seletor de fundos; a foto cobre a moldura (camada do jogador opaca em todo o octógono) e o
@@ -5889,8 +5900,8 @@ async function cenaRodada27(navegador) {
 //       time é o 1º, pintável, com aviso — e a cena NÃO pinta (toca em "Agora não");
 //   B · "Sair" só deste aparelho (outro aparelho da mesma conta continua dentro); 401 do motor: renova e
 //       repete; 401 de novo → login com "Sua sessão terminou", e o Início nunca diz "Bem-vindo ao Futty.";
-//   C · cadastro com menos de 13 anos: o formulário não chama o signUp; o onboarding pede a data antes da
-//       foto — adulto segue, menor vê o login com "O Futty é para maiores de 13 anos";
+//   C · cadastro com menos de 18 anos (Rodada 29G; antes 13): o formulário não chama o signUp; o onboarding
+//       pede a data antes da foto — adulto segue, menor vê o login com "O Futty é para maiores de 18 anos.";
 //   D · Perfil sem Diagnóstico; /diagnostico só para o super-admin, pelo Gabinete;
 //   E · telemetria: uma vez por tela, sem Authorization, só os campos combinados, telas como padrão;
 //   H · Gabinete: aba Figurinhas com jogadores/gerações; aba Velocidade.
@@ -6131,7 +6142,7 @@ async function cenaRodada28(navegador) {
     await cS.close().catch(() => {});
   }
 
-  // ── C · cadastro com menos de 13 anos ──
+  // ── C · cadastro com menos de 18 anos ──
   const dezAnos = `${new Date().getUTCFullYear() - 10}-06-15`;
   const cR = await navegador.newContext({ ...IPHONE, serviceWorkers: 'block' });
   try {
@@ -6147,8 +6158,10 @@ async function cenaRodada28(navegador) {
     await pagina.fill('#birthdate', dezAnos);
     await pagina.locator('input[type="checkbox"]').check();
     await pagina.locator('button[type="submit"]').click();
-    await pagina.getByText('O Futty é para maiores de 13 anos.').first().waitFor({ timeout: 8000 }).catch(() => {});
-    verificar('C · cadastro por e-mail com 10 anos: "O Futty é para maiores de 13 anos." e o signUp nem sai', /O Futty é para maiores de 13 anos\./.test(await texto(pagina)) && signups === 0, `signups: ${signups}`);
+    // A frase também mora como apoio sob o campo da data: o que prova o ERRO é o aviso (.auth-alert), não o texto da página.
+    const aviso = pagina.locator('.auth-alert--error');
+    await aviso.first().waitFor({ timeout: 8000 }).catch(() => {});
+    verificar('C · cadastro por e-mail com 10 anos: aviso "O Futty é para maiores de 18 anos." e o signUp nem sai', /O Futty é para maiores de 18 anos\./.test(await aviso.first().innerText().catch(() => '')) && signups === 0, `signups: ${signups}`);
     await capturar(pagina, 'C1-cadastro-menor');
   } catch (e) {
     erros.push(`C-register: ${e.message.split('\n')[0]}`);
@@ -6183,7 +6196,7 @@ async function cenaRodada28(navegador) {
     await pagina.waitForURL('**/login', { timeout: 20000 }).catch(() => {});
     await espera(800);
     const t = await texto(pagina);
-    verificar('C · menor de 13 no onboarding: sai para o login com "O Futty é para maiores de 13 anos. A conta não foi criada."', pediu && /\/login/.test(pagina.url()) && /maiores de 13 anos\. A conta não foi criada/.test(t), pagina.url().replace(BASE, ''));
+    verificar('C · menor de 18 no onboarding: sai para o login só com a frase única "O Futty é para maiores de 18 anos."', pediu && /\/login/.test(pagina.url()) && /O Futty é para maiores de 18 anos\./.test(t) && !/A conta não foi criada/.test(t), pagina.url().replace(BASE, ''));
     await capturar(pagina, 'C3-menor-login');
     await c.close();
   } catch (e) {
@@ -7973,6 +7986,212 @@ async function cenaRodada29d(navegador) {
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29g" (1-out): o Futty é 18+ de ponta a ponta ────────────────────────────────────────────────────────
+// Prova pela tela, em servidor LOCAL (nunca a produção — CLAUDE.md, 25-set), o que a Rodada 29G mudou:
+//   A · cadastro por e-mail: o seletor de data só oferece até hoje − 18 anos (o ano mais alto é o ano atual − 18) e a
+//       frase mora sob o campo; com MENOR (faz 18 amanhã) o aviso diz "O Futty é para maiores de 18 anos." e o signUp
+//       nem sai; com MAIOR (faz 18 hoje) o signUp sai com a data (resposta de mentira — nenhuma conta nasce);
+//   B · conta que JÁ existia com 17 anos: o app dá lugar à tela com a frase + "Excluir minha conta" (2 toques, "Voltar"
+//       desfaz; o DELETE é interceptado — a cena NUNCA exclui de verdade) e a barra de navegação some;
+//   C · conta existente sem data: entra normal, o Início pede a data com o texto novo; salvar uma data de menor leva à
+//       mesma tela na hora (o PATCH é interceptado);
+//   D · Termos e Privacidade com a cláusula de 18 anos e a data nova, sem "13 anos".
+// Precisa de backend/scripts/_bench/prova-rodada29g.js rodado antes (2 contas @futtymock; custo de IA zero).
+//   node scripts/ver-iphone.mjs --url http://localhost:5232 --cenas rodada29g --etiqueta r29g
+async function cenaRodada29g(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29g só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29g');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29g.json'), 'utf8'));
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `r29g-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const seguir = (pagina, rotulo) => pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+  const aceitarCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+  const texto = (pagina) => pagina.locator('body').innerText().catch(() => '');
+  const FRASE = 'O Futty é para maiores de 18 anos.';
+  const barra = (pagina) => pagina.locator('nav[aria-label="Navegação principal"]');
+  // "AAAA-MM-DD" de quem faz `anos` anos HOJE (UTC, a régua do motor), deslocada `dias`. 29/02 cai em 28/02.
+  const aniversarioHoje = (anos, dias = 0) => {
+    const h = new Date();
+    let d = new Date(Date.UTC(h.getUTCFullYear() - anos, h.getUTCMonth(), h.getUTCDate()));
+    if (d.getUTCMonth() !== h.getUTCMonth()) d = new Date(Date.UTC(h.getUTCFullYear() - anos, h.getUTCMonth() + 1, 0));
+    d.setUTCDate(d.getUTCDate() + dias);
+    return d.toISOString().slice(0, 10);
+  };
+
+  // ── A · cadastro por e-mail ──
+  const cR = await navegador.newContext({ ...IPHONE, serviceWorkers: 'block' });
+  try {
+    const pagina = await cR.newPage();
+    seguir(pagina, 'A-register');
+    const signups = [];
+    // O signUp é de mentira: nenhuma conta nasce no Supabase. Só se guarda o corpo para conferir a data.
+    await cR.route('**/auth/v1/signup**', async (route) => {
+      const pedido = route.request();
+      const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
+      if (pedido.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+      let corpo = {};
+      try { corpo = JSON.parse(pedido.postData() || '{}'); } catch { /* corpo ilegível: fica vazio */ }
+      signups.push(corpo);
+      const agora = new Date().toISOString();
+      return route.fulfill({
+        status: 200, contentType: 'application/json', headers: cors,
+        body: JSON.stringify({ id: '00000000-0000-4000-8000-000000002907', aud: 'authenticated', role: '', email: corpo.email || 'x@futtymock.com', created_at: agora, updated_at: agora, app_metadata: {}, user_metadata: corpo.data || {}, identities: [] }),
+      });
+    });
+    await pagina.goto(`${BASE}/register`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await pagina.waitForSelector('#birthdate', { timeout: 30000 });
+    const max = await pagina.locator('#birthdate').getAttribute('max');
+    verificar('A · o seletor de data oferece até hoje − 18 anos (o ano mais alto é o ano atual − 18)', max === aniversarioHoje(18) && Number(String(max).slice(0, 4)) === new Date().getUTCFullYear() - 18, `max=${max}`);
+    verificar('A · a frase "O Futty é para maiores de 18 anos." mora sob o campo da data', (await pagina.locator('#birthdate').locator('xpath=..').innerText().catch(() => '')).includes(FRASE));
+    await capturar(pagina, 'A1-register');
+
+    const preencher = async (nasc, sufixo) => {
+      await pagina.fill('#email', `prova-r29g-${sufixo}-${Date.now()}@futtymock.com`);
+      await pagina.fill('#password', 'Prova!R29G-registro');
+      await pagina.fill('#confirm', 'Prova!R29G-registro');
+      await pagina.fill('#birthdate', nasc);
+      await pagina.locator('input[type="checkbox"]').check();
+    };
+    const aviso = pagina.locator('.auth-alert--error');
+    await preencher(aniversarioHoje(18, 1), 'menor');
+    await pagina.locator('button[type="submit"]').click();
+    await aviso.first().waitFor({ timeout: 8000 }).catch(() => {});
+    await espera(600);
+    verificar('A · MENOR (faz 18 amanhã): o aviso diz a frase única e o signUp nem sai', (await aviso.first().innerText().catch(() => '')).includes(FRASE) && signups.length === 0, `signups: ${signups.length}`);
+    await capturar(pagina, 'A2-menor-faz-18-amanha');
+
+    await preencher(aniversarioHoje(18), 'maior');
+    await pagina.locator('button[type="submit"]').click();
+    const limite = Date.now() + 10000;
+    while (signups.length === 0 && Date.now() < limite) await espera(200);
+    await espera(800);
+    const t = await texto(pagina);
+    verificar('A · MAIOR (faz 18 hoje): o signUp sai, com a data de nascimento', signups.length === 1 && signups[0]?.data?.birthdate === aniversarioHoje(18), `signups: ${signups.length} · data: ${signups[0]?.data?.birthdate}`);
+    verificar('A · MAIOR: segue para "Conta criada!" (sem o aviso de idade)', /Conta criada!/.test(t) && (await aviso.count()) === 0, t.replace(/\s+/g, ' ').slice(0, 160));
+    await capturar(pagina, 'A3-maior-faz-18-hoje');
+  } catch (e) {
+    erros.push(`A-register: ${e.message.split('\n')[0]}`);
+  } finally {
+    await cR.close().catch(() => {});
+  }
+
+  // ── B · conta existente com 17 anos: a tela de exclusão ──
+  const cM = await novoContexto(navegador, fx.menor, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+  try {
+    await cM.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); } catch { /* nada */ } });
+    const escritas = await travarEscritas(cM);
+    // O "Sair" do app revoga a sessão no Supabase (scope local); aqui o logout é de mentira, para a sessão da
+    // conta de prova continuar valendo e a cena poder rodar de novo sem refazer as contas.
+    await cM.route('**/auth/v1/logout**', (route) => route.fulfill({
+      status: 204,
+      headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' },
+    }));
+    const pagina = await cM.newPage();
+    seguir(pagina, 'B-menor');
+    await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await pagina.getByRole('heading', { name: FRASE }).waitFor({ timeout: 30000 }).catch(() => {});
+    const t = await texto(pagina);
+    verificar('B · conta existente com 17 anos: a tela mostra a frase única', /O Futty é para maiores de 18 anos\./.test(t));
+    verificar('B · com "Excluir minha conta" e "Sair"', await pagina.getByRole('button', { name: 'Excluir minha conta' }).isVisible().catch(() => false) && await pagina.getByRole('button', { name: 'Sair' }).isVisible().catch(() => false));
+    verificar('B · o app não aparece por trás: sem barra de navegação e sem o Início', (await barra(pagina).count()) === 0 && !/Bem-vindo|INÍCIO/.test(t), t.replace(/\s+/g, ' ').slice(0, 120));
+    await capturar(pagina, 'B1-menor-existente');
+
+    await pagina.getByRole('button', { name: 'Excluir minha conta' }).click();
+    await pagina.getByRole('button', { name: 'Excluir de vez' }).waitFor({ timeout: 8000 }).catch(() => {});
+    const t2 = await texto(pagina);
+    verificar('B · "Excluir minha conta" pede confirmação (Excluir de vez / Voltar) e avisa que não dá para desfazer', /Excluir de vez/i.test(t2) && /Voltar/i.test(t2) && /Não dá para desfazer/i.test(t2), t2.replace(/\s+/g, ' ').slice(0, 200));
+    await capturar(pagina, 'B2-confirmar');
+    await pagina.getByRole('button', { name: 'Voltar' }).click();
+    await espera(500);
+    verificar('B · "Voltar" desfaz sem excluir nada', (await pagina.getByRole('button', { name: 'Excluir minha conta' }).isVisible().catch(() => false)) && !escritas.some((e) => e.metodo === 'DELETE'));
+
+    await pagina.getByRole('button', { name: 'Excluir minha conta' }).click();
+    await pagina.getByRole('button', { name: 'Excluir de vez' }).click();
+    await pagina.waitForURL((u) => ['/', '/login'].includes(new URL(u).pathname), { timeout: 20000 }).catch(() => {});
+    await espera(800);
+    const apagados = escritas.filter((e) => e.metodo === 'DELETE' && e.rota === '/api/me');
+    let confirmacao = null;
+    try { confirmacao = JSON.parse(apagados[0]?.corpo || '{}').confirmacao; } catch { /* corpo cortado */ }
+    verificar('B · "Excluir de vez" manda UM DELETE /api/me com a confirmação EXCLUIR (interceptado, nada foi apagado)', apagados.length === 1 && confirmacao === 'EXCLUIR', `DELETE: ${apagados.length} · confirmacao: ${confirmacao}`);
+    verificar('B · depois de excluir, a pessoa sai do app (landing/login) e a sessão sai do aparelho', ['/', '/login'].includes(new URL(pagina.url()).pathname) && (await pagina.evaluate(() => Object.keys(localStorage).filter((k) => /^sb-.+-auth-token$/.test(k)))).length === 0, pagina.url().replace(BASE, ''));
+    await capturar(pagina, 'B3-depois-de-excluir');
+  } catch (e) {
+    erros.push(`B-menor: ${e.message.split('\n')[0]}`);
+  } finally {
+    await cM.close().catch(() => {});
+  }
+
+  // ── C · conta existente sem data: entra normal; data de menor salva no Início leva à tela ──
+  const cS = await novoContexto(navegador, fx.semData, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+  try {
+    await cS.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); localStorage.removeItem('futty_dob_dispensado'); } catch { /* nada */ } });
+    const escritas = await travarEscritas(cS);
+    const pagina = await cS.newPage();
+    seguir(pagina, 'C-semdata');
+    await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    const campo = pagina.getByLabel('Data de nascimento');
+    await campo.waitFor({ timeout: 30000 }).catch(() => {});
+    const t = await texto(pagina);
+    verificar('C · conta sem data entra normal (sem a tela de exclusão) e o Início pede a data', await campo.isVisible().catch(() => false) && !new RegExp(`^${FRASE}$`, 'm').test(t));
+    verificar('C · o pedido diz "para confirmarmos que você tem 18 anos ou mais" (some "proteger menores")', /para confirmarmos que você tem 18 anos ou mais/.test(t) && !/proteger menores/.test(t));
+    verificar('C · o seletor de data do Início também para em hoje − 18 anos', (await campo.getAttribute('max').catch(() => null)) === aniversarioHoje(18));
+    await capturar(pagina, 'C1-inicio-pede-a-data');
+    await campo.fill(aniversarioHoje(17));
+    await pagina.getByRole('button', { name: 'Salvar' }).click();
+    await pagina.getByRole('heading', { name: FRASE }).waitFor({ timeout: 15000 }).catch(() => {});
+    const salvo = escritas.filter((e) => e.metodo === 'PATCH' && e.rota === '/api/me');
+    verificar('C · salvar uma data de menor leva à tela de exclusão na hora (PATCH interceptado)', salvo.length === 1 && /"birthdate"/.test(salvo[0].corpo || '') && (await pagina.getByRole('button', { name: 'Excluir minha conta' }).isVisible().catch(() => false)) && (await barra(pagina).count()) === 0);
+    await capturar(pagina, 'C2-data-de-menor');
+  } catch (e) {
+    erros.push(`C-semdata: ${e.message.split('\n')[0]}`);
+  } finally {
+    await cS.close().catch(() => {});
+  }
+
+  // ── D · Termos e Privacidade ──
+  const cD = await navegador.newContext({ ...IPHONE, serviceWorkers: 'block' });
+  try {
+    const pagina = await cD.newPage();
+    seguir(pagina, 'D-legal');
+    const CLAUSULA = /Para usar o Futty você precisa ter 18 anos ou mais\.\s+Se descobrirmos uma conta de menor de 18, ela é apagada\./;
+    await pagina.goto(`${BASE}/termos`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await pagina.getByRole('heading', { name: 'Termos de Uso' }).waitFor({ timeout: 30000 }).catch(() => {});
+    const tt = await texto(pagina);
+    verificar('D · Termos: cláusula "Para usar o Futty você precisa ter 18 anos ou mais. Se descobrirmos uma conta de menor de 18, ela é apagada."', CLAUSULA.test(tt));
+    verificar('D · Termos: "Última atualização: 1 de outubro de 2026"', /Última atualização: 1 de outubro de 2026/.test(tt));
+    verificar('D · Termos: sem "13 anos", sem "peça autorização ao seu responsável" (compra); só sobra o "responsável legal" da foto de terceiro (§5)', !/13 anos/.test(tt) && !/peça autorização ao seu responsável/.test(tt) && (tt.match(/responsável legal/g) || []).length === 1, `responsável legal: ${(tt.match(/responsável legal/g) || []).length}`);
+    verificar('D · Termos §8: anúncio 18+ só com data que confirme 18 anos', /só são exibidos a contas com data de nascimento que confirme 18 anos ou mais/.test(tt.replace(/\s+/g, ' ')));
+    await capturar(pagina, 'D1-termos');
+    await pagina.goto(`${BASE}/privacidade`, { waitUntil: 'domcontentloaded' });
+    await pagina.getByRole('heading', { name: 'Política de Privacidade' }).waitFor({ timeout: 30000 }).catch(() => {});
+    const tp = await texto(pagina);
+    verificar('D · Privacidade: seção "5. Idade mínima" com a cláusula e "(v6)" na data', /5\. Idade mínima/.test(tp) && CLAUSULA.test(tp) && /1 de outubro de 2026 \(v6\)/.test(tp));
+    verificar('D · Privacidade: sem "13 anos", sem "Menores de idade", dado de nascimento "para confirmar que você tem 18 anos ou mais"', !/13 anos/.test(tp) && !/Menores de idade/.test(tp) && /Data de nascimento \(para confirmar que você tem 18 anos ou mais\)/.test(tp));
+    await capturar(pagina, 'D2-privacidade');
+  } catch (e) {
+    erros.push(`D-legal: ${e.message.split('\n')[0]}`);
+  } finally {
+    await cD.close().catch(() => {});
+  }
+
+  verificar('sem erro de JS nas páginas', erros.length === 0, erros.join(' | '));
+  return { pasta, verificacoes, capturas, erros };
 }
 
 // ─── Cena "rodada29e" (1-out): a 1ª página do onboarding — o ícone do app a 110 px flutuando, os textos da landing, e o mini ──

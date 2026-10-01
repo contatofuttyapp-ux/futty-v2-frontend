@@ -30,7 +30,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                 <span>{j.nome}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {j.cabeca_chave && <span className="sorteio-player__cap">C</span>}
-                  {j.goleiro && <span className="sorteio-player__gk">GR</span>}
+                  {j.goleiro && <span className="sorteio-player__gk">GOL</span>}
                   <span className="rating-pill">{j.rating}</span>
                 </span>
               </div>

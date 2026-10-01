@@ -319,7 +319,7 @@ export default function Equipa() {
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{nomeExibicao(m)}</div>
                   </div>
                   {m.joga === false ? <Badge45>ORGANIZA</Badge45> : null}
-                  {m.goleiro ? <Badge45 gold>GR</Badge45> : null}
+                  {m.goleiro ? <Badge45 gold>GOL</Badge45> : null}
                   <Badge45 gold={m.role === 'admin'}>{m.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45>
                 </div>
               ))}

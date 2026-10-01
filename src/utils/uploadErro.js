@@ -8,8 +8,9 @@ export function mensagemUploadFoto(err) {
     return { texto: err.message, podeRepetir: true };
   }
   const m = String(err?.message || '').toLowerCase();
-  // Falha de rede: o fetch rejeita antes de haver resposta.
-  if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed') || m.includes('sem ligação')) {
+  // Falha de rede: o fetch rejeita antes de haver resposta. Pelo apiFetch chega com code 'SEM_REDE'
+  // (Rodada 29G); as mensagens cruas do navegador seguem reconhecidas por quem não passa por ele.
+  if (err?.code === 'SEM_REDE' || m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed') || m.includes('sem ligação')) {
     return { texto: 'Sem conexão. Verifique a internet e tente de novo.', podeRepetir: true };
   }
   // Tamanho: o backend recusa acima de 5MB.

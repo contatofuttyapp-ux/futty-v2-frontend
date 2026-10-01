@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { entrarComGoogle } from '../lib/googleAuth';
 import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
-import { dataDeNascimentoValida, menorQueIdadeMinima, MSG_MENOR } from '../utils/idade';
+import { dataDeNascimentoValida, menorQueIdadeMinima, nascimentoMaximo, MSG_MENOR } from '../utils/idade';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
@@ -13,9 +13,6 @@ import FuttyLogo from '../components/FuttyLogo';
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
 import '../styles/app.css';
 import '../styles/auth.css';
-
-// Máximo permitido: ontem (não permite hoje nem datas futuras).
-const MAX_NASCIMENTO = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
 export default function Register() {
   const navigate = useNavigate();
@@ -73,7 +70,7 @@ export default function Register() {
       setError('Data de nascimento inválida.');
       return;
     }
-    // Rodada 28 (LGPD art. 14): abaixo de 13 anos a conta não é criada — nem chega ao Supabase.
+    // Rodada 29G: abaixo de 18 anos a conta não é criada — nem chega ao Supabase.
     if (menorQueIdadeMinima(birthdate)) {
       setError(MSG_MENOR);
       return;
@@ -246,11 +243,21 @@ export default function Register() {
                 type="date"
                 className="auth-input hud-corners-s"
                 value={birthdate}
-                max={MAX_NASCIMENTO}
+                max={nascimentoMaximo()}
                 onChange={(e) => setBirthdate(e.target.value)}
+                // O `max` (hoje − 18 anos) faz o navegador barrar o envio com a mensagem DELE; aqui a
+                // data acima do teto mostra a frase da casa, e o signUp nem sai.
+                onInvalid={(e) => {
+                  if (e.target.validity.rangeOverflow) {
+                    e.preventDefault();
+                    setSuccess('');
+                    setError(MSG_MENOR);
+                  }
+                }}
                 autoComplete="bday"
                 required
               />
+              <span style={{ display: 'block', marginTop: 6, fontSize: 12, lineHeight: 1.4, color: 'var(--text-dim)' }}>{MSG_MENOR}</span>
             </div>
 
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5, cursor: 'pointer', margin: '4px 0 0' }}>

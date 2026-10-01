@@ -26,6 +26,9 @@ import { registarChamada, lerServerTiming, marcarDadosDaTela } from './diagnosti
 const MOTOR = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 const API_URL = !Capacitor.isNativePlatform() && import.meta.env.PROD ? '' : MOTOR;
 
+// A frase da casa para "a rede caiu" (Rodada 29G): é o que o `apiFetch` devolve no lugar do erro cru do navegador.
+export const MSG_SEM_REDE = 'Sem internet agora. Tente de novo.';
+
 // Resolução de assets: fonte única em utils/avatar.js (re-exportado como assetUrl).
 export { urlAsset as assetUrl } from '../utils/avatar';
 
@@ -98,7 +101,16 @@ async function pedir(path, options, token, segundoPlano) {
     // VELOCIDADE 4 — a caixa-preta mede AQUI, no único sítio por onde todas as
     // chamadas passam. Só rota, estado e tempos; nunca corpo nem token.
     const t0 = performance.now();
-    const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    let res;
+    try {
+      res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    } catch {
+      // Sem rede (ou o servidor nem atendeu): o navegador rejeita com a mensagem CRUA dele ("Load failed" no
+      // WebKit, "Failed to fetch" no Chrome) e isso nunca chega à tela. A mensagem é a da casa.
+      const falha = new Error(MSG_SEM_REDE);
+      falha.code = 'SEM_REDE';
+      throw falha;
+    }
     const ms = performance.now() - t0;
     const { motorMs, edgeMs } = lerServerTiming(res.headers.get('Server-Timing'));
     registarChamada({ rota: path, metodo: (options.method || 'GET').toUpperCase(), status: res.status, ms, motorMs, edgeMs, segundoPlano });

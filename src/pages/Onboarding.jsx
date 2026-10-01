@@ -3,8 +3,8 @@
 // nunca passam aqui). Pede SÓ o que o dia-1 usa — equipa entra-se/cria-se no Início.
 // Foto: selfie (capture="user") OU galeria → CropModal da casa (1:1) → POST /api/me/avatar.
 // "Deixar para depois" só aparece aos ~4s; quem salta leva o card persistente no Início.
-// RODADA 28 (LGPD art. 14): quem chega sem data de nascimento (Google/Apple não a trazem) passa
-// por "Quando você nasceu?" ANTES da foto. Menor de 13: o motor apaga a conta e o login explica.
+// RODADA 28/29G: quem chega sem data de nascimento (Google/Apple não a trazem) passa
+// por "Quando você nasceu?" ANTES da foto. Menor de 18: o motor apaga a conta e o login explica.
 // RODADA 29D (dono): o passo 1 ganhou o mini sorteio ao vivo (MiniSorteio.jsx) e o ícone do app no lugar do F solto;
 // RODADA 29E (dono): o ícone de volta a 110 px flutuando, figurinhas fictícias caindo em dois times no mini sorteio, textos da landing.
 // quem chega pelo convite (bilhete no aparelho) começa na foto, com dois traços — o sorteio ela vê no time.
@@ -15,7 +15,7 @@ import { enquadroAvatar } from '../lib/enquadroAvatar';
 import { temConvitePendente } from '../lib/convitePendente';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
-import { dataDeNascimentoValida } from '../utils/idade';
+import { dataDeNascimentoValida, IDADE_MINIMA, nascimentoMaximo } from '../utils/idade';
 import { usePerfil } from '../context/PerfilContext';
 import { useAuth } from '../hooks/useAuth';
 import FuttyLogo from '../components/FuttyLogo';
@@ -142,9 +142,9 @@ export default function Onboarding() {
     }
   }
 
-  // RODADA 28 — "Quando você nasceu?". Quem decide é o motor (PATCH /api/me): 13 anos ou mais, a data
-  // fica e segue para a foto; menos de 13, ele apaga a conta (403 MENOR_DE_13) — aqui só se sai do
-  // aparelho, e o login diz "O Futty é para maiores de 13 anos".
+  // RODADA 28/29G — "Quando você nasceu?". Quem decide é o motor (PATCH /api/me): 18 anos ou mais, a data
+  // fica e segue para a foto; menos de 18, ele apaga a conta (403 MENOR_DE_18) — aqui só se sai do
+  // aparelho, e o login diz "O Futty é para maiores de 18 anos."
   async function confirmarNascimento() {
     const v = dataDeNascimentoValida(nascimento);
     if (!v) {
@@ -160,8 +160,8 @@ export default function Onboarding() {
     } catch (e) {
       if (e.code === 'NASCIMENTO_JA_DEFINIDO') {
         setNascimentoOk(true); // a data já veio do cadastro por e-mail
-      } else if (e.code === 'MENOR_DE_13') {
-        try { sessionStorage.setItem('futty_menor13', '1'); } catch { /* sem o aviso */ }
+      } else if (e.code === 'MENOR_DE_18') {
+        try { sessionStorage.setItem('futty_menor18', '1'); } catch { /* sem o aviso */ }
         await signOut();
       } else {
         setErroNascimento(e.message || 'Não deu para salvar a data. Tente de novo.');
@@ -198,9 +198,9 @@ export default function Onboarding() {
       if (base) hidratar({ ...base, user: { ...base.user, onboarding_completo: true } });
       window.location.assign('/home');
     } catch (e) {
-      // Rodada 28: data de menor de 13 que veio do cadastro por e-mail — o motor apagou a conta.
-      if (e.code === 'MENOR_DE_13') {
-        try { sessionStorage.setItem('futty_menor13', '1'); } catch { /* sem o aviso */ }
+      // Rodada 29G: data de menor de 18 que veio do cadastro por e-mail — o motor apagou a conta.
+      if (e.code === 'MENOR_DE_18') {
+        try { sessionStorage.setItem('futty_menor18', '1'); } catch { /* sem o aviso */ }
         await signOut();
         return;
       }
@@ -245,7 +245,7 @@ export default function Onboarding() {
           <>
             <Titulo size={24}>Quando você<br />nasceu?</Titulo>
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
-              Pedimos a data de nascimento para seguir as regras de idade da LGPD.
+              Pedimos a data de nascimento para confirmar que você tem {IDADE_MINIMA} anos ou mais.
             </p>
             <div style={{ width: '100%', maxWidth: 290 }}>
               <label htmlFor="onb-nascimento" style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Data de nascimento</label>
@@ -254,7 +254,7 @@ export default function Onboarding() {
                 type="date"
                 className="input input--hud"
                 value={nascimento}
-                max={new Date().toISOString().slice(0, 10)}
+                max={nascimentoMaximo()}
                 onChange={(e) => { setNascimento(e.target.value); setErroNascimento(''); }}
                 autoComplete="bday"
                 style={{ width: '100%', fontFamily: RAJ, fontSize: 17, fontWeight: 700, textAlign: 'center' }}

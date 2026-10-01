@@ -120,7 +120,8 @@ Rota `/super` (guard super-admin), 3 tabs:
 - **Medição no motor** (arquitetura BannerAd, backend nosso): cada render = IMPRESSÃO,
   cada toque = CLIQUE → endpoint leve, **agregação diária em Storage JSON**; zero cookies
   extra, zero scripts externos. Respeita a **lei de menores** selada: impressões de
-  menores/anónimos **nem existem** para banners 18+ (nunca renderizam).
+  quem não tem 18 confirmados e de anónimos **nem existem** para banners 18+ (nunca
+  renderizam). Desde 1-out (Rodada 29G) o app é 18+; esta é a 2ª linha.
 - **Campanhas com dinheiro** — campos por banner/campanha: anunciante · valor acordado ·
   modelo (fixo mensal / por período) · datas início-fim · estado (ativa/pausada/terminada).
   Classificação etária por banner (livre/18+; default 18+ = fail-closed). Geridas no Gabinete.

@@ -120,7 +120,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
         </span>
         <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>{j.nome}</span>
         {j.cabeca_chave ? <span className="sorteio-player__cap">C</span> : null}
-        {j.goleiro ? <span className="sorteio-player__gk">GR</span> : null}
+        {j.goleiro ? <span className="sorteio-player__gk">GOL</span> : null}
         <span className="rating-pill">{j.rating}</span>
       </div>
     );

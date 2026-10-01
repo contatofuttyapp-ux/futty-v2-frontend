@@ -6,8 +6,10 @@
 // 26-set (Pagamentos P2): §7 volta a falar de compras. A CLAUSULA_PAGAMENTO_FUTURA, revista para os
 // produtos de hoje (compras avulsas e consumíveis pela App Store / Google Play, sem assinatura), entrou
 // no lugar do "7. Cobrança" e saiu do comentário.
-// 25-set (Rodada 28, LGPD art. 14): §2 diz como a idade mínima é conferida no cadastro.
+// 1-out (Rodada 29G): o Futty é para maiores de 18 anos. §2 traz a cláusula de idade (o número vem de
+// IDADE_MINIMA, utils/idade.js), §7 perde o aviso de responsável e §8 diz que o anúncio 18+ depende da data.
 import { Link } from 'react-router-dom';
+import { IDADE_MINIMA } from '../utils/idade';
 import '../styles/app.css';
 
 const H = { fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, color: '#fff' };
@@ -16,7 +18,7 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const ULTIMA_ATUALIZACAO = '26 de setembro de 2026';
+const ULTIMA_ATUALIZACAO = '1 de outubro de 2026';
 const CONTATO = 'contato@futtyapp.com';
 
 export default function Termos() {
@@ -38,13 +40,11 @@ export default function Termos() {
 
         <h2 style={h2}>2. Elegibilidade</h2>
         <p style={p}>
-          O Futty é para maiores de 13 anos: você precisa de pelo menos 13 anos para criar
-          uma conta, e menores de 13 anos não podem usar o Futty. A data de nascimento é
-          pedida no cadastro (por e-mail, Google ou Apple) e, abaixo dessa idade, a conta não
-          é criada. Menores de idade contam com proteções específicas no app: o
-          rosto aparece sempre em silhueta nas páginas públicas e publicidade classificada
-          como 18+ nunca é exibida. Ao se cadastrar, você confirma que as informações
-          fornecidas são verdadeiras. O Futty não verifica a veracidade dos dados.
+          Para usar o Futty você precisa ter {IDADE_MINIMA} anos ou mais. Se descobrirmos uma
+          conta de menor de {IDADE_MINIMA}, ela é apagada. A data de nascimento é pedida no
+          cadastro (por e-mail, Google ou Apple) e, abaixo dessa idade, a conta não é criada.
+          Ao se cadastrar, você confirma que as informações fornecidas são verdadeiras. O Futty
+          não verifica a veracidade dos dados.
         </p>
 
         <h2 style={h2}>3. Sua conta e sua responsabilidade</h2>
@@ -113,8 +113,7 @@ export default function Termos() {
           São compras avulsas, pagas uma vez só: não há assinatura nem cobrança recorrente. O
           pagamento é feito exclusivamente pela App Store (Apple) ou pelo Google Play (Google),
           na sua conta da loja, e o preço é o que a loja mostra no momento da compra, na moeda
-          da sua conta. O Futty não recebe nem guarda dados do seu cartão. Se você tem menos de
-          18 anos, peça autorização ao seu responsável antes de comprar.
+          da sua conta. O Futty não recebe nem guarda dados do seu cartão.
         </p>
         <p style={{ ...p, marginTop: 6 }}>
           As gerações são itens consumíveis: cada geração usada é gasta, e uma geração que sai
@@ -137,8 +136,8 @@ export default function Termos() {
         <h2 style={h2}>8. Publicidade</h2>
         <p style={p}>
           O Futty pode mostrar publicidade de parceiros, sempre identificada como tal.
-          Anúncios classificados como 18+ nunca são exibidos a contas de menores de idade.
-          Essa regra nunca falha a favor do anúncio.
+          Anúncios classificados como 18+ só são exibidos a contas com data de nascimento que
+          confirme {IDADE_MINIMA} anos ou mais. Essa regra nunca falha a favor do anúncio.
         </p>
 
         <h2 style={h2}>9. Uso aceitável</h2>

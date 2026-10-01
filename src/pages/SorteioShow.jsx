@@ -143,8 +143,8 @@ export default function SorteioShow() {
                 <b>Declaro que posso compartilhar este sorteio.</b>
               </p>
               <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-dim)', marginBottom: 16 }}>
-                Os jogadores autorizaram ou são maiores de idade. Os rostos de menores aparecem
-                sempre como silhueta, independentemente disto.
+                Os jogadores autorizaram. O rosto de quem não liberou ou não informou a data de
+                nascimento aparece sempre como silhueta, independentemente disto.
               </p>
               <button type="button" className="btn btn--primary" style={{ width: '100%' }} onClick={aceitarTermo}>
                 Aceitar e copiar link

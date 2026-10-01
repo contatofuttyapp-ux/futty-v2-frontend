@@ -15,6 +15,7 @@ import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
 import { plural } from '../utils/plural';
+import { IDADE_MINIMA, nascimentoMaximo } from '../utils/idade';
 import { gerarFigurinhaCanvas, enquadrarAvatar, enquadrarFotoComum, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
@@ -468,8 +469,8 @@ export default function Inicio() {
   const [toast, setToast] = useState(null); // { msg, tipo }
   const celebrouCamp = useRef(false);
 
-  // Pedido ÚNICO de data de nascimento (Opção B): sem ela, o /p/ cai em silhueta
-  // (proteção de menores — a idade manda). Banner não-bloqueante e dispensável.
+  // Pedido ÚNICO de data de nascimento (Opção B): sem ela, o /p/ cai em silhueta e o anúncio 18+
+  // nunca aparece (a idade manda; o app é 18+, Rodada 29G). Banner não-bloqueante e dispensável.
   const [dobInput, setDobInput] = useState('');
   const [dobBusy, setDobBusy] = useState(false);
   const [dobFeito, setDobFeito] = useState(false);
@@ -482,6 +483,8 @@ export default function Inicio() {
     setDobBusy(true);
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ birthdate: dobInput }) });
+      // A data entra no perfil na hora: se for de menor de 18, o AuthGuard troca o app pela tela de exclusão.
+      if (me?.user) hidratarPerfil({ ...me, user: { ...me.user, birthdate: dobInput } });
       setDobFeito(true);
       setToast({ msg: 'Data salva. Obrigado.', tipo: 'success' });
     } catch (e) {
@@ -977,18 +980,18 @@ export default function Inicio() {
           </div>
         ) : null}
 
-        {/* Pedido único de data de nascimento (Opção B) — para proteger menores nos
-            links públicos de sorteio. Não-bloqueante; dispensável. */}
+        {/* Pedido único de data de nascimento (Opção B) — para confirmar os 18 anos do app.
+            Não-bloqueante; dispensável. */}
         {precisaDob ? (
           <div className="hud-corners" style={{ display: 'grid', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.25)' }}>
             <span style={{ fontSize: 13, color: '#fff', lineHeight: 1.45 }}>
-              Informe sua <b>data de nascimento</b>: é para sabermos proteger menores nos links públicos de sorteio.
+              Informe sua <b>data de nascimento</b> para confirmarmos que você tem {IDADE_MINIMA} anos ou mais.
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <input
                 type="date"
                 value={dobInput}
-                max={new Date().toISOString().slice(0, 10)}
+                max={nascimentoMaximo()}
                 onChange={(e) => setDobInput(e.target.value)}
                 style={{ flex: '1 1 150px', padding: '8px 10px', borderRadius: 2, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: 16 }}
                 aria-label="Data de nascimento"

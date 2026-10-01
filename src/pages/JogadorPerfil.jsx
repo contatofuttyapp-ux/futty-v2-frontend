@@ -253,7 +253,7 @@ export default function JogadorPerfil() {
               </div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, fontFamily: "'Rajdhani', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
                 {jogador.posicao != null ? <span>{jogador.posicao}º de {jogador.total_com_nota}</span> : <span>Sem nota ainda</span>}
-                {jogador.categoria === 'GR' ? <><span style={{ opacity: 0.4 }}>·</span><span style={{ fontSize: 10, fontWeight: 700, color: '#b69cff', border: '1px solid var(--purple)', padding: '1px 6px' }}>GR</span></> : null}
+                {jogador.categoria === 'GR' ? <><span style={{ opacity: 0.4 }}>·</span><span style={{ fontSize: 10, fontWeight: 700, color: '#b69cff', border: '1px solid var(--purple)', padding: '1px 6px' }}>GOL</span></> : null}
               </div>
               {equipas.length ? (
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 13 }}>

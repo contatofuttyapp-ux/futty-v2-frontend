@@ -154,12 +154,13 @@ sempre sobre o resultado persistido (a SEQUÊNCIA não era reproduzível — Mat
   `BannerAd` reutilizável (chanfro 45°, filete fino, rótulo "PUBLICIDADE"), **300×250
   ABAIXO da máquina** (o 320×50 fixo flutuaria sobre o palco — reprovado), no in-app E
   na /p/. v1 = house ads (Storage JSON rotativo; fallback = promover planos). **LEI DE
-  MENORES (fundadora, fail-closed):** classificação por banner (livre/18+); menor OU
-  idade desconhecida/anónimo (/p/) só recebe "livre"; 18+ nunca serve menor/anónimo, sem
-  exceção; sem classificação = 18+. **INTERRUPTOR DO DONO:** toggle por página no
+  MENORES (fundadora, fail-closed):** classificação por banner (livre/18+); quem não tem
+  18 anos confirmados pela data OU idade desconhecida/anónimo (/p/) só recebe "livre"; 18+
+  nunca serve a esses, sem exceção; sem classificação = 18+. (Desde 1-out, Rodada 29G, o app é
+  18+ de ponta a ponta; esta trava vira a 2ª linha, para nunca depender só do cadastro.) **INTERRUPTOR DO DONO:** toggle por página no
   Gabinete, Storage, default DESLIGADO — o slot existe sempre, mostrar é decisão do dono.
   **MEDIÇÃO:** render=impressão, toque=clique (endpoint nosso, agregação diária Storage
-  JSON, zero cookies/scripts externos; menor/anónimo nem gera impressão de 18+). Rede
+  JSON, zero cookies/scripts externos; quem não tem 18 confirmados/anónimo nem gera impressão de 18+). Rede
   externa (AdSense etc.) = decisão FUTURA à parte (consent UE + scripts). **PNG
   partilhado fica LIMPO (sem banner)**; "patrocinador no cartão" = ideia futura.
 - **BARALHO OFICIAL v9 (23 jul, decisão):** SÓ estes símbolos nos rolos — 5 personagens

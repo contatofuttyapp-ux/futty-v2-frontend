@@ -477,8 +477,8 @@ export default function MeuPerfil() {
         ) : null}
 
         {/* SECÇÃO PRIVACIDADE (Opção B): o rosto entra por omissão para MAIORES; aqui
-            desliga-se para silhueta. No servidor a IDADE manda sempre (menores/sem data
-            de nascimento nunca revelam, mesmo com isto ligado). */}
+            desliga-se para silhueta. No servidor a IDADE manda sempre (sem data de nascimento
+            ou sem 18 anos nunca revelam, mesmo com isto ligado). */}
         <SecLabel>Privacidade</SecLabel>
         <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px' }}>

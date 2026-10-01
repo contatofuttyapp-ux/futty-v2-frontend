@@ -200,7 +200,7 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
     let rx = boxX + (boxW - rowW) / 2;
     for (let k = 0; k < count; k += 1) {
       const j = jogs[idx]; idx += 1;
-      const marca = j.goleiro ? ' (GR)' : j.cabeca_chave ? ' (C)' : '';
+      const marca = j.goleiro ? ' (GOL)' : j.cabeca_chave ? ' (C)' : '';
       desenharCartaoJogador(cx, rx, ry, L.cw, cardH, kit, (j.convidado ? '· ' : '') + (j.nome || '?') + marca, j._img);
       rx += L.cw + cardGap;
     }

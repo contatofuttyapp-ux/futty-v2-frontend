@@ -79,7 +79,8 @@ O radar da Vitrine (Vaga 6) nasce dos **eixos activos**: 5=pentágono, 4=losango
 ### 6.1 BUSCA DE JOGADORES — APROVADA (fase PÓS-Segurança)
 - Procurar pessoas **por nome** → ver **cromo/vitrine pública** + equipas dessa pessoa.
 - **Regras definem-se na SPEC-SEGURANCA:** quem é indexável (**opt-out**), **menores NUNCA**
-  aparecem em busca pública, **sem dados de contacto** expostos.
+  aparecem em busca pública (o app é 18+ desde a Rodada 29G; a regra fica para quem não tiver
+  18 confirmados pela data), **sem dados de contacto** expostos.
 - Depende do filtro de moderação e das regras de privacidade estarem selados primeiro.
 
 ### 6.2 CRIAR EQUIPA VIA AMIGOS — APROVADA (v2 do wizard)

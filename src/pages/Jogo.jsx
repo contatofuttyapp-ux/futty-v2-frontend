@@ -280,7 +280,7 @@ export default function Jogo() {
                       disabled={busy}
                       onChange={(e) => confirmar(true, e.target.checked)}
                     />
-                    Sou goleiro (GR)
+                    Sou goleiro (GOL)
                   </label>
                   {/* P2-8: sem confirmação, um dedo mal posto tirava-te do jogo. */}
                   {confirmacao === 'cancelar-presenca' ? (
@@ -329,7 +329,7 @@ export default function Jogo() {
             <SecLabel>Confirmados · {confirmados.length}</SecLabel>
             {isAdmin && confirmados.length > 0 && (
               <p className="muted" style={{ fontSize: 13 }}>
-                Marque jogadores como goleiro (GR) ou cabeça de chave (C) antes de sortear.
+                Marque jogadores como goleiro (GOL) ou cabeça de chave (C) antes de sortear.
               </p>
             )}
             {confirmados.length === 0 ? (
@@ -349,7 +349,7 @@ export default function Jogo() {
                           disabled={busy}
                           onClick={() => marcar(p.user_id, { goleiro: !p.goleiro })}
                         >
-                          GR
+                          GOL
                         </button>
                         <button
                           type="button"
@@ -364,7 +364,7 @@ export default function Jogo() {
                     ) : (
                       <>
                         {p.cabeca_chave && <span className="sorteio-player__cap">C</span>}
-                        {p.goleiro && <span className="sorteio-player__gk">GR</span>}
+                        {p.goleiro && <span className="sorteio-player__gk">GOL</span>}
                       </>
                     )}
                     <span className="rating-pill">★ {p.rating}</span>

@@ -175,7 +175,7 @@ export default function NovoJogo() {
                     </label>
                     {st.jogou ? (
                       <label className="check-inline" style={{ fontFamily: RAJ, fontSize: 12, flexShrink: 0 }}>
-                        <input type="checkbox" checked={!!st.gr} onChange={() => toggleGr(m.id)} /> GR
+                        <input type="checkbox" checked={!!st.gr} onChange={() => toggleGr(m.id)} /> GOL
                       </label>
                     ) : null}
                   </div>

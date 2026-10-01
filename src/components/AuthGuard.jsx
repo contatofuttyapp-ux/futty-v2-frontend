@@ -4,16 +4,23 @@
 // conta não entra, sem apagar nada. A Super age sobre a plataforma, nunca o conteúdo.
 // Achado 3/23: o perfil já vem do PerfilContext (carregado 1x por sessão) — este
 // guard deixou de sondar /api/me por conta própria.
+// Rodada 29G: conta com data de nascimento menor de 18 anos também não entra — vê a tela
+// de MenorDeIdade (a frase da casa + "Excluir minha conta"). Conta sem data segue (o onboarding e o
+// Início pedem a data).
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
+import { menorQueIdadeMinima } from '../utils/idade';
+import { lazyComRetry } from '../utils/lazyComRetry';
 import LoadingFutty from './LoadingFutty';
 import ErrorPage from './ErrorPage';
+
+const MenorDeIdade = lazyComRetry(() => import('./MenorDeIdade'));
 
 export default function AuthGuard({ children }) {
   const { session, loading, signOut } = useAuth();
   const location = useLocation();
-  const { carregando: perfilCarregando, suspenso } = usePerfil();
+  const { carregando: perfilCarregando, suspenso, perfil } = usePerfil();
 
   if (loading) return <LoadingFutty motivo="sessao" />;
 
@@ -34,6 +41,8 @@ export default function AuthGuard({ children }) {
       />
     );
   }
+
+  if (menorQueIdadeMinima(perfil?.user?.birthdate)) return <MenorDeIdade />;
 
   return children;
 }

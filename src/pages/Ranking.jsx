@@ -94,7 +94,7 @@ function RankRow({ p, idx, slug, onVote }) {
           <div className="rank-name" style={nomeFs ? { fontSize: nomeFs } : undefined}>
             {nomeShow}
             {p.categoria === 'GR' ? (
-              <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: '#b69cff', border: '1px solid var(--purple)', padding: '1px 6px' }}>GR</span>
+              <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: '#b69cff', border: '1px solid var(--purple)', padding: '1px 6px' }}>GOL</span>
             ) : null}
           </div>
           <div className="rank-votes" style={{ marginTop: 4, fontSize: 12 }}>

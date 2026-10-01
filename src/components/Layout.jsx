@@ -7,6 +7,7 @@ import { useTeams } from '../hooks/useTeam';
 import { usePerfil } from '../context/PerfilContext';
 import { InicioProvider } from '../context/InicioContext';
 import { useAuth } from '../hooks/useAuth';
+import { menorQueIdadeMinima } from '../utils/idade';
 import BottomNav from './BottomNav';
 import AuroraBg from './AuroraBg';
 
@@ -94,7 +95,9 @@ export default function Layout({ children }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { teams } = useTeams();
-  const showNav = shouldShowNav(pathname);
+  // Rodada 29G: conta com data menor de 18 anos vê a tela de exclusão (AuthGuard) — sem a barra por cima.
+  const { perfil: perfilDaConta } = usePerfil();
+  const showNav = shouldShowNav(pathname) && !menorQueIdadeMinima(perfilDaConta?.user?.birthdate);
 
   const urlSlug = pathname.match(/^\/equipa\/([^/]+)/)?.[1] || null;
   const slug = urlSlug || teams[0]?.slug || null;

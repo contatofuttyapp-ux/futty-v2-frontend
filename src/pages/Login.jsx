@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { entrarComGoogle } from '../lib/googleAuth';
 import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
+import { MSG_MENOR } from '../utils/idade';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
@@ -24,20 +25,20 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   // RODADA 28 — avisos curtos, uma vez só: a sessão acabou sem a pessoa pedir (AuthContext: 401 do
-  // motor, refresh recusado) ou o cadastro parou nos 13 anos (Onboarding: o motor apagou a conta).
+  // motor, refresh recusado) ou o cadastro parou nos 18 anos (Onboarding: o motor apagou a conta).
   // A marca só é LIDA aqui e apagada no efeito, depois de a tela montar: o Login chega por import
   // dinâmico e o React 19 renderiza-o duas vezes antes de fixar a tela (medido na cena rodada28) —
   // apagada na 1ª renderização, a 2ª, que é a que fica, nascia sem o aviso.
   const [aviso] = useState(() => {
     try {
-      if (sessionStorage.getItem('futty_menor13') === '1') return { tipo: 'error', texto: 'O Futty é para maiores de 13 anos. A conta não foi criada.' };
+      if (sessionStorage.getItem('futty_menor18') === '1') return { tipo: 'error', texto: MSG_MENOR };
       if (sessionStorage.getItem('futty_sessao_terminou') === '1') return { tipo: 'success', texto: 'Sua sessão terminou. Entre de novo.' };
     } catch { /* modo privado: sem aviso */ }
     return null;
   });
   useEffect(() => {
     try {
-      sessionStorage.removeItem('futty_menor13');
+      sessionStorage.removeItem('futty_menor18');
       sessionStorage.removeItem('futty_sessao_terminou');
     } catch { /* modo privado */ }
   }, []);
