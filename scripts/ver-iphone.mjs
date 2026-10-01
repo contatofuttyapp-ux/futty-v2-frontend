@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3962,6 +3962,17 @@ try {
     const r = await cenaRodada29bPintura(navegador);
     saida.rodada29bPintura = r;
     console.log('\n[iphone] RODADA 29B bloco 2 (A) — pintura em segundo plano + barra honesta (servidor local; a fal é simulada, custo zero)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29b-pesada')) {
+    const r = await cenaRodada29bPesada(navegador);
+    saida.rodada29bPesada = r;
+    console.log('\n[iphone] RODADA 29B bloco 2 (B) — conta pesada: Início, Resenha em páginas e pré-aquecimento (servidor local; só leitura)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7366,6 +7377,122 @@ async function cenaRodada29bPintura(navegador) {
   await capturar(N.pagina, '9-nao-achou');
   await N.contexto.close();
 
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29b-pesada" (1-out): a conta pesada (super-admin, 2 times, histórico) no Início e na Resenha (Rodada 29B, bloco 2, B). ──
+// Contas de prova do backend (scripts/_bench/prova-conta-pesada.js → sessao-pesada.json, sessao-leve.json): a pesada está em 2 times (um
+// "Missa" com 30 jogos de histórico e 16 posts com foto; um "Várzea" com 22 membros, 9 jogos e 9 posts) e é super-admin; a leve, em 1.
+// Prova no navegador: o Início faz UM pedido no arranque e a lista de jogos não carrega o histórico; a Resenha vem em páginas de 20 e o
+// "Ver mais antigos" completa a lista sem repetir; o pré-aquecimento baixa no máximo 12 imagens e nada de super-admin sai. Só LEITURA e só
+// servidor LOCAL (CLAUDE.md, 25-set).
+async function cenaRodada29bPesada(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29b-pesada só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29b');
+  mkdirSync(pasta, { recursive: true });
+  const sessaoPesada = JSON.parse(readFileSync(path.join(PASTA, 'sessao-pesada.json'), 'utf8'));
+  const sessaoLeve = JSON.parse(readFileSync(path.join(PASTA, 'sessao-leve.json'), 'utf8'));
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `pesada-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const abrir = async (sessao, rota) => {
+    const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
+    await contexto.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); localStorage.setItem('futty_figurinha_estreia', '1'); } catch { /* nada */ } });
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(e.message));
+    const pedidos = [];
+    const inicio = [];
+    pagina.on('request', (r) => {
+      const u = new URL(r.url());
+      if (u.pathname.startsWith('/api/') && r.method() !== 'OPTIONS') pedidos.push(`${u.pathname}${u.search}`);
+    });
+    pagina.on('response', async (r) => {
+      const u = new URL(r.url());
+      if (u.pathname === '/api/inicio') inicio.push({ status: r.status(), bytes: (await r.body().catch(() => Buffer.alloc(0))).length });
+    });
+    await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
+    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    return { contexto, pagina, pedidos, inicio };
+  };
+
+  // ── 1. O Início da conta pesada: um pedido, e a lista de jogos sem o histórico ──
+  {
+    const { contexto, pagina, pedidos, inicio } = await abrir(sessaoPesada, '/home');
+    await pagina.getByText('Próximos Jogos').first().waitFor({ timeout: 45000 });
+    await espera(2500);
+    const ultimos = await pagina.evaluate(() => {
+      const rotulo = [...document.querySelectorAll('.games-label')].find((e) => /Últimos Jogos/i.test(e.textContent || ''));
+      return rotulo ? rotulo.parentElement.children.length - 1 : 0;
+    });
+    verificar('Início da conta pesada: UM pedido ao /api/inicio no arranque', pedidos.filter((p) => p === '/api/inicio').length === 1 && inicio.length === 1 && inicio[0].status === 200, JSON.stringify(inicio));
+    verificar('Início da conta pesada: a resposta cabe em 12 KB (eram ~20 KB com 36 jogos de histórico)', inicio[0] && inicio[0].bytes < 12000, `${inicio[0]?.bytes} bytes`);
+    verificar('Início da conta pesada: "Últimos Jogos" mostra no máximo 3 (e não está vazio)', ultimos >= 1 && ultimos <= 3, `${ultimos} cartão(ões)`);
+    verificar('Início da conta pesada: nenhuma rota de super-admin no arranque', !pedidos.some((p) => /\/api\/super|\/api\/diagnostico/.test(p)), pedidos.join(' | '));
+    await capturar(pagina, '1-inicio');
+    await contexto.close();
+  }
+
+  // ── 2. A Resenha em páginas: 20, e "Ver mais antigos" completa sem repetir ──
+  {
+    const { contexto, pagina, pedidos } = await abrir(sessaoPesada, '/feed');
+    await pagina.locator('.feed-item').first().waitFor({ timeout: 45000 });
+    await espera(2000);
+    const contar = () => pagina.evaluate(() => {
+      const ids = [...document.querySelectorAll('.feed-item')].map((e) => e.id);
+      return { total: ids.length, unicos: new Set(ids).size };
+    });
+    let c = await contar();
+    verificar('Resenha: a 1ª página traz 20 itens (e não os 120 de antes)', c.total === 20, `${c.total} itens`);
+    verificar('Resenha: o app novo pede `?limite=20`', pedidos.includes('/api/feed?limite=20'), pedidos.filter((p) => p.startsWith('/api/feed')).join(' | '));
+    const botao = pagina.getByRole('button', { name: 'Ver mais antigos' });
+    verificar('Resenha: aparece "Ver mais antigos"', (await botao.count()) === 1);
+    await capturar(pagina, '2-resenha-pagina-1');
+    let voltas = 0;
+    let encolheu = null; // a página NUNCA pode encolher quando ganha itens (a lista progressiva não volta aos 6 primeiros)
+    while ((await botao.count()) === 1 && voltas < 6) {
+      await pagina.waitForFunction(() => document.querySelectorAll('.feed-item').length >= 6, null, { timeout: 20000 }).catch(() => {});
+      await espera(1200); // a lista que já está na tela termina de entrar em lotes antes do próximo clique
+      const antes = (await contar()).total;
+      await botao.click();
+      for (let i = 0; i < 20; i += 1) {
+        const agora = (await contar()).total;
+        if (agora < antes) encolheu = `${agora} < ${antes}`;
+        await espera(100);
+      }
+      voltas += 1;
+    }
+    await espera(2000);
+    verificar('Resenha: ao ganhar uma página a lista NÃO encolhe (nenhuma amostra abaixo do que já estava na tela)', encolheu === null, String(encolheu));
+    c = await contar();
+    verificar('Resenha: "Ver mais antigos" completa a lista (61 itens = 25 posts + 36 jogos), sem repetir', c.total === 61 && c.unicos === 61, `${c.total} itens, ${c.unicos} únicos, ${voltas} cliques`);
+    verificar('Resenha: no fim da lista o botão some', (await botao.count()) === 0);
+    await capturar(pagina, '3-resenha-completa');
+    await contexto.close();
+  }
+
+  // ── 3. O pré-aquecimento da conta pesada: no máximo 12 imagens, só rotas comuns; a leve quase não pede nada ──
+  for (const [rotulo, sessao] of [['pesada', sessaoPesada], ['leve', sessaoLeve]]) {
+    const { contexto, pagina, pedidos } = await abrir(sessao, '/');
+    await espera(24000);
+    const imagens = pedidos.filter((p) => p.startsWith('/api/media/')).length;
+    const rotas = [...new Set(pedidos.filter((p) => !p.startsWith('/api/media/')).map((p) => p.replace(/\/[^/]*\/ranking/, '/{slug}/ranking')))].sort();
+    if (rotulo === 'pesada') {
+      verificar('Pré-aquecimento (conta pesada): no máximo 12 imagens baixadas por trás (eram 24)', imagens <= 12, `${imagens} imagens`);
+      verificar('Pré-aquecimento (conta pesada): só pede o que as telas comuns leem', JSON.stringify(rotas) === JSON.stringify(['/api/blocks', '/api/feed?limite=20', '/api/inicio', '/api/me/selos', '/api/teams/{slug}/ranking'].sort()), rotas.join(' | '));
+    } else {
+      verificar('Pré-aquecimento (conta leve): sem imagens e sem rota estranha', imagens === 0 && !rotas.some((p) => /\/api\/super|\/api\/diagnostico/.test(p)), `${imagens} imagens · ${rotas.join(' | ')}`);
+    }
+    await pagina.close();
+    await contexto.close();
+  }
   return { verificacoes, capturas, erros, pasta };
 }
 

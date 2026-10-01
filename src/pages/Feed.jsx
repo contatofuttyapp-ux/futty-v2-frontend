@@ -897,6 +897,9 @@ const linkBtn = {
   cursor: 'pointer',
 };
 
+// Tamanho da página da Resenha (o motor aceita até 50; o app pede 20, que é o que cabe em três ou quatro telas).
+const PAGINA_FEED = 20;
+
 // ─── Página ────────────────────────────────────────────────────────────────────
 export default function Feed() {
   const { user: authUser } = useAuth();
@@ -915,7 +918,9 @@ export default function Feed() {
   // resposta chegar de São Paulo. Quem está em Lisboa pagava essa espera em
   // TODA visita à aba. Agora entra no mesmo stale-while-revalidate do resto da
   // casa: pinta o feed da última visita na hora e actualiza por trás.
-  const { data: feedData, loading: feedCarregando, error: feedErro } = useApiComCache('/api/feed', 'feed');
+  // RODADA 29B (bloco 2, B — conta pesada): a Resenha vem em PÁGINAS de 20 (jogos e posts juntos); "Ver mais antigos" busca a seguinte pelo
+  // cursor `proximo`. Antes vinham até 120 itens de uma vez — com comentários, reações e fotos de todos os times da pessoa.
+  const { data: feedData, loading: feedCarregando, error: feedErro } = useApiComCache(`/api/feed?limite=${PAGINA_FEED}`, 'feed');
 
   // VELOCIDADE 6B (15-set): o anúncio é pedido AQUI, no topo, em paralelo com o
   // feed. Antes o AdCard só era montado entre o 3º e o 4º item da lista, por
@@ -938,9 +943,32 @@ export default function Feed() {
   // DURANTE o render a partir do hook — mesmo padrão do MeuPerfil e do Início,
   // nunca num efeito (lint react-hooks/set-state-in-effect).
   const [feedAnterior, setFeedAnterior] = useState(undefined);
+  const [proximo, setProximo] = useState(null); // cursor da página seguinte (null = não há mais antigos)
+  const [carregandoMais, setCarregandoMais] = useState(false);
   if (feedData !== feedAnterior) {
     setFeedAnterior(feedData);
-    if (feedData) setItems(feedData.items || []);
+    if (feedData) {
+      setItems(feedData.items || []);
+      setProximo(feedData.proximo || null);
+    }
+  }
+
+  async function verMais() {
+    if (!proximo || carregandoMais) return;
+    setCarregandoMais(true);
+    setErro('');
+    try {
+      const d = await apiFetch(`/api/feed?limite=${PAGINA_FEED}&antes=${encodeURIComponent(proximo)}`);
+      setItems((cur) => {
+        const jaVistos = new Set((cur || []).map((i) => `${i.kind}-${i.id}`));
+        return [...(cur || []), ...(d.items || []).filter((i) => !jaVistos.has(`${i.kind}-${i.id}`))];
+      });
+      setProximo(d.proximo || null);
+    } catch (err) {
+      setErro(err.message || 'Não foi possível carregar mais.');
+    } finally {
+      setCarregandoMais(false);
+    }
   }
 
   // Bloqueio entre jogadores (Apple UGC 1.2): remove localmente todo o conteúdo
@@ -1087,6 +1115,11 @@ export default function Feed() {
                 })
               )}
             </div>
+            {proximo && !loading ? (
+              <button type="button" className="btn btn--purple-outline hud-corners" style={{ width: '100%', marginTop: 14 }} disabled={carregandoMais} onClick={verMais}>
+                {carregandoMais ? 'Carregando…' : 'Ver mais antigos'}
+              </button>
+            ) : null}
           </>
         )}
       </main>

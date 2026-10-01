@@ -26,6 +26,18 @@ function mudou(a, b) {
   return a[0] !== b[0] || a[a.length - 1] !== b[b.length - 1];
 }
 
+/**
+ * A lista só CRESCEU no fim (Rodada 29B, a Resenha em páginas: "Ver mais antigos" acrescenta 20 itens depois dos que já estão na
+ * tela)? Então o que já foi desenhado continua desenhado: voltar aos 6 primeiros encolheria a página debaixo do dedo e perderia a
+ * posição da rolagem. Os itens antigos têm de ser os MESMOS objetos, nas mesmas posições (a ponta e o último da lista anterior).
+ */
+export function soCresceuNoFim(anterior, nova) {
+  return anterior.length > 0
+    && nova.length > anterior.length
+    && nova[0] === anterior[0]
+    && nova[anterior.length - 1] === anterior[anterior.length - 1];
+}
+
 // FLUIDEZ 2 (16-set) — o "resto" deixa de ser UMA leva.
 //
 // A Velocidade 8 partiu a lista em duas: os primeiros já, o resto dois quadros
@@ -64,7 +76,8 @@ export function useListaProgressiva(itens, primeiros = 6) {
   const [vista, setVista] = useState(lista);
   if (vista !== lista && mudou(vista, lista)) {
     setVista(lista);
-    setLimite(primeiros);
+    // Só cresceu no fim ("Ver mais antigos"): o que já está na tela fica; os novos entram em lotes a partir daí.
+    if (!soCresceuNoFim(vista, lista)) setLimite(primeiros);
   }
 
   const faltam = lista.length > limite;

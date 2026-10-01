@@ -25,8 +25,11 @@ import { urlImagem } from '../utils/avatar';
 // tocar. Duas adiantam quase tanto e não se sentem.
 const IMAGENS_EM_PARALELO = 2;
 // Teto de imagens por aquecimento: um time grande tem 30+ avatares e não vale
-// a pena descer todos — as primeiras são as que aparecem nas listas.
-const MAX_IMAGENS = 24;
+// a pena descer todos — as primeiras são as que aparecem nas listas. 24 → 12 na
+// Rodada 29B (conta pesada): a conta com a Resenha cheia de fotos disputava o
+// aparelho com 24 downloads logo depois de abrir; as 12 primeiras são o que cabe
+// em duas telas.
+const MAX_IMAGENS = 12;
 // Velocidade 7B: a mesma janela de frescor das telas (useApiComCache, Figurinha).
 // Se a pessoa abriu a Figurinha antes de o aquecimento chegar aos selos, a tela
 // já os buscou e gravou — pedir de novo por trás era o "selos em dobro".
@@ -124,7 +127,7 @@ export function preaquecer(userId, dadosInicio) {
     // 'ranking:<slug>' (useRanking), 'selos' (Figurinha), 'blocks' (MeuPerfil).
     const passos = [];
     if (slug) {
-      passos.push(['/api/feed', 'feed', (d) => d]);
+      passos.push(['/api/feed?limite=20', 'feed', (d) => d]); // a 1ª página da Resenha (pages/Feed.jsx pede a mesma)
       passos.push([`/api/teams/${slug}/ranking`, `ranking:${slug}`, (d) => d]);
     }
     // A Figurinha guarda só o ARRAY de selos, não o payload — tem de ser igual,
