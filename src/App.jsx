@@ -98,6 +98,39 @@ function JogoRoute() {
   return <Jogo key={id} />;
 }
 
+// Rotas que exigem login: [caminho, tela, só super-admin?]. A ordem não manda (o roteador
+// escolhe a rota mais específica); só agrupa por assunto.
+const ROTAS_PRIVADAS = [
+  ['/home', Inicio],
+  ['/onboarding', Onboarding],
+  ['/criar-equipa', CriarEquipa],
+  ['/equipa/:slug', EquipaRoute],
+  ['/equipa/:slug/jogos', Jogos],
+  ['/equipa/:slug/ranking', Ranking],
+  // Sem :slug: para onde a BottomNav manda quem ainda não tem time (ver `rankingTo` em
+  // BottomNav.jsx). O próprio Ranking.jsx detecta a ausência do slug e mostra o convite a
+  // criar/entrar.
+  ['/ranking', Ranking],
+  ['/equipa/:slug/campeonato', Campeonato],
+  ['/equipa/:slug/campeonato/:id', Campeonato],
+  ['/equipa/:slug/jogador/:userId', JogadorPerfil],
+  ['/equipa/:slug/jogo/novo', NovoJogo],
+  ['/equipa/:slug/jogo/:id/sorteio', SorteioShow],
+  ['/equipa/:slug/jogo/:id', JogoRoute],
+  ['/admin/:slug', AdminPanel],
+  ['/feed', Feed],
+  ['/figurinha', Figurinha],
+  // VELOCIDADE 4 — a caixa-preta do app. RODADA 28: só o super-admin, pelo Gabinete; o número
+  // de todo mundo vem da telemetria anônima (sem botão).
+  ['/diagnostico', Diagnostico, true],
+  ['/perfil', MeuPerfil],
+  ['/planos', Planos],
+  ['/alterar-password', AlterarPassword],
+  ['/explorar', Explorar],
+  ['/super', Super, true],
+  ['/gabinete', Gabinete, true],
+];
+
 // Rotas animadas: o PageTransition (keyed pelo pathname) faz o fade/deslize de
 // entrada em CSS. Trocar a key remonta o div e é isso que recomeça o keyframe.
 //
@@ -126,201 +159,15 @@ function AnimatedRoutes() {
           {/* Vista pública do sorteio (sem login) */}
           <Route path="/p/campeonato/:slug/:id" element={<CampeonatoPublico />} />
           <Route path="/p/:slug/:gameId" element={<SorteioPublico />} />
-          <Route
-            path="/home"
-            element={
-              <AuthGuard>
-                <Inicio />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/onboarding"
-            element={
-              <AuthGuard>
-                <Onboarding />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/criar-equipa"
-            element={
-              <AuthGuard>
-                <CriarEquipa />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug"
-            element={
-              <AuthGuard>
-                <EquipaRoute />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug/jogos"
-            element={
-              <AuthGuard>
-                <Jogos />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug/ranking"
-            element={
-              <AuthGuard>
-                <Ranking />
-              </AuthGuard>
-            }
-          />
-          {/* Sem :slug: para onde a BottomNav manda quem ainda não tem time
-              (ver `rankingTo` em BottomNav.jsx). O próprio Ranking.jsx detecta
-              a ausência do slug e mostra o convite a criar/entrar. */}
-          <Route
-            path="/ranking"
-            element={
-              <AuthGuard>
-                <Ranking />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug/campeonato"
-            element={
-              <AuthGuard>
-                <Campeonato />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug/campeonato/:id"
-            element={
-              <AuthGuard>
-                <Campeonato />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug/jogador/:userId"
-            element={
-              <AuthGuard>
-                <JogadorPerfil />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug/jogo/novo"
-            element={
-              <AuthGuard>
-                <NovoJogo />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug/jogo/:id/sorteio"
-            element={
-              <AuthGuard>
-                <SorteioShow />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/equipa/:slug/jogo/:id"
-            element={
-              <AuthGuard>
-                <JogoRoute />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/admin/:slug"
-            element={
-              <AuthGuard>
-                <AdminPanel />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/feed"
-            element={
-              <AuthGuard>
-                <Feed />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/figurinha"
-            element={
-              <AuthGuard>
-                <Figurinha />
-              </AuthGuard>
-            }
-          />
-          {/* VELOCIDADE 4 — a caixa-preta do app. RODADA 28: só o super-admin, pelo
-              Gabinete; o número de todo mundo vem da telemetria anônima (sem botão). */}
-          <Route
-            path="/diagnostico"
-            element={
-              <AuthGuard>
-                <SuperAdminGuard>
-                  <Diagnostico />
-                </SuperAdminGuard>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/perfil"
-            element={
-              <AuthGuard>
-                <MeuPerfil />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/planos"
-            element={
-              <AuthGuard>
-                <Planos />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/alterar-password"
-            element={
-              <AuthGuard>
-                <AlterarPassword />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/explorar"
-            element={
-              <AuthGuard>
-                <Explorar />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/super"
-            element={
-              <AuthGuard>
-                <SuperAdminGuard>
-                  <Super />
-                </SuperAdminGuard>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/gabinete"
-            element={
-              <AuthGuard>
-                <SuperAdminGuard>
-                  <Gabinete />
-                </SuperAdminGuard>
-              </AuthGuard>
-            }
-          />
+          {/* Rodada 29B (D.3): as rotas com login vêm da tabela ROTAS_PRIVADAS (um <Route> + AuthGuard
+              repetido 25 vezes custava ~1,4 KB do arranque). */}
+          {ROTAS_PRIVADAS.map(([path, Tela, soSuper]) => (
+            <Route
+              key={path}
+              path={path}
+              element={<AuthGuard>{soSuper ? <SuperAdminGuard><Tela /></SuperAdminGuard> : <Tela />}</AuthGuard>}
+            />
+          ))}
           {/* fallback — página inexistente */}
           <Route path="*" element={<ErrorPage titulo="Página não encontrada" mensagem="Esta página não existe." />} />
         </Routes>
