@@ -21,9 +21,10 @@ import ModeracaoFila from '../components/ModeracaoFila';
 import EscolhaLinhaGol, { TEXTO_APOIO_LINHA_GOL } from '../components/EscolhaLinhaGol';
 import '../styles/app.css';
 
-// Rodada 29B (C) — EM LAZY: as boas-vindas só aparecem a quem entra num time pela PRIMEIRA vez (uma página, um
-// botão; substituíram o modal de 3 passos e o tour do Início) e não têm motivo para pesar no arranque.
-const BoasVindasTime = lazy(() => import('../components/BoasVindasTime'));
+// Rodada 29B (C) / 29C — EM LAZY: as boas-vindas só aparecem uma vez por time (convidado na 1ª entrada, criador ao
+// tocar "Ir para o time"; uma página, um botão; substituíram o modal de 3 passos e o tour do Início) e não têm motivo
+// para pesar no arranque.
+const BoasVindas = lazy(() => import('../components/BoasVindas'));
 
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
@@ -102,25 +103,30 @@ export default function Equipa() {
   // a pastilha "GR" do admin e este chip nunca mais podem discordar.
   const souGoleiroNoTime = !!members.find((m) => m.id === meuId)?.goleiro;
 
-  // Boas-vindas (Rodada 29B, C): 1ª vez de um jogador que não fundou a equipa — logo depois de aceitar o convite
-  // (a página do convite manda `state.primeiraEntrada`) ou, como antes, sem avatar ainda — e que nunca as dispensou
-  // (localStorage por equipa, a mesma marca do modal antigo).
+  // Boas-vindas (Rodada 29B, C + 29C), uma vez por time (localStorage por equipa, a mesma marca do modal antigo):
+  // `convidado` — 1ª vez de um jogador que não fundou a equipa, logo depois de aceitar o convite (a página do convite
+  // manda `state.primeiraEntrada`) ou, como antes, sem avatar ainda; `criador` — o admin que acabou de criar o time e
+  // tocou "Ir para o time" (CriarEquipa manda `state.criouAgora`).
   const [onboardingDispensado, setOnboardingDispensado] = useState(false);
   const onboardingKey = team ? `futty_onboarding_${team.id}` : null;
   const entrouAgora = !!location.state?.primeiraEntrada;
+  const criouAgora = !!location.state?.criouAgora;
+  const varianteBoasVindas = !team
+    ? null
+    : team.role === 'admin'
+      ? (criouAgora ? 'criador' : null)
+      : (entrouAgora || !me?.user?.avatar_url ? 'convidado' : null);
   const mostrarOnboarding =
-    !!team &&
     !!me &&
-    team.role !== 'admin' &&
-    (entrouAgora || !me?.user?.avatar_url) &&
+    !!varianteBoasVindas &&
     !onboardingDispensado &&
     !(onboardingKey && localStorage.getItem(onboardingKey));
 
   function fecharOnboarding({ mudou, erro } = {}) {
     if (onboardingKey) localStorage.setItem(onboardingKey, '1');
     setOnboardingDispensado(true);
-    // Ativa o banner CTA da figurinha no Início (mostra uma vez).
-    localStorage.setItem('futty_cta_figurinha', '1');
+    // Dispensar a tela do convidado ativa o banner CTA da figurinha no Início (mostra uma vez); o criador não, como antes.
+    if (varianteBoasVindas === 'convidado') localStorage.setItem('futty_cta_figurinha', '1');
     if (mudou) reload();
     if (erro) setToast({ tipo: 'error', mensagem: `Não deu para salvar sua posição: ${erro}` });
   }
@@ -376,7 +382,7 @@ export default function Equipa() {
           de carregamento por meio segundo seria mais ruído do que ajuda. */}
       {mostrarOnboarding ? (
         <Suspense fallback={null}>
-          <BoasVindasTime team={team} slug={slug} goleiroInicial={souGoleiroNoTime} onClose={fecharOnboarding} />
+          <BoasVindas variante={varianteBoasVindas} team={team} slug={slug} goleiroInicial={souGoleiroNoTime} onClose={fecharOnboarding} />
         </Suspense>
       ) : null}
     </div>

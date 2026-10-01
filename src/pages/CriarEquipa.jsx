@@ -336,7 +336,8 @@ export default function CriarEquipa() {
               <Cta onClick={gerarConvite} disabled={busy}>{busy ? 'Gerando…' : 'Gerar link de convite'}</Cta>
             )}
             <div style={{ marginTop: 22 }}>
-              <Cta cheio onClick={() => navigate(`/equipa/${team.slug}`)}>Ir para o time</Cta>
+              {/* Rodada 29C: `criouAgora` abre as boas-vindas do criador na página do time (uma vez por time). */}
+              <Cta cheio onClick={() => navigate(`/equipa/${team.slug}`, { state: { criouAgora: true } })}>Ir para o time</Cta>
             </div>
           </>
         )}

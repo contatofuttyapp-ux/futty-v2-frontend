@@ -1,44 +1,61 @@
-// Futty v2.0 — Rodada 29B (C): onde ficam as luzes de slot machine das boas-vindas (src/utils/luzesSlot.js).
+// Futty v2.0 — Rodada 29C: as lâmpadas das máquinas das boas-vindas (src/utils/luzesSlot.js) — a régua da deitada e
+// o anel contínuo da quadrada, com a geometria da prova aprovada (lado 248, anéis em 8 e 19 px, passo 11).
 //
 // Uso: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { posicoesDasLuzes } from '../../src/utils/luzesSlot.js';
+import { anelDeLuzes, reguaDeLuzes } from '../../src/utils/luzesSlot.js';
 
-const CAIXA = { largura: 152, altura: 196 };
+const LADO = 248;
+const PASSO = 11;
 
-test('são 2·(colunas+linhas) luzes (24 no padrão) e todas caem dentro da caixa', () => {
-  const p = posicoesDasLuzes(CAIXA);
-  assert.equal(p.length, 24);
-  for (const { x, y } of p) {
-    assert.ok(x >= 0 && x <= CAIXA.largura && y >= 0 && y <= CAIXA.altura, `(${x}, ${y}) fora da caixa`);
+test('régua: n lâmpadas com o i contínuo a partir de inicio (as quatro réguas partilham um contador)', () => {
+  const cima = reguaDeLuzes({ n: 22 });
+  assert.equal(cima.length, 22);
+  assert.deepEqual(cima.map((l) => l.i), Array.from({ length: 22 }, (_, k) => k));
+  const base = reguaDeLuzes({ n: 24, inicio: 44 });
+  assert.equal(base.length, 24);
+  assert.equal(base[0].i, 44);
+  assert.equal(base[23].i, 67);
+});
+
+test('anel: 4·round((lado − 2·inset)/passo) lâmpadas, todas dentro da faixa do inset, e o i é a ordem do caminho', () => {
+  for (const [inset, esperado] of [[8, 84], [19, 76]]) {
+    const p = anelDeLuzes({ lado: LADO, inset, passo: PASSO });
+    assert.equal(p.length, esperado, `inset ${inset}`);
+    p.forEach((q, k) => {
+      assert.equal(q.i, k);
+      assert.ok(q.x >= inset && q.x <= LADO - inset && q.y >= inset && q.y <= LADO - inset, `(${q.x}, ${q.y}) fora da faixa`);
+    });
   }
-  assert.equal(posicoesDasLuzes({ ...CAIXA, colunas: 4, linhas: 6 }).length, 20);
 });
 
-test('ordem horária a partir do canto de cima à esquerda, e os quatro cantos sempre têm uma luz', () => {
-  const margem = 5;
-  const p = posicoesDasLuzes({ ...CAIXA, margem });
-  const w = CAIXA.largura - 2 * margem;
-  const h = CAIXA.altura - 2 * margem;
-  assert.deepEqual(p[0], { x: margem, y: margem }, 'a 1ª luz é o canto de cima à esquerda');
-  const tem = (x, y) => p.some((q) => q.x === x + margem && q.y === y + margem);
-  assert.ok(tem(0, 0) && tem(w, 0) && tem(w, h) && tem(0, h), 'cantos');
-  // lado de cima corre para a direita, o da direita para baixo, o de baixo para a esquerda, o da esquerda para cima
-  assert.ok(p[1].x > p[0].x && p[1].y === p[0].y);
-  assert.ok(p[5].x === margem + w && p[6].y > p[5].y);
-  assert.ok(p[12].y === margem + h && p[13].x < p[12].x);
-  assert.ok(p[17].x === margem && p[18].y < p[17].y);
+test('anel: ordem horária a partir do canto de cima à esquerda, e os quatro cantos sempre têm lâmpada', () => {
+  const inset = 8;
+  const p = anelDeLuzes({ lado: LADO, inset, passo: PASSO });
+  const L = LADO - 2 * inset;
+  const n = p.length / 4;
+  assert.deepEqual({ x: p[0].x, y: p[0].y }, { x: inset, y: inset }, 'a 1ª lâmpada é o canto de cima à esquerda');
+  const tem = (x, y) => p.some((q) => q.x === x + inset && q.y === y + inset);
+  assert.ok(tem(0, 0) && tem(L, 0) && tem(L, L) && tem(0, L), 'cantos');
+  // cima corre para a direita, direita para baixo, baixo para a esquerda, esquerda para cima
+  for (let k = 1; k < n; k += 1) assert.ok(p[k].x > p[k - 1].x && p[k].y === inset, `cima ${k}`);
+  for (let k = n + 1; k < 2 * n; k += 1) assert.ok(p[k].y > p[k - 1].y && p[k].x === inset + L, `direita ${k}`);
+  for (let k = 2 * n + 1; k < 3 * n; k += 1) assert.ok(p[k].x < p[k - 1].x && p[k].y === inset + L, `baixo ${k}`);
+  for (let k = 3 * n + 1; k < 4 * n; k += 1) assert.ok(p[k].y < p[k - 1].y && p[k].x === inset, `esquerda ${k}`);
 });
 
-test('espaçamento parelho em cada lado e nenhuma luz repetida (a corrida de luzes não "gagueja")', () => {
-  const p = posicoesDasLuzes(CAIXA);
+test('anel: espaçamento parelho (~passo) e nenhuma lâmpada repetida — a onda não "gagueja" e fecha sem emenda', () => {
+  const p = anelDeLuzes({ lado: LADO, inset: 19, passo: PASSO });
   assert.equal(new Set(p.map((q) => `${q.x},${q.y}`)).size, p.length);
-  const passo = p[1].x - p[0].x; // lado de cima: 5 vãos iguais
-  for (let k = 1; k < 5; k += 1) assert.ok(Math.abs(p[k].x - p[k - 1].x - passo) < 0.2);
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  for (let k = 1; k < p.length; k += 1) assert.ok(Math.abs(dist(p[k], p[k - 1]) - PASSO) < 0.6, `vão ${k}: ${dist(p[k], p[k - 1])}`);
+  assert.ok(Math.abs(dist(p[p.length - 1], p[0]) - PASSO) < 0.6, 'a última lâmpada fecha o caminho sobre a primeira');
 });
 
-test('número par de luzes: a paridade do índice (roxo/amarelo) fecha a volta sem dois iguais juntos', () => {
-  assert.equal(posicoesDasLuzes(CAIXA).length % 2, 0);
-  assert.equal(posicoesDasLuzes({ ...CAIXA, colunas: 6, linhas: 8 }).length % 2, 0);
+test('os dois anéis da prova não se tocam: o roxo (inset 19) fica inteiro dentro do dourado (inset 8)', () => {
+  const dourado = anelDeLuzes({ lado: LADO, inset: 8, passo: PASSO });
+  const roxo = anelDeLuzes({ lado: LADO, inset: 19, passo: PASSO });
+  const minD = Math.min(...dourado.flatMap((a) => roxo.map((b) => Math.hypot(a.x - b.x, a.y - b.y))));
+  assert.ok(minD >= 7, `lâmpadas a ${minD} px (diâmetro 7)`);
 });

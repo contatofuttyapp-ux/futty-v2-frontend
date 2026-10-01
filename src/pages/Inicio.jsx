@@ -1,5 +1,5 @@
 // Futty v2.0 — Início: o cromo, chips de equipas, próximos jogos e publicidade.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { RefreshCw, Trophy } from 'lucide-react';
@@ -31,6 +31,11 @@ import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
 import '../styles/app.css';
+
+// Rodada 29C — EM LAZY: as boas-vindas de quem só baixou o app aparecem uma vez por aparelho (1ª vez no Início com
+// 0 times); o mesmo chunk que a página do time usa.
+const BoasVindas = lazy(() => import('../components/BoasVindas'));
+const CHAVE_BOAS_VINDAS_APP = 'futty_boasvindas_app';
 
 function isToday(iso) {
   if (!iso) return false;
@@ -503,6 +508,16 @@ export default function Inicio() {
     sessionStorage.setItem('futty_push_dismiss', '1');
   }
 
+  // Rodada 29C: boas-vindas de quem só baixou o app — uma vez por aparelho, marcada ao tocar num dos botões.
+  const [boasVindasAppVista, setBoasVindasAppVista] = useState(() => {
+    try { return localStorage.getItem(CHAVE_BOAS_VINDAS_APP) === '1'; } catch { return false; }
+  });
+  function fecharBoasVindasApp({ destino } = {}) {
+    try { localStorage.setItem(CHAVE_BOAS_VINDAS_APP, '1'); } catch { /* priv */ }
+    setBoasVindasAppVista(true);
+    if (destino) navigate(destino);
+  }
+
   // CTA pós-onboarding: criar figurinha (ativado ao fechar o onboarding da equipa).
   const [ctaFigurinha, setCtaFigurinha] = useState(() => localStorage.getItem('futty_cta_figurinha') === '1');
   function dispensarCtaFigurinha() {
@@ -896,6 +911,8 @@ export default function Inicio() {
   // isso; falha sem dado nenhum é erro com "Tentar de novo" (e 401 já vai para o login, lib/api.js).
   const semDadosPorErro = !!inicio.erro && !dadosInicio;
   const noTeams = !teamsLoading && !teamsErro && !semDadosPorErro && teams.length === 0;
+  // O EmptyState ("Comece por aqui") fica atrás, para quem fechou a tela.
+  const mostrarBoasVindasApp = noTeams && !!user && !boasVindasAppVista;
 
   // Rodada 12C: para onde o cromo leva. A vitrine vive DENTRO de um time (a
   // rota é /equipa/:slug/jogador/:id), por isso só existe com time e com
@@ -1367,6 +1384,13 @@ export default function Inicio() {
       </main>
 
       {toast ? <Toast mensagem={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
+
+      {/* Sem fallback: as boas-vindas são um extra por cima do Início já desenhado (mesma nota da página do time). */}
+      {mostrarBoasVindasApp ? (
+        <Suspense fallback={null}>
+          <BoasVindas variante="semTime" me={me} onClose={fecharBoasVindasApp} />
+        </Suspense>
+      ) : null}
 
       {/* Pergunta do aviso de ausência — portal para o body (overlay fixo nunca
           dentro do [data-page], ver LoadingFutty.jsx). */}

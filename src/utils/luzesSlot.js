@@ -1,24 +1,31 @@
-// Futty v2.0 — Rodada 29B (C): onde ficam as "luzes de slot machine" em volta do mini card das boas-vindas.
-// Puro (sem React): devolve os pontos, em ordem horária a partir do canto de cima à esquerda, sobre o retângulo da
-// faixa — as duas pontas de cada lado incluídas, então os quatro cantos sempre têm uma luz. A animação (CSS) acende as
-// luzes em sequência pela ordem deste vetor; cores alternadas (roxo/amarelo) saem da paridade do índice.
+// Futty v2.0 — Rodada 29C: as lâmpadas das duas máquinas das boas-vindas (components/BoasVindas.jsx), com a geometria
+// da prova aprovada pelo dono (FUT/DESIGN/prova-boas-vindas-v2.html). Puro (sem React): só números. A animação é CSS e
+// acende cada lâmpada pela ordem do `i` (animation-delay: calc(var(--i) * -.09s)) — é o `i` que faz a onda correr.
 
 /**
- * @param {object} o
- * @param {number} o.largura  largura da caixa das luzes (px)
- * @param {number} o.altura   altura da caixa (px)
- * @param {number} [o.colunas] quantos vãos no lado de cima/baixo (luzes por lado horizontal = colunas)
- * @param {number} [o.linhas]  quantos vãos nos lados esquerdo/direito
- * @param {number} [o.margem]  folga entre a borda da caixa e a faixa (px)
- * @returns {{x:number, y:number}[]} 2·(colunas+linhas) pontos
+ * Régua da máquina deitada: n lâmpadas numa fila. O `i` continua a partir de `inicio` porque, na prova, um contador só
+ * atravessa as quatro réguas — a fila de baixo continua a contagem da de cima.
+ * @param {{ n: number, inicio?: number }} o
+ * @returns {{ i: number }[]}
  */
-export function posicoesDasLuzes({ largura, altura, colunas = 5, linhas = 7, margem = 5 }) {
-  const w = largura - 2 * margem;
-  const h = altura - 2 * margem;
-  const pontos = [];
-  for (let k = 0; k < colunas; k += 1) pontos.push({ x: (k * w) / colunas, y: 0 });
-  for (let k = 0; k < linhas; k += 1) pontos.push({ x: w, y: (k * h) / linhas });
-  for (let k = 0; k < colunas; k += 1) pontos.push({ x: w - (k * w) / colunas, y: h });
-  for (let k = 0; k < linhas; k += 1) pontos.push({ x: 0, y: h - (k * h) / linhas });
-  return pontos.map((p) => ({ x: Math.round((p.x + margem) * 10) / 10, y: Math.round((p.y + margem) * 10) / 10 }));
+export function reguaDeLuzes({ n, inicio = 0 }) {
+  return Array.from({ length: n }, (_, k) => ({ i: inicio + k }));
+}
+
+/**
+ * Anel contínuo da máquina quadrada: um caminho fechado em sentido horário a partir do canto de cima à esquerda,
+ * lâmpadas a ~`passo` px uma da outra e os quatro cantos sempre com lâmpada. O `i` segue a ordem do caminho, por isso
+ * a onda dá a volta sem emenda. São 4·n lâmpadas, n = round((lado − 2·inset) / passo); x/y já incluem o inset.
+ * @param {{ lado: number, inset: number, passo: number }} o
+ * @returns {{ x: number, y: number, i: number }[]}
+ */
+export function anelDeLuzes({ lado, inset, passo }) {
+  const L = lado - 2 * inset;
+  const n = Math.round(L / passo);
+  const pts = [];
+  for (let k = 0; k < n; k += 1) pts.push({ x: (k * L) / n, y: 0 });
+  for (let k = 0; k < n; k += 1) pts.push({ x: L, y: (k * L) / n });
+  for (let k = 0; k < n; k += 1) pts.push({ x: L - (k * L) / n, y: L });
+  for (let k = 0; k < n; k += 1) pts.push({ x: 0, y: L - (k * L) / n });
+  return pts.map((p, i) => ({ x: Math.round((p.x + inset) * 100) / 100, y: Math.round((p.y + inset) * 100) / 100, i }));
 }
