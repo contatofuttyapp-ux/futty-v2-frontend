@@ -110,7 +110,7 @@ export default function Jogo() {
     const url = `${window.location.origin}/p/${slug}/${id}`;
     const ok = await copiarTexto(url);
     setToast(ok
-      ? { tipo: 'success', mensagem: 'Link copiado!' }
+      ? { tipo: 'success', mensagem: 'Link copiado.' }
       : { tipo: 'error', mensagem: 'Não deu para copiar, copie o link à mão.' });
   }
 
@@ -191,7 +191,7 @@ export default function Jogo() {
           <>
             {rsvpConfirmados ? (
               <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.08)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
-                Sorteio com {confirmados.length} {plural(confirmados.length, 'confirmado', 'confirmados')} via RSVP
+                Sorteio com {confirmados.length} {plural(confirmados.length, 'confirmado', 'confirmados')} na lista de presença
               </div>
             ) : null}
             <div className="hud-corners" style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>

@@ -29,7 +29,7 @@ export default function DenunciaModal({ targetType, targetId, onClose, onResult 
       setFeito(true); // confirmação digna, sem veredicto
     } catch (err) {
       const lim = /429|de hoje/i.test(err?.message || '');
-      onResult?.({ tipo: lim ? 'info' : 'error', mensagem: lim ? 'Já recebemos as suas denúncias de hoje.' : err?.message || 'Erro ao denunciar.' });
+      onResult?.({ tipo: lim ? 'info' : 'error', mensagem: lim ? 'Já recebemos as suas denúncias de hoje.' : err?.message || 'Não deu para denunciar agora. Tente de novo.' });
       onClose?.();
     } finally {
       setBusy(false);
@@ -49,14 +49,14 @@ export default function DenunciaModal({ targetType, targetId, onClose, onResult 
               </div>
               <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22 }}>Recebido</h2>
               <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: '8px auto 16px', maxWidth: 280, lineHeight: 1.6 }}>
-                Vamos analisar. Obrigado por cuidar da casa — a sua denúncia é anônima.
+                Vamos analisar. Obrigado por cuidar da casa. A sua denúncia é anônima.
               </p>
               <button type="button" className="btn btn--sm cta-gold hud-corners-s" style={{ minWidth: 120 }} onClick={onClose}>Fechar</button>
             </div>
           ) : (
             <>
               <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 17, marginBottom: 3 }}>O que está acontecendo com este conteúdo?</h2>
-              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Escolha um — a análise é anônima.</p>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Escolha um motivo. A análise é anônima.</p>
               <div style={{ display: 'grid', gap: 8 }}>
                 {CATEGORIAS.map((c) => (
                   <button

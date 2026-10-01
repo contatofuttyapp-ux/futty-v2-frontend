@@ -137,7 +137,7 @@ export default function EnquadroMiniatura({ avatarUrl, onSalvo }) {
         <div style={{ display: 'grid', gap: 2, minWidth: 0, flex: 1 }}>
           <span style={rotulo}>Sua miniatura no app</span>
           <span style={{ fontSize: 12, color: 'var(--label-color)', lineHeight: 1.35 }}>
-            {salvo ? 'Enquadrada do seu jeito — é assim que aparece no Início, no ranking e no sorteio.' : 'Ajuste o enquadramento para o seu rosto aparecer certinho.'}
+            {salvo ? 'Enquadrada do seu jeito. É assim que aparece no Início, no ranking e no sorteio.' : 'Ajuste o enquadramento para o seu rosto aparecer certinho.'}
           </span>
         </div>
         <button type="button" className="btn btn--purple-outline hud-corners fig-io-btn" style={{ flex: '0 0 auto', paddingLeft: 12, paddingRight: 12 }} onClick={() => setAberto(true)}>

@@ -226,7 +226,7 @@ function AbaVisaoGeral({ dados }) {
   return (
     <div>
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))' }}>
-        <Card6 n={`${v.usuarios_novos_hoje} · ${v.usuarios_novos_7d}`} legenda="Usuários novos (hoje · 7 dias)" />
+        <Card6 n={`${v.usuarios_novos_hoje} · ${v.usuarios_novos_7d}`} legenda="Pessoas novas (hoje · 7 dias)" />
         <Card6 n={v.jogos_criados_7d} legenda="Jogos criados (7 dias)" />
         <Card6
           n={`${v.figurinhas_hoje.qtd} · ${v.figurinhas_mes.qtd}`}
@@ -446,7 +446,7 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
 
       <h2 style={sectionH2}>Interruptores por página <span style={{ fontWeight: 400, color: '#8a8a98', textTransform: 'none' }}>(default desligado)</span></h2>
       <div style={{ ...CARD, padding: 14, opacity: ativoGeral ? 1 : 0.5 }}>
-        {!ativoGeral ? <p style={{ ...muted, marginBottom: 8 }}>Interruptor geral desligado — estes toggles não têm efeito agora.</p> : null}
+        {!ativoGeral ? <p style={{ ...muted, marginBottom: 8 }}>Interruptor geral desligado. Estes interruptores não têm efeito agora.</p> : null}
         {Object.keys(NOMES_PAGINA).map((pg) => (
           <div key={pg} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: '1px solid #1a1a1a' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#c9c2d6' }}>{NOMES_PAGINA[pg]}</span>
@@ -537,7 +537,7 @@ function SecaoDiagnostico() {
     <>
       <h2 style={sectionH2}>Diagnóstico do app</h2>
       {erro ? <div style={{ ...CARD, padding: 10, color: '#fda4af', fontSize: 12 }}>{erro}</div> : null}
-      {lista === null && !erro ? <div style={{ ...CARD, padding: 10, fontSize: 12, color: 'var(--text-dim)' }}>A carregar…</div> : null}
+      {lista === null && !erro ? <div style={{ ...CARD, padding: 10, fontSize: 12, color: 'var(--text-dim)' }}>Carregando…</div> : null}
       {lista && lista.length === 0 ? (
         <div style={{ ...CARD, padding: 10, fontSize: 12, color: 'var(--text-dim)' }}>
           Nenhum relatório ainda. Eles chegam quando alguém toca em “Enviar relatório” no Perfil → Diagnóstico.
@@ -589,7 +589,7 @@ function SecaoDiagnostico() {
                   {JSON.stringify(aberto.json, null, 2)}
                 </pre>
               ) : (
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>A abrir…</span>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Abrindo…</span>
               )}
             </div>
           ) : null}
@@ -605,7 +605,7 @@ function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp
   const corBanco = bt.estado === 'verde' ? 'verde' : bt.estado === 'vermelho' ? 'vermelho' : 'amarelo';
   const txtBanco = bt.estado === 'verde' ? 'trancado (RLS ok, zero policies em users)'
     : bt.estado === 'vermelho' ? `problema: ${(bt.tabelas_sem_rls || []).length} tabela(s) sem RLS, ${bt.policies_users} policy(ies) em users`
-      : 'a confirmar — migração 050 ainda não foi corrida no Supabase';
+      : 'a confirmar: a migração 050 ainda não foi aplicada no Supabase';
 
   const diasBackup = s.ultimo_backup ? diasAte(s.ultimo_backup.data) : null;
   const corBackup = !s.ultimo_backup ? 'amarelo' : diasBackup != null && diasBackup >= -8 ? 'verde' : 'vermelho';
@@ -626,7 +626,7 @@ function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp
         <LinhaChecklist rotulo="Banco trancado" cor={corBanco}>{txtBanco}</LinhaChecklist>
         <LinhaChecklist rotulo="Último backup" cor={corBackup}>{txtBackup} · próximo previsto {s.proximo_backup}</LinhaChecklist>
         <LinhaChecklist rotulo="Kill-switch de IA" cor={s.kill_switch_ia.freeze ? 'vermelho' : 'verde'}>
-          {s.kill_switch_ia.freeze ? `ligado desde ${(s.kill_switch_ia.desde || '').slice(0, 10)} — ${s.kill_switch_ia.motivo}` : 'normal, não travado'}
+          {s.kill_switch_ia.freeze ? `ligado desde ${(s.kill_switch_ia.desde || '').slice(0, 10)}: ${s.kill_switch_ia.motivo}` : 'normal, não travado'}
         </LinhaChecklist>
         <LinhaChecklist rotulo="Rate limit ativo" cor="verde">
           {s.rate_limit.length} regra(s) configurada(s)
@@ -638,7 +638,7 @@ function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp
           <CampoManual v={segManual.npm_audit?.data} onData={(v) => setManual('npm_audit', 'data', v)} vTexto={segManual.npm_audit?.falhas ?? ''} onTexto={(v) => setManual('npm_audit', 'falhas', v)} placeholderTexto="nº de falhas restantes" />
         </LinhaChecklist>
         <LinhaChecklist rotulo="Última auditoria" cor={segManual.ultima_auditoria?.data ? 'verde' : 'cinza'}>
-          <CampoManual v={segManual.ultima_auditoria?.data} onData={(v) => setManual('ultima_auditoria', 'data', v)} vTexto={segManual.ultima_auditoria?.link} onTexto={(v) => setManual('ultima_auditoria', 'link', v)} placeholderTexto="link do ficheiro" />
+          <CampoManual v={segManual.ultima_auditoria?.data} onData={(v) => setManual('ultima_auditoria', 'data', v)} vTexto={segManual.ultima_auditoria?.link} onTexto={(v) => setManual('ultima_auditoria', 'link', v)} placeholderTexto="link do arquivo" />
         </LinhaChecklist>
       </div>
       <div style={{ marginTop: 10 }}><button type="button" style={btnGold} onClick={onSalvar}>Salvar checklist manual</button></div>
@@ -815,7 +815,7 @@ function BlocoAcessos({ acessos, setAcessos, onSalvar, showMsg }) {
                   </div>
                 </td>
                 <td style={{ ...td, width: 170 }}><input style={inp} value={a.entra_com || ''} onChange={(e) => editar(i, 'entra_com', e.target.value)} /></td>
-                <td style={{ ...td, width: 130 }}><input style={inp} value={a.custo_eur || ''} onChange={(e) => editar(i, 'custo_eur', e.target.value)} placeholder="vazio = grátis" /></td>
+                <td style={{ ...td, width: 130 }}><input style={inp} value={a.custo_eur || ''} onChange={(e) => editar(i, 'custo_eur', e.target.value)} placeholder="vazio = sem custo" /></td>
                 <td style={td}><input style={inp} value={a.obs || ''} onChange={(e) => editar(i, 'obs', e.target.value)} /></td>
                 <td style={{ ...td, width: 30 }}><span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => del(i)}>✕</span></td>
               </tr>
@@ -868,7 +868,7 @@ function AbaCobertura({ cobertura, setCobertura, onSalvar }) {
   return (
     <div>
       <h2 style={sectionH2}>Cobertura de venda</h2>
-      <p style={muted}>Onde o mundo nos compra hoje, e onde ainda não. Lista editável à mão — sem IAP das lojas ligado ainda não há fonte automática.</p>
+      <p style={muted}>Onde o mundo nos compra hoje, e onde ainda não. Lista editável à mão: sem IAP das lojas ligado, ainda não há fonte automática.</p>
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', marginTop: 10 }}>
         <ColunaCobertura
           titulo="Onde vende"

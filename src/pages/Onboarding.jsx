@@ -243,7 +243,7 @@ export default function Onboarding() {
 
         {mostrarNascimento && (
           <>
-            <Titulo size={24}>QUANDO VOCÊ<br />NASCEU?</Titulo>
+            <Titulo size={24}>Quando você<br />nasceu?</Titulo>
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
               Pedimos a data de nascimento para seguir as regras de idade da LGPD.
             </p>
@@ -322,7 +322,7 @@ export default function Onboarding() {
 
         {passo === 3 && (
           <>
-            <Titulo size={24}>COMO TE CHAMAM<br />EM CAMPO?</Titulo>
+            <Titulo size={24}>Como te chamam<br />em campo?</Titulo>
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
               É o nome que aparece no card e no ranking: seu nome de guerra.
             </p>
@@ -340,7 +340,7 @@ export default function Onboarding() {
                 <Cta cheio onClick={concluir} disabled={salvando}>{salvando ? 'Entrando…' : 'Entrar'}</Cta>
               </div>
               <div style={{ fontSize: 10, color: '#6f6a80', textAlign: 'center', marginTop: 10 }}>
-                a posição você escolhe no seu time, aqui só o que o dia-1 usa
+                A posição você escolhe depois, no seu time.
               </div>
             </div>
           </>

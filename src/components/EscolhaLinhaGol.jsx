@@ -8,7 +8,7 @@ export const TEXTO_APOIO_LINHA_GOL = 'Vale para os sorteios deste time. Dá para
 // Rodada 29B (E): o papel de quem administra o time. "Só organizo" administra tudo (jogos, sorteio, resultados, Resenha)
 // mas fica fora da lista de presença, do sorteio, do ranking e do pacote de figurinhas. Mora aqui (e não num arquivo novo)
 // porque o Criar time e o painel do time o usam, e um módulo compartilhado a mais pesaria no arranque do app.
-export const TEXTO_APOIO_PAPEL = 'Só organizando, você cuida de tudo — jogos, sorteio, resultados, Resenha — mas não entra na lista de presença, no sorteio nem no ranking, e não ocupa vaga no pacote de figurinhas. Dá para mudar depois.';
+export const TEXTO_APOIO_PAPEL = 'Você cuida de tudo, mas não entra na lista de presença, no sorteio nem no ranking, e não ocupa vaga no pacote de figurinhas. Dá para mudar depois.';
 
 /** Os dois chips "Eu jogo" / "Só organizo o time" e o texto que explica. */
 export function EscolhaPapel({ joga, ocupado = false, aoTrocar }) {

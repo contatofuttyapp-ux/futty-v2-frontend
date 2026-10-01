@@ -489,8 +489,8 @@ export default function Figurinha() {
   const pedidoVivo = candidatos.find((p) => p.estado === 'pendente') || candidatos[0] || null;
   // Com a loja ligada a tela vende, não fala de pedidos (P2: nunca as duas coisas juntas).
   const recadoPedido = lojaLigada ? null
-    : (pedidoVivo?.estado === 'pendente' ? 'Pedido enviado — a gente ativa e avisa.' : null)
-      || (pedidoVivo?.estado === 'recusado' ? (pedidoVivo.motivo || 'Este pedido não seguiu.') : null);
+    : (pedidoVivo?.estado === 'pendente' ? 'Pedido enviado. A gente ativa e avisa.' : null)
+      || (pedidoVivo?.estado === 'recusado' ? (pedidoVivo.motivo || 'Este pedido não seguiu. Tente de novo.') : null);
 
   useEffect(() => {
     let vivo = true;
@@ -823,7 +823,7 @@ export default function Figurinha() {
   function tratarFalhaDaEstreia(err) {
     if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(aplicarBrilhante);
     else if (err?.status === 403) setLimiteIA(true); // 403 sem código conhecido (defensivo)
-    else setErro(err?.message || 'Não foi possível gerar sua figurinha.');
+    else setErro(err?.message || 'Não deu para gerar sua figurinha. Tente de novo.');
   }
 
   // Trocar foto: upload para o servidor e, CONFIRMADO o 200, preview local imediato.
@@ -907,7 +907,7 @@ export default function Figurinha() {
       setFotoLocal(URL.createObjectURL(file)); // só depois do 200, como em subirFoto
       setUploadFoto(false);
       ultimoRecorte.current = null;
-      setToast({ tipo: 'success', mensagem: 'Enquadramento atualizado!' });
+      setToast({ tipo: 'success', mensagem: 'Enquadramento atualizado.' });
     } catch (err) {
       setUploadErro(mensagemUploadFoto(err));
       setUploadFoto(false);
@@ -1003,9 +1003,9 @@ export default function Figurinha() {
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa } } : m));
       setFotoLocal(null); // mostra o avatar_url novo (não o preview local de upload)
       recarregarPerfilGlobal();
-      setToast({ tipo: 'success', mensagem: 'Figurinha aplicada!' });
+      setToast({ tipo: 'success', mensagem: 'Figurinha aplicada.' });
     } catch (err) {
-      setErro(err?.message || 'Não foi possível usar essa figurinha.');
+      setErro(err?.message || 'Não deu para usar essa figurinha. Tente de novo.');
     } finally {
       setUsandoHistoricoId(null);
     }
@@ -1051,7 +1051,7 @@ export default function Figurinha() {
         await salvarOuCompartilhar(blob, nome);
       }
     } catch (e) {
-      if (e?.name !== 'AbortError') setErro(e?.message || 'Não foi possível compartilhar.');
+      if (e?.name !== 'AbortError') setErro(e?.message || 'Não deu para compartilhar. Tente de novo.');
     } finally {
       concluirEstreia();
     }
@@ -1232,7 +1232,7 @@ export default function Figurinha() {
         emVoo = false;
       }
       if (Date.now() - inicio > TETO_ACOMPANHAMENTO_MS) {
-        aplicarPinturaFalhou({ erro: 'A pintura demorou demais. Toque em gerar para tentar de novo — nada foi cobrado.', mostrar: true }, estreiaDoJob);
+        aplicarPinturaFalhou({ erro: 'A pintura demorou demais. Toque em gerar para tentar de novo. Nada foi cobrado.', mostrar: true }, estreiaDoJob);
         return;
       }
       agendar();
@@ -1273,7 +1273,7 @@ export default function Figurinha() {
       if (error) throw error;
       setReenviarFeito(true);
     } catch (e) {
-      setErro(e?.message || 'Não foi possível reenviar o e-mail.');
+      setErro(e?.message || 'Não deu para reenviar o e-mail. Tente de novo.');
     } finally {
       setReenviarBusy(false);
     }
@@ -1347,7 +1347,7 @@ export default function Figurinha() {
       setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa } } : m));
       aplicarNoPerfilGlobal({ avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa });
     } catch (e) {
-      setErro(e?.message || 'Não foi possível trocar o card.');
+      setErro(e?.message || 'Não deu para trocar o card. Tente de novo.');
     } finally {
       setTrocandoModo(false);
     }
@@ -1379,7 +1379,7 @@ export default function Figurinha() {
       aplicarNoPerfilGlobal({ fundo_figurinha: k });
     } catch (e) {
       setFundo(anterior); // nunca fica com o tile marcado e o banco diferente
-      setToast({ tipo: 'error', mensagem: e?.message || 'Não foi possível trocar o fundo agora.' });
+      setToast({ tipo: 'error', mensagem: e?.message || 'Não deu para trocar o fundo agora. Tente de novo.' });
     }
   }
 
@@ -1400,14 +1400,14 @@ export default function Figurinha() {
     try {
       const blob = await gerarFigurinhaCanvas(opts);
       if (!blob) {
-        setErro('Não foi possível gerar a imagem.');
+        setErro('Não deu para gerar a imagem. Tente de novo.');
         return;
       }
       // Web: baixa. App: folha de compartilhar (tem "Salvar imagem"); fechar a
       // folha sem escolher nada não é erro.
       await salvarOuCompartilhar(blob, ficheiroNome(nomeJogador(jogador)), { titulo: 'Minha figurinha Futty' });
     } catch (e) {
-      setErro(e?.message || 'Erro ao gerar.');
+      setErro(e?.message || 'Não deu para gerar agora. Tente de novo.');
     } finally {
       setBusy(false);
     }
@@ -1420,7 +1420,7 @@ export default function Figurinha() {
     try {
       const blob = await gerarFigurinhaCanvas(opts);
       if (!blob) {
-        setErro('Não foi possível gerar a imagem.');
+        setErro('Não deu para gerar a imagem. Tente de novo.');
         return;
       }
       const file = new File([blob], ficheiroNome(nomeJogador(jogador)), { type: 'image/png' });
@@ -1430,7 +1430,7 @@ export default function Figurinha() {
         await salvarOuCompartilhar(blob, file.name, { titulo: 'Minha figurinha Futty' });
       }
     } catch (e) {
-      if (e?.name !== 'AbortError') setErro(e?.message || 'Não foi possível compartilhar.');
+      if (e?.name !== 'AbortError') setErro(e?.message || 'Não deu para compartilhar. Tente de novo.');
     } finally {
       setBusy(false);
     }
@@ -1730,7 +1730,7 @@ export default function Figurinha() {
           // não há nada a gerar. A linha só convida a gerar a Brilhante quando
           // há direito; senão diz o que aconteceu de facto.
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <Check size={14} /> {temDireitoDeGerar ? 'Foto trocada, gere sua figurinha' : 'Foto trocada — sua foto já mudou'}
+            <Check size={14} /> {temDireitoDeGerar ? 'Foto trocada, gere sua figurinha' : 'Foto trocada. Seu card já mostra a nova foto.'}
           </div>
         ) : null}
 
@@ -1851,7 +1851,7 @@ export default function Figurinha() {
               onSalvo={(url, restaurou) => {
                 setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: url } } : m));
                 aplicarNoPerfilGlobal({ avatar_url: url });
-                setToast({ tipo: 'success', mensagem: restaurou ? 'Miniatura de volta ao padrão' : 'Miniatura salva!' });
+                setToast({ tipo: 'success', mensagem: restaurou ? 'Miniatura de volta ao padrão' : 'Miniatura salva.' });
               }}
             />
           ) : null}

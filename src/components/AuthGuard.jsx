@@ -28,7 +28,7 @@ export default function AuthGuard({ children }) {
     return (
       <ErrorPage
         titulo="Conta suspensa"
-        mensagem="Sua conta está suspensa. Se você acha que é engano, fale conosco."
+        mensagem="Sua conta está suspensa. Se você acha que é engano, fale com a gente."
         larguraTexto={300}
         acao={{ rotulo: 'Sair', aoTocar: () => signOut() }}
       />

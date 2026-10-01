@@ -232,7 +232,7 @@ export default function Ranking() {
       });
       setVoteModal(null);
       await reload();
-      setToast({ tipo: 'success', mensagem: 'Voto salvo!' });
+      setToast({ tipo: 'success', mensagem: 'Voto salvo.' });
     } catch (err) {
       setToast({ tipo: 'error', mensagem: err.message });
     } finally {
@@ -353,7 +353,7 @@ export default function Ranking() {
                 {modalNota >= 0.5 ? (
                   <>Sua nota: <b style={{ fontFamily: "'Rajdhani', sans-serif", color: 'var(--neon)', fontSize: 16 }}>{notaParaExibir(modalNota).toFixed(1)}</b></>
                 ) : (
-                  'Escolha de 0.5 a 5 estrelas'
+                  'Escolha de 0,5 a 5 estrelas'
                 )}
               </div>
               <button type="button" className="btn btn--primary btn--hud hud-corners-s" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || !(modalNota >= 0.5)} onClick={confirmVote}>

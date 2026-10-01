@@ -65,7 +65,7 @@ export default function SorteioShow() {
     const url = `${window.location.origin}/p/${slug}/${id}`;
     try {
       await navigator.clipboard.writeText(url);
-      setToast({ tipo: 'success', mensagem: 'Link do sorteio copiado!' });
+      setToast({ tipo: 'success', mensagem: 'Link do sorteio copiado.' });
     } catch {
       // fallback (clipboard falha em alguns contextos)
       const inp = document.createElement('input');
@@ -74,7 +74,7 @@ export default function SorteioShow() {
       inp.select();
       try {
         document.execCommand('copy');
-        setToast({ tipo: 'success', mensagem: 'Link do sorteio copiado!' });
+        setToast({ tipo: 'success', mensagem: 'Link do sorteio copiado.' });
       } catch {
         setToast({ tipo: 'error', mensagem: `Copie à mão: ${url}` });
       }

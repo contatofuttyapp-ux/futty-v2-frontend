@@ -197,7 +197,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
       });
       setAnTitulo('');
       setAnMensagem('');
-      showToast('Anúncio publicado no feed.');
+      showToast('Anúncio publicado na Resenha.');
       navigate('/feed');
     } catch (e) {
       showToast(e.message, 'error');
@@ -213,7 +213,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
         <div style={secLbl}>Notificação push</div>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Jogo confirmado!" style={inputStyle} />
+          <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Jogo confirmado" style={inputStyle} />
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
@@ -226,7 +226,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
 
       {/* Anúncio no feed */}
       <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
-        <div style={secLbl}>Anúncio no feed</div>
+        <div style={secLbl}>Anúncio na Resenha</div>
         <p className="muted" style={{ margin: 0, fontSize: 12 }}>
           Fica fixado na Resenha como post oficial, visível a todos os membros.
         </p>
@@ -239,7 +239,7 @@ function TabComunicacao({ slug, navigate, showToast }) {
           <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreva o anúncio para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
         </label>
         <button type="button" className="btn btn--purple btn--sm" disabled={anBusy || !anTitulo.trim() || !anMensagem.trim()} onClick={publicarAnuncio}>
-          {anBusy ? 'Publicando…' : 'Publicar no feed'}
+          {anBusy ? 'Publicando…' : 'Publicar na Resenha'}
         </button>
       </div>
     </div>
@@ -414,7 +414,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
     setRevotarBusy(true);
     try {
       await apiFetch(`/api/teams/${slug}/pedir-revotacao`, { method: 'POST' });
-      showToast('Pedido enviado a todos os membros!');
+      showToast('Pedido enviado a todos os membros.');
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -497,7 +497,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
   // Alertas accionáveis.
   const alertas = [];
   if (semFoto > 0) alertas.push({ txt: `${semFoto} ${semFoto === 1 ? 'jogador sem foto' : 'jogadores sem foto'}`, acao: () => onGoTab('membros') });
-  if (naoResponderam > 0) alertas.push({ txt: `${naoResponderam} ${naoResponderam === 1 ? 'jogador não respondeu' : 'jogadores não responderam'} ao RSVP`, acao: () => onGoTab('jogos') });
+  if (naoResponderam > 0) alertas.push({ txt: `${naoResponderam} ${naoResponderam === 1 ? 'jogador não respondeu' : 'jogadores não responderam'} à confirmação de presença`, acao: () => onGoTab('jogos') });
   if (uGame && (uGame.resultado_nivel || 0) === 0) alertas.push({ txt: 'Resultado do último jogo não registrado', acao: () => navigate(`/equipa/${slug}/jogo/${uGame.id}`) });
 
   return (
@@ -513,7 +513,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
             ) : null}
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Fazer sorteio</button>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => onGoTab('jogos')}>{rsvpAtivo ? 'Ver RSVP' : 'Abrir RSVP'}</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => onGoTab('jogos')}>{rsvpAtivo ? 'Ver presenças' : 'Abrir presença'}</button>
             </div>
           </>
         ) : (
@@ -668,7 +668,7 @@ function TabEquipa({ slug, team, showToast }) {
     try {
       const { logo_url } = await apiUpload(`/api/teams/${slug}/logo`, file, 'logo');
       setLogoUrl(logo_url);
-      showToast('Logo atualizado!');
+      showToast('Logo atualizado.');
     } catch (err) {
       setPreviewLogo(null);
       showToast(err.message, 'error');
@@ -693,7 +693,7 @@ function TabEquipa({ slug, team, showToast }) {
     setModo(novoModo);
     try {
       await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ modo_visibilidade: novoModo }) });
-      showToast('Visibilidade atualizada!');
+      showToast('Visibilidade atualizada.');
     } catch (err) {
       setModo(anterior);
       showToast(err.message, 'error');
@@ -758,7 +758,7 @@ function TabEquipa({ slug, team, showToast }) {
         setCidadeGuardada(guardada || '');
         setCidadeEscolha(null);
       }
-      showToast('Time atualizado!');
+      showToast('Time atualizado.');
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -907,7 +907,7 @@ function TabEquipa({ slug, team, showToast }) {
             <span style={{ position: 'absolute', top: 2, left: mostrarGols ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
           </span>
         </button>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Off: esconde gols e artilharia (radar, perfil, tiles). Para futebol casual.</span>
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: esconde gols e artilharia (radar, perfil e blocos). Para futebol casual.</span>
       </div>
 
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
@@ -1344,7 +1344,7 @@ function TabConvites({ slug, showToast }) {
       const { token } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
       setNovoLink(linkDe(token));
       await recarregar();
-      showToast('Convite gerado!');
+      showToast('Convite gerado.');
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -1355,9 +1355,9 @@ function TabConvites({ slug, showToast }) {
   async function copiar(texto) {
     try {
       await navigator.clipboard.writeText(texto);
-      showToast('Link copiado!');
+      showToast('Link copiado.');
     } catch {
-      showToast('Não foi possível copiar.', 'error');
+      showToast('Não deu para copiar. Copie o link à mão.', 'error');
     }
   }
 
@@ -1506,7 +1506,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
       setAbrirModal(false);
       setPrazoInput('');
       await carregar();
-      showToast('RSVP aberto!');
+      showToast('Presença aberta.');
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -1520,7 +1520,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
     try {
       await apiFetch(`/api/jogos/${gameId}/rsvp/fechar`, { method: 'POST' });
       await carregar();
-      showToast('RSVP fechado.');
+      showToast('Presença fechada.');
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -1536,14 +1536,14 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
   const linha = { marginTop: 12, borderTop: '1px solid #222222', paddingTop: 10 };
 
   if (!info) {
-    return <div style={{ ...linha, fontSize: 12, color: 'var(--text-dim)' }}>{erro || 'Carregando RSVP…'}</div>;
+    return <div style={{ ...linha, fontSize: 12, color: 'var(--text-dim)' }}>{erro || 'Carregando presenças…'}</div>;
   }
 
   // C) RSVP FECHADO
   if (info.rsvp_fechado) {
     return (
       <div style={linha}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>RSVP fechado: {info.confirmados.length} {plural(info.confirmados.length, 'confirmado', 'confirmados')}</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Presença fechada: {info.confirmados.length} {plural(info.confirmados.length, 'confirmado', 'confirmados')}</div>
         <ListaUsers users={info.confirmados} />
         <button type="button" className="btn btn--primary btn--sm" style={{ marginTop: 10 }} onClick={fazerSorteio}>
           Fazer sorteio com confirmados
@@ -1572,10 +1572,9 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
           </div>
         ) : null}
         <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 10, borderColor: 'var(--danger)', color: '#fda4af' }} disabled={busy} onClick={() => setConfirmarFechar(true)}>
-          Fechar RSVP
-        </button>
+          Fechar presença</button>
         {confirmarFechar ? (
-          <ConfirmModal texto="Fechar o RSVP? Os pendentes ficam fora." perigo confirmarLabel="Fechar RSVP" onConfirm={fechar} onCancel={() => setConfirmarFechar(false)} />
+          <ConfirmModal texto="Fechar a presença? Quem não respondeu fica fora." perigo confirmarLabel="Fechar presença" onConfirm={fechar} onCancel={() => setConfirmarFechar(false)} />
         ) : null}
       </div>
     );
@@ -1599,7 +1598,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
           </div>
         </div>
       ) : (
-        <button type="button" className="btn btn--purple btn--sm" onClick={() => setAbrirModal(true)}>Abrir RSVP</button>
+        <button type="button" className="btn btn--purple btn--sm" onClick={() => setAbrirModal(true)}>Abrir presença</button>
       )}
     </div>
   );
@@ -1737,7 +1736,7 @@ function TabJogos({ slug, showToast, navigate }) {
   function onEditado(updated) {
     setGames((cur) => cur.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
     setEditar(null);
-    showToast('Jogo atualizado!');
+    showToast('Jogo atualizado.');
   }
 
   if (games === null) return <LoadingFutty />;
@@ -1956,7 +1955,7 @@ function TabResultados({ slug, showToast }) {
   async function onGuardado() {
     setRegistar(null);
     await carregar();
-    showToast('Resultado salvo! Aparece na Resenha.');
+    showToast('Resultado salvo. Aparece na Resenha.');
   }
 
   if (games === null) return <LoadingFutty />;

@@ -418,7 +418,7 @@ function EmptyState() {
           </Link>
         </div>
         <Link to="/explorar" className="btn btn--purple hud-corners">
-          Explorar peladas
+          Explorar times
         </Link>
         <Link to="/figurinha" className="btn btn--purple-outline hud-corners">
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -483,9 +483,9 @@ export default function Inicio() {
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ birthdate: dobInput }) });
       setDobFeito(true);
-      setToast({ msg: 'Obrigado! Data salva.', tipo: 'success' });
+      setToast({ msg: 'Data salva. Obrigado.', tipo: 'success' });
     } catch (e) {
-      setToast({ msg: e.message || 'Não deu para salvar.', tipo: 'error' });
+      setToast({ msg: e.message || 'Não deu para salvar agora. Tente de novo.', tipo: 'error' });
     } finally {
       setDobBusy(false);
     }
@@ -599,8 +599,8 @@ export default function Inicio() {
   const pedidosBrilhante = inicio?.dados?.pedidos_brilhante || [];
   const pedidoBrilhante = pedidosBrilhante.find((p) => p.estado === 'pendente') || pedidosBrilhante[0] || null;
   const recadoBrilhante = !pedidoBrilhante ? null : pedidoBrilhante.estado === 'pendente'
-    ? { texto: 'Pedido enviado — a gente ativa e avisa ✨', recusado: false }
-    : { texto: pedidoBrilhante.motivo || 'Seu pedido de figurinha não seguiu.', recusado: true };
+    ? { texto: 'Pedido enviado. A gente ativa e avisa ✨', recusado: false }
+    : { texto: pedidoBrilhante.motivo || 'Seu pedido de figurinha não seguiu. Tente de novo.', recusado: true };
   // PAGAMENTOS P2 — o pacote comprado na loja chega sem uniforme quando o time não tinha um, e sem
   // uniforme ninguém do time gera. Enquanto faltar, o dono vê o recado (os times vêm no /api/inicio).
   const timeSemUniforme = (inicio?.dados?.teams?.teams || []).find((t) => t.role === 'admin' && t.brilhante_ativo && !t.brilhante_kit) || null;
@@ -644,7 +644,7 @@ export default function Inicio() {
       else recarregarPerfil();
     } catch (e) {
       setAvatarGenericoOverride(anterior);
-      setToast({ msg: e.message || 'Não deu para salvar.', tipo: 'error' });
+      setToast({ msg: e.message || 'Não deu para salvar agora. Tente de novo.', tipo: 'error' });
     }
   }
 
@@ -1038,10 +1038,10 @@ export default function Inicio() {
           <div key={p.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: p.status === 'approved' ? 'rgba(123,216,143,0.08)' : 'rgba(255,255,255,0.03)', border: p.status === 'approved' ? '1px solid rgba(123,216,143,0.5)' : '1px solid rgba(255,255,255,0.14)' }}>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: p.status === 'approved' ? '#7bd88f' : '#c9c2d6' }}>
-                {p.status === 'approved' ? `Você entrou na ${p.team?.nome}!` : `O pedido para ${p.team?.nome} não seguiu`}
+                {p.status === 'approved' ? `Você entrou no time ${p.team?.nome}!` : `O pedido para ${p.team?.nome} não seguiu`}
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                {p.status === 'approved' ? 'O admin aceitou seu pedido, bem-vindo.' : 'Sem drama: há mais peladas no Explorar.'}
+                {p.status === 'approved' ? 'O admin aceitou seu pedido, bem-vindo.' : 'Sem drama: há mais times no Explorar.'}
               </span>
             </span>
             {/* Rodada 29D: quem foi aceito entra no time como primeira entrada (abre as boas-vindas do time). */}
@@ -1143,7 +1143,7 @@ export default function Inicio() {
         {/* P2 — pacote ativo sem uniforme: o dono escolhe e o time inteiro passa a poder gerar. */}
         {timeSemUniforme ? (
           <Link to={`/planos?uniforme=${timeSemUniforme.id}`} className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
-            Falta escolher o uniforme das figurinhas do {timeSemUniforme.nome} — o time só gera depois disso. Escolher →
+            Falta escolher o uniforme das figurinhas do {timeSemUniforme.nome}. O time só gera depois disso. Escolher →
           </Link>
         ) : null}
 
@@ -1234,7 +1234,7 @@ export default function Inicio() {
         {(error || (inicio.erro && !semDadosPorErro)) && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error || inicio.erro}</div>}
 
         {semDadosPorErro ? (
-          <EstadoErroRede compacto mensagem="Não deu para carregar o Início agora." onRepetir={() => inicio.reload()} />
+          <EstadoErroRede compacto mensagem="Não deu para carregar o Início agora. Tente de novo." onRepetir={() => inicio.reload()} />
         ) : noTeams ? (
           <EmptyState />
         ) : (
@@ -1358,7 +1358,7 @@ export default function Inicio() {
                       <span style={{ color: '#d4a017', fontSize: 18 }}>{campeonato.time_b_pontos}</span>
                       <span>{campeonato.time_b_nome}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center', marginTop: 6 }}>Jornada {campeonato.jornadas_jogadas} de {campeonato.num_jornadas} · clique para ver</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center', marginTop: 6 }}>Jornada {campeonato.jornadas_jogadas} de {campeonato.num_jornadas} · toque para ver</div>
                   </>
                 )}
               </Link>

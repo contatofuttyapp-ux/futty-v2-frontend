@@ -182,7 +182,7 @@ export default function Equipa() {
         body: JSON.stringify({ status }),
       });
       setPedidos((cur) => cur.filter((p) => p.id !== pedidoId));
-      setToast({ tipo: status === 'approved' ? 'success' : 'info', mensagem: status === 'approved' ? 'Jogador adicionado!' : 'Pedido rejeitado.' });
+      setToast({ tipo: status === 'approved' ? 'success' : 'info', mensagem: status === 'approved' ? 'Jogador adicionado.' : 'Pedido rejeitado.' });
       if (status === 'approved') reload();
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
@@ -328,7 +328,7 @@ export default function Equipa() {
 
             <SecLabel>Convidar jogador</SecLabel>
             <p className="texto-apoio" style={{ marginTop: 0, marginBottom: 10 }}>
-              Gere o link do time e mande no grupo: o mesmo link serve para todo mundo, vale 30 dias e você pode revogar quando quiser.
+              Manda no grupo do seu time. O mesmo link serve para todo mundo, vale 30 dias e você pode revogar quando quiser.
             </p>
             <button
               type="button"
@@ -337,16 +337,16 @@ export default function Equipa() {
               onClick={gerarConvite}
               disabled={generating}
             >
-              <Icon name="partilhar" size={15} /> {generating ? 'Gerando…' : 'Gerar link de convite'}
+              <Icon name="partilhar" size={15} /> {generating ? 'Gerando…' : 'Gerar link do convite'}
             </button>
 
             {inviteLink && (
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginTop: 10 }}>
-                <strong style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, letterSpacing: '0.06em' }}>Link de convite</strong>
+                <strong style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, letterSpacing: '0.06em' }}>Link do convite</strong>
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <input className="input input--hud" readOnly value={inviteLink} onFocus={(e) => e.target.select()} style={{ flex: 1, minWidth: 0 }} />
                   <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={copiar}>
-                    {copied ? 'Copiado!' : 'Copiar'}
+                    {copied ? 'Copiado' : 'Copiar'}
                   </button>
                 </div>
               </div>
@@ -359,7 +359,7 @@ export default function Equipa() {
                 <div style={{ ...VIDRO, clipPath: CLIP, padding: '14px 16px', borderColor: 'rgba(248,113,113,0.35)' }}>
                   <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#fda4af' }}>Você vai sair de {team.nome}</div>
                   <div className="texto-apoio texto-apoio--centro" style={{ marginBottom: 12 }}>
-                    Sua história (jogos, notas, prêmios) fica; você sai do ranking e dos próximos jogos. Para voltar, pede entrada de novo.
+                    Sua história (jogos, notas, prêmios) fica; você sai do ranking e dos próximos jogos. Para voltar, peça entrada de novo.
                   </div>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                     <button type="button" className="btn btn--sm hud-corners-s" style={{ color: '#fda4af', border: '1.5px solid rgba(248,113,113,0.5)', background: 'rgba(248,113,113,0.08)', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }} disabled={saindo} onClick={sairDaEquipa}>

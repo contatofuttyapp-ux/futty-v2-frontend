@@ -43,7 +43,7 @@ export default function CampeonatoPublico() {
                   <div className="camp-title">{camp.nome}</div>
                   <div className="row" style={{ margin: '4px 0 14px' }}>
                     <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{camp.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
-                    <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em curso'}</span>
+                    <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
                     <span className="camp-chip">{camp.times.length} times</span>
                   </div>
                   {terminado ? <CampeonatoCelebracao campeonato={camp} slug={slug} /> : null}
@@ -51,14 +51,14 @@ export default function CampeonatoPublico() {
                   {camp.formato === 'mata' ? <CampeonatoBracket campeonato={camp} admin={false} /> : <CampeonatoTabela campeonato={camp} />}
                   {(camp.times || []).some((t) => (t.jogadores || []).length) ? (
                     <>
-                      <div className="section-title">Times &amp; plantéis</div>
+                      <div className="section-title">Times e elencos</div>
                       <CampeonatoPlanteis campeonato={camp} />
                     </>
                   ) : null}
                 </>
               );
             })()}
-            <Link to="/register" className="btn hud-corners cta-gold" style={{ display: 'flex', marginTop: 24, textDecoration: 'none' }}>Crie seu grupo no Futty</Link>
+            <Link to="/register" className="btn hud-corners cta-gold" style={{ display: 'flex', marginTop: 24, textDecoration: 'none' }}>Crie o seu time no Futty</Link>
           </>
         )}
       </main>

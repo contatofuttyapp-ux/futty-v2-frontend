@@ -46,7 +46,7 @@ async function sha256(texto) {
   // é melhor falhar aqui, alto, do que mandar um nonce errado e receber um erro
   // opaco do Supabase.
   if (!globalThis.crypto?.subtle) {
-    throw new Error('Este aparelho não suporta o login da Apple com segurança.');
+    throw new Error('Este celular não suporta entrar com a Apple com segurança.');
   }
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
   return hex(new Uint8Array(buf));
@@ -86,7 +86,7 @@ async function guardarNomeDaPrimeiraVez({ givenName, familyName }) {
  */
 export async function entrarComApple() {
   if (!podeEntrarComApple()) {
-    return { error: new Error('O login da Apple só existe no app do iPhone.') };
+    return { error: new Error('Entrar com a Apple só funciona no app do iPhone.') };
   }
   try {
     const cru = nonceCru();
@@ -101,7 +101,7 @@ export async function entrarComApple() {
     });
 
     if (!response?.identityToken) {
-      return { error: new Error('A Apple não devolveu o token de identidade.') };
+      return { error: new Error('A Apple não confirmou sua identidade. Tente de novo.') };
     }
 
     const supabase = await obterSupabase();

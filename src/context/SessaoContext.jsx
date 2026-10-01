@@ -76,7 +76,7 @@ export function SessaoProvider({ children }) {
         console.warn('[SessaoContext] /api/teams falhou, mantendo cache:', e.message);
         return doCache;
       }
-      setErroTeams(e.message || 'Não foi possível carregar as equipas.');
+      setErroTeams(e.message || 'Não deu para carregar os times. Tente de novo.');
       return null;
     } finally {
       if (userIdRef.current === userId) setCarregandoTeams(false);

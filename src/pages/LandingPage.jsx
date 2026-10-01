@@ -143,7 +143,7 @@ function PaginaInicial() {
             className="btn btn--outline hud-corners-s"
             style={{ height: 46, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            Criar conta grátis
+            Criar conta
           </Link>
 
           {erro && <p style={{ fontSize: 13, color: '#f87171', margin: 0 }}>{erro}</p>}

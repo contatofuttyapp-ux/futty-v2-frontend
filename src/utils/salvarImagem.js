@@ -44,7 +44,7 @@ function paraBase64(blob) {
   return new Promise((resolve, reject) => {
     const leitor = new FileReader();
     leitor.onload = () => resolve(String(leitor.result).split(',')[1] || '');
-    leitor.onerror = () => reject(leitor.error || new Error('Não foi possível ler a imagem.'));
+    leitor.onerror = () => reject(leitor.error || new Error('Não deu para ler a imagem. Tente de novo.'));
     leitor.readAsDataURL(blob);
   });
 }
@@ -65,7 +65,7 @@ function foiCancelado(erro) {
  * @returns {Promise<'baixou'|'compartilhou'|'cancelou'>} Outros erros sobem.
  */
 export async function salvarOuCompartilhar(blob, nome, { titulo = 'Futty' } = {}) {
-  if (!blob) throw new Error('Não foi possível gerar a imagem.');
+  if (!blob) throw new Error('Não deu para gerar a imagem. Tente de novo.');
   const arquivo = nomeSeguro(nome);
 
   if (!ehNativo()) {

@@ -48,7 +48,7 @@ export default function Privacidade() {
           <li>Foto de perfil, usada para gerar seu card com inteligência artificial</li>
           <li>Dados de jogo: presenças confirmadas, votos recebidos, posição em campo, resultados</li>
           <li>Conteúdo que você publica na Resenha (posts, comentários, fotos)</li>
-          <li>Localização aproximada <em>da sua equipe</em>, nunca a sua (ver seção 4)</li>
+          <li>Localização aproximada <em>do seu time</em>, nunca a sua (ver seção 4)</li>
           <li>Dados de desempenho do app, não vinculados à sua identidade (ver abaixo)</li>
           <li>Dados das compras feitas no app: produto, valor, moeda, data, loja e o identificador da transação (nunca dados de cartão)</li>
         </ul>
@@ -74,8 +74,7 @@ export default function Privacidade() {
           <span style={strong}>Base legal:</span> o tratamento se baseia no seu consentimento,
           dado no momento do cadastro, que pode ser revogado a qualquer momento pedindo a
           eliminação da conta. Para as compras, a base legal é a execução do contrato de compra
-          que você fez. Seguimos a LGPD (Lei Geral de Proteção de Dados, Brasil). Os
-          mesmos direitos valem para usuários em Portugal e em qualquer outro país.
+          que você fez. Seguimos a LGPD (Lei Geral de Proteção de Dados, Brasil). Os mesmos direitos valem para quem usa o Futty em Portugal e em qualquer outro país.
         </p>
 
         <h2 style={h2}>3. Com quem compartilhamos</h2>
@@ -104,10 +103,9 @@ export default function Privacidade() {
         <h2 style={h2}>4. Localização, a regra clara</h2>
         <p style={p}>
           A <span style={strong}>sua posição pessoal nunca é enviada nem guardada</span> pelo
-          Futty. Ela vive só no seu navegador, durante a busca por peladas, e desaparece
-          quando você sai da tela. Existe apenas a localização <span style={strong}>da
-          equipe</span>, aproximada (cerca de 1 km), que o administrador escolhe mostrar
-          publicamente para facilitar a descoberta. Equipes privadas nunca aparecem na busca.
+          Futty. Ela vive só no seu navegador, durante a busca por times, e desaparece
+          quando você sai da tela. Existe apenas a localização <span style={strong}>do time</span>, aproximada (cerca de 1 km), que o administrador escolhe mostrar
+          publicamente para facilitar a descoberta. Times privados nunca aparecem na busca.
         </p>
 
         <h2 style={h2}>5. Menores de idade</h2>
@@ -116,7 +114,7 @@ export default function Privacidade() {
           e-mail, Google ou Apple) e, abaixo de 13 anos, a conta não é criada: nada fica
           guardado. Para proteger quem é menor
           de 18: o rosto de menores <span style={strong}>nunca aparece</span> em páginas
-          públicas (sem login), aparece sempre como silhueta. Publicidade classificada como
+          públicas (sem entrar na conta), aparece sempre como silhueta. Publicidade classificada como
           18+ nunca é mostrada a uma conta menor de idade, e essa regra falha sempre para o
           lado seguro. A idade é calculada a partir da data de nascimento informada no cadastro.
         </p>

@@ -157,7 +157,7 @@ function Wizard({ slug, onCancel, onCriado }) {
             <div className={`camp-fopt ${formato === 'mata' ? 'on' : ''}`} onClick={() => setFormato('mata')} role="button" tabIndex={0}>
               <div><div className="camp-fopt__t">Mata-mata</div><div className="camp-fopt__d">Eliminatória direta. Quem perde sai; o vencedor avança até a final.</div></div>
             </div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Fase de grupos chega na v2.</div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Por enquanto só pontos corridos e mata-mata.</div>
             <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
               <button type="button" className="btn hud-corners cta-gold" onClick={() => setPasso(3)}>Continuar</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(1)}>Voltar</button>
@@ -231,7 +231,7 @@ function PlanteisSection({ campeonato }) {
   if (!tem) return null;
   return (
     <>
-      <div className="section-title">Times &amp; plantéis</div>
+      <div className="section-title">Times e elencos</div>
       <CampeonatoPlanteis campeonato={campeonato} />
     </>
   );

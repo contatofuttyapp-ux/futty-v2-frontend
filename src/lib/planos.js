@@ -97,7 +97,7 @@ const PRODUTOS_APP = [
   },
   {
     id: 'minha',
-    nome: 'Minha figurinha',
+    nome: 'Minha Figurinha',
     resumo: `${MINHA_GERACOES} gerações no uniforme que você escolher.`,
     botao: 'Pedir a minha',
     botaoBloco: `Pedir a minha · ${MINHA_GERACOES} gerações`,

@@ -965,7 +965,7 @@ export default function Feed() {
       });
       setProximo(d.proximo || null);
     } catch (err) {
-      setErro(err.message || 'Não foi possível carregar mais.');
+      setErro(err.message || 'Não deu para carregar mais. Tente de novo.');
     } finally {
       setCarregandoMais(false);
     }

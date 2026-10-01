@@ -79,7 +79,7 @@ const espera = (ms) => new Promise((r) => { setTimeout(r, ms); });
 /** A resposta da loja vira o estado da tela: sem produto nenhum, é "não deu para falar com a loja". */
 function lerLoja(r) {
   const produtos = r?.produtos || {};
-  const erro = r?.erro || (r?.disponivel === false || !Object.keys(produtos).length ? 'Não deu para falar com a loja agora.' : null);
+  const erro = r?.erro || (r?.disponivel === false || !Object.keys(produtos).length ? 'Não deu para falar com a loja agora. Tente de novo.' : null);
   return { produtos, erro };
 }
 
@@ -157,7 +157,7 @@ export default function Planos() {
     const r = await pedirAtivacao(produto, teamId);
     setAPedir(null);
     if (r.ok) {
-      setAviso({ tipo: 'ok', texto: 'Pedido enviado — a gente ativa e avisa.' });
+      setAviso({ tipo: 'ok', texto: 'Pedido enviado. A gente ativa e avisa.' });
       const novo = await estadoBrilhantes();
       aplicarEstado(novo); // o cartão passa a mostrar "pedido enviado"
     } else {
@@ -212,7 +212,7 @@ export default function Planos() {
         const timeNovo = (novo?.times || []).find((t) => t.id === time?.id);
         if (chegou && timeNovo && !timeNovo.brilhante_kit) setUniformeDe(timeNovo);
       } else {
-        setToast({ tipo: 'success', mensagem: 'Manto pedido — a gente desenha e avisa' });
+        setToast({ tipo: 'success', mensagem: 'Manto pedido. A gente desenha e avisa' });
       }
     } finally {
       setAComprar(null);
@@ -248,7 +248,7 @@ export default function Planos() {
 
   async function uniformeEscolhido() {
     setUniformeDe(null);
-    setToast({ tipo: 'success', mensagem: 'Uniforme escolhido — o time já pode gerar ✨' });
+    setToast({ tipo: 'success', mensagem: 'Uniforme escolhido. O time já pode gerar ✨' });
     aplicarEstado(await estadoBrilhantes());
   }
 
@@ -292,7 +292,7 @@ export default function Planos() {
         <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
           {/* Cabeçalho curto: o que estas três coisas são, em uma linha. */}
           <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0, marginBottom: 2 }}>
-            Seu card com a foto é grátis, sempre. A <b style={{ color: '#f0c94a' }}>figurinha</b> é a versão em arte,
+            Seu card com a foto não custa nada. A <b style={{ color: '#f0c94a' }}>figurinha</b> é a versão em arte,
             feita por IA no uniforme do Futty.
           </p>
           {aviso ? (
@@ -436,7 +436,7 @@ export default function Planos() {
                     sem explicação é uma porta batida na cara. */}
                 {!pendente && recusado ? (
                   <div className="hud-corners-s" role="status" style={{ padding: '9px 11px', fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.14)' }}>
-                    {recusado.motivo || 'Este pedido não seguiu.'}
+                    {recusado.motivo || 'Este pedido não seguiu. Tente de novo.'}
                   </div>
                 ) : null}
 
@@ -451,7 +451,7 @@ export default function Planos() {
                   </span>
                 ) : atual ? null : pendente || mantoPago ? (
                   <div className="hud-corners" style={{ width: '100%', textAlign: 'center', padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, color: '#f0c94a', border: '1.2px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>
-                    {mantoPago ? 'Manto pedido — a gente desenha e avisa' : 'Pedido enviado — a gente ativa e avisa'}
+                    {mantoPago ? 'Manto pedido. A gente desenha e avisa' : 'Pedido enviado. A gente ativa e avisa'}
                   </div>
                 ) : faltaTime || faltaPacote ? (
                   <div className="hud-corners" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, color: 'rgba(255,255,255,0.6)', border: '1.2px dashed rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.02)' }}>
@@ -530,7 +530,7 @@ export default function Planos() {
                 {compras === null || compras === 'carregando' ? (
                   <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)' }}>Carregando…</span>
                 ) : compras === 'erro' ? (
-                  <span style={{ fontSize: 12.5, color: '#f8b4b4' }}>Não deu para carregar agora.</span>
+                  <span style={{ fontSize: 12.5, color: '#f8b4b4' }}>Não deu para carregar agora. Tente de novo.</span>
                 ) : !compras.length ? (
                   <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)' }}>Nenhuma compra ainda.</span>
                 ) : (

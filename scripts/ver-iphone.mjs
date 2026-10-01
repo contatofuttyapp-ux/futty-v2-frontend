@@ -4299,8 +4299,8 @@ async function cenaRodada20(navegador) {
     await pagina.goto(`${BASE}/equipa/${estado.teamSlug}`, { waitUntil: 'domcontentloaded' });
     await fecharCookies(pagina);
     await pagina.getByText('Convidar jogador').waitFor({ timeout: 15000 });
-    await pagina.locator('button', { hasText: /Gerar link de convite/ }).click();
-    await pagina.locator('strong', { hasText: 'Link de convite' }).waitFor({ timeout: 10000 });
+    await pagina.locator('button', { hasText: /Gerar link do convite/ }).click();
+    await pagina.locator('strong', { hasText: 'Link do convite' }).waitFor({ timeout: 10000 });
     await espera(400);
     await pagina.screenshot({ path: arq('a-equipa-link-novo'), fullPage: true });
     await contexto.close();
@@ -4640,7 +4640,7 @@ async function cenaRodada23(navegador, sessao) {
     semPreco(nome, c);
     verificar(`${nome}: dois cartões (sem o manto próprio)`, cartoes(c) === 2, `${cartoes(c)} cartão(ões)`);
     for (const t of ['Manto próprio', 'Restaurar compras']) naoMostra(nome, c, t);
-    for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
+    for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha Figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
   }
 
   // (2) Figurinha, foto sem figurinha e sem gerações: o bloco "Vire figurinha" grande. Desde a
@@ -4703,7 +4703,7 @@ async function cenaRodada24(navegador, sessao) {
       semPreco(nome, c);
       verificar(`${nome}: dois cartões (sem o manto próprio)`, cartoes(c) === 2, `${cartoes(c)} cartão(ões)`);
       for (const t of ['Manto próprio', 'Restaurar compras']) naoMostra(nome, c, t);
-      for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
+      for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha Figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
     }
   }
 
@@ -6163,7 +6163,7 @@ async function cenaRodada28(navegador) {
     await pagina.goto(`${BASE}/onboarding`, { waitUntil: 'domcontentloaded' });
     await aceitarCookies(pagina);
     await pagina.getByRole('button', { name: /Começar/i }).click({ timeout: 20000 });
-    const pediu = await pagina.getByText(/QUANDO VOCÊ/).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
+    const pediu = await pagina.getByText(/Quando você/).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
     await capturar(pagina, `${rotulo}-pergunta`);
     await pagina.fill('#onb-nascimento', data);
     await pagina.getByRole('button', { name: /Continuar/i }).click();
@@ -6980,7 +6980,7 @@ async function cenaRodada29bConvite(navegador, sessao) {
     const { contexto, pagina } = await abrir({ time: TIME_COM_LOGO, resposta: { valido: false, motivo: 'expirado' } }, 'expirado');
     const t = await corpo(pagina);
     verificar('expirado: "Convite inválido" + "Este convite expirou."', /Convite inválido/i.test(t) && t.includes('Este convite expirou.'), t.slice(0, 160).replace(/\n/g, ' | '));
-    verificar('expirado: sai pela porta certa (login para entrar no time + Explorar)', t.includes('Faça login para entrar em Várzea FC') && t.includes('Procurar times no Explorar'));
+    verificar('expirado: sai pela porta certa (entrar na conta para pedir entrada no time + Explorar)', t.includes('Entre na conta para pedir entrada em Várzea FC') && t.includes('Procurar times no Explorar'));
     verificar('expirado: nenhum "Criar conta e entrar"', !t.includes('Criar conta e entrar'));
     await capturar(pagina, '4-expirado');
     await contexto.close();
@@ -7914,7 +7914,7 @@ async function cenaRodada29d(navegador) {
     await capturar(pagina, 'onboarding-2-foto');
     await espera(4300); // "deixar para depois" aparece aos ~4 s
     await pagina.getByRole('button', { name: /deixar para depois/i }).tap();
-    await pagina.getByText(/COMO TE CHAMAM/).first().waitFor({ timeout: 15000 });
+    await pagina.getByText(/Como te chamam/).first().waitFor({ timeout: 15000 });
     const prog3 = await lerProgresso(pagina);
     verificar('"deixar para depois" → passo 3 (nome), 3 traços acesos', prog3.n === 3 && prog3.acesos === 3, JSON.stringify(prog3));
     await capturar(pagina, 'onboarding-3-nome');
@@ -7936,7 +7936,7 @@ async function cenaRodada29d(navegador) {
     await capturar(pagina, 'convite-1-foto');
     await espera(4300);
     await pagina.getByRole('button', { name: /deixar para depois/i }).tap();
-    await pagina.getByText(/COMO TE CHAMAM/).first().waitFor({ timeout: 15000 });
+    await pagina.getByText(/Como te chamam/).first().waitFor({ timeout: 15000 });
     const prog2 = await lerProgresso(pagina);
     verificar('passo do nome: os 2 traços acesos', prog2.n === 2 && prog2.acesos === 2, JSON.stringify(prog2));
     await capturar(pagina, 'convite-2-nome');
@@ -7956,7 +7956,7 @@ async function cenaRodada29d(navegador) {
     const { contexto, pagina, escritas } = await abrir(fx.membroFoto, 'aceite', '/home', { antes: comPedidoAceito });
     await pagina.getByText('O admin aceitou seu pedido').first().waitFor({ timeout: 30000 }).catch(() => {});
     const t = await texto(pagina);
-    verificar('Início: o card "Você entrou na Prova R29B Grátis!" / "O admin aceitou seu pedido, bem-vindo."', /Você entrou na Prova R29B Grátis!/.test(t) && /O admin aceitou seu pedido, bem-vindo\./.test(t), t.replace(/\s+/g, ' ').slice(0, 160));
+    verificar('Início: o card "Você entrou no time Prova R29B Grátis!" / "O admin aceitou seu pedido, bem-vindo."', /Você entrou no time Prova R29B Grátis!/.test(t) && /O admin aceitou seu pedido, bem-vindo\./.test(t), t.replace(/\s+/g, ' ').slice(0, 160));
     await capturar(pagina, 'aceite-1-inicio');
     await pagina.getByRole('link', { name: /Ir ao time/i }).tap();
     await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});

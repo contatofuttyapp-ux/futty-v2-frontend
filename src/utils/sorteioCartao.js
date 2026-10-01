@@ -101,7 +101,7 @@ async function desenharLogoLockup(cx, W, H) {
   const by = H - 58;
   cx.textBaseline = 'middle';
   cx.font = '800 32px Rajdhani, sans-serif'; const wF = cx.measureText('Futty').width;
-  cx.font = '600 22px Rajdhani, sans-serif'; const wT = cx.measureText('· futebol de quem joga').width;
+  cx.font = '600 22px Rajdhani, sans-serif'; const wT = cx.measureText('· O seu time. A sua figurinha.').width;
   const totalW = 50 + 16 + wF + 16 + wT; let bx = (W - totalW) / 2;
   if (logo) cx.drawImage(logo, bx, by - 25, 50, 50);
   bx += 50 + 16;
@@ -110,7 +110,7 @@ async function desenharLogoLockup(cx, W, H) {
   cx.fillStyle = bg2; cx.textAlign = 'left'; cx.font = '800 32px Rajdhani, sans-serif';
   cx.fillText('Futty', bx, by); bx += wF + 16;
   cx.fillStyle = '#7d7791'; cx.font = '600 22px Rajdhani, sans-serif';
-  cx.fillText('· futebol de quem joga', bx, by);
+  cx.fillText('· O seu time. A sua figurinha.', bx, by);
 }
 
 // Um cartão de jogador (foto/silhueta + placa de nome, chanfro + filete duplo na cor).
@@ -211,7 +211,7 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
 
   // Devolve a imagem; quem chama entrega (SorteioShow → salvarOuCompartilhar).
   const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
-  if (!blob) throw new Error('Não deu para gerar o cartão.');
+  if (!blob) throw new Error('Não deu para gerar o cartão. Tente de novo.');
   return { blob, nome: `futty-sorteio-${(time.nome || 'time').toLowerCase().replace(/\s+/g, '-')}.png` };
 }
 

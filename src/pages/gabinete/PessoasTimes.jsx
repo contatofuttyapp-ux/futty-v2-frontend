@@ -71,7 +71,7 @@ function TabUsers({ showMsg }) {
           <thead>
             <tr>
               <th style={th}>Nome</th>
-              <th style={th}>Email</th>
+              <th style={th}>E-mail</th>
               <th style={th}>Figurinha</th>
               <th style={th}>Estado</th>
               <th style={th}>Ações</th>
@@ -99,7 +99,7 @@ function TabUsers({ showMsg }) {
               </tr>
             ))}
             {!users.length && !loading && (
-              <tr><td style={td} colSpan={5}>Sem usuários.</td></tr>
+              <tr><td style={td} colSpan={5}>Sem pessoas.</td></tr>
             )}
           </tbody>
         </table>
@@ -107,7 +107,7 @@ function TabUsers({ showMsg }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          {total} usuários · página {page}/{totalPaginas}
+          {total} pessoas · página {page}/{totalPaginas}
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" style={btn} disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>← Anterior</button>
@@ -246,7 +246,7 @@ function TabDenuncias({ showMsg }) {
 }
 
 const SUBABAS = [
-  { k: 'users', label: 'Usuários' },
+  { k: 'users', label: 'Pessoas' },
   { k: 'teams', label: 'Times' },
   { k: 'denuncias', label: 'Denúncias' },
 ];

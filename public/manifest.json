@@ -1,7 +1,7 @@
 {
   "name": "Futty",
   "short_name": "Futty",
-  "description": "O app da tua pelada",
+  "description": "Sorteio justo, ranking e figurinha de colecionador.",
   "start_url": "/home",
   "display": "standalone",
   "orientation": "portrait",

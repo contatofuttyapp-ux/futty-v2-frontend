@@ -116,7 +116,7 @@ async function pedir(path, options, token, segundoPlano) {
     }
 
     if (!res.ok) {
-      const err = new Error(body?.error || `Erro ${res.status}`);
+      const err = new Error(body?.error || 'Não deu para completar agora. Tente de novo.');
       err.status = res.status;
       err.code = body?.code || null; // ex.: 'CONTA_SUSPENSA' → o AuthGuard distingue; 'FOTO_FRACA' → mensagemUploadFoto
       throw err;

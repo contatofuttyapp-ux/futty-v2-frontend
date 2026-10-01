@@ -67,10 +67,10 @@ export default function AlterarPassword() {
     try {
       const { error } = await supabase.auth.updateUser({ password: nova });
       if (error) throw error;
-      setToast({ tipo: 'success', mensagem: 'Senha alterada com sucesso!' });
+      setToast({ tipo: 'success', mensagem: 'Senha alterada.' });
       setTimeout(() => navigate('/perfil'), 1500);
     } catch (e) {
-      setToast({ tipo: 'error', mensagem: e?.message || 'Erro ao alterar a senha.' });
+      setToast({ tipo: 'error', mensagem: e?.message || 'Não deu para alterar a senha. Tente de novo.' });
       setBusy(false);
     }
   }

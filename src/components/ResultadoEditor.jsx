@@ -69,7 +69,7 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
       }
       if (nivel === 3) body.gols = jogadores.map((j) => ({ user_id: j.user_id, gols: golsMap[j.user_id] || 0 }));
       await apiFetch(`/api/games/${gameId}/resultado`, { method: 'PATCH', body: JSON.stringify(body) });
-      showToast('Resultado salvo!');
+      showToast('Resultado salvo.');
       onSaved();
     } catch (e) {
       showToast(e.message, 'error');

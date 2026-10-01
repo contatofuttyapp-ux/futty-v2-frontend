@@ -10,7 +10,7 @@ export function mensagemUploadFoto(err) {
   const m = String(err?.message || '').toLowerCase();
   // Falha de rede: o fetch rejeita antes de haver resposta.
   if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed') || m.includes('sem ligação')) {
-    return { texto: 'Sem ligação. Verifique a internet e tente de novo.', podeRepetir: true };
+    return { texto: 'Sem conexão. Verifique a internet e tente de novo.', podeRepetir: true };
   }
   // Tamanho: o backend recusa acima de 5MB.
   if (m.includes('5mb') || m.includes('limite') || m.includes('grande') || m.includes('too large')) {
@@ -21,5 +21,5 @@ export function mensagemUploadFoto(err) {
     return { texto: 'Formato não suportado: use JPEG, PNG ou WebP.', podeRepetir: false };
   }
   // Genérico: mantém a pista do backend se houver, mas em tom acionável.
-  return { texto: 'Não consegui enviar a foto. Tente de novo.', podeRepetir: true };
+  return { texto: 'Não deu para enviar a foto. Tente de novo.', podeRepetir: true };
 }

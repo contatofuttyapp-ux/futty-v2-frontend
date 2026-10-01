@@ -12,7 +12,7 @@ const TITULOS = [
   ['/onboarding', 'Bem-vindo'],
   ['/home', 'Início'],
   ['/criar-equipa', 'Criar time'],
-  ['/feed', 'Feed'],
+  ['/feed', 'Resenha'],
   ['/figurinha', 'Figurinha'],
   ['/perfil', 'Perfil'],
   ['/diagnostico', 'Diagnóstico'],

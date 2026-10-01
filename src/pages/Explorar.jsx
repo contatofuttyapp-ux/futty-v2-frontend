@@ -94,7 +94,7 @@ export default function Explorar() {
   // aproximados das equipas (fase Segurança).
   function pedirGeo() {
     if (!navigator.geolocation) {
-      setToast({ tipo: 'info', mensagem: 'Seu dispositivo não expõe localização.' });
+      setToast({ tipo: 'info', mensagem: 'Seu celular não informa a localização.' });
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -134,7 +134,7 @@ export default function Explorar() {
       const r = await apiFetch(`/api/teams/${equipa.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
       const entrou = !!r?.entrou;
       setEquipas((cur) => cur.map((t) => (t.slug === equipa.slug ? { ...t, ja_membro: entrou || t.ja_membro, pedido_pendente: !entrou } : t)));
-      setToast({ tipo: 'success', mensagem: entrou ? 'Você entrou no time!' : 'Pedido enviado! O admin vai decidir e você vê o desfecho no Início.' });
+      setToast({ tipo: 'success', mensagem: entrou ? `Você entrou no time ${equipa.nome}!` : 'Pedido enviado. O admin decide e você vê o desfecho no Início.' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {
@@ -159,7 +159,7 @@ export default function Explorar() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="EXPLORAR PELADAS" back="/home" />
+      <Topbar hud="EXPLORAR TIMES" back="/home" />
       <main className="app-main page-reveal">
         {/* BUSCA por cidade/nome */}
         <div style={{ ...VIDRO, clipPath: CLIP_S, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>

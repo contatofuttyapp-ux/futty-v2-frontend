@@ -526,7 +526,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
       {loading ? (
         <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>Carregando comentários…</div>
       ) : lista.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>Ainda não há comentários. Seja o primeiro!</div>
+        <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '6px 0' }}>Ainda não há comentários. Seja o primeiro.</div>
       ) : (
         <div style={{ display: 'grid', gap: 14 }}>
           {topLevel.map((c) => (

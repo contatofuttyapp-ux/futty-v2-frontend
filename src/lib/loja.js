@@ -165,7 +165,7 @@ export function criarLoja({ Purchases: sdk, plataforma, chaves, apiFetch: api })
       return { disponivel: true, produtos };
     } catch (e) {
       console.warn('[loja] produtos:', e?.code, e?.message);
-      return { disponivel: true, produtos: {}, erro: 'Não deu para falar com a loja agora.' };
+      return { disponivel: true, produtos: {}, erro: 'Não deu para falar com a loja agora. Tente de novo.' };
     }
   }
 

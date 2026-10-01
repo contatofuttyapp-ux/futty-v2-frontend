@@ -103,7 +103,7 @@ export default function Brilhantes({ showMsg }) {
   function ativarPacote(teamId, nome) {
     const kitId = kitPorTime[teamId] || kits[0];
     if (!kitId) { showMsg('Sem uniformes disponíveis no motor.', true); return; }
-    if (!window.confirm(`Ativar as figurinhas do ${nome} no uniforme ${nomeKit(kitId)}?\n\nTodos os jogadores geram nesse uniforme. Ninguém é gerado agora — cada um gera quando abrir o app.`)) return;
+    if (!window.confirm(`Ativar as figurinhas do ${nome} no uniforme ${nomeKit(kitId)}?\n\nTodos os jogadores geram nesse uniforme. Ninguém é gerado agora: cada um gera quando abrir o app.`)) return;
     agir(`pacote-${teamId}`, '/api/super/gabinete/brilhantes/ativar-pacote', { teamId, kitId }, 'Pacote ativado e time avisado.');
   }
 
@@ -135,7 +135,7 @@ export default function Brilhantes({ showMsg }) {
       const r = await apiFetch('/api/super/gabinete/brilhantes/recusar', { method: 'POST', body: JSON.stringify({ pedidoId, motivo }) });
       // A 055 pode não estar corrida: o pedido fecha na mesma, mas o texto
       // não ficou guardado — o dono tem de saber disso.
-      showMsg(r?.motivo_guardado === false ? 'Pedido recusado — mas o motivo NÃO ficou guardado (migração 055 em falta).' : 'Pedido recusado.', r?.motivo_guardado === false);
+      showMsg(r?.motivo_guardado === false ? 'Pedido recusado, mas o motivo NÃO ficou guardado (falta a migração 055).' : 'Pedido recusado.', r?.motivo_guardado === false);
       await reload();
     } catch (e) {
       showMsg(e.message, true);
@@ -153,7 +153,7 @@ export default function Brilhantes({ showMsg }) {
         <div style={{ fontSize: 13, color: '#f0c94a', lineHeight: 1.5 }}>
           {data.motivo || 'Ainda não dá para ler os pedidos.'}
           <div style={{ color: 'var(--text-dim)', marginTop: 6 }}>
-            Corra <code>db/migrations/054_brilhante.sql</code> no SQL Editor do Supabase e recarregue.
+            Rode <code>db/migrations/054_brilhante.sql</code> no SQL Editor do Supabase e recarregue.
           </div>
         </div>
       </Secao>
@@ -349,7 +349,7 @@ export default function Brilhantes({ showMsg }) {
       {/* ── 3. DAR CRÉDITO A UM E-MAIL — RODADA 21: quem ainda não pediu nada
           (0 créditos, nenhum pedido) não aparece em nenhuma lista acima nem
           abaixo; este é o único jeito de ativar essa pessoa. ── */}
-      <Secao titulo="Dar crédito a um e-mail" sub="Para quem ainda não pediu nada e não tem crédito — não está em nenhuma lista acima">
+      <Secao titulo="Dar crédito a um e-mail" sub="Para quem ainda não pediu nada e não tem crédito. Não está em nenhuma lista acima">
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="email"

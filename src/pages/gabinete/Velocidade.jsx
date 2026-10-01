@@ -50,7 +50,7 @@ export default function Velocidade() {
     <div style={{ display: 'grid', gap: 16 }}>
       <Secao
         titulo="Velocidade no aparelho de quem usa"
-        sub={`Últimos ${data.dias || 7} dias · ${data.medicoes || 0} medições anônimas (sem usuário, e-mail, IP nem aparelho). Útil = a tela desenhada sem o F de carregamento.`}
+        sub={`Últimos ${data.dias || 7} dias · ${data.medicoes || 0} medições anônimas (sem conta, e-mail, IP nem aparelho). Útil = a tela desenhada sem o F de carregamento.`}
       >
         {data.indisponivel ? (
           <div style={{ fontSize: 13, color: '#f0c94a' }}>{data.motivo}</div>

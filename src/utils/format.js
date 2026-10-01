@@ -2,7 +2,7 @@
 
 export const STATUS_LABELS = {
   agendado: 'Agendado',
-  em_curso: 'Em curso',
+  em_curso: 'Em andamento',
   terminado: 'Terminado',
   cancelado: 'Cancelado',
 };

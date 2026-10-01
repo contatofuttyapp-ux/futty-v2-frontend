@@ -426,7 +426,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     const ligouPorOmissao = euSorteei && SOM_PADRAO_QUEM_SORTEIA && !SomSorteio.escolhido;
     if (ligouPorOmissao) SomSorteio.ligarPorOmissao();
     const somBtn = q('.somBtn');
-    const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (clique p/ ligar)'; };
+    const pintarSom = () => { somBtn.classList.toggle('on', SomSorteio.ligado); somBtn.title = SomSorteio.ligado ? 'Som ligado' : 'Som desligado (toque para ligar)'; };
     // Ao LIGAR, um toque do efeito de revelação serve de prova de que há som
     // (a pessoa acabou de escolher ouvir; sem retorno nenhum parece quebrado).
     const onSom = () => { const on = SomSorteio.toggle(); if (on) SomSorteio.revelar(); pintarSom(); };
@@ -500,7 +500,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       const { entrega } = await gerarCartazEscalacao(resultado, { equipa, data });
       if (entrega === 'baixou') toastRef.current('Imagem dos times salva');
     } catch (e) {
-      toastRef.current(e?.message || 'Não deu para gerar a imagem');
+      toastRef.current(e?.message || 'Não deu para gerar a imagem. Tente de novo.');
     } finally { setGerando(false); }
   }
   async function compartilharTime(ti) {
@@ -511,7 +511,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
       if (entrega === 'baixou') toastRef.current('Cartão 9:16 salvo');
     } catch (e) {
-      toastRef.current(e?.message || 'Não deu para gerar o cartão');
+      toastRef.current(e?.message || 'Não deu para gerar o cartão. Tente de novo.');
     } finally { setGerando(false); }
   }
 

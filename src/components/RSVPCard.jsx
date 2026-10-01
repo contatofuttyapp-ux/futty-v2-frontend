@@ -63,7 +63,7 @@ export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, ch
       if (r?.espera) setPosEspera(r.posicao);
       else onResposta(status);
     } catch (e) {
-      setErro(e?.message || 'Não foi possível responder.');
+      setErro(e?.message || 'Não deu para responder agora. Tente de novo.');
     } finally {
       setBusy(false);
     }
@@ -77,7 +77,7 @@ export default function RSVPCard({ gameId, prazo, respostaActual, onResposta, ch
       await apiFetch(`/api/jogos/${gameId}/rsvp/sair-espera`, { method: 'POST' });
       setPosEspera(null);
     } catch (e) {
-      setErro(e?.message || 'Não foi possível sair da lista.');
+      setErro(e?.message || 'Não deu para sair da lista agora. Tente de novo.');
     } finally {
       setBusy(false);
     }

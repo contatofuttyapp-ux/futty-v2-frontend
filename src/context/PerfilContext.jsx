@@ -208,7 +208,7 @@ export function PerfilProvider({ children }) {
           return;
         }
         setPerfil(null);
-        setErro(e.message || 'Não foi possível carregar o perfil.');
+        setErro(e.message || 'Não deu para carregar o perfil. Tente de novo.');
         setErroCode(e.code || null);
         setCarregadoParaId(userId);
         setDeCache(false);
@@ -235,7 +235,7 @@ export function PerfilProvider({ children }) {
       return data;
     } catch (e) {
       if (userIdRef.current !== idDoPedido) return null;
-      setErro(e.message || 'Não foi possível carregar o perfil.');
+      setErro(e.message || 'Não deu para carregar o perfil. Tente de novo.');
       setErroCode(e.code || null);
       return null;
     }

@@ -90,7 +90,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
         method: 'PATCH',
         body: JSON.stringify({ times_resultado: tr }),
       });
-      showToast?.('Times atualizados!');
+      showToast?.('Times atualizados.');
       onSaved?.(times_resultado);
     } catch (e) {
       showToast?.(e.message, 'error');

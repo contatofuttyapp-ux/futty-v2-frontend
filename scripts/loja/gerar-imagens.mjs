@@ -44,7 +44,7 @@ const PECAS = [
   // recorte: pixels da captura (a 1080 de largura) cortados no topo, por tamanho, para os botões
   // "Vou / Não vou" caberem no cartaz. Na App Store cabem sem recorte.
   { arquivo: '05-presenca.png', tela: 'inicio.png', kicker: 'Presença', titulo: 'Confirme presença em um toque', recorte: { '1080x1920': 160 } },
-  { arquivo: '06-explorar.png', tela: 'explorar.png', kicker: 'Explorar', titulo: 'Ache uma pelada perto de você' },
+  { arquivo: '06-explorar.png', tela: 'explorar.png', kicker: 'Explorar', titulo: 'Ache um time perto de você' },
 ];
 
 const dataUri = (caminho, mime) => `data:${mime};base64,${readFileSync(caminho).toString('base64')}`;
@@ -138,7 +138,7 @@ function htmlDestaque() {
       <div class="circulo"></div></div>
     <img class="f" src="${LOGO_F}" alt="">
     <div class="bloco"><div class="nome">FUTTY</div><div class="risco"></div>
-      <div class="frase">Sua pelada virou campeonato</div></div>
+      <div class="frase">O seu time. A sua figurinha.</div></div>
   </body></html>`;
 }
 

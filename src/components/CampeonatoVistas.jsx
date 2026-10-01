@@ -304,7 +304,7 @@ export function CampeonatoCelebracao({ campeonato, slug }) {
 
         <div className="camp-cel__row" style={{ marginTop: 12 }}>
           <button type="button" onClick={copiarLink} style={{ flex: 1, cursor: 'pointer', fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '.06em', color: '#fff', background: 'rgba(139,92,246,.16)', border: '1.5px solid #8b5cf6', padding: '11px 6px', clipPath: 'polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>{copiado ? 'Copiado!' : <><LinkGlifo /> Link</>}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>{copiado ? 'Copiado' : <><LinkGlifo /> Link</>}</span>
           </button>
           <button type="button" className="btn hud-corners cta-gold" onClick={() => gerarCartaoCampeao(campeonato)} style={{ flex: 1, fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '.06em' }}>
             9:16 campeão

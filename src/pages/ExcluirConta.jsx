@@ -49,7 +49,7 @@ export default function ExcluirConta() {
           <li>Times em que você é o único membro</li>
         </ul>
         <p style={{ ...p, marginTop: 6 }}>
-          Times com outros membros continuam existindo para o resto do grupo — sua conta só sai
+          Times com outros membros continuam existindo para o resto do grupo. Sua conta só sai
           deles. Mais detalhes sobre retenção e prazos de backup estão na{' '}
           <Link to="/privacidade" style={{ color: 'var(--neon)' }}>Política de Privacidade</Link>.
         </p>

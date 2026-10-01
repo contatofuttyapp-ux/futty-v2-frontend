@@ -81,7 +81,7 @@ export function InicioProvider({ children }) {
       return d;
     } catch (e) {
       if (geracaoRef.current !== minhaGeracao) return null;
-      setErro(e.message || 'Não foi possível carregar o Início.');
+      setErro(e.message || 'Não deu para carregar o Início. Tente de novo.');
       return null;
     }
   }, [hidratarPerfil, hidratarTeams, hidratarVotacaoStatus, userId]);
@@ -148,7 +148,7 @@ export function InicioProvider({ children }) {
           console.warn('[InicioContext] /api/inicio falhou, mantendo cache:', e.message);
           return;
         }
-        setErro(e.message || 'Não foi possível carregar o Início.');
+        setErro(e.message || 'Não deu para carregar o Início. Tente de novo.');
       });
     return () => {
       ativo = false;

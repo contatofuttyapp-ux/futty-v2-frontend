@@ -25,7 +25,7 @@ export default function RegistarJornada({ campeonato, onSaved, showToast }) {
       setVencedor(null);
       setPlacarA('');
       setPlacarB('');
-      showToast('Jornada registrada!');
+      showToast('Jornada registrada.');
       onSaved();
     } catch (e) {
       showToast(e.message, 'error');

@@ -78,7 +78,7 @@ function LinhaMeuTime({ time, meuId, semBorda, aoErro }) {
       await apiFetch(`/api/equipas/${time.slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ goleiro: ligado }) });
       await reload();
     } catch (e) {
-      aoErro(e.message || 'Não foi possível trocar agora.');
+      aoErro(e.message || 'Não deu para trocar agora. Tente de novo.');
     } finally {
       setOcupado(false);
     }
@@ -161,7 +161,7 @@ export default function MeuPerfil() {
       await reloadBlocks();
       showToast('Jogador desbloqueado.');
     } catch (e) {
-      showToast(e.message || 'Não foi possível desbloquear.', 'error');
+      showToast(e.message || 'Não deu para desbloquear agora. Tente de novo.', 'error');
     } finally {
       setDesbloqueandoId(null);
     }
@@ -200,9 +200,9 @@ export default function MeuPerfil() {
       await apiFetch('/api/me', { method: 'DELETE', body: JSON.stringify({ confirmacao: CONFIRMACAO_EXCLUIR }) });
       limparCacheLocal();
       await signOut();
-      navigate('/', { state: { toast: 'Conta excluída. Até a próxima pelada.' } });
+      navigate('/', { state: { toast: 'Conta excluída.' } });
     } catch (e) {
-      showToast(e.message || 'Não foi possível excluir a conta.', 'error');
+      showToast(e.message || 'Não deu para excluir a conta agora. Tente de novo.', 'error');
       setExcluindo(false);
     }
   }
@@ -236,7 +236,7 @@ export default function MeuPerfil() {
     const u = perfil.user;
     const ok = await patchMe({ nome: u.nome || null, nome_jogador: u.nome_jogador || null });
     setSavingDados(false);
-    if (ok) showToast('Dados salvos!');
+    if (ok) showToast('Dados salvos.');
   }
 
   // Saíram com a secção do avatar: escolherGenerico() (o único escritor que metia no
@@ -387,7 +387,7 @@ export default function MeuPerfil() {
             <input value={u.nome || ''} onChange={(e) => setField('nome', e.target.value.slice(0, 60))} placeholder="Nome completo" className="hud-corners-s" style={inputStyle} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={labelStyle}>Email</span>
+            <span style={labelStyle}>E-mail</span>
             <div className="hud-corners-s" style={{ ...inputStyle, color: 'var(--text-dim)' }}>{u.email || user?.email || '—'}</div>
           </label>
           {/* OUTLINE ROXO RECUADO. Percurso, para quem vier a seguir:

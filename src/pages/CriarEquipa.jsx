@@ -124,7 +124,7 @@ export default function CriarEquipa() {
     // encontram o time no Explorar/distância. No privado fica opcional. Manda
     // de volta ao passo 1 (onde fica o campo) com um toast claro.
     if (modo !== 'privado' && !cidade.trim()) {
-      setToast({ tipo: 'error', mensagem: 'Times públicos precisam de uma cidade — é assim que jogadores perto encontram o seu.' });
+      setToast({ tipo: 'error', mensagem: 'Times públicos precisam de uma cidade. É assim que jogadores perto encontram o seu.' });
       setPasso(1);
       return;
     }
@@ -139,7 +139,7 @@ export default function CriarEquipa() {
       const { team: t, geo, joga: jogaGravado } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
       setAvisoCidade(avisoDaCidade(geo, cidade.trim()));
       // O motor sem a migração 067 cria o time com o criador jogando: a tela não finge que gravou o outro papel.
-      if (!joga && jogaGravado !== false) setToast({ tipo: 'info', mensagem: 'Time criado, mas "só organizo" ainda não está disponível — você entrou jogando. Dá para mudar depois.' });
+      if (!joga && jogaGravado !== false) setToast({ tipo: 'info', mensagem: 'Time criado, mas "só organizo" ainda não está disponível. Você entrou jogando; dá para mudar depois.' });
       // P2-12: a equipa já existe aqui. Se o PATCH das definições falhar, NÃO
       // dizer "erro a criar" — a equipa nasceu; segue-se para convites e avisa-se
       // que a definição ficou por aplicar (ajusta-se no admin).
@@ -254,7 +254,7 @@ export default function CriarEquipa() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Mostrar gols</div>
                 <div className="texto-apoio" style={{ marginTop: 2 }}>
-                  {mostrarGols ? 'radar de 5 eixos + tile Gols e troféu Artilheiro' : 'radar cai para 3: presença · vitórias · destaque'}
+                  {mostrarGols ? 'radar de 5 eixos, bloco de Gols e troféu de Artilheiro' : 'radar cai para 3: presença · vitórias · destaque'}
                 </div>
               </div>
               <Toggle on={mostrarGols} onClick={() => setMostrarGols(!mostrarGols)} />
@@ -304,7 +304,7 @@ export default function CriarEquipa() {
         {passo === 4 && team && (
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Chame o seu time</h1>
-            <p className="texto-apoio" style={{ marginBottom: 14 }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. O link é válido 7 dias. Você pode pular este passo.</p>
+            <p className="texto-apoio" style={{ marginBottom: 14 }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. Manda no grupo do seu time: o link vale 30 dias. Você pode pular este passo.</p>
             {avisoCidade ? (
               avisoCidade.tipo === 'ok' ? (
                 <p className="texto-apoio" data-aviso-cidade="ok" style={{ marginTop: 0, marginBottom: 14 }}>{avisoCidade.texto}</p>
@@ -323,17 +323,17 @@ export default function CriarEquipa() {
             ) : null}
             {inviteLink ? (
               <>
-                <Lbl>Link de convite</Lbl>
+                <Lbl>Link do convite</Lbl>
                 <input className="input input--hud" readOnly value={inviteLink} onFocus={(e) => e.target.select()} style={{ width: '100%', color: '#f0c94a' }} />
                 <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-                  <Cta onClick={copiar}>{copied ? 'Copiado!' : 'Copiar link'}</Cta>
+                  <Cta onClick={copiar}>{copied ? 'Copiado' : 'Copiar link'}</Cta>
                   <a href={waHref} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
                     <Cta sec style={{ color: '#7bd88f', borderColor: 'rgba(123,216,143,0.45)', background: 'rgba(123,216,143,0.06)' }}>Compartilhar no WhatsApp</Cta>
                   </a>
                 </div>
               </>
             ) : (
-              <Cta onClick={gerarConvite} disabled={busy}>{busy ? 'Gerando…' : 'Gerar link de convite'}</Cta>
+              <Cta onClick={gerarConvite} disabled={busy}>{busy ? 'Gerando…' : 'Gerar link do convite'}</Cta>
             )}
             <div style={{ marginTop: 22 }}>
               {/* Rodada 29C: `criouAgora` abre as boas-vindas do criador na página do time (uma vez por time). */}

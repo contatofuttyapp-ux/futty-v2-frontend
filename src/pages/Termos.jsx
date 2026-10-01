@@ -65,12 +65,12 @@ export default function Termos() {
           Quando dizemos que o card é seu, falamos do arquivo de imagem: uma vez baixado, ele
           é seu para sempre e continua seu mesmo que o Futty deixe de existir. O que depende
           do serviço estar ativo é o que acontece dentro do app: gerar novos cards, trocar
-          uniformes e fundos, e usar créditos.
+          uniformes e fundos, e usar gerações.
         </p>
         <p style={{ ...p, marginTop: 6 }}>
           O card é uma representação artística criada por inteligência artificial a partir da
           sua foto e pode não reproduzir fielmente a sua aparência. Se uma geração sair com
-          defeito evidente, ela não consome o seu crédito: o Futty pede outra foto em vez de
+          defeito evidente, ela não gasta uma geração sua: o Futty pede outra foto em vez de
           entregar um resultado ruim. Ao enviar uma foto, você confirma que tem o direito de
           usá-la e autoriza o seu uso para a criação do card. Você recebe uma licença de uso
           pessoal do seu card, mas não adquire propriedade intelectual sobre a técnica de geração.
@@ -107,7 +107,7 @@ export default function Termos() {
         <ul style={ul}>
           <li><span style={strong}>Minha Figurinha</span>: 10 gerações de figurinha para você, no uniforme que escolher.</li>
           <li><span style={strong}>Figurinhas do time</span>: 2 gerações por jogador, para até 25 jogadores do time, todos no uniforme escolhido pelo dono do time. Só o dono do time compra.</li>
-          <li><span style={strong}>Manto próprio</span>: o uniforme do seu time nas figurinhas, desenhado pela equipe do Futty depois da compra, a partir das cores e do escudo do time, e conferido antes de valer. Exige as Figurinhas do time.</li>
+          <li><span style={strong}>Manto próprio</span>: o uniforme do seu time nas figurinhas, desenhado por quem faz o Futty depois da compra, a partir das cores e do escudo do time, e conferido antes de valer. Exige as Figurinhas do time.</li>
         </ul>
         <p style={{ ...p, marginTop: 6 }}>
           São compras avulsas, pagas uma vez só: não há assinatura nem cobrança recorrente. O
@@ -144,16 +144,14 @@ export default function Termos() {
         <h2 style={h2}>9. Uso aceitável</h2>
         <p style={p}>
           É proibido: tentar burlar limites do serviço (incluindo limites de geração),
-          automatizar o uso por robôs ou scripts, sobrecarregar a infraestrutura, acessar
-          dados de outros usuários sem autorização e fazer engenharia reversa do app. Contas
+          automatizar o uso por robôs ou scripts, sobrecarregar a infraestrutura, acessar dados de outras pessoas sem autorização e fazer engenharia reversa do app. Contas
           envolvidas nessas práticas podem ser suspensas ou encerradas sem aviso.
         </p>
 
         <h2 style={h2}>10. Disponibilidade e encerramento do serviço</h2>
         <p style={p}>
           O serviço pode ser interrompido para manutenção, atualizações ou por razões
-          técnicas, sem aviso prévio. Se o Futty for descontinuado de forma definitiva, os
-          usuários serão avisados com antecedência razoável.
+          técnicas, sem aviso prévio. Se o Futty for descontinuado de forma definitiva, você será avisado com antecedência razoável.
         </p>
 
         <h2 style={h2}>11. Encerramento de conta</h2>
@@ -179,8 +177,7 @@ export default function Termos() {
         <h2 style={h2}>14. Lei aplicável</h2>
         <p style={p}>
           Estes termos seguem a legislação brasileira. Em caso de disputa, as partes se
-          comprometem a tentar uma solução amigável antes de recorrer à Justiça. Para
-          usuários consumidores, fica eleito o foro do seu domicílio.
+          comprometem a tentar uma solução amigável antes de recorrer à Justiça. Para quem usa o Futty como consumidor, fica eleito o foro do seu domicílio.
         </p>
 
         <h2 style={h2}>15. Propriedade intelectual</h2>

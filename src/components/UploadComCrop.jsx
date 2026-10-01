@@ -46,7 +46,7 @@ export default function UploadComCrop({ onUpload, uploadFn = null, accept = 'ima
       const res = uploadFn ? await uploadFn(file) : await uploadFile(file);
       onUpload(res.url, res.media_type);
     } catch (err) {
-      setErro(err?.message || 'Erro no upload.');
+      setErro(err?.message || 'Não deu para enviar agora. Tente de novo.');
     } finally {
       setBusy(false);
     }

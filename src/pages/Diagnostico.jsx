@@ -109,7 +109,7 @@ function linhaDePreaquecimento(p) {
   if (!p) return null;
   if (p.estado) {
     const previsto = p.previstoEmMs != null ? `, previsto aos ${(p.previstoEmMs / 1000).toFixed(1)}s` : '';
-    return `Adiantamento em segundo plano: ${p.estado} — precisa de ${(p.esperaMs / 1000).toFixed(1)}s sem toque${previsto}`;
+    return `Adiantamento em segundo plano: ${p.estado}. Precisa de ${(p.esperaMs / 1000).toFixed(1)}s sem toque${previsto}`;
   }
   return `Adiantou em segundo plano: ${p.itens} telas e ${p.imagens} imagens (${(p.ms / 1000).toFixed(1)}s)`;
 }
@@ -134,9 +134,9 @@ export default function Diagnostico() {
     setEnviando(true);
     try {
       await apiFetch('/api/diagnostico', { method: 'POST', body: JSON.stringify(lerDiagnostico()) });
-      setToast({ msg: 'Relatório enviado. Obrigado!', tipo: 'success' });
+      setToast({ msg: 'Relatório enviado. Obrigado.', tipo: 'success' });
     } catch (e) {
-      setToast({ msg: e.message || 'Não deu para enviar.', tipo: 'error' });
+      setToast({ msg: e.message || 'Não deu para enviar agora. Tente de novo.', tipo: 'error' });
     } finally {
       setEnviando(false);
     }

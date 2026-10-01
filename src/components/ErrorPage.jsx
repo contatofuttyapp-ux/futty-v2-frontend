@@ -77,7 +77,7 @@ export default function ErrorPage({ onRetry, mensagem, titulo, detalheTecnico, a
             href="/explorar"
             style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 3 }}
           >
-            Ou descubra peladas perto de você
+            Ou descubra times perto de você
           </a>
         )}
       </div>

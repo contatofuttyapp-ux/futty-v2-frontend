@@ -145,7 +145,7 @@ export default function Convite() {
             </div>
           ) : (
             <button type="button" className="btn cta-gold convite__cta" onClick={pedirEntrada} disabled={pedindo}>
-              {pedindo ? 'Enviando…' : session ? `Pedir entrada em ${alvo.nome}` : `Faça login para entrar em ${alvo.nome}`}
+              {pedindo ? 'Enviando…' : session ? `Pedir entrada em ${alvo.nome}` : `Entre na conta para pedir entrada em ${alvo.nome}`}
             </button>
           )
         ) : null}
@@ -174,7 +174,7 @@ export default function Convite() {
           </>
         ) : error ? (
           <>
-            <h1 className="convite__titulo">Ups…</h1>
+            <h1 className="convite__titulo">Ops…</h1>
             <div className="alert alert--error convite__erro">{error}</div>
             {saidas(info?.team)}
           </>

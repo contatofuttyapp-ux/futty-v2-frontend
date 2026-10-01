@@ -90,7 +90,7 @@ export default function ForgotPassword() {
           </form>
 
           <p className="auth-footer">
-            Lembrou? <Link to="/login">Voltar ao login</Link>
+            Lembrou? <Link to="/login">Voltar para entrar</Link>
           </p>
         </div>
       </div>
