@@ -50,6 +50,11 @@
   Cache-Control: public, max-age=31536000, immutable
   Access-Control-Allow-Origin: *
 
+# Os 6 bustos do mini sorteio do onboarding (Rodada 29E): o app nativo busca daqui; se a arte mudar, muda o nome.
+/onboarding/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
   Access-Control-Allow-Origin: *

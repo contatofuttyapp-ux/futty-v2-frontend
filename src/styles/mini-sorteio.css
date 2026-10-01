@@ -1,7 +1,9 @@
-/* Futty v2.0 — Rodada 29D: o mini sorteio do Onboarding (components/MiniSorteio.jsx). A receita da máquina do sorteio
-   (sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .rolo/.strip em spinY, .baseluz) numa caixa de ~290×160, escopada
-   em .msq e com os keyframes prefixados (msq*) para não disputar com os do sorteio. Só o Onboarding importa (chunk lazy).
-   Estado natural visível: sem JS, os rolos mostram o 1º nome e as lâmpadas seguem no CSS. */
+/* Futty v2.0 — Rodada 29E: o mini sorteio do Onboarding (components/MiniSorteio.jsx). A receita da máquina do sorteio
+   (sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) numa caixa de 290 de largura, e a janela do sorteio REAL
+   copiada de lá: .grupo/.ghead/.srow/.slot (tracejado vazio) → .mmold (moldura octogonal .fr, micro-lâmpadas .mb, nome
+   .nm, mPop ao entrar). Os dois grupos empilhados como no sorteio no celular (lá, lado a lado só a partir de 1280 px).
+   Escopado em .msq, keyframes prefixados (msq*) para não disputar com os do sorteio. Só o Onboarding importa (chunk lazy).
+   Estado natural: sem JS, os 6 no lugar (o JSX nasce cheio); com movimento reduzido, tudo parado. */
 .msq{width:100%;max-width:290px;margin:22px auto 0}
 .msq .maq{position:relative;width:100%;background:linear-gradient(180deg,#0d0b14,#08070d);border:1px solid rgba(212,160,23,.4);padding:12px 14px 0;box-shadow:0 0 16px 3px rgba(245,224,112,.16);clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
 .msq .luzes{display:flex;gap:4px;justify-content:center;margin-bottom:4px;overflow:hidden}
@@ -9,22 +11,33 @@
 .msq .luz{position:relative;flex:none;width:7px;height:7px;border-radius:50%;background:var(--lc,#f5e070);box-shadow:0 0 8px 2px var(--lg,rgba(245,224,112,.75));animation:msqCalm 2s linear infinite;animation-delay:calc(var(--i)*-.09s)}
 .msq .roxa .luz{--lc:#a78bfa;--lg:rgba(139,92,246,.75)}
 @keyframes msqCalm{0%,55%,100%{opacity:.16}25%{opacity:.85}}
-.msq .janela{position:relative;background:rgba(0,0,0,.55);border:1px solid rgba(139,92,246,.4);padding:8px 8px 10px;overflow:hidden}
-.msq .rolos{display:flex;gap:8px}
-.msq .rolo{flex:1;min-width:0;--qc:#f0c94a;--qg:rgba(212,160,23,.5)}
-.msq .rolo.roxo{--qc:#a78bfa;--qg:rgba(139,92,246,.5)}
-.msq .quem{display:block;text-align:center;margin:0 0 6px;font-family:'Rajdhani',var(--sans);font-weight:800;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--qc);text-shadow:0 0 10px var(--qg)}
-.msq .tira{position:relative;height:40px;overflow:hidden;background:#0a0a10;border-bottom:2px solid rgba(139,92,246,.35);clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 7px),0 7px)}
-.msq .strip{position:absolute;left:0;right:0;top:0;animation:msqSpin var(--sd,.55s) linear infinite;animation-delay:calc(var(--fase,0)*var(--sd,.55s)*-1)}
-.msq .rolo.roxo .strip{--sd:.62s}
-@keyframes msqSpin{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
-.msq .n{display:grid;place-items:center;height:40px;font-family:'Rajdhani',var(--sans);font-weight:800;font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:#fff;white-space:nowrap}
-.msq .rolo.travado .strip{animation:none;transition:transform .7s cubic-bezier(.15,.7,.2,1)}
-.msq .rolo.travado .tira{box-shadow:inset 0 0 16px var(--qg);border-bottom-color:var(--qc)}
-.msq .rolo.travado .n{color:var(--qc);text-shadow:0 0 10px var(--qg)}
+.msq .janela{position:relative;background:rgba(0,0,0,.55);border:1px solid rgba(139,92,246,.4);padding:10px 8px 6px;overflow:hidden}
+.msq .grupo+.grupo{margin-top:8px}
+.msq .ghead{display:flex;align-items:center;gap:8px;font-family:'Rajdhani',var(--sans);font-weight:800;letter-spacing:.11em;font-size:12px;text-transform:uppercase;color:var(--tc);text-shadow:0 0 12px var(--tg);margin:0 2px 6px}
+.msq .ghead::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--tg),transparent)}
+.msq .srow{display:flex;gap:6px;justify-content:center}
+.msq .slot{width:56px;height:75px;flex:none;border:1.5px dashed rgba(255,255,255,.16);clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)}
+.msq .slot.cheio{border:none}
+.msq .mmold{position:relative;width:100%;height:100%;animation:msqPop .4s cubic-bezier(.3,1.5,.5,1)}
+@keyframes msqPop{0%{transform:scale(.55)}100%{transform:scale(1)}}
+.msq .mmold.sai{opacity:0;transition:opacity .4s ease}
+.msq .mmold .fr{position:absolute;inset:0;overflow:hidden;background:#0c0c12;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);box-shadow:inset 0 0 0 2px var(--tc)}
+.msq .mmold .fr::before{content:'';position:absolute;inset:4px;z-index:4;pointer-events:none;border:1px solid color-mix(in srgb,var(--tc) 60%,#fff 12%);opacity:.5;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)}
+.msq .mmold img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 0%}
+.msq .mmold .nm{position:absolute;bottom:0;left:0;right:0;z-index:5;text-align:center;font-family:'Rajdhani',var(--sans);font-weight:800;font-size:7.5px;letter-spacing:.04em;color:#fff;padding:8px 1px 3px;background:linear-gradient(transparent,color-mix(in srgb,var(--tc) 55%,#000 45%) 82%)}
+.msq .mmold .mb{position:absolute;z-index:6;width:3.5px;height:3.5px;border-radius:50%;background:var(--tc);box-shadow:0 0 4px 1px var(--tg);animation:msqMb 1.8s linear infinite;animation-delay:calc(var(--i)*-.3s)}
+@keyframes msqMb{0%,55%,100%{opacity:.2}25%{opacity:1}}
+/* Enquanto os 6 seguram (fase "cheio"): as micro-lâmpadas piscam como no brinde do sorteio real (.mmold.brinde .mb). */
+.msq .grupo.cheio .mb{animation:msqMbPisca .5s steps(2) infinite;animation-delay:calc(var(--i)*.08s)}
+@keyframes msqMbPisca{50%{opacity:.12}}
 .msq .baseluz{position:relative;margin:10px -14px 0;padding:9px 0 11px;overflow:hidden}
 .msq .baseluz::before{content:'';position:absolute;inset:0;background:radial-gradient(60% 130% at 30% 100%,rgba(212,160,23,.16),transparent 70%),radial-gradient(60% 130% at 70% 100%,rgba(139,92,246,.16),transparent 70%)}
 .msq .baseluz .fila{position:relative;display:flex;gap:5px;justify-content:center;overflow:hidden}
 .msq .baseluz .fila+.fila{margin-top:5px}
 .msq-legenda{margin:10px 0 0;font-size:13px;line-height:1.4;color:rgba(255,255,255,.72);text-align:center}
-@media (prefers-reduced-motion:reduce){.msq .luz{animation:none;opacity:.7}.msq .strip{animation:none;transition:none}}
+@media (prefers-reduced-motion:reduce){
+  .msq .luz{animation:none;opacity:.7}
+  .msq .mmold,.msq .grupo.cheio .mb,.msq .mmold .mb{animation:none}
+  .msq .mmold .mb{opacity:.5}
+  .msq .mmold.sai{transition:none}
+}

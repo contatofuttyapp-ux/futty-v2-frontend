@@ -25,7 +25,7 @@ const CORES_VALIDAS = ['verde', 'azul', 'vermelho', 'preto'];
 // em canvas com crossOrigin desligado, e servi-las de outra origem contaminaria
 // o canvas — o toBlob() passaria a lançar e o download da figurinha morria.
 // São 457 KB; não vale o risco.
-const PASTAS_REMOTAS = ['/avatares/', '/sorteio-assets/', '/sons/', '/dados/'];
+const PASTAS_REMOTAS = ['/avatares/', '/sorteio-assets/', '/sons/', '/dados/', '/onboarding/'];
 
 // Base da mídia no nativo. Na web fica vazio: mesma origem, como sempre foi.
 function baseAssets() {

@@ -6,6 +6,7 @@
 // RODADA 28 (LGPD art. 14): quem chega sem data de nascimento (Google/Apple não a trazem) passa
 // por "Quando você nasceu?" ANTES da foto. Menor de 13: o motor apaga a conta e o login explica.
 // RODADA 29D (dono): o passo 1 ganhou o mini sorteio ao vivo (MiniSorteio.jsx) e o ícone do app no lugar do F solto;
+// RODADA 29E (dono): o ícone de volta a 110 px flutuando, figurinhas fictícias caindo em dois times no mini sorteio, textos da landing.
 // quem chega pelo convite (bilhete no aparelho) começa na foto, com dois traços — o sorteio ela vê no time.
 import { useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
@@ -226,11 +227,12 @@ export default function Onboarding() {
         {passo === 1 && (
           <>
             <div className="futty-f-bob"><div className="futty-f-sway">
-              <FuttyLogo variant="icone" size={72} />
+              <FuttyLogo variant="icone" size={110} />
             </div></div>
             <Titulo>BEM-VINDO AO FUTTY</Titulo>
-            <div style={{ fontFamily: RAJ, fontSize: 14, letterSpacing: '0.14em', color: '#c9c2d6', textTransform: 'uppercase', textAlign: 'center', marginTop: 6 }}>
-              feito para quem <b style={{ color: '#f0c94a' }}>joga de verdade</b>
+            {/* Rodada 29E (dono): uma voz só — o mesmo subtítulo da landing (a pontuação final é o item 26 e vale para os dois). */}
+            <div style={{ fontFamily: RAJ, fontSize: 15, fontWeight: 700, letterSpacing: '0.1em', color: '#c9c2d6', textTransform: 'uppercase', textAlign: 'center', marginTop: 6 }}>
+              O seu time. <b style={{ color: '#f0c94a' }}>A sua figurinha.</b>
             </div>
             <MiniSorteio />
             <div style={{ width: '100%', maxWidth: 290, marginTop: 26 }}>
