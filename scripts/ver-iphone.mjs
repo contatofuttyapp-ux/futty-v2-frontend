@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3995,6 +3995,17 @@ try {
     const r = await cenaRodada29d(navegador);
     saida.rodada29d = r;
     console.log('\n[iphone] RODADA 29D — onboarding em 3 páginas com o mini sorteio, o F no ícone do app, aceite com boas-vindas (servidor local; contas de prova; escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29e')) {
+    const r = await cenaRodada29e(navegador);
+    saida.rodada29e = r;
+    console.log('\n[iphone] RODADA 29E — 1ª página do onboarding: ícone 110 px flutuando, figurinhas fictícias caindo em dois times, textos da landing (servidor local; conta de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7812,7 +7823,6 @@ async function cenaRodada29d(navegador) {
   mkdirSync(pasta, { recursive: true });
   const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
   const slug = fx.times.gratis.slug;
-  const NOMES = ['BRUNINHO', 'TIAGÃO', 'LÉO', 'PEDRÃO', 'NANDO', 'CAIO', 'RAFA', 'DUDU'];
   const erros = [];
   const verificacoes = [];
   const capturas = [];
@@ -7864,42 +7874,6 @@ async function cenaRodada29d(navegador) {
   };
   const bilheteDoConvite = () => { try { localStorage.setItem('futty_convite_pendente', JSON.stringify({ token: 'token-de-prova', em: Date.now() })); } catch { /* nada */ } };
 
-  // Lê o mini sorteio: lâmpadas, rolos (girando/travado, o nome VISÍVEL pela transformação da tira), legenda, tamanho, mídia.
-  const lerMini = (pagina) => pagina.evaluate(() => {
-    const m = document.querySelector('.msq');
-    if (!m) return null;
-    const cs = (el) => getComputedStyle(el);
-    const luzes = [...m.querySelectorAll('.luz')];
-    const visivel = (rolo) => {
-      const strip = rolo.querySelector('.strip');
-      const nomes = [...strip.querySelectorAll('.n')].map((n) => n.textContent.trim());
-      const mm = /matrix\(([^)]+)\)/.exec(cs(strip).transform);
-      const ty = mm ? parseFloat(mm[1].split(',')[5]) : 0;
-      const idx = Math.round(-ty / 40);
-      return { nome: nomes[((idx % nomes.length) + nomes.length) % nomes.length], ty: Math.round(ty), animacao: cs(strip).animationName };
-    };
-    const maq = m.querySelector('.maq').getBoundingClientRect();
-    return {
-      luzes: luzes.length,
-      animacao: cs(luzes[0]).animationName,
-      opacidades: [...new Set(luzes.map((l) => cs(l).opacity))],
-      rolos: [...m.querySelectorAll('.rolo')].map((r) => ({ time: r.classList.contains('ouro') ? 'ouro' : 'roxo', quem: r.querySelector('.quem')?.textContent.trim(), travado: r.classList.contains('travado'), escolhido: r.dataset.escolhido || null, ...visivel(r) })),
-      nomesNaTira: [...new Set([...m.querySelectorAll('.n')].map((n) => n.textContent.trim()))],
-      legenda: m.querySelector('.msq-legenda')?.textContent.trim(),
-      largura: Math.round(maq.width),
-      altura: Math.round(maq.height),
-      media: m.querySelectorAll('video,audio,canvas,picture,img,svg image').length,
-    };
-  });
-  // Espera a máquina ter exatamente `n` rolos travados (MutationObserver na classe; 0 = voltou a girar).
-  const esperarTravados = (pagina, n, limiteMs = 8000) => pagina.evaluate(([alvo, limite]) => new Promise((res) => {
-    const t0 = performance.now();
-    const conta = () => document.querySelectorAll('.msq .rolo.travado').length;
-    if (conta() === alvo) return res({ ok: true, ms: 0 });
-    const obs = new MutationObserver(() => { if (conta() === alvo) { obs.disconnect(); res({ ok: true, ms: Math.round(performance.now() - t0) }); } });
-    obs.observe(document.querySelector('.msq'), { attributes: true, subtree: true, attributeFilter: ['class'] });
-    setTimeout(() => { obs.disconnect(); res({ ok: conta() === alvo, ms: null }); }, limite);
-  }), [n, limiteMs]);
   const lerMarca = (pagina) => pagina.evaluate(() => ({
     icones: [...document.querySelectorAll('[data-marca="icone"]')].map((s) => Math.round(s.getBoundingClientRect().width)),
     soltos: document.querySelectorAll('svg[aria-label="Futty"]:not([data-marca="icone"])').length,
@@ -7922,43 +7896,17 @@ async function cenaRodada29d(navegador) {
     await contexto.close();
   }
 
-  // 2) Onboarding SEM convite: passo 1 com o ícone (72 px), 3 traços, o mini sorteio girando → travando → girando; depois foto e nome
+  // 2) Onboarding SEM convite: passo 1 com o ícone (110 px) e 3 traços (o mini sorteio é da cena rodada29e); depois foto e nome
   {
     const { contexto, pagina, escritas } = await abrir(fx.novato, 'onboarding', '/onboarding');
     await pagina.locator('.msq .maq').waitFor({ timeout: 30000 });
     await espera(300);
     const marca = await lerMarca(pagina);
     const prog = await lerProgresso(pagina);
-    const r = await lerMini(pagina);
     const t = await texto(pagina);
-    // ±2 px: o ícone flutua (bob/sway) e o getBoundingClientRect arredonda a 73 no meio do movimento.
-    verificar('passo 1: "BEM-VINDO AO FUTTY" com o ícone do app a 72 px (sem F solto) e 3 traços, o 1º aceso', /BEM-VINDO AO FUTTY/.test(t) && marca.icones.length === 1 && Math.abs(marca.icones[0] - 72) <= 2 && marca.soltos === 0 && prog.n === 3 && prog.acesos === 1, JSON.stringify({ marca, prog }));
-    verificar('o mini sorteio: caixa de ~290×160 na receita da máquina (réguas 22+22 e 24+24 = 92 lâmpadas em msqCalm)', r && Math.abs(r.largura - 290) <= 4 && r.altura >= 140 && r.altura <= 180 && r.luzes === 92 && r.animacao === 'msqCalm', JSON.stringify(r && { largura: r.largura, altura: r.altura, luzes: r.luzes, animacao: r.animacao }));
-    verificar('dois rolos, TIME OURO e TIME ROXO, girando (msqSpin) com os 8 nomes fictícios na tira', r && r.rolos.length === 2 && r.rolos[0].quem === 'Time Ouro' && r.rolos[1].quem === 'Time Roxo' && r.rolos.every((x) => !x.travado && x.animacao === 'msqSpin') && r.nomesNaTira.length === 8 && r.nomesNaTira.every((n) => NOMES.includes(n)), JSON.stringify(r && { rolos: r.rolos, nomes: r.nomesNaTira }));
-    verificar('legenda "Sorteio justo, ranking e a sua figurinha." e 0 KB de mídia', r && r.legenda === 'Sorteio justo, ranking e a sua figurinha.' && r.media === 0, JSON.stringify(r && { legenda: r.legenda, media: r.media }));
-    await capturar(pagina, 'onboarding-1-girando');
-    const t1 = await esperarTravados(pagina, 1, 4000);
-    const t2 = await esperarTravados(pagina, 2, 3000);
-    await espera(900); // a tira leva 0,7 s a assentar no nome
-    const travado = await lerMini(pagina);
-    verificar('os rolos travam um a um (ouro primeiro, roxo ~1 s depois) em dois nomes diferentes da lista', t1.ok && t2.ok && t2.ms >= 600 && t2.ms <= 1600 && travado.rolos.every((x) => x.travado && NOMES.includes(x.escolhido)) && travado.rolos[0].escolhido !== travado.rolos[1].escolhido, JSON.stringify({ t1, t2, escolhidos: travado.rolos.map((x) => x.escolhido) }));
-    verificar('o nome VISÍVEL em cada rolo é o sorteado (a tira assentou nele, sem animação)', travado.rolos.every((x) => x.nome === x.escolhido && x.animacao === 'none'), JSON.stringify(travado.rolos));
-    await capturar(pagina, 'onboarding-1-travado');
-    // Um ciclo inteiro medido na página (MutationObserver): recomeça a girar → trava os dois → recomeça de novo.
-    const ciclo = await pagina.evaluate(() => new Promise((res) => {
-      const conta = () => document.querySelectorAll('.msq .rolo.travado').length;
-      const marcas = [];
-      const alvos = [0, 2, 0];
-      const obs = new MutationObserver(() => {
-        if (conta() === alvos[marcas.length]) marcas.push(performance.now());
-        if (marcas.length === 3) { obs.disconnect(); res({ ok: true, seguraMs: Math.round(marcas[2] - marcas[1]), cicloMs: Math.round(marcas[2] - marcas[0]) }); }
-      });
-      obs.observe(document.querySelector('.msq'), { attributes: true, subtree: true, attributeFilter: ['class'] });
-      setTimeout(() => { obs.disconnect(); res({ ok: false, marcas: marcas.length }); }, 16000);
-    }));
-    verificar('segura o resultado ~2,6 s e recomeça: ciclo de 6 s em loop', ciclo.ok && ciclo.seguraMs >= 2000 && ciclo.seguraMs <= 3300 && ciclo.cicloMs >= 5500 && ciclo.cicloMs <= 6600, JSON.stringify(ciclo));
-    const som = await pagina.evaluate(() => window.__som);
-    verificar('sem som: nenhum Audio/AudioContext criado (não há gesto)', som.audio === 0 && som.contexto === 0, JSON.stringify(som));
+    // ±2 px: o ícone flutua (bob/sway) e o getBoundingClientRect arredonda no meio do movimento. O mini sorteio é da cena rodada29e.
+    verificar('passo 1: "BEM-VINDO AO FUTTY" com o ícone do app a 110 px (sem F solto) e 3 traços, o 1º aceso', /BEM-VINDO AO FUTTY/.test(t) && marca.icones.length === 1 && Math.abs(marca.icones[0] - 110) <= 2 && marca.soltos === 0 && prog.n === 3 && prog.acesos === 1, JSON.stringify({ marca, prog }));
+    await capturar(pagina, 'onboarding-1');
     await pagina.getByRole('button', { name: /^Começar$/ }).tap();
     await pagina.getByText(/SUA FIGURINHA/).first().waitFor({ timeout: 15000 });
     const prog2 = await lerProgresso(pagina);
@@ -8003,20 +7951,6 @@ async function cenaRodada29d(navegador) {
     await contexto.close();
   }
 
-  // 4) prefers-reduced-motion: rolos parados num resultado, lâmpadas a 0,7, nada gira
-  {
-    const { contexto, pagina } = await abrir(fx.novato, 'onboarding-reduzido', '/onboarding', { extra: { reducedMotion: 'reduce' } });
-    await pagina.locator('.msq .maq').waitFor({ timeout: 30000 });
-    await espera(600);
-    const r = await lerMini(pagina);
-    await espera(3200);
-    const depois = await lerMini(pagina);
-    verificar('reduced-motion: as 92 lâmpadas paradas a 0,7 e os dois rolos travados num resultado da lista, sem animação', r.luzes === 92 && r.animacao === 'none' && r.opacidades.length === 1 && Number(r.opacidades[0]) === 0.7 && r.rolos.every((x) => x.travado && x.animacao === 'none' && NOMES.includes(x.escolhido) && x.nome === x.escolhido), JSON.stringify({ animacao: r.animacao, opacidades: r.opacidades, rolos: r.rolos }));
-    verificar('reduced-motion: 3 s depois continua parado no mesmo resultado (sem ciclo)', depois.rolos.every((x, i) => x.travado && x.escolhido === r.rolos[i].escolhido), JSON.stringify(depois.rolos.map((x) => x.escolhido)));
-    await capturar(pagina, 'onboarding-reduzido');
-    await contexto.close();
-  }
-
   // 5) Aceite de pedido: o card do Início leva ao time com as boas-vindas; a rota ?entrou=1 (notificação) também
   {
     const { contexto, pagina, escritas } = await abrir(fx.membroFoto, 'aceite', '/home', { antes: comPedidoAceito });
@@ -8036,6 +7970,198 @@ async function cenaRodada29d(navegador) {
     await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
     const variante = await pagina.locator('.bv').getAttribute('data-variante').catch(() => null);
     verificar('/equipa/:slug?entrou=1 (o link da notificação) abre as boas-vindas do convidado', variante === 'convidado', String(variante));
+    await contexto.close();
+  }
+  return { verificacoes, capturas, erros, pasta };
+}
+
+// ─── Cena "rodada29e" (1-out): a 1ª página do onboarding — o ícone do app a 110 px flutuando, os textos da landing, e o mini ──
+// sorteio com as 6 figurinhas FICTÍCIAS caindo em dois times (TIME A ouro / TIME B roxo) nas molduras do sorteio real: o
+// ciclo inteiro medido na página (vazio → 6 entradas alternando A/B a cada 0,45 s → cheio com as micro-lâmpadas piscando por
+// 2,5 s → esvazia → recomeça noutra ordem), os bustos servidos de /onboarding/ (112×150 WebP, ≤ 6 KB), sem som, e o
+// movimento reduzido (os 6 no lugar, parados). Conta de prova `novato` (prova-rodada29b.js). Só servidor LOCAL.
+async function cenaRodada29e(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29e só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29e');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const NOMES = ['BRUNINHO', 'TIAGÃO', 'LÉO', 'PEDRÃO', 'RAFA', 'DUDU'];
+  const IDS = ['bruninho', 'tiagao', 'leo', 'pedrao', 'rafa', 'dudu'];
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `r29e-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const aceitarCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+  const abrir = async (rotulo, { extra = {} } = {}) => {
+    const contexto = await novoContexto(navegador, fx.novato, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo', ...extra } });
+    await contexto.addInitScript(() => {
+      window.__som = { audio: 0, contexto: 0 };
+      const A = window.Audio;
+      window.Audio = function (...a) { window.__som.audio += 1; return new A(...a); };
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (C) { const N = function (...a) { window.__som.contexto += 1; return new C(...a); }; window.AudioContext = N; window.webkitAudioContext = N; }
+    });
+    await travarEscritas(contexto, () => null);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    await pagina.goto(`${BASE}/onboarding`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await pagina.locator('.msq .maq').waitFor({ timeout: 30000 });
+    return { contexto, pagina };
+  };
+  // Lê a página: textos, o ícone (tamanho e flutuação), a máquina (lâmpadas, grupos, vagas, molduras, imagens), a fase.
+  const ler = (pagina) => pagina.evaluate(() => {
+    const cs = (el) => getComputedStyle(el);
+    const icone = document.querySelector('[data-marca="icone"]');
+    const bob = icone?.closest('.futty-f-bob');
+    const sway = icone?.closest('.futty-f-sway');
+    const m = document.querySelector('.msq');
+    const luzes = m ? [...m.querySelectorAll('.luz')] : [];
+    const maq = m?.querySelector('.maq')?.getBoundingClientRect();
+    const grupos = m ? [...m.querySelectorAll('.grupo')].map((g) => ({
+      time: g.dataset.time,
+      nome: g.querySelector('.ghead')?.textContent.trim(),
+      cor: cs(g).getPropertyValue('--tc').trim(),
+      vagas: [...g.querySelectorAll('.slot')].map((s) => {
+        const mm = s.querySelector('.mmold');
+        const img = mm?.querySelector('img');
+        const mb = mm?.querySelector('.mb');
+        return {
+          cheia: s.classList.contains('cheio'),
+          id: mm?.dataset.figurinha || null,
+          nome: mm?.querySelector('.nm')?.textContent.trim() || null,
+          src: img?.getAttribute('src') || null,
+          natural: img ? [img.naturalWidth, img.naturalHeight] : null,
+          pop: mm ? cs(mm).animationName : null,
+          opacidade: mm ? cs(mm).opacity : null,
+          mb: mb ? { animacao: cs(mb).animationName, opacidade: cs(mb).opacity } : null,
+        };
+      }),
+    })) : [];
+    return {
+      texto: document.body.textContent,
+      icone: icone ? { largura: Math.round(icone.getBoundingClientRect().width), bob: bob ? cs(bob).animationName : null, sway: sway ? cs(sway).animationName : null } : null,
+      fase: m?.dataset.fase, ciclo: Number(m?.dataset.ciclo),
+      luzes: luzes.length, luzAnim: luzes[0] ? cs(luzes[0]).animationName : null, luzOpacidades: [...new Set(luzes.map((l) => cs(l).opacity))],
+      largura: maq ? Math.round(maq.width) : null, altura: maq ? Math.round(maq.height) : null,
+      grupos, legenda: m?.querySelector('.msq-legenda')?.textContent.trim(),
+      slots: m ? m.querySelectorAll('.slot').length : 0, cheios: m ? m.querySelectorAll('.slot.cheio .mmold').length : 0,
+      media: m ? m.querySelectorAll('video,audio,canvas').length : 0,
+    };
+  });
+  const idsPorVaga = (r) => r.grupos.map((g) => g.vagas.map((v) => v.id));
+  const esperarFase = (pagina, fase, limite = 12000) => pagina.waitForFunction((f) => document.querySelector('.msq')?.dataset.fase === f, fase, { timeout: limite }).then(() => true, () => false);
+
+  // 1) textos, ícone, máquina — e um ciclo inteiro medido na página (MutationObserver)
+  {
+    const { contexto, pagina } = await abrir('onboarding');
+    await espera(300);
+    const r = await ler(pagina);
+    verificar('título "BEM-VINDO AO FUTTY", subtítulo da landing "O seu time. A sua figurinha." e "joga de verdade" fora', /BEM-VINDO AO FUTTY/.test(r.texto) && /O seu time\. A sua figurinha\./i.test(r.texto) && !/joga de verdade/i.test(r.texto), r.texto.replace(/\s+/g, ' ').slice(0, 120));
+    verificar('legenda "Sorteio justo, ranking e figurinha de colecionador."', r.legenda === 'Sorteio justo, ranking e figurinha de colecionador.', String(r.legenda));
+    verificar('o ícone do app a 110 px, flutuando (futty-f-bob + futty-f-sway)', r.icone && Math.abs(r.icone.largura - 110) <= 2 && r.icone.bob === 'futtyFBob' && r.icone.sway === 'futtyFSway', JSON.stringify(r.icone));
+    verificar('a máquina (290 de largura, 92 lâmpadas em msqCalm) com dois grupos, TIME A ouro e TIME B roxo, 3 vagas cada', Math.abs(r.largura - 290) <= 4 && r.luzes === 92 && r.luzAnim === 'msqCalm' && r.grupos.length === 2 && r.grupos[0].nome === 'Time A' && r.grupos[1].nome === 'Time B' && r.grupos[0].cor === '#d4a017' && r.grupos[1].cor === '#8b5cf6' && r.slots === 6 && r.grupos.every((g) => g.vagas.length === 3), JSON.stringify({ largura: r.largura, altura: r.altura, luzes: r.luzes, luzAnim: r.luzAnim, grupos: r.grupos.map((g) => [g.nome, g.cor, g.vagas.length]) }));
+    // Um ciclo inteiro: cada mudança de (n molduras, fase, ciclo) com o instante e o time da moldura que acabou de entrar.
+    const ciclo = await pagina.evaluate(() => new Promise((res) => {
+      const m = document.querySelector('.msq');
+      const estado = () => ({ n: m.querySelectorAll('.slot.cheio .mmold').length, fase: m.dataset.fase, ciclo: Number(m.dataset.ciclo) });
+      const ids = () => [...m.querySelectorAll('.grupo')].map((g) => [...g.querySelectorAll('.slot')].map((s) => s.querySelector('.mmold')?.dataset.figurinha || null));
+      const log = [];
+      let vistos = new Set();
+      let ultimo = JSON.stringify(estado());
+      const anotar = () => {
+        const e = estado();
+        const chave = JSON.stringify(e);
+        if (chave === ultimo) return;
+        ultimo = chave;
+        const agora = new Set([...m.querySelectorAll('.slot.cheio .mmold')].map((x) => x.dataset.figurinha));
+        const novo = [...agora].find((id) => !vistos.has(id));
+        vistos = agora;
+        log.push({ t: Math.round(performance.now()), ...e, novo: novo || null, time: novo ? m.querySelector(`.mmold[data-figurinha="${novo}"]`)?.closest('.grupo')?.dataset.time : null, ids: ids() });
+        // para quando o 2º ciclo observado ficou cheio (dá para comparar as ordens)
+        const cheios = log.filter((x) => x.fase === 'cheio' && x.n === 6);
+        if (cheios.length >= 2 && cheios[1].ciclo > cheios[0].ciclo) { obs.disconnect(); res({ ok: true, log }); }
+      };
+      const obs = new MutationObserver(anotar);
+      obs.observe(m, { attributes: true, childList: true, subtree: true, attributeFilter: ['class', 'data-fase', 'data-ciclo'] });
+      setTimeout(() => { obs.disconnect(); res({ ok: false, log }); }, 24000);
+    }));
+    const log = ciclo.log;
+    const primeiroCheio = log.findIndex((x) => x.fase === 'cheio' && x.n === 6);
+    const k = log[primeiroCheio]?.ciclo;
+    const doCiclo = (c) => log.filter((x) => x.ciclo === c);
+    const entradas = doCiclo(k + 1).filter((x) => x.fase === 'entrando' || (x.novo && x.n >= 1));
+    const vazio1 = doCiclo(k + 1).find((x) => x.fase === 'vazio' && x.n === 0);
+    const cheio1 = doCiclo(k + 1).find((x) => x.fase === 'cheio' && x.n === 6);
+    const saindo0 = doCiclo(k).find((x) => x.fase === 'saindo');
+    const vazio0 = doCiclo(k).filter((x) => x.fase === 'vazio' && x.n === 0).pop();
+    const cheio0 = log[primeiroCheio];
+    const passos = entradas.slice(1).map((e, i) => e.t - entradas[i].t);
+    const medidas = {
+      ok: ciclo.ok, ciclos: [k, k + 1],
+      entradas: entradas.length, times: entradas.map((e) => e.time), passos,
+      vazioAntesDa1a: entradas[0] && vazio1 ? entradas[0].t - vazio1.t : null,
+      popDaUltima: cheio1 && entradas[5] ? cheio1.t - entradas[5].t : null,
+      segura: saindo0 && cheio0 ? saindo0.t - cheio0.t : null,
+      fade: vazio0 && saindo0 ? vazio0.t - saindo0.t : null,
+      periodo: cheio1 && cheio0 ? cheio1.t - cheio0.t : null,
+      ordem0: cheio0?.ids, ordem1: cheio1?.ids,
+    };
+    verificar('as 6 figurinhas entram uma a uma, alternando TIME A / TIME B, a cada ~0,45 s (vagas vazias ~0,6 s antes da 1ª)', ciclo.ok && medidas.entradas === 6 && medidas.times.join('') === 'ABABAB' && passos.every((p) => p >= 300 && p <= 650) && medidas.vazioAntesDa1a >= 450 && medidas.vazioAntesDa1a <= 950, JSON.stringify({ entradas: medidas.entradas, times: medidas.times, passos, vazio: medidas.vazioAntesDa1a }));
+    verificar('seguram ~2,5 s cheias, esvaziam em ~0,4 s e o ciclo dá ~7 s', medidas.segura >= 2200 && medidas.segura <= 2950 && medidas.fade >= 250 && medidas.fade <= 700 && medidas.periodo >= 6300 && medidas.periodo <= 7500, JSON.stringify({ segura: medidas.segura, fade: medidas.fade, periodo: medidas.periodo, pop: medidas.popDaUltima }));
+    verificar('cada ciclo cheio tem as 6 figurinhas (3 por time) e o ciclo seguinte vem noutra ordem', medidas.ordem0 && medidas.ordem1 && medidas.ordem0.flat().filter(Boolean).length === 6 && medidas.ordem1.flat().filter(Boolean).length === 6 && new Set(medidas.ordem0.flat()).size === 6 && JSON.stringify(medidas.ordem0) !== JSON.stringify(medidas.ordem1), JSON.stringify({ ordem0: medidas.ordem0, ordem1: medidas.ordem1 }));
+    // Na fase cheia: as molduras do sorteio real com as 6 figurinhas (nome, imagem 112×150 de /onboarding/) e as micro-lâmpadas piscando.
+    await esperarFase(pagina, 'cheio');
+    await espera(150);
+    const cheio = await ler(pagina);
+    const vagas = cheio.grupos.flatMap((g) => g.vagas);
+    verificar('fase cheia: 6 molduras, cada uma com o nome fictício e o busto de /onboarding/<id>.webp (112×150 carregado)', cheio.cheios === 6 && vagas.every((v) => v.cheia && IDS.includes(v.id) && NOMES.includes(v.nome) && v.src?.endsWith(`/onboarding/${v.id}.webp`) && v.natural?.[0] === 112 && v.natural?.[1] === 150) && new Set(vagas.map((v) => v.id)).size === 6, JSON.stringify(vagas.map((v) => [v.id, v.nome, v.natural])));
+    verificar('fase cheia: as micro-lâmpadas das molduras piscam (msqMbPisca) e a moldura está opaca', vagas.every((v) => v.mb?.animacao === 'msqMbPisca' && Number(v.opacidade) === 1), JSON.stringify(vagas.map((v) => [v.mb?.animacao, v.opacidade])));
+    await capturar(pagina, 'onboarding-cheio');
+    await esperarFase(pagina, 'saindo', 4000);
+    await espera(200);
+    const saindo = await ler(pagina);
+    verificar('fase saindo: as molduras esvaziam em fade (opacidade a descer)', saindo.fase === 'saindo' && saindo.grupos.flatMap((g) => g.vagas).every((v) => Number(v.opacidade) < 1), JSON.stringify(saindo.grupos.flatMap((g) => g.vagas).map((v) => v.opacidade)));
+    await esperarFase(pagina, 'vazio', 2000);
+    await espera(100);
+    const vazio = await ler(pagina);
+    verificar('fase vazia: 6 vagas tracejadas, nenhuma moldura', vazio.fase === 'vazio' && vazio.cheios === 0 && vazio.slots === 6, JSON.stringify({ fase: vazio.fase, cheios: vazio.cheios }));
+    await capturar(pagina, 'onboarding-vazio');
+    await pagina.waitForFunction(() => document.querySelectorAll('.msq .slot.cheio .mmold').length === 3, null, { timeout: 6000 }).catch(() => {});
+    const entrando = await ler(pagina);
+    verificar('entrando: a 3ª moldura "pipoca" (msqPop) e as micro-lâmpadas seguem no ritmo calmo (msqMb)', entrando.fase === 'entrando' && entrando.cheios === 3 && entrando.grupos.flatMap((g) => g.vagas).filter((v) => v.cheia).every((v) => v.pop === 'msqPop' && v.mb?.animacao === 'msqMb'), JSON.stringify({ fase: entrando.fase, cheios: entrando.cheios, pops: entrando.grupos.flatMap((g) => g.vagas).filter((v) => v.cheia).map((v) => [v.pop, v.mb?.animacao]) }));
+    await capturar(pagina, 'onboarding-entrando');
+    // Os 6 arquivos: servidos pelo site, WebP, ≤ 6 KB cada.
+    const arquivos = await pagina.evaluate(async (ids) => Promise.all(ids.map(async (id) => {
+      const r = await fetch(`/onboarding/${id}.webp`, { cache: 'no-store' });
+      const b = await r.blob();
+      return { id, status: r.status, tipo: b.type, bytes: b.size };
+    })), IDS);
+    verificar('os 6 bustos em /onboarding/: 200, image/webp, ≤ 6 KB cada', arquivos.every((a) => a.status === 200 && a.tipo === 'image/webp' && a.bytes > 0 && a.bytes <= 6144), JSON.stringify(arquivos.map((a) => `${a.id} ${a.bytes} B`)));
+    const som = await pagina.evaluate(() => window.__som);
+    verificar('sem som: nenhum Audio/AudioContext criado (não há gesto); sem vídeo/áudio/canvas na máquina', som.audio === 0 && som.contexto === 0 && vazio.media === 0, JSON.stringify(som));
+    await contexto.close();
+  }
+
+  // 2) prefers-reduced-motion: os 6 no lugar (a ordem natural), parados, e 3,5 s depois tudo igual (sem ciclo)
+  {
+    const { contexto, pagina } = await abrir('onboarding-reduzido', { extra: { reducedMotion: 'reduce' } });
+    await espera(500);
+    const r = await ler(pagina);
+    await espera(3500);
+    const depois = await ler(pagina);
+    const vagas = r.grupos.flatMap((g) => g.vagas);
+    verificar('reduced-motion: os 6 já no lugar na ordem natural (A: bruninho, léo, rafa · B: tiagão, pedrão, dudu), fase cheia, ciclo 0', r.fase === 'cheio' && r.ciclo === 0 && r.cheios === 6 && JSON.stringify(idsPorVaga(r)) === JSON.stringify([['bruninho', 'leo', 'rafa'], ['tiagao', 'pedrao', 'dudu']]), JSON.stringify({ fase: r.fase, ciclo: r.ciclo, ids: idsPorVaga(r) }));
+    verificar('reduced-motion: nada se mexe — molduras sem pop, micro-lâmpadas paradas a 0,5, lâmpadas a 0,7, ícone sem flutuar', vagas.every((v) => v.pop === 'none' && v.mb?.animacao === 'none' && Number(v.mb?.opacidade) === 0.5) && r.luzAnim === 'none' && r.luzOpacidades.length === 1 && Number(r.luzOpacidades[0]) === 0.7 && r.icone?.bob === 'none' && r.icone?.sway === 'none', JSON.stringify({ pops: [...new Set(vagas.map((v) => v.pop))], mb: [...new Set(vagas.map((v) => `${v.mb?.animacao}/${v.mb?.opacidade}`))], luz: [r.luzAnim, r.luzOpacidades], icone: r.icone }));
+    verificar('reduced-motion: 3,5 s depois continua igual (sem ciclo)', depois.fase === 'cheio' && depois.ciclo === 0 && JSON.stringify(idsPorVaga(depois)) === JSON.stringify(idsPorVaga(r)), JSON.stringify({ fase: depois.fase, ciclo: depois.ciclo }));
+    await capturar(pagina, 'onboarding-reduzido');
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
