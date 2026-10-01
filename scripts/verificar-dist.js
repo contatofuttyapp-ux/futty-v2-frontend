@@ -131,10 +131,14 @@ function pesoDoArranque(html) {
 
   console.log(`\n[verificar-dist] peso do arranque (entrada + modulepreload), ${linhas.length} chunk(s):`);
   for (const l of linhas) {
-    console.log(`   ${String(Math.round(l.bytes / 1024)).padStart(4)} KiB  ${l.nome}`);
+    console.log(`   ${String(l.bytes).padStart(8)} B  ${l.nome}`);
   }
   console.log(`   ${'—'.repeat(4)}`);
   console.log(`   ${kib.toFixed(1)} KiB (${(total / 1000).toFixed(1)} kB) · teto ${TETO_ARRANQUE_KIB} KiB`);
+  // Em bytes exatos: o arredondado em KiB esconde os últimos ~100 B, e é a folga
+  // em bytes que as rodadas negociam (Rodada 29B). Formato fixo, fácil de grepar.
+  const tetoBytes = TETO_ARRANQUE_KIB * 1024;
+  console.log(`   ARRANQUE_BYTES=${total} TETO_BYTES=${tetoBytes} FOLGA_BYTES=${tetoBytes - total}`);
 
   if (kib > TETO_ARRANQUE_KIB) {
     console.error(`\n[verificar-dist] ❌ o arranque passou do teto: ${kib.toFixed(1)} KiB > ${TETO_ARRANQUE_KIB} KiB.`);

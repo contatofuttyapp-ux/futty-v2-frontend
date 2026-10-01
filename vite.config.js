@@ -99,7 +99,15 @@ function manualChunks(id) {
   // a transição de página é CSS. Não recriar um grupo "vendor-motion" aqui — um
   // grupo do manualChunks é um chunk forçado e, na Velocidade 8, arrastou 55
   // chunks (e o modulepreload do arranque) só por causa do `react/jsx-runtime`.
-  if (p.includes('/lucide-react/')) return 'vendor-icons'
+  // Rodada 29B (D.1): NÃO há grupo "vendor-icons". Ele existia para o lucide ter chunk
+  // próprio, mas o grupo arrastava o núcleo CJS do React (react/cjs/react.production.js)
+  // para dentro de si — e, como o arranque importa o React, o chunk inteiro (16 KiB:
+  // núcleo do React + a base do lucide + ~28 ícones de telas lazy) ia no modulepreload
+  // do index.html. Nenhum módulo do arranque usa o lucide (a barra de baixo usa
+  // components/Icon.jsx, SVG de /public/icons). Sem o grupo, o núcleo do React volta
+  // ao vendor-react e cada ícone cai no chunk da tela que o usa: −8,5 KiB no arranque.
+  // Não recriar o grupo; se um módulo do arranque passar a importar lucide-react, o
+  // verificar-dist acusa no peso do arranque.
   if (p.includes('/recharts/') || p.includes('/d3-') || p.includes('/victory-vendor/')) return 'vendor-charts'
   if (p.includes('/lottie-react/') || p.includes('/lottie-web/')) return 'vendor-lottie'
   return undefined
