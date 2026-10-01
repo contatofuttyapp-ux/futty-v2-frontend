@@ -43,6 +43,8 @@ import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import SeloHonra from '../components/SeloHonra';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
+import EnquadroMiniatura from '../components/EnquadroMiniatura';
+import { tipoDoAvatar } from '../lib/enquadroAvatar';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -1839,6 +1841,20 @@ export default function Figurinha() {
                 em duas passadas. Duas legendas de tempo diferentes ao mesmo
                 tempo (30s aqui, 45s ali) confundia mais do que ajudava. */}
           </div>
+
+          {/* Rodada 29B (bloco 3, E) — "Como você aparece no app": o editor da MINIATURA (arrastar + zoom, prévia ao vivo,
+              a mesma moldura do Início/ranking/sorteio). Só para o que é arquivo nosso (foto ou figurinha, pelo proxy):
+              a foto do Google e as silhuetas não têm janela para enquadrar. Salvar vale para todas as miniaturas. */}
+          {!fotoLocal && !uploadFoto && !gerandoIA && String(jogador.avatar_url || '').includes('/api/media/') && tipoDoAvatar(jogador.avatar_url) !== 'outro' ? (
+            <EnquadroMiniatura
+              avatarUrl={jogador.avatar_url}
+              onSalvo={(url, restaurou) => {
+                setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: url } } : m));
+                aplicarNoPerfilGlobal({ avatar_url: url });
+                setToast({ tipo: 'success', mensagem: restaurou ? 'Miniatura de volta ao padrão' : 'Miniatura salva!' });
+              }}
+            />
+          ) : null}
 
           {/* VIRE BRILHANTE ✨ (SPEC-FIGURINHA-3 §3/§7) — o convite do card com a
               FOTO para quem ainda não tem geração. Um exemplo FIXO (o modelo

@@ -25,7 +25,9 @@ export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, us
   // do px CSS cobre as telas de 2x/3x sem ficar borrado; acima de 128 CSS já é
   // cartão grande, e aí vale o degrau de 512.
   const px = size || (lg ? PX.lg : md ? PX.md : sm ? PX.sm : PX.base);
-  const src = bruto ? urlImagem(bruto, px <= 64 ? 128 : px <= 128 ? 256 : 512) : null;
+  // Rodada 29B (E): a caixa é SEMPRE quadrada (.pavatar), então o quadrado vem do motor (`sq=1`): é o do TOPO, o mesmo que o
+  // CSS (object-position: top) mostrava — e é nele que o motor aplica o recorte que a pessoa escolheu para a miniatura.
+  const src = bruto ? urlImagem(bruto, px <= 64 ? 128 : px <= 128 ? 256 : 512, { quadrado: true }) : null;
 
   const cls = [
     'pavatar',
