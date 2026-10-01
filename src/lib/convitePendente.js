@@ -11,6 +11,16 @@ export function guardarConvitePendente(token, agora = Date.now()) {
   try { localStorage.setItem(CHAVE, JSON.stringify({ token: String(token), em: agora })); } catch { /* modo privado: sem bilhete */ }
 }
 
+/** Só espreita: há bilhete válido? (Rodada 29D: o Onboarding pula o passo 1 para quem vem do convite; o Início é quem o toma.) */
+export function temConvitePendente(agora = Date.now()) {
+  try {
+    const bruto = localStorage.getItem(CHAVE);
+    if (!bruto) return false;
+    const { token, em } = JSON.parse(bruto);
+    return !!token && Number.isFinite(em) && agora - em <= VALIDADE_MS;
+  } catch { return false; }
+}
+
 /** Lê e APAGA o bilhete. Devolve o token, ou null se não há (ou se já passou da validade). */
 export function tomarConvitePendente(agora = Date.now()) {
   try {

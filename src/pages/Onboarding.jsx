@@ -5,16 +5,20 @@
 // "Deixar para depois" só aparece aos ~4s; quem salta leva o card persistente no Início.
 // RODADA 28 (LGPD art. 14): quem chega sem data de nascimento (Google/Apple não a trazem) passa
 // por "Quando você nasceu?" ANTES da foto. Menor de 13: o motor apaga a conta e o login explica.
+// RODADA 29D (dono): o passo 1 ganhou o mini sorteio ao vivo (MiniSorteio.jsx) e o ícone do app no lugar do F solto;
+// quem chega pelo convite (bilhete no aparelho) começa na foto, com dois traços — o sorteio ela vê no time.
 import { useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { enquadroAvatar } from '../lib/enquadroAvatar';
+import { temConvitePendente } from '../lib/convitePendente';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
 import { dataDeNascimentoValida } from '../utils/idade';
 import { usePerfil } from '../context/PerfilContext';
 import { useAuth } from '../hooks/useAuth';
 import FuttyLogo from '../components/FuttyLogo';
+import MiniSorteio from '../components/MiniSorteio';
 import CropModal from '../components/CropModal';
 import Toast from '../components/Toast';
 import '../styles/app.css';
@@ -76,11 +80,16 @@ function MolduraFoto({ src, size = 170 }) {
 export default function Onboarding() {
   const { perfil, hidratar, recarregar: recarregarPerfil } = usePerfil();
   const { signOut } = useAuth();
-  const [passo, setPasso] = useState(1); // 1 · 'nascimento' · 2 · 3
+  // Quem vem do convite pula o passo 1 (boas-vindas + mini sorteio) e vê só foto → nome.
+  const [deConvite] = useState(() => temConvitePendente());
+  const [passo, setPasso] = useState(() => (deConvite ? 2 : 1)); // 1 · 2 (foto; antes dela a data de nascimento, se faltar) · 3
   const [nascimento, setNascimento] = useState('');
   const [salvandoNascimento, setSalvandoNascimento] = useState(false);
   const [erroNascimento, setErroNascimento] = useState('');
-  const precisaNascimento = !perfil?.user?.birthdate;
+  const [nascimentoOk, setNascimentoOk] = useState(false);
+  // Só decide com o perfil carregado: antes dele, a foto (o caso comum) em vez de um relance da pergunta.
+  const precisaNascimento = !!perfil && !perfil.user?.birthdate && !nascimentoOk;
+  const mostrarNascimento = passo === 2 && precisaNascimento;
   const [cropFile, setCropFile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null); // preenchida após upload
   const [enviando, setEnviando] = useState(false);
@@ -146,10 +155,10 @@ export default function Onboarding() {
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ birthdate: v }) });
       if (perfil) hidratar({ ...perfil, user: { ...perfil.user, birthdate: v } });
-      setPasso(2);
+      setNascimentoOk(true);
     } catch (e) {
       if (e.code === 'NASCIMENTO_JA_DEFINIDO') {
-        setPasso(2); // a data já veio do cadastro por e-mail
+        setNascimentoOk(true); // a data já veio do cadastro por e-mail
       } else if (e.code === 'MENOR_DE_13') {
         try { sessionStorage.setItem('futty_menor13', '1'); } catch { /* sem o aviso */ }
         await signOut();
@@ -199,10 +208,11 @@ export default function Onboarding() {
     }
   }
 
+  const passos = deConvite ? [2, 3] : [1, 2, 3];
   const prog = (
-    <div style={{ position: 'absolute', top: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 8, zIndex: 3 }}>
-      {[1, 2, 3].map((n) => {
-        const aceso = n <= (passo === 'nascimento' ? 1 : passo);
+    <div data-progresso style={{ position: 'absolute', top: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 8, zIndex: 3 }}>
+      {passos.map((n) => {
+        const aceso = n <= (mostrarNascimento ? passos[0] : passo);
         return <i key={n} style={{ width: 26, height: 3, background: aceso ? 'linear-gradient(90deg,#d4a017,#f0c94a)' : 'rgba(255,255,255,0.12)', boxShadow: aceso ? '0 0 8px rgba(212,160,23,0.5)' : 'none' }} />;
       })}
     </div>
@@ -216,19 +226,20 @@ export default function Onboarding() {
         {passo === 1 && (
           <>
             <div className="futty-f-bob"><div className="futty-f-sway">
-              <FuttyLogo variant="flat" size={110} />
+              <FuttyLogo variant="icone" size={72} />
             </div></div>
             <Titulo>BEM-VINDO AO FUTTY</Titulo>
             <div style={{ fontFamily: RAJ, fontSize: 14, letterSpacing: '0.14em', color: '#c9c2d6', textTransform: 'uppercase', textAlign: 'center', marginTop: 6 }}>
               feito para quem <b style={{ color: '#f0c94a' }}>joga de verdade</b>
             </div>
-            <div style={{ width: '100%', maxWidth: 290, marginTop: 38 }}>
-              <Cta cheio onClick={() => setPasso(precisaNascimento ? 'nascimento' : 2)}>Começar</Cta>
+            <MiniSorteio />
+            <div style={{ width: '100%', maxWidth: 290, marginTop: 26 }}>
+              <Cta cheio onClick={() => setPasso(2)}>Começar</Cta>
             </div>
           </>
         )}
 
-        {passo === 'nascimento' && (
+        {mostrarNascimento && (
           <>
             <Titulo size={24}>QUANDO VOCÊ<br />NASCEU?</Titulo>
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
@@ -256,7 +267,7 @@ export default function Onboarding() {
           </>
         )}
 
-        {passo === 2 && (
+        {passo === 2 && !mostrarNascimento && (
           <>
             <MolduraFoto src={avatarUrl ? urlAsset(avatarUrl) : null} />
             <Titulo size={24}>SUA FIGURINHA<br />COMEÇA AQUI</Titulo>

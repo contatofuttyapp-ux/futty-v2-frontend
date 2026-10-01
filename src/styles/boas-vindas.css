@@ -7,7 +7,6 @@
 .bv-frase{margin:0;max-width:30em;font-size:14px;line-height:1.5;color:rgba(255,255,255,.8);text-wrap:balance}
 .bv-posicao{display:flex;gap:8px;justify-content:center}
 .bv-cta{width:100%;height:50px;font-size:16px}
-.bv-convite{margin:-2px 0 0;font-size:12px;line-height:1.45;color:rgba(255,255,255,.55)}
 
 /* ── A MÁQUINA (receita da .maq do sorteio) ── */
 .bv .maq{position:relative;width:100%;background:linear-gradient(180deg,#0d0b14,#08070d);border:1px solid rgba(212,160,23,.4);padding:12px 14px 0;box-shadow:0 0 16px 3px rgba(245,224,112,.16);clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
@@ -51,12 +50,10 @@
 @keyframes bvBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes bvShine{0%,100%{filter:drop-shadow(0 0 6px rgba(245,224,112,.8)) drop-shadow(0 0 15px rgba(212,160,23,.5))}50%{filter:drop-shadow(0 0 12px rgba(255,240,170,1)) drop-shadow(0 0 24px rgba(212,160,23,.72))}}
 
-/* ── A IMAGEM na janela quadrada: logo do time, foto da pessoa ou o F real, a 88% e flutuando com aura. A foto leva o
-   chanfro da casa no <img>; a aura fica no .aura por fora, senão o clip-path cortava o brilho. ── */
+/* ── O LOGO na janela quadrada, a 88% e flutuando com aura (.aura por fora do <img>, para nada cortar o brilho). ── */
 .bv .logo-wrap{display:grid;place-items:center;width:100%;height:100%;animation:bvBob 4.6s cubic-bezier(.45,0,.55,1) infinite}
 .bv .aura{display:grid;width:88%;height:88%;filter:drop-shadow(0 0 10px rgba(212,160,23,.45));animation:bvAura 2.8s ease-in-out infinite}
 .bv .aura img{display:block;width:100%;height:100%;min-width:0;min-height:0;object-fit:contain}
-.bv .aura img.foto{object-fit:cover;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
 @keyframes bvAura{0%,100%{filter:drop-shadow(0 0 6px rgba(212,160,23,.3))}50%{filter:drop-shadow(0 0 16px rgba(212,160,23,.6))}}
 
 @media (prefers-reduced-motion:reduce){.bv .luz,.bv .luz::after,.bv .letreiro,.bv .logo-wrap,.bv .aura{animation:none!important}.bv .luz{opacity:.7}}

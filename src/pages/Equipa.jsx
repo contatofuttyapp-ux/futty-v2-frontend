@@ -109,7 +109,9 @@ export default function Equipa() {
   // tocou "Ir para o time" (CriarEquipa manda `state.criouAgora`).
   const [onboardingDispensado, setOnboardingDispensado] = useState(false);
   const onboardingKey = team ? `futty_onboarding_${team.id}` : null;
-  const entrouAgora = !!location.state?.primeiraEntrada;
+  // Rodada 29D: quem foi aceito num pedido também chega como primeira entrada — pelo card do Início (state) ou pela
+  // notificação do motor (`/equipa/:slug?entrou=1`).
+  const entrouAgora = !!location.state?.primeiraEntrada || new URLSearchParams(location.search).get('entrou') === '1';
   const criouAgora = !!location.state?.criouAgora;
   const varianteBoasVindas = !team
     ? null

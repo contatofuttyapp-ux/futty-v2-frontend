@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dataCurta, fatosDoConvite, fraseDoConvite } from '../../src/utils/convite.js';
-import { guardarConvitePendente, tomarConvitePendente } from '../../src/lib/convitePendente.js';
+import { guardarConvitePendente, temConvitePendente, tomarConvitePendente } from '../../src/lib/convitePendente.js';
 
 const SP = 'America/Sao_Paulo';
 const AGORA = new Date('2026-10-01T15:00:00Z'); // quinta-feira, 12h em São Paulo
@@ -72,6 +72,18 @@ test('convite pendente: guarda, devolve UMA vez e apaga', () => {
     assert.equal(tomarConvitePendente(), 'abc-123');
     assert.equal(guardado.size, 0, 'depois de tomado, o bilhete some');
     assert.equal(tomarConvitePendente(), null, 'segunda vez não há nada');
+  });
+});
+
+test('convite pendente: espreitar (Onboarding, 29D) diz se há bilhete válido SEM o tomar', () => {
+  comArmazenamento((guardado) => {
+    assert.equal(temConvitePendente(), false, 'sem bilhete');
+    const t0 = 1_000_000;
+    guardarConvitePendente('abc-123', t0);
+    assert.equal(temConvitePendente(t0 + 1000), true);
+    assert.equal(guardado.size, 1, 'espreitar não apaga');
+    assert.equal(temConvitePendente(t0 + 3 * 86400000), false, 'vencido não conta');
+    assert.equal(tomarConvitePendente(t0 + 1000), 'abc-123', 'o Início ainda o toma depois');
   });
 });
 
