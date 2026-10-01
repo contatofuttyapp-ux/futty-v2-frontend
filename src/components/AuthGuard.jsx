@@ -8,26 +8,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
 import LoadingFutty from './LoadingFutty';
-import FuttyLoader from './FuttyLoader';
-
-function ContaSuspensa({ onSair }) {
-  return (
-    <div style={{ minHeight: '100dvh', background: '#050810', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, padding: 24, textAlign: 'center' }}>
-      <FuttyLoader size={110} label={null} />
-      <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 24, fontWeight: 700, letterSpacing: '0.06em', color: '#fff', margin: 0 }}>
-        Conta suspensa
-      </h1>
-      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, maxWidth: 300, lineHeight: 1.5, margin: 0 }}>
-        Sua conta está suspensa. Se você acha que é engano, fale conosco.
-      </p>
-      <div className="cta-gold-glow" style={{ display: 'flex', width: '100%', maxWidth: 260, marginTop: 4 }}>
-        <button type="button" className="btn hud-corners cta-gold" style={{ width: '100%' }} onClick={onSair}>
-          Sair
-        </button>
-      </div>
-    </div>
-  );
-}
+import ErrorPage from './ErrorPage';
 
 export default function AuthGuard({ children }) {
   const { session, loading, signOut } = useAuth();
@@ -42,7 +23,17 @@ export default function AuthGuard({ children }) {
   }
 
   if (perfilCarregando) return <LoadingFutty motivo="sessao" />; // a confirmar o estado da conta
-  if (suspenso) return <ContaSuspensa onSair={() => signOut()} />;
+  // Rodada 29B (D.3): o layout é o do ErrorPage (a ContaSuspensa era uma cópia dele aqui).
+  if (suspenso) {
+    return (
+      <ErrorPage
+        titulo="Conta suspensa"
+        mensagem="Sua conta está suspensa. Se você acha que é engano, fale conosco."
+        larguraTexto={300}
+        acao={{ rotulo: 'Sair', aoTocar: () => signOut() }}
+      />
+    );
+  }
 
   return children;
 }

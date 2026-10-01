@@ -12,7 +12,12 @@
 // asset, e a página de erro passa a falar a linguagem do resto.
 import FuttyLoader from './FuttyLoader';
 
-export default function ErrorPage({ onRetry, mensagem, titulo, detalheTecnico }) {
+// Rodada 29B (D.3): é também a tela cheia dos avisos do shell — "Conta suspensa" (AuthGuard) e
+// "Sem permissão" (SuperAdminGuard) eram cópias deste layout (~1 KB do arranque, que tem teto).
+//   acao          — { rotulo, aoTocar }: troca o botão de ouro e tira o 2º elo (retry/descobrir peladas).
+//   larguraTexto  — maxWidth do parágrafo (padrão 280).
+export default function ErrorPage({ onRetry, mensagem, titulo, detalheTecnico, acao, larguraTexto = 280 }) {
+  const irAoInicio = () => { window.location.href = '/home'; };
   return (
     <div
       style={{
@@ -32,7 +37,7 @@ export default function ErrorPage({ onRetry, mensagem, titulo, detalheTecnico })
       <h1 style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 24, fontWeight: 700, letterSpacing: '0.06em', color: '#fff', margin: 0 }}>
         {titulo || 'Algo deu errado'}
       </h1>
-      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, maxWidth: 280, lineHeight: 1.5, margin: 0 }}>
+      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, maxWidth: larguraTexto, lineHeight: 1.5, margin: 0 }}>
         {mensagem || 'O servidor está descansando. Tente de novo daqui a pouco.'}
       </p>
 
@@ -53,17 +58,17 @@ export default function ErrorPage({ onRetry, mensagem, titulo, detalheTecnico })
             type="button"
             className="btn hud-corners cta-gold"
             style={{ width: '100%' }}
-            onClick={onRetry ? onRetry : () => { window.location.href = '/home'; }}
+            onClick={acao ? acao.aoTocar : onRetry || irAoInicio}
           >
-            {onRetry ? 'Tentar novamente' : 'Voltar ao início'}
+            {acao ? acao.rotulo : onRetry ? 'Tentar novamente' : 'Voltar ao início'}
           </button>
         </div>
-        {onRetry ? (
+        {acao ? null : onRetry ? (
           <button
             type="button"
             className="btn btn--purple-outline hud-corners"
             style={{ width: '100%', height: 42, fontSize: 14 }}
-            onClick={() => { window.location.href = '/home'; }}
+            onClick={irAoInicio}
           >
             Voltar ao início
           </button>
