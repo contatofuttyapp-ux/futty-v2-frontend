@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3980,10 +3980,10 @@ try {
     if (falhas) process.exitCode = 1;
   }
 
-  if (CENAS.includes('rodada29b-boasvindas')) {
+  if (CENAS.includes('rodada29b-boasvindas') || CENAS.includes('rodada29c-boasvindas')) {
     const r = await cenaRodada29bBoasVindas(navegador);
     saida.rodada29bBoasVindas = r;
-    console.log('\n[iphone] RODADA 29B (C) — boas-vindas do time: uma página, um botão (servidor local; contas de prova; escritas interceptadas)');
+    console.log('\n[iphone] RODADA 29C — boas-vindas para todo mundo: convidado, criador e sem time, nas duas máquinas da prova (servidor local; contas de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -7496,18 +7496,27 @@ async function cenaRodada29bPesada(navegador) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29b-boasvindas" (30-set): o onboarding do time em UMA página e UM botão (Rodada 29B, parte C). ──
-// Contas de prova (scripts/_bench/prova-rodada29b.js): `novato` (membro do time grátis, sem foto) e `membroFoto` (membro,
-// com foto). O OnboardingModal de 3 passos e o tour de 3 balões do Início saíram; entra o BoasVindasTime. Toda escrita à
-// /api é interceptada (o "No gol" manda o PATCH de posição, respondido aqui). Só servidor LOCAL.
+// ─── Cena "rodada29b-boasvindas" (30-set; refeita na Rodada 29C, 1-out — alias "rodada29c-boasvindas"): as boas-vindas ──
+// para todo mundo, em UMA página (components/BoasVindas.jsx). Contas de prova (scripts/_bench/prova-rodada29b.js): `novato`
+// (membro do time grátis, sem foto), `membroFoto` (membro, com foto) e `gratis` (dono do time grátis). As três variantes
+// (convidado, criador, sem time) e as duas máquinas da prova aprovada (deitada para time sem logo; quadrada, com dois anéis
+// contínuos, para logo, foto ou o F). Toda escrita à /api é interceptada (o "No gol" manda o PATCH de posição, o Criar time
+// manda o POST — respondidos aqui); o logo do time e o "sem time" entram por cima da resposta REAL do motor (route.fetch).
+// Só servidor LOCAL.
 async function cenaRodada29bBoasVindas(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-boasvindas só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
   }
-  const pasta = path.join(PASTA, 'rodada-29b');
+  const pasta = path.join(PASTA, 'rodada-29c');
   mkdirSync(pasta, { recursive: true });
   const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
   const slug = fx.times.gratis.slug;
+  const LOGO = `${BASE}/icons/icon-192.png`; // um PNG real do site faz de logo do time (não há time com logo nas contas de prova)
+  const FRASES = {
+    convidado: 'Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.',
+    criador: 'Seu time está no ar. Chame a galera pelo link, confirme presença, sorteie e faça a figurinha de cada um.',
+    semTime: 'Bem-vindo ao Futty. Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.',
+  };
   const erros = [];
   const verificacoes = [];
   const capturas = [];
@@ -7517,10 +7526,90 @@ async function cenaRodada29bBoasVindas(navegador) {
     await pagina.screenshot({ path: arq });
     capturas.push(path.relative(RAIZ, arq));
   };
-  const VELHOS = /Próximo →|Bem-vindo ao|Sua figurinha\b.*foto e a IA|Confirme sua presença/;
+  const VELHOS = /Próximo →|Sua figurinha\b.*foto e a IA|Confirme sua presença/;
 
-  // `limpo`: sem marcas de "já visto" (a cena é a PRIMEIRA entrada). O som e a mídia são contados por um gancho.
-  const abrir = async (sessao, rotulo, { extra = {}, rota = `/equipa/${slug}`, espera: esp = true } = {}) => {
+  // Lê a tela inteira de uma vez: máquina, lâmpadas, letreiro, frase, botões, mídia e som.
+  const lerTela = (pagina) => pagina.evaluate(() => {
+    const d = document.querySelector('.bv');
+    const maq = d.querySelector('.maq');
+    const cs = (el) => getComputedStyle(el);
+    const luzes = [...maq.querySelectorAll('.luz')];
+    const nome = d.querySelector('#bv-nome');
+    const img = maq.querySelector('.janela img');
+    const caixa = d.getBoundingClientRect();
+    const pos = (sel) => { const l = maq.querySelector(sel); return l ? `${l.style.left},${l.style.top}` : null; };
+    const delay = (sel) => { const l = maq.querySelector(sel); return l ? cs(l).animationDelay : null; };
+    const luzesCantos = (anel) => [...maq.querySelectorAll(`.anel.${anel} .luz`)].map((l) => `${l.style.left},${l.style.top}`);
+    return {
+      variante: d.dataset.variante,
+      quadrada: maq.classList.contains('quadrada'),
+      premio: maq.classList.contains('premio'),
+      luzes: luzes.length,
+      cores: [...new Set(luzes.map((l) => cs(l).backgroundColor))],
+      animacao: luzes.length ? cs(luzes[0]).animationName : null,
+      opacidades: [...new Set(luzes.map((l) => cs(l).opacity))],
+      reguas: [...maq.querySelectorAll('.luzes, .baseluz .fila')].map((f) => f.querySelectorAll('.luz').length),
+      anelDourado: maq.querySelectorAll('.anel.dourado .luz').length,
+      anelRoxo: maq.querySelectorAll('.anel.roxo .luz').length,
+      primeiraDourada: pos('.anel.dourado .luz'),
+      cantosDourado: luzesCantos('dourado'),
+      cantosRoxo: luzesCantos('roxo'),
+      delayDourado2: delay('.anel.dourado .luz:nth-child(2)'),
+      delayRoxo2: delay('.anel.roxo .luz:nth-child(2)'),
+      nome: nome?.textContent?.trim(),
+      nomeNaJanela: !!maq.querySelector('.janela #bv-nome'),
+      nomeAbaixo: !!nome?.classList.contains('abaixo'),
+      nomeFs: nome ? parseFloat(cs(nome).fontSize) : null,
+      nomeCabe: nome ? nome.scrollWidth <= nome.clientWidth : null,
+      nomeLinhas: nome ? Math.round(nome.getBoundingClientRect().height / (parseFloat(cs(nome).fontSize) * 1.05)) : null,
+      nomeDourado: nome ? /gradient/.test(cs(nome).backgroundImage) && cs(nome).textTransform === 'uppercase' : false,
+      nomeAnimacao: nome ? cs(nome).animationName : null,
+      img: img ? img.getAttribute('src') : null,
+      imgFoto: !!img?.classList.contains('foto'),
+      frase: d.querySelector('.bv-frase')?.textContent?.trim(),
+      chips: [...d.querySelectorAll('.bv-posicao button')].map((b) => ({ t: b.textContent.trim(), ativo: b.getAttribute('aria-pressed') === 'true' })),
+      botoes: [...d.querySelectorAll('button.btn')].map((b) => ({ t: b.textContent.trim(), ouro: b.classList.contains('cta-gold'), roxo: b.classList.contains('btn--purple-outline') })),
+      convite: d.querySelector('.bv-convite')?.textContent?.trim() || null,
+      fechar: !!d.querySelector('[aria-label="Fechar"]'),
+      caixa: { w: Math.round(caixa.width), h: Math.round(caixa.height), cabe: caixa.bottom <= window.innerHeight && caixa.top >= 0 },
+      texto: d.innerText,
+      media: d.querySelectorAll('video,audio,canvas,picture,svg image').length,
+      som: window.__som,
+      midiaNaRede: performance.getEntriesByType('resource').filter((e) => /\.(mp4|webm|gif|lottie|mp3|wav|m4a)(\?|$)/i.test(e.name)).map((e) => e.name),
+    };
+  });
+  // O "tchan": espera a máquina sair de .premio, entrar de novo e sair — mede quanto durou (prova: 1,6 s) e o intervalo até
+  // voltar (7 s). MutationObserver, não requestAnimationFrame: com 160 lâmpadas animadas os quadros atrasam e a leitura por
+  // quadro encurtava a medida em centenas de ms (1ª corrida desta cena).
+  const medirTchan = (pagina) => pagina.evaluate(() => new Promise((res) => {
+    const maq = document.querySelector('.bv .maq');
+    let fase = maq.classList.contains('premio') ? 0 : 1; let inicio = null; let durou = null;
+    const obs = new MutationObserver(() => {
+      const on = maq.classList.contains('premio');
+      if (fase === 0 && !on) fase = 1;
+      else if (fase === 1 && on) { fase = 2; inicio = performance.now(); }
+      else if (fase === 2 && !on) { fase = 3; durou = Math.round(performance.now() - inicio); }
+      else if (fase === 3 && on) { obs.disconnect(); res({ veio: true, durouMs: durou, voltouMs: Math.round(performance.now() - inicio) }); }
+    });
+    obs.observe(maq, { attributes: true, attributeFilter: ['class'] });
+    setTimeout(() => { obs.disconnect(); res({ veio: fase >= 3, durouMs: durou, voltouMs: null }); }, 20000);
+  }));
+  // Espera a máquina sair do "tchan" (as lâmpadas voltam ao bvCalm e aos atrasos de cruzeiro) antes de ler a cruzeiro.
+  const esperarCalma = (pagina) => pagina.evaluate(() => new Promise((res) => {
+    const maq = document.querySelector('.bv .maq');
+    if (!maq.classList.contains('premio')) return res();
+    const obs = new MutationObserver(() => { if (!maq.classList.contains('premio')) { obs.disconnect(); res(); } });
+    obs.observe(maq, { attributes: true, attributeFilter: ['class'] });
+    setTimeout(() => { obs.disconnect(); res(); }, 5000);
+  }));
+  const cantos = (lista, inset) => {
+    const L = 248 - inset;
+    return [`${inset}px,${inset}px`, `${L}px,${inset}px`, `${L}px,${L}px`, `${inset}px,${L}px`].every((c) => lista.includes(c));
+  };
+
+  // `limpo`: sem marcas de "já visto" (a cena é a PRIMEIRA vez). O som e a mídia são contados por um gancho. `antes(contexto)`
+  // regista rotas por cima (logo do time, "sem time"); `respostas` responde às escritas (travarEscritas).
+  const abrir = async (sessao, rotulo, { extra = {}, rota = `/equipa/${slug}`, esp = true, antes = null, respostas = () => null } = {}) => {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo', ...extra } });
     await contexto.addInitScript(() => {
       window.__som = { audio: 0, contexto: 0 };
@@ -7529,7 +7618,8 @@ async function cenaRodada29bBoasVindas(navegador) {
       const C = window.AudioContext || window.webkitAudioContext;
       if (C) { const N = function (...a) { window.__som.contexto += 1; return new C(...a); }; window.AudioContext = N; window.webkitAudioContext = N; }
     });
-    const escritas = await travarEscritas(contexto);
+    const escritas = await travarEscritas(contexto, respostas);
+    if (antes) await antes(contexto);
     const pagina = await contexto.newPage();
     pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
     await pagina.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded' });
@@ -7538,64 +7628,69 @@ async function cenaRodada29bBoasVindas(navegador) {
     await espera(900);
     return { contexto, pagina, escritas };
   };
-
-  // 1) primeira entrada (novato, sem foto): a página única
-  {
-    const { contexto, pagina, escritas } = await abrir(fx.novato, 'novato');
-    const r = await pagina.evaluate(() => {
-      const d = document.querySelector('.bv');
-      const luzes = [...d.querySelectorAll('.bv-luz')];
-      const cores = luzes.map((l) => getComputedStyle(l).backgroundColor);
-      const caixa = d.getBoundingClientRect();
-      const botoes = [...d.querySelectorAll('button')];
-      return {
-        nome: d.querySelector('.bv-nome')?.textContent?.trim(),
-        frase: d.querySelector('.bv-frase')?.textContent?.trim(),
-        chips: [...d.querySelectorAll('.bv-posicao button')].map((b) => ({ t: b.textContent.trim(), ativo: b.getAttribute('aria-pressed') === 'true' })),
-        botoes: botoes.length,
-        acoes: botoes.filter((b) => b.classList.contains('btn')).map((b) => b.textContent.trim()),
-        fechar: !!d.querySelector('[aria-label="Fechar"]'),
-        luzes: luzes.length,
-        coresDistintas: [...new Set(cores)],
-        alternadas: cores.every((c, i) => i === 0 || c !== cores[i - 1]),
-        animacao: luzes.length ? getComputedStyle(luzes[0]).animationName : null,
-        caixa: { w: Math.round(caixa.width), h: Math.round(caixa.height), cabe: caixa.bottom <= window.innerHeight && caixa.top >= 0 },
-        texto: d.innerText,
-        imgs: [...d.querySelectorAll('img')].length,
-        media: d.querySelectorAll('video,audio,canvas,picture,svg image').length,
-        som: window.__som,
-        midiaNaRede: performance.getEntriesByType('resource').filter((e) => /\.(mp4|webm|gif|lottie|mp3|wav|m4a)(\?|$)/i.test(e.name)).map((e) => e.name),
-      };
+  // O time grátis COM logo: a resposta real do motor, com `logo_url` por cima.
+  const comLogo = async (contexto) => {
+    await contexto.route(`**/api/teams/${slug}`, async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const resposta = await route.fetch();
+      const json = await resposta.json().catch(() => null);
+      if (!json?.team) return route.fulfill({ response: resposta });
+      return route.fulfill({ response: resposta, json: { ...json, team: { ...json.team, logo_url: LOGO } } });
     });
-    verificar('a página abre na 1ª entrada, com o nome do time e a frase da casa', !!r.nome && r.frase === 'Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.', JSON.stringify({ nome: r.nome, frase: r.frase }));
+  };
+  // "Sem time": o /api/inicio real com a lista de times vazia (e o /api/teams de reserva também vazio).
+  const semTimes = async (contexto) => {
+    await contexto.route('**/api/inicio*', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const resposta = await route.fetch();
+      const json = await resposta.json().catch(() => null);
+      if (!json?.teams) return route.fulfill({ response: resposta });
+      return route.fulfill({ response: resposta, json: { ...json, teams: { ...json.teams, teams: [] } } });
+    });
+    await contexto.route('**/api/teams', (route) => (route.request().method() === 'GET' ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ teams: [] }) }) : route.fallback()));
+  };
+  const marcasDe = (pagina) => pagina.evaluate(() => ({
+    visto: Object.keys(localStorage).filter((k) => k.startsWith('futty_onboarding_')).map((k) => [k, localStorage.getItem(k)]),
+    cta: localStorage.getItem('futty_cta_figurinha'),
+    app: localStorage.getItem('futty_boasvindas_app'),
+  }));
+
+  // 1) CONVIDADO, time SEM logo (novato, sem foto): a máquina DEITADA com o nome na janela
+  {
+    const { contexto, pagina, escritas } = await abrir(fx.novato, 'convidado-deitada');
+    const r = await lerTela(pagina);
+    verificar('convidado: a página abre na 1ª entrada, com o nome do time e a frase da casa', r.variante === 'convidado' && r.nome === 'Prova R29B Grátis' && r.frase === FRASES.convidado, JSON.stringify({ variante: r.variante, nome: r.nome, frase: r.frase }));
+    verificar('time sem logo → máquina DEITADA: réguas de 22+22 em cima e 24+24 na base (92 lâmpadas), dourado e roxo', !r.quadrada && r.luzes === 92 && JSON.stringify(r.reguas) === '[22,22,24,24]' && r.cores.length === 2, JSON.stringify({ quadrada: r.quadrada, luzes: r.luzes, reguas: r.reguas, cores: r.cores }));
+    verificar('o nome é o letreiro dourado DENTRO da janela: caixa alta em degradê, flutuando (bvBob + bvShine)', r.nomeNaJanela && r.nomeDourado && /bvBob/.test(r.nomeAnimacao) && /bvShine/.test(r.nomeAnimacao), JSON.stringify({ naJanela: r.nomeNaJanela, dourado: r.nomeDourado, animacao: r.nomeAnimacao }));
+    verificar('letreiro na janela: 34 px, encolhido até caber numa linha (mínimo 20), sem cortar', r.nomeFs <= 34 && r.nomeFs >= 20 && r.nomeCabe && r.nomeLinhas === 1, JSON.stringify({ fs: r.nomeFs, cabe: r.nomeCabe, linhas: r.nomeLinhas }));
+    verificar('o "tchan" já está na máquina 0,6 s depois de abrir (.premio)', r.premio, String(r.premio));
     verificar('o chip "Jogo na linha / No gol": padrão linha', r.chips.length === 2 && r.chips[0].t === 'Jogo na linha' && r.chips[0].ativo && r.chips[1].t === 'No gol' && !r.chips[1].ativo, JSON.stringify(r.chips));
-    verificar('UM botão só ("Vamos lá") e nenhum "Fechar"/X', r.acoes.length === 1 && r.acoes[0] === 'Vamos lá' && !r.fechar, JSON.stringify({ acoes: r.acoes, fechar: r.fechar }));
-    verificar('os passos velhos saíram (nada de "Próximo →", "Bem-vindo ao…", "Confirme sua presença")', !VELHOS.test(r.texto), r.texto.replace(/\s+/g, ' ').slice(0, 140));
-    verificar('faixa de luzes: 24 bolinhas, roxo/amarelo alternando', r.luzes === 24 && r.coresDistintas.length === 2 && r.alternadas, JSON.stringify({ luzes: r.luzes, cores: r.coresDistintas }));
-    verificar('as luzes piscam em sequência (animação CSS "bv-pisca" rodando)', r.animacao === 'bv-pisca', String(r.animacao));
+    verificar('UM botão só ("Vamos lá", dourado) e nenhum "Fechar"/X', r.botoes.length === 1 && r.botoes[0].t === 'Vamos lá' && r.botoes[0].ouro && !r.fechar, JSON.stringify({ botoes: r.botoes, fechar: r.fechar }));
+    verificar('os passos velhos saíram (nada de "Próximo →", "Confirme sua presença")', !VELHOS.test(r.texto), r.texto.replace(/\s+/g, ' ').slice(0, 140));
     verificar('0 KB de mídia: sem vídeo, áudio, GIF, lottie nem imagem de animação', r.media === 0 && r.midiaNaRede.length === 0, JSON.stringify({ media: r.media, rede: r.midiaNaRede }));
     verificar('sem som: nenhum Audio/AudioContext criado (não há gesto)', r.som.audio === 0 && r.som.contexto === 0, JSON.stringify(r.som));
     verificar('a página cabe na tela do iPhone (430×932) sem rolar', r.caixa.cabe, JSON.stringify(r.caixa));
-    await capturar(pagina, '1-primeira-entrada');
+    await capturar(pagina, '1-convidado-deitada');
+    await esperarCalma(pagina);
+    const calma = await lerTela(pagina);
+    verificar('fora do "tchan" as lâmpadas correm com a animação de cruzeiro da máquina do sorteio (bvCalm)', !calma.premio && calma.animacao === 'bvCalm', JSON.stringify({ premio: calma.premio, animacao: calma.animacao }));
+    const t = await medirTchan(pagina);
+    verificar('o "tchan" dura 1,6 s e volta a cada 7 s (lâmpadas em cascata branca)', t.veio && t.durouMs >= 1300 && t.durouMs <= 2000 && t.voltouMs >= 6500 && t.voltouMs <= 7700, JSON.stringify(t));
+    await pagina.evaluate(() => new Promise((res) => { const maq = document.querySelector('.bv .maq'); const tick = () => (maq.classList.contains('premio') ? res() : requestAnimationFrame(tick)); tick(); }));
+    await espera(120);
+    await capturar(pagina, '1b-convidado-tchan');
 
     // escolhe "No gol" e toca "Vamos lá": PATCH de posição, marca de visto, CTA da figurinha
     await pagina.locator('.bv-posicao button', { hasText: 'No gol' }).tap();
     const ativoDepois = await pagina.locator('.bv-posicao button[aria-pressed="true"]').allInnerTexts();
     verificar('tocar em "No gol" troca o chip ativo', ativoDepois.length === 1 && ativoDepois[0].trim() === 'No gol', JSON.stringify(ativoDepois));
-    await espera(450); // a troca do chip leva 0,15 s de transição
-    await capturar(pagina, '2-no-gol');
     await pagina.locator('.bv button.cta-gold').tap();
     await pagina.locator('.bv').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
     const patch = escritas.find((e) => e.metodo === 'PATCH' && e.rota === `/api/equipas/${slug}/membros/posicao`);
     verificar('"Vamos lá" com "No gol" grava o PATCH de posição que já existia ({ goleiro: true })', !!patch && JSON.parse(patch.corpo || '{}').goleiro === true, patch ? `${patch.rota} ${patch.corpo}` : escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
     verificar('a página fecha', (await pagina.locator('.bv').count()) === 0);
-    const marcas = await pagina.evaluate(() => ({
-      visto: Object.keys(localStorage).filter((k) => k.startsWith('futty_onboarding_')).map((k) => [k, localStorage.getItem(k)]),
-      cta: localStorage.getItem('futty_cta_figurinha'),
-    }));
+    const marcas = await marcasDe(pagina);
     verificar('marca "visto" no mesmo lugar do modal antigo (futty_onboarding_<time>) e liga o CTA da figurinha', marcas.visto.length === 1 && marcas.visto[0][1] === '1' && marcas.cta === '1', JSON.stringify(marcas));
-    await capturar(pagina, '3-depois');
-    // voltar à página do time: não abre de novo
     await pagina.reload({ waitUntil: 'domcontentloaded' });
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
     await espera(3500);
@@ -7605,63 +7700,139 @@ async function cenaRodada29bBoasVindas(navegador) {
 
   // 2) "Vamos lá" sem mexer no chip: nada é gravado (linha já é o padrão)
   {
-    const { contexto, pagina, escritas } = await abrir(fx.novato, 'novato-linha');
+    const { contexto, pagina, escritas } = await abrir(fx.novato, 'convidado-linha');
     await pagina.locator('.bv button.cta-gold').tap();
     await pagina.locator('.bv').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
     verificar('"Vamos lá" sem mexer no chip não grava posição (linha é o padrão)', !escritas.some((e) => e.metodo === 'PATCH' && /posicao/.test(e.rota)), escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | ') || 'nenhuma escrita');
     await contexto.close();
   }
 
-  // 3) prefers-reduced-motion: as luzes ficam paradas
+  // 3) prefers-reduced-motion: lâmpadas paradas a 0,7, letreiro parado, sem "tchan"
   {
-    const { contexto, pagina } = await abrir(fx.novato, 'novato-reduzido', { extra: { reducedMotion: 'reduce' } });
-    const a = await pagina.evaluate(() => { const l = document.querySelectorAll('.bv-luz'); return { n: l.length, animacao: getComputedStyle(l[0]).animationName, opacidades: [...new Set([...l].map((x) => getComputedStyle(x).opacity))] }; });
-    verificar('reduced-motion: as luzes ficam PARADAS (sem animação) e acesas', a.n === 24 && a.animacao === 'none' && a.opacidades.length === 1 && Number(a.opacidades[0]) > 0.5, JSON.stringify(a));
-    await capturar(pagina, '4-reduzido');
+    const { contexto, pagina } = await abrir(fx.novato, 'convidado-reduzido', { extra: { reducedMotion: 'reduce' } });
+    const a = await lerTela(pagina);
+    await espera(2500);
+    const premioDepois = await pagina.evaluate(() => !!document.querySelector('.bv .maq.premio'));
+    verificar('reduced-motion: as 92 lâmpadas ficam PARADAS (sem animação) a 0,7 de opacidade', a.luzes === 92 && a.animacao === 'none' && a.opacidades.length === 1 && Number(a.opacidades[0]) === 0.7, JSON.stringify({ n: a.luzes, animacao: a.animacao, opacidades: a.opacidades }));
+    verificar('reduced-motion: o letreiro não flutua e não há "tchan" (sem .premio em 3,4 s)', a.nomeAnimacao === 'none' && !a.premio && !premioDepois, JSON.stringify({ letreiro: a.nomeAnimacao, premio: a.premio, premioDepois }));
+    await capturar(pagina, '3-reduzido');
     await contexto.close();
   }
 
   // 4) quem já tem foto e visita o time por conta própria: nada de página (só logo depois de aceitar um convite)
   {
-    const { contexto, pagina } = await abrir(fx.membroFoto, 'membro-foto', { esp: false, espera: false });
+    const { contexto, pagina } = await abrir(fx.membroFoto, 'membro-foto', { esp: false });
     await espera(4000);
     verificar('membro com foto, visita comum ao time: a página não abre', (await pagina.locator('.bv').count()) === 0);
     await contexto.close();
   }
 
-  // 5) aceitar um convite (POST interceptado) leva ao time COM as boas-vindas, mesmo para quem tem foto
+  // 5) CONVIDADO, time COM logo: aceitar um convite (POST interceptado) leva ao time com a máquina QUADRADA, logo na janela
   {
     const contexto = await novoContexto(navegador, fx.membroFoto, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
     await travarEscritas(contexto, (caminho, metodo) => (metodo === 'POST' && caminho.endsWith('/aceitar') ? { team: { slug, nome: 'Prova R29B Grátis' } } : null));
     await contexto.route('**/api/convite/*', async (route) => {
       const u = new URL(route.request().url());
       if (route.request().method() !== 'GET' || u.pathname.endsWith('/aceitar')) return route.fallback();
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valido: true, motivo: null, autenticado: true, jaMembro: false, convidadoPor: 'Tonhão', expires_at: new Date(Date.now() + 86400000).toISOString(), usos: 1, membros: 3, proximoJogo: null, cidade: null, team: { nome: 'Prova R29B Grátis', slug, cor: 'verde', logo_url: null, cor_fundo: null } }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valido: true, motivo: null, autenticado: true, jaMembro: false, convidadoPor: 'Tonhão', expires_at: new Date(Date.now() + 86400000).toISOString(), usos: 1, membros: 3, proximoJogo: null, cidade: null, team: { nome: 'Prova R29B Grátis', slug, cor: 'verde', logo_url: LOGO, cor_fundo: null } }) });
     });
+    await comLogo(contexto);
     const pagina = await contexto.newPage();
-    pagina.on('pageerror', (e) => erros.push(`convite: ${e.message}`));
+    pagina.on('pageerror', (e) => erros.push(`convidado-quadrada: ${e.message}`));
     await pagina.goto(`${BASE}/convite/token-de-prova`, { waitUntil: 'domcontentloaded' });
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
     await pagina.locator('button.convite__cta', { hasText: 'Entrar no time' }).tap({ timeout: 30000 });
     await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
     verificar('aceitar o convite leva ao time e abre as boas-vindas (mesmo com foto)', (await pagina.locator('.bv').count()) === 1 && pagina.url().endsWith(`/equipa/${slug}`), pagina.url().replace(BASE, ''));
-    await capturar(pagina, '5-apos-convite');
+    await espera(900);
+    await esperarCalma(pagina); // os atrasos dos anéis só se leem fora do "tchan" (ele põe −0,045 s nos dois)
+    const r = await lerTela(pagina);
+    verificar('time com logo → máquina QUADRADA, 248 px, com o logo do time na janela (88%, flutuando)', r.variante === 'convidado' && r.quadrada && r.img === LOGO && !r.imgFoto, JSON.stringify({ quadrada: r.quadrada, img: r.img, foto: r.imgFoto }));
+    verificar('dois anéis contínuos: dourado por fora (inset 8, 84 lâmpadas) e roxo por dentro (inset 19, 76), 160 no total', r.anelDourado === 84 && r.anelRoxo === 76 && r.luzes === 160 && r.cores.length === 2, JSON.stringify({ dourado: r.anelDourado, roxo: r.anelRoxo, luzes: r.luzes, cores: r.cores }));
+    verificar('lâmpada em todos os cantos dos dois anéis, a 1ª no canto de cima à esquerda', r.primeiraDourada === '8px,8px' && cantos(r.cantosDourado, 8) && cantos(r.cantosRoxo, 19), JSON.stringify({ primeira: r.primeiraDourada }));
+    verificar('os anéis correm em sentidos opostos (delay −0,09 s por lâmpada no dourado, +0,09 s no roxo)', r.delayDourado2 === '-0.09s' && r.delayRoxo2 === '0.09s', JSON.stringify({ dourado: r.delayDourado2, roxo: r.delayRoxo2 }));
+    verificar('o nome fica EMBAIXO da máquina: letreiro de 30 px, uma linha, sem cortar', r.nomeAbaixo && !r.nomeNaJanela && r.nome === 'Prova R29B Grátis' && r.nomeFs <= 30 && r.nomeFs >= 18 && r.nomeCabe && r.nomeLinhas === 1, JSON.stringify({ abaixo: r.nomeAbaixo, fs: r.nomeFs, cabe: r.nomeCabe, linhas: r.nomeLinhas }));
+    verificar('convidado com logo: a mesma frase, os chips e o "Vamos lá"', r.frase === FRASES.convidado && r.chips.length === 2 && r.botoes.length === 1 && r.botoes[0].t === 'Vamos lá' && r.caixa.cabe, JSON.stringify({ chips: r.chips.length, botoes: r.botoes, caixa: r.caixa }));
+    await capturar(pagina, '5-convidado-quadrada');
     await contexto.close();
   }
 
-  // 6) o tour de 3 balões do Início saiu: sem as marcas de "já visto", nada de balão
+  // 6) CRIADOR: cria o time (POST interceptado → o time grátis, de que `gratis` é dono) e toca "Ir para o time"
   {
-    const contexto = await novoContexto(navegador, fx.novato, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
-    await travarEscritas(contexto);
-    const pagina = await contexto.newPage();
-    pagina.on('pageerror', (e) => erros.push(`inicio: ${e.message}`));
-    await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    const respostaDoPost = (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: fx.times.gratis.id, slug, nome: 'Prova R29B Grátis' } } : null);
+    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'criador', { rota: '/criar-equipa', esp: false, respostas: respostaDoPost });
+    await pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
+    await pagina.locator('input[placeholder^="ex.:"]').fill('Prova R29B Grátis');
+    await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
+    await espera(400);
+    await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
+    await espera(400);
+    await pagina.locator('button', { hasText: /Criar o time/i }).first().tap();
+    await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
+    await pagina.locator('button', { hasText: /^Ir para o time$/ }).tap();
+    await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
+    verificar('"Ir para o time" leva ao time e abre as boas-vindas do CRIADOR', (await pagina.locator('.bv').count()) === 1 && pagina.url().endsWith(`/equipa/${slug}`), pagina.url().replace(BASE, ''));
+    await espera(900);
+    const r = await lerTela(pagina);
+    verificar('criador: a frase do time no ar, sem a escolha linha/gol (já escolheu no Criar time), um "Vamos lá"', r.variante === 'criador' && r.frase === FRASES.criador && r.chips.length === 0 && r.botoes.length === 1 && r.botoes[0].t === 'Vamos lá' && r.botoes[0].ouro, JSON.stringify({ variante: r.variante, frase: r.frase, chips: r.chips.length, botoes: r.botoes }));
+    verificar('criador sem logo → máquina deitada com o nome do time na janela', !r.quadrada && r.luzes === 92 && r.nomeNaJanela && r.nome === 'Prova R29B Grátis' && r.nomeCabe, JSON.stringify({ quadrada: r.quadrada, nome: r.nome, naJanela: r.nomeNaJanela }));
+    await capturar(pagina, '6-criador');
+    await pagina.locator('.bv button.cta-gold').tap();
+    await pagina.locator('.bv').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
+    const marcas = await marcasDe(pagina);
+    verificar('"Vamos lá" do criador: fecha, marca futty_onboarding_<time>, NÃO liga o CTA da figurinha e não grava posição', (await pagina.locator('.bv').count()) === 0 && marcas.visto.length === 1 && marcas.visto[0][0] === `futty_onboarding_${fx.times.gratis.id}` && marcas.cta === null && !escritas.some((e) => /posicao/.test(e.rota)), JSON.stringify({ marcas, escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
+    await pagina.reload({ waitUntil: 'domcontentloaded' });
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
-    await espera(6000);
+    await espera(3500);
+    verificar('criador: depois de "visto" a página não volta (nem com o state ainda na história)', (await pagina.locator('.bv').count()) === 0);
+    await contexto.close();
+  }
+
+  // 7) SEM TIME, sem foto (novato): 1ª vez no Início com 0 times — máquina quadrada com o F real, primeiro nome embaixo
+  {
+    const { contexto, pagina } = await abrir(fx.novato, 'sem-time-f', { rota: '/home', antes: semTimes });
+    const r = await lerTela(pagina);
+    const fundo = await pagina.locator('body').innerText();
+    verificar('sem time: abre no Início com a frase de boas-vindas ao Futty e o EmptyState ("Comece por aqui") atrás', r.variante === 'semTime' && r.frase === FRASES.semTime && /Comece por aqui/.test(fundo), JSON.stringify({ variante: r.variante, frase: r.frase }));
+    verificar('sem foto → máquina quadrada com o F REAL (icone-app-144.png) na janela, nunca gerado', r.quadrada && /\/email\/icone-app-144\.png$/.test(r.img || '') && !r.imgFoto && r.luzes === 160, JSON.stringify({ quadrada: r.quadrada, img: r.img, luzes: r.luzes }));
+    verificar('o letreiro é o PRIMEIRO nome da pessoa, embaixo da máquina', r.nomeAbaixo && r.nome === 'NOVATO29' && r.nomeCabe, JSON.stringify({ nome: r.nome, abaixo: r.nomeAbaixo }));
+    verificar('dois botões: "Criar meu time" (dourado) e "Explorar peladas" (roxo contorno), sem chips, e a linha do convite', r.chips.length === 0 && r.botoes.length === 2 && r.botoes[0].t === 'Criar meu time' && r.botoes[0].ouro && r.botoes[1].t === 'Explorar peladas' && r.botoes[1].roxo && r.convite === 'Recebeu um convite? Abra o link que mandaram no grupo.', JSON.stringify({ botoes: r.botoes, convite: r.convite }));
+    verificar('sem time: a página cabe na tela do iPhone sem rolar', r.caixa.cabe, JSON.stringify(r.caixa));
+    await capturar(pagina, '7-sem-time-f');
+    await pagina.locator('.bv button.cta-gold').tap();
+    await pagina.waitForURL('**/criar-equipa', { timeout: 15000 }).catch(() => {});
+    const marcas = await marcasDe(pagina);
+    verificar('"Criar meu time" leva ao Criar time e marca futty_boasvindas_app=1 (uma vez por aparelho)', pagina.url().endsWith('/criar-equipa') && marcas.app === '1', JSON.stringify({ url: pagina.url().replace(BASE, ''), app: marcas.app }));
+    // Numa aba nova do mesmo aparelho (mesmo localStorage): navegar a aba velha para fora do Criar time cortava o POST da
+    // telemetria a meio e dava um "access control checks" de ruído no WebKit.
+    const outra = await contexto.newPage();
+    await outra.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await espera(4000);
+    verificar('sem time: depois de marcada, a página não volta no Início', (await outra.locator('.bv').count()) === 0);
+    await contexto.close();
+  }
+
+  // 8) SEM TIME, com foto (membroFoto): a foto da pessoa na janela (miniatura quadrada), "Explorar peladas"
+  {
+    const { contexto, pagina } = await abrir(fx.membroFoto, 'sem-time-foto', { rota: '/home', antes: semTimes });
+    const r = await lerTela(pagina);
+    verificar('com foto → a foto da pessoa na janela (miniatura quadrada do motor, sq=1), com o chanfro da casa', r.quadrada && /\/api\/media\//.test(r.img || '') && /sq=1/.test(r.img || '') && r.imgFoto && r.nome === 'MEMBROFOTO29', JSON.stringify({ img: r.img, foto: r.imgFoto, nome: r.nome }));
+    await capturar(pagina, '8-sem-time-foto');
+    await pagina.locator('.bv button.btn--purple-outline').tap();
+    await pagina.waitForURL('**/explorar', { timeout: 15000 }).catch(() => {});
+    const marcas = await marcasDe(pagina);
+    verificar('"Explorar peladas" leva ao Explorar e marca futty_boasvindas_app=1', pagina.url().endsWith('/explorar') && marcas.app === '1', JSON.stringify({ url: pagina.url().replace(BASE, ''), app: marcas.app }));
+    await contexto.close();
+  }
+
+  // 9) quem TEM time não vê a tela do app no Início (novato de verdade: membro do time grátis)
+  {
+    const { contexto, pagina } = await abrir(fx.novato, 'inicio-com-time', { rota: '/home', esp: false });
+    await espera(4000);
     const t = await pagina.locator('body').innerText();
     const marcadores = await pagina.evaluate(() => document.querySelectorAll('[data-tour]').length);
-    verificar('Início sem o tour: nenhum balão ("Este é o seu card…") e nenhum [data-tour] no DOM', !/Este é o seu card|Nunca perca um jogo|Explore o ranking, a resenha/.test(t) && marcadores === 0, JSON.stringify({ marcadores }));
-    await capturar(pagina, '6-inicio-sem-tour');
+    verificar('Início de quem tem time: sem boas-vindas do app, sem o tour antigo (nenhum balão, nenhum [data-tour])', (await pagina.locator('.bv').count()) === 0 && !/Este é o seu card|Nunca perca um jogo|Explore o ranking, a resenha/.test(t) && marcadores === 0, JSON.stringify({ marcadores }));
+    await capturar(pagina, '9-inicio-com-time');
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
