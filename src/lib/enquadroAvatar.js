@@ -101,6 +101,14 @@ export function recortePadrao(largura, altura) {
   return { x: 0.5, y: arredonda3(Math.min(largura, altura) / 2 / altura), escala: 1 };
 }
 
+/**
+ * Rodada 29H-B (item 55): o ENQUADRAMENTO ÚNICO. O quadrado tracejado dentro da moldura 2:3 do card (CropModal com `miniatura`) é
+ * o quadrado do TOPO, da largura do card — a mesma janela que o motor corta sem recorte para a figurinha. Gravá-lo em
+ * users.avatar_recorte (lib/miniatura.js) é o que faz a FOTO crua (que sem recorte o app mostrava em 50%/35%) seguir o que a
+ * pessoa viu no tracejado. `largura`/`altura` são as do arquivo que sai do recorte (2:3).
+ */
+export const recorteDaMolduraUnica = (largura, altura) => recortePadrao(largura, altura);
+
 /** O mesmo recorte com o centro trocado pelo da janela JÁ puxada para dentro — o que o arrasto grava, para nunca "sobrar" além da borda. */
 export function normalizarRecorte(largura, altura, recorte) {
   const j = janelaDoRecorte(largura, altura, recorte);

@@ -10,10 +10,23 @@
 // receita e semente em SONS.md (raiz do frontend). Nada baixado, nada de IA de
 // música — nem material "CC0", que continua sendo de terceiros.
 //
-// O SORTEIO NÃO TEM MÚSICA (lei do dono, CLAUDE.md). Ficam TRÊS efeitos:
-//   tique   — o rolo passando um símbolo, em trem enquanto gira (3 variantes)
-//   clac    — o rolo TRAVANDO: um jogador apareceu
-//   jackpot — os times ficaram prontos: a máquina acabou de dar prêmio
+// O SORTEIO NÃO TEM MÚSICA (lei do dono, CLAUDE.md). Ficam os efeitos:
+//   tique    — o rolo passando um símbolo, em trem enquanto gira (3 variantes)
+//   clac     — o rolo TRAVANDO: um jogador apareceu
+//   jackpot  — os times ficaram prontos: a máquina acabou de dar prêmio
+//   alavanca — RODADA 29H-B (2-out): a slot machine MANUAL — a alavanca puxada e a
+//              catraca engatando no instante em que o giro começa (≤ 0,8 s). Os três
+//              de cima não mudaram um bit (o gerador confere por MD5).
+//
+// RODADA 29H-B — POR QUE O SITE SOAVA DIFERENTE DO APP: no site (Safari/WebKit) um
+// <audio> só toca se o seu play() aconteceu DENTRO de um toque da pessoa; o app da
+// loja não tem essa regra (o WKWebView do Capacitor nasce com
+// mediaTypesRequiringUserActionForPlayback vazio). Os efeitos saem de temporizadores,
+// segundos depois do toque em "Sortear" (que ainda faz um POST e uma navegação) —
+// no site nada tocava, no app tudo. `prepararNoGesto` (abaixo) resolve: chamado
+// síncrono no gesto, destrava cada elemento com um play() mudo. Os arquivos são os
+// MESMOS nos dois (o site e o app buscam /sons/* do mesmo lugar; `git diff main dev`
+// vazio em public/sons; cache imutável de 1 ano, e o nome só muda se o som mudar).
 //
 // O tique mudou de natureza na 14A: era um MP3 longo em loop (slot-machine.mp3),
 // agora é um trem de tiques curtos disparado por temporizador, alternando as 3
@@ -24,16 +37,18 @@
 // eram música; e agora os três arquivos de banco que estes cinco substituem.
 //
 // API: ligado(get) · escolhido(get) · toggle · ligarPorOmissao · desfazerOmissao
-//   · girar/girarLento/pararGiro · revelar · fecharTime · silenciar · autoTeste
+//   · prepararNoGesto · puxar · girar/girarLento/pararGiro · revelar · fecharTime · silenciar · autoTeste
 // ═══════════════════════════════════════════════════════════════════════════════
 import { urlAsset } from '../utils/avatar';
 
 // Os caminhos passam por urlAsset(): na web é a mesma origem; no app nativo os
 // sons não viajam dentro do pacote, vêm do site e ficam em cache.
 const TIQUES = ['/sons/tique-1.mp3', '/sons/tique-2.mp3', '/sons/tique-3.mp3'];
-const CAMINHOS = { clac: '/sons/clac.mp3', jackpot: '/sons/jackpot.mp3' };
-// Volumes da lei (Rodada 14A). Vivem AQUI, não em quem chama.
-const VOL = { tique: 0.5, clac: 0.7, jackpot: 1.0 };
+const CAMINHOS = { clac: '/sons/clac.mp3', jackpot: '/sons/jackpot.mp3', alavanca: '/sons/alavanca.mp3' };
+// Volumes da lei (Rodada 14A; a alavanca na 29H-B). Vivem AQUI, não em quem chama.
+const VOL = { tique: 0.5, clac: 0.7, jackpot: 1.0, alavanca: 0.65 };
+// As rodas de todos os efeitos, para o prepararNoGesto abrir de uma vez.
+const RODAS = [['tique', TIQUES, 3], ['clac', [CAMINHOS.clac], 3], ['jackpot', [CAMINHOS.jackpot], 1], ['alavanca', [CAMINHOS.alavanca], 1]];
 // Espaçamento do trem de tiques. O rolo leva 0,34-0,50 s por volta de 6 símbolos
 // (o --sd do CSS), ou seja ~60-80 ms por símbolo: 70 ms solto e 115 ms depois de
 // desacelerar é o que soa como a mesma máquina perdendo força.
@@ -73,6 +88,8 @@ function roda(chave, fontes, tamanho) {
 
 const rodas = {};
 let volta = {};
+// Elementos no meio do play() mudo do prepararNoGesto: o pause() de destrave só vale se ninguém os tocou de verdade entretanto.
+const primando = new Set();
 function tocar(chave, fontes, tamanho, vol) {
   if (!ligado || falhou[chave]) return;
   try {
@@ -80,6 +97,8 @@ function tocar(chave, fontes, tamanho, vol) {
     const els = rodas[chave];
     const a = els[volta[chave] % els.length];
     volta[chave] += 1;
+    primando.delete(a);
+    a.muted = false;
     a.volume = vol;
     a.currentTime = 0;
     const p = a.play(); if (p && p.catch) p.catch(() => {});
@@ -150,15 +169,45 @@ const SomSorteio = {
   revelar() { tocar('clac', [CAMINHOS.clac], 3, VOL.clac); },
   /** O JACKPOT: os times ficaram prontos. Um só por cerimônia. */
   fecharTime() { tocar('jackpot', [CAMINHOS.jackpot], 1, VOL.jackpot); },
+  /** A ALAVANCA (29H-B): puxada e catraca engatando — no instante em que o giro começa. */
+  puxar() { tocar('alavanca', [CAMINHOS.alavanca], 1, VOL.alavanca); },
+  /**
+   * Destrava o áudio no gesto (29H-B). Chamar SÍNCRONO dentro do toque — "Sortear" no Jogo, a alavanca na cerimônia —, antes de
+   * qualquer await. Cria as rodas de todos os efeitos e dá a cada elemento um play() mudo seguido de pause(): no Safari/WebKit do
+   * site é isso que autoriza o play() de depois, vindo de um temporizador. Não liga o som nem grava nada (quem manda nisso continua
+   * sendo a escolha da pessoa e o ligarPorOmissao); quem desligou à mão nem baixa os arquivos.
+   */
+  prepararNoGesto() {
+    if (escolheu && !ligado) return;
+    for (const [chave, fontes, n] of RODAS) {
+      if (!rodas[chave]) { rodas[chave] = roda(chave, fontes, n); volta[chave] = 0; }
+      for (const a of rodas[chave]) {
+        if (a.dataset.destravado) continue;
+        a.dataset.destravado = '1';
+        primando.add(a);
+        const soltar = () => {
+          if (!primando.has(a)) return; // já tocou de verdade: deixa tocar
+          primando.delete(a);
+          try { a.pause(); a.currentTime = 0; } catch { /* ignore */ }
+          a.muted = false;
+        };
+        try {
+          a.muted = true;
+          const p = a.play();
+          if (p && p.then) p.then(soltar, () => { primando.delete(a); a.muted = false; }); else soltar();
+        } catch { primando.delete(a); a.muted = false; }
+      }
+    }
+  },
   silenciar() {
     pararTrem();
     Object.values(rodas).forEach((els) => els.forEach((a) => {
       try { a.pause(); a.currentTime = 0; } catch { /* ignore */ }
     }));
   },
-  // AUTO-TESTE: confirma que os ficheiros carregam. Loga "SOM OK 5/5".
+  // AUTO-TESTE: confirma que os ficheiros carregam. Loga "SOM OK 6/6".
   async autoTeste() {
-    const fontes = [...TIQUES, CAMINHOS.clac, CAMINHOS.jackpot];
+    const fontes = [...TIQUES, CAMINHOS.clac, CAMINHOS.jackpot, CAMINHOS.alavanca];
     let ok = 0; const falhas = [];
     await Promise.all(fontes.map((src) => new Promise((res) => {
       const a = new Audio(urlAsset(src)); let done = false;

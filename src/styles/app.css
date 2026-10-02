@@ -2996,6 +2996,24 @@
    cobria parte do retângulo dos times. Compartilhar vive agora dentro da
    cerimónia — ver .compartilhar em sorteio-maquina.css. */
 
+/* Rodada 29H-B (item 55): o ENQUADRAMENTO ÚNICO. Dentro da moldura 2:3 do card (a área de recorte do react-easy-crop, ou a moldura
+   do onboarding depois de a foto subir), o quadrado tracejado dourado marca o que vira a foto da miniatura (Início, ranking,
+   sorteio): o quadrado do TOPO, da largura do card — a conta de lib/enquadroAvatar.js#recorteDaMolduraUnica. Só desenho: o
+   pointer-events: none deixa o arrasto passar para o cropper. */
+.reactEasyCrop_CropArea.crop-area--miniatura::after,
+.moldura-unica::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  border: 2px dashed #d4a017;
+  box-shadow: inset 0 0 12px rgba(212, 160, 23, 0.35);
+  pointer-events: none;
+}
+
 /* Rodada 29H (item 3): a data de nascimento em rolinhos (components/RolinhosData.jsx). Três rolos com scroll-snap; o item no
    centro é o escolhido, a faixa dourada o marca. 5 linhas de 40 px = 200 px; as pontas somem num degradê. Antes de a pessoa
    mexer nos três, o item do centro fica apagado (é só o ponto de partida, não uma resposta). */

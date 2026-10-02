@@ -67,25 +67,31 @@ test('a tira de cada rolo: as 8 figurinhas, fixa por rolo, e os 8 rolos não mos
   assert.equal(new Set(tiras.map((t) => t.join(','))).size, N, 'oito rolos, oito tiras diferentes');
 });
 
-test('agenda: giram 0,8 s → um rolo desacelera a cada 0,5 s e trava 1 s depois → o 8º trava em 5,3 s → pulso 0,8 s → seguram 2,5 s → fade 0,4 s → ~9 s', () => {
+test('agenda (29H-B): giram 0,4 s → um rolo desacelera a cada 0,75 s e trava 1,5 s depois → o 8º trava em 7,15 s → pulso 0,8 s → seguram 2,5 s → fade 0,4 s → ~10,7 s', () => {
   const a = agendaDoCiclo();
   assert.equal(a.desaceleram.length, N);
   assert.equal(a.travam.length, N);
-  assert.equal(a.desaceleram[0], TEMPOS.giroMs, 'o 1º rolo começa a desacelerar em 0,8 s');
-  for (let k = 1; k < N; k += 1) assert.equal(a.desaceleram[k] - a.desaceleram[k - 1], TEMPOS.passoMs, 'um rolo a cada 0,5 s');
-  for (let k = 0; k < N; k += 1) assert.equal(a.travam[k] - a.desaceleram[k], TEMPOS.desaceleraMs, 'desacelera ~1 s antes de travar');
-  assert.equal(a.travam[0], 1800);
+  assert.equal(a.desaceleram[0], TEMPOS.giroMs, 'o 1º rolo começa a desacelerar em 0,4 s');
+  for (let k = 1; k < N; k += 1) assert.equal(a.desaceleram[k] - a.desaceleram[k - 1], TEMPOS.passoMs, 'um rolo a cada 0,75 s');
+  for (let k = 0; k < N; k += 1) assert.equal(a.travam[k] - a.desaceleram[k], TEMPOS.desaceleraMs, 'desacelera 1,5 s antes de travar');
+  assert.equal(a.travam[0], 1900);
   assert.equal(a.cheioEm, a.travam[N - 1], 'cheio = o 8º travou');
-  assert.equal(a.cheioEm, 5300);
+  assert.equal(a.cheioEm, 7150);
   assert.equal(a.pulsoFimEm - a.cheioEm, TEMPOS.pulsoMs, 'o pulso das réguas dura 0,8 s, uma vez');
   assert.equal(a.saindoEm - a.cheioEm, TEMPOS.seguraMs, 'seguram 2,5 s');
   assert.equal(a.girandoEm - a.saindoEm, TEMPOS.fadeMs, 'fade 0,4 s');
   assert.equal(a.fimEm - a.girandoEm, TEMPOS.respiroMs, 'os rolos giram um respiro antes do próximo ciclo');
   assert.equal(a.fimEm, CICLO_MS);
-  assert.equal(CICLO_MS, 8800);
-  assert.ok(CICLO_MS >= 8500 && CICLO_MS <= 9500, `ciclo de ${CICLO_MS} ms (~9 s)`);
-  assert.equal(TEMPOS.giroMs, 800);
-  assert.equal(TEMPOS.passoMs, 500);
+  assert.equal(CICLO_MS, 10650);
+  assert.ok(CICLO_MS >= 10000 && CICLO_MS <= 11500, `ciclo de ${CICLO_MS} ms (~10,7 s)`);
+  // A regra do dono (item 40) em números: giro inicial pela METADE do que era (800), revelação 1,5× (passo 500 → 750; a desaceleração
+  // na mesma proporção, 1000 → 1500) e a comemoração igual (pulso 800, segura 2500).
+  assert.equal(TEMPOS.giroMs, 400);
+  assert.equal(TEMPOS.passoMs, 750);
+  assert.equal(TEMPOS.desaceleraMs, 1500);
+  assert.equal(TEMPOS.passoMs / 500, 1.5);
+  assert.equal(TEMPOS.desaceleraMs / 1000, 1.5);
+  assert.equal(TEMPOS.pulsoMs, 800);
   assert.equal(TEMPOS.seguraMs, 2500);
   assert.equal(TEMPOS.fadeMs, 400);
   assert.equal(TEMPOS.respiroMs, 600);

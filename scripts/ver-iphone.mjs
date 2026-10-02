@@ -62,6 +62,7 @@ import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import { webkit } from 'playwright';
 import { cenaRodada29h } from './cena-rodada29h.mjs';
+import { cenaRodada29hb } from './cena-rodada29hb.mjs';
 
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -3287,7 +3288,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29e2', 'rodada29g', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada', 'rodada29h'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29e2', 'rodada29g', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada', 'rodada29h', 'rodada29hb'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -4026,6 +4027,16 @@ try {
     const r = await cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novoContexto, travarEscritas, espera, escolherData: escolherDataNosRolinhos });
     saida.rodada29h = r;
     console.log('\n[iphone] RODADA 29H-A — os 14 pontos: convidado, barra, rolinhos de data, página 1 do onboarding, Criar time, convite (link curto, WhatsApp, og:image), chips, painel do admin, figurinha, "＋ Criar time", bairro, ajustes finais (servidor local; contas de prova; escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+  if (CENAS.includes('rodada29hb')) {
+    const r = await cenaRodada29hb(navegador, { BASE, PASTA, RAIZ, novoContexto, travarEscritas, espera });
+    saida.rodada29hb = r;
+    console.log('\n[iphone] RODADA 29H-B — tempos do mini sorteio, enquadramento único, selfie sem espelho, aura, 4º efeito de som (servidor local; contas de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -8447,7 +8458,7 @@ async function cenaRodada29e2(navegador) {
       };
       obs = new MutationObserver(anotar);
       obs.observe(m, { attributes: true, subtree: true, attributeFilter: ['class', 'data-fase', 'data-ciclo', 'data-travadas'] });
-      setTimeout(() => { obs.disconnect(); res({ ok: false, log }); }, 24000);
+      setTimeout(() => { obs.disconnect(); res({ ok: false, log }); }, 32000); // 29H-B: dois ciclos de ~10,65 s cabem com folga
     }));
     const log = medido.log;
     const cheios = log.filter((x) => x.ev === 'fase:cheio');
@@ -8475,10 +8486,11 @@ async function cenaRodada29e2(navegador) {
       segura: saindo0 && cheio0 ? saindo0.t - cheio0.t : null, fade: girando0 && saindo0 ? girando0.t - saindo0.t : null,
       periodo: cheio1 && cheio0 ? cheio1.t - cheio0.t : null, ordem0: cheio0?.ids, ordem1: cheio1?.ids,
     };
-    verificar('C · os 8 rolos travam um por vez, alternando A/B a cada ~0,5 s, o 1º ~1,8 s depois de começarem a girar e o 8º ~5,3 s', medido.ok && stops1.length === N && medidas.times === 'ABABABAB' && passos.every((p) => p >= 350 && p <= 700) && medidas.primeiraTrava >= 1500 && medidas.primeiraTrava <= 2200 && medidas.ultimaTrava >= 4800 && medidas.ultimaTrava <= 5900 && new Set(medidas.rolos).size === N, JSON.stringify({ rolos: medidas.rolos, passos, primeira: medidas.primeiraTrava, ultima: medidas.ultimaTrava }));
-    verificar('C · cada rolo desacelera (.slow) ~1 s antes de travar (.stop)', slows1.length === N && desaceleras.every((d) => d !== null && d >= 800 && d <= 1250), JSON.stringify(desaceleras));
+    // 29H-B (item 40): giro inicial 0,4 s, um rolo a cada 0,75 s, desacelera 1,5 s → 1ª trava ~1,9 s, 8ª ~7,15 s; ciclo ~10,65 s.
+    verificar('C · os 8 rolos travam um por vez, alternando A/B a cada ~0,75 s, o 1º ~1,9 s depois de começarem a girar e o 8º ~7,15 s (29H-B)', medido.ok && stops1.length === N && medidas.times === 'ABABABAB' && passos.every((p) => p >= 600 && p <= 950) && medidas.primeiraTrava >= 1600 && medidas.primeiraTrava <= 2400 && medidas.ultimaTrava >= 6700 && medidas.ultimaTrava <= 7800 && new Set(medidas.rolos).size === N, JSON.stringify({ rolos: medidas.rolos, passos, primeira: medidas.primeiraTrava, ultima: medidas.ultimaTrava }));
+    verificar('C · cada rolo desacelera (.slow) ~1,5 s antes de travar (.stop) (29H-B)', slows1.length === N && desaceleras.every((d) => d !== null && d >= 1300 && d <= 1750), JSON.stringify(desaceleras));
     verificar('C · quando o 8º trava, as réguas dão UM pulso de ~0,8 s (.maq.premio) e só esse', premioOn && premioOff && Math.abs(medidas.pulsoNoUltimo) <= 150 && medidas.pulso >= 600 && medidas.pulso <= 1050 && log.filter((x) => x.ev === 'premio-on' && x.ciclo === c0).length === 1 && premioOff.t < (saindo0?.t ?? Infinity), JSON.stringify({ noUltimo: medidas.pulsoNoUltimo, pulso: medidas.pulso }));
-    verificar('C · seguram ~2,5 s cheios, esvaziam em ~0,4 s e o ciclo dá ~8,8 s', medidas.segura >= 2200 && medidas.segura <= 2950 && medidas.fade >= 250 && medidas.fade <= 700 && medidas.periodo >= 8200 && medidas.periodo <= 9700, JSON.stringify({ segura: medidas.segura, fade: medidas.fade, periodo: medidas.periodo }));
+    verificar('C · seguram ~2,5 s cheios, esvaziam em ~0,4 s e o ciclo dá ~10,65 s (29H-B)', medidas.segura >= 2200 && medidas.segura <= 2950 && medidas.fade >= 250 && medidas.fade <= 700 && medidas.periodo >= 10000 && medidas.periodo <= 11600, JSON.stringify({ segura: medidas.segura, fade: medidas.fade, periodo: medidas.periodo }));
     verificar('C · cada ciclo cheio tem as 8 figurinhas (4 por time) e o ciclo seguinte vem noutra ordem', medidas.ordem0 && medidas.ordem1 && medidas.ordem0.flat().filter(Boolean).length === N && new Set(medidas.ordem0.flat()).size === N && new Set(medidas.ordem1.flat()).size === N && medidas.ordem0.every((g) => g.length === 4) && JSON.stringify(medidas.ordem0) !== JSON.stringify(medidas.ordem1), JSON.stringify({ ordem0: medidas.ordem0, ordem1: medidas.ordem1 }));
 
     // D · fim do ciclo: os 6 rolos travados
@@ -8498,7 +8510,7 @@ async function cenaRodada29e2(navegador) {
     // mede-se no ciclo SEGUINTE, sem captura no meio, amostrando a opacidade a cada 25 ms (setTimeout — a cadência do rAF no
     // WebKit sem janela não é de confiança) desde o instante em que a fase vira "saindo": a curva tem de descer de ~1 até ~0.
     await esperarFase(pagina, 'girando', 5000);
-    await esperarFase(pagina, 'cheio', 9000);
+    await esperarFase(pagina, 'cheio', 11000); // 29H-B: o 8º trava 7,15 s depois de girar
     const fade = await pagina.evaluate(() => new Promise((res) => {
       const m = document.querySelector('.msq');
       const revs = [...m.querySelectorAll('.rolo .rev')];

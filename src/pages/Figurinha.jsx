@@ -43,8 +43,7 @@ import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import SeloHonra from '../components/SeloHonra';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
-import EnquadroMiniatura from '../components/EnquadroMiniatura';
-import { tipoDoAvatar } from '../lib/enquadroAvatar';
+import { gravarMiniatura } from '../lib/miniatura';
 import Toast from '../components/Toast';
 import '../styles/app.css';
 
@@ -77,9 +76,9 @@ const FUNDO_BG = {
   // FASE 3.51 — 'preto' (label "Neutro") re-baseado: mesma base escura do épico, sem
   // padrão. O tile é o gradiente liso, condizente com o card real.
   preto: 'linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
-  // 'aura' — tile fiel ao glow selado: elipse dourada (mesmos stops) sobre o escuro
-  // da casa. O card real desenha o glow com blur no canvas; aqui a elipse já é suave.
-  aura: 'radial-gradient(ellipse 70% 56% at 50% 44%, rgba(212,160,23,0.95) 0%, rgba(212,160,23,0.48) 40%, rgba(212,160,23,0.16) 64%, transparent 92%), linear-gradient(180deg, #0a0a12 0%, #070812 55%, #050609 100%)',
+  // 'aura' — tile fiel ao glow do card: elipse dourada (mesmos stops) sobre o escuro da casa. O card real desenha o glow com
+  // blur no canvas; aqui a elipse já é suave. 29H-B: o dobro do tamanho (70%×56% → 140%×112%) e os alphas a 3/4, como no canvas.
+  aura: 'radial-gradient(ellipse 140% 112% at 50% 44%, rgba(212,160,23,0.7125) 0%, rgba(212,160,23,0.36) 40%, rgba(212,160,23,0.12) 64%, transparent 92%), linear-gradient(180deg, #0a0a12 0%, #070812 55%, #050609 100%)',
   // 'golden' — FALLBACK (foil dourado) até o render real da chapa ficar pronto (ver `goldenTile`).
   golden: 'linear-gradient(160deg, #b8860b 0%, #e6bd52 28%, #a9760f 54%, #dcab3a 76%, #855a0b 100%)',
   // 'royal' — FALLBACK (foil roxo) até o render real da chapa ficar pronto (ver `royalTile`).
@@ -273,6 +272,7 @@ export default function Figurinha() {
   const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
   const ultimoFicheiro = useRef(null); // retém a foto p/ "tentar de novo"
   const ultimoRecorte = useRef(null); // idem, para o "Ajustar enquadramento" (PUT do recorte)
+  const ultimoRecorteMini = useRef(null); // 29H-B: o quadrado tracejado da miniatura do último recorte (gravado depois de subir)
   // Zoom do avatar no card. Escala interna 0.88–1.43 (passo 0.11); exibida ÷1.1
   // → 80/90/100/110/120/130%. Base 1.1 = 100% exibido. Reinicia sempre a 110%.
   // Clamp defensivo no arranque: normaliza qualquer valor fora de [ZOOM_MIN, ZOOM_MAX]
@@ -841,7 +841,9 @@ export default function Figurinha() {
   // se dispara a geração IA automática a seguir. RODADA 19: `file` já é o
   // RECORTE (saído do CropModal); `original` (opcional) é a foto de antes do
   // recorte, mandada junto para "Ajustar enquadramento" mais tarde.
-  async function subirFoto(file, emEstreia, original) {
+  // 29H-B: `recorteMini` é o quadrado tracejado da miniatura (enquadramento único), gravado em users.avatar_recorte depois do 200 —
+  // só quando o card passa a mostrar a FOTO (com figurinha ativa, o arquivo do avatar continua sendo a figurinha; o recorte dela fica).
+  async function subirFoto(file, emEstreia, original, recorteMini = null) {
     setFotoLocal(null); // some a confirmação de uma troca anterior enquanto esta corre
     if (emEstreia) setEstreiaFase('gerando');
     setUploadFoto(true);
@@ -878,6 +880,7 @@ export default function Figurinha() {
       setUploadFoto(false);
       ultimoFicheiro.current = null;
       origParaEnviar.current = null;
+      if (recorteMini && !data.figurinha_ativa) gravarMiniaturaDaFoto(recorteMini);
       if (emEstreia) {
         // SPEC-FIGURINHA-3 (22-set): a estreia só tenta gerar a Brilhante com
         // direito confirmado (crédito ou pacote do time) — sem isso o POST
@@ -895,9 +898,19 @@ export default function Figurinha() {
     }
   }
 
+  // 29H-B: grava o quadrado tracejado como a miniatura de verdade (best-effort, sem segurar a tela); com o 200, o avatar_url novo
+  // já traz o `?rc=` e as miniaturas de todo lado passam a cortar nele.
+  function gravarMiniaturaDaFoto(recorteMini) {
+    gravarMiniatura(recorteMini).then((url) => {
+      if (!url) return;
+      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: url } } : m));
+      aplicarNoPerfilGlobal({ avatar_url: url });
+    });
+  }
+
   // RODADA 19 — "Ajustar enquadramento": regrava só o recorte (PUT), sem
   // mandar original nenhuma (a que já está guardada não muda).
-  async function enviarRecorte(blob) {
+  async function enviarRecorte(blob, recorteMini = null) {
     const file = new File([blob], 'recorte.jpg', { type: 'image/jpeg' });
     ultimoRecorte.current = blob; // o "Tentar de novo" de um erro aqui repete ESTE recorte
     setFotoLocal(null);
@@ -912,6 +925,7 @@ export default function Figurinha() {
       setFotoLocal(URL.createObjectURL(file)); // só depois do 200, como em subirFoto
       setUploadFoto(false);
       ultimoRecorte.current = null;
+      if (recorteMini && !data.figurinha_ativa) gravarMiniaturaDaFoto(recorteMini);
       setToast({ tipo: 'success', mensagem: 'Enquadramento atualizado.' });
     } catch (err) {
       setUploadErro(mensagemUploadFoto(err));
@@ -960,16 +974,18 @@ export default function Figurinha() {
 
   // Confirmar do CropModal — um só ponto, os dois fluxos ("Escolher outra
   // foto" e "Ajustar enquadramento") só diferem no que fazem com o recorte.
-  async function aoConfirmarCrop(blob) {
+  async function aoConfirmarCrop(blob, extra) {
     setCropFile(null);
+    const recorteMini = extra?.recorte || null; // 29H-B: o quadrado tracejado da miniatura
+    ultimoRecorteMini.current = recorteMini;
     if (cropModo === 'ajustar') {
-      await enviarRecorte(blob);
+      await enviarRecorte(blob, recorteMini);
       return;
     }
     const original = origParaEnviar.current;
     ultimoFicheiro.current = blob;
     ultimoRecorte.current = null;
-    await subirFoto(blob, estreiaFase === 'foto', original);
+    await subirFoto(blob, estreiaFase === 'foto', original, recorteMini);
   }
   function aoCancelarCrop() {
     setCropFile(null);
@@ -981,8 +997,8 @@ export default function Figurinha() {
   // enquadramento" repete o PUT do recorte (antes o botão não fazia nada: só
   // olhava para o arquivo do upload de foto nova).
   function repetirUpload() {
-    if (ultimoRecorte.current) enviarRecorte(ultimoRecorte.current);
-    else if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto', origParaEnviar.current);
+    if (ultimoRecorte.current) enviarRecorte(ultimoRecorte.current, ultimoRecorteMini.current);
+    else if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto', origParaEnviar.current, ultimoRecorteMini.current);
   }
 
   // RODADA 19 — "Minhas figurinhas": até 6, mais recente primeiro. Recarrega
@@ -1852,19 +1868,8 @@ export default function Figurinha() {
                 tempo (30s aqui, 45s ali) confundia mais do que ajudava. */}
           </div>
 
-          {/* Rodada 29B (bloco 3, E) — "Como você aparece no app": o editor da MINIATURA (arrastar + zoom, prévia ao vivo,
-              a mesma moldura do Início/ranking/sorteio). Só para o que é arquivo nosso (foto ou figurinha, pelo proxy):
-              a foto do Google e as silhuetas não têm janela para enquadrar. Salvar vale para todas as miniaturas. */}
-          {!fotoLocal && !uploadFoto && !gerandoIA && String(jogador.avatar_url || '').includes('/api/media/') && tipoDoAvatar(jogador.avatar_url) !== 'outro' ? (
-            <EnquadroMiniatura
-              avatarUrl={jogador.avatar_url}
-              onSalvo={(url, restaurou) => {
-                setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: url } } : m));
-                aplicarNoPerfilGlobal({ avatar_url: url });
-                setToast({ tipo: 'success', mensagem: restaurou ? 'Miniatura de volta ao padrão' : 'Miniatura salva.' });
-              }}
-            />
-          ) : null}
+          {/* O editor da miniatura à parte ("Enquadrar", Rodada 29B) SAIU na 29H-B (item 55): o enquadramento é um só, ao
+              escolher ou trocar a foto — o quadrado tracejado dentro do card, no CropModal com `miniatura`. */}
 
           {/* VIRE BRILHANTE ✨ (SPEC-FIGURINHA-3 §3/§7) — o convite do card com a
               FOTO para quem ainda não tem geração. Um exemplo FIXO (o modelo
@@ -2432,7 +2437,7 @@ export default function Figurinha() {
           foto" (cropModo='nova') e "Ajustar enquadramento" (cropModo='ajustar');
           só o que aoConfirmarCrop faz com o resultado muda entre os dois. */}
       {cropFile ? (
-        <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} onConfirm={aoConfirmarCrop} onCancel={aoCancelarCrop} />
+        <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} miniatura onConfirm={aoConfirmarCrop} onCancel={aoCancelarCrop} />
       ) : null}
 
       {/* RODADA 21 — "Pintar no uniforme X?" antes de qualquer geração nova

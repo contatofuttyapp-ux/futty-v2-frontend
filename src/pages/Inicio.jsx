@@ -682,7 +682,8 @@ export default function Inicio() {
     // O modo entra na chave: a mesma pessoa com a mesma foto desenha DUAS
     // coisas diferentes antes e depois de ter Brilhante, e servir o cromo
     // errado do cache seria o bug de 22-set outra vez, por outra porta.
-    const chave = `q|${modoCromo}|${jogadorCard.avatar_url || jogadorCard.foto_url || '-'}|${cromoFundo}|${nome}`;
+    // 29H-B: a aura mudou de desenho (dobro do tamanho, −25% de opacidade) — a chave dela muda, senão o IndexedDB servia o cromo antigo.
+    const chave = `q${cromoFundo === 'aura' ? '2' : ''}|${modoCromo}|${jogadorCard.avatar_url || jogadorCard.foto_url || '-'}|${cromoFundo}|${nome}`;
 
     const naMemoria = cromoCache.get(chave);
     if (naMemoria) {

@@ -375,6 +375,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     }
     async function corpo() {
       const lv = q('.lever'); lv.classList.remove('pull'); void lv.offsetWidth; lv.classList.add('pull');
+      // 29H-B: a alavanca puxada e a catraca engatando — o 4º efeito, no instante em que o giro começa (o 1º tique sai logo abaixo,
+      // em vagaRolos). Com movimento reduzido não há giro, então não há alavanca.
+      if (!reduzido) SomSorteio.puxar();
       q('.palcoStage').classList.remove('veuTotal'); montarGrupos(); q('.fimtxt').classList.remove('on');
       // Rodada 14B: a alavanca repete a cerimónia — o prêmio da corrida anterior
       // apaga-se antes de os rolos voltarem a girar.
@@ -431,7 +434,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     // (a pessoa acabou de escolher ouvir; sem retorno nenhum parece quebrado).
     const onSom = () => { const on = SomSorteio.toggle(); if (on) SomSorteio.revelar(); pintarSom(); };
     somBtn.addEventListener('click', onSom); pintarSom();
-    // 13-set: o autoTeste dá load() nos 5 sons para logar "SOM OK 5/5" — 43 KB
+    // 13-set: o autoTeste dá load() nos 6 sons para logar "SOM OK 6/6" — ~52 KB
     // baixados ao abrir a cerimônia, inclusive com o som desligado, que é o
     // padrão. Fica só em desenvolvimento; em produção os sons entram um a um,
     // no primeiro uso (as rodas do somSorteio.js nascem preguiçosas).
@@ -450,10 +453,11 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     const repor = () => { grip.style.transform = ''; lever.style.setProperty('--drag', '0'); lever.classList.remove('arrastando', 'armado'); prog = 0; };
     const disparar = () => { repor(); if (!aCorrer) cerimonia(); };
     const voltaElastica = () => { lever.classList.add('voltando'); repor(); const id = setTimeout(() => lever.classList.remove('voltando'), 360); timers.add(id); };
-    const onDown = (e) => { if (aCorrer) return; arrasto = true; movido = 0; y0 = e.clientY; pid = e.pointerId; lever.classList.remove('voltando'); try { lever.setPointerCapture(pid); } catch { /* */ } e.preventDefault(); };
+    // 29H-B: o toque na alavanca é o gesto que destrava o áudio no site (ver prepararNoGesto) — síncrono, antes de qualquer espera.
+    const onDown = (e) => { if (aCorrer) return; SomSorteio.prepararNoGesto(); arrasto = true; movido = 0; y0 = e.clientY; pid = e.pointerId; lever.classList.remove('voltando'); try { lever.setPointerCapture(pid); } catch { /* */ } e.preventDefault(); };
     const onMove = (e) => { if (!arrasto) return; const dy = e.clientY - y0; movido = Math.max(movido, Math.abs(dy)); if (!reduzido && dy > 0) setProg(dy / MAX); e.preventDefault(); };
     const onUp = () => { if (!arrasto) return; arrasto = false; try { lever.releasePointerCapture(pid); } catch { /* */ } if (reduzido || movido < 6) { disparar(); return; } if (prog >= LIMIAR) disparar(); else voltaElastica(); };
-    const onKey = (e) => { if ((e.key === 'Enter' || e.key === ' ') && !aCorrer) { e.preventDefault(); cerimonia(); } };
+    const onKey = (e) => { if ((e.key === 'Enter' || e.key === ' ') && !aCorrer) { e.preventDefault(); SomSorteio.prepararNoGesto(); cerimonia(); } };
     lever.addEventListener('pointerdown', onDown); lever.addEventListener('pointermove', onMove);
     lever.addEventListener('pointerup', onUp); lever.addEventListener('pointercancel', onUp);
     lever.addEventListener('keydown', onKey);

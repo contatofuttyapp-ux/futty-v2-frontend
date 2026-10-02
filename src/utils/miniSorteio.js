@@ -32,10 +32,12 @@ export const TIMES = [
 
 export const VAGAS_POR_TIME = 4;
 
-// O ciclo (~8,8 s): os 8 rolos girando rápido → a partir de 0,8 s um rolo por vez desacelera (1 s) e trava, alternando A/B a cada
-// 0,5 s (o 8º trava em 5,3 s) → quando o 8º trava, um pulso único de 0,8 s nas réguas e os times seguram 2,5 s → fade 0,4 s →
-// os rolos voltam a girar (0,6 s de respiro) → recomeça com outra ordem.
-export const TEMPOS = { giroMs: 800, passoMs: 500, desaceleraMs: 1000, pulsoMs: 800, seguraMs: 2500, fadeMs: 400, respiroMs: 600 };
+// O ciclo (~10,7 s). Rodada 29H-B (dono, 2-out, item 40): o giro inicial caiu pela metade (0,8 → 0,4 s) e a revelação ficou 1,5×
+// mais longa (um rolo a cada 0,75 s em vez de 0,5; a desaceleração acompanha, 1,5 s em vez de 1 s); a comemoração é a mesma.
+// Os 8 rolos girando rápido → a partir de 0,4 s um rolo por vez desacelera (1,5 s) e trava, alternando A/B a cada 0,75 s (o 8º trava
+// em 7,15 s) → quando o 8º trava, um pulso único de 0,8 s nas réguas e os times seguram 2,5 s → fade 0,4 s → os rolos voltam a girar
+// (0,6 s de respiro) → recomeça com outra ordem.
+export const TEMPOS = { giroMs: 400, passoMs: 750, desaceleraMs: 1500, pulsoMs: 800, seguraMs: 2500, fadeMs: 400, respiroMs: 600 };
 
 /** Os instantes do ciclo, a partir do seu início (ms): o k-ésimo rolo da ordem desacelera em desaceleram[k] e trava em travam[k]. */
 export function agendaDoCiclo(t = TEMPOS) {

@@ -23,8 +23,18 @@
 //   • CLAC — inalterado, e de propósito: a semente continua a mesma e cada tique
 //     consome exatamente as mesmas 46 tiragens de antes, então o clac sai
 //     bit a bit igual ao da 14A.
+//
+// RODADA 29H-B (2-out-2026, decisão do dono às 17h): os três efeitos estão
+// perfeitos e NÃO mudam — a lei de 16-set fica (sem música, sem v2). Entra só um
+// 4º efeito, a ALAVANCA: a slot machine MANUAL sendo puxada e a catraca mecânica
+// engatando no instante em que o giro começa, ≤ 0,8 s. Nasce DEPOIS dos cinco de
+// sempre na mesma semente, então eles continuam bit a bit iguais — e este script
+// CONFERE isso (ASSINATURAS, abaixo): se um dos cinco mudar de MD5, a geração
+// falha. Duas variantes para o dono ouvir (scripts/capturas/rodada-29h/); a 1ª é
+// a que o app toca (public/sons/alavanca.mp3).
 // ═══════════════════════════════════════════════════════════════════════════════
-import { writeFileSync, statSync, mkdirSync, unlinkSync } from 'node:fs';
+import { writeFileSync, statSync, mkdirSync, unlinkSync, readFileSync, copyFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -36,6 +46,17 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '..');
 const DESTINO = path.join(RAIZ, 'public', 'sons');
 const CAPTURAS = path.join(AQUI, 'capturas');
+const CAPTURAS_29H = path.join(CAPTURAS, 'rodada-29h'); // as 2 variantes da alavanca, para o dono ouvir
+
+// Os cinco de sempre, selados (16A). A alavanca nasce depois deles na mesma semente; se algum destes mudar, a geração FALHA.
+const ASSINATURAS = {
+  'tique-1': 'b17ecfcd958ecd2dff4b54fd77d1847d',
+  'tique-2': '655a349ac7633f5150e50face398368e',
+  'tique-3': '0d5bca1fcd34cff2f4d6ac9ff24b425d',
+  clac: 'b06c5105d9d17b9355c436f3aff5ce41',
+  jackpot: '7c4e3e14b78151f521df24e375bf74bf',
+};
+const ALAVANCA_MAX_SEG = 0.8; // lei do dono (29H-B): a alavanca inteira, puxada + catraca, em até 0,8 s
 
 const TAXA = 44100;      // Hz
 // Lei do app leve: 96 kbps. Os degraus abaixo existem só para o jackpot: a 96
@@ -310,6 +331,129 @@ function gerarJackpot(rnd) {
   return buf;
 }
 
+/**
+ * Passa-banda cujo CENTRO varre de fDe a fAte ao longo do sinal (receita RBJ recalculada a cada amostra, estado contínuo):
+ * é o "whoosh" do braço da alavanca descendo — um filtro fixo soaria parado, e filtrar em pedaços estalaria nas emendas.
+ */
+function passaBandaVarrendo(entrada, fDe, fAte, q) {
+  const saida = new Float32Array(entrada.length);
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let i = 0; i < entrada.length; i += 1) {
+    const f0 = fDe * (fAte / fDe) ** (i / entrada.length);
+    const w0 = (2 * Math.PI * f0) / TAXA;
+    const alpha = Math.sin(w0) / (2 * q);
+    const a0 = 1 + alpha;
+    const b0 = alpha / a0, b2 = -alpha / a0;
+    const a1 = (-2 * Math.cos(w0)) / a0, a2 = (1 - alpha) / a0;
+    const x0 = entrada[i];
+    const y0 = b0 * x0 + b2 * x2 - a1 * y1 - a2 * y2;
+    saida[i] = y0;
+    x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+  }
+  return saida;
+}
+
+/**
+ * ALAVANCA (≤ 0,8 s) — a slot machine MANUAL: a alavanca puxada e a catraca engatando no instante em que o giro começa.
+ * Rodada 29H-B (2-out). Três gestos, em sequência, todos na faixa de 250 Hz a 1,4 kHz (mais um "ping" de 4 kHz): fora da faixa
+ * dos tiques (1,6–3,45 kHz), que começam a correr ao mesmo tempo — a alavanca se ouve por baixo do trem de tiques, sem brigar com ele.
+ *   1) a PUXADA — o braço descendo: ruído em passa-banda varrendo para baixo (900 → 350 Hz), com a envoltória de um gesto
+ *      (sobe e cai, pico a 45%); por cima, a MOLA: um tom metálico (fundamental + 2º harmônico) descendo 1400 → 950 Hz com vibrato
+ *      de 7 Hz — o que separa "alavanca de metal" de "sopro";
+ *   2) a CATRACA — 12 cliques de impulso filtrado (1150 Hz, Q 2,2) com um ping de 4 kHz, cada vez mais juntos (42 → 21 ms) e um pouco
+ *      mais altos: o mecanismo engatando e ganhando velocidade;
+ *   3) o ENGATE — o "clunk" no fim: seno 140 → 95 Hz (a massa assentando, fase acumulada) e o clique metálico da trava em 2,3 kHz.
+ * Variante 2 ("pesada", só para o dono comparar): puxada mais longa e mais grave (700 → 250 Hz; mola 1000 → 650), 8 cliques mais
+ * espaçados (48 → 27 ms) e clunk mais fundo (120 → 80 Hz). As duas: 0,72 s de som = 0,78 s no decodificador (≤ 0,8 s).
+ */
+function gerarAlavanca(variante, rnd) {
+  const pesada = variante === 1;
+  // 0,72 s de som nas duas: o MP3 soma ~25 ms de atraso de codificação, arredonda a quadros de 1152 amostras (26 ms) e o WebKit
+  // ainda conta o quadro de cabeçalho Xing/Info do LAME — é isso que <audio>.duration devolve. 0,72 s → 29 quadros de som + 1 de
+  // cabeçalho = 0,784 s no decodificador, dentro dos 0,8 s (medirMp3 conta como o WebKit; 0,74 s já dava 0,81 s).
+  const DUR = 0.72;
+  const buf = criar(DUR);
+
+  // 1) a puxada: whoosh varrendo para baixo + a mola
+  const tPux = pesada ? 0.35 : 0.29;
+  const whoosh = passaBandaVarrendo(ruido(tPux, rnd), pesada ? 700 : 900, pesada ? 250 : 350, 1.4);
+  const nPux = whoosh.length;
+  for (let i = 0; i < nPux; i += 1) {
+    const x = i / nPux;
+    const env = Math.sin(Math.PI * Math.min(1, x / 0.9)) ** 1.5; // sobe até 45% e cai
+    buf[i] += whoosh[i] * env * (pesada ? 2.4 : 2.0);
+  }
+  const mola0 = pesada ? 1000 : 1400, mola1 = pesada ? 650 : 950;
+  const iniMola = Math.round(0.04 * TAXA);
+  let fase = 0;
+  for (let i = iniMola; i < nPux; i += 1) {
+    const t = i / TAXA;
+    const x = (i - iniMola) / (nPux - iniMola);
+    const f = mola0 * (mola1 / mola0) ** x * (1 + 0.025 * Math.sin(2 * Math.PI * 7 * t));
+    fase += (2 * Math.PI * f) / TAXA;
+    const env = Math.min(1, (i - iniMola) / (0.02 * TAXA)) * (1 - x) ** 0.8;
+    buf[i] += (Math.sin(fase) + 0.30 * Math.sin(2 * fase)) * 0.28 * env;
+  }
+
+  // 2) a catraca: cliques cada vez mais juntos, do fim da puxada até perto do engate
+  const nCliques = pesada ? 8 : 12;
+  const d0 = pesada ? 0.048 : 0.042, d1 = pesada ? 0.027 : 0.021;
+  const fClique = pesada ? 900 : 1150, fPing = pesada ? 3200 : 4000;
+  let tC = tPux - 0.02;
+  for (let c = 0; c < nCliques; c += 1) {
+    const impulso = criar(0.012);
+    const nImp = Math.round(0.0012 * TAXA);
+    for (let i = 0; i < nImp; i += 1) impulso[i] = (rnd() * 2 - 1) * (1 - i / nImp);
+    const clique = passaBanda(impulso, fClique * (0.98 + rnd() * 0.04), 2.2);
+    const ganho = 0.55 + 0.30 * (c / (nCliques - 1));
+    for (let i = 0; i < clique.length; i += 1) {
+      const t = i / TAXA;
+      clique[i] = clique[i] * Math.exp(-t / 0.006) * 2.8 * ganho + Math.sin(2 * Math.PI * fPing * t) * 0.45 * ganho * Math.exp(-t / 0.003);
+    }
+    somar(buf, clique, tC, 1);
+    tC += d0 * (d1 / d0) ** (c / (nCliques - 1));
+  }
+
+  // 3) o engate: o clunk da massa assentando + o clique da trava
+  const tEng = DUR - 0.085;
+  const clunk = criar(0.085);
+  fase = 0;
+  const g0 = pesada ? 120 : 140, g1 = pesada ? 80 : 95;
+  for (let i = 0; i < clunk.length; i += 1) {
+    const t = i / TAXA;
+    fase += (2 * Math.PI * (g0 + (g1 - g0) * (t / 0.085))) / TAXA;
+    clunk[i] = Math.sin(fase) * Math.exp(-t / (pesada ? 0.060 : 0.045)) * 1.0;
+  }
+  somar(buf, clunk, tEng, 1);
+  const trava = passaBanda(ruido(0.005, rnd), 2300, 1.2);
+  for (let i = 0; i < trava.length; i += 1) trava[i] *= Math.exp((-i / TAXA) / 0.003) * 0.6;
+  somar(buf, trava, tEng, 1);
+  return buf;
+}
+
+/**
+ * A duração que um DECODIFICADOR vê (WebKit/Safari, <audio>.duration): TODOS os quadros do arquivo × 1152 amostras — o atraso de
+ * codificação do LAME entra, e o quadro de cabeçalho Xing/Info também (o Safari não o desconta; medido: 0,78 s de som → 0,836 s,
+ * 0,74 s → 0,81 s). É maior que o som sintetizado — é ESTA que tem de caber na lei do dono.
+ */
+function medirMp3(arquivo) {
+  const b = readFileSync(arquivo);
+  let i = 0;
+  if (b.length > 10 && b.toString('latin1', 0, 3) === 'ID3') i = 10 + (((b[6] & 0x7f) << 21) | ((b[7] & 0x7f) << 14) | ((b[8] & 0x7f) << 7) | (b[9] & 0x7f));
+  const BITRATES = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+  const TAXAS = [44100, 48000, 32000];
+  let quadros = 0;
+  while (i + 4 <= b.length) {
+    if (b[i] !== 0xff || (b[i + 1] & 0xe0) !== 0xe0) { i += 1; continue; }
+    const br = BITRATES[b[i + 2] >> 4], ta = TAXAS[(b[i + 2] >> 2) & 3], pad = (b[i + 2] >> 1) & 1;
+    if (!br || !ta) { i += 1; continue; }
+    const len = Math.floor((144 * br * 1000) / ta) + pad;
+    quadros += 1;
+    i += len;
+  }
+  return (quadros * 1152) / TAXA;
+}
+
 // ── saída: normalizar → WAV → MP3 ─────────────────────────────────────────────
 
 /** Normaliza o pico para -1 dBFS. Nada clipa e nada sai baixo demais. */
@@ -336,11 +480,11 @@ function wav16(amostras) {
   return b;
 }
 
-function escrever(nome, amostras) {
+function escrever(nome, amostras, destino = DESTINO) {
   normalizar(amostras);
   const temp = path.join(tmpdir(), `futty-${nome}-${process.pid}.wav`);
   writeFileSync(temp, wav16(amostras));
-  const alvo = path.join(DESTINO, `${nome}.mp3`);
+  const alvo = path.join(destino, `${nome}.mp3`);
 
   let bytes = 0, taxa = '';
   for (const degrau of DEGRAUS) {
@@ -383,6 +527,29 @@ const feitos = [
   escrever('clac', gerarClac(rnd)),
   escrever('jackpot', gerarJackpot(rnd)),
 ];
+
+// 29H-B: a alavanca vem DEPOIS dos cinco, na mesma semente — eles não mudam. A 1ª variante é a do app; as duas vão para o dono ouvir.
+mkdirSync(CAPTURAS_29H, { recursive: true });
+const alavanca = escrever('alavanca', gerarAlavanca(0, rnd));
+feitos.push(alavanca);
+copyFileSync(path.join(DESTINO, 'alavanca.mp3'), path.join(CAPTURAS_29H, 'alavanca-v1.mp3'));
+const alavanca2 = escrever('alavanca-v2', gerarAlavanca(1, rnd), CAPTURAS_29H);
+for (const a of [alavanca, alavanca2]) {
+  a.segMp3 = medirMp3(path.join(a.nome === 'alavanca' ? DESTINO : CAPTURAS_29H, `${a.nome}.mp3`));
+  console.log(`[sons] ${a.nome}: ${(a.seg * 1000).toFixed(0)} ms de som · ${(a.segMp3 * 1000).toFixed(0)} ms no decodificador`);
+  if (Math.max(a.seg, a.segMp3) > ALAVANCA_MAX_SEG + 1e-6) {
+    console.error(`[sons] FALHA: ${a.nome} dura ${(a.seg * 1000).toFixed(0)} ms de som / ${(a.segMp3 * 1000).toFixed(0)} ms no decodificador — a alavanca tem de caber em ${ALAVANCA_MAX_SEG * 1000} ms (dono, 29H-B).`);
+    process.exit(1);
+  }
+}
+for (const [nome, md5] of Object.entries(ASSINATURAS)) {
+  const atual = createHash('md5').update(readFileSync(path.join(DESTINO, `${nome}.mp3`))).digest('hex');
+  if (atual !== md5) {
+    console.error(`[sons] FALHA: ${nome}.mp3 mudou (md5 ${atual}, esperado ${md5}) — os cinco de sempre são selados (16A / 29H-B).`);
+    process.exit(1);
+  }
+}
+console.log(`[sons] os cinco de sempre conferidos por MD5 (bit a bit iguais); alavanca v1 e v2 em ${path.relative(RAIZ, CAPTURAS_29H)}`);
 
 const total = feitos.reduce((s, f) => s + f.bytes, 0);
 console.log(`\n[sons] ${feitos.length} arquivos · ${(total / 1024).toFixed(1)} KB no total`);

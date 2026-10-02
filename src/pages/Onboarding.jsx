@@ -1,7 +1,9 @@
 // Futty v2.0 — Onboarding dia-1 (3 passos): boas-vindas → FOTO (quase-obrigatória)
 // → identidade. Só para REGISTOS NOVOS (o Register navega para cá; contas antigas
 // nunca passam aqui). Pede SÓ o que o dia-1 usa — equipa entra-se/cria-se no Início.
-// Foto: selfie (capture="user") OU galeria → CropModal da casa (1:1) → POST /api/me/avatar.
+// Foto: selfie (capture="user") OU galeria → CropModal da casa (2:3, ENQUADRAMENTO ÚNICO da 29H-B: o quadrado tracejado da
+// miniatura dentro do card) → POST /api/me/avatar → PUT /api/me/avatar/enquadro (lib/miniatura.js, best-effort). A foto nunca é
+// espelhada (item 54): aparece como foi tirada.
 // "Deixar para depois" só aparece aos ~2s (29H); quem salta leva o card persistente no Início.
 // RODADA 28/29G: quem chega sem data de nascimento (Google/Apple não a trazem) passa
 // por "Quando você nasceu?" ANTES da foto. Menor de 18: o motor apaga a conta e o login explica.
@@ -16,7 +18,8 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset, urlImagem } from '../utils/avatar';
-import { enquadroAvatar } from '../lib/enquadroAvatar';
+import { estiloDaJanela, recorteDaMolduraUnica, urlSemRecorte } from '../lib/enquadroAvatar';
+import { gravarMiniatura } from '../lib/miniatura';
 import { guardarPosicaoPendente, lerConvitePendente, tomarConvitePendente } from '../lib/convitePendente';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
@@ -67,14 +70,36 @@ function Cta({ children, cheio, sec, ...rest }) {
   );
 }
 
-// Moldura V1 grande — vazia (gancho) ou preenchida (a foto cai aqui ao vivo).
+// O card 2:3, com cantos a 45° em px (num retângulo, o OCTO em % cortaria cantos tortos).
+const OCTO_CARD = 'polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px)';
+
+// Moldura V1 grande — vazia (gancho) ou, com a foto subida, o CARD 2:3 como ele vai ficar (29H-B): o quadrado tracejado da
+// miniatura por cima (o mesmo do enquadramento único) e, ao lado, a miniatura na moldura real do app. O arquivo que subiu É o
+// recorte 2:3: a janela da miniatura é o quadrado do topo (recorteDaMolduraUnica), sem adivinhar posição nenhuma.
 function MolduraFoto({ src, size = 170 }) {
+  if (src) {
+    const largura = Math.round(size * 0.82);
+    const altura = Math.round(largura * 1.5);
+    const inteira = urlImagem(urlSemRecorte(src), 512);
+    const janela = estiloDaJanela(2, 3, recorteDaMolduraUnica(2, 3));
+    return (
+      <div data-moldura-unica style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, margin: '0 auto' }}>
+        <div className="moldura-unica" style={{ position: 'relative', width: largura, height: altura, flexShrink: 0, overflow: 'hidden', clipPath: OCTO_CARD, border: '1.5px solid rgba(212,160,23,0.5)', boxShadow: '0 0 18px rgba(212,160,23,0.3)', background: '#101012' }}>
+          <img src={inteira} alt="" decoding="async" fetchpriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+        <div style={{ display: 'grid', gap: 6, justifyItems: 'center', maxWidth: 112 }}>
+          <div className="pavatar" data-miniatura-ao-vivo style={{ width: 52, height: 52, position: 'relative', overflow: 'hidden' }} aria-hidden="true">
+            <img src={inteira} alt="" decoding="async" style={{ ...janela, objectFit: 'fill', pointerEvents: 'none' }} />
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', lineHeight: 1.35 }}>É assim que você aparece no app</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ position: 'relative', width: size, height: size, margin: '0 auto' }}>
-      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', overflow: 'hidden', background: 'linear-gradient(0deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03)), #101012', clipPath: OCTO, border: '1.5px solid rgba(212,160,23,0.5)', animation: src ? 'none' : undefined, boxShadow: '0 0 18px rgba(212,160,23,0.3)' }}>
-        {src ? (
-          <img src={urlImagem(src, 512)} alt="" width={size} height={size} decoding="async" fetchpriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: enquadroAvatar(src) }} />
-        ) : (
+      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', overflow: 'hidden', background: 'linear-gradient(0deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03)), #101012', clipPath: OCTO, border: '1.5px solid rgba(212,160,23,0.5)', boxShadow: '0 0 18px rgba(212,160,23,0.3)' }}>
+        {(
           <div style={{ display: 'grid', placeItems: 'center', gap: 8, color: 'rgba(255,255,255,0.35)' }}>
             <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="rgba(212,160,23,0.65)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
             <span style={{ fontFamily: RAJ, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}>sua foto</span>
@@ -110,6 +135,7 @@ export default function Onboarding() {
   const [enviando, setEnviando] = useState(false);
   const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
   const ultimoBlob = useRef(null); // retém o blob p/ "tentar de novo" sem recortar
+  const ultimoRecorteMini = useRef(null); // 29H-B: o quadrado tracejado desse blob, gravado depois de a foto subir
   const [nome, setNome] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [toast, setToast] = useState(null);
@@ -174,8 +200,8 @@ export default function Onboarding() {
   // Crop confirmado → sobe já (POST /api/me/avatar) e a foto CAI na moldura.
   // P1-5 — em vez de um toast cru e passageiro, o erro fica INLINE na moldura com
   // uma mensagem accionável e "tentar de novo" (repete o mesmo blob, sem recortar).
-  async function subirRecorte(blob) {
-    if (blob) ultimoBlob.current = blob;
+  async function subirRecorte(blob, extra) {
+    if (blob) { ultimoBlob.current = blob; ultimoRecorteMini.current = extra?.recorte || null; }
     const alvo = blob || ultimoBlob.current;
     if (!alvo) return;
     setCropFile(null);
@@ -185,6 +211,10 @@ export default function Onboarding() {
       const file = new File([alvo], 'onboarding.jpg', { type: 'image/jpeg' });
       const res = await apiUpload('/api/me/avatar', file, 'avatar');
       setAvatarUrl(res.avatar_url || res.foto_url || null);
+      // 29H-B: o quadrado tracejado vira a miniatura de verdade (users.avatar_recorte). Best-effort e sem segurar a tela: a foto já
+      // subiu; se o motor ainda não tem a migração 070, a miniatura segue na regra de sempre.
+      const recorteMini = ultimoRecorteMini.current;
+      if (recorteMini && !res.figurinha_ativa) gravarMiniatura(recorteMini).then((url) => { if (url) setAvatarUrl(url); });
       ultimoBlob.current = null;
     } catch (e) {
       setUploadErro(mensagemUploadFoto(e));
@@ -424,7 +454,7 @@ export default function Onboarding() {
         // esta foto na moldura, e o que a pessoa enquadra aqui é exatamente o
         // que ela vai ver no álbum. Uma proporção só — escolher entre 1:1 e
         // 16:9 aqui seria escolher um card torto.
-        <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} onConfirm={subirRecorte} onCancel={() => setCropFile(null)} />
+        <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} miniatura onConfirm={subirRecorte} onCancel={() => setCropFile(null)} />
       ) : null}
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
     </div>

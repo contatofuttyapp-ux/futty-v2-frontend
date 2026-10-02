@@ -24,10 +24,11 @@
    os espaços encolhem antes de qualquer rolo estourar ou ser cortado pelo overflow da janela). */
 .msq .srow{display:flex;justify-content:space-between}
 /* O rolo: a peça da máquina real (.rolo/.strip/.scel) a 56×75. A tira tem as 8 figurinhas duas vezes: o spinY vai a −50 % e
-   fecha sem emenda. Rápido a girar (.35 s a volta), ~1 s ao desacelerar (.slow), parado ao travar (.stop). */
+   fecha sem emenda. Rápido a girar (.35 s a volta), ~1,5 s ao desacelerar (.slow; 29H-B: era 1 s, a revelação ficou 1,5× mais
+   longa), parado ao travar (.stop). */
 .msq .rolo{position:relative;width:56px;height:75px;flex:none;overflow:hidden;background:#0a0a10;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);border-bottom:2px solid rgba(139,92,246,.35)}
 .msq .strip{position:absolute;left:0;right:0;top:0;animation:msqSpin var(--sd,.35s) linear infinite}
-.msq .rolo.slow .strip{animation-duration:1s}
+.msq .rolo.slow .strip{animation-duration:1.5s}
 .msq .rolo.stop .strip{animation-play-state:paused}
 @keyframes msqSpin{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
 /* 29H (item 4): antes de a figurinha chegar da rede a célula já é a MOLDURA vazia (fundo em degradê e filete interno), e a imagem

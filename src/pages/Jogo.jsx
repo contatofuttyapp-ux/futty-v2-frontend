@@ -19,6 +19,7 @@ import Icon from '../components/Icon';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
+import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
 
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
@@ -121,6 +122,9 @@ export default function Jogo() {
 
   // Sorteio: faz o POST, abre o overlay com o resultado e recarrega o jogo.
   async function sortear() {
+    // 29H-B: este toque é o único gesto de quem sorteia antes de a cerimônia tocar os efeitos (segundos depois, de temporizadores).
+    // No site (Safari) o áudio só toca destravado por um gesto; o app da loja não tem a regra. Síncrono, antes do primeiro await.
+    SomSorteio.prepararNoGesto();
     setActionError('');
     setBusy(true);
     try {

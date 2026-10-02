@@ -168,6 +168,12 @@ export function desenharFundoNeutro(ctx, W, H) {
 // Fica em cache por PROPORÇÃO (o card 2:3 e o retrato quadrado têm caixas de
 // glow diferentes), não por tamanho: como tudo no desenho escala com W, a mesma
 // mancha serve qualquer resolução.
+//
+// RODADA 29H-B (dono, 2-out, item 56): a aura no DOBRO do tamanho e com 25% MENOS opacidade. A caixa do glow dobra
+// (AURA_ESCALA) e cada parada do degradê sai com 3/4 do alpha (AURA_OPACIDADE) — a elipse continua centrada no mesmo ponto,
+// só cresce e suaviza. O palco selado da vitrine (.perfil-glow) NÃO muda: é a aura do CARD que o dono pediu.
+export const AURA_ESCALA = 2;
+export const AURA_OPACIDADE = 0.75;
 const LARGURA_GLOW = 160;
 const glowAuraCache = new Map();
 
@@ -189,10 +195,11 @@ function glowAura(razaoCaixa) {
   octx.scale(gw * 0.5, gh * 0.48);                      // raios 50%×48% do box
   // DOSE glow ×2 (mesmo desenho, dobra opacity/spread): alphas dobrados (clamp) e
   // stops empurrados para fora (mais alcance). Base seladas: .55/.24/.07 @ 0/34/56/78.
+  // 29H-B: os alphas de antes (0,95 / 0,48 / 0,16) vezes AURA_OPACIDADE (0,75) — o dobro do tamanho vem da caixa, em desenharFundoAura.
   const g = octx.createRadialGradient(0, 0, 0, 0, 0, 1);
-  g.addColorStop(0, 'rgba(212,160,23,0.95)');
-  g.addColorStop(0.40, 'rgba(212,160,23,0.48)');
-  g.addColorStop(0.64, 'rgba(212,160,23,0.16)');
+  g.addColorStop(0, `rgba(212,160,23,${(0.95 * AURA_OPACIDADE).toFixed(4)})`);
+  g.addColorStop(0.40, `rgba(212,160,23,${(0.48 * AURA_OPACIDADE).toFixed(4)})`);
+  g.addColorStop(0.64, `rgba(212,160,23,${(0.16 * AURA_OPACIDADE).toFixed(4)})`);
   g.addColorStop(0.92, 'rgba(212,160,23,0)');
   octx.fillStyle = g;
   octx.beginPath(); octx.arc(0, 0, 1, 0, Math.PI * 2); octx.fill();
@@ -211,9 +218,10 @@ export function desenharFundoAura(ctx, W, H, ehQuadrado = false) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, W, H);
 
-  // b) glow do tamanho do "glow box" (300/330 × 344/470 do palco), já desfocado.
-  const gw = Math.max(2, Math.round(W * (300 / 330)));
-  const gh = Math.max(2, Math.round(H * (344 / 470)));
+  // b) glow do tamanho do "glow box" (300/330 × 344/470 do palco), já desfocado — e, desde a 29H-B, no DOBRO (AURA_ESCALA): a
+  // mancha passa a sangrar além do card, de propósito; o que sobra é cortado pelo próprio canvas.
+  const gw = Math.max(2, Math.round(W * (300 / 330) * AURA_ESCALA));
+  const gh = Math.max(2, Math.round(H * (344 / 470) * AURA_ESCALA));
   const { canvas: pronto, folgaFrac } = glowAura(gh / gw);
   // c) o centro do box senta a 44% (translate(-50%,-50%) top:44% do glow selado).
   const cy = (ehQuadrado ? 0.42 : 0.44) * H;
@@ -236,6 +244,9 @@ const PREMIUM_GLINTS = [
   [0.14, 0.82, 3.2], [0.85, 0.85, 4.2], [0.50, 0.91, 3.2], [0.31, 0.19, 2.4], [0.70, 0.21, 3.2],
 ];
 const PREMIUM_GLINTS_DISCRETO = [PREMIUM_GLINTS[2], PREMIUM_GLINTS[7], PREMIUM_GLINTS[10]];
+// 29H-B (item 57, prancha scripts/prancha-golden.mjs): "brilho só nas bordas" — os 12 glints a até 16% da borda; o miolo fica calmo.
+// Não é usado pelo app até o dono escolher uma variante do Golden.
+const PREMIUM_GLINTS_BORDAS = PREMIUM_GLINTS.filter(([x, y]) => x <= 0.16 || x >= 0.84 || y <= 0.12 || y >= 0.86);
 
 // Paletas dos fundos premium: chapa (asset em /public), base de fallback (caso a
 // chapa falhe a carregar — nunca fica buraco) e as 3 cores do glint (centro/halo/cauda).
@@ -298,7 +309,7 @@ export async function desenharFundoPremium(ctx, W, H, cor, { glints = 'pico', cr
   cron?.marca('fundo:desenhar');
   // b) poeira de cristal.
   if (glints) {
-    const pontos = glints === 'discreto' ? PREMIUM_GLINTS_DISCRETO : PREMIUM_GLINTS;
+    const pontos = glints === 'discreto' ? PREMIUM_GLINTS_DISCRETO : glints === 'bordas' ? PREMIUM_GLINTS_BORDAS : PREMIUM_GLINTS;
     const boost = glints === 'vitrine' ? 1.7 : 1;
     for (const [xf, yf, r] of pontos) desenharGlintPico(ctx, xf * W, yf * H, r * k * boost, k, pal);
     cron?.marca('glints');
