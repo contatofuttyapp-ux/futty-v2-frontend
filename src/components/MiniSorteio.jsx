@@ -1,11 +1,12 @@
-// Futty v2.0 — Rodada 29E2: o mini sorteio ao vivo do passo 1 do Onboarding — a máquina pequena na receita da máquina do
+// Futty v2.0 — Rodada 29E2/29E3: o mini sorteio ao vivo do passo 1 do Onboarding — a máquina pequena na receita da máquina do
 // sorteio (styles/sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) e, dentro, dois grupos, TIME A (ouro) e
-// TIME B (roxo), com 3 ROLOS de slot machine cada (.rolo/.strip/.scel de lá, a 56×75). Os 6 rolos giram rápido com as 6
-// figurinhas FICTÍCIAS (utils/miniSorteio.js); a partir de 0,8 s um por vez desacelera (.slow, 1 s) e trava (.stop) na figurinha
-// sorteada, que entra por cima na moldura do sorteio real (.rev com revPop, micro-lâmpadas .mb piscando, nome), alternando
-// A/B a cada 0,5 s; quando o 6º trava, as réguas dão UM pulso (premio, 0,8 s) e os times seguram 2,5 s; fade 0,4 s; os rolos
-// voltam a girar e recomeça com outra ordem — ciclo de ~7,8 s, sem som (não há gesto), só CSS + um relógio de setTimeout.
-// prefers-reduced-motion: os 6 travados, sem giro. Estado natural (antes do JS correr): os 6 travados.
+// TIME B (roxo), com 4 ROLOS de slot machine cada (29E3, dono: 4 jogadores por time; .rolo/.strip/.scel de lá, a 56×75, 4 por
+// linha). Os 8 rolos giram rápido com as 8 figurinhas FICTÍCIAS (utils/miniSorteio.js); a partir de 0,8 s um por vez desacelera
+// (.slow, 1 s) e trava (.stop) na figurinha sorteada, que entra por cima na moldura do sorteio real (.rev com revPop, micro-
+// lâmpadas .mb piscando, nome), alternando A/B a cada 0,5 s; quando o 8º trava (5,3 s), as réguas dão UM pulso (premio, 0,8 s)
+// e os times seguram 2,5 s; fade 0,4 s; os rolos voltam a girar e recomeça com outra ordem — ciclo de ~8,8 s, sem som (não há
+// gesto), só CSS + um relógio de setTimeout. prefers-reduced-motion: os 8 travados, sem giro. Estado natural (antes do JS
+// correr): os 8 travados.
 import { useEffect, useState } from 'react';
 import { urlAsset } from '../utils/avatar';
 import { reguaDeLuzes } from '../utils/luzesSlot';
@@ -23,7 +24,7 @@ const MBPOS = [[20, 2], [80, 2], [2, 40], [97, 40], [2, 72], [97, 72]];
 const POR_ID = Object.fromEntries(FIGURINHAS.map((f) => [f.id, f]));
 const AGENDA = agendaDoCiclo();
 const N = FIGURINHAS.length;
-// A tira de cada rolo nasce uma vez: as 6 figurinhas na ordem própria do rolo, duas vezes (o spinY vai a −50 % e fecha sem emenda).
+// A tira de cada rolo nasce uma vez: as 8 figurinhas na ordem própria do rolo, duas vezes (o spinY vai a −50 % e fecha sem emenda).
 const TIRAS = TIMES.flatMap((_, ti) => Array.from({ length: VAGAS_POR_TIME }, (_, vaga) => tiraDoRolo(ti * VAGAS_POR_TIME + vaga)));
 
 function movimentoReduzido() {
@@ -32,7 +33,7 @@ function movimentoReduzido() {
 
 // O relógio: girando → (0,8 s) um rolo por vez desacelera e, 1 s depois, trava → cheio (pulso de 0,8 s nas réguas; seguram) →
 // saindo (fade) → girando de novo → próximo ciclo, noutra ordem. `desacelerando` e `travadas` contam rolos na ordem do ciclo.
-// O estado inicial é o natural: os 6 travados (ciclo 0, cheio) — é o que fica com movimento reduzido.
+// O estado inicial é o natural: os 8 travados (ciclo 0, cheio) — é o que fica com movimento reduzido.
 function useCiclo() {
   const [estado, setEstado] = useState({ ciclo: 0, fase: 'cheio', desacelerando: N, travadas: N, pulso: false });
   useEffect(() => {

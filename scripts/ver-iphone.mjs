@@ -4016,7 +4016,7 @@ try {
   if (CENAS.includes('rodada29e2')) {
     const r = await cenaRodada29e2(navegador);
     saida.rodada29e2 = r;
-    console.log('\n[iphone] RODADA 29E2 — mini sorteio em rolos de slot machine, legenda e CTA novos, sem barra no onboarding (servidor local; conta de prova; escritas interceptadas)');
+    console.log('\n[iphone] RODADA 29E2/29E3 — mini sorteio em 8 rolos de slot machine (4 por time, GONÇALO), legenda e CTA novos, sem barra no onboarding (servidor local; conta de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -8227,8 +8227,11 @@ async function cenaRodada29e2(navegador) {
   const pasta = path.join(PASTA, 'rodada-29e2');
   mkdirSync(pasta, { recursive: true });
   const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
-  const NOMES = ['BRUNINHO', 'TIAGÃO', 'LÉO', 'PEDRÃO', 'RAFA', 'DUDU'];
-  const IDS = ['bruninho', 'tiagao', 'leo', 'pedrao', 'rafa', 'dudu'];
+  // 29E3 (dono, 2-out): 4 jogadores por time — 8 figurinhas em 8 rolos (2 linhas de 4); LÉO virou GONÇALO (goncalo.webp).
+  const NOMES = ['BRUNINHO', 'TIAGÃO', 'GONÇALO', 'PEDRÃO', 'RAFA', 'DUDU', 'NANDO', 'CAIO'];
+  const IDS = ['bruninho', 'tiagao', 'goncalo', 'pedrao', 'rafa', 'dudu', 'nando', 'caio'];
+  const N = 8;
+  const NATURAL = [['bruninho', 'goncalo', 'rafa', 'nando'], ['tiagao', 'pedrao', 'dudu', 'caio']];
   const LEGENDA = 'SORTEIO JUSTO · RANKING · FIGURINHA DE COLECIONADOR';
   const erros = [];
   const verificacoes = [];
@@ -8272,8 +8275,13 @@ async function cenaRodada29e2(navegador) {
         const rev = r.querySelector('.rev');
         const img = rev?.querySelector('.fr img');
         const mb = rev?.querySelector('.mb');
+        // 29E3: o nome tem de caber na cartinha de 56 (GONÇALO como BRUNINHO): a largura do texto medida com um Range.
+        const nm = rev?.querySelector('.nm');
+        let nmLargura = null;
+        if (nm?.firstChild) { const rg = document.createRange(); rg.selectNodeContents(nm); nmLargura = rg.getBoundingClientRect().width; }
         return {
           vaga: Number(r.dataset.vaga), estado: r.dataset.estado, classes: [...r.classList].filter((c) => c !== 'rolo'),
+          nm: nm ? { largura: nmLargura, caixa: nm.clientWidth, estoura: nm.scrollWidth > nm.clientWidth } : null,
           celulas: strip ? strip.querySelectorAll('.scel img').length : 0,
           celulasIds: strip ? [...strip.querySelectorAll('.scel img')].map((i) => (i.getAttribute('src') || '').match(/\/onboarding\/([a-z]+)\.webp/)?.[1] || null) : [],
           spin: strip ? { nome: cs(strip).animationName, dur: cs(strip).animationDuration, play: cs(strip).animationPlayState } : null,
@@ -8315,6 +8323,20 @@ async function cenaRodada29e2(navegador) {
       largura: maq ? Math.round(maq.getBoundingClientRect().width) : null,
       luzes: luzes.length, luzAnim: luzes[0] ? cs(luzes[0]).animationName : null, luzOpacidades: [...new Set(luzes.map((l) => cs(l).opacity))],
       grupos, rolos: m ? m.querySelectorAll('.rolo').length : 0, travados: m ? m.querySelectorAll('.rolo.stop .rev.on').length : 0,
+      // 29E3: a geometria das 2 linhas de 4 — a máquina não pode estourar a largura (nem a 320 px) nem a janela cortar um rolo.
+      geometria: (maq && m.querySelector('.janela')) ? (() => {
+        const j = m.querySelector('.janela');
+        const jr = j.getBoundingClientRect();
+        const mr = maq.getBoundingClientRect();
+        const rs = [...m.querySelectorAll('.rolo')].map((r) => r.getBoundingClientRect());
+        return {
+          viewport: window.innerWidth, docScroll: document.documentElement.scrollWidth, bodyScroll: document.body.scrollWidth,
+          maq: { esq: Math.round(mr.left), dir: Math.round(mr.right), largura: Math.round(mr.width) },
+          janela: { client: j.clientWidth, scroll: j.scrollWidth, esq: Math.round(jr.left), dir: Math.round(jr.right) },
+          linhas: [...m.querySelectorAll('.srow')].map((s) => ({ n: s.children.length, client: s.clientWidth, scroll: s.scrollWidth, larguras: [...s.children].map((c) => Math.round(c.getBoundingClientRect().width)) })),
+          rolosEsq: Math.round(Math.min(...rs.map((r) => r.left))), rolosDir: Math.round(Math.max(...rs.map((r) => r.right))),
+        };
+      })() : null,
       legenda: leg ? {
         texto: leg.textContent.replace(/ /g, ' ').replace(/\s+/g, ' ').trim(), fonte: legCs.fontFamily, peso: legCs.fontWeight, caixa: legCs.textTransform,
         espaco: parseFloat(legCs.letterSpacing), cor: legCs.color, tamanho: parseFloat(legCs.fontSize), balance: legCs.textWrap || legCs.textWrapStyle || '',
@@ -8331,6 +8353,12 @@ async function cenaRodada29e2(navegador) {
   });
   const esperarFase = (pagina, fase, limite = 12000) => pagina.waitForFunction((f) => document.querySelector('.msq')?.dataset.fase === f, fase, { timeout: limite }).then(() => true, () => false);
   const todosRolos = (r) => r.grupos.flatMap((g) => g.rolos.map((x) => ({ ...x, time: g.time })));
+  // 29E3: a máquina cabe na tela (nada rola de lado), 2 linhas de 4 rolos de 56 dentro da janela (nenhum cortado pelo overflow).
+  const geoOk = (G) => !!G && G.docScroll <= G.viewport && G.bodyScroll <= G.viewport && G.maq.esq >= 0 && G.maq.dir <= G.viewport
+    && G.janela.scroll <= G.janela.client && G.linhas.length === 2 && G.linhas.every((l) => l.n === 4 && l.scroll <= l.client && l.larguras.every((w) => w === 56))
+    // e ar entre os rolos: os 3 espaços de cada linha somam ≥ 12 px (≥ 4 cada), também a 320 (mini-sorteio.css, @media ≤ 340)
+    && G.linhas.every((l) => l.client - l.larguras.reduce((a, b) => a + b, 0) >= 12)
+    && G.rolosEsq >= G.janela.esq + 1 && G.rolosDir <= G.janela.dir - 1;
 
   // 1) 1ª página: textos, legenda, botão, barra — e a máquina a girar
   {
@@ -8346,8 +8374,9 @@ async function cenaRodada29e2(navegador) {
     verificar('A · botão "Começar" = CTA dourado da casa (.btn.cta-gold dentro de .cta-gold-glow), 50 px de altura, ≤ 290 de largura', B && B.texto === 'Começar' && B.classes.includes('btn') && B.classes.includes('cta-gold') && B.glow && B.altura === 50 && B.largura <= 290 && B.largura >= 240, JSON.stringify(B && { texto: B.texto, classes: B.classes, glow: B.glow, altura: B.altura, largura: B.largura }));
     verificar('A · botão: texto e borda dourados (não a laje amarela sólida), 24 px de respiro acima (da legenda) e abaixo', B && L && B.cor === 'rgb(240, 201, 74)' && B.borda === 'rgb(212, 160, 23)' && B.margemCima === 24 && B.margemBaixo === 24 && Math.round(B.topo - L.baixo) >= 24 && Math.round(B.topo - L.baixo) <= 30, JSON.stringify(B && { cor: B.cor, borda: B.borda, cima: B.margemCima, baixo: B.margemBaixo, daLegenda: Math.round(B.topo - L.baixo) }));
     verificar('B · 1ª página: sem a barra de navegação', !r.nav);
-    verificar('C · a máquina (290, 92 lâmpadas em msqCalm): 2 grupos (TIME A ouro, TIME B roxo) com 3 ROLOS cada, cada tira com as 6 figurinhas duas vezes', Math.abs(r.largura - 290) <= 4 && r.luzes === 92 && r.luzAnim === 'msqCalm' && r.grupos.length === 2 && r.grupos[0].nome === 'Time A' && r.grupos[1].nome === 'Time B' && r.grupos[0].cor === '#d4a017' && r.grupos[1].cor === '#8b5cf6' && r.rolos === 6 && todosRolos(r).every((x) => x.celulas === 12 && new Set(x.celulasIds.slice(0, 6)).size === 6 && x.celulasIds.slice(0, 6).join() === x.celulasIds.slice(6).join()), JSON.stringify({ largura: r.largura, luzes: r.luzes, luzAnim: r.luzAnim, grupos: r.grupos.map((g) => [g.nome, g.cor, g.rolos.length]), celulas: todosRolos(r).map((x) => x.celulas) }));
-    verificar('C · as tiras dos 6 rolos não são todas iguais (sequências próprias)', new Set(todosRolos(r).map((x) => x.celulasIds.slice(0, 6).join())).size >= 4, JSON.stringify(todosRolos(r).map((x) => x.celulasIds.slice(0, 6).join('>'))));
+    verificar('C · a máquina (290, 92 lâmpadas em msqCalm): 2 grupos (TIME A ouro, TIME B roxo) com 4 ROLOS cada (29E3), cada tira com as 8 figurinhas duas vezes', Math.abs(r.largura - 290) <= 4 && r.luzes === 92 && r.luzAnim === 'msqCalm' && r.grupos.length === 2 && r.grupos[0].nome === 'Time A' && r.grupos[1].nome === 'Time B' && r.grupos[0].cor === '#d4a017' && r.grupos[1].cor === '#8b5cf6' && r.rolos === N && r.grupos.every((g) => g.rolos.length === 4) && todosRolos(r).every((x) => x.celulas === 2 * N && new Set(x.celulasIds.slice(0, N)).size === N && x.celulasIds.slice(0, N).join() === x.celulasIds.slice(N).join()), JSON.stringify({ largura: r.largura, luzes: r.luzes, luzAnim: r.luzAnim, grupos: r.grupos.map((g) => [g.nome, g.cor, g.rolos.length]), celulas: todosRolos(r).map((x) => x.celulas) }));
+    verificar('C · as tiras dos 8 rolos não são todas iguais (sequências próprias)', new Set(todosRolos(r).map((x) => x.celulasIds.slice(0, N).join())).size >= 5, JSON.stringify(todosRolos(r).map((x) => x.celulasIds.slice(0, N).join('>'))));
+    verificar('C · 2 linhas de 4 rolos de 56 dentro da janela (nenhum cortado) e nada rola de lado no iPhone', geoOk(r.geometria), JSON.stringify(r.geometria));
     await capturar(pagina, 'pagina-1');
 
     // Um ciclo inteiro, medido na página: cada rolo que entra em .slow / .stop, o pulso das réguas, as fases e os ciclos.
@@ -8390,31 +8419,37 @@ async function cenaRodada29e2(navegador) {
     // O pulso mede-se no 1º ciclo observado: o observador desliga no 2º "cheio", que é o instante em que o pulso do c1 liga.
     const premioOn = log.find((x) => x.ev === 'premio-on' && x.ciclo === c0);
     const premioOff = log.find((x) => x.ev === 'premio-off' && x.ciclo === c0);
-    const stop6do0 = log.filter((x) => x.ev === 'stop' && x.ciclo === c0).pop();
+    const stopUltimoDo0 = log.filter((x) => x.ev === 'stop' && x.ciclo === c0).pop();
     const passos = stops1.slice(1).map((s, i) => s.t - stops1[i].t);
     const desaceleras = stops1.map((s) => { const sl = slows1.find((x) => x.rolo === s.rolo); return sl ? s.t - sl.t : null; });
     const medidas = {
       ok: medido.ok, ciclos: [c0, c1],
       primeiraTrava: stops1[0] && inicio1 ? stops1[0].t - inicio1.t : null,
+      ultimaTrava: stops1.length && inicio1 ? stops1[stops1.length - 1].t - inicio1.t : null,
       passos, times: stops1.map((s) => s.rolo[0]).join(''), rolos: stops1.map((s) => s.rolo), desaceleras,
-      pulsoNo6: premioOn && stop6do0 ? premioOn.t - stop6do0.t : null, pulso: premioOn && premioOff ? premioOff.t - premioOn.t : null,
+      pulsoNoUltimo: premioOn && stopUltimoDo0 ? premioOn.t - stopUltimoDo0.t : null, pulso: premioOn && premioOff ? premioOff.t - premioOn.t : null,
       segura: saindo0 && cheio0 ? saindo0.t - cheio0.t : null, fade: girando0 && saindo0 ? girando0.t - saindo0.t : null,
       periodo: cheio1 && cheio0 ? cheio1.t - cheio0.t : null, ordem0: cheio0?.ids, ordem1: cheio1?.ids,
     };
-    verificar('C · os 6 rolos travam um por vez, alternando A/B a cada ~0,5 s, o 1º ~1,8 s depois de começarem a girar', medido.ok && stops1.length === 6 && medidas.times === 'ABABAB' && passos.every((p) => p >= 350 && p <= 700) && medidas.primeiraTrava >= 1500 && medidas.primeiraTrava <= 2200 && new Set(medidas.rolos).size === 6, JSON.stringify({ rolos: medidas.rolos, passos, primeira: medidas.primeiraTrava }));
-    verificar('C · cada rolo desacelera (.slow) ~1 s antes de travar (.stop)', slows1.length === 6 && desaceleras.every((d) => d !== null && d >= 800 && d <= 1250), JSON.stringify(desaceleras));
-    verificar('C · quando o 6º trava, as réguas dão UM pulso de ~0,8 s (.maq.premio) e só esse', premioOn && premioOff && Math.abs(medidas.pulsoNo6) <= 150 && medidas.pulso >= 600 && medidas.pulso <= 1050 && log.filter((x) => x.ev === 'premio-on' && x.ciclo === c0).length === 1 && premioOff.t < (saindo0?.t ?? Infinity), JSON.stringify({ no6: medidas.pulsoNo6, pulso: medidas.pulso }));
-    verificar('C · seguram ~2,5 s cheios, esvaziam em ~0,4 s e o ciclo dá ~7,8 s', medidas.segura >= 2200 && medidas.segura <= 2950 && medidas.fade >= 250 && medidas.fade <= 700 && medidas.periodo >= 7200 && medidas.periodo <= 8600, JSON.stringify({ segura: medidas.segura, fade: medidas.fade, periodo: medidas.periodo }));
-    verificar('C · cada ciclo cheio tem as 6 figurinhas (3 por time) e o ciclo seguinte vem noutra ordem', medidas.ordem0 && medidas.ordem1 && medidas.ordem0.flat().filter(Boolean).length === 6 && new Set(medidas.ordem0.flat()).size === 6 && new Set(medidas.ordem1.flat()).size === 6 && medidas.ordem0.every((g) => g.length === 3) && JSON.stringify(medidas.ordem0) !== JSON.stringify(medidas.ordem1), JSON.stringify({ ordem0: medidas.ordem0, ordem1: medidas.ordem1 }));
+    verificar('C · os 8 rolos travam um por vez, alternando A/B a cada ~0,5 s, o 1º ~1,8 s depois de começarem a girar e o 8º ~5,3 s', medido.ok && stops1.length === N && medidas.times === 'ABABABAB' && passos.every((p) => p >= 350 && p <= 700) && medidas.primeiraTrava >= 1500 && medidas.primeiraTrava <= 2200 && medidas.ultimaTrava >= 4800 && medidas.ultimaTrava <= 5900 && new Set(medidas.rolos).size === N, JSON.stringify({ rolos: medidas.rolos, passos, primeira: medidas.primeiraTrava, ultima: medidas.ultimaTrava }));
+    verificar('C · cada rolo desacelera (.slow) ~1 s antes de travar (.stop)', slows1.length === N && desaceleras.every((d) => d !== null && d >= 800 && d <= 1250), JSON.stringify(desaceleras));
+    verificar('C · quando o 8º trava, as réguas dão UM pulso de ~0,8 s (.maq.premio) e só esse', premioOn && premioOff && Math.abs(medidas.pulsoNoUltimo) <= 150 && medidas.pulso >= 600 && medidas.pulso <= 1050 && log.filter((x) => x.ev === 'premio-on' && x.ciclo === c0).length === 1 && premioOff.t < (saindo0?.t ?? Infinity), JSON.stringify({ noUltimo: medidas.pulsoNoUltimo, pulso: medidas.pulso }));
+    verificar('C · seguram ~2,5 s cheios, esvaziam em ~0,4 s e o ciclo dá ~8,8 s', medidas.segura >= 2200 && medidas.segura <= 2950 && medidas.fade >= 250 && medidas.fade <= 700 && medidas.periodo >= 8200 && medidas.periodo <= 9700, JSON.stringify({ segura: medidas.segura, fade: medidas.fade, periodo: medidas.periodo }));
+    verificar('C · cada ciclo cheio tem as 8 figurinhas (4 por time) e o ciclo seguinte vem noutra ordem', medidas.ordem0 && medidas.ordem1 && medidas.ordem0.flat().filter(Boolean).length === N && new Set(medidas.ordem0.flat()).size === N && new Set(medidas.ordem1.flat()).size === N && medidas.ordem0.every((g) => g.length === 4) && JSON.stringify(medidas.ordem0) !== JSON.stringify(medidas.ordem1), JSON.stringify({ ordem0: medidas.ordem0, ordem1: medidas.ordem1 }));
 
     // D · fim do ciclo: os 6 rolos travados
     await esperarFase(pagina, 'cheio');
     await espera(150);
     const cheio = await ler(pagina);
     const rolosCheio = todosRolos(cheio);
-    verificar('D · fase cheia: 6 rolos travados (.stop, tira parada), cada um com a figurinha sorteada na moldura (.rev.on, msqRevPop), nome e busto 112×150 de /onboarding/', cheio.travados === 6 && rolosCheio.every((x) => x.estado === 'travado' && x.spin?.play === 'paused' && x.rev?.on && IDS.includes(x.rev.id) && NOMES.includes(x.rev.nome) && x.rev.src?.endsWith(`/onboarding/${x.rev.id}.webp`) && x.rev.natural?.[0] === 112 && x.rev.natural?.[1] === 150 && x.rev.anim === 'msqRevPop' && Number(x.rev.opacidade) === 1) && new Set(rolosCheio.map((x) => x.rev.id)).size === 6 && cheio.grupos.every((g) => g.rolos.length === 3), JSON.stringify(rolosCheio.map((x) => [x.time + x.vaga, x.rev?.id, x.rev?.natural, x.spin?.play])));
+    verificar('D · fase cheia: 8 rolos travados (.stop, tira parada), cada um com a figurinha sorteada na moldura (.rev.on, msqRevPop), nome e busto 112×150 de /onboarding/', cheio.travados === N && rolosCheio.every((x) => x.estado === 'travado' && x.spin?.play === 'paused' && x.rev?.on && IDS.includes(x.rev.id) && NOMES.includes(x.rev.nome) && x.rev.src?.endsWith(`/onboarding/${x.rev.id}.webp`) && x.rev.natural?.[0] === 112 && x.rev.natural?.[1] === 150 && x.rev.anim === 'msqRevPop' && Number(x.rev.opacidade) === 1) && new Set(rolosCheio.map((x) => x.rev.id)).size === N && cheio.grupos.every((g) => g.rolos.length === 4), JSON.stringify(rolosCheio.map((x) => [x.time + x.vaga, x.rev?.id, x.rev?.natural, x.spin?.play])));
     verificar('D · fase cheia: as micro-lâmpadas das molduras piscam (msqMbPisca)', rolosCheio.every((x) => x.rev?.mb?.anim === 'msqMbPisca'), JSON.stringify(rolosCheio.map((x) => x.rev?.mb?.anim)));
-    await capturar(pagina, 'cheio-6-travados');
+    // 29E3: GONÇALO (com cedilha, arquivo goncalo.webp) aparece e cabe na cartinha de 56 como BRUNINHO: texto ≤ 54 px, sem estourar.
+    const nomes = rolosCheio.map((x) => ({ id: x.rev?.id, nome: x.rev?.nome, src: x.rev?.src, ...(x.nm || {}) }));
+    const goncalo = nomes.find((x) => x.id === 'goncalo');
+    const bruninho = nomes.find((x) => x.id === 'bruninho');
+    verificar('D · GONÇALO aparece (nome com cedilha, busto goncalo.webp, nada de LÉO) e os 8 nomes cabem na cartinha de 56 (≤ 54 px, sem estourar), GONÇALO como BRUNINHO', !!goncalo && goncalo.nome === 'GONÇALO' && goncalo.src?.endsWith('/onboarding/goncalo.webp') && !!bruninho && nomes.length === N && nomes.every((x) => x.largura !== null && x.largura <= 54 && !x.estoura && x.caixa === 56) && !nomes.some((x) => x.id === 'leo' || x.nome === 'LÉO'), JSON.stringify(nomes.map((x) => `${x.nome} ${x.largura?.toFixed(1)}/${x.caixa}${x.estoura ? ' ESTOURA' : ''}`)));
+    await capturar(pagina, 'cheio-8-travados');
     // O fade dura 0,4 s e a captura acima (página inteira a 3×) demora o bastante para comer a janela de 2,5 s do "cheio":
     // mede-se no ciclo SEGUINTE, sem captura no meio, amostrando a opacidade a cada 25 ms (setTimeout — a cadência do rAF no
     // WebKit sem janela não é de confiança) desde o instante em que a fase vira "saindo": a curva tem de descer de ~1 até ~0.
@@ -8452,18 +8487,18 @@ async function cenaRodada29e2(navegador) {
     }));
     const ops = fade.amostras.map((a) => a.op);
     const c = fade.contrato;
-    verificar('D · fase saindo: os 6 rolos ganham .sai, a revelação faz a transição opacity 0,4 s (CSSTransition de 400 ms a correr em cada uma) e, no fim do fade, as 6 estão em 0 e sem .on', !!c && c.sai && c.dur === '0.4s' && /opacity/.test(c.prop) && c.transicoes.length === 6 && c.transicoes.every((t) => t.some((a) => a.ms === 400 && a.estado === 'running')) && fade.fim.every((v) => v <= 0.02) && fade.revOn === 0, JSON.stringify({ n: ops.length, contrato: c && { sai: c.sai, dur: c.dur, prop: c.prop, transicoes: c.transicoes.map((t) => t.map((a) => `${a.ms}/${a.estado}`)) }, fim: fade.fim.map((v) => v.toFixed(2)), revOn: fade.revOn }));
+    verificar('D · fase saindo: os 8 rolos ganham .sai, a revelação faz a transição opacity 0,4 s (CSSTransition de 400 ms a correr em cada uma) e, no fim do fade, as 8 estão em 0 e sem .on', !!c && c.sai && c.dur === '0.4s' && /opacity/.test(c.prop) && c.transicoes.length === N && c.transicoes.every((t) => t.some((a) => a.ms === 400 && a.estado === 'running')) && fade.fim.every((v) => v <= 0.02) && fade.revOn === 0, JSON.stringify({ n: ops.length, contrato: c && { sai: c.sai, dur: c.dur, prop: c.prop, transicoes: c.transicoes.map((t) => t.map((a) => `${a.ms}/${a.estado}`)) }, fim: fade.fim.map((v) => v.toFixed(2)), revOn: fade.revOn }));
     await esperarFase(pagina, 'girando', 2000);
     await espera(120);
     const girando = await ler(pagina);
-    verificar('C · fase girando: os 6 rolos com a tira girando rápido (msqSpin .35 s, a correr) e nenhuma revelação', girando.fase === 'girando' && girando.travados === 0 && todosRolos(girando).every((x) => x.estado === 'girando' && x.spin?.nome === 'msqSpin' && x.spin?.play === 'running' && parseFloat(x.spin?.dur) <= 0.5 && !x.rev?.on), JSON.stringify(todosRolos(girando).map((x) => [x.estado, x.spin?.nome, x.spin?.dur, x.spin?.play])));
+    verificar('C · fase girando: os 8 rolos com a tira girando rápido (msqSpin .35 s, a correr) e nenhuma revelação', girando.fase === 'girando' && girando.travados === 0 && girando.rolos === N && todosRolos(girando).every((x) => x.estado === 'girando' && x.spin?.nome === 'msqSpin' && x.spin?.play === 'running' && parseFloat(x.spin?.dur) <= 0.5 && !x.rev?.on), JSON.stringify(todosRolos(girando).map((x) => [x.estado, x.spin?.nome, x.spin?.dur, x.spin?.play])));
     await capturar(pagina, 'girando');
-    await pagina.waitForFunction(() => document.querySelector('.msq')?.dataset.travadas === '3', null, { timeout: 8000 }).catch(() => {});
+    await pagina.waitForFunction(() => document.querySelector('.msq')?.dataset.travadas === '4', null, { timeout: 9000, polling: 50 }).catch(() => {});
     await espera(60);
     const meio = await ler(pagina);
     const travadosMeio = todosRolos(meio).filter((x) => x.estado === 'travado');
-    verificar('C · a meio: 3 travados (2 de um time, 1 do outro), os outros a girar ou a desacelerar (.slow a ~1 s)', meio.travadas === 3 && travadosMeio.length === 3 && new Set(travadosMeio.map((x) => x.time)).size === 2 && todosRolos(meio).filter((x) => x.estado === 'desacelerando').every((x) => x.classes.includes('slow') && parseFloat(x.spin?.dur) >= 0.9), JSON.stringify(todosRolos(meio).map((x) => [x.time + x.vaga, x.estado, x.spin?.dur])));
-    await capturar(pagina, 'travando-3');
+    verificar('C · a meio: 4 travados (2 de cada time), os outros 4 a girar ou a desacelerar (.slow a ~1 s)', meio.travadas === 4 && travadosMeio.length === 4 && ['A', 'B'].every((t) => travadosMeio.filter((x) => x.time === t).length === 2) && todosRolos(meio).filter((x) => x.estado === 'desacelerando').every((x) => x.classes.includes('slow') && parseFloat(x.spin?.dur) >= 0.9), JSON.stringify(todosRolos(meio).map((x) => [x.time + x.vaga, x.estado, x.spin?.dur])));
+    await capturar(pagina, 'travando-4');
 
     // E · os 6 arquivos e o silêncio
     const arquivos = await pagina.evaluate(async (ids) => Promise.all(ids.map(async (id) => {
@@ -8471,7 +8506,7 @@ async function cenaRodada29e2(navegador) {
       const b = await r.blob();
       return { id, status: r.status, tipo: b.type, bytes: b.size };
     })), IDS);
-    verificar('E · os 6 bustos em /onboarding/: 200, image/webp, ≤ 6 KB cada', arquivos.every((a) => a.status === 200 && a.tipo === 'image/webp' && a.bytes > 0 && a.bytes <= 6144), JSON.stringify(arquivos.map((a) => `${a.id} ${a.bytes} B`)));
+    verificar('E · os 8 bustos em /onboarding/ (goncalo.webp incluído): 200, image/webp, ≤ 6 KB cada', arquivos.length === N && arquivos.some((a) => a.id === 'goncalo') && arquivos.every((a) => a.status === 200 && a.tipo === 'image/webp' && a.bytes > 0 && a.bytes <= 6144), JSON.stringify(arquivos.map((a) => `${a.id} ${a.bytes} B`)));
     const som = await pagina.evaluate(() => window.__som);
     verificar('E · sem som: nenhum Audio/AudioContext criado; sem vídeo/áudio/canvas na máquina', som.audio === 0 && som.contexto === 0 && cheio.media === 0, JSON.stringify(som));
 
@@ -8494,6 +8529,7 @@ async function cenaRodada29e2(navegador) {
     const comp = L ? L.linhas.map((l) => l.length) : [];
     verificar('A · a 320 px: legenda em 2 linhas parecidas (a mais curta ≥ 60 % da mais longa), só quebrando depois de um "·", nenhuma palavra sozinha', L && L.linhas.length === 2 && L.linhas.every((l) => l.split(' ').length >= 2) && Math.min(...comp) / Math.max(...comp) >= 0.6 && L.linhas.join(' ') === LEGENDA && L.linhas[0].endsWith('·'), JSON.stringify(L && L.linhas));
     verificar('A · a 320 px: o botão cabe (≤ 290, 50 px) e sem barra', r.botao && r.botao.largura <= 290 && r.botao.altura === 50 && !r.nav, JSON.stringify(r.botao && { largura: r.botao.largura, altura: r.botao.altura }));
+    verificar('C · a 320 px: a máquina não estoura — 2 linhas de 4 rolos de 56 dentro da janela (nenhum cortado), nada rola de lado', r.rolos === N && geoOk(r.geometria) && r.geometria.viewport === 320, JSON.stringify(r.geometria));
     await capturar(pagina, 'estreito-320');
     await contexto.close();
   }
@@ -8506,9 +8542,9 @@ async function cenaRodada29e2(navegador) {
     await espera(3500);
     const depois = await ler(pagina);
     const rolos = todosRolos(r);
-    verificar('F · reduced-motion: os 6 rolos travados na ordem natural (A: bruninho, léo, rafa · B: tiagão, pedrão, dudu), ciclo 0, fase cheia', r.fase === 'cheio' && r.ciclo === 0 && r.travados === 6 && JSON.stringify(r.grupos.map((g) => g.rolos.map((x) => x.rev?.id))) === JSON.stringify([['bruninho', 'leo', 'rafa'], ['tiagao', 'pedrao', 'dudu']]), JSON.stringify({ fase: r.fase, ciclo: r.ciclo, ids: r.grupos.map((g) => g.rolos.map((x) => x.rev?.id)) }));
+    verificar('F · reduced-motion: os 8 rolos travados na ordem natural (A: bruninho, gonçalo, rafa, nando · B: tiagão, pedrão, dudu, caio), ciclo 0, fase cheia', r.fase === 'cheio' && r.ciclo === 0 && r.travados === N && JSON.stringify(r.grupos.map((g) => g.rolos.map((x) => x.rev?.id))) === JSON.stringify(NATURAL), JSON.stringify({ fase: r.fase, ciclo: r.ciclo, ids: r.grupos.map((g) => g.rolos.map((x) => x.rev?.id)) }));
     verificar('F · reduced-motion: nada se mexe — tiras sem giro, revelações sem pop, micro-lâmpadas paradas a 0,5, lâmpadas a 0,7, sem pulso', rolos.every((x) => x.spin?.nome === 'none' && x.rev?.anim === 'none' && x.rev?.mb?.anim === 'none' && Number(x.rev?.mb?.opacidade) === 0.5) && r.luzAnim === 'none' && r.luzOpacidades.length === 1 && Number(r.luzOpacidades[0]) === 0.7 && !r.premio, JSON.stringify({ spin: [...new Set(rolos.map((x) => x.spin?.nome))], rev: [...new Set(rolos.map((x) => x.rev?.anim))], mb: [...new Set(rolos.map((x) => `${x.rev?.mb?.anim}/${x.rev?.mb?.opacidade}`))], luz: [r.luzAnim, r.luzOpacidades] }));
-    verificar('F · reduced-motion: 3,5 s depois continua igual (sem ciclo)', depois.fase === 'cheio' && depois.ciclo === 0 && depois.travados === 6, JSON.stringify({ fase: depois.fase, ciclo: depois.ciclo, travados: depois.travados }));
+    verificar('F · reduced-motion: 3,5 s depois continua igual (sem ciclo)', depois.fase === 'cheio' && depois.ciclo === 0 && depois.travados === N, JSON.stringify({ fase: depois.fase, ciclo: depois.ciclo, travados: depois.travados }));
     await capturar(pagina, 'reduzido');
     await contexto.close();
   }

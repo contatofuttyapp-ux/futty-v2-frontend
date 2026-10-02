@@ -1,37 +1,54 @@
-// Futty v2.0 — Rodada 29E2: o que o mini sorteio do Onboarding sorteia e quando (src/utils/miniSorteio.js). Puro.
+// Futty v2.0 — Rodada 29E2/29E3: o que o mini sorteio do Onboarding sorteia e quando (src/utils/miniSorteio.js). Puro.
+// 29E3 (2-out, dono): 4 jogadores por time — 8 figurinhas, 8 rolos; LÉO virou GONÇALO (arquivo goncalo.webp).
 //
 // Uso: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CICLO_MS, FIGURINHAS, TEMPOS, TIMES, VAGAS_POR_TIME, agendaDoCiclo, ordemDoCiclo, tiraDoRolo } from '../../src/utils/miniSorteio.js';
 
-const NOMES = ['BRUNINHO', 'TIAGÃO', 'LÉO', 'PEDRÃO', 'RAFA', 'DUDU'];
+const NOMES = ['BRUNINHO', 'TIAGÃO', 'GONÇALO', 'PEDRÃO', 'RAFA', 'DUDU', 'NANDO', 'CAIO'];
 const IDS = FIGURINHAS.map((f) => f.id);
+const N = 8;
 
-test('figurinhas: as 6 do dono, nomes curtos em caixa alta, ids sem acento, arquivos em /onboarding/ (servidos do site)', () => {
+test('figurinhas: as 8 do dono, nomes curtos em caixa alta, ids sem acento, arquivos em /onboarding/ (servidos do site)', () => {
   assert.deepEqual(FIGURINHAS.map((f) => f.nome).sort(), [...NOMES].sort());
   for (const f of FIGURINHAS) {
     assert.match(f.id, /^[a-z]+$/, `${f.id} tem de ser URL-safe`);
     assert.equal(f.arquivo, `/onboarding/${f.id}.webp`);
-    assert.ok(f.nome.length <= 9 && f.nome === f.nome.toUpperCase());
+    assert.ok(f.nome.length <= 'BRUNINHO'.length && f.nome === f.nome.toUpperCase(), `${f.nome}: cabe na cartinha de 56 px como BRUNINHO cabe`);
   }
-  assert.equal(FIGURINHAS.length, TIMES.length * VAGAS_POR_TIME, '6 figurinhas = 2 times × 3 vagas');
+  assert.equal(FIGURINHAS.length, N);
+  assert.equal(FIGURINHAS.length, TIMES.length * VAGAS_POR_TIME, '8 figurinhas = 2 times × 4 vagas');
+  assert.equal(VAGAS_POR_TIME, 4, '4 jogadores por time (dono, 29E3)');
 });
 
-test('ordem do ciclo (a ordem em que os rolos travam): uma permutação das 6, alternando A/B, cada time com as vagas 0..2', () => {
+test('GONÇALO: o nome leva cedilha, o id e o arquivo não (goncalo.webp); LÉO/leo saiu', () => {
+  const g = FIGURINHAS.find((f) => f.id === 'goncalo');
+  assert.ok(g, 'existe a figurinha goncalo');
+  assert.equal(g.nome, 'GONÇALO');
+  assert.equal(g.arquivo, '/onboarding/goncalo.webp');
+  assert.ok(!FIGURINHAS.some((f) => f.id === 'leo' || f.nome === 'LÉO'));
+  assert.ok(FIGURINHAS.some((f) => f.id === 'nando' && f.nome === 'NANDO'));
+  assert.ok(FIGURINHAS.some((f) => f.id === 'caio' && f.nome === 'CAIO'));
+});
+
+test('ordem do ciclo (a ordem em que os rolos travam): uma permutação das 8, alternando A/B, cada time com as vagas 0..3', () => {
   for (let k = 0; k < 20; k += 1) {
     const ordem = ordemDoCiclo(k);
     assert.deepEqual(ordem.map((e) => e.id).sort(), [...IDS].sort(), `ciclo ${k}: faltou ou repetiu figurinha`);
-    assert.deepEqual(ordem.map((e) => e.time), ['A', 'B', 'A', 'B', 'A', 'B'], `ciclo ${k}: os rolos travam alternando A/B`);
+    assert.deepEqual(ordem.map((e) => e.time), ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'], `ciclo ${k}: os rolos travam alternando A/B`);
     for (const time of ['A', 'B']) {
-      assert.deepEqual(ordem.filter((e) => e.time === time).map((e) => e.vaga), [0, 1, 2], `ciclo ${k}: as vagas do ${time}`);
+      assert.deepEqual(ordem.filter((e) => e.time === time).map((e) => e.vaga), [0, 1, 2, 3], `ciclo ${k}: as vagas do ${time}`);
     }
-    assert.deepEqual(ordem.map((e) => e.ordem), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(ordem.map((e) => e.ordem), [0, 1, 2, 3, 4, 5, 6, 7]);
   }
 });
 
-test('ordem do ciclo: o ciclo 0 é a natural (o que se vê sem JS); os seguintes embaralham, reproduzíveis e diferentes entre si', () => {
+test('ordem do ciclo: o ciclo 0 é a natural (o que se vê sem JS: A = bruninho, gonçalo, rafa, nando · B = tiagão, pedrão, dudu, caio); os seguintes embaralham, reproduzíveis e diferentes entre si', () => {
   assert.deepEqual(ordemDoCiclo(0).map((e) => e.id), IDS);
+  const natural = ordemDoCiclo(0);
+  assert.deepEqual(natural.filter((e) => e.time === 'A').map((e) => e.id), ['bruninho', 'goncalo', 'rafa', 'nando']);
+  assert.deepEqual(natural.filter((e) => e.time === 'B').map((e) => e.id), ['tiagao', 'pedrao', 'dudu', 'caio']);
   const vistas = new Set();
   for (let k = 0; k < 8; k += 1) {
     const chave = ordemDoCiclo(k).map((e) => e.id).join(',');
@@ -41,35 +58,37 @@ test('ordem do ciclo: o ciclo 0 é a natural (o que se vê sem JS); os seguintes
   assert.equal(vistas.size, 8, 'oito ciclos seguidos, oito ordens diferentes');
 });
 
-test('a tira de cada rolo: as 6 figurinhas, fixa por rolo, e os 6 rolos não mostram a mesma sequência', () => {
-  const tiras = Array.from({ length: 6 }, (_, i) => tiraDoRolo(i));
+test('a tira de cada rolo: as 8 figurinhas, fixa por rolo, e os 8 rolos não mostram a mesma sequência', () => {
+  const tiras = Array.from({ length: N }, (_, i) => tiraDoRolo(i));
   for (const [i, tira] of tiras.entries()) {
     assert.deepEqual([...tira].sort(), [...IDS].sort(), `rolo ${i}: faltou ou repetiu figurinha`);
     assert.deepEqual(tiraDoRolo(i), tira, `rolo ${i}: a tira é a mesma em todos os ciclos`);
   }
-  assert.equal(new Set(tiras.map((t) => t.join(','))).size, 6, 'seis rolos, seis tiras diferentes');
+  assert.equal(new Set(tiras.map((t) => t.join(','))).size, N, 'oito rolos, oito tiras diferentes');
 });
 
-test('agenda: giram 0,8 s → um rolo desacelera a cada 0,5 s e trava 1 s depois → o 6º trava em 4,3 s → pulso 0,8 s → seguram 2,5 s → fade 0,4 s → ~8 s', () => {
+test('agenda: giram 0,8 s → um rolo desacelera a cada 0,5 s e trava 1 s depois → o 8º trava em 5,3 s → pulso 0,8 s → seguram 2,5 s → fade 0,4 s → ~9 s', () => {
   const a = agendaDoCiclo();
-  assert.equal(a.desaceleram.length, 6);
-  assert.equal(a.travam.length, 6);
+  assert.equal(a.desaceleram.length, N);
+  assert.equal(a.travam.length, N);
   assert.equal(a.desaceleram[0], TEMPOS.giroMs, 'o 1º rolo começa a desacelerar em 0,8 s');
-  for (let k = 1; k < 6; k += 1) assert.equal(a.desaceleram[k] - a.desaceleram[k - 1], TEMPOS.passoMs, 'um rolo a cada 0,5 s');
-  for (let k = 0; k < 6; k += 1) assert.equal(a.travam[k] - a.desaceleram[k], TEMPOS.desaceleraMs, 'desacelera ~1 s antes de travar');
+  for (let k = 1; k < N; k += 1) assert.equal(a.desaceleram[k] - a.desaceleram[k - 1], TEMPOS.passoMs, 'um rolo a cada 0,5 s');
+  for (let k = 0; k < N; k += 1) assert.equal(a.travam[k] - a.desaceleram[k], TEMPOS.desaceleraMs, 'desacelera ~1 s antes de travar');
   assert.equal(a.travam[0], 1800);
-  assert.equal(a.cheioEm, a.travam[5], 'cheio = o 6º travou');
-  assert.equal(a.cheioEm, 4300);
+  assert.equal(a.cheioEm, a.travam[N - 1], 'cheio = o 8º travou');
+  assert.equal(a.cheioEm, 5300);
   assert.equal(a.pulsoFimEm - a.cheioEm, TEMPOS.pulsoMs, 'o pulso das réguas dura 0,8 s, uma vez');
   assert.equal(a.saindoEm - a.cheioEm, TEMPOS.seguraMs, 'seguram 2,5 s');
   assert.equal(a.girandoEm - a.saindoEm, TEMPOS.fadeMs, 'fade 0,4 s');
   assert.equal(a.fimEm - a.girandoEm, TEMPOS.respiroMs, 'os rolos giram um respiro antes do próximo ciclo');
   assert.equal(a.fimEm, CICLO_MS);
-  assert.ok(CICLO_MS >= 7500 && CICLO_MS <= 8500, `ciclo de ${CICLO_MS} ms (~8 s)`);
+  assert.equal(CICLO_MS, 8800);
+  assert.ok(CICLO_MS >= 8500 && CICLO_MS <= 9500, `ciclo de ${CICLO_MS} ms (~9 s)`);
   assert.equal(TEMPOS.giroMs, 800);
   assert.equal(TEMPOS.passoMs, 500);
   assert.equal(TEMPOS.seguraMs, 2500);
   assert.equal(TEMPOS.fadeMs, 400);
+  assert.equal(TEMPOS.respiroMs, 600);
   assert.ok(a.pulsoFimEm < a.saindoEm, 'o pulso acaba antes de os times soltarem');
 });
 

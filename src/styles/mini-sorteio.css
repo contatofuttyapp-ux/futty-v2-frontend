@@ -1,10 +1,11 @@
-/* Futty v2.0 — Rodada 29E2: o mini sorteio do Onboarding (components/MiniSorteio.jsx). A receita da máquina do sorteio
+/* Futty v2.0 — Rodada 29E2/29E3: o mini sorteio do Onboarding (components/MiniSorteio.jsx). A receita da máquina do sorteio
    (sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) numa caixa de 290 de largura e, dentro, a janela do sorteio
    REAL com os ROLOS de lá: .grupo/.ghead/.srow → .rolo (clip octogonal) com a .strip girando em spinY (.scel por figurinha),
    .slow ao desacelerar, .stop ao travar; por cima, a figurinha sorteada na moldura do sorteio (.rev com revPop: .fr, micro-
-   lâmpadas .mb, nome .nm). As réguas dão UM pulso (premioLampa) quando o 6º trava. Escopado em .msq, keyframes prefixados
+   lâmpadas .mb, nome .nm). As réguas dão UM pulso (premioLampa) quando o 8º trava. Escopado em .msq, keyframes prefixados
    (msq*) para não disputar com os do sorteio. Só o Onboarding importa (chunk lazy).
-   Estado natural: sem JS, os 6 travados (o JSX nasce cheio); com movimento reduzido, tudo parado. */
+   29E3 (dono): 4 jogadores por time — 2 linhas de 4 rolos de 56 (224 nos 242 de dentro da janela a 290: 3 espaços de 6).
+   Estado natural: sem JS, os 8 travados (o JSX nasce cheio); com movimento reduzido, tudo parado. */
 .msq{width:100%;margin:22px auto 0}
 .msq .maq{position:relative;width:100%;max-width:290px;margin:0 auto;background:linear-gradient(180deg,#0d0b14,#08070d);border:1px solid rgba(212,160,23,.4);padding:12px 14px 0;box-shadow:0 0 16px 3px rgba(245,224,112,.16);clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
 .msq .luzes{display:flex;gap:4px;justify-content:center;margin-bottom:4px;overflow:hidden}
@@ -12,15 +13,17 @@
 .msq .luz{position:relative;flex:none;width:7px;height:7px;border-radius:50%;background:var(--lc,#f5e070);box-shadow:0 0 8px 2px var(--lg,rgba(245,224,112,.75));animation:msqCalm 2s linear infinite;animation-delay:calc(var(--i)*-.09s)}
 .msq .roxa .luz{--lc:#a78bfa;--lg:rgba(139,92,246,.75)}
 @keyframes msqCalm{0%,55%,100%{opacity:.16}25%{opacity:.85}}
-/* O pulso único quando o 6º rolo trava (o premioLampa da máquina real, UMA vez): .maq.premio dura 0,8 s, pelo relógio do JSX. */
+/* O pulso único quando o 8º rolo trava (o premioLampa da máquina real, UMA vez): .maq.premio dura 0,8 s, pelo relógio do JSX. */
 .msq .maq.premio .luz{animation:msqPremio .8s linear 1}
 @keyframes msqPremio{0%,100%{opacity:1}50%{opacity:.3}}
 .msq .janela{position:relative;background:rgba(0,0,0,.55);border:1px solid rgba(139,92,246,.4);padding:10px 8px 6px;overflow:hidden}
 .msq .grupo+.grupo{margin-top:8px}
 .msq .ghead{display:flex;align-items:center;gap:8px;font-family:'Rajdhani',var(--sans);font-weight:800;letter-spacing:.11em;font-size:12px;text-transform:uppercase;color:var(--tc);text-shadow:0 0 12px var(--tg);margin:0 2px 6px}
 .msq .ghead::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--tg),transparent)}
-.msq .srow{display:flex;gap:6px;justify-content:center}
-/* O rolo: a peça da máquina real (.rolo/.strip/.scel) a 56×75. A tira tem as 6 figurinhas duas vezes: o spinY vai a −50 % e
+/* 4 rolos por linha (29E3): os 4×56 ocupam a largura da janela e os 3 espaços repartem a sobra (6 px a 290; em tela estreita
+   os espaços encolhem antes de qualquer rolo estourar ou ser cortado pelo overflow da janela). */
+.msq .srow{display:flex;justify-content:space-between}
+/* O rolo: a peça da máquina real (.rolo/.strip/.scel) a 56×75. A tira tem as 8 figurinhas duas vezes: o spinY vai a −50 % e
    fecha sem emenda. Rápido a girar (.35 s a volta), ~1 s ao desacelerar (.slow), parado ao travar (.stop). */
 .msq .rolo{position:relative;width:56px;height:75px;flex:none;overflow:hidden;background:#0a0a10;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);border-bottom:2px solid rgba(139,92,246,.35)}
 .msq .strip{position:absolute;left:0;right:0;top:0;animation:msqSpin var(--sd,.35s) linear infinite}
@@ -49,6 +52,13 @@
 /* Legenda (dono, 2-out): o estilo do subtítulo da landing — Rajdhani 700, caixa alta, .14em, #c9c2d6, 12,5 px. Cabe numa
    linha onde dá; em tela estreita, text-wrap:balance divide em duas linhas parecidas (os únicos pontos de quebra são depois
    dos "·": os espaços de cada frase são duros no JSX), nunca uma palavra sozinha. */
+/* Tela estreita (≤ 340, p. ex. 320): a página dá 272 à máquina e os 4×56 ficariam colados (224 em 224). As bordas da máquina
+   e da janela encolhem (14→8 e 8→5) e as linhas voltam a ter os 3 espaços de 6, como a 290. A régua de baixo acompanha a borda. */
+@media (max-width:340px){
+  .msq .maq{padding-left:8px;padding-right:8px}
+  .msq .janela{padding-left:5px;padding-right:5px}
+  .msq .baseluz{margin-left:-8px;margin-right:-8px}
+}
 .msq-legenda{margin:14px 0 0;font-family:'Rajdhani',var(--sans);font-weight:700;font-size:12.5px;line-height:1.45;letter-spacing:.14em;text-transform:uppercase;color:#c9c2d6;text-align:center;text-wrap:balance}
 @media (prefers-reduced-motion:reduce){
   .msq .luz,.msq .maq.premio .luz{animation:none;opacity:.7}
