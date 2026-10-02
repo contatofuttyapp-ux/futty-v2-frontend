@@ -4036,7 +4036,7 @@ try {
   if (CENAS.includes('rodada29hb')) {
     const r = await cenaRodada29hb(navegador, { BASE, PASTA, RAIZ, novoContexto, travarEscritas, espera });
     saida.rodada29hb = r;
-    console.log('\n[iphone] RODADA 29H-B — tempos do mini sorteio, enquadramento único, selfie sem espelho, aura, 4º efeito de som (servidor local; contas de prova; escritas interceptadas)');
+    console.log('\n[iphone] RODADA 29H-B — tempos do mini sorteio, enquadramento único, selfie sem espelho, aura, destrave do som (servidor local; contas de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
