@@ -1,5 +1,5 @@
 // Futty v2.0 — Fila de moderação do admin da equipa (Tijolo 3). Só casos AMBÍGUOS
-// (a IA já resolveu os óbvios). Preview BORRADO por defeito (toque revela). Menor no
+// (os óbvios já foram resolvidos pela moderação automática). Preview BORRADO por defeito (toque revela). Menor no
 // topo com marca vermelha. Ações: remover / manter / avisar. GET/POST /api/denuncias.
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
@@ -79,7 +79,7 @@ export default function ModeracaoFila({ slug }) {
   if (!fila.length) {
     return (
       <div style={{ marginTop: 8, textAlign: 'center', color: '#7f7a8e', fontSize: 12.5, padding: '18px 10px', lineHeight: 1.6 }}>
-        <b style={{ color: '#9fd8a8' }}>Tudo tranquilo por aqui.</b><br />A IA já resolveu os óbvios: só chega o que precisa do seu olho.
+        <b style={{ color: '#9fd8a8' }}>Tudo tranquilo por aqui.</b><br />O que precisar de você aparece nesta lista.
       </div>
     );
   }

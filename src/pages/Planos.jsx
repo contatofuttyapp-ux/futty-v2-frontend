@@ -13,13 +13,13 @@
 //   · SEM LOJA (a web, ou a loja desligada no motor): o botão NÃO diz "em breve" nem fica
 //     desativado — cria um pedido de ativação de verdade, que o dono resolve no Gabinete. A regra da
 //     casa é que o botão diga a verdade — e "a gente ativa e avisa" é verdade.
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Check, Lock } from 'lucide-react';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import EscolherUniformeTime from '../components/EscolherUniformeTime';
-import { produtosDaTela } from '../lib/planos';
+import { PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES, produtosDaTela } from '../lib/planos';
 import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja, comprar, restaurar, sincronizarAposCompra } from '../lib/loja';
 import { apiFetch } from '../lib/api';
@@ -291,9 +291,11 @@ export default function Planos() {
             Layout compacto para caber sem scroll em viewports normais. */}
         <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
           {/* Cabeçalho curto: o que estas três coisas são, em uma linha. */}
-          <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0, marginBottom: 2 }}>
-            Seu card com a foto não custa nada. A <b style={{ color: '#f0c94a' }}>figurinha</b> é a versão em arte,
-            feita por IA no uniforme do Futty.
+          {/* 29H (item 60): duas frases, duas linhas — antes eram uma só, quebrando no meio. A palavra "IA" fica: a figurinha
+              é arte gerada por IA e a casa diz isso (VOZ §3). */}
+          <p className="texto-apoio texto-apoio--centro" data-planos-apoio style={{ marginTop: 0, marginBottom: 2 }}>
+            <span style={{ display: 'block' }}>Seu card com a foto não custa nada.</span>
+            <span style={{ display: 'block', marginTop: 2 }}><b style={{ color: '#f0c94a' }}>Figurinha</b>: a versão em arte, feita por IA no uniforme do Futty.</span>
           </p>
           {aviso ? (
             <div
@@ -322,6 +324,10 @@ export default function Planos() {
             </div>
           ) : null}
           {produtos.map((p) => {
+            // 29H (item 60): o pacote e o manto são DO TIME — só aparecem para quem é dono de um (antes apareciam para todo mundo,
+            // trancados com "Só para quem criou um time", sem explicar do que se tratava). A seção ganha título e uma linha de apoio.
+            if (p.soDono && !meusTimes.length) return null;
+            const abreSecaoDoTime = p.id === 'pacote' && meusTimes.length > 0;
             // Pacote e manto são do dono do time; sem time próprio, o cartão
             // aparece na mesma (é o que faz a pessoa querer criar um) mas com o
             // botão a explicar o que falta, em vez de um botão morto.
@@ -493,7 +499,14 @@ export default function Planos() {
             // objecto não é sombra, é decalque. Agora o wrapper exterior é estático, a
             // sombra fica no chão, e só o card sobe por cima dela.
             return (
-              <div key={p.id} style={{ position: 'relative' }}>
+              <Fragment key={p.id}>
+              {abreSecaoDoTime ? (
+                <div data-secao-do-time style={{ display: 'grid', justifyItems: 'center', gap: 2, marginTop: 4 }}>
+                  <h2 style={{ margin: 0, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#fff' }}>Figurinhas do time</h2>
+                  <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Pacote do time: {PACOTE_GERACOES_POR_JOGADOR} gerações para cada um dos {PACOTE_JOGADORES} jogadores</p>
+                </div>
+              ) : null}
+              <div style={{ position: 'relative' }}>
                 <div
                   className={heroi ? 'planos-shadow' : undefined}
                   aria-hidden="true"
@@ -503,6 +516,7 @@ export default function Planos() {
                   <div className="planos-sway" style={{ animationDuration: SWAY_DUR[p.id] }}>{card}</div>
                 </div>
               </div>
+              </Fragment>
             );
           })}
 

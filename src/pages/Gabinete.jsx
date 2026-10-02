@@ -237,7 +237,7 @@ function AbaVisaoGeral({ dados }) {
         <Card6
           n={v.ia.freeze ? 'FREEZE' : 'Normal'}
           sub={v.ia.freeze ? v.ia.motivo : null}
-          legenda="Estado da IA"
+          legenda="Estado das gerações"
         />
         <Card6 n={`v${v.servidor.versao}`} sub={`uptime ${fmtUptime(v.servidor.uptime_s)}`} legenda="Servidor" />
       </div>
@@ -327,7 +327,7 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCamb
         </div>
       </div>
 
-      <h2 style={sectionH2}>IA do mês</h2>
+      <h2 style={sectionH2}>Gerações do mês</h2>
       <div style={{ ...CARD, padding: 16, display: 'flex', gap: 28, flexWrap: 'wrap' }}>
         <div>
           <div style={bigNum}>{fmtUSD(ia.gasto_usd)}</div>
@@ -335,7 +335,7 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCamb
         </div>
         <div><div style={bigNum}>{fmtUSD(ia.gasto_hoje_usd)}</div><span style={muted}>gasto hoje</span></div>
         <div><div style={bigNum}>{fmtUSD(ia.teto_diario_usd)}</div><span style={muted}>teto diário configurado</span></div>
-        <div><Semaforo cor={ia.freeze ? 'vermelho' : 'verde'}>{ia.freeze ? 'Freeze ligado' : 'Normal'}</Semaforo><div style={{ ...muted, marginTop: 4 }}>estado da IA</div></div>
+        <div><Semaforo cor={ia.freeze ? 'vermelho' : 'verde'}>{ia.freeze ? 'Freeze ligado' : 'Normal'}</Semaforo><div style={{ ...muted, marginTop: 4 }}>estado das gerações</div></div>
       </div>
       <div style={{ ...CARD, padding: 12, marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 13, color: '#ddd' }}>1 US$ = €</span>
@@ -625,7 +625,7 @@ function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp
       <div style={{ ...CARD, padding: 4 }}>
         <LinhaChecklist rotulo="Banco trancado" cor={corBanco}>{txtBanco}</LinhaChecklist>
         <LinhaChecklist rotulo="Último backup" cor={corBackup}>{txtBackup} · próximo previsto {s.proximo_backup}</LinhaChecklist>
-        <LinhaChecklist rotulo="Kill-switch de IA" cor={s.kill_switch_ia.freeze ? 'vermelho' : 'verde'}>
+        <LinhaChecklist rotulo="Freio das gerações" cor={s.kill_switch_ia.freeze ? 'vermelho' : 'verde'}>
           {s.kill_switch_ia.freeze ? `ligado desde ${(s.kill_switch_ia.desde || '').slice(0, 10)}: ${s.kill_switch_ia.motivo}` : 'normal, não travado'}
         </LinhaChecklist>
         <LinhaChecklist rotulo="Rate limit ativo" cor="verde">

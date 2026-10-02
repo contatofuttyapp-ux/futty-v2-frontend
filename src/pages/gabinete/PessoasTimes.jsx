@@ -221,7 +221,7 @@ function TabDenuncias({ showMsg }) {
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <p style={{ fontSize: 12, color: 'var(--text-dim)', margin: 0 }}>
-        A IA subiu estes casos (não os resolveu sozinha). O conteúdo aparece porque alguém pediu revisão. Menores no topo.
+        A moderação automática subiu estes casos (não os resolveu sozinha). O conteúdo aparece porque alguém pediu revisão. Menores no topo.
       </p>
       {fila.map((c) => (
         <div key={c.id} style={{ ...CARD, padding: 14, borderColor: c.prioritaria ? 'var(--danger)' : '#222' }}>

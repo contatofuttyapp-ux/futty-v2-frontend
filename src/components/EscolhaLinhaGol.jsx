@@ -1,14 +1,16 @@
-// Futty v2.0 — Rodada 29A (G): "Você joga na linha · trocar" / "Você joga no gol · trocar".
-// A escolha entre jogar na linha ou no gol vivia num chip no meio da página do time e o dono não a achou.
-// Agora é este botão, com o estado escrito por extenso, no card do próprio jogador (topo da página do time)
-// e na seção "Meus times" do Perfil. Quem grava é quem usa (PATCH /api/equipas/:slug/membros/posicao, que já existia).
-// Gol = chip dourado (ativo); linha = roxo da casa, como era.
+// Futty v2.0 — Rodada 29A (G) / 29H (item 8): a escolha entre jogar na linha ou no gol. Vivia num chip no meio da página do
+// time e o dono não a achou; na 29A virou um botão "Você joga na linha · trocar" no card do próprio jogador e no Perfil.
+// 29H: dois chips LADO A LADO — "Jogo na linha" | "No gol" —, um aceso (dourado), padrão linha: é a mesma escolha das
+// boas-vindas do time, e a pessoa vê as duas opções sem adivinhar o que o toque faz. Quem grava é quem usa
+// (PATCH /api/equipas/:slug/membros/posicao, que já existia): `aoTrocar(true)` = no gol, `aoTrocar(false)` = na linha.
 export const TEXTO_APOIO_LINHA_GOL = 'Vale para os sorteios deste time. Dá para mudar em cada jogo.';
 
 // Rodada 29B (E): o papel de quem administra o time. "Só organizo" administra tudo (jogos, sorteio, resultados, Resenha)
 // mas fica fora da lista de presença, do sorteio, do ranking e do pacote de figurinhas. Mora aqui (e não num arquivo novo)
 // porque o Criar time e o painel do time o usam, e um módulo compartilhado a mais pesaria no arranque do app.
+// 29H (item 43): o texto acompanha a opção marcada (antes ficava sempre o de "só organizo", mesmo com "Eu jogo" aceso).
 export const TEXTO_APOIO_PAPEL = 'Você cuida de tudo, mas não entra na lista de presença, no sorteio nem no ranking, e não ocupa vaga no pacote de figurinhas. Dá para mudar depois.';
+export const TEXTO_APOIO_JOGA = 'Você joga e também cuida de tudo: entra na lista de presença, no sorteio e no ranking. Dá para mudar depois.';
 
 /** Os dois chips "Eu jogo" / "Só organizo o time" e o texto que explica. */
 export function EscolhaPapel({ joga, ocupado = false, aoTrocar }) {
@@ -22,24 +24,20 @@ export function EscolhaPapel({ joga, ocupado = false, aoTrocar }) {
           Só organizo o time
         </button>
       </div>
-      <p className="texto-apoio" style={{ marginTop: 8 }}>{TEXTO_APOIO_PAPEL}</p>
+      <p className="texto-apoio" data-texto-papel={joga ? 'joga' : 'organiza'} style={{ marginTop: 8 }}>{joga ? TEXTO_APOIO_JOGA : TEXTO_APOIO_PAPEL}</p>
     </div>
   );
 }
 
 export default function EscolhaLinhaGol({ goleiro, ocupado = false, aoTrocar }) {
-  const estado = goleiro ? 'no gol' : 'na linha';
   return (
-    <button
-      type="button"
-      aria-pressed={!!goleiro}
-      aria-label={`Você joga ${estado}. Tocar para trocar para ${goleiro ? 'a linha' : 'o gol'}.`}
-      className={`chip ${goleiro ? 'chip--active' : ''}`}
-      disabled={ocupado}
-      onClick={() => aoTrocar(!goleiro)}
-      style={goleiro ? undefined : { color: '#b69cff', borderColor: 'rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' }}
-    >
-      Você joga {estado} · trocar
-    </button>
+    <div data-escolha-linha-gol role="group" aria-label="Como você joga" style={{ display: 'flex', gap: 8, flexWrap: 'nowrap' }}>
+      <button type="button" className={`chip ${!goleiro ? 'chip--active' : ''}`} aria-pressed={!goleiro} disabled={ocupado} onClick={() => { if (goleiro) aoTrocar(false); }}>
+        Jogo na linha
+      </button>
+      <button type="button" className={`chip ${goleiro ? 'chip--active' : ''}`} aria-pressed={!!goleiro} disabled={ocupado} onClick={() => { if (!goleiro) aoTrocar(true); }}>
+        No gol
+      </button>
+    </div>
   );
 }

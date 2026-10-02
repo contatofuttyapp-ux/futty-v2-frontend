@@ -464,9 +464,9 @@ export default function MeuPerfil() {
 
         {/* SECÇÃO MEUS TIMES (Rodada 29A): a escolha linha/gol de cada time, à vista. Antes só existia num chip
             dentro da página do time e o dono não a achou. Vale para os sorteios de cada time. */}
+        <SecLabel>Meus times</SecLabel>
         {teams.length ? (
           <>
-            <SecLabel>Meus times</SecLabel>
             <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
               {teams.map((t, i) => (
                 <LinhaMeuTime key={t.id || t.slug} time={t} meuId={perfil.user.id} semBorda={i === teams.length - 1} aoErro={(m) => showToast(m, 'error')} />
@@ -475,6 +475,10 @@ export default function MeuPerfil() {
             <p className="texto-apoio">Vale para os sorteios de cada time. Dá para mudar em cada jogo.</p>
           </>
         ) : null}
+        {/* Rodada 29H (item 62): criar o próprio time sempre à mão, com ou sem time (a seção aparece mesmo vazia). */}
+        <Link to="/criar-equipa" className="btn btn--purple-outline hud-corners" data-criar-time style={{ marginTop: teams.length ? 10 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          ＋ Criar time
+        </Link>
 
         {/* SECÇÃO PRIVACIDADE (Opção B): o rosto entra por omissão para MAIORES; aqui
             desliga-se para silhueta. No servidor a IDADE manda sempre (sem data de nascimento

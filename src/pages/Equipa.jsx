@@ -9,6 +9,7 @@ import { useTeam } from '../hooks/useTeam';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
+import { enderecoDoWhatsapp, linkDoConvite } from '../utils/convite';
 import { plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import Topbar from '../components/Topbar';
@@ -196,8 +197,9 @@ export default function Equipa() {
     setCopied(false);
     setGenerating(true);
     try {
-      const { token } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
-      setInviteLink(`${window.location.origin}/convite/${token}`);
+      const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
+      // 29H (item 7): o link curto (/c/<código>) quando há código; o longo continua valendo.
+      setInviteLink(linkDoConvite({ origem: window.location.origin, token, codigo }));
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -302,7 +304,7 @@ export default function Equipa() {
               </>
             )}
 
-            {/* Tijolo 3 — moderação: só casos ambíguos (a IA resolve os óbvios). */}
+            {/* Tijolo 3 — moderação: só casos ambíguos (os óbvios a moderação automática já resolveu). */}
             {team.role === 'admin' && (
               <>
                 <SecLabel>Moderação</SecLabel>
@@ -349,6 +351,17 @@ export default function Equipa() {
                     {copied ? 'Copiado' : 'Copiar'}
                   </button>
                 </div>
+                {/* 29H (item 7): a frase aprovada pelo dono já vem escrita no WhatsApp ("Bora jogar? Você foi chamado para o <time> no Futty…"). */}
+                <a
+                  href={enderecoDoWhatsapp({ nomeTime: team.nome, link: inviteLink })}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-whatsapp
+                  className="btn btn--sm btn--outline hud-corners-s"
+                  style={{ marginTop: 8, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#7bd88f', borderColor: 'rgba(123,216,143,0.45)', background: 'rgba(123,216,143,0.06)' }}
+                >
+                  Mandar no WhatsApp
+                </a>
               </div>
             )}
 

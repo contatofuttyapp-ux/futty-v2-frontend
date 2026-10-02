@@ -309,6 +309,11 @@ export default function Figurinha() {
   const jogador = me?.user || {};
   const stats = me?.stats || {};
   const appNativo = ehNativo();
+  // Rodada 29H (item 58): no CELULAR — o app e também o navegador de toque — fica UM botão, "Compartilhar": a folha do sistema já
+  // tem "Salvar imagem", então "Baixar" ao lado era a mesma coisa (a pessoa parava para decidir qual é qual). "Baixar" só no
+  // computador, onde grava o arquivo. Navegador de celular sem folha de compartilhar com arquivo cai no download, como antes.
+  const [telaDeToque] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches);
+  const soCompartilhar = appNativo || telaDeToque;
   // GRUPO B 6a — `equipa` existia só para alimentar o PlayerCard, que saiu daqui.
   const frameHex = getFrameColor(corFrame).stroke;
   // Regra única: a foto CRUA nunca entra no card. Só entra o avatar quando é
@@ -1716,8 +1721,13 @@ export default function Figurinha() {
             trocada": essa linha só existe depois do 200 (fotoLocal nasce lá), e
             com o upload falhando a pessoa vê o erro aqui, sob o card. */}
         {gerandoIA ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <FuttyLoader size={14} label={null} /> Sua figurinha está sendo pintada… pode sair da tela, a gente avisa quando ficar pronta
+          // 29H (item 59): antes era UMA linha de 11 px com as duas frases coladas (quebrava no meio, sem alinhamento). Agora o
+          // título numa linha, com o F, e a explicação embaixo no texto de apoio da casa (≤ 34 em, 2 linhas, centrada).
+          <div role="status" data-pintando-aviso style={{ display: 'grid', justifyItems: 'center', gap: 2, padding: '4px 0', marginBottom: 10 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.02em', color: '#d4a017' }}>
+              <FuttyLoader size={16} label={null} /> Sua figurinha está sendo pintada…
+            </span>
+            <span className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Pode sair da tela. A gente avisa quando ficar pronta.</span>
           </div>
         ) : uploadFoto ? (
           <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
@@ -2118,7 +2128,7 @@ export default function Figurinha() {
               "Baixar" grava o ficheiro, "Compartilhar" abre o navigator.share. */}
           <div style={{ display: 'flex', gap: 12 }}>
             {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente. */}
-            {appNativo ? null : (
+            {soCompartilhar ? null : (
               <button
                 type="button"
                 className="btn btn--purple-outline hud-corners"

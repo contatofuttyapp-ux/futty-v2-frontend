@@ -23,7 +23,10 @@ import { nomeCampeao } from '../utils/campeonato';
 import { celebrarCerveja } from '../hooks/useConfetti';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
 import { EscolhaPapel } from '../components/EscolhaLinhaGol';
+import CampoBairro from '../components/CampoBairro';
 import { avisoDaCidade } from '../utils/cidades';
+import { TEXTO_APOIO_BAIRRO, avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
+import { linkDoConvite } from '../utils/convite';
 import '../styles/app.css';
 
 // Opções de cor de fundo do avatar da equipa (sem logo) e de visibilidade.
@@ -33,10 +36,11 @@ const VIS_OPCOES = [
   { k: 'publico_aprovacao', icon: LockOpen, label: 'Com aprovação' },
   { k: 'publico_aberto', icon: Globe, label: 'Aberto' },
 ];
+// 29H (item 45): os textos de entrada aprovados pelo dono (2-out), os mesmos do Criar time.
 const VIS_DESC = {
-  privado: 'Só por convite, não aparece no Explorar.',
-  publico_aprovacao: 'Aparece no Explorar; a entrada precisa de aprovação.',
-  publico_aberto: 'Aparece no Explorar; qualquer pessoa entra na hora.',
+  privado: 'Só entra quem receber o seu link de convite. Não aparece no Explorar.',
+  publico_aprovacao: 'Quem achar o time no Explorar pede para entrar; você aceita ou não.',
+  publico_aberto: 'Qualquer um que achar o time no Explorar entra na hora.',
 };
 
 const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12 };
@@ -645,12 +649,20 @@ function TabEquipa({ slug, team, showToast }) {
   const [cidadeEscolha, setCidadeEscolha] = useState(null);
   const [cidadeGuardada, setCidadeGuardada] = useState(team.cidade || '');
   const [avisoCidade, setAvisoCidade] = useState(null);
+  // 29H (item 12): o bairro (opcional). `bairroEscolha` = a freguesia da lista (Portugal) com a coordenada; null enquanto digita.
+  const [bairro, setBairro] = useState(team.bairro || '');
+  const [bairroGuardado, setBairroGuardado] = useState(team.bairro || '');
+  const [bairroEscolha, setBairroEscolha] = useState(null);
+  const [avisoBairro, setAvisoBairro] = useState(null);
   const [descricao, setDescricao] = useState(team.descricao || '');
   const [logoUrl, setLogoUrl] = useState(team.logo_url || null);
   const [previewLogo, setPreviewLogo] = useState(null);
   const [corFundo, setCorFundo] = useState(team.cor_fundo || '#1a1a2e');
   const [modo, setModo] = useState(team.modo_visibilidade || 'privado');
   const [mostrarGols, setMostrarGols] = useState(team.mostrar_gols !== false);
+  // 29H (item 44): "Artilheiro do dia" / "Destaque do dia" — ligados, o editor de resultado oferece a seção.
+  const [mostrarArtilheiro, setMostrarArtilheiro] = useState(team.mostrar_artilheiro !== false);
+  const [mostrarDestaque, setMostrarDestaque] = useState(team.mostrar_destaque !== false);
   const [joga, setJoga] = useState(team.joga !== false); // Rodada 29B (E): "Eu jogo" / "Só organizo o time"
   const [jogaOcupado, setJogaOcupado] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -730,6 +742,20 @@ function TabEquipa({ slug, team, showToast }) {
     }
   }
 
+  // Os dois prêmios do dia (29H, item 44): guarda ao tocar, como "Mostrar gols"; reverte em erro (sem a migração 073 o motor
+  // diz "ainda não está disponível").
+  async function guardarPremio(campo, v, definir, mensagem) {
+    const anterior = campo === 'mostrar_artilheiro' ? mostrarArtilheiro : mostrarDestaque;
+    definir(v);
+    try {
+      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ [campo]: v }) });
+      showToast(v ? mensagem.liga : mensagem.desliga);
+    } catch (err) {
+      definir(anterior);
+      showToast(err.message, 'error');
+    }
+  }
+
   async function zerarTodosVotos() {
     try {
       const r = await apiFetch(`/api/teams/${slug}/votos`, { method: 'DELETE' });
@@ -750,6 +776,10 @@ function TabEquipa({ slug, team, showToast }) {
       const corpo = { nome: nome.trim(), cor, localizacao: localizacao.trim(), descricao: descricao.trim() };
       const mudouCidade = cidade.trim() !== cidadeGuardada.trim();
       if (mudouCidade) Object.assign(corpo, cidade.trim() ? (cidadeEscolha || { cidade: cidade.trim() }) : { cidade: '' });
+      // 29H (item 12): o bairro vai quando mudou — e também quando a CIDADE mudou e há bairro (ele é procurado na cidade nova).
+      const mudouBairro = bairro.trim() !== bairroGuardado.trim();
+      const mandaBairro = mudouBairro || (mudouCidade && !!bairro.trim());
+      if (mandaBairro) Object.assign(corpo, bairro.trim() ? (bairroEscolha && bairroEscolha.bairro === bairro.trim() ? bairroEscolha : { bairro: bairro.trim() }) : { bairro: '' });
       const r = await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify(corpo) });
       if (mudouCidade) {
         setAvisoCidade(avisoDaCidade(r?.geo, cidade.trim()));
@@ -757,6 +787,13 @@ function TabEquipa({ slug, team, showToast }) {
         setCidade(guardada || '');
         setCidadeGuardada(guardada || '');
         setCidadeEscolha(null);
+      }
+      if (mandaBairro) {
+        setAvisoBairro(avisoDoBairro(r?.bairro));
+        const guardado = r?.team?.bairro ?? bairro.trim();
+        setBairro(guardado || '');
+        setBairroGuardado(guardado || '');
+        setBairroEscolha(null);
       }
       showToast('Time atualizado.');
     } catch (e) {
@@ -806,13 +843,30 @@ function TabEquipa({ slug, team, showToast }) {
           O nome da cidade é guardado + mostrado; do ponto guarda-se só o arredondado. */}
       <div style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Cidade <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· busca por proximidade</span></span>
-        <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setAvisoCidade(null); }} placeholder="Ex: Brasília" className="" style={inputStyle} />
+        <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setAvisoCidade(null); setBairroEscolha(null); }} placeholder="Ex: Brasília" className="" style={inputStyle} />
         {avisoCidade ? (
           <span role="status" data-aviso-cidade={avisoCidade.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: avisoCidade.tipo === 'ok' ? '#7bd88f' : '#f0c94a' }}>{avisoCidade.texto}</span>
         ) : null}
         <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>
           Aparece na busca por proximidade. O endereço exato nunca é mostrado, só a zona aproximada. Apague para sair da busca por distância.
         </span>
+      </div>
+
+      {/* 29H (item 12): o bairro, opcional — põe o time no ponto do bairro (e não no centro da cidade). Em Portugal, a freguesia. */}
+      <div style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Bairro <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· opcional</span></span>
+        <CampoBairro
+          valor={bairro}
+          aoMudar={(texto, escolha) => { setBairro(texto); setBairroEscolha(escolha); setAvisoBairro(null); }}
+          concelho={concelhoDePortugal(cidade, cidadeEscolha)}
+          desabilitado={!cidade.trim()}
+          className=""
+          style={inputStyle}
+        />
+        {avisoBairro ? (
+          <span role="status" data-aviso-bairro={avisoBairro.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: avisoBairro.tipo === 'ok' ? '#7bd88f' : '#f0c94a' }}>{avisoBairro.texto}</span>
+        ) : null}
+        <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>{TEXTO_APOIO_BAIRRO}</span>
       </div>
 
       <label style={{ display: 'grid', gap: 6 }}>
@@ -908,6 +962,31 @@ function TabEquipa({ slug, team, showToast }) {
           </span>
         </button>
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: esconde gols e artilharia (radar, perfil e blocos). Para futebol casual.</span>
+      </div>
+
+      {/* PRÊMIOS DO DIA (29H, item 44): o editor de resultado só oferece o artilheiro / o destaque quando ligados. */}
+      <div style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Prêmios do dia</span>
+        {[
+          { campo: 'mostrar_artilheiro', rotulo: 'Artilheiro do dia', valor: mostrarArtilheiro, definir: setMostrarArtilheiro, liga: 'Artilheiro do dia ligado.', desliga: 'Artilheiro do dia desligado.' },
+          { campo: 'mostrar_destaque', rotulo: 'Destaque do dia', valor: mostrarDestaque, definir: setMostrarDestaque, liga: 'Destaque do dia ligado.', desliga: 'Destaque do dia desligado.' },
+        ].map((p) => (
+          <button
+            key={p.campo}
+            type="button"
+            role="switch"
+            aria-checked={p.valor}
+            data-premio-do-time={p.campo}
+            onClick={() => guardarPremio(p.campo, !p.valor, p.definir, { liga: p.liga, desliga: p.desliga })}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${p.valor ? 'var(--neon)' : '#1a1a1a'}`, background: p.valor ? 'rgba(139,92,246,0.08)' : '#080808', color: '#fff' }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{p.rotulo}</span>
+            <span style={{ width: 40, height: 22, borderRadius: 999, background: p.valor ? 'var(--neon)' : '#333', position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
+              <span style={{ position: 'absolute', top: 2, left: p.valor ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+            </span>
+          </button>
+        ))}
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: o editor de resultado não oferece o troféu nem o destaque. O que já foi premiado continua no histórico.</span>
       </div>
 
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
@@ -1333,16 +1412,17 @@ function TabConvites({ slug, showToast }) {
     };
   }, [slug, showToast]);
 
-  function linkDe(token) {
-    return `${window.location.origin}/convite/${token}`;
+  // 29H (item 7): o link curto (/c/<código>) quando o motor deu um código; senão o longo.
+  function linkDe(token, codigo) {
+    return linkDoConvite({ origem: window.location.origin, token, codigo });
   }
 
   async function gerar() {
     if (gerando) return;
     setGerando(true);
     try {
-      const { token } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
-      setNovoLink(linkDe(token));
+      const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
+      setNovoLink(linkDe(token, codigo));
       await recarregar();
       showToast('Convite gerado.');
     } catch (e) {
@@ -1402,10 +1482,10 @@ function TabConvites({ slug, showToast }) {
               {c.usos > 0 ? `${c.usos} ${c.usos === 1 ? 'entrou' : 'entraram'} por este link` : 'ninguém entrou ainda'}
             </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {linkDe(c.token).slice(0, 20)}…
+              {c.codigo ? linkDe(c.token, c.codigo).replace(/^https?:\/\//, '') : `${linkDe(c.token).slice(0, 20)}…`}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => copiar(linkDe(c.token))}>Copiar link</button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => copiar(linkDe(c.token, c.codigo))}>Copiar link</button>
               <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => setRevogar(c)}>Revogar</button>
             </div>
           </div>
@@ -1919,7 +1999,7 @@ function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
 }
 
 // ─── TAB: RESULTADOS ─────────────────────────────────────────────────────────
-function TabResultados({ slug, showToast }) {
+function TabResultados({ slug, team, showToast }) {
   const [games, setGames] = useState(null);
   const [registar, setRegistar] = useState(null);
   const [modo, setModo] = useState('sem'); // 'sem' | 'com'
@@ -1991,12 +2071,14 @@ function TabResultados({ slug, showToast }) {
         ))
       )}
 
-      {registar ? <ResultadoModal jogo={registar} onClose={() => setRegistar(null)} onSaved={onGuardado} showToast={showToast} /> : null}
+      {registar ? <ResultadoModal jogo={registar} premios={{ artilheiro: team?.mostrar_artilheiro !== false, destaque: team?.mostrar_destaque !== false }} onClose={() => setRegistar(null)} onSaved={onGuardado} showToast={showToast} /> : null}
     </div>
   );
 }
 
-function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
+// `premios` (29H, item 44): o que o time deixou ligado no painel ("Artilheiro do dia" / "Destaque do dia"). Desligado, a seção some —
+// a menos que o jogo JÁ tenha o prêmio (editar um resultado antigo não pode apagá-lo em silêncio: o prêmio continua à vista).
+function ResultadoModal({ jogo, premios = { artilheiro: true, destaque: true }, onClose, onSaved, showToast }) {
   const [detail, setDetail] = useState(null);
   const [campeaoIdx, setCampeaoIdx] = useState(null);
   const [campeaoFoto, setCampeaoFoto] = useState(null);
@@ -2100,16 +2182,20 @@ function ResultadoModal({ jogo, onClose, onSaved, showToast }) {
               </div>
 
               {/* 2. ARTILHEIRO */}
-              <Seccao titulo="Artilheiro" ligado={temArt} onToggle={setTemArt}>
-                <SelectJogador value={artId} onChange={setArtId} confirmados={confirmados} />
-                <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Nº de gols</span><input type="number" min={1} value={artGols} onChange={(e) => setArtGols(e.target.value)} style={inputStyle} /></label>
-              </Seccao>
+              {premios.artilheiro || temArt ? (
+                <Seccao titulo="Artilheiro" ligado={temArt} onToggle={setTemArt}>
+                  <SelectJogador value={artId} onChange={setArtId} confirmados={confirmados} />
+                  <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Nº de gols</span><input type="number" min={1} value={artGols} onChange={(e) => setArtGols(e.target.value)} style={inputStyle} /></label>
+                </Seccao>
+              ) : null}
 
               {/* 3. DESTAQUE */}
-              <Seccao titulo="Destaque" ligado={temDest} onToggle={setTemDest}>
-                <SelectJogador value={destId} onChange={setDestId} confirmados={confirmados} />
-                <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Título</span><input value={destTitulo} onChange={(e) => setDestTitulo(e.target.value.slice(0, 60))} placeholder="Ex: Melhor em campo" style={inputStyle} /></label>
-              </Seccao>
+              {premios.destaque || temDest ? (
+                <Seccao titulo="Destaque" ligado={temDest} onToggle={setTemDest}>
+                  <SelectJogador value={destId} onChange={setDestId} confirmados={confirmados} />
+                  <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Título</span><input value={destTitulo} onChange={(e) => setDestTitulo(e.target.value.slice(0, 60))} placeholder="Ex: Melhor em campo" style={inputStyle} /></label>
+                </Seccao>
+              ) : null}
 
               {/* 4. RODADA DE CERVEJA */}
               <Seccao titulo="Rodada de cerveja" ligado={temRodada} onToggle={setTemRodada}>
@@ -2437,7 +2523,7 @@ export default function AdminPanel() {
               {tab === 'convites' && <TabConvites slug={slug} showToast={showToast} />}
               {tab === 'jogos' && <TabJogos slug={slug} showToast={showToast} navigate={navigate} />}
               {tab === 'campeonato' && <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} />}
-              {tab === 'resultados' && <TabResultados slug={slug} showToast={showToast} />}
+              {tab === 'resultados' && <TabResultados slug={slug} team={team} showToast={showToast} />}
               {tab === 'estatisticas' && <TabEstatisticas slug={slug} membrosBasicos={membrosBasicos} showToast={showToast} />}
               {tab === 'comunicacao' && <TabComunicacao slug={slug} navigate={navigate} showToast={showToast} />}
               {tab === 'denuncias' && <TabDenuncias showToast={showToast} />}
