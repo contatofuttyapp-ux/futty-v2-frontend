@@ -2,7 +2,9 @@
 // (FUT/DESIGN/prova-boas-vindas-v2.html): a DEITADA (A), para time sem logo, com o nome como letreiro na janela; e a
 // QUADRADA (B), com dois anéis contínuos de lâmpadas, para time com logo. Duas variantes na mesma tela: `convidado`
 // (1ª vez no time depois de aceitar o convite ou de ter o pedido aceito) e `criador` ("Ir para o time" no fim do Criar
-// time). A variante de quem só baixou o app saiu na 29D (o Onboarding ganhou o mini sorteio). Lâmpadas de CSS, 0 KB de
+// time"). 29H (item 1): o convidado vê esta tela como a 1ª página do onboarding (`comConvite`: "Você foi convidado para o <time>.
+// …", `gravar={false}`: a pessoa ainda não é do time, então a escolha linha/gol só volta no onClose e é gravada depois de
+// entrar). A variante de quem só baixou o app saiu na 29D (o Onboarding ganhou o mini sorteio). Lâmpadas de CSS, 0 KB de
 // mídia, sem som (não há gesto); prefers-reduced-motion: tudo parado e sem "tchan". Quem mostra e marca "visto" é a Equipa.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -89,9 +91,11 @@ function Lampada({ luz }) {
  * @param {object}  p.team             o time ({ nome, logo_url })
  * @param {string}  [p.slug]           para o PATCH de posição (convidado)
  * @param {boolean} [p.goleiroInicial] como a pessoa já está no time (padrão: linha)
- * @param {(r: { mudou: boolean, erro: string|null }) => void} p.onClose  chamado no "Vamos lá"
+ * @param {boolean} [p.comConvite]     abre a frase com "Você foi convidado para o <time>." (a 1ª página do onboarding do convidado)
+ * @param {boolean} [p.gravar]         false = não grava a posição (a pessoa ainda não é do time); o escolhido volta em `goleiro`
+ * @param {(r: { mudou: boolean, erro: string|null, goleiro: boolean }) => void} p.onClose  chamado no "Vamos lá"
  */
-export default function BoasVindas({ variante, team = null, slug = '', goleiroInicial = false, onClose }) {
+export default function BoasVindas({ variante, team = null, slug = '', goleiroInicial = false, comConvite = false, gravar = true, onClose }) {
   const [goleiro, setGoleiro] = useState(!!goleiroInicial);
   const [ocupado, setOcupado] = useState(false);
   const premio = useTchan();
@@ -106,7 +110,7 @@ export default function BoasVindas({ variante, team = null, slug = '', goleiroIn
     if (ocupado) return;
     setOcupado(true);
     let erro = null;
-    const mudou = variante === 'convidado' && goleiro !== !!goleiroInicial;
+    const mudou = gravar && variante === 'convidado' && goleiro !== !!goleiroInicial;
     if (mudou) {
       try {
         await apiFetch(`/api/equipas/${slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ goleiro }) });
@@ -114,7 +118,7 @@ export default function BoasVindas({ variante, team = null, slug = '', goleiroIn
         erro = e?.message || 'Não deu para salvar agora. Dá para mudar no card do time.';
       }
     }
-    onClose({ mudou: mudou && !erro, erro });
+    onClose({ mudou: mudou && !erro, erro, goleiro });
   }
 
   const letreiro = (classe) => (
@@ -151,7 +155,7 @@ export default function BoasVindas({ variante, team = null, slug = '', goleiroIn
             </div>
           </div>
         )}
-        <p className="bv-frase">{FRASES[variante]}</p>
+        <p className="bv-frase">{comConvite && variante === 'convidado' ? `Você foi convidado para o ${nome}. ` : ''}{FRASES[variante]}</p>
         {variante === 'convidado' ? (
           <div className="bv-posicao" role="group" aria-label="Como você joga">
             <button type="button" className={`chip ${!goleiro ? 'chip--active' : ''}`} aria-pressed={!goleiro} disabled={ocupado} onClick={() => setGoleiro(false)}>

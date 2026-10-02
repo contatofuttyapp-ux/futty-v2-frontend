@@ -15,7 +15,8 @@ import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
 import { plural } from '../utils/plural';
-import { IDADE_MINIMA, nascimentoMaximo } from '../utils/idade';
+import { IDADE_MINIMA } from '../utils/idade';
+import RolinhosData from '../components/RolinhosData';
 import { gerarFigurinhaCanvas, enquadrarAvatar, enquadrarFotoComum, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
@@ -436,11 +437,16 @@ export default function Inicio() {
   // Rodada 29B (A): quem tocou em "Criar conta e entrar" no convite passou pelo cadastro e chegou aqui — o bilhete que a
   // página do convite deixou no aparelho a devolve ao convite (uma vez só; sem bilhete, nada acontece).
   const navigate = useNavigate();
+  const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil, hidratar: hidratarPerfil } = usePerfil();
+  // Rodada 29H (item 1): o bilhete só é tomado por conta que JÁ terminou o onboarding. Antes, uma conta nova do Google/Apple que
+  // caía aqui por um instante (a trava do onboarding só a manda para /onboarding no mesmo ciclo) tinha o bilhete tomado e era
+  // levada à página do convite sem foto e sem nome — e o Onboarding abria sem saber do convite.
+  const onboardingCompleto = me?.user?.onboarding_completo;
   useEffect(() => {
+    if (onboardingCompleto === false) return;
     const token = tomarConvitePendente();
     if (token) navigate(`/convite/${token}`, { replace: true });
-  }, [navigate]);
-  const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil, hidratar: hidratarPerfil } = usePerfil();
+  }, [navigate, onboardingCompleto]);
   const { teams, loading: teamsLoading, error: teamsErro } = useTeams();
   // Início (11-set): 1 pedido só (GET /api/inicio, via Layout.jsx que monta o
   // InicioProvider só nesta rota) alimenta jogos, RSVP, campeonato, pedidos,
@@ -987,15 +993,9 @@ export default function Inicio() {
             <span style={{ fontSize: 13, color: '#fff', lineHeight: 1.45 }}>
               Informe sua <b>data de nascimento</b> para confirmarmos que você tem {IDADE_MINIMA} anos ou mais.
             </span>
+            {/* 29H (item 3): rolinhos dia · mês · ano, como no cadastro e no onboarding. */}
+            <RolinhosData id="inicio-nascimento" onChange={setDobInput} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <input
-                type="date"
-                value={dobInput}
-                max={nascimentoMaximo()}
-                onChange={(e) => setDobInput(e.target.value)}
-                style={{ flex: '1 1 150px', padding: '8px 10px', borderRadius: 2, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: 16 }}
-                aria-label="Data de nascimento"
-              />
               <button type="button" className="btn btn--purple btn--sm hud-corners-s" disabled={!dobInput || dobBusy} onClick={guardarDob}>
                 {dobBusy ? 'Salvando…' : 'Salvar'}
               </button>
@@ -1274,6 +1274,10 @@ export default function Inicio() {
                   ) : null}
                 </button>
               ))}
+              {/* Rodada 29H (item 62): criar o próprio time sempre à mão — antes o botão só existia no Início vazio. */}
+              <Link to="/criar-equipa" className="chip chip--explore hud-corners-s" data-criar-time>
+                ＋ Criar time
+              </Link>
               <Link to="/explorar" className="chip chip--explore hud-corners-s">
                 ＋ Explorar
               </Link>

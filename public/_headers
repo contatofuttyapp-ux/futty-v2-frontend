@@ -55,6 +55,15 @@
   Cache-Control: public, max-age=31536000, immutable
   Access-Control-Allow-Origin: *
 
+# O arquivo de pré-carga da página 1 do onboarding (29H item 4): o NOME é fixo e o conteúdo muda a cada build (lista os chunks com hash), então
+# nunca cache longo: o navegador pergunta sempre.
+/preload-onboarding.js
+  Cache-Control: no-cache
+
+# A imagem de prévia do link (og:image, 29H item 7): o nome leva a versão (-v1), então o cache é longo.
+/og/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
   Access-Control-Allow-Origin: *

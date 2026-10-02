@@ -99,3 +99,15 @@ test('agenda: cada rolo só desacelera depois de o anterior ter começado e os i
   for (let i = 1; i < a.travam.length; i += 1) assert.ok(a.travam[i] > a.travam[i - 1]);
   assert.ok(tudo.every((t) => Number.isInteger(t) && t > 0));
 });
+
+test('versão da imagem (29H, item 37): com __VERSOES_ONBOARDING__ o arquivo leva ?v=<hash>; sem ela o caminho fica limpo', async () => {
+  globalThis.__VERSOES_ONBOARDING__ = { bruninho: 'abcd1234', goncalo: '0f0f0f0f' };
+  try {
+    const m = await import('../../src/utils/miniSorteio.js?versionado');
+    assert.equal(m.FIGURINHAS.find((f) => f.id === 'bruninho').arquivo, '/onboarding/bruninho.webp?v=abcd1234');
+    assert.equal(m.FIGURINHAS.find((f) => f.id === 'goncalo').arquivo, '/onboarding/goncalo.webp?v=0f0f0f0f');
+    assert.equal(m.FIGURINHAS.find((f) => f.id === 'rafa').arquivo, '/onboarding/rafa.webp', 'sem versão no mapa, o caminho fica limpo');
+  } finally {
+    delete globalThis.__VERSOES_ONBOARDING__;
+  }
+});

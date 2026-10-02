@@ -19,7 +19,8 @@ const DIST = new URL('../dist/', import.meta.url).pathname.replace(/^\/([A-Za-z]
 // `.well-known` (Rodada 29B, bloco 3, C): os arquivos que o iOS/Android buscam NO SITE para ligar futtyapp.com.br ao app. Dentro
 // do pacote não servem a nada — e, ao contrário das outras pastas, o app nunca os pede (fica de fora de PASTAS_REMOTAS).
 // 'onboarding' (Rodada 29E): os 6 bustos do mini sorteio do onboarding — o app busca do site (PASTAS_REMOTAS).
-const REMOVER = ['avatares', 'sorteio-assets', 'sons', 'dados', 'onboarding', '.well-known'];
+// 'og' (Rodada 29H): a imagem de prévia do link (og:image) — só quem LÊ o link (o robô do WhatsApp) a pede, no site; o app nunca.
+const REMOVER = ['avatares', 'sorteio-assets', 'sons', 'dados', 'onboarding', 'og', '.well-known'];
 
 function tamanho(dir) {
   let total = 0;

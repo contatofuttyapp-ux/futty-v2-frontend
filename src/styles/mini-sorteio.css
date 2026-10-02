@@ -30,7 +30,9 @@
 .msq .rolo.slow .strip{animation-duration:1s}
 .msq .rolo.stop .strip{animation-play-state:paused}
 @keyframes msqSpin{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
-.msq .scel{width:56px;height:75px;position:relative;overflow:hidden;border-bottom:1px solid rgba(139,92,246,.2);background:#0a0a10}
+/* 29H (item 4): antes de a figurinha chegar da rede a célula já é a MOLDURA vazia (fundo em degradê e filete interno), e a imagem
+   entra por cima — o rolo gira desenhado desde o primeiro quadro, sem buraco preto. */
+.msq .scel{width:56px;height:75px;position:relative;overflow:hidden;border-bottom:1px solid rgba(139,92,246,.2);background:linear-gradient(180deg,#171326,#0a0a10);box-shadow:inset 0 0 0 1px rgba(212,160,23,.14)}
 .msq .scel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 0%;opacity:.9}
 /* O rolo travado: a figurinha sorteada "pipoca" por cima da tira (revPop) na moldura do sorteio real — borda do time, filete,
    micro-lâmpadas piscando, nome — e some em fade quando o ciclo esvazia (.sai). */

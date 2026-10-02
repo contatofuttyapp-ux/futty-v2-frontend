@@ -7,16 +7,23 @@
 // A ordem natural (ciclo 0) alterna A/B: TIME A = bruninho, gonçalo, rafa, nando · TIME B = tiagão, pedrão, dudu, caio — 2 do
 // Brasil e 2 de Portugal em cada time.
 
+// Rodada 29H (item 37): o arquivo leva ?v=<hash do conteúdo> (vite.config.js define __VERSOES_ONBOARDING__ a cada build). O _headers
+// serve /onboarding/* com cache de 1 ano, imutável, e o nome do arquivo não muda quando a arte muda — sem a versão, quem já viu
+// o busto antigo continuava vendo. Fora do Vite (os testes no Node) não há versão e o caminho fica limpo.
+/* global __VERSOES_ONBOARDING__ */
+const VERSOES = typeof __VERSOES_ONBOARDING__ !== 'undefined' ? __VERSOES_ONBOARDING__ : {};
+const arquivoDe = (id) => `/onboarding/${id}.webp${VERSOES[id] ? `?v=${VERSOES[id]}` : ''}`;
+
 export const FIGURINHAS = [
-  { id: 'bruninho', nome: 'BRUNINHO', arquivo: '/onboarding/bruninho.webp' },
-  { id: 'tiagao', nome: 'TIAGÃO', arquivo: '/onboarding/tiagao.webp' },
-  { id: 'goncalo', nome: 'GONÇALO', arquivo: '/onboarding/goncalo.webp' },
-  { id: 'pedrao', nome: 'PEDRÃO', arquivo: '/onboarding/pedrao.webp' },
-  { id: 'rafa', nome: 'RAFA', arquivo: '/onboarding/rafa.webp' },
-  { id: 'dudu', nome: 'DUDU', arquivo: '/onboarding/dudu.webp' },
-  { id: 'nando', nome: 'NANDO', arquivo: '/onboarding/nando.webp' },
-  { id: 'caio', nome: 'CAIO', arquivo: '/onboarding/caio.webp' },
-];
+  { id: 'bruninho', nome: 'BRUNINHO' },
+  { id: 'tiagao', nome: 'TIAGÃO' },
+  { id: 'goncalo', nome: 'GONÇALO' },
+  { id: 'pedrao', nome: 'PEDRÃO' },
+  { id: 'rafa', nome: 'RAFA' },
+  { id: 'dudu', nome: 'DUDU' },
+  { id: 'nando', nome: 'NANDO' },
+  { id: 'caio', nome: 'CAIO' },
+].map((f) => ({ ...f, arquivo: arquivoDe(f.id) }));
 
 export const TIMES = [
   { id: 'A', nome: 'Time A', cor: '#d4a017', brilho: 'rgba(212,160,23,.55)' },

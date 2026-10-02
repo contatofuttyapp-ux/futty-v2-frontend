@@ -5,13 +5,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { shouldShowNav } from './Layout';
+import { useAuth } from '../hooks/useAuth';
 import '../styles/app.css';
 
 const KEY = 'futty_cookies';
 
 export default function CookieBanner() {
   const { pathname } = useLocation();
-  const navVisivel = shouldShowNav(pathname);
+  const { session } = useAuth();
+  const navVisivel = shouldShowNav(pathname, !!session);
   const bannerRef = useRef(null);
   const [visivel, setVisivel] = useState(() => {
     try {

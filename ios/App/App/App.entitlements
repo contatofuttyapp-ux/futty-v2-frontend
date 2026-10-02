@@ -13,7 +13,7 @@
 		<string>Default</string>
 	</array>
 	<!-- Links que abrem no app (Rodada 29B, bloco 3, C): tocar em https://futtyapp.com.br/convite/…
-	     (ou /equipa, /jogo) no WhatsApp abre o app e não o Safari. O iOS confere o arquivo
+	     (ou o link curto /c/…, ou /equipa) no WhatsApp abre o app e não o Safari. O iOS confere o arquivo
 	     https://futtyapp.com.br/.well-known/apple-app-site-association (public/.well-known/); os caminhos
 	     de lá, o intent-filter do Android e src/lib/linkDoSite.js têm de bater (há um teste). Com
 	     assinatura automática o xcodebuild -allowProvisioningUpdates liga a capacidade "Associated

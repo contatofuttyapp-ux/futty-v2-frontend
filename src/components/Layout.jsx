@@ -15,7 +15,7 @@ import AuroraBg from './AuroraBg';
 // onboarding — para não fazer loop).
 const ROTAS_SEM_ONBOARDING = [
   /^\/$/, /^\/login/, /^\/register/, /^\/forgot-password/,
-  /^\/convite\//, /^\/p\//, /^\/termos/, /^\/privacidade/, /^\/excluir-conta/, /^\/onboarding/,
+  /^\/(convite|c)\//, /^\/p\//, /^\/termos/, /^\/privacidade/, /^\/excluir-conta/, /^\/onboarding/,
 ];
 
 // Gate do onboarding dia-1: se a conta ainda não o concluiu (flag no servidor),
@@ -53,7 +53,7 @@ const HIDE_NAV_PATTERNS = [
   /^\/login/,
   /^\/register/,
   /^\/forgot-password/,
-  /^\/convite\//,
+  /^\/(convite|c)\//, // 29H: o link longo e o curto do convite
   /^\/onboarding/, // Rodada 29E2 (item 33 da RODADA-29): a pessoa ainda não entrou — sem barra nas 3 páginas
   /^\/p\//, // vista pública do sorteio (fullscreen)
   /^\/criar-equipa/,
@@ -61,8 +61,14 @@ const HIDE_NAV_PATTERNS = [
   /^\/equipa\/[^/]+\/jogador\//,
 ];
 
+// Rodada 29H (item 2): páginas que existem para quem ainda não tem conta (o destino dos links das redes, os Termos e a
+// Privacidade abertos do cadastro ou do "Saiba mais" do banner) — sem sessão a barra do app não faz sentido; com sessão
+// (Perfil → Termos) ela continua.
+const HIDE_NAV_SEM_SESSAO = [/^\/avise-me/, /^\/termos/, /^\/privacidade/];
+
 // eslint-disable-next-line react-refresh/only-export-components
-export function shouldShowNav(pathname) {
+export function shouldShowNav(pathname, comSessao = true) {
+  if (!comSessao && HIDE_NAV_SEM_SESSAO.some((re) => re.test(pathname))) return false;
   return !HIDE_NAV_PATTERNS.some((re) => re.test(pathname));
 }
 
@@ -98,7 +104,8 @@ export default function Layout({ children }) {
   const { teams } = useTeams();
   // Rodada 29G: conta com data menor de 18 anos vê a tela de exclusão (AuthGuard) — sem a barra por cima.
   const { perfil: perfilDaConta } = usePerfil();
-  const showNav = shouldShowNav(pathname) && !menorQueIdadeMinima(perfilDaConta?.user?.birthdate);
+  const { session } = useAuth();
+  const showNav = shouldShowNav(pathname, !!session) && !menorQueIdadeMinima(perfilDaConta?.user?.birthdate);
 
   const urlSlug = pathname.match(/^\/equipa\/([^/]+)/)?.[1] || null;
   const slug = urlSlug || teams[0]?.slug || null;

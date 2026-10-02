@@ -1,14 +1,17 @@
 // Futty v2.0 — Registo (email/password)
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { entrarComGoogle } from '../lib/googleAuth';
 import { entrarComApple, podeEntrarComApple } from '../lib/appleAuth';
-import { dataDeNascimentoValida, menorQueIdadeMinima, nascimentoMaximo, MSG_MENOR } from '../utils/idade';
+import { dataDeNascimentoValida, menorQueIdadeMinima, MSG_MENOR } from '../utils/idade';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
+import RolinhosData from '../components/RolinhosData';
+import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
+import { temConvitePendente } from '../lib/convitePendente';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
 import '../styles/app.css';
@@ -30,6 +33,9 @@ export default function Register() {
   const [reenviarErro, setReenviarErro] = useState('');
   const [cooldown, setCooldown] = useState(0);
 
+  // Rodada 29H (item 4): a próxima parada é o onboarding — o chunk e as 8 figurinhas dele vêm a caminho enquanto a pessoa digita.
+  useEffect(() => { preaquecerOnboarding({ convidado: temConvitePendente() }); }, []);
+
   // Contagem regressiva do "Reenviar e-mail": 1 setTimeout por tick, dependency
   // simples em `cooldown` — evita recriar um setInterval solto a limpar na mão.
   useEffect(() => {
@@ -41,12 +47,15 @@ export default function Register() {
   // Rede de segurança para "já está autenticado": cobre chegar aqui já logado
   // e o login nativo pela Apple/Google, cuja sessão nasce de um evento fora
   // desta tela (a folha da Apple; o appUrlOpen do Google — este já navega
-  // sozinho no DeepLinkListener, mas o efeito é reforço). Não compete com o
-  // /onboarding do cadastro com sessão imediata (handleSubmit): a mudança de
-  // sessão e o navigate('/onboarding') acontecem no mesmo ciclo de renderização,
-  // então o React já trocou de rota (e desmontou esta tela) antes deste efeito rodar.
+  // sozinho no DeepLinkListener, mas o efeito é reforço).
+  //
+  // Rodada 29H (item 4): quem ACABOU de criar a conta (cadastro com sessão imediata) vai a /onboarding — e não a /home. Antes,
+  // o evento de sessão chegava depois do navigate('/onboarding') do envio e este efeito mandava para /home (medido: 60 ms
+  // depois); o Início era carregado (chunk grande + /api/inicio) só para a trava do onboarding devolver a pessoa a /onboarding
+  // quando a resposta chegava. Era essa a demora da página 1 (medida: ~3,8 s; o Onboarding em si pesava ~0,3 s).
+  const acabouDeCadastrar = useRef(false);
   useEffect(() => {
-    if (!sessaoCarregando && session) navigate('/home', { replace: true });
+    if (!sessaoCarregando && session) navigate(acabouDeCadastrar.current ? '/onboarding' : '/home', { replace: true });
   }, [sessaoCarregando, session, navigate]);
 
   async function handleSubmit(e) {
@@ -81,6 +90,7 @@ export default function Register() {
     }
 
     setLoading(true);
+    acabouDeCadastrar.current = true;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -94,6 +104,7 @@ export default function Register() {
     setLoading(false);
 
     if (error) {
+      acabouDeCadastrar.current = false;
       setError(error.message);
       return;
     }
@@ -237,26 +248,10 @@ export default function Register() {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="birthdate">Data de nascimento *</label>
-              <input
-                id="birthdate"
-                type="date"
-                className="auth-input hud-corners-s"
-                value={birthdate}
-                max={nascimentoMaximo()}
-                onChange={(e) => setBirthdate(e.target.value)}
-                // O `max` (hoje − 18 anos) faz o navegador barrar o envio com a mensagem DELE; aqui a
-                // data acima do teto mostra a frase da casa, e o signUp nem sai.
-                onInvalid={(e) => {
-                  if (e.target.validity.rangeOverflow) {
-                    e.preventDefault();
-                    setSuccess('');
-                    setError(MSG_MENOR);
-                  }
-                }}
-                autoComplete="bday"
-                required
-              />
+              <span id="birthdate-rotulo" className="auth-field__rotulo">Data de nascimento *</span>
+              {/* Rodada 29H (item 3): rolinhos dia · mês · ano, sem ano futuro e com teto ano atual − 18 (RolinhosData.jsx).
+                  A data acima do teto (último ano, mês/dia depois de hoje) mostra a frase da casa no envio. */}
+              <RolinhosData id="birthdate" onChange={setBirthdate} rotulo="Data de nascimento" />
               <span style={{ display: 'block', marginTop: 6, fontSize: 12, lineHeight: 1.4, color: 'var(--text-dim)' }}>{MSG_MENOR}</span>
             </div>
 

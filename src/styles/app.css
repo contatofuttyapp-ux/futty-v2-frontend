@@ -2675,7 +2675,7 @@
 }
 
 /* Onboarding dia-1 — "deixar para depois" só aparece aos ~4s (quase-obrigatória). */
-@keyframes onbAparece { to { opacity: 1; } }
+@keyframes onbAparece { to { opacity: 1; visibility: visible; } }
 
 /* Silhueta-jogador v4 — respiração do traço (como o radar da vitrine). */
 .sil-corpo { stroke-opacity: 0.55; fill-opacity: 0.12; animation: silRespira 5.5s ease-in-out infinite; }
@@ -2995,3 +2995,60 @@
 /* A barra de compartilhar presa ao fundo (Rodada 12A) saiu na Rodada 14B:
    cobria parte do retângulo dos times. Compartilhar vive agora dentro da
    cerimónia — ver .compartilhar em sorteio-maquina.css. */
+
+/* Rodada 29H (item 3): a data de nascimento em rolinhos (components/RolinhosData.jsx). Três rolos com scroll-snap; o item no
+   centro é o escolhido, a faixa dourada o marca. 5 linhas de 40 px = 200 px; as pontas somem num degradê. Antes de a pessoa
+   mexer nos três, o item do centro fica apagado (é só o ponto de partida, não uma resposta). */
+.rolinhos {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1.3fr;
+  gap: 6px;
+  width: 100%;
+  height: 200px;
+}
+.rolinhos__faixa {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 80px;
+  height: 40px;
+  pointer-events: none;
+  border-top: 1px solid rgba(212, 160, 23, 0.55);
+  border-bottom: 1px solid rgba(212, 160, 23, 0.55);
+  background: rgba(212, 160, 23, 0.07);
+}
+.rolo {
+  height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 28%, #000 72%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 28%, #000 72%, transparent);
+  outline: none;
+}
+.rolo::-webkit-scrollbar { display: none; }
+.rolo:focus-visible { box-shadow: inset 0 0 0 1px rgba(212, 160, 23, 0.6); }
+.rolo__esp { display: block; height: 80px; flex: none; }
+.rolo__item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.rolo__item--atual { color: rgba(255, 255, 255, 0.55); }
+.rolinhos--completo .rolo__item--atual,
+.rolo[data-escolhido]:not([data-escolhido=""]) .rolo__item--atual { color: #f0c94a; }

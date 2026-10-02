@@ -156,6 +156,8 @@ function AnimatedRoutes() {
               próprio custava 172 B do arranque, que tem teto de 320 KiB. */}
           <Route path="/avise-me" element={<LandingPage soAviseMe />} />
           <Route path="/convite/:token" element={<ConviteRoute />} />
+          {/* Rodada 29H (item 7): o link curto do convite, futtyapp.com.br/c/<código> — a mesma tela. */}
+          <Route path="/c/:token" element={<ConviteRoute />} />
           {/* Vista pública do sorteio (sem login) */}
           <Route path="/p/campeonato/:slug/:id" element={<CampeonatoPublico />} />
           <Route path="/p/:slug/:gameId" element={<SorteioPublico />} />

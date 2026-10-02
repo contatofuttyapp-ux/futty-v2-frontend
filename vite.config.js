@@ -1,4 +1,6 @@
 import { execSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { readdirSync, readFileSync } from 'node:fs'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -11,6 +13,67 @@ function versaoWeb() {
     return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || 'local'
   } catch {
     return 'local'
+  }
+}
+
+// RODADA 29H (item 37) — versão da mídia de public/ que pode ser trocada. O _headers serve public/onboarding/* com
+// "immutable, max-age=1 ano" e o NOME do arquivo não muda quando a arte muda: quem já tinha visto o busto antigo continuava
+// vendo (o dono viu isto na 29E2/29E3). A regra: mídia de public/ que possa ser trocada leva ?v=<hash do conteúdo> na URL, e o
+// hash sai do próprio arquivo a cada build — trocou a imagem, mudou a URL, nada a lembrar. O Cloudflare Pages guarda por URL
+// completa (com a query) e o _headers casa pelo caminho, então o cache longo continua valendo para cada versão.
+// Hoje só o onboarding (utils/miniSorteio.js lê __VERSOES_ONBOARDING__); outra pasta que passe a trocar ganha a sua linha aqui.
+function versoesDaPasta(pasta) {
+  const dir = new URL(`./public/${pasta}/`, import.meta.url)
+  const versoes = {}
+  for (const nome of readdirSync(dir)) {
+    versoes[nome.replace(/\.[^.]+$/, '')] = createHash('sha1').update(readFileSync(new URL(nome, dir))).digest('hex').slice(0, 8)
+  }
+  return versoes
+}
+
+// RODADA 29H (item 4) — o caminho FRIO da página 1 do onboarding. O Register/Login aquecem o chunk e as 8 figurinhas (lib/
+// preaquecerOnboarding.js), mas quem chega ao /onboarding pelo link do e-mail de confirmação, ou voltando do Google, abre o site do zero:
+// o index.js é lido e executado, o roteador resolve a rota, SÓ ENTÃO o chunk do Onboarding é pedido, e só quando ele renderiza saem as 8
+// imagens — uma fila de quatro idas. Este plugin emite um arquivo pequeno (/preload-onboarding.js, fora do bundle e sem hash no nome) que o
+// index.html carrega com `async`: se o caminho é /onboarding, ele já pede, em paralelo com o index.js, o chunk do Onboarding e o que ele
+// importa (modulepreload), o CSS dele (preload as=style) e as 8 imagens versionadas (preload as=image). Em qualquer outro caminho e no app
+// da loja (Capacitor.isNativePlatform(): o objeto Capacitor também existe na web, então não basta ele existir) não faz nada. Arquivo externo, e não um <script> inline, para a CSP (hoje Report-Only, depois de verdade)
+// nunca precisar abrir uma exceção. Só roda no build (no dev não há chunks); o nome do arquivo é fixo, o conteúdo muda a cada build, e o
+// _headers não lhe dá cache longo.
+function preloadDoOnboardingNoFrio() {
+  const caminho = (p) => String(p || '').replace(/\\/g, '/')
+  return {
+    name: 'futty-preload-onboarding',
+    apply: 'build',
+    enforce: 'post', // depois do plugin do HTML: o que o index.html já carrega (index, vendor-react…) não se repete aqui
+    generateBundle(_opcoes, bundle) {
+      const entrada = Object.values(bundle).find((c) => c.type === 'chunk' && caminho(c.facadeModuleId).endsWith('/src/pages/Onboarding.jsx'))
+      if (!entrada) return
+      const js = []
+      const css = []
+      const vistos = new Set()
+      const andar = (nome) => {
+        if (vistos.has(nome)) return
+        vistos.add(nome)
+        const c = bundle[nome]
+        if (!c || c.type !== 'chunk') return
+        js.push(nome)
+        for (const k of c.viteMetadata?.importedCss || []) css.push(k)
+        for (const i of c.imports || []) andar(i)
+      }
+      andar(entrada.fileName)
+      const imagens = Object.entries(versoesDaPasta('onboarding')).map(([id, v]) => `/onboarding/${id}.webp?v=${v}`)
+      const html = String(bundle['index.html']?.source || '')
+      const novo = (f) => !html.includes(`/${f}`)
+      const lista = [
+        ...js.filter(novo).map((f) => ['modulepreload', `/${f}`, '']),
+        ...css.filter(novo).map((f) => ['preload', `/${f}`, 'style']),
+        ...imagens.map((u) => ['preload', u, 'image']),
+      ]
+      const codigo = `(function(){var p=location.pathname;var C=window.Capacitor;if(p.indexOf('/onboarding')!==0||(C&&C.isNativePlatform&&C.isNativePlatform()))return;${JSON.stringify(lista)}.forEach(function(x){var l=document.createElement('link');l.rel=x[0];l.href=x[1];if(x[2])l.as=x[2];if(x[0]==='modulepreload'||x[2]==='style')l.crossOrigin='';document.head.appendChild(l)})})();\n`
+      this.emitFile({ type: 'asset', fileName: 'preload-onboarding.js', source: codigo })
+    },
+    transformIndexHtml: () => [{ tag: 'script', attrs: { async: '', src: '/preload-onboarding.js' }, injectTo: 'head' }],
   }
 }
 
@@ -115,8 +178,8 @@ function manualChunks(id) {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), preconectar(loadEnv(mode, process.cwd(), 'VITE_'))],
-  define: { __VERSAO_WEB__: JSON.stringify(versaoWeb()) },
+  plugins: [react(), preconectar(loadEnv(mode, process.cwd(), 'VITE_')), preloadDoOnboardingNoFrio()],
+  define: { __VERSAO_WEB__: JSON.stringify(versaoWeb()), __VERSOES_ONBOARDING__: JSON.stringify(versoesDaPasta('onboarding')) },
   // host:true = escuta em 0.0.0.0 (além de localhost) — inofensivo pro uso normal
   // (localhost continua a funcionar igual); é o que deixa o telemóvel na mesma
   // wifi alcançar o dev server pelo IP da máquina (vaga do celular).

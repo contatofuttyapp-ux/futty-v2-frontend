@@ -43,8 +43,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/convite" />
+                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/c/" />
                 <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/equipa" />
-                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/jogo" />
             </intent-filter>
         </activity>
 

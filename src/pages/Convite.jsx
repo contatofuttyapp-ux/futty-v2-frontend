@@ -1,16 +1,20 @@
 // Futty v2.0 — Página de convite: aceitar entrada numa equipa.
 // Rodada 29B (A): refeita inteira. Centrada, sem cartão; marca atual no alto (F dourado + FUTTY espaçado, o lockup do
 // e-mail); o logo do time grande no centro; nome em destaque; três fatos; UM botão. O desenho vive em convite.css.
+// Rodada 29H (itens 1 e 7): o link é o longo (/convite/<uuid>) ou o curto (/c/<código>) — a mesma tela; quem chega sem conta (ou
+// com conta que ainda não terminou o onboarding) deixa o bilhete do convite no aparelho e segue para o cadastro / o onboarding,
+// que ABRE nas boas-vindas do time; time sem logo = só o nome em destaque, sem quadrado de iniciais.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MapPin, Users } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { usePerfil } from '../context/PerfilContext';
 import FuttyLogo from '../components/FuttyLogo';
-import { colorOf, initials } from '../utils/teamColors';
 import { urlImagem } from '../utils/avatar';
 import { fatosDoConvite, fraseDoConvite } from '../utils/convite';
-import { guardarConvitePendente } from '../lib/convitePendente';
+import { guardarConvitePendente, tomarConvitePendente } from '../lib/convitePendente';
+import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
 import '../styles/app.css';
 import '../styles/convite.css';
 
@@ -35,16 +39,13 @@ const ICONE_DO_FATO = {
   cidade: <MapPin size={15} aria-hidden="true" />,
 };
 
-/** O escudo do time: o logo, e as iniciais só quando não há logo. `vazio` = esqueleto enquanto o convite carrega. */
+/** O escudo do time: o logo. Sem logo não há escudo (29H, item 23: nada de quadrado com iniciais — o nome em destaque basta). `vazio` = esqueleto enquanto o convite carrega. */
 function Escudo({ team, vazio = false }) {
   if (vazio) return <div className="convite__escudo convite__escudo--vazio" aria-hidden="true" />;
-  const c = colorOf(team?.cor);
-  const temLogo = !!team?.logo_url;
+  if (!team?.logo_url) return null;
   return (
-    <div className="convite__escudo" style={temLogo ? { background: team.cor_fundo || '#1a1a2e' } : { background: c.hex, color: c.text }}>
-      {temLogo ? (
-        <img src={urlImagem(assetUrl(team.logo_url), 384)} alt={`Logo do ${team.nome}`} decoding="async" />
-      ) : initials(team?.nome)}
+    <div className="convite__escudo" style={{ background: team.cor_fundo || '#1a1a2e' }}>
+      <img src={urlImagem(assetUrl(team.logo_url), 384)} alt={`Logo do ${team.nome}`} decoding="async" />
     </div>
   );
 }
@@ -53,6 +54,10 @@ export default function Convite() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
+  const { perfil, deCache, carregando: perfilCarregando } = usePerfil();
+  // Conta que existe mas ainda não terminou o onboarding (cadastro por e-mail, Google ou Apple em andamento): o convite vai
+  // para o onboarding, não para "Entrar no time". `!deCache`: nunca decide a partir de um perfil guardado no aparelho.
+  const contaSemOnboarding = !!session && !deCache && perfil?.user?.onboarding_completo === false;
 
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,9 +86,22 @@ export default function Convite() {
     };
   }, [token, authLoading]);
 
+  // O bilhete do convite (29H, item 1): sem conta, ou com conta que ainda não terminou o onboarding, o convite fica guardado
+  // no aparelho DESDE QUE a página abre — o cadastro por e-mail, o Google e a Apple levam a pessoa para fora (e o OAuth perde o
+  // `state` do roteador), mas o bilhete sobrevive. O Onboarding o lê e começa nas boas-vindas do time; ao final, aceita o convite.
+  // Para quem já tem conta pronta não há bilhete: "Entrar no time" resolve aqui mesmo.
+  useEffect(() => {
+    if (!info?.valido || info.jaMembro || !info.team) return;
+    if (!session || contaSemOnboarding) guardarConvitePendente(token, Date.now(), info.team);
+    if (contaSemOnboarding) navigate('/onboarding', { replace: true });
+  }, [info, session, contaSemOnboarding, token, navigate]);
+
+  // O próximo passo é o cadastro/onboarding: o chunk dele e as boas-vindas do time já vêm a caminho (item 4).
+  useEffect(() => { if (!session) preaquecerOnboarding({ convidado: true }); }, [session]);
+
   // Sem conta: cadastro (o bilhete no aparelho traz a pessoa de volta a este convite depois da foto e do e-mail).
   function criarContaEEntrar() {
-    guardarConvitePendente(token);
+    guardarConvitePendente(token, Date.now(), info?.team);
     navigate('/register');
   }
 
@@ -97,6 +115,7 @@ export default function Convite() {
     setAccepting(true);
     try {
       const { team, jaMembro } = await apiFetch(`/api/convite/${token}/aceitar`, { method: 'POST' });
+      tomarConvitePendente(); // entrou: o bilhete cumpriu a função (se houvesse)
       // `primeiraEntrada`: a página do time abre as boas-vindas (Rodada 29B, C) — só para quem acabou de entrar.
       navigate(`/equipa/${team.slug}`, { replace: true, state: jaMembro ? undefined : { primeiraEntrada: true } });
     } catch (err) {
@@ -167,7 +186,7 @@ export default function Convite() {
           <span className="convite__marca-nome" aria-hidden="true">FUTTY</span>
         </div>
 
-        {loading ? (
+        {loading || (!!session && perfilCarregando) || (contaSemOnboarding && info?.valido && !info.jaMembro) ? (
           <>
             <Escudo vazio />
             <p className="convite__espera">Validando convite…</p>
@@ -181,7 +200,7 @@ export default function Convite() {
         ) : !info?.valido ? (
           <>
             {team ? <Escudo team={team} /> : null}
-            <h1 className="convite__titulo" style={{ marginTop: team ? 22 : 0 }}>Convite inválido</h1>
+            <h1 className="convite__titulo" style={{ marginTop: team?.logo_url ? 22 : 0 }}>Convite inválido</h1>
             <p className="convite__frase">
               {MOTIVOS[info?.motivo] || 'Este convite não está disponível.'}
               {team ? ' Mas você ainda pode entrar no time:' : ''}
@@ -191,7 +210,7 @@ export default function Convite() {
         ) : (
           <>
             <Escudo team={team} />
-            <h1 className="convite__nome">{team?.nome}</h1>
+            <h1 className={`convite__nome${team?.logo_url ? '' : ' convite__nome--sozinho'}`}>{team?.nome}</h1>
             <p className="convite__frase">{fraseDoConvite({ convidadoPor: info.convidadoPor, nomeTime: team?.nome })}</p>
 
             {(() => {

@@ -4,8 +4,8 @@
 // Uso: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dataCurta, fatosDoConvite, fraseDoConvite } from '../../src/utils/convite.js';
-import { guardarConvitePendente, temConvitePendente, tomarConvitePendente } from '../../src/lib/convitePendente.js';
+import { dataCurta, fatosDoConvite, fraseDoConvite, linkDoConvite, textoDoConvite, enderecoDoWhatsapp } from '../../src/utils/convite.js';
+import { guardarConvitePendente, guardarPosicaoPendente, lerConvitePendente, temConvitePendente, tomarConvitePendente } from '../../src/lib/convitePendente.js';
 
 const SP = 'America/Sao_Paulo';
 const AGORA = new Date('2026-10-01T15:00:00Z'); // quinta-feira, 12h em São Paulo
@@ -107,4 +107,68 @@ test('convite pendente: sem armazenamento (modo privado) ou lixo no lugar nunca 
     guardarConvitePendente('');
     assert.equal(guardado.size, 0, 'token vazio não guarda nada');
   });
+});
+
+// ─── Rodada 29H (item 1): o bilhete leva o time e a escolha linha/gol ─────────────────────────────────────────
+test('bilhete 29H: guarda uma cópia do time (nome, logo, cor de fundo) para as boas-vindas abrirem sem esperar a rede', () => {
+  comArmazenamento((guardado) => {
+    const time = { nome: 'Várzea FC', logo_url: 'https://x/logo.png', cor_fundo: '#1a1a2e', slug: 'nao-guarda', cor: 'nao-guarda' };
+    guardarConvitePendente('k7m2p9qx', 1_000_000, time);
+    assert.deepEqual(lerConvitePendente(1_000_001), { token: 'k7m2p9qx', time: { nome: 'Várzea FC', logo_url: 'https://x/logo.png', cor_fundo: '#1a1a2e' }, goleiro: false });
+    assert.equal(guardado.size, 1, 'ler não apaga');
+    assert.ok(!guardado.get('futty_convite_pendente').includes('nao-guarda'), 'só o que a tela precisa');
+    assert.equal(tomarConvitePendente(1_000_002), 'k7m2p9qx');
+    assert.equal(lerConvitePendente(), null);
+  });
+});
+
+test('bilhete 29H: time sem logo, bilhete antigo (sem time) e bilhete vencido', () => {
+  comArmazenamento(() => {
+    guardarConvitePendente('abc', 1_000_000, { nome: 'Sem Logo FC' });
+    assert.deepEqual(lerConvitePendente(1_000_001).time, { nome: 'Sem Logo FC', logo_url: null, cor_fundo: null });
+    guardarConvitePendente('abc', 1_000_000); // a página voltou a abrir sem o time (ex.: erro de rede): mantém o que já tinha
+    assert.equal(lerConvitePendente(1_000_001).time.nome, 'Sem Logo FC');
+    guardarConvitePendente('outro-convite', 1_000_000);
+    assert.equal(lerConvitePendente(1_000_001).time, null, 'outro convite começa limpo, sem o time do anterior');
+    assert.equal(lerConvitePendente(1_000_000 + 3 * 86400000), null, 'vencido');
+  });
+});
+
+test('bilhete 29H: a escolha "No gol" feita nas boas-vindas fica no bilhete (sobrevive a recarregar a página) e some com ele', () => {
+  comArmazenamento(() => {
+    const t0 = 1_000_000;
+    guardarConvitePendente('abc', t0, { nome: 'Várzea FC' });
+    guardarPosicaoPendente(true, t0 + 10);
+    assert.equal(lerConvitePendente(t0 + 20).goleiro, true);
+    guardarConvitePendente('abc', t0 + 30, { nome: 'Várzea FC' }); // a mesma página de novo: a escolha fica
+    assert.equal(lerConvitePendente(t0 + 40).goleiro, true);
+    guardarPosicaoPendente(false, t0 + 50);
+    assert.equal(lerConvitePendente(t0 + 60).goleiro, false);
+    tomarConvitePendente(t0 + 70);
+    guardarPosicaoPendente(true, t0 + 80); // sem bilhete não há onde guardar: nada acontece, nada quebra
+    assert.equal(lerConvitePendente(t0 + 90), null);
+  });
+});
+
+// ─── Rodada 29H (item 7): o link e a frase do convite ─────────────────────────────────────────────────────────
+test('linkDoConvite: o curto (/c/<código>) quando há código; senão o longo (/convite/<uuid>)', () => {
+  const origem = 'https://futtyapp.com.br';
+  assert.equal(linkDoConvite({ origem, token: 'uuid-longo', codigo: 'k7m2p9qx' }), 'https://futtyapp.com.br/c/k7m2p9qx');
+  assert.equal(linkDoConvite({ origem, token: 'uuid-longo', codigo: null }), 'https://futtyapp.com.br/convite/uuid-longo');
+  assert.equal(linkDoConvite({ origem, token: 'uuid-longo' }), 'https://futtyapp.com.br/convite/uuid-longo', 'motor sem a migração 072');
+});
+
+test('textoDoConvite: a frase aprovada pelo dono (2-out), com o time e o link', () => {
+  assert.equal(
+    textoDoConvite({ nomeTime: 'Várzea FC', link: 'https://futtyapp.com.br/c/k7m2p9qx' }),
+    'Bora jogar? Você foi chamado para o Várzea FC no Futty. Entre pelo link: https://futtyapp.com.br/c/k7m2p9qx'
+  );
+  assert.equal(textoDoConvite({ nomeTime: '  Várzea FC ', link: 'L' }), 'Bora jogar? Você foi chamado para o Várzea FC no Futty. Entre pelo link: L');
+  assert.match(textoDoConvite({ nomeTime: '', link: 'L' }), /para o time no Futty/, 'sem nome, a frase continua inteira');
+});
+
+test('enderecoDoWhatsapp: wa.me com a frase codificada', () => {
+  const url = enderecoDoWhatsapp({ nomeTime: 'Várzea FC', link: 'https://futtyapp.com.br/c/k7m2p9qx' });
+  assert.ok(url.startsWith('https://wa.me/?text='));
+  assert.equal(decodeURIComponent(url.slice('https://wa.me/?text='.length)), 'Bora jogar? Você foi chamado para o Várzea FC no Futty. Entre pelo link: https://futtyapp.com.br/c/k7m2p9qx');
 });

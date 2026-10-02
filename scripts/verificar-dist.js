@@ -101,7 +101,32 @@ function main() {
 
   console.log('[verificar-dist] ✅ grafo de chunks íntegro — nenhuma referência quebrada.');
 
+  if (!preloadDoOnboarding(html)) process.exit(1);
   if (!pesoDoArranque(html)) process.exit(1);
+}
+
+/**
+ * Rodada 29H (item 4): o index.html carrega /preload-onboarding.js (plugin preloadDoOnboardingNoFrio do vite.config.js), que no caminho
+ * /onboarding pede o chunk, o CSS e as 8 imagens da página 1 junto com o index.js. O arquivo é gerado a cada build com os nomes COM hash:
+ * se um chunk mudar de nome sem o plugin acompanhar, o preload pediria arquivos que não existem (404 por pessoa, em silêncio). Aqui se
+ * confere que o <script> está no HTML e que TODA URL do arquivo existe em dist/.
+ *
+ * @returns {boolean} false se algo faltar (o chamador falha a build).
+ */
+function preloadDoOnboarding(html) {
+  const arquivo = path.join(DIST, 'preload-onboarding.js');
+  if (!/<script[^>]*src="\/preload-onboarding\.js"/.test(html) || !fs.existsSync(arquivo)) {
+    console.error('\n[verificar-dist] ❌ o index.html não carrega /preload-onboarding.js, ou o arquivo não foi gerado (plugin preloadDoOnboardingNoFrio).');
+    return false;
+  }
+  const urls = [...fs.readFileSync(arquivo, 'utf8').matchAll(/"(\/(?:assets|onboarding)\/[^"]+)"/g)].map((m) => m[1]);
+  const faltam = urls.filter((u) => !fs.existsSync(path.join(DIST, u.split('?')[0])));
+  if (urls.length < 10 || faltam.length) {
+    console.error(`\n[verificar-dist] ❌ preload-onboarding.js: ${urls.length} URL(s), ${faltam.length} inexistente(s) em dist/: ${faltam.join(', ') || '(poucas URLs — o plugin não achou o chunk?)'}`);
+    return false;
+  }
+  console.log(`[verificar-dist] ✅ preload-onboarding.js: ${urls.length} URL(s) (chunks, CSS e as 8 figurinhas), todas existem.`);
+  return true;
 }
 
 /**

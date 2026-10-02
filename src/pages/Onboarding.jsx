@@ -2,27 +2,37 @@
 // → identidade. Só para REGISTOS NOVOS (o Register navega para cá; contas antigas
 // nunca passam aqui). Pede SÓ o que o dia-1 usa — equipa entra-se/cria-se no Início.
 // Foto: selfie (capture="user") OU galeria → CropModal da casa (1:1) → POST /api/me/avatar.
-// "Deixar para depois" só aparece aos ~4s; quem salta leva o card persistente no Início.
+// "Deixar para depois" só aparece aos ~2s (29H); quem salta leva o card persistente no Início.
 // RODADA 28/29G: quem chega sem data de nascimento (Google/Apple não a trazem) passa
 // por "Quando você nasceu?" ANTES da foto. Menor de 18: o motor apaga a conta e o login explica.
 // RODADA 29D (dono): o passo 1 ganhou o mini sorteio ao vivo (MiniSorteio.jsx) e o ícone do app no lugar do F solto;
 // RODADA 29E (dono): o ícone de volta a 110 px flutuando, figurinhas fictícias caindo em dois times no mini sorteio, textos da landing.
-// quem chega pelo convite (bilhete no aparelho) começa na foto, com dois traços — o sorteio ela vê no time.
-import { useRef, useState } from 'react';
+// RODADA 29H (item 1): quem chega por um convite (bilhete no aparelho: lib/convitePendente.js) NÃO vê a página "Começar": a
+// 1ª página é a boas-vindas DO TIME (BoasVindas, variante convidado: "Você foi convidado para o <time>. …", linha/gol, "Vamos
+// lá") → foto → nome → o time (o convite é aceito aqui, no fim; sem passar de novo pelo Início nem pela página do convite).
+// A escolha linha/gol vale depois de entrar. Convite que morreu (apagado, vencido) vira cadastro comum.
+// 29H (item 3): "Quando você nasceu?" em rolinhos dia/mês/ano (RolinhosData). 29H (item 4): o Register/Login aquecem o chunk
+// e as 8 imagens desta página (lib/preaquecerOnboarding.js).
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { enquadroAvatar } from '../lib/enquadroAvatar';
-import { temConvitePendente } from '../lib/convitePendente';
+import { guardarPosicaoPendente, lerConvitePendente, tomarConvitePendente } from '../lib/convitePendente';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
-import { dataDeNascimentoValida, IDADE_MINIMA, nascimentoMaximo } from '../utils/idade';
+import { dataDeNascimentoValida, IDADE_MINIMA } from '../utils/idade';
 import { usePerfil } from '../context/PerfilContext';
 import { useAuth } from '../hooks/useAuth';
 import FuttyLogo from '../components/FuttyLogo';
+import LoadingFutty from '../components/LoadingFutty';
 import MiniSorteio from '../components/MiniSorteio';
+import RolinhosData from '../components/RolinhosData';
 import CropModal from '../components/CropModal';
 import Toast from '../components/Toast';
 import '../styles/app.css';
+
+// As boas-vindas do time (a mesma tela do time, chunk próprio): a 1ª página de quem chega pelo convite.
+const BoasVindas = lazy(() => import('../components/BoasVindas'));
 
 const RAJ = "'Rajdhani', sans-serif";
 const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)';
@@ -81,9 +91,13 @@ function MolduraFoto({ src, size = 170 }) {
 export default function Onboarding() {
   const { perfil, hidratar, recarregar: recarregarPerfil } = usePerfil();
   const { signOut } = useAuth();
-  // Quem vem do convite pula o passo 1 (boas-vindas + mini sorteio) e vê só foto → nome.
-  const [deConvite] = useState(() => temConvitePendente());
-  const [passo, setPasso] = useState(() => (deConvite ? 2 : 1)); // 1 · 2 (foto; antes dela a data de nascimento, se faltar) · 3
+  // Quem vem do convite começa pelas boas-vindas do time (passo 1) em vez da página "Começar"; foto e nome seguem iguais.
+  const [convite] = useState(() => lerConvitePendente()); // { token, time, goleiro } | null
+  const [timeDoConvite, setTimeDoConvite] = useState(() => convite?.time || null); // { nome, logo_url, cor_fundo }
+  const [conviteMorto, setConviteMorto] = useState(false); // sumiu ou venceu: a pessoa segue como cadastro comum
+  const [goleiro, setGoleiro] = useState(() => !!convite?.goleiro);
+  const deConvite = !!convite && !conviteMorto;
+  const [passo, setPasso] = useState(1); // 1 (boas-vindas do time ou "Começar") · 2 (foto; antes dela a data de nascimento, se faltar) · 3
   const [nascimento, setNascimento] = useState('');
   const [salvandoNascimento, setSalvandoNascimento] = useState(false);
   const [erroNascimento, setErroNascimento] = useState('');
@@ -101,6 +115,43 @@ export default function Onboarding() {
   const [toast, setToast] = useState(null);
   const selfieRef = useRef(null);
   const galeriaRef = useRef(null);
+
+  // O convite do bilhete ainda vale? O bilhete já traz o nome e o logo do time (a 1ª tela abre sem esperar); aqui se confirma e se
+  // renova o logo. Morto (não existe, venceu, ou a pessoa já é do time) → o bilhete cai e vira cadastro comum. Sem rede e sem
+  // cópia do time, o bilhete FICA (o Início o devolve ao convite depois) e a pessoa segue pelo cadastro comum.
+  useEffect(() => {
+    if (!convite) return undefined;
+    let ativo = true;
+    apiFetch(`/api/convite/${encodeURIComponent(convite.token)}`)
+      .then((r) => {
+        if (!ativo) return;
+        if (!r?.valido || !r.team || r.jaMembro) {
+          tomarConvitePendente();
+          setConviteMorto(true);
+          return;
+        }
+        setTimeDoConvite({ nome: r.team.nome, logo_url: r.team.logo_url || null, cor_fundo: r.team.cor_fundo || null });
+      })
+      .catch(() => { if (ativo) setTimeDoConvite((t) => { if (!t) setConviteMorto(true); return t; }); });
+    return () => { ativo = false; };
+  }, [convite]);
+
+  // Aceita o convite do bilhete e devolve para onde ir (o time), ou null se não deu. Depois de entrar: grava linha/gol (se a
+  // pessoa escolheu "No gol"), marca as boas-vindas do time como vistas (ela acabou de ver) e acende o convite da figurinha.
+  async function aceitarConvite() {
+    try {
+      const { team } = await apiFetch(`/api/convite/${encodeURIComponent(convite.token)}/aceitar`, { method: 'POST' });
+      tomarConvitePendente();
+      try {
+        if (team?.id) localStorage.setItem(`futty_onboarding_${team.id}`, '1');
+        localStorage.setItem('futty_cta_figurinha', '1');
+      } catch { /* sem armazenamento: as boas-vindas do time podem repetir uma vez */ }
+      if (goleiro) await apiFetch(`/api/equipas/${team.slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ goleiro: true }) }).catch(() => {});
+      return `/equipa/${team.slug}`;
+    } catch {
+      return null;
+    }
+  }
 
   async function escolherFicheiro(e) {
     const f = e.target.files?.[0];
@@ -196,7 +247,9 @@ export default function Onboarding() {
       // stale, é esta linha que impede o loop — não o inverso.
       const base = fresco || perfil;
       if (base) hidratar({ ...base, user: { ...base.user, onboarding_completo: true } });
-      window.location.assign('/home');
+      // 29H (item 1): o convite do bilhete é aceito AQUI — a pessoa cai direto no time, que ela já viu nas boas-vindas. Se o
+      // convite falhar (venceu entre uma tela e outra), o bilhete fica e o Início a leva à página do convite, que explica.
+      window.location.assign((deConvite && (await aceitarConvite())) || '/home');
     } catch (e) {
       // Rodada 29G: data de menor de 18 que veio do cadastro por e-mail — o motor apagou a conta.
       if (e.code === 'MENOR_DE_18') {
@@ -209,7 +262,7 @@ export default function Onboarding() {
     }
   }
 
-  const passos = deConvite ? [2, 3] : [1, 2, 3];
+  const passos = [1, 2, 3];
   const prog = (
     <div data-progresso style={{ position: 'absolute', top: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 8, zIndex: 3 }}>
       {passos.map((n) => {
@@ -224,7 +277,23 @@ export default function Onboarding() {
       <main style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '46px 24px 32px', maxWidth: 480, margin: '0 auto', width: '100%' }}>
         {prog}
 
-        {passo === 1 && (
+        {passo === 1 && deConvite && !timeDoConvite && <LoadingFutty motivo="convite" />}
+
+        {passo === 1 && deConvite && timeDoConvite && (
+          // As boas-vindas do time: portal sobre o fundo; "Vamos lá" guarda linha/gol (só vale depois de entrar) e segue para a foto.
+          <Suspense fallback={null}>
+            <BoasVindas
+              variante="convidado"
+              comConvite
+              gravar={false}
+              team={timeDoConvite}
+              goleiroInicial={goleiro}
+              onClose={({ goleiro: g }) => { setGoleiro(g); guardarPosicaoPendente(g); setPasso(2); }}
+            />
+          </Suspense>
+        )}
+
+        {passo === 1 && !deConvite && (
           <>
             <div className="futty-f-bob"><div className="futty-f-sway">
               <FuttyLogo variant="icone" size={110} />
@@ -258,17 +327,9 @@ export default function Onboarding() {
               Pedimos a data de nascimento para confirmar que você tem {IDADE_MINIMA} anos ou mais.
             </p>
             <div style={{ width: '100%', maxWidth: 290 }}>
-              <label htmlFor="onb-nascimento" style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Data de nascimento</label>
-              <input
-                id="onb-nascimento"
-                type="date"
-                className="input input--hud"
-                value={nascimento}
-                max={nascimentoMaximo()}
-                onChange={(e) => { setNascimento(e.target.value); setErroNascimento(''); }}
-                autoComplete="bday"
-                style={{ width: '100%', fontFamily: RAJ, fontSize: 17, fontWeight: 700, textAlign: 'center' }}
-              />
+              <span style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Data de nascimento</span>
+              {/* 29H (item 3): rolinhos dia · mês · ano, sem ano futuro, teto ano atual − 18. */}
+              <RolinhosData id="onb-nascimento" onChange={(v) => { setNascimento(v); setErroNascimento(''); }} />
               {erroNascimento ? (
                 <div role="alert" style={{ marginTop: 10, fontSize: 13, color: '#f8b4b4', textAlign: 'center', lineHeight: 1.45 }}>{erroNascimento}</div>
               ) : null}
@@ -315,11 +376,12 @@ export default function Onboarding() {
                     Escolher da galeria
                   </Cta>
                 </div>
-                {/* "deixar para depois" — surge aos ~4s (o convite do Início continua até haver foto) */}
+                {/* "deixar para depois" — surge aos ~2s (29H, item 5; era ~4 s). Escondido até lá (visibility), para um toque
+                    antes da hora não valer; o convite do Início continua até haver foto. */}
                 <button
                   type="button"
                   onClick={() => setPasso(3)}
-                  style={{ display: 'block', margin: '18px auto 0', background: 'none', border: 'none', color: '#8a8398', fontFamily: RAJ, fontSize: 12, letterSpacing: '0.06em', cursor: 'pointer', opacity: 0, animation: 'onbAparece 0.6s ease 4s forwards' }}
+                  style={{ display: 'block', margin: '18px auto 0', background: 'none', border: 'none', color: '#8a8398', fontFamily: RAJ, fontSize: 12, letterSpacing: '0.06em', cursor: 'pointer', opacity: 0, visibility: 'hidden', animation: 'onbAparece 0.4s ease 1.8s forwards' }}
                 >
                   deixar para depois
                 </button>

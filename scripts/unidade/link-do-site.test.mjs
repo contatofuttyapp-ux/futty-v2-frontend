@@ -1,7 +1,8 @@
 // Futty v2.0 — Rodada 29B (bloco 3, C): links que abrem no app (src/lib/linkDoSite.js).
 //
 // Dois assuntos:
-//   1. o parser: só https + futtyapp.com.br + /convite/, /equipa/ ou /jogo/ vira caminho do roteador; o resto é null (e o app não navega);
+//   1. o parser: só https + futtyapp.com.br + /convite/, /c/ (o link curto do convite, 29H) ou /equipa/ vira caminho do roteador; o resto
+//      é null (e o app não navega) — /jogo/ saiu na 29H: o app não tem essa rota (o jogo mora em /equipa/<slug>/jogo/<id>);
 //   2. a COERÊNCIA entre os quatro lugares que falam do mesmo domínio e caminhos — o arquivo do iOS (AASA), o do Android (assetlinks.json
 //      + o intent-filter do manifesto), o entitlement do iOS e o parser. Se um deles divergir, o link abre no navegador em vez do app
 //      (ou o app abre numa tela que o site nunca abriria) e ninguém vê erro nenhum: é o tipo de defeito que só o teste aponta.
@@ -18,12 +19,13 @@ import { HOST_DO_SITE, PREFIXOS_DE_LINK, caminhoDoLinkDoSite } from '../../src/l
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(`${RAIZ}${rel}`, 'utf8');
 
-test('links do site que o app abre: convite, time (e o que mora nele) e jogo — com a query, sem o #', () => {
+test('links do site que o app abre: convite (longo e curto) e time (e o que mora nele, o jogo inclusive) — com a query, sem o #', () => {
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/convite/abc123'), '/convite/abc123');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/convite/abc123?origem=zap'), '/convite/abc123?origem=zap');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/equipa/varzea-fc'), '/equipa/varzea-fc');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/equipa/varzea-fc/jogo/9f1c/sorteio'), '/equipa/varzea-fc/jogo/9f1c/sorteio');
-  assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/jogo/9f1c'), '/jogo/9f1c');
+  assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/k7m2p9qx'), '/c/k7m2p9qx', 'o link curto do convite (29H)');
+  assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/k7m2p9qx?origem=zap'), '/c/k7m2p9qx?origem=zap');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/convite/abc123#topo'), '/convite/abc123');
   assert.equal(caminhoDoLinkDoSite('https://FUTTYAPP.com.br/convite/abc123'), '/convite/abc123', 'o domínio não diferencia maiúsculas');
 });
@@ -41,6 +43,10 @@ test('o que NÃO é do app vira null: outro domínio, esquema, caminho ou truque
     'https://futtyapp.com.br/login',
     'https://futtyapp.com.br/convite',                     // sem token
     'https://futtyapp.com.br/convitex/abc',
+    'https://futtyapp.com.br/jogo/9f1c',                   // saiu na 29H: não existe /jogo/<id> no app
+    'https://futtyapp.com.br/criar-equipa',                // "/c" sem a barra não é o link curto
+    'https://futtyapp.com.br/c',
+    'https://futtyapp.com.br/c/../home',
     'https://futtyapp.com.br/convite/../home',             // o `..` se resolve para /home
     'https://futtyapp.com.br//evil.com/convite/abc',       // protocolo-relativo disfarçado
     'com.futty.app://auth/callback?code=abc',              // o retorno do Google: outro ramo do ouvinte
@@ -95,7 +101,8 @@ test('coerência: o Android — assetlinks.json do pacote certo e intent-filter 
   const dados = [...filtro[0].matchAll(/<data android:scheme="([^"]+)" android:host="([^"]+)" android:pathPrefix="([^"]+)" \/>/g)];
   assert.deepEqual(dados.map((d) => d[1]), PREFIXOS_DE_LINK.map(() => 'https'));
   assert.deepEqual(dados.map((d) => d[2]), PREFIXOS_DE_LINK.map(() => HOST_DO_SITE));
-  assert.deepEqual(dados.map((d) => `${d[3]}/`), PREFIXOS_DE_LINK, 'os pathPrefix (sem a barra final) são os prefixos do parser');
+  // O Android escreve "/convite" e "/equipa" sem a barra; o do link curto TEM de levar a barra ("/c" casaria "/criar-equipa").
+  assert.deepEqual(dados.map((d) => (d[3].endsWith('/') ? d[3] : `${d[3]}/`)), PREFIXOS_DE_LINK, 'os pathPrefix são os prefixos do parser');
 });
 
 test('o site serve o AASA como JSON e o pacote nativo não o leva', () => {

@@ -94,6 +94,11 @@
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
+/* Time sem logo (29H, item 23): sem escudo, o nome é o destaque — maior, sem a folga de cima que o escudo pedia. */
+.convite__nome--sozinho {
+  margin-top: 4px;
+  font-size: 44px;
+}
 .convite__frase {
   margin: 10px 0 0;
   font-size: 15px;

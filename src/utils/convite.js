@@ -40,3 +40,22 @@ export function fraseDoConvite({ convidadoPor, nomeTime }) {
   const quem = String(convidadoPor ?? '').trim();
   return quem ? `${quem} te convidou para o ${nome}` : `Você foi convidado para o ${nome}`;
 }
+
+/**
+ * O link do convite que vai para o grupo (29H, item 7): o curto, futtyapp.com.br/c/<código>, quando o motor deu um código
+ * (migração 072); senão o longo, /convite/<uuid>, que continua valendo. `origem` é window.location.origin.
+ */
+export function linkDoConvite({ origem, token, codigo }) {
+  return codigo ? `${origem}/c/${codigo}` : `${origem}/convite/${token}`;
+}
+
+/** A frase do WhatsApp (dono, 2-out): "Bora jogar? Você foi chamado para o <time> no Futty. Entre pelo link: <link>". */
+export function textoDoConvite({ nomeTime, link }) {
+  const nome = String(nomeTime ?? '').trim() || 'time';
+  return `Bora jogar? Você foi chamado para o ${nome} no Futty. Entre pelo link: ${link}`;
+}
+
+/** O endereço do WhatsApp com a frase pronta (abre a escolha do grupo; o app ou o WhatsApp Web). */
+export function enderecoDoWhatsapp({ nomeTime, link }) {
+  return `https://wa.me/?text=${encodeURIComponent(textoDoConvite({ nomeTime, link }))}`;
+}

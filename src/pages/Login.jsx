@@ -9,6 +9,8 @@ import { MSG_MENOR } from '../utils/idade';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
+import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
+import { temConvitePendente } from '../lib/convitePendente';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
 import '../styles/app.css';
@@ -54,6 +56,9 @@ export default function Login() {
   useEffect(() => {
     if (!sessaoCarregando && session) navigate('/home', { replace: true });
   }, [sessaoCarregando, session, navigate]);
+
+  // Rodada 29H (item 4): quem entra pelo Google/Apple numa conta nova cai no onboarding — o chunk e as 8 figurinhas dele já vêm.
+  useEffect(() => { preaquecerOnboarding({ convidado: temConvitePendente() }); }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();

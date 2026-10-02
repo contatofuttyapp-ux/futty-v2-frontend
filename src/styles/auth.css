@@ -138,7 +138,8 @@
 
 /* Label = estrutura → Rajdhani 600. O valor que se escreve no input é leitura e
    fica no --sans: a régua da Vaga 1 é "Rajdhani estrutural, leitura no resto". */
-.auth-field label {
+.auth-field label,
+.auth-field__rotulo {
   font-family: 'Rajdhani', var(--sans);
   font-size: 13px;
   font-weight: 600;

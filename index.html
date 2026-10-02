@@ -16,6 +16,23 @@
          fica a cargo do sistema. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <title>Futty</title>
+    <meta name="description" content="Sorteio justo, ranking e figurinha de colecionador." />
+
+    <!-- Prévia do link (WhatsApp, iMessage, redes) — Rodada 29H, item 7. Antes não havia og:image e o WhatsApp mostrava o F
+         pequeno num círculo; agora é o ÍCONE DO APP (quadrado arredondado) centrado em 1200×630. Vale para o site inteiro e para
+         o convite (/convite/<uuid> e /c/<código> caem neste mesmo index.html). A URL é absoluta e de produção: quem lê a prévia
+         é o robô do app de mensagem, que não passa pelo dev.futty.pages.dev. O arquivo tem versão no nome (-v1): a prévia fica
+         guardada por muito tempo nesses apps; ao trocar a arte, trocar o nome (scripts/gerar-og.mjs) e esta linha. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Futty" />
+    <meta property="og:title" content="O seu time. A sua figurinha." />
+    <meta property="og:description" content="Sorteio justo, ranking e figurinha de colecionador." />
+    <meta property="og:image" content="https://futtyapp.com.br/og/futty-1200x630-v1.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="O ícone do Futty: um F dourado." />
+    <meta name="twitter:card" content="summary_large_image" />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
@@ -44,6 +61,11 @@
          partir daí, com a paleta #050810 de sempre — a troca é sub-imperceptível,
          as duas cores são quase-pretas. */
       html, body { background: #080808; }
+      /* O F de espera (ver o <div id="root"> abaixo): fixo no centro, respirando devagar. Sem movimento reduzido: parado. */
+      .futty-splash { position: fixed; inset: 0; display: grid; place-items: center; background: #080808; }
+      .futty-splash svg { display: block; filter: drop-shadow(0 0 22px rgba(212, 160, 23, 0.35)); animation: futtySplashRespira 1.6s ease-in-out infinite; }
+      @keyframes futtySplashRespira { 0%, 100% { opacity: 0.55; transform: scale(0.97); } 50% { opacity: 1; transform: scale(1); } }
+      @media (prefers-reduced-motion: reduce) { .futty-splash svg { animation: none; opacity: 0.9; } }
       @font-face {
         font-family: 'Rajdhani'; font-style: normal; font-weight: 400; font-display: swap;
         src: url('/fonts/rajdhani-400.woff2') format('woff2');
@@ -68,7 +90,18 @@
     <link rel="preload" href="/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Rodada 29H (item 28): o F carregando ANTES de o JavaScript chegar. Quem toca em "Confirmar minha conta" no e-mail cai aqui
+           com o cache frio: do redirecionamento do Supabase até a 1ª pintura do app era uma tela escura e vazia. O React troca
+           este conteúdo na 1ª renderização (createRoot limpa o #root). É o F da casa (o mesmo contorno do FuttyLoader), só CSS: o
+           estado natural é visível e nada depende de script (lei dos builds 10-12). -->
+      <div class="futty-splash" aria-hidden="true">
+        <svg width="112" height="112" viewBox="0 0 1080 1080">
+          <defs><linearGradient id="futty-splash-ouro" gradientUnits="objectBoundingBox" x1="0.28" y1="0" x2="0.56" y2="1"><stop offset="0" stop-color="#e3a516"/><stop offset="0.45" stop-color="#b57305"/><stop offset="1" stop-color="#6b4204"/></linearGradient></defs>
+          <path d="M392.28 576.53 L648.8 576.5 L659.27 541.52 L398.39 541.46 L472.99 285.11 L828.3 195.25 L839.06 152.39 L440.51 257.5 L210.76 1049.58 L110.36 1049.52 L360.67 177.16 L983.79 16.94 L913.11 270.83 L548.68 369.73 L532.74 441.62 L798.55 441.67 L732.82 676.38 L462.77 676.38 L354.76 1049.56 L249.78 1049.53 Z" fill="url(#futty-splash-ouro)"/>
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

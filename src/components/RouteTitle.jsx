@@ -24,6 +24,7 @@ const TITULOS = [
   ['/termos', 'Termos'],
   ['/privacidade', 'Privacidade'],
   ['/convite/:token', 'Convite'],
+  ['/c/:token', 'Convite'],
   ['/p/campeonato/:slug/:id', 'Campeonato'],
   ['/p/:slug/:gameId', 'Sorteio'],
   ['/equipa/:slug/jogos', 'Jogos'],
