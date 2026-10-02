@@ -36,9 +36,14 @@ noite, depois de ouvir a alavanca v1/v2):
   **1 e 8 kHz** (agulha/engrenagem), com um "tum" leve por baixo entre 150 e
   400 Hz a cada clique; **sem whoosh, sem sopro, sem ruído contínuo de ar** —
   o timbre foi medido numa referência do dono (licenciada: não se usa o arquivo,
-  sintetiza-se). Três variantes para o dono ouvir em `scripts/capturas/rodada-29h/`:
-  `mecanica-v1.mp3` (só os cliques), `mecanica-v2.mp3` (cliques + tum — **a que
-  está ligada**, `public/sons/mecanica.mp3`) e `mecanica-v3.mp3` (a v2 a ~13/s).
+  sintetiza-se). **1ª rodada**, três variantes em `scripts/capturas/rodada-29h/`:
+  `mecanica-v1.mp3` (só os cliques), `mecanica-v2.mp3` (cliques + tum) e
+  `mecanica-v3.mp3` (a v2 a ~13/s). **2ª rodada** (o dono: a v2 foi a melhor das
+  três, mas longe da referência; a Freaky mediu as duas a 16 kHz, janelas de 5 ms):
+  `mecanica-v4.mp3` (**a que está ligada**, `public/sons/mecanica.mp3`), com o
+  fundo contínuo de motor a −14 dB dos cliques, cadência 110 ms com toque duplo a
+  cada 6 cliques e clique com corpo; `mecanica-v5.mp3` (fundo a −11 dB) e
+  `mecanica-v6.mp3` (fundo a −17 dB). A régua e a tabela estão abaixo.
 - **Engate** — o instante em que o giro começa: o mecanismo pegando, em **160 ms**
   de som (0,235 s como o Safari mede o MP3; teto do dono: 0,3 s). Nasce junto com
   a mecânica e o 1º tique.
@@ -70,7 +75,7 @@ mais o script provam a origem de cada onda.
 | `tique-3.mp3` | rolo girando (variante 3) | 60 ms | 1,6 KB | 96 kbps mono |
 | `clac.mp3` | rolo travando, um jogador aparece | 120 ms | 2,2 KB | 96 kbps mono |
 | `jackpot.mp3` | os times ficam prontos | 3,6 s | 35,8 KB | 80 kbps mono |
-| `mecanica.mp3` | a mecânica da máquina, em loop enquanto os rolos giram (29H-B) | 3,0 s | 35,9 KB | 96 kbps mono |
+| `mecanica.mp3` | a mecânica da máquina (v4: cliques + motor), em loop enquanto os rolos giram (29H-B) | 3,0 s | 35,9 KB | 96 kbps mono |
 | `engate.mp3` | o mecanismo pegando, no instante em que o giro começa (29H-B) | 160 ms | 2,8 KB | 96 kbps mono |
 
 Total: **81,3 KB**. Todos abaixo do teto de 40 KB por arquivo (lei do app leve).
@@ -145,10 +150,11 @@ o que separa "sino" de "flauta" — metal real vibra fora da série harmônica.
    no fecho, 71% da energia está no acorde (900-2500 Hz) e 16% no brilho de
    6,3 kHz — ouve-se um acorde com brilho por cima, não um chiado.
 
-### Mecânica (3,0 s em loop) — a máquina trabalhando (Rodada 29H-B)
+### Mecânica, 1ª rodada (v1-v3) — só cliques (Rodada 29H-B)
 
-A camada que toca por baixo do trem de tiques enquanto os rolos giram. Nada de
-tom, nada de ar: só **cliques** e **silêncio digital** entre eles.
+A camada que toca por baixo do trem de tiques enquanto os rolos giram. Nesta 1ª
+rodada, nada de tom, nada de ar: só **cliques** e **silêncio digital** entre
+eles. (Ficou longe da referência do dono — ver a v4 abaixo, que é a do app.)
 
 1. **O clique metálico** (~4 ms de som) — 0,8 ms de impulso de ruído com rampa
    descendente passado por **três passa-bandas em paralelo** (receita RBJ):
@@ -180,13 +186,73 @@ silêncio pelo percentil 30 do RMS de janelas de 5 ms):
 | variante | cliques | por segundo | intervalo | 1-8 kHz | 150-400 Hz | > 8 kHz | entre cliques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | v1 (só cliques) | 33 | 10,9/s | 92 ±7 ms | 81% | 0,1% | 17% | −180 dBFS |
-| **v2 (cliques + tum, a do app)** | 33 | 10,9/s | 92 ±7 ms | 57% | 26% | 12% | −89 dBFS |
+| v2 (cliques + tum; a do app na 1ª rodada) | 33 | 10,9/s | 92 ±7 ms | 57% | 26% | 12% | −89 dBFS |
 | v3 (a v2 a ~13/s) | 39 | 12,9/s | 78 ±6 ms | 59% | 26% | 11% | −80 dBFS |
 
 A geração **falha** se alguma variante sair da régua: cadência fora de 10-12/s
 (12-14/s na v3), variação fora de 3-14 ms, energia principal fora de 1-8 kHz, tum
 ausente (v2/v3) ou presente (v1), som contínuo entre cliques acima de −60 dBFS,
 taxa diferente de 96 kbps, duração diferente de 3,0 s.
+
+### Mecânica v4 (3,0 s em loop) — a 2ª rodada, contra a referência do dono
+
+O dono ouviu as três: a v2 foi a melhor, mas longe da referência dele. A Freaky
+mediu as duas com o mesmo método (**16 kHz, janelas de 5 ms**) e apontou três
+diferenças: (a) a referência tem um **fundo contínuo de motor** entre os cliques
+(piso ≈ 20% do pico, −14 dB; a v2 tinha silêncio absoluto); (b) a cadência é de
+**~110 ms** com um **toque duplo** a cada ~6 cliques (par de 40 + 70 ms; a v2 era
+regular a 90 ms); (c) o espectro tem mais corpo em 800-2500 Hz e menos acima de
+6 kHz (centroide 3,1 kHz; a v2 estava em 3,6). A v4 parte da v2 e corrige as três:
+
+1. **O fundo de motor** — ruído branco filtrado na banda **300-2500 Hz** com a
+   amplitude modulada por uma vibração de **120 Hz** (profundidade 0,6): o zumbido
+   de um motor elétrico pequeno. Os filtros são de **1ª ordem** (6 dB/oitava: o
+   corpo em 300-2500, respirando acima — passa-altas em 180 Hz, passa-baixas em
+   3,5 kHz) porque o fundo é ~57% da energia do trecho e a referência tem metade
+   da energia acima de 2,5 kHz: com encostas de 24 dB/oitava (1ª tentativa) o
+   centroide afundava em 1,5 kHz. O nível é **calibrado medindo o buffer com a
+   régua** (piso = mediana do RMS das janelas de 5 ms; pico = a janela mais
+   forte): v4 **−14 dB**, v5 **−11 dB**, v6 **−17 dB**.
+   **Sem falhas no loop:** o ruído nasce 60 ms mais longo e as pontas são cruzadas
+   (fade de potência igual: o começo do trecho é a continuação do fim), e 3,0 s ×
+   120 Hz são 360 ciclos inteiros — a modulação acaba na fase em que começa.
+2. **A cadência** — 110 ms ±7 ms (sorteio por intervalo, intervalos reescalados
+   para a grade fechar no trecho), e a cada 6 cliques o 6º ganha um **segundo
+   toque 40 ms depois** (0,9 da força) com o clique seguinte 70 ms depois desse: o
+   par ocupa um intervalo normal. A grade começa e acaba a meio intervalo das
+   pontas, então a emenda do loop é mais um intervalo de 110 ms (com o loop exato
+   do Web Audio — ver "Como o sorteio usa").
+3. **O clique com corpo** — o metal da v2 (três passa-bandas) passado por um
+   **passa-baixas suave em 6 kHz** (2ª ordem, Q 0,5) e somado a uma **ressonância
+   curta de madeira/metal**: dois modos (~1,0 e ~1,9 kHz, ±8% por clique), senos
+   decaindo em 8 ms (a cauda acaba em ~25 ms), a −16 dB do pico do metal. O
+   **tum** de 150-400 Hz fica (seno sorteado por clique, 6 ms, −15 dB do pico).
+
+**A régua** (`medirRegua` em `gerar-sons.mjs`), no MP3 pronto, reamostrado a
+16 kHz com **sinc janelado** (um biquad em 7 kHz como anti-aliasing comia a banda
+6-8 kHz e a régua não batia com a da Freaky; com o sinc, a v2 dá 23% em 6-8 kHz
+contra os 22% que ela mediu): picos pela envoltória de 1 ms acima de 2,2× o piso
+**e subindo ≥ 1,2× o piso em 1 ms** (o ataque — a vibração do motor sobe devagar e
+nunca tanto), 25 ms de refratário; picos/s = picos ÷ duração; intervalo = mediana
+dos intervalos ≥ 90 ms ± desvio; pares = intervalos < 55 ms; piso/pico nas
+janelas de 5 ms; bandas e centroide por FFT de 2^16 pontos (fração da energia
+entre 20 Hz e 8 kHz). A geração **falha** se a v4-v6 sair de: 9-12 picos/s,
+intervalo 103-118 ms, ≥ 3 pares, piso a ±2 dB do pedido, centroide 2,6-3,6 kHz,
+6-8 kHz ≤ 20% e 800-1500 ≥ 12%, 96 kbps, 3,0 s.
+
+| arquivo | picos/s | intervalo (ms) | pares | piso/pico | 150-400 | 400-800 | 800-1500 | 1500-2500 | 2500-4000 | 4000-6000 | 6000-8000 | centroide |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| referência (dono) | 9,9 | 110 | — | 20% (−14 dB) | 7% | 8% | 16% | 16% | 16% | 20% | 14% | 3,1 kHz |
+| v2 (1ª rodada) | 11,0 | 98 ±4 | 0 | 0% (−53 dB) | 28% | 2% | 5% | 10% | 16% | 14% | 23% | 3,2 kHz |
+| **v4 (a do app)** | 10,7 | 111 ±4 | 5 | 20% (−14 dB) | 8% | 6% | 15% | 19% | 22% | 17% | 13% | 3,0 kHz |
+| v5 (fundo −11 dB) | 10,7 | 112 ±4 | 5 | 29% (−11 dB) | 6% | 7% | 15% | 19% | 21% | 18% | 14% | 3,1 kHz |
+| v6 (fundo −17 dB) | 10,3 | 112 ±4 | 4 | 14% (−17 dB) | 11% | 5% | 16% | 20% | 23% | 15% | 11% | 2,8 kHz |
+
+A grade tem exatamente 4 pares (aos 617, 1275, 1935 e 2612 ms); o 5º que a régua
+lê na v4/v5 é um pico a mais que o ruído do motor arranca do detector (±1 em 32).
+O que ainda difere da referência: 1500-4000 Hz um pouco cheio (+9 pontos) e
+4-6 kHz um pouco vazio (−3) — é a assinatura do motor de 1ª ordem; para ir além
+seria preciso um fundo mais brilhante do que "banda 300-2500".
 
 ### Engate (160 ms) — o mecanismo pegando (Rodada 29H-B)
 
@@ -252,14 +318,29 @@ mexe em player de áudio direto). Volumes: tique **0,5**, clac **0,7**, jackpot
 **1,0**, mecânica **0,158** (= 0,5 × 10^(−10/20): **−10 dB do tique**, os dois
 arquivos normalizados ao mesmo pico de −1 dBFS), engate **0,6**.
 
-**A vida da mecânica (29H-B):** `girar()` dispara o engate, liga a mecânica (o
-elemento tem `loop`) e o 1º tique no mesmo instante; `pararGiro()` para só o trem
-de tiques — os rolos ainda giram devagar enquanto travam um a um; `travar()`,
-chamado quando o **último** rolo recebe `.stop`, apaga a mecânica em 4 degraus de
-20 ms (cortar um clique ao meio estalaria). Medido na cerimônia real (cena
-`rodada29hb`, bloco G): engate, mecânica e tique a ≤ 1 ms um do outro; `travar`
-no instante do 4º `.stop`, 430-440 ms depois de `pararGiro`; pausa do elemento
-124 ms depois.
+**A vida da mecânica (29H-B):** `girar()` dispara o engate, liga a mecânica e o
+1º tique no mesmo instante; `pararGiro()` para só o trem de tiques — os rolos
+ainda giram devagar enquanto travam um a um; `travar()`, chamado quando o
+**último** rolo recebe `.stop`, apaga a mecânica em 80 ms (cortar um clique ao
+meio estalaria). Medido na cerimônia real (cena `rodada29hb`, bloco G): engate,
+mecânica e tique a ≤ 1 ms um do outro; `travar` no instante do 4º `.stop`,
+430-440 ms depois de `pararGiro`; parada 124 ms depois.
+
+**O loop sem emenda (v4):** o fundo de motor é contínuo, e um `<audio loop>` com
+MP3 deixa um **buraco na emenda** — o Safari toca o atraso de codificação e o
+quadro de cabeçalho do LAME (~56 ms de silêncio a cada volta; o Chrome os
+desconta). Por isso a mecânica toca por **Web Audio**: o trecho é baixado e
+decodificado UMA vez no gesto (`prepararNoGesto` / `toggle`: `fetch` +
+`decodeAudioData`; `/sons/*` tem CORS para o app nativo) e um
+`AudioBufferSourceNode` em loop é exato até a amostra, com os pontos do loop na
+primeira e na última amostra com som, recuados 1/120 s cada (um ciclo da
+vibração: a modulação segue na mesma fase) — o silêncio do decodificador fica de
+fora. `travar()` apaga pelo `GainNode` (rampa de 80 ms) e para a fonte. Se o Web
+Audio faltar, falhar ou o trecho ainda não estiver pronto no instante do giro,
+vale o `<audio loop>` de sempre (com o buraco). Provado na cena `rodada29hb`:
+bloco H (Chromium) — trecho decodificado com 3,000 s, loop 8 → 2992 ms, fonte em
+loop com o ganho da lei, parada 90 ms depois de `travar`; bloco G (o WebKit do
+Playwright, que não tem Web Audio) — o caminho de reserva inteiro.
 
 **Site × app (29H-B):** os arquivos são os mesmos nos dois — o site e o app da
 loja buscam `/sons/*` do mesmo `public/` (o app, de `VITE_ASSETS_URL`), e

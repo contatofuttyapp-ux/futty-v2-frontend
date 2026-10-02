@@ -42,6 +42,21 @@
 // e este script CONFERE por MD5 que continuam bit a bit iguais (ASSINATURAS).
 // Cada mecânica é MEDIDA no MP3 pronto (cadência, bandas, silêncio entre
 // cliques) e a geração FALHA se sair da régua do dono.
+//
+// 2ª RODADA DA MECÂNICA (dono, 2-out, mais tarde): a v2 foi a melhor das três mas
+// ainda longe da referência. A Freaky mediu as duas com o mesmo método (16 kHz,
+// janelas de 5 ms): a referência tem um FUNDO CONTÍNUO de motor entre os cliques
+// (piso ≈ 20% do pico, −14 dB; a v2 tinha silêncio absoluto), cadência ≈ 110 ms
+// com um TOQUE DUPLO a cada ~6 cliques (par de 40 + 70 ms; a v2 era regular a
+// 90 ms) e um espectro com mais corpo em 800-2500 Hz e menos acima de 6 kHz
+// (centroide 3,1 kHz; a v2 estava em 3,6 — fina demais). Daí v4/v5/v6, partindo
+// da v2: fundo de motor (ruído em banda 300-2500 Hz com vibração de 120 Hz),
+// cadência 110 ±7 ms com o par duplo, clique com ressonância curta de madeira/
+// metal e passa-baixas suave em 6 kHz; v5 = fundo mais presente (−11 dB), v6 =
+// mais discreto (−17 dB). As três são medidas com a MESMA régua (16 kHz, 5 ms)
+// e a tabela sai ao lado dos números da referência; a v4 é a que o app toca.
+// O fundo contínuo exige loop SEM emenda: no app a mecânica passa a tocar por
+// Web Audio (AudioBufferSourceNode em loop, exato à amostra) — ver somSorteio.js.
 // ═══════════════════════════════════════════════════════════════════════════════
 import { writeFileSync, statSync, mkdirSync, unlinkSync, readFileSync, copyFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -415,6 +430,244 @@ function gerarMecanica({ porSegundo, comTum, semente, jitterMs = 10 }) {
   return buf;
 }
 
+// ── a mecânica v4 (2ª rodada): motor, cadência 110 ms com toque duplo, clique com corpo ─────────
+
+/** Passa-baixas ('lp') e passa-altas ('hp') biquad (receita RBJ, 2ª ordem). Em cascata (duas vezes) dão 24 dB/oitava. */
+function biquad(entrada, tipo, f0, q = Math.SQRT1_2, taxa = TAXA) {
+  const w0 = (2 * Math.PI * f0) / taxa;
+  const cw = Math.cos(w0), sw = Math.sin(w0);
+  const alpha = sw / (2 * q);
+  let b0, b1, b2;
+  if (tipo === 'lp') { b0 = (1 - cw) / 2; b1 = 1 - cw; b2 = (1 - cw) / 2; } else { b0 = (1 + cw) / 2; b1 = -(1 + cw); b2 = (1 + cw) / 2; }
+  const a0 = 1 + alpha, a1 = -2 * cw, a2 = 1 - alpha;
+  const saida = new Float32Array(entrada.length);
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let i = 0; i < entrada.length; i += 1) {
+    const x0 = entrada[i];
+    const y0 = (b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+    saida[i] = y0;
+    x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+  }
+  return saida;
+}
+
+/**
+ * O clique da v4: o metal da v2 (três passa-bandas, 1,7 / 3,4 / 6,2 kHz) com MENOS agudo — passa-baixas suave em 6 kHz (2ª ordem,
+ * Q 0,7) — e MAIS corpo: uma ressonância curta de madeira/metal entre 800 e 2500 Hz (dois modos, ~1,0 e ~1,9 kHz com ±8% de sorteio,
+ * senos decaindo em 8 ms — a cauda acaba em ~25 ms), a −6 dB do pico do metal. É o "tac" com caixa, não a agulha nua da v2.
+ */
+function cliqueCorpo(rnd, { corpo = 0.5, decaiCorpo = 0.008, lpQ = 0.5 } = {}) {
+  const metal = biquad(cliqueMetal(rnd), 'lp', 6000, lpQ);
+  const p = pico(metal);
+  const b = criar(0.03);
+  for (let i = 0; i < metal.length; i += 1) b[i] += metal[i];
+  const f1 = 1000 * (0.92 + rnd() * 0.16), f2 = 1900 * (0.92 + rnd() * 0.16);
+  for (let i = 0; i < b.length; i += 1) {
+    const t = i / TAXA;
+    const env = Math.exp(-t / decaiCorpo) * Math.min(1, t / 0.0006);
+    b[i] += (Math.sin(2 * Math.PI * f1 * t) * 0.6 + Math.sin(2 * Math.PI * f2 * t) * 0.4) * env * p * corpo;
+  }
+  return b;
+}
+
+/** Filtro RC de 1ª ordem ('lp' ou 'hp', 6 dB/oitava): a encosta suave que deixa o ruído "respirar" fora da banda. */
+function primeiraOrdem(entrada, tipo, f0) {
+  const k = Math.exp((-2 * Math.PI * f0) / TAXA);
+  const saida = new Float32Array(entrada.length);
+  let y = 0, x1 = 0;
+  for (let i = 0; i < entrada.length; i += 1) {
+    const x = entrada[i];
+    y = tipo === 'lp' ? y + (1 - k) * (x - y) : k * (y + x - x1);
+    x1 = x; saida[i] = y;
+  }
+  return saida;
+}
+
+/**
+ * O FUNDO DE MOTOR (v4): ruído branco filtrado na banda 300-2500 Hz — passa-altas em 300 Hz e passa-baixas em 2,5 kHz, de 1ª ORDEM
+ * (encostas de 6 dB/oitava): o corpo do zumbido fica em 300-2500, mas ele respira acima — como o motor de verdade da referência,
+ * que tem metade da energia acima de 2,5 kHz (medido pela Freaky: 4-6 kHz 20%, 6-8 kHz 14%). Com encostas de 24 dB/oitava (1ª
+ * tentativa) o fundo, que é ~57% da energia do trecho, afundava o centroide em 1,5 kHz. A amplitude é modulada por uma vibração de
+ * 120 Hz (profundidade 0,6) — o zumbido de um motor elétrico pequeno.
+ * SEM FALHAS NO LOOP: o ruído nasce 60 ms mais longo e as pontas são cruzadas (fade de potência igual: o começo do trecho é a
+ * continuação do fim), e 3,0 s × 120 Hz são 360 ciclos inteiros — a modulação chega ao fim exatamente na fase em que começa.
+ * Sai com RMS 1; quem chama dá o nível.
+ */
+function motor(rnd, { f0 = 300, f1 = 2500, fMod = 120, profundidade = 0.6 } = {}) {
+  const X = Math.round(0.06 * TAXA);
+  const n = Math.round(MECANICA_SEG * TAXA);
+  let r = ruido(MECANICA_SEG + 0.06, rnd);
+  r = primeiraOrdem(r, 'hp', f0);
+  r = primeiraOrdem(r, 'lp', f1);
+  const b = new Float32Array(n);
+  for (let i = 0; i < n; i += 1) b[i] = r[i];
+  for (let i = 0; i < X; i += 1) {
+    const w = i / X;
+    b[i] = r[i] * Math.sin((Math.PI / 2) * w) + r[n + i] * Math.cos((Math.PI / 2) * w);
+  }
+  let soma = 0;
+  for (let i = 0; i < n; i += 1) {
+    const t = i / TAXA;
+    b[i] *= 1 - profundidade + profundidade * (0.5 + 0.5 * Math.sin(2 * Math.PI * fMod * t));
+    soma += b[i] * b[i];
+  }
+  const rms = Math.sqrt(soma / n);
+  for (let i = 0; i < n; i += 1) b[i] /= rms;
+  return b;
+}
+
+/**
+ * Reamostra para 16 kHz (o método da Freaky) com sinc janelado (Hann, ±48 amostras de entrada, corte a 95% do Nyquist da saída).
+ * Um passa-baixas biquad em 7 kHz como anti-aliasing (1ª tentativa) comia a banda 6-8 kHz e a régua deixava de bater com a dela
+ * (na v2: 6% em 6-8 kHz contra os 22% que ela mediu; com o sinc, 23%).
+ */
+function reamostrar16k(amostras, taxa, K = 48) {
+  const n = Math.floor((amostras.length * 16000) / taxa);
+  const passo = taxa / 16000;
+  const fc = 0.95 / passo;
+  const kernel = (d) => (d === 0 ? 2 * fc : Math.sin(2 * Math.PI * fc * d) / (Math.PI * d)) * (0.5 + 0.5 * Math.cos((Math.PI * d) / K));
+  let ganho = 0;
+  for (let d = -K; d <= K; d += 1) ganho += kernel(d);
+  const saida = new Float32Array(n);
+  for (let i = 0; i < n; i += 1) {
+    const c = i * passo;
+    const j0 = Math.max(0, Math.ceil(c - K)), j1 = Math.min(amostras.length - 1, Math.floor(c + K));
+    let s = 0;
+    for (let j = j0; j <= j1; j += 1) s += amostras[j] * kernel(j - c);
+    saida[i] = s / ganho;
+  }
+  return saida;
+}
+
+/** Piso e pico nas janelas de 5 ms a 16 kHz (80 amostras): piso = mediana do RMS das janelas, pico = a janela mais forte. */
+function pisoEPico(x16) {
+  const jan = 80; const rms = [];
+  for (let i = 0; i + jan <= x16.length; i += jan) {
+    let s = 0;
+    for (let j = i; j < i + jan; j += 1) s += x16[j] * x16[j];
+    rms.push(Math.sqrt(s / jan));
+  }
+  const ordenado = [...rms].sort((a, b) => a - b);
+  return { piso: ordenado[Math.floor(ordenado.length / 2)], pico: ordenado[ordenado.length - 1] };
+}
+
+/**
+ * MECÂNICA v4 (3,0 s em loop) — a v2 refeita contra a referência do dono (medida pela Freaky: 16 kHz, janelas de 5 ms):
+ *   1) o fundo contínuo de motor (acima), ao nível pedido em relação aos cliques: o "piso" (mediana do RMS das janelas de 5 ms) a
+ *      −14 dB do "pico" (a janela mais forte) — v5 −11 dB, v6 −17 dB; o ganho é CALIBRADO medindo o buffer com a mesma régua;
+ *   2) cadência de 110 ms ±7 ms com um TOQUE DUPLO a cada 6 cliques: o 6º clique ganha um segundo toque 40 ms depois (mais leve,
+ *      0,7) e o clique seguinte vem 70 ms depois desse — o par ocupa um intervalo normal; a grade começa e acaba a meio intervalo
+ *      das pontas, então a emenda do loop é mais um intervalo de 110 ms (com o loop exato do Web Audio);
+ *   3) o clique com corpo (cliqueCorpo) e o tum de 150-400 Hz (como na v2, −15 dB do pico do clique).
+ */
+function gerarMecanicaV4({ nivelMotorDb, semente, cadenciaMs = 110, jitterMs = 7, corpo = 0.15, tumGanho = 0.18, tumDecai = 0.006, motorHp = 180, motorLp = 3500 }) {
+  const rnd = mulberry32(semente);
+  const rndTum = mulberry32(semente + 1000);
+  const rndMotor = mulberry32(semente + 2000);
+  const DUR = MECANICA_SEG;
+  const buf = criar(DUR);
+  const base = cadenciaMs / 1000;
+  const tIni = base / 2;
+  const span = DUR - 2 * tIni;
+  const n = Math.round(span / base);
+  const intervalos = Array.from({ length: n }, () => base + (rnd() * 2 - 1) * (jitterMs / 1000));
+  const soma = intervalos.reduce((s, d) => s + d, 0);
+  for (let k = 0; k < n; k += 1) intervalos[k] *= span / soma;
+  let t = tIni;
+  const toques = [];
+  for (let k = 0; k <= n; k += 1) {
+    const forca = 0.85 + rnd() * 0.15;
+    toques.push([t, forca]);
+    if (k % 6 === 5) toques.push([t + 0.040, forca * 0.9]); // o toque duplo: 40 ms depois, e o próximo clique 70 ms depois dele
+    if (k < n) t += intervalos[k];
+  }
+  for (const [tq, forca] of toques) {
+    const clique = cliqueCorpo(rnd, { corpo });
+    somar(buf, clique, tq, forca);
+    // o tum fica, mais leve que na v2 (−20 dB do pico do clique, 6 ms): a referência só tem 7% da energia em 150-400 Hz
+    somar(buf, tum(rndTum, { decai: tumDecai }), tq, tumGanho * pico(clique) * forca);
+  }
+  // o motor, calibrado contra a régua (piso/pico nas janelas de 5 ms a 16 kHz)
+  const fundo = motor(rndMotor, { f0: motorHp, f1: motorLp });
+  const alvo = 10 ** (nivelMotorDb / 20);
+  let ganho = 0.05;
+  for (let passo = 0; passo < 6; passo += 1) {
+    const teste = new Float32Array(buf);
+    for (let i = 0; i < teste.length; i += 1) teste[i] += fundo[i] * ganho;
+    const m = pisoEPico(reamostrar16k(teste, TAXA));
+    ganho *= alvo / (m.piso / m.pico);
+  }
+  for (let i = 0; i < buf.length; i += 1) buf[i] += fundo[i] * ganho;
+  return buf;
+}
+
+/**
+ * A régua da Freaky, no MP3 PRONTO: decodificado, reamostrado a 16 kHz, janelas de 5 ms.
+ *   • picos — envoltória (|x| em média móvel de 1 ms) acima de 2,2× o piso (a mediana da envoltória) E subindo ≥ 1,2× o piso no
+ *     último 1 ms — o ATAQUE: a vibração de 120 Hz do motor, mesmo a −11 dB, sobe devagar (um quarto de ciclo são 2 ms) e nunca
+ *     tanto; o transiente de metal de qualquer clique sobe do piso a ≥ 3× em menos de 1 ms. Mínimos de 10% / 8% do máximo para
+ *     trechos sem piso (v2). Medir contra o MÁXIMO (1ª tentativa) perdia cliques, porque o máximo é sempre um clique fora da curva;
+ *     medir só o nível (2ª) perdia os cliques mais leves com o piso a −11 dB. 25 ms de refratário (para contar os toques duplos);
+ *     picos/s = picos ÷ duração; "intervalo" = mediana dos intervalos ≥ 90 ms (a cadência regular, fora os 40 e os 70 ms do par) ±
+ *     desvio; "pares" = intervalos < 55 ms (o toque duplo);
+ *   • piso/pico — mediana e máximo do RMS das janelas de 5 ms, em % e dB;
+ *   • bandas — FFT de 2^16 pontos sobre o trecho a 16 kHz: fração da energia (20 Hz-8 kHz) em cada banda, e o centroide espectral.
+ */
+function medirRegua(arquivo) {
+  const x = reamostrar16k(lerMp3(arquivo).amostras, TAXA);
+  const T = 16000, n = x.length;
+  const jan = Math.round(0.001 * T);
+  const env = new Float32Array(n);
+  let acc = 0, envMax = 0;
+  for (let i = 0; i < n; i += 1) {
+    acc += Math.abs(x[i]); if (i >= jan) acc -= Math.abs(x[i - jan]);
+    env[i] = acc / jan; if (env[i] > envMax) envMax = env[i];
+  }
+  const envOrd = [...env].sort((a, b) => a - b);
+  const envPiso = envOrd[Math.floor(n / 2)];
+  const limiar = Math.max(envPiso * 2.2, envMax * 0.1);
+  const subida = Math.max(envPiso * 1.2, envMax * 0.08); // o ATAQUE: quanto a envoltória tem de subir em 1 ms
+  const refr = Math.round(0.025 * T);
+  const inicios = [];
+  let ultimo = -refr;
+  for (let i = jan; i < n; i += 1) {
+    if (i - ultimo <= refr || env[i] < limiar || env[i] - env[i - jan] < subida) continue;
+    inicios.push(i / T); ultimo = i;
+  }
+  const intervalos = inicios.slice(1).map((v, k) => v - inicios[k]);
+  const regulares = intervalos.filter((d) => d >= 0.090).sort((a, b) => a - b); // fora os 40 e os 70 ms do par
+  const mediana = regulares.length ? regulares[Math.floor(regulares.length / 2)] : 0;
+  const media = regulares.reduce((s, d) => s + d, 0) / Math.max(1, regulares.length);
+  const desvio = Math.sqrt(regulares.reduce((s, d) => s + (d - media) ** 2, 0) / Math.max(1, regulares.length));
+  const pares = intervalos.filter((d) => d < 0.055).length;
+  const ondePares = intervalos.map((d, k) => (d < 0.055 ? `${(inicios[k] * 1000).toFixed(0)}+${(d * 1000).toFixed(0)}` : null)).filter(Boolean);
+  const { piso, pico: picoJan } = pisoEPico(x);
+  const N = 1 << 16;
+  const re = new Float64Array(N), im = new Float64Array(N);
+  for (let i = 0; i < Math.min(n, N); i += 1) re[i] = x[i];
+  fft(re, im);
+  const binHz = T / N;
+  const energia = (f1, f2) => { let e = 0; for (let k = Math.ceil(f1 / binHz); k < Math.min(N / 2, Math.floor(f2 / binHz)); k += 1) e += re[k] * re[k] + im[k] * im[k]; return e; };
+  const total = energia(20, 8000);
+  let somaF = 0;
+  for (let k = Math.ceil(20 / binHz); k < N / 2; k += 1) somaF += k * binHz * (re[k] * re[k] + im[k] * im[k]);
+  const BANDAS = [[150, 400], [400, 800], [800, 1500], [1500, 2500], [2500, 4000], [4000, 6000], [6000, 8000]];
+  return {
+    picosPorSeg: inicios.length / (n / T), intervaloMs: mediana * 1000, desvioMs: desvio * 1000, pares, ondePares, picos: inicios.length,
+    pisoPct: (piso / picoJan) * 100, pisoDb: 20 * Math.log10(Math.max(1e-9, piso / picoJan)),
+    bandas: BANDAS.map(([a, b]) => (energia(a, b) / total) * 100), centroideHz: somaF / total,
+  };
+}
+
+/** A referência do dono, como a Freaky a mediu (16 kHz, janelas de 5 ms). */
+const REFERENCIA = { picosPorSeg: 9.9, intervaloMs: 110, desvioMs: null, pares: null, pisoPct: 20, pisoDb: -14, bandas: [7, 8, 16, 16, 16, 20, 14], centroideHz: 3100 };
+
+function linhaDaTabela(nome, m) {
+  const f = (v, d = 0) => (v == null ? '—' : v.toFixed(d));
+  return `| ${nome} | ${f(m.picosPorSeg, 1)} | ${f(m.intervaloMs)}${m.desvioMs != null ? ` ±${f(m.desvioMs)}` : ''} | ${f(m.pares)} | ${f(m.pisoPct)}% (${f(m.pisoDb)} dB) | ${m.bandas.map((v) => `${f(v)}%`).join(' | ')} | ${f(m.centroideHz / 1000, 1)} kHz |`;
+}
+const CABECALHO_TABELA = '| arquivo | picos/s | intervalo (ms) | pares | piso/pico | 150-400 | 400-800 | 800-1500 | 1500-2500 | 2500-4000 | 4000-6000 | 6000-8000 | centroide |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|';
+
 /**
  * ENGATE (160 ms de som; ≤ 0,3 s no decodificador) — o instante em que o giro começa: o mecanismo PEGA.
  *   1) a trava, em 0 ms: o clique mais pesado (centros mais graves, 1,3 / 2,7 / 5,2 kHz, decaimento de 3 ms) e o "tum" da peça
@@ -626,11 +879,35 @@ for (const v of VARIANTES) {
   if (m.fundoDb > -60) falhas.push(`${v.nome}: há som contínuo entre os cliques (${m.fundoDb.toFixed(0)} dBFS)`);
   if (f.taxa !== '96k') falhas.push(`${v.nome}: saiu a ${f.taxa}, a lei pede 96 kbps`);
   if (Math.abs(f.seg - MECANICA_SEG) > 1e-6) falhas.push(`${v.nome}: ${f.seg} s de som, esperado ${MECANICA_SEG}`);
-  if (v.nome === 'mecanica-v2') {
+}
+
+// 2ª rodada da mecânica: v4 (fundo −14 dB), v5 (−11 dB), v6 (−17 dB), medidas com a régua da Freaky ao lado da referência do dono.
+// A v4 é a que o app toca.
+const VARIANTES_V4 = [
+  { nome: 'mecanica-v4', nivelMotorDb: -14, semente: SEMENTE + 4 },
+  { nome: 'mecanica-v5', nivelMotorDb: -11, semente: SEMENTE + 4 },
+  { nome: 'mecanica-v6', nivelMotorDb: -17, semente: SEMENTE + 4 },
+];
+const tabela = [CABECALHO_TABELA, linhaDaTabela('referência (dono)', REFERENCIA), linhaDaTabela('v2 (1ª rodada)', medirRegua(path.join(CAPTURAS_29H, 'mecanica-v2.mp3')))];
+for (const v of VARIANTES_V4) {
+  const f = escrever(v.nome, gerarMecanicaV4(v), CAPTURAS_29H);
+  const m = medirRegua(f.arquivo);
+  tabela.push(linhaDaTabela(`${v.nome}${v.nome === 'mecanica-v4' ? ' (a do app)' : ''}`, m));
+  console.log(`[sons] ${v.nome}: ${m.picos} picos · pares (ms do 1º toque + intervalo): ${m.ondePares.join(', ') || 'nenhum'}`);
+  if (m.picosPorSeg < 9 || m.picosPorSeg > 12) falhas.push(`${v.nome}: ${m.picosPorSeg.toFixed(1)} picos/s (régua: ~9,9)`);
+  if (m.intervaloMs < 103 || m.intervaloMs > 118) falhas.push(`${v.nome}: intervalo regular de ${m.intervaloMs.toFixed(0)} ms (régua: 110 ±7)`);
+  if (m.pares < 3) falhas.push(`${v.nome}: só ${m.pares} toques duplos (um a cada 6 cliques dá 4)`);
+  if (Math.abs(m.pisoDb - v.nivelMotorDb) > 2) falhas.push(`${v.nome}: piso a ${m.pisoDb.toFixed(1)} dB do pico (pedido: ${v.nivelMotorDb})`);
+  if (m.centroideHz < 2600 || m.centroideHz > 3600) falhas.push(`${v.nome}: centroide em ${(m.centroideHz / 1000).toFixed(2)} kHz (referência 3,1)`);
+  if (m.bandas[6] > 20 || m.bandas[2] < 12) falhas.push(`${v.nome}: espectro fora da referência (6-8 kHz ${m.bandas[6].toFixed(0)}%, 800-1500 ${m.bandas[2].toFixed(0)}%)`);
+  if (f.taxa !== '96k') falhas.push(`${v.nome}: saiu a ${f.taxa}, a lei pede 96 kbps`);
+  if (f.seg !== MECANICA_SEG) falhas.push(`${v.nome}: ${f.seg} s de som, esperado ${MECANICA_SEG}`);
+  if (v.nome === 'mecanica-v4') {
     copyFileSync(f.arquivo, path.join(DESTINO, 'mecanica.mp3'));
     feitos.push({ ...f, nome: 'mecanica', arquivo: path.join(DESTINO, 'mecanica.mp3') });
   }
 }
+console.log(`\n[sons] a régua da Freaky (16 kHz, janelas de 5 ms) — a referência do dono e as mecânicas:\n${tabela.join('\n')}\n`);
 const engate = escrever('engate', gerarEngate(rnd));
 feitos.push(engate);
 engate.segMp3 = medirMp3(engate.arquivo);
@@ -647,7 +924,7 @@ for (const [nome, md5] of Object.entries(ASSINATURAS)) {
     process.exit(1);
   }
 }
-console.log(`[sons] os cinco de sempre conferidos por MD5 (bit a bit iguais); mecânica v1, v2 e v3 em ${path.relative(RAIZ, CAPTURAS_29H)} (a v2 é a do app)`);
+console.log(`[sons] os cinco de sempre conferidos por MD5 (bit a bit iguais); mecânica v1-v6 em ${path.relative(RAIZ, CAPTURAS_29H)} (a v4 é a do app)`);
 
 const total = feitos.reduce((s, f) => s + f.bytes, 0);
 console.log(`\n[sons] ${feitos.length} arquivos · ${(total / 1024).toFixed(1)} KB no total`);

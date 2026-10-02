@@ -42,7 +42,7 @@
 // eram música; e agora os três arquivos de banco que estes cinco substituem.
 //
 // API: ligado(get) · escolhido(get) · toggle · ligarPorOmissao · desfazerOmissao
-//   · prepararNoGesto · girar/girarLento/pararGiro · travar · revelar · fecharTime · silenciar · autoTeste
+//   · prepararNoGesto · girar/girarLento/pararGiro · travar · revelar · fecharTime · estadoMecanica · silenciar · autoTeste
 // ═══════════════════════════════════════════════════════════════════════════════
 import { urlAsset } from '../utils/avatar';
 
@@ -125,12 +125,84 @@ function pararTrem() {
 }
 
 // ── a mecânica (29H-B): entra com o giro, some quando o último rolo trava ─────
-let apagando = null; // o fade de saída (4 degraus em 80 ms: cortar um clique ao meio estalaria)
+// O LOOP SEM EMENDA (v4): a mecânica tem um fundo contínuo de motor, e um <audio loop> com MP3 deixa um buraco na emenda — o
+// Safari toca o atraso de codificação e o quadro de cabeçalho do LAME (~56 ms de silêncio a cada volta; o Chrome os desconta).
+// Um AudioBufferSourceNode em loop é exato até a amostra: o trecho é baixado e decodificado UMA vez (fetch + decodeAudioData;
+// /sons/* tem CORS para o app nativo, que corre noutra origem) e os pontos do loop são a primeira e a última amostra com som,
+// recuadas 1/120 s cada (um ciclo da vibração do motor: a modulação continua na mesma fase) — o silêncio que o decodificador
+// acrescenta fica de fora. O contexto nasce e acorda no gesto (prepararNoGesto / toggle), como manda o Safari. Se o Web Audio
+// faltar, falhar ou ainda não tiver o trecho pronto no instante do giro, vale o <audio loop> de sempre (com o buraco).
+let ctxAudio = null, bufMecanica = null, pontosLoop = null, carregando = null, fonte = null, ganhoFonte = null;
+function contextoAudio() {
+  if (ctxAudio) return ctxAudio;
+  const AC = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+  if (!AC) return null;
+  try { ctxAudio = new AC(); } catch { return null; }
+  return ctxAudio;
+}
+function pontosDoLoop(buf) {
+  const d = buf.getChannelData(0);
+  const LIMIAR = 1e-3; // o fundo de motor fica ~30 dB acima disto; o silêncio do decodificador, abaixo
+  let a = 0, b = d.length - 1;
+  while (a < b && Math.abs(d[a]) < LIMIAR) a += 1;
+  while (b > a && Math.abs(d[b]) < LIMIAR) b -= 1;
+  const recuo = 1 / 120;
+  const inicio = a / buf.sampleRate + recuo, fim = (b + 1) / buf.sampleRate - recuo;
+  return fim - inicio > 1 ? { inicio, fim } : null;
+}
+function carregarMecanica() {
+  if (bufMecanica || carregando) return carregando;
+  const ctx = contextoAudio();
+  if (!ctx) return null;
+  carregando = fetch(urlAsset(CAMINHOS.mecanica))
+    .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+    .then((ab) => new Promise((res, rej) => { ctx.decodeAudioData(ab, res, rej); }))
+    .then((buf) => { pontosLoop = pontosDoLoop(buf); if (pontosLoop) bufMecanica = buf; return bufMecanica; })
+    .catch(() => null);
+  return carregando;
+}
+/** Acorda o contexto e pede o trecho — dentro de um gesto da pessoa. */
+function acordarWebAudio() {
+  const ctx = contextoAudio();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') { try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch { /* ignore */ } }
+  carregarMecanica();
+}
+function pararWebAudio(imediato) {
+  if (!fonte) return;
+  const src = fonte, g = ganhoFonte, ctx = ctxAudio;
+  fonte = null; ganhoFonte = null;
+  try {
+    if (imediato || !ctx) { src.stop(); return; }
+    const t = ctx.currentTime;
+    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.linearRampToValueAtTime(0, t + 0.08); // some em 80 ms, como o fade do <audio>
+    src.stop(t + 0.09);
+  } catch { /* ignore */ }
+}
+function ligarWebAudio() {
+  const ctx = ctxAudio;
+  if (!ctx || !bufMecanica || !pontosLoop) { carregarMecanica(); return false; }
+  if (ctx.state === 'suspended') { try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch { /* ignore */ } }
+  pararWebAudio(true);
+  try {
+    const src = ctx.createBufferSource();
+    src.buffer = bufMecanica; src.loop = true; src.loopStart = pontosLoop.inicio; src.loopEnd = pontosLoop.fim;
+    const g = ctx.createGain(); g.gain.value = VOL.mecanica;
+    src.connect(g); g.connect(ctx.destination);
+    src.start(0, pontosLoop.inicio);
+    fonte = src; ganhoFonte = g;
+    return true;
+  } catch { return false; }
+}
+let apagando = null; // o fade de saída do <audio> (4 degraus em 80 ms: cortar um clique ao meio estalaria)
 function mecanicaLigar() {
   if (apagando) { clearInterval(apagando); apagando = null; }
+  if (ligarWebAudio()) return;
   tocar('mecanica', [CAMINHOS.mecanica], 1, VOL.mecanica);
 }
 function mecanicaDesligar() {
+  pararWebAudio(false);
   const a = rodas.mecanica?.[0];
   if (!a || a.paused) return;
   if (apagando) clearInterval(apagando);
@@ -154,6 +226,7 @@ const SomSorteio = {
     escolheu = true;
     try { localStorage.setItem(CHAVE_SOM, ligado ? '1' : '0'); } catch { /* ignore */ }
     if (!ligado) this.silenciar();
+    else acordarWebAudio(); // o toque no botão de som é um gesto: o contexto acorda aqui
     return ligado;
   },
   /**
@@ -215,6 +288,7 @@ const SomSorteio = {
    */
   prepararNoGesto() {
     if (escolheu && !ligado) return;
+    acordarWebAudio();
     for (const [chave, fontes, n] of RODAS) {
       if (!rodas[chave]) { rodas[chave] = roda(chave, fontes, n); volta[chave] = 0; }
       for (const a of rodas[chave]) {
@@ -235,8 +309,20 @@ const SomSorteio = {
       }
     }
   },
+  /** Como a mecânica está tocando (diagnóstico; a cena rodada29hb lê isto). */
+  estadoMecanica() {
+    const el = rodas.mecanica?.[0];
+    return {
+      modo: fonte ? 'webaudio' : (el && !el.paused ? 'audio' : 'parada'),
+      contexto: ctxAudio ? ctxAudio.state : null,
+      trecho: bufMecanica ? Math.round(bufMecanica.duration * 1000) : null,
+      loop: pontosLoop ? { inicio: Math.round(pontosLoop.inicio * 1000), fim: Math.round(pontosLoop.fim * 1000) } : null,
+      ganho: VOL.mecanica,
+    };
+  },
   silenciar() {
     pararTrem();
+    pararWebAudio(true);
     if (apagando) { clearInterval(apagando); apagando = null; }
     Object.values(rodas).forEach((els) => els.forEach((a) => {
       try { a.pause(); a.currentTime = 0; } catch { /* ignore */ }

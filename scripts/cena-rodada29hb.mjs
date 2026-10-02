@@ -17,7 +17,8 @@
 //       selado de 16A, e o prepararNoGesto abre as rodas de todos os efeitos (9 <audio>) sem ligar o som de ninguém;
 //   G · som na cerimônia REAL (um sorteio fabricado só na resposta do GET do jogo — nada no banco): o engate e a mecânica nascem no
 //       instante do 1º tique de cada vaga, a mecânica fica em loop enquanto os rolos travam um a um e some só depois do ÚLTIMO
-//       travar (pararGiro não a cala), o volume dela é −10 dB do tique.
+//       travar (pararGiro não a cala), o volume dela é −10 dB do tique;
+//   H · (Chromium) o loop SEM emenda da mecânica v4 por Web Audio: trecho decodificado no gesto, pontos do loop, ganho, fade.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -356,6 +357,13 @@ export async function cenaRodada29hb(navegador, { BASE, PASTA, RAIZ, novoContext
         el.pause = function () { if (!el.muted) marca('pause', { src: nome() }); return pause(); };
         return el;
       };
+      // o loop por Web Audio (v4): start/stop da fonte em loop
+      const BS = window.AudioBufferSourceNode?.prototype;
+      if (BS) {
+        const start = BS.start, stop = BS.stop;
+        BS.start = function (...a) { marca('wa-start', { loop: this.loop, inicio: Math.round(this.loopStart * 1000), fim: Math.round(this.loopEnd * 1000), trecho: Math.round((this.buffer?.duration || 0) * 1000) }); return start.apply(this, a); };
+        BS.stop = function (...a) { marca('wa-stop', { daqui: a[0] != null ? Math.round((a[0] - this.context.currentTime) * 1000) : 0 }); return stop.apply(this, a); };
+      }
       const mo = new MutationObserver((ms) => {
         for (const m of ms) {
           const el = m.target;
@@ -389,24 +397,67 @@ export async function cenaRodada29hb(navegador, { BASE, PASTA, RAIZ, novoContext
     await pagina.waitForSelector('.smaq .maq.premio', { timeout: 90000 });
     await espera(300);
     const ev = await pagina.evaluate(() => window.__som);
+    const estado = await pagina.evaluate(async () => (await import('/src/components/somSorteio.js')).default.estadoMecanica());
     const dos = (tipo, src) => ev.filter((e) => e.tipo === tipo && (!src || e.src === src));
     const girar = dos('girar'), travar = dos('travar'), parar = dos('pararGiro'), stops = dos('stop');
     const playMec = dos('play', 'mecanica.mp3'), pauseMec = dos('pause', 'mecanica.mp3'), playEng = dos('play', 'engate.mp3'), playTique = dos('play').filter((e) => /^tique-/.test(e.src));
+    const waStart = dos('wa-start'), waStop = dos('wa-stop');
     verificar('G · duas vagas de rolos (2 times): girar ×2, pararGiro ×2, travar ×2, 8 rolos travados, 1 jackpot', girar.length === 2 && parar.length === 2 && travar.length === 2 && stops.length === 8 && dos('fecharTime').length === 1, JSON.stringify({ girar: girar.length, parar: parar.length, travar: travar.length, stops: stops.length }));
     const vagas = girar.map((g, i) => {
       const fim = travar[i]?.t ?? Infinity;
       const stopsDaVaga = stops.filter((s) => s.t >= g.t && s.t <= fim + 50);
       const ultimoStop = stopsDaVaga.length ? stopsDaVaga[stopsDaVaga.length - 1].t : null;
-      const pMec = playMec.find((p) => Math.abs(p.t - g.t) <= 40), pEng = playEng.find((p) => Math.abs(p.t - g.t) <= 40), pTq = playTique.find((p) => Math.abs(p.t - g.t) <= 40);
-      const pausa = pauseMec.find((p) => p.t >= fim && p.t <= fim + 400);
-      return { girar: g.t, pararGiro: parar[i]?.t, travar: fim, stops: stopsDaVaga.map((s) => s.t - g.t), ultimoStop, mecanicaPlay: pMec?.t, engatePlay: pEng?.t, tiquePlay: pTq?.t, pausaMecanica: pausa?.t, volMec: pMec?.volume, volTique: pTq?.volume, loop: pMec?.loop };
+      // a mecânica nasce por Web Audio (wa-start) ou, se o trecho ainda não estava pronto, pelo <audio loop> (play)
+      const wa = waStart.find((p) => Math.abs(p.t - g.t) <= 40);
+      const pMec = wa || playMec.find((p) => Math.abs(p.t - g.t) <= 40), pEng = playEng.find((p) => Math.abs(p.t - g.t) <= 40), pTq = playTique.find((p) => Math.abs(p.t - g.t) <= 40);
+      const pausa = (wa ? waStop : pauseMec).find((p) => p.t >= fim && p.t <= fim + 400);
+      return { girar: g.t, pararGiro: parar[i]?.t, travar: fim, stops: stopsDaVaga.map((s) => s.t - g.t), ultimoStop, modo: wa ? 'webaudio' : (pMec ? 'audio' : null), mecanicaPlay: pMec?.t, engatePlay: pEng?.t, tiquePlay: pTq?.t, pausaMecanica: pausa?.t, volTique: pTq?.volume, loop: wa ? (wa.loop && wa.fim - wa.inicio >= 2900 && wa.fim - wa.inicio <= 3000) : pMec?.loop, loopPontos: wa ? [wa.inicio, wa.fim, wa.trecho] : null };
     });
-    verificar('G · em cada vaga, o engate e a mecânica nascem no MESMO instante do 1º tique (±40 ms)', vagas.every((v) => v.mecanicaPlay != null && v.engatePlay != null && v.tiquePlay != null), JSON.stringify(vagas.map((v) => ({ girar: v.girar, mec: v.mecanicaPlay, eng: v.engatePlay, tique: v.tiquePlay }))));
+    verificar('G · em cada vaga, o engate e a mecânica nascem no MESMO instante do 1º tique (±40 ms)', vagas.every((v) => v.mecanicaPlay != null && v.engatePlay != null && v.tiquePlay != null), JSON.stringify(vagas.map((v) => ({ girar: v.girar, modo: v.modo, mec: v.mecanicaPlay, eng: v.engatePlay, tique: v.tiquePlay }))));
     verificar('G · a mecânica some só quando o ÚLTIMO rolo trava: travar() vem no instante do 4º stop (±60 ms), DEPOIS de pararGiro (≥ 300 ms: os rolos ainda travam um a um)', vagas.every((v) => v.ultimoStop != null && Math.abs(v.travar - v.ultimoStop) <= 60 && v.travar - v.pararGiro >= 300 && v.stops.length === 4), JSON.stringify(vagas.map((v) => ({ pararGiro: v.pararGiro - v.girar, stops: v.stops, travar: v.travar - v.girar }))));
-    verificar('G · o elemento da mecânica é pausado até 400 ms depois de travar (fade de 80 ms) e toca em loop', vagas.every((v) => v.pausaMecanica != null && v.loop === true), JSON.stringify(vagas.map((v) => ({ travar: v.travar, pausa: v.pausaMecanica, loop: v.loop }))));
-    verificar('G · o volume da mecânica é −10 dB do tique (0,158 contra 0,5)', vagas.every((v) => v.volMec != null && v.volTique != null && Math.abs(20 * Math.log10(v.volMec / v.volTique) + 10) <= 0.3), JSON.stringify(vagas.map((v) => ({ mec: v.volMec, tique: v.volTique }))));
+    verificar('G · a mecânica é parada até 400 ms depois de travar (fade de 80 ms) e toca em loop — por Web Audio (loop exato, 3,0 s menos 2 × 1/120 s) ou pelo <audio loop> de reserva', vagas.every((v) => v.pausaMecanica != null && v.loop === true), JSON.stringify(vagas.map((v) => ({ modo: v.modo, travar: v.travar, pausa: v.pausaMecanica, loop: v.loop, pontos: v.loopPontos }))));
+    verificar('G · o volume da mecânica é −10 dB do tique (ganho 0,158 contra 0,5)', vagas.every((v) => v.volTique != null && Math.abs(20 * Math.log10(estado.ganho / v.volTique) + 10) <= 0.3), JSON.stringify({ ganho: estado.ganho, tique: vagas.map((v) => v.volTique) }));
+    verificar(`G · neste WebKit a mecânica tocou por ${vagas[0]?.modo || '?'} (estadoMecanica: contexto ${estado.contexto}, trecho ${estado.trecho} ms, loop ${JSON.stringify(estado.loop)})`, vagas.every((v) => v.modo != null), JSON.stringify(estado));
     await capturar(pagina, 'G1-cerimonia-premio');
     await contexto.close();
+  });
+
+  // ───────────────────────────────── H · o loop por Web Audio, no Chromium ─────────────────────────────────
+  // O WebKit do Playwright no Windows pode não decodificar MP3 pelo Web Audio (aí a cerimônia cai no <audio loop> de reserva, e o
+  // bloco G o prova). Aqui o caminho principal é provado num motor que decodifica: o trecho é baixado e decodificado no gesto, os
+  // pontos do loop são a primeira e a última amostra com som (recuadas 1/120 s), e girar() liga a fonte em loop com o ganho da lei.
+  await bloco('H', async () => {
+    const { chromium } = await import('playwright');
+    const cr = await chromium.launch();
+    try {
+      const ctx = await cr.newContext({ serviceWorkers: 'block' });
+      const pagina = await ctx.newPage();
+      await pagina.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
+      const r = await pagina.evaluate(async () => {
+        const S = (await import('/src/components/somSorteio.js')).default;
+        const BS = window.AudioBufferSourceNode.prototype; const log = [];
+        const start = BS.start, stop = BS.stop;
+        BS.start = function (...a) { log.push({ ev: 'start', loop: this.loop, inicio: this.loopStart, fim: this.loopEnd, trecho: this.buffer?.duration }); return start.apply(this, a); };
+        BS.stop = function (...a) { log.push({ ev: 'stop', daqui: a[0] != null ? a[0] - this.context.currentTime : 0 }); return stop.apply(this, a); };
+        S.ligarPorOmissao();
+        S.prepararNoGesto();
+        for (let i = 0; i < 100 && !S.estadoMecanica().trecho; i += 1) await new Promise((res) => setTimeout(res, 100));
+        const antes = S.estadoMecanica();
+        S.girar();
+        const tocando = S.estadoMecanica();
+        S.pararGiro(); S.travar();
+        await new Promise((res) => setTimeout(res, 150));
+        const depois = S.estadoMecanica();
+        S.silenciar(); S.desfazerOmissao();
+        return { antes, tocando, depois, log };
+      });
+      const st = r.log.find((e) => e.ev === 'start'), sp = r.log.find((e) => e.ev === 'stop');
+      verificar('H · (Chromium) o trecho é decodificado no gesto: 3,0 s de som (o decodificador pode acrescentar quadros) e os pontos do loop cobrem 3,0 s menos 2 × 1/120 s', r.antes.trecho >= 2990 && r.antes.trecho <= 3120 && r.antes.loop && Math.abs((r.antes.loop.fim - r.antes.loop.inicio) - (3000 - 2000 / 120)) <= 12, JSON.stringify(r.antes));
+      verificar('H · (Chromium) girar() toca a mecânica por Web Audio, em loop, com o ganho da lei; travar() apaga em 80 ms e para a fonte', r.tocando.modo === 'webaudio' && st?.loop === true && r.depois.modo === 'parada' && sp && sp.daqui > 0.05 && sp.daqui <= 0.12, JSON.stringify({ tocando: r.tocando, depois: r.depois, log: r.log }));
+      await ctx.close();
+    } finally {
+      await cr.close();
+    }
   });
 
   verificar('sem erro de JS nas páginas', erros.length === 0, erros.join(' | '));
