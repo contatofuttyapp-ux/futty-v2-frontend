@@ -1,43 +1,59 @@
-/* Futty v2.0 — Rodada 29E: o mini sorteio do Onboarding (components/MiniSorteio.jsx). A receita da máquina do sorteio
-   (sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) numa caixa de 290 de largura, e a janela do sorteio REAL
-   copiada de lá: .grupo/.ghead/.srow/.slot (tracejado vazio) → .mmold (moldura octogonal .fr, micro-lâmpadas .mb, nome
-   .nm, mPop ao entrar). Os dois grupos empilhados como no sorteio no celular (lá, lado a lado só a partir de 1280 px).
-   Escopado em .msq, keyframes prefixados (msq*) para não disputar com os do sorteio. Só o Onboarding importa (chunk lazy).
-   Estado natural: sem JS, os 6 no lugar (o JSX nasce cheio); com movimento reduzido, tudo parado. */
-.msq{width:100%;max-width:290px;margin:22px auto 0}
-.msq .maq{position:relative;width:100%;background:linear-gradient(180deg,#0d0b14,#08070d);border:1px solid rgba(212,160,23,.4);padding:12px 14px 0;box-shadow:0 0 16px 3px rgba(245,224,112,.16);clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
+/* Futty v2.0 — Rodada 29E2: o mini sorteio do Onboarding (components/MiniSorteio.jsx). A receita da máquina do sorteio
+   (sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) numa caixa de 290 de largura e, dentro, a janela do sorteio
+   REAL com os ROLOS de lá: .grupo/.ghead/.srow → .rolo (clip octogonal) com a .strip girando em spinY (.scel por figurinha),
+   .slow ao desacelerar, .stop ao travar; por cima, a figurinha sorteada na moldura do sorteio (.rev com revPop: .fr, micro-
+   lâmpadas .mb, nome .nm). As réguas dão UM pulso (premioLampa) quando o 6º trava. Escopado em .msq, keyframes prefixados
+   (msq*) para não disputar com os do sorteio. Só o Onboarding importa (chunk lazy).
+   Estado natural: sem JS, os 6 travados (o JSX nasce cheio); com movimento reduzido, tudo parado. */
+.msq{width:100%;margin:22px auto 0}
+.msq .maq{position:relative;width:100%;max-width:290px;margin:0 auto;background:linear-gradient(180deg,#0d0b14,#08070d);border:1px solid rgba(212,160,23,.4);padding:12px 14px 0;box-shadow:0 0 16px 3px rgba(245,224,112,.16);clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
 .msq .luzes{display:flex;gap:4px;justify-content:center;margin-bottom:4px;overflow:hidden}
 .msq .luzes.roxa{margin-bottom:10px}
 .msq .luz{position:relative;flex:none;width:7px;height:7px;border-radius:50%;background:var(--lc,#f5e070);box-shadow:0 0 8px 2px var(--lg,rgba(245,224,112,.75));animation:msqCalm 2s linear infinite;animation-delay:calc(var(--i)*-.09s)}
 .msq .roxa .luz{--lc:#a78bfa;--lg:rgba(139,92,246,.75)}
 @keyframes msqCalm{0%,55%,100%{opacity:.16}25%{opacity:.85}}
+/* O pulso único quando o 6º rolo trava (o premioLampa da máquina real, UMA vez): .maq.premio dura 0,8 s, pelo relógio do JSX. */
+.msq .maq.premio .luz{animation:msqPremio .8s linear 1}
+@keyframes msqPremio{0%,100%{opacity:1}50%{opacity:.3}}
 .msq .janela{position:relative;background:rgba(0,0,0,.55);border:1px solid rgba(139,92,246,.4);padding:10px 8px 6px;overflow:hidden}
 .msq .grupo+.grupo{margin-top:8px}
 .msq .ghead{display:flex;align-items:center;gap:8px;font-family:'Rajdhani',var(--sans);font-weight:800;letter-spacing:.11em;font-size:12px;text-transform:uppercase;color:var(--tc);text-shadow:0 0 12px var(--tg);margin:0 2px 6px}
 .msq .ghead::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--tg),transparent)}
 .msq .srow{display:flex;gap:6px;justify-content:center}
-.msq .slot{width:56px;height:75px;flex:none;border:1.5px dashed rgba(255,255,255,.16);clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)}
-.msq .slot.cheio{border:none}
-.msq .mmold{position:relative;width:100%;height:100%;animation:msqPop .4s cubic-bezier(.3,1.5,.5,1)}
-@keyframes msqPop{0%{transform:scale(.55)}100%{transform:scale(1)}}
-.msq .mmold.sai{opacity:0;transition:opacity .4s ease}
-.msq .mmold .fr{position:absolute;inset:0;overflow:hidden;background:#0c0c12;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);box-shadow:inset 0 0 0 2px var(--tc)}
-.msq .mmold .fr::before{content:'';position:absolute;inset:4px;z-index:4;pointer-events:none;border:1px solid color-mix(in srgb,var(--tc) 60%,#fff 12%);opacity:.5;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)}
-.msq .mmold img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 0%}
-.msq .mmold .nm{position:absolute;bottom:0;left:0;right:0;z-index:5;text-align:center;font-family:'Rajdhani',var(--sans);font-weight:800;font-size:7.5px;letter-spacing:.04em;color:#fff;padding:8px 1px 3px;background:linear-gradient(transparent,color-mix(in srgb,var(--tc) 55%,#000 45%) 82%)}
-.msq .mmold .mb{position:absolute;z-index:6;width:3.5px;height:3.5px;border-radius:50%;background:var(--tc);box-shadow:0 0 4px 1px var(--tg);animation:msqMb 1.8s linear infinite;animation-delay:calc(var(--i)*-.3s)}
-@keyframes msqMb{0%,55%,100%{opacity:.2}25%{opacity:1}}
-/* Enquanto os 6 seguram (fase "cheio"): as micro-lâmpadas piscam como no brinde do sorteio real (.mmold.brinde .mb). */
-.msq .grupo.cheio .mb{animation:msqMbPisca .5s steps(2) infinite;animation-delay:calc(var(--i)*.08s)}
+/* O rolo: a peça da máquina real (.rolo/.strip/.scel) a 56×75. A tira tem as 6 figurinhas duas vezes: o spinY vai a −50 % e
+   fecha sem emenda. Rápido a girar (.35 s a volta), ~1 s ao desacelerar (.slow), parado ao travar (.stop). */
+.msq .rolo{position:relative;width:56px;height:75px;flex:none;overflow:hidden;background:#0a0a10;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);border-bottom:2px solid rgba(139,92,246,.35)}
+.msq .strip{position:absolute;left:0;right:0;top:0;animation:msqSpin var(--sd,.35s) linear infinite}
+.msq .rolo.slow .strip{animation-duration:1s}
+.msq .rolo.stop .strip{animation-play-state:paused}
+@keyframes msqSpin{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
+.msq .scel{width:56px;height:75px;position:relative;overflow:hidden;border-bottom:1px solid rgba(139,92,246,.2);background:#0a0a10}
+.msq .scel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 0%;opacity:.9}
+/* O rolo travado: a figurinha sorteada "pipoca" por cima da tira (revPop) na moldura do sorteio real — borda do time, filete,
+   micro-lâmpadas piscando, nome — e some em fade quando o ciclo esvazia (.sai). */
+.msq .rev{position:absolute;inset:0;z-index:3;opacity:0}
+.msq .rev.on{opacity:1;animation:msqRevPop .38s cubic-bezier(.3,1.6,.5,1)}
+@keyframes msqRevPop{0%{transform:scale(.8)}100%{transform:scale(1)}}
+.msq .rolo.sai .rev{opacity:0;transition:opacity .4s ease}
+.msq .rev .fr{position:absolute;inset:0;overflow:hidden;background:#0c0c12;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);box-shadow:inset 0 0 0 2px var(--tc)}
+.msq .rev .fr::before{content:'';position:absolute;inset:4px;z-index:4;pointer-events:none;border:1px solid color-mix(in srgb,var(--tc) 60%,#fff 12%);opacity:.5;clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)}
+.msq .rev img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 0%}
+.msq .rev .nm{position:absolute;bottom:0;left:0;right:0;z-index:5;text-align:center;font-family:'Rajdhani',var(--sans);font-weight:800;font-size:7.5px;letter-spacing:.04em;color:#fff;padding:8px 1px 3px;background:linear-gradient(transparent,color-mix(in srgb,var(--tc) 55%,#000 45%) 82%)}
+.msq .rev .mb{position:absolute;z-index:6;width:3.5px;height:3.5px;border-radius:50%;background:var(--tc);box-shadow:0 0 4px 1px var(--tg);opacity:.2}
+.msq .rev.on .mb{opacity:1;animation:msqMbPisca .5s steps(2) infinite;animation-delay:calc(var(--i)*.08s)}
 @keyframes msqMbPisca{50%{opacity:.12}}
 .msq .baseluz{position:relative;margin:10px -14px 0;padding:9px 0 11px;overflow:hidden}
 .msq .baseluz::before{content:'';position:absolute;inset:0;background:radial-gradient(60% 130% at 30% 100%,rgba(212,160,23,.16),transparent 70%),radial-gradient(60% 130% at 70% 100%,rgba(139,92,246,.16),transparent 70%)}
 .msq .baseluz .fila{position:relative;display:flex;gap:5px;justify-content:center;overflow:hidden}
 .msq .baseluz .fila+.fila{margin-top:5px}
-.msq-legenda{margin:10px 0 0;font-size:13px;line-height:1.4;color:rgba(255,255,255,.72);text-align:center}
+/* Legenda (dono, 2-out): o estilo do subtítulo da landing — Rajdhani 700, caixa alta, .14em, #c9c2d6, 12,5 px. Cabe numa
+   linha onde dá; em tela estreita, text-wrap:balance divide em duas linhas parecidas (os únicos pontos de quebra são depois
+   dos "·": os espaços de cada frase são duros no JSX), nunca uma palavra sozinha. */
+.msq-legenda{margin:14px 0 0;font-family:'Rajdhani',var(--sans);font-weight:700;font-size:12.5px;line-height:1.45;letter-spacing:.14em;text-transform:uppercase;color:#c9c2d6;text-align:center;text-wrap:balance}
 @media (prefers-reduced-motion:reduce){
-  .msq .luz{animation:none;opacity:.7}
-  .msq .mmold,.msq .grupo.cheio .mb,.msq .mmold .mb{animation:none}
-  .msq .mmold .mb{opacity:.5}
-  .msq .mmold.sai{transition:none}
+  .msq .luz,.msq .maq.premio .luz{animation:none;opacity:.7}
+  .msq .strip{animation:none}
+  .msq .rev.on{animation:none}
+  .msq .rev.on .mb{animation:none;opacity:.5}
+  .msq .rolo.sai .rev{transition:none}
 }

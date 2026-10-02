@@ -3267,7 +3267,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29g', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29e2', 'rodada29g', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -4006,6 +4006,17 @@ try {
     const r = await cenaRodada29g(navegador);
     saida.rodada29g = r;
     console.log('\n[iphone] RODADA 29G — o Futty é 18+: cadastro com menor e com maior, conta existente com 17 anos, Termos e Privacidade (servidor local; signUp e escritas interceptados)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29e2')) {
+    const r = await cenaRodada29e2(navegador);
+    saida.rodada29e2 = r;
+    console.log('\n[iphone] RODADA 29E2 — mini sorteio em rolos de slot machine, legenda e CTA novos, sem barra no onboarding (servidor local; conta de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -8192,6 +8203,318 @@ async function cenaRodada29g(navegador) {
 
   verificar('sem erro de JS nas páginas', erros.length === 0, erros.join(' | '));
   return { pasta, verificacoes, capturas, erros };
+}
+
+// ─── Cena "rodada29e2" (2-out): o mini sorteio do onboarding em ROLOS de slot machine, a legenda e o CTA novos, sem barra ──
+// O que prova pela tela, em servidor LOCAL (CLAUDE.md, 25-set), com a conta de prova `novato` (prova-rodada29b.js) e toda
+// escrita interceptada:
+//   A · 1ª página: título e subtítulo; a legenda "SORTEIO JUSTO · RANKING · FIGURINHA DE COLECIONADOR" no estilo do subtítulo
+//       (Rajdhani 700, caixa alta, .14em, #c9c2d6, 12–13 px) em ≤ 2 linhas — e, a 320 px, em DUAS linhas parecidas sem palavra
+//       sozinha; o botão Começar é o CTA dourado da casa (.btn.cta-gold dentro de .cta-gold-glow, 50 px, ≤ 290, 24 px acima e abaixo);
+//   B · a barra de navegação não aparece na 1ª nem na 2ª página do onboarding (a regra é por rota — a 3ª é a mesma rota);
+//   C · a máquina: 6 rolos (3 por time), cada tira com as 6 figurinhas duas vezes girando em msqSpin; um ciclo inteiro medido na
+//       página (MutationObserver): o 1º rolo trava ~1,8 s depois de girarem, um a cada ~0,5 s alternando A/B, desacelera ~1 s
+//       (.slow) antes de parar (.stop + .rev.on com msqRevPop + micro-lâmpadas msqMbPisca), o pulso único das réguas (.maq.premio
+//       ~0,8 s) quando o 6º trava, seguram ~2,5 s, fade ~0,4 s, ciclo ~7,8 s, e o ciclo seguinte vem noutra ordem;
+//   D · no fim do ciclo os 6 rolos travados mostram as 6 figurinhas (3 por time, nome e busto 112×150 de /onboarding/);
+//   E · os 6 arquivos: 200, image/webp, ≤ 6 KB; sem som;
+//   F · prefers-reduced-motion: os 6 travados, nada gira nem pisca, e 3,5 s depois tudo igual.
+//   node scripts/ver-iphone.mjs --url http://localhost:5232 --cenas rodada29e2 --etiqueta r29e2
+async function cenaRodada29e2(navegador) {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
+    throw new Error(`rodada29e2 só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
+  }
+  const pasta = path.join(PASTA, 'rodada-29e2');
+  mkdirSync(pasta, { recursive: true });
+  const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
+  const NOMES = ['BRUNINHO', 'TIAGÃO', 'LÉO', 'PEDRÃO', 'RAFA', 'DUDU'];
+  const IDS = ['bruninho', 'tiagao', 'leo', 'pedrao', 'rafa', 'dudu'];
+  const LEGENDA = 'SORTEIO JUSTO · RANKING · FIGURINHA DE COLECIONADOR';
+  const erros = [];
+  const verificacoes = [];
+  const capturas = [];
+  const verificar = (nome, ok, detalhe = '') => verificacoes.push({ nome, ok: !!ok, detalhe });
+  const capturar = async (pagina, nome) => {
+    const arq = path.join(pasta, `r29e2-${nome}.png`);
+    await pagina.screenshot({ path: arq });
+    capturas.push(path.relative(RAIZ, arq));
+  };
+  const aceitarCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+  const abrir = async (rotulo, { extra = {}, viewport = null } = {}) => {
+    const contexto = await novoContexto(navegador, fx.novato, { amostrar: false, viewport, extra: { timezoneId: 'America/Sao_Paulo', ...extra } });
+    await contexto.addInitScript(() => {
+      window.__som = { audio: 0, contexto: 0 };
+      const A = window.Audio;
+      window.Audio = function (...a) { window.__som.audio += 1; return new A(...a); };
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (C) { const N = function (...a) { window.__som.contexto += 1; return new C(...a); }; window.AudioContext = N; window.webkitAudioContext = N; }
+    });
+    await travarEscritas(contexto, () => null);
+    const pagina = await contexto.newPage();
+    pagina.on('pageerror', (e) => erros.push(`${rotulo}: ${e.message}`));
+    await pagina.goto(`${BASE}/onboarding`, { waitUntil: 'domcontentloaded' });
+    await aceitarCookies(pagina);
+    await pagina.locator('.msq .maq').waitFor({ timeout: 30000 });
+    return { contexto, pagina };
+  };
+  // Lê a página: textos, legenda (estilo e linhas), botão, barra, a máquina (lâmpadas, grupos, rolos, tiras, revelações).
+  const ler = (pagina) => pagina.evaluate(() => {
+    const cs = (el) => getComputedStyle(el);
+    const m = document.querySelector('.msq');
+    const maq = m?.querySelector('.maq');
+    const luzes = m ? [...m.querySelectorAll('.luz')] : [];
+    const grupos = m ? [...m.querySelectorAll('.grupo')].map((g) => ({
+      time: g.dataset.time,
+      nome: g.querySelector('.ghead')?.textContent.trim(),
+      cor: cs(g).getPropertyValue('--tc').trim(),
+      rolos: [...g.querySelectorAll('.rolo')].map((r) => {
+        const strip = r.querySelector('.strip');
+        const rev = r.querySelector('.rev');
+        const img = rev?.querySelector('.fr img');
+        const mb = rev?.querySelector('.mb');
+        return {
+          vaga: Number(r.dataset.vaga), estado: r.dataset.estado, classes: [...r.classList].filter((c) => c !== 'rolo'),
+          celulas: strip ? strip.querySelectorAll('.scel img').length : 0,
+          celulasIds: strip ? [...strip.querySelectorAll('.scel img')].map((i) => (i.getAttribute('src') || '').match(/\/onboarding\/([a-z]+)\.webp/)?.[1] || null) : [],
+          spin: strip ? { nome: cs(strip).animationName, dur: cs(strip).animationDuration, play: cs(strip).animationPlayState } : null,
+          rev: rev ? {
+            on: rev.classList.contains('on'), id: rev.dataset.figurinha || null, nome: rev.querySelector('.nm')?.textContent.trim() || null,
+            opacidade: cs(rev).opacity, anim: cs(rev).animationName, src: img?.getAttribute('src') || null,
+            natural: img ? [img.naturalWidth, img.naturalHeight] : null, mb: mb ? { anim: cs(mb).animationName, opacidade: cs(mb).opacity } : null,
+          } : null,
+        };
+      }),
+    })) : [];
+    const leg = m?.querySelector('.msq-legenda');
+    const legCs = leg ? cs(leg) : null;
+    // As linhas da legenda: cada palavra medida com um Range e agrupada pelo topo do seu retângulo.
+    let linhas = [];
+    if (leg?.firstChild) {
+      const no = leg.firstChild;
+      const txt = no.textContent || '';
+      const porY = new Map();
+      const re = /\S+/g;
+      let mm;
+      while ((mm = re.exec(txt))) {
+        const r = document.createRange();
+        r.setStart(no, mm.index);
+        r.setEnd(no, mm.index + mm[0].length);
+        const y = Math.round(r.getBoundingClientRect().top);
+        if (!porY.has(y)) porY.set(y, []);
+        porY.get(y).push(mm[0].replace(/ /g, ' '));
+      }
+      linhas = [...porY.values()].map((p) => p.join(' '));
+    }
+    const btn = document.querySelector('[data-cta="comecar"]');
+    const wrap = btn?.parentElement;
+    const nav = document.querySelector('.bottom-nav, nav[aria-label="Navegação principal"]');
+    const rb = btn?.getBoundingClientRect();
+    return {
+      texto: document.body.textContent,
+      fase: m?.dataset.fase, ciclo: Number(m?.dataset.ciclo), travadas: Number(m?.dataset.travadas), premio: !!maq?.classList.contains('premio'),
+      largura: maq ? Math.round(maq.getBoundingClientRect().width) : null,
+      luzes: luzes.length, luzAnim: luzes[0] ? cs(luzes[0]).animationName : null, luzOpacidades: [...new Set(luzes.map((l) => cs(l).opacity))],
+      grupos, rolos: m ? m.querySelectorAll('.rolo').length : 0, travados: m ? m.querySelectorAll('.rolo.stop .rev.on').length : 0,
+      legenda: leg ? {
+        texto: leg.textContent.replace(/ /g, ' ').replace(/\s+/g, ' ').trim(), fonte: legCs.fontFamily, peso: legCs.fontWeight, caixa: legCs.textTransform,
+        espaco: parseFloat(legCs.letterSpacing), cor: legCs.color, tamanho: parseFloat(legCs.fontSize), balance: legCs.textWrap || legCs.textWrapStyle || '',
+        linhas, baixo: leg.getBoundingClientRect().bottom,
+      } : null,
+      botao: btn ? {
+        texto: btn.textContent.trim(), classes: [...btn.classList], glow: !!wrap?.classList.contains('cta-gold-glow'),
+        altura: Math.round(rb.height), largura: Math.round(rb.width), topo: rb.top, fundo: rb.bottom,
+        margemCima: parseFloat(cs(wrap).marginTop), margemBaixo: parseFloat(cs(wrap).marginBottom), cor: cs(btn).color, borda: cs(btn).borderTopColor,
+      } : null,
+      nav: !!nav,
+      media: m ? m.querySelectorAll('video,audio,canvas').length : 0,
+    };
+  });
+  const esperarFase = (pagina, fase, limite = 12000) => pagina.waitForFunction((f) => document.querySelector('.msq')?.dataset.fase === f, fase, { timeout: limite }).then(() => true, () => false);
+  const todosRolos = (r) => r.grupos.flatMap((g) => g.rolos.map((x) => ({ ...x, time: g.time })));
+
+  // 1) 1ª página: textos, legenda, botão, barra — e a máquina a girar
+  {
+    const { contexto, pagina } = await abrir('onboarding');
+    await espera(250);
+    const r = await ler(pagina);
+    verificar('A · título "BEM-VINDO AO FUTTY" e subtítulo "O seu time. A sua figurinha."', /BEM-VINDO AO FUTTY/.test(r.texto) && /O seu time\. A sua figurinha\./i.test(r.texto), r.texto.replace(/\s+/g, ' ').slice(0, 100));
+    const L = r.legenda;
+    verificar('A · legenda "SORTEIO JUSTO · RANKING · FIGURINHA DE COLECIONADOR" (a antiga em frase saiu)', L?.texto === LEGENDA && !/Sorteio justo, ranking/.test(r.texto), String(L?.texto));
+    verificar('A · legenda no estilo do subtítulo: Rajdhani 700, caixa alta, letter-spacing .14em, #c9c2d6, 12–13 px', L && /Rajdhani/i.test(L.fonte) && String(L.peso) === '700' && L.caixa === 'uppercase' && L.tamanho >= 12 && L.tamanho <= 13 && Math.abs(L.espaco - L.tamanho * 0.14) <= 0.15 && L.cor === 'rgb(201, 194, 214)', JSON.stringify(L && { fonte: L.fonte, peso: L.peso, caixa: L.caixa, tamanho: L.tamanho, espaco: L.espaco, cor: L.cor }));
+    verificar('A · legenda em ≤ 2 linhas no iPhone, com text-wrap: balance, nenhuma linha com uma palavra só', L && L.linhas.length >= 1 && L.linhas.length <= 2 && L.linhas.every((l) => l.split(' ').length >= 2) && /balance/.test(L.balance), JSON.stringify(L && { linhas: L.linhas, balance: L.balance }));
+    const B = r.botao;
+    verificar('A · botão "Começar" = CTA dourado da casa (.btn.cta-gold dentro de .cta-gold-glow), 50 px de altura, ≤ 290 de largura', B && B.texto === 'Começar' && B.classes.includes('btn') && B.classes.includes('cta-gold') && B.glow && B.altura === 50 && B.largura <= 290 && B.largura >= 240, JSON.stringify(B && { texto: B.texto, classes: B.classes, glow: B.glow, altura: B.altura, largura: B.largura }));
+    verificar('A · botão: texto e borda dourados (não a laje amarela sólida), 24 px de respiro acima (da legenda) e abaixo', B && L && B.cor === 'rgb(240, 201, 74)' && B.borda === 'rgb(212, 160, 23)' && B.margemCima === 24 && B.margemBaixo === 24 && Math.round(B.topo - L.baixo) >= 24 && Math.round(B.topo - L.baixo) <= 30, JSON.stringify(B && { cor: B.cor, borda: B.borda, cima: B.margemCima, baixo: B.margemBaixo, daLegenda: Math.round(B.topo - L.baixo) }));
+    verificar('B · 1ª página: sem a barra de navegação', !r.nav);
+    verificar('C · a máquina (290, 92 lâmpadas em msqCalm): 2 grupos (TIME A ouro, TIME B roxo) com 3 ROLOS cada, cada tira com as 6 figurinhas duas vezes', Math.abs(r.largura - 290) <= 4 && r.luzes === 92 && r.luzAnim === 'msqCalm' && r.grupos.length === 2 && r.grupos[0].nome === 'Time A' && r.grupos[1].nome === 'Time B' && r.grupos[0].cor === '#d4a017' && r.grupos[1].cor === '#8b5cf6' && r.rolos === 6 && todosRolos(r).every((x) => x.celulas === 12 && new Set(x.celulasIds.slice(0, 6)).size === 6 && x.celulasIds.slice(0, 6).join() === x.celulasIds.slice(6).join()), JSON.stringify({ largura: r.largura, luzes: r.luzes, luzAnim: r.luzAnim, grupos: r.grupos.map((g) => [g.nome, g.cor, g.rolos.length]), celulas: todosRolos(r).map((x) => x.celulas) }));
+    verificar('C · as tiras dos 6 rolos não são todas iguais (sequências próprias)', new Set(todosRolos(r).map((x) => x.celulasIds.slice(0, 6).join())).size >= 4, JSON.stringify(todosRolos(r).map((x) => x.celulasIds.slice(0, 6).join('>'))));
+    await capturar(pagina, 'pagina-1');
+
+    // Um ciclo inteiro, medido na página: cada rolo que entra em .slow / .stop, o pulso das réguas, as fases e os ciclos.
+    const medido = await pagina.evaluate(() => new Promise((res) => {
+      const m = document.querySelector('.msq');
+      const maq = m.querySelector('.maq');
+      const rolos = [...m.querySelectorAll('.rolo')];
+      const nomeRolo = (i) => `${rolos[i].closest('.grupo').dataset.time}${rolos[i].dataset.vaga}`;
+      const ids = () => [...m.querySelectorAll('.grupo')].map((g) => [...g.querySelectorAll('.rolo .rev')].map((x) => x.dataset.figurinha));
+      const snap = () => ({ fase: m.dataset.fase, ciclo: Number(m.dataset.ciclo), premio: maq.classList.contains('premio'), slow: rolos.map((x) => x.classList.contains('slow')), stop: rolos.map((x) => x.classList.contains('stop')) });
+      const log = [];
+      let ultimo = snap();
+      let obs;
+      const anotar = () => {
+        const e = snap();
+        const t = Math.round(performance.now());
+        e.slow.forEach((v, i) => { if (v && !ultimo.slow[i]) log.push({ t, ev: 'slow', rolo: nomeRolo(i), ciclo: e.ciclo }); });
+        e.stop.forEach((v, i) => { if (v && !ultimo.stop[i]) log.push({ t, ev: 'stop', rolo: nomeRolo(i), ciclo: e.ciclo }); });
+        if (e.premio && !ultimo.premio) log.push({ t, ev: 'premio-on', ciclo: e.ciclo });
+        if (!e.premio && ultimo.premio) log.push({ t, ev: 'premio-off', ciclo: e.ciclo });
+        if (e.fase !== ultimo.fase || e.ciclo !== ultimo.ciclo) log.push({ t, ev: `fase:${e.fase}`, ciclo: e.ciclo, ids: e.fase === 'cheio' ? ids() : undefined });
+        ultimo = e;
+        if (log.filter((x) => x.ev === 'fase:cheio').length >= 2) { obs.disconnect(); res({ ok: true, log }); }
+      };
+      obs = new MutationObserver(anotar);
+      obs.observe(m, { attributes: true, subtree: true, attributeFilter: ['class', 'data-fase', 'data-ciclo', 'data-travadas'] });
+      setTimeout(() => { obs.disconnect(); res({ ok: false, log }); }, 24000);
+    }));
+    const log = medido.log;
+    const cheios = log.filter((x) => x.ev === 'fase:cheio');
+    const cheio0 = cheios[0];
+    const cheio1 = cheios[1];
+    const c0 = cheio0?.ciclo;
+    const c1 = cheio1?.ciclo;
+    const saindo0 = log.find((x) => x.ev === 'fase:saindo' && x.ciclo === c0);
+    const girando0 = log.find((x) => x.ev === 'fase:girando' && x.ciclo === c0 && saindo0 && x.t > saindo0.t);
+    const inicio1 = log.filter((x) => x.ev === 'fase:girando' && x.ciclo === c1).pop();
+    const stops1 = log.filter((x) => x.ev === 'stop' && x.ciclo === c1);
+    const slows1 = log.filter((x) => x.ev === 'slow' && x.ciclo === c1);
+    // O pulso mede-se no 1º ciclo observado: o observador desliga no 2º "cheio", que é o instante em que o pulso do c1 liga.
+    const premioOn = log.find((x) => x.ev === 'premio-on' && x.ciclo === c0);
+    const premioOff = log.find((x) => x.ev === 'premio-off' && x.ciclo === c0);
+    const stop6do0 = log.filter((x) => x.ev === 'stop' && x.ciclo === c0).pop();
+    const passos = stops1.slice(1).map((s, i) => s.t - stops1[i].t);
+    const desaceleras = stops1.map((s) => { const sl = slows1.find((x) => x.rolo === s.rolo); return sl ? s.t - sl.t : null; });
+    const medidas = {
+      ok: medido.ok, ciclos: [c0, c1],
+      primeiraTrava: stops1[0] && inicio1 ? stops1[0].t - inicio1.t : null,
+      passos, times: stops1.map((s) => s.rolo[0]).join(''), rolos: stops1.map((s) => s.rolo), desaceleras,
+      pulsoNo6: premioOn && stop6do0 ? premioOn.t - stop6do0.t : null, pulso: premioOn && premioOff ? premioOff.t - premioOn.t : null,
+      segura: saindo0 && cheio0 ? saindo0.t - cheio0.t : null, fade: girando0 && saindo0 ? girando0.t - saindo0.t : null,
+      periodo: cheio1 && cheio0 ? cheio1.t - cheio0.t : null, ordem0: cheio0?.ids, ordem1: cheio1?.ids,
+    };
+    verificar('C · os 6 rolos travam um por vez, alternando A/B a cada ~0,5 s, o 1º ~1,8 s depois de começarem a girar', medido.ok && stops1.length === 6 && medidas.times === 'ABABAB' && passos.every((p) => p >= 350 && p <= 700) && medidas.primeiraTrava >= 1500 && medidas.primeiraTrava <= 2200 && new Set(medidas.rolos).size === 6, JSON.stringify({ rolos: medidas.rolos, passos, primeira: medidas.primeiraTrava }));
+    verificar('C · cada rolo desacelera (.slow) ~1 s antes de travar (.stop)', slows1.length === 6 && desaceleras.every((d) => d !== null && d >= 800 && d <= 1250), JSON.stringify(desaceleras));
+    verificar('C · quando o 6º trava, as réguas dão UM pulso de ~0,8 s (.maq.premio) e só esse', premioOn && premioOff && Math.abs(medidas.pulsoNo6) <= 150 && medidas.pulso >= 600 && medidas.pulso <= 1050 && log.filter((x) => x.ev === 'premio-on' && x.ciclo === c0).length === 1 && premioOff.t < (saindo0?.t ?? Infinity), JSON.stringify({ no6: medidas.pulsoNo6, pulso: medidas.pulso }));
+    verificar('C · seguram ~2,5 s cheios, esvaziam em ~0,4 s e o ciclo dá ~7,8 s', medidas.segura >= 2200 && medidas.segura <= 2950 && medidas.fade >= 250 && medidas.fade <= 700 && medidas.periodo >= 7200 && medidas.periodo <= 8600, JSON.stringify({ segura: medidas.segura, fade: medidas.fade, periodo: medidas.periodo }));
+    verificar('C · cada ciclo cheio tem as 6 figurinhas (3 por time) e o ciclo seguinte vem noutra ordem', medidas.ordem0 && medidas.ordem1 && medidas.ordem0.flat().filter(Boolean).length === 6 && new Set(medidas.ordem0.flat()).size === 6 && new Set(medidas.ordem1.flat()).size === 6 && medidas.ordem0.every((g) => g.length === 3) && JSON.stringify(medidas.ordem0) !== JSON.stringify(medidas.ordem1), JSON.stringify({ ordem0: medidas.ordem0, ordem1: medidas.ordem1 }));
+
+    // D · fim do ciclo: os 6 rolos travados
+    await esperarFase(pagina, 'cheio');
+    await espera(150);
+    const cheio = await ler(pagina);
+    const rolosCheio = todosRolos(cheio);
+    verificar('D · fase cheia: 6 rolos travados (.stop, tira parada), cada um com a figurinha sorteada na moldura (.rev.on, msqRevPop), nome e busto 112×150 de /onboarding/', cheio.travados === 6 && rolosCheio.every((x) => x.estado === 'travado' && x.spin?.play === 'paused' && x.rev?.on && IDS.includes(x.rev.id) && NOMES.includes(x.rev.nome) && x.rev.src?.endsWith(`/onboarding/${x.rev.id}.webp`) && x.rev.natural?.[0] === 112 && x.rev.natural?.[1] === 150 && x.rev.anim === 'msqRevPop' && Number(x.rev.opacidade) === 1) && new Set(rolosCheio.map((x) => x.rev.id)).size === 6 && cheio.grupos.every((g) => g.rolos.length === 3), JSON.stringify(rolosCheio.map((x) => [x.time + x.vaga, x.rev?.id, x.rev?.natural, x.spin?.play])));
+    verificar('D · fase cheia: as micro-lâmpadas das molduras piscam (msqMbPisca)', rolosCheio.every((x) => x.rev?.mb?.anim === 'msqMbPisca'), JSON.stringify(rolosCheio.map((x) => x.rev?.mb?.anim)));
+    await capturar(pagina, 'cheio-6-travados');
+    // O fade dura 0,4 s e a captura acima (página inteira a 3×) demora o bastante para comer a janela de 2,5 s do "cheio":
+    // mede-se no ciclo SEGUINTE, sem captura no meio, amostrando a opacidade a cada 25 ms (setTimeout — a cadência do rAF no
+    // WebKit sem janela não é de confiança) desde o instante em que a fase vira "saindo": a curva tem de descer de ~1 até ~0.
+    await esperarFase(pagina, 'girando', 5000);
+    await esperarFase(pagina, 'cheio', 9000);
+    const fade = await pagina.evaluate(() => new Promise((res) => {
+      const m = document.querySelector('.msq');
+      const revs = [...m.querySelectorAll('.rolo .rev')];
+      const amostras = [];
+      let contrato = null;
+      const limite = performance.now() + 6000;
+      const passo = () => {
+        const op = revs.map((r) => Number(getComputedStyle(r).opacity));
+        if (m.dataset.fase === 'saindo') {
+          // O relógio das animações do WebKit sem janela só avança quando há quadro desenhado — a curva interpolada não é
+          // de confiança aqui. O que se prova é o contrato: .sai em todos os rolos, a transição opacity 0,4 s e a
+          // CSSTransition de 400 ms a correr em cada revelação; e, no fim, as 6 em 0.
+          if (!contrato) {
+            const cs0 = getComputedStyle(revs[0]);
+            contrato = {
+              sai: [...m.querySelectorAll('.rolo')].every((r) => r.classList.contains('sai')),
+              dur: cs0.transitionDuration, prop: cs0.transitionProperty,
+              transicoes: revs.map((r) => r.getAnimations().filter((a) => a.transitionProperty === 'opacity').map((a) => ({ ms: a.effect?.getTiming().duration, estado: a.playState }))),
+            };
+          }
+          amostras.push({ t: Math.round(performance.now()), op: Math.max(...op) });
+          if (amostras.length >= 40 || amostras[amostras.length - 1].op <= 0.02) return res({ amostras, fim: op, contrato });
+        } else if (amostras.length) {
+          return res({ amostras, fim: op, contrato, revOn: m.querySelectorAll('.rolo .rev.on').length });
+        }
+        if (performance.now() > limite) return res({ amostras, fim: op, contrato });
+        setTimeout(passo, 25);
+      };
+      passo();
+    }));
+    const ops = fade.amostras.map((a) => a.op);
+    const c = fade.contrato;
+    verificar('D · fase saindo: os 6 rolos ganham .sai, a revelação faz a transição opacity 0,4 s (CSSTransition de 400 ms a correr em cada uma) e, no fim do fade, as 6 estão em 0 e sem .on', !!c && c.sai && c.dur === '0.4s' && /opacity/.test(c.prop) && c.transicoes.length === 6 && c.transicoes.every((t) => t.some((a) => a.ms === 400 && a.estado === 'running')) && fade.fim.every((v) => v <= 0.02) && fade.revOn === 0, JSON.stringify({ n: ops.length, contrato: c && { sai: c.sai, dur: c.dur, prop: c.prop, transicoes: c.transicoes.map((t) => t.map((a) => `${a.ms}/${a.estado}`)) }, fim: fade.fim.map((v) => v.toFixed(2)), revOn: fade.revOn }));
+    await esperarFase(pagina, 'girando', 2000);
+    await espera(120);
+    const girando = await ler(pagina);
+    verificar('C · fase girando: os 6 rolos com a tira girando rápido (msqSpin .35 s, a correr) e nenhuma revelação', girando.fase === 'girando' && girando.travados === 0 && todosRolos(girando).every((x) => x.estado === 'girando' && x.spin?.nome === 'msqSpin' && x.spin?.play === 'running' && parseFloat(x.spin?.dur) <= 0.5 && !x.rev?.on), JSON.stringify(todosRolos(girando).map((x) => [x.estado, x.spin?.nome, x.spin?.dur, x.spin?.play])));
+    await capturar(pagina, 'girando');
+    await pagina.waitForFunction(() => document.querySelector('.msq')?.dataset.travadas === '3', null, { timeout: 8000 }).catch(() => {});
+    await espera(60);
+    const meio = await ler(pagina);
+    const travadosMeio = todosRolos(meio).filter((x) => x.estado === 'travado');
+    verificar('C · a meio: 3 travados (2 de um time, 1 do outro), os outros a girar ou a desacelerar (.slow a ~1 s)', meio.travadas === 3 && travadosMeio.length === 3 && new Set(travadosMeio.map((x) => x.time)).size === 2 && todosRolos(meio).filter((x) => x.estado === 'desacelerando').every((x) => x.classes.includes('slow') && parseFloat(x.spin?.dur) >= 0.9), JSON.stringify(todosRolos(meio).map((x) => [x.time + x.vaga, x.estado, x.spin?.dur])));
+    await capturar(pagina, 'travando-3');
+
+    // E · os 6 arquivos e o silêncio
+    const arquivos = await pagina.evaluate(async (ids) => Promise.all(ids.map(async (id) => {
+      const r = await fetch(`/onboarding/${id}.webp`, { cache: 'no-store' });
+      const b = await r.blob();
+      return { id, status: r.status, tipo: b.type, bytes: b.size };
+    })), IDS);
+    verificar('E · os 6 bustos em /onboarding/: 200, image/webp, ≤ 6 KB cada', arquivos.every((a) => a.status === 200 && a.tipo === 'image/webp' && a.bytes > 0 && a.bytes <= 6144), JSON.stringify(arquivos.map((a) => `${a.id} ${a.bytes} B`)));
+    const som = await pagina.evaluate(() => window.__som);
+    verificar('E · sem som: nenhum Audio/AudioContext criado; sem vídeo/áudio/canvas na máquina', som.audio === 0 && som.contexto === 0 && cheio.media === 0, JSON.stringify(som));
+
+    // B · 2ª página (Começar): sem a barra também
+    await pagina.locator('[data-cta="comecar"]').click();
+    await pagina.locator('[data-cta="comecar"]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
+    await espera(400);
+    const p2 = await ler(pagina);
+    verificar('B · 2ª página (depois de Começar): a máquina saiu, a página mudou e continua sem barra de navegação', !p2.rolos && !/BEM-VINDO AO FUTTY/.test(p2.texto) && !p2.nav && /\/onboarding/.test(pagina.url()), JSON.stringify({ rolos: p2.rolos, nav: p2.nav, url: pagina.url().replace(BASE, ''), texto: p2.texto.replace(/\s+/g, ' ').slice(0, 80) }));
+    await capturar(pagina, 'pagina-2-sem-barra');
+    await contexto.close();
+  }
+
+  // 2) tela estreita (320 px): a legenda em DUAS linhas parecidas, nenhuma palavra sozinha; o botão continua ≤ 290
+  {
+    const { contexto, pagina } = await abrir('onboarding-estreito', { viewport: { width: 320, height: 568 } });
+    await espera(250);
+    const r = await ler(pagina);
+    const L = r.legenda;
+    const comp = L ? L.linhas.map((l) => l.length) : [];
+    verificar('A · a 320 px: legenda em 2 linhas parecidas (a mais curta ≥ 60 % da mais longa), só quebrando depois de um "·", nenhuma palavra sozinha', L && L.linhas.length === 2 && L.linhas.every((l) => l.split(' ').length >= 2) && Math.min(...comp) / Math.max(...comp) >= 0.6 && L.linhas.join(' ') === LEGENDA && L.linhas[0].endsWith('·'), JSON.stringify(L && L.linhas));
+    verificar('A · a 320 px: o botão cabe (≤ 290, 50 px) e sem barra', r.botao && r.botao.largura <= 290 && r.botao.altura === 50 && !r.nav, JSON.stringify(r.botao && { largura: r.botao.largura, altura: r.botao.altura }));
+    await capturar(pagina, 'estreito-320');
+    await contexto.close();
+  }
+
+  // 3) prefers-reduced-motion: os 6 travados (a ordem natural), nada gira nem pisca, e 3,5 s depois tudo igual (sem ciclo)
+  {
+    const { contexto, pagina } = await abrir('onboarding-reduzido', { extra: { reducedMotion: 'reduce' } });
+    await espera(500);
+    const r = await ler(pagina);
+    await espera(3500);
+    const depois = await ler(pagina);
+    const rolos = todosRolos(r);
+    verificar('F · reduced-motion: os 6 rolos travados na ordem natural (A: bruninho, léo, rafa · B: tiagão, pedrão, dudu), ciclo 0, fase cheia', r.fase === 'cheio' && r.ciclo === 0 && r.travados === 6 && JSON.stringify(r.grupos.map((g) => g.rolos.map((x) => x.rev?.id))) === JSON.stringify([['bruninho', 'leo', 'rafa'], ['tiagao', 'pedrao', 'dudu']]), JSON.stringify({ fase: r.fase, ciclo: r.ciclo, ids: r.grupos.map((g) => g.rolos.map((x) => x.rev?.id)) }));
+    verificar('F · reduced-motion: nada se mexe — tiras sem giro, revelações sem pop, micro-lâmpadas paradas a 0,5, lâmpadas a 0,7, sem pulso', rolos.every((x) => x.spin?.nome === 'none' && x.rev?.anim === 'none' && x.rev?.mb?.anim === 'none' && Number(x.rev?.mb?.opacidade) === 0.5) && r.luzAnim === 'none' && r.luzOpacidades.length === 1 && Number(r.luzOpacidades[0]) === 0.7 && !r.premio, JSON.stringify({ spin: [...new Set(rolos.map((x) => x.spin?.nome))], rev: [...new Set(rolos.map((x) => x.rev?.anim))], mb: [...new Set(rolos.map((x) => `${x.rev?.mb?.anim}/${x.rev?.mb?.opacidade}`))], luz: [r.luzAnim, r.luzOpacidades] }));
+    verificar('F · reduced-motion: 3,5 s depois continua igual (sem ciclo)', depois.fase === 'cheio' && depois.ciclo === 0 && depois.travados === 6, JSON.stringify({ fase: depois.fase, ciclo: depois.ciclo, travados: depois.travados }));
+    await capturar(pagina, 'reduzido');
+    await contexto.close();
+  }
+
+  verificar('sem erro de JS nas páginas', erros.length === 0, erros.join(' | '));
+  return { verificacoes, capturas, erros, pasta };
 }
 
 // ─── Cena "rodada29e" (1-out): a 1ª página do onboarding — o ícone do app a 110 px flutuando, os textos da landing, e o mini ──

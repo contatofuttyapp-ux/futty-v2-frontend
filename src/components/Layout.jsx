@@ -54,6 +54,7 @@ const HIDE_NAV_PATTERNS = [
   /^\/register/,
   /^\/forgot-password/,
   /^\/convite\//,
+  /^\/onboarding/, // Rodada 29E2 (item 33 da RODADA-29): a pessoa ainda não entrou — sem barra nas 3 páginas
   /^\/p\//, // vista pública do sorteio (fullscreen)
   /^\/criar-equipa/,
   /^\/equipa\/[^/]+\/jogo\//, // jogo/:id e jogo/novo

@@ -235,8 +235,18 @@ export default function Onboarding() {
               O seu time. <b style={{ color: '#f0c94a' }}>A sua figurinha.</b>
             </div>
             <MiniSorteio />
-            <div style={{ width: '100%', maxWidth: 290, marginTop: 26 }}>
-              <Cta cheio onClick={() => setPasso(2)}>Começar</Cta>
+            {/* Rodada 29E2 (dono): o CTA dourado da casa (o "Vamos lá" das boas-vindas) — 50 px, máx. 290, 24 px de respiro
+                acima e abaixo. O glow vive no wrapper porque o clip dos cantos cortaria o drop-shadow (ver .cta-gold no app.css). */}
+            <div className="cta-gold-glow" style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '24px 0' }}>
+              <button
+                type="button"
+                className="btn cta-gold"
+                data-cta="comecar"
+                onClick={() => setPasso(2)}
+                style={{ width: '100%', maxWidth: 290, height: 50, fontFamily: RAJ, fontSize: 16, letterSpacing: '0.08em', textTransform: 'uppercase' }}
+              >
+                Começar
+              </button>
             </div>
           </>
         )}

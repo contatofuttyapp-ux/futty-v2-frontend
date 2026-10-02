@@ -1,14 +1,15 @@
-// Futty v2.0 — Rodada 29E: o mini sorteio ao vivo do passo 1 do Onboarding — a máquina pequena na receita da máquina do
-// sorteio (styles/sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) com a janela do sorteio REAL: dois grupos,
-// TIME A (ouro) e TIME B (roxo), 3 vagas cada, nas molduras de lá (.slot tracejado → .mmold com a figurinha, mPop ao
-// entrar, micro-lâmpadas .mb, nome em Rajdhani). Seis figurinhas FICTÍCIAS (utils/miniSorteio.js) entram uma a uma
-// alternando A/B, seguram com as micro-lâmpadas piscando, esvaziam e recomeçam noutra ordem — ciclo de ~7 s, sem som (não
-// há gesto), só CSS + um relógio de setTimeout. prefers-reduced-motion: os 6 já no lugar, parados. Estado natural (antes do
-// JS correr): os 6 no lugar.
+// Futty v2.0 — Rodada 29E2: o mini sorteio ao vivo do passo 1 do Onboarding — a máquina pequena na receita da máquina do
+// sorteio (styles/sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) e, dentro, dois grupos, TIME A (ouro) e
+// TIME B (roxo), com 3 ROLOS de slot machine cada (.rolo/.strip/.scel de lá, a 56×75). Os 6 rolos giram rápido com as 6
+// figurinhas FICTÍCIAS (utils/miniSorteio.js); a partir de 0,8 s um por vez desacelera (.slow, 1 s) e trava (.stop) na figurinha
+// sorteada, que entra por cima na moldura do sorteio real (.rev com revPop, micro-lâmpadas .mb piscando, nome), alternando
+// A/B a cada 0,5 s; quando o 6º trava, as réguas dão UM pulso (premio, 0,8 s) e os times seguram 2,5 s; fade 0,4 s; os rolos
+// voltam a girar e recomeça com outra ordem — ciclo de ~7,8 s, sem som (não há gesto), só CSS + um relógio de setTimeout.
+// prefers-reduced-motion: os 6 travados, sem giro. Estado natural (antes do JS correr): os 6 travados.
 import { useEffect, useState } from 'react';
 import { urlAsset } from '../utils/avatar';
 import { reguaDeLuzes } from '../utils/luzesSlot';
-import { FIGURINHAS, TIMES, VAGAS_POR_TIME, agendaDoCiclo, ordemDoCiclo } from '../utils/miniSorteio';
+import { FIGURINHAS, TIMES, VAGAS_POR_TIME, agendaDoCiclo, ordemDoCiclo, tiraDoRolo } from '../utils/miniSorteio';
 import '../styles/mini-sorteio.css';
 
 // As quatro réguas partilham um contador só, como na máquina do sorteio (a de baixo continua a de cima).
@@ -21,15 +22,19 @@ const REGUAS = (() => {
 const MBPOS = [[20, 2], [80, 2], [2, 40], [97, 40], [2, 72], [97, 72]];
 const POR_ID = Object.fromEntries(FIGURINHAS.map((f) => [f.id, f]));
 const AGENDA = agendaDoCiclo();
+const N = FIGURINHAS.length;
+// A tira de cada rolo nasce uma vez: as 6 figurinhas na ordem própria do rolo, duas vezes (o spinY vai a −50 % e fecha sem emenda).
+const TIRAS = TIMES.flatMap((_, ti) => Array.from({ length: VAGAS_POR_TIME }, (_, vaga) => tiraDoRolo(ti * VAGAS_POR_TIME + vaga)));
 
 function movimentoReduzido() {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-// O relógio: vazio → entradas (1..6) → cheio (micro-lâmpadas) → saindo (fade) → vazio → próximo ciclo, noutra ordem.
-// O estado inicial é o natural: os 6 no lugar (ciclo 0, cheio) — é o que fica com movimento reduzido.
+// O relógio: girando → (0,8 s) um rolo por vez desacelera e, 1 s depois, trava → cheio (pulso de 0,8 s nas réguas; seguram) →
+// saindo (fade) → girando de novo → próximo ciclo, noutra ordem. `desacelerando` e `travadas` contam rolos na ordem do ciclo.
+// O estado inicial é o natural: os 6 travados (ciclo 0, cheio) — é o que fica com movimento reduzido.
 function useCiclo() {
-  const [estado, setEstado] = useState({ ciclo: 0, fase: 'cheio', colocadas: FIGURINHAS.length });
+  const [estado, setEstado] = useState({ ciclo: 0, fase: 'cheio', desacelerando: N, travadas: N, pulso: false });
   useEffect(() => {
     if (movimentoReduzido()) return undefined;
     let ciclo = 0;
@@ -37,11 +42,12 @@ function useCiclo() {
     const em = (ms, fn) => { timers.push(setTimeout(fn, ms)); };
     const rodar = () => {
       timers = [];
-      setEstado({ ciclo, fase: 'vazio', colocadas: 0 });
-      AGENDA.entradas.forEach((t, k) => em(t, () => setEstado({ ciclo, fase: 'entrando', colocadas: k + 1 })));
-      em(AGENDA.cheioEm, () => setEstado({ ciclo, fase: 'cheio', colocadas: FIGURINHAS.length }));
-      em(AGENDA.saindoEm, () => setEstado({ ciclo, fase: 'saindo', colocadas: FIGURINHAS.length }));
-      em(AGENDA.vazioEm, () => setEstado({ ciclo, fase: 'vazio', colocadas: 0 }));
+      setEstado({ ciclo, fase: 'girando', desacelerando: 0, travadas: 0, pulso: false });
+      AGENDA.desaceleram.forEach((t, k) => em(t, () => setEstado((e) => ({ ...e, fase: 'travando', desacelerando: k + 1 }))));
+      AGENDA.travam.forEach((t, k) => em(t, () => setEstado((e) => ({ ...e, fase: k + 1 === N ? 'cheio' : 'travando', travadas: k + 1, pulso: k + 1 === N }))));
+      em(AGENDA.pulsoFimEm, () => setEstado((e) => ({ ...e, pulso: false })));
+      em(AGENDA.saindoEm, () => setEstado((e) => ({ ...e, fase: 'saindo' })));
+      em(AGENDA.girandoEm, () => setEstado({ ciclo, fase: 'girando', desacelerando: 0, travadas: 0, pulso: false }));
       em(AGENDA.fimEm, () => { ciclo += 1; rodar(); });
     };
     rodar();
@@ -54,28 +60,35 @@ function Lampada({ luz }) {
   return <i className="luz" style={{ '--i': luz.i }} />;
 }
 
-function Moldura({ figurinha, saindo }) {
+// Um rolo: a tira girando por baixo e, por cima, a figurinha sorteada na moldura do sorteio real (só aparece quando trava).
+function Rolo({ vaga, tira, figurinha, estadoRolo, saindo }) {
+  const travado = estadoRolo === 'travado';
   return (
-    <div className={`mmold${saindo ? ' sai' : ''}`} data-figurinha={figurinha.id}>
-      <div className="fr"><img src={urlAsset(figurinha.arquivo)} alt="" width="56" height="75" decoding="async" /></div>
-      {MBPOS.map(([x, y], i) => <span key={i} className="mb" style={{ '--i': i, left: `${x}%`, top: `${y}%` }} />)}
-      <span className="nm">{figurinha.nome}</span>
+    <div className={`rolo${estadoRolo === 'desacelerando' ? ' slow' : ''}${travado ? ' stop' : ''}${saindo ? ' sai' : ''}`} data-vaga={vaga} data-estado={estadoRolo}>
+      <div className="strip">
+        {[...tira, ...tira].map((id, i) => (
+          <div key={i} className="scel"><img src={urlAsset(POR_ID[id].arquivo)} alt="" width="56" height="75" decoding="async" /></div>
+        ))}
+      </div>
+      <div className={`rev${travado ? ' on' : ''}`} data-figurinha={figurinha.id}>
+        <div className="fr"><img src={urlAsset(figurinha.arquivo)} alt="" width="56" height="75" decoding="async" /></div>
+        {MBPOS.map(([x, y], i) => <span key={i} className="mb" style={{ '--i': i, left: `${x}%`, top: `${y}%` }} />)}
+        <span className="nm">{figurinha.nome}</span>
+      </div>
     </div>
   );
 }
 
-function Grupo({ time, entradas, fase }) {
+function Grupo({ time, ti, ordem, estado }) {
+  const { fase, desacelerando, travadas } = estado;
   return (
-    <div className={`grupo ${time.id === 'A' ? 'ouro' : 'roxo'}${fase === 'cheio' ? ' cheio' : ''}`} style={{ '--tc': time.cor, '--tg': time.brilho }} data-time={time.id}>
+    <div className={`grupo ${time.id === 'A' ? 'ouro' : 'roxo'}`} style={{ '--tc': time.cor, '--tg': time.brilho }} data-time={time.id}>
       <div className="ghead">{time.nome}</div>
       <div className="srow">
         {Array.from({ length: VAGAS_POR_TIME }, (_, vaga) => {
-          const e = entradas.find((x) => x.vaga === vaga);
-          return (
-            <div key={vaga} className={`slot${e ? ' cheio' : ''}`} data-vaga={vaga}>
-              {e ? <Moldura figurinha={POR_ID[e.id]} saindo={fase === 'saindo'} /> : null}
-            </div>
-          );
+          const e = ordem.find((x) => x.time === time.id && x.vaga === vaga);
+          const estadoRolo = e.ordem < travadas ? 'travado' : e.ordem < desacelerando ? 'desacelerando' : 'girando';
+          return <Rolo key={vaga} vaga={vaga} tira={TIRAS[ti * VAGAS_POR_TIME + vaga]} figurinha={POR_ID[e.id]} estadoRolo={estadoRolo} saindo={fase === 'saindo'} />;
         })}
       </div>
     </div>
@@ -83,22 +96,24 @@ function Grupo({ time, entradas, fase }) {
 }
 
 export default function MiniSorteio() {
-  const { ciclo, fase, colocadas } = useCiclo();
-  const ordem = ordemDoCiclo(ciclo).filter((e) => e.ordem < colocadas);
+  const estado = useCiclo();
+  const ordem = ordemDoCiclo(estado.ciclo);
   return (
-    <div className="msq" data-fase={fase} data-ciclo={ciclo}>
-      <div className="maq" aria-hidden="true">
+    <div className="msq" data-fase={estado.fase} data-ciclo={estado.ciclo} data-travadas={estado.travadas}>
+      <div className={`maq${estado.pulso ? ' premio' : ''}`} aria-hidden="true">
         <div className="luzes">{REGUAS.cima.map((l) => <Lampada key={l.i} luz={l} />)}</div>
         <div className="luzes roxa">{REGUAS.cimaRoxa.map((l) => <Lampada key={l.i} luz={l} />)}</div>
         <div className="janela">
-          {TIMES.map((time) => <Grupo key={time.id} time={time} entradas={ordem.filter((e) => e.time === time.id)} fase={fase} />)}
+          {TIMES.map((time, ti) => <Grupo key={time.id} time={time} ti={ti} ordem={ordem} estado={estado} />)}
         </div>
         <div className="baseluz">
           <div className="fila">{REGUAS.base.map((l) => <Lampada key={l.i} luz={l} />)}</div>
           <div className="fila roxa">{REGUAS.baseRoxa.map((l) => <Lampada key={l.i} luz={l} />)}</div>
         </div>
       </div>
-      <p className="msq-legenda">Sorteio justo, ranking e figurinha de colecionador.</p>
+      {/* Legenda (dono, 2-out): o estilo do subtítulo. Os espaços dentro de cada frase são duros — em tela estreita a linha só
+          quebra depois de um "·", em duas linhas parecidas, nunca uma palavra sozinha. */}
+      <p className="msq-legenda">SORTEIO&nbsp;JUSTO&nbsp;· RANKING&nbsp;· FIGURINHA&nbsp;DE&nbsp;COLECIONADOR</p>
     </div>
   );
 }
