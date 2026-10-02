@@ -244,9 +244,8 @@ const PREMIUM_GLINTS = [
   [0.14, 0.82, 3.2], [0.85, 0.85, 4.2], [0.50, 0.91, 3.2], [0.31, 0.19, 2.4], [0.70, 0.21, 3.2],
 ];
 const PREMIUM_GLINTS_DISCRETO = [PREMIUM_GLINTS[2], PREMIUM_GLINTS[7], PREMIUM_GLINTS[10]];
-// 29H-B (item 57, prancha scripts/prancha-golden.mjs): "brilho só nas bordas" — os 12 glints a até 16% da borda; o miolo fica calmo.
-// Não é usado pelo app até o dono escolher uma variante do Golden.
-const PREMIUM_GLINTS_BORDAS = PREMIUM_GLINTS.filter(([x, y]) => x <= 0.16 || x >= 0.84 || y <= 0.12 || y >= 0.86);
+// 29H-B (decisão do dono, 2-out, noite): o GOLDEN FICA O ATUAL, com as estrelas e os brilhos. As variantes A/B da prancha
+// (ouro fosco / ouro escuro, brilho só nas bordas) foram descartadas e saíram do app; o PNG em FUT/DESIGN fica só como registro.
 
 // Paletas dos fundos premium: chapa (asset em /public), base de fallback (caso a
 // chapa falhe a carregar — nunca fica buraco) e as 3 cores do glint (centro/halo/cauda).
@@ -309,7 +308,7 @@ export async function desenharFundoPremium(ctx, W, H, cor, { glints = 'pico', cr
   cron?.marca('fundo:desenhar');
   // b) poeira de cristal.
   if (glints) {
-    const pontos = glints === 'discreto' ? PREMIUM_GLINTS_DISCRETO : glints === 'bordas' ? PREMIUM_GLINTS_BORDAS : PREMIUM_GLINTS;
+    const pontos = glints === 'discreto' ? PREMIUM_GLINTS_DISCRETO : PREMIUM_GLINTS;
     const boost = glints === 'vitrine' ? 1.7 : 1;
     for (const [xf, yf, r] of pontos) desenharGlintPico(ctx, xf * W, yf * H, r * k * boost, k, pal);
     cron?.marca('glints');
@@ -1043,11 +1042,17 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     cron?.marca('fundo:desenhar');
   } else if (fundo === 'golden' || fundo === 'royal') {
     // GOLDEN/ROYAL premium — chapa foil + poeira de cristal (atrás do avatar), MESMO
-    // pipeline (desenharFundoPremium). No PREVIEW (apenasMoldura) a chapa entra SEM
-    // glints baked → a "mina" vive no overlay animado (z3); no card completo
+    // pipeline (desenharFundoPremium). No PREVIEW (apenasMoldura) do GOLDEN a chapa
+    // entra SEM glints baked → a "mina" vive no overlay animado (z3); no card completo
     // (download) os glints saem NO PICO (frame mais rico).
+    // ROYAL (decisão do dono, 2-out, noite): o app renderiza EXATAMENTE como a prancha
+    // golden-variantes.png — chapa roxa + os 14 brilhos no pico, também na prévia. O
+    // overlay vivo nunca existiu para o Royal, e a prévia entrava com a chapa nua (0 de
+    // 14 brilhos, medido em scripts/prova-royal.mjs): a poeira passa a ser desenhada na
+    // própria camada de fundo, atrás do jogador, como no download.
     const desenhar = fundo === 'golden' ? desenharFundoGolden : desenharFundoRoyal;
-    await desenhar(ctx, W, H, { glints: apenasMoldura ? false : fundoGlints, cron });
+    const glintsDaCamada = apenasMoldura ? (fundo === 'royal' ? 'pico' : false) : fundoGlints;
+    await desenhar(ctx, W, H, { glints: glintsDaCamada, cron });
   } else {
     await desenharFundoEstadio(ctx, W, H, { ehQuadrado, cron });
   }

@@ -14,9 +14,14 @@
 //   tique    — o rolo passando um símbolo, em trem enquanto gira (3 variantes)
 //   clac     — o rolo TRAVANDO: um jogador apareceu
 //   jackpot  — os times ficaram prontos: a máquina acabou de dar prêmio
-//   alavanca — RODADA 29H-B (2-out): a slot machine MANUAL — a alavanca puxada e a
-//              catraca engatando no instante em que o giro começa (≤ 0,8 s). Os três
-//              de cima não mudaram um bit (o gerador confere por MD5).
+//   mecânica — RODADA 29H-B (2-out, decisão final do dono): a MECÂNICA da máquina,
+//              uma camada discreta de cliques metálicos (~11/s) que toca ENQUANTO os
+//              rolos giram, em loop (3 s), a −10 dB do tique, e some quando o ÚLTIMO
+//              rolo trava — não quando o trem de tiques para (os rolos ainda giram
+//              devagar durante a revelação). Mais o ENGATE: ≤ 0,3 s no instante em
+//              que o giro começa. A 1ª tentativa (a alavanca, puxada + catraca, v1/v2)
+//              foi reprovada pelo sopro agudo e saiu. Os três de cima não mudaram um
+//              bit (o gerador confere por MD5).
 //
 // RODADA 29H-B — POR QUE O SITE SOAVA DIFERENTE DO APP: no site (Safari/WebKit) um
 // <audio> só toca se o seu play() aconteceu DENTRO de um toque da pessoa; o app da
@@ -37,18 +42,20 @@
 // eram música; e agora os três arquivos de banco que estes cinco substituem.
 //
 // API: ligado(get) · escolhido(get) · toggle · ligarPorOmissao · desfazerOmissao
-//   · prepararNoGesto · puxar · girar/girarLento/pararGiro · revelar · fecharTime · silenciar · autoTeste
+//   · prepararNoGesto · girar/girarLento/pararGiro · travar · revelar · fecharTime · silenciar · autoTeste
 // ═══════════════════════════════════════════════════════════════════════════════
 import { urlAsset } from '../utils/avatar';
 
 // Os caminhos passam por urlAsset(): na web é a mesma origem; no app nativo os
 // sons não viajam dentro do pacote, vêm do site e ficam em cache.
 const TIQUES = ['/sons/tique-1.mp3', '/sons/tique-2.mp3', '/sons/tique-3.mp3'];
-const CAMINHOS = { clac: '/sons/clac.mp3', jackpot: '/sons/jackpot.mp3', alavanca: '/sons/alavanca.mp3' };
-// Volumes da lei (Rodada 14A; a alavanca na 29H-B). Vivem AQUI, não em quem chama.
-const VOL = { tique: 0.5, clac: 0.7, jackpot: 1.0, alavanca: 0.65 };
+const CAMINHOS = { clac: '/sons/clac.mp3', jackpot: '/sons/jackpot.mp3', mecanica: '/sons/mecanica.mp3', engate: '/sons/engate.mp3' };
+// Volumes da lei (Rodada 14A; mecânica e engate na 29H-B). Vivem AQUI, não em quem chama.
+// A mecânica toca a −10 dB do tique (dono, 29H-B): 0,5 × 10^(−10/20) = 0,158 — os dois arquivos saem do gerador normalizados ao
+// mesmo pico (−1 dBFS), então a diferença de volume é exatamente a dos elementos.
+const VOL = { tique: 0.5, clac: 0.7, jackpot: 1.0, mecanica: 0.158, engate: 0.6 };
 // As rodas de todos os efeitos, para o prepararNoGesto abrir de uma vez.
-const RODAS = [['tique', TIQUES, 3], ['clac', [CAMINHOS.clac], 3], ['jackpot', [CAMINHOS.jackpot], 1], ['alavanca', [CAMINHOS.alavanca], 1]];
+const RODAS = [['tique', TIQUES, 3], ['clac', [CAMINHOS.clac], 3], ['jackpot', [CAMINHOS.jackpot], 1], ['mecanica', [CAMINHOS.mecanica], 1], ['engate', [CAMINHOS.engate], 1]];
 // Espaçamento do trem de tiques. O rolo leva 0,34-0,50 s por volta de 6 símbolos
 // (o --sd do CSS), ou seja ~60-80 ms por símbolo: 70 ms solto e 115 ms depois de
 // desacelerar é o que soa como a mesma máquina perdendo força.
@@ -80,6 +87,8 @@ function roda(chave, fontes, tamanho) {
   for (let i = 0; i < tamanho; i += 1) {
     const a = new Audio(urlAsset(fontes[i % fontes.length]));
     a.preload = 'auto';
+    // A mecânica é um trecho de 3 s em loop: o próprio elemento repete (a emenda cai entre dois cliques, por baixo do trem de tiques).
+    if (chave === 'mecanica') a.loop = true;
     a.addEventListener('error', () => { falhou[chave] = true; });
     els.push(a);
   }
@@ -113,6 +122,27 @@ function trem(passo) {
 }
 function pararTrem() {
   if (temporizador) { clearInterval(temporizador); temporizador = null; }
+}
+
+// ── a mecânica (29H-B): entra com o giro, some quando o último rolo trava ─────
+let apagando = null; // o fade de saída (4 degraus em 80 ms: cortar um clique ao meio estalaria)
+function mecanicaLigar() {
+  if (apagando) { clearInterval(apagando); apagando = null; }
+  tocar('mecanica', [CAMINHOS.mecanica], 1, VOL.mecanica);
+}
+function mecanicaDesligar() {
+  const a = rodas.mecanica?.[0];
+  if (!a || a.paused) return;
+  if (apagando) clearInterval(apagando);
+  let degrau = 4;
+  apagando = setInterval(() => {
+    degrau -= 1;
+    try { a.volume = VOL.mecanica * (degrau / 4); } catch { /* ignore */ }
+    if (degrau <= 0) {
+      clearInterval(apagando); apagando = null;
+      try { a.pause(); a.currentTime = 0; } catch { /* ignore */ }
+    }
+  }, 20);
 }
 
 const SomSorteio = {
@@ -153,9 +183,14 @@ const SomSorteio = {
     this.silenciar();
     return false;
   },
-  // O TIQUE: entra com o rolo a girar e só pára quando ele pára.
+  /**
+   * O GIRO COMEÇA (29H-B): o ENGATE (≤ 0,3 s, o mecanismo pegando) e a MECÂNICA (em loop, por baixo) nascem no mesmo instante do
+   * 1º tique; o trem de tiques corre até `pararGiro`, a mecânica até `travar`.
+   */
   girar() {
     if (!ligado) return;
+    tocar('engate', [CAMINHOS.engate], 1, VOL.engate);
+    mecanicaLigar();
     tocar('tique', TIQUES, 3, VOL.tique);
     trem(PASSO_RAPIDO);
   },
@@ -164,13 +199,14 @@ const SomSorteio = {
     if (!ligado || !temporizador) return;
     trem(PASSO_LENTO);
   },
+  /** Os tiques param (os rolos travam um a um a seguir); a mecânica continua até o último travar. */
   pararGiro() { pararTrem(); },
+  /** O ÚLTIMO rolo travou (29H-B): a mecânica some — em 80 ms, para não cortar um clique ao meio. */
+  travar() { mecanicaDesligar(); },
   /** O CLAC: o rolo travou e um jogador apareceu. */
   revelar() { tocar('clac', [CAMINHOS.clac], 3, VOL.clac); },
   /** O JACKPOT: os times ficaram prontos. Um só por cerimônia. */
   fecharTime() { tocar('jackpot', [CAMINHOS.jackpot], 1, VOL.jackpot); },
-  /** A ALAVANCA (29H-B): puxada e catraca engatando — no instante em que o giro começa. */
-  puxar() { tocar('alavanca', [CAMINHOS.alavanca], 1, VOL.alavanca); },
   /**
    * Destrava o áudio no gesto (29H-B). Chamar SÍNCRONO dentro do toque — "Sortear" no Jogo, a alavanca na cerimônia —, antes de
    * qualquer await. Cria as rodas de todos os efeitos e dá a cada elemento um play() mudo seguido de pause(): no Safari/WebKit do
@@ -201,13 +237,14 @@ const SomSorteio = {
   },
   silenciar() {
     pararTrem();
+    if (apagando) { clearInterval(apagando); apagando = null; }
     Object.values(rodas).forEach((els) => els.forEach((a) => {
       try { a.pause(); a.currentTime = 0; } catch { /* ignore */ }
     }));
   },
-  // AUTO-TESTE: confirma que os ficheiros carregam. Loga "SOM OK 6/6".
+  // AUTO-TESTE: confirma que os arquivos carregam. Loga "SOM OK 7/7".
   async autoTeste() {
-    const fontes = [...TIQUES, CAMINHOS.clac, CAMINHOS.jackpot, CAMINHOS.alavanca];
+    const fontes = [...TIQUES, CAMINHOS.clac, CAMINHOS.jackpot, CAMINHOS.mecanica, CAMINHOS.engate];
     let ok = 0; const falhas = [];
     await Promise.all(fontes.map((src) => new Promise((res) => {
       const a = new Audio(urlAsset(src)); let done = false;

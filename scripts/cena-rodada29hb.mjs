@@ -12,11 +12,14 @@
 //   D · Figurinha: "Trocar foto" abre o mesmo enquadramento único; o botão "Enquadrar" (o editor à parte) não existe mais;
 //   E · aura (item 56): no desenho real do fundo (desenharFundoAura), a aura chega à BORDA do card (dobro do tamanho) e o centro está
 //       menos cheio (−25% de opacidade); no card inteiro a borda lateral é dourada;
-//   F · som (item 61): o 4º efeito existe no site (200, audio/mpeg, ≤ 0,8 s medido pelo WebKit), os 6 arquivos servidos são BYTE A BYTE
-//       os de public/sons (SHA-256), os 5 de sempre têm o MD5 selado de 16A, e o prepararNoGesto abre as rodas de todos os efeitos
-//       (8 <audio>) — inclusive a alavanca — sem ligar o som de ninguém.
+//   F · som (item 61, decisão final do dono de 2-out à noite): o 4º efeito é a MECÂNICA (loop de 3 s, a −10 dB do tique) + o ENGATE
+//       (≤ 0,3 s medido pelo WebKit); os 7 arquivos servidos são BYTE A BYTE os de public/sons (SHA-256), os 5 de sempre têm o MD5
+//       selado de 16A, e o prepararNoGesto abre as rodas de todos os efeitos (9 <audio>) sem ligar o som de ninguém;
+//   G · som na cerimônia REAL (um sorteio fabricado só na resposta do GET do jogo — nada no banco): o engate e a mecânica nascem no
+//       instante do 1º tique de cada vaga, a mecânica fica em loop enquanto os rolos travam um a um e some só depois do ÚLTIMO
+//       travar (pararGiro não a cala), o volume dela é −10 dB do tique.
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
@@ -296,7 +299,7 @@ export async function cenaRodada29hb(navegador, { BASE, PASTA, RAIZ, novoContext
         window.Audio = function (...a) { const el = new A(...a); window.__audios.push(el); return el; };
       },
     });
-    const NOMES = ['tique-1', 'tique-2', 'tique-3', 'clac', 'jackpot', 'alavanca'];
+    const NOMES = ['tique-1', 'tique-2', 'tique-3', 'clac', 'jackpot', 'mecanica', 'engate'];
     const som = await pagina.evaluate(async (nomes) => {
       const m = await import('/src/components/somSorteio.js');
       const S = m.default;
@@ -311,17 +314,98 @@ export async function cenaRodada29hb(navegador, { BASE, PASTA, RAIZ, novoContext
         const dur = await new Promise((res) => { const a = new Audio(`/sons/${nome}.mp3`); a.addEventListener('loadedmetadata', () => res(a.duration), { once: true }); a.addEventListener('error', () => res(-1), { once: true }); setTimeout(() => res(-2), 4000); });
         arquivos[nome] = { status: r.status, tipo: r.headers.get('content-type'), bytes: buf.byteLength, sha, dur: Math.round(dur * 1000) / 1000 };
       }
-      return { antesLigado, antesEscolhido, depoisLigado: S.ligado, depoisEscolhido: S.escolhido, rodas, arquivos, puxar: typeof S.puxar === 'function' };
+      const mecanicaEl = window.__audios.find((a) => /mecanica\.mp3$/.test(new URL(a.src).pathname));
+      return { antesLigado, antesEscolhido, depoisLigado: S.ligado, depoisEscolhido: S.escolhido, rodas, arquivos, travar: typeof S.travar === 'function', puxar: typeof S.puxar === 'function', loop: !!mecanicaEl?.loop };
     }, NOMES);
-    verificar('F · prepararNoGesto abre as rodas de todos os efeitos de uma vez (3 tiques + 3 clacs + jackpot + alavanca = 8 <audio>) e não liga nem grava o som de ninguém', som.rodas.length === 8 && som.rodas.filter((p) => /alavanca\.mp3$/.test(p)).length === 1 && som.rodas.filter((p) => /tique-/.test(p)).length === 3 && som.depoisLigado === som.antesLigado && som.depoisEscolhido === som.antesEscolhido, JSON.stringify(som.rodas));
-    const a = som.arquivos.alavanca;
-    verificar('F · o 4º efeito existe no site: /sons/alavanca.mp3 200, audio/mpeg, ≤ 0,8 s como o próprio WebKit mede, ≤ 40 KB; SomSorteio.puxar existe', a.status === 200 && /mpeg/.test(a.tipo || '') && a.dur > 0.5 && a.dur <= 0.8 && a.bytes <= 40960 && som.puxar, JSON.stringify(a));
-    // os bytes que o site serve são os de public/sons (o que o app nativo embarca): SHA-256 igual nos 6; os 5 de sempre com o MD5 de 16A
+    verificar('F · prepararNoGesto abre as rodas de todos os efeitos de uma vez (3 tiques + 3 clacs + jackpot + mecânica + engate = 9 <audio>) e não liga nem grava o som de ninguém', som.rodas.length === 9 && som.rodas.filter((p) => /mecanica\.mp3$/.test(p)).length === 1 && som.rodas.filter((p) => /engate\.mp3$/.test(p)).length === 1 && som.rodas.filter((p) => /tique-/.test(p)).length === 3 && som.depoisLigado === som.antesLigado && som.depoisEscolhido === som.antesEscolhido, JSON.stringify(som.rodas));
+    const mec = som.arquivos.mecanica, eng = som.arquivos.engate;
+    verificar('F · a mecânica existe no site: /sons/mecanica.mp3 200, audio/mpeg, 3 s em loop (≤ 3,1 s como o WebKit mede; o elemento tem loop), ≤ 40 KB', mec.status === 200 && /mpeg/.test(mec.tipo || '') && mec.dur >= 2.9 && mec.dur <= 3.1 && mec.bytes <= 40960 && som.loop, JSON.stringify(mec));
+    verificar('F · o engate existe no site: /sons/engate.mp3 200, audio/mpeg, ≤ 0,3 s como o próprio WebKit mede; SomSorteio.travar existe e puxar (a alavanca reprovada) não', eng.status === 200 && /mpeg/.test(eng.tipo || '') && eng.dur > 0.1 && eng.dur <= 0.3 && som.travar && !som.puxar, JSON.stringify(eng));
+    // os bytes que o site serve são os de public/sons (o que o app nativo embarca): SHA-256 igual nos 7; os 5 de sempre com o MD5 de 16A
     const disco = Object.fromEntries(NOMES.map((n) => { const b = readFileSync(path.join(RAIZ, 'public', 'sons', `${n}.mp3`)); return [n, { sha: createHash('sha256').update(b).digest('hex'), md5: createHash('md5').update(b).digest('hex'), bytes: b.length }]; }));
     const iguais = NOMES.filter((n) => som.arquivos[n].status === 200 && som.arquivos[n].sha === disco[n].sha);
     const selados = Object.entries(ASSINATURAS).filter(([n, md5]) => disco[n].md5 === md5);
-    verificar('F · o site serve BYTE A BYTE os 6 arquivos de public/sons (os mesmos que o app nativo embarca) — SHA-256 igual', iguais.length === 6, `iguais: ${iguais.join(', ')}`);
+    verificar('F · o site serve BYTE A BYTE os 7 arquivos de public/sons (os mesmos que o app nativo embarca) — SHA-256 igual', iguais.length === 7, `iguais: ${iguais.join(', ')}`);
     verificar('F · os 5 efeitos de sempre (tique ×3, clac, jackpot) têm o MD5 selado de 16A: nada mudou neles', selados.length === 5, JSON.stringify(Object.fromEntries(NOMES.map((n) => [n, disco[n].bytes]))));
+    verificar('F · a alavanca reprovada saiu do site (/sons/alavanca.mp3 não é servido)', existsSync(path.join(RAIZ, 'public', 'sons', 'alavanca.mp3')) === false);
+    await contexto.close();
+  });
+
+  // ───────────────────────────────── G · a mecânica na cerimônia real ─────────────────────────────────
+  await bloco('G', async () => {
+    // Um sorteio FABRICADO só na resposta do GET do jogo (2 times × 4 jogadores, sem foto → silhuetas): a cerimônia corre de verdade,
+    // com o som ligado por omissão (quem sorteou), e cada chamada ao SomSorteio e cada rolo travando ficam carimbados com o relógio
+    // da página. Nenhuma escrita chega ao banco (travarEscritas).
+    const resultado = {
+      seed: 29,
+      times: [
+        { jogadores: ['ANA', 'BETO', 'CACÁ', 'DUDA'].map((nome) => ({ nome, avatar_url: null })) },
+        { jogadores: ['EDU', 'FÁBIO', 'GIL', 'HUGO'].map((nome) => ({ nome, avatar_url: null })) },
+      ],
+      reservas: [],
+    };
+    const carimbos = () => {
+      window.__som = [];
+      const marca = (tipo, extra) => window.__som.push({ t: Math.round(performance.now()), tipo, ...extra });
+      const A = window.Audio;
+      window.Audio = function (...a) {
+        const el = new A(...a);
+        const play = el.play.bind(el), pause = el.pause.bind(el);
+        const nome = () => { try { return new URL(el.src).pathname.split('/').pop(); } catch { return ''; } };
+        el.play = function () { if (!el.muted) marca('play', { src: nome(), volume: el.volume, loop: el.loop }); const p = play(); return p && p.catch ? p.catch(() => {}) : p; };
+        el.pause = function () { if (!el.muted) marca('pause', { src: nome() }); return pause(); };
+        return el;
+      };
+      const mo = new MutationObserver((ms) => {
+        for (const m of ms) {
+          const el = m.target;
+          if (el.classList?.contains('rolo') && el.classList.contains('stop') && !el.__travou) { el.__travou = true; marca('stop', { rolo: [...el.parentNode.children].indexOf(el) }); }
+        }
+      });
+      const ligar = () => { const r = document.querySelector('.smaq'); if (r) mo.observe(r, { attributes: true, attributeFilter: ['class'], subtree: true }); else setTimeout(ligar, 50); };
+      ligar();
+      if (/\/sorteio$/.test(location.pathname)) history.replaceState({ usr: { euSorteei: true }, key: 'r29hb', idx: 0 }, '');
+    };
+    const { contexto, pagina } = await abrir(fx.gratis, 'G-cerimonia', `/equipa/${fx.times.gratis.slug}/jogo/${fx.jogo.id}/sorteio`, {
+      inicial: carimbos,
+      antes: async (ctx) => {
+        await ctx.route(`**/api/games/${fx.jogo.id}`, async (route) => {
+          const r = await route.fetch();
+          const json = await r.json();
+          if (json?.game) { json.game.times_resultado = resultado; json.game.sorteio_realizado = true; }
+          await route.fulfill({ response: r, json });
+        });
+      },
+    });
+    // as chamadas ao módulo do som, carimbadas (o mesmo objeto que a cerimônia usa)
+    await pagina.evaluate(async () => {
+      const S = (await import('/src/components/somSorteio.js')).default;
+      for (const nome of ['girar', 'pararGiro', 'travar', 'fecharTime']) {
+        const original = S[nome].bind(S);
+        S[nome] = (...a) => { window.__som.push({ t: Math.round(performance.now()), tipo: nome }); return original(...a); };
+      }
+    });
+    await pagina.waitForSelector('.smaq .maq', { timeout: 30000 });
+    await pagina.waitForSelector('.smaq .maq.premio', { timeout: 90000 });
+    await espera(300);
+    const ev = await pagina.evaluate(() => window.__som);
+    const dos = (tipo, src) => ev.filter((e) => e.tipo === tipo && (!src || e.src === src));
+    const girar = dos('girar'), travar = dos('travar'), parar = dos('pararGiro'), stops = dos('stop');
+    const playMec = dos('play', 'mecanica.mp3'), pauseMec = dos('pause', 'mecanica.mp3'), playEng = dos('play', 'engate.mp3'), playTique = dos('play').filter((e) => /^tique-/.test(e.src));
+    verificar('G · duas vagas de rolos (2 times): girar ×2, pararGiro ×2, travar ×2, 8 rolos travados, 1 jackpot', girar.length === 2 && parar.length === 2 && travar.length === 2 && stops.length === 8 && dos('fecharTime').length === 1, JSON.stringify({ girar: girar.length, parar: parar.length, travar: travar.length, stops: stops.length }));
+    const vagas = girar.map((g, i) => {
+      const fim = travar[i]?.t ?? Infinity;
+      const stopsDaVaga = stops.filter((s) => s.t >= g.t && s.t <= fim + 50);
+      const ultimoStop = stopsDaVaga.length ? stopsDaVaga[stopsDaVaga.length - 1].t : null;
+      const pMec = playMec.find((p) => Math.abs(p.t - g.t) <= 40), pEng = playEng.find((p) => Math.abs(p.t - g.t) <= 40), pTq = playTique.find((p) => Math.abs(p.t - g.t) <= 40);
+      const pausa = pauseMec.find((p) => p.t >= fim && p.t <= fim + 400);
+      return { girar: g.t, pararGiro: parar[i]?.t, travar: fim, stops: stopsDaVaga.map((s) => s.t - g.t), ultimoStop, mecanicaPlay: pMec?.t, engatePlay: pEng?.t, tiquePlay: pTq?.t, pausaMecanica: pausa?.t, volMec: pMec?.volume, volTique: pTq?.volume, loop: pMec?.loop };
+    });
+    verificar('G · em cada vaga, o engate e a mecânica nascem no MESMO instante do 1º tique (±40 ms)', vagas.every((v) => v.mecanicaPlay != null && v.engatePlay != null && v.tiquePlay != null), JSON.stringify(vagas.map((v) => ({ girar: v.girar, mec: v.mecanicaPlay, eng: v.engatePlay, tique: v.tiquePlay }))));
+    verificar('G · a mecânica some só quando o ÚLTIMO rolo trava: travar() vem no instante do 4º stop (±60 ms), DEPOIS de pararGiro (≥ 300 ms: os rolos ainda travam um a um)', vagas.every((v) => v.ultimoStop != null && Math.abs(v.travar - v.ultimoStop) <= 60 && v.travar - v.pararGiro >= 300 && v.stops.length === 4), JSON.stringify(vagas.map((v) => ({ pararGiro: v.pararGiro - v.girar, stops: v.stops, travar: v.travar - v.girar }))));
+    verificar('G · o elemento da mecânica é pausado até 400 ms depois de travar (fade de 80 ms) e toca em loop', vagas.every((v) => v.pausaMecanica != null && v.loop === true), JSON.stringify(vagas.map((v) => ({ travar: v.travar, pausa: v.pausaMecanica, loop: v.loop }))));
+    verificar('G · o volume da mecânica é −10 dB do tique (0,158 contra 0,5)', vagas.every((v) => v.volMec != null && v.volTique != null && Math.abs(20 * Math.log10(v.volMec / v.volTique) + 10) <= 0.3), JSON.stringify(vagas.map((v) => ({ mec: v.volMec, tique: v.volTique }))));
+    await capturar(pagina, 'G1-cerimonia-premio');
     await contexto.close();
   });
 

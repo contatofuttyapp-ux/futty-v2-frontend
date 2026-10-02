@@ -24,14 +24,24 @@
 //     consome exatamente as mesmas 46 tiragens de antes, então o clac sai
 //     bit a bit igual ao da 14A.
 //
-// RODADA 29H-B (2-out-2026, decisão do dono às 17h): os três efeitos estão
-// perfeitos e NÃO mudam — a lei de 16-set fica (sem música, sem v2). Entra só um
-// 4º efeito, a ALAVANCA: a slot machine MANUAL sendo puxada e a catraca mecânica
-// engatando no instante em que o giro começa, ≤ 0,8 s. Nasce DEPOIS dos cinco de
-// sempre na mesma semente, então eles continuam bit a bit iguais — e este script
-// CONFERE isso (ASSINATURAS, abaixo): se um dos cinco mudar de MD5, a geração
-// falha. Duas variantes para o dono ouvir (scripts/capturas/rodada-29h/); a 1ª é
-// a que o app toca (public/sons/alavanca.mp3).
+// RODADA 29H-B (2-out-2026): os três efeitos estão perfeitos e NÃO mudam — a lei
+// de 16-set fica (sem música, sem v2). Entra só um 4º efeito. A 1ª tentativa (a
+// ALAVANCA: puxada + catraca + engate, 720 ms, v1/v2) foi REPROVADA pelo dono
+// pelo "sopro agudo" (o whoosh do braço descendo). Decisão final (2-out, noite):
+// a MECÂNICA DA MÁQUINA — uma camada discreta que toca ENQUANTO os rolos giram e
+// some quando o último trava, em loop, a −10 dB do tique, mais um ENGATE curto
+// (≤ 0,3 s) no instante em que o giro começa. Timbre medido numa referência do
+// dono (não se usa o arquivo, é licenciado; sintetiza-se): cliques metálicos
+// curtos e secos a ~11 por segundo (intervalo ~90 ms, ±10 ms para não soar
+// robótico), energia principal entre 1 e 8 kHz (agulha/engrenagem), um "tum"
+// leve por baixo entre 150 e 400 Hz a cada clique; SEM whoosh, SEM sopro, SEM
+// ruído contínuo de ar. Três variantes para o dono ouvir, em
+// scripts/capturas/rodada-29h/ (v1 só cliques; v2 cliques + tum; v3 a v2 a
+// ~13/s), cada uma um trecho de 3 s em loop; a v2 é a que o app toca
+// (public/sons/mecanica.mp3). Os cinco de sempre nascem ANTES, na mesma semente,
+// e este script CONFERE por MD5 que continuam bit a bit iguais (ASSINATURAS).
+// Cada mecânica é MEDIDA no MP3 pronto (cadência, bandas, silêncio entre
+// cliques) e a geração FALHA se sair da régua do dono.
 // ═══════════════════════════════════════════════════════════════════════════════
 import { writeFileSync, statSync, mkdirSync, unlinkSync, readFileSync, copyFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -40,15 +50,15 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ffmpeg from 'ffmpeg-static';
-import { lerMp3, serieDeTom, desenharGrafico } from './prova-tom.mjs';
+import { lerMp3, serieDeTom, desenharGrafico, fft } from './prova-tom.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '..');
 const DESTINO = path.join(RAIZ, 'public', 'sons');
 const CAPTURAS = path.join(AQUI, 'capturas');
-const CAPTURAS_29H = path.join(CAPTURAS, 'rodada-29h'); // as 2 variantes da alavanca, para o dono ouvir
+const CAPTURAS_29H = path.join(CAPTURAS, 'rodada-29h'); // as 3 variantes da mecânica, para o dono ouvir
 
-// Os cinco de sempre, selados (16A). A alavanca nasce depois deles na mesma semente; se algum destes mudar, a geração FALHA.
+// Os cinco de sempre, selados (16A). A mecânica e o engate nascem depois deles; se algum destes mudar, a geração FALHA.
 const ASSINATURAS = {
   'tique-1': 'b17ecfcd958ecd2dff4b54fd77d1847d',
   'tique-2': '655a349ac7633f5150e50face398368e',
@@ -56,7 +66,8 @@ const ASSINATURAS = {
   clac: 'b06c5105d9d17b9355c436f3aff5ce41',
   jackpot: '7c4e3e14b78151f521df24e375bf74bf',
 };
-const ALAVANCA_MAX_SEG = 0.8; // lei do dono (29H-B): a alavanca inteira, puxada + catraca, em até 0,8 s
+const ENGATE_MAX_SEG = 0.3;  // lei do dono (29H-B, 2ª decisão): o engate em até 0,3 s — como o aparelho o mede
+const MECANICA_SEG = 3.0;    // o trecho em loop
 
 const TAXA = 44100;      // Hz
 // Lei do app leve: 96 kbps. Os degraus abaixo existem só para o jackpot: a 96
@@ -331,103 +342,105 @@ function gerarJackpot(rnd) {
   return buf;
 }
 
+// ── o 4º efeito (29H-B, 2ª decisão): a MECÂNICA da máquina e o ENGATE ────────
+
 /**
- * Passa-banda cujo CENTRO varre de fDe a fAte ao longo do sinal (receita RBJ recalculada a cada amostra, estado contínuo):
- * é o "whoosh" do braço da alavanca descendo — um filtro fixo soaria parado, e filtrar em pedaços estalaria nas emendas.
+ * Um clique metálico curto e SECO (~4 ms de som): 0,8 ms de impulso de ruído passado por TRÊS passa-bandas em paralelo — agulha e
+ * engrenagem, não um tom: 1,7 / 3,4 / 6,2 kHz (cada centro ±6% por clique, cada um com o seu Q), somados e apagados por um decaimento
+ * de 2,2 ms. Toda a energia fica entre 1 e 8 kHz, e acaba antes de o ouvido o ler como "nota". Nada de ruído por baixo: entre um clique
+ * e o seguinte o silêncio é digital — é isso que o separa de um "sopro" (a razão de a alavanca ter sido reprovada).
  */
-function passaBandaVarrendo(entrada, fDe, fAte, q) {
-  const saida = new Float32Array(entrada.length);
-  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-  for (let i = 0; i < entrada.length; i += 1) {
-    const f0 = fDe * (fAte / fDe) ** (i / entrada.length);
-    const w0 = (2 * Math.PI * f0) / TAXA;
-    const alpha = Math.sin(w0) / (2 * q);
-    const a0 = 1 + alpha;
-    const b0 = alpha / a0, b2 = -alpha / a0;
-    const a1 = (-2 * Math.cos(w0)) / a0, a2 = (1 - alpha) / a0;
-    const x0 = entrada[i];
-    const y0 = b0 * x0 + b2 * x2 - a1 * y1 - a2 * y2;
-    saida[i] = y0;
-    x2 = x1; x1 = x0; y2 = y1; y1 = y0;
-  }
-  return saida;
+function cliqueMetal(rnd, { centros = [1700, 3400, 6200], pesos = [1.0, 0.8, 0.55], qs = [2.0, 2.4, 2.8], decai = 0.0022 } = {}) {
+  const DUR = 0.012;
+  const impulso = criar(DUR);
+  const nImp = Math.round(0.0008 * TAXA);
+  for (let i = 0; i < nImp; i += 1) impulso[i] = (rnd() * 2 - 1) * (1 - i / nImp);
+  const b = criar(DUR);
+  centros.forEach((f, k) => {
+    const fil = passaBanda(impulso, f * (0.94 + rnd() * 0.12), qs[k]);
+    for (let i = 0; i < b.length; i += 1) b[i] += fil[i] * pesos[k];
+  });
+  for (let i = 0; i < b.length; i += 1) b[i] *= Math.exp((-i / TAXA) / decai);
+  return b;
 }
 
 /**
- * ALAVANCA (≤ 0,8 s) — a slot machine MANUAL: a alavanca puxada e a catraca engatando no instante em que o giro começa.
- * Rodada 29H-B (2-out). Três gestos, em sequência, todos na faixa de 250 Hz a 1,4 kHz (mais um "ping" de 4 kHz): fora da faixa
- * dos tiques (1,6–3,45 kHz), que começam a correr ao mesmo tempo — a alavanca se ouve por baixo do trem de tiques, sem brigar com ele.
- *   1) a PUXADA — o braço descendo: ruído em passa-banda varrendo para baixo (900 → 350 Hz), com a envoltória de um gesto
- *      (sobe e cai, pico a 45%); por cima, a MOLA: um tom metálico (fundamental + 2º harmônico) descendo 1400 → 950 Hz com vibrato
- *      de 7 Hz — o que separa "alavanca de metal" de "sopro";
- *   2) a CATRACA — 12 cliques de impulso filtrado (1150 Hz, Q 2,2) com um ping de 4 kHz, cada vez mais juntos (42 → 21 ms) e um pouco
- *      mais altos: o mecanismo engatando e ganhando velocidade;
- *   3) o ENGATE — o "clunk" no fim: seno 140 → 95 Hz (a massa assentando, fase acumulada) e o clique metálico da trava em 2,3 kHz.
- * Variante 2 ("pesada", só para o dono comparar): puxada mais longa e mais grave (700 → 250 Hz; mola 1000 → 650), 8 cliques mais
- * espaçados (48 → 27 ms) e clunk mais fundo (120 → 80 Hz). As duas: 0,72 s de som = 0,78 s no decodificador (≤ 0,8 s).
+ * O "tum" leve por baixo de cada clique: um seno entre 170 e 360 Hz (sorteado por clique, dentro dos 150-400 Hz da régua do dono),
+ * ataque de 0,8 ms e decaimento de 7 ms — a peça pequena que o dente da engrenagem faz tremer. Sai com pico 1 e é escalado por quem
+ * chama CONTRA O PICO DO CLIQUE (−15 dB dele): um seno de 7 ms carrega muito mais energia que 1 ms de metal — com o ganho medido no
+ * buffer cru (1ª tentativa) o tum ficava 17× mais forte que o clique, e a −11 dB ainda tinha 52% da energia (2ª). Leve de propósito:
+ * o que manda no espectro continua a ser o metal agudo (medido: 1-8 kHz com a maior fatia), e entre um clique e o seguinte volta o
+ * silêncio.
  */
-function gerarAlavanca(variante, rnd) {
-  const pesada = variante === 1;
-  // 0,72 s de som nas duas: o MP3 soma ~25 ms de atraso de codificação, arredonda a quadros de 1152 amostras (26 ms) e o WebKit
-  // ainda conta o quadro de cabeçalho Xing/Info do LAME — é isso que <audio>.duration devolve. 0,72 s → 29 quadros de som + 1 de
-  // cabeçalho = 0,784 s no decodificador, dentro dos 0,8 s (medirMp3 conta como o WebKit; 0,74 s já dava 0,81 s).
-  const DUR = 0.72;
+function tum(rnd, { decai = 0.007 } = {}) {
+  const DUR = 0.06;
+  const f = 170 + rnd() * 190;
+  const b = criar(DUR);
+  for (let i = 0; i < b.length; i += 1) {
+    const t = i / TAXA;
+    b[i] = Math.sin(2 * Math.PI * f * t) * Math.exp(-t / decai) * Math.min(1, t / 0.0008);
+  }
+  return b;
+}
+
+/**
+ * MECÂNICA (3,0 s em loop) — a camada discreta que toca ENQUANTO os rolos giram e some quando o último trava.
+ * Uma grade de cliques metálicos a `porSegundo` por segundo (11 → intervalo ~90 ms; 13 → ~77 ms), cada intervalo com ±10 ms de sorteio
+ * para não soar robótico, e os intervalos reescalados para a grade fechar EXATAMENTE no trecho: o primeiro clique entra a 1/3 de um
+ * intervalo do início e o último acaba a 1/3 do fim, então a emenda do loop é mais um intervalo (2/3 + o que o decodificador acrescenta
+ * — ~56 ms de atraso de codificação e quadro de cabeçalho — fica entre 60 e 120 ms conforme o aparelho, uma vez a cada 3 s, por baixo de
+ * um trem de tiques 10 dB mais alto). `comTum` soma o tum a cada clique com um gerador PRÓPRIO: a v2 tem exatamente a grade da v1.
+ * Sem whoosh, sem sopro, sem ruído contínuo: fora dos cliques o buffer é zero.
+ */
+function gerarMecanica({ porSegundo, comTum, semente, jitterMs = 10 }) {
+  const rnd = mulberry32(semente);
+  const rndTum = mulberry32(semente + 1000);
+  const DUR = MECANICA_SEG;
   const buf = criar(DUR);
-
-  // 1) a puxada: whoosh varrendo para baixo + a mola
-  const tPux = pesada ? 0.35 : 0.29;
-  const whoosh = passaBandaVarrendo(ruido(tPux, rnd), pesada ? 700 : 900, pesada ? 250 : 350, 1.4);
-  const nPux = whoosh.length;
-  for (let i = 0; i < nPux; i += 1) {
-    const x = i / nPux;
-    const env = Math.sin(Math.PI * Math.min(1, x / 0.9)) ** 1.5; // sobe até 45% e cai
-    buf[i] += whoosh[i] * env * (pesada ? 2.4 : 2.0);
+  const base = 1 / porSegundo;
+  const tIni = base / 3;
+  const span = DUR - 2 * tIni;
+  const n = Math.round(span / base);
+  const intervalos = Array.from({ length: n }, () => base + (rnd() * 2 - 1) * (jitterMs / 1000));
+  const soma = intervalos.reduce((s, d) => s + d, 0);
+  for (let k = 0; k < n; k += 1) intervalos[k] *= span / soma;
+  let t = tIni;
+  for (let k = 0; k <= n; k += 1) {
+    const forca = 0.85 + rnd() * 0.15; // nenhum clique igual ao anterior
+    const clique = cliqueMetal(rnd);
+    somar(buf, clique, t, forca);
+    if (comTum) somar(buf, tum(rndTum), t, 0.18 * pico(clique) * forca); // −15 dB do pico do clique
+    if (k < n) t += intervalos[k];
   }
-  const mola0 = pesada ? 1000 : 1400, mola1 = pesada ? 650 : 950;
-  const iniMola = Math.round(0.04 * TAXA);
+  return buf;
+}
+
+/**
+ * ENGATE (160 ms de som; ≤ 0,3 s no decodificador) — o instante em que o giro começa: o mecanismo PEGA.
+ *   1) a trava, em 0 ms: o clique mais pesado (centros mais graves, 1,3 / 2,7 / 5,2 kHz, decaimento de 3 ms) e o "tum" da peça
+ *      assentando — seno 210 → 150 Hz com a fase acumulada (uma varredura ingênua estala na emenda), 22 ms de decaimento;
+ *   2) dois dentes da catraca pegando, a 45 e 85 ms, mais leves (0,6 e 0,45), cada um com o seu tum pequeno — o mecanismo entrando na
+ *      cadência da mecânica, que começa a correr no mesmo instante.
+ * Tudo seco: nenhuma varredura de ruído, nenhum sopro. Nasce DEPOIS dos cinco de sempre, na semente deles — eles não mudam.
+ */
+function gerarEngate(rnd) {
+  const DUR = 0.16;
+  const buf = criar(DUR);
+  const trava = cliqueMetal(rnd, { centros: [1300, 2700, 5200], pesos: [1.0, 0.85, 0.5], qs: [1.6, 2.0, 2.4], decai: 0.003 });
+  const p = pico(trava); // todos os ganhos abaixo são relativos ao pico do clique da trava
+  somar(buf, trava, 0, 1.0);
+  const assento = criar(0.06);
   let fase = 0;
-  for (let i = iniMola; i < nPux; i += 1) {
+  for (let i = 0; i < assento.length; i += 1) {
     const t = i / TAXA;
-    const x = (i - iniMola) / (nPux - iniMola);
-    const f = mola0 * (mola1 / mola0) ** x * (1 + 0.025 * Math.sin(2 * Math.PI * 7 * t));
-    fase += (2 * Math.PI * f) / TAXA;
-    const env = Math.min(1, (i - iniMola) / (0.02 * TAXA)) * (1 - x) ** 0.8;
-    buf[i] += (Math.sin(fase) + 0.30 * Math.sin(2 * fase)) * 0.28 * env;
+    fase += (2 * Math.PI * (210 + (150 - 210) * (t / 0.06))) / TAXA;
+    assento[i] = Math.sin(fase) * Math.exp(-t / 0.022) * Math.min(1, t / 0.0008);
   }
-
-  // 2) a catraca: cliques cada vez mais juntos, do fim da puxada até perto do engate
-  const nCliques = pesada ? 8 : 12;
-  const d0 = pesada ? 0.048 : 0.042, d1 = pesada ? 0.027 : 0.021;
-  const fClique = pesada ? 900 : 1150, fPing = pesada ? 3200 : 4000;
-  let tC = tPux - 0.02;
-  for (let c = 0; c < nCliques; c += 1) {
-    const impulso = criar(0.012);
-    const nImp = Math.round(0.0012 * TAXA);
-    for (let i = 0; i < nImp; i += 1) impulso[i] = (rnd() * 2 - 1) * (1 - i / nImp);
-    const clique = passaBanda(impulso, fClique * (0.98 + rnd() * 0.04), 2.2);
-    const ganho = 0.55 + 0.30 * (c / (nCliques - 1));
-    for (let i = 0; i < clique.length; i += 1) {
-      const t = i / TAXA;
-      clique[i] = clique[i] * Math.exp(-t / 0.006) * 2.8 * ganho + Math.sin(2 * Math.PI * fPing * t) * 0.45 * ganho * Math.exp(-t / 0.003);
-    }
-    somar(buf, clique, tC, 1);
-    tC += d0 * (d1 / d0) ** (c / (nCliques - 1));
-  }
-
-  // 3) o engate: o clunk da massa assentando + o clique da trava
-  const tEng = DUR - 0.085;
-  const clunk = criar(0.085);
-  fase = 0;
-  const g0 = pesada ? 120 : 140, g1 = pesada ? 80 : 95;
-  for (let i = 0; i < clunk.length; i += 1) {
-    const t = i / TAXA;
-    fase += (2 * Math.PI * (g0 + (g1 - g0) * (t / 0.085))) / TAXA;
-    clunk[i] = Math.sin(fase) * Math.exp(-t / (pesada ? 0.060 : 0.045)) * 1.0;
-  }
-  somar(buf, clunk, tEng, 1);
-  const trava = passaBanda(ruido(0.005, rnd), 2300, 1.2);
-  for (let i = 0; i < trava.length; i += 1) trava[i] *= Math.exp((-i / TAXA) / 0.003) * 0.6;
-  somar(buf, trava, tEng, 1);
+  somar(buf, assento, 0, 0.45 * p); // −7 dB da trava: o peso assentando, sem virar bumbo
+  somar(buf, cliqueMetal(rnd), 0.045, 0.6);
+  somar(buf, tum(rnd), 0.045, 0.16 * p);
+  somar(buf, cliqueMetal(rnd), 0.085, 0.45);
+  somar(buf, tum(rnd), 0.085, 0.12 * p);
   return buf;
 }
 
@@ -452,6 +465,66 @@ function medirMp3(arquivo) {
     i += len;
   }
   return (quadros * 1152) / TAXA;
+}
+
+/**
+ * A régua do dono, medida no MP3 PRONTO (decodificado pelo ffmpeg, como o aparelho faz):
+ *   • cadência — os cliques são achados pela envoltória (|x| em média móvel de 1 ms) cruzando 20% do seu máximo, com 35 ms de
+ *     refratário; cliques por segundo = (n − 1) / (último − primeiro); intervalo médio e desvio;
+ *   • bandas — FFT de 2^18 pontos sobre o arquivo inteiro: fração da energia em 1-8 kHz (tem de ser a principal), em 150-400 Hz
+ *     (o tum) e acima de 8 kHz;
+ *   • silêncio — RMS de cada janela de 5 ms; o percentil 30 (o terço final de cada intervalo, ou seja, o que há ENTRE os cliques
+ *     depois de o tum se apagar) em dBFS: ruído contínuo de ar apareceria aqui. Teto: −60 dBFS.
+ */
+function analisarMecanica(arquivo) {
+  const { amostras } = lerMp3(arquivo);
+  const n = amostras.length;
+  const jan = Math.round(0.001 * TAXA);
+  const env = new Float32Array(n);
+  let acc = 0, envMax = 0;
+  for (let i = 0; i < n; i += 1) {
+    acc += Math.abs(amostras[i]);
+    if (i >= jan) acc -= Math.abs(amostras[i - jan]);
+    env[i] = acc / jan;
+    if (env[i] > envMax) envMax = env[i];
+  }
+  const limiar = envMax * 0.2;
+  const refr = Math.round(0.035 * TAXA);
+  const inicios = [];
+  let ultimo = -refr;
+  for (let i = 1; i < n; i += 1) {
+    if (env[i] >= limiar && env[i - 1] < limiar && i - ultimo > refr) { inicios.push(i / TAXA); ultimo = i; }
+  }
+  const intervalos = inicios.slice(1).map((t, k) => t - inicios[k]);
+  const media = intervalos.reduce((s, d) => s + d, 0) / Math.max(1, intervalos.length);
+  const desvio = Math.sqrt(intervalos.reduce((s, d) => s + (d - media) ** 2, 0) / Math.max(1, intervalos.length));
+  const porSegundo = inicios.length > 1 ? (inicios.length - 1) / (inicios[inicios.length - 1] - inicios[0]) : 0;
+
+  const N = 1 << 18;
+  const re = new Float64Array(N), im = new Float64Array(N);
+  for (let i = 0; i < Math.min(n, N); i += 1) re[i] = amostras[i];
+  fft(re, im);
+  const binHz = TAXA / N;
+  const energia = (f1, f2) => {
+    let e = 0;
+    for (let k = Math.ceil(f1 / binHz); k < Math.min(N / 2, Math.floor(f2 / binHz)); k += 1) e += re[k] * re[k] + im[k] * im[k];
+    return e;
+  };
+  const total = energia(20, TAXA / 2);
+  const fracao1a8 = energia(1000, 8000) / total;
+  const fracao150a400 = energia(150, 400) / total;
+  const fracaoAcima8 = energia(8000, TAXA / 2) / total;
+
+  const jan5 = Math.round(0.005 * TAXA);
+  const rms = [];
+  for (let i = 0; i + jan5 <= n; i += jan5) {
+    let s = 0;
+    for (let j = i; j < i + jan5; j += 1) s += amostras[j] * amostras[j];
+    rms.push(Math.sqrt(s / jan5));
+  }
+  rms.sort((a, b) => a - b);
+  const fundoDb = 20 * Math.log10(Math.max(1e-9, rms[Math.floor(rms.length * 0.3)]));
+  return { cliques: inicios.length, porSegundo, intervaloMs: media * 1000, desvioMs: desvio * 1000, fracao1a8, fracao150a400, fracaoAcima8, fundoDb, primeiroMs: (inicios[0] || 0) * 1000, ultimoMs: (inicios[inicios.length - 1] || 0) * 1000 };
 }
 
 // ── saída: normalizar → WAV → MP3 ─────────────────────────────────────────────
@@ -510,7 +583,7 @@ function escrever(nome, amostras, destino = DESTINO) {
     `  ${cabe ? 'ok ' : 'ACIMA'} ${`${nome}.mp3`.padEnd(14)} `
     + `${(seg * 1000).toFixed(0).padStart(5)} ms · ${(bytes / 1024).toFixed(1).padStart(6)} KB · ${taxa} mono`,
   );
-  return { nome, bytes, seg, taxa, cabe };
+  return { nome, bytes, seg, taxa, cabe, arquivo: alvo };
 }
 
 // ── principal ─────────────────────────────────────────────────────────────────
@@ -528,19 +601,44 @@ const feitos = [
   escrever('jackpot', gerarJackpot(rnd)),
 ];
 
-// 29H-B: a alavanca vem DEPOIS dos cinco, na mesma semente — eles não mudam. A 1ª variante é a do app; as duas vão para o dono ouvir.
+// 29H-B (2ª decisão): as três variantes da mecânica, cada uma com semente própria (a v2 é a v1 com o tum: a MESMA grade de cliques);
+// a v2 é a que o app toca. O engate vem DEPOIS dos cinco, na semente deles — eles não mudam (conferido por MD5 abaixo).
 mkdirSync(CAPTURAS_29H, { recursive: true });
-const alavanca = escrever('alavanca', gerarAlavanca(0, rnd));
-feitos.push(alavanca);
-copyFileSync(path.join(DESTINO, 'alavanca.mp3'), path.join(CAPTURAS_29H, 'alavanca-v1.mp3'));
-const alavanca2 = escrever('alavanca-v2', gerarAlavanca(1, rnd), CAPTURAS_29H);
-for (const a of [alavanca, alavanca2]) {
-  a.segMp3 = medirMp3(path.join(a.nome === 'alavanca' ? DESTINO : CAPTURAS_29H, `${a.nome}.mp3`));
-  console.log(`[sons] ${a.nome}: ${(a.seg * 1000).toFixed(0)} ms de som · ${(a.segMp3 * 1000).toFixed(0)} ms no decodificador`);
-  if (Math.max(a.seg, a.segMp3) > ALAVANCA_MAX_SEG + 1e-6) {
-    console.error(`[sons] FALHA: ${a.nome} dura ${(a.seg * 1000).toFixed(0)} ms de som / ${(a.segMp3 * 1000).toFixed(0)} ms no decodificador — a alavanca tem de caber em ${ALAVANCA_MAX_SEG * 1000} ms (dono, 29H-B).`);
-    process.exit(1);
+const VARIANTES = [
+  { nome: 'mecanica-v1', porSegundo: 11, comTum: false, semente: SEMENTE + 1, faixa: [10, 12] },
+  { nome: 'mecanica-v2', porSegundo: 11, comTum: true, semente: SEMENTE + 1, faixa: [10, 12] },
+  { nome: 'mecanica-v3', porSegundo: 13, comTum: true, semente: SEMENTE + 3, faixa: [12, 14] },
+];
+const falhas = [];
+for (const v of VARIANTES) {
+  const f = escrever(v.nome, gerarMecanica(v), CAPTURAS_29H);
+  const seg = medirMp3(f.arquivo);
+  const m = analisarMecanica(f.arquivo);
+  console.log(
+    `[sons] ${v.nome}: ${m.cliques} cliques · ${m.porSegundo.toFixed(1)}/s · intervalo ${m.intervaloMs.toFixed(0)} ±${m.desvioMs.toFixed(0)} ms (1º a ${m.primeiroMs.toFixed(0)} ms, último a ${m.ultimoMs.toFixed(0)} ms)`
+    + ` · energia 1-8 kHz ${(m.fracao1a8 * 100).toFixed(0)}% · 150-400 Hz ${(m.fracao150a400 * 100).toFixed(1)}% · >8 kHz ${(m.fracaoAcima8 * 100).toFixed(0)}%`
+    + ` · entre cliques ${m.fundoDb.toFixed(0)} dBFS · ${(seg * 1000).toFixed(0)} ms no decodificador`,
+  );
+  if (m.porSegundo < v.faixa[0] || m.porSegundo > v.faixa[1]) falhas.push(`${v.nome}: ${m.porSegundo.toFixed(1)} cliques/s fora de ${v.faixa.join('-')}`);
+  if (m.desvioMs < 3 || m.desvioMs > 14) falhas.push(`${v.nome}: variação de ${m.desvioMs.toFixed(0)} ms (a régua pede ~±10 ms, nem robótico nem solto)`);
+  if (m.fracao1a8 < 0.5 || m.fracao1a8 <= m.fracao150a400) falhas.push(`${v.nome}: a energia principal não está em 1-8 kHz (${(m.fracao1a8 * 100).toFixed(0)}%)`);
+  if (v.comTum ? m.fracao150a400 < 0.03 : m.fracao150a400 > 0.02) falhas.push(`${v.nome}: tum ${v.comTum ? 'ausente' : 'presente'} (${(m.fracao150a400 * 100).toFixed(1)}% em 150-400 Hz)`);
+  if (m.fundoDb > -60) falhas.push(`${v.nome}: há som contínuo entre os cliques (${m.fundoDb.toFixed(0)} dBFS)`);
+  if (f.taxa !== '96k') falhas.push(`${v.nome}: saiu a ${f.taxa}, a lei pede 96 kbps`);
+  if (Math.abs(f.seg - MECANICA_SEG) > 1e-6) falhas.push(`${v.nome}: ${f.seg} s de som, esperado ${MECANICA_SEG}`);
+  if (v.nome === 'mecanica-v2') {
+    copyFileSync(f.arquivo, path.join(DESTINO, 'mecanica.mp3'));
+    feitos.push({ ...f, nome: 'mecanica', arquivo: path.join(DESTINO, 'mecanica.mp3') });
   }
+}
+const engate = escrever('engate', gerarEngate(rnd));
+feitos.push(engate);
+engate.segMp3 = medirMp3(engate.arquivo);
+console.log(`[sons] engate: ${(engate.seg * 1000).toFixed(0)} ms de som · ${(engate.segMp3 * 1000).toFixed(0)} ms no decodificador`);
+if (Math.max(engate.seg, engate.segMp3) > ENGATE_MAX_SEG + 1e-6) falhas.push(`engate dura ${(engate.segMp3 * 1000).toFixed(0)} ms no decodificador — tem de caber em ${ENGATE_MAX_SEG * 1000} ms (dono, 29H-B)`);
+if (falhas.length) {
+  for (const f of falhas) console.error(`[sons] FALHA: ${f}`);
+  process.exit(1);
 }
 for (const [nome, md5] of Object.entries(ASSINATURAS)) {
   const atual = createHash('md5').update(readFileSync(path.join(DESTINO, `${nome}.mp3`))).digest('hex');
@@ -549,7 +647,7 @@ for (const [nome, md5] of Object.entries(ASSINATURAS)) {
     process.exit(1);
   }
 }
-console.log(`[sons] os cinco de sempre conferidos por MD5 (bit a bit iguais); alavanca v1 e v2 em ${path.relative(RAIZ, CAPTURAS_29H)}`);
+console.log(`[sons] os cinco de sempre conferidos por MD5 (bit a bit iguais); mecânica v1, v2 e v3 em ${path.relative(RAIZ, CAPTURAS_29H)} (a v2 é a do app)`);
 
 const total = feitos.reduce((s, f) => s + f.bytes, 0);
 console.log(`\n[sons] ${feitos.length} arquivos · ${(total / 1024).toFixed(1)} KB no total`);

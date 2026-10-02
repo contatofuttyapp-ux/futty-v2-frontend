@@ -258,18 +258,20 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       const rolos = [...rolosEl.children];
       maq.classList.add('giroOn'); maq.classList.remove('accel', 'burst');
       SomSorteio.girar();
-      if (saltarFlag || !vivo) { SomSorteio.pararGiro(); return; }
+      if (saltarFlag || !vivo) { SomSorteio.pararGiro(); SomSorteio.travar(); return; }
       await sleep(1200); if (!vivo) return;
       maq.classList.remove('giroOn'); maq.classList.add('accel');
       rolos.forEach((r) => r.classList.add('slow'));
       SomSorteio.girarLento();
-      if (saltarFlag || !vivo) { SomSorteio.pararGiro(); return; }
+      if (saltarFlag || !vivo) { SomSorteio.pararGiro(); SomSorteio.travar(); return; }
       await sleep(600); if (!vivo) return;
       SomSorteio.pararGiro();
       maq.classList.remove('accel'); maq.classList.add('burst');
       flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
       for (let r = 0; r < n; r += 1) {
         const v = vis(jogs[r], ti); rolos[r].classList.add('stop');
+        // 29H-B: os rolos ainda giram devagar enquanto travam um a um; a mecânica só some quando o ÚLTIMO trava.
+        if (r === n - 1) SomSorteio.travar();
         const rev = rolos[r].querySelector('.rev');
         rev.innerHTML = `<img src="${esc(v.img)}"><span class="nm">${esc(v.nome)}</span>`;
         rev.classList.add('on'); SomSorteio.revelar();
@@ -375,9 +377,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     }
     async function corpo() {
       const lv = q('.lever'); lv.classList.remove('pull'); void lv.offsetWidth; lv.classList.add('pull');
-      // 29H-B: a alavanca puxada e a catraca engatando — o 4º efeito, no instante em que o giro começa (o 1º tique sai logo abaixo,
-      // em vagaRolos). Com movimento reduzido não há giro, então não há alavanca.
-      if (!reduzido) SomSorteio.puxar();
+      // 29H-B: o 4º efeito (engate + mecânica em loop) nasce dentro de SomSorteio.girar(), no instante em que os rolos começam a
+      // girar (vagaRolos), e some em SomSorteio.travar(), quando o último rolo trava. Com movimento reduzido não há giro, então
+      // não há som nenhum dele.
       q('.palcoStage').classList.remove('veuTotal'); montarGrupos(); q('.fimtxt').classList.remove('on');
       // Rodada 14B: a alavanca repete a cerimónia — o prêmio da corrida anterior
       // apaga-se antes de os rolos voltarem a girar.
@@ -434,7 +436,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     // (a pessoa acabou de escolher ouvir; sem retorno nenhum parece quebrado).
     const onSom = () => { const on = SomSorteio.toggle(); if (on) SomSorteio.revelar(); pintarSom(); };
     somBtn.addEventListener('click', onSom); pintarSom();
-    // 13-set: o autoTeste dá load() nos 6 sons para logar "SOM OK 6/6" — ~52 KB
+    // 13-set: o autoTeste dá load() nos 7 sons para logar "SOM OK 7/7" — ~81 KB
     // baixados ao abrir a cerimônia, inclusive com o som desligado, que é o
     // padrão. Fica só em desenvolvimento; em produção os sons entram um a um,
     // no primeiro uso (as rodas do somSorteio.js nascem preguiçosas).
