@@ -61,6 +61,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import { webkit } from 'playwright';
+import { cenaRodada29h } from './cena-rodada29h.mjs';
 
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -3260,6 +3261,25 @@ function tabelaVelocidade9(r) {
   });
 }
 
+// Rodada 29H (item 3): a data de nascimento são ROLINHOS (components/RolinhosData.jsx), não um <input type="date">. `escolherData` põe cada
+// rolo no item pedido (rolagem programática → o mesmo caminho do dedo: onScroll → índice) e espera o rolo confirmar. `so` limita a
+// quais rolos mexer (['ano', 'mes']); a ordem é sempre ano → mês → dia, porque o dia depende do mês.
+async function escolherDataNosRolinhos(pagina, raiz, data, { so = null } = {}) {
+  const [a, m, d] = data.split('-').map(Number);
+  for (const [nome, valor] of [['ano', a], ['mes', m], ['dia', d]]) {
+    if (so && !so.includes(nome)) continue;
+    await pagina.locator(`${raiz} [data-rolo="${nome}"]`).evaluate((el, v) => {
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); // tocar na coluna já vale como "mexi" (o valor de partida pode ser o certo)
+      const itens = [...el.querySelectorAll('[data-valor]')];
+      el.scrollTop = itens.findIndex((i) => i.dataset.valor === String(v)) * 40;
+    }, valor);
+    await pagina.waitForFunction(({ raiz: r, nome: n, valor: v }) => document.querySelector(`${r} [data-rolo="${n}"]`)?.dataset.escolhido === String(v), { raiz, nome, valor }, { timeout: 5000 }).catch(async (e) => {
+      const visto = await pagina.locator(`${raiz} [data-rolo="${nome}"]`).evaluate((el) => ({ escolhido: el.dataset.escolhido, scrollTop: el.scrollTop, itens: el.querySelectorAll('[data-valor]').length })).catch(() => null);
+      throw new Error(`rolinho ${nome}=${valor} não confirmou (${JSON.stringify(visto)}): ${e.message.split('\n')[0]}`);
+    });
+  }
+}
+
 mkdirSync(PASTA, { recursive: true });
 const navegador = await webkit.launch();
 try {
@@ -3267,7 +3287,7 @@ try {
   // Estas cenas trazem as SUAS PRÓPRIAS sessões (--sessoes/--sessoes-varredura)
   // e nunca tocam na conta demo. Sem esta saída, pedi-las sozinhas obrigava a
   // um login que não serve a nada.
-  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29e2', 'rodada29g', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada'];
+  const CENAS_AUTOSSUFICIENTES = ['figurinha3-pacote', 'criar-time', 'convite-recusa', 'varredura', 'hotfix26', 'hotfix-26', 'rodada27', 'rodada-27', 'rodada28', 'rodada-28', 'rodada29b-uniformes', 'rodada29b-boasvindas', 'rodada29c-boasvindas', 'rodada29d', 'rodada29e', 'rodada29e2', 'rodada29g', 'rodada29b-cidades', 'rodada29b-organiza', 'rodada29b-avise', 'rodada29b-pintura', 'rodada29b-pesada', 'rodada29h'];
   const soPacote = CENAS.every((c) => CENAS_AUTOSSUFICIENTES.includes(c)) && !ARQUIVO_SESSAO;
   const { sessao, camposLogin } = soPacote
     ? { sessao: null, camposLogin: null }
@@ -3995,6 +4015,17 @@ try {
     const r = await cenaRodada29d(navegador);
     saida.rodada29d = r;
     console.log('\n[iphone] RODADA 29D — onboarding em 3 páginas com o mini sorteio, o F no ícone do app, aceite com boas-vindas (servidor local; contas de prova; escritas interceptadas)');
+    for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
+    const falhas = r.verificacoes.filter((v) => !v.ok).length;
+    console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
+    if (r.erros.length) console.log(`   erros de JS: ${r.erros.join(' | ')}`);
+    if (falhas) process.exitCode = 1;
+  }
+
+  if (CENAS.includes('rodada29h')) {
+    const r = await cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novoContexto, travarEscritas, espera, escolherData: escolherDataNosRolinhos });
+    saida.rodada29h = r;
+    console.log('\n[iphone] RODADA 29H-A — os 14 pontos: convidado, barra, rolinhos de data, página 1 do onboarding, Criar time, convite (link curto, WhatsApp, og:image), chips, painel do admin, figurinha, "＋ Criar time", bairro, ajustes finais (servidor local; contas de prova; escritas interceptadas)');
     for (const v of r.verificacoes) console.log(`   ${v.ok ? 'OK' : 'FALHA'} ${v.nome}${v.detalhe ? ` — ${v.detalhe}` : ''}`);
     const falhas = r.verificacoes.filter((v) => !v.ok).length;
     console.log(`   ${r.verificacoes.length - falhas}/${r.verificacoes.length} verificações passaram · capturas em ${path.relative(RAIZ, r.pasta)}`);
@@ -6055,7 +6086,8 @@ async function cenaRodada28(navegador) {
     verificar('A3 · grade de uniformes (grátis): 5 tiles, todos com cadeado', estados.length === 5 && estados.every((e) => e.estado === 'trancado' && /bloqueado/.test(e.nome)), JSON.stringify(estados));
     const t = await texto(pagina);
     verificar('A3 · sem "Pedir a minha" e sem "em breve" na tela', !/Pedir a minha/i.test(t) && !/em breve/i.test(t));
-    verificar('A · Baixar e Compartilhar voltaram ao card com a foto', /Compartilhar/.test(t) && /Baixar/.test(t));
+    // 29H (item 58): no celular (tela de toque) fica UM botão, "Compartilhar"; "Baixar" só no computador.
+    verificar('A · Compartilhar voltou ao card com a foto (um botão só no celular; Baixar só no computador — 29H)', /Compartilhar/.test(t) && !/Baixar/.test(t));
     await pagina.locator('[data-grade="uniformes"]').evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {});
     await espera(600);
     await capturar(pagina, 'A3-uniformes');
@@ -6154,7 +6186,8 @@ async function cenaRodada28(navegador) {
   }
 
   // ── C · cadastro com menos de 18 anos ──
-  const dezAnos = `${new Date().getUTCFullYear() - 10}-06-15`;
+  // 29H: o rolo só vai até o ano atual − 18 — "menor de 18" é o último ano oferecido, no fim de dezembro (sempre menor, salvo em 31/12).
+  const dezAnos = `${new Date().getUTCFullYear() - 18}-12-31`;
   const cR = await navegador.newContext({ ...IPHONE, serviceWorkers: 'block' });
   try {
     const pagina = await cR.newPage();
@@ -6166,7 +6199,8 @@ async function cenaRodada28(navegador) {
     await pagina.fill('#email', `prova-r28-registro-${Date.now()}@futtymock.com`);
     await pagina.fill('#password', 'Prova!R28-registro');
     await pagina.fill('#confirm', 'Prova!R28-registro');
-    await pagina.fill('#birthdate', dezAnos);
+    // 29H: rolinhos — o ano mais alto é o ano atual − 18; "menor de 18" aqui é o último ano oferecido, no fim de dezembro.
+    await escolherDataNosRolinhos(pagina, '#birthdate', `${new Date().getUTCFullYear() - 18}-12-31`);
     await pagina.locator('input[type="checkbox"]').check();
     await pagina.locator('button[type="submit"]').click();
     // A frase também mora como apoio sob o campo da data: o que prova o ERRO é o aviso (.auth-alert), não o texto da página.
@@ -6189,7 +6223,7 @@ async function cenaRodada28(navegador) {
     await pagina.getByRole('button', { name: /Começar/i }).click({ timeout: 20000 });
     const pediu = await pagina.getByText(/Quando você/).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
     await capturar(pagina, `${rotulo}-pergunta`);
-    await pagina.fill('#onb-nascimento', data);
+    await escolherDataNosRolinhos(pagina, '#onb-nascimento', data);
     await pagina.getByRole('button', { name: /Continuar/i }).click();
     return { c, pagina, pediu };
   };
@@ -6693,31 +6727,33 @@ async function cenaRodada29aLinhaGol(navegador, sessao) {
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
     return { contexto, pagina, escritas };
   };
-  const RE = /^Você joga (na linha|no gol) · trocar$/;
+  // Rodada 29H (item 8/50): o botão "Você joga na linha · trocar" virou DOIS chips lado a lado — "Jogo na linha" | "No gol" —, um aceso.
+  const grupo = '[data-escolha-linha-gol]';
+  const lerChips = (pagina) => pagina.locator(`${grupo}`).first().locator('.chip').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { texto: e.innerText.trim(), x: Math.round(r.x), y: Math.round(r.y), ativo: e.classList.contains('chip--active') }; }));
 
   // 1) página do time
   {
     const { contexto, pagina, escritas } = await abrir(`/equipa/${TIME}`);
-    const chip = pagina.locator('button', { hasText: RE }).first();
-    await chip.waitFor({ timeout: 30000 });
+    const par = pagina.locator(grupo).first();
+    await par.waitFor({ timeout: 30000 });
     await espera(600);
-    const antes = (await chip.innerText()).trim();
+    const chips = await lerChips(pagina);
     const y = await pagina.evaluate(() => {
-      const chipEl = [...document.querySelectorAll('button')].find((b) => /^Você joga (na linha|no gol) · trocar$/.test(b.textContent.trim()));
+      const par = document.querySelector('[data-escolha-linha-gol]');
       const jogos = [...document.querySelectorAll('a')].find((a) => /Jogos/i.test(a.textContent) && /\/jogos$/.test(a.getAttribute('href') || ''));
-      const apoio = chipEl?.closest('.hud-corners')?.querySelector('.texto-apoio')?.textContent?.trim() || null;
-      return { chip: chipEl?.getBoundingClientRect().top ?? null, jogos: jogos?.getBoundingClientRect().top ?? null, apoio, secaoAntiga: /Goleiro ou linha: você decide/.test(document.body.innerText) };
+      const apoio = par?.closest('.hud-corners')?.querySelector('.texto-apoio')?.textContent?.trim() || null;
+      return { par: par?.getBoundingClientRect().top ?? null, jogos: jogos?.getBoundingClientRect().top ?? null, apoio, secaoAntiga: /Goleiro ou linha: você decide/.test(document.body.innerText), botaoAntigo: /Você joga (na linha|no gol) · trocar/.test(document.body.innerText) };
     });
-    verificar('time: o texto do botão é "Você joga na linha/no gol · trocar"', RE.test(antes), antes);
-    verificar('time: o botão fica no topo, acima de "Jogos"', y.chip != null && y.jogos != null && y.chip < y.jogos, `botão y=${Math.round(y.chip)} · Jogos y=${Math.round(y.jogos)}`);
+    verificar('time: dois chips lado a lado, "Jogo na linha" | "No gol", um aceso (o botão antigo "Você joga … · trocar" saiu)', chips.length === 2 && chips[0].texto === 'Jogo na linha' && chips[1].texto === 'No gol' && chips[0].y === chips[1].y && chips[1].x > chips[0].x && chips.filter((c) => c.ativo).length === 1 && !y.botaoAntigo, JSON.stringify(chips));
+    verificar('time: os chips ficam no topo, acima de "Jogos"', y.par != null && y.jogos != null && y.par < y.jogos, `chips y=${Math.round(y.par)} · Jogos y=${Math.round(y.jogos)}`);
     verificar('time: texto de apoio "Vale para os sorteios deste time. Dá para mudar em cada jogo."', y.apoio === 'Vale para os sorteios deste time. Dá para mudar em cada jogo.', String(y.apoio));
     verificar('time: a seção antiga "Goleiro ou linha: você decide" saiu', !y.secaoAntiga);
     await capturar(pagina, '1-time');
-    await chip.tap();
+    const eraGol = chips[1].ativo;
+    await par.locator('.chip').nth(eraGol ? 0 : 1).tap();
     await espera(800);
     const patch = escritas.find((e) => e.metodo === 'PATCH' && e.rota === `/api/equipas/${TIME}/membros/posicao`);
-    const eraGol = /no gol/.test(antes);
-    verificar('time: tocar manda PATCH .../membros/posicao com o valor trocado', !!patch && JSON.parse(patch.corpo || '{}').goleiro === !eraGol, patch ? patch.corpo : escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
+    verificar('time: tocar no chip apagado manda PATCH .../membros/posicao com o valor trocado', !!patch && JSON.parse(patch.corpo || '{}').goleiro === !eraGol, patch ? patch.corpo : escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
     await contexto.close();
   }
 
@@ -6728,18 +6764,19 @@ async function cenaRodada29aLinhaGol(navegador, sessao) {
     await titulo.waitFor({ timeout: 30000 });
     await titulo.scrollIntoViewIfNeeded();
     await espera(1500);
-    const chips = pagina.locator('button', { hasText: RE });
-    const n = await chips.count();
-    verificar('perfil: a seção "Meus times" tem a escolha por time', n >= 1, `${n} botão(ões)`);
+    const pares = pagina.locator(grupo);
+    const n = await pares.count();
+    verificar('perfil: a seção "Meus times" tem os dois chips por time', n >= 1 && (await pares.first().locator('.chip').count()) === 2, `${n} time(s)`);
     const apoio = await pagina.evaluate(() => [...document.querySelectorAll('.texto-apoio')].map((e) => e.textContent.trim()).filter((t) => /sorteios/.test(t)));
     verificar('perfil: texto de apoio dos sorteios', apoio.length >= 1, apoio.join(' | '));
     await capturar(pagina, '2-perfil');
     if (n) {
-      const antes = (await chips.first().innerText()).trim();
-      await chips.first().tap();
+      const chips = await lerChips(pagina);
+      const eraGol = chips[1].ativo;
+      await pares.first().locator('.chip').nth(eraGol ? 0 : 1).tap();
       await espera(900);
       const patch = escritas.find((e) => e.metodo === 'PATCH' && /\/api\/equipas\/.+\/membros\/posicao$/.test(e.rota));
-      verificar('perfil: tocar manda PATCH .../membros/posicao com o valor trocado', !!patch && JSON.parse(patch.corpo || '{}').goleiro === !/no gol/.test(antes), patch ? `${patch.rota} ${patch.corpo}` : 'nenhum PATCH');
+      verificar('perfil: tocar manda PATCH .../membros/posicao com o valor trocado', !!patch && JSON.parse(patch.corpo || '{}').goleiro === !eraGol, patch ? `${patch.rota} ${patch.corpo}` : 'nenhum PATCH');
     }
     await contexto.close();
   }
@@ -6974,14 +7011,15 @@ async function cenaRodada29bConvite(navegador, sessao) {
     await contexto.close();
   }
 
-  // 2) sem logo: as iniciais
+  // 2) sem logo: só o nome em destaque (29H, item 23: o quadrado de iniciais saiu)
   {
     const { contexto, pagina } = await abrir({ time: TIME_SEM_LOGO }, 'sem-logo');
     const r = await pagina.evaluate(() => {
       const e = document.querySelector('.convite__escudo');
-      return { temImg: !!e?.querySelector('img'), texto: (e?.textContent || '').trim(), larg: e ? Math.round(e.getBoundingClientRect().width) : null };
+      const nome = document.querySelector('.convite__nome');
+      return { escudo: !!e, nomeEmDestaque: !!nome && /convite__nome--sozinho/.test(nome.className), tamanho: nome ? parseFloat(getComputedStyle(nome).fontSize) : null };
     });
-    verificar('sem logo: iniciais "VF" grandes e nenhuma imagem', !r.temImg && r.texto === 'VF' && r.larg >= 120, JSON.stringify(r));
+    verificar('sem logo: nenhum escudo (nada de iniciais) e o nome em destaque (44 px)', !r.escudo && r.nomeEmDestaque && r.tamanho === 44, JSON.stringify(r));
     await capturar(pagina, '2-sem-logo');
     await contexto.close();
   }
@@ -7341,7 +7379,10 @@ async function cenaRodada29bPintura(navegador) {
   await nunca100(A.pagina, 'demorando');
   verificar('NUNCA 100% antes de existir a imagem (todas as amostras ≤ 90)', pendentes.length >= 20 && pendentes.every((p) => Number(p.split(':')[1]) <= 90), pendentes.join(' '));
   const textoCard = await A.pagina.locator('body').innerText();
-  verificar('o texto sob o card avisa que dá para sair da tela', /pode sair da tela, a gente avisa/.test(textoCard));
+  // 29H (item 59): o aviso foi rediagramado — título numa linha (com o F) e a explicação embaixo, no texto de apoio da casa.
+  verificar('o texto sob o card avisa que dá para sair da tela ("Pode sair da tela. A gente avisa quando ficar pronta.")', /Pode sair da tela. A gente avisa quando ficar pronta./.test(textoCard));
+  const aviso59 = await A.pagina.evaluate(() => { const el = document.querySelector('[data-pintando-aviso]'); if (!el) return null; const apoio = el.querySelector('.texto-apoio'); return { titulo: el.firstElementChild?.textContent.trim(), apoio: apoio?.textContent.trim(), largura: apoio ? Math.round(apoio.getBoundingClientRect().width) : null, maxEm: apoio ? parseFloat(getComputedStyle(apoio).fontSize) * 34 : null }; });
+  verificar('o aviso da pintura: título "Sua figurinha está sendo pintada…" e a explicação no texto de apoio (≤ 34 em), em duas linhas', !!aviso59 && aviso59.titulo === 'Sua figurinha está sendo pintada…' && aviso59.apoio === 'Pode sair da tela. A gente avisa quando ficar pronta.' && aviso59.largura <= aviso59.maxEm + 1, JSON.stringify(aviso59));
 
   momento.m = 'aba';
   // ── 2. Aba escondida não consulta; ao voltar, consulta na hora; visível, a cada ~3 s ──
@@ -7936,7 +7977,7 @@ async function cenaRodada29d(navegador) {
     const prog2 = await lerProgresso(pagina);
     verificar('"Começar" → passo 2 (foto), 2 de 3 traços acesos, sem o mini sorteio', prog2.n === 3 && prog2.acesos === 2 && (await pagina.locator('.msq').count()) === 0, JSON.stringify(prog2));
     await capturar(pagina, 'onboarding-2-foto');
-    await espera(4300); // "deixar para depois" aparece aos ~4 s
+    await espera(2300); // "deixar para depois" aparece aos ~2 s (29H; era ~4 s)
     await pagina.getByRole('button', { name: /deixar para depois/i }).tap();
     await pagina.getByText(/Como te chamam/).first().waitFor({ timeout: 15000 });
     const prog3 = await lerProgresso(pagina);
@@ -7949,29 +7990,29 @@ async function cenaRodada29d(navegador) {
     await contexto.close();
   }
 
-  // 3) Onboarding COM convite pendente: começa na foto com 2 traços, sem sorteio; no fim o Início devolve ao convite → time → boas-vindas
+  // 3) Onboarding COM convite pendente — 29H (item 1): começa nas boas-vindas do time (a máquina), depois foto e nome (3 traços); o convite
+  //    é aceito no fim e a pessoa cai direto no time. A prova completa desse caminho é a cena rodada29h (seção C).
   {
-    const { contexto, pagina } = await abrir(fx.membroFoto, 'onboarding-convite', '/onboarding', { inicial: bilheteDoConvite, antes: rotasDoConvite, respostas: respostaAceitar });
-    await pagina.getByText(/SUA FIGURINHA/).first().waitFor({ timeout: 30000 }).catch(() => {});
-    await espera(400);
-    const prog = await lerProgresso(pagina);
+    const { contexto, pagina, escritas } = await abrir(fx.membroFoto, 'onboarding-convite', '/onboarding', { inicial: bilheteDoConvite, antes: rotasDoConvite, respostas: (c, m) => (m === 'POST' && c.endsWith('/aceitar') ? { team: { id: fx.times.gratis.id, slug, nome: 'Prova R29B Grátis' } } : null) });
+    await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
+    const variante = await pagina.locator('.bv').getAttribute('data-variante').catch(() => null);
     const t = await texto(pagina);
-    verificar('com convite pendente o Onboarding começa na FOTO: 2 traços (1 aceso), sem "BEM-VINDO" nem mini sorteio', /SUA FIGURINHA/.test(t) && !/BEM-VINDO AO FUTTY/.test(t) && prog.n === 2 && prog.acesos === 1 && (await pagina.locator('.msq').count()) === 0 && /\/onboarding/.test(pagina.url()), JSON.stringify({ prog, url: pagina.url().replace(BASE, '') }));
-    await capturar(pagina, 'convite-1-foto');
-    await espera(4300);
+    verificar('com convite pendente o Onboarding começa nas BOAS-VINDAS DO TIME (variante convidado), sem "BEM-VINDO" nem mini sorteio', variante === 'convidado' && !/BEM-VINDO AO FUTTY/.test(t) && (await pagina.locator('.msq').count()) === 0 && /\/onboarding/.test(pagina.url()), JSON.stringify({ variante, url: pagina.url().replace(BASE, '') }));
+    await capturar(pagina, 'convite-1-boasvindas');
+    await pagina.getByRole('button', { name: 'Vamos lá' }).tap();
+    await pagina.getByText(/SUA FIGURINHA/).first().waitFor({ timeout: 15000 });
+    const prog = await lerProgresso(pagina);
+    verificar('"Vamos lá" → foto: 3 traços, o 2º aceso', prog.n === 3 && prog.acesos === 2, JSON.stringify(prog));
+    await capturar(pagina, 'convite-2-foto');
+    await espera(2300); // "deixar para depois" aparece aos ~2 s (29H)
     await pagina.getByRole('button', { name: /deixar para depois/i }).tap();
     await pagina.getByText(/Como te chamam/).first().waitFor({ timeout: 15000 });
     const prog2 = await lerProgresso(pagina);
-    verificar('passo do nome: os 2 traços acesos', prog2.n === 2 && prog2.acesos === 2, JSON.stringify(prog2));
-    await capturar(pagina, 'convite-2-nome');
+    verificar('passo do nome: os 3 traços acesos', prog2.n === 3 && prog2.acesos === 3, JSON.stringify(prog2));
+    await capturar(pagina, 'convite-3-nome');
     await pagina.getByRole('button', { name: /^Entrar$/ }).tap();
-    await pagina.waitForURL('**/convite/token-de-prova', { timeout: 40000 }).catch(() => {});
-    verificar('"Entrar" → o Início toma o bilhete e devolve ao convite', pagina.url().endsWith('/convite/token-de-prova'), pagina.url().replace(BASE, ''));
-    await pagina.locator('button.convite__cta', { hasText: 'Entrar no time' }).tap({ timeout: 30000 });
-    await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
-    const variante = await pagina.locator('.bv').getAttribute('data-variante').catch(() => null);
-    verificar('"Entrar no time" → o time com as boas-vindas do convidado (3 telas no caminho do convite, sorteio só no time)', pagina.url().endsWith(`/equipa/${slug}`) && variante === 'convidado', JSON.stringify({ url: pagina.url().replace(BASE, ''), variante }));
-    await capturar(pagina, 'convite-3-boasvindas');
+    await pagina.waitForURL(`**/equipa/${slug}`, { timeout: 40000 }).catch(() => {});
+    verificar('"Entrar" aceita o convite e cai direto no time (sem passar de novo pelo Início nem pela página do convite)', pagina.url().endsWith(`/equipa/${slug}`) && escritas.some((e) => e.metodo === 'POST' && e.rota === '/api/convite/token-de-prova/aceitar'), JSON.stringify({ url: pagina.url().replace(BASE, ''), escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
     await contexto.close();
   }
 
@@ -8063,9 +8104,10 @@ async function cenaRodada29g(navegador) {
     });
     await pagina.goto(`${BASE}/register`, { waitUntil: 'domcontentloaded' });
     await aceitarCookies(pagina);
-    await pagina.waitForSelector('#birthdate', { timeout: 30000 });
-    const max = await pagina.locator('#birthdate').getAttribute('max');
-    verificar('A · o seletor de data oferece até hoje − 18 anos (o ano mais alto é o ano atual − 18)', max === aniversarioHoje(18) && Number(String(max).slice(0, 4)) === new Date().getUTCFullYear() - 18, `max=${max}`);
+    await pagina.waitForSelector('#birthdate [data-rolo="ano"]', { timeout: 30000 });
+    // 29H: rolinhos — o ano mais alto que o rolo oferece é o ano atual − 18 (o teto do mês/dia, quem confere é o envio, abaixo).
+    const anosOferecidos = await pagina.locator('#birthdate [data-rolo="ano"] [data-valor]').evaluateAll((els) => els.map((e) => Number(e.dataset.valor)));
+    verificar('A · o seletor de data oferece até hoje − 18 anos (o ano mais alto é o ano atual − 18)', anosOferecidos[anosOferecidos.length - 1] === new Date().getUTCFullYear() - 18, `ano mais alto=${anosOferecidos[anosOferecidos.length - 1]}`);
     verificar('A · a frase "O Futty é para maiores de 18 anos." mora sob o campo da data', (await pagina.locator('#birthdate').locator('xpath=..').innerText().catch(() => '')).includes(FRASE));
     await capturar(pagina, 'A1-register');
 
@@ -8073,7 +8115,7 @@ async function cenaRodada29g(navegador) {
       await pagina.fill('#email', `prova-r29g-${sufixo}-${Date.now()}@futtymock.com`);
       await pagina.fill('#password', 'Prova!R29G-registro');
       await pagina.fill('#confirm', 'Prova!R29G-registro');
-      await pagina.fill('#birthdate', nasc);
+      await escolherDataNosRolinhos(pagina, '#birthdate', nasc);
       await pagina.locator('input[type="checkbox"]').check();
     };
     const aviso = pagina.locator('.auth-alert--error');
@@ -8160,9 +8202,11 @@ async function cenaRodada29g(navegador) {
     const t = await texto(pagina);
     verificar('C · conta sem data entra normal (sem a tela de exclusão) e o Início pede a data', await campo.isVisible().catch(() => false) && !new RegExp(`^${FRASE}$`, 'm').test(t));
     verificar('C · o pedido diz "para confirmarmos que você tem 18 anos ou mais" (some "proteger menores")', /para confirmarmos que você tem 18 anos ou mais/.test(t) && !/proteger menores/.test(t));
-    verificar('C · o seletor de data do Início também para em hoje − 18 anos', (await campo.getAttribute('max').catch(() => null)) === aniversarioHoje(18));
+    const anosDoInicio = await pagina.locator('#inicio-nascimento [data-rolo="ano"] [data-valor]').evaluateAll((els) => els.map((e) => Number(e.dataset.valor)));
+    verificar('C · o seletor de data do Início também para em hoje − 18 anos (rolinhos: o ano mais alto é o ano atual − 18)', anosDoInicio[anosDoInicio.length - 1] === new Date().getUTCFullYear() - 18, `ano mais alto=${anosDoInicio[anosDoInicio.length - 1]}`);
     await capturar(pagina, 'C1-inicio-pede-a-data');
-    await campo.fill(aniversarioHoje(17));
+    // 29H: o rolo só vai até o ano atual − 18; "menor" aqui é quem faz 18 amanhã (último ano oferecido, dia de amanhã).
+    await escolherDataNosRolinhos(pagina, '#inicio-nascimento', aniversarioHoje(18, 1));
     await pagina.getByRole('button', { name: 'Salvar' }).click();
     await pagina.getByRole('heading', { name: FRASE }).waitFor({ timeout: 15000 }).catch(() => {});
     const salvo = escritas.filter((e) => e.metodo === 'PATCH' && e.rota === '/api/me');
@@ -8442,13 +8486,13 @@ async function cenaRodada29e2(navegador) {
     await espera(150);
     const cheio = await ler(pagina);
     const rolosCheio = todosRolos(cheio);
-    verificar('D · fase cheia: 8 rolos travados (.stop, tira parada), cada um com a figurinha sorteada na moldura (.rev.on, msqRevPop), nome e busto 112×150 de /onboarding/', cheio.travados === N && rolosCheio.every((x) => x.estado === 'travado' && x.spin?.play === 'paused' && x.rev?.on && IDS.includes(x.rev.id) && NOMES.includes(x.rev.nome) && x.rev.src?.endsWith(`/onboarding/${x.rev.id}.webp`) && x.rev.natural?.[0] === 112 && x.rev.natural?.[1] === 150 && x.rev.anim === 'msqRevPop' && Number(x.rev.opacidade) === 1) && new Set(rolosCheio.map((x) => x.rev.id)).size === N && cheio.grupos.every((g) => g.rolos.length === 4), JSON.stringify(rolosCheio.map((x) => [x.time + x.vaga, x.rev?.id, x.rev?.natural, x.spin?.play])));
+    verificar('D · fase cheia: 8 rolos travados (.stop, tira parada), cada um com a figurinha sorteada na moldura (.rev.on, msqRevPop), nome e busto 112×150 de /onboarding/', cheio.travados === N && rolosCheio.every((x) => x.estado === 'travado' && x.spin?.play === 'paused' && x.rev?.on && IDS.includes(x.rev.id) && NOMES.includes(x.rev.nome) && new RegExp(`/onboarding/${x.rev.id}\\.webp(\\?v=[0-9a-f]{8})?$`).test(x.rev.src || '') && x.rev.natural?.[0] === 112 && x.rev.natural?.[1] === 150 && x.rev.anim === 'msqRevPop' && Number(x.rev.opacidade) === 1) && new Set(rolosCheio.map((x) => x.rev.id)).size === N && cheio.grupos.every((g) => g.rolos.length === 4), JSON.stringify(rolosCheio.map((x) => [x.time + x.vaga, x.rev?.id, x.rev?.natural, x.spin?.play])));
     verificar('D · fase cheia: as micro-lâmpadas das molduras piscam (msqMbPisca)', rolosCheio.every((x) => x.rev?.mb?.anim === 'msqMbPisca'), JSON.stringify(rolosCheio.map((x) => x.rev?.mb?.anim)));
     // 29E3: GONÇALO (com cedilha, arquivo goncalo.webp) aparece e cabe na cartinha de 56 como BRUNINHO: texto ≤ 54 px, sem estourar.
     const nomes = rolosCheio.map((x) => ({ id: x.rev?.id, nome: x.rev?.nome, src: x.rev?.src, ...(x.nm || {}) }));
     const goncalo = nomes.find((x) => x.id === 'goncalo');
     const bruninho = nomes.find((x) => x.id === 'bruninho');
-    verificar('D · GONÇALO aparece (nome com cedilha, busto goncalo.webp, nada de LÉO) e os 8 nomes cabem na cartinha de 56 (≤ 54 px, sem estourar), GONÇALO como BRUNINHO', !!goncalo && goncalo.nome === 'GONÇALO' && goncalo.src?.endsWith('/onboarding/goncalo.webp') && !!bruninho && nomes.length === N && nomes.every((x) => x.largura !== null && x.largura <= 54 && !x.estoura && x.caixa === 56) && !nomes.some((x) => x.id === 'leo' || x.nome === 'LÉO'), JSON.stringify(nomes.map((x) => `${x.nome} ${x.largura?.toFixed(1)}/${x.caixa}${x.estoura ? ' ESTOURA' : ''}`)));
+    verificar('D · GONÇALO aparece (nome com cedilha, busto goncalo.webp, nada de LÉO) e os 8 nomes cabem na cartinha de 56 (≤ 54 px, sem estourar), GONÇALO como BRUNINHO', !!goncalo && goncalo.nome === 'GONÇALO' && /\/onboarding\/goncalo\.webp(\?v=[0-9a-f]{8})?$/.test(goncalo.src || '') && !!bruninho && nomes.length === N && nomes.every((x) => x.largura !== null && x.largura <= 54 && !x.estoura && x.caixa === 56) && !nomes.some((x) => x.id === 'leo' || x.nome === 'LÉO'), JSON.stringify(nomes.map((x) => `${x.nome} ${x.largura?.toFixed(1)}/${x.caixa}${x.estoura ? ' ESTOURA' : ''}`)));
     await capturar(pagina, 'cheio-8-travados');
     // O fade dura 0,4 s e a captura acima (página inteira a 3×) demora o bastante para comer a janela de 2,5 s do "cheio":
     // mede-se no ciclo SEGUINTE, sem captura no meio, amostrando a opacidade a cada 25 ms (setTimeout — a cadência do rAF no
@@ -9040,11 +9084,15 @@ async function cenaRodada29bOrganiza(navegador) {
     await criarAtePapel(pagina, 'Time do Organizador');
     const c = await chips(pagina);
     verificar('criar time, passo 2: "Eu jogo" é o padrão e há "Só organizo o time"', c.length === 2 && c[0].t === 'Eu jogo' && c[0].ativo && c[1].t === 'Só organizo o time' && !c[1].ativo, JSON.stringify(c));
-    const t = await texto(pagina);
-    verificar('criar time: o texto de apoio explica (não entra na presença, no sorteio nem no ranking; nem vaga do pacote)', /não entra na lista de presença, no sorteio nem no ranking/.test(t) && /não ocupa vaga no pacote de figurinhas/.test(t) && /Dá para mudar depois/.test(t));
+    // 29H (item 43): o texto de apoio acompanha a opção marcada — com "Eu jogo" (padrão) diz o que ela faz, e só ao marcar
+    // "Só organizo o time" diz que não entra na presença, no sorteio nem no ranking.
+    const tJoga = await texto(pagina);
+    verificar('criar time: com "Eu jogo" o texto diz que entra na presença, no sorteio e no ranking (não o de "só organizo")', /Você joga e também cuida de tudo: entra na lista de presença, no sorteio e no ranking/.test(tJoga) && !/não ocupa vaga no pacote/.test(tJoga));
     await capturar(pagina, '1-criar-papel');
     await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
     await espera(450);
+    const t = await texto(pagina);
+    verificar('criar time: com "Só organizo o time" o texto explica (não entra na presença, no sorteio nem no ranking; nem vaga do pacote)', /não entra na lista de presença, no sorteio nem no ranking/.test(t) && /não ocupa vaga no pacote de figurinhas/.test(t) && /Dá para mudar depois/.test(t));
     const c2 = await chips(pagina);
     verificar('tocar em "Só organizo o time" troca o chip ativo', c2[1].ativo && !c2[0].ativo, JSON.stringify(c2));
     await capturar(pagina, '2-criar-so-organizo');
@@ -9067,9 +9115,10 @@ async function cenaRodada29bOrganiza(navegador) {
     await criarAtePapel(pagina, 'Time Sem 067');
     await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
     await terminarCriacao(pagina);
-    await pagina.locator('.futty-toast').waitFor({ timeout: 8000 }).catch(() => {});
-    const aviso = await pagina.locator('.futty-toast').innerText().catch(() => '');
-    verificar('se o motor não gravou o papel, a tela diz a verdade (sem fingir que gravou)', /ainda não está disponível/.test(aviso) && /entrou jogando/.test(aviso), aviso.replace(/\s+/g, ' '));
+    // 29H (item 46): o aviso era um toast de 2 s, ilegível — agora é texto fixo na tela do passo 4 (nenhum toast).
+    await pagina.locator('[data-aviso-papel]').waitFor({ timeout: 8000 }).catch(() => {});
+    const aviso = await pagina.locator('[data-aviso-papel]').innerText().catch(() => '');
+    verificar('se o motor não gravou o papel, a tela diz a verdade (sem fingir que gravou), em texto fixo e sem toast', /não pôde ser salvo agora/.test(aviso) && /entrou jogando/.test(aviso) && (await pagina.locator('.futty-toast').count()) === 0, aviso.replace(/\s+/g, ' '));
     await contexto.close();
   }
 
