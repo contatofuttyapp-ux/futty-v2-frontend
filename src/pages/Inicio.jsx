@@ -1019,9 +1019,6 @@ export default function Inicio() {
     <div className="app-shell inicio-reveal">
       <Topbar hud="INÍCIO" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10 }}>
-        {/* Rodada 29I, bloco 3: o card "Seu time" (só para quem administra algum time), no topo — era o Dashboard do painel do admin. */}
-        <CardSeuTime seuTime={dadosInicio?.seu_time || []} teams={teams || []} games={games || []} />
-
         {/* Banner discreto para ativar notificações push */}
         {pushEstado === 'suportado' && !pushBannerFechado ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
@@ -1262,7 +1259,8 @@ export default function Inicio() {
             ) : null}
           </div>
           <NomeCromo nome={nome} />
-          {teams[0] ? (
+          {/* Com o card "Seus times" logo abaixo, o nome do time sai daqui: o card já diz o time (29N, decisão da Freaky). */}
+          {teams[0] && !(dadosInicio?.seu_time || []).length ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neon)' }} />
               {teams[0].nome}
@@ -1280,6 +1278,10 @@ export default function Inicio() {
             </span>
           </div>
         </div>
+
+        {/* Rodada 29N: embaixo do avatar, decisão do dono. Era a primeira coisa da página (29I, bloco 3: o card "Seu time", só para
+            quem administra algum time — o Dashboard do painel do admin); o olho da pessoa cai no avatar, não no topo (achado 146). */}
+        <CardSeuTime seuTime={dadosInicio?.seu_time || []} teams={teams || []} games={games || []} />
 
         {(error || (inicio.erro && !semDadosPorErro)) && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error || inicio.erro}</div>}
 

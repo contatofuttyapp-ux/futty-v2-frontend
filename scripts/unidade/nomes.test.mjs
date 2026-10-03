@@ -13,7 +13,8 @@ import { primeiroNome } from '../../src/utils/primeiroNome.js';
 import { nomeExibicao } from '../../src/utils/nomeExibicao.js';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
-const ler = (rel) => fs.readFileSync(`${RAIZ}${rel}`, 'utf8');
+// CRLF → LF: no Windows o checkout vem com \r\n (autocrlf) e a regex do NomeCromo abaixo termina em "\n}\n".
+const ler = (rel) => fs.readFileSync(`${RAIZ}${rel}`, 'utf8').replace(/\r\n/g, '\n');
 
 test('primeiroNome: tira a pontuação do fim da primeira palavra (vírgula, ponto, ponto e vírgula, hífen) — o achado 92', () => {
   assert.equal(primeiroNome('CHAVO, EL MATADOR'), 'CHAVO');
