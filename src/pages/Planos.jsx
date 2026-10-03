@@ -22,6 +22,7 @@ import EscolherUniformeTime from '../components/EscolherUniformeTime';
 import { PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES, produtosDaTela } from '../lib/planos';
 import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja, comprar, restaurar, sincronizarAposCompra } from '../lib/loja';
+import { ehNativo } from '../lib/plataforma';
 import { apiFetch } from '../lib/api';
 import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
 import '../lib/ligarLoja';
@@ -298,6 +299,13 @@ export default function Planos() {
             <span style={{ display: 'block' }}>Seu card com a foto não custa nada.</span>
             <span style={{ display: 'block', marginTop: 2 }}><b style={{ color: '#f0c94a' }}>Figurinha</b>: a versão em arte, feita por IA no uniforme do Futty.</span>
           </p>
+          {/* Achado 110 (29K): no site os cartões aparecem sem preço e sem "Comprar" — certo, o preço é
+              da loja e só existe no app nativo —, mas sem isto ninguém entende por quê. */}
+          {!ehNativo() ? (
+            <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0, marginBottom: 2 }}>
+              A compra só acontece no app, pela App Store ou pelo Google Play.
+            </p>
+          ) : null}
           {aviso ? (
             <div
               className="hud-corners-s"

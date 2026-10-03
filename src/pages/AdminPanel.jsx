@@ -973,11 +973,14 @@ function TabMembros({ slug, meId, showToast }) {
       })}
 
       {/* O painel do membro (folha de baixo): tudo o que o admin faz com ele, num toque. Portal para o body (15-set): fixed dentro do
-          [data-page] animado não confia no viewport no WebKit do iPhone (ver LoadingFutty.jsx). */}
+          [data-page] animado não confia no viewport no WebKit do iPhone (ver LoadingFutty.jsx).
+          Achado 124 (29K): overflow hidden + overscroll-behavior contain no véu (sem isso, um arrasto nele encadeia para o body por
+          trás, no WebKit — ao fechar a folha, o body fica rolado numa posição que não bate com o conteúdo, "dois terços no topo em
+          preto"); o mesmo contain na folha, que já rola por si (overflowY: auto). */}
       {aberto
         ? createPortal(
-            <div role="presentation" onClick={() => setAbertoId(null)} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-              <div role="dialog" aria-modal="true" aria-label={nomeExibicao(aberto)} data-painel-membro onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, background: '#0a0a0a', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderTop: '1px solid #1a1a1a', padding: '10px 16px calc(16px + env(safe-area-inset-bottom))', maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box' }}>
+            <div role="presentation" onClick={() => setAbertoId(null)} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', overscrollBehavior: 'contain' }}>
+              <div role="dialog" aria-modal="true" aria-label={nomeExibicao(aberto)} data-painel-membro onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, background: '#0a0a0a', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderTop: '1px solid #1a1a1a', padding: '10px 16px calc(16px + env(safe-area-inset-bottom))', maxHeight: '86vh', overflowY: 'auto', overscrollBehavior: 'contain', boxSizing: 'border-box' }}>
                 <div style={{ width: 40, height: 4, borderRadius: 999, background: '#333', margin: '6px auto 12px' }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <PlayerAvatar nome={nomeExibicao(aberto)} avatarUrl={aberto.avatar_url} userId={aberto.user_id} avatarGenerico={aberto.avatar_generico} />

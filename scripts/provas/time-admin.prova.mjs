@@ -9,11 +9,12 @@ export const nome = 'Página do time (abas, Voltar pelo histórico, membro por t
 
 const DIA = 86400000;
 
-function motor(papel) {
+function motor(papel, { comLogo = false } = {}) {
   const agora = Date.now();
   const team = {
     id: 'T1', slug: 'varzea-fc', nome: 'Várzea FC', cor: 'vinho', escudo_cor2: 'ouro', escudo_padrao: 'faixa', role: papel, joga: true,
-    fuso: 'America/Sao_Paulo', cidade: 'São Paulo', jogadores_por_time: 6, mostrar_gols: true, modo_visibilidade: 'privado', logo_url: null,
+    fuso: 'America/Sao_Paulo', cidade: 'São Paulo', jogadores_por_time: 6, mostrar_gols: true, modo_visibilidade: 'privado',
+    logo_url: comLogo ? 'https://x/logos/T1.png?v=1' : null,
   };
   const members = [
     { id: 'U1', nome: 'Tonhão', role: 'admin', joga: true, goleiro: false },
@@ -35,6 +36,7 @@ function motor(papel) {
     '/api/jogos/g-futuro/rsvp': { rsvp_aberto: false, rsvp_fechado: false, confirmados: [], recusados: [], pendentes: [], fuso: 'America/Sao_Paulo' },
     '/api/feed/denuncias': { denuncias: [] },
     '/api/denuncias/fila': { fila: [] },
+    '/api/teams/varzea-fc/logo': { ok: true },
   };
   return (pathname) => respostas[pathname] ?? {};
 }
@@ -50,12 +52,12 @@ function rotear(responder, base) {
   };
 }
 
-async function abrir(navegador, base, papel) {
+async function abrir(navegador, base, papel, opcoesMotor) {
   const ctx = await navegador.newContext({ viewport: { width: 390, height: 800 } });
   const page = await ctx.newPage();
   const erros = [];
   page.on('pageerror', (e) => erros.push(e.message));
-  await page.route('**/*', rotear(motor(papel), base));
+  await page.route('**/*', rotear(motor(papel, opcoesMotor), base));
   await page.goto(`${base}/scripts/provas/time-admin.html`, { waitUntil: 'domcontentloaded' });
   return { ctx, page, erros };
 }
@@ -169,6 +171,45 @@ export async function rodar({ navegador, base, t }) {
     const semNada = await page.locator('[data-sem-pendencias]').innerText();
     t('sem pendência o card fica compacto: "Tudo tranquilo por aqui."', /Tudo tranquilo por aqui\./.test(semNada) && (await page.locator('[data-sem-pendencias] [data-pendencia]').count()) === 0);
     t('o card roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
+  // ── achado 124 (29K): fechar um diálogo não pode deixar resíduo na página ────────────────────────────────────────────────────────
+  {
+    const { ctx, page, erros } = await abrir(navegador, base, 'admin', { comLogo: true });
+    await irPara(page, '/time/varzea-fc?aba=ajustes');
+    await page.locator('[data-ajustes-do-time]').waitFor({ timeout: 15000 });
+    const alturaAntes = await page.evaluate(() => document.documentElement.scrollHeight);
+
+    // Abrir e CANCELAR: nada muda de dado nenhum — a altura tem de voltar ao byte.
+    await page.locator('[data-ajustes-do-time] button:has-text("Remover logo")').click();
+    await page.locator('.modal-card').waitFor({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await page.locator('.modal-card').waitFor({ state: 'detached', timeout: 5000 });
+    const alturaCancelar = await page.evaluate(() => document.documentElement.scrollHeight);
+    t('cancelar o diálogo de "Remover logo" não deixa resíduo: a altura volta ao que era',
+      alturaCancelar === alturaAntes, `antes ${alturaAntes}px, depois de cancelar ${alturaCancelar}px`);
+
+    // Abrir e CONFIRMAR: o logo some e o editor de escudo aparece — a página cresce de VERDADE
+    // (mais conteúdo), o que não é "resíduo". Comparo com uma segunda aba que nasce já sem logo:
+    // se as alturas baterem, o crescimento é só o conteúdo novo, não sobra nenhuma.
+    await page.locator('[data-ajustes-do-time] button:has-text("Remover logo")').click();
+    await page.locator('.modal-card').waitFor({ timeout: 5000 });
+    await page.locator('.modal-card button:has-text("Remover logo")').click();
+    await page.locator('.modal-card').waitFor({ state: 'detached', timeout: 5000 });
+    await page.locator('[data-previa-escudo]').waitFor({ timeout: 5000 });
+    const alturaConfirmar = await page.evaluate(() => document.documentElement.scrollHeight);
+
+    const semLogo = await abrir(navegador, base, 'admin', { comLogo: false });
+    await irPara(semLogo.page, '/time/varzea-fc?aba=ajustes');
+    await semLogo.page.locator('[data-previa-escudo]').waitFor({ timeout: 15000 });
+    const alturaDeReferencia = await semLogo.page.evaluate(() => document.documentElement.scrollHeight);
+    await semLogo.ctx.close();
+
+    t('confirmar "Remover logo": a altura final bate com a de um time que já nasce sem logo (só cresceu o conteúdo novo, sem resíduo)',
+      Math.abs(alturaConfirmar - alturaDeReferencia) <= 2, `confirmado ${alturaConfirmar}px, referência ${alturaDeReferencia}px`);
+    t('sem o logo, o editor de escudo (864 combinações) aparece', (await page.locator('[data-previa-escudo]').count()) === 1);
+    t('achado 124: roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }
 }

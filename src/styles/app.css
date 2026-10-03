@@ -1090,6 +1090,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Achado 124 (29K): sem overflow/overscroll-behavior próprios, um arrasto no véu (fora do
+     card, onde não há nada para rolar) ENCADEIA para o body por baixo — no WebKit do iPhone,
+     isso rola a página por trás do modal; ao fechar, o body fica numa posição que não bate
+     com o conteúdo novo (achado 124: "dois terços do topo em preto"), e só um reload acerta.
+     `overflow: hidden` + `overscroll-behavior: contain` fazem o véu ABSORVER o arrasto, em
+     vez de deixá-lo passar para trás. */
+  overflow: hidden;
+  overscroll-behavior: contain;
   /* max(): nunca menos que os 16px de sempre, mais o que o notch/gesto exigir
      (14-set, VELOCIDADE 5) — um modal alto não pode nascer com o card colado
      ao relógio ou à barra de gesto. Sheets de fundo (AvatarGenericoSheet, o
@@ -1118,6 +1126,9 @@
   border-radius: calc(var(--radius) - 2px);
   padding: 24px 20px;
   text-align: center;
+  /* Achado 124 (29K): quando o conteúdo é alto e leva overflow-y: auto próprio (ex.: o modal de
+     resultado), rolar até à borda não pode encadear para o body por baixo do véu. */
+  overscroll-behavior: contain;
 }
 
 /* Modal em modo HUD: corte cheio 8px (escala de card). Opt-in — só a instância que leva

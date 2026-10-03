@@ -24,12 +24,6 @@
 import { useId } from 'react';
 import { F_CONTORNO, F_ESQUELETO } from '../utils/futtyMonograma';
 
-// Marcador de entrega — confirma no browser que o build novo do loader está servido.
-if (typeof window !== 'undefined' && window.FUTTY_BUILD !== 'loader-ouro-v3') {
-  window.FUTTY_BUILD = 'loader-ouro-v3';
-  console.log("[FUTTY_BUILD] loader-ouro-v3 (branco morto: halo/pincel só ouro, specular ouro-quente, shine fora)");
-}
-
 // FASE 3.48 — +35% em todos os tamanhos (default 44 → 59; overlay 64 → 86; botão 16 → 22).
 export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
   // ids únicos por instância: podem coexistir dois loaders no mesmo ecrã.

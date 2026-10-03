@@ -2,13 +2,15 @@
 // SPEC-SORTEIO §9: o LINK partilhado reproduz a MESMA cerimónia (seed persistida)
 // a quem o abrir — a montra do Futty: animação + marca + CTA "cria o teu grupo".
 // (A página antiga de listas morreu, substituída por esta.)
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { estadoSorteio } from '../utils/estadoSorteio';
+import { quandoOndeDoJogo } from '../utils/quandoOndeDoJogo';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
-import SeletorIdiomaDiscreto from '../components/SeletorIdiomaDiscreto';
+import DrawnTeams from '../components/DrawnTeams';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -21,11 +23,16 @@ export default function SorteioPublico() {
   const resultado = data?.times_resultado;
   const res = data?.resultado;
   const estado = estadoSorteio({ loading, error, resultado });
+  // Achado 112 (29K): a página mostrava o time, a cerimônia e os times — e mais nada. Quem recebe
+  // o link no grupo não descobria quando nem onde é o jogo, que é o que foi ali procurar.
+  const quandoOnde = quandoOndeDoJogo(data?.jogo, data?.equipa);
+  // Achado 114 (29K): quem chega pelo link do grupo quer ver os times, não assistir a cerimônia
+  // inteira (+20s). Aqui o resultado já vem montado; "Ver sorteio" é a cerimônia, pra quem quiser.
+  const [verCerimonia, setVerCerimonia] = useState(false);
 
   return (
     <div className="app-shell">
       <main className="app-main page-reveal" style={{ maxWidth: 480, paddingTop: 18, position: 'relative' }}>
-        <SeletorIdiomaDiscreto style={{ position: 'absolute', top: 0, right: 16 }} />
         {/* marca no topo — isto é a montra */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 4 }}>
           <FuttyLogo variant="icone" size={30} />
@@ -34,6 +41,9 @@ export default function SorteioPublico() {
         <p style={{ fontFamily: RAJ, fontSize: 13, letterSpacing: '0.08em', color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 14px', textTransform: 'uppercase' }}>
           {data?.equipa?.nome || 'Sorteio'} · sorteio dos times
         </p>
+        {quandoOnde ? (
+          <p style={{ fontFamily: RAJ, fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '-8px 0 14px' }}>{quandoOnde}</p>
+        ) : null}
 
         {estado === 'carregando' ? (
           <LoadingFutty />
@@ -48,7 +58,16 @@ export default function SorteioPublico() {
           <p className="muted" style={{ textAlign: 'center' }}>Este sorteio ainda não aconteceu.</p>
         ) : (
           <>
-            <CerimoniaSorteio resultado={resultado} />
+            {verCerimonia ? (
+              <CerimoniaSorteio resultado={resultado} />
+            ) : (
+              <>
+                <DrawnTeams resultado={resultado} teamCor={data?.equipa?.cor} />
+                <button type="button" className="btn btn--outline hud-corners-s" style={{ width: '100%', marginTop: 14 }} onClick={() => setVerCerimonia(true)}>
+                  Ver sorteio
+                </button>
+              </>
+            )}
 
             {/* resultado do jogo, se já houver */}
             {res?.nivel >= 2 ? (

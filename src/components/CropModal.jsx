@@ -129,6 +129,10 @@ export default function CropModal({ file, aspect = 1, aspectos = ASPECTS, miniat
         background: '#000',
         display: 'flex',
         flexDirection: 'column',
+        // Achado 124 (29K): o wrapper não deixa um arrasto fora do cropper (o Cropper cuida do
+        // seu próprio gesto) encadear a rolagem para o body por trás, no WebKit.
+        overflow: 'hidden',
+        overscrollBehavior: 'contain',
       }}
     >
       {/* Área do cropper */}

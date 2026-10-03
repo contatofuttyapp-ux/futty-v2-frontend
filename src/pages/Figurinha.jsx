@@ -2226,8 +2226,10 @@ export default function Figurinha() {
           aria-label="Sua foto"
           onClick={() => setModalFoto(false)}
           /* Velocidade 8: a 0,85 de preto por cima, o blur de 4px não se via —
-             pagava-se uma camada de composição de ecrã inteiro para nada. */
-          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+             pagava-se uma camada de composição de ecrã inteiro para nada.
+             Achado 124 (29K): overflow hidden + overscroll-behavior contain — sem isso, um arrasto no véu encadeia
+             a rolagem para o body por trás (WebKit), e ao fechar a página fica numa posição que não bate. */
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflow: 'hidden', overscrollBehavior: 'contain' }}
         >
           <div
             onClick={(e) => e.stopPropagation()}

@@ -596,7 +596,9 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
               aria-modal="true"
               aria-label="Imagem"
               onClick={() => setImgFull(null)}
-              style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+              // Achado 124 (29K): overflow hidden + overscroll-behavior contain — sem isso, um arrasto no véu encadeia
+              // a rolagem para o body por trás (WebKit), e ao fechar a página fica numa posição que não bate.
+              style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflow: 'hidden', overscrollBehavior: 'contain' }}
             >
               <img src={urlImagem(imgFull, 1024)} alt="" decoding="async" fetchPriority="high" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
             </div>,
