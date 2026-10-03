@@ -11,6 +11,7 @@ import { apiFetch } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { formatarData } from '../utils/dataHora';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
+import { estadoSorteio } from '../utils/estadoSorteio';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
 import AdCard from '../components/AdCard';
@@ -33,7 +34,10 @@ export default function SorteioShow() {
     if (euSorteei) navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corre uma vez, na montagem
   }, []);
-  const { data, loading } = useApi(`/api/games/${id}`);
+  // Achado 120 (29J) — REGRESSÃO: um erro de rede/sessão aqui caía no MESMO `!resultado`
+  // do sorteio nunca feito, e a tela dizia "ainda não foi realizado" com o sorteio
+  // intacto no banco. `error` distingue os dois agora (como Jogo.jsx já fazia).
+  const { data, loading, error, reload } = useApi(`/api/games/${id}`);
   const [toast, setToast] = useState(null);
   const [termoAberto, setTermoAberto] = useState(false);
   // Item 74 (29I, bloco 3): o link curto do sorteio (/s/<código>), pedido assim que a página abre — a cópia sai na hora do toque.
@@ -52,6 +56,7 @@ export default function SorteioShow() {
   const [jaTerminou, setJaTerminou] = useState(false);
   const game = data?.game;
   const resultado = game?.times_resultado;
+  const estado = estadoSorteio({ loading, error, resultado });
   // A data do cartaz é a do CAMPO (fuso do time, 29I achado 83): "8 out 2026".
   const dataCartaz = game?.data
     ? formatarData(game.data, data?.team?.fuso, 'comAno').replace(/ de /g, ' ').replace(/\./g, '')
@@ -99,9 +104,16 @@ export default function SorteioShow() {
     <div className="app-shell">
       {/* LEI: página do sorteio = IMERSIVA, SEM Topbar; a saída faz-se pelo X da máquina. */}
       <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
-        {loading ? (
+        {estado === 'carregando' ? (
           <LoadingFutty />
-        ) : !resultado ? (
+        ) : estado === 'erro' ? (
+          <div style={{ textAlign: 'center' }}>
+            <div className="alert alert--error">{error}</div>
+            <button type="button" className="btn btn--outline hud-corners-s" style={{ marginTop: 12 }} onClick={reload}>
+              Tentar de novo
+            </button>
+          </div>
+        ) : estado === 'nao_feito' ? (
           <p className="muted">O sorteio ainda não foi realizado.</p>
         ) : (
           <>

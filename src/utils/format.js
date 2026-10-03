@@ -24,9 +24,13 @@ export function dayMonth(iso, fuso) {
   return { day: String(dia).padStart(2, '0'), month: mesCurto(iso, fuso) };
 }
 
-/** Média de votos formatada (2 casas) ou "--" se não houver votos. */
+// Achado 119 (29J): "★ -" no Elenco, "--" no Início e no Perfil, "—" na vitrine — quatro formas
+// para a mesma coisa. Uma só, que diga o que é (a vitrine já dizia certo: "Sem nota ainda").
+export const SEM_NOTA_AINDA = 'sem nota ainda';
+
+/** Média de votos formatada (2 casas) ou SEM_NOTA_AINDA se não houver votos. */
 export function formatRating(value) {
-  return Number(value) > 0 ? Number(value).toFixed(2) : '--';
+  return Number(value) > 0 ? Number(value).toFixed(2) : SEM_NOTA_AINDA;
 }
 
 /** Score do ranking formatado (1 casa decimal). */

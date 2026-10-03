@@ -14,7 +14,7 @@ import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
-import { formatDateTime, formatRating } from '../utils/format';
+import { SEM_NOTA_AINDA, formatDateTime, formatRating } from '../utils/format';
 import { ehHoje, formatarData } from '../utils/dataHora';
 import { plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -1266,7 +1266,7 @@ export default function Inicio() {
             </div>
           ) : null}
           <div className="inicio-stats">
-            <span className="nota">{stats ? formatRating(stats.nota) : '--'}</span>
+            <span className="nota">{stats ? formatRating(stats.nota) : SEM_NOTA_AINDA}</span>
             <span>·</span>
             <span>
               <b>{stats?.jogos ?? 0}</b> jogos

@@ -79,48 +79,59 @@ function Badge45({ children, gold }) {
 }
 
 // As abas, no estilo das da Figurinha (as mesmas medidas). Ajustes só para o admin, com o selo ADMIN.
-function AbasDoTime({ aba, ehAdmin, aoTrocar }) {
+// Achado 117 (29J): o Ranking era uma barra solta, de largura total, acima desta linha — parecia
+// banner, não botão. Agora é um item do MESMO tamanho das abas, na mesma linha (mas é navegação
+// para outra página, não um aba.: por isso fica fora do role="tablist", sem role="tab").
+const ESTILO_ABA = (on) => ({
+  flex: 1,
+  height: 36,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  border: on ? '1px solid var(--border-accent)' : '1px solid transparent',
+  background: on ? 'rgba(139,92,246,0.2)' : 'transparent',
+  color: on ? '#8b5cf6' : 'var(--label-color)',
+  fontFamily: "'Rajdhani', sans-serif",
+  fontWeight: 700,
+  fontSize: 13,
+  letterSpacing: '0.5px',
+  textTransform: 'uppercase',
+  cursor: 'pointer',
+  transition: 'all 0.15s ease',
+  textDecoration: 'none',
+});
+
+function AbasDoTime({ aba, ehAdmin, aoTrocar, slug }) {
   const abas = [['jogos', 'Jogos'], ['elenco', 'Elenco'], ...(ehAdmin ? [['ajustes', 'Ajustes']] : [])];
   return (
-    <div role="tablist" aria-label="Seções do time" style={{ display: 'flex', gap: 6, marginTop: 14 }}>
-      {abas.map(([k, rotulo]) => {
-        const on = aba === k;
-        return (
-          <button
-            key={k}
-            type="button"
-            role="tab"
-            className="hud-corners-s"
-            data-aba={k}
-            aria-selected={on}
-            aria-pressed={on}
-            onClick={() => aoTrocar(k)}
-            style={{
-              flex: 1,
-              height: 36,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              border: on ? '1px solid var(--border-accent)' : '1px solid transparent',
-              background: on ? 'rgba(139,92,246,0.2)' : 'transparent',
-              color: on ? '#8b5cf6' : 'var(--label-color)',
-              fontFamily: "'Rajdhani', sans-serif",
-              fontWeight: 700,
-              fontSize: 13,
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {rotulo}
-            {k === 'ajustes' ? (
-              <span data-selo-admin style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#f0c94a', border: '1px solid rgba(212,160,23,0.6)', background: 'rgba(212,160,23,0.10)', padding: '1px 5px', clipPath: CLIP_S }}>ADMIN</span>
-            ) : null}
-          </button>
-        );
-      })}
+    <div style={{ display: 'flex', gap: 6, marginTop: 14 }}>
+      <div role="tablist" aria-label="Seções do time" style={{ display: 'flex', gap: 6, flex: abas.length }}>
+        {abas.map(([k, rotulo]) => {
+          const on = aba === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              className="hud-corners-s"
+              data-aba={k}
+              aria-selected={on}
+              aria-pressed={on}
+              onClick={() => aoTrocar(k)}
+              style={ESTILO_ABA(on)}
+            >
+              {rotulo}
+              {k === 'ajustes' ? (
+                <span data-selo-admin style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#f0c94a', border: '1px solid rgba(212,160,23,0.6)', background: 'rgba(212,160,23,0.10)', padding: '1px 5px', clipPath: CLIP_S }}>ADMIN</span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+      <Link to={`/time/${slug}/ranking`} className="hud-corners-s" data-botao-ranking style={{ ...ESTILO_ABA(false), flex: 1 }}>
+        Ranking
+      </Link>
     </div>
   );
 }
@@ -350,11 +361,7 @@ export default function Equipa() {
               </div>
             ) : null}
 
-            <Link to={`/time/${slug}/ranking`} className="btn btn--outline hud-corners-s" style={{ marginTop: 12, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
-              <Icon name="medalha" size={15} /> Ranking
-            </Link>
-
-            <AbasDoTime aba={aba} ehAdmin={ehAdmin} aoTrocar={trocarAba} />
+            <AbasDoTime aba={aba} ehAdmin={ehAdmin} aoTrocar={trocarAba} slug={slug} />
 
             <div style={{ marginTop: 14 }} role="tabpanel" data-painel-aba={aba}>
             {aba === 'jogos' ? (

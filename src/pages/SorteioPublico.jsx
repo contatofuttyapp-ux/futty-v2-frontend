@@ -4,6 +4,7 @@
 // (A página antiga de listas morreu, substituída por esta.)
 import { Link, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
+import { estadoSorteio } from '../utils/estadoSorteio';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
@@ -14,9 +15,12 @@ const RAJ = "'Rajdhani', sans-serif";
 
 export default function SorteioPublico() {
   const { gameId } = useParams();
-  const { data, loading } = useApi(`/api/p/${gameId}`);
+  // Achado 120 (29J): `error` tem de sair distinto de "ainda não aconteceu" — mesma
+  // regra do SorteioShow (a página com login), para a vista pública não repetir o erro.
+  const { data, loading, error, reload } = useApi(`/api/p/${gameId}`);
   const resultado = data?.times_resultado;
   const res = data?.resultado;
+  const estado = estadoSorteio({ loading, error, resultado });
 
   return (
     <div className="app-shell">
@@ -31,9 +35,16 @@ export default function SorteioPublico() {
           {data?.equipa?.nome || 'Sorteio'} · sorteio dos times
         </p>
 
-        {loading ? (
+        {estado === 'carregando' ? (
           <LoadingFutty />
-        ) : !resultado ? (
+        ) : estado === 'erro' ? (
+          <div style={{ textAlign: 'center' }}>
+            <div className="alert alert--error">{error}</div>
+            <button type="button" className="btn btn--outline hud-corners-s" style={{ marginTop: 12 }} onClick={reload}>
+              Tentar de novo
+            </button>
+          </div>
+        ) : estado === 'nao_feito' ? (
           <p className="muted" style={{ textAlign: 'center' }}>Este sorteio ainda não aconteceu.</p>
         ) : (
           <>

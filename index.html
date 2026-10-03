@@ -19,10 +19,13 @@
     <meta name="description" content="Sorteio justo, ranking e figurinha de colecionador." />
 
     <!-- Prévia do link (WhatsApp, iMessage, redes) — Rodada 29H, item 7. Antes não havia og:image e o WhatsApp mostrava o F
-         pequeno num círculo; agora é o ÍCONE DO APP (quadrado arredondado) centrado em 1200×630. Vale para o site inteiro e para
-         o convite (/convite/<uuid> e /c/<código> caem neste mesmo index.html). A URL é absoluta e de produção: quem lê a prévia
-         é o robô do app de mensagem, que não passa pelo dev.futty.pages.dev. O arquivo tem versão no nome (-v1): a prévia fica
-         guardada por muito tempo nesses apps; ao trocar a arte, trocar o nome (scripts/gerar-og.mjs) e esta linha. -->
+         pequeno num círculo; agora é o ÍCONE DO APP (quadrado arredondado) centrado em 1200×630. Este é o PADRÃO, para o site
+         inteiro. A URL é absoluta e de produção: quem lê a prévia é o robô do app de mensagem, que não passa pelo
+         dev.futty.pages.dev. O arquivo tem versão no nome (-v1): a prévia fica guardada por muito tempo nesses apps; ao trocar
+         a arte, trocar o nome (scripts/gerar-og.mjs) e esta linha.
+         Achado 121 (Rodada 29J): /p/*, /s/*, /c/* e /convite/* têm prévia PRÓPRIA (o time, o convite, o campeonato) — uma
+         Cloudflare Function troca estas mesmas tags antes de entregar o HTML, só para o robô (functions/_shared/previaDoLink.js).
+         Uma pessoa abrindo o link no navegador continua a ver este index.html tal e qual. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Futty" />
     <meta property="og:title" content="O seu time. A sua figurinha." />

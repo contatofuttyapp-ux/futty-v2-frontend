@@ -329,18 +329,28 @@ export default function JogadorPerfil() {
                   ) : null}
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
-                  <div>
-                    <div className="perfil-num" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 34, color: OURO, lineHeight: 1, animationDelay: '0.6s' }}>{notaAlvo != null ? notaShow.toFixed(1) : '--'}</div>
-                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Nota</div>
-                  </div>
+                  {jogador.posicao != null ? (
+                    <div>
+                      <div className="perfil-num" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 34, color: OURO, lineHeight: 1, animationDelay: '0.6s' }}>{notaShow.toFixed(1)}</div>
+                      <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Nota</div>
+                    </div>
+                  ) : (
+                    // Achado 119 (29J): era "--" aqui, "—" e "--" nos tiles ao lado — três formas pro mesmo "sem nota
+                    // ainda" já dito (bem) no cabeçalho desta página (linha 272). Uma mensagem só, no lugar dos três.
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--text-dim)', textTransform: 'uppercase', padding: '0 12px', lineHeight: 1.3 }}>Sem nota ainda</div>
+                  )}
                 </div>
               </div>
-              <div style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                <div style={{ fontSize: 22, fontWeight: 700 }}>{jogador.posicao != null ? <>Top <CountUp end={jogador.posicao} className="perfil-num" style={{ display: 'inline-block' }} /></> : '—'}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>de {jogador.total_com_nota} com nota</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: OURO, marginTop: 8 }}>{notaAlvo != null ? `${notaAlvo.toFixed(1)} / 10` : '--'}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>média recebida</div>
-              </div>
+              {jogador.posicao != null ? (
+                <div style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  <div style={{ fontSize: 22, fontWeight: 700 }}>Top <CountUp end={jogador.posicao} className="perfil-num" style={{ display: 'inline-block' }} /></div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>de {jogador.total_com_nota} com nota</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: OURO, marginTop: 8 }}>{(notaAlvo ?? 0).toFixed(1)} / 10</div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>média recebida</div>
+                </div>
+              ) : (
+                <p className="texto-apoio" style={{ margin: 0 }}>Ainda sem votos recebidos nesta equipa. A nota aparece depois dos primeiros jogos.</p>
+              )}
             </div>
 
             {eixosRadar.length >= 3 ? (

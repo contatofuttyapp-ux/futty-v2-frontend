@@ -14,7 +14,7 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, ChevronRight, ShieldCheck, ShieldOff, RotateCcw, UserMinus } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
-import { formatDateTime, STATUS_LABELS } from '../utils/format';
+import { SEM_NOTA_AINDA, formatDateTime, STATUS_LABELS } from '../utils/format';
 import { camposNoCampo, formatarData, formatarDataHora, instanteNoCampo, rabichoDoFuso } from '../utils/dataHora';
 import { LABEL_LINHA } from '../utils/posicoes';
 import { plural } from '../utils/plural';
@@ -36,6 +36,7 @@ import { avisoDaCidade } from '../utils/cidades';
 import { TEXTO_APOIO_BAIRRO, avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
 import { linkDoConvite } from '../utils/convite';
 import { caminhoDoAdminAntigo } from '../lib/rotasAntigas';
+import { separarFuturosPassados } from '../utils/jogosFuturoPassado';
 import '../styles/app.css';
 
 // Opções de visibilidade (a "cor de fundo do avatar" saiu — 29I, bloco 3, achado 102: o escudo é UM controle, EditorEscudo).
@@ -391,6 +392,10 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
   const [joga, setJoga] = useState(team.joga !== false); // Rodada 29B (E): "Eu jogo" / "Só organizo o time"
   const [jogaOcupado, setJogaOcupado] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  // Achado 118 (29J): sem isto não havia volta — quem subisse um logo errado ficava preso, e o
+  // editor de escudo (864 combinações) ficava inalcançável em qualquer time com logo.
+  const [removendoLogo, setRemovendoLogo] = useState(false);
+  const [confirmRemoverLogo, setConfirmRemoverLogo] = useState(false);
   const logoInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
   // Item 68 (Rodada 29): jogadores por time é UM padrão do time — o "Novo jogo" já vem com ele. Grava sozinho, um instante depois do
@@ -429,6 +434,23 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
       showToast(err.message, 'error');
     } finally {
       setUploadingLogo(false);
+    }
+  }
+
+  // Achado 118 (29J): remove o logo — o escudo do time (EditorEscudo) volta a aparecer.
+  async function removerLogo() {
+    setConfirmRemoverLogo(false);
+    setRemovendoLogo(true);
+    try {
+      await apiFetch(`/api/teams/${slug}/logo`, { method: 'DELETE' });
+      setLogoUrl(null);
+      setPreviewLogo(null);
+      showToast('Logo removido. O escudo do time volta a aparecer.');
+      onMudou?.();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setRemovendoLogo(false);
     }
   }
 
@@ -594,14 +616,26 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <EscudoEquipa team={{ ...team, nome, logo_url: previewLogo || logoUrl }} size={64} />
           <div style={{ display: 'grid', gap: 6 }}>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              disabled={uploadingLogo}
-              onClick={() => logoInputRef.current?.click()}
-            >
-              {uploadingLogo ? 'Carregando…' : 'Enviar logo'}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                disabled={uploadingLogo || removendoLogo}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                {uploadingLogo ? 'Carregando…' : 'Enviar logo'}
+              </button>
+              {previewLogo || logoUrl ? (
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  disabled={uploadingLogo || removendoLogo}
+                  onClick={() => setConfirmRemoverLogo(true)}
+                >
+                  {removendoLogo ? 'Removendo…' : 'Remover logo'}
+                </button>
+              ) : null}
+            </div>
             <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>PNG, JPG ou WEBP · máx 2MB</span>
           </div>
           <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={aoEscolherLogo} style={{ display: 'none' }} />
@@ -715,6 +749,16 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         {saving ? 'Salvando…' : 'Salvar'}
       </button>
     </div>
+
+    {confirmRemoverLogo ? (
+      <ConfirmModal
+        texto="Remover o logo do time? O escudo volta a aparecer no lugar."
+        confirmarLabel="Remover logo"
+        perigo
+        onConfirm={removerLogo}
+        onCancel={() => setConfirmRemoverLogo(false)}
+      />
+    ) : null}
 
     </div>
   );
@@ -913,7 +957,7 @@ function TabMembros({ slug, meId, showToast }) {
                 {inativo ? <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', borderRadius: 999, padding: '2px 6px' }}>Inativo</span> : null}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-dim)' }}>
-                <span style={{ fontWeight: 800, color: m.nota_media == null ? 'var(--label-color)' : m.nota_media >= 7 ? '#d4a017' : '#fff' }}>★ {m.nota_media == null ? '-' : m.nota_media.toFixed(1)}</span>
+                <span style={{ fontWeight: 800, color: m.nota_media == null ? 'var(--text-dim)' : m.nota_media >= 7 ? '#d4a017' : '#fff' }}>{m.nota_media == null ? SEM_NOTA_AINDA : `★ ${m.nota_media.toFixed(1)}`}</span>
                 <span style={{ display: 'inline-flex', gap: 4 }} aria-hidden>
                   {Array.from({ length: 5 }).map((_, idx) => {
                     const p = (m.presencas_recentes || [])[idx];
@@ -1417,16 +1461,7 @@ function TabJogos({ slug, team, showToast, navigate }) {
   }
 
   const [now] = useState(() => Date.now());
-  const { futuros, passados } = useMemo(() => {
-    const f = [];
-    const p = [];
-    for (const g of games || []) {
-      // Cancelados futuros continuam na lista "Futuros" (com visual distinto).
-      const fut = g.data && new Date(g.data).getTime() > now && g.status !== 'terminado';
-      (fut ? f : p).push(g);
-    }
-    return { futuros: f, passados: p };
-  }, [games, now]);
+  const { futuros, passados } = useMemo(() => separarFuturosPassados(games, now), [games, now]);
 
   async function cancelar(g, motivo) {
     try {

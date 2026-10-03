@@ -32,4 +32,10 @@ export default defineConfig([
     files: ['scripts/**/*.js', 'vite.config.js'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // functions/** corre no runtime das Cloudflare Pages Functions: fetch/Request/Response (já
+    // cobertos pelo "browser") + HTMLRewriter, que só existe ali (achado 121, Rodada 29J).
+    files: ['functions/**/*.js'],
+    languageOptions: { globals: { ...globals.browser, HTMLRewriter: 'readonly' } },
+  },
 ])

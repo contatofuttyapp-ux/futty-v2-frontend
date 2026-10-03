@@ -63,8 +63,12 @@ const FUNDOS = [
   { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label novo — GRÁTIS (15-set)
   { k: 'estadio', label: 'Estádio' },
   { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
-  { k: 'golden', label: 'Dourado', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
-  { k: 'royal', label: 'Real', premium: true }, // par de luxo do Golden — chapa roxa da casa
+  // REVERSÃO (dono, 3-out, Rodada 29J): "Golden" e "Royal" são nomes de PRODUTO batizados pelo dono em
+  // 15-set, não texto de interface — ficam em inglês, como "Golden" fica no cadeado GOLDEN. O bloco 2 da
+  // 29I traduziu para "Dourado"/"Real" por conta própria; a regra do PT-BR vale para o que o app DIZ, não
+  // para o que o app BATIZA. Não reabrir sem o dono pedir.
+  { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
+  { k: 'royal', label: 'Royal', premium: true }, // par de luxo do Golden — chapa roxa da casa
 ];
 // Background real de cada fundo (igual ao do PlayerCard) para os tiles.
 const FUNDO_BG = {

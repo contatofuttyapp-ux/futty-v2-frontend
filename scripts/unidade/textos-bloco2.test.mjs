@@ -31,20 +31,26 @@ test('91 · os uniformes têm nome em português, com a cara de marca (os ids in
   for (const nome of Object.values(nomes)) assert.doesNotMatch(nome, /Dark|Gold|White|Elite Gold|Royal|Purple/, nome);
 });
 
-test('91 · os fundos da figurinha também: nada de "Golden" nem "Royal" na tela', () => {
+// REVERSÃO (dono, 3-out, Rodada 29J, item 8): "Golden" e "Royal" são nomes de PRODUTO, batizados
+// pelo dono em 15-set — não texto de interface. A tradução para "Dourado"/"Real" (91, bloco 2)
+// era por conta própria e foi revertida; a regra do PT-BR vale para o que o app DIZ, não BATIZA.
+test('item 8 (29J) · os fundos Golden e Royal ficam em inglês — são nome de produto, não texto de interface', () => {
   const figurinha = ler('src/pages/Figurinha.jsx');
-  assert.match(figurinha, /\{ k: 'golden', label: 'Dourado', premium: true \}/);
-  assert.match(figurinha, /\{ k: 'royal', label: 'Real', premium: true \}/);
+  assert.match(figurinha, /\{ k: 'golden', label: 'Golden', premium: true \}/);
+  assert.match(figurinha, /\{ k: 'royal', label: 'Royal', premium: true \}/);
   const lista = figurinha.slice(figurinha.indexOf('const FUNDOS = ['), figurinha.indexOf('];', figurinha.indexOf('const FUNDOS = [')));
   const rotulos = [...lista.matchAll(/\{ k: '[a-z]+', label: '([^']+)'/g)].map((m) => m[1]);
-  assert.deepEqual(rotulos, ['Neutro', 'Épico', 'Estádio', 'Aura', 'Dourado', 'Real']);
+  assert.deepEqual(rotulos, ['Neutro', 'Épico', 'Estádio', 'Aura', 'Golden', 'Royal']);
   // o Gabinete lista o uniforme do pacote pelo nome em português, não por "dark-gold" capitalizado
   const gabinete = ler('src/pages/gabinete/Brilhantes.jsx');
   assert.match(gabinete, /KITS_FIGURINHA\.find/);
 });
 
-test('91 · nenhum nome de uniforme, fundo ou kit em inglês escrito para a tela (JSX e textos)', () => {
-  const ingles = /['"`>][^'"`<>{}]*\b(Dark Gold|Dark Purple|White Gold|Elite Gold|Royal Purple|Golden|Royal)\b/;
+// "Golden" e "Royal" saíram da lista proibida (item 8, 29J): são nome de PRODUTO do fundo da
+// figurinha, não texto de interface — ficam em inglês de propósito. "Royal Purple" (o UNIFORME)
+// continua banido: essa tradução ("Roxo Real") era descrição, e fica.
+test('91 · nenhum nome de uniforme ou kit em inglês escrito para a tela (JSX e textos)', () => {
+  const ingles = /['"`>][^'"`<>{}]*\b(Dark Gold|Dark Purple|White Gold|Elite Gold|Royal Purple)\b/;
   const achados = [];
   const andar = (dir) => {
     for (const nome of fs.readdirSync(dir)) {
