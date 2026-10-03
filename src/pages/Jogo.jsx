@@ -268,9 +268,10 @@ export default function Jogo() {
               </div>
             ) : null}
 
+            {/* Rodada 29L (achado 142): era um chip "Ranking" solto, sem dizer o que era nem de quem. Agora diz: "Ranking do time", com o troféu. */}
             <div className="header-actions">
-              <Link to={`/time/${slug}/ranking`} className="btn btn--ghost btn--sm">
-                Ranking
+              <Link to={`/time/${slug}/ranking`} className="btn btn--ghost btn--sm" data-ranking-do-time style={{ gap: 6 }}>
+                <Trophy size={14} aria-hidden="true" /> Ranking do time
               </Link>
             </div>
 

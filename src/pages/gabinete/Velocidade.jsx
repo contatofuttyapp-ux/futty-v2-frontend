@@ -7,6 +7,7 @@
 import { Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import EstadoErroRede from '../../components/EstadoErroRede';
+import { contar, plural } from '../../utils/plural';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
 const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #222' };
@@ -50,7 +51,7 @@ export default function Velocidade() {
     <div style={{ display: 'grid', gap: 16 }}>
       <Secao
         titulo="Velocidade no aparelho de quem usa"
-        sub={`Últimos ${data.dias || 7} dias · ${data.medicoes || 0} medições anônimas (sem conta, e-mail, IP nem aparelho). Útil = a tela desenhada sem o F de carregamento.`}
+        sub={`${plural(data.dias || 7, 'Último', 'Últimos')} ${contar(data.dias || 7, 'dia', 'dias')} · ${contar(data.medicoes || 0, 'medição anônima', 'medições anônimas')} (sem conta, e-mail, IP nem aparelho). Útil = a tela desenhada sem o F de carregamento.`}
       >
         {data.indisponivel ? (
           <div style={{ fontSize: 13, color: '#f0c94a' }}>{data.motivo}</div>

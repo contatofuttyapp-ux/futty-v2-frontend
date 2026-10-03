@@ -9,6 +9,7 @@ import { useApiComCache } from '../hooks/useApiComCache';
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
 import { formatarData } from '../utils/dataHora';
+import { plural } from '../utils/plural';
 import SeloHonra from '../components/SeloHonra';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { mostraFigurinha } from '../utils/figurinhaCanvas';
@@ -173,9 +174,9 @@ export default function JogadorPerfil() {
   })();
 
   const tiles = [
-    { n: conquistas.jogos_total ?? 0, l: 'Jogos' },
-    { n: conquistas.vitorias_total ?? 0, l: 'Vitórias' },
-    ...(mostrarGols ? [{ n: conquistas.gols_total ?? 0, l: 'Gols' }] : []),
+    { n: conquistas.jogos_total ?? 0, l: plural(conquistas.jogos_total ?? 0, 'Jogo', 'Jogos') },
+    { n: conquistas.vitorias_total ?? 0, l: plural(conquistas.vitorias_total ?? 0, 'Vitória', 'Vitórias') },
+    ...(mostrarGols ? [{ n: conquistas.gols_total ?? 0, l: plural(conquistas.gols_total ?? 0, 'Gol', 'Gols') }] : []),
     { n: jogador?.posicao ?? null, l: 'Ranking', prefix: '#' },
   ];
 
@@ -349,7 +350,7 @@ export default function JogadorPerfil() {
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>média recebida</div>
                 </div>
               ) : (
-                <p className="texto-apoio" style={{ margin: 0 }}>Ainda sem votos recebidos nesta equipa. A nota aparece depois dos primeiros jogos.</p>
+                <p className="texto-apoio" style={{ margin: 0 }}>Ainda sem votos recebidos neste time. A nota aparece depois dos primeiros jogos.</p>
               )}
             </div>
 

@@ -137,6 +137,14 @@ export function diaDaSemana(iso, fuso) {
   return formatar(iso, fuso, { weekday: 'long' }).replace(/-feira$/i, '');
 }
 
+/** A data no relógio do campo com o dia da semana por extenso e inicial maiúscula (início de frase): "Sexta, 9 de out.". */
+export function dataComDiaPorExtenso(iso, fuso) {
+  const dia = diaDaSemana(iso, fuso);
+  const numero = diaDoMes(iso, fuso);
+  if (!dia || numero == null) return '';
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${numero} de ${mesCurto(iso, fuso)}.`;
+}
+
 /** O dia do mês (número, sem zero na frente) no relógio do campo. */
 export function diaDoMes(iso, fuso) {
   const p = partesDe(iso, fuso, { day: 'numeric' });

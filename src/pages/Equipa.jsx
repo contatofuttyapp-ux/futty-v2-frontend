@@ -82,20 +82,16 @@ function Badge45({ children, gold }) {
 // Achado 117 (29J): o Ranking era uma barra solta, de largura total, acima desta linha — parecia
 // banner, não botão. Agora é um item do MESMO tamanho das abas, na mesma linha (mas é navegação
 // para outra página, não um aba.: por isso fica fora do role="tablist", sem role="tab").
+// Rodada 29L (achado 129): tudo o que decide a LARGURA da aba (fonte, espaçamento, selo) saiu do estilo em linha e foi para a classe
+// .aba-time (app.css), que muda por largura de tela. Com `flex: 1` (partes iguais) a aba "Ajustes" + selo ADMIN não cabia na sua parte
+// e empurrava o resto; agora cada aba tem a largura do próprio texto e divide a sobra. Em telas estreitas o selo vira um ponto dourado.
 const ESTILO_ABA = (on) => ({
-  flex: 1,
   height: 36,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 6,
   border: on ? '1px solid var(--border-accent)' : '1px solid transparent',
   background: on ? 'rgba(139,92,246,0.2)' : 'transparent',
   color: on ? '#8b5cf6' : 'var(--label-color)',
   fontFamily: "'Rajdhani', sans-serif",
   fontWeight: 700,
-  fontSize: 13,
-  letterSpacing: '0.5px',
   textTransform: 'uppercase',
   cursor: 'pointer',
   transition: 'all 0.15s ease',
@@ -106,7 +102,7 @@ function AbasDoTime({ aba, ehAdmin, aoTrocar, slug }) {
   const abas = [['jogos', 'Jogos'], ['elenco', 'Elenco'], ...(ehAdmin ? [['ajustes', 'Ajustes']] : [])];
   return (
     <div style={{ display: 'flex', gap: 6, marginTop: 14 }}>
-      <div role="tablist" aria-label="Seções do time" style={{ display: 'flex', gap: 6, flex: abas.length }}>
+      <div role="tablist" aria-label="Seções do time" style={{ display: 'flex', gap: 6, flex: `${abas.length} 1 auto`, minWidth: 0 }}>
         {abas.map(([k, rotulo]) => {
           const on = aba === k;
           return (
@@ -114,7 +110,7 @@ function AbasDoTime({ aba, ehAdmin, aoTrocar, slug }) {
               key={k}
               type="button"
               role="tab"
-              className="hud-corners-s"
+              className="hud-corners-s aba-time"
               data-aba={k}
               aria-selected={on}
               aria-pressed={on}
@@ -123,13 +119,13 @@ function AbasDoTime({ aba, ehAdmin, aoTrocar, slug }) {
             >
               {rotulo}
               {k === 'ajustes' ? (
-                <span data-selo-admin style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#f0c94a', border: '1px solid rgba(212,160,23,0.6)', background: 'rgba(212,160,23,0.10)', padding: '1px 5px', clipPath: CLIP_S }}>ADMIN</span>
+                <span data-selo-admin className="aba-time__selo" style={{ clipPath: CLIP_S }}>ADMIN</span>
               ) : null}
             </button>
           );
         })}
       </div>
-      <Link to={`/time/${slug}/ranking`} className="hud-corners-s" data-botao-ranking style={{ ...ESTILO_ABA(false), flex: 1 }}>
+      <Link to={`/time/${slug}/ranking`} className="hud-corners-s aba-time" data-botao-ranking style={ESTILO_ABA(false)}>
         Ranking
       </Link>
     </div>

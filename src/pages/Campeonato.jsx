@@ -9,6 +9,7 @@ import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 import Icon from '../components/Icon';
+import { contar } from '../utils/plural';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
 import ComporTimes from '../components/ComporTimes';
 import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
@@ -59,7 +60,7 @@ function Hub({ slug }) {
               <div className="row" style={{ marginTop: 6 }}>
                 <span className={`camp-chip ${c.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{c.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
                 <span className={`camp-chip ${c.estado === 'terminado' ? 'camp-chip--gold' : 'camp-chip--live'}`}>{c.estado === 'terminado' ? 'Terminado' : 'Em andamento'}</span>
-                <span className="camp-chip">{c.n_times} times</span>
+                <span className="camp-chip">{contar(c.n_times, 'time', 'times')}</span>
               </div>
               {c.campeao ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#f0c94a', marginTop: 8, fontFamily: RAJ, fontWeight: 700 }}><Icon name="trofeu" size={14} color="#d4a017" /> {c.campeao}</div> : null}
             </button>
@@ -206,8 +207,8 @@ function Wizard({ slug, onCancel, onCriado }) {
               <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 16, color: '#f0c94a' }}>{nome.trim() || 'Campeonato'}</div>
               <div className="row" style={{ marginTop: 6 }}>
                 <span className={`camp-chip ${formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
-                <span className="camp-chip">{nomes.length} times</span>
-                <span className="camp-chip">{totalAtrib > 0 ? `${totalAtrib} jogadores` : 'só nomes'}</span>
+                <span className="camp-chip">{contar(nomes.length, 'time', 'times')}</span>
+                <span className="camp-chip">{totalAtrib > 0 ? contar(totalAtrib, 'jogador', 'jogadores') : 'só nomes'}</span>
               </div>
             </div>
 
@@ -299,7 +300,7 @@ function Detalhe({ slug, id }) {
         <div className="row" style={{ margin: '4px 0 14px' }}>
           <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{camp.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
           <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
-          <span className="camp-chip">{camp.times.length} times</span>
+          <span className="camp-chip">{contar(camp.times.length, 'time', 'times')}</span>
         </div>
 
         {terminado ? <CampeonatoCelebracao campeonato={camp} slug={slug} /> : null}

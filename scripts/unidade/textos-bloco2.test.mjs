@@ -119,7 +119,8 @@ test('78 · o painel do admin (Ajustes) segue a mesma regra: gols off desliga o 
 
 test('101 · o número "por jogo" do painel diz do quê: confirmados por jogo', () => {
   const painel = ler('src/pages/AdminPanel.jsx');
-  assert.match(painel, /label="confirmados por jogo"/);
+  // Rodada 29L (achado 136): o rótulo concorda com o número ("1 confirmado por jogo"), mas continua dizendo DO QUÊ é a média.
+  assert.match(painel, /'confirmado por jogo', 'confirmados por jogo'/);
   assert.doesNotMatch(painel, /label="por jogo"/);
 });
 

@@ -17,6 +17,7 @@ import { useTeam, useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { SEM_NOTA_AINDA, formatRating } from '../utils/format';
 import { nomeExibicao } from '../utils/nomeExibicao';
+import { plural } from '../utils/plural';
 import { CONFIRMACAO_EXCLUIR, confirmacaoExcluirValida } from '../utils/confirmarExclusao';
 import { useI18n } from '../context/I18nContext';
 import { nomeIdioma, MOSTRAR_IDIOMA } from '../lib/i18n';
@@ -307,9 +308,9 @@ export default function MeuPerfil() {
         <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 13, color: 'var(--text-dim)' }}>
           <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{stats.nota != null ? formatRating(stats.nota) : SEM_NOTA_AINDA}</span>
           <span>·</span>
-          <span><b style={{ color: '#fff' }}>{stats.jogos ?? 0}</b> jogos</span>
+          <span><b style={{ color: '#fff' }}>{stats.jogos ?? 0}</b> {plural(stats.jogos ?? 0, 'jogo', 'jogos')}</span>
           <span>·</span>
-          <span><b style={{ color: '#fff' }}>{stats.gols ?? 0}</b> gols</span>
+          <span><b style={{ color: '#fff' }}>{stats.gols ?? 0}</b> {plural(stats.gols ?? 0, 'gol', 'gols')}</span>
         </div>
 
         {/* RODADA 12C — a vitrine de jogador, a um toque.

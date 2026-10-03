@@ -9,6 +9,8 @@ import { urlImagem } from '../utils/avatar';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import { primeiroNome } from '../utils/primeiroNome';
 import { formatarData, formatarHora } from '../utils/dataHora';
+import { haQuantoTempo } from '../utils/haQuantoTempo';
+import { contar } from '../utils/plural';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -21,6 +23,7 @@ import { useListaProgressiva } from '../hooks/useListaProgressiva';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import Reacoes from '../components/Reacoes';
 import Comentarios from '../components/Comentarios';
+import ImagemDoPost from '../components/ImagemDoPost';
 import UploadComCrop from '../components/UploadComCrop';
 import EscudoEquipa from '../components/EscudoEquipa';
 import DenunciaModal from '../components/DenunciaModal';
@@ -48,21 +51,6 @@ const CARD = {
 // A data e a hora do jogo são as do CAMPO (`fuso` do time, que o motor manda em cada jogo — 29I, achado 83).
 const dataExtensa = (iso, fuso) => formatarData(iso, fuso);
 const horaDe = (iso, fuso) => formatarHora(iso, fuso);
-// "há 5 h": tempo decorrido, não data de calendário — não tem fuso, vale o relógio de quem olha.
-function haQuantoTempo(iso) {
-  const ts = new Date(iso).getTime();
-  if (!Number.isFinite(ts)) return '';
-  const diff = Date.now() - ts;
-  const min = Math.floor(diff / 60000);
-  if (min < 60) return `há ${Math.max(1, min)} min`;
-  const h = Math.floor(diff / 3600000);
-  if (h < 48) return `há ${h} h`;
-  const dias = Math.floor(diff / 86400000);
-  if (dias < 14) return `há ${dias} dias`;
-  const sem = Math.floor(dias / 7);
-  if (sem < 8) return `há ${sem} semanas`;
-  return `há ${Math.floor(dias / 30)} meses`;
-}
 
 // Jogadores do time campeão (a partir de times_resultado + campeao_time_index).
 function timeCampeao(j) {
@@ -115,7 +103,7 @@ function PremioRow({ label, labelColor, nome, sub }) {
         </div>
         <div style={{ marginTop: 4, fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#fff' }}>
           {nome}
-          {sub?.gols ? <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}> · {sub.gols} gols</span> : null}
+          {sub?.gols ? <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}> · {contar(sub.gols, 'gol', 'gols')}</span> : null}
         </div>
         {sub?.titulo ? (
           <div style={{ marginTop: 2, fontSize: 13, color: 'var(--text-dim)', fontStyle: 'italic' }}>{sub.titulo}</div>
@@ -166,7 +154,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
     const linhas = [
       `${dataExtensa(j.date, j.fuso)} · ${horaDe(j.date, j.fuso)}`,
       nomesCampeao ? `🏆 Time campeão: ${nomesCampeao}` : null,
-      j.artilheiro_nome ? `⚽ Artilheiro: ${j.artilheiro_nome}${j.artilheiro_gols ? ` · ${j.artilheiro_gols} gols` : ''}` : null,
+      j.artilheiro_nome ? `⚽ Artilheiro: ${j.artilheiro_nome}${j.artilheiro_gols ? ` · ${contar(j.artilheiro_gols, 'gol', 'gols')}` : ''}` : null,
       j.destaque_nome ? `⭐ Destaque: ${j.destaque_nome}${j.destaque_titulo ? ` – ${j.destaque_titulo}` : ''}` : null,
     ].filter(Boolean);
     try {
@@ -203,15 +191,17 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
         <>
           {/* B) FOTO DO JOGO (sangra até às bordas) */}
           {foto ? (
-            <button
-              type="button"
-              onClick={() => onOpenImage(foto)}
-              style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: '#000', cursor: 'zoom-in' }}
-            >
-              {/* Foto de post: lazy; os atributos só reservam a proporção, o CSS manda no tamanho.
-                  Velocidade 9: 512 na lista (o toque abre o original). */}
-              <img src={urlImagem(foto, 512)} alt="" width={390} height={420} loading="lazy" decoding="async" style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 420, objectFit: 'cover', display: 'block' }} />
-            </button>
+            // Foto de post: lazy; os atributos só reservam a proporção, o CSS manda no tamanho. Velocidade 9: 512 na lista (o toque abre o
+            // original). Rodada 29L (achado 141): se a foto falha, vira uma linha curta com "tentar de novo" (ImagemDoPost).
+            <ImagemDoPost
+              src={urlImagem(foto, 512)}
+              onAbrir={() => onOpenImage(foto)}
+              estiloBotao={{ display: 'block', width: '100%', padding: 0, border: 'none', background: '#000', cursor: 'zoom-in' }}
+              largura={390}
+              altura={420}
+              estiloImg={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 420, objectFit: 'cover', display: 'block' }}
+              estiloFalha={{ width: 'calc(100% - 28px)', margin: '8px 14px' }}
+            />
           ) : null}
 
           {/* C) TIME CAMPEÃO — respira como o cromo (bob+sway aninhados). */}
@@ -546,15 +536,18 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
           {media[0].media_type === 'video' ? (
             <video src={assetUrl(media[0].url)} controls style={{ width: '100%', maxHeight: 460, borderRadius: 10, display: 'block', background: '#000' }} />
           ) : (
-            <button type="button" onClick={() => onOpenImage(assetUrl(media[0].url))} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block', width: '100%' }}>
-              {/* VELOCIDADE 9: 512, não 1024. A caixa tem 362 pt de largura —
-                  1024 é quatro vezes mais pixels para descodificar do que o
-                  que cabe, e essa descodificação é na thread principal, a meio
-                  da rolagem. O toque abre o ORIGINAL em tela cheia (onOpenImage
-                  leva a url sem `w`), por isso ninguém perde detalhe nenhum:
-                  perde-se só o que estava a ser deitado fora na miniatura. */}
-              <img src={urlImagem(assetUrl(media[0].url), 512)} alt="" width={362} height={460} loading="lazy" decoding="async" style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }} />
-            </button>
+            // VELOCIDADE 9: 512, não 1024. A caixa tem 362 pt de largura — 1024 é quatro vezes mais pixels para descodificar do que o que
+            // cabe, e essa descodificação é na thread principal, a meio da rolagem. O toque abre o ORIGINAL em tela cheia (onOpenImage leva
+            // a url sem `w`), por isso ninguém perde detalhe nenhum: perde-se só o que estava a ser deitado fora na miniatura.
+            // Rodada 29L (achado 141): foto que falha vira uma linha curta com "tentar de novo", não um buraco de 460 px.
+            <ImagemDoPost
+              src={urlImagem(assetUrl(media[0].url), 512)}
+              onAbrir={() => onOpenImage(assetUrl(media[0].url))}
+              estiloBotao={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block', width: '100%' }}
+              largura={362}
+              altura={460}
+              estiloImg={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', objectPosition: 'top', borderRadius: 10, display: 'block' }}
+            />
           )}
         </div>
       ) : media.length ? (
@@ -566,9 +559,15 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
                 {m.media_type === 'video' ? (
                   <video src={url} controls style={{ width: 240, maxHeight: 220, display: 'block', background: '#000' }} />
                 ) : (
-                  <button type="button" onClick={() => onOpenImage(url)} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block' }}>
-                    <img src={urlImagem(url, 512)} alt="" loading="lazy" decoding="async" width={240} height={220} style={{ width: 240, maxWidth: '100%', height: 'auto', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
-                  </button>
+                  <ImagemDoPost
+                    src={urlImagem(url, 512)}
+                    onAbrir={() => onOpenImage(url)}
+                    estiloBotao={{ padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', display: 'block' }}
+                    largura={240}
+                    altura={220}
+                    estiloImg={{ width: 240, maxWidth: '100%', height: 'auto', maxHeight: 220, objectFit: 'cover', display: 'block' }}
+                    larguraMinFalha={240}
+                  />
                 )}
               </div>
             );

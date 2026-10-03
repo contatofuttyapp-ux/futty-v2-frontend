@@ -16,8 +16,10 @@ import FuttyLoader from './FuttyLoader';
 // "Sem permissão" (SuperAdminGuard) eram cópias deste layout (~1 KB do arranque, que tem teto).
 //   acao          — { rotulo, aoTocar }: troca o botão de ouro e tira o 2º elo (retry/descobrir peladas).
 //   larguraTexto  — maxWidth do parágrafo (padrão 280).
-export default function ErrorPage({ onRetry, mensagem, titulo, acao, larguraTexto = 280 }) {
-  const irAoInicio = () => { window.location.href = '/home'; };
+//   semSessao     — Rodada 29L (achado 126): a pessoa ainda não tem conta. O "início" dela é a landing (o /home a mandaria para o login) e a
+//                   porta alternativa é criar a conta: o Explorar exige conta, então oferecê-lo aqui era um beco que terminava no login.
+export default function ErrorPage({ onRetry, mensagem, titulo, acao, larguraTexto = 280, semSessao = false }) {
+  const irAoInicio = () => { window.location.href = semSessao ? '/' : '/home'; };
   return (
     <div
       style={{
@@ -69,10 +71,11 @@ export default function ErrorPage({ onRetry, mensagem, titulo, acao, larguraText
           </button>
         ) : (
           <a
-            href="/explorar"
+            href={semSessao ? '/register' : '/explorar'}
+            data-porta-alternativa={semSessao ? 'criar-conta' : 'explorar'}
             style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 3 }}
           >
-            Ou descubra times perto de você
+            {semSessao ? 'Ou crie sua conta' : 'Ou descubra times perto de você'}
           </a>
         )}
       </div>

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, assetUrl } from '../lib/api';
 import { urlImagem } from '../utils/avatar';
+import { haQuantoTempo } from '../utils/haQuantoTempo';
 import { useAuth } from '../hooks/useAuth';
 import SilhuetaJogador from './SilhuetaJogador';
 import Reacoes from './Reacoes';
@@ -20,21 +21,6 @@ const MENCAO_PARCIAL = /(^|\s)@([^\s@]{1,30})$/;
 
 function contar(lista) {
   return lista.filter((c) => !c.deleted).length;
-}
-
-function haQuantoTempo(iso) {
-  const ts = new Date(iso).getTime();
-  if (!Number.isFinite(ts)) return '';
-  const diff = Date.now() - ts;
-  const min = Math.floor(diff / 60000);
-  if (min < 60) return `há ${Math.max(1, min)} min`;
-  const h = Math.floor(diff / 3600000);
-  if (h < 48) return `há ${h} h`;
-  const dias = Math.floor(diff / 86400000);
-  if (dias < 14) return `há ${dias} dias`;
-  const sem = Math.floor(dias / 7);
-  if (sem < 8) return `há ${sem} semanas`;
-  return `há ${Math.floor(dias / 30)} meses`;
 }
 
 function Avatar({ avatarUrl, size = 40 }) {

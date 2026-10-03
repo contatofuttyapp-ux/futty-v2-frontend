@@ -2038,6 +2038,51 @@
   text-align: center;
 }
 
+/* Rodada 29L (achados 130 e 138) — FAIXA QUE ROLA AVISA QUE ROLA. O hook useIndicadorDeRolagem põe data-mais-esq / data-mais-dir no
+   trilho quando ainda há conteúdo escondido daquele lado; a borda esmaece (a peça cortada deixa de parecer "o fim da fila" e passa a
+   dizer "continua"). Vale para qualquer trilho que use o hook: fundos e uniformes da Figurinha, abas do Gabinete, chips de time do Início. */
+[data-mais-dir="1"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent 100%);
+}
+[data-mais-esq="1"] {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40px);
+  mask-image: linear-gradient(to right, transparent 0, #000 40px);
+}
+[data-mais-esq="1"][data-mais-dir="1"] {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+}
+
+/* O componente FaixaRolavel (fundos e uniformes da Figurinha) junta a seta, que é botão, ao esmaecer: nos fundos, os três últimos são
+   os da figurinha paga, e quem não vê que existem nunca vai querer um. A caixa (85%, centrada) passou do trilho para o envoltório,
+   senão a seta ficaria presa à borda errada. */
+.faixa-rolavel { position: relative; min-width: 0; }
+.faixa-rolavel--grade { width: 85%; max-width: 100%; margin: 0 auto; }
+.faixa-rolavel--grade > .fig-seletor-grade { width: 100%; margin: 0; }
+.faixa-rolavel__seta {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 160, 23, 0.6);
+  background: rgba(5, 8, 16, 0.9);
+  color: #f0c94a;
+  cursor: pointer;
+  z-index: 2;
+}
+/* Área de toque de 44 px (o desenho fica em 30): o pseudo-elemento do botão conta para o toque. O inset conta a partir da caixa interna
+   (28 px: os 30 menos 1 px de borda de cada lado), então 8 + 28 + 8 = 44. */
+.faixa-rolavel__seta::before { content: ''; position: absolute; inset: -8px; }
+.faixa-rolavel__seta--dir { right: -6px; }
+.faixa-rolavel__seta--esq { left: -6px; }
+.faixa-rolavel--grade .faixa-rolavel__seta { top: 40px; } /* o centro da foto do tile (2px de respiro + metade dos 76px), não da altura com o nome */
+
 /* Figurinha studio — card vivo (levitação orgânica: bob + sway dessincronizados)
    + fundos vivos. Só transform/filter/opacity animados (compositor, sem jank). */
 @keyframes futtyBob {
@@ -2147,10 +2192,12 @@
 }
 
 /* Botão do controlo de zoom (estilo Futty, dourado). */
+/* Rodada 29L (achado 131): a área de toque é de 44 px (o mínimo para o dedo); o que se VÊ continua o de antes — o ícone e, ao tocar, o
+   círculo dourado de 24 px (agora no ::before). Eram 24 px de botão. */
 .fig-zoom-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  position: relative;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   color: #d4a017;
@@ -2159,11 +2206,31 @@
   cursor: pointer;
   display: grid;
   place-items: center;
+}
+.fig-zoom-btn::before {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
   transition: background 0.15s ease;
 }
-.fig-zoom-btn:hover:not(:disabled),
-.fig-zoom-btn:active:not(:disabled) { background: rgba(212, 160, 23, 0.15); }
+.fig-zoom-btn > svg { position: relative; }
+.fig-zoom-btn:hover:not(:disabled)::before,
+.fig-zoom-btn:active:not(:disabled)::before { background: rgba(212, 160, 23, 0.15); }
 .fig-zoom-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* Rodada 29L (achado 132): "Gerar minha figurinha" numa linha só, com o mesmo respiro lateral do "Trocar foto" (12 px, não os 20 do .btn); o
+   rótulo curto (components/RotuloGerar.jsx) só aparece nas telas estreitas. */
+.fig-gerar { white-space: nowrap; min-width: 0; padding-left: 12px; padding-right: 12px; }
+.rotulo-gerar-curto { display: none; }
+/* 410 px: medido com a Inter de 16 px do botão, o "Gerar minha figurinha" precisa de ~221 px ao lado do "Trocar foto" (134 px); a 390 px sobram
+   216, então só passa dos ~411 px (iPhone Plus/Max). Abaixo disso o rótulo curto, que é a frase da VOZ-FUTTY §4. */
+@media (max-width: 410px) {
+  .rotulo-gerar-longo { display: none; }
+  .rotulo-gerar-curto { display: inline; }
+}
 /* Linha de brilho a percorrer o frame ocasionalmente (cromo a apanhar luz). */
 @keyframes futtyFrameShine {
   0%        { transform: translateX(-150%); }
@@ -2347,7 +2414,8 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
-  color: var(--neon);
+  /* Rodada 29L (achado 137): --neon sobre o chip roxo translúcido dava ~4,3:1 em 10 px; #a78bfa (da paleta) passa de 4,5:1 com folga. */
+  color: #a78bfa;
   background: rgba(139, 92, 246, 0.08);
   border: 1px solid rgba(139, 92, 246, 0.2);
   padding: 2px 8px;
@@ -2371,7 +2439,8 @@
   flex: 0 0 auto;
   font-size: 9px;
   font-weight: 700;
-  color: #8b5cf6;
+  /* Rodada 29L (achado 137): o roxo da casa (#8b5cf6) sobre o roxo translúcido do chip dava ~4,1:1 em 9 px. O #a78bfa (já da paleta) dá ~7:1. */
+  color: #a78bfa;
   background: rgba(139, 92, 246, 0.12);
   border: 1px solid rgba(139, 92, 246, 0.35);
   padding: 2px 6px;
@@ -2393,7 +2462,9 @@
 
 .gcard__meta {
   font-size: 13px;
-  color: #333333;
+  /* Rodada 29L (achado 137): era #333333 (~1,6:1) — a contagem de confirmados, que diz se vale ir ao jogo, quase sumia. O --text-dim
+     (#aaaaaa) dá ~8:1 sobre o card, bem acima do 4,5:1 do WCAG AA para texto normal. */
+  color: var(--text-dim);
   margin-top: 6px;
 }
 
@@ -2541,6 +2612,8 @@
   border: 1px solid rgba(139, 92, 246, 0.2);
   color: var(--neon);
 }
+/* Rodada 29L (achado 137): no card de jogo o "Sorteado" em --neon sobre o roxo translúcido dava ~4,3:1; o #a78bfa passa de 4,5:1 com folga. */
+.gcard .badge--sorteado { color: #a78bfa; }
 
 .badge--encerrado {
   background: rgba(255, 255, 255, 0.06);
@@ -3123,4 +3196,49 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .feed-esqueleto::after { animation: none; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   RODADA 29L — a varredura visual em 390 px.
+   ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* Achado 125 — A ALTURA DA BARRA DE NAVEGAÇÃO, num lugar só. A faixa de cookies ficava a 58 px do fundo, mas a barra tem 75 (8 de
+   respiro + 54 do toque + 1 da linha + 12 de base, ou a barra de gesto do iPhone se for maior): 17 px da faixa ficavam por baixo e o
+   "Aceitar" perdia 9, encostando no "PERFIL". Esta conta tem de bater com .bottom-nav (padding 8 + .bottom-nav__tab 54 + borda 1 +
+   max(12, safe-area)); o teste de unidade e a prova de navegador travam isso. */
+:root {
+  --altura-barra-nav: calc(63px + max(12px, env(safe-area-inset-bottom, 0px)));
+}
+
+/* Achado 129 — as abas do time (Jogos · Elenco · Ajustes[ADMIN] · Ranking). Cada uma tem a largura do próprio texto e divide a sobra
+   (flex: 1 1 auto), em vez de partes iguais, onde "Ajustes" + selo estourava a sua parte e empurrava o "Ranking" para a borda. */
+.aba-time {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.aba-time__selo {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f0c94a;
+  border: 1px solid rgba(212, 160, 23, 0.6);
+  background: rgba(212, 160, 23, 0.1);
+  padding: 1px 5px;
+}
+/* iPhone de 375 px e menores: o selo vira um ponto dourado (o texto fica na árvore de acessibilidade, só não ocupa lugar) e o texto
+   das abas aperta um pouco. Nos 390 px de hoje nada muda. */
+@media (max-width: 380px) {
+  .aba-time { gap: 4px; padding: 0 6px; letter-spacing: 0.2px; }
+  .aba-time__selo { font-size: 0; width: 7px; height: 7px; padding: 0; border: none; border-radius: 50%; background: #f0c94a; clip-path: none !important; }
+}
+@media (max-width: 340px) {
+  .aba-time { font-size: 12px; padding: 0 4px; letter-spacing: 0; }
 }

@@ -39,6 +39,8 @@ import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import AdCard from '../components/AdCard';
 import Topbar from '../components/Topbar';
 import FuttyLoader from '../components/FuttyLoader';
+import FaixaRolavel from '../components/FaixaRolavel';
+import RotuloGerar from '../components/RotuloGerar';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import SeloHonra from '../components/SeloHonra';
@@ -312,12 +314,6 @@ export default function Figurinha() {
 
   const jogador = me?.user || {};
   const stats = me?.stats || {};
-  const appNativo = ehNativo();
-  // Rodada 29H (item 58): no CELULAR — o app e também o navegador de toque — fica UM botão, "Compartilhar": a folha do sistema já
-  // tem "Salvar imagem", então "Baixar" ao lado era a mesma coisa (a pessoa parava para decidir qual é qual). "Baixar" só no
-  // computador, onde grava o arquivo. Navegador de celular sem folha de compartilhar com arquivo cai no download, como antes.
-  const [telaDeToque] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches);
-  const soCompartilhar = appNativo || telaDeToque;
   // GRUPO B 6a — `equipa` existia só para alimentar o PlayerCard, que saiu daqui.
   const frameHex = getFrameColor(corFrame).stroke;
   // Regra única: a foto CRUA nunca entra no card. Só entra o avatar quando é
@@ -434,7 +430,7 @@ export default function Figurinha() {
   const refazerAtual = !!kitDoCard && podeRefazer({ direito: direitoDaGradeAgora, kitVestido: kitAtivo, kitDoTime, restantes: restantesDireito, avatarEhIA });
   function gradeDeUniformes() {
     return (
-      <div className="fig-seletor-grade" data-grade="uniformes">
+      <FaixaRolavel className="fig-seletor-grade" envoltorioClassName="faixa-rolavel--grade" data-grade="uniformes" rotuloMais="Ver mais uniformes" rotuloAnteriores="Ver uniformes anteriores">
         {kitsDaGrade.map((kit) => {
           const estado = estadoDoKit(kit);
           const trancado = estado === 'trancado';
@@ -488,7 +484,7 @@ export default function Figurinha() {
             </button>
           );
         })}
-      </div>
+      </FaixaRolavel>
     );
   }
 
@@ -1771,12 +1767,15 @@ export default function Figurinha() {
           {/* FASE 3.36 — Zoom saiu de cima do card: linha discreta ABAIXO, à direita.
               Mesma família visual das tabs. RODADA 28: também no card com a FOTO (ver zoomDaFoto). */}
           {(avatarEhIA || temFoto) && !fotoLocal ? (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, height: 26, marginTop: -4, marginBottom: -6 }}>
+            // Rodada 29L (achado 131): os botões − e + tinham 24 px; o mínimo para o dedo é 44. A linha cresce para 44 e as margens negativas
+            // crescem junto (−13 e −15 no lugar de −4 e −6): a altura que ela ocupa na página continua a mesma (44 − 13 − 15 = 16 = 26 − 4 − 6),
+            // então o card e os botões de baixo não se mexem e a figurinha continua cabendo na primeira tela.
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0, height: 44, marginTop: -13, marginBottom: -15 }}>
               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)', marginRight: 2 }}>{zoomDaFoto ? 'Zoom' : 'Tamanho'}</span>
               <button
                 type="button"
                 aria-label={zoomDaFoto ? 'Afastar a foto' : 'Reduzir tamanho do avatar'}
-                className="fig-zoom-btn hud-corners-s"
+                className="fig-zoom-btn"
                 onClick={() => mudarZoom(-1)}
                 disabled={zoomNoMinimo}
               >
@@ -1785,7 +1784,7 @@ export default function Figurinha() {
               <button
                 type="button"
                 aria-label={zoomDaFoto ? 'Aproximar a foto' : 'Aumentar tamanho do avatar'}
-                className="fig-zoom-btn hud-corners-s"
+                className="fig-zoom-btn"
                 onClick={() => mudarZoom(1)}
                 disabled={zoomNoMaximo}
               >
@@ -1793,9 +1792,10 @@ export default function Figurinha() {
               </button>
             </div>
           ) : null}
-          {/* Trocar foto + Gerar Avatar IA (na mesma linha) */}
+          {/* Trocar foto + Gerar Avatar IA (na mesma linha). Rodada 29L (achado 132): em telas estreitas demais para os dois lado a lado (320 px),
+              o "Gerar" desce inteiro para a linha de baixo, em vez de estourar a tela ou partir o rótulo em duas linhas. */}
           <div style={{ display: 'grid', gap: 4 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <button
                 type="button"
                 className="btn btn--purple-outline fig-io-btn hud-corners"
@@ -1826,18 +1826,18 @@ export default function Figurinha() {
                   <span className="cta-gold-glow pulse-glow" style={{ flex: 1, display: 'flex' }}>
                     <button
                       type="button"
-                      className="btn hud-corners fig-io-btn cta-gold pulse-active"
+                      className="btn hud-corners fig-io-btn fig-gerar cta-gold pulse-active"
                       style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                       disabled={gerandoIA || uploadFoto}
                       onClick={gerarAvatarIA}
                     >
-                      <EstrelaIA size={16} color="#f0c94a" /> Gerar minha figurinha
+                      <EstrelaIA size={16} color="#f0c94a" /> <RotuloGerar />
                     </button>
                   </span>
                 ) : (
                   <button
                     type="button"
-                    className="btn btn--purple fig-io-btn hud-corners"
+                    className="btn btn--purple fig-io-btn fig-gerar hud-corners"
                     style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     disabled={gerandoIA || uploadFoto}
                     onClick={gerarAvatarIA}
@@ -1848,7 +1848,7 @@ export default function Figurinha() {
                       </>
                     ) : (
                       <>
-                        <EstrelaIA size={16} color="#ffffff" /> Gerar minha figurinha
+                        <EstrelaIA size={16} color="#ffffff" /> <RotuloGerar />
                       </>
                     )}
                   </button>
@@ -2037,7 +2037,7 @@ export default function Figurinha() {
             // scroll-snap para o gesto de arrastar assentar num tile de cada vez.
             // Grade partilhada com a tab Uniforme (.fig-seletor-grade / .fig-seletor-tile
             // em app.css) — ver nota de 15-set ali.
-            <div className="fig-seletor-grade">
+            <FaixaRolavel className="fig-seletor-grade" envoltorioClassName="faixa-rolavel--grade" data-grade="fundos" rotuloMais="Ver mais fundos" rotuloAnteriores="Ver fundos anteriores">
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
                 // Cadeado premium (mesma regra dos kits): fundo premium + plano não pago.
@@ -2085,7 +2085,7 @@ export default function Figurinha() {
                   </button>
                 );
               })}
-            </div>
+            </FaixaRolavel>
           ) : (
             // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile em app.css, nota de
             // 15-set). RODADA 29B: a MESMA grade nos três casos (grátis, pacote do time, Minha Figurinha) — o
@@ -2135,19 +2135,22 @@ export default function Figurinha() {
               que escolha vê o mesmo ecrã. Fica o dourado, à largura toda.
               Na WEB os dois continuam, porque lá são mesmo coisas diferentes:
               "Baixar" grava o ficheiro, "Compartilhar" abre o navigator.share. */}
+          {/* Rodada 29L (achado 134, decisão do dono de 3-out): "Baixar" VOLTA ao lado de "Compartilhar", também no celular. A 29H (item 58)
+              o tinha tirado do celular por parecer o mesmo botão; o dono quer os dois: compartilhar abre a folha do sistema (WhatsApp,
+              Instagram), baixar guarda a figurinha para a pessoa (no navegador, o arquivo; no app da loja, a folha do sistema, que tem
+              "Salvar imagem" — gravar direto no rolo da câmera pede um plugin nativo, que não está instalado). */}
           <div style={{ display: 'flex', gap: 12 }}>
             {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente. */}
-            {soCompartilhar ? null : (
-              <button
-                type="button"
-                className="btn btn--purple-outline hud-corners"
-                style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                disabled={busy}
-                onClick={baixar}
-              >
-                <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn btn--purple-outline hud-corners"
+              data-acao="baixar"
+              style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              disabled={busy}
+              onClick={baixar}
+            >
+              <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
+            </button>
             {/* FASE 3.47 — CTA dourado partilhado com o "Assinar Pro" dos Planos:
                 gradiente, texto, altura, glow e shine vivem em .cta-gold/.cta-gold-glow
                 (app.css). O glow fica no wrapper SEM clip porque o clip-path do botão

@@ -18,6 +18,7 @@ import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
 import EstadoErroRede from '../../components/EstadoErroRede';
 import { KITS_FIGURINHA } from '../../utils/kitsFigurinha';
+import { contar } from '../../utils/plural';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
 const btn = {
@@ -115,7 +116,7 @@ export default function Brilhantes({ showMsg }) {
   function darCreditos(userId, email) {
     const quantidade = Number(creditoPorPessoa[userId] ?? 10);
     if (!Number.isInteger(quantidade) || quantidade < 1) { showMsg('Quantidade inválida.', true); return; }
-    if (!window.confirm(`Dar ${quantidade} crédito(s) de figurinha a ${email}?`)) return;
+    if (!window.confirm(`Dar ${contar(quantidade, 'crédito', 'créditos')} de figurinha a ${email}?`)) return;
     agir(`credito-${userId}`, '/api/super/gabinete/brilhantes/creditos', { userId, quantidade }, 'Créditos dados e pessoa avisada.');
   }
 
@@ -127,7 +128,7 @@ export default function Brilhantes({ showMsg }) {
     const quantidade = Number(quantidadeEmail);
     if (!email) { showMsg('Escreva o e-mail.', true); return; }
     if (!Number.isInteger(quantidade) || quantidade < 1) { showMsg('Quantidade inválida.', true); return; }
-    if (!window.confirm(`Dar ${quantidade} crédito(s) de figurinha a ${email}?`)) return;
+    if (!window.confirm(`Dar ${contar(quantidade, 'crédito', 'créditos')} de figurinha a ${email}?`)) return;
     agir(`credito-email-${email}`, '/api/super/gabinete/brilhantes/creditos', { email, quantidade }, 'Créditos dados e pessoa avisada.');
   }
 
@@ -300,7 +301,7 @@ export default function Brilhantes({ showMsg }) {
                   <tr key={t.id}>
                     <td style={td}>
                       <div style={{ fontWeight: 700 }}>{t.nome}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{t.membros} membro(s){t.manto_proprio ? ' · manto próprio' : ''}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{contar(t.membros, 'membro', 'membros')}{t.manto_proprio ? ' · manto próprio' : ''}</div>
                     </td>
                     <td style={td}>
                       {t.brilhante_ativo

@@ -12,6 +12,7 @@ import { useInicio } from '../context/InicioContext';
 import CardSeuTime from '../components/CardSeuTime';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useIndicadorDeRolagem } from '../hooks/useIndicadorDeRolagem';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { SEM_NOTA_AINDA, formatDateTime, formatRating } from '../utils/format';
@@ -476,6 +477,8 @@ export default function Inicio() {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState('all');
+  // Rodada 29L (achado 138): a faixa de chips de time rola; a borda esmaece onde há mais, e o "Várzea FC" cortado deixa de parecer erro.
+  const { aoMontar: montarFaixaDeChips, esquerda: chipsEscondidosEsq, direita: chipsEscondidosDir } = useIndicadorDeRolagem();
   const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
   const [ausenciaBusy, setAusenciaBusy] = useState(false);
   const [confirmarAusencia, setConfirmarAusencia] = useState(false); // pergunta "Avisar o time…?" aberta
@@ -1115,7 +1118,7 @@ export default function Inicio() {
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                 {votacaoTop.pedido_revotacao
                   ? 'Dê sua nota aos companheiros do último jogo.'
-                  : `Faltam ${votacaoTop.faltam} na ${votacaoTop.nome}: sua nota conta para o ranking.`}
+                  : `${plural(votacaoTop.faltam, 'Falta', 'Faltam')} ${votacaoTop.faltam} na ${votacaoTop.nome}: sua nota conta para o ranking.`}
               </span>
             </span>
             <Link to={`/time/${votacaoTop.slug}/ranking`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={fecharVotacao}>
@@ -1269,11 +1272,11 @@ export default function Inicio() {
             <span className="nota">{stats ? formatRating(stats.nota) : SEM_NOTA_AINDA}</span>
             <span>·</span>
             <span>
-              <b>{stats?.jogos ?? 0}</b> jogos
+              <b>{stats?.jogos ?? 0}</b> {plural(stats?.jogos ?? 0, 'jogo', 'jogos')}
             </span>
             <span>·</span>
             <span>
-              <b>{stats?.gols ?? 0}</b> gols
+              <b>{stats?.gols ?? 0}</b> {plural(stats?.gols ?? 0, 'gol', 'gols')}
             </span>
           </div>
         </div>
@@ -1292,7 +1295,7 @@ export default function Inicio() {
                 A .chip--active traz uma "serpente" dourada a percorrer o contorno;
                 sob o recorte ela abre-se nas 4 diagonais, o que ecoa o travessão
                 que o frame do cromo abre exactamente nos mesmos cantos. */}
-            <div className="chips-row">
+            <div className="chips-row" ref={montarFaixaDeChips} data-mais-esq={chipsEscondidosEsq ? '1' : undefined} data-mais-dir={chipsEscondidosDir ? '1' : undefined}>
               <button
                 type="button"
                 className={`chip hud-corners-s ${selectedTeam === 'all' ? 'chip--active tab-shine' : ''}`}
@@ -1312,7 +1315,7 @@ export default function Inicio() {
                   {t.nome}
                   {/* P2-6: pedidos de entrada por resolver (só admin) — badge dourado. */}
                   {t.pedidos_pendentes > 0 ? (
-                    <span className="chip-badge" aria-label={`${t.pedidos_pendentes} pedidos para resolver`}>
+                    <span className="chip-badge" aria-label={`${t.pedidos_pendentes} ${plural(t.pedidos_pendentes, 'pedido', 'pedidos')} para resolver`}>
                       {t.pedidos_pendentes}
                     </span>
                   ) : null}

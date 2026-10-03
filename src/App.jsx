@@ -82,6 +82,12 @@ function IndexRedirect() {
   return <LandingPage />;
 }
 
+// Rodada 29L (achado 126): o 404 de quem não tem sessão leva à landing e ao cadastro; o de quem tem, ao Início e ao Explorar.
+function PaginaNaoEncontrada() {
+  const { session } = useAuth();
+  return <ErrorPage titulo="Página não encontrada" mensagem="Esta página não existe." semSessao={!session} />;
+}
+
 // Rodada 29I (achado 103): as rotas em português de Portugal (/equipa/…, /criar-equipa) viraram /time/… e /criar-time. As antigas
 // CONTINUAM valendo — link que já foi para o grupo do WhatsApp, favorito, notificação já enviada — e levam para as novas, com a
 // query (?entrou=1), o # e o state de quem chegou.
@@ -187,7 +193,7 @@ function AnimatedRoutes() {
             />
           ))}
           {/* fallback — página inexistente */}
-          <Route path="*" element={<ErrorPage titulo="Página não encontrada" mensagem="Esta página não existe." />} />
+          <Route path="*" element={<PaginaNaoEncontrada />} />
         </Routes>
       </PageTransition>
     </Suspense>

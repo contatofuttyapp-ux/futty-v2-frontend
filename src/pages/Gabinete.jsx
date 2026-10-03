@@ -23,6 +23,8 @@ import Brilhantes from './gabinete/Brilhantes';
 import Velocidade from './gabinete/Velocidade';
 import AviseMeLista from './gabinete/AviseMe';
 import { MOSTRAR_AVANCADO } from '../config/flags';
+import { useIndicadorDeRolagem } from '../hooks/useIndicadorDeRolagem';
+import { contar, plural } from '../utils/plural';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
 const btn = {
@@ -88,6 +90,8 @@ const ABAS = [
 export default function Gabinete() {
   const [searchParams, setSearchParams] = useSearchParams();
   const aba = ABAS.some((a) => a.k === searchParams.get('aba')) ? searchParams.get('aba') : 'visao';
+  // Rodada 29L (achado 130): no celular as abas viram uma faixa que rola; a borda esmaece onde há mais abas escondidas.
+  const { aoMontar: montarFaixaDeAbas, esquerda: abasEscondidasEsq, direita: abasEscondidasDir } = useIndicadorDeRolagem();
 
   const [dados, setDados] = useState(null); // /resumo
   const [op, setOp] = useState(null); // /operacao (objeto completo, para PUT seguro)
@@ -155,9 +159,11 @@ export default function Gabinete() {
     <div className="app-shell">
       <GabCSS />
       <main className="app-main gab2-main" style={{ maxWidth: 1320, padding: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '20px 20px 0' }}>
-          <h1 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 26, margin: 0 }}>Gabinete <span style={{ color: '#f0c94a' }}>do Dono</span></h1>
-          <span style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
+        {/* Rodada 29L (achado 133): em 390 px o título e os dois links não cabem numa linha e cada um quebrava em duas. Agora o bloco
+            dos links nunca parte ao meio (cada link numa linha só) e, sem largura, desce inteiro para baixo do título. */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: 12, rowGap: 6, padding: '20px 20px 0' }}>
+          <h1 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 26, margin: 0, whiteSpace: 'nowrap' }}>Gabinete <span style={{ color: '#f0c94a' }}>do Dono</span></h1>
+          <span data-links-do-gabinete style={{ display: 'flex', gap: 14, alignItems: 'baseline', whiteSpace: 'nowrap' }}>
             {/* Rodada 28: a caixa-preta DESTE aparelho mora aqui (saiu do Perfil de todo mundo). */}
             <Link to="/diagnostico" style={{ fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none' }}>Diagnóstico deste aparelho</Link>
             <Link to="/home" style={{ fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none' }}>← Início</Link>
@@ -165,7 +171,7 @@ export default function Gabinete() {
         </div>
 
         <div className="gab2">
-          <nav className="gab2-side">
+          <nav className="gab2-side" ref={montarFaixaDeAbas} data-mais-esq={abasEscondidasEsq ? '1' : undefined} data-mais-dir={abasEscondidasDir ? '1' : undefined}>
             {ABAS.map((a) => (
               <button key={a.k} type="button" className={`gab2-tab ${aba === a.k ? 'ativa' : ''}`} onClick={() => irAba(a.k)}>
                 {a.label}
@@ -295,7 +301,7 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCamb
   return (
     <div>
       <h2 style={sectionH2}>Custos fixos</h2>
-      {custosVencidos > 0 ? <p style={{ color: '#fda4af', fontSize: 12, margin: '0 0 8px' }}>⚠ {custosVencidos} custo(s) com data vencida.</p> : null}
+      {custosVencidos > 0 ? <p style={{ color: '#fda4af', fontSize: 12, margin: '0 0 8px' }}>⚠ {contar(custosVencidos, 'custo', 'custos')} com data vencida.</p> : null}
       <div style={{ ...CARD, overflowX: 'auto', padding: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
           <thead><tr><th style={th}>Nome</th><th style={th}>Valor</th><th style={th}>Moeda</th><th style={th}>Periodicidade</th><th style={th}>Próxima data</th><th style={th}>Pago</th><th style={th}>Nota</th><th style={th} /></tr></thead>
@@ -604,7 +610,7 @@ function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp
   const bt = s.banco_trancado;
   const corBanco = bt.estado === 'verde' ? 'verde' : bt.estado === 'vermelho' ? 'vermelho' : 'amarelo';
   const txtBanco = bt.estado === 'verde' ? 'trancado (RLS ok, zero policies em users)'
-    : bt.estado === 'vermelho' ? `problema: ${(bt.tabelas_sem_rls || []).length} tabela(s) sem RLS, ${bt.policies_users} policy(ies) em users`
+    : bt.estado === 'vermelho' ? `problema: ${contar((bt.tabelas_sem_rls || []).length, 'tabela', 'tabelas')} sem RLS, ${contar(bt.policies_users, 'policy', 'policies')} em users`
       : 'a confirmar: a migração 050 ainda não foi aplicada no Supabase';
 
   const diasBackup = s.ultimo_backup ? diasAte(s.ultimo_backup.data) : null;
@@ -629,7 +635,7 @@ function AbaSeguranca({ dados, segManual, setSegManual, onSalvar, op, onSalvarOp
           {s.kill_switch_ia.freeze ? `ligado desde ${(s.kill_switch_ia.desde || '').slice(0, 10)}: ${s.kill_switch_ia.motivo}` : 'normal, não travado'}
         </LinhaChecklist>
         <LinhaChecklist rotulo="Rate limit ativo" cor="verde">
-          {s.rate_limit.length} regra(s) configurada(s)
+          {contar(s.rate_limit.length, 'regra', 'regras')} {plural(s.rate_limit.length, 'configurada', 'configuradas')}
         </LinhaChecklist>
         <LinhaChecklist rotulo="Testes de permissão" cor={segManual.testes_permissao?.data ? 'verde' : 'cinza'}>
           <CampoManual v={segManual.testes_permissao?.data} onData={(v) => setManual('testes_permissao', 'data', v)} vTexto={segManual.testes_permissao?.resultado} onTexto={(v) => setManual('testes_permissao', 'resultado', v)} placeholderTexto="resultado (ex.: 4 pass, 0 fail)" />

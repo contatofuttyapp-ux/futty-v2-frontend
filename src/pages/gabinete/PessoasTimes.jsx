@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
 import { urlImagem } from '../../utils/avatar';
+import { contar } from '../../utils/plural';
 import EstadoErroRede from '../../components/EstadoErroRede';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -109,7 +110,7 @@ function TabUsers({ showMsg }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          {total} pessoas · página {page}/{totalPaginas}
+          {contar(total, 'pessoa', 'pessoas')} · página {page}/{totalPaginas}
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" style={btn} disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>← Anterior</button>

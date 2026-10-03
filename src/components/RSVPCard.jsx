@@ -83,13 +83,14 @@ export default function RSVPCard({ gameId, prazo, fuso, respostaActual, onRespos
   return (
     <div style={{ border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.06)', borderRadius: 'var(--radius-md)', padding: 14, marginBottom: 12 }}>
       <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Confirme presença</div>
-      <div style={{ fontSize: 12, color: 'var(--label-color)', marginTop: 2 }}>até {formatarPrazo(prazo, fuso)}</div>
+      {/* Rodada 29L (achado 137): o --label-color (branco a 40%, ~3,7:1) não chega a 4,5:1; o --text-dim passa folgado. */}
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>até {formatarPrazo(prazo, fuso)}</div>
 
       {modoEspera ? (
         posEspera != null ? (
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neon)' }}>Você está em {posEspera}º na lista de espera</div>
-            <button type="button" disabled={busy} onClick={sairEspera} style={{ marginTop: 8, border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 12, cursor: busy ? 'default' : 'pointer', padding: 0 }}>
+            <button type="button" disabled={busy} onClick={sairEspera} style={{ marginTop: 8, border: 'none', background: 'transparent', color: 'var(--text-dim)', fontWeight: 700, fontSize: 12, cursor: busy ? 'default' : 'pointer', padding: 0 }}>
               Sair da lista
             </button>
           </div>
@@ -109,7 +110,7 @@ export default function RSVPCard({ gameId, prazo, fuso, respostaActual, onRespos
             </button>
           </div>
           {respostaActual ? (
-            <div style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center', marginTop: 6 }}>Mudar resposta</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', marginTop: 6 }}>Mudar resposta</div>
           ) : null}
         </>
       )}

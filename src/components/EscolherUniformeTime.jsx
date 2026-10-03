@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { Check } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { KIT_IMG, KITS_FIGURINHA } from '../utils/kitsFigurinha';
+import FaixaRolavel from './FaixaRolavel';
 
 export default function EscolherUniformeTime({ time, aoFechar, aoEscolher }) {
   const [kit, setKit] = useState(time?.brilhante_kit || null);
@@ -40,7 +41,7 @@ export default function EscolherUniformeTime({ time, aoFechar, aoEscolher }) {
           <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
             Todos os jogadores geram a figurinha nesse uniforme. Dá para trocar enquanto ninguém tiver gerado.
           </p>
-          <div className="fig-seletor-grade" data-grade="uniforme-do-time" style={{ width: '100%' }}>
+          <FaixaRolavel className="fig-seletor-grade" data-grade="uniforme-do-time" style={{ width: '100%' }} rotuloMais="Ver mais uniformes" rotuloAnteriores="Ver uniformes anteriores">
             {KITS_FIGURINHA.filter((k) => k.estado !== 'breve').map((k) => {
               const escolhido = k.id === kit;
               return (
@@ -72,7 +73,7 @@ export default function EscolherUniformeTime({ time, aoFechar, aoEscolher }) {
                 </button>
               );
             })}
-          </div>
+          </FaixaRolavel>
           {erro ? (
             <div role="alert" className="hud-corners-s" style={{ padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, color: '#f8b4b4', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.45)' }}>
               {erro}

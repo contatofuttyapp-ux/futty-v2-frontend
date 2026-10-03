@@ -30,7 +30,7 @@ test('card "Seu time": uma linha por pendência, na ordem, cada uma levando ao l
   });
   assert.deepEqual(linhas, [
     { chave: 'pedidos', para: '/time/missa?aba=elenco', texto: '2 pedidos de entrada' },
-    { chave: 'presenca', para: '/time/missa?aba=jogos', texto: 'Jogo de qui., 8 de out. sem presença aberta' },
+    { chave: 'presenca', para: '/time/missa?aba=jogos', texto: 'Quinta, 8 de out.: presença ainda não aberta' }, // 29L, achado 128
     { chave: 'resultado', para: '/time/missa?aba=jogos', texto: 'Resultado de qui., 1 de out. por lançar' },
     { chave: 'denuncias', para: '/time/missa?aba=ajustes#denuncias', texto: '1 denúncia para ver' },
   ]);
@@ -62,7 +62,7 @@ test('a página do time: abas Jogos · Elenco · Ajustes no estilo da Figurinha;
   const equipa = ler('src/pages/Equipa.jsx');
   assert.match(equipa, /\[\['jogos', 'Jogos'\], \['elenco', 'Elenco'\], \.\.\.\(ehAdmin \? \[\['ajustes', 'Ajustes'\]\] : \[\]\)\]/);
   assert.match(equipa, /data-selo-admin/);
-  assert.match(equipa, /className="hud-corners-s"/);
+  assert.match(equipa, /className="hud-corners-s aba-time"/);
   assert.match(equipa, /background: on \? 'rgba\(139,92,246,0\.2\)' : 'transparent'/, 'as mesmas medidas das abas da Figurinha');
   assert.match(equipa, /\{ replace: true \}/, 'trocar de aba não empilha histórico');
   assert.match(equipa, /<Topbar hud="TIME" back="voltar" backFallback="\/home" \/>/, '"Voltar" volta para onde a pessoa estava');

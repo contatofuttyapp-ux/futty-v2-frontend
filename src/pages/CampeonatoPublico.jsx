@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { contar } from '../utils/plural';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import { CampeonatoTabela, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
@@ -42,7 +43,7 @@ export default function CampeonatoPublico() {
                   <div className="row" style={{ margin: '4px 0 14px' }}>
                     <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{camp.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
                     <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
-                    <span className="camp-chip">{camp.times.length} times</span>
+                    <span className="camp-chip">{contar(camp.times.length, 'time', 'times')}</span>
                   </div>
                   {terminado ? <CampeonatoCelebracao campeonato={camp} slug={slug} /> : null}
                   <div className="section-title">{camp.formato === 'mata' ? 'Chaveamento' : terminado ? 'Classificação final' : 'Classificação'}</div>

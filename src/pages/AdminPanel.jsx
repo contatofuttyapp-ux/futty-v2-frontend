@@ -17,7 +17,7 @@ import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { SEM_NOTA_AINDA, formatDateTime, STATUS_LABELS } from '../utils/format';
 import { camposNoCampo, formatarData, formatarDataHora, instanteNoCampo, rabichoDoFuso } from '../utils/dataHora';
 import { LABEL_LINHA } from '../utils/posicoes';
-import { plural } from '../utils/plural';
+import { arredondarMedia, contar, formatarMedia, plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import LoadingFutty from '../components/LoadingFutty';
 import PlayerAvatar from '../components/PlayerAvatar';
@@ -1150,7 +1150,7 @@ function TabConvites({ slug, showToast, semBotao = false }) {
             <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
               Criado por <b style={{ color: '#fff' }}>{c.criado_por_nome || 'alguém'}</b> · {haQuantoTempo(c.created_at)}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Expira em {diasAte(c.expires_at)} dias</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Expira em {contar(diasAte(c.expires_at), 'dia', 'dias')}</div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
               {c.usos > 0 ? `${c.usos} ${c.usos === 1 ? 'entrou' : 'entraram'} por este link` : 'ninguém entrou ainda'}
             </div>
@@ -1376,7 +1376,7 @@ function FormRecorrentes({ slug, fuso, cidade, showToast, onClose, onCriado }) {
         body: JSON.stringify({ dia_semana: dia, hora, local: local.trim() || undefined, semanas }),
       });
       const datas = (r.datas || []).map((iso) => formatarData(iso, r.fuso, 'diaMes')).join(', ');
-      showToast(`${r.criados} jogos criados para as próximas ${semanas} semanas${r.ignorados ? ` (${r.ignorados} ignorados por conflito)` : ''}.${datas ? ` Datas: ${datas}` : ''}`);
+      showToast(`${contar(r.criados, 'jogo criado', 'jogos criados')} para as próximas ${semanas} semanas${r.ignorados ? ` (${contar(r.ignorados, 'ignorado', 'ignorados')} por conflito)` : ''}.${datas ? ` Datas: ${datas}` : ''}`);
       await onCriado();
       onClose();
     } catch (e) {
@@ -1506,20 +1506,31 @@ function TabJogos({ slug, team, showToast, navigate }) {
               const cancelado = g.cancelado || g.status === 'cancelado';
               if (cancelado) {
                 return (
-                  <div key={g.id} style={{ ...CARD, padding: 12, opacity: 0.55 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 8px' }}>Cancelado</span>
+                  <div key={g.id} data-jogo={g.id} data-jogo-cancelado style={{ ...CARD, padding: 12 }}>
+                    <div style={{ opacity: 0.55 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 8px' }}>Cancelado</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso)}</div>
+                      {g.motivo_cancelamento ? (
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>Motivo: {g.motivo_cancelamento}</div>
+                      ) : null}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso)}</div>
-                    {g.motivo_cancelamento ? (
-                      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>Motivo: {g.motivo_cancelamento}</div>
+                    {/* Rodada 29L (achado 139, decisão do dono de 3-out): "Excluir" só existe DEPOIS de cancelar. Cancelar avisa o time e
+                        é o primeiro passo; excluir apaga. Antes, os dois ficavam lado a lado, em vermelho, num dedo grosso. O motor só
+                        apaga jogo futuro SEM confirmados (409 "Cancele-o em vez de excluí-lo" nos outros); por isso o botão só aparece
+                        quando o motor aceita, em vez de oferecer o que ele vai recusar. */}
+                    {g.confirmados === 0 ? (
+                      <div style={{ marginTop: 10 }}>
+                        <button type="button" className="btn btn--ghost btn--sm" data-excluir-jogo style={{ color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'apagar', jogo: g })}>Excluir</button>
+                      </div>
                     ) : null}
                   </div>
                 );
               }
               return (
-                <div key={g.id} style={{ ...CARD, padding: 12 }}>
+                <div key={g.id} data-jogo={g.id} style={{ ...CARD, padding: 12 }}>
                   <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
                     {formatDateTime(g.data, fuso)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
@@ -1530,7 +1541,7 @@ function TabJogos({ slug, team, showToast, navigate }) {
                     return (
                       <div style={{ marginTop: 8 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: cheio ? 'var(--neon)' : 'var(--text-dim)' }}>
-                          {g.confirmados} / {g.max_jogadores} lugares{cheio ? ' · cheio' : ''}
+                          {g.confirmados} / {contar(g.max_jogadores, 'lugar', 'lugares')}{cheio ? ' · cheio' : ''}
                         </div>
                         <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.08)', marginTop: 4, overflow: 'hidden' }}>
                           <div style={{ width: `${pct}%`, height: '100%', background: cheio ? 'var(--neon)' : 'rgba(255,255,255,0.35)', transition: 'width 0.3s ease' }} />
@@ -1541,9 +1552,6 @@ function TabJogos({ slug, team, showToast, navigate }) {
                   <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
                     <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>Cancelar jogo</button>
-                    {g.confirmados === 0 ? (
-                      <button type="button" className="btn btn--ghost btn--sm" style={{ color: '#fda4af' }} onClick={() => setConfirmacao({ tipo: 'apagar', jogo: g })}>Excluir</button>
-                    ) : null}
                   </div>
                   <RSVPAdmin gameId={g.id} slug={slug} navigate={navigate} showToast={showToast} />
                 </div>
@@ -1887,7 +1895,7 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
                 <div style={{ fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</div>
                 <BarraProgresso valor={m.gols || 0} max={maxGols} />
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
-                  <b style={{ color: 'var(--neon)' }}>{m.gols || 0}</b> gols · {m.vitorias || 0} vitórias · {m.artilharia || 0} artilharia
+                  <b style={{ color: 'var(--neon)' }}>{m.gols || 0}</b> {plural(m.gols || 0, 'gol', 'gols')} · {contar(m.vitorias || 0, 'vitória', 'vitórias')} · {m.artilharia || 0} artilharia
                 </div>
               </div>
             </div>
@@ -2070,9 +2078,12 @@ export function JogosDoAdmin({ slug, team, showToast, navigate }) {
       <Link to={`/time/${slug}/jogo/novo`} className="btn hud-corners-s cta-gold" style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
         + Novo jogo
       </Link>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" className="btn btn--outline btn--sm hud-corners-s" aria-pressed={painel === 'recorrentes'} style={{ flex: 1 }} onClick={() => alternar('recorrentes')}>Criar jogos recorrentes</button>
-        <button type="button" className="btn btn--outline btn--sm hud-corners-s" aria-pressed={painel === 'campeonato'} style={{ flex: 1 }} onClick={() => alternar('campeonato')}>Criar campeonato</button>
+      {/* Rodada 29L (achado 140): o par era 50%/50% e "Criar jogos recorrentes" quebrava em duas linhas ao lado de "Criar campeonato" em uma.
+          Agora cada botão tem a largura do próprio texto (e divide a sobra), nunca parte o rótulo; se a tela for estreita demais para os
+          dois, o segundo desce inteiro para a linha de baixo. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <button type="button" className="btn btn--outline btn--sm hud-corners-s" aria-pressed={painel === 'recorrentes'} style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }} onClick={() => alternar('recorrentes')}>Criar jogos recorrentes</button>
+        <button type="button" className="btn btn--outline btn--sm hud-corners-s" aria-pressed={painel === 'campeonato'} style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }} onClick={() => alternar('campeonato')}>Criar campeonato</button>
       </div>
       {painel === 'recorrentes' ? (
         <FormRecorrentes slug={slug} fuso={team?.fuso} cidade={team?.cidade} showToast={showToast} onClose={() => setPainel(null)} onCriado={async () => setVersao((v) => v + 1)} />
@@ -2096,10 +2107,11 @@ export function ElencoDoAdmin({ slug, meId, showToast, versaoConvites = 0 }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }} data-tres-numeros>
-        <MetricCard valor={stats ? stats.total_jogos ?? 0 : '–'} label="jogos" />
-        <MetricCard valor={stats ? stats.total_membros ?? 0 : '–'} label="membros" />
+        {/* Rodada 29L (achado 136): o rótulo concorda com o número ("1 jogo", "1 membro") e a média sem casa decimal quando é inteira ("0", não "0.0"). */}
+        <MetricCard valor={stats ? stats.total_jogos ?? 0 : '–'} label={plural(stats?.total_jogos, 'jogo', 'jogos')} />
+        <MetricCard valor={stats ? stats.total_membros ?? 0 : '–'} label={plural(stats?.total_membros, 'membro', 'membros')} />
         {/* Achado 101: é a média de CONFIRMADOS por jogo (stats.media_confirmacoes), não de gols. */}
-        <MetricCard valor={stats ? (stats.media_confirmacoes ?? 0).toFixed(1) : '–'} label="confirmados por jogo" />
+        <MetricCard valor={stats ? formatarMedia(stats.media_confirmacoes ?? 0) : '–'} label={plural(arredondarMedia(stats?.media_confirmacoes), 'confirmado por jogo', 'confirmados por jogo')} />
       </div>
       <TabMembros slug={slug} meId={meId} showToast={showToast} />
       <Secao titulo="Links de convite ativos">
