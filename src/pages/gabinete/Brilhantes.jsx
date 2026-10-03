@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
 import EstadoErroRede from '../../components/EstadoErroRede';
+import { KITS_FIGURINHA } from '../../utils/kitsFigurinha';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
 const btn = {
@@ -59,9 +60,11 @@ function fmtDataHora(iso) {
   if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
-/** "dark-gold" → "Dark Gold". O catálogo é do motor (KITS_IA); o nome bonito sai daqui. */
+/** "dark-gold" → "Ouro Escuro". O catálogo é do motor (KITS_IA); o nome em português sai de utils/kitsFigurinha.js (29I, achado 91). */
 function nomeKit(id) {
-  return String(id || '').split('-').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+  const conhecido = KITS_FIGURINHA.find((k) => k.id === id);
+  if (conhecido) return conhecido.nome;
+  return String(id || '').split('-').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' '); // kit novo no motor que o app ainda não conhece
 }
 
 function Secao({ titulo, sub, children }) {

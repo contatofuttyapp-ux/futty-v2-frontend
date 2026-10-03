@@ -88,7 +88,7 @@ function RankRow({ p, idx, slug, onVote }) {
             pos
           )}
         </div>
-        <Link to={`/equipa/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${nomeShow}`} style={{ lineHeight: 0 }}>
+        <Link to={`/time/${slug}/jogador/${p.user_id}`} aria-label={`Ver perfil de ${nomeShow}`} style={{ lineHeight: 0 }}>
           <FrameAvatar nome={nomeShow} avatarUrl={p.avatar_url} userId={p.user_id} avatarGenerico={p.avatar_generico} size={avSize} />
         </Link>
         <div className="rank-info">
@@ -130,7 +130,7 @@ function RankRow({ p, idx, slug, onVote }) {
           ) : (
             <VoteButton jaVotou={jaVotou} onClick={() => onVote(p)} />
           )}
-          <Link to={`/equipa/${slug}/jogador/${p.user_id}`} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: 11, textDecoration: 'none', cursor: 'pointer' }}>
+          <Link to={`/time/${slug}/jogador/${p.user_id}`} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: 11, textDecoration: 'none', cursor: 'pointer' }}>
             Ver perfil
           </Link>
         </div>
@@ -258,14 +258,16 @@ export default function Ranking() {
 
   return (
     <div className="app-shell page-reveal">
-      <Topbar hud="RANKING" back={semTime ? undefined : `/equipa/${slug}`} />
+      <Topbar hud="RANKING" back={semTime ? undefined : `/time/${slug}`} />
       <main className="app-main">
         {semTime ? (
           <EstadoSemTime icone="trofeu" mensagem="O ranking nasce com o seu time. Crie o seu ou entre em um." />
         ) : (
           <>
-            {/* Cabeçalho: escudo + nome da equipa actual. */}
-            {equipaAtual ? (
+            {/* Cabeçalho: escudo + nome da equipa actual. Achado 96: com mais de um time os chips logo abaixo JÁ dizem qual é o atual
+                (o ativo é o dourado, com escudo e nome) — o título repetia o mesmo nome em cima do chip. O nome do time aparece UMA vez:
+                no título quando há um time só (não há chips), no chip ativo quando há vários. */}
+            {equipaAtual && teams.length <= 1 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <EscudoEquipa team={equipaAtual} size={40} />
                 <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: '0.04em' }}>{equipaAtual.nome}</span>
@@ -279,7 +281,7 @@ export default function Ranking() {
                 {teams.map((t) => (
                   <Link
                     key={t.id}
-                    to={`/equipa/${t.slug}/ranking`}
+                    to={`/time/${t.slug}/ranking`}
                     className={`chip ${t.slug === slug ? 'chip--active tab-shine' : ''}`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none' }}
                   >
@@ -306,7 +308,7 @@ export default function Ranking() {
               <div style={{ textAlign: 'center', padding: '30px 16px', display: 'grid', gap: 14, justifyItems: 'center' }}>
                 <p className="muted" style={{ margin: 0, fontSize: 14, color: '#c9c2d6' }}>O ranking nasce do 1º jogo.</p>
                 {equipaAtual?.role === 'admin' ? (
-                  <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--sm hud-corners-s cta-gold" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 18px', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
+                  <Link to={`/time/${slug}/jogo/novo`} className="btn btn--sm hud-corners-s cta-gold" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 18px', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
                     Criar o 1º jogo
                   </Link>
                 ) : (

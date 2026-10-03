@@ -37,11 +37,11 @@ export default function Jogos() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="JOGOS" back={`/equipa/${slug}`} />
+      <Topbar hud="JOGOS" back={`/time/${slug}`} />
       <main className="app-main page-reveal">
         {isAdmin && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-            <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
+            <Link to={`/time/${slug}/jogo/novo`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
               + Novo jogo
             </Link>
           </div>
@@ -59,7 +59,7 @@ export default function Jogos() {
               {isAdmin ? 'Marque o primeiro e chame o time.' : 'Espere um admin agendar um jogo.'}
             </p>
             {isAdmin && (
-              <Link to={`/equipa/${slug}/jogo/novo`} className="btn hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
+              <Link to={`/time/${slug}/jogo/novo`} className="btn hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
                 + Novo jogo
               </Link>
             )}
@@ -70,7 +70,7 @@ export default function Jogos() {
               const { day, month } = dayMonth(g.data, team?.fuso); // 29I: a data é a do campo (fuso do time)
               const apagado = g.status === 'encerrado' || g.status === 'cancelado';
               return (
-                <Link key={g.id} to={`/equipa/${slug}/jogo/${g.id}`} style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, textDecoration: 'none', color: 'inherit', opacity: apagado ? 0.75 : 1 }}>
+                <Link key={g.id} to={`/time/${slug}/jogo/${g.id}`} style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, textDecoration: 'none', color: 'inherit', opacity: apagado ? 0.75 : 1 }}>
                   <div style={{ display: 'grid', placeItems: 'center', width: 52, height: 56, flexShrink: 0, background: 'rgba(212,160,23,0.10)', border: '1px solid rgba(212,160,23,0.45)', clipPath: CLIP_S }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#f0c94a', lineHeight: 1 }}>{day}</div>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, color: '#c9a24a', textTransform: 'uppercase' }}>{month}</div>

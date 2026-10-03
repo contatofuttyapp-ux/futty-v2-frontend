@@ -6,7 +6,7 @@
 //
 // Anônima por construção:
 //   · sem Authorization, sem cookie: o motor não tem como saber de quem é;
-//   · telas e rotas seguem como PADRÃO (/equipa/:slug/ranking) — slug de time, id, token, e-mail e
+//   · telas e rotas seguem como PADRÃO (/time/:slug/ranking) — slug de time, id, token, e-mail e
 //     número nunca saem do aparelho (o motor normaliza de novo, com a mesma regra);
 //   · o aparelho vai como faixa genérica ("android-medio"), nunca modelo nem id.
 //
@@ -26,12 +26,12 @@ function destino() {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PALAVRA_DE_ROTA = /^[a-z]+(-[a-z]+)*$/;
-const ANTES_DO_SLUG = new Set(['teams', 'equipas', 'equipa', 'admin']);
+const ANTES_DO_SLUG = new Set(['teams', 'equipas', 'equipa', 'time', 'admin']); // 'equipa' = o endereço antigo (29I: /equipa → /time)
 const MAX_ROTAS = 20;
 
 /**
  * O padrão de uma rota, sem nada que identifique alguém ou algum time — a MESMA regra do motor
- * (backend/utils/telemetria.js): /equipa/missa-de-quinta-ogqq6/ranking → /equipa/:slug/ranking.
+ * (backend/utils/telemetria.js): /time/missa-de-quinta-ogqq6/ranking → /time/:slug/ranking.
  */
 export function normalizarRota(caminho) {
   const partes = String(caminho || '').split(/[?#]/)[0].split('/');

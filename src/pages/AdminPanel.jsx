@@ -30,6 +30,7 @@ import CampoBairro from '../components/CampoBairro';
 import { avisoDaCidade } from '../utils/cidades';
 import { TEXTO_APOIO_BAIRRO, avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
 import { linkDoConvite } from '../utils/convite';
+import { abaDoAdmin } from '../lib/rotasAntigas';
 import '../styles/app.css';
 
 // Opções de cor de fundo do avatar da equipa (sem logo) e de visibilidade.
@@ -49,7 +50,7 @@ const VIS_DESC = {
 const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12 };
 const MENU = [
   { k: 'dashboard', icon: House, label: 'Dashboard' },
-  { k: 'equipa', icon: Settings, label: 'Time' },
+  { k: 'time', icon: Settings, label: 'Time' },
   { k: 'membros', icon: Users, label: 'Membros' },
   { k: 'convites', icon: Link2, label: 'Convites' },
   { k: 'jogos', icon: CircleDot, label: 'Jogos' },
@@ -321,7 +322,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
           <div style={{ color: '#fff', marginTop: 4 }}>Campeão: <b>{nomeCampeao(c)}</b></div>
         </div>
         <button type="button" className="btn btn--purple btn--sm" onClick={() => setData({ campeonato: null })}>Criar novo campeonato</button>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/equipa/${slug}/campeonato`)}>Ver detalhes →</button>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/time/${slug}/campeonato`)}>Ver detalhes →</button>
       </div>
     );
   }
@@ -351,7 +352,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
           </div>
         ) : null}
 
-        <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/equipa/${slug}/campeonato`)}>Ver detalhes →</button>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/time/${slug}/campeonato`)}>Ver detalhes →</button>
         <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} disabled={busy} onClick={() => setConfirmTerminar(true)}>
           Terminar campeonato antecipadamente
         </button>
@@ -497,7 +498,7 @@ function TabDashboard({ slug, fuso, navigate, onGoTab, showToast }) {
   const alertas = [];
   if (semFoto > 0) alertas.push({ txt: `${semFoto} ${semFoto === 1 ? 'jogador sem foto' : 'jogadores sem foto'}`, acao: () => onGoTab('membros') });
   if (naoResponderam > 0) alertas.push({ txt: `${naoResponderam} ${naoResponderam === 1 ? 'jogador não respondeu' : 'jogadores não responderam'} à confirmação de presença`, acao: () => onGoTab('jogos') });
-  if (uGame && (uGame.resultado_nivel || 0) === 0) alertas.push({ txt: 'Resultado do último jogo não registrado', acao: () => navigate(`/equipa/${slug}/jogo/${uGame.id}`) });
+  if (uGame && (uGame.resultado_nivel || 0) === 0) alertas.push({ txt: 'Resultado do último jogo não registrado', acao: () => navigate(`/time/${slug}/jogo/${uGame.id}`) });
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
@@ -513,14 +514,14 @@ function TabDashboard({ slug, fuso, navigate, onGoTab, showToast }) {
               {rsvpAtivo ? ` / ${rsvpTotal} ${plural(rsvpTotal, 'membro', 'membros')}` : ''}
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Fazer sorteio</button>
+              <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${pj.id}`)}>Fazer sorteio</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => onGoTab('jogos')}>{rsvpAtivo ? 'Ver presenças' : 'Abrir presença'}</button>
             </div>
           </>
         ) : (
           <>
             <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem jogo agendado</div>
-            <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/equipa/${slug}/jogo/novo`)}>Criar jogo</button>
+            <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/time/${slug}/jogo/novo`)}>Criar jogo</button>
           </>
         )}
       </div>
@@ -533,7 +534,7 @@ function TabDashboard({ slug, fuso, navigate, onGoTab, showToast }) {
             {(uGame.resultado_nivel || 0) === 0 ? (
               <>
                 <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem resultado registrado</div>
-                <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/equipa/${slug}/jogo/${uGame.id}`)}>Registrar resultado</button>
+                <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/time/${slug}/jogo/${uGame.id}`)}>Registrar resultado</button>
               </>
             ) : (
               <>
@@ -579,7 +580,9 @@ function TabDashboard({ slug, fuso, navigate, onGoTab, showToast }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <MetricCard valor={stats.total_jogos ?? 0} label="jogos" />
         <MetricCard valor={stats.total_membros ?? 0} label="membros" />
-        <MetricCard valor={(stats.media_confirmacoes ?? 0).toFixed(1)} label="por jogo" />
+        {/* Achado 101: o número solto não dizia do quê. É a média de CONFIRMADOS por jogo (stats.media_confirmacoes no motor: confirmações
+            ÷ jogos), não de gols — a varredura supôs gols; 13 gols por jogo não existe, 13 jogadores confirmados por jogo é o normal. */}
+        <MetricCard valor={(stats.media_confirmacoes ?? 0).toFixed(1)} label="confirmados por jogo" />
         <MetricCard valor={denuncias} label="denúncias" alerta={denuncias > 0} />
       </div>
 
@@ -647,7 +650,9 @@ function TabEquipa({ slug, team, showToast }) {
   const [modo, setModo] = useState(team.modo_visibilidade || 'privado');
   const [mostrarGols, setMostrarGols] = useState(team.mostrar_gols !== false);
   // 29H (item 44): "Artilheiro do dia" / "Destaque do dia" — ligados, o editor de resultado oferece a seção.
-  const [mostrarArtilheiro, setMostrarArtilheiro] = useState(team.mostrar_artilheiro !== false);
+  // 29I (achado 78): o artilheiro depende dos gols — com os gols desligados ele aparece desligado (um time antigo que ficou com a
+  // combinação incoerente é mostrado como o motor a trata: sem artilheiro).
+  const [mostrarArtilheiro, setMostrarArtilheiro] = useState(team.mostrar_gols !== false && team.mostrar_artilheiro !== false);
   const [mostrarDestaque, setMostrarDestaque] = useState(team.mostrar_destaque !== false);
   const [joga, setJoga] = useState(team.joga !== false); // Rodada 29B (E): "Eu jogo" / "Só organizo o time"
   const [jogaOcupado, setJogaOcupado] = useState(false);
@@ -717,13 +722,20 @@ function TabEquipa({ slug, team, showToast }) {
 
   // "Mostrar gols" — equipa casual pode esconder gols/artilharia (radar, tiles, perfil).
   async function guardarMostrarGols(v) {
-    const anterior = mostrarGols;
+    const golsAntes = mostrarGols;
+    const artilheiroAntes = mostrarArtilheiro;
+    // Achado 78 (decisão do dono): desligar os gols desliga o artilheiro junto (o troféu faz parte dos gols), e as duas chaves vão no
+    // mesmo pedido — o motor recusa a combinação "gols desligados, artilheiro ligado". Religar os gols NÃO religa o artilheiro: quem decide
+    // é a pessoa, no botão dele.
+    const desligaArtilheiroJunto = !v && artilheiroAntes;
     setMostrarGols(v);
+    if (desligaArtilheiroJunto) setMostrarArtilheiro(false);
     try {
-      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ mostrar_gols: v }) });
-      showToast(v ? 'Gols visíveis.' : 'Gols escondidos.');
+      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ mostrar_gols: v, ...(desligaArtilheiroJunto ? { mostrar_artilheiro: false } : {}) }) });
+      showToast(v ? 'Gols visíveis.' : desligaArtilheiroJunto ? 'Gols escondidos. O artilheiro do dia foi desligado junto.' : 'Gols escondidos.');
     } catch (err) {
-      setMostrarGols(anterior);
+      setMostrarGols(golsAntes);
+      setMostrarArtilheiro(artilheiroAntes);
       showToast(err.message, 'error');
     }
   }
@@ -939,6 +951,7 @@ function TabEquipa({ slug, team, showToast }) {
           type="button"
           role="switch"
           aria-checked={mostrarGols}
+          aria-label="Mostrar gols"
           onClick={() => guardarMostrarGols(!mostrarGols)}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${mostrarGols ? 'var(--neon)' : '#1a1a1a'}`, background: mostrarGols ? 'rgba(139,92,246,0.08)' : '#080808', color: '#fff' }}
         >
@@ -947,7 +960,7 @@ function TabEquipa({ slug, team, showToast }) {
             <span style={{ position: 'absolute', top: 2, left: mostrarGols ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
           </span>
         </button>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: esconde gols e artilharia (radar, perfil e blocos). Para futebol casual.</span>
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: esconde gols e artilharia (radar, perfil e blocos), e desliga o artilheiro do dia. Para futebol casual.</span>
       </div>
 
       {/* PRÊMIOS DO DIA (29H, item 44): o editor de resultado só oferece o artilheiro / o destaque quando ligados. */}
@@ -956,22 +969,32 @@ function TabEquipa({ slug, team, showToast }) {
         {[
           { campo: 'mostrar_artilheiro', rotulo: 'Artilheiro do dia', valor: mostrarArtilheiro, definir: setMostrarArtilheiro, liga: 'Artilheiro do dia ligado.', desliga: 'Artilheiro do dia desligado.' },
           { campo: 'mostrar_destaque', rotulo: 'Destaque do dia', valor: mostrarDestaque, definir: setMostrarDestaque, liga: 'Destaque do dia ligado.', desliga: 'Destaque do dia desligado.' },
-        ].map((p) => (
+        ].map((p) => {
+          // O artilheiro fica apagado enquanto os gols estão desligados (achado 78): sem clique, com a razão escrita embaixo.
+          const apagado = p.campo === 'mostrar_artilheiro' && !mostrarGols;
+          return (
           <button
             key={p.campo}
             type="button"
             role="switch"
             aria-checked={p.valor}
+            aria-label={p.rotulo}
+            aria-disabled={apagado}
+            disabled={apagado}
             data-premio-do-time={p.campo}
             onClick={() => guardarPremio(p.campo, !p.valor, p.definir, { liga: p.liga, desliga: p.desliga })}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${p.valor ? 'var(--neon)' : '#1a1a1a'}`, background: p.valor ? 'rgba(139,92,246,0.08)' : '#080808', color: '#fff' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: apagado ? 'not-allowed' : 'pointer', opacity: apagado ? 0.5 : 1, border: `1px solid ${p.valor ? 'var(--neon)' : '#1a1a1a'}`, background: p.valor ? 'rgba(139,92,246,0.08)' : '#080808', color: '#fff' }}
           >
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{p.rotulo}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, textAlign: 'left' }}>
+              {p.rotulo}
+              {apagado ? <span data-premio-apagado style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-dim)', marginTop: 2 }}>Precisa dos gols ligados.</span> : null}
+            </span>
             <span style={{ width: 40, height: 22, borderRadius: 999, background: p.valor ? 'var(--neon)' : '#333', position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
               <span style={{ position: 'absolute', top: 2, left: p.valor ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
             </span>
           </button>
-        ))}
+          );
+        })}
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: o editor de resultado não oferece o troféu nem o destaque. O que já foi premiado continua no histórico.</span>
       </div>
 
@@ -1596,7 +1619,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
 
   function fazerSorteio() {
     const ids = (info?.confirmados || []).map((u) => u.id);
-    navigate(`/equipa/${slug}/jogo/${gameId}`, { state: { rsvpConfirmados: ids } });
+    navigate(`/time/${slug}/jogo/${gameId}`, { state: { rsvpConfirmados: ids } });
   }
 
   const linha = { marginTop: 12, borderTop: '1px solid #222222', paddingTop: 10 };
@@ -1890,7 +1913,7 @@ function TabJogos({ slug, fuso, showToast, navigate }) {
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso)}</div>
                 </div>
                 <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>
-                <button type="button" className="btn btn--purple btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${g.id}`)}>Ver resultado</button>
+                <button type="button" className="btn btn--purple btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${g.id}`)}>Ver resultado</button>
               </div>
             ))}
           </div>
@@ -2426,7 +2449,8 @@ export default function AdminPanel() {
   const { user } = useAuth();
   const meId = user?.id || null;
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') || 'dashboard';
+  // 29I (achado 103): a aba do time é ?tab=time. O endereço antigo (?tab=equipa) continua valendo: vira a mesma aba.
+  const tab = abaDoAdmin(searchParams.get('tab'));
 
   const [team, setTeam] = useState(null);
   const [membrosBasicos, setMembrosBasicos] = useState([]); // de GET /api/teams/:slug (com created_at)
@@ -2454,7 +2478,7 @@ export default function AdminPanel() {
         if (!ativo) return;
         if (d.team?.role !== 'admin') {
           setNegado(true);
-          navigate(`/equipa/${slug}`, { replace: true });
+          navigate(`/time/${slug}`, { replace: true });
           return;
         }
         setTeam(d.team);
@@ -2463,7 +2487,7 @@ export default function AdminPanel() {
       .catch(() => {
         if (!ativo) return;
         setNegado(true);
-        navigate(`/equipa/${slug}`, { replace: true });
+        navigate(`/time/${slug}`, { replace: true });
       });
     return () => {
       ativo = false;
@@ -2478,7 +2502,7 @@ export default function AdminPanel() {
 
       {/* Header do painel */}
       <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
-        <Link to={`/equipa/${slug}`} className="topbar-back" style={{ flexShrink: 0 }}>← Voltar</Link>
+        <Link to={`/time/${slug}`} className="topbar-back" style={{ flexShrink: 0 }}>← Voltar</Link>
         <div style={{ flex: 1, textAlign: 'center', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {team?.nome || 'Admin'}
         </div>
@@ -2506,7 +2530,7 @@ export default function AdminPanel() {
           <main className="admin-content">
             <div style={{ maxWidth: 760, margin: '0 auto' }}>
               {tab === 'dashboard' && <TabDashboard slug={slug} fuso={team?.fuso} navigate={navigate} onGoTab={irTab} showToast={showToast} />}
-              {tab === 'equipa' && <TabEquipa slug={slug} team={team} showToast={showToast} />}
+              {tab === 'time' && <TabEquipa slug={slug} team={team} showToast={showToast} />}
               {tab === 'membros' && <TabMembros slug={slug} fuso={team?.fuso} meId={meId} showToast={showToast} />}
               {tab === 'convites' && <TabConvites slug={slug} showToast={showToast} />}
               {tab === 'jogos' && <TabJogos slug={slug} fuso={team?.fuso} showToast={showToast} navigate={navigate} />}

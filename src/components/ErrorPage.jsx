@@ -16,7 +16,7 @@ import FuttyLoader from './FuttyLoader';
 // "Sem permissão" (SuperAdminGuard) eram cópias deste layout (~1 KB do arranque, que tem teto).
 //   acao          — { rotulo, aoTocar }: troca o botão de ouro e tira o 2º elo (retry/descobrir peladas).
 //   larguraTexto  — maxWidth do parágrafo (padrão 280).
-export default function ErrorPage({ onRetry, mensagem, titulo, detalheTecnico, acao, larguraTexto = 280 }) {
+export default function ErrorPage({ onRetry, mensagem, titulo, acao, larguraTexto = 280 }) {
   const irAoInicio = () => { window.location.href = '/home'; };
   return (
     <div
@@ -41,13 +41,8 @@ export default function ErrorPage({ onRetry, mensagem, titulo, detalheTecnico, a
         {mensagem || 'O servidor está descansando. Tente de novo daqui a pouco.'}
       </p>
 
-      {/* Letra pequena (build 10): a mensagem técnica, só para quem sabe o
-          que está a ler — o mesmo texto fica em Perfil → Diagnóstico. */}
-      {detalheTecnico ? (
-        <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 11, maxWidth: 300, lineHeight: 1.4, margin: 0, wordBreak: 'break-word' }}>
-          {detalheTecnico}
-        </p>
-      ) : null}
+      {/* Rodada 29I (achado 75): a linha técnica em letra pequena (build 10) saiu da tela — inglês cru ("Failed to fetch dynamically
+          imported module…") numa tela que fala com a pessoa. A mensagem técnica fica no console e no Diagnóstico (lib/ultimoErro). */}
 
       {/* A acção primária (ouro) tira o utilizador do beco: se há como repetir, repete;
           senão, leva ao Início (onde vivem os próximos jogos). O 2º elo é uma porta

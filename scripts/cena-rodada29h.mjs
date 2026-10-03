@@ -272,10 +272,10 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await pagina.getByText(/Como te chamam/).first().waitFor({ timeout: 15000 });
     await pagina.locator('input[placeholder^="ex.:"]').fill('Prova 29H');
     await pagina.getByRole('button', { name: /^Entrar$/ }).tap();
-    await pagina.waitForURL(`**/equipa/${slug}`, { timeout: 40000 }).catch(() => {});
+    await pagina.waitForURL(`**/time/${slug}`, { timeout: 40000 }).catch(() => {});
     await espera(1500);
     const rotas = escritas.map((e) => `${e.metodo} ${e.rota}`);
-    verificar('C · "Entrar" aceita o convite do bilhete e cai DIRETO no time (nome → onboarding selado → aceitar → posição "No gol")', pagina.url().endsWith(`/equipa/${slug}`) && rotas.includes('POST /api/convite/token-de-prova/aceitar') && rotas.includes('POST /api/me/onboarding-completo') && escritaDe(escritas, 'PATCH', `/api/equipas/${slug}/membros/posicao`).some((e) => /"goleiro":true/.test(e.corpo || '')), JSON.stringify({ url: pagina.url().replace(BASE, ''), rotas }));
+    verificar('C · "Entrar" aceita o convite do bilhete e cai DIRETO no time (nome → onboarding selado → aceitar → posição "No gol")', pagina.url().endsWith(`/time/${slug}`) && rotas.includes('POST /api/convite/token-de-prova/aceitar') && rotas.includes('POST /api/me/onboarding-completo') && escritaDe(escritas, 'PATCH', `/api/equipas/${slug}/membros/posicao`).some((e) => /"goleiro":true/.test(e.corpo || '')), JSON.stringify({ url: pagina.url().replace(BASE, ''), rotas }));
     const guardado = await pagina.evaluate((id) => ({ visto: localStorage.getItem(`futty_onboarding_${id}`), bilhete: localStorage.getItem('futty_convite_pendente') }), idDoTime);
     verificar('C · o bilhete é gasto, as boas-vindas do time já contam como vistas (não repetem na página do time)', guardado.bilhete === null && guardado.visto === '1' && (await pagina.locator('.bv').count()) === 0, JSON.stringify(guardado));
     await capturar(pagina, 'C3-convidado-no-time');
@@ -395,7 +395,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
       if (metodo === 'POST' && caminho === '/api/teams/prova-r29h/convite') return { token: '11111111-2222-3333-4444-555555555555', codigo: 'k7m2p9qx', expires_at: new Date(Date.now() + 30 * 86400000).toISOString() };
       return null;
     };
-    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'F-criar', '/criar-equipa', { respostas });
+    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'F-criar', '/criar-time', { respostas });
     await pagina.getByPlaceholder('ex.: Domingueira FC').fill('Savassi FC');
     // a cidade (da lista) e o bairro
     const bairro = pagina.locator('[data-campo-bairro]');
@@ -465,7 +465,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   });
   await bloco('F16', async () => {
     // F2: bairro em Portugal — a freguesia da lista, com coordenada
-    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'F-criar-pt', '/criar-equipa', { respostas: (c, m) => (m === 'POST' && c === '/api/teams' ? { team: { id: 'x', slug: 'prova-r29h-pt', nome: 'Alvalade FC' }, geo: { encontrada: true, nomeOficial: 'Lisboa, Portugal' }, bairro: { encontrado: true, nomeOficial: 'Alvalade, Lisboa, Portugal' }, joga: true } : null) });
+    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'F-criar-pt', '/criar-time', { respostas: (c, m) => (m === 'POST' && c === '/api/teams' ? { team: { id: 'x', slug: 'prova-r29h-pt', nome: 'Alvalade FC' }, geo: { encontrada: true, nomeOficial: 'Lisboa, Portugal' }, bairro: { encontrado: true, nomeOficial: 'Alvalade, Lisboa, Portugal' }, joga: true } : null) });
     await pagina.getByPlaceholder('ex.: Domingueira FC').fill('Alvalade FC');
     const cidade = pagina.getByPlaceholder('Ex: Brasília');
     await cidade.click();
@@ -489,7 +489,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   });
   await bloco('F17', async () => {
     // F3: bairro que o motor não achou: aviso amarelo, o time fica no ponto da cidade
-    const { contexto, pagina } = await abrir(fx.gratis, 'F-criar-nao-achou', '/criar-equipa', { respostas: (c, m) => (m === 'POST' && c === '/api/teams' ? { team: { id: 'x', slug: 'prova-r29h-b', nome: 'Sem Bairro FC' }, geo: { encontrada: true, nomeOficial: 'Belo Horizonte, MG' }, bairro: { encontrado: false }, joga: true } : null) });
+    const { contexto, pagina } = await abrir(fx.gratis, 'F-criar-nao-achou', '/criar-time', { respostas: (c, m) => (m === 'POST' && c === '/api/teams' ? { team: { id: 'x', slug: 'prova-r29h-b', nome: 'Sem Bairro FC' }, geo: { encontrada: true, nomeOficial: 'Belo Horizonte, MG' }, bairro: { encontrado: false }, joga: true } : null) });
     await pagina.getByPlaceholder('ex.: Domingueira FC').fill('Sem Bairro FC');
     const cidade = pagina.getByPlaceholder('Ex: Brasília');
     await cidade.click();
@@ -528,7 +528,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
 
   // ───────────────────────────────── H · chips linha/gol e "＋ Criar time" ─────────────────────────────────
   await bloco('H20', async () => {
-    const { contexto, pagina, escritas } = await abrir(fx.novato, 'H-equipa', `/equipa/${slug}`, { inicial: () => { try { localStorage.setItem(`futty_onboarding_x`, '1'); } catch { /* nada */ } } });
+    const { contexto, pagina, escritas } = await abrir(fx.novato, 'H-equipa', `/time/${slug}`, { inicial: () => { try { localStorage.setItem(`futty_onboarding_x`, '1'); } catch { /* nada */ } } });
     await pagina.locator('[data-escolha-linha-gol]').first().waitFor({ timeout: 30000 });
     // O novato não tem foto: as boas-vindas do convidado abrem por cima; "Vamos lá" as fecha (variante convidado).
     await pagina.locator('.bv').waitFor({ timeout: 8000 }).catch(() => {});
@@ -551,8 +551,8 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     verificar('H · Início: chip "＋ Criar time" ao lado dos times (antes só havia o botão do Início vazio)', (await chip.count()) === 1 && /Criar time/.test(await chip.innerText()));
     await capturar(pagina, 'H2-inicio-criar-time');
     await chip.tap();
-    await pagina.waitForURL('**/criar-equipa', { timeout: 15000 }).catch(() => {});
-    verificar('H · o chip leva ao Criar time', /\/criar-equipa$/.test(pagina.url()));
+    await pagina.waitForURL('**/criar-time', { timeout: 15000 }).catch(() => {});
+    verificar('H · o chip leva ao Criar time', /\/criar-time$/.test(pagina.url()));
     await contexto.close();
   });
   await bloco('H22', async () => {
@@ -576,7 +576,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
 
   // ───────────────────────────────── I · o painel do admin sem "IA" ─────────────────────────────────
   await bloco('I24', async () => {
-    const { contexto, pagina } = await abrir(fx.gratis, 'I-admin', `/equipa/${slug}`);
+    const { contexto, pagina } = await abrir(fx.gratis, 'I-admin', `/time/${slug}`);
     await pagina.getByText('Moderação').first().waitFor({ timeout: 30000 });
     await pagina.getByText('Tudo tranquilo por aqui.').waitFor({ timeout: 20000 }).catch(() => {});
     const t = norm(await texto(pagina));
@@ -636,7 +636,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   await bloco('K29', async () => {
     const corposDoPatch = [];
     const respostas = (caminho, metodo, corpoCompleto) => (metodo === 'PATCH' && caminho === `/api/teams/${slug}` && (corposDoPatch.push(corpoCompleto || ''), true) ? { team: { id: idDoTime, slug, nome: NOME, cidade: 'Lisboa, Portugal', bairro: 'Alvalade' }, geo: { encontrada: true, nomeOficial: 'Lisboa, Portugal' }, bairro: { encontrado: true, nomeOficial: 'Alvalade, Lisboa, Portugal' } } : null);
-    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'K-admin', `/admin/${slug}?tab=equipa`, { respostas });
+    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'K-admin', `/admin/${slug}?tab=time`, { respostas });
     await pagina.getByText('Bairro').first().waitFor({ timeout: 30000 });
     const premios = pagina.locator('[data-premio-do-time]');
     verificar('K · painel do time: "Prêmios do dia" — dois interruptores (Artilheiro do dia, Destaque do dia) ligados de saída', (await premios.count()) === 2 && (await premios.evaluateAll((els) => els.map((e) => e.getAttribute('aria-checked')))).join() === 'true,true');

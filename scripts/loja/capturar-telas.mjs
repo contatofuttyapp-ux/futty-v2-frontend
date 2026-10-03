@@ -116,7 +116,7 @@ if (quer('figurinha')) {
 }
 
 if (quer('ranking')) {
-  await page.goto(`${BASE}/equipa/${estado.teamSlug}/ranking`);
+  await page.goto(`${BASE}/time/${estado.teamSlug}/ranking`);
   await page.waitForSelector('.rank-list .rank-row', { timeout: 60000 });
   await assentar(page);
   // Confete do pódio (canvas-confetti): o canvas some quando a animação acaba.
@@ -152,7 +152,7 @@ await ctx.close();
 // Sorteio: com movimento, para a cerimônia terminar com as molduras travadas.
 // Se em 45 s não acabar, cai para a versão instantânea (movimento reduzido).
 if (quer('sorteio')) {
-  const url = `${BASE}/equipa/${estado.teamSlug}/jogo/${estado.proximoJogoId}/sorteio`;
+  const url = `${BASE}/time/${estado.teamSlug}/jogo/${estado.proximoJogoId}/sorteio`;
   const { ctx: c2, page: p2 } = await novoContexto(navegador, { reducedMotion: 'no-preference' });
   await p2.goto(url);
   let ok = false;

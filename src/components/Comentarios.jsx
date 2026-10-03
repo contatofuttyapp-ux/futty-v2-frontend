@@ -338,7 +338,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
   }
 
   function irParaPerfil(userId) {
-    if (teamSlug) navigate(`/equipa/${teamSlug}/jogador/${userId}`);
+    if (teamSlug) navigate(`/time/${teamSlug}/jogador/${userId}`);
   }
 
   // Renderiza o corpo, transformando @<uuid> em @Nome clicável.

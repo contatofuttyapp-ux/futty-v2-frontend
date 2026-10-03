@@ -2573,7 +2573,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   VAGA 6 — VITRINE DO JOGADOR (/equipa/:slug/jogador/:id)
+   VAGA 6 — VITRINE DO JOGADOR (/time/:slug/jogador/:id)
    Herói = recorte puro com aura + respiração; stats-espectáculo (anel/radar/
    sparkline/tiles em cascata). Namespace .perfil-*, aditivo. reduced-motion estático.
    ═══════════════════════════════════════════════════════════════════════════════ */
@@ -3070,3 +3070,46 @@
 .rolo__item--atual { color: rgba(255, 255, 255, 0.55); }
 .rolinhos--completo .rolo__item--atual,
 .rolo[data-escolhido]:not([data-escolhido=""]) .rolo__item--atual { color: #f0c94a; }
+
+/* Rodada 29I (achado 84) — o card do jogo inteiro abre a tela do jogo, com um link de verdade. O <a> é o título (.gcard__link); a camada que
+   cobre o card é o ::after dele. Os controles de dentro (Vou / Não vou, Ver sorteio) sobem de nível (z-index) e seguem funcionando sem abrir
+   o jogo. Nada de botão dentro de <a>. O clip-path de 45° do .gcard também recorta a camada: o toque nos cantos cortados não pega. */
+.gcard { position: relative; }
+.gcard__link { color: inherit; text-decoration: none; }
+.gcard__link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.gcard__link:focus-visible { outline: none; }
+.gcard__link:focus-visible::after { outline: 2px solid var(--neon, #8b5cf6); outline-offset: -3px; }
+.gcard__presence,
+.gcard .cta-gold-glow,
+.gcard button { position: relative; z-index: 2; }
+
+/* Rodada 29I (achado 93) — o esqueleto da Resenha: enquanto os posts não chegam, três cartões com a forma dos de verdade (avatar, linhas, foto)
+   em vez de uma tela que parece vazia. Mesmo brilho que passa devagar do .rank-row-esqueleto/Explorar; sem movimento para quem pede menos. */
+.feed-esqueleto {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+}
+.feed-esqueleto__topo { display: flex; align-items: center; gap: 10px; }
+.feed-esqueleto__avatar { width: 36px; height: 36px; flex-shrink: 0; background: rgba(255, 255, 255, 0.07); }
+.feed-esqueleto__linha { height: 10px; background: rgba(255, 255, 255, 0.07); }
+.feed-esqueleto__foto { height: 120px; background: rgba(255, 255, 255, 0.05); }
+.feed-esqueleto::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: rankShimmer 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-esqueleto::after { animation: none; }
+}

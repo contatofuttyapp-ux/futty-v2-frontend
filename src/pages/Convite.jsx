@@ -117,7 +117,7 @@ export default function Convite() {
       const { team, jaMembro } = await apiFetch(`/api/convite/${token}/aceitar`, { method: 'POST' });
       tomarConvitePendente(); // entrou: o bilhete cumpriu a função (se houvesse)
       // `primeiraEntrada`: a página do time abre as boas-vindas (Rodada 29B, C) — só para quem acabou de entrar.
-      navigate(`/equipa/${team.slug}`, { replace: true, state: jaMembro ? undefined : { primeiraEntrada: true } });
+      navigate(`/time/${team.slug}`, { replace: true, state: jaMembro ? undefined : { primeiraEntrada: true } });
     } catch (err) {
       setError(err.message);
       setAccepting(false);
@@ -139,7 +139,7 @@ export default function Convite() {
     try {
       const r = await apiFetch(`/api/teams/${alvo.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
       if (r?.entrou) {
-        navigate(`/equipa/${alvo.slug}`, { replace: true });
+        navigate(`/time/${alvo.slug}`, { replace: true });
         return;
       }
       setPedidoEnviado(true);
@@ -233,7 +233,7 @@ export default function Convite() {
               <>
                 <div className="convite__aviso">Você já é membro deste time.</div>
                 <div className="convite__acoes">
-                  <Link to={`/equipa/${team?.slug}`} className="btn cta-gold convite__cta">
+                  <Link to={`/time/${team?.slug}`} className="btn cta-gold convite__cta">
                     Ir para o time
                   </Link>
                 </div>

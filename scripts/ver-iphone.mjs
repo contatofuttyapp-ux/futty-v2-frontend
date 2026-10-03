@@ -433,7 +433,7 @@ async function cenaVoto(navegador, sessao) {
   const contexto = await novoContexto(navegador, sessao, { amostrar: false });
   const escritas = await travarEscritas(contexto);
   const pagina = await contexto.newPage();
-  await pagina.goto(`${BASE}/equipa/${TIME}/ranking`, { waitUntil: 'domcontentloaded' });
+  await pagina.goto(`${BASE}/time/${TIME}/ranking`, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('.rank-row', { timeout: 30000 });
   await espera(1500);
   const botoes = pagina.locator('.rank-row button', { hasText: /^(Votar|Alterar)$/ });
@@ -1062,7 +1062,7 @@ async function acharJogoSorteado(navegador, sessao) {
     const json = await resposta.json().catch(() => null);
     for (const g of json?.games || []) jogos.push(g);
   });
-  await pagina.goto(`${BASE}/equipa/${TIME}/jogos`, { waitUntil: 'domcontentloaded' });
+  await pagina.goto(`${BASE}/time/${TIME}/jogos`, { waitUntil: 'domcontentloaded' });
   await espera(4000);
   await contexto.close();
   const sorteado = jogos.find((g) => g.sorteio_realizado) || jogos[0] || null;
@@ -1074,10 +1074,10 @@ async function cenaFixos(navegador, sessao) {
   const telas = [];
 
   if (jogo) {
-    telas.push(await telaFixa(navegador, sessao, { nome: 'jogo', rota: `/equipa/${TIME}/jogo/${jogo.id}` }));
+    telas.push(await telaFixa(navegador, sessao, { nome: 'jogo', rota: `/time/${TIME}/jogo/${jogo.id}` }));
     telas.push(await telaFixa(navegador, sessao, {
       nome: 'sorteio',
-      rota: `/equipa/${TIME}/jogo/${jogo.id}/sorteio`,
+      rota: `/time/${TIME}/jogo/${jogo.id}/sorteio`,
       // O termo de uso é um .modal-overlay renderizado dentro da própria tela.
       preparar: async (pagina) => {
         const b = pagina.locator('button', { hasText: /^(Baixar|Salvar)/ }).first();
@@ -1126,7 +1126,7 @@ async function umaVisitaRanking(navegador, sessao, { comCache }) {
     // 1 h (fora da janela de frescor de 30 s): a tela pinta do cache e revalida,
     // como no iPhone do Pedro, que já tinha visitado o Ranking noutros dias.
     const previa = await contexto.newPage();
-    await previa.goto(`${BASE}/equipa/${TIME}/ranking`, { waitUntil: 'domcontentloaded' });
+    await previa.goto(`${BASE}/time/${TIME}/ranking`, { waitUntil: 'domcontentloaded' });
     await previa.waitForSelector('.rank-row', { timeout: 30000 });
     await espera(3000);
     await previa.evaluate(() => {
@@ -1155,7 +1155,7 @@ async function umaVisitaRanking(navegador, sessao, { comCache }) {
   // CPU. Não era defeito do app (confirmado à parte); era a bancada a medir
   // outra coisa. Teto de 5 s para não trocar um timeout por outro.
   await pagina
-    .locator('.bottom-nav__tab--ranking[href*="/equipa/"]')
+    .locator('.bottom-nav__tab--ranking[href*="/time/"]')
     .waitFor({ timeout: 5000 })
     .catch(() => {});
   // No relatório do build 18 o toque veio 214 ms depois de o /api/inicio voltar
@@ -1336,7 +1336,7 @@ async function provaSorteio(navegador, sessao, jogo) {
   pagina.on('pageerror', (e) => erros.push(e.message));
 
   // ── Item 2: os botões da página do jogo ──
-  await pagina.goto(`${BASE}/equipa/${TIME}/jogo/${jogo.id}`, { waitUntil: 'domcontentloaded' });
+  await pagina.goto(`${BASE}/time/${TIME}/jogo/${jogo.id}`, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('main', { timeout: 30000 });
   await espera(2500);
   const botoesJogo = await pagina.evaluate(() => ({
@@ -1346,7 +1346,7 @@ async function provaSorteio(navegador, sessao, jogo) {
   await pagina.screenshot({ path: arquivoCaptura('jogo-botoes') });
 
   // ── Itens 3, 4: a barra e o slot, antes e depois de a cerimónia acabar ──
-  await pagina.goto(`${BASE}/equipa/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
+  await pagina.goto(`${BASE}/time/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('.smaq', { timeout: 30000 });
   await espera(2500);
   const durante = await pagina.evaluate(() => ({
@@ -1439,7 +1439,7 @@ async function provaRanking(navegador, sessao) {
     return route.fulfill({ response: resposta, json: { ...json, ranking: dobrado } });
   });
   const pagina = await contexto.newPage();
-  await pagina.goto(`${BASE}/equipa/${TIME}/ranking`, { waitUntil: 'commit' });
+  await pagina.goto(`${BASE}/time/${TIME}/ranking`, { waitUntil: 'commit' });
   await pagina.waitForSelector('.rank-row, .rank-row-esqueleto', { timeout: 30000 });
   await pagina.screenshot({ path: arquivoCaptura('ranking-esqueleto-cedo') });
   // As alturas medem-se AGORA, com esqueletos ainda no ecrã: daqui a 8 s já são
@@ -1604,7 +1604,7 @@ async function cenaRodada14a(navegador, sessao) {
   });
 
   const pagina = await contexto.newPage();
-  await pagina.goto(`${BASE}/equipa/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
+  await pagina.goto(`${BASE}/time/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('.smaq', { timeout: 30000 });
   // A cerimônia inteira: a barra do sorteio só aparece quando ela acaba.
   await pagina.waitForSelector('.sorteio-barra', { timeout: 90000 }).catch(() => {});
@@ -1715,7 +1715,7 @@ function carimbosR14b() {
 async function cenaRodada14b(navegador, sessao) {
   const jogo = await acharJogoSorteado(navegador, sessao);
   if (!jogo) return { semJogo: true };
-  const ROTA = `/equipa/${TIME}/jogo/${jogo.id}/sorteio`;
+  const ROTA = `/time/${TIME}/jogo/${jogo.id}/sorteio`;
   const erros = [];
   const saida = { jogo: jogo.id, erros };
 
@@ -1955,7 +1955,7 @@ function medirLuz16b() {
 async function cenaRodada16b(navegador, sessao) {
   const jogo = await acharJogoSorteado(navegador, sessao);
   if (!jogo) return { semJogo: true };
-  const ROTA = `/equipa/${TIME}/jogo/${jogo.id}/sorteio`;
+  const ROTA = `/time/${TIME}/jogo/${jogo.id}/sorteio`;
   const erros = [];
   const saida = { jogo: jogo.id, erros };
 
@@ -2258,7 +2258,7 @@ async function cenaCriarTime(navegador, sessoes) {
   passos.saiuDoOnboarding = !/onboarding/.test(pagina.url());
   await pagina.screenshot({ path: foto('0c-inicio-comum') });
 
-  await pagina.goto(`${BASE}/criar-equipa`, { waitUntil: 'domcontentloaded' });
+  await pagina.goto(`${BASE}/criar-time`, { waitUntil: 'domcontentloaded' });
   await espera(3000);
   await pagina.locator('input').first().fill('Varredura FC');
   await espera(300);
@@ -2346,7 +2346,7 @@ async function cenaConviteRecusa(navegador, sessoes, teamSlugDono) {
     await botaoEntrar.click().catch((e) => erros.push(`aceitar convite: ${e.message.split('\n')[0]}`));
     await espera(3000);
   }
-  passos.entrouNoTime = pagUrlTem(conv.pagina, `/equipa/${teamSlugDono}`);
+  passos.entrouNoTime = pagUrlTem(conv.pagina, `/time/${teamSlugDono}`);
   await conv.pagina.screenshot({ path: foto('2-entrou') });
 
   // 3. Início do convidado: card comum (figurinha pronta na hora, sem Brilhante).
@@ -2427,16 +2427,16 @@ function montarRotasVarredura(incluirEstaticas) {
   const rotas = [
     { path: '/home', nome: 'home' },
     { path: '/onboarding', nome: 'onboarding' },
-    { path: '/criar-equipa', nome: 'criar-equipa' },
-    { path: `/equipa/${TIME_A}`, nome: 'equipa' },
-    { path: `/equipa/${TIME_A}/jogos`, nome: 'equipa-jogos' },
-    { path: `/equipa/${TIME_A}/ranking`, nome: 'equipa-ranking' },
+    { path: '/criar-time', nome: 'criar-time' },
+    { path: `/time/${TIME_A}`, nome: 'equipa' },
+    { path: `/time/${TIME_A}/jogos`, nome: 'equipa-jogos' },
+    { path: `/time/${TIME_A}/ranking`, nome: 'equipa-ranking' },
     { path: '/ranking', nome: 'ranking-global' },
-    { path: `/equipa/${TIME_B}/campeonato`, nome: 'campeonato-lista' },
-    { path: `/equipa/${TIME_B}/campeonato/${CAMPEONATO_B}`, nome: 'campeonato-um' },
-    { path: `/equipa/${TIME_A}/jogador/${JOGADOR_A}`, nome: 'jogador-perfil' },
-    { path: `/equipa/${TIME_A}/jogo/novo`, nome: 'jogo-novo' },
-    { path: `/equipa/${TIME_A}/jogo/${JOGO_A}`, nome: 'jogo-um' },
+    { path: `/time/${TIME_B}/campeonato`, nome: 'campeonato-lista' },
+    { path: `/time/${TIME_B}/campeonato/${CAMPEONATO_B}`, nome: 'campeonato-um' },
+    { path: `/time/${TIME_A}/jogador/${JOGADOR_A}`, nome: 'jogador-perfil' },
+    { path: `/time/${TIME_A}/jogo/novo`, nome: 'jogo-novo' },
+    { path: `/time/${TIME_A}/jogo/${JOGO_A}`, nome: 'jogo-um' },
     { path: `/admin/${TIME_A}`, nome: 'admin' },
     { path: '/feed', nome: 'feed' },
     { path: '/figurinha', nome: 'figurinha' },
@@ -2816,12 +2816,12 @@ async function cenaRodada12c(navegador, sessao) {
 
   telas.push(await telaComAnuncio(navegador, sessao, { nome: 'inicio', rota: '/home' }));
   telas.push(await telaComAnuncio(navegador, sessao, { nome: 'resenha', rota: '/feed' }));
-  telas.push(await telaComAnuncio(navegador, sessao, { nome: 'ranking', rota: `/equipa/${TIME}/ranking` }));
+  telas.push(await telaComAnuncio(navegador, sessao, { nome: 'ranking', rota: `/time/${TIME}/ranking` }));
   telas.push(await telaComAnuncio(navegador, sessao, { nome: 'figurinha', rota: '/figurinha' }));
   if (jogo) {
     telas.push(await telaComAnuncio(navegador, sessao, {
       nome: 'sorteio',
-      rota: `/equipa/${TIME}/jogo/${jogo.id}/sorteio`,
+      rota: `/time/${TIME}/jogo/${jogo.id}/sorteio`,
       // A cerimónia tem de ACABAR para o slot aparecer (Rodada 12A).
       prepararFn: async (pagina) => {
         const saltar = pagina.locator('.saltar button');
@@ -2838,7 +2838,7 @@ async function cenaRodada12c(navegador, sessao) {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false });
     await travarEscritas(contexto);
     const pagina = await contexto.newPage();
-    await pagina.goto(`${BASE}/equipa/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
+    await pagina.goto(`${BASE}/time/${TIME}/jogo/${jogo.id}/sorteio`, { waitUntil: 'domcontentloaded' });
     await pagina.waitForSelector('.smaq', { timeout: 30000 });
     await espera(2500); // a cerimónia está a correr: é ESTE o momento que a lei cobre
     mudo = await pagina.evaluate(() => {
@@ -3075,7 +3075,7 @@ async function cenaRodada18(navegador, sessao) {
   await pagina.screenshot({ path: foto('3-inicio-com-foto') });
 
   // ── 4) Ranking — mesma conta, mesmo avatar_url, sem tocar em Ranking.jsx ──
-  await pagina.goto(`${BASE}/equipa/${TIME}/ranking`, { waitUntil: 'domcontentloaded' });
+  await pagina.goto(`${BASE}/time/${TIME}/ranking`, { waitUntil: 'domcontentloaded' });
   await espera(2000);
   await pagina.screenshot({ path: foto('4-ranking-com-foto') });
 
@@ -3306,7 +3306,7 @@ try {
   }
 
   const telas = [];
-  for (const [nome, rota] of [['ranking', `/equipa/${TIME}/ranking`], ['resenha', '/feed']]) {
+  for (const [nome, rota] of [['ranking', `/time/${TIME}/ranking`], ['resenha', '/feed']]) {
     if (!CENAS.includes(nome)) continue;
     const tela = await abrirTela(navegador, sessao, nome, rota);
     telas.push(tela);
@@ -4221,7 +4221,7 @@ async function cenaRodada19(navegador) {
   // topo (proxy `sq=1` + CSS `object-position:50% 0%`): tem de mostrar o
   // rosto, não o pulso/relógio como na bancada anterior.
   await capturar('f-ranking-miniatura', async () => {
-    await pagina.goto(`${BASE}/equipa/domingueira-fc-demo/ranking`, { waitUntil: 'domcontentloaded' });
+    await pagina.goto(`${BASE}/time/domingueira-fc-demo/ranking`, { waitUntil: 'domcontentloaded' });
     await pagina.waitForSelector('.rank-row', { timeout: 20000 });
     await pagina.getByText('Rodada19').scrollIntoViewIfNeeded().catch(() => {});
     await espera(400);
@@ -4261,7 +4261,7 @@ async function cenaCerimoniaMista(navegador) {
     }
   };
 
-  const rotaSorteio = `/equipa/${estado.teamSlug}/jogo/${estado.gameId}/sorteio`;
+  const rotaSorteio = `/time/${estado.teamSlug}/jogo/${estado.gameId}/sorteio`;
   await pagina.goto(`${BASE}${rotaSorteio}`, { waitUntil: 'domcontentloaded' });
   // Fecha o banner de cookies cedo — senão fica sobreposto em todas as capturas.
   await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 5000 }).catch(() => {});
@@ -4305,7 +4305,7 @@ async function cenaCerimoniaMista(navegador) {
 
   // (e) Ranking — fotos e figurinhas nas linhas.
   await capturar('e-ranking', async () => {
-    await pagina.goto(`${BASE}/equipa/${estado.teamSlug}/ranking`, { waitUntil: 'domcontentloaded' });
+    await pagina.goto(`${BASE}/time/${estado.teamSlug}/ranking`, { waitUntil: 'domcontentloaded' });
     await pagina.waitForSelector('.rank-row', { timeout: 20000 });
     await espera(500);
     await pagina.screenshot({ path: arq('e-ranking'), fullPage: true });
@@ -4313,7 +4313,7 @@ async function cenaCerimoniaMista(navegador) {
 
   // (f) lista de presença do jogo (confirmados, com GOL/C marcados).
   await capturar('f-presenca', async () => {
-    await pagina.goto(`${BASE}/equipa/${estado.teamSlug}/jogo/${estado.gameId}`, { waitUntil: 'domcontentloaded' });
+    await pagina.goto(`${BASE}/time/${estado.teamSlug}/jogo/${estado.gameId}`, { waitUntil: 'domcontentloaded' });
     await pagina.getByText(/^Confirmados/).waitFor({ timeout: 20000 });
     await espera(300);
     await pagina.screenshot({ path: arq('f-presenca'), fullPage: true });
@@ -4360,7 +4360,7 @@ async function cenaRodada20(navegador) {
   // (a) Equipa — texto novo + link gerado na hora (capitão, admin do time).
   await capturar('a-equipa-link-novo', async () => {
     const { contexto, pagina } = await abrir('capitao');
-    await pagina.goto(`${BASE}/equipa/${estado.teamSlug}`, { waitUntil: 'domcontentloaded' });
+    await pagina.goto(`${BASE}/time/${estado.teamSlug}`, { waitUntil: 'domcontentloaded' });
     await fecharCookies(pagina);
     await pagina.getByText('Convidar jogador').waitFor({ timeout: 15000 });
     await pagina.locator('button', { hasText: /Gerar link do convite/ }).click();
@@ -4739,7 +4739,7 @@ async function cenaRodada23(navegador, sessao) {
   }
 
   // (4) Varredura como app: as outras telas não mostram valor nem o nome antigo.
-  await varrer('app', true, ['/home', '/perfil', '/feed', '/explorar', `/equipa/${TIME}`, `/equipa/${TIME}/ranking`, '/criar-equipa']);
+  await varrer('app', true, ['/home', '/perfil', '/feed', '/explorar', `/time/${TIME}`, `/time/${TIME}/ranking`, '/criar-time']);
 
   return { pasta, verificacoes, capturas, erros };
 }
@@ -4830,7 +4830,7 @@ async function cenaRodada24(navegador, sessao) {
   }
 
   // (6) Varredura no site: as outras telas não mostram valor nem o nome antigo.
-  await varrer('site', false, ['/home', '/perfil', '/feed', '/explorar', `/equipa/${TIME}`, `/equipa/${TIME}/ranking`, '/criar-equipa']);
+  await varrer('site', false, ['/home', '/perfil', '/feed', '/explorar', `/time/${TIME}`, `/time/${TIME}/ranking`, '/criar-time']);
 
   return { pasta, verificacoes, capturas, erros };
 }
@@ -5460,7 +5460,7 @@ async function cenaRodada27(navegador) {
     item1.inicioPediu = [...arquivosGenericos];
     verificar(`Início (contexto novo): usa o genérico escolhido (${alvoGenerico}) e nenhum outro`, arquivosGenericos.has(arquivoDoAlvo) && [...arquivosGenericos].every((a) => a === arquivoDoAlvo), [...arquivosGenericos].join(', ') || 'nenhum arquivo genérico pedido');
     await capturar(C.pagina, '1c-inicio-generico');
-    await C.pagina.goto(`${BASE}/equipa/${SLUG}/ranking`, { waitUntil: 'domcontentloaded' });
+    await C.pagina.goto(`${BASE}/time/${SLUG}/ranking`, { waitUntil: 'domcontentloaded' });
     await C.pagina.waitForSelector('.rank-row', { timeout: 25000 });
     await espera(800);
     item1.ranking = await C.pagina.evaluate(() => {
@@ -5470,7 +5470,7 @@ async function cenaRodada27(navegador) {
     });
     await capturar(C.pagina, '1c-ranking', { fullPage: true });
     verificar(`Ranking: a linha de quem escolheu o genérico mostra o genérico escolhido (${alvoGenerico})`, String(item1.ranking.src || '').endsWith(arquivoDoAlvo), item1.ranking.silhueta ? 'mostra a silhueta "?" da casa' : String(item1.ranking.src).split('/').pop());
-    await C.pagina.goto(`${BASE}/equipa/${SLUG}/jogo/${JOGO}`, { waitUntil: 'domcontentloaded' });
+    await C.pagina.goto(`${BASE}/time/${SLUG}/jogo/${JOGO}`, { waitUntil: 'domcontentloaded' });
     await C.pagina.getByText(/^Confirmados/).waitFor({ timeout: 25000 });
     await espera(800);
     item1.presenca = await C.pagina.evaluate(() => [...document.images].filter((i) => /avatar-generico-/.test(i.currentSrc || i.src)).map((i) => (i.currentSrc || i.src).replace(/^.*\//, '')));
@@ -5705,9 +5705,9 @@ async function cenaRodada27(navegador) {
         return { rotulo: 'outra', regra: 'R2' };
       };
       const paginas = [
-        { nome: 'Ranking', url: `/equipa/${SLUG}/ranking`, espera: async () => { await ep.waitForSelector('.rank-row', { timeout: 25000 }); } },
-        { nome: 'Presença', url: `/equipa/${SLUG}/jogo/${JOGO}`, espera: async () => { await ep.getByText(/^Confirmados/).waitFor({ timeout: 25000 }); } },
-        { nome: 'Sorteio', url: `/equipa/${SLUG}/jogo/${JOGO}/sorteio`, espera: async () => { await ep.waitForSelector('.mmold img', { timeout: 40000 }); } },
+        { nome: 'Ranking', url: `/time/${SLUG}/ranking`, espera: async () => { await ep.waitForSelector('.rank-row', { timeout: 25000 }); } },
+        { nome: 'Presença', url: `/time/${SLUG}/jogo/${JOGO}`, espera: async () => { await ep.getByText(/^Confirmados/).waitFor({ timeout: 25000 }); } },
+        { nome: 'Sorteio', url: `/time/${SLUG}/jogo/${JOGO}/sorteio`, espera: async () => { await ep.waitForSelector('.mmold img', { timeout: 40000 }); } },
         { nome: 'Perfil', url: '/perfil', espera: async () => { await ep.waitForSelector('.pavatar img', { timeout: 25000 }); } },
       ];
       for (const pg of paginas) {
@@ -6110,7 +6110,7 @@ async function cenaRodada28(navegador) {
     await capturar(pagina, 'A4-planos');
 
     // E · mais telas para a telemetria: o Ranking do time (o slug na URL), o Início e o Perfil.
-    await pagina.goto(`${BASE}/equipa/${fx.times.sem.slug}/ranking`, { waitUntil: 'domcontentloaded' });
+    await pagina.goto(`${BASE}/time/${fx.times.sem.slug}/ranking`, { waitUntil: 'domcontentloaded' });
     await espera(3500);
     await barra(pagina).locator('a', { hasText: 'Início' }).click().catch(() => {});
     await espera(3000);
@@ -6139,7 +6139,7 @@ async function cenaRodada28(navegador) {
   verificar('E · sem Authorization', enviados.every((x) => !x.autorizacao));
   const brutoTodo = enviados.map((x) => x.bruto).join(' ');
   verificar('E · nada que identifique: sem slug do time, sem id, sem e-mail', !brutoTodo.includes(fx.times.sem.slug) && !UUID.test(brutoTodo) && !/@/.test(brutoTodo), brutoTodo.slice(0, 300));
-  verificar('E · a tela do Ranking sai como padrão (/equipa/:slug/ranking)', telas.includes('/equipa/:slug/ranking'), telas.join(', '));
+  verificar('E · a tela do Ranking sai como padrão (/time/:slug/ranking)', telas.includes('/time/:slug/ranking'), telas.join(', '));
 
   // ── A · conta do pacote do time (Dark Purple): o 1º uniforme é o do time e é pintável ──
   const cP = await contexto(fx.pacote);
@@ -6476,7 +6476,7 @@ async function cenaRodada29aCsp(navegador, sessao) {
     ['inicio', '/home', true],
     ['perfil', '/perfil', true],
     ['resenha', '/feed', true],
-    ['ranking', `/equipa/${TIME}/ranking`, true],
+    ['ranking', `/time/${TIME}/ranking`, true],
     ['planos', '/planos', true],
     ['figurinha', '/figurinha', true],
     ['explorar', '/explorar', true],
@@ -6672,10 +6672,10 @@ async function cenaRodada29aApoio(navegador, sessao) {
     ['perfil', '/perfil', async () => {}],
     ['planos', '/planos', async () => {}],
     ['figurinha', '/figurinha', async () => {}],
-    ['equipa', `/equipa/${TIME}`, async () => {}],
-    ['criar-time-1', '/criar-equipa', async () => {}],
-    ['criar-time-2', '/criar-equipa', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
-    ['criar-time-3', '/criar-equipa', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
+    ['equipa', `/time/${TIME}`, async () => {}],
+    ['criar-time-1', '/criar-time', async () => {}],
+    ['criar-time-2', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
+    ['criar-time-3', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
   ];
   for (const [nome, rota, preparar] of telas) {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false });
@@ -6744,7 +6744,7 @@ async function cenaRodada29aLinhaGol(navegador, sessao) {
 
   // 1) página do time
   {
-    const { contexto, pagina, escritas } = await abrir(`/equipa/${TIME}`);
+    const { contexto, pagina, escritas } = await abrir(`/time/${TIME}`);
     const par = pagina.locator(grupo).first();
     await par.waitFor({ timeout: 30000 });
     await espera(600);
@@ -6830,7 +6830,7 @@ async function cenaRodada29aLogo(navegador, sessao) {
     });
     const pagina = await contexto.newPage();
     pagina.on('pageerror', (e) => erros.push(e.message));
-    await pagina.goto(`${BASE}/criar-equipa`, { waitUntil: 'domcontentloaded' });
+    await pagina.goto(`${BASE}/criar-time`, { waitUntil: 'domcontentloaded' });
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
     await pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
     return { contexto, pagina, escritas, enviosLogo };
@@ -7068,7 +7068,7 @@ async function cenaRodada29bConvite(navegador, sessao) {
       href: document.querySelector('a.convite__cta')?.getAttribute('href'),
       criar: /Criar conta e entrar/.test(document.body.innerText),
     }));
-    verificar('já membro: "Você já é membro deste time." e "Ir para o time" (link para /equipa/varzea-fc)', r.aviso === 'Você já é membro deste time.' && r.cta === 'Ir para o time' && r.href === '/equipa/varzea-fc' && !r.criar, JSON.stringify(r));
+    verificar('já membro: "Você já é membro deste time." e "Ir para o time" (link para /time/varzea-fc)', r.aviso === 'Você já é membro deste time.' && r.cta === 'Ir para o time' && r.href === '/time/varzea-fc' && !r.criar, JSON.stringify(r));
     await capturar(pagina, '5-ja-membro');
     await contexto.close();
   }
@@ -7706,7 +7706,7 @@ async function cenaRodada29bBoasVindas(navegador) {
 
   // `limpo`: sem marcas de "já visto" (a cena é a PRIMEIRA vez). O som e a mídia são contados por um gancho. `antes(contexto)`
   // regista rotas por cima (logo do time, "sem time"); `respostas` responde às escritas (travarEscritas).
-  const abrir = async (sessao, rotulo, { extra = {}, rota = `/equipa/${slug}`, esp = true, antes = null, respostas = () => null } = {}) => {
+  const abrir = async (sessao, rotulo, { extra = {}, rota = `/time/${slug}`, esp = true, antes = null, respostas = () => null } = {}) => {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo', ...extra } });
     await contexto.addInitScript(() => {
       window.__som = { audio: 0, contexto: 0 };
@@ -7828,7 +7828,7 @@ async function cenaRodada29bBoasVindas(navegador) {
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
     await pagina.locator('button.convite__cta', { hasText: 'Entrar no time' }).tap({ timeout: 30000 });
     await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
-    verificar('aceitar o convite leva ao time e abre as boas-vindas (mesmo com foto)', (await pagina.locator('.bv').count()) === 1 && pagina.url().endsWith(`/equipa/${slug}`), pagina.url().replace(BASE, ''));
+    verificar('aceitar o convite leva ao time e abre as boas-vindas (mesmo com foto)', (await pagina.locator('.bv').count()) === 1 && pagina.url().endsWith(`/time/${slug}`), pagina.url().replace(BASE, ''));
     await espera(900);
     await esperarCalma(pagina); // os atrasos dos anéis só se leem fora do "tchan" (ele põe −0,045 s nos dois)
     const r = await lerTela(pagina);
@@ -7845,7 +7845,7 @@ async function cenaRodada29bBoasVindas(navegador) {
   // 6) CRIADOR: cria o time (POST interceptado → o time grátis, de que `gratis` é dono) e toca "Ir para o time"
   {
     const respostaDoPost = (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: fx.times.gratis.id, slug, nome: 'Prova R29B Grátis' } } : null);
-    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'criador', { rota: '/criar-equipa', esp: false, respostas: respostaDoPost });
+    const { contexto, pagina, escritas } = await abrir(fx.gratis, 'criador', { rota: '/criar-time', esp: false, respostas: respostaDoPost });
     await pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
     await pagina.locator('input[placeholder^="ex.:"]').fill('Prova R29B Grátis');
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
@@ -7856,7 +7856,7 @@ async function cenaRodada29bBoasVindas(navegador) {
     await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
     await pagina.locator('button', { hasText: /^Ir para o time$/ }).tap();
     await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
-    verificar('"Ir para o time" leva ao time e abre as boas-vindas do CRIADOR', (await pagina.locator('.bv').count()) === 1 && pagina.url().endsWith(`/equipa/${slug}`), pagina.url().replace(BASE, ''));
+    verificar('"Ir para o time" leva ao time e abre as boas-vindas do CRIADOR', (await pagina.locator('.bv').count()) === 1 && pagina.url().endsWith(`/time/${slug}`), pagina.url().replace(BASE, ''));
     await espera(900);
     const r = await lerTela(pagina);
     verificar('criador: a frase do time no ar, sem a escolha linha/gol (já escolheu no Criar time), um "Vamos lá"', r.variante === 'criador' && r.frase === FRASES.criador && r.chips.length === 0 && r.botoes.length === 1 && r.botoes[0].t === 'Vamos lá' && r.botoes[0].ouro, JSON.stringify({ variante: r.variante, frase: r.frase, chips: r.chips.length, botoes: r.botoes }));
@@ -8022,8 +8022,8 @@ async function cenaRodada29d(navegador) {
     verificar('passo do nome: os 3 traços acesos', prog2.n === 3 && prog2.acesos === 3, JSON.stringify(prog2));
     await capturar(pagina, 'convite-3-nome');
     await pagina.getByRole('button', { name: /^Entrar$/ }).tap();
-    await pagina.waitForURL(`**/equipa/${slug}`, { timeout: 40000 }).catch(() => {});
-    verificar('"Entrar" aceita o convite e cai direto no time (sem passar de novo pelo Início nem pela página do convite)', pagina.url().endsWith(`/equipa/${slug}`) && escritas.some((e) => e.metodo === 'POST' && e.rota === '/api/convite/token-de-prova/aceitar'), JSON.stringify({ url: pagina.url().replace(BASE, ''), escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
+    await pagina.waitForURL(`**/time/${slug}`, { timeout: 40000 }).catch(() => {});
+    verificar('"Entrar" aceita o convite e cai direto no time (sem passar de novo pelo Início nem pela página do convite)', pagina.url().endsWith(`/time/${slug}`) && escritas.some((e) => e.metodo === 'POST' && e.rota === '/api/convite/token-de-prova/aceitar'), JSON.stringify({ url: pagina.url().replace(BASE, ''), escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
     await contexto.close();
   }
 
@@ -8037,15 +8037,15 @@ async function cenaRodada29d(navegador) {
     await pagina.getByRole('link', { name: /Ir ao time/i }).tap();
     await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
     const variante = await pagina.locator('.bv').getAttribute('data-variante').catch(() => null);
-    verificar('"Ir ao time" abre o time com as boas-vindas do convidado (membro COM foto: só o state.primeiraEntrada as abre) e dispensa o card', pagina.url().endsWith(`/equipa/${slug}`) && variante === 'convidado' && escritas.some((e) => e.metodo === 'DELETE' && e.rota === '/api/me/pedidos/pedido-de-prova'), JSON.stringify({ url: pagina.url().replace(BASE, ''), variante, escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
+    verificar('"Ir ao time" abre o time com as boas-vindas do convidado (membro COM foto: só o state.primeiraEntrada as abre) e dispensa o card', pagina.url().endsWith(`/time/${slug}`) && variante === 'convidado' && escritas.some((e) => e.metodo === 'DELETE' && e.rota === '/api/me/pedidos/pedido-de-prova'), JSON.stringify({ url: pagina.url().replace(BASE, ''), variante, escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
     await capturar(pagina, 'aceite-2-boasvindas');
     await contexto.close();
   }
   {
-    const { contexto, pagina } = await abrir(fx.membroFoto, 'entrou-1', `/equipa/${slug}?entrou=1`);
+    const { contexto, pagina } = await abrir(fx.membroFoto, 'entrou-1', `/time/${slug}?entrou=1`);
     await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
     const variante = await pagina.locator('.bv').getAttribute('data-variante').catch(() => null);
-    verificar('/equipa/:slug?entrou=1 (o link da notificação) abre as boas-vindas do convidado', variante === 'convidado', String(variante));
+    verificar('/time/:slug?entrou=1 (o link da notificação) abre as boas-vindas do convidado', variante === 'convidado', String(variante));
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
@@ -8875,7 +8875,7 @@ async function cenaRodada29bCidades(navegador) {
 
   // 1) criar time — cidade DA LISTA: manda o pacote todo, e "Encontramos: …" no fim
   {
-    const { contexto, pagina, escritas, nominatim, listaBaixada } = await abrir('/criar-equipa', { extra: respostaDoPost({ encontrada: true, nomeOficial: 'São Paulo, SP' }), espere: esperarCriar }, 'criar-lista');
+    const { contexto, pagina, escritas, nominatim, listaBaixada } = await abrir('/criar-time', { extra: respostaDoPost({ encontrada: true, nomeOficial: 'São Paulo, SP' }), espere: esperarCriar }, 'criar-lista');
     verificar('a lista NÃO é buscada ao abrir a tela (só quando o campo ganha foco)', listaBaixada.length === 0, `${listaBaixada.length} pedido(s)`);
     await criarAteOFim(pagina, 'Time da Lista');
     const r = await escolher(pagina, 'SAO pau', 'São Paulo, SP');
@@ -8895,7 +8895,7 @@ async function cenaRodada29bCidades(navegador) {
 
   // 2) criar time — cidade FORA da lista, o motor não acha: o texto fica e a tela avisa
   {
-    const { contexto, pagina, escritas, listaBaixada } = await abrir('/criar-equipa', { extra: respostaDoPost({ encontrada: false }), espere: esperarCriar }, 'criar-nao-achou');
+    const { contexto, pagina, escritas, listaBaixada } = await abrir('/criar-time', { extra: respostaDoPost({ encontrada: false }), espere: esperarCriar }, 'criar-nao-achou');
     await criarAteOFim(pagina, 'Time Perdido');
     const campo = pagina.locator('input[role="combobox"]').first();
     await campo.tap();
@@ -8913,7 +8913,7 @@ async function cenaRodada29bCidades(navegador) {
 
   // 3) criar time — fora da lista, o Nominatim acha: "Encontramos: <nome oficial>"
   {
-    const { contexto, pagina } = await abrir('/criar-equipa', { extra: respostaDoPost({ encontrada: true, nomeOficial: 'Kyoto, Kyoto Prefecture' }), espere: esperarCriar }, 'criar-nominatim');
+    const { contexto, pagina } = await abrir('/criar-time', { extra: respostaDoPost({ encontrada: true, nomeOficial: 'Kyoto, Kyoto Prefecture' }), espere: esperarCriar }, 'criar-nominatim');
     await criarAteOFim(pagina, 'Time de Kyoto');
     const campo = pagina.locator('input[role="combobox"]').first();
     await campo.tap();
@@ -8936,7 +8936,7 @@ async function cenaRodada29bCidades(navegador) {
       if (c.cidade === 'Vila Xyzzy') return { team: { cidade: 'Vila Xyzzy' }, geo: { encontrada: false } };
       return { team: {} };
     };
-    const { contexto, pagina } = await abrir(`/admin/${slug}?tab=equipa`, { extra, espere: (p) => p.locator('input[role="combobox"]').first().waitFor({ timeout: 30000 }) }, 'painel');
+    const { contexto, pagina } = await abrir(`/admin/${slug}?tab=time`, { extra, espere: (p) => p.locator('input[role="combobox"]').first().waitFor({ timeout: 30000 }) }, 'painel');
     const campo = pagina.locator('input[role="combobox"]').first();
     verificar('painel: o campo abre com a cidade guardada ("Brasília")', (await campo.inputValue()) === 'Brasília');
     await pagina.getByRole('button', { name: /^Salvar$/ }).first().tap();
@@ -9092,7 +9092,7 @@ async function cenaRodada29bOrganiza(navegador) {
 
   // 1) criar o time: "Eu jogo" (padrão) / "Só organizo o time" — com o texto que explica
   {
-    const { contexto, pagina, escritas } = await abrir('/criar-equipa', { extra: respostaDoPost(false) }, 'criar-organiza');
+    const { contexto, pagina, escritas } = await abrir('/criar-time', { extra: respostaDoPost(false) }, 'criar-organiza');
     await criarAtePapel(pagina, 'Time do Organizador');
     const c = await chips(pagina);
     verificar('criar time, passo 2: "Eu jogo" é o padrão e há "Só organizo o time"', c.length === 2 && c[0].t === 'Eu jogo' && c[0].ativo && c[1].t === 'Só organizo o time' && !c[1].ativo, JSON.stringify(c));
@@ -9114,7 +9114,7 @@ async function cenaRodada29bOrganiza(navegador) {
     await contexto.close();
   }
   {
-    const { contexto, pagina, escritas } = await abrir('/criar-equipa', { extra: respostaDoPost(true) }, 'criar-joga');
+    const { contexto, pagina, escritas } = await abrir('/criar-time', { extra: respostaDoPost(true) }, 'criar-joga');
     await criarAtePapel(pagina, 'Time de Quem Joga');
     await terminarCriacao(pagina);
     const post = corpoCompleto(escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/teams'));
@@ -9123,7 +9123,7 @@ async function cenaRodada29bOrganiza(navegador) {
   }
   {
     // o motor sem a migração 067 cria o time com o criador jogando e responde joga: true
-    const { contexto, pagina } = await abrir('/criar-equipa', { extra: respostaDoPost(true) }, 'criar-sem-067');
+    const { contexto, pagina } = await abrir('/criar-time', { extra: respostaDoPost(true) }, 'criar-sem-067');
     await criarAtePapel(pagina, 'Time Sem 067');
     await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
     await terminarCriacao(pagina);
@@ -9137,7 +9137,7 @@ async function cenaRodada29bOrganiza(navegador) {
   // 2) painel do time: "Meu papel" muda na hora e reverte se o motor recusar
   {
     const falharJoga = { ligado: false };
-    const { contexto, pagina, patches } = await abrir(`/admin/${slug}?tab=equipa`, {
+    const { contexto, pagina, patches } = await abrir(`/admin/${slug}?tab=time`, {
       falharJoga,
       alterar: [[new RegExp(`/api/teams/${slug}(\\?.*)?$`), (j) => { j.team.joga = false; }]],
     }, 'painel');
@@ -9198,7 +9198,7 @@ async function cenaRodada29bOrganiza(navegador) {
 
   // 4) a tela do jogo: "Sua presença" vira a explicação para quem só organiza
   {
-    const org = await abrir(`/equipa/${slug}/jogo/${jogoId}`, { alterar: [[new RegExp(`/api/jogos/${jogoId}/rsvp(\\?.*)?$`), (j) => { j.eu_jogo = false; }]] }, 'jogo-organiza');
+    const org = await abrir(`/time/${slug}/jogo/${jogoId}`, { alterar: [[new RegExp(`/api/jogos/${jogoId}/rsvp(\\?.*)?$`), (j) => { j.eu_jogo = false; }]] }, 'jogo-organiza');
     await org.pagina.getByText('Sua presença').first().waitFor({ timeout: 30000 });
     await espera(1200);
     const t = await texto(org.pagina);
@@ -9207,7 +9207,7 @@ async function cenaRodada29bOrganiza(navegador) {
     verificar('Jogo (só organiza): sem "Confirmar presença"', !/confirmar presença/i.test(t));
     await capturar(org.pagina, '7-jogo-so-organizo');
     await org.contexto.close();
-    const joga = await abrir(`/equipa/${slug}/jogo/${jogoId}`, {}, 'jogo-joga');
+    const joga = await abrir(`/time/${slug}/jogo/${jogoId}`, {}, 'jogo-joga');
     await joga.pagina.getByText('Sua presença').first().waitFor({ timeout: 30000 });
     await espera(1000);
     verificar('Jogo (joga): "Confirmar presença" continua lá', /confirmar presença/i.test(await texto(joga.pagina)));
@@ -9216,7 +9216,7 @@ async function cenaRodada29bOrganiza(navegador) {
 
   // 5) a página do time: o card do jogador e a lista de membros
   {
-    const { contexto, pagina } = await abrir(`/equipa/${slug}`, {
+    const { contexto, pagina } = await abrir(`/time/${slug}`, {
       alterar: [[new RegExp(`/api/teams/${slug}(\\?.*)?$`), (j) => {
         j.team.joga = false;
         const eu = j.members.find((m) => m.role === 'admin');

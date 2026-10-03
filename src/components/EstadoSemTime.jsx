@@ -14,7 +14,7 @@ export default function EstadoSemTime({ icone, mensagem }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 320, marginTop: 8 }}>
         {/* Glow no wrapper, recorte no botão — clip-path corta sombras (ver .cta-gold). */}
         <div className="cta-gold-glow" style={{ display: 'flex' }}>
-          <Link to="/criar-equipa" className="btn hud-corners cta-gold" style={{ flex: 1 }}>
+          <Link to="/criar-time" className="btn hud-corners cta-gold" style={{ flex: 1 }}>
             ＋ Criar meu time
           </Link>
         </div>

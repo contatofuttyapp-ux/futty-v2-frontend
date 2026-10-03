@@ -56,9 +56,9 @@ const HIDE_NAV_PATTERNS = [
   /^\/(convite|c)\//, // 29H: o link longo e o curto do convite
   /^\/onboarding/, // Rodada 29E2 (item 33 da RODADA-29): a pessoa ainda não entrou — sem barra nas 3 páginas
   /^\/p\//, // vista pública do sorteio (fullscreen)
-  /^\/criar-equipa/,
-  /^\/equipa\/[^/]+\/jogo\//, // jogo/:id e jogo/novo
-  /^\/equipa\/[^/]+\/jogador\//,
+  /^\/criar-time/,
+  /^\/time\/[^/]+\/jogo\//, // jogo/:id e jogo/novo
+  /^\/time\/[^/]+\/jogador\//,
 ];
 
 // Rodada 29H (item 2): páginas que existem para quem ainda não tem conta (o destino dos links das redes, os Termos e a
@@ -107,9 +107,9 @@ export default function Layout({ children }) {
   const { session } = useAuth();
   const showNav = shouldShowNav(pathname, !!session) && !menorQueIdadeMinima(perfilDaConta?.user?.birthdate);
 
-  const urlSlug = pathname.match(/^\/equipa\/([^/]+)/)?.[1] || null;
+  const urlSlug = pathname.match(/^\/time\/([^/]+)/)?.[1] || null;
   const slug = urlSlug || teams[0]?.slug || null;
-  const rankingTo = slug ? `/equipa/${slug}/ranking` : '/home';
+  const rankingTo = slug ? `/time/${slug}/ranking` : '/home';
 
   function navegarParaTab(delta, evento) {
     if (comecouEmScrollHorizontal(evento?.event?.target)) return;

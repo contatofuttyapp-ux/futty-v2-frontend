@@ -38,11 +38,11 @@ function Hub({ slug }) {
     return () => { ativo = false; };
   }, [slug]);
 
-  if (criar) return <Wizard slug={slug} onCancel={() => setCriar(false)} onCriado={(c) => navigate(`/equipa/${slug}/campeonato/${c.id}`, { state: { cerimonia: !!c.seed } })} />;
+  if (criar) return <Wizard slug={slug} onCancel={() => setCriar(false)} onCriado={(c) => navigate(`/time/${slug}/campeonato/${c.id}`, { state: { cerimonia: !!c.seed } })} />;
 
   return (
     <div className="app-shell">
-      <Topbar hud="CAMPEONATO" back={`/equipa/${slug}`} />
+      <Topbar hud="CAMPEONATO" back={`/time/${slug}`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <h1 className="camp-title" style={{ fontSize: 22 }}>Campeonatos</h1>
         <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Torneios internos do time: o ranking fica intocado.</p>
@@ -54,7 +54,7 @@ function Hub({ slug }) {
           </div>
         ) : (
           lista.map((c) => (
-            <button key={c.id} type="button" className="camp-card" onClick={() => navigate(`/equipa/${slug}/campeonato/${c.id}`)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}>
+            <button key={c.id} type="button" className="camp-card" onClick={() => navigate(`/time/${slug}/campeonato/${c.id}`)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}>
               <div className="camp-card__n">{c.nome}</div>
               <div className="row" style={{ marginTop: 6 }}>
                 <span className={`camp-chip ${c.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{c.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
@@ -131,7 +131,7 @@ function Wizard({ slug, onCancel, onCriado }) {
 
   return (
     <div className="app-shell">
-      <Topbar hud="CRIAR CAMPEONATO" back={`/equipa/${slug}`} />
+      <Topbar hud="CRIAR CAMPEONATO" back={`/time/${slug}`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <div className="camp-steps">{dots}</div>
 
@@ -273,15 +273,15 @@ function Detalhe({ slug, id }) {
     } catch (e) { setToast({ tipo: 'error', mensagem: e.message }); }
   }
 
-  if (erro) return <div className="app-shell"><Topbar hud="CAMPEONATO" back={`/equipa/${slug}/campeonato`} /><main className="app-main"><div className="alert alert--error hud-corners">{erro}</div></main></div>;
-  if (!camp) return <div className="app-shell"><Topbar hud="CAMPEONATO" back={`/equipa/${slug}/campeonato`} /><main className="app-main"><LoadingFutty /></main></div>;
+  if (erro) return <div className="app-shell"><Topbar hud="CAMPEONATO" back={`/time/${slug}/campeonato`} /><main className="app-main"><div className="alert alert--error hud-corners">{erro}</div></main></div>;
+  if (!camp) return <div className="app-shell"><Topbar hud="CAMPEONATO" back={`/time/${slug}/campeonato`} /><main className="app-main"><LoadingFutty /></main></div>;
 
   // Reveal da cerimónia (times sorteados) antes de mostrar o campeonato.
   if (revelar && camp.seed) {
     const resultado = { numTimes: camp.times.length, times: camp.times.map((t) => ({ nome: t.nome, jogadores: t.jogadores })), reservas: [], seed: camp.seed };
     return (
       <div className="app-shell">
-        <Topbar hud="SORTEIO DOS TIMES" back={`/equipa/${slug}/campeonato`} />
+        <Topbar hud="SORTEIO DOS TIMES" back={`/time/${slug}/campeonato`} />
         <main className="app-main" style={{ padding: 0 }}>
           <CerimoniaSorteio resultado={resultado} aoTerminar={() => setRevelar(false)} />
           <div style={{ textAlign: 'center', padding: 12 }}><button type="button" className="btn btn--ghost btn--sm" onClick={() => setRevelar(false)}>Ver o campeonato →</button></div>
@@ -293,7 +293,7 @@ function Detalhe({ slug, id }) {
   const terminado = camp.estado === 'terminado';
   return (
     <div className="app-shell">
-      <Topbar hud="CAMPEONATO" back={`/equipa/${slug}/campeonato`} />
+      <Topbar hud="CAMPEONATO" back={`/time/${slug}/campeonato`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <div className="camp-title">{camp.nome}</div>
         <div className="row" style={{ margin: '4px 0 14px' }}>

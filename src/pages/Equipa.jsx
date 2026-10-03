@@ -112,7 +112,7 @@ export default function Equipa() {
   const [onboardingDispensado, setOnboardingDispensado] = useState(false);
   const onboardingKey = team ? `futty_onboarding_${team.id}` : null;
   // Rodada 29D: quem foi aceito num pedido também chega como primeira entrada — pelo card do Início (state) ou pela
-  // notificação do motor (`/equipa/:slug?entrou=1`).
+  // notificação do motor (`/time/:slug?entrou=1`).
   const entrouAgora = !!location.state?.primeiraEntrada || new URLSearchParams(location.search).get('entrou') === '1';
   const criouAgora = !!location.state?.criouAgora;
   const varianteBoasVindas = !team
@@ -265,16 +265,16 @@ export default function Equipa() {
 
             {/* Acções principais */}
             <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-              <Link to={`/equipa/${slug}/jogos`} className="btn hud-corners-s cta-gold" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
+              <Link to={`/time/${slug}/jogos`} className="btn hud-corners-s cta-gold" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
                 <Icon name="bola" size={15} /> Jogos
               </Link>
-              <Link to={`/equipa/${slug}/ranking`} className="btn btn--outline hud-corners-s" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
+              <Link to={`/time/${slug}/ranking`} className="btn btn--outline hud-corners-s" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
                 <Icon name="medalha" size={15} /> Ranking
               </Link>
             </div>
             {team.role === 'admin' && (
               <div style={{ marginTop: 8 }}>
-                <Link to={`/equipa/${slug}/jogo/novo`} className="btn btn--outline hud-corners-s" style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none' }}>
+                <Link to={`/time/${slug}/jogo/novo`} className="btn btn--outline hud-corners-s" style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none' }}>
                   + Criar jogo
                 </Link>
               </div>

@@ -6,11 +6,12 @@ import { Link } from 'react-router-dom';
 import { Camera, ExternalLink, Eye, Link2, Music2, Play, Share2, Video } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import { urlImagem } from '../utils/avatar';
+import { nomeExibicao } from '../utils/nomeExibicao';
+import { primeiroNome } from '../utils/primeiroNome';
 import { formatarData, formatarHora } from '../utils/dataHora';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
-import LoadingFutty from '../components/LoadingFutty';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
 import { useTeams } from '../hooks/useTeam';
@@ -79,7 +80,7 @@ function timeCampeao(j) {
 function LinkVitrine({ teamSlug, userId, style, children }) {
   if (!teamSlug || !userId) return <span style={style}>{children}</span>;
   return (
-    <Link to={`/equipa/${teamSlug}/jogador/${userId}`} style={style} aria-label="Ver a vitrine deste jogador">
+    <Link to={`/time/${teamSlug}/jogador/${userId}`} style={style} aria-label="Ver a vitrine deste jogador">
       {children}
     </Link>
   );
@@ -895,6 +896,29 @@ const linkBtn = {
 // Tamanho da página da Resenha (o motor aceita até 50; o app pede 20, que é o que cabe em três ou quatro telas).
 const PAGINA_FEED = 20;
 
+// Achado 93: a Resenha levava mais de 5 s para mostrar os posts e, enquanto isso, parecia vazia (só o campo de postar e "Ver mais antigos").
+// Enquanto não há NADA para mostrar, três cartões-esqueleto com a forma dos de verdade (avatar, linhas, foto) ocupam o lugar.
+function ResenhaEsqueleto() {
+  return (
+    <div role="status" aria-live="polite" aria-label="Carregando a resenha" data-resenha-esqueleto style={{ display: 'grid', gap: 14 }}>
+      {[0, 1, 2].map((n) => (
+        <div key={n} className="feed-esqueleto" aria-hidden="true">
+          <div className="feed-esqueleto__topo">
+            <span className="feed-esqueleto__avatar" />
+            <div style={{ flex: 1, display: 'grid', gap: 6 }}>
+              <span className="feed-esqueleto__linha" style={{ width: '45%' }} />
+              <span className="feed-esqueleto__linha" style={{ width: '25%' }} />
+            </div>
+          </div>
+          <span className="feed-esqueleto__linha" style={{ width: '92%' }} />
+          <span className="feed-esqueleto__linha" style={{ width: '70%' }} />
+          {n !== 1 ? <span className="feed-esqueleto__foto" /> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Página ────────────────────────────────────────────────────────────────────
 export default function Feed() {
   const { user: authUser } = useAuth();
@@ -1021,8 +1045,9 @@ export default function Feed() {
   const loading = items === null && feedCarregando;
   const meId = user?.id;
   // Fonte do nome = a do Início (nome_jogador primeiro). NUNCA o derivado do email.
-  const nomeUser = user?.nome_jogador || user?.nome || 'Jogador';
-  const primeiroNome = nomeUser.split(' ')[0];
+  // 29I (achados 92 e 94): a regra única do nome (nomeExibicao) e o primeiro nome SEM a pontuação colada ("CHAVO, EL MATADOR" → "CHAVO")
+  // — antes cortava no primeiro espaço e a vírgula ia junto: "Solte a resenha, Chavo,…".
+  const primeiroNomeDoUser = primeiroNome(nomeExibicao(user)) || 'Jogador';
 
   return (
     <div className="app-shell page-reveal">
@@ -1049,7 +1074,7 @@ export default function Feed() {
 
             {/* 2.5 COMPOSER INLINE NO TOPO (só para quem pode publicar). Substitui o FAB. */}
             {podeCriar ? (
-              <ComposerInline teams={equipasParaPostar} user={user} nome={primeiroNome} onCreated={aoCriarPost} />
+              <ComposerInline teams={equipasParaPostar} user={user} nome={primeiroNomeDoUser} onCreated={aoCriarPost} />
             ) : null}
 
             {/* 3. FEED — coluna travada na largura da tela (minmax(0, 1fr)). Com a
@@ -1057,11 +1082,16 @@ export default function Feed() {
                 alargava TODOS para 638 px num iPhone de 430: era o (b) da 7B. */}
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14, marginTop: 14 }}>
               {loading ? (
-                <LoadingFutty />
+                <ResenhaEsqueleto />
               ) : filtrados.length === 0 ? (
-                <div className="empty-state" style={{ marginTop: 8 }}>
+                // Estado vazio de verdade (achado 93): diz que está vazio e o que fazer — não só um "não há jogos". Com um time escolhido
+                // no chip, a frase é desse time.
+                <div className="empty-state" data-resenha-vazia style={{ marginTop: 8 }}>
                   <div className="empty-state__emoji"><Icon name="resenha" size={40} /></div>
-                  <p className="muted">Ainda não há jogos na resenha.</p>
+                  <p className="muted">{selectedTeam === 'all' ? 'Ainda não tem resenha por aqui.' : 'Esse time ainda não tem resenha.'}</p>
+                  <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                    {podeCriar ? 'Seja o primeiro: o campo de cima é para isso.' : 'Quando alguém postar ou um jogo for fechado, aparece aqui.'}
+                  </p>
                 </div>
               ) : (
                 aDesenhar.map((item, i) => {

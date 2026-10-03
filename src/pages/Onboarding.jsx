@@ -173,7 +173,7 @@ export default function Onboarding() {
         localStorage.setItem('futty_cta_figurinha', '1');
       } catch { /* sem armazenamento: as boas-vindas do time podem repetir uma vez */ }
       if (goleiro) await apiFetch(`/api/equipas/${team.slug}/membros/posicao`, { method: 'PATCH', body: JSON.stringify({ goleiro: true }) }).catch(() => {});
-      return `/equipa/${team.slug}`;
+      return `/time/${team.slug}`;
     } catch {
       return null;
     }

@@ -6,7 +6,8 @@
         "components": [
           { "/": "/convite/*", "comment": "Link de convite do time (WhatsApp)" },
           { "/": "/c/*", "comment": "Link curto do convite (futtyapp.com.br/c/codigo)" },
-          { "/": "/equipa/*", "comment": "Página do time e dos jogos" }
+          { "/": "/time/*", "comment": "Página do time e dos jogos" },
+          { "/": "/equipa/*", "comment": "O endereço antigo do time (até a 29I era /equipa): link já enviado no WhatsApp continua abrindo o app" }
         ]
       }
     ]

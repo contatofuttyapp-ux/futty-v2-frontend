@@ -18,6 +18,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage';
 import PageTransition from './components/PageTransition';
 import { lazyComRetry } from './utils/lazyComRetry';
+import { caminhoNovoDeEquipa } from './lib/rotasAntigas';
 import {
   importarInicio,
   importarFeed,
@@ -80,7 +81,15 @@ function IndexRedirect() {
   return <LandingPage />;
 }
 
-// Remonta a página da equipa quando o slug muda (reinicia o estado de loading)
+// Rodada 29I (achado 103): as rotas em português de Portugal (/equipa/…, /criar-equipa) viraram /time/… e /criar-time. As antigas
+// CONTINUAM valendo — link que já foi para o grupo do WhatsApp, favorito, notificação já enviada — e levam para as novas, com a
+// query (?entrou=1), o # e o state de quem chegou.
+function RedirecionaEquipa() {
+  const { pathname, search, hash, state } = useLocation();
+  return <Navigate to={`${caminhoNovoDeEquipa(pathname)}${search}${hash}`} replace state={state} />;
+}
+
+// Remonta a página do time quando o slug muda (reinicia o estado de loading)
 function EquipaRoute() {
   const { slug } = useParams();
   return <Equipa key={slug} />;
@@ -103,20 +112,20 @@ function JogoRoute() {
 const ROTAS_PRIVADAS = [
   ['/home', Inicio],
   ['/onboarding', Onboarding],
-  ['/criar-equipa', CriarEquipa],
-  ['/equipa/:slug', EquipaRoute],
-  ['/equipa/:slug/jogos', Jogos],
-  ['/equipa/:slug/ranking', Ranking],
+  ['/criar-time', CriarEquipa],
+  ['/time/:slug', EquipaRoute],
+  ['/time/:slug/jogos', Jogos],
+  ['/time/:slug/ranking', Ranking],
   // Sem :slug: para onde a BottomNav manda quem ainda não tem time (ver `rankingTo` em
   // BottomNav.jsx). O próprio Ranking.jsx detecta a ausência do slug e mostra o convite a
   // criar/entrar.
   ['/ranking', Ranking],
-  ['/equipa/:slug/campeonato', Campeonato],
-  ['/equipa/:slug/campeonato/:id', Campeonato],
-  ['/equipa/:slug/jogador/:userId', JogadorPerfil],
-  ['/equipa/:slug/jogo/novo', NovoJogo],
-  ['/equipa/:slug/jogo/:id/sorteio', SorteioShow],
-  ['/equipa/:slug/jogo/:id', JogoRoute],
+  ['/time/:slug/campeonato', Campeonato],
+  ['/time/:slug/campeonato/:id', Campeonato],
+  ['/time/:slug/jogador/:userId', JogadorPerfil],
+  ['/time/:slug/jogo/novo', NovoJogo],
+  ['/time/:slug/jogo/:id/sorteio', SorteioShow],
+  ['/time/:slug/jogo/:id', JogoRoute],
   ['/admin/:slug', AdminPanel],
   ['/feed', Feed],
   ['/figurinha', Figurinha],
@@ -152,6 +161,10 @@ function AnimatedRoutes() {
           <Route path="/termos" element={<Termos />} />
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/excluir-conta" element={<ExcluirConta />} />
+          {/* Os endereços antigos (29I, achado 103): redirecionam para /time e /criar-time. */}
+          <Route path="/equipa/*" element={<RedirecionaEquipa />} />
+          <Route path="/equipa" element={<RedirecionaEquipa />} />
+          <Route path="/criar-equipa" element={<Navigate to="/criar-time" replace />} />
           {/* Rodada 29B (F): /avise-me sai do MESMO chunk lazy da página inicial (soAviseMe) — uma rota nova com import()
               próprio custava 172 B do arranque, que tem teto de 320 KiB. */}
           <Route path="/avise-me" element={<LandingPage soAviseMe />} />

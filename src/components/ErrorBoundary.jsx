@@ -24,8 +24,9 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const detalhe = String(this.state.error?.message || this.state.error || '').slice(0, 160);
-      return <ErrorPage detalheTecnico={detalhe} onRetry={() => this.setState({ hasError: false, error: null })} />;
+      // 29I (achado 75): a linha técnica ("Failed to fetch dynamically imported module: …/LandingPage-xxx.js") NÃO vai para a tela — ficou
+      // no console (componentDidCatch) e no Diagnóstico (gravarUltimoErro). Na tela, só a frase da casa.
+      return <ErrorPage onRetry={() => this.setState({ hasError: false, error: null })} />;
     }
     return this.props.children;
   }

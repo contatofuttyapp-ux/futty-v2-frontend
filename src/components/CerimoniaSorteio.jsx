@@ -144,6 +144,18 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
   // alavanca esconde-o outra vez ao recomeçar.
   const [compartilharOn, setCompartilharOn] = useState(false);
   const [gerando, setGerando] = useState(false);
+  // Achado 90: "9:16 · Time A" não dava retorno nenhum. O toast da máquina é `position: fixed` dentro da página animada (o transform do
+  // [data-page] vira o "chão" do fixed) e podia ficar fora da tela, longe do botão. Agora o retorno é DO LADO do botão: ele diz
+  // "Gerando…" enquanto trabalha e, no fim, uma linha de status logo abaixo diz o que aconteceu (salvo, ou compartilhado).
+  const [gerandoQual, setGerandoQual] = useState(null); // índice do time cujo 9:16 está sendo gerado, ou 'todos'
+  const [avisoCartao, setAvisoCartao] = useState('');
+  const avisoTimer = useRef(null);
+  const avisar = (texto) => {
+    setAvisoCartao(texto);
+    clearTimeout(avisoTimer.current);
+    avisoTimer.current = setTimeout(() => setAvisoCartao(''), 4500);
+  };
+  useEffect(() => () => clearTimeout(avisoTimer.current), []);
   const btnRef = useRef(null);
   // O toast da máquina nasce dentro do efeito; os botões (React) falam com ele por aqui.
   const toastRef = useRef(() => {});
@@ -186,7 +198,16 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     let vivo = true;
     const timers = new Set();
     const clones = new Set();
-    const sleep = (ms) => new Promise((r) => { const id = setTimeout(r, ms); timers.add(id); });
+    // Achado 89: "» concluir já" levava 2,1 s medidos — o flag só era lido ENTRE as esperas, e a que estava em curso (o giro de 1,2 s, a
+    // desaceleração de 0,6 s, o voo do jogador) corria até o fim. Agora cada espera pode ser acordada na hora: ao saltar, todas
+    // as que estão dormindo acordam juntas e as novas nem dormem — o salto vai direto ao final.
+    const acordadores = new Set();
+    const sleep = (ms) => new Promise((r) => {
+      if (saltarFlag) { r(); return; }
+      const acordar = () => { clearTimeout(id); acordadores.delete(acordar); r(); };
+      const id = setTimeout(acordar, ms);
+      timers.add(id); acordadores.add(acordar);
+    });
     const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const q = (sel) => root.querySelector(sel);
     const qa = (sel) => [...root.querySelectorAll(sel)];
@@ -458,7 +479,13 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     lever.addEventListener('pointerdown', onDown); lever.addEventListener('pointermove', onMove);
     lever.addEventListener('pointerup', onUp); lever.addEventListener('pointercancel', onUp);
     lever.addEventListener('keydown', onKey);
-    const saltarBtn = q('.saltar button'); const onSaltar = () => { saltarFlag = true; }; saltarBtn.addEventListener('click', onSaltar);
+    const saltarBtn = q('.saltar button');
+    const onSaltar = () => {
+      saltarFlag = true;
+      [...acordadores].forEach((acordar) => acordar()); // as esperas em curso acordam já
+      clones.forEach((c) => { try { c.getAnimations?.().forEach((a) => a.finish()); } catch { /* sem animação */ } }); // jogadores em voo chegam
+    };
+    saltarBtn.addEventListener('click', onSaltar);
 
     // ── X de saída (volta à página do jogo) ──
     const sairX = q('.sairX'); const onSair = () => { if (window.history.length > 1) window.history.back(); }; sairX.addEventListener('click', onSair);
@@ -496,24 +523,30 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
   // não se diz "salvo".
   async function compartilharTimes() {
     if (gerando) return;
-    setGerando(true);
+    setGerando(true); setGerandoQual('todos'); setAvisoCartao('');
     try {
       const { entrega } = await gerarCartazEscalacao(resultado, { equipa, data });
-      if (entrega === 'baixou') toastRef.current('Imagem dos times salva');
+      if (entrega === 'baixou') { toastRef.current('Imagem dos times salva'); avisar('Imagem dos times salva no seu aparelho.'); }
+      else if (entrega === 'compartilhou') avisar('Imagem dos times compartilhada.');
     } catch (e) {
       toastRef.current(e?.message || 'Não deu para gerar a imagem. Tente de novo.');
-    } finally { setGerando(false); }
+      avisar(e?.message || 'Não deu para gerar a imagem. Tente de novo.');
+    } finally { setGerando(false); setGerandoQual(null); }
   }
   async function compartilharTime(ti) {
     if (gerando) return;
-    setGerando(true);
+    setGerando(true); setGerandoQual(ti); setAvisoCartao('');
+    const nomeDoTime = resultado?.times?.[ti]?.nome || `Time ${ti + 1}`;
     try {
       const { blob, nome } = await gerarCartao916(resultado, ti, equipa);
       const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
-      if (entrega === 'baixou') toastRef.current('Cartão 9:16 salvo');
+      if (entrega === 'baixou') { toastRef.current('Cartão 9:16 salvo'); avisar(`Cartão do ${nomeDoTime} salvo no seu aparelho.`); }
+      else if (entrega === 'compartilhou') avisar(`Cartão do ${nomeDoTime} compartilhado.`);
+      // 'cancelou' (a folha de compartilhar foi fechada sem escolher nada): não é erro de ninguém, não se diz nada.
     } catch (e) {
       toastRef.current(e?.message || 'Não deu para gerar o cartão. Tente de novo.');
-    } finally { setGerando(false); }
+      avisar(e?.message || 'Não deu para gerar o cartão. Tente de novo.');
+    } finally { setGerando(false); setGerandoQual(null); }
   }
 
   if (!resultado?.times?.length) {
@@ -587,16 +620,18 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
             vê o estado final: o botão no lugar só com o glow (item 4 da 14B). */}
         <div className={`cta-gold-glow${euSorteei ? ' pulse-glow' : ''}`} style={{ display: 'flex' }}>
           <button ref={btnRef} type="button" className={`btn hud-corners cta-gold compartilhar__btn${euSorteei ? ' pulse-active' : ''}`} style={{ flex: 1 }} disabled={gerando} onClick={compartilharTimes}>
-            <Share2 size={17} /> {gerando ? 'Gerando…' : 'Compartilhar os times'}
+            <Share2 size={17} /> {gerandoQual === 'todos' ? 'Gerando…' : 'Compartilhar os times'}
           </button>
         </div>
         <div className="compartilhar__times">
           {times.map((t, ti) => (
             <button key={ti} type="button" className="btn btn--sm btn--outline hud-corners-s compartilhar__time" style={{ color: marca(ti).c, borderColor: marca(ti).c }} disabled={gerando} onClick={() => compartilharTime(ti)}>
-              9:16 · {t.nome}
+              {gerandoQual === ti ? 'Gerando…' : `9:16 · ${t.nome}`}
             </button>
           ))}
         </div>
+        {/* Achado 90: o que aconteceu, logo abaixo dos botões (e lido por leitor de tela). Some sozinho. */}
+        <p role="status" aria-live="polite" data-aviso-cartao style={{ margin: avisoCartao ? '8px 0 0' : 0, fontSize: 12, lineHeight: 1.4, textAlign: 'center', color: '#6ee7a0' }}>{avisoCartao}</p>
       </div>
       {/* A pílula vai por portal ao body: dentro do [data-page] um ancestral com
           transform/filter prenderia o `fixed` à página. */}

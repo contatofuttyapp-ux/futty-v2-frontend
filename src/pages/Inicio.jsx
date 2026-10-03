@@ -16,6 +16,7 @@ import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
 import { ehHoje, formatarData } from '../utils/dataHora';
 import { plural } from '../utils/plural';
+import { nomeExibicao } from '../utils/nomeExibicao';
 import { IDADE_MINIMA } from '../utils/idade';
 import RolinhosData from '../components/RolinhosData';
 import { gerarFigurinhaCanvas, enquadrarAvatar, enquadrarFotoComum, mostraFigurinha } from '../utils/figurinhaCanvas';
@@ -270,7 +271,7 @@ function NomeCromo({ nome }) {
         fontWeight: 700,
         fontSize: 44,
         letterSpacing: '0.04em',
-        textTransform: 'uppercase',
+        // Sem forçar maiúsculas (29I, achado 94): o nome sai como a pessoa escreveu, igual à Resenha e ao resto do app.
         color: '#f0c94a',
         textAlign: 'center',
         lineHeight: 1.05,
@@ -287,7 +288,7 @@ function NomeCromo({ nome }) {
 }
 
 // ----- Card de jogo -----
-function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
+export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo = false, index = 0 }) {
   const today = ehHoje(game.date, game.fuso); // "hoje" é o dia do campo (fuso do time), não o do aparelho
   const isPast = game.status === 'finished';
   const isDrawn = game.status === 'drawn';
@@ -323,7 +324,14 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
       <div className={`gcard hud-corners ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`}>
         {isNext ? <div className="gcard__next-badge hud-corners-s">PRÓXIMO</div> : null}
         <div className="gcard__top">
-          <span className="gcard__title">{game.name}</span>
+          {/* Achado 84: o card inteiro abre a tela do jogo. Link de verdade (abre em nova aba, dá para copiar o endereço): o <a> está
+              no título e a camada que cobre o card é o ::after dele (.gcard__link, app.css) — os botões "Vou / Não vou" e "Ver sorteio"
+              ficam por cima (z-index) e continuam funcionando sem abrir o jogo. Sem botão dentro de <a>. */}
+          <span className="gcard__title">
+            {game.team_slug
+              ? <Link className="gcard__link" to={`/time/${game.team_slug}/jogo/${game.id}`} aria-label={`Abrir o jogo ${game.name}`}>{game.name}</Link>
+              : game.name}
+          </span>
           {game.team_name && <span className="gcard__team">{game.team_name}</span>}
         </div>
 
@@ -356,8 +364,10 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
                 .pulse-active no botão (a metade dele que anima a borda
                 sobrevive ao clip-path). */}
             <span className="cta-gold-glow pulse-glow" style={{ display: 'flex', marginTop: 12 }}>
-              <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} onClick={() => onVerSorteio(game)}>
-                <Trophy size={16} /> Ver sorteio
+              {/* Achado 88: tocar e não ver nada por vários segundos parecia botão quebrado. Agora o botão responde NA HORA ("Abrindo…",
+                  apagado, sem tocar duas vezes) e a tela abre pelo roteador, sem recarregar o app inteiro. */}
+              <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} disabled={abrindo} aria-busy={abrindo} onClick={() => onVerSorteio(game)}>
+                {abrindo ? 'Abrindo…' : <><Trophy size={16} /> Ver sorteio</>}
               </button>
             </span>
           </>
@@ -411,7 +421,7 @@ function EmptyState() {
       <div className="home-empty__actions">
         {/* Glow no wrapper, recorte no botão — clip-path corta sombras (ver .cta-gold). */}
         <div className="cta-gold-glow" style={{ display: 'flex' }}>
-          <Link to="/criar-equipa" className="btn hud-corners cta-gold" style={{ flex: 1 }}>
+          <Link to="/criar-time" className="btn hud-corners cta-gold" style={{ flex: 1 }}>
             ＋ Criar meu time
           </Link>
         </div>
@@ -516,8 +526,16 @@ export default function Inicio() {
   }
 
   // "Ver sorteio": a cerimónia corre na PÁGINA do sorteio (SPEC-SORTEIO §13d).
+  // Achados 88 e 89: antes a tela abria por um recarregamento da página — o app INTEIRO de novo (vários segundos, sem indicador nenhum). Agora navega
+  // pelo roteador (como o botão "Sortear" da tela do jogo já fazia) e o botão mostra "Abrindo…" no mesmo instante do toque. Sem state
+  // `euSorteei`: quem só vai ver o resultado abre com o som desligado (regra da casa, 16-set).
+  const [abrindoSorteioId, setAbrindoSorteioId] = useState(null);
   function verSorteio(game) {
-    window.location.assign(`/equipa/${game.team_slug}/jogo/${game.id}/sorteio`);
+    if (abrindoSorteioId) return;
+    setAbrindoSorteioId(game.id);
+    navigate(`/time/${game.team_slug}/jogo/${game.id}/sorteio`);
+    // se a tela não abrir (chunk que falhou, por exemplo) o botão volta em vez de ficar apagado para sempre
+    setTimeout(() => setAbrindoSorteioId(null), 8000);
   }
 
   // Sincroniza `games` a partir de /api/inicio (carga inicial e qualquer
@@ -584,7 +602,7 @@ export default function Inicio() {
 
   const user = me?.user;
   const stats = me?.stats;
-  const nome = user?.nome_jogador || user?.nome || user?.email?.split('@')[0] || 'Jogador';
+  const nome = nomeExibicao(user); // a regra única do nome (nome de jogador → nome completo → "Jogador"; nunca o e-mail) — 29I, achado 94
 
   // Figurinha IA no card agora? Quem diz é o motor (Rodada 28, mostraFigurinha) — mesma regra da Figurinha.
   const cromoAvatarEhIA = mostraFigurinha(user);
@@ -929,12 +947,12 @@ export default function Inicio() {
   const noTeams = !teamsLoading && !teamsErro && !semDadosPorErro && teams.length === 0;
 
   // Rodada 12C: para onde o cromo leva. A vitrine vive DENTRO de um time (a
-  // rota é /equipa/:slug/jogador/:id), por isso só existe com time e com
+  // rota é /time/:slug/jogador/:id), por isso só existe com time e com
   // sessão carregada; até lá, a Figurinha continua a ser um destino honesto.
   const destinoCromo = noTeams
-    ? { to: '/criar-equipa', label: 'Criar meu time' }
+    ? { to: '/criar-time', label: 'Criar meu time' }
     : campSlug && user?.id
-      ? { to: `/equipa/${campSlug}/jogador/${user.id}`, label: 'Ver minha vitrine de jogador' }
+      ? { to: `/time/${campSlug}/jogador/${user.id}`, label: 'Ver minha vitrine de jogador' }
       : { to: '/figurinha', label: 'Ver e personalizar minha figurinha' };
 
   // Desfechos dos meus pedidos de entrada (aceite/recusado) — ciclo v1 sem push.
@@ -1071,7 +1089,7 @@ export default function Inicio() {
             </span>
             {/* Rodada 29D: quem foi aceito entra no time como primeira entrada (abre as boas-vindas do time). */}
             {p.status === 'approved' && p.team?.slug ? (
-              <Link to={`/equipa/${p.team.slug}`} state={{ primeiraEntrada: true }} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={() => dispensarDesfecho(p.id)}>
+              <Link to={`/time/${p.team.slug}`} state={{ primeiraEntrada: true }} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={() => dispensarDesfecho(p.id)}>
                 Ir ao time
               </Link>
             ) : null}
@@ -1096,7 +1114,7 @@ export default function Inicio() {
                   : `Faltam ${votacaoTop.faltam} na ${votacaoTop.nome}: sua nota conta para o ranking.`}
               </span>
             </span>
-            <Link to={`/equipa/${votacaoTop.slug}/ranking`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={fecharVotacao}>
+            <Link to={`/time/${votacaoTop.slug}/ranking`} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={fecharVotacao}>
               Avaliar
             </Link>
             <button type="button" aria-label="Dispensar" onClick={fecharVotacao} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
@@ -1297,7 +1315,7 @@ export default function Inicio() {
                 </button>
               ))}
               {/* Rodada 29H (item 62): criar o próprio time sempre à mão — antes o botão só existia no Início vazio. */}
-              <Link to="/criar-equipa" className="chip chip--explore hud-corners-s" data-criar-time>
+              <Link to="/criar-time" className="chip chip--explore hud-corners-s" data-criar-time>
                 ＋ Criar time
               </Link>
               <Link to="/explorar" className="chip chip--explore hud-corners-s">
@@ -1350,6 +1368,7 @@ export default function Inicio() {
                       isNext={item.game.id === nextId}
                       onPresence={onPresence}
                       onVerSorteio={verSorteio}
+                      abrindo={abrindoSorteioId === item.game.id}
                       index={i}
                     />
                   )
@@ -1364,14 +1383,14 @@ export default function Inicio() {
               <div style={{ marginTop: 16 }}>
                 <div className="games-label">Últimos Jogos</div>
                 {ultimosJogos.map((g) => (
-                  <GameCard key={g.id} game={g} busy={false} isNext={false} onPresence={onPresence} onVerSorteio={verSorteio} />
+                  <GameCard key={g.id} game={g} busy={false} isNext={false} onPresence={onPresence} onVerSorteio={verSorteio} abrindo={abrindoSorteioId === g.id} />
                 ))}
               </div>
             ) : null}
 
             {/* Card do campeonato (equipa principal) */}
             {campeonato && campSlug ? (
-              <Link to={`/equipa/${campSlug}/campeonato`} className="hud-corners" style={{ textDecoration: 'none', display: 'block', marginTop: 14, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', padding: 'var(--space-md)' }}>
+              <Link to={`/time/${campSlug}/campeonato`} className="hud-corners" style={{ textDecoration: 'none', display: 'block', marginTop: 14, background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', padding: 'var(--space-md)' }}>
                 {campeonato.estado === 'terminado' ? (
                   <>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 800, color: '#d4a017' }}>{campeonato.nome} · Campeão: {nomeCampeao(campeonato)}</div>

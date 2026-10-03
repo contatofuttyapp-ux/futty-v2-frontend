@@ -245,7 +245,7 @@ export default function Explorar() {
             <div
               key={equipa.id}
               style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 8, cursor: equipa.ja_membro ? 'pointer' : undefined }}
-              onClick={equipa.ja_membro ? () => navigate(`/equipa/${equipa.slug}`) : undefined}
+              onClick={equipa.ja_membro ? () => navigate(`/time/${equipa.slug}`) : undefined}
             >
               <EscudoEquipa team={equipa} size={44} />
               <div style={{ flex: 1, minWidth: 0 }}>

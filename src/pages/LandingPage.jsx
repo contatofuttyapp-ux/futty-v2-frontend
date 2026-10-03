@@ -59,14 +59,22 @@ function PaginaInicial() {
           minHeight: '100%',
           maxWidth: 430,
           margin: '0 auto',
-          padding: '20px 24px',
+          padding: '20px 24px 12px',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+        }}
+      >
+      {/* O miolo fica centrado como sempre; o rodapé legal (29I, achado 76) desce para o pé da tela. */}
+      <div
+        style={{
+          flex: 1,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
           gap: 22,
-          position: 'relative',
         }}
       >
         {/* O F oficial, sozinho, com a aura dourada da casa a respirar atrás */}
@@ -160,6 +168,19 @@ function PaginaInicial() {
         <div style={{ width: '100%', maxWidth: 320, borderTop: '1px solid rgba(255,255,255,0.10)', paddingTop: 18 }}>
           <AviseMeForm origemPadrao="site" />
         </div>
+      </div>
+
+        {/* Rodapé legal (Rodada 29I, achado 76): as lojas pedem a Privacidade acessível SEM precisar de conta, e o aviso dos 18 anos
+            tem de estar antes do cadastro, não só dentro dele. As duas páginas já existem (/termos, /privacidade). Discreto: letra
+            pequena, cor apagada, um link por palavra, sem ocupar o lugar dos botões. */}
+        <footer data-rodape-legal style={{ width: '100%', maxWidth: 320, margin: '0 auto', padding: '18px 0 6px', textAlign: 'center', fontSize: 12, lineHeight: 1.7, color: 'rgba(255,255,255,0.45)' }}>
+          <div>
+            <Link to="/termos" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'underline', textUnderlineOffset: 3 }}>Termos de Uso</Link>
+            {' · '}
+            <Link to="/privacidade" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'underline', textUnderlineOffset: 3 }}>Privacidade</Link>
+          </div>
+          <div>Para maiores de 18 anos.</div>
+        </footer>
       </div>
 
       {toastPassagem ? <Toast mensagem={toastPassagem} tipo="success" onClose={() => setToastPassagem('')} /> : null}

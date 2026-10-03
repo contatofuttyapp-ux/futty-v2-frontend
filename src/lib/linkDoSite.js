@@ -17,8 +17,11 @@ export const HOST_DO_SITE = 'futtyapp.com.br';
 // o retorno do Google/e-mail tem de voltar para o lugar dela.)
 export const ORIGEM_DO_SITE = `https://${HOST_DO_SITE}`;
 // 29H: entrou o link curto do convite (/c/<código>) e saiu /jogo/ — o app não tem a rota /jogo/<id> (o jogo mora em
-// /equipa/<slug>/jogo/<id>, já coberto por /equipa/), então um link /jogo/… abria o app numa página inexistente.
-export const PREFIXOS_DE_LINK = ['/convite/', '/c/', '/equipa/'];
+// /time/<slug>/jogo/<id>, já coberto por /time/), então um link /jogo/… abria o app numa página inexistente.
+// 29I (achado 103): o time passou de /equipa para /time (o link que a pessoa copia para o grupo). O antigo /equipa/ continua na lista:
+// link já enviado no WhatsApp abre o app e a rota antiga redireciona para a nova (App.jsx). Android: o intent-filter novo (/time) só vale
+// depois de um build novo do app; até lá o link /time abre no navegador, que funciona.
+export const PREFIXOS_DE_LINK = ['/convite/', '/c/', '/time/', '/equipa/'];
 
 /** O caminho (com a query) do roteador para uma URL do site que o app abre, ou null. Nunca lança. */
 export function caminhoDoLinkDoSite(url) {

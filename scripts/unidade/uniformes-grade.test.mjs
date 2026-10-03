@@ -23,7 +23,7 @@ test('direito: crédito manda (abre todos), depois o pacote do time, senão grá
   assert.equal(direitoDaGrade({ fonteDireito: 'time', creditos: 2 }), 'minha', 'quem é do pacote E comprou a Minha abre todos');
 });
 
-test('grátis (card com a foto): TODOS os cinco com cadeado — nem o Dark Gold fica livre', () => {
+test('grátis (card com a foto): TODOS os cinco com cadeado — nem o Ouro Escuro fica livre', () => {
   assert.deepEqual(estados({ direito: 'gratis', kitVestido: null, slots: [] }), {
     'dark-gold': 'trancado', 'dark-purple': 'trancado', 'white-gold': 'trancado', 'elite-gold': 'trancado', 'royal-purple': 'trancado',
   });

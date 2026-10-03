@@ -251,8 +251,8 @@ export default function Diagnostico() {
             {aparelho.appVersao ? ` · versão ${aparelho.appVersao} (build ${aparelho.appBuild})` : ''}
             <br />
             {aparelho.ligacao
-              ? `Ligação: ${aparelho.ligacao.tipo || '?'}${aparelho.ligacao.rttMs != null ? ` · rtt ${aparelho.ligacao.rttMs}ms` : ''}`
-              : 'Ligação: o aparelho não informa'}
+              ? `Conexão: ${aparelho.ligacao.tipo || '?'}${aparelho.ligacao.rttMs != null ? ` · rtt ${aparelho.ligacao.rttMs}ms` : ''}`
+              : 'Conexão: o aparelho não informa'}
             <br />
             Telas abertas: {resumo.navegacoes} · pintaram do cache: {resumo.pinturasDoCache}
             {/* Velocidade 6B: quantas imagens o app mostrou e quantas nem foram
@@ -287,7 +287,7 @@ export default function Diagnostico() {
         {/* ─── Fases do cromo (FLUIDEZ 2) ─── */}
         {linhasDoCromo(resumo.cromo) ? (
           <div>
-            <div className="games-label">Cromo: fases</div>
+            <div className="games-label">Figurinha: fases</div>
             <div className="hud-corners-s" style={{ ...CARTAO, display: 'grid', gap: 6 }}>
               <div style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--text-dim)' }}>
                 O canvas da figurinha, por fundo: quanto somou e qual foi a fase mais cara.

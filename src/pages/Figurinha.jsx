@@ -63,8 +63,8 @@ const FUNDOS = [
   { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label novo — GRÁTIS (15-set)
   { k: 'estadio', label: 'Estádio' },
   { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
-  { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
-  { k: 'royal', label: 'Royal', premium: true }, // par de luxo do Golden — chapa roxa da casa
+  { k: 'golden', label: 'Dourado', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
+  { k: 'royal', label: 'Real', premium: true }, // par de luxo do Golden — chapa roxa da casa
 ];
 // Background real de cada fundo (igual ao do PlayerCard) para os tiles.
 const FUNDO_BG = {

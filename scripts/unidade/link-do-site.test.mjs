@@ -2,7 +2,7 @@
 //
 // Dois assuntos:
 //   1. o parser: só https + futtyapp.com.br + /convite/, /c/ (o link curto do convite, 29H) ou /equipa/ vira caminho do roteador; o resto
-//      é null (e o app não navega) — /jogo/ saiu na 29H: o app não tem essa rota (o jogo mora em /equipa/<slug>/jogo/<id>);
+//      é null (e o app não navega) — /jogo/ saiu na 29H: o app não tem essa rota (o jogo mora em /time/<slug>/jogo/<id>);
 //   2. a COERÊNCIA entre os quatro lugares que falam do mesmo domínio e caminhos — o arquivo do iOS (AASA), o do Android (assetlinks.json
 //      + o intent-filter do manifesto), o entitlement do iOS e o parser. Se um deles divergir, o link abre no navegador em vez do app
 //      (ou o app abre numa tela que o site nunca abriria) e ninguém vê erro nenhum: é o tipo de defeito que só o teste aponta.
@@ -22,8 +22,10 @@ const ler = (rel) => fs.readFileSync(`${RAIZ}${rel}`, 'utf8');
 test('links do site que o app abre: convite (longo e curto) e time (e o que mora nele, o jogo inclusive) — com a query, sem o #', () => {
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/convite/abc123'), '/convite/abc123');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/convite/abc123?origem=zap'), '/convite/abc123?origem=zap');
+  assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/time/varzea-fc'), '/time/varzea-fc');
+  assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/time/varzea-fc/jogo/9f1c/sorteio'), '/time/varzea-fc/jogo/9f1c/sorteio');
+  // 29I (achado 103): o endereço antigo continua abrindo o app — a rota /equipa/* redireciona para /time/*.
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/equipa/varzea-fc'), '/equipa/varzea-fc');
-  assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/equipa/varzea-fc/jogo/9f1c/sorteio'), '/equipa/varzea-fc/jogo/9f1c/sorteio');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/k7m2p9qx'), '/c/k7m2p9qx', 'o link curto do convite (29H)');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/k7m2p9qx?origem=zap'), '/c/k7m2p9qx?origem=zap');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/convite/abc123#topo'), '/convite/abc123');

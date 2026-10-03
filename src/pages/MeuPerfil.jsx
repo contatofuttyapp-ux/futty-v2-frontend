@@ -86,7 +86,7 @@ function LinhaMeuTime({ time, meuId, semBorda, aoErro }) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderBottom: semBorda ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
-      <Link to={`/equipa/${time.slug}`} style={{ minWidth: 0, flex: 1, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+      <Link to={`/time/${time.slug}`} style={{ minWidth: 0, flex: 1, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>
         {time.nome}
       </Link>
       {eu ? (
@@ -318,10 +318,10 @@ export default function MeuPerfil() {
             mostra inteiro (radar, conquistas, histórico, evolução). Até aqui só
             se chegava lá pelo avatar de outra pessoa no Ranking — a própria
             vitrine, que é a que interessa mostrar aos amigos, não tinha porta.
-            Só com time: a vitrine vive dentro de um (/equipa/:slug/jogador/:id). */}
+            Só com time: a vitrine vive dentro de um (/time/:slug/jogador/:id). */}
         {vitrineSlug ? (
           <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 12 }}>
-            <Link to={`/equipa/${vitrineSlug}/jogador/${u.id}`} className="btn hud-corners cta-gold" style={{ flex: 1, textDecoration: 'none' }}>
+            <Link to={`/time/${vitrineSlug}/jogador/${u.id}`} className="btn hud-corners cta-gold" style={{ flex: 1, textDecoration: 'none' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 <Icon name="estrela" size={16} />
                 Ver minha vitrine de jogador
@@ -476,7 +476,7 @@ export default function MeuPerfil() {
           </>
         ) : null}
         {/* Rodada 29H (item 62): criar o próprio time sempre à mão, com ou sem time (a seção aparece mesmo vazia). */}
-        <Link to="/criar-equipa" className="btn btn--purple-outline hud-corners" data-criar-time style={{ marginTop: teams.length ? 10 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Link to="/criar-time" className="btn btn--purple-outline hud-corners" data-criar-time style={{ marginTop: teams.length ? 10 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           ＋ Criar time
         </Link>
 

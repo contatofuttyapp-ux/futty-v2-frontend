@@ -12,6 +12,7 @@
     "build:native:ios": "npm run build && npm run test:visibilidade && node scripts/preparar-nativo.js && cap sync ios",
     "lint": "eslint .",
     "test": "node --import ./scripts/unidade/registrar.mjs --test \"scripts/unidade/*.test.mjs\"",
+    "provar:navegador": "node scripts/provar-navegador.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,4 +1,4 @@
-// Futty v2.0 — Vitrine do Jogador (/equipa/:slug/jogador/:id) no cânone.
+// Futty v2.0 — Vitrine do Jogador (/time/:slug/jogador/:id) no cânone.
 // Herói = recorte puro (avatar IA) com aura + respiração; fallback foto-com-fade.
 // Stats-espectáculo: nota count-up + anel, radar FIFA, sparkline animada, tiles em
 // cascata (reduced-motion → estático). Conquistas (sem rodada). Actividade gated por
@@ -203,7 +203,7 @@ export default function JogadorPerfil() {
       {/* Rodada 12C: volta para onde a pessoa estava (Início, Resenha, Perfil,
           Ranking…). O Ranking fica como destino de quem abriu o link direto e
           não tem histórico para desfazer. */}
-      <Topbar hud="PERFIL" back="voltar" backFallback={`/equipa/${slug}/ranking`} />
+      <Topbar hud="PERFIL" back="voltar" backFallback={`/time/${slug}/ranking`} />
 
       {eu && eu.id !== userId ? (
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 16px 0' }}>
@@ -275,7 +275,7 @@ export default function JogadorPerfil() {
               {equipas.length ? (
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 13 }}>
                   {equipas.map((e) => (
-                    <Link key={e.id} to={`/equipa/${e.slug}/ranking`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', clipPath: CLIP_S, ...VIDRO, textDecoration: 'none', color: '#e8c65a', fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700 }}>
+                    <Link key={e.id} to={`/time/${e.slug}/ranking`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', clipPath: CLIP_S, ...VIDRO, textDecoration: 'none', color: '#e8c65a', fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700 }}>
                       <EscudoEquipa team={e} size={20} /> {e.nome}
                     </Link>
                   ))}

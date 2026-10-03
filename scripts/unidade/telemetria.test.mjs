@@ -25,9 +25,11 @@ const UUID = '5b1c2d3e-aaaa-4bbb-8ccc-0123456789ab';
 
 test('normalizarRota: a mesma regra do motor — nada que identifique alguém ou um time', () => {
   const casos = [
-    ['/equipa/missa-de-quinta-ogqq6/ranking', '/equipa/:slug/ranking'],
+    ['/time/missa-de-quinta-ogqq6/ranking', '/time/:slug/ranking'],
+    ['/equipa/missa-de-quinta-ogqq6/ranking', '/equipa/:slug/ranking'], // o endereço antigo ainda chega por link já enviado
+    ['/time/teste-abcde', '/time/:slug'],
     ['/equipa/teste-abcde', '/equipa/:slug'],
-    [`/equipa/missa/jogador/${UUID}`, '/equipa/:slug/jogador/:id'],
+    [`/time/missa/jogador/${UUID}`, '/time/:slug/jogador/:id'],
     ['/api/teams/missa-de-quinta-ogqq6/ranking?x=1', '/api/teams/:slug/ranking'],
     [`/p/missa-de-quinta-ogqq6/${UUID}`, '/p/:slug/:id'],
     ['/api/users/joao@exemplo.com', '/api/users/:x'],
@@ -49,7 +51,7 @@ test('faixaDoAparelho e versaoDoApp: genéricos, nunca modelo', () => {
 
 test('montarEnvio: só os campos combinados, mesmo com identificadores por perto', () => {
   const nav = {
-    rota: `/equipa/missa-de-quinta-ogqq6/jogador/${UUID}`,
+    rota: `/time/missa-de-quinta-ogqq6/jogador/${UUID}`,
     registo: { msPintura: 812.6, rota: 'x', email: 'pessoa@exemplo.com' },
     chamadas: [
       { rota: '/api/teams/missa-de-quinta-ogqq6/jogador/' + UUID, ms: 540.4, motorMs: 120.2, token: 'eyJ.segredo' },
@@ -63,7 +65,7 @@ test('montarEnvio: só os campos combinados, mesmo com identificadores por perto
   const envio = montarEnvio(nav, { plataforma: 'android', infoApp: { version: '1.0.0', build: '16' }, conexao: { type: 'wifi' }, memoriaGb: 2, userId: 'u-1', email: 'pessoa@exemplo.com' });
   assert.deepEqual(Object.keys(envio).sort(), CAMPOS);
   assert.deepEqual(envio, {
-    tela: '/equipa/:slug/jogador/:id',
+    tela: '/time/:slug/jogador/:id',
     ms_util: 813,
     chamadas: { '/api/teams/:slug/jogador/:id': { ms: 540, motor: 120 }, '/api/me/selos': { ms: 210, motor: null } },
     versao_app: '1.0.0 (16)',

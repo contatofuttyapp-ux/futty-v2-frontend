@@ -12,6 +12,9 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
    quando a vaga toca os dois. Páginas seladas e primitivas partilhadas (F, Topbar,
    avatar-frame, .cta-gold) só se tocam com ordem explícita.
 4. **Prova**: toda a entrega se prova no 5173 (screenshots); telegramas curtos.
+   **Gestos e histórico (29I):** `npm run provar:navegador` sobe um Vite sozinho e prova, num Chromium de verdade e sem login nem banco, o que
+   o teste de unidade não alcança — o Voltar do sistema na criação do time, o toque que cai no link do card e não no botão, o salto da
+   cerimônia medido em ms, o redirecionamento de /equipa para /time. Cada prova é um `scripts/provas/*.prova.mjs` (+ uma bancada .html/.jsx).
 
 ## O cânone visual
 - Material: VIDRO — véu `rgba(255,255,255,0.03)` sobre base transparente; a aurora

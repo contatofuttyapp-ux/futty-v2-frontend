@@ -86,7 +86,7 @@ export default function Jogo() {
         method: 'POST',
         body: JSON.stringify({ game_id: id, formato }),
       });
-      navigate(`/equipa/${slug}/campeonato/${data.campeonato.id}`);
+      navigate(`/time/${slug}/campeonato/${data.campeonato.id}`);
     } catch (err) {
       setToast({ tipo: 'error', mensagem: err.message });
       setCriandoCamp(false);
@@ -140,7 +140,7 @@ export default function Jogo() {
       // 12A) diz à cerimónia que quem chega ali acabou de pedir o sorteio — é a
       // única vista que pode nascer com som. Vai no state da navegação, não na
       // URL: o link partilhado nunca pode trazer isto colado.
-      navigate(`/equipa/${slug}/jogo/${id}/sorteio`, { state: { euSorteei: true } });
+      navigate(`/time/${slug}/jogo/${id}/sorteio`, { state: { euSorteei: true } });
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -151,7 +151,7 @@ export default function Jogo() {
   if (loading) {
     return (
       <div className="app-shell">
-        <Topbar hud="JOGO" back={`/equipa/${slug}/jogos`} />
+        <Topbar hud="JOGO" back={`/time/${slug}/jogos`} />
         <main className="app-main">
           <LoadingFutty />
         </main>
@@ -187,7 +187,7 @@ export default function Jogo() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="JOGO" back={`/equipa/${slug}/jogos`} />
+      <Topbar hud="JOGO" back={`/time/${slug}/jogos`} />
       <main className="app-main page-reveal" style={game?.times_resultado ? { paddingBottom: 140 } : undefined}>
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
@@ -256,7 +256,7 @@ export default function Jogo() {
             ) : null}
 
             <div className="header-actions">
-              <Link to={`/equipa/${slug}/ranking`} className="btn btn--ghost btn--sm">
+              <Link to={`/time/${slug}/ranking`} className="btn btn--ghost btn--sm">
                 Ranking
               </Link>
             </div>
@@ -472,7 +472,7 @@ export default function Jogo() {
                   Só o sorteio (com seed) tem replay/"Ver sorteio". */}
               {game.sorteio_realizado && game.times_resultado?.seed != null && (
                 <span className="cta-gold-glow pulse-glow" style={{ display: 'flex', width: '100%' }}>
-                  <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} onClick={() => navigate(`/equipa/${slug}/jogo/${id}/sorteio`)}>
+                  <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
                     <Trophy size={16} /> Ver sorteio
                   </button>
                 </span>
@@ -565,7 +565,7 @@ export default function Jogo() {
             {game.sorteio_realizado && (game.status === 'em_curso' || game.status === 'terminado') && (
               <div style={{ marginTop: 20 }}>
                 <div className="cta-gold-glow" style={{ display: 'flex' }}>
-                  <Link to={`/equipa/${slug}/ranking`} className="btn hud-corners cta-gold" style={{ flex: 1, textDecoration: 'none' }}>
+                  <Link to={`/time/${slug}/ranking`} className="btn hud-corners cta-gold" style={{ flex: 1, textDecoration: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                       <Icon name="estrela" size={16} />
                       Avaliar os jogadores

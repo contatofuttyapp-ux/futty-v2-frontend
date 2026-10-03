@@ -82,7 +82,7 @@ export default function NovoJogo() {
         }),
       });
       if (eManual) { setGameId(game.id); setFase('compor'); setLoading(false); }
-      else navigate(`/equipa/${slug}/jogo/${game.id}`);
+      else navigate(`/time/${slug}/jogo/${game.id}`);
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -102,7 +102,7 @@ export default function NovoJogo() {
         jogadores: (atrib[i] || []).map((k) => poolByKey[k]).filter(Boolean).map((p) => ({ user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url, convidado: p.convidado })),
       }));
       await apiFetch(`/api/games/${gameId}/times-manuais`, { method: 'POST', body: JSON.stringify({ times }) });
-      navigate(`/equipa/${slug}/jogo/${gameId}`);
+      navigate(`/time/${slug}/jogo/${gameId}`);
     } catch (err) {
       setToast({ tipo: 'error', mensagem: err.message });
       setLoading(false);
@@ -111,7 +111,7 @@ export default function NovoJogo() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="NOVO JOGO" back={`/equipa/${slug}/jogos`} />
+      <Topbar hud="NOVO JOGO" back={`/time/${slug}/jogos`} />
       <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
         {fase === 'form' ? (
           <>

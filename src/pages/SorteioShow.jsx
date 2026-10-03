@@ -1,4 +1,4 @@
-// Futty v2.0 — A PÁGINA DO SORTEIO (/equipa/:slug/jogo/:id/sorteio).
+// Futty v2.0 — A PÁGINA DO SORTEIO (/time/:slug/jogo/:id/sorteio).
 // SPEC-SORTEIO §13(d): esta página É a animação — chega-se pelo fluxo
 // (jogo → countdown → Ver sorteio). Cada visita reproduz a cerimónia completa,
 // replay ilimitado e EXACTO (a seed vive em times_resultado).
