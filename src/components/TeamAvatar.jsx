@@ -1,40 +1,9 @@
-// Futty v2.0 — Avatar da equipa: logo (se existir) ou iniciais sobre a cor de fundo.
-import { assetUrl } from '../lib/api';
-import { initials } from '../utils/teamColors';
-import { urlImagem } from '../utils/avatar';
+// Futty v2.0 — Avatar do time nos tamanhos de sempre (sm/md/lg). Rodada 29I, bloco 3: é o MESMO escudo do resto do app
+// (EscudoEquipa) — a "cor de fundo do avatar", que era um segundo controle de cor sem explicação (achado 102), saiu.
+import EscudoEquipa from './EscudoEquipa';
 
 const SIZES = { sm: 32, md: 48, lg: 64 };
 
 export default function TeamAvatar({ team = {}, size = 'md' }) {
-  const px = SIZES[size] || SIZES.md;
-  const bg = team.cor_fundo || '#1a1a2e';
-  const raw = team.logo_url || null;
-  // URLs de preview (blob:/data:) passam intactas; relativas resolvem via assetUrl.
-  // Velocidade 6B: o logo nunca passa dos 64 px CSS — 128 chega e sobra em 2x.
-  const src = raw ? (raw.startsWith('blob:') || raw.startsWith('data:') ? raw : urlImagem(assetUrl(raw), 128)) : null;
-
-  return (
-    <div
-      style={{
-        width: px,
-        height: px,
-        borderRadius: '50%',
-        flexShrink: 0,
-        overflow: 'hidden',
-        display: 'grid',
-        placeItems: 'center',
-        background: bg,
-        color: '#fff',
-        fontWeight: 800,
-        fontSize: Math.round(px * 0.4),
-      }}
-    >
-      {src ? (
-        // minWidth/minHeight 0: item de grid — ver a nota em .pavatar img (app.css).
-        <img src={src} alt="" decoding="async" style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover' }} />
-      ) : (
-        initials(team.nome) || '?'
-      )}
-    </div>
-  );
+  return <EscudoEquipa team={team} size={SIZES[size] || SIZES.md} />;
 }

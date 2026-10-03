@@ -1,12 +1,18 @@
-// Futty v2.0 — Detalhe da equipa + membros + convite (hub no cânone, transversal lote 1).
-// Lógica intacta; render no material da casa: vidro + hud-corners + chips 45° + Rajdhani
-// + .cta-gold. Posição do jogador em DESTAQUE (regra: o próprio decide; GR no roxo).
+// Futty v2.0 — A página do time (hub no cânone, transversal lote 1): vidro + hud-corners + chips 45° + Rajdhani + .cta-gold. Posição
+// do jogador em DESTAQUE (regra: o próprio decide; GR no roxo).
+//
+// Rodada 29I, bloco 3 (dono): ADMIN NÃO É UM LUGAR. A página ganha abas no estilo da Figurinha — JOGOS · ELENCO · AJUSTES — e o que
+// era o painel /admin/<slug> mora nelas: Jogos (+ resultados + campeonato), Elenco (+ convites) e Ajustes (só o admin vê, com o selo
+// ADMIN). A aba fica no endereço (?aba=elenco), trocar de aba não empilha histórico, e "Voltar" volta para onde a pessoa estava.
+// As partes do admin vêm de pages/AdminPanel.jsx em lazy: quem não é admin não baixa nada delas.
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { usePerfil } from '../context/PerfilContext';
-import { useTeam } from '../hooks/useTeam';
+import { useTeam, useTeamGames } from '../hooks/useTeam';
+import { abaDoTime } from '../lib/rotasAntigas';
+import { lazyComRetry } from '../utils/lazyComRetry';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
@@ -19,7 +25,7 @@ import SilhuetaJogador from '../components/SilhuetaJogador';
 import EscudoEquipa from '../components/EscudoEquipa';
 import Toast from '../components/Toast';
 import Icon from '../components/Icon';
-import ModeracaoFila from '../components/ModeracaoFila';
+import ListaDeJogos from '../components/ListaDeJogos';
 import EscolhaLinhaGol, { TEXTO_APOIO_LINHA_GOL } from '../components/EscolhaLinhaGol';
 import '../styles/app.css';
 
@@ -27,6 +33,10 @@ import '../styles/app.css';
 // tocar "Ir para o time"; uma página, um botão; substituíram o modal de 3 passos e o tour do Início) e não têm motivo
 // para pesar no arranque.
 const BoasVindas = lazy(() => import('../components/BoasVindas'));
+// O que só o admin usa (29I, bloco 3): um chunk só, baixado quando a pessoa é admin do time.
+const JogosDoAdmin = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.JogosDoAdmin })));
+const ElencoDoAdmin = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.ElencoDoAdmin })));
+const AjustesDoTime = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.AjustesDoTime })));
 
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
@@ -68,11 +78,79 @@ function Badge45({ children, gold }) {
   );
 }
 
+// As abas, no estilo das da Figurinha (as mesmas medidas). Ajustes só para o admin, com o selo ADMIN.
+function AbasDoTime({ aba, ehAdmin, aoTrocar }) {
+  const abas = [['jogos', 'Jogos'], ['elenco', 'Elenco'], ...(ehAdmin ? [['ajustes', 'Ajustes']] : [])];
+  return (
+    <div role="tablist" aria-label="Seções do time" style={{ display: 'flex', gap: 6, marginTop: 14 }}>
+      {abas.map(([k, rotulo]) => {
+        const on = aba === k;
+        return (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            className="hud-corners-s"
+            data-aba={k}
+            aria-selected={on}
+            aria-pressed={on}
+            onClick={() => aoTrocar(k)}
+            style={{
+              flex: 1,
+              height: 36,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              border: on ? '1px solid var(--border-accent)' : '1px solid transparent',
+              background: on ? 'rgba(139,92,246,0.2)' : 'transparent',
+              color: on ? '#8b5cf6' : 'var(--label-color)',
+              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 700,
+              fontSize: 13,
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {rotulo}
+            {k === 'ajustes' ? (
+              <span data-selo-admin style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#f0c94a', border: '1px solid rgba(212,160,23,0.6)', background: 'rgba(212,160,23,0.10)', padding: '1px 5px', clipPath: CLIP_S }}>ADMIN</span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// A aba Jogos de quem não é admin: a lista do time (os próximos e os que já foram), cada um levando ao jogo.
+function JogosDoTime({ slug }) {
+  const { team, games, loading, error } = useTeamGames(slug);
+  if (loading) return <LoadingFutty />;
+  if (error) return <div className="alert alert--error">{error}</div>;
+  return <ListaDeJogos slug={slug} team={team} games={games} />;
+}
+
 export default function Equipa() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { team, members, loading, error, reload } = useTeam(slug);
+  const ehAdmin = team?.role === 'admin';
+  const aba = abaDoTime(searchParams.get('aba'), ehAdmin);
+  // Trocar de aba troca o endereço SEM empilhar histórico: "Voltar" continua indo para onde a pessoa estava antes da página do time.
+  function trocarAba(k) {
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.set('aba', k);
+      p.delete('convidar');
+      return p;
+    }, { replace: true });
+  }
+  const [versaoConvites, setVersaoConvites] = useState(0); // o "Convidar" gerou um link → a lista de links ativos recarrega
   const { perfil: me } = usePerfil();
   const [confirmarSaida, setConfirmarSaida] = useState(false);
   const [saindo, setSaindo] = useState(false);
@@ -201,12 +279,21 @@ export default function Equipa() {
       const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
       // 29H (item 7): o link curto (/c/<código>) quando há código; o longo continua valendo.
       setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
+      setVersaoConvites((v) => v + 1);
     } catch (err) {
       setActionError(err.message);
     } finally {
       setGenerating(false);
     }
   }
+
+  const pediuConvite = searchParams.get('convidar') === '1';
+  useEffect(() => {
+    if (!pediuConvite || !team || inviteLink || generating) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot: o atalho "Convidar" do Início pede o link ao abrir
+    gerarConvite();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- corre 1x quando o time carrega com ?convidar=1
+  }, [pediuConvite, team]);
 
   async function copiar() {
     const ok = await copiarTexto(inviteLink);
@@ -216,7 +303,7 @@ export default function Equipa() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="TIME" back="/home" />
+      <Topbar hud="TIME" back="voltar" backFallback="/home" />
       <main className="app-main page-reveal">
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
@@ -263,85 +350,47 @@ export default function Equipa() {
               </div>
             ) : null}
 
-            {/* Acções principais */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-              <Link to={`/time/${slug}/jogos`} className="btn hud-corners-s cta-gold" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
-                <Icon name="bola" size={15} /> Jogos
-              </Link>
-              <Link to={`/time/${slug}/ranking`} className="btn btn--outline hud-corners-s" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
-                <Icon name="medalha" size={15} /> Ranking
-              </Link>
-            </div>
-            {team.role === 'admin' && (
-              <div style={{ marginTop: 8 }}>
-                <Link to={`/time/${slug}/jogo/novo`} className="btn btn--outline hud-corners-s" style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none' }}>
-                  + Criar jogo
-                </Link>
-              </div>
-            )}
+            <Link to={`/time/${slug}/ranking`} className="btn btn--outline hud-corners-s" style={{ marginTop: 12, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
+              <Icon name="medalha" size={15} /> Ranking
+            </Link>
 
-            {team.role === 'admin' && pedidos.length > 0 && (
-              <>
-                <SecLabel>Pedidos de entrada · {pedidos.length}</SecLabel>
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {pedidos.map((p) => (
-                    <div key={p.id} style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' }}>
-                      <FrameAvatar nome={p.nome_jogador || p.nome || 'Jogador'} avatarUrl={p.avatar_url} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14 }}>{p.nome_jogador || p.nome || 'Jogador'}</div>
-                        {p.mensagem && <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'normal' }}>{p.mensagem}</div>}
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <button type="button" className="btn btn--sm hud-corners-s cta-gold" disabled={busyPedido === p.id} onClick={() => decidirPedido(p.id, 'approved')} style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }}>
-                          Aprovar
-                        </button>
-                        <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ borderColor: 'rgba(248,113,113,0.45)', color: '#fda4af' }} disabled={busyPedido === p.id} onClick={() => decidirPedido(p.id, 'rejected')}>
-                          Rejeitar
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+            <AbasDoTime aba={aba} ehAdmin={ehAdmin} aoTrocar={trocarAba} />
 
-            {/* Tijolo 3 — moderação: só casos ambíguos (os óbvios a moderação automática já resolveu). */}
-            {team.role === 'admin' && (
-              <>
-                <SecLabel>Moderação</SecLabel>
-                <ModeracaoFila slug={slug} />
-              </>
-            )}
+            <div style={{ marginTop: 14 }} role="tabpanel" data-painel-aba={aba}>
+            {aba === 'jogos' ? (
+              ehAdmin ? (
+                <Suspense fallback={<LoadingFutty />}>
+                  <JogosDoAdmin slug={slug} team={team} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} navigate={navigate} />
+                </Suspense>
+              ) : (
+                <JogosDoTime slug={slug} />
+              )
+            ) : null}
 
-            <SecLabel>Membros · {members.length}</SecLabel>
-            <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>
-              {members.map((m, i) => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
-                  <FrameAvatar avatarUrl={m.avatar_url} userId={m.id} avatarGenerico={m.avatar_generico} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{nomeExibicao(m)}</div>
-                  </div>
-                  {m.joga === false ? <Badge45>ORGANIZA</Badge45> : null}
-                  {m.goleiro ? <Badge45 gold>GOL</Badge45> : null}
-                  <Badge45 gold={m.role === 'admin'}>{m.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45>
-                </div>
-              ))}
-              {members.length === 0 && <p className="muted" style={{ padding: '10px 2px' }}>Nenhum membro ainda.</p>}
-            </div>
+            {aba === 'ajustes' ? (
+              <Suspense fallback={<LoadingFutty />}>
+                <AjustesDoTime slug={slug} team={team} members={members} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} onMudou={reload} />
+              </Suspense>
+            ) : null}
 
-            <SecLabel>Convidar jogador</SecLabel>
-            <p className="texto-apoio" style={{ marginTop: 0, marginBottom: 10 }}>
-              Manda no grupo do seu time. O mesmo link serve para todo mundo, vale 30 dias e você pode revogar quando quiser.
-            </p>
+            {aba === 'elenco' ? (
+            <>
+            {/* O "Convidar" é a ação principal da aba (o dourado): abre o link do convite, curto, pronto para o grupo. */}
             <button
               type="button"
               className="btn hud-corners-s cta-gold"
+              data-convidar
               style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase' }}
               onClick={gerarConvite}
               disabled={generating}
             >
-              <Icon name="partilhar" size={15} /> {generating ? 'Gerando…' : 'Gerar link do convite'}
+              <Icon name="partilhar" size={15} /> {generating ? 'Gerando…' : 'Convidar'}
             </button>
+            {inviteLink ? null : (
+              <p className="texto-apoio" style={{ marginBottom: 0 }}>
+                Manda no grupo do seu time. O mesmo link serve para todo mundo, vale 30 dias e o admin pode revogar quando quiser.
+              </p>
+            )}
 
             {inviteLink && (
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginTop: 10 }}>
@@ -364,6 +413,57 @@ export default function Equipa() {
                   Mandar no WhatsApp
                 </a>
               </div>
+            )}
+
+            {ehAdmin && pedidos.length > 0 && (
+              <>
+                <SecLabel>Pedidos de entrada · {pedidos.length}</SecLabel>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {pedidos.map((p) => (
+                    <div key={p.id} style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' }}>
+                      <FrameAvatar nome={p.nome_jogador || p.nome || 'Jogador'} avatarUrl={p.avatar_url} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14 }}>{p.nome_jogador || p.nome || 'Jogador'}</div>
+                        {p.mensagem && <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'normal' }}>{p.mensagem}</div>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', color: '#f0c94a', borderColor: 'rgba(212,160,23,0.6)' }} disabled={busyPedido === p.id} onClick={() => decidirPedido(p.id, 'approved')}>
+                          Aprovar
+                        </button>
+                        <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ borderColor: 'rgba(248,113,113,0.45)', color: '#fda4af' }} disabled={busyPedido === p.id} onClick={() => decidirPedido(p.id, 'rejected')}>
+                          Rejeitar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <SecLabel>Elenco · {members.length}</SecLabel>
+            {ehAdmin ? (
+              <>
+                {/* Um toque no nome abre tudo o que o admin faz com aquele membro (o "⋯" saiu). */}
+                <p className="texto-apoio" style={{ marginTop: -4, marginBottom: 10 }}>Toque num nome para ver o que dá para fazer.</p>
+                <Suspense fallback={<LoadingFutty />}>
+                  <ElencoDoAdmin slug={slug} meId={meuId} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} versaoConvites={versaoConvites} />
+                </Suspense>
+              </>
+            ) : (
+            <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>
+              {members.map((m, i) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
+                  <FrameAvatar avatarUrl={m.avatar_url} userId={m.id} avatarGenerico={m.avatar_generico} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{nomeExibicao(m)}</div>
+                  </div>
+                  {m.joga === false ? <Badge45>ORGANIZA</Badge45> : null}
+                  {m.goleiro ? <Badge45 gold>GOL</Badge45> : null}
+                  <Badge45 gold={m.role === 'admin'}>{m.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45>
+                </div>
+              ))}
+              {members.length === 0 && <p className="muted" style={{ padding: '10px 2px' }}>Nenhum membro ainda.</p>}
+            </div>
             )}
 
             {/* SAIR DA EQUIPA — zona discreta no FIM (acção destrutiva não compete
@@ -389,6 +489,9 @@ export default function Equipa() {
                   Sair deste time
                 </button>
               )}
+            </div>
+            </>
+            ) : null}
             </div>
           </>
         )}

@@ -54,7 +54,7 @@ const PLANOS_PARTICULAS = [
 ];
 
 // "Minhas compras" — os nomes que a pessoa conhece (o motor guarda ids).
-const NOME_PRODUTO = { minha: 'Minha Figurinha', pacote: 'Figurinhas do time', manto: 'Manto próprio' };
+const NOME_PRODUTO = { minha: 'Minha Figurinha', pacote: 'Pacote do time', manto: 'Manto próprio' }; // item 65: o produto é o "Pacote do time"
 const NOME_LOJA = { app_store: 'App Store', play_store: 'Google Play', promo: 'Promoção', gabinete: 'Cortesia do Futty' };
 const NOME_ESTADO = { creditada: 'Confirmada', reembolsada: 'Reembolsada' };
 // O realce de chegada (?destaque=) diz porque este cartão: do uniforme trancado e do "Comprar mais"

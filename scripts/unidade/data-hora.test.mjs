@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   TZ_PADRAO, fusoOuPadrao, formatarData, formatarHora, formatarDataHora, diaDaSemana, diaDoMes, mesCurto, diaDeCalendario, ehHoje,
-  instanteNoCampo, camposNoCampo,
+  instanteNoCampo, camposNoCampo, rabichoDoFuso, cidadeDoRabicho,
 } from '../../src/utils/dataHora.js';
 import { dataCurta } from '../../src/utils/convite.js';
 
@@ -25,7 +25,7 @@ test('o jogo de 2026-10-08T23:00Z com fuso America/Sao_Paulo é "quinta" e "20:0
   assert.equal(diaDaSemana(JOGO, SP), 'quinta');
   assert.equal(formatarHora(JOGO, SP), '20:00');
   assert.equal(formatarData(JOGO, SP), 'qui., 8 de out.');
-  assert.equal(formatarDataHora(JOGO, SP), 'qui., 8 de out. · 20:00');
+  assert.equal(formatarDataHora(JOGO, SP, { olhando: SP }), 'qui., 8 de out. · 20:00');
   assert.equal(formatarData(JOGO, SP, 'numerica'), '08/10/2026');
   assert.equal(formatarData(JOGO, SP, 'diaMes'), '08/10');
   assert.equal(diaDoMes(JOGO, SP), 8);
@@ -35,7 +35,25 @@ test('o jogo de 2026-10-08T23:00Z com fuso America/Sao_Paulo é "quinta" e "20:0
 test('o mesmo instante no relógio de Lisboa é sexta 00:00 — era o que o app mostrava para o jogador de Lisboa', () => {
   assert.equal(diaDaSemana(JOGO, 'Europe/Lisbon'), 'sexta');
   assert.equal(formatarHora(JOGO, 'Europe/Lisbon'), '00:00');
-  assert.equal(formatarDataHora(JOGO, 'Europe/Lisbon'), 'sex., 9 de out. · 00:00');
+  assert.equal(formatarDataHora(JOGO, 'Europe/Lisbon', { olhando: 'Europe/Lisbon' }), 'sex., 9 de out. · 00:00');
+});
+
+test('o rabicho (dono, 3-out): só quem está noutro relógio vê "· horário de <cidade do time>"; no mesmo relógio, nada', () => {
+  assert.equal(formatarDataHora(JOGO, SP, { olhando: SP }), 'qui., 8 de out. · 20:00');
+  assert.equal(formatarDataHora(JOGO, SP, { olhando: 'Europe/Lisbon' }), 'qui., 8 de out. · 20:00 · horário de São Paulo');
+  assert.equal(formatarDataHora(JOGO, SP, { olhando: 'Europe/Lisbon', cidade: 'Campinas - SP' }), 'qui., 8 de out. · 20:00 · horário de Campinas');
+  assert.equal(formatarDataHora(JOGO, 'Europe/Lisbon', { olhando: SP, cidade: 'Lisboa' }), 'sex., 9 de out. · 00:00 · horário de Lisboa');
+  // Mesmo relógio com outro nome (Salvador e São Paulo, UTC-3 os dois): sem rabicho.
+  assert.equal(rabichoDoFuso(JOGO, SP, { olhando: 'America/Bahia' }), '');
+  assert.equal(rabichoDoFuso(JOGO, 'America/Manaus', { olhando: SP }), 'horário de Manaus');
+  // Nunca o identificador IANA na tela.
+  assert.equal(cidadeDoRabicho('America/Sao_Paulo'), 'São Paulo');
+  assert.equal(cidadeDoRabicho('Atlantic/Azores'), 'Açores');
+  assert.equal(cidadeDoRabicho('Europe/Madrid'), 'Madrid');
+  assert.equal(cidadeDoRabicho(SP, 'Brasília, DF'), 'Brasília');
+  for (const r of [rabichoDoFuso(JOGO, SP, { olhando: 'Asia/Tokyo' }), rabichoDoFuso(JOGO, 'Europe/Lisbon', { olhando: SP })]) {
+    assert.doesNotMatch(r, /[/_]|fuso|Brasília/i, r);
+  }
 });
 
 test('os outros dois jogos medidos na varredura (terça 21h e sábado 09h) também ficam no campo', () => {
@@ -110,7 +128,7 @@ test('o resultado é IDÊNTICO com o processo em Lisboa, São Paulo, UTC, Auckla
     const SP = 'America/Sao_Paulo';
     const J = '2026-10-08T23:00:00Z';
     console.log(JSON.stringify([
-      diaDaSemana(J, SP), formatarHora(J, SP), formatarData(J, SP), formatarDataHora(J, SP),
+      diaDaSemana(J, SP), formatarHora(J, SP), formatarData(J, SP), formatarDataHora(J, SP, { olhando: SP }),
       diaDaSemana(J, 'Europe/Lisbon'), formatarHora(J, 'Europe/Lisbon'),
       ehHoje('2026-10-09T02:30:00Z', SP, new Date('2026-10-08T15:00:00Z')),
       instanteNoCampo('2026-10-08', '20:00', SP), camposNoCampo(J, SP), formatarData(J, undefined, 'comAno'),

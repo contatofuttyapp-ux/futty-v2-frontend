@@ -1,6 +1,6 @@
 // Futty v2.0 — Ranking (modelo definitivo): voto por jogador (meias estrelas),
 // nota exibida 6-10, score por categoria. Sem jogo de votação nem períodos.
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -23,6 +23,7 @@ import EstadoSemTime from '../components/EstadoSemTime';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import EscudoEquipa from '../components/EscudoEquipa';
+import { lazyComRetry } from '../utils/lazyComRetry';
 import '../styles/app.css';
 
 // Diagnóstico (Rodada 8A): a 1ª imagem da tela que terminou de carregar.
@@ -183,6 +184,10 @@ function MeiaEstrelas({ value = 0, onChange }) {
   );
 }
 
+// Rodada 29I, bloco 3: as estatísticas do time (eram a aba Estatísticas do painel do admin) moram no Ranking do time, só para o admin, e
+// só são baixadas quando ele abre (o mesmo chunk das abas do admin na página do time).
+const EstatisticasDoTime = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.EstatisticasDoTime })));
+
 export default function Ranking() {
   const { slug } = useParams();
   // Rota /ranking (sem :slug): é para onde a BottomNav manda quem ainda não
@@ -215,6 +220,7 @@ export default function Ranking() {
   const [voteBusy, setVoteBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const [bannerFechado, setBannerFechado] = useState(false);
+  const [verEstatisticas, setVerEstatisticas] = useState(false);
   const celebrouTop3 = useRef(false);
   const festaRef = useRef(null);
   useEffect(() => () => clearTimeout(festaRef.current), []);
@@ -258,7 +264,7 @@ export default function Ranking() {
 
   return (
     <div className="app-shell page-reveal">
-      <Topbar hud="RANKING" back={semTime ? undefined : `/time/${slug}`} />
+      <Topbar hud="RANKING" back={semTime ? undefined : 'voltar'} backFallback={`/time/${slug}`} />
       <main className="app-main">
         {semTime ? (
           <EstadoSemTime icone="trofeu" mensagem="O ranking nasce com o seu time. Crie o seu ou entre em um." />
@@ -354,6 +360,21 @@ export default function Ranking() {
               </ListaRanking>
               </>
             )}
+
+            {equipaAtual?.role === 'admin' ? (
+              <div style={{ marginTop: 18 }} data-estatisticas-do-time>
+                <button type="button" className="btn btn--outline btn--sm hud-corners-s" style={{ width: '100%' }} aria-expanded={verEstatisticas} onClick={() => setVerEstatisticas((v) => !v)}>
+                  {verEstatisticas ? 'Esconder estatísticas do time' : 'Ver estatísticas do time'}
+                </button>
+                {verEstatisticas ? (
+                  <div style={{ marginTop: 12 }}>
+                    <Suspense fallback={<LoadingFutty />}>
+                      <EstatisticasDoTime slug={slug} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} />
+                    </Suspense>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </>
         )}
       </main>

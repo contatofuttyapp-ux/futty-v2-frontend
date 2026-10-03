@@ -9,6 +9,7 @@ import { usePerfil } from '../context/PerfilContext';
 // Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
 import { useInicio } from '../context/InicioContext';
+import CardSeuTime from '../components/CardSeuTime';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { celebrarTop3 } from '../hooks/useConfetti';
@@ -1015,6 +1016,9 @@ export default function Inicio() {
     <div className="app-shell inicio-reveal">
       <Topbar hud="INÍCIO" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10 }}>
+        {/* Rodada 29I, bloco 3: o card "Seu time" (só para quem administra algum time), no topo — era o Dashboard do painel do admin. */}
+        <CardSeuTime seuTime={dadosInicio?.seu_time || []} teams={teams || []} games={games || []} />
+
         {/* Banner discreto para ativar notificações push */}
         {pushEstado === 'suportado' && !pushBannerFechado ? (
           <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>

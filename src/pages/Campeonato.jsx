@@ -42,7 +42,7 @@ function Hub({ slug }) {
 
   return (
     <div className="app-shell">
-      <Topbar hud="CAMPEONATO" back={`/time/${slug}`} />
+      <Topbar hud="CAMPEONATO" back="voltar" backFallback={`/time/${slug}?aba=jogos`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <h1 className="camp-title" style={{ fontSize: 22 }}>Campeonatos</h1>
         <p className="muted" style={{ fontSize: 12, margin: '0 0 14px' }}>Torneios internos do time: o ranking fica intocado.</p>
@@ -131,7 +131,7 @@ function Wizard({ slug, onCancel, onCriado }) {
 
   return (
     <div className="app-shell">
-      <Topbar hud="CRIAR CAMPEONATO" back={`/time/${slug}`} />
+      <Topbar hud="CRIAR CAMPEONATO" back="voltar" backFallback={`/time/${slug}?aba=jogos`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <div className="camp-steps">{dots}</div>
 

@@ -5,6 +5,10 @@
 // (PATCH /api/equipas/:slug/membros/posicao, que já existia): `aoTrocar(true)` = no gol, `aoTrocar(false)` = na linha.
 export const TEXTO_APOIO_LINHA_GOL = 'Vale para os sorteios deste time. Dá para mudar em cada jogo.';
 
+// Item 69 (Rodada 29, no bloco 3 da 29I): "admin" e "posição em campo" são coisas separadas — gente achava que virar admin mudava
+// onde jogava, ou que o goleiro tinha de ser o admin.
+export const TEXTO_ADMIN_E_POSICAO = 'Admin é quem organiza o time. Não tem nada a ver com a posição em campo: linha ou gol, cada um escolhe no próprio card.';
+
 // Rodada 29B (E): o papel de quem administra o time. "Só organizo" administra tudo (jogos, sorteio, resultados, Resenha)
 // mas fica fora da lista de presença, do sorteio, do ranking e do pacote de figurinhas. Mora aqui (e não num arquivo novo)
 // porque o Criar time e o painel do time o usam, e um módulo compartilhado a mais pesaria no arranque do app.

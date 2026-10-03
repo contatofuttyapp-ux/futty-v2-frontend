@@ -17,6 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HOST_DO_SITE, ORIGEM_DO_SITE } from '../../src/lib/linkDoSite.js';
 import { linkDoConvite } from '../../src/utils/convite.js';
+import { linkDoSorteio } from '../../src/utils/linkDoSorteio.js';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -29,13 +30,21 @@ const PERMITIDOS = new Set([
 
 // Os seis lugares do achado 87, com o link que cada um monta.
 const SEIS_LUGARES = [
-  ['src/pages/SorteioShow.jsx', /ORIGEM_DO_SITE\}\/p\/\$\{slug\}\/\$\{id\}/, 'link do sorteio'],
-  ['src/pages/Jogo.jsx', /ORIGEM_DO_SITE\}\/p\/\$\{slug\}\/\$\{id\}/, 'link público do jogo'],
+  // 29I, bloco 3 (item 74): o sorteio sai pelo link curto /s/<código> quando há código (utils/linkDoSorteio.js), o longo quando não há.
+  ['src/pages/SorteioShow.jsx', /linkDoSorteio\(\{ origem: ORIGEM_DO_SITE/, 'link do sorteio'],
+  ['src/pages/Jogo.jsx', /linkDoSorteio\(\{ origem: ORIGEM_DO_SITE/, 'link público do jogo'],
   ['src/pages/AdminPanel.jsx', /linkDoConvite\(\{ origem: ORIGEM_DO_SITE/, 'convite (admin)'],
   ['src/pages/Equipa.jsx', /linkDoConvite\(\{ origem: ORIGEM_DO_SITE/, 'convite'],
   ['src/pages/CriarEquipa.jsx', /linkDoConvite\(\{ origem: ORIGEM_DO_SITE/, 'convite ao criar o time'],
   ['src/components/CampeonatoVistas.jsx', /ORIGEM_DO_SITE\}\/p\/campeonato\//, 'link do campeonato'],
 ];
+
+test('o link do sorteio (item 74): curto /s/<código> quando o motor deu código; o longo /p/<slug>/<id> quando não', () => {
+  assert.equal(linkDoSorteio({ origem: ORIGEM_DO_SITE, slug: 'missa', gameId: 'g-1', codigo: 'k7m2p9qx' }), 'https://futtyapp.com.br/s/k7m2p9qx');
+  assert.equal(linkDoSorteio({ origem: ORIGEM_DO_SITE, slug: 'missa', gameId: 'g-1', codigo: null }), 'https://futtyapp.com.br/p/missa/g-1');
+  const app = ler('src/App.jsx');
+  assert.match(app, /<Route path="\/s\/:codigo" element=\{<SorteioCurto \/>\} \/>/, 'a rota /s/<código> existe');
+});
 
 test('a origem dos links é o site de verdade: https + futtyapp.com.br', () => {
   assert.equal(HOST_DO_SITE, 'futtyapp.com.br');

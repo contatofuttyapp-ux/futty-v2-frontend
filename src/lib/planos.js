@@ -46,7 +46,8 @@ export const MINHA_GERACOES = 10;
 const PRODUTOS_LOJA = [
   {
     id: 'pacote',
-    nome: 'Figurinhas do time',
+    // Item 65 (Rodada 29): o cartão chama "Pacote do time" — a seção em volta já se chama "Figurinhas do time" (não repetir o título).
+    nome: 'Pacote do time',
     resumo: `${PACOTE_GERACOES_POR_JOGADOR} gerações por jogador, até ${PACOTE_JOGADORES}.`,
     features: [
       `Até ${PACOTE_JOGADORES} jogadores`,
@@ -89,7 +90,8 @@ const PRODUTOS_LOJA = [
 const PRODUTOS_APP = [
   {
     id: 'pacote',
-    nome: 'Figurinhas do time',
+    // Item 65 (Rodada 29): o cartão chama "Pacote do time" — a seção em volta já se chama "Figurinhas do time" (não repetir o título).
+    nome: 'Pacote do time',
     resumo: 'O dono do time ativa para todo mundo.',
     botao: 'Pedir ativação',
     botaoBloco: 'Pedir ativação para o meu time',

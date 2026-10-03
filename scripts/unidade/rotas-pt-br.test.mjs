@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { caminhoNovoDeEquipa, abaDoAdmin } from '../../src/lib/rotasAntigas.js';
+import { caminhoNovoDeEquipa, abaDoAdmin, caminhoDoAdminAntigo, abaDoTime } from '../../src/lib/rotasAntigas.js';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -78,11 +78,29 @@ test('as rotas do app são as novas: /time/:slug…, /criar-time (e as antigas r
   assert.match(app, /caminhoNovoDeEquipa\(pathname\)\}\$\{search\}\$\{hash\}/, 'o redirecionamento leva a query e o #');
 });
 
-test('o painel do admin usa ?tab=time (e aceita o nome antigo)', () => {
+test('29I, bloco 3: o painel /admin/<slug>?tab=… virou abas da página do time — o link antigo leva à casa nova da seção', () => {
+  assert.equal(caminhoDoAdminAntigo('missa', null), '/time/missa');
+  assert.equal(caminhoDoAdminAntigo('missa', 'dashboard'), '/time/missa');
+  assert.equal(caminhoDoAdminAntigo('missa', 'time'), '/time/missa?aba=ajustes');
+  assert.equal(caminhoDoAdminAntigo('missa', 'equipa'), '/time/missa?aba=ajustes', 'o nome mais antigo também');
+  assert.equal(caminhoDoAdminAntigo('missa', 'comunicacao'), '/time/missa?aba=ajustes');
+  assert.equal(caminhoDoAdminAntigo('missa', 'denuncias'), '/time/missa?aba=ajustes#denuncias');
+  assert.equal(caminhoDoAdminAntigo('missa', 'membros'), '/time/missa?aba=elenco');
+  assert.equal(caminhoDoAdminAntigo('missa', 'convites'), '/time/missa?aba=elenco');
+  for (const tab of ['jogos', 'resultados', 'campeonato']) assert.equal(caminhoDoAdminAntigo('missa', tab), '/time/missa?aba=jogos', tab);
+  assert.equal(caminhoDoAdminAntigo('missa', 'estatisticas'), '/time/missa/ranking');
+  assert.equal(caminhoDoAdminAntigo('missa', 'inventada'), '/time/missa');
   const painel = ler('src/pages/AdminPanel.jsx');
-  assert.match(painel, /\{ k: 'time', icon: Settings, label: 'Time' \}/);
-  assert.match(painel, /tab === 'time'/);
-  assert.match(painel, /abaDoAdmin\(searchParams\.get\('tab'\)\)/);
+  assert.match(painel, /<Navigate to=\{caminhoDoAdminAntigo\(slug, searchParams\.get\('tab'\)\)\} replace \/>/);
+  assert.doesNotMatch(painel, /admin-sidebar|MenuItems|☰/, 'a barra lateral e o menu do painel saíram');
+});
+
+test('a aba da página do time: Jogos por padrão; Ajustes só para o admin', () => {
+  assert.equal(abaDoTime(null, false), 'jogos');
+  assert.equal(abaDoTime('elenco', false), 'elenco');
+  assert.equal(abaDoTime('ajustes', false), 'jogos', 'quem não é admin não tem Ajustes');
+  assert.equal(abaDoTime('ajustes', true), 'ajustes');
+  assert.equal(abaDoTime('qualquer', true), 'jogos');
 });
 
 test('o link universal: /time/ abre o app (iOS AASA, Android intent-filter, parser) e o /equipa/ antigo também', () => {

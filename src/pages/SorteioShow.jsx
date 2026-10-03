@@ -10,6 +10,7 @@ import { useApi } from '../hooks/useApi';
 import { apiFetch } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { formatarData } from '../utils/dataHora';
+import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
 import AdCard from '../components/AdCard';
@@ -35,6 +36,15 @@ export default function SorteioShow() {
   const { data, loading } = useApi(`/api/games/${id}`);
   const [toast, setToast] = useState(null);
   const [termoAberto, setTermoAberto] = useState(false);
+  // Item 74 (29I, bloco 3): o link curto do sorteio (/s/<código>), pedido assim que a página abre — a cópia sai na hora do toque.
+  const [codigoCurto, setCodigoCurto] = useState(null);
+  useEffect(() => {
+    let ativo = true;
+    codigoDoSorteio(id).then((c) => ativo && setCodigoCurto(c));
+    return () => {
+      ativo = false;
+    };
+  }, [id]);
   // O anúncio NÃO pode ir e voltar: o AdCard conta a impressão ao montar, e a
   // alavanca (que repete a cerimónia) montava-o outra vez a cada corrida —
   // cinco repetições, seis impressões pela mesma vista. Por isso este estado só
@@ -65,7 +75,7 @@ export default function SorteioShow() {
   }
 
   async function copiarLink() {
-    const url = `${ORIGEM_DO_SITE}/p/${slug}/${id}`;
+    const url = linkDoSorteio({ origem: ORIGEM_DO_SITE, slug, gameId: id, codigo: codigoCurto });
     try {
       await navigator.clipboard.writeText(url);
       setToast({ tipo: 'success', mensagem: 'Link do sorteio copiado.' });

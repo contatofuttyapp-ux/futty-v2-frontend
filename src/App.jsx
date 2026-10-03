@@ -58,6 +58,7 @@ const Figurinha = lazyComRetry(importarFigurinha);
 const MeuPerfil = lazyComRetry(importarMeuPerfil);
 const Planos = lazyComRetry(() => import('./pages/Planos'));
 const SorteioPublico = lazyComRetry(() => import('./pages/SorteioPublico'));
+const SorteioCurto = lazyComRetry(() => import('./pages/SorteioCurto'));
 const CampeonatoPublico = lazyComRetry(() => import('./pages/CampeonatoPublico'));
 const Explorar = lazyComRetry(() => import('./pages/Explorar'));
 const LandingPage = lazyComRetry(() => import('./pages/LandingPage'));
@@ -174,6 +175,8 @@ function AnimatedRoutes() {
           {/* Vista pública do sorteio (sem login) */}
           <Route path="/p/campeonato/:slug/:id" element={<CampeonatoPublico />} />
           <Route path="/p/:slug/:gameId" element={<SorteioPublico />} />
+          {/* 29I, bloco 3 (item 74): o link curto do sorteio, futtyapp.com.br/s/<código> — leva à vista pública de sempre. */}
+          <Route path="/s/:codigo" element={<SorteioCurto />} />
           {/* Rodada 29B (D.3): as rotas com login vêm da tabela ROTAS_PRIVADAS (um <Route> + AuthGuard
               repetido 25 vezes custava ~1,4 KB do arranque). */}
           {ROTAS_PRIVADAS.map(([path, Tela, soSuper]) => (

@@ -10,10 +10,11 @@ export const STATUS_LABELS = {
 
 /**
  * Data + hora do jogo (ex.: "qua., 18 de jun. · 22:00") no relógio do CAMPO: `fuso` é o do time (Rodada 29I, achado 83).
- * Uma forma só em toda tela — a de src/utils/dataHora.js.
+ * Uma forma só em toda tela — a de src/utils/dataHora.js, com o rabicho "· horário de <cidade>" para quem está noutro relógio
+ * (`opcoes.cidade`: a do time).
  */
-export function formatDateTime(iso, fuso) {
-  return formatarDataHora(iso, fuso);
+export function formatDateTime(iso, fuso, opcoes) {
+  return formatarDataHora(iso, fuso, opcoes);
 }
 
 /** Dia e mês curtos para o cartão de jogo, no relógio do campo (`fuso` do time). */

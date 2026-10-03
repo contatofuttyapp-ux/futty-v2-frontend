@@ -26,6 +26,8 @@ import { nomeIdioma, MOSTRAR_IDIOMA } from '../lib/i18n';
 import PlayerAvatar from '../components/PlayerAvatar';
 import Topbar from '../components/Topbar';
 import EscolhaLinhaGol from '../components/EscolhaLinhaGol';
+import EscudoEquipa from '../components/EscudoEquipa';
+import PreferenciasNotificacoes from '../components/PreferenciasNotificacoes';
 import Icon from '../components/Icon';
 import Toast from '../components/Toast';
 import LoadingFutty from '../components/LoadingFutty';
@@ -86,8 +88,11 @@ function LinhaMeuTime({ time, meuId, semBorda, aoErro }) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderBottom: semBorda ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
-      <Link to={`/time/${time.slug}`} style={{ minWidth: 0, flex: 1, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>
-        {time.nome}
+      {/* 29I, bloco 3: cada time leva à página dele (o admin acha lá a aba Ajustes). */}
+      <Link to={`/time/${time.slug}`} data-meu-time={time.slug} style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', textDecoration: 'none' }}>
+        <EscudoEquipa team={time} size={20} />
+        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{time.nome}</span>
+        {time.role === 'admin' ? <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#f0c94a', border: '1px solid rgba(212,160,23,0.6)', padding: '1px 5px' }}>ADMIN</span> : null}
       </Link>
       {eu ? (
         <EscolhaLinhaGol goleiro={!!eu.goleiro} ocupado={ocupado} aoTrocar={trocar} />
@@ -106,14 +111,8 @@ export default function MeuPerfil() {
   // 1x por sessão, em vez desta página o pedir 2x por conta própria (como fazia).
   const { perfil: perfilCtx, carregando: perfilCarregando, erro: erroCtx, recarregar: recarregarPerfil } = usePerfil();
   const { estado: pushEstado, subscrever: pushSubscrever, dessubscrever: pushDessubscrever } = usePushNotifications();
-  const adminTeams = teams.filter((t) => t.role === 'admin');
-  const [adminPicker, setAdminPicker] = useState(false);
-
-  // Vai para o painel de admin (ou abre selector se for admin de várias equipas).
-  function irParaAdmin() {
-    if (adminTeams.length === 1) navigate(`/admin/${adminTeams[0].slug}`);
-    else if (adminTeams.length > 1) setAdminPicker(true);
-  }
+  // Rodada 29I, bloco 3: o "Painel de administração" saiu daqui — admin não é um lugar. Cada time de "Meus times" leva à página do time,
+  // onde o admin tem a aba Ajustes (e o resto do que era o painel, nas abas Jogos e Elenco).
 
   // Rascunho local { user, stats }: espelha o contexto, mas a edição dos campos
   // (setField/patchMe) precisa de mutação optimista própria — não faz sentido
@@ -539,13 +538,14 @@ export default function MeuPerfil() {
         {/* 6. SECÇÃO CONTA — no fim: é a zona de sessão, e o "Terminar sessão" é a
             última coisa que se quer encontrar por acidente. As notificações push são
             a primeira LINHA deste card (não secção própria), por isso vêm com ele. */}
-        <SecLabel>Conta</SecLabel>
+        {/* SEÇÃO NOTIFICAÇÕES (29I, bloco 3): neste aparelho (ligar/desligar o push) e, por tipo, o que você quer receber. */}
+        <SecLabel>Notificações</SecLabel>
         <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
           {pushEstado !== 'nao_suportado' ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>
                 <Icon name="sino" size={20} color="#d4a017" />
-                Notificações push
+                Notificações neste celular
               </span>
               <input
                 type="checkbox"
@@ -553,9 +553,15 @@ export default function MeuPerfil() {
                 disabled={pushEstado === 'negado'}
                 onChange={(e) => (e.target.checked ? pushSubscrever() : pushDessubscrever())}
                 style={{ width: 20, height: 20, accentColor: '#8b5cf6' }}
+                aria-label="Notificações neste celular"
               />
             </div>
           ) : null}
+          <PreferenciasNotificacoes aoErro={(m) => showToast(m, 'error')} />
+        </div>
+
+        <SecLabel>Conta</SecLabel>
+        <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
           <ContaRow onClick={() => navigate('/alterar-password')}>
             <Icon name="cadeado" size={20} color="#d4a017" />
             Alterar senha
@@ -564,12 +570,6 @@ export default function MeuPerfil() {
             <Icon name="bandeira" size={20} color="#d4a017" />
             Relatar um problema
           </ContaRow>
-          {adminTeams.length > 0 ? (
-            <ContaRow onClick={irParaAdmin} cor="#8b5cf6">
-              <Icon name="definicoes" size={20} color="#d4a017" />
-              Painel de administração
-            </ContaRow>
-          ) : null}
           {/* RODADA 28 — o Diagnóstico saiu daqui: o número de todo mundo vem da
               telemetria anônima; a tela ficou para o super-admin, dentro do Gabinete. */}
           {souSuperAdmin ? (
@@ -617,37 +617,6 @@ export default function MeuPerfil() {
                 Sair da conta
               </button>
               <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} onClick={() => setConfirmSignOut(false)}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      ) : null}
-
-      {/* Selector de equipa (admin de várias) — portal pela mesma razão do de cima. */}
-      {adminPicker ? createPortal(
-        <div className="modal-overlay" role="presentation" onClick={() => setAdminPicker(false)}>
-          <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-card__inner" style={{ textAlign: 'left' }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, textAlign: 'center' }}>Escolha o time</h2>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {adminTeams.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className="btn btn--ghost"
-                    style={{ width: '100%', justifyContent: 'flex-start' }}
-                    onClick={() => {
-                      setAdminPicker(false);
-                      navigate(`/admin/${t.slug}`);
-                    }}
-                  >
-                    {t.nome}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%', marginTop: 10 }} onClick={() => setAdminPicker(false)}>
                 Cancelar
               </button>
             </div>

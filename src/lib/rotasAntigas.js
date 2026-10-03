@@ -12,3 +12,32 @@ export function abaDoAdmin(parametro) {
   const aba = parametro || 'dashboard';
   return aba === 'equipa' ? 'time' : aba;
 }
+
+// ─── Rodada 29I, bloco 3: "admin não é um lugar" ───────────────────────────────────────────────────────────────────────
+// O painel /admin/<slug>?tab=… acabou: cada seção mudou para uma aba da página do time (/time/<slug>?aba=jogos|elenco|ajustes) ou
+// para o Ranking. O endereço antigo continua valendo e leva para a casa nova da mesma seção.
+export const ABAS_DO_TIME = ['jogos', 'elenco', 'ajustes'];
+const CASA_NOVA = {
+  dashboard: '', // virou o card "Seu time" do Início; a página do time é o lugar natural de quem chega pelo link
+  time: '?aba=ajustes',
+  comunicacao: '?aba=ajustes',
+  denuncias: '?aba=ajustes#denuncias',
+  membros: '?aba=elenco',
+  convites: '?aba=elenco',
+  jogos: '?aba=jogos',
+  resultados: '?aba=jogos',
+  campeonato: '?aba=jogos',
+  estatisticas: '/ranking',
+};
+
+/** Para onde vai /admin/<slug>?tab=<tab>: /admin/missa?tab=membros → /time/missa?aba=elenco. Aba desconhecida: a página do time. */
+export function caminhoDoAdminAntigo(slug, tab) {
+  const base = `/time/${slug}`;
+  return base + (CASA_NOVA[abaDoAdmin(tab)] ?? '');
+}
+
+/** A aba da página do time a partir de ?aba=: Ajustes só existe para o admin; sem aba (ou aba que a pessoa não tem), Jogos. */
+export function abaDoTime(parametro, ehAdmin) {
+  const aba = ABAS_DO_TIME.includes(parametro) ? parametro : 'jogos';
+  return aba === 'ajustes' && !ehAdmin ? 'jogos' : aba;
+}

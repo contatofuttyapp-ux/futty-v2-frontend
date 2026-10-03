@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useTeam } from '../hooks/useTeam';
-import { diaDeCalendario, instanteNoCampo } from '../utils/dataHora';
+import { diaDeCalendario, instanteNoCampo, rabichoDoFuso } from '../utils/dataHora';
 import Topbar from '../components/Topbar';
 import NumberStepper from '../components/NumberStepper';
 import ComporTimes from '../components/ComporTimes';
@@ -29,7 +29,10 @@ export default function NovoJogo() {
   const [data, setData] = useState('');
   const [hora, setHora] = useState('');
   const [local, setLocal] = useState('');
-  const [porTime, setPorTime] = useState(5);
+  // Item 68 (Rodada 29): jogadores por time é UM padrão do time (Ajustes) — o jogo já nasce com ele, dobrado em "Padrão do time: 5 ·
+  // mudar só neste jogo". `porTime` null = o padrão (o motor usa o do time); com número, vale só para este jogo.
+  const [porTime, setPorTime] = useState(null);
+  const padraoDoTime = team?.jogadores_por_time || 5;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -63,7 +66,7 @@ export default function NovoJogo() {
     e.preventDefault();
     if (!data) { setError('Informe a data do jogo.'); return; }
     if (modo === 'sortear' && !hora) { setError('Informe a hora do jogo.'); return; }
-    if (modo === 'sortear' && (!porTime || Number(porTime) < 2)) { setError('Informe quantos jogadores por time (mínimo 2).'); return; }
+    if (modo === 'sortear' && porTime != null && (!porTime || Number(porTime) < 2)) { setError('Informe quantos jogadores por time (mínimo 2).'); return; }
     setError('');
     setLoading(true);
     try {
@@ -77,12 +80,13 @@ export default function NovoJogo() {
           team_slug: slug,
           data: iso,
           local: local.trim() || null,
-          jogadores_por_time: Number(porTime) || 5,
+          ...(porTime != null ? { jogadores_por_time: Number(porTime) } : {}), // sem número: o padrão do time
           historico: modo === 'retro',
         }),
       });
       if (eManual) { setGameId(game.id); setFase('compor'); setLoading(false); }
-      else navigate(`/time/${slug}/jogo/${game.id}`);
+      // replace: o "Voltar" do jogo leva para onde a pessoa estava antes do formulário, não de volta a ele.
+      else navigate(`/time/${slug}/jogo/${game.id}`, { replace: true });
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -102,7 +106,7 @@ export default function NovoJogo() {
         jogadores: (atrib[i] || []).map((k) => poolByKey[k]).filter(Boolean).map((p) => ({ user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url, convidado: p.convidado })),
       }));
       await apiFetch(`/api/games/${gameId}/times-manuais`, { method: 'POST', body: JSON.stringify({ times }) });
-      navigate(`/time/${slug}/jogo/${gameId}`);
+      navigate(`/time/${slug}/jogo/${gameId}`, { replace: true });
     } catch (err) {
       setToast({ tipo: 'error', mensagem: err.message });
       setLoading(false);
@@ -111,7 +115,7 @@ export default function NovoJogo() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="NOVO JOGO" back={`/time/${slug}/jogos`} />
+      <Topbar hud="NOVO JOGO" back="voltar" backFallback={`/time/${slug}?aba=jogos`} />
       <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
         {fase === 'form' ? (
           <>
@@ -136,8 +140,12 @@ export default function NovoJogo() {
                   <input id="data" type="date" className="input input--hud" value={data} max={modo === 'retro' ? diaDeCalendario(new Date(), team?.fuso) : undefined} onChange={(e) => setData(e.target.value)} />
                 </div>
                 <div className="field" style={{ flex: 1 }}>
-                  <label htmlFor="hora">Hora {modo !== 'sortear' ? <span className="muted" style={{ fontSize: 11 }}>(opcional)</span> : null}</label>
+                  {/* 29I, bloco 3 (dono): "Hora do jogo" — nunca "fuso". O rabicho aparece só para quem está noutro relógio que o do time. */}
+                  <label htmlFor="hora">Hora do jogo {modo !== 'sortear' ? <span className="muted" style={{ fontSize: 11 }}>(opcional)</span> : null}</label>
                   <input id="hora" type="time" className="input input--hud" value={hora} onChange={(e) => setHora(e.target.value)} />
+                  {rabichoDoFuso(new Date(), team?.fuso, { cidade: team?.cidade }) ? (
+                    <span className="muted" data-rabicho-hora style={{ fontSize: 11, marginTop: 4 }}>{rabichoDoFuso(new Date(), team?.fuso, { cidade: team?.cidade })}</span>
+                  ) : null}
                 </div>
               </div>
 
@@ -147,10 +155,20 @@ export default function NovoJogo() {
               </div>
 
               {modo === 'sortear' ? (
-                <div className="field">
+                <div className="field" data-jogadores-por-time>
                   <label>Jogadores por time</label>
-                  <NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} />
-                  <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>O número de times é calculado automaticamente no sorteio, conforme os jogadores confirmados.</span>
+                  {porTime == null ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
+                      <span>Padrão do time: <b>{padraoDoTime}</b></span>
+                      <button type="button" className="btn btn--ghost btn--sm" data-mudar-so-neste onClick={() => setPorTime(padraoDoTime)}>mudar só neste jogo</button>
+                    </div>
+                  ) : (
+                    <>
+                      <NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} />
+                      <button type="button" className="btn btn--ghost btn--sm" style={{ justifySelf: 'start', marginTop: 6 }} onClick={() => setPorTime(null)}>Voltar ao padrão do time ({padraoDoTime})</button>
+                    </>
+                  )}
+                  <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>O número de times sai no sorteio, conforme os confirmados. O padrão muda em Ajustes do time.</span>
                 </div>
               ) : null}
 

@@ -1,5 +1,5 @@
 // Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -21,6 +21,7 @@ import Icon from '../components/Icon';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
+import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
 
@@ -76,6 +77,18 @@ export default function Jogo() {
   const [toast, setToast] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'cancelar-presenca' | 'campeonato' | null
   const [criandoCamp, setCriandoCamp] = useState(false);
+  // Item 74: o código do link curto (/s/<código>) é pedido quando o sorteio existe — antes do toque em "copiar", para a cópia sair na
+  // hora (o Safari só deixa copiar logo depois do toque). Sem código, o link longo.
+  const [codigoCurto, setCodigoCurto] = useState(null);
+  const temSorteio = !!data?.game?.sorteio_realizado;
+  useEffect(() => {
+    if (!temSorteio) return undefined;
+    let ativo = true;
+    codigoDoSorteio(id).then((c) => ativo && setCodigoCurto(c));
+    return () => {
+      ativo = false;
+    };
+  }, [id, temSorteio]);
 
   // Campeonato a partir dos times sorteados (SPEC-CAMPEONATOS): o admin só escolhe
   // o formato — nomes/plantéis vêm do adaptador no servidor (times_resultado → campeonato).
@@ -110,7 +123,7 @@ export default function Jogo() {
 
   // Copia o link público do sorteio (para WhatsApp / telão).
   async function partilharLink() {
-    const url = `${ORIGEM_DO_SITE}/p/${slug}/${id}`;
+    const url = linkDoSorteio({ origem: ORIGEM_DO_SITE, slug, gameId: id, codigo: codigoCurto });
     const ok = await copiarTexto(url);
     setToast(ok
       ? { tipo: 'success', mensagem: 'Link copiado.' }
@@ -151,7 +164,7 @@ export default function Jogo() {
   if (loading) {
     return (
       <div className="app-shell">
-        <Topbar hud="JOGO" back={`/time/${slug}/jogos`} />
+        <Topbar hud="JOGO" back="voltar" backFallback={`/time/${slug}?aba=jogos`} />
         <main className="app-main">
           <LoadingFutty />
         </main>
@@ -187,7 +200,7 @@ export default function Jogo() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="JOGO" back={`/time/${slug}/jogos`} />
+      <Topbar hud="JOGO" back="voltar" backFallback={`/time/${slug}?aba=jogos`} />
       <main className="app-main page-reveal" style={game?.times_resultado ? { paddingBottom: 140 } : undefined}>
         {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
 
@@ -208,7 +221,7 @@ export default function Jogo() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 18, lineHeight: 1.15 }}>{game.local || 'Jogo'}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                  {formatDateTime(game.data, team?.fuso)}
+                  {formatDateTime(game.data, team?.fuso, { cidade: team?.cidade })}
                   {game.jogadores_por_time ? ` · ${game.jogadores_por_time} por time` : ''}
                   {game.sorteio_realizado && game.num_times ? ` · ${game.num_times} times` : ''}
                 </div>

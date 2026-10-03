@@ -1,42 +1,52 @@
-// Futty v2.0 — Escudo da equipa (fallback sem logo): iniciais num escudo do cânone
-// (chanfro 45°, borda na COR da equipa, véu vidro). Quando existir logo_url (backlog
-// gated na Segurança), passa a mostrar a imagem. Tamanhos livres via `size`.
-import { colorOf, initials } from '../utils/teamColors';
+// Futty v2.0 — O escudo do time. Com logo, o logo; sem logo, as iniciais sobre o escudo que o admin escolheu (Rodada 29I, bloco 3):
+// cor principal + segunda cor + padrão, da paleta fixa — utils/escudo.js. O desenho é o das bancadas aprovadas pelo dono
+// (DESIGN/escudo-cores.html e escudo-padroes.html): círculo, anel claro de 1,5 px, sombra curta, iniciais 800 com sombra. Legível em
+// 84, 36 e 20 px. Tamanhos livres via `size`.
+import { initials } from '../utils/teamColors';
+import { camadasDoEscudo, letraDoEscudo } from '../utils/escudo';
 import { assetUrl } from '../lib/api';
 import { urlImagem } from '../utils/avatar';
 
-const CLIP = 'polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px)';
+const SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 export default function EscudoEquipa({ team = {}, size = 22 }) {
-  const cor = colorOf(team.cor).hex;
   const ini = initials(team.nome) || '?';
-  const raw = team.logo_url || null; // backlog: upload de logo (gated na Segurança)
-  // Velocidade 6B: o escudo vive entre 20 e 52 px CSS — 128 cobre tudo em 2x.
-  const src = raw ? (raw.startsWith('blob:') || raw.startsWith('data:') ? raw : urlImagem(assetUrl(raw), 128)) : null;
+  const raw = team.logo_url || null;
+  // Velocidade 6B: o escudo vive entre 20 e 84 px CSS — 192 cobre tudo em 2x.
+  const src = raw ? (raw.startsWith('blob:') || raw.startsWith('data:') ? raw : urlImagem(assetUrl(raw), size > 64 ? 192 : 128)) : null;
+  const { fundo, camada } = camadasDoEscudo(team);
   return (
     <span
       aria-hidden
+      data-escudo={src ? 'logo' : team.escudo_padrao || 'solido'}
       style={{
+        position: 'relative',
         width: size,
         height: size,
         flexShrink: 0,
         display: 'grid',
         placeItems: 'center',
+        borderRadius: '50%',
         overflow: 'hidden',
-        clipPath: CLIP,
-        border: `1px solid ${cor}`,
-        // véu vidro com um toque da tinta da equipa
-        background: `linear-gradient(135deg, ${cor}26, rgba(255,255,255,0.04))`,
+        background: src ? '#0c0c10' : fundo,
+        boxShadow: '0 0 0 1.5px rgba(255,255,255,.14), 0 2px 8px rgba(0,0,0,.5)',
         color: '#fff',
-        fontFamily: "'Rajdhani', sans-serif",
+        fontFamily: SANS,
         fontWeight: 800,
-        fontSize: Math.round(size * 0.42),
+        fontSize: letraDoEscudo(size),
         lineHeight: 1,
-        letterSpacing: '0.02em',
+        letterSpacing: '.03em',
       }}
     >
       {/* minWidth/minHeight 0: item de grid — ver a nota em .pavatar img (app.css). */}
-      {src ? <img src={src} alt="" decoding="async" style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover' }} /> : ini}
+      {src ? (
+        <img src={src} alt="" decoding="async" style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover' }} />
+      ) : (
+        <>
+          {camada ? <i style={{ position: 'absolute', inset: 0, zIndex: 1, display: 'block', background: camada }} /> : null}
+          <span style={{ position: 'relative', zIndex: 3, textShadow: '0 1px 3px rgba(0,0,0,.55)' }}>{ini}</span>
+        </>
+      )}
     </span>
   );
 }

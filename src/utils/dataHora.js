@@ -7,6 +7,11 @@
 //
 // Onde o relógio do aparelho vale de propósito (e este arquivo NÃO se usa): o Gabinete (o dono olhando datas do sistema, no
 // relógio dele), o "há 5 h" (tempo decorrido, não data de calendário) e o Diagnóstico.
+//
+// A PALAVRA NA TELA (dono, 3-out): "Hora do jogo", ou só "Hora" — nunca "hora do campo", "fuso" ou "horário de Brasília". O jogador
+// não tem de saber que existe fuso. A única exceção é o RABICHO: quando o relógio do time é outro que o de quem está olhando, a hora
+// ganha "· horário de São Paulo" (o nome da CIDADE do time, nunca o identificador IANA) — quem viajou, ou entrou num time de outro
+// país, não chega atrasado. Para quem está no mesmo relógio (quase todo mundo) não aparece nada. Ver rabichoDoFuso.
 
 export const TZ_PADRAO = 'America/Sao_Paulo';
 
@@ -74,11 +79,57 @@ export function formatarHora(iso, fuso) {
   return formatar(iso, fuso, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 }
 
-/** Data e hora do jogo no relógio do campo: "qui., 8 de out. · 20:00". Uma forma só, em toda tela. */
-export function formatarDataHora(iso, fuso) {
+// ─── O rabicho: "· horário de São Paulo" só para quem está noutro relógio ─────────────────────────────────────────────────
+
+/** O relógio de quem está olhando (o do aparelho) — só para decidir se a hora do jogo precisa do rabicho, nunca para formatá-la. */
+export function fusoDeQuemOlha() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || TZ_PADRAO;
+  } catch {
+    return TZ_PADRAO;
+  }
+}
+
+// O nome de gente dos fusos que o app usa (o do time sem cidade escrita): nunca "America/Sao_Paulo" na tela.
+const CIDADE_DO_FUSO = {
+  'America/Sao_Paulo': 'São Paulo', 'America/Bahia': 'Salvador', 'America/Fortaleza': 'Fortaleza', 'America/Recife': 'Recife',
+  'America/Maceio': 'Maceió', 'America/Belem': 'Belém', 'America/Araguaina': 'Araguaína', 'America/Santarem': 'Santarém',
+  'America/Manaus': 'Manaus', 'America/Cuiaba': 'Cuiabá', 'America/Campo_Grande': 'Campo Grande', 'America/Porto_Velho': 'Porto Velho',
+  'America/Boa_Vista': 'Boa Vista', 'America/Rio_Branco': 'Rio Branco', 'America/Eirunepe': 'Eirunepé', 'America/Noronha': 'Fernando de Noronha',
+  'Europe/Lisbon': 'Lisboa', 'Atlantic/Madeira': 'Madeira', 'Atlantic/Azores': 'Açores',
+};
+
+/** A cidade do rabicho: a que o time escreveu ("Campinas", sem o "- SP"), ou a do fuso. */
+export function cidadeDoRabicho(fuso, cidade) {
+  const escrita = String(cidade ?? '').split(/,|\s[-–]\s/)[0].trim();
+  if (escrita) return escrita;
+  const f = fusoOuPadrao(fuso);
+  return CIDADE_DO_FUSO[f] || f.split('/').pop().replace(/_/g, ' ');
+}
+
+const RELOGIO = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
+
+/**
+ * "horário de São Paulo" quando, no instante do jogo, o relógio do time marca outra hora que o de quem olha; '' quando marca a
+ * mesma (compara a hora, não o nome do fuso: Salvador e São Paulo dão a mesma hora e não ganham rabicho). `cidade`: a do time.
+ * `olhando` só existe para o teste.
+ */
+export function rabichoDoFuso(iso, fuso, { cidade, olhando = fusoDeQuemOlha() } = {}) {
+  const d = instanteValido(iso) || new Date();
+  const doTime = formatador(fusoOuPadrao(fuso), RELOGIO).format(d);
+  const deQuemOlha = formatador(fusoOuPadrao(olhando), RELOGIO).format(d);
+  return doTime === deQuemOlha ? '' : `horário de ${cidadeDoRabicho(fuso, cidade)}`;
+}
+
+/**
+ * Data e hora do jogo no relógio do campo: "qui., 8 de out. · 20:00". Uma forma só, em toda tela. Para quem está noutro relógio:
+ * "qui., 8 de out. · 20:00 · horário de São Paulo". `opcoes`: { cidade } do time (e `olhando`, só para o teste).
+ */
+export function formatarDataHora(iso, fuso, opcoes = {}) {
   const data = formatarData(iso, fuso);
   if (!data) return '';
-  return `${data} · ${formatarHora(iso, fuso)}`;
+  const rabicho = rabichoDoFuso(iso, fuso, opcoes);
+  return `${data} · ${formatarHora(iso, fuso)}${rabicho ? ` · ${rabicho}` : ''}`;
 }
 
 /** O dia da semana do jogo no relógio do campo, por extenso e sem "-feira": "quinta", "sábado", "domingo". */

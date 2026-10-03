@@ -1,40 +1,44 @@
-// Futty v2.0 — Painel de Admin por equipa (/admin/:slug?tab=...).
-// Só admins. Sidebar (desktop) / drawer (mobile). Tab persistida na URL.
-import Icon from '../components/Icon';
+// Futty v2.0 — O que o admin faz no time. Rodada 29I, bloco 3 (decisão do dono): ADMIN NÃO É UM LUGAR, é um conjunto de botões a mais
+// nas telas que já existem. O painel /admin/<slug>, com 10 seções numa barra lateral que não conversava com o resto do app, acabou;
+// nada dele se perdeu, mudou de casa:
+//   · Dashboard            → card "Seu time" no Início (pendências + Novo jogo · Sortear · Convidar · Ajustes)
+//   · Jogos + Resultados + Campeonato → aba JOGOS da página do time (JogosDoAdmin)
+//   · Membros + Convites   → aba ELENCO (ElencoDoAdmin; as ações de cada membro abrem com um toque no nome, sem o "⋯")
+//   · Time + Comunicação + Denúncias + Zona de perigo → aba AJUSTES (AjustesDoTime; a zona virou AÇÕES DEFINITIVAS)
+//   · Estatísticas         → Ranking do time (EstatisticasDoTime), para o admin
+// /admin/<slug>?tab=… (link antigo, favorito) continua valendo: leva à aba nova (lib/rotasAntigas.js#caminhoDoAdminAntigo).
+// A página do time carrega este arquivo só para quem é admin (lazy): o jogador não paga por ele.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, House, Settings, Users, Link2, CircleDot, Medal, Trophy, ChartColumn, Megaphone, Flag } from 'lucide-react';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, ChevronRight, ShieldCheck, ShieldOff, RotateCcw, UserMinus } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
-import { useAuth } from '../hooks/useAuth';
-import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
-import { camposNoCampo, formatarData, formatarDataHora, instanteNoCampo } from '../utils/dataHora';
-import { confirmadosDoProximoJogo, ultimoJogoPassado } from '../utils/jogosAdmin';
+import { camposNoCampo, formatarData, formatarDataHora, instanteNoCampo, rabichoDoFuso } from '../utils/dataHora';
 import { LABEL_LINHA } from '../utils/posicoes';
 import { plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import LoadingFutty from '../components/LoadingFutty';
-import Toast from '../components/Toast';
 import PlayerAvatar from '../components/PlayerAvatar';
-import TeamAvatar from '../components/TeamAvatar';
+import EscudoEquipa from '../components/EscudoEquipa';
+import EditorEscudo from '../components/EditorEscudo';
+import ModeracaoFila from '../components/ModeracaoFila';
 import UploadComCrop from '../components/UploadComCrop';
 import NumberStepper from '../components/NumberStepper';
 import RegistarJornada from '../components/RegistarJornada';
 import { nomeCampeao } from '../utils/campeonato';
 import { celebrarCerveja } from '../hooks/useConfetti';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
-import { EscolhaPapel } from '../components/EscolhaLinhaGol';
+import { EscolhaPapel, TEXTO_ADMIN_E_POSICAO } from '../components/EscolhaLinhaGol';
 import CampoBairro from '../components/CampoBairro';
 import { avisoDaCidade } from '../utils/cidades';
 import { TEXTO_APOIO_BAIRRO, avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
 import { linkDoConvite } from '../utils/convite';
-import { abaDoAdmin } from '../lib/rotasAntigas';
+import { caminhoDoAdminAntigo } from '../lib/rotasAntigas';
 import '../styles/app.css';
 
-// Opções de cor de fundo do avatar da equipa (sem logo) e de visibilidade.
-const CORES_FUNDO = ['#1a1a2e', '#0d1f0d', '#1f0d0d', '#1f1a0d', '#0d0d1f', '#111111'];
+// Opções de visibilidade (a "cor de fundo do avatar" saiu — 29I, bloco 3, achado 102: o escudo é UM controle, EditorEscudo).
 const VIS_OPCOES = [
   { k: 'privado', icon: Lock, label: 'Privado' },
   { k: 'publico_aprovacao', icon: LockOpen, label: 'Com aprovação' },
@@ -48,18 +52,6 @@ const VIS_DESC = {
 };
 
 const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12 };
-const MENU = [
-  { k: 'dashboard', icon: House, label: 'Dashboard' },
-  { k: 'time', icon: Settings, label: 'Time' },
-  { k: 'membros', icon: Users, label: 'Membros' },
-  { k: 'convites', icon: Link2, label: 'Convites' },
-  { k: 'jogos', icon: CircleDot, label: 'Jogos' },
-  { k: 'campeonato', icon: Medal, label: 'Campeonato' },
-  { k: 'resultados', icon: Trophy, label: 'Resultados' },
-  { k: 'estatisticas', icon: ChartColumn, label: 'Estatísticas' },
-  { k: 'comunicacao', icon: Megaphone, label: 'Comunicação' },
-  { k: 'denuncias', icon: Flag, label: 'Denúncias' },
-];
 // fontSize 16: abaixo disso o iPhone dá zoom ao focar (Rodada 8A, ver index.css).
 const inputStyle = {
   width: '100%',
@@ -73,19 +65,6 @@ const inputStyle = {
 };
 const lbl = { fontSize: 12, color: 'var(--text-dim)' };
 const secLbl = { fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-dim)', textTransform: 'uppercase' };
-const menuItem = { display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' };
-
-const ADMIN_CSS = `
-.admin-layout { display: flex; align-items: stretch; }
-.admin-sidebar { width: 210px; flex-shrink: 0; background: #0a0a0a; border-right: 1px solid #1a1a1a; padding: 12px 0; }
-.admin-content { flex: 1; min-width: 0; padding: 16px; }
-.admin-burger { display: none; }
-@media (max-width: 760px) {
-  .admin-sidebar { display: none; }
-  .admin-burger { display: inline-flex; }
-}
-`;
-
 // "há 5 h": tempo decorrido, não data de calendário — não tem fuso (29I, achado 83); vale o relógio de quem olha.
 function haQuantoTempo(iso) {
   const ts = new Date(iso).getTime();
@@ -102,15 +81,39 @@ function diasAte(iso) {
   return Math.max(0, Math.ceil(ms / 86400000));
 }
 
-// Data e hora do jogo no relógio do CAMPO (fuso do time — 29I, achado 83), uma forma só em toda a tela: "dom., 22 de jun. · 19:00".
-// (Antes o bloco de cima escrevia "19h00" e o de baixo "19:00" — achado 100.)
-const fmtJogoCompleto = (iso, fuso) => formatarDataHora(iso, fuso);
-// "dom., 15 de jun."
-const fmtDiaCurto = (iso, fuso) => formatarData(iso, fuso);
+// O rabicho embaixo de um campo de hora (29I, bloco 3): "horário de São Paulo" só para quem está noutro relógio que o do time; vazio
+// para quem está no mesmo (quase todo mundo). O rótulo do campo é sempre "Hora do jogo" ou "Hora" — nunca "fuso".
+function RabichoDaHora({ fuso, cidade }) {
+  const r = rabichoDoFuso(new Date(), fuso, { cidade });
+  return r ? <span data-rabicho-hora style={{ fontSize: 11, color: 'var(--text-dim)' }}>{r}</span> : null;
+}
 
-// Tokens dos cards do dashboard.
-const cardDash = { background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-md)' };
-const cardDashLbl = { fontFamily: "'Rajdhani', sans-serif", fontSize: 'var(--label-size)', fontWeight: 700, color: 'var(--label-color)', textTransform: 'uppercase', letterSpacing: '1px' };
+// O interruptor da casa (o mesmo desenho de "Mostrar gols").
+function Interruptor({ ligado, aoTrocar, rotulo, apoio = null }) {
+  return (
+    <button type="button" role="switch" aria-checked={ligado} aria-label={rotulo} onClick={() => aoTrocar(!ligado)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${ligado ? 'var(--neon)' : '#1a1a1a'}`, background: ligado ? 'rgba(139,92,246,0.08)' : '#080808', color: '#fff', textAlign: 'left' }}>
+      <span style={{ fontSize: 13, fontWeight: 700 }}>
+        {rotulo}
+        {apoio ? <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-dim)', marginTop: 2 }}>{apoio}</span> : null}
+      </span>
+      <span style={{ width: 40, height: 22, borderRadius: 999, background: ligado ? 'var(--neon)' : '#333', position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
+        <span style={{ position: 'absolute', top: 2, left: ligado ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+      </span>
+    </button>
+  );
+}
+
+// Rótulo de seção da aba (a régua dos SecLabel da página do time).
+function Secao({ titulo, id, children, perigo = false }) {
+  return (
+    <section id={id} style={{ display: 'grid', gap: 10 }}>
+      <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: perigo ? '#fda4af' : 'rgba(255,255,255,0.5)', marginTop: 8 }}>
+        {titulo}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 // Pequeno modal de confirmação reutilizável. Os três modais desta página vão por
 // PORTAL para o body (Rodada 8A): fixed dentro do [data-page] animado ancora na
@@ -150,98 +153,59 @@ function MetricCard({ valor, label, alerta = false }) {
   );
 }
 
-// ─── TAB: COMUNICAÇÃO ────────────────────────────────────────────────────────
-function TabComunicacao({ slug, navigate, showToast }) {
+// ─── AJUSTES → AVISAR O TIME ─────────────────────────────────────────────────
+// 29I, bloco 3 (dono): "Avisar o time" = push + anúncio na Resenha, num formulário só (eram dois cartões com dois títulos e duas
+// mensagens). As duas saídas vêm ligadas; dá para mandar só uma. O push é o aviso que não se desliga no Perfil (é o admin falando).
+function AvisarOTime({ slug, showToast }) {
   const [titulo, setTitulo] = useState('');
   const [mensagem, setMensagem] = useState('');
+  const [noCelular, setNoCelular] = useState(true);
+  const [naResenha, setNaResenha] = useState(true);
   const [busy, setBusy] = useState(false);
-
-  // Anúncio no feed (post oficial permanente).
-  const [anTitulo, setAnTitulo] = useState('');
-  const [anMensagem, setAnMensagem] = useState('');
-  const [anBusy, setAnBusy] = useState(false);
+  // O celular mostra até 60 + 200 caracteres; só na Resenha cabe mais.
+  const maxTitulo = noCelular ? 60 : 80;
+  const maxMensagem = noCelular ? 200 : 500;
 
   async function enviar() {
-    if (busy) return;
-    if (!titulo.trim() || !mensagem.trim()) {
-      showToast('Preencha o título e a mensagem.', 'error');
-      return;
-    }
+    if (busy || !titulo.trim() || !mensagem.trim() || (!noCelular && !naResenha)) return;
     setBusy(true);
+    const corpo = JSON.stringify({ titulo: titulo.trim().slice(0, maxTitulo), mensagem: mensagem.trim().slice(0, maxMensagem) });
+    const feitos = [];
     try {
-      const r = await apiFetch(`/api/push/equipas/${slug}/broadcast`, {
-        method: 'POST',
-        body: JSON.stringify({ titulo: titulo.trim(), mensagem: mensagem.trim() }),
-      });
-      showToast(`Notificação enviada para ${r.enviadas} ${r.enviadas === 1 ? 'membro' : 'membros'}.`);
+      if (naResenha) {
+        await apiFetch(`/api/feed/equipas/${slug}/anuncio`, { method: 'POST', body: corpo });
+        feitos.push('Anúncio publicado na Resenha');
+      }
+      if (noCelular) {
+        const r = await apiFetch(`/api/push/equipas/${slug}/broadcast`, { method: 'POST', body: corpo });
+        feitos.push(`Aviso enviado para ${r.enviadas} ${plural(r.enviadas, 'celular', 'celulares')}`);
+      }
       setTitulo('');
       setMensagem('');
+      showToast(`${feitos.join('. ')}.`);
     } catch (e) {
-      showToast(e.message, 'error');
+      showToast(feitos.length ? `${feitos.join('. ')}, mas: ${e.message}` : e.message, 'error');
     } finally {
       setBusy(false);
     }
   }
 
-  async function publicarAnuncio() {
-    if (anBusy) return;
-    if (!anTitulo.trim() || !anMensagem.trim()) {
-      showToast('Preencha o título e a mensagem do anúncio.', 'error');
-      return;
-    }
-    setAnBusy(true);
-    try {
-      await apiFetch(`/api/feed/equipas/${slug}/anuncio`, {
-        method: 'POST',
-        body: JSON.stringify({ titulo: anTitulo.trim(), mensagem: anMensagem.trim() }),
-      });
-      setAnTitulo('');
-      setAnMensagem('');
-      showToast('Anúncio publicado na Resenha.');
-      navigate('/feed');
-    } catch (e) {
-      showToast(e.message, 'error');
-    } finally {
-      setAnBusy(false);
-    }
-  }
-
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
-      {/* Notificação push */}
-      <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
-        <div style={secLbl}>Notificação push</div>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Jogo confirmado" style={inputStyle} />
-        </label>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
-          <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreva o aviso para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
-        </label>
-        <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim()} onClick={enviar}>
-          {busy ? 'Enviando…' : 'Enviar para todos'}
-        </button>
-      </div>
-
-      {/* Anúncio no feed */}
-      <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
-        <div style={secLbl}>Anúncio na Resenha</div>
-        <p className="muted" style={{ margin: 0, fontSize: 12 }}>
-          Fica fixado na Resenha como post oficial, visível a todos os membros.
-        </p>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({anTitulo.length}/80)</span></span>
-          <input value={anTitulo} onChange={(e) => setAnTitulo(e.target.value.slice(0, 80))} placeholder="Ex.: Nova temporada começa em julho" style={inputStyle} />
-        </label>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({anMensagem.length}/500)</span></span>
-          <textarea value={anMensagem} onChange={(e) => setAnMensagem(e.target.value.slice(0, 500))} rows={4} placeholder="Escreva o anúncio para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
-        </label>
-        <button type="button" className="btn btn--purple btn--sm" disabled={anBusy || !anTitulo.trim() || !anMensagem.trim()} onClick={publicarAnuncio}>
-          {anBusy ? 'Publicando…' : 'Publicar na Resenha'}
-        </button>
-      </div>
+    <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }} data-avisar-o-time>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/{maxTitulo})</span></span>
+        <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, maxTitulo))} placeholder="Ex.: Jogo confirmado" style={inputStyle} />
+      </label>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/{maxMensagem})</span></span>
+        <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, maxMensagem))} rows={3} placeholder="Escreva o aviso para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
+      </label>
+      <Interruptor ligado={noCelular} aoTrocar={setNoCelular} rotulo="Notificar no celular" />
+      <Interruptor ligado={naResenha} aoTrocar={setNaResenha} rotulo="Publicar na Resenha" />
+      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Na Resenha o aviso fica fixado como post oficial do time.</span>
+      <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim() || (!noCelular && !naResenha)} onClick={enviar}>
+        {busy ? 'Enviando…' : 'Avisar o time'}
+      </button>
     </div>
   );
 }
@@ -399,238 +363,9 @@ function TabCampeonato({ slug, navigate, showToast }) {
   );
 }
 
-function TabDashboard({ slug, fuso, navigate, onGoTab, showToast }) {
-  const [stats, setStats] = useState(null);
-  const [pedidos, setPedidos] = useState(0);
-  const [denuncias, setDenuncias] = useState(0);
-  const [confirmRevotar, setConfirmRevotar] = useState(false);
-  const [revotarBusy, setRevotarBusy] = useState(false);
-  // Dashboard de acesso rápido.
-  const [proximoRsvp, setProximoRsvp] = useState(null); // rsvp do próximo jogo
-  const [ultimoJogo, setUltimoJogo] = useState(undefined); // GET do último jogo (undefined=loading, null=nenhum)
-  const [semFoto, setSemFoto] = useState(0);
-
-  async function pedirRevotacao() {
-    setRevotarBusy(true);
-    try {
-      await apiFetch(`/api/teams/${slug}/pedir-revotacao`, { method: 'POST' });
-      showToast('Pedido enviado a todos os membros.');
-    } catch (e) {
-      showToast(e.message, 'error');
-    } finally {
-      setRevotarBusy(false);
-      setConfirmRevotar(false);
-    }
-  }
-
-  useEffect(() => {
-    let ativo = true;
-    apiFetch(`/api/teams/${slug}/stats`)
-      .then((d) => ativo && setStats(d.stats || {}))
-      .catch((e) => ativo && (setStats({}), showToast(e.message, 'error')));
-    apiFetch(`/api/teams/${slug}/pedidos`).then((d) => ativo && setPedidos((d.pedidos || []).length)).catch(() => {});
-    apiFetch('/api/feed/denuncias').then((d) => ativo && setDenuncias((d.denuncias || []).length)).catch(() => {});
-
-    // Membros sem foto. (Rodada 9: "sem posição" saiu — jogador de linha é o
-    // normal, nunca foi pendência.)
-    apiFetch(`/api/teams/${slug}/membros`)
-      .then((d) => {
-        if (!ativo) return;
-        setSemFoto((d.membros || []).filter((m) => !m.avatar_url).length);
-      })
-      .catch(() => {});
-
-    // Último jogo + o seu detalhe. 29I (achado 98): o último jogo é o mais recente que já ACONTECEU (data no passado) — antes um
-    // jogo futuro já sorteado também entrava na conta e o painel mostrava "ÚLTIMO JOGO — qua., 14 de out." num 3 de outubro.
-    apiFetch(`/api/teams/${slug}/games`)
-      .then((d) => {
-        if (!ativo) return;
-        const ultimo = ultimoJogoPassado(d.games || []);
-        if (!ultimo) {
-          setUltimoJogo(null);
-          return;
-        }
-        apiFetch(`/api/games/${ultimo.id}`)
-          .then((gd) => ativo && setUltimoJogo(gd))
-          .catch(() => ativo && setUltimoJogo(null));
-      })
-      .catch(() => ativo && setUltimoJogo(null));
-
-    return () => {
-      ativo = false;
-    };
-  }, [slug, showToast]);
-
-  // RSVP do próximo jogo (depende do stats já carregado).
-  useEffect(() => {
-    const pjId = stats?.proximo_jogo?.id;
-    if (!pjId) return undefined;
-    let ativo = true;
-    apiFetch(`/api/jogos/${pjId}/rsvp`)
-      .then((d) => ativo && setProximoRsvp(d))
-      .catch(() => {});
-    return () => {
-      ativo = false;
-    };
-  }, [stats]);
-
-  if (!stats) return <LoadingFutty />;
-  const pj = stats.proximo_jogo;
-  const art = stats.artilheiro;
-
-  // Resumo do RSVP do próximo jogo.
-  const rsvpAtivo = !!proximoRsvp && (proximoRsvp.rsvp_aberto || proximoRsvp.rsvp_fechado);
-  const rsvpAberto = !!proximoRsvp?.rsvp_aberto && !proximoRsvp?.rsvp_fechado;
-  const rsvpTotal = proximoRsvp ? proximoRsvp.confirmados.length + proximoRsvp.recusados.length + proximoRsvp.pendentes.length : 0;
-  // 29I (achado 99): UM número de confirmados para o próximo jogo, de uma fonte só (a presença, quando existe; senão o jogo).
-  const { confirmados: confirmadosDoProximo } = confirmadosDoProximoJogo({ rsvp: proximoRsvp, jogo: pj });
-  const naoResponderam = rsvpAberto ? proximoRsvp.pendentes.length : 0;
-
-  // Último jogo + resultado/artilheiro/destaque.
-  const uGame = ultimoJogo && ultimoJogo.game ? ultimoJogo.game : null;
-  const uTimes = uGame?.times_resultado?.times || [];
-  const uNomeA = uTimes[0]?.nome || 'Time A';
-  const uNomeB = uTimes[1]?.nome || 'Time B';
-  const uArtilheiro = (ultimoJogo?.gols || []).reduce((m, g) => (g.gols > (m?.gols || 0) ? g : m), null);
-  const uDestaque = (ultimoJogo?.players || []).filter((p) => p.confirmado).sort((a, b) => (b.rating || 0) - (a.rating || 0))[0] || null;
-
-  // Alertas accionáveis.
-  const alertas = [];
-  if (semFoto > 0) alertas.push({ txt: `${semFoto} ${semFoto === 1 ? 'jogador sem foto' : 'jogadores sem foto'}`, acao: () => onGoTab('membros') });
-  if (naoResponderam > 0) alertas.push({ txt: `${naoResponderam} ${naoResponderam === 1 ? 'jogador não respondeu' : 'jogadores não responderam'} à confirmação de presença`, acao: () => onGoTab('jogos') });
-  if (uGame && (uGame.resultado_nivel || 0) === 0) alertas.push({ txt: 'Resultado do último jogo não registrado', acao: () => navigate(`/time/${slug}/jogo/${uGame.id}`) });
-
-  return (
-    <div style={{ display: 'grid', gap: 14 }}>
-      {/* Dashboard de acesso rápido (próximo jogo / último jogo / alertas) */}
-      <div style={cardDash}>
-        <div style={cardDashLbl}>Próximo jogo</div>
-        {pj ? (
-          <>
-            <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>{fmtJogoCompleto(pj.date, fuso)}</div>
-            {pj.location ? <div style={{ fontSize: 13, color: '#fff', fontWeight: 700, marginTop: 2 }}>{pj.location}</div> : null}
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
-              {confirmadosDoProximo} {plural(confirmadosDoProximo, 'confirmado', 'confirmados')}
-              {rsvpAtivo ? ` / ${rsvpTotal} ${plural(rsvpTotal, 'membro', 'membros')}` : ''}
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${pj.id}`)}>Fazer sorteio</button>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => onGoTab('jogos')}>{rsvpAtivo ? 'Ver presenças' : 'Abrir presença'}</button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem jogo agendado</div>
-            <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/time/${slug}/jogo/novo`)}>Criar jogo</button>
-          </>
-        )}
-      </div>
-
-      <div style={cardDash}>
-        <div style={cardDashLbl}>Último jogo</div>
-        {uGame ? (
-          <>
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{fmtDiaCurto(uGame.data, fuso)}</div>
-            {(uGame.resultado_nivel || 0) === 0 ? (
-              <>
-                <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem resultado registrado</div>
-                <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 10 }} onClick={() => navigate(`/time/${slug}/jogo/${uGame.id}`)}>Registrar resultado</button>
-              </>
-            ) : (
-              <>
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>
-                  {uGame.resultado_nivel >= 2
-                    ? `${uNomeA} ${uGame.placar_a} × ${uGame.placar_b} ${uNomeB}`
-                    : uGame.time_vencedor === 'empate'
-                      ? 'Empate'
-                      : `${uGame.time_vencedor === 'A' ? uNomeA : uNomeB} venceu`}
-                </div>
-                {uGame.resultado_nivel === 3 && uArtilheiro && uArtilheiro.gols > 0 ? (
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{uArtilheiro.nome} · {uArtilheiro.gols} {uArtilheiro.gols === 1 ? 'gol' : 'gols'}</div>
-                ) : null}
-                {uDestaque ? (
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>Destaque: {uDestaque.nome}</div>
-                ) : null}
-              </>
-            )}
-          </>
-        ) : ultimoJogo === null ? (
-          <div style={{ color: 'var(--text-dim)', marginTop: 4 }}>Sem jogos anteriores.</div>
-        ) : (
-          <div style={{ color: 'var(--text-dim)', marginTop: 4 }}>Carregando…</div>
-        )}
-      </div>
-
-      <div style={cardDash}>
-        <div style={cardDashLbl}>Alertas</div>
-        {alertas.length === 0 ? (
-          <div style={{ color: '#fff', fontWeight: 700, marginTop: 6 }}>Tudo em ordem</div>
-        ) : (
-          <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
-            {alertas.map((a) => (
-              <button key={a.txt} type="button" onClick={a.acao} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#f5e070', fontSize: 13, cursor: 'pointer', padding: '4px 0' }}>
-                {a.txt}
-                <span style={{ marginLeft: 'auto', color: 'var(--text-dim)' }}>→</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <MetricCard valor={stats.total_jogos ?? 0} label="jogos" />
-        <MetricCard valor={stats.total_membros ?? 0} label="membros" />
-        {/* Achado 101: o número solto não dizia do quê. É a média de CONFIRMADOS por jogo (stats.media_confirmacoes no motor: confirmações
-            ÷ jogos), não de gols — a varredura supôs gols; 13 gols por jogo não existe, 13 jogadores confirmados por jogo é o normal. */}
-        <MetricCard valor={(stats.media_confirmacoes ?? 0).toFixed(1)} label="confirmados por jogo" />
-        <MetricCard valor={denuncias} label="denúncias" alerta={denuncias > 0} />
-      </div>
-
-      {pedidos > 0 ? (
-        <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 10, borderColor: 'rgba(124,58,237,0.4)' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, color: '#fff' }}>{pedidos} {pedidos === 1 ? 'pedido pendente' : 'pedidos pendentes'}</div>
-          </div>
-          <button type="button" className="btn btn--purple btn--sm" onClick={() => onGoTab('membros')}>Ver pedidos</button>
-        </div>
-      ) : null}
-
-      {art ? (
-        <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <PlayerAvatar nome={art.nome || 'Jogador'} avatarUrl={art.avatar_url} />
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Artilheiro do time</div>
-            <div style={{ fontWeight: 800, color: '#fff' }}>{art.nome} <span style={{ color: 'var(--neon)' }}>· {art.gols} gols</span></div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Pedir revotação a todos */}
-      <button
-        type="button"
-        disabled={revotarBusy}
-        onClick={() => setConfirmRevotar(true)}
-        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #d4a017', background: 'rgba(212,160,23,0.08)', color: '#f5e070', fontWeight: 700, cursor: 'pointer' }}
-      >
-        Pedir para votar de novo
-      </button>
-
-      {confirmRevotar ? (
-        <ConfirmModal
-          texto="Pedir a todos os membros para atualizarem suas notas?"
-          confirmarLabel="Pedir para votar de novo"
-          onConfirm={pedirRevotacao}
-          onCancel={() => setConfirmRevotar(false)}
-        />
-      ) : null}
-    </div>
-  );
-}
-
 // ─── TAB: EQUIPA ─────────────────────────────────────────────────────────────
-function TabEquipa({ slug, team, showToast }) {
+function TabEquipa({ slug, team, showToast, onMudou }) {
   const [nome, setNome] = useState(team.nome || '');
-  const [cor, setCor] = useState(team.cor || 'verde');
   const [localizacao, setLocalizacao] = useState(team.localizacao || '');
   const [cidade, setCidade] = useState(team.cidade || '');
   // Rodada 29B (D): escolha da lista (null enquanto digita), o último texto GUARDADO (só se manda a cidade quando mudou)
@@ -646,7 +381,6 @@ function TabEquipa({ slug, team, showToast }) {
   const [descricao, setDescricao] = useState(team.descricao || '');
   const [logoUrl, setLogoUrl] = useState(team.logo_url || null);
   const [previewLogo, setPreviewLogo] = useState(null);
-  const [corFundo, setCorFundo] = useState(team.cor_fundo || '#1a1a2e');
   const [modo, setModo] = useState(team.modo_visibilidade || 'privado');
   const [mostrarGols, setMostrarGols] = useState(team.mostrar_gols !== false);
   // 29H (item 44): "Artilheiro do dia" / "Destaque do dia" — ligados, o editor de resultado oferece a seção.
@@ -659,7 +393,25 @@ function TabEquipa({ slug, team, showToast }) {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
-  const [zerarStep, setZerarStep] = useState(0); // 0=nada, 1=1ª confirmação, 2=2ª
+  // Item 68 (Rodada 29): jogadores por time é UM padrão do time — o "Novo jogo" já vem com ele. Grava sozinho, um instante depois do
+  // último toque no seletor (sem um pedido por toque); sem a migração 079 o motor diz "ainda não está disponível" e o número volta.
+  const [porTime, setPorTime] = useState(team.jogadores_por_time || 5);
+  const porTimeTimer = useRef(null);
+  useEffect(() => () => clearTimeout(porTimeTimer.current), []);
+  function mudarPorTime(n) {
+    setPorTime(n);
+    clearTimeout(porTimeTimer.current);
+    porTimeTimer.current = setTimeout(async () => {
+      try {
+        await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ jogadores_por_time: Number(n) }) });
+        showToast(`Padrão do time: ${n} por time.`);
+        onMudou?.();
+      } catch (err) {
+        setPorTime(team.jogadores_por_time || 5);
+        showToast(err.message, 'error');
+      }
+    }, 700);
+  }
 
   // Carrega o logo escolhido (preview imediato) e envia para o backend.
   async function aoEscolherLogo(e) {
@@ -677,16 +429,6 @@ function TabEquipa({ slug, team, showToast }) {
       showToast(err.message, 'error');
     } finally {
       setUploadingLogo(false);
-    }
-  }
-
-  // Cor de fundo do avatar (guarda logo ao clicar).
-  async function guardarCorFundo(novaCor) {
-    setCorFundo(novaCor);
-    try {
-      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ cor_fundo: novaCor }) });
-    } catch (err) {
-      showToast(err.message, 'error');
     }
   }
 
@@ -754,24 +496,13 @@ function TabEquipa({ slug, team, showToast }) {
     }
   }
 
-  async function zerarTodosVotos() {
-    try {
-      const r = await apiFetch(`/api/teams/${slug}/votos`, { method: 'DELETE' });
-      showToast(`Todos os votos zerados${r?.count != null ? ` (${r.count})` : ''}.`);
-    } catch (e) {
-      showToast(e.message, 'error');
-    } finally {
-      setZerarStep(0);
-    }
-  }
-
   async function guardar() {
     if (saving) return;
     setSaving(true);
     try {
       // Rodada 29B (D): a cidade só vai no corpo quando MUDOU (antes ia a cada "Salvar" e geocodificava de novo).
       // Da lista: o pacote todo (o motor usa a coordenada da lista); digitada: só o texto; vazia: sai da busca.
-      const corpo = { nome: nome.trim(), cor, localizacao: localizacao.trim(), descricao: descricao.trim() };
+      const corpo = { nome: nome.trim(), localizacao: localizacao.trim(), descricao: descricao.trim() };
       const mudouCidade = cidade.trim() !== cidadeGuardada.trim();
       if (mudouCidade) Object.assign(corpo, cidade.trim() ? (cidadeEscolha || { cidade: cidade.trim() }) : { cidade: '' });
       // 29H (item 12): o bairro vai quando mudou — e também quando a CIDADE mudou e há bairro (ele é procurado na cidade nova).
@@ -794,6 +525,7 @@ function TabEquipa({ slug, team, showToast }) {
         setBairroEscolha(null);
       }
       showToast('Time atualizado.');
+      onMudou?.();
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -807,30 +539,14 @@ function TabEquipa({ slug, team, showToast }) {
       <div style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Meu papel</span>
         <EscolhaPapel joga={joga} ocupado={jogaOcupado} aoTrocar={guardarJoga} />
+        {/* Item 69 (Rodada 29): "admin" e "posição em campo" são coisas separadas. */}
+        <p className="texto-apoio" data-texto-admin-posicao style={{ marginTop: 0 }}>{TEXTO_ADMIN_E_POSICAO}</p>
       </div>
 
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Nome do time</span>
         <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 60))} style={inputStyle} />
       </label>
-
-      <div style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Cor</span>
-        <div className="color-picker">
-          {COLOR_OPTIONS.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              className="color-swatch"
-              style={{ background: c.hex, outline: cor === c.key ? '2px solid #fff' : 'none' }}
-              aria-pressed={cor === c.key}
-              aria-label={c.label}
-              title={c.label}
-              onClick={() => setCor(c.key)}
-            />
-          ))}
-        </div>
-      </div>
 
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Localização</span>
@@ -876,7 +592,7 @@ function TabEquipa({ slug, team, showToast }) {
       <div style={{ display: 'grid', gap: 8 }}>
         <span style={lbl}>Logo</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <TeamAvatar team={{ nome, logo_url: previewLogo || logoUrl, cor_fundo: corFundo }} size="lg" />
+          <EscudoEquipa team={{ ...team, nome, logo_url: previewLogo || logoUrl }} size={64} />
           <div style={{ display: 'grid', gap: 6 }}>
             <button
               type="button"
@@ -892,22 +608,12 @@ function TabEquipa({ slug, team, showToast }) {
         </div>
       </div>
 
-      {/* COR DE FUNDO (avatar sem logo) */}
-      <div style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Cor de fundo do avatar</span>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {CORES_FUNDO.map((hex) => (
-            <button
-              key={hex}
-              type="button"
-              aria-label={`Fundo ${hex}`}
-              aria-pressed={corFundo === hex}
-              onClick={() => guardarCorFundo(hex)}
-              style={{ width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', background: hex, border: corFundo === hex ? '2px solid #fff' : '2px solid #333' }}
-            />
-          ))}
-        </div>
-      </div>
+      {/* ESCUDO DO TIME (29I, bloco 3): só para o time sem logo — com logo, é o logo que aparece. */}
+      {previewLogo || logoUrl ? (
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Com logo, o escudo não aparece: o app mostra o logo em todo lugar.</span>
+      ) : (
+        <EditorEscudo slug={slug} team={{ ...team, nome }} showToast={showToast} onMudou={() => onMudou?.()} />
+      )}
 
       {/* VISIBILIDADE */}
       <div style={{ display: 'grid', gap: 6 }}>
@@ -998,41 +704,18 @@ function TabEquipa({ slug, team, showToast }) {
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: o editor de resultado não oferece o troféu nem o destaque. O que já foi premiado continua no histórico.</span>
       </div>
 
+      {/* JOGADORES POR TIME (item 68): o padrão do time; cada jogo ainda pode mudar só para ele, no "Novo jogo". */}
+      <div style={{ display: 'grid', gap: 6 }} data-padrao-por-time>
+        <span style={lbl}>Jogadores por time</span>
+        <NumberStepper value={porTime} onChange={mudarPorTime} min={2} max={11} />
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>O padrão do time: todo jogo novo já nasce com ele. Dá para mudar só num jogo, na hora de criar.</span>
+      </div>
+
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
         {saving ? 'Salvando…' : 'Salvar'}
       </button>
     </div>
 
-    {/* Zona de perigo */}
-    <div style={{ ...CARD, padding: 14, borderColor: 'rgba(239,68,68,0.4)' }}>
-      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--danger)', textTransform: 'uppercase', marginBottom: 8 }}>Zona de perigo</div>
-      <button
-        type="button"
-        onClick={() => setZerarStep(1)}
-        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--danger)', background: 'transparent', color: '#fda4af', fontWeight: 700, cursor: 'pointer' }}
-      >
-        Zerar todos os votos do time
-      </button>
-    </div>
-
-    {zerarStep === 1 ? (
-      <ConfirmModal
-        texto="Você vai excluir TODOS os votos do time. Continuar?"
-        perigo
-        confirmarLabel="Continuar"
-        onConfirm={() => setZerarStep(2)}
-        onCancel={() => setZerarStep(0)}
-      />
-    ) : null}
-    {zerarStep === 2 ? (
-      <ConfirmModal
-        texto="Tem mesmo certeza? Esta ação é irreversível."
-        perigo
-        confirmarLabel="Zerar tudo"
-        onConfirm={zerarTodosVotos}
-        onCancel={() => setZerarStep(0)}
-      />
-    ) : null}
     </div>
   );
 }
@@ -1091,11 +774,11 @@ function FormMensagem({ slug, membro, showToast, onClose }) {
   );
 }
 
-function TabMembros({ slug, fuso, meId, showToast }) {
+function TabMembros({ slug, meId, showToast }) {
   const [membros, setMembros] = useState(null);
-  const [menuId, setMenuId] = useState(null);
+  const [abertoId, setAbertoId] = useState(null); // o membro cujo painel está aberto (29I, bloco 3: um toque no nome)
+  const [mensagemAberta, setMensagemAberta] = useState(false);
   const [confirmacao, setConfirmacao] = useState(null);
-  const [mensagemId, setMensagemId] = useState(null);
 
   useEffect(() => {
     let ativo = true;
@@ -1122,7 +805,7 @@ function TabMembros({ slug, fuso, meId, showToast }) {
     try {
       await apiFetch(`/api/teams/${slug}/membros/${m.user_id}`, { method: 'PATCH', body: JSON.stringify({ role }) });
       setMembros((cur) => cur.map((x) => (x.user_id === m.user_id ? { ...x, role } : x)));
-      showToast(role === 'admin' ? 'Promovido a admin.' : 'Removido de admin.');
+      showToast(role === 'admin' ? 'Agora é admin.' : 'Não é mais admin.');
     } catch (e) {
       showToast(e.message, 'error');
     }
@@ -1203,167 +886,100 @@ function TabMembros({ slug, fuso, meId, showToast }) {
 
   // Activos primeiro, inactivos no fundo (mantém a ordem do servidor dentro de cada grupo).
   const membrosOrdenados = [...membros].sort((a, b) => (a.ativo === false ? 1 : 0) - (b.ativo === false ? 1 : 0));
+  // O membro aberto vem SEMPRE da lista viva (os toques no painel mudam a lista, otimista).
+  const aberto = abertoId ? membros.find((x) => x.user_id === abertoId) || null : null;
+  const pilula = (on, cor = 'var(--neon)') => ({ padding: '7px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, cursor: 'pointer', border: `1px solid ${on ? cor : '#333'}`, background: on ? 'rgba(139,92,246,0.12)' : 'transparent', color: on ? cor : 'var(--text-dim)' });
+  const acao = (perigo = false) => ({ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '12px 4px', border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'transparent', color: perigo ? '#fda4af' : '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' });
 
   return (
-    <div style={{ display: 'grid', gap: 10 }}>
+    <div style={{ display: 'grid', gap: 8 }} data-elenco-admin>
       {membrosOrdenados.map((m) => {
-        const ehProprio = m.user_id === meId;
         const inativo = m.ativo === false;
         return (
-          <div key={m.user_id} style={{ ...CARD, padding: 12, opacity: inativo ? 0.45 : 1 }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            key={m.user_id}
+            type="button"
+            data-membro={m.user_id}
+            onClick={() => { setAbertoId(m.user_id); setMensagemAberta(false); }}
+            style={{ ...CARD, padding: 12, opacity: inativo ? 0.45 : 1, display: 'flex', gap: 10, alignItems: 'center', width: '100%', textAlign: 'left', cursor: 'pointer', color: '#fff' }}
+          >
             <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</span>
-                {m.role === 'admin' && (
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '2px 6px' }}>ADMIN</span>
-                )}
-                {m.ausente_proximo && (
-                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 6px' }}>Ausente</span>
-                )}
-                {inativo && (
-                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', background: 'rgba(255,255,255,0.04)', borderRadius: 999, padding: '2px 6px' }}>Inativo</span>
-                )}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: m.nota_media == null ? 'var(--label-color)' : m.nota_media >= 7 ? '#d4a017' : m.nota_media >= 5 ? '#fff' : 'var(--label-color)', border: '1px solid #333', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
-                  ★ {m.nota_media == null ? '-' : m.nota_media.toFixed(1)}
+            <span style={{ flex: 1, minWidth: 0, display: 'grid', gap: 4 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700 }}>{nomeExibicao(m)}</span>
+                {m.role === 'admin' ? <span style={{ fontSize: 10, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '2px 6px' }}>ADMIN</span> : null}
+                {m.goleiro ? <span style={{ fontSize: 10, fontWeight: 800, color: '#d4a017', border: '1px solid rgba(212,160,23,0.6)', borderRadius: 999, padding: '2px 6px' }}>GOL</span> : null}
+                {m.ausente_proximo ? <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 6px' }}>Ausente</span> : null}
+                {inativo ? <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', borderRadius: 999, padding: '2px 6px' }}>Inativo</span> : null}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-dim)' }}>
+                <span style={{ fontWeight: 800, color: m.nota_media == null ? 'var(--label-color)' : m.nota_media >= 7 ? '#d4a017' : '#fff' }}>★ {m.nota_media == null ? '-' : m.nota_media.toFixed(1)}</span>
+                <span style={{ display: 'inline-flex', gap: 4 }} aria-hidden>
+                  {Array.from({ length: 5 }).map((_, idx) => {
+                    const p = (m.presencas_recentes || [])[idx];
+                    return <span key={idx} style={{ width: 8, height: 8, borderRadius: '50%', background: !p ? 'transparent' : p.presente ? '#10b981' : '#ef4444', border: p ? 'none' : '1px solid #444', boxSizing: 'border-box' }} />;
+                  })}
                 </span>
-                {m.tem_brilhante ? (
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#d4a017', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
-                    ✨ Figurinha
-                  </span>
+                {m.taxa_presenca ? <span style={{ fontWeight: 700 }}>{m.taxa_presenca}</span> : null}
+              </span>
+            </span>
+            <ChevronRight size={16} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
+          </button>
+        );
+      })}
+
+      {/* O painel do membro (folha de baixo): tudo o que o admin faz com ele, num toque. Portal para o body (15-set): fixed dentro do
+          [data-page] animado não confia no viewport no WebKit do iPhone (ver LoadingFutty.jsx). */}
+      {aberto
+        ? createPortal(
+            <div role="presentation" onClick={() => setAbertoId(null)} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+              <div role="dialog" aria-modal="true" aria-label={nomeExibicao(aberto)} data-painel-membro onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, background: '#0a0a0a', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderTop: '1px solid #1a1a1a', padding: '10px 16px calc(16px + env(safe-area-inset-bottom))', maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box' }}>
+                <div style={{ width: 40, height: 4, borderRadius: 999, background: '#333', margin: '6px auto 12px' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <PlayerAvatar nome={nomeExibicao(aberto)} avatarUrl={aberto.avatar_url} userId={aberto.user_id} avatarGenerico={aberto.avatar_generico} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, color: '#fff' }}>{nomeExibicao(aberto)}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aberto.email}</div>
+                  </div>
+                </div>
+
+                {/* Rodada 9/10B: goleiro ou linha, mais nada — o MESMO campo do card do próprio jogador. */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+                  <button type="button" aria-pressed={!!aberto.goleiro} onClick={() => setGoleiro(aberto, !aberto.goleiro)} style={pilula(!!aberto.goleiro, '#d4a017')}>Goleiro</button>
+                  {aberto.goleiro ? null : <span style={{ fontSize: 11, color: 'var(--text-dim)', alignSelf: 'center' }}>{LABEL_LINHA}</span>}
+                  <button type="button" aria-pressed={!!aberto.pode_postar} onClick={() => togglePostar(aberto)} style={pilula(!!aberto.pode_postar)}>Pode postar</button>
+                  <button type="button" aria-pressed={aberto.visivel_ranking !== false} onClick={() => toggleRanking(aberto)} style={pilula(aberto.visivel_ranking !== false)}>No ranking</button>
+                </div>
+                {aberto.user_id !== meId && aberto.visivel_ranking === false ? (
+                  <input
+                    type="text"
+                    value={aberto.nota_interna || ''}
+                    onChange={(e) => setNotaLocal(aberto, e.target.value.slice(0, 200))}
+                    onBlur={() => saveNota(aberto)}
+                    placeholder="Razão (só você vê)…"
+                    style={{ marginTop: 10, width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 16 }}
+                  />
                 ) : null}
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => togglePostar(m)}
-              aria-pressed={m.pode_postar}
-              title="Pode postar"
-              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${m.pode_postar ? 'var(--neon)' : '#333'}`, background: m.pode_postar ? 'rgba(139,92,246,0.12)' : 'transparent', color: m.pode_postar ? 'var(--neon)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
-            >
-              {m.pode_postar ? '✓ Postar' : 'Postar'}
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleRanking(m)}
-              aria-pressed={m.visivel_ranking !== false}
-              title="Visível no ranking"
-              style={{ padding: '5px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${m.visivel_ranking !== false ? 'var(--neon)' : '#333'}`, background: m.visivel_ranking !== false ? 'rgba(139,92,246,0.12)' : 'transparent', color: m.visivel_ranking !== false ? 'var(--neon)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}
-            >
-              {m.visivel_ranking !== false ? '✓ Ranking' : 'Ranking'}
-            </button>
-
-            {!ehProprio ? (
-              <button
-                type="button"
-                onClick={() => setMensagemId((c) => (c === m.user_id ? null : m.user_id))}
-                aria-pressed={mensagemId === m.user_id}
-                aria-label={`Enviar mensagem a ${m.nome_jogador || m.nome || 'jogador'}`}
-                title="Enviar mensagem direta"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 7px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${mensagemId === m.user_id ? 'var(--neon)' : '#333'}`, background: mensagemId === m.user_id ? 'rgba(139,92,246,0.12)' : 'transparent', color: mensagemId === m.user_id ? 'var(--neon)' : 'var(--text-dim)' }}
-              >
-                <MessageSquare size={15} strokeWidth={2.2} />
-              </button>
-            ) : null}
-
-            {!ehProprio ? (
-              <button
-                type="button"
-                onClick={() => (inativo ? setAtivo(m, true) : setConfirmacao({ tipo: 'inativar', membro: m }))}
-                aria-label={inativo ? `Reativar ${m.nome_jogador || m.nome || 'jogador'}` : `Marcar ${m.nome_jogador || m.nome || 'jogador'} como inativo`}
-                title={inativo ? 'Reativar jogador' : 'Marcar como inativo'}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 7px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${inativo ? 'var(--neon)' : '#333'}`, background: inativo ? 'rgba(139,92,246,0.12)' : 'transparent', color: inativo ? 'var(--neon)' : 'var(--text-dim)' }}
-              >
-                {inativo ? <UserCheck size={15} strokeWidth={2.2} /> : <UserX size={15} strokeWidth={2.2} />}
-              </button>
-            ) : null}
-
-            {!ehProprio ? (
-              <div style={{ position: 'relative' }} data-menu>
-                <button type="button" aria-label="Opções" onClick={() => setMenuId((c) => (c === m.user_id ? null : m.user_id))} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', fontSize: 18, fontWeight: 900, cursor: 'pointer', padding: '0 4px' }}>⋯</button>
-                {menuId === m.user_id ? (
-                  <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, minWidth: 180, background: '#0c0c0c', border: '1px solid #222222', borderRadius: 10, overflow: 'hidden', zIndex: 10 }}>
-                    {m.role === 'member' ? (
-                      <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'promover', membro: m }); }} style={menuItem}>Promover a admin</button>
-                    ) : (
-                      <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'despromover', membro: m }); }} style={menuItem}>Remover de admin</button>
-                    )}
-                    <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'zerar-votos', membro: m }); }} style={{ ...menuItem, color: '#fda4af' }}>Zerar votos</button>
-                    <button type="button" onClick={() => { setMenuId(null); setConfirmacao({ tipo: 'remover', membro: m }); }} style={{ ...menuItem, color: '#fda4af' }}>Remover do time</button>
+                {aberto.user_id !== meId ? (
+                  <div style={{ marginTop: 12 }}>
+                    <button type="button" style={acao()} onClick={() => setMensagemAberta((v) => !v)}><MessageSquare size={16} /> Mandar mensagem</button>
+                    {mensagemAberta ? <FormMensagem slug={slug} membro={aberto} showToast={showToast} onClose={() => setMensagemAberta(false)} /> : null}
+                    <button type="button" style={acao()} onClick={() => (aberto.ativo === false ? setAtivo(aberto, true) : setConfirmacao({ tipo: 'inativar', membro: aberto }))}>
+                      {aberto.ativo === false ? <><UserCheck size={16} /> Reativar</> : <><UserX size={16} /> Marcar como inativo</>}
+                    </button>
+                    <button type="button" style={acao()} onClick={() => setConfirmacao({ tipo: aberto.role === 'member' ? 'promover' : 'despromover', membro: aberto })}>
+                      {aberto.role === 'member' ? <><ShieldCheck size={16} /> Tornar admin</> : <><ShieldOff size={16} /> Tirar de admin</>}
+                    </button>
+                    <button type="button" style={acao(true)} onClick={() => setConfirmacao({ tipo: 'zerar-votos', membro: aberto })}><RotateCcw size={16} /> Zerar as notas dele</button>
+                    <button type="button" style={acao(true)} onClick={() => setConfirmacao({ tipo: 'remover', membro: aberto })}><UserMinus size={16} /> Remover do time</button>
                   </div>
                 ) : null}
               </div>
-            ) : null}
-            </div>
-
-            {/* Rodada 9: goleiro ou linha, mais nada. Ligado, os jogos deste time
-                já nascem com ele no gol (o jogador ainda desliga em cada jogo).
-                Rodada 10B: único controlo de goleiro do admin (a pastilha "GR"
-                que ficava na fila de cima escrevia a mesma coluna por outra
-                rota — virou duplicidade e saiu). */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => setGoleiro(m, !m.goleiro)}
-                aria-pressed={!!m.goleiro}
-                style={{ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer', border: `1px solid ${m.goleiro ? '#d4a017' : '#333'}`, background: m.goleiro ? 'rgba(212,160,23,0.15)' : 'transparent', color: m.goleiro ? '#d4a017' : 'var(--text-dim)' }}
-              >
-                Goleiro
-              </button>
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{m.goleiro ? '' : LABEL_LINHA}</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Presenças:</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                {Array.from({ length: 5 }).map((_, idx) => {
-                  const p = (m.presencas_recentes || [])[idx];
-                  const cor = !p ? 'transparent' : p.presente ? '#10b981' : '#ef4444';
-                  const dataFmt = p?.data ? formatarData(p.data, fuso, 'numerica') : null;
-                  const label = p ? `Jogo de ${dataFmt || 'data desconhecida'}: ${p.presente ? 'presente' : 'ausente'}` : 'Sem dados (jogo não aconteceu)';
-                  return (
-                    <span
-                      key={idx}
-                      role="img"
-                      aria-label={label}
-                      title={label}
-                      style={{ width: 10, height: 10, borderRadius: '50%', background: cor, border: p ? 'none' : '1px solid #444', boxSizing: 'border-box', display: 'inline-block' }}
-                    />
-                  );
-                })}
-              </div>
-              {m.taxa_presenca ? (
-                <span style={{ fontSize: 'var(--label-size)', color: 'var(--label-color)', fontWeight: 700 }}>{m.taxa_presenca}</span>
-              ) : null}
-            </div>
-
-            {!ehProprio && m.visivel_ranking === false ? (
-              <input
-                type="text"
-                value={m.nota_interna || ''}
-                onChange={(e) => setNotaLocal(m, e.target.value.slice(0, 200))}
-                onBlur={() => saveNota(m)}
-                placeholder="Razão (só você vê)…"
-                style={{ marginTop: 10, width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid #1a1a1a', background: '#0c0c0c', color: '#fff', fontSize: 16 }}
-              />
-            ) : null}
-
-            {mensagemId === m.user_id ? (
-              <FormMensagem
-                slug={slug}
-                membro={m}
-                showToast={showToast}
-                onClose={() => setMensagemId(null)}
-              />
-            ) : null}
-          </div>
-        );
-      })}
+            </div>,
+            document.body
+          )
+        : null}
 
       {confirmacao ? (
         <ConfirmModal
@@ -1371,20 +987,19 @@ function TabMembros({ slug, fuso, meId, showToast }) {
             confirmacao.tipo === 'remover'
               ? `Remover ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} do time?`
               : confirmacao.tipo === 'promover'
-                ? `Promover ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} a admin?`
+                ? `Tornar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} admin? Admin organiza o time; a posição em campo não muda.`
                 : confirmacao.tipo === 'zerar-votos'
-                  ? `Zerar os votos recebidos por ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
+                  ? `Zerar as notas que ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} recebeu?`
                   : confirmacao.tipo === 'inativar'
-                    ? `Marcar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} como inativo? Vai ser removido do sorteio e ranking mas o histórico é preservado.`
-                    : `Remover o admin de ${confirmacao.membro.nome_jogador || confirmacao.membro.nome}?`
+                    ? `Marcar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} como inativo? Sai do sorteio e do ranking, mas o histórico fica.`
+                    : `Tirar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} de admin?`
           }
           perigo={confirmacao.tipo === 'remover' || confirmacao.tipo === 'zerar-votos'}
           confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : confirmacao.tipo === 'zerar-votos' ? 'Zerar' : confirmacao.tipo === 'inativar' ? 'Marcar inativo' : 'Confirmar'}
           onConfirm={() => {
             const { tipo, membro } = confirmacao;
             setConfirmacao(null);
-            if (tipo === 'remover') remover(membro);
-            else if (tipo === 'zerar-votos') zerarVotos(membro);
+            if (tipo === 'remover') { setAbertoId(null); remover(membro); } else if (tipo === 'zerar-votos') zerarVotos(membro);
             else if (tipo === 'inativar') setAtivo(membro, false);
             else mudarRole(membro, tipo === 'promover' ? 'admin' : 'member');
           }}
@@ -1396,7 +1011,7 @@ function TabMembros({ slug, fuso, meId, showToast }) {
 }
 
 // ─── TAB: CONVITES ───────────────────────────────────────────────────────────
-function TabConvites({ slug, showToast }) {
+function TabConvites({ slug, showToast, semBotao = false }) {
   const [convites, setConvites] = useState(null);
   const [gerando, setGerando] = useState(false);
   const [novoLink, setNovoLink] = useState('');
@@ -1464,9 +1079,11 @@ function TabConvites({ slug, showToast }) {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={gerando} onClick={gerar}>
-        {gerando ? 'Gerando…' : '＋ Gerar novo convite'}
-      </button>
+      {semBotao ? null : (
+        <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={gerando} onClick={gerar}>
+          {gerando ? 'Gerando…' : '＋ Gerar novo convite'}
+        </button>
+      )}
 
       {novoLink ? (
         <div style={{ ...CARD, padding: 12, borderColor: 'rgba(139,92,246,0.4)' }}>
@@ -1479,7 +1096,7 @@ function TabConvites({ slug, showToast }) {
       ) : null}
 
       {convites.length === 0 ? (
-        <div className="empty-state"><div className="empty-state__emoji"><Icon name="partilhar" size={36} /></div><p className="muted">Sem convites ativos.</p></div>
+        <p className="muted" style={{ fontSize: 13, margin: 0 }}>Nenhum link de convite ativo.</p>
       ) : (
         convites.map((c) => (
           <div key={c.id} style={{ ...CARD, padding: 12, display: 'grid', gap: 8 }}>
@@ -1681,6 +1298,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
             onChange={(e) => setPrazoInput(e.target.value)}
             style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 16 }}
           />
+          <RabichoDaHora fuso={info?.fuso} />
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={abrir}>Confirmar</button>
             <button type="button" className="btn btn--ghost btn--sm" onClick={() => setAbrirModal(false)}>Cancelar</button>
@@ -1695,7 +1313,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
 
 // Form inline para agendar N jogos semanais de uma vez.
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-function FormRecorrentes({ slug, showToast, onClose, onCriado }) {
+function FormRecorrentes({ slug, fuso, cidade, showToast, onClose, onCriado }) {
   const [dia, setDia] = useState(1); // segunda por defeito
   const [hora, setHora] = useState('19:00');
   const [local, setLocal] = useState('');
@@ -1742,8 +1360,9 @@ function FormRecorrentes({ slug, showToast, onClose, onCriado }) {
         </div>
       </div>
       <label style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Hora</span>
+        <span style={lbl}>Hora do jogo</span>
         <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} style={inputStyle} />
+        <RabichoDaHora fuso={fuso} cidade={cidade} />
       </label>
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Local (opcional)</span>
@@ -1765,12 +1384,13 @@ function FormRecorrentes({ slug, showToast, onClose, onCriado }) {
   );
 }
 
-function TabJogos({ slug, fuso, showToast, navigate }) {
+function TabJogos({ slug, team, showToast, navigate }) {
+  const fuso = team?.fuso;
   const [games, setGames] = useState(null);
   const [editar, setEditar] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null);
   const [motivoCancel, setMotivoCancel] = useState('');
-  const [recorrenteAberto, setRecorrenteAberto] = useState(false);
+  const [lancar, setLancar] = useState(null); // o jogo do "Lançar resultado" (era a aba Resultados)
 
   useEffect(() => {
     let ativo = true;
@@ -1789,6 +1409,12 @@ function TabJogos({ slug, fuso, showToast, navigate }) {
         .catch((e) => showToast(e.message, 'error')),
     [slug, showToast]
   );
+
+  async function onResultado() {
+    setLancar(null);
+    await recarregar();
+    showToast('Resultado salvo. Aparece na Resenha.');
+  }
 
   const [now] = useState(() => Date.now());
   const { futuros, passados } = useMemo(() => {
@@ -1833,18 +1459,7 @@ function TabJogos({ slug, fuso, showToast, navigate }) {
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div className="games-label" style={{ margin: 0 }}>Futuros</div>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => setRecorrenteAberto((v) => !v)}>Criar jogos recorrentes</button>
-        </div>
-        {recorrenteAberto ? (
-          <FormRecorrentes
-            slug={slug}
-            showToast={showToast}
-            onClose={() => setRecorrenteAberto(false)}
-            onCriado={recarregar}
-          />
-        ) : null}
+        <div className="games-label" style={{ margin: 0 }}>Próximos</div>
         {futuros.length === 0 ? (
           <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>Sem jogos futuros.</p>
         ) : (
@@ -1906,21 +1521,35 @@ function TabJogos({ slug, fuso, showToast, navigate }) {
           <p className="muted" style={{ fontSize: 13 }}>Sem jogos passados.</p>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            {passados.map((g) => (
-              <div key={g.id} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso)}</div>
+            {passados.map((g) => {
+              // "Lançar resultado" só no jogo que aconteceu, foi sorteado e ainda não tem resultado nenhum (era a aba Resultados).
+              const cancelado = g.cancelado || g.status === 'cancelado';
+              const temResultado = (g.campeao_time_index !== null && g.campeao_time_index !== undefined) || (g.resultado_nivel || 0) > 0;
+              const semResultado = !cancelado && g.sorteio_realizado && !temResultado;
+              return (
+                <div key={g.id} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10, opacity: cancelado ? 0.55 : 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso, { cidade: team?.cidade })}</div>
+                  </div>
+                  {semResultado ? (
+                    <button type="button" className="btn btn--purple btn--sm" data-lancar-resultado onClick={() => setLancar(g)}>Lançar resultado</button>
+                  ) : (
+                    <>
+                      <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>
+                      {temResultado ? <button type="button" className="btn btn--ghost btn--sm" onClick={() => setLancar(g)}>Editar resultado</button> : null}
+                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${g.id}`)}>Ver</button>
+                    </>
+                  )}
                 </div>
-                <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>
-                <button type="button" className="btn btn--purple btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${g.id}`)}>Ver resultado</button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {editar ? <EditarJogoModal jogo={editar} fuso={fuso} onClose={() => setEditar(null)} onSaved={onEditado} showToast={showToast} /> : null}
+      {editar ? <EditarJogoModal jogo={editar} fuso={fuso} cidade={team?.cidade} onClose={() => setEditar(null)} onSaved={onEditado} showToast={showToast} /> : null}
+      {lancar ? <ResultadoModal jogo={lancar} fuso={fuso} premios={{ artilheiro: team?.mostrar_artilheiro !== false, destaque: team?.mostrar_destaque !== false }} onClose={() => setLancar(null)} onSaved={onResultado} showToast={showToast} /> : null}
 
       {confirmacao ? (
         <ConfirmModal
@@ -1955,7 +1584,7 @@ function TabJogos({ slug, fuso, showToast, navigate }) {
   );
 }
 
-function EditarJogoModal({ jogo, fuso, onClose, onSaved, showToast }) {
+function EditarJogoModal({ jogo, fuso, cidade, onClose, onSaved, showToast }) {
   // Data e hora do formulário são as do CAMPO (fuso do time, 29I achado 83): é o que o motor lê ao salvar. Antes vinham do relógio
   // do aparelho — o admin em Lisboa via, e salvava, a hora de Lisboa.
   const campos = camposNoCampo(jogo.data, fuso);
@@ -1993,7 +1622,7 @@ function EditarJogoModal({ jogo, fuso, onClose, onSaved, showToast }) {
         <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 12 }}>
           <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Editar jogo</h2>
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Data</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} /></label>
-          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Hora</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inputStyle} /></label>
+          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Hora do jogo</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inputStyle} /><RabichoDaHora fuso={fuso} cidade={cidade} /></label>
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Local</span><input value={local} onChange={(e) => setLocal(e.target.value)} style={inputStyle} /></label>
           <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Jogadores por time</span><NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} /></label>
           <label style={{ display: 'grid', gap: 6 }}>
@@ -2008,84 +1637,7 @@ function EditarJogoModal({ jogo, fuso, onClose, onSaved, showToast }) {
   );
 }
 
-// ─── TAB: RESULTADOS ─────────────────────────────────────────────────────────
-function TabResultados({ slug, team, showToast }) {
-  const [games, setGames] = useState(null);
-  const [registar, setRegistar] = useState(null);
-  const [modo, setModo] = useState('sem'); // 'sem' | 'com'
-
-  function carregar() {
-    return apiFetch(`/api/teams/${slug}/games`)
-      .then((d) => setGames(d.games || []))
-      .catch((e) => {
-        setGames([]);
-        showToast(e.message, 'error');
-      });
-  }
-
-  useEffect(() => {
-    let ativo = true;
-    apiFetch(`/api/teams/${slug}/games`)
-      .then((d) => ativo && setGames(d.games || []))
-      .catch((e) => ativo && (setGames([]), showToast(e.message, 'error')));
-    return () => {
-      ativo = false;
-    };
-  }, [slug, showToast]);
-
-  const semResultado = useMemo(
-    () => (games || []).filter((g) => g.sorteio_realizado && (g.campeao_time_index === null || g.campeao_time_index === undefined)),
-    [games]
-  );
-  const comResultado = useMemo(
-    () => (games || []).filter((g) => g.campeao_time_index !== null && g.campeao_time_index !== undefined),
-    [games]
-  );
-
-  async function onGuardado() {
-    setRegistar(null);
-    await carregar();
-    showToast('Resultado salvo. Aparece na Resenha.');
-  }
-
-  if (games === null) return <LoadingFutty />;
-  const lista = modo === 'sem' ? semResultado : comResultado;
-
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      {/* Toggle */}
-      <div className="chips-row">
-        <button type="button" className={`chip ${modo === 'sem' ? 'chip--active tab-shine' : ''}`} onClick={() => setModo('sem')}>Sem resultado</button>
-        <button type="button" className={`chip ${modo === 'com' ? 'chip--active tab-shine' : ''}`} onClick={() => setModo('com')}>Com resultado</button>
-      </div>
-
-      {lista.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state__emoji"><Icon name="medalha" size={36} /></div>
-          <p className="muted">{modo === 'sem' ? 'Nenhum jogo à espera de resultado.' : 'Nenhum jogo com resultado.'}</p>
-        </div>
-      ) : (
-        lista.map((g) => (
-          <div key={g.id} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-                {formatDateTime(g.data, team?.fuso)}
-                {modo === 'com' ? ` · Time ${(g.campeao_time_index ?? 0) + 1} venceu` : ' · Sem resultado registrado'}
-              </div>
-            </div>
-            <button type="button" className={`btn btn--sm ${modo === 'sem' ? 'btn--primary' : 'btn--ghost'}`} onClick={() => setRegistar(g)}>
-              {modo === 'sem' ? 'Registrar resultado' : 'Editar resultado'}
-            </button>
-          </div>
-        ))
-      )}
-
-      {registar ? <ResultadoModal jogo={registar} fuso={team?.fuso} premios={{ artilheiro: team?.mostrar_artilheiro !== false, destaque: team?.mostrar_destaque !== false }} onClose={() => setRegistar(null)} onSaved={onGuardado} showToast={showToast} /> : null}
-    </div>
-  );
-}
-
+// ─── RESULTADO (era a aba Resultados; agora "Lançar resultado" nos jogos passados da aba Jogos) ─────────
 // `premios` (29H, item 44): o que o time deixou ligado no painel ("Artilheiro do dia" / "Destaque do dia"). Desligado, a seção some —
 // a menos que o jogo JÁ tenha o prêmio (editar um resultado antigo não pode apagá-lo em silêncio: o prêmio continua à vista).
 function ResultadoModal({ jogo, fuso, premios = { artilheiro: true, destaque: true }, onClose, onSaved, showToast }) {
@@ -2364,14 +1916,8 @@ function TabDenuncias({ showToast }) {
   }
 
   if (denuncias === null) return <LoadingFutty />;
-  if (denuncias.length === 0) {
-    return (
-      <div className="empty-state" style={{ borderColor: 'rgba(139,92,246,0.4)' }}>
-        <div className="empty-state__emoji"><Icon name="estrela" size={36} /></div>
-        <p className="muted">Sem denúncias pendentes.</p>
-      </div>
-    );
-  }
+  // Vazia, some: a fila da moderação, logo acima, já diz "Tudo tranquilo por aqui." (dois "vazios" seguidos eram ruído).
+  if (denuncias.length === 0) return null;
 
   const MOTIVO_LABEL = { linguagem_inapropriada: 'Linguagem inapropriada', spam: 'Spam', conteudo_ofensivo: 'Conteúdo ofensivo', outro: 'Outro' };
 
@@ -2406,160 +1952,169 @@ function TabDenuncias({ showToast }) {
   );
 }
 
-// ─── Itens do menu (sidebar + drawer) ────────────────────────────────────────
-function MenuItems({ tab, onPick }) {
+// ─── AJUSTES → NOTIFICAÇÕES DO ADMIN ─────────────────────────────────────────
+// 29I, bloco 3: o admin recebe push quando chega pedido de entrada (o dono pediu) e pode desligar aqui. As outras ficam em Perfil →
+// Notificações (é a mesma escolha, guardada na conta).
+function NotificacoesDoAdmin({ showToast }) {
+  const [prefs, setPrefs] = useState(null);
+  useEffect(() => {
+    let ativo = true;
+    apiFetch('/api/push/preferencias')
+      .then((d) => ativo && setPrefs(d))
+      .catch(() => ativo && setPrefs({ preferencias: { pedidos: true }, salvavel: false }));
+    return () => {
+      ativo = false;
+    };
+  }, []);
+  async function trocarPedidos(v) {
+    const antes = prefs;
+    setPrefs((p) => ({ ...p, preferencias: { ...p.preferencias, pedidos: v } }));
+    try {
+      await apiFetch('/api/push/preferencias', { method: 'PATCH', body: JSON.stringify({ pedidos: v }) });
+    } catch (e) {
+      setPrefs(antes);
+      showToast(e.message, 'error');
+    }
+  }
+  if (!prefs) return null;
   return (
-    <div style={{ display: 'grid' }}>
-      {MENU.map((m) => {
-        const on = tab === m.k;
-        return (
-          <button
-            key={m.k}
-            type="button"
-            onClick={() => onPick(m.k)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              width: '100%',
-              textAlign: 'left',
-              padding: '11px 14px',
-              border: 'none',
-              borderLeft: `3px solid ${on ? '#8b5cf6' : 'transparent'}`,
-              background: on ? 'rgba(139,92,246,0.08)' : 'transparent',
-              color: on ? '#fff' : '#555',
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: 'pointer',
-            }}
-          >
-            <m.icon size={15} style={{ flexShrink: 0 }} />
-            {m.label}
-          </button>
-        );
-      })}
+    <div style={{ ...CARD, padding: 14, display: 'grid', gap: 8 }}>
+      <Interruptor ligado={prefs.preferencias?.pedidos !== false} aoTrocar={trocarPedidos} rotulo="Pedidos de entrada" apoio="Um aviso no celular quando alguém pede para entrar no time." />
+      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>As outras notificações ficam em Perfil → Notificações.</span>
     </div>
   );
 }
 
-// ─── PÁGINA ──────────────────────────────────────────────────────────────────
-export default function AdminPanel() {
-  const { slug } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const meId = user?.id || null;
-  const [searchParams, setSearchParams] = useSearchParams();
-  // 29I (achado 103): a aba do time é ?tab=time. O endereço antigo (?tab=equipa) continua valendo: vira a mesma aba.
-  const tab = abaDoAdmin(searchParams.get('tab'));
-
-  const [team, setTeam] = useState(null);
-  const [membrosBasicos, setMembrosBasicos] = useState([]); // de GET /api/teams/:slug (com created_at)
-  const [negado, setNegado] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [drawer, setDrawer] = useState(false);
-
-  function showToast(mensagem, tipo = 'success') {
-    setToast({ mensagem, tipo });
+// ─── AJUSTES → AÇÕES DEFINITIVAS (nome do dono, no lugar de "Zona de perigo") ──
+function PedirVotarDeNovo({ slug, showToast }) {
+  const [confirmar, setConfirmar] = useState(false);
+  const [busy, setBusy] = useState(false);
+  async function pedir() {
+    setConfirmar(false);
+    setBusy(true);
+    try {
+      await apiFetch(`/api/teams/${slug}/pedir-revotacao`, { method: 'POST', body: JSON.stringify({ zerar: true }) });
+      showToast('Notas zeradas. O time foi avisado para votar de novo.');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
   }
-  function irTab(k) {
-    setSearchParams((prev) => {
-      const p = new URLSearchParams(prev);
-      p.set('tab', k);
-      return p;
-    }, { replace: true });
-    setDrawer(false);
-  }
+  return (
+    <div style={{ ...CARD, padding: 14, borderColor: 'rgba(239,68,68,0.4)', display: 'grid', gap: 8 }}>
+      <button type="button" disabled={busy} onClick={() => setConfirmar(true)} data-pedir-votar-de-novo style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--danger)', background: 'transparent', color: '#fda4af', fontWeight: 700, cursor: 'pointer' }}>
+        {busy ? 'Zerando…' : 'Pedir para votar de novo'}
+      </button>
+      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Zera as notas de todo mundo no time e pede para cada um votar de novo. Não dá para desfazer.</span>
+      {confirmar ? (
+        <ConfirmModal
+          texto="Zerar as notas do time e pedir para todo mundo votar de novo? Não dá para desfazer."
+          perigo
+          confirmarLabel="Zerar e pedir"
+          onConfirm={pedir}
+          onCancel={() => setConfirmar(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
 
-  // Carrega a equipa e verifica acesso de admin.
+// ─── As abas da página do time (Rodada 29I, bloco 3) ─────────────────────────
+
+/** Aba JOGOS do admin: "Novo jogo" é a ação principal (o dourado); recorrentes e campeonato, secundários no topo; depois a lista. */
+export function JogosDoAdmin({ slug, team, showToast, navigate }) {
+  const [painel, setPainel] = useState(null); // 'recorrentes' | 'campeonato'
+  const [versao, setVersao] = useState(0); // remonta a lista depois de criar os recorrentes
+  const alternar = (k) => setPainel((p) => (p === k ? null : k));
+  return (
+    <div style={{ display: 'grid', gap: 12 }} data-jogos-admin>
+      <Link to={`/time/${slug}/jogo/novo`} className="btn hud-corners-s cta-gold" style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
+        + Novo jogo
+      </Link>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className="btn btn--outline btn--sm hud-corners-s" aria-pressed={painel === 'recorrentes'} style={{ flex: 1 }} onClick={() => alternar('recorrentes')}>Criar jogos recorrentes</button>
+        <button type="button" className="btn btn--outline btn--sm hud-corners-s" aria-pressed={painel === 'campeonato'} style={{ flex: 1 }} onClick={() => alternar('campeonato')}>Criar campeonato</button>
+      </div>
+      {painel === 'recorrentes' ? (
+        <FormRecorrentes slug={slug} fuso={team?.fuso} cidade={team?.cidade} showToast={showToast} onClose={() => setPainel(null)} onCriado={async () => setVersao((v) => v + 1)} />
+      ) : null}
+      {painel === 'campeonato' ? <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} /> : null}
+      <TabJogos key={versao} slug={slug} team={team} showToast={showToast} navigate={navigate} />
+    </div>
+  );
+}
+
+/** Aba ELENCO do admin: 3 números do time no topo (o resto das estatísticas está no Ranking), os membros e os links de convite ativos. */
+export function ElencoDoAdmin({ slug, meId, showToast, versaoConvites = 0 }) {
+  const [stats, setStats] = useState(null);
   useEffect(() => {
     let ativo = true;
-    apiFetch(`/api/teams/${slug}`)
-      .then((d) => {
-        if (!ativo) return;
-        if (d.team?.role !== 'admin') {
-          setNegado(true);
-          navigate(`/time/${slug}`, { replace: true });
-          return;
-        }
-        setTeam(d.team);
-        setMembrosBasicos(d.members || []);
-      })
-      .catch(() => {
-        if (!ativo) return;
-        setNegado(true);
-        navigate(`/time/${slug}`, { replace: true });
-      });
+    apiFetch(`/api/teams/${slug}/stats`).then((d) => ativo && setStats(d.stats || {})).catch(() => ativo && setStats({}));
     return () => {
       ativo = false;
     };
-  }, [slug, navigate]);
-
-  if (negado) return null;
-
+  }, [slug]);
   return (
-    <div className="app-shell">
-      <style>{ADMIN_CSS}</style>
-
-      {/* Header do painel */}
-      <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
-        <Link to={`/time/${slug}`} className="topbar-back" style={{ flexShrink: 0 }}>← Voltar</Link>
-        <div style={{ flex: 1, textAlign: 'center', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {team?.nome || 'Admin'}
-        </div>
-        <button
-          type="button"
-          className="admin-burger"
-          aria-label="Menu"
-          onClick={() => setDrawer(true)}
-          style={{ alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10, border: '1px solid #222', background: 'transparent', color: '#fff', fontSize: 18, cursor: 'pointer' }}
-        >
-          ☰
-        </button>
-        <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, color: '#b69cff', border: '1px solid var(--purple)', borderRadius: 999, padding: '3px 8px' }}>ADMIN</span>
-      </header>
-      <div className="app-topbar__line" />
-
-      {!team ? (
-        <main className="app-main"><LoadingFutty /></main>
-      ) : (
-        <div className="admin-layout">
-          <aside className="admin-sidebar">
-            <MenuItems tab={tab} onPick={irTab} />
-          </aside>
-
-          <main className="admin-content">
-            <div style={{ maxWidth: 760, margin: '0 auto' }}>
-              {tab === 'dashboard' && <TabDashboard slug={slug} fuso={team?.fuso} navigate={navigate} onGoTab={irTab} showToast={showToast} />}
-              {tab === 'time' && <TabEquipa slug={slug} team={team} showToast={showToast} />}
-              {tab === 'membros' && <TabMembros slug={slug} fuso={team?.fuso} meId={meId} showToast={showToast} />}
-              {tab === 'convites' && <TabConvites slug={slug} showToast={showToast} />}
-              {tab === 'jogos' && <TabJogos slug={slug} fuso={team?.fuso} showToast={showToast} navigate={navigate} />}
-              {tab === 'campeonato' && <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} />}
-              {tab === 'resultados' && <TabResultados slug={slug} team={team} showToast={showToast} />}
-              {tab === 'estatisticas' && <TabEstatisticas slug={slug} membrosBasicos={membrosBasicos} showToast={showToast} />}
-              {tab === 'comunicacao' && <TabComunicacao slug={slug} navigate={navigate} showToast={showToast} />}
-              {tab === 'denuncias' && <TabDenuncias showToast={showToast} />}
-            </div>
-          </main>
-        </div>
-      )}
-
-      {/* Drawer mobile — portal para o body (15-set): fixed dentro do [data-page]
-          animado não confia no viewport no WebKit do iPhone, ver nota em
-          LoadingFutty.jsx. */}
-      {drawer
-        ? createPortal(
-            <div role="presentation" onClick={() => setDrawer(false)} style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-end' }}>
-              <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', background: '#0a0a0a', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderTop: '1px solid #1a1a1a', padding: '10px 0 16px', maxHeight: '80vh', overflowY: 'auto' }}>
-                <div style={{ width: 40, height: 4, borderRadius: 999, background: '#333', margin: '6px auto 10px' }} />
-                <MenuItems tab={tab} onPick={irTab} />
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
-
-      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
+    <div style={{ display: 'grid', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }} data-tres-numeros>
+        <MetricCard valor={stats ? stats.total_jogos ?? 0 : '–'} label="jogos" />
+        <MetricCard valor={stats ? stats.total_membros ?? 0 : '–'} label="membros" />
+        {/* Achado 101: é a média de CONFIRMADOS por jogo (stats.media_confirmacoes), não de gols. */}
+        <MetricCard valor={stats ? (stats.media_confirmacoes ?? 0).toFixed(1) : '–'} label="confirmados por jogo" />
+      </div>
+      <TabMembros slug={slug} meId={meId} showToast={showToast} />
+      <Secao titulo="Links de convite ativos">
+        <TabConvites key={versaoConvites} slug={slug} showToast={showToast} semBotao />
+      </Secao>
     </div>
   );
+}
+
+/** Aba AJUSTES (só admin): o time, admins, notificações do admin, avisar o time, denúncias e, no fim, AÇÕES DEFINITIVAS. */
+export function AjustesDoTime({ slug, team, members = [], showToast, onMudou }) {
+  const admins = members.filter((m) => m.role === 'admin');
+  return (
+    <div style={{ display: 'grid', gap: 18 }} data-ajustes-do-time>
+      <Secao titulo="O time">
+        <TabEquipa slug={slug} team={team} showToast={showToast} onMudou={onMudou} />
+      </Secao>
+      <Secao titulo={`Admins · ${admins.length}`}>
+        <div style={{ ...CARD, padding: '4px 12px' }}>
+          {admins.map((m, i) => (
+            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
+              <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.id} avatarGenerico={m.avatar_generico} sm />
+              <span style={{ fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</span>
+            </div>
+          ))}
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Para tornar alguém admin, toque no nome dele no Elenco. {TEXTO_ADMIN_E_POSICAO}</span>
+      </Secao>
+      <Secao titulo="Notificações do admin">
+        <NotificacoesDoAdmin showToast={showToast} />
+      </Secao>
+      <Secao titulo="Avisar o time">
+        <AvisarOTime slug={slug} showToast={showToast} />
+      </Secao>
+      <Secao titulo="Denúncias" id="denuncias">
+        <ModeracaoFila slug={slug} />
+        <TabDenuncias showToast={showToast} />
+      </Secao>
+      <Secao titulo="Ações definitivas" perigo>
+        <PedirVotarDeNovo slug={slug} showToast={showToast} />
+      </Secao>
+    </div>
+  );
+}
+
+/** As estatísticas do time, no Ranking (eram a aba Estatísticas do painel). Só o admin vê. */
+export function EstatisticasDoTime({ slug, membrosBasicos = [], showToast }) {
+  return <TabEstatisticas slug={slug} membrosBasicos={membrosBasicos} showToast={showToast} />;
+}
+
+/** /admin/<slug>?tab=… — o endereço antigo (favorito, link no grupo) continua valendo: leva à aba nova da página do time. */
+export default function AdminRedireciona() {
+  const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  return <Navigate to={caminhoDoAdminAntigo(slug, searchParams.get('tab'))} replace />;
 }

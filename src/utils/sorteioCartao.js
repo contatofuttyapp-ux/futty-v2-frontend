@@ -84,6 +84,11 @@ function desenharFundoCasa(cx, W, H) {
   cx.fillStyle = vinh; cx.fillRect(0, 0, W, H);
 }
 
+// Quanto a linha de baixo (data · time) fica abaixo da linha de base do título — item 73: a cedilha do "ESCALAÇÃO" (120 px) desce
+// ~27 px e a linha antiga (+40, corpo 26: o topo das letras em ~+21) passava por cima dela.
+export const DESCE_META_ESCALACAO = 70;
+export const DESCE_META_916 = 72;
+
 // Título em gradiente dourado com sombra — MESMO tratamento do "ESCALAÇÃO".
 function desenharTituloGradiente(cx, texto, W, y, tamanho = 120) {
   cx.textAlign = 'center'; cx.textBaseline = 'alphabetic';
@@ -181,11 +186,13 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
   // título = o NOME DO TIME (o cartaz é sobre ESTE time), mesmo tratamento gradiente.
   let y = 96;
   const baseline = desenharTituloGradiente(cx, (time.nome || 'TIME').toUpperCase(), W, y, 110);
+  // Item 73 (Rodada 29, no bloco 3 da 29I): a linha de baixo DESCE — colada no título, ela cobria a cedilha (Ç) e as descendentes
+  // do nome do time. DESCE_META px abaixo da linha de base: livra a perna mais funda das letras do título (~0,22 do corpo).
   cx.fillStyle = '#a99fc0'; cx.textAlign = 'center'; cx.font = '600 30px Rajdhani, sans-serif';
-  cx.fillText([nomeEquipa, 'sorteio'].filter(Boolean).join(' · ').toUpperCase(), W / 2, baseline + 44);
+  cx.fillText([nomeEquipa, 'sorteio'].filter(Boolean).join(' · ').toUpperCase(), W / 2, baseline + DESCE_META_916);
 
   // grelha de cartões (mesma lógica adaptativa do ESCALAÇÃO, para 1 time só).
-  const boxX = 64; const boxTop = baseline + 110; const boxRight = W - 64; const boxBottom = H - 150;
+  const boxX = 64; const boxTop = baseline + DESCE_META_916 + 66; const boxRight = W - 64; const boxBottom = H - 150;
   const boxW = boxRight - boxX; const boxH = boxBottom - boxTop;
   const L = jogs.length <= 4 ? { cw: 240, hs: 44 } : jogs.length <= 8 ? { cw: 190, hs: 40 } : { cw: 150, hs: 34 };
   const cardGap = 20; const rowGap = 18;
@@ -254,8 +261,8 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
 
   secs.forEach((s) => { s.linhas = linhasDe(s.jogs.length, maxPorLinha); s.h = L.hs + 18 + s.linhas.length * cardH + (s.linhas.length - 1) * rowGap; });
 
-  // título "ESCALAÇÃO" (3×) + meta = 1º item do bloco distribuído
-  const tituloH = 120 + 14 + 32;
+  // título "ESCALAÇÃO" (3×) + meta = 1º item do bloco distribuído. Item 73: a meta (data · time) desce para baixo da cedilha do Ç.
+  const tituloH = 120 + (DESCE_META_ESCALACAO - 26) + 32;
   const itens = [{ tipo: 'titulo', h: tituloH }, ...secs.map((s) => ({ tipo: 'sec', h: s.h, sec: s }))];
   const totalH = itens.reduce((a, it) => a + it.h, 0);
   const espaco = Math.max(18, (boxH - totalH) / (itens.length + 1)); // space-evenly (com piso p/ times grandes)
@@ -271,7 +278,7 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
   itens.forEach((it) => {
     if (it.tipo === 'titulo') {
       const baseline = desenharTituloGradiente(cx, 'ESCALAÇÃO', W, y, 120);
-      if (meta) { cx.fillStyle = '#a99fc0'; cx.font = '600 26px Rajdhani, sans-serif'; cx.fillText(meta, W / 2, baseline + 40); }
+      if (meta) { cx.fillStyle = '#a99fc0'; cx.font = '600 26px Rajdhani, sans-serif'; cx.fillText(meta, W / 2, baseline + DESCE_META_ESCALACAO); }
     } else {
       const s = it.sec;
       cx.save();
