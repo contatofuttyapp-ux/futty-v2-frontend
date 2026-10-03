@@ -54,3 +54,16 @@ test('29N · a linha "● nome do time" sob o nome só aparece quando NÃO há c
   // O texto continua sendo o nome do primeiro time, para quem não administra e não tem card.
   assert.match(inicio, /\{teams\[0\]\.nome\}/);
 });
+
+// ── 29N-B · o avatar segue a LARGURA da tela, não a altura ──────────────────────────────────────────────────────────────────────
+test('29N-B · .cromo-inicio mede min(49vw, 236px) — nenhuma altura (dvh/vh) dentro, e nenhum outro seletor sobrescreve a largura', () => {
+  const css = ler('src/styles/app.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const regra = css.match(/\.cromo-inicio\s*\{([^}]*)\}/);
+  assert.ok(regra, 'achou a regra .cromo-inicio');
+  assert.match(regra[1], /width:\s*min\(49vw,\s*236px\);/);
+  assert.doesNotMatch(regra[1], /d?vh/, 'a altura da tela (no Safari com as barras, 664 em vez de 844) encolhia o avatar para 97 px');
+  const todas = [...css.matchAll(/(^|\})\s*([^{}]*\.cromo-inicio[^{}]*)\{([^}]*)\}/g)].filter((m) => /(^|[^-\w])width\s*:/.test(m[3]));
+  assert.equal(todas.length, 1, 'só a regra principal define a largura do avatar do Início');
+  // A Figurinha continua com a fórmula da altura (ali o card tem de caber sem rolar): a 29N-B não mexe nela.
+  assert.match(css, /\.fig-studio-card\s*\{\s*width:\s*min\(78vw, calc\(\(100dvh - 477px/);
+});

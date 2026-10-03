@@ -1131,9 +1131,9 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
 // vai ser VISTO, não sempre a 600×600.
 //
 // O cromo do Início é um elemento de tela, e a sua largura vem do CSS
-// (`.cromo-inicio`, que depende da altura do aparelho): num iPhone 15 Pro Max dá
-// 236 px, num iPhone SE dá 99 px. A 600×600 fixos, o SE gerava 6× mais pixéis do
-// que mostra — e cada pixel a mais é rasterização e codificação de PNG.
+// (`.cromo-inicio`: 49% da largura da tela, teto de 236 px): num iPhone de 390 dá
+// 191 px, num computador 236 px. A 600×600 fixos, o iPhone gerava ~10× mais pixéis
+// do que mostra — e cada pixel a mais é rasterização e codificação de PNG.
 //
 // Tecto de 600 (o tamanho canónico de sempre — nunca se gera MAIOR do que o que
 // já se desenhava) e piso de 300, para o cromo nunca sair mole se a medição da
