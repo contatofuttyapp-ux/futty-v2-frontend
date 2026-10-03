@@ -7,6 +7,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { estadoSorteio } from '../utils/estadoSorteio';
 import { quandoOndeDoJogo } from '../utils/quandoOndeDoJogo';
+import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
@@ -72,7 +73,7 @@ export default function SorteioPublico() {
             {/* resultado do jogo, se já houver */}
             {res?.nivel >= 2 ? (
               <div style={{ marginTop: 14, padding: '12px 14px', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.3)', textAlign: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 20 }}>
-                {resultado.times?.[0]?.nome} <span style={{ color: '#d4a017' }}>{res.placar_a} × {res.placar_b}</span> {resultado.times?.[1]?.nome}
+                {nomeDoTimeNaTela(resultado.times?.[0]?.nome, 0)} <span style={{ color: '#d4a017' }}>{res.placar_a} × {res.placar_b}</span> {nomeDoTimeNaTela(resultado.times?.[1]?.nome, 1)}
               </div>
             ) : null}
           </>

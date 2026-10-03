@@ -1,6 +1,6 @@
 // Capturas de TODAS as telas do app em 390 px, contra o servidor LOCAL (nunca produção).
 //
-//   node scripts/capturar-telas.mjs [--url http://localhost:5173] [--time <slug>] [--so-publicas] [--saida <pasta>]
+//   node scripts/capturar-telas.mjs [--url http://localhost:5173] [--time <slug>] [--so-publicas] [--so 11,12] [--saida <pasta>]
 //
 // Pré-requisitos (dois terminais, ou LIGAR-FUTTY.bat): backend em :3001 (`npm start`) e frontend em :5173 (`npm run dev`).
 //
@@ -36,6 +36,8 @@ const EMAIL = process.env.FUTTY_TESTE_EMAIL || '';
 const SENHA = process.env.FUTTY_TESTE_SENHA || '';
 const TIME_FIXO = opcao('time', process.env.FUTTY_TESTE_TIME || null);
 const SO_PUBLICAS = args.includes('--so-publicas');
+// --so 11,12 → só as telas cujo nome começa por esses números (as outras imagens ficam como estão).
+const SO_ESTAS = (opcao('so', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 const LARGURA = 390;
 const ALTURA = 844;
@@ -407,6 +409,7 @@ async function main() {
     }
 
     for (const t of TELAS) {
+      if (SO_ESTAS.length && !SO_ESTAS.some((n) => t.arq.startsWith(`${n}-`) || t.arq === n)) continue;
       const motivoAntes = (t.sessao && !estado && `NÃO GERADA — ${semSessao}`)
         || (t.precisa && !dados?.[t.precisa] && `NÃO GERADA — ${t.dica}`)
         || (t.arq === '12-sorteio-publico' && !dados && `NÃO GERADA — ${semSessao}`);

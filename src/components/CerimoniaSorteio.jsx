@@ -16,6 +16,7 @@ import { registarEventoAd } from '../lib/ads';
 import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import SomSorteio from './somSorteio';
+import { NOMES_DAS_CORES, nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import '../styles/app.css';
 import '../styles/sorteio-maquina.css';
 
@@ -23,10 +24,10 @@ import '../styles/sorteio-maquina.css';
 // A cor veste o PALCO (anel + rótulo + tinte da silhueta), nunca a camisa.
 // eslint-disable-next-line react-refresh/only-export-components -- constante partilhada com SorteioShow
 export const MARCA_TIME = [
-  { n: 'OURO', nome: 'Time Ouro', c: '#d4a017', g: 'rgba(212,160,23,.55)' },
-  { n: 'ROXO', nome: 'Time Roxo', c: '#8b5cf6', g: 'rgba(139,92,246,.55)' },
-  { n: 'PRATA', nome: 'Time Prata', c: '#aab4c8', g: 'rgba(170,180,200,.55)' },
-  { n: 'BRONZE', nome: 'Time Bronze', c: '#c2652e', g: 'rgba(194,101,46,.55)' },
+  { n: 'OURO', nome: NOMES_DAS_CORES[0], c: '#d4a017', g: 'rgba(212,160,23,.55)' },
+  { n: 'ROXO', nome: NOMES_DAS_CORES[1], c: '#8b5cf6', g: 'rgba(139,92,246,.55)' },
+  { n: 'PRATA', nome: NOMES_DAS_CORES[2], c: '#aab4c8', g: 'rgba(170,180,200,.55)' },
+  { n: 'BRONZE', nome: NOMES_DAS_CORES[3], c: '#c2652e', g: 'rgba(194,101,46,.55)' },
 ];
 const marca = (i) => MARCA_TIME[i % MARCA_TIME.length];
 // LEI: RESERVA nunca veste cor de time — cinza-aço apagado, "à espera, sem dono".
@@ -253,7 +254,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         const k = marca(gi); const linhas = LINHAS[Math.min(t.jogadores.length, 11)] || [t.jogadores.length];
         let n = 0; let rows = '';
         for (const c of linhas) rows += `<div class="srow">${Array.from({ length: c }, () => `<div class="slot" data-g="${gi}" data-i="${n++}"></div>`).join('')}</div>`;
-        return `<div class="grupo" data-gi="${gi}" style="--tc:${k.c};--tg:${k.g}"><div class="ghead">${esc(k.nome)}</div>${rows}</div>`;
+        return `<div class="grupo" data-gi="${gi}" style="--tc:${k.c};--tg:${k.g}"><div class="ghead">${esc(nomeDoTimeNaTela(t.nome, gi))}</div>${rows}</div>`;
       }).join('');
       q('.resv').classList.toggle('on', reservas.length > 0);
       q('.rrow').innerHTML = reservas.map((j, i) => `<div class="rslot" data-r="${i}"><span class="badge">${esc(j.posicao || i + 1)}</span><div class="slot" style="width:100%;height:100%"></div></div>`).join('');
@@ -309,7 +310,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     }
     async function girarTime(ti) {
       const jogs = times[ti].jogadores; const k = marca(ti);
-      const quem = q('.quem'); quem.textContent = `Girando · ${k.nome}`;
+      q('.janela').classList.remove('encerrada');
+      const quem = q('.quem'); quem.textContent = `Girando · ${nomeDoTimeNaTela(times[ti].nome, ti)}`;
       quem.style.setProperty('--qc', k.c); quem.style.setProperty('--qg', k.g);
       const vagas = jogs.length > 7 ? [Math.ceil(jogs.length / 2), jogs.length - Math.ceil(jogs.length / 2)] : [jogs.length];
       let off = 0;
@@ -361,6 +363,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         let fs = 26; caixa.style.setProperty('--fs', `${fs}px`);
         while (caixa.offsetWidth > alvo && fs > 13) { fs -= 1; caixa.style.setProperty('--fs', `${fs}px`); }
       }
+      // Rodada 29M (achado 144): a janela dos rolos já fez o que tinha de fazer. Esconde-se junto com o véu (o desfoque cobre o salto), em vez de
+      // ficar uma caixa preta vazia, de ~60 px, no topo do resultado. Volta quando a cerimônia recomeça (corpo / girarTime).
+      q('.janela').classList.add('encerrada');
       q('.palcoStage').classList.add('veuTotal'); ft.classList.add('on');
       // O time inteiro acabou de aparecer: o jackpot (Rodada 14A) e o prêmio
       // (Rodada 14B) nascem no mesmo instante — é o segundo de "ganhei".
@@ -386,7 +391,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     }
 
     function preencherTudo() {
-      q('.rolos').innerHTML = ''; q('.quem').textContent = '';
+      q('.rolos').innerHTML = ''; q('.quem').textContent = ''; q('.janela').classList.add('encerrada'); // achado 144: sem caixa vazia no resultado
       maq.classList.remove('giroOn', 'accel', 'burst', 'dim', 'pulseall');
       times.forEach((t, gi) => t.jogadores.forEach((j, i) => {
         const s = q(`.slot[data-g="${gi}"][data-i="${i}"]`);
@@ -396,7 +401,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     }
     async function corpo() {
       const lv = q('.lever'); lv.classList.remove('pull'); void lv.offsetWidth; lv.classList.add('pull');
-      q('.palcoStage').classList.remove('veuTotal'); montarGrupos(); q('.fimtxt').classList.remove('on');
+      q('.palcoStage').classList.remove('veuTotal'); q('.janela').classList.remove('encerrada'); montarGrupos(); q('.fimtxt').classList.remove('on');
       // Rodada 14B: a alavanca repete a cerimónia — o prêmio da corrida anterior
       // apaga-se antes de os rolos voltarem a girar.
       maq.classList.remove('premio', 'premioCalmo');
@@ -536,7 +541,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
   async function compartilharTime(ti) {
     if (gerando) return;
     setGerando(true); setGerandoQual(ti); setAvisoCartao('');
-    const nomeDoTime = resultado?.times?.[ti]?.nome || `Time ${ti + 1}`;
+    const nomeDoTime = nomeDoTimeNaTela(resultado?.times?.[ti]?.nome, ti);
     try {
       const { blob, nome } = await gerarCartao916(resultado, ti, equipa);
       const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
@@ -626,7 +631,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         <div className="compartilhar__times">
           {times.map((t, ti) => (
             <button key={ti} type="button" className="btn btn--sm btn--outline hud-corners-s compartilhar__time" style={{ color: marca(ti).c, borderColor: marca(ti).c }} disabled={gerando} onClick={() => compartilharTime(ti)}>
-              {gerandoQual === ti ? 'Gerando…' : `9:16 · ${t.nome}`}
+              {gerandoQual === ti ? 'Gerando…' : `9:16 · ${nomeDoTimeNaTela(t.nome, ti)}`}
             </button>
           ))}
         </div>

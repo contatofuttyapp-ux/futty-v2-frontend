@@ -8,6 +8,7 @@ import { useApi } from '../hooks/useApi';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
 import { diaDoMes, mesCurto } from '../utils/dataHora';
 import { plural } from '../utils/plural';
+import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -179,8 +180,9 @@ export default function Jogo() {
   const golsResultado = data?.gols || [];
   // Times do sorteio (para nomes, jogadores do resultado e artilheiro).
   const timesSorteio = game?.times_resultado?.times || [];
-  const nomeTimeA = timesSorteio[0]?.nome || 'Time A';
-  const nomeTimeB = timesSorteio[1]?.nome || 'Time B';
+  // Achado 143 (29M): o placar também chama os times pelo nome da cerimônia ("Time Ouro × Time Roxo"), não pelo "Time A" do motor.
+  const nomeTimeA = nomeDoTimeNaTela(timesSorteio[0]?.nome, 0);
+  const nomeTimeB = nomeDoTimeNaTela(timesSorteio[1]?.nome, 1);
   const jogadoresResultado = [
     ...(timesSorteio[0]?.jogadores || []).map((j) => ({ ...j, time: 'A' })),
     ...(timesSorteio[1]?.jogadores || []).map((j) => ({ ...j, time: 'B' })),

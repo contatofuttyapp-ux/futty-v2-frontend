@@ -1,6 +1,7 @@
 // Futty v2.0 — Mostra os times resultantes do sorteio + avisos + banco de reservas.
 import { TriangleAlert } from 'lucide-react';
 import { colorOf } from '../utils/teamColors';
+import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import PlayerAvatar from './PlayerAvatar';
 
 export default function DrawnTeams({ resultado, teamCor }) {
@@ -22,7 +23,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
         {resultado.times.map((time, i) => (
           <div className="sorteio-team" key={i}>
             <div className="sorteio-team__head" style={{ borderColor: c.hex }}>
-              <span>{time.nome}</span>
+              <span>{nomeDoTimeNaTela(time.nome, i)}</span>
               <span className="sorteio-team__avg">★ {time.rating_medio}</span>
             </div>
             {time.jogadores.map((j) => (

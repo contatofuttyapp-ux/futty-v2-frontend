@@ -7,6 +7,7 @@
 // dentro do WebView.
 import { urlAsset, urlImagem } from './avatar';
 import { salvarOuCompartilhar } from './salvarImagem';
+import { nomeDoTimeNaTela } from './nomeDoTime';
 
 const KITS = [
   { n: 'OURO', c: '#d4a017' },
@@ -185,7 +186,9 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
 
   // título = o NOME DO TIME (o cartaz é sobre ESTE time), mesmo tratamento gradiente.
   let y = 96;
-  const baseline = desenharTituloGradiente(cx, (time.nome || 'TIME').toUpperCase(), W, y, 110);
+  // Rodada 29M (achado 143): o nome é o MESMO da cerimônia e dos botões ("Time Ouro"), não o "Time A" do motor.
+  const nomeDoTime = nomeDoTimeNaTela(time.nome, timeIndex);
+  const baseline = desenharTituloGradiente(cx, nomeDoTime.toUpperCase(), W, y, 110);
   // Item 73 (Rodada 29, no bloco 3 da 29I): a linha de baixo DESCE — colada no título, ela cobria a cedilha (Ç) e as descendentes
   // do nome do time. DESCE_META px abaixo da linha de base: livra a perna mais funda das letras do título (~0,22 do corpo).
   cx.fillStyle = '#a99fc0'; cx.textAlign = 'center'; cx.font = '600 30px Rajdhani, sans-serif';
@@ -219,7 +222,7 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
   // Devolve a imagem; quem chama entrega (SorteioShow → salvarOuCompartilhar).
   const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
   if (!blob) throw new Error('Não deu para gerar o cartão. Tente de novo.');
-  return { blob, nome: `futty-sorteio-${(time.nome || 'time').toLowerCase().replace(/\s+/g, '-')}.png` };
+  return { blob, nome: `futty-sorteio-${nomeDoTime.toLowerCase().replace(/\s+/g, '-')}.png` };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -245,7 +248,7 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
   const cx = cv.getContext('2d');
 
   // secções: times (kit da casa) + reserva (cinza-aço) se houver
-  const secs = times.map((t, i) => ({ cor: { c: KITS[i % 4].c, g: comAlfa(KITS[i % 4].c, 0.55) }, nome: t.nome || `Time ${i + 1}`, jogs: t.jogadores || [], res: false }));
+  const secs = times.map((t, i) => ({ cor: { c: KITS[i % 4].c, g: comAlfa(KITS[i % 4].c, 0.55) }, nome: nomeDoTimeNaTela(t.nome, i), jogs: t.jogadores || [], res: false }));
   if (reservas.length) secs.push({ cor: RES_COR, nome: 'Reserva', jogs: reservas, res: true });
   const nSec = secs.length;
 

@@ -150,7 +150,9 @@ export default function SorteioShow() {
                 Copiar link do sorteio
               </button>
               <p className="muted" style={{ fontSize: 11, textAlign: 'center', margin: 0 }}>
-                o link reproduz esta MESMA cerimônia (semente {resultado.seed ?? '—'}) para quem abrir, sem app
+                {/* Achado 145 (29M): a "semente" é o nosso nome técnico do número que torna o sorteio reproduzível; para quem joga não quer dizer nada.
+                    A ideia é o que vale: quem abrir o link vê o mesmo sorteio, do mesmo jeito. */}
+                Quem abrir o link vê o mesmo sorteio, do mesmo jeito, sem precisar do app.
               </p>
             </div>
           </>

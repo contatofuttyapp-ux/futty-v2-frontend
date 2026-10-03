@@ -104,6 +104,9 @@
 .smaq .somBtn.on .waves{display:block}
 .smaq .janela{position:relative;background:rgba(0,0,0,.55);border:1px solid rgba(139,92,246,.4);
     padding:12px 8px 10px;overflow:hidden}
+/* Rodada 29M (achado 144): terminada a cerimônia, a janela dos rolos fica sem rolos e sem "Girando · …". Em vez de uma caixa preta vazia no topo
+   do resultado, ela sai de cena (a cerimônia pôs a classe junto com o véu e a tira quando recomeça). */
+.smaq .janela.encerrada{display:none}
 .smaq .quem{display:block;text-align:left;margin:0 4px 8px;font-family:'Rajdhani',sans-serif;font-weight:800;
     font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--qc,#f0c94a);text-shadow:0 0 10px var(--qg,rgba(212,160,23,.5));min-height:13px}
 .smaq .rolos{display:flex;gap:6px;justify-content:center}
