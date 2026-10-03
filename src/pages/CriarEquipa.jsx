@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, apiUpload } from '../lib/api';
+import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import { avisoLogoRecusado, motivoDoLogo } from '../utils/logoTime';
@@ -199,7 +200,7 @@ export default function CriarEquipa() {
     setBusy(true);
     try {
       const { token, codigo } = await apiFetch(`/api/teams/${team.slug}/convite`, { method: 'POST' });
-      setInviteLink(linkDoConvite({ origem: window.location.origin, token, codigo }));
+      setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {

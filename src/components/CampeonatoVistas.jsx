@@ -6,6 +6,7 @@ import { gerarCartaoCampeao, gerarCartaoPodio } from '../utils/campeonatoCartao'
 import { podioDe } from '../utils/campeonatoPodio';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarQuadrado, enquadroAvatar } from '../lib/enquadroAvatar';
+import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import SilhuetaJogador from './SilhuetaJogador';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -271,7 +272,7 @@ export function CampeonatoCelebracao({ campeonato, slug }) {
     <i key={i} className={`camp-conf--${c.layer}`} style={{ left: `${c.left}%`, '--st': `${c.st}%`, width: `${c.w}px`, height: `${c.h}px`, background: c.cor, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s` }} />
   ));
   function copiarLink() {
-    const url = `${window.location.origin}/p/campeonato/${slug}/${campeonato.id}`;
+    const url = `${ORIGEM_DO_SITE}/p/campeonato/${slug}/${campeonato.id}`;
     const done = () => { setCopiado(true); setTimeout(() => setCopiado(false), 1800); };
     if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done).catch(() => fallback(url, done));
     else fallback(url, done);

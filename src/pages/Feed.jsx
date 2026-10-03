@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Camera, ExternalLink, Eye, Link2, Music2, Play, Share2, Video } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import { urlImagem } from '../utils/avatar';
+import { formatarData, formatarHora } from '../utils/dataHora';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -43,16 +44,10 @@ const CARD = {
 };
 
 // ─── Helpers de data ──────────────────────────────────────────────────────────
-function dataExtensa(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-function horaDe(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
+// A data e a hora do jogo são as do CAMPO (`fuso` do time, que o motor manda em cada jogo — 29I, achado 83).
+const dataExtensa = (iso, fuso) => formatarData(iso, fuso);
+const horaDe = (iso, fuso) => formatarHora(iso, fuso);
+// "há 5 h": tempo decorrido, não data de calendário — não tem fuso, vale o relógio de quem olha.
 function haQuantoTempo(iso) {
   const ts = new Date(iso).getTime();
   if (!Number.isFinite(ts)) return '';
@@ -168,7 +163,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
 
   async function partilhar() {
     const linhas = [
-      `${dataExtensa(j.date)} · ${horaDe(j.date)}`,
+      `${dataExtensa(j.date, j.fuso)} · ${horaDe(j.date, j.fuso)}`,
       nomesCampeao ? `🏆 Time campeão: ${nomesCampeao}` : null,
       j.artilheiro_nome ? `⚽ Artilheiro: ${j.artilheiro_nome}${j.artilheiro_gols ? ` · ${j.artilheiro_gols} gols` : ''}` : null,
       j.destaque_nome ? `⭐ Destaque: ${j.destaque_nome}${j.destaque_titulo ? ` – ${j.destaque_titulo}` : ''}` : null,
@@ -186,7 +181,7 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
       <div style={{ padding: 14, position: 'relative' }}>
         <div style={{ paddingRight: 80 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--neon)', letterSpacing: '0.04em' }}>
-            {dataExtensa(j.date)} · {horaDe(j.date)} ·{' '}
+            {dataExtensa(j.date, j.fuso)} · {horaDe(j.date, j.fuso)} ·{' '}
             <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>{haQuantoTempo(j.date)}</span>
           </div>
           <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>

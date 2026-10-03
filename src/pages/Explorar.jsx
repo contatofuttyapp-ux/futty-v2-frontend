@@ -225,7 +225,8 @@ export default function Explorar() {
         ) : null}
 
         <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', color: '#9a8fc0', textTransform: 'uppercase', margin: '20px 2px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          Times abertos · {filtradas.length}
+          {/* 29I (achado 106): a lista traz times de entrada aberta E times com aprovação (com o botão PEDIR ENTRADA); o título antigo prometia só os abertos. */}
+          Times perto de você · {filtradas.length}
           <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(139,92,246,0.4), transparent)' }} />
         </div>
 

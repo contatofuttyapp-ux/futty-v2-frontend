@@ -10,6 +10,12 @@
 // o app sabe abrir e qual caminho do roteador ela é. Só https, só o domínio do site, só os prefixos abaixo — qualquer outra coisa
 // (outro domínio, outro caminho, `..`, esquema estranho) é null e o app não navega.
 export const HOST_DO_SITE = 'futtyapp.com.br';
+// A origem dos links que a pessoa COPIA e manda para o grupo (convite, jogo, sorteio, campeonato) — Rodada 29I, achados 87 e 105.
+// Sempre o site de verdade, nunca `window.location.origin`: no app nativo a origem é `capacitor://localhost` (iPhone) ou
+// `https://localhost` (Android), e em teste é `http://localhost:5173` — links que só funcionam no aparelho de quem mandou.
+// (Os de AUTENTICAÇÃO — Login, Register, ForgotPassword, LandingPage — usam a origem de onde a pessoa está, de propósito:
+// o retorno do Google/e-mail tem de voltar para o lugar dela.)
+export const ORIGEM_DO_SITE = `https://${HOST_DO_SITE}`;
 // 29H: entrou o link curto do convite (/c/<código>) e saiu /jogo/ — o app não tem a rota /jogo/<id> (o jogo mora em
 // /equipa/<slug>/jogo/<id>, já coberto por /equipa/), então um link /jogo/… abria o app numa página inexistente.
 export const PREFIXOS_DE_LINK = ['/convite/', '/c/', '/equipa/'];

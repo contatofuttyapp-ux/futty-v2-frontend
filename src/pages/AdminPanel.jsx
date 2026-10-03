@@ -6,9 +6,12 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, House, Settings, Users, Link2, CircleDot, Medal, Trophy, ChartColumn, Megaphone, Flag } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
+import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { useAuth } from '../hooks/useAuth';
 import { COLOR_OPTIONS } from '../utils/teamColors';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
+import { camposNoCampo, formatarData, formatarDataHora, instanteNoCampo } from '../utils/dataHora';
+import { confirmadosDoProximoJogo, ultimoJogoPassado } from '../utils/jogosAdmin';
 import { LABEL_LINHA } from '../utils/posicoes';
 import { plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -82,6 +85,7 @@ const ADMIN_CSS = `
 }
 `;
 
+// "há 5 h": tempo decorrido, não data de calendário — não tem fuso (29I, achado 83); vale o relógio de quem olha.
 function haQuantoTempo(iso) {
   const ts = new Date(iso).getTime();
   if (!Number.isFinite(ts)) return '';
@@ -97,20 +101,11 @@ function diasAte(iso) {
   return Math.max(0, Math.ceil(ms / 86400000));
 }
 
-// "dom, 22 jun · 19h00"
-function fmtJogoCompleto(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const data = d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
-  const hora = `${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`;
-  return `${data} · ${hora}`;
-}
-// "dom, 15 jun"
-function fmtDiaCurto(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
-}
+// Data e hora do jogo no relógio do CAMPO (fuso do time — 29I, achado 83), uma forma só em toda a tela: "dom., 22 de jun. · 19:00".
+// (Antes o bloco de cima escrevia "19h00" e o de baixo "19:00" — achado 100.)
+const fmtJogoCompleto = (iso, fuso) => formatarDataHora(iso, fuso);
+// "dom., 15 de jun."
+const fmtDiaCurto = (iso, fuso) => formatarData(iso, fuso);
 
 // Tokens dos cards do dashboard.
 const cardDash = { background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-md)' };
@@ -403,7 +398,7 @@ function TabCampeonato({ slug, navigate, showToast }) {
   );
 }
 
-function TabDashboard({ slug, navigate, onGoTab, showToast }) {
+function TabDashboard({ slug, fuso, navigate, onGoTab, showToast }) {
   const [stats, setStats] = useState(null);
   const [pedidos, setPedidos] = useState(0);
   const [denuncias, setDenuncias] = useState(0);
@@ -444,13 +439,12 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
       })
       .catch(() => {});
 
-    // Último jogo (mais recente já sorteado / passado) + o seu detalhe.
+    // Último jogo + o seu detalhe. 29I (achado 98): o último jogo é o mais recente que já ACONTECEU (data no passado) — antes um
+    // jogo futuro já sorteado também entrava na conta e o painel mostrava "ÚLTIMO JOGO — qua., 14 de out." num 3 de outubro.
     apiFetch(`/api/teams/${slug}/games`)
       .then((d) => {
         if (!ativo) return;
-        const games = d.games || [];
-        const passados = games.filter((g) => g.sorteio_realizado || (g.data && new Date(g.data).getTime() < Date.now()));
-        const ultimo = passados.slice().sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
+        const ultimo = ultimoJogoPassado(d.games || []);
         if (!ultimo) {
           setUltimoJogo(null);
           return;
@@ -486,8 +480,9 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
   // Resumo do RSVP do próximo jogo.
   const rsvpAtivo = !!proximoRsvp && (proximoRsvp.rsvp_aberto || proximoRsvp.rsvp_fechado);
   const rsvpAberto = !!proximoRsvp?.rsvp_aberto && !proximoRsvp?.rsvp_fechado;
-  const rsvpConf = proximoRsvp ? proximoRsvp.confirmados.length : 0;
   const rsvpTotal = proximoRsvp ? proximoRsvp.confirmados.length + proximoRsvp.recusados.length + proximoRsvp.pendentes.length : 0;
+  // 29I (achado 99): UM número de confirmados para o próximo jogo, de uma fonte só (a presença, quando existe; senão o jogo).
+  const { confirmados: confirmadosDoProximo } = confirmadosDoProximoJogo({ rsvp: proximoRsvp, jogo: pj });
   const naoResponderam = rsvpAberto ? proximoRsvp.pendentes.length : 0;
 
   // Último jogo + resultado/artilheiro/destaque.
@@ -511,10 +506,12 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
         <div style={cardDashLbl}>Próximo jogo</div>
         {pj ? (
           <>
-            <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>{fmtJogoCompleto(pj.date)}</div>
-            {rsvpAtivo ? (
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>{rsvpConf} {plural(rsvpConf, 'confirmado', 'confirmados')} / {rsvpTotal} {plural(rsvpTotal, 'membro', 'membros')}</div>
-            ) : null}
+            <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 4 }}>{fmtJogoCompleto(pj.date, fuso)}</div>
+            {pj.location ? <div style={{ fontSize: 13, color: '#fff', fontWeight: 700, marginTop: 2 }}>{pj.location}</div> : null}
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
+              {confirmadosDoProximo} {plural(confirmadosDoProximo, 'confirmado', 'confirmados')}
+              {rsvpAtivo ? ` / ${rsvpTotal} ${plural(rsvpTotal, 'membro', 'membros')}` : ''}
+            </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               <button type="button" className="btn btn--primary btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Fazer sorteio</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => onGoTab('jogos')}>{rsvpAtivo ? 'Ver presenças' : 'Abrir presença'}</button>
@@ -532,7 +529,7 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
         <div style={cardDashLbl}>Último jogo</div>
         {uGame ? (
           <>
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{fmtDiaCurto(uGame.data)}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{fmtDiaCurto(uGame.data, fuso)}</div>
             {(uGame.resultado_nivel || 0) === 0 ? (
               <>
                 <div style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>Sem resultado registrado</div>
@@ -585,17 +582,6 @@ function TabDashboard({ slug, navigate, onGoTab, showToast }) {
         <MetricCard valor={(stats.media_confirmacoes ?? 0).toFixed(1)} label="por jogo" />
         <MetricCard valor={denuncias} label="denúncias" alerta={denuncias > 0} />
       </div>
-
-      {pj ? (
-        <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: 'var(--neon)', fontWeight: 800, letterSpacing: '0.08em' }}>PRÓXIMO JOGO</div>
-            <div style={{ fontWeight: 700, color: '#fff', marginTop: 2 }}>{pj.location || 'Jogo'}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{formatDateTime(pj.date)} · {pj.confirmados} {plural(pj.confirmados, 'confirmado', 'confirmados')}</div>
-          </div>
-          <button type="button" className="btn btn--purple btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${pj.id}`)}>Ver jogo</button>
-        </div>
-      ) : null}
 
       {pedidos > 0 ? (
         <div style={{ ...CARD, padding: 14, display: 'flex', alignItems: 'center', gap: 10, borderColor: 'rgba(124,58,237,0.4)' }}>
@@ -1082,7 +1068,7 @@ function FormMensagem({ slug, membro, showToast, onClose }) {
   );
 }
 
-function TabMembros({ slug, meId, showToast }) {
+function TabMembros({ slug, fuso, meId, showToast }) {
   const [membros, setMembros] = useState(null);
   const [menuId, setMenuId] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null);
@@ -1315,7 +1301,7 @@ function TabMembros({ slug, meId, showToast }) {
                 {Array.from({ length: 5 }).map((_, idx) => {
                   const p = (m.presencas_recentes || [])[idx];
                   const cor = !p ? 'transparent' : p.presente ? '#10b981' : '#ef4444';
-                  const dataFmt = p?.data ? new Date(p.data).toLocaleDateString('pt-BR') : null;
+                  const dataFmt = p?.data ? formatarData(p.data, fuso, 'numerica') : null;
                   const label = p ? `Jogo de ${dataFmt || 'data desconhecida'}: ${p.presente ? 'presente' : 'ausente'}` : 'Sem dados (jogo não aconteceu)';
                   return (
                     <span
@@ -1414,7 +1400,7 @@ function TabConvites({ slug, showToast }) {
 
   // 29H (item 7): o link curto (/c/<código>) quando o motor deu um código; senão o longo.
   function linkDe(token, codigo) {
-    return linkDoConvite({ origem: window.location.origin, token, codigo });
+    return linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo });
   }
 
   async function gerar() {
@@ -1506,14 +1492,8 @@ function TabConvites({ slug, showToast }) {
 }
 
 // ─── TAB: JOGOS ──────────────────────────────────────────────────────────────
-// "até sex, 20 jun · 22:00" para o prazo do RSVP.
-function fmtPrazoAdmin(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const data = d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
-  const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  return `${data} · ${hora}`;
-}
+// "sex., 20 de jun. · 22:00" para o prazo do RSVP — no relógio do campo (fuso do time, 29I achado 83).
+const fmtPrazoAdmin = (iso, fuso) => formatarDataHora(iso, fuso);
 
 // Lista compacta de jogadores (avatar + nome) com título opcional.
 function ListaUsers({ users, titulo }) {
@@ -1580,9 +1560,15 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
       showToast('Informe o prazo de confirmação.', 'error');
       return;
     }
+    // O prazo digitado é a hora do CAMPO (fuso do time), qualquer que seja o relógio do aparelho de quem abre a presença.
+    const prazoIso = instanteNoCampo(prazoInput.slice(0, 10), prazoInput.slice(11, 16), info?.fuso);
+    if (!prazoIso) {
+      showToast('Esse prazo não é válido. Confira a data e a hora.', 'error');
+      return;
+    }
     setBusy(true);
     try {
-      await apiFetch(`/api/jogos/${gameId}/rsvp/abrir`, { method: 'POST', body: JSON.stringify({ prazo: new Date(prazoInput).toISOString() }) });
+      await apiFetch(`/api/jogos/${gameId}/rsvp/abrir`, { method: 'POST', body: JSON.stringify({ prazo: prazoIso }) });
       setAbrirModal(false);
       setPrazoInput('');
       await carregar();
@@ -1636,7 +1622,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
   if (info.rsvp_aberto) {
     return (
       <div style={linha}>
-        <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700 }}>Aberto até {fmtPrazoAdmin(info.rsvp_prazo)}</div>
+        <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700 }}>Aberto até {fmtPrazoAdmin(info.rsvp_prazo, info.fuso)}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
           {info.confirmados.length} {plural(info.confirmados.length, 'confirmado', 'confirmados')} · {info.recusados.length} {plural(info.recusados.length, 'recusado', 'recusados')} · {info.pendentes.length} {plural(info.pendentes.length, 'pendente', 'pendentes')}
         </div>
@@ -1701,7 +1687,7 @@ function FormRecorrentes({ slug, showToast, onClose, onCriado }) {
         method: 'POST',
         body: JSON.stringify({ dia_semana: dia, hora, local: local.trim() || undefined, semanas }),
       });
-      const datas = (r.datas || []).map((iso) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })).join(', ');
+      const datas = (r.datas || []).map((iso) => formatarData(iso, r.fuso, 'diaMes')).join(', ');
       showToast(`${r.criados} jogos criados para as próximas ${semanas} semanas${r.ignorados ? ` (${r.ignorados} ignorados por conflito)` : ''}.${datas ? ` Datas: ${datas}` : ''}`);
       await onCriado();
       onClose();
@@ -1756,7 +1742,7 @@ function FormRecorrentes({ slug, showToast, onClose, onCriado }) {
   );
 }
 
-function TabJogos({ slug, showToast, navigate }) {
+function TabJogos({ slug, fuso, showToast, navigate }) {
   const [games, setGames] = useState(null);
   const [editar, setEditar] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null);
@@ -1849,7 +1835,7 @@ function TabJogos({ slug, showToast, navigate }) {
                       <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
                       <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 8px' }}>Cancelado</span>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso)}</div>
                     {g.motivo_cancelamento ? (
                       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>Motivo: {g.motivo_cancelamento}</div>
                     ) : null}
@@ -1860,7 +1846,7 @@ function TabJogos({ slug, showToast, navigate }) {
                 <div key={g.id} style={{ ...CARD, padding: 12 }}>
                   <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-                    {formatDateTime(g.data)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
+                    {formatDateTime(g.data, fuso)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
                   </div>
                   {g.max_jogadores != null ? (() => {
                     const cheio = g.confirmados >= g.max_jogadores;
@@ -1901,7 +1887,7 @@ function TabJogos({ slug, showToast, navigate }) {
               <div key={g.id} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso)}</div>
                 </div>
                 <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>
                 <button type="button" className="btn btn--purple btn--sm" onClick={() => navigate(`/equipa/${slug}/jogo/${g.id}`)}>Ver resultado</button>
@@ -1911,13 +1897,13 @@ function TabJogos({ slug, showToast, navigate }) {
         )}
       </div>
 
-      {editar ? <EditarJogoModal jogo={editar} onClose={() => setEditar(null)} onSaved={onEditado} showToast={showToast} /> : null}
+      {editar ? <EditarJogoModal jogo={editar} fuso={fuso} onClose={() => setEditar(null)} onSaved={onEditado} showToast={showToast} /> : null}
 
       {confirmacao ? (
         <ConfirmModal
           texto={
             confirmacao.tipo === 'cancelar'
-              ? `Cancelar o jogo de ${formatDateTime(confirmacao.jogo.data)}? Esta ação envia notificação a todos os membros.`
+              ? `Cancelar o jogo de ${formatDateTime(confirmacao.jogo.data, fuso)}? Esta ação envia notificação a todos os membros.`
               : 'Excluir este jogo? Esta ação é irreversível.'
           }
           perigo
@@ -1946,11 +1932,12 @@ function TabJogos({ slug, showToast, navigate }) {
   );
 }
 
-function EditarJogoModal({ jogo, onClose, onSaved, showToast }) {
-  const pad = (n) => String(n).padStart(2, '0');
-  const d0 = new Date(jogo.data);
-  const [date, setDate] = useState(`${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}`);
-  const [time, setTime] = useState(`${pad(d0.getHours())}:${pad(d0.getMinutes())}`);
+function EditarJogoModal({ jogo, fuso, onClose, onSaved, showToast }) {
+  // Data e hora do formulário são as do CAMPO (fuso do time, 29I achado 83): é o que o motor lê ao salvar. Antes vinham do relógio
+  // do aparelho — o admin em Lisboa via, e salvava, a hora de Lisboa.
+  const campos = camposNoCampo(jogo.data, fuso);
+  const [date, setDate] = useState(campos.data);
+  const [time, setTime] = useState(campos.hora);
   const [local, setLocal] = useState(jogo.local || '');
   const [porTime, setPorTime] = useState(jogo.jogadores_por_time || 5);
   const [maxJog, setMaxJog] = useState(jogo.max_jogadores != null ? String(jogo.max_jogadores) : '');
@@ -2060,7 +2047,7 @@ function TabResultados({ slug, team, showToast }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-                {formatDateTime(g.data)}
+                {formatDateTime(g.data, team?.fuso)}
                 {modo === 'com' ? ` · Time ${(g.campeao_time_index ?? 0) + 1} venceu` : ' · Sem resultado registrado'}
               </div>
             </div>
@@ -2071,14 +2058,14 @@ function TabResultados({ slug, team, showToast }) {
         ))
       )}
 
-      {registar ? <ResultadoModal jogo={registar} premios={{ artilheiro: team?.mostrar_artilheiro !== false, destaque: team?.mostrar_destaque !== false }} onClose={() => setRegistar(null)} onSaved={onGuardado} showToast={showToast} /> : null}
+      {registar ? <ResultadoModal jogo={registar} fuso={team?.fuso} premios={{ artilheiro: team?.mostrar_artilheiro !== false, destaque: team?.mostrar_destaque !== false }} onClose={() => setRegistar(null)} onSaved={onGuardado} showToast={showToast} /> : null}
     </div>
   );
 }
 
 // `premios` (29H, item 44): o que o time deixou ligado no painel ("Artilheiro do dia" / "Destaque do dia"). Desligado, a seção some —
 // a menos que o jogo JÁ tenha o prêmio (editar um resultado antigo não pode apagá-lo em silêncio: o prêmio continua à vista).
-function ResultadoModal({ jogo, premios = { artilheiro: true, destaque: true }, onClose, onSaved, showToast }) {
+function ResultadoModal({ jogo, fuso, premios = { artilheiro: true, destaque: true }, onClose, onSaved, showToast }) {
   const [detail, setDetail] = useState(null);
   const [campeaoIdx, setCampeaoIdx] = useState(null);
   const [campeaoFoto, setCampeaoFoto] = useState(null);
@@ -2154,7 +2141,7 @@ function ResultadoModal({ jogo, premios = { artilheiro: true, destaque: true }, 
     <div className="modal-overlay" role="presentation" onClick={() => !saving && onClose()}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 16, maxHeight: '82vh', overflowY: 'auto' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado: {formatDateTime(jogo.data)}</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado: {formatDateTime(jogo.data, fuso)}</h2>
 
           {!detail ? (
             <LoadingFutty />
@@ -2268,7 +2255,8 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
 
   const topGols = [...membros].sort((a, b) => (b.gols || 0) - (a.gols || 0)).slice(0, 5);
   const maxGols = topGols[0]?.gols || 0;
-  const topVitorias = [...membros].sort((a, b) => (b.vitorias || 0) - (a.vitorias || 0)).slice(0, 5);
+  // 29I (achado 104): "Presença" é presença — os jogos em que a pessoa ESTEVE, ordenado por isso (antes listava vitórias).
+  const topPresenca = [...membros].sort((a, b) => (b.presencas || 0) - (a.presencas || 0)).slice(0, 5);
   const totalGols = membros.reduce((s, m) => s + (m.gols || 0), 0);
   const jogoMaisConf = [...games].sort((a, b) => (b.confirmados || 0) - (a.confirmados || 0))[0] || null;
   const maisAntigo = [...(membrosBasicos || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0] || null;
@@ -2294,15 +2282,15 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
         </div>
       </div>
 
-      {/* Presença (por vitórias) */}
+      {/* Presença (por jogos em que a pessoa esteve) */}
       <div>
         <div className="games-label">Presença</div>
         <div style={{ display: 'grid', gap: 8 }}>
-          {topVitorias.map((m) => (
+          {topPresenca.map((m) => (
             <div key={m.user_id} style={{ ...CARD, padding: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
               <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} />
               <div style={{ flex: 1, fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</div>
-              <div style={{ fontSize: 13, color: 'var(--neon)', fontWeight: 800 }}>{m.vitorias || 0} vitórias</div>
+              <div style={{ fontSize: 13, color: 'var(--neon)', fontWeight: 800 }}>{m.presencas || 0} {plural(m.presencas || 0, 'presença', 'presenças')}</div>
             </div>
           ))}
         </div>
@@ -2517,11 +2505,11 @@ export default function AdminPanel() {
 
           <main className="admin-content">
             <div style={{ maxWidth: 760, margin: '0 auto' }}>
-              {tab === 'dashboard' && <TabDashboard slug={slug} navigate={navigate} onGoTab={irTab} showToast={showToast} />}
+              {tab === 'dashboard' && <TabDashboard slug={slug} fuso={team?.fuso} navigate={navigate} onGoTab={irTab} showToast={showToast} />}
               {tab === 'equipa' && <TabEquipa slug={slug} team={team} showToast={showToast} />}
-              {tab === 'membros' && <TabMembros slug={slug} meId={meId} showToast={showToast} />}
+              {tab === 'membros' && <TabMembros slug={slug} fuso={team?.fuso} meId={meId} showToast={showToast} />}
               {tab === 'convites' && <TabConvites slug={slug} showToast={showToast} />}
-              {tab === 'jogos' && <TabJogos slug={slug} showToast={showToast} navigate={navigate} />}
+              {tab === 'jogos' && <TabJogos slug={slug} fuso={team?.fuso} showToast={showToast} navigate={navigate} />}
               {tab === 'campeonato' && <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} />}
               {tab === 'resultados' && <TabResultados slug={slug} team={team} showToast={showToast} />}
               {tab === 'estatisticas' && <TabEstatisticas slug={slug} membrosBasicos={membrosBasicos} showToast={showToast} />}

@@ -14,6 +14,7 @@ import { celebrarTop3 } from '../hooks/useConfetti';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { nomeExibicao } from '../utils/nomeExibicao';
+import { formatScore } from '../utils/format';
 import AdCard from '../components/AdCard';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -97,9 +98,22 @@ function RankRow({ p, idx, slug, onVote }) {
               <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: '#b69cff', border: '1px solid var(--purple)', padding: '1px 6px' }}>GOL</span>
             ) : null}
           </div>
-          <div className="rank-votes" style={{ marginTop: 4, fontSize: 12 }}>
+          {/* Rodada 29I (achado 95): a ordem do ranking é por PONTOS (o `score` 0–100 do motor: vitórias, gols, destaques, presença e
+              nota), e a tela só mostrava a nota — que não acompanha a posição (1º 10.0, 2º 8.7, 3º 9.3…) e fazia o ranking parecer
+              quebrado. Agora o número que ordena aparece, rotulado "pontos", com a nota ao lado. Continua uma linha só (a altura da
+              linha é medida: ver .rank-row-esqueleto); o que não cabe no celular some no fim, que é o "por votar" — o botão ao lado
+              já diz o mesmo. */}
+          <div className="rank-votes" style={{ marginTop: 4, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {p.score != null ? (
+              <>
+                <span data-pontos style={{ fontFamily: "'Rajdhani', sans-serif", color: '#d4a017', fontWeight: 700, fontSize: notaFs }}>{formatScore(p.score)}</span>
+                <span className="muted" style={{ marginLeft: 3 }}>pontos</span>
+                <span className="muted" style={{ margin: '0 5px' }}>·</span>
+              </>
+            ) : null}
+            <span className="muted">nota </span>
             {p.nota != null ? (
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", color: '#d4a017', fontWeight: 700, fontSize: notaFs }}>{p.nota.toFixed(1)}</span>
+              <span data-nota style={{ fontFamily: "'Rajdhani', sans-serif", color: '#fff', fontWeight: 700 }}>{p.nota.toFixed(1)}</span>
             ) : (
               <span style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">--</span>
             )}
@@ -300,6 +314,11 @@ export default function Ranking() {
                 )}
               </div>
             ) : (
+              <>
+              {/* Quanto vale cada coisa: uma linha, no topo, para a ordem não parecer defeito (achado 95). Texto pela régua da VOZ. */}
+              <p className="texto-apoio" data-ranking-criterio style={{ margin: '0 0 12px' }}>
+                Os pontos juntam vitórias, gols, destaques, presença e nota. A ordem é por eles.
+              </p>
               <ListaRanking ranking={ranking}>
                 {linhasADesenhar.map((p, idx) => (
                   // RODADA 12C — o anúncio entra DEPOIS do pódio: o top-3 é a
@@ -331,6 +350,7 @@ export default function Ranking() {
                   <div key={`esqueleto-${p.user_id}`} className={`rank-row-esqueleto ${i < 6 ? 'rank-row-esqueleto--respira' : ''}`} aria-hidden="true" />
                 ))}
               </ListaRanking>
+              </>
             )}
           </>
         )}

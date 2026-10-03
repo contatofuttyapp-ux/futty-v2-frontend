@@ -168,6 +168,7 @@ export default function Diagnostico() {
             <div className="games-label">Último erro (crash)</div>
             <div className="hud-corners-s" style={{ ...CARTAO, display: 'grid', gap: 6 }}>
               <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                {/* 29I (achado 83): o instante do crash é lido no relógio de quem olha (o do aparelho que travou), não no fuso de time nenhum. */}
                 {new Date(ultimoErro.data).toLocaleString('pt-BR')} · rota {ultimoErro.rota || '—'}
               </div>
               <div style={{ fontSize: 12.5, lineHeight: 1.5, color: '#f8b4b4', wordBreak: 'break-word' }}>

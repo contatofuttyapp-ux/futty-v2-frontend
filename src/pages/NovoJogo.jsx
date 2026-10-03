@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useTeam } from '../hooks/useTeam';
+import { diaDeCalendario, instanteNoCampo } from '../utils/dataHora';
 import Topbar from '../components/Topbar';
 import NumberStepper from '../components/NumberStepper';
 import ComporTimes from '../components/ComporTimes';
@@ -19,7 +20,7 @@ const NOMES_PALETA = ['Time Ouro', 'Time Roxo', 'Time Prata', 'Time Bronze'];
 export default function NovoJogo() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { members } = useTeam(slug);
+  const { members, team } = useTeam(slug);
 
   const [modo, setModo] = useState('sortear'); // 'sortear' | 'manual' | 'retro'
   const [fase, setFase] = useState('form'); // 'form' | 'compor'
@@ -66,7 +67,10 @@ export default function NovoJogo() {
     setError('');
     setLoading(true);
     try {
-      const iso = new Date(`${data}T${hora || '12:00'}`).toISOString();
+      // 29I (achado 83): a data e a hora digitadas são as do CAMPO (fuso do time), não as do aparelho de quem cria o jogo — o admin
+      // em Lisboa que marca "quinta 20:00" para um time de São Paulo está marcando 20:00 de São Paulo.
+      const iso = instanteNoCampo(data, hora || '12:00', team?.fuso);
+      if (!iso) { setError('Confira a data e a hora do jogo.'); setLoading(false); return; }
       const { game } = await apiFetch('/api/games', {
         method: 'POST',
         body: JSON.stringify({
@@ -129,7 +133,7 @@ export default function NovoJogo() {
               <div style={{ display: 'flex', gap: 12 }}>
                 <div className="field" style={{ flex: 1 }}>
                   <label htmlFor="data">Data</label>
-                  <input id="data" type="date" className="input input--hud" value={data} max={modo === 'retro' ? new Date().toISOString().slice(0, 10) : undefined} onChange={(e) => setData(e.target.value)} />
+                  <input id="data" type="date" className="input input--hud" value={data} max={modo === 'retro' ? diaDeCalendario(new Date(), team?.fuso) : undefined} onChange={(e) => setData(e.target.value)} />
                 </div>
                 <div className="field" style={{ flex: 1 }}>
                   <label htmlFor="hora">Hora {modo !== 'sortear' ? <span className="muted" style={{ fontSize: 11 }}>(opcional)</span> : null}</label>

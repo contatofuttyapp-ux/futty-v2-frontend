@@ -598,7 +598,7 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
               onClick={() => setImgFull(null)}
               style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
             >
-              <img src={urlImagem(imgFull, 1024)} alt="" decoding="async" fetchpriority="high" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              <img src={urlImagem(imgFull, 1024)} alt="" decoding="async" fetchPriority="high" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
             </div>,
             document.body
           )

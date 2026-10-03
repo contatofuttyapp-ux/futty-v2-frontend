@@ -4,6 +4,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { usePerfil } from '../context/PerfilContext';
 import { useTeam } from '../hooks/useTeam';
 import { urlAsset, urlImagem } from '../utils/avatar';
@@ -199,7 +200,7 @@ export default function Equipa() {
     try {
       const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
       // 29H (item 7): o link curto (/c/<código>) quando há código; o longo continua valendo.
-      setInviteLink(linkDoConvite({ origem: window.location.origin, token, codigo }));
+      setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
     } catch (err) {
       setActionError(err.message);
     } finally {

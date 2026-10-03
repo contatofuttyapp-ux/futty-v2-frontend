@@ -8,6 +8,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useApiComCache } from '../hooks/useApiComCache';
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
+import { formatarData } from '../utils/dataHora';
 import SeloHonra from '../components/SeloHonra';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { mostraFigurinha } from '../utils/figurinhaCanvas';
@@ -35,9 +36,9 @@ const RES = {
 };
 const prefersReduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function fmtLongo(iso) {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+// A data de cada jogo do histórico é a do CAMPO (fuso do time, 29I achado 83).
+function fmtLongo(iso, fuso) {
+  return formatarData(iso, fuso);
 }
 function SecLabel({ children, extra }) {
   return (
@@ -223,8 +224,24 @@ export default function JogadorPerfil() {
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {error ? (
           <div className="glass" style={{ ...VIDRO, clipPath: CLIP, padding: '22px 16px', textAlign: 'center', marginTop: 16, color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.6 }}>
-            <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, color: '#fff' }}>Perfil só entre companheiros</div>
-            Não compartilham nenhum time: este perfil não está acessível.
+            {/* 29I (achado 97): "só entre companheiros" é a resposta ao 403 do motor (quem não é do time) — não a de qualquer erro.
+                A própria pessoa nunca cai aqui por falta de time; e um tropeço de rede não pode dizer que o perfil "não está acessível". */}
+            {/não é membro/i.test(error) ? (
+              <>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, color: '#fff' }}>Perfil só entre companheiros</div>
+                Não compartilham nenhum time: este perfil não está acessível.
+              </>
+            ) : /não encontrado/i.test(error) ? (
+              <>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, color: '#fff' }}>Jogador fora do ranking</div>
+                Este jogador não aparece no ranking do time, então não tem vitrine por aqui.
+              </>
+            ) : (
+              <>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, color: '#fff' }}>Não deu para abrir o perfil agora</div>
+                Tente de novo daqui a pouco.
+              </>
+            )}
           </div>
         ) : loading ? (
           <LoadingFutty />
@@ -241,7 +258,7 @@ export default function JogadorPerfil() {
               <div className="perfil-palco">
                 <div className="perfil-glow" />
                 {imgSrc ? (
-                  <img className={ehRecorte ? 'perfil-cutout' : 'perfil-faded'} src={urlImagem(imgSrc, 512)} alt="" width={250} height={284} decoding="async" fetchpriority="high" />
+                  <img className={ehRecorte ? 'perfil-cutout' : 'perfil-faded'} src={urlImagem(imgSrc, 512)} alt="" width={250} height={284} decoding="async" fetchPriority="high" />
                 ) : (
                   <span style={{ position: 'absolute', left: '50%', bottom: 96, transform: 'translateX(-50%)', zIndex: 1, display: 'grid', placeItems: 'center', width: 180, height: 180, clipPath: CLIP, background: 'rgba(212,160,23,0.1)', border: `1px solid ${OURO}` }}>
                     <SilhuetaJogador size="64%" color="rgba(212,160,23,0.75)" />
@@ -390,7 +407,7 @@ export default function JogadorPerfil() {
                 return (
                   <div key={j.game_id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', marginBottom: 7, clipPath: CLIP, ...VIDRO }}>
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, flex: 1, color: 'rgba(255,255,255,0.78)' }}>
-                      {fmtLongo(j.data)}
+                      {fmtLongo(j.data, data?.team?.fuso)}
                       <span style={{ display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
                         {j.foi_artilheiro ? 'artilheiro ' : ''}{j.foi_destaque ? 'destaque' : ''}{!j.foi_artilheiro && !j.foi_destaque ? '—' : ''}
                       </span>

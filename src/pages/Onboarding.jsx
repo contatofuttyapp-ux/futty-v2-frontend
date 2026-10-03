@@ -85,7 +85,7 @@ function MolduraFoto({ src, size = 170 }) {
     return (
       <div data-moldura-unica style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, margin: '0 auto' }}>
         <div className="moldura-unica" style={{ position: 'relative', width: largura, height: altura, flexShrink: 0, overflow: 'hidden', clipPath: OCTO_CARD, border: '1.5px solid rgba(212,160,23,0.5)', boxShadow: '0 0 18px rgba(212,160,23,0.3)', background: '#101012' }}>
-          <img src={inteira} alt="" decoding="async" fetchpriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={inteira} alt="" decoding="async" fetchPriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         <div style={{ display: 'grid', gap: 6, justifyItems: 'center', maxWidth: 112 }}>
           <div className="pavatar" data-miniatura-ao-vivo style={{ width: 52, height: 52, position: 'relative', overflow: 'hidden' }} aria-hidden="true">

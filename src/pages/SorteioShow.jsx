@@ -8,6 +8,8 @@ import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { apiFetch } from '../lib/api';
+import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
+import { formatarData } from '../utils/dataHora';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
 import AdCard from '../components/AdCard';
@@ -40,8 +42,9 @@ export default function SorteioShow() {
   const [jaTerminou, setJaTerminou] = useState(false);
   const game = data?.game;
   const resultado = game?.times_resultado;
+  // A data do cartaz é a do CAMPO (fuso do time, 29I achado 83): "8 out 2026".
   const dataCartaz = game?.data
-    ? new Date(game.data).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ de /g, ' ').replace(/\./g, '')
+    ? formatarData(game.data, data?.team?.fuso, 'comAno').replace(/ de /g, ' ').replace(/\./g, '')
     : '';
 
   // TERMO de quem partilha (1-clique, uma vez por jogo). Ao primeiro "Copiar link"
@@ -62,7 +65,7 @@ export default function SorteioShow() {
   }
 
   async function copiarLink() {
-    const url = `${window.location.origin}/p/${slug}/${id}`;
+    const url = `${ORIGEM_DO_SITE}/p/${slug}/${id}`;
     try {
       await navigator.clipboard.writeText(url);
       setToast({ tipo: 'success', mensagem: 'Link do sorteio copiado.' });

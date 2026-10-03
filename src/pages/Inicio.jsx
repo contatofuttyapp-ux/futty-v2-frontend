@@ -14,6 +14,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
 import { formatDateTime, formatRating } from '../utils/format';
+import { ehHoje, formatarData } from '../utils/dataHora';
 import { plural } from '../utils/plural';
 import { IDADE_MINIMA } from '../utils/idade';
 import RolinhosData from '../components/RolinhosData';
@@ -21,6 +22,8 @@ import { gerarFigurinhaCanvas, enquadrarAvatar, enquadrarFotoComum, mostraFiguri
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
+import { MSG_FALHA_RSVP, responderComOtimismo } from '../lib/rsvp';
+import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../utils/presenca';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -34,18 +37,9 @@ import { urlAsset, urlImagem } from '../utils/avatar';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
 import '../styles/app.css';
 
-function isToday(iso) {
-  if (!iso) return false;
-  const d = new Date(iso);
-  const n = new Date();
-  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
-}
-
-// "domingo, 20/09" — o dia do jogo na pergunta do aviso de ausência.
-function diaDoJogo(iso) {
-  const d = iso ? new Date(iso) : null;
-  if (!d || Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+// "quinta-feira, 08/10" — o dia do jogo na pergunta do aviso de ausência. No relógio do CAMPO (fuso do time, 29I achado 83).
+function diaDoJogo(iso, fuso) {
+  return formatarData(iso, fuso, 'longa') || null;
 }
 
 // ----- O cromo do Início -----
@@ -232,7 +226,7 @@ function CromoInicio({ cromo, previa, modoPrevia, fundo, nome, refCromo, destino
       <div className="fig-bob" style={{ position: 'relative', width: '100%', height: '100%' }}>
         <div className="fig-sway" style={{ position: 'relative', width: '100%', height: '100%' }}>
           {cromo ? (
-            <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" decoding="async" fetchpriority="high" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+            <img src={cromo} alt={`Figurinha de ${nome}`} className="fig-aura" decoding="async" fetchPriority="high" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
           ) : (
             <PreviaCromo previa={previa} fundo={fundo} modo={modoPrevia} />
           )}
@@ -294,7 +288,7 @@ function NomeCromo({ nome }) {
 
 // ----- Card de jogo -----
 function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
-  const today = isToday(game.date);
+  const today = ehHoje(game.date, game.fuso); // "hoje" é o dia do campo (fuso do time), não o do aparelho
   const isPast = game.status === 'finished';
   const isDrawn = game.status === 'drawn';
   const going = game.user_status === 'going';
@@ -335,7 +329,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
 
         <div className="gcard__meta">
           <span className={`gcard__date ${today ? 'gcard__date--today' : ''}`}>
-            {game.date ? formatDateTime(game.date) : 'Data a definir'}
+            {game.date ? formatDateTime(game.date, game.fuso) : 'Data a definir'}
           </span>
           {` · ${game.confirmed_count} ${plural(game.confirmed_count, 'confirmado', 'confirmados')}`}
         </div>
@@ -382,6 +376,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
                 type="button"
                 className={`pbtn pbtn--go hud-corners-s ${going ? 'active' : ''} ${!going && !busy ? 'pulse-active tab-shine' : ''}`}
                 disabled={busy}
+                aria-pressed={going}
                 onClick={() => onPresence(game.id, true)}
               >
                 Vou
@@ -391,6 +386,7 @@ function GameCard({ game, busy, isNext, onPresence, onVerSorteio, index = 0 }) {
               type="button"
               className={`pbtn pbtn--no hud-corners-s ${notGoing ? 'active' : ''}`}
               disabled={busy}
+              aria-pressed={notGoing}
               onClick={() => onPresence(game.id, false)}
             >
               Não vou
@@ -535,10 +531,18 @@ export default function Inicio() {
     if (dadosInicio?.convites) setGames(dadosInicio.convites.games || []);
   }
 
-  // Presença com optimistic update + chamada à API.
+  // Presença com estado otimista + chamada à API (Rodada 29I, achado 86): o botão escolhido acende e o contador de confirmados
+  // mexe NA HORA; se o pedido falhar, volta ao estado de antes e diz o que fazer.
   async function onPresence(gameId, going) {
+    // Com o RSVP aberto para o próximo jogo a resposta que vale é a do RSVP: o "Vou / Não vou" do card do jogo e o do cartão
+    // "Confirme presença" são o MESMO — um destino só, um número só.
+    if (gameId === nextId && rsvpValeParaOProximo) {
+      await responderRsvp(going ? 'confirmado' : 'recusado');
+      return;
+    }
     setError('');
     setBusyId(gameId);
+    const antes = (games || []).find((g) => g.id === gameId);
     setGames((prev) =>
       (prev || []).map((g) => {
         if (g.id !== gameId) return g;
@@ -553,14 +557,29 @@ export default function Inicio() {
         method: 'POST',
         body: JSON.stringify({ confirmado: going }),
       });
-    } catch (err) {
-      setError(err.message);
-      // Recarrega o agregado inteiro (não só os jogos) — o useEffect acima
-      // aplica `games` fresco assim que a resposta chegar.
-      await inicio.reload();
+    } catch {
+      // Volta ao estado de antes (o do jogo que a tela mostrava) e avisa — sem deixar o botão aceso por um pedido que não valeu.
+      if (antes) setGames((prev) => (prev || []).map((g) => (g.id === gameId ? { ...g, user_status: antes.user_status, confirmed_count: antes.confirmed_count } : g)));
+      setToast({ msg: MSG_FALHA_RSVP, tipo: 'error' });
     } finally {
       setBusyId(null);
     }
+  }
+
+  // A resposta no RSVP do próximo jogo (o "Vou / Não vou" do card do jogo quando o RSVP está aberto). O cartão "Confirme presença"
+  // faz o mesmo por conta própria (components/RSVPCard.jsx) e avisa a tela por `onResposta`.
+  async function responderRsvp(status) {
+    if (!nextId) return;
+    setBusyId(nextId);
+    const r = await responderComOtimismo({ gameId: nextId, status, anterior: minhaResposta, aplicar: setMinhaResposta });
+    if (!r.ok) {
+      setToast({ msg: r.erro, tipo: 'error' });
+    } else if (r.espera != null) {
+      // O jogo está cheio: não confirmou, entrou na fila. Recarrega para o cartão mostrar a posição.
+      setToast({ msg: 'O jogo está cheio. Você entrou na lista de espera.', tipo: 'success' });
+      await inicio.reload();
+    }
+    setBusyId(null);
   }
 
   const user = me?.user;
@@ -868,17 +887,19 @@ export default function Inicio() {
   const [rsvpDataAnterior, setRsvpDataAnterior] = useState(undefined);
   if (rsvpData !== rsvpDataAnterior) {
     setRsvpDataAnterior(rsvpData);
-    if (rsvpData) {
-      const meuId = me?.user?.id;
-      setMinhaResposta(
-        rsvpData.confirmados?.some((u) => u.id === meuId)
-          ? 'confirmado'
-          : rsvpData.recusados?.some((u) => u.id === meuId)
-            ? 'recusado'
-            : null
-      );
-    }
+    if (rsvpData) setMinhaResposta(respostaNoRsvp(rsvpData, me?.user?.id));
   }
+  // O que o card do próximo jogo mostra enquanto o RSVP está aberto (29I, achado 86): UM número só — os confirmados do RSVP, que é
+  // o que o "Vou" grava — e a resposta da pessoa. `minhaResposta` já inclui o estado otimista; o número parte do que o motor
+  // contou e soma/tira a diferença entre a resposta de agora e a que o motor conhecia. Sem RSVP aberto vale o que o motor mandou.
+  // O RSVP que o motor mandou é o do 1º jogo não encerrado de TODOS os times; com um chip de time escolhido o "próximo" da tela pode
+  // ser outro jogo — aí o RSVP não é dele, e o card dele fica com o que o motor contou para ele.
+  const jogoDoRsvpId = (dadosInicio?.convites?.games || []).find((g) => g.status !== 'finished')?.id ?? null;
+  const rsvpValeParaOProximo = rsvpAbertoNoProximo && nextId != null && nextId === jogoDoRsvpId;
+  const confirmadosNoRsvp = confirmadosComResposta(rsvpData, me?.user?.id, minhaResposta);
+  const comRsvp = (g) => (g.id === nextId && rsvpValeParaOProximo && confirmadosNoRsvp != null
+    ? { ...g, confirmed_count: confirmadosNoRsvp, user_status: statusDoJogoPelaResposta(minhaResposta) }
+    : g);
 
   // Campeonato da equipa principal (card no Início) — mesmo campSlug que o
   // backend usou para calcular `campeonato` dentro de /api/inicio.
@@ -896,7 +917,7 @@ export default function Inicio() {
   // Anúncio nativo: a seguir ao 2º jogo; se houver ≤1 jogo, no fim.
   const items = [];
   proximosJogos.forEach((g, i) => {
-    items.push({ type: 'game', game: g });
+    items.push({ type: 'game', game: comRsvp(g) });
     if (i === 1) items.push({ type: 'ad', key: 'ad-inicio' });
   });
   if (proximosJogos.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
@@ -1288,7 +1309,7 @@ export default function Inicio() {
             <div>
               <div className="games-label">Próximos Jogos</div>
             {rsvpAbertoNoProximo ? (
-              <RSVPCard gameId={nextId} prazo={rsvpInfo.rsvp_prazo} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
+              <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
             ) : null}
             {proximoSoOrganizo ? (
               <p className="texto-apoio" data-so-organizo>Você só organiza este time, então não entra na lista de presença. Dá para mudar nas configurações do time.</p>
@@ -1385,8 +1406,8 @@ export default function Inicio() {
               <div className="modal-card modal-card--hud" role="dialog" aria-modal="true" aria-labelledby="aviso-ausencia-pergunta" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-card__inner">
                   <p id="aviso-ausencia-pergunta" style={{ fontSize: 15, lineHeight: 1.5, marginBottom: 16 }}>
-                    {diaDoJogo(proximoJogo.date)
-                      ? `Avisar o time que você não vai ao jogo de ${diaDoJogo(proximoJogo.date)}?`
+                    {diaDoJogo(proximoJogo.date, proximoJogo.fuso)
+                      ? `Avisar o time que você não vai ao jogo de ${diaDoJogo(proximoJogo.date, proximoJogo.fuso)}?`
                       : 'Avisar o time que você não vai ao próximo jogo?'}
                   </p>
                   <button type="button" className="btn hud-corners-s cta-gold" style={{ width: '100%' }} onClick={() => definirAusencia(true)}>

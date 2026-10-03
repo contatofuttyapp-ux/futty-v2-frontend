@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { useApi } from '../hooks/useApi';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
+import { diaDoMes, mesCurto } from '../utils/dataHora';
 import { plural } from '../utils/plural';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
@@ -108,7 +110,7 @@ export default function Jogo() {
 
   // Copia o link público do sorteio (para WhatsApp / telão).
   async function partilharLink() {
-    const url = `${window.location.origin}/p/${slug}/${id}`;
+    const url = `${ORIGEM_DO_SITE}/p/${slug}/${id}`;
     const ok = await copiarTexto(url);
     setToast(ok
       ? { tipo: 'success', mensagem: 'Link copiado.' }
@@ -200,13 +202,13 @@ export default function Jogo() {
             ) : null}
             <div className="hud-corners" style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
               <div style={{ display: 'grid', placeItems: 'center', width: 52, height: 56, flexShrink: 0, background: 'rgba(212,160,23,0.10)', border: '1px solid rgba(212,160,23,0.45)', clipPath: CLIP_S }}>
-                <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, color: '#f0c94a', lineHeight: 1 }}>{new Date(game.data).getDate()}</div>
-                <div style={{ fontFamily: RAJ, fontSize: 10, color: '#c9a24a', textTransform: 'uppercase' }}>{new Date(game.data).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</div>
+                <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, color: '#f0c94a', lineHeight: 1 }}>{diaDoMes(game.data, team?.fuso)}</div>
+                <div style={{ fontFamily: RAJ, fontSize: 10, color: '#c9a24a', textTransform: 'uppercase' }}>{mesCurto(game.data, team?.fuso)}</div>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 18, lineHeight: 1.15 }}>{game.local || 'Jogo'}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                  {formatDateTime(game.data)}
+                  {formatDateTime(game.data, team?.fuso)}
                   {game.jogadores_por_time ? ` · ${game.jogadores_por_time} por time` : ''}
                   {game.sorteio_realizado && game.num_times ? ` · ${game.num_times} times` : ''}
                 </div>

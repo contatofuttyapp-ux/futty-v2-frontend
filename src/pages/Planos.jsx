@@ -61,6 +61,7 @@ const NOME_ESTADO = { creditada: 'Confirmada', reembolsada: 'Reembolsada' };
 // da Figurinha chega-se à Minha; do convite do dono (P2: o bloco agora traz para cá), ao pacote.
 const REALCE = { minha: 'Escolher o uniforme é aqui', pacote: 'As figurinhas do time todo são aqui', manto: 'O manto do seu time é aqui' };
 
+// 29I (achado 83): data de COMPRA (do sistema), no relógio de quem olha — o fuso do time é só para a hora de jogo.
 function dataCurta(iso) {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });

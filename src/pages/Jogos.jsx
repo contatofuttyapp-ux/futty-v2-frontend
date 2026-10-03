@@ -67,7 +67,7 @@ export default function Jogos() {
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {games.map((g) => {
-              const { day, month } = dayMonth(g.data);
+              const { day, month } = dayMonth(g.data, team?.fuso); // 29I: a data é a do campo (fuso do time)
               const apagado = g.status === 'encerrado' || g.status === 'cancelado';
               return (
                 <Link key={g.id} to={`/equipa/${slug}/jogo/${g.id}`} style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, textDecoration: 'none', color: 'inherit', opacity: apagado ? 0.75 : 1 }}>
@@ -78,7 +78,7 @@ export default function Jogos() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>{g.local || 'Jogo'}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                      {formatDateTime(g.data)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
+                      {formatDateTime(g.data, team?.fuso)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
                       {g.jogadores_por_time ? ` · ${g.jogadores_por_time}/time` : ''}
                       {g.sorteio_realizado && g.num_times ? ` · ${g.num_times} times` : ''}
                     </div>

@@ -1,4 +1,5 @@
 // Futty v2.0 — Funções puras de formatação.
+import { diaDoMes, formatarDataHora, mesCurto } from './dataHora';
 
 export const STATUS_LABELS = {
   agendado: 'Agendado',
@@ -7,26 +8,19 @@ export const STATUS_LABELS = {
   cancelado: 'Cancelado',
 };
 
-/** Data + hora curtas em PT (ex.: "qua, 18 jun, 22:00"). */
-export function formatDateTime(iso) {
-  if (!iso) return '';
-  return new Date(iso).toLocaleString('pt-PT', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+/**
+ * Data + hora do jogo (ex.: "qua., 18 de jun. · 22:00") no relógio do CAMPO: `fuso` é o do time (Rodada 29I, achado 83).
+ * Uma forma só em toda tela — a de src/utils/dataHora.js.
+ */
+export function formatDateTime(iso, fuso) {
+  return formatarDataHora(iso, fuso);
 }
 
-/** Dia e mês curtos para o cartão de jogo. */
-export function dayMonth(iso) {
-  if (!iso) return { day: '--', month: '' };
-  const d = new Date(iso);
-  return {
-    day: String(d.getDate()).padStart(2, '0'),
-    month: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
-  };
+/** Dia e mês curtos para o cartão de jogo, no relógio do campo (`fuso` do time). */
+export function dayMonth(iso, fuso) {
+  const dia = diaDoMes(iso, fuso);
+  if (dia == null) return { day: '--', month: '' };
+  return { day: String(dia).padStart(2, '0'), month: mesCurto(iso, fuso) };
 }
 
 /** Média de votos formatada (2 casas) ou "--" se não houver votos. */
