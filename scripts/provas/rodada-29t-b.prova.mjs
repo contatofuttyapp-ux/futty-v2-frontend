@@ -1,7 +1,9 @@
 // Prova no navegador da Rodada 29T, bloco B (o Radar apresenta o time, os bairros viram lista): o que só um Chromium de verdade confirma, com as MESMAS fontes
 // e o MESMO CSS do app, as listas de verdade (public/dados/) e o motor de mentira (/api/** respondido por page.route).
-//   · a fila ÚNICA de avisos do Início (ajuste da Freaky): todos os avisos entram nela, um por vez, na ordem jogo → pedido → votação → figurinha pronta → os
-//     demais → notificações; fechar ou resolver faz entrar o próximo; "Seus times" com pendência primeiro e nenhum escondido atrás do "Ver todos";
+//   · a fila ÚNICA de avisos do Início (ajuste da Freaky; ordem revista na 29T-C): todos os avisos entram nela, um por vez — primeiro o que aconteceu ou tem
+//     prazo (jogo → pedido → resposta do pedido → votação → denúncia → figurinha nascendo), depois os lembretes sem prazo (figurinha para gerar, uniforme,
+//     card, data de nascimento — cada um com o "Agora não" de 7 dias), por último as notificações; fechar ou resolver faz entrar o próximo; "Seus times" com
+//     pendência primeiro e nenhum escondido atrás do "Ver todos";
 //   · o Radar (157): "Bairro · Cidade" e o "Sobre o time" em até 2 linhas, tocar no card abre o pop-up com tudo e o mesmo botão, tocar no botão NÃO abre;
 //   · o campo Bairro (157): só aparece com cidade que tem lista (IBGE no Brasil, freguesias em Portugal), só aceita da lista, e some quando a cidade muda;
 //   · o "Sobre o time" (157): obrigatório no passo 3 do Criar time só para aberto / com aprovação; Ajustes pede o texto antes de abrir o time.
@@ -89,8 +91,12 @@ function criarRoteador(base, { inicio = null, chamadas, explorar = [], respostas
   };
 }
 
-async function abrir(navegador, base, { largura = 390, altura = ALTURA, caminho = '/home', inicio = null, explorar = [], respostas = {} } = {}) {
+async function abrir(navegador, base, { largura = 390, altura = ALTURA, caminho = '/home', inicio = null, explorar = [], respostas = {}, plantar = {} } = {}) {
   const ctx = await navegador.newContext({ viewport: { width: largura, height: altura }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: 'pt-BR', timezoneId: SP });
+  await ctx.addInitScript((itens) => {
+    // `plantar`: chaves do localStorage já postas antes de o app abrir (o "Agora não" de dias atrás, por exemplo)
+    try { for (const [k, v] of Object.entries(itens)) localStorage.setItem(k, v); } catch { /* sem storage */ }
+  }, plantar);
   await ctx.addInitScript(({ chave, sessao }) => {
     try { localStorage.setItem('futty_cookies', 'aceite'); localStorage.setItem(chave, sessao); } catch { /* sem storage */ }
     // O Chromium sem tela nasce com a permissão de notificações NEGADA e o aviso "Ativar notificações" nunca apareceria. Aqui ela está "default".
@@ -153,61 +159,104 @@ export async function rodar({ navegador, base, t }) {
     await imagem(page, 'fila-2-pedido');
     await page.locator('[data-aviso="pedido"]').getByRole('button', { name: 'Cancelar' }).click();
 
-    await esperarAviso(page, 'votacao'); await registrar();
-    t('cancelou o pedido → entra a votação ("Você tem colegas para avaliar")', ordem[2] === 'votacao' && /colegas para avaliar/.test(await page.locator('[data-aviso="votacao"]').innerText()), ordem[2]);
-    await imagem(page, 'fila-3-votacao');
-    await page.locator('[data-aviso="votacao"] [aria-label="Dispensar"]').click();
-
     await esperarAviso(page, 'desfecho'); await registrar();
-    t('dispensou a votação → entra o desfecho do pedido ("Você entrou no time Racha da Candanga!")', ordem[3] === 'desfecho' && /Você entrou no time Racha da Candanga!/.test(await page.locator('[data-aviso="desfecho"]').innerText()), ordem[3]);
+    t('cancelou o pedido → entra a resposta do outro pedido ("Você entrou no time Racha da Candanga!")', ordem[2] === 'desfecho' && /Você entrou no time Racha da Candanga!/.test(await page.locator('[data-aviso="desfecho"]').innerText()), ordem[2]);
+    await imagem(page, 'fila-3-desfecho');
     await page.locator('[data-aviso="desfecho"] [aria-label="Dispensar"]').click();
 
-    await esperarAviso(page, 'nascimento'); await registrar();
-    t('dispensou o desfecho → entra o pedido da data de nascimento', ordem[4] === 'nascimento', ordem[4]);
-    await imagem(page, 'fila-5-nascimento');
-    await page.locator('[data-aviso="nascimento"] [aria-label="Agora não"]').click();
+    await esperarAviso(page, 'votacao'); await registrar();
+    t('dispensou a resposta → entra a votação ("Você tem colegas para avaliar")', ordem[3] === 'votacao' && /colegas para avaliar/.test(await page.locator('[data-aviso="votacao"]').innerText()), ordem[3]);
+    await imagem(page, 'fila-4-votacao');
+    await page.locator('[data-aviso="votacao"] [aria-label="Dispensar"]').click();
 
     await esperarAviso(page, 'denuncia'); await registrar();
-    t('"Agora não" → entra o desfecho da denúncia', ordem[5] === 'denuncia', ordem[5]);
+    t('dispensou a votação → entra o desfecho da denúncia (ainda é o que aconteceu, antes dos lembretes)', ordem[4] === 'denuncia', ordem[4]);
     await page.locator('[data-aviso="denuncia"] [aria-label="Fechar"]').click();
 
+    await esperarAviso(page, 'nascimento'); await registrar();
+    t('fechou a denúncia → só agora entra o lembrete da data de nascimento', ordem[5] === 'nascimento', ordem[5]);
+    t('o lembrete traz o "Agora não"', (await page.locator('[data-aviso="nascimento"] [data-agora-nao]').count()) === 1);
+    await imagem(page, 'fila-6-nascimento');
+    await page.locator('[data-aviso="nascimento"] [data-agora-nao]').click();
+    t('"Agora não" guarda o adiamento neste aparelho (7 dias)', await page.evaluate(() => { const v = Number(localStorage.getItem('futty_agora_nao_nascimento')); return v > Date.now() - 60000 && v <= Date.now(); }));
+
     await esperarAviso(page, 'notificacoes'); await registrar();
-    t('as notificações são o ÚLTIMO da fila', ordem[6] === 'notificacoes', ordem[6]);
+    t('"Agora não" → a fila anda: as notificações são o ÚLTIMO', ordem[6] === 'notificacoes', ordem[6]);
     await imagem(page, 'fila-7-notificacoes');
     await page.locator('[data-aviso="notificacoes"] [aria-label="Fechar"]').click();
     await page.waitForFunction(() => document.querySelectorAll('[data-aviso]').length === 0, null, { timeout: 5000 });
-    t('a ordem inteira: jogo → pedido → votação → desfecho → nascimento → denúncia → notificações', JSON.stringify(ordem) === JSON.stringify(['jogo', 'pedido', 'votacao', 'desfecho', 'nascimento', 'denuncia', 'notificacoes']), JSON.stringify(ordem));
+    t('a ordem inteira: jogo → pedido → resposta do pedido → votação → denúncia → nascimento (lembrete) → notificações', JSON.stringify(ordem) === JSON.stringify(['jogo', 'pedido', 'desfecho', 'votacao', 'denuncia', 'nascimento', 'notificacoes']), JSON.stringify(ordem));
     t('fechada a fila, nenhum aviso sobra no topo', (await avisos(page).count()) === 0);
     t('a fila roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }
 
-  // ── A figurinha pronta (cartão dourado) passa à frente dos demais e das notificações ───────────────────────────────────────────────────
+  // ── A figurinha para gerar (cartão dourado) é um lembrete: vem DEPOIS do que aconteceu, ANTES da data de nascimento e das notificações; "Agora não" a faz andar ──
   if (roda('pronta')) {
     const inicio = payloadInicio({ denuncias: 1, nascimento: true, foto: true, direito: 'time' });
     const { ctx, page } = await abrir(navegador, base, { inicio });
-    await esperarAviso(page, 'figurinha-pronta', 25000);
+    await esperarAviso(page, 'denuncia', 25000);
     await page.waitForTimeout(600);
-    t('com direito a uma figurinha, só o cartão "Você tem uma figurinha para gerar" aparece — os demais e as notificações esperam atrás dele', (await tipoDoAviso(page)) === 'figurinha-pronta' && /figurinha para gerar/.test(await page.locator('[data-aviso]').innerText()), await tipoDoAviso(page));
+    t('o desfecho da denúncia (aconteceu) passa à frente do lembrete da figurinha, e é o único aviso', (await tipoDoAviso(page)) === 'denuncia', await tipoDoAviso(page));
+    await page.locator('[data-aviso="denuncia"] [aria-label="Fechar"]').click();
+    await esperarAviso(page, 'figurinha-pronta');
+    await page.waitForTimeout(600);
+    t('sem nada que tenha acontecido, só o cartão "Você tem uma figurinha para gerar" aparece — a data de nascimento e as notificações esperam atrás dele', (await tipoDoAviso(page)) === 'figurinha-pronta' && /figurinha para gerar/.test(await page.locator('[data-aviso]').innerText()), await tipoDoAviso(page));
+    await imagem(page, 'lembrete-figurinha-pronta');
+    t('o cartão traz o "Agora não" e continua levando à Figurinha', (await page.locator('[data-aviso="figurinha-pronta"] [data-agora-nao]').count()) === 1 && (await page.locator('[data-aviso="figurinha-pronta"] a[href="/figurinha"]').count()) === 1);
+    await page.locator('[data-aviso="figurinha-pronta"] [data-agora-nao]').click();
+    await esperarAviso(page, 'nascimento');
+    t('"Agora não" na figurinha → entra o próximo lembrete (data de nascimento), e a figurinha não volta', (await tipoDoAviso(page)) === 'nascimento' && (await page.locator('[data-aviso="figurinha-pronta"]').count()) === 0, await tipoDoAviso(page));
+    t('a figurinha ficou adiada neste aparelho (7 dias)', await page.evaluate(() => Number(localStorage.getItem('futty_agora_nao_figurinha-pronta')) > Date.now() - 60000));
+    await page.locator('[data-aviso="nascimento"] [data-agora-nao]').click();
+    await esperarAviso(page, 'notificacoes');
+    t('os dois lembretes adiados: ativar notificações, por último, aparece (a fila não trava)', (await tipoDoAviso(page)) === 'notificacoes', await tipoDoAviso(page));
     await ctx.close();
   }
-  // ── A figurinha nascendo ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  // ── A figurinha nascendo é o que acontece agora: passa à frente de todos os lembretes ──────────────────────────────────────────────────
   if (roda('nascendo')) {
-    const inicio = payloadInicio({ denuncias: 1, nascimento: true, figurinha: 'gerando' });
+    const inicio = payloadInicio({ nascimento: true, figurinha: 'gerando' });
     const { ctx, page } = await abrir(navegador, base, { inicio });
     await esperarAviso(page, 'figurinha-nascendo', 25000);
     await page.waitForTimeout(600);
-    t('"Sua figurinha está sendo criada…" vem antes da data de nascimento e da denúncia, e é o único aviso', (await tipoDoAviso(page)) === 'figurinha-nascendo' && /sendo criada/.test(await page.locator('[data-aviso]').innerText()), await tipoDoAviso(page));
+    t('"Sua figurinha está sendo criada…" vem antes do lembrete da data de nascimento, e é o único aviso', (await tipoDoAviso(page)) === 'figurinha-nascendo' && /sendo criada/.test(await page.locator('[data-aviso]').innerText()), await tipoDoAviso(page));
     await ctx.close();
   }
-  // ── "Complete seu card" (sem foto) vem antes das notificações ──────────────────────────────────────────────────────────────────────────
+  // a que não saiu ("Não deu para gerar sua figurinha agora"): "Agora não" a esconde e a fila anda
+  if (roda('nascendo')) {
+    const inicio = payloadInicio({ nascimento: true, figurinha: 'falhou' });
+    const { ctx, page } = await abrir(navegador, base, { inicio });
+    await esperarAviso(page, 'figurinha-nascendo', 25000);
+    await page.waitForTimeout(600);
+    t('a figurinha que não saiu traz o "Agora não" e o botão "Ir para Figurinha"', /Não deu para gerar sua figurinha/.test(await page.locator('[data-aviso]').innerText()) && (await page.locator('[data-aviso="figurinha-nascendo"] [data-agora-nao]').count()) === 1);
+    await page.locator('[data-aviso="figurinha-nascendo"] [data-agora-nao]').click();
+    await esperarAviso(page, 'nascimento');
+    t('"Agora não" → a fila anda para a data de nascimento', (await tipoDoAviso(page)) === 'nascimento', await tipoDoAviso(page));
+    await ctx.close();
+  }
+  // ── "Complete seu card" (sem foto): lembrete com "Agora não" (antes não tinha X: segurava a fila para sempre) ───────────────────────────
   if (roda('card')) {
     const inicio = payloadInicio({ foto: false });
     const { ctx, page } = await abrir(navegador, base, { inicio });
     await esperarAviso(page, 'card', 25000);
     await page.waitForTimeout(600);
-    t('sem foto, "Complete seu card" é o aviso (sem X) e as notificações esperam', (await tipoDoAviso(page)) === 'card' && /Complete seu card/.test(await page.locator('[data-aviso]').innerText()), await tipoDoAviso(page));
+    t('sem foto, "Complete seu card" é o aviso e as notificações esperam atrás dele', (await tipoDoAviso(page)) === 'card' && /Complete seu card/.test(await page.locator('[data-aviso]').innerText()), await tipoDoAviso(page));
+    t('o card traz o "Agora não"', (await page.locator('[data-aviso="card"] [data-agora-nao]').count()) === 1);
+    await imagem(page, 'lembrete-card');
+    await page.locator('[data-aviso="card"] [data-agora-nao]').click();
+    await esperarAviso(page, 'notificacoes');
+    t('"Agora não" → o card some por 7 dias e entram as notificações', (await tipoDoAviso(page)) === 'notificacoes' && (await page.locator('[data-aviso="card"]').count()) === 0, await tipoDoAviso(page));
     await ctx.close();
+  }
+  // ── o "Agora não" vale 7 dias NAQUELE aparelho: com a marca de ontem o lembrete não volta; com a de 8 dias atrás, volta ──────────────
+  if (roda('lembrete-7-dias')) {
+    for (const [dias, volta] of [[1, false], [8, true]]) {
+      const inicio = payloadInicio({ foto: false });
+      const { ctx, page } = await abrir(navegador, base, { inicio, plantar: { futty_agora_nao_card: String(Date.now() - dias * DIA) } });
+      await esperarAviso(page, volta ? 'card' : 'notificacoes', 25000);
+      t(volta ? 'adiado há 8 dias: o card volta' : 'adiado ontem: o card continua escondido e as notificações entram', (await page.locator('[data-aviso="card"]').count()) === (volta ? 1 : 0), await tipoDoAviso(page));
+      await ctx.close();
+    }
   }
 
   // ── "Seus times": os com pendência primeiro, nenhum atrás do "Ver todos" ─────────────────────────────────────────────────────────────────
@@ -321,8 +370,18 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('input[placeholder="Ex.: Domingueira FC"]').fill('Racha do Guará');
 
     t('sem cidade o campo Bairro nem aparece (não há campo apagado)', (await bairro.count()) === 0 && !/BAIRRO/i.test(await page.locator('main').innerText()));
+    // 29T-C: São Paulo capital não tem bairros no Censo, mas tem os 96 distritos oficiais do IBGE — o campo aparece e sugere "Pinheiros"
     await escolherCidade('São Paulo', 'São Paulo, SP');
-    t('São Paulo (capital): o IBGE não tem bairros → o campo Bairro não aparece', (await bairro.count()) === 0);
+    await bairro.waitFor({ timeout: 10000 });
+    await bairro.click();
+    await bairro.fill('pinhei');
+    await page.locator('[data-sugestoes-bairro] button', { hasText: 'Pinheiros' }).first().waitFor({ timeout: 5000 });
+    t('São Paulo (capital): os distritos do IBGE viram a lista — o campo Bairro aparece e "pinhei" sugere "Pinheiros"', (await page.locator('[data-sugestoes-bairro] button').allInnerTexts()).includes('Pinheiros'));
+    await imagem(page, 'criar-bairro-sao-paulo');
+    await bairro.fill('');
+    // Rio Branco (AC) tem um distrito só: não há o que escolher, o campo some
+    await escolherCidade('Rio Branc', 'Rio Branco, AC');
+    t('Rio Branco, AC (um distrito só no IBGE): o campo Bairro não aparece e o que estava escrito sai', (await bairro.count()) === 0);
     await escolherCidade('Brasíl', 'Brasília, DF');
     await bairro.waitFor({ timeout: 10000 });
     t('Brasília, DF: o campo Bairro (opcional) aparece, com "Onde vocês jogam"', (await bairro.getAttribute('placeholder')) === 'Onde vocês jogam' && /BAIRRO \(OPCIONAL\)/i.test(await page.locator('main').innerText()));
@@ -514,9 +573,9 @@ export async function rodar({ navegador, base, t }) {
 
     // Cidade sem bairros na lista: o campo não aparece, e o bairro antigo fica salvo
     {
-      const { ctx, page, chamadas } = await ir({ cidade: 'São Paulo, SP', bairro: 'Pinheiros', modo: 'privado', descricao: '' });
+      const { ctx, page, chamadas } = await ir({ cidade: 'Rio Branco, AC', bairro: 'Pinheiros', modo: 'privado', descricao: '' });
       await page.waitForTimeout(800);
-      t('São Paulo, SP (sem bairros no IBGE): o campo Bairro não aparece nos Ajustes', (await page.locator('[data-campo-bairro]').count()) === 0 && !/Bairro/.test(await page.locator('[data-ajustes-do-time]').innerText().then((s) => s.replace(/Bairro e a cidade/, ''))));
+      t('Rio Branco, AC (um distrito só no IBGE, sem lista): o campo Bairro não aparece nos Ajustes', (await page.locator('[data-campo-bairro]').count()) === 0 && !/Bairro/.test(await page.locator('[data-ajustes-do-time]').innerText().then((s) => s.replace(/Bairro e a cidade/, ''))));
       await page.locator('[data-ajustes-do-time] button.btn--primary', { hasText: /^Salvar$/ }).first().click();
       await page.getByText('Time atualizado.').waitFor({ timeout: 5000 });
       const salvo = chamadas.find((c) => c.metodo === 'PATCH' && c.caminho === '/api/teams/varzea-fc');

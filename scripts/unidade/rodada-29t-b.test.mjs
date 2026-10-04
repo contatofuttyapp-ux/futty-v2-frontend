@@ -9,7 +9,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { ORDEM_DOS_AVISOS, proximoAviso } from '../../src/utils/avisosDoInicio.js';
+import { LEMBRETES_SEM_PRAZO, ORDEM_DOS_AVISOS, proximoAviso } from '../../src/utils/avisosDoInicio.js';
+import { DIAS_DO_AGORA_NAO, esconderLembrete, lembreteEscondido, lembretesEscondidos } from '../../src/utils/lembretes.js';
 import { quantosTimesMostrar, timesComPendenciaPrimeiro } from '../../src/utils/seuTime.js';
 import { SEM_SOBRE_NO_POPUP, localDoTime, rotuloDoModo } from '../../src/utils/radar.js';
 import { EXEMPLO_SOBRE_O_TIME, FALTA_SOBRE_NA_CRIACAO, FALTA_SOBRE_NOS_AJUSTES, MAX_SOBRE_O_TIME, faltaSobre, precisaDeSobre } from '../../src/utils/sobreOTime.js';
@@ -39,7 +40,7 @@ const CHAVE_DO_TIPO = {
   uniforme: 'uniforme', 'recado-figurinha': 'recadoFigurinha', nascimento: 'nascimento', denuncia: 'denuncia', card: 'card', notificacoes: 'notificacoes',
 };
 
-test('ajuste 0 · a ordem da fila: jogo sem resposta → pedido pendente → votação → figurinha pronta → os demais → ativar notificações por último', () => {
+test('ajuste 0 · a ordem da fila (revista na 29T-C): o que aconteceu ou tem prazo → os lembretes sem prazo → ativar notificações por último', () => {
   const candidatos = TUDO();
   const saiu = [];
   for (let i = 0; i < 30; i += 1) {
@@ -48,12 +49,85 @@ test('ajuste 0 · a ordem da fila: jogo sem resposta → pedido pendente → vot
     saiu.push(aviso.tipo);
     delete candidatos[CHAVE_DO_TIPO[aviso.tipo]]; // resolveu / fechou o aviso: entra o próximo da fila
   }
-  assert.deepEqual(saiu, ['jogo', 'pedido', 'votacao', 'figurinha-pronta', 'desfecho', 'figurinha-nascendo', 'uniforme', 'recado-figurinha', 'nascimento', 'denuncia', 'card', 'notificacoes']);
+  // 29T-C: jogo sem resposta, pedido pendente, resposta do pedido, votação, denúncia, figurinha nascendo — e SÓ DEPOIS os lembretes
+  assert.deepEqual(saiu, ['jogo', 'pedido', 'desfecho', 'votacao', 'denuncia', 'figurinha-nascendo', 'figurinha-pronta', 'recado-figurinha', 'uniforme', 'card', 'nascimento', 'notificacoes']);
   assert.deepEqual(saiu, ORDEM_DOS_AVISOS, 'a ordem exportada é a mesma que a fila segue');
-  // as quatro primeiras posições são as que a Freaky decidiu; as notificações são a última
-  assert.deepEqual(saiu.slice(0, 4), ['jogo', 'pedido', 'votacao', 'figurinha-pronta']);
+  assert.deepEqual(saiu.slice(0, 6), ['jogo', 'pedido', 'desfecho', 'votacao', 'denuncia', 'figurinha-nascendo']);
   assert.equal(saiu.at(-1), 'notificacoes');
   assert.equal(proximoAviso(candidatos), null, 'fila vazia: nenhum aviso');
+});
+
+test('29T-C · a fila não trava: nenhum lembrete sem prazo passa à frente de um aviso que aconteceu, e todos passam à frente de ativar notificações', () => {
+  const aconteceu = ORDEM_DOS_AVISOS.filter((tipo) => !LEMBRETES_SEM_PRAZO.includes(tipo) && tipo !== 'notificacoes');
+  assert.deepEqual(aconteceu, ['jogo', 'pedido', 'desfecho', 'votacao', 'denuncia', 'figurinha-nascendo']);
+  assert.deepEqual(LEMBRETES_SEM_PRAZO, ['figurinha-pronta', 'recado-figurinha', 'uniforme', 'card', 'nascimento']);
+  const posicao = (tipo) => ORDEM_DOS_AVISOS.indexOf(tipo);
+  for (const tipo of aconteceu) for (const lembrete of LEMBRETES_SEM_PRAZO) assert.ok(posicao(tipo) < posicao(lembrete), `${tipo} antes de ${lembrete}`);
+  for (const lembrete of LEMBRETES_SEM_PRAZO) assert.ok(posicao(lembrete) < posicao('notificacoes'), `${lembrete} antes de ativar notificações`);
+  assert.equal(new Set(ORDEM_DOS_AVISOS).size, ORDEM_DOS_AVISOS.length, 'nenhum tipo repetido');
+  // os lembretes entre si: figurinha para gerar · (recado) · uniforme · card · data de nascimento
+  assert.deepEqual(ORDEM_DOS_AVISOS.filter((t) => LEMBRETES_SEM_PRAZO.includes(t)), LEMBRETES_SEM_PRAZO);
+  // um lembrete passa à frente de ativar notificações, mas perde para qualquer aviso que aconteceu
+  assert.equal(proximoAviso({ nascimento: true, notificacoes: true }).tipo, 'nascimento');
+  assert.equal(proximoAviso({ nascimento: true, votacoes: [{ slug: 'a' }] }).tipo, 'votacao');
+  assert.equal(proximoAviso({ card: { variante: 'sem-foto' }, figurinhaPronta: true, figurinhaNascendo: { estado: 'falhou' } }).tipo, 'figurinha-nascendo');
+});
+
+test('29T-C · "Agora não": esconde o lembrete por 7 dias NAQUELE aparelho, a fila anda, e passados os 7 dias ele volta', () => {
+  const agora = Date.parse('2026-10-05T12:00:00Z');
+  const dias = (n) => n * 24 * 60 * 60 * 1000;
+  const armazem = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), m }; })();
+  assert.equal(DIAS_DO_AGORA_NAO, 7);
+  assert.equal(lembreteEscondido('uniforme', agora, armazem), false, 'nunca dispensado: aparece');
+  assert.equal(esconderLembrete('uniforme', agora, armazem), true);
+  assert.equal(armazem.m.has('futty_agora_nao_uniforme'), true, 'a chave é por lembrete, no aparelho');
+  assert.equal(lembreteEscondido('uniforme', agora, armazem), true, 'escondido agora');
+  assert.equal(lembreteEscondido('uniforme', agora + dias(6) + 23 * 3600 * 1000, armazem), true, 'ainda escondido no 7º dia, antes da hora');
+  assert.equal(lembreteEscondido('uniforme', agora + dias(7), armazem), false, 'sete dias depois ele volta');
+  assert.equal(lembreteEscondido('uniforme', agora + dias(30), armazem), false);
+  assert.equal(lembreteEscondido('card', agora, armazem), false, 'esconder um lembrete não esconde os outros');
+  assert.equal(lembreteEscondido('uniforme', agora - dias(1), armazem), false, 'relógio que andou para trás (marca no futuro) não esconde nada');
+  assert.deepEqual([...lembretesEscondidos(['uniforme', 'card', 'nascimento'], agora, armazem)], ['uniforme']);
+  // lixo no armazém não esconde nada
+  armazem.setItem('futty_agora_nao_card', 'abc');
+  armazem.setItem('futty_agora_nao_nascimento', '');
+  assert.equal(lembreteEscondido('card', agora, armazem), false);
+  assert.equal(lembreteEscondido('nascimento', agora, armazem), false);
+  // e a fila anda: com o uniforme escondido, o próximo lembrete é o card; com os dois escondidos, ativar notificações
+  const fila = (escondidos) => proximoAviso({ uniforme: escondidos.has('uniforme') ? null : { id: 'u1' }, card: escondidos.has('card') ? null : { variante: 'sem-foto' }, notificacoes: true }).tipo;
+  assert.deepEqual([fila(new Set()), fila(new Set(['uniforme'])), fila(new Set(['uniforme', 'card']))], ['uniforme', 'card', 'notificacoes']);
+});
+
+test('29T-C · "Agora não": sem localStorage (janela privada, dados bloqueados) nada quebra — o lembrete só some enquanto a tela está aberta', () => {
+  const quebrado = { getItem() { throw new Error('SecurityError'); }, setItem() { throw new Error('QuotaExceededError'); } };
+  assert.equal(esconderLembrete('card', Date.now(), quebrado), false, 'não guardou, e disse que não');
+  assert.equal(lembreteEscondido('card', Date.now(), quebrado), false, 'não leu, e o lembrete aparece');
+  assert.deepEqual([...lembretesEscondidos(['card'], Date.now(), quebrado)], []);
+  assert.equal(esconderLembrete('card', Date.now(), null), false);
+  assert.equal(lembreteEscondido('card', Date.now(), null), false);
+});
+
+test('29T-C · o Início: todo lembrete sem prazo tem o "Agora não" ligado à fila, guardado pelo utilitário (try/catch), e não sobra o dispensar antigo', () => {
+  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  assert.match(inicio, /import \{ esconderLembrete, lembretesEscondidos \} from '\.\.\/utils\/lembretes';/);
+  assert.match(inicio, /useState\(\(\) => lembretesEscondidos\(\[\.\.\.LEMBRETES_SEM_PRAZO, 'figurinha-falhou'\]\)\)/);
+  assert.match(inicio, /function agoraNao\(id\) \{\s*esconderLembrete\(id\);\s*setAgoraNaoDeles\(\(cur\) => new Set\(cur\)\.add\(id\)\);\s*\}/);
+  // cada lembrete: o "vale agora" ganha o "não escondido", e o aviso desenhado traz o botão com o próprio id
+  assert.match(inicio, /figurinhaPronta: !figurinhaGerando && !figurinhaFalhou && podeGerarBrilhante && !escondido\('figurinha-pronta'\),/);
+  assert.match(inicio, /recadoFigurinha: !podeGerarBrilhante && !escondido\('recado-figurinha'\) \? recadoBrilhante : null,/);
+  assert.match(inicio, /uniforme: escondido\('uniforme'\) \? null : timeSemUniforme,/);
+  assert.match(inicio, /card: figurinhaGerando \|\| figurinhaFalhou \|\| escondido\('card'\) \? null : cardSemFoto/);
+  assert.match(inicio, /nascimento: precisaDob && !escondido\('nascimento'\),/);
+  assert.match(inicio, /figurinhaFalhou && !escondido\('figurinha-falhou'\) \? \{ estado: 'falhou' \} : null/);
+  for (const id of ['figurinha-pronta', 'recado-figurinha', 'uniforme', 'card', 'nascimento', 'figurinha-falhou']) {
+    assert.match(inicio, new RegExp(`<AgoraNao onClick=\\{\\(\\) => agoraNao\\('${id}'\\)\\} />`), `${id}: "Agora não"`);
+  }
+  // o antigo "dispensar para sempre" da data de nascimento saiu: agora volta depois de 7 dias, como os outros
+  assert.doesNotMatch(inicio, /dispensarDob|dobDispensado|futty_dob_dispensado/);
+  // o botão é um só, com o texto da casa
+  assert.match(inicio, /function AgoraNao\(\{ onClick \}\) \{[\s\S]*?Agora não\s*<\/button>/);
+  // ativar notificações continua por último e com o seu próprio fechar
+  assert.match(inicio, /onClick=\{fecharPushBanner\}/);
 });
 
 test('ajuste 0 · cada tipo de aviso passa à frente de todos os que vêm depois dele (e só dele)', () => {
@@ -89,11 +163,12 @@ test('ajuste 0 · o Início desenha TODOS os avisos pela fila: nenhum bloco empi
   }
   // a conta de cada "vale agora" continua a de antes, só que dentro da fila
   assert.match(inicio, /votacoes: votacaoTop \? \[votacaoTop\] : \[\],/);
-  assert.match(inicio, /figurinhaPronta: !figurinhaGerando && !figurinhaFalhou && podeGerarBrilhante,/);
+  // (29T-C: os lembretes ganharam o "não escondido" no fim do "vale agora" — o "Agora não" de 7 dias, travado no teste dele)
+  assert.match(inicio, /figurinhaPronta: !figurinhaGerando && !figurinhaFalhou && podeGerarBrilhante && !escondido\('figurinha-pronta'\),/);
   assert.match(inicio, /desfechos: desfechosResolvidos,/);
-  assert.match(inicio, /figurinhaNascendo: figurinhaGerando \? \{ estado: 'gerando' \} : figurinhaFalhou \? \{ estado: 'falhou' \} : null,/);
-  assert.match(inicio, /recadoFigurinha: !podeGerarBrilhante \? recadoBrilhante : null,/);
-  assert.match(inicio, /card: figurinhaGerando \|\| figurinhaFalhou \? null : cardSemFoto \? \{ variante: 'sem-foto' \} : ctaFigurinha \? \{ variante: 'pos-onboarding' \} : null,/);
+  assert.match(inicio, /figurinhaNascendo: figurinhaGerando \? \{ estado: 'gerando' \} : figurinhaFalhou && !escondido\('figurinha-falhou'\) \? \{ estado: 'falhou' \} : null,/);
+  assert.match(inicio, /recadoFigurinha: !podeGerarBrilhante && !escondido\('recado-figurinha'\) \? recadoBrilhante : null,/);
+  assert.match(inicio, /card: figurinhaGerando \|\| figurinhaFalhou \|\| escondido\('card'\) \? null : cardSemFoto \? \{ variante: 'sem-foto' \} : ctaFigurinha \? \{ variante: 'pos-onboarding' \} : null,/);
   for (const tipo of ['nascimento', 'denuncia', 'desfecho', 'votacao', 'figurinha-nascendo', 'figurinha-pronta', 'uniforme', 'recado-figurinha', 'card']) {
     assert.match(inicio, new RegExp(`data-aviso="${tipo}"`), `${tipo}: data-aviso (a prova conta um só na tela)`);
   }
@@ -268,7 +343,7 @@ const arquivoDe = (uf) => JSON.parse(ler(`public/dados/bairros/${uf}.json`));
 const norm = (t) => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const cidades = JSON.parse(ler('public/dados/cidades.json'));
 
-test('157 · a lista: um arquivo por estado (27), no formato [[codigoIbge, municipio, [[bairro, lat, lng], …]], …], com 17.596 bairros em 896 municípios', () => {
+test('157 · a lista: um arquivo por estado (27), no formato [[codigoIbge, municipio, [[bairro, lat, lng], …]], …] (29T-C: 22.873 itens em 2.590 municípios)', () => {
   const disco = fs.readdirSync(path.join(RAIZ, 'public/dados/bairros')).sort();
   assert.deepEqual(disco, UFS.map((u) => `${u}.json`), 'exatamente os 27 estados, nada a mais');
   let bairros = 0;
@@ -295,9 +370,10 @@ test('157 · a lista: um arquivo por estado (27), no formato [[codigoIbge, munic
       }
     }
   }
-  assert.equal(municipios, 896, '895 do IBGE + o Distrito Federal');
-  assert.equal(bairros, 17596, '17.576 do IBGE − 13 nomes repetidos no mesmo município + 33 Regiões Administrativas do DF');
-  assert.deepEqual(arquivoDe('TO'), [], 'Tocantins não tem bairros na lista: arquivo vazio (e o campo some)');
+  // 29T-C: os 895 municípios com bairros no Censo + os 1.695 que passam a ter lista pelos distritos e subdistritos (2 ou mais) do mesmo IBGE
+  assert.equal(municipios, 2590, '895 com bairros no Censo + 1.695 pelos distritos/subdistritos (o DF entre eles)');
+  assert.equal(bairros, 22873, '17.563 bairros do Censo (17.576 − 13 nomes repetidos) + 5.310 distritos/subdistritos (um nome só por município)');
+  assert.ok(arquivoDe('TO').length > 0, 'Tocantins deixou de ser arquivo vazio: Palmas e outros municípios têm 2 ou mais distritos');
 });
 
 test('157 · todo município da lista de bairros existe na lista de cidades (nome + UF): é assim que o campo liga um à outra', () => {
@@ -319,14 +395,54 @@ test('157 · Brasília (DF): o IBGE traz as 33 Regiões Administrativas (Guará,
   for (const [nome, lat, lng] of lista) assert.ok(lat > -16.1 && lat < -15.45 && lng > -48.3 && lng < -47.3, `${nome}: ${lat},${lng} fora do DF`);
 });
 
-test('157 · o que o IBGE não tem fica sem campo: São Paulo, Goiânia, São Luís, Palmas e Rio Branco (e a maioria dos municípios pequenos)', () => {
+test('157 · o que o IBGE não tem fica sem campo: só Rio Branco e São Luís (um distrito só cada) — as outras 25 capitais têm lista', () => {
   const temBairros = (uf, municipio) => arquivoDe(uf).some((m) => norm(m[1]) === norm(municipio));
-  assert.equal(temBairros('SP', 'São Paulo'), false);
-  assert.equal(temBairros('GO', 'Goiânia'), false);
-  assert.equal(temBairros('MA', 'São Luís'), false);
-  assert.equal(temBairros('TO', 'Palmas'), false);
-  assert.equal(temBairros('AC', 'Rio Branco'), false);
-  for (const [cidade, uf] of [['Belo Horizonte', 'MG'], ['Rio de Janeiro', 'RJ'], ['Salvador', 'BA'], ['Fortaleza', 'CE'], ['Curitiba', 'PR'], ['Porto Alegre', 'RS']]) assert.equal(temBairros(uf, cidade), true, cidade);
+  assert.equal(temBairros('MA', 'São Luís'), false, 'um distrito só: não há o que escolher');
+  assert.equal(temBairros('AC', 'Rio Branco'), false, 'um distrito só: não há o que escolher');
+  for (const [cidade, uf] of [['Belo Horizonte', 'MG'], ['Rio de Janeiro', 'RJ'], ['Salvador', 'BA'], ['Fortaleza', 'CE'], ['Curitiba', 'PR'], ['Porto Alegre', 'RS'], ['São Paulo', 'SP'], ['Goiânia', 'GO'], ['Palmas', 'TO'], ['Brasília', 'DF']]) assert.equal(temBairros(uf, cidade), true, cidade);
+});
+
+// ── 29T-C · onde o Censo não tem bairros: os distritos e subdistritos oficiais do mesmo IBGE (2 ou mais) ──────────────────────────────────────
+const listaDe = (uf, municipio) => arquivoDe(uf).find((m) => norm(m[1]) === norm(municipio));
+
+test('29T-C · São Paulo (capital): os 96 distritos oficiais — Pinheiros, Mooca, Butantã… — como lista do campo Bairro', () => {
+  const [codigo, nome, lista] = listaDe('SP', 'São Paulo');
+  assert.deepEqual([codigo, nome, lista.length], ['3550308', 'São Paulo', 96]);
+  const nomes = lista.map((b) => b[0]);
+  for (const distrito of ['Pinheiros', 'Mooca', 'Butantã', 'Itaim Bibi', 'Santana', 'Vila Mariana', 'Tatuapé', 'Moema']) assert.ok(nomes.includes(distrito), distrito);
+  for (const [bairro, lat, lng] of lista) assert.ok(lat > -24.1 && lat < -23.3 && lng > -46.9 && lng < -46.3, `${bairro}: ${lat},${lng} fora de São Paulo`);
+});
+
+test('29T-C · Goiânia: os 64 subdistritos, sem o "U.T.P." que o IBGE põe na frente de 63 deles; Palmas: os 3 distritos', () => {
+  const [, , goiania] = listaDe('GO', 'Goiânia');
+  assert.equal(goiania.length, 64);
+  assert.ok(goiania.every((b) => !/^U\.T\.P\./.test(b[0])), 'o prefixo técnico (Unidade Territorial de Planejamento) não vai para o campo');
+  assert.ok(goiania.some((b) => b[0] === 'Aeroviários'));
+  const [, , palmas] = listaDe('TO', 'Palmas');
+  assert.deepEqual(palmas.map((b) => b[0]), ['Buritirana', 'Palmas', 'Taquaruçu']);
+});
+
+test('29T-C · o distrito-sede (o que tem o nome do município) usa o ponto da cidade; os outros, o centro da própria área', () => {
+  const pontoDaCidade = (nome, uf) => { const c = cidades.find((x) => x[2] === 'BR' && x[1] === uf && norm(x[0]) === norm(nome)); return [c[3], c[4]]; };
+  const [, , palmas] = listaDe('TO', 'Palmas');
+  assert.deepEqual(palmas.find((b) => b[0] === 'Palmas').slice(1), pontoDaCidade('Palmas', 'TO'), 'o distrito-sede de Palmas fica na cidade de Palmas');
+  const taquarucu = palmas.find((b) => b[0] === 'Taquaruçu');
+  assert.notDeepEqual(taquarucu.slice(1), pontoDaCidade('Palmas', 'TO'), 'Taquaruçu fica onde Taquaruçu fica');
+});
+
+test('29T-C · quase todo ponto da lista está a até 60 km da cidade — o raio em que o motor aceita o bairro da lista (o resto o motor geocodifica)', () => {
+  const rad = (g) => (g * Math.PI) / 180;
+  const km = (a, b) => { const h = Math.sin(rad(b[0] - a[0]) / 2) ** 2 + Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(rad(b[1] - a[1]) / 2) ** 2; return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h))); };
+  const ponto = new Map(cidades.filter((c) => c[2] === 'BR').map((c) => [`${norm(c[0])}|${c[1]}`, [c[3], c[4]]]));
+  let total = 0;
+  let longe = 0;
+  for (const uf of UFS) {
+    for (const [, municipio, lista] of arquivoDe(uf)) {
+      for (const [, lat, lng] of lista) { total += 1; if (km(ponto.get(`${norm(municipio)}|${uf}`), [lat, lng]) > 60) longe += 1; }
+    }
+  }
+  assert.ok(longe <= 120, `${longe} de ${total} itens a mais de 60 km da cidade (hoje 110: distritos rurais de municípios enormes, quase todos na Amazônia)`);
+  assert.ok(longe / total < 0.01);
 });
 
 test('157 · o tamanho: cada estado cabe em 60 KB comprimido, a pasta toda fica fora do pacote nativo e o site a serve com cache', () => {
@@ -341,9 +457,10 @@ test('157 · o tamanho: cada estado cabe em 60 KB comprimido, a pasta toda fica 
     gzip += g;
     maior = Math.max(maior, g);
   }
-  assert.ok(bruto < 600 * 1024, `${(bruto / 1024).toFixed(1)} KB sem comprimir no total`);
-  assert.ok(gzip < 200 * 1024, `${(gzip / 1024).toFixed(1)} KB comprimidos no total`);
-  assert.ok(maior < 30 * 1024, 'o maior estado (SP/RS) fica abaixo de 30 KB comprimidos');
+  // 29T-C: com os distritos e subdistritos o total passou de 556 KB / 164 KB para 763 KB / 234 KB (e o maior estado, MG, de 17 para 34 KB comprimidos)
+  assert.ok(bruto < 800 * 1024, `${(bruto / 1024).toFixed(1)} KB sem comprimir no total`);
+  assert.ok(gzip < 250 * 1024, `${(gzip / 1024).toFixed(1)} KB comprimidos no total`);
+  assert.ok(maior < 40 * 1024, 'o maior estado (MG) fica abaixo de 40 KB comprimidos');
   // fora do pacote nativo: a pasta dados/ inteira é removida do nativo (scripts/preparar-nativo.js) e buscada de VITE_ASSETS_URL
   assert.match(ler('scripts/preparar-nativo.js'), /const REMOVER = \[[^\]]*'dados'/);
   assert.match(ler('public/_headers'), /\/dados\/\*/);
@@ -361,7 +478,11 @@ test('157 · o script: baixa o zip do IBGE, tira nome + município (código) + p
   assert.match(script, /Math\.round\(n \* 100\) \/ 100/, '2 casas, como a cidade');
   assert.match(script, /TETO_GZIP_POR_UF = 60 \* 1024/);
   assert.match(script, /CD_MUN/);
-  assert.match(script, /DF_subdistritos_CD2022\.zip/, 'a exceção do DF vem do próprio IBGE (subdistritos do Censo 2022)');
+  // 29T-C: onde o Censo não tem bairros, os distritos e subdistritos do mesmo IBGE (2 ou mais por município); o DF e São Paulo são conferidos
+  assert.match(script, /subdistritos\/shp\/UF\/\$\{uf\}\/\$\{uf\}_subdistritos_CD2022\.zip/, 'um arquivo de distritos+subdistritos por estado, do próprio IBGE');
+  assert.match(script, /if \(nomes\.size < 2\) continue;/, 'um distrito só: o campo Bairro não aparece');
+  assert.match(script, /ITENS_EXIGIDOS = \{ 5300108: 33, 3550308: 96 \}/, 'as 33 Regiões Administrativas e os 96 distritos de São Paulo são conferidos');
+  assert.match(script, /s\.NM_SUBDIST \|\| s\.NM_DIST/, 'o subdistrito quando o IBGE subdivide o distrito; senão, o próprio distrito');
   assert.match(script, /process\.exit\(1\)/, 'dado fora do esperado não grava arquivo');
 });
 

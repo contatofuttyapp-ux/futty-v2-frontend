@@ -96,7 +96,7 @@ test('168 · respondeu → entra o próximo da fila (jogo → outro jogo → ped
 
 test('168 · o Início usa a fila: um slot só no topo, o aviso do jogo chama a MESMA função dos cards e o pedido segue com "Cancelar"', () => {
   const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
-  assert.match(inicio, /import \{ jogosQuePedemResposta, proximoAviso \} from '\.\.\/utils\/avisosDoInicio';/);
+  assert.match(inicio, /import \{ LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso \} from '\.\.\/utils\/avisosDoInicio';/); // 29T-C: + a lista dos lembretes sem prazo
   // 29T-B: a mesma fila, agora com todos os avisos do topo (a ordem em si é travada em rodada-29t-b.test.mjs).
   assert.match(inicio, /const aviso = proximoAviso\(\{\s*jogos: jogosQuePedemResposta\(jogosParaAviso\),\s*pedidos: pedidosPendentes,[\s\S]*?notificacoes: pushEstado === 'suportado' && !pushBannerFechado,\s*\}\);/);
   // O aviso do jogo: os botões chamam responderDoAviso → onPresence, a função que os cards dos Próximos jogos também usam.

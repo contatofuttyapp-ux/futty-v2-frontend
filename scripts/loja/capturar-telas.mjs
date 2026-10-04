@@ -46,7 +46,7 @@ const SEM_AVISOS = () => {
   localStorage.setItem('futty_cookies', 'aceite');
   localStorage.setItem('futty_tour_done', '1');
   localStorage.setItem('futty_figurinha_estreia', '1');
-  localStorage.setItem('futty_dob_dispensado', '1');
+  localStorage.setItem('futty_agora_nao_nascimento', String(Date.now())); // 29T-C: o "Agora não" da data de nascimento (7 dias)
   localStorage.removeItem('futty_cta_figurinha');
   sessionStorage.setItem('futty_push_dismiss', '1');
   sessionStorage.setItem('futty_votacao_dismiss', '1');

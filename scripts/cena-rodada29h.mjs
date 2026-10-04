@@ -242,7 +242,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   });
   await bloco('B5', async () => {
     const { contexto, pagina, escritas } = await abrir(fx.novato, 'B-inicio', '/home', {
-      inicial: () => { try { localStorage.removeItem('futty_dob_dispensado'); } catch { /* nada */ } },
+      inicial: () => { try { localStorage.removeItem('futty_agora_nao_nascimento'); } catch { /* nada */ } },
       antes: comMe((json) => { json.user.birthdate = null; }),
     });
     await pagina.locator('#inicio-nascimento [data-rolo]').first().waitFor({ timeout: 30000 }).catch(() => {});

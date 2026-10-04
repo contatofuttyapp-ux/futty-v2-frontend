@@ -9,10 +9,16 @@
 // ≈ 1 km — a mesma precisão da cidade). O polígono em si nunca sai deste script.
 //
 // O IBGE só delimita bairros onde o município os tem em lei: 895 dos 5.571. Ficam de fora, entre outros, São Paulo (capital), Goiânia, São Luís,
-// Palmas, Rio Branco e o Distrito Federal. Município sem bairros na lista = o campo Bairro não aparece (decisão do dono). UMA exceção, também
-// do Censo 2022 do IBGE: o DF. Brasília é uma cidade só, dividida em 33 Regiões Administrativas (Guará, Núcleo Bandeirante, Candangolândia…) —
-// é assim que o brasiliense diz o "bairro" — e o IBGE as traz como SUBDISTRITOS (DF_subdistritos_CD2022.zip). Entram como os bairros de
-// Brasília. (O Censo não tem "Asa Norte": ela é parte do "Plano Piloto".) Para incluir outro município assim, acrescente-o em SUBDISTRITOS_COMO_BAIRRO.
+// Palmas, Rio Branco e o Distrito Federal. Município sem bairros na lista = o campo Bairro não aparece (decisão do dono).
+//
+// RODADA 29T-C (decisão da Freaky, 4-out): onde o Censo não tem bairros entram os DISTRITOS e SUBDISTRITOS oficiais do mesmo IBGE — quando o
+// município tem 2 ou mais. É o que já se fazia com o DF (Brasília é uma cidade só, dividida em 33 Regiões Administrativas — Guará, Núcleo
+// Bandeirante, Candangolândia… —, que o IBGE traz como subdistritos) e é o que cobre São Paulo capital (os 96 distritos: Pinheiros, Mooca, Butantã…).
+// Fonte: os arquivos de subdistritos do Censo 2022, um por estado (<UF>_subdistritos_CD2022.zip). Cada linha é um distrito OU um subdistrito dele:
+// o distrito que o IBGE subdivide aparece só pelos subdistritos (NM_SUBDIST), o que não subdivide, pelo próprio nome (NM_DIST). Os 10.699 distritos
+// do país estão lá (conferido contra BR_distritos_CD2022.zip, 227 MB). Município com um distrito só (Rio Branco, São Luís…) continua sem lista.
+// Uma correção: o DISTRITO-SEDE (o que tem o nome do município) usa o ponto da sede do município (cidades.json), não o centro da área dele —
+// a área do distrito-sede abrange a zona rural e o centro dela pode cair a 90 km da cidade. (O Censo não tem "Asa Norte": ela é parte do "Plano Piloto".)
 //
 // Os nomes dos municípios saem da MESMA lista do campo Cidade (public/dados/cidades.json, via o código IBGE do CSV kelvins/municipios-brasileiros,
 // MIT): o campo liga o bairro à cidade escolhida por nome + UF, então a grafia tem de ser a mesma ("Ererê", "Lauro Muller").
@@ -22,8 +28,8 @@
 // cidade: NUNCA no bundle nem no pacote nativo (a pasta dados/ sai em scripts/preparar-nativo.js). Cada UF tem o seu teto comprimido (abaixo).
 //
 // Uso (a partir de FUTTY-V2/frontend; precisa de internet):  node scripts/gerar-bairros.mjs
-//   --zip <arquivo>      usa um BR_bairros_CD2022.zip já baixado (sem internet)
-//   --zip-df <arquivo>   idem para o DF_subdistritos_CD2022.zip
+//   --zip <arquivo>              usa um BR_bairros_CD2022.zip já baixado (sem internet)
+//   --subdistritos <pasta>       idem para os <UF>_subdistritos_CD2022.zip (uma pasta com os 27 arquivos)
 import { gzipSync, inflateRawSync } from 'node:zlib';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -35,24 +41,37 @@ const CIDADES = path.join(RAIZ, 'public', 'dados', 'cidades.json');
 const TETO_GZIP_POR_UF = 60 * 1024;
 const BASE_IBGE = 'https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos';
 const FONTE_BAIRROS = `${BASE_IBGE}/bairros/shp/BR/BR_bairros_CD2022.zip`;
+const fonteSubdistritos = (uf) => `${BASE_IBGE}/subdistritos/shp/UF/${uf}/${uf}_subdistritos_CD2022.zip`;
 const FONTE_MUNICIPIOS = 'https://raw.githubusercontent.com/kelvins/municipios-brasileiros/main/csv/municipios.csv';
 const UA = 'Futty/1.0 (https://futtyapp.com.br; contato@futtyapp.com)';
+const RAIO_DO_BAIRRO_KM = 60; // o do motor (utils/cidade.js): ponto de bairro mais longe que isto da cidade o motor não aceita como "da lista"
 
-/** Municípios sem bairros no arquivo de bairros, cujas subdivisões oficiais do Censo 2022 (subdistritos) fazem o papel deles. */
-const SUBDISTRITOS_COMO_BAIRRO = [
-  { uf: 'DF', codigo: '5300108', esperados: 33, fonte: `${BASE_IBGE}/subdistritos/shp/UF/DF/DF_subdistritos_CD2022.zip`, argumento: 'zip-df' },
-];
+/** Municípios que a conferência exige com este número de itens na lista (DF: as 33 Regiões Administrativas; São Paulo: os 96 distritos). */
+const ITENS_EXIGIDOS = { 5300108: 33, 3550308: 96 };
+/** As 27 capitais (código IBGE → nome), para dizer no fim quais continuam sem lista. */
+const CAPITAIS = {
+  1100205: 'Porto Velho', 1200401: 'Rio Branco', 1302603: 'Manaus', 1400100: 'Boa Vista', 1501402: 'Belém', 1600303: 'Macapá', 1721000: 'Palmas',
+  2111300: 'São Luís', 2211001: 'Teresina', 2304400: 'Fortaleza', 2408102: 'Natal', 2507507: 'João Pessoa', 2611606: 'Recife', 2704302: 'Maceió',
+  2800308: 'Aracaju', 2927408: 'Salvador', 3106200: 'Belo Horizonte', 3205309: 'Vitória', 3304557: 'Rio de Janeiro', 3550308: 'São Paulo',
+  4106902: 'Curitiba', 4205407: 'Florianópolis', 4314902: 'Porto Alegre', 5002704: 'Campo Grande', 5103403: 'Cuiabá', 5208707: 'Goiânia', 5300108: 'Brasília',
+};
 
 const UF_DO_CODIGO = {
   11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO', 21: 'MA', 22: 'PI', 23: 'CE', 24: 'RN', 25: 'PB', 26: 'PE', 27: 'AL', 28: 'SE', 29: 'BA',
   31: 'MG', 32: 'ES', 33: 'RJ', 35: 'SP', 41: 'PR', 42: 'SC', 43: 'RS', 50: 'MS', 51: 'MT', 52: 'GO', 53: 'DF',
 };
-const ESPERADO = { bairros: 17576, municipios: 895 };
+const ESPERADO = { bairros: 17576, municipios: 895, divisoes: 11307, distritos: 10699, todosOsMunicipios: 5571 };
 const MAX_LETRAS = 80; // o limite do motor para o bairro (lerBairro)
 
 const args = process.argv.slice(2);
 const opcao = (nome) => { const i = args.indexOf(`--${nome}`); return i >= 0 && args[i + 1] ? args[i + 1] : null; };
 const arredonda = (n) => Math.round(n * 100) / 100;
+/** Distância em km entre dois pontos { lat, lng } (haversine) — a mesma de utils/cidade.js no motor. */
+function distanciaKm(a, b) {
+  const rad = (g) => (g * Math.PI) / 180;
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
 const normalizar = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const limpar = (t) => String(t ?? '').replace(/\s+/g, ' ').trim();
 
@@ -178,7 +197,8 @@ async function carregarZip(argumento, fonte) {
 
 // ── Lê as fontes ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const nomeDoMunicipio = new Map(lerCsv((await baixar(FONTE_MUNICIPIOS)).toString('utf8')).map((m) => [m.codigo_ibge, m.nome]));
-const cidadesDoApp = new Set(JSON.parse(readFileSync(CIDADES, 'utf8')).filter((c) => c[2] === 'BR').map((c) => `${normalizar(c[0])}|${c[1]}`));
+/** "nome normalizado|UF" → { lat, lng } da cidade, como o campo Cidade a conhece. */
+const cidadesDoApp = new Map(JSON.parse(readFileSync(CIDADES, 'utf8')).filter((c) => c[2] === 'BR').map((c) => [`${normalizar(c[0])}|${c[1]}`, { lat: c[3], lng: c[4] }]));
 const bairrosDoIbge = feicoes(await carregarZip('zip', FONTE_BAIRROS));
 
 const erros = [];
@@ -204,11 +224,48 @@ for (const b of bairrosDoIbge) {
 }
 if (municipios.size !== ESPERADO.municipios) erros.push(`municípios com bairros: ${municipios.size}, esperava ${ESPERADO.municipios}`);
 
-for (const extra of SUBDISTRITOS_COMO_BAIRRO) {
-  if (municipios.has(extra.codigo)) { erros.push(`${extra.codigo} já tem bairros no IBGE — tire-o de SUBDISTRITOS_COMO_BAIRRO`); continue; }
-  const sub = feicoes(await carregarZip(extra.argumento, extra.fonte)).filter((s) => s.CD_MUN === extra.codigo && s.NM_SUBDIST);
-  if (sub.length !== extra.esperados) erros.push(`${extra.uf}: ${sub.length} subdistritos, esperava ${extra.esperados}`);
-  for (const s of sub) acrescentar({ codigoUf: s.CD_UF, codigoMunicipio: s.CD_MUN, nomeNoIbge: s.NM_MUN, bairro: s.NM_SUBDIST, lat: s.lat, lng: s.lng });
+// ── 29T-C: onde o Censo não tem bairros, os distritos e subdistritos oficiais (2 ou mais por município) ─────────────────────────────
+const comBairrosDoCenso = new Set(municipios.keys());
+/** codigo do município → as linhas (distrito ou subdistrito) do IBGE */
+const divisoes = new Map();
+let linhasDivisoes = 0;
+const distritosVistos = new Set();
+for (const uf of Object.values(UF_DO_CODIGO).sort()) {
+  const pasta = opcao('subdistritos');
+  const zip = pasta ? readFileSync(path.join(pasta, `${uf}_subdistritos_CD2022.zip`)) : await (async () => { console.log(`[bairros] baixando ${fonteSubdistritos(uf)}`); return baixar(fonteSubdistritos(uf)); })();
+  for (const s of feicoes(zip)) {
+    linhasDivisoes += 1;
+    distritosVistos.add(s.CD_DIST);
+    if (!divisoes.has(s.CD_MUN)) divisoes.set(s.CD_MUN, []);
+    divisoes.get(s.CD_MUN).push(s);
+  }
+}
+if (linhasDivisoes !== ESPERADO.divisoes) erros.push(`distritos+subdistritos: ${linhasDivisoes} linhas, esperava ${ESPERADO.divisoes}`);
+if (distritosVistos.size !== ESPERADO.distritos) erros.push(`distritos: ${distritosVistos.size}, esperava ${ESPERADO.distritos}`);
+if (divisoes.size !== ESPERADO.todosOsMunicipios) erros.push(`municípios nos arquivos de divisões: ${divisoes.size}, esperava ${ESPERADO.todosOsMunicipios}`);
+
+const pontoDaSede = (nome, uf) => cidadesDoApp.get(`${normalizar(nome)}|${uf}`);
+let viraramLista = 0; let sedesComPontoDaCidade = 0;
+for (const [codigo, linhas] of divisoes) {
+  if (comBairrosDoCenso.has(codigo)) continue;
+  const nomeNoIbge = linhas[0].NM_MUN;
+  const nomes = new Set(linhas.map((s) => normalizar(s.NM_SUBDIST || s.NM_DIST)));
+  if (nomes.size < 2) continue; // um distrito só: o campo Bairro não aparece
+  const uf = UF_DO_CODIGO[Number(linhas[0].CD_UF)];
+  const nomeDaCidade = nomeDoMunicipio.get(codigo) || nomeNoIbge;
+  const sede = pontoDaSede(nomeDaCidade, uf);
+  viraramLista += 1;
+  for (const s of linhas) {
+    // Goiânia: o IBGE chama os 63 subdistritos de "U.T.P. Aeroviários" (Unidade Territorial de Planejamento); o nome do bairro é o que vem depois.
+    const bairro = (s.NM_SUBDIST || s.NM_DIST).replace(/^U\.T\.P\.\s+/, '');
+    const eSede = !s.NM_SUBDIST && normalizar(bairro) === normalizar(nomeDaCidade);
+    if (eSede && sede) sedesComPontoDaCidade += 1;
+    acrescentar({ codigoUf: s.CD_UF, codigoMunicipio: codigo, nomeNoIbge, bairro, lat: eSede && sede ? sede.lat : s.lat, lng: eSede && sede ? sede.lng : s.lng });
+  }
+}
+for (const [codigo, esperados] of Object.entries(ITENS_EXIGIDOS)) {
+  const n = municipios.get(codigo)?.itens.size ?? 0;
+  if (n !== esperados) erros.push(`${CAPITAIS[codigo]} (${codigo}): ${n} itens na lista, esperava ${esperados}`);
 }
 
 // O campo liga o bairro à cidade pelo nome + UF: todo município daqui tem de existir na lista de cidades do app.
@@ -240,4 +297,16 @@ for (const uf of Object.values(UF_DO_CODIGO).sort(ordem)) {
 }
 console.log(linhasDaTabela.join('\n'));
 console.log(`[bairros] ${municipios.size} municípios, ${totalBairros} bairros (${repetidos} nome(s) repetido(s) no mesmo município ficaram só uma vez) em 27 arquivos`);
+console.log(`[bairros] ${comBairrosDoCenso.size} municípios com bairros do Censo + ${viraramLista} por distritos/subdistritos (${sedesComPontoDaCidade} distritos-sede com o ponto da cidade)`);
+const capitaisSem = Object.entries(CAPITAIS).filter(([codigo]) => !municipios.has(codigo)).map(([, nome]) => nome);
+console.log(`[bairros] capitais ainda sem lista: ${capitaisSem.length ? capitaisSem.join(', ') : 'nenhuma'}`);
+let longeDaCidade = 0; const municipiosLonge = new Set();
+for (const [codigo, m] of municipios) {
+  const sede = pontoDaSede(m.nome, m.uf);
+  if (!sede) continue;
+  for (const [, lat, lng] of m.itens.values()) {
+    if (distanciaKm(sede, { lat, lng }) > RAIO_DO_BAIRRO_KM) { longeDaCidade += 1; municipiosLonge.add(codigo); }
+  }
+}
+console.log(`[bairros] ${longeDaCidade} itens a mais de ${RAIO_DO_BAIRRO_KM} km do ponto da cidade (em ${municipiosLonge.size} municípios): o motor não aceita o ponto deles como "da lista" e geocodifica`);
 console.log(`[bairros] total ${(totalBytes / 1024).toFixed(1)} KB sem comprimir · ${(totalGzip / 1024).toFixed(1)} KB com gzip · o maior arquivo é o de ${maior.uf}, com ${(maior.gzip / 1024).toFixed(1)} KB comprimidos`);

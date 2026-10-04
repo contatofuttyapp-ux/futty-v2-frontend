@@ -1,6 +1,6 @@
 // Futty v2.0 — Rodada 29T (bloco B, achado 157): busca a lista de bairros da cidade que a pessoa escolheu, só então, e nunca no bundle nem no pacote
 // nativo (a pasta dados/ sai em scripts/preparar-nativo.js; no app nativo vem de VITE_ASSETS_URL, como cidades.json e freguesias.json).
-//   Brasil    um arquivo por estado (public/dados/bairros/<UF>.json, de 0,5 a 20 KB comprimidos), buscado quando a cidade é escolhida: é preciso
+//   Brasil    um arquivo por estado (public/dados/bairros/<UF>.json, de 0,5 a 35 KB comprimidos), buscado quando a cidade é escolhida: é preciso
 //             saber se ela TEM bairros na lista antes de mostrar o campo. Cada estado é buscado uma vez só.
 //   Portugal  o freguesias.json de sempre (lib/freguesiasDados.js).
 // Falhou a rede? A promessa é descartada e a próxima escolha de cidade tenta de novo; sem a lista o campo (opcional) simplesmente não aparece.

@@ -8216,7 +8216,7 @@ async function cenaRodada29g(navegador) {
   // ── C · conta existente sem data: entra normal; data de menor salva no Início leva à tela ──
   const cS = await novoContexto(navegador, fx.semData, { amostrar: false, extra: { timezoneId: 'America/Sao_Paulo' } });
   try {
-    await cS.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); localStorage.removeItem('futty_dob_dispensado'); } catch { /* nada */ } });
+    await cS.addInitScript(() => { try { localStorage.setItem('futty_tour_done', '1'); localStorage.removeItem('futty_agora_nao_nascimento'); } catch { /* nada */ } });
     const escritas = await travarEscritas(cS);
     const pagina = await cS.newPage();
     seguir(pagina, 'C-semdata');

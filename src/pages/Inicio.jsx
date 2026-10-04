@@ -29,7 +29,8 @@ import RSVPCard from '../components/RSVPCard';
 import AvisoDeJogo from '../components/AvisoDeJogo';
 import { MSG_FALHA_RSVP, responderComOtimismo } from '../lib/rsvp';
 import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../utils/presenca';
-import { jogosQuePedemResposta, proximoAviso } from '../utils/avisosDoInicio';
+import { LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso } from '../utils/avisosDoInicio';
+import { esconderLembrete, lembretesEscondidos } from '../utils/lembretes';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -46,6 +47,15 @@ import '../styles/app.css';
 // "quinta-feira, 08/10" — o dia do jogo na pergunta do aviso de ausência. No relógio do CAMPO (fuso do time, 29I achado 83).
 function diaDoJogo(iso, fuso) {
   return formatarData(iso, fuso, 'longa') || null;
+}
+
+// 29T-C: o "Agora não" dos lembretes sem prazo — esconde o lembrete por 7 dias neste aparelho e a fila anda (a conta está em utils/lembretes.js).
+function AgoraNao({ onClick }) {
+  return (
+    <button type="button" data-agora-nao onClick={onClick} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', padding: '4px 2px', flexShrink: 0 }}>
+      Agora não
+    </button>
+  );
 }
 
 // ----- O cromo do Início -----
@@ -501,10 +511,15 @@ export default function Inicio() {
   const [dobInput, setDobInput] = useState('');
   const [dobBusy, setDobBusy] = useState(false);
   const [dobFeito, setDobFeito] = useState(false);
-  const [dobDispensado, setDobDispensado] = useState(() => {
-    try { return localStorage.getItem('futty_dob_dispensado') === '1'; } catch { return false; }
-  });
-  const precisaDob = !!me?.user && !me.user.birthdate && !dobFeito && !dobDispensado;
+  // 29T-C: o "Agora não" dos lembretes sem prazo (figurinha para gerar, recado, uniforme, card, data de nascimento — e a figurinha que não saiu) esconde o
+  // lembrete por 7 dias NAQUELE aparelho (utils/lembretes.js, com try/catch) e a fila anda. O estado guarda o mesmo para a tela atual, mesmo sem localStorage.
+  const [agoraNaoDeles, setAgoraNaoDeles] = useState(() => lembretesEscondidos([...LEMBRETES_SEM_PRAZO, 'figurinha-falhou']));
+  const escondido = (id) => agoraNaoDeles.has(id);
+  function agoraNao(id) {
+    esconderLembrete(id);
+    setAgoraNaoDeles((cur) => new Set(cur).add(id));
+  }
+  const precisaDob = !!me?.user && !me.user.birthdate && !dobFeito;
   async function guardarDob() {
     if (dobBusy || !dobInput) return;
     setDobBusy(true);
@@ -519,10 +534,6 @@ export default function Inicio() {
     } finally {
       setDobBusy(false);
     }
-  }
-  function dispensarDob() {
-    setDobDispensado(true);
-    try { localStorage.setItem('futty_dob_dispensado', '1'); } catch { /* priv */ }
   }
 
   // Notificações push: banner discreto (uma vez por sessão).
@@ -1037,18 +1048,19 @@ export default function Inicio() {
   // pedido pendente → votação → figurinha pronta → os demais → ativar notificações por último). Cada um mantém a regra de "vale agora" que já tinha;
   // o que mudou é que só o primeiro da fila aparece, e fechar ou resolver faz entrar o próximo.
   const cardSemFoto = !meLoading && !!user && !user.foto_url;
+  // 29T-C: primeiro o que aconteceu ou tem prazo, depois os lembretes sem prazo (cada um com o "Agora não" de 7 dias), por último ativar notificações.
   const aviso = proximoAviso({
     jogos: jogosQuePedemResposta(jogosParaAviso),
     pedidos: pedidosPendentes,
-    votacoes: votacaoTop ? [votacaoTop] : [],
-    figurinhaPronta: !figurinhaGerando && !figurinhaFalhou && podeGerarBrilhante,
     desfechos: desfechosResolvidos,
-    figurinhaNascendo: figurinhaGerando ? { estado: 'gerando' } : figurinhaFalhou ? { estado: 'falhou' } : null,
-    uniforme: timeSemUniforme,
-    recadoFigurinha: !podeGerarBrilhante ? recadoBrilhante : null,
-    nascimento: precisaDob,
+    votacoes: votacaoTop ? [votacaoTop] : [],
     denuncia: denunciaDesfechos > 0 && !desfechoFechado,
-    card: figurinhaGerando || figurinhaFalhou ? null : cardSemFoto ? { variante: 'sem-foto' } : ctaFigurinha ? { variante: 'pos-onboarding' } : null,
+    figurinhaNascendo: figurinhaGerando ? { estado: 'gerando' } : figurinhaFalhou && !escondido('figurinha-falhou') ? { estado: 'falhou' } : null,
+    figurinhaPronta: !figurinhaGerando && !figurinhaFalhou && podeGerarBrilhante && !escondido('figurinha-pronta'),
+    recadoFigurinha: !podeGerarBrilhante && !escondido('recado-figurinha') ? recadoBrilhante : null,
+    uniforme: escondido('uniforme') ? null : timeSemUniforme,
+    card: figurinhaGerando || figurinhaFalhou || escondido('card') ? null : cardSemFoto ? { variante: 'sem-foto' } : ctaFigurinha ? { variante: 'pos-onboarding' } : null,
+    nascimento: precisaDob && !escondido('nascimento'),
     notificacoes: pushEstado === 'suportado' && !pushBannerFechado,
   });
 
@@ -1123,7 +1135,7 @@ export default function Inicio() {
               <button type="button" className="btn btn--purple btn--sm hud-corners-s" disabled={!dobInput || dobBusy} onClick={guardarDob}>
                 {dobBusy ? 'Salvando…' : 'Salvar'}
               </button>
-              <button type="button" aria-label="Agora não" onClick={dispensarDob} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 13 }}>Agora não</button>
+              <AgoraNao onClick={() => agoraNao('nascimento')} />
             </div>
           </div>
         ) : null}
@@ -1215,9 +1227,12 @@ export default function Inicio() {
                 recusado pela fal, nada a ver com a foto) — "tente outra foto" seria
                 enganoso nesse caso. */}
             <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: '#f8b4b4', lineHeight: 1.4 }}>Não deu para gerar sua figurinha agora. Tente de novo na aba Figurinha.</span>
-            <Link to="/figurinha" className="btn btn--sm hud-corners-s cta-gold" style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none' }}>
-              Ir para Figurinha
-            </Link>
+            <span style={{ flexShrink: 0, display: 'grid', justifyItems: 'center', gap: 2 }}>
+              <Link to="/figurinha" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none' }}>
+                Ir para Figurinha
+              </Link>
+              <AgoraNao onClick={() => agoraNao('figurinha-falhou')} />
+            </span>
           </div>
         ) : null}
 
@@ -1228,20 +1243,25 @@ export default function Inicio() {
             abre não custa nada. O toque leva à Figurinha, onde o botão dourado
             está à espera — não se dispara uma geração paga sem alguém pedir. */}
         {aviso?.tipo === 'figurinha-pronta' ? (
-          <Link to="/figurinha" data-aviso="figurinha-pronta" className="hud-corners cta-gold-glow" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.55)', textDecoration: 'none', color: 'inherit' }}>
-            <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.6)', background: '#101012' }}>
-              {user?.foto_url ? (
-                <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : null}
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, color: '#f0c94a' }}>Você tem uma figurinha para gerar ✨</span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                {brilhanteDireito?.fonte === 'time' ? 'Cortesia do pacote do seu time' : 'Leva uns 45 segundos'}
+          <div data-aviso="figurinha-pronta" className="hud-corners cta-gold-glow" style={{ marginBottom: 12, background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.55)' }}>
+            <Link to="/figurinha" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px 4px', textDecoration: 'none', color: 'inherit' }}>
+              <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.6)', background: '#101012' }}>
+                {user?.foto_url ? (
+                  <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : null}
               </span>
-            </span>
-            <span className="btn btn--sm hud-corners-s cta-gold" style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }}>Gerar</span>
-          </Link>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, color: '#f0c94a' }}>Você tem uma figurinha para gerar ✨</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                  {brilhanteDireito?.fonte === 'time' ? 'Cortesia do pacote do seu time' : 'Leva uns 45 segundos'}
+                </span>
+              </span>
+              <span className="btn btn--sm hud-corners-s cta-gold" style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em' }}>Gerar</span>
+            </Link>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 14px 6px' }}>
+              <AgoraNao onClick={() => agoraNao('figurinha-pronta')} />
+            </div>
+          </div>
         ) : null}
 
         {/* RECADO DO PEDIDO (bloco 2) — só para quem AINDA não tem direito: com
@@ -1250,15 +1270,25 @@ export default function Inicio() {
             motivo que o dono escreveu. Ativado nunca chega aqui: vira direito. */}
         {/* P2 — pacote ativo sem uniforme: o dono escolhe e o time inteiro passa a poder gerar. */}
         {aviso?.tipo === 'uniforme' ? (
-          <Link to={`/planos?uniforme=${timeSemUniforme.id}`} data-aviso="uniforme" className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
-            Falta escolher o uniforme das figurinhas do {timeSemUniforme.nome}. O time só gera depois disso. Escolher →
-          </Link>
+          <div data-aviso="uniforme" className="hud-corners" style={{ marginBottom: 12, background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
+            <Link to={`/planos?uniforme=${timeSemUniforme.id}`} style={{ display: 'block', padding: '10px 13px 2px', fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: '#f0c94a' }}>
+              Falta escolher o uniforme das figurinhas do {timeSemUniforme.nome}. O time só gera depois disso. Escolher →
+            </Link>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 13px 6px' }}>
+              <AgoraNao onClick={() => agoraNao('uniforme')} />
+            </div>
+          </div>
         ) : null}
 
         {aviso?.tipo === 'recado-figurinha' ? (
-          <Link to="/planos" data-aviso="recado-figurinha" className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: recadoBrilhante.recusado ? 'rgba(255,255,255,0.75)' : '#f0c94a', background: recadoBrilhante.recusado ? 'rgba(255,255,255,0.03)' : 'rgba(212,160,23,0.08)', border: `1px solid ${recadoBrilhante.recusado ? 'rgba(255,255,255,0.14)' : 'rgba(212,160,23,0.45)'}` }}>
-            {recadoBrilhante.texto}
-          </Link>
+          <div data-aviso="recado-figurinha" className="hud-corners" style={{ marginBottom: 12, background: recadoBrilhante.recusado ? 'rgba(255,255,255,0.03)' : 'rgba(212,160,23,0.08)', border: `1px solid ${recadoBrilhante.recusado ? 'rgba(255,255,255,0.14)' : 'rgba(212,160,23,0.45)'}` }}>
+            <Link to="/planos" style={{ display: 'block', padding: '10px 13px 2px', fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: recadoBrilhante.recusado ? 'rgba(255,255,255,0.75)' : '#f0c94a' }}>
+              {recadoBrilhante.texto}
+            </Link>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 13px 6px' }}>
+              <AgoraNao onClick={() => agoraNao('recado-figurinha')} />
+            </div>
+          </div>
         ) : null}
 
         {/* CARD PERSISTENTE — sem FOTO não há cromo: moldura V1 vazia + convite.
@@ -1268,23 +1298,28 @@ export default function Inicio() {
             Quem tem foto já tem figurinha (a comum) — continuar a pedir "complete
             sua figurinha" a quem acabou de a completar era o convite a mentir. */}
         {aviso?.tipo === 'card' && aviso.item.variante === 'sem-foto' ? (
-          <Link to="/figurinha" data-aviso="card" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,160,23,0.4)', textDecoration: 'none', color: 'inherit' }}>
-            <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
-              <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: '#101012', border: '1.5px solid rgba(212,160,23,0.5)', clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(212,160,23,0.65)" strokeWidth="1.6"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
+          <div data-aviso="card" className="hud-corners" style={{ marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,160,23,0.4)' }}>
+            <Link to="/figurinha" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px 4px', textDecoration: 'none', color: 'inherit' }}>
+              <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
+                <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: '#101012', border: '1.5px solid rgba(212,160,23,0.5)', clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(212,160,23,0.65)" strokeWidth="1.6"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
+                </span>
               </span>
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Complete seu card</span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Seu card com a foto fica pronto na hora.</span>
-            </span>
-            <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 11, color: '#f0c94a', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>Adicionar →</span>
-          </Link>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15 }}>Complete seu card</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Seu card com a foto fica pronto na hora.</span>
+              </span>
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 11, color: '#f0c94a', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>Adicionar →</span>
+            </Link>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 14px 6px' }}>
+              <AgoraNao onClick={() => agoraNao('card')} />
+            </div>
+          </div>
         ) : aviso?.tipo === 'card' ? (
           <div data-aviso="card" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Complete seu card</span>
             <Link to="/figurinha" className="btn btn--purple btn--sm hud-corners-s" onClick={dispensarCtaFigurinha}>Ir para Figurinha</Link>
-            <button type="button" aria-label="Fechar" onClick={dispensarCtaFigurinha} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+            <AgoraNao onClick={() => agoraNao('card')} />
           </div>
         ) : null}
 

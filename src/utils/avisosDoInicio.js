@@ -2,31 +2,39 @@
 // Mais de um do mesmo tipo → o mais próximo e um "+N" discreto.
 //
 // Bloco A: jogo sem resposta → pedido de entrada pendente → ativar notificações.
-// Bloco B (ajuste da Freaky, 4-out): os outros avisos que ficavam empilhados abaixo da fila entram na MESMA fila, um por vez. A ordem (ORDEM_DOS_AVISOS):
+// Bloco B (ajuste da Freaky, 4-out): os outros avisos que ficavam empilhados abaixo da fila entram na MESMA fila, um por vez.
+// Bloco C (a fila não trava, Freaky, 4-out): primeiro o que ACONTECEU ou TEM PRAZO, depois os lembretes SEM PRAZO, por último ativar notificações.
+// Os lembretes sem prazo (LEMBRETES_SEM_PRAZO) ganham "Agora não", que os esconde por 7 dias naquele aparelho (utils/lembretes.js): a fila anda. A ordem
+// (ORDEM_DOS_AVISOS):
 //   1. jogo sem resposta (o próximo jogo com presença aberta e sem Vou / Não vou) — a pessoa abre o app para responder "vou ou não vou";
 //   2. pedido de entrada pendente;
-//   3. votação (você tem colegas para avaliar / nova temporada de notas);
-//   4. figurinha pronta (o cartão "Você tem uma figurinha para gerar");
-//   5. os demais, nesta ordem: o desfecho do pedido de entrada (aceito / recusado) · a figurinha nascendo (ou que não saiu) · o uniforme por escolher ·
-//      o recado do pedido de figurinha · a data de nascimento · o desfecho da denúncia · "Complete seu card";
-//   6. ativar notificações, por último.
+//   3. a resposta do pedido de entrada (aceito / recusado);
+//   4. votação (você tem colegas para avaliar / nova temporada de notas);
+//   5. o desfecho da denúncia;
+//   6. a figurinha nascendo (ou que não saiu);
+//   — daqui para baixo, lembretes sem prazo —
+//   7. "Você tem uma figurinha para gerar" · 8. o recado do pedido de figurinha · 9. o uniforme por escolher · 10. "Complete seu card" · 11. a data de nascimento;
+//   12. ativar notificações, por último.
 // Puro (sem React, sem rede): o Início só desenha o que esta fila devolve, e o teste roda no Node.
 
 /** A ordem em que um tipo de aviso passa à frente de outro. */
 export const ORDEM_DOS_AVISOS = [
   'jogo',
   'pedido',
-  'votacao',
-  'figurinha-pronta',
   'desfecho',
-  'figurinha-nascendo',
-  'uniforme',
-  'recado-figurinha',
-  'nascimento',
+  'votacao',
   'denuncia',
+  'figurinha-nascendo',
+  'figurinha-pronta',
+  'recado-figurinha',
+  'uniforme',
   'card',
+  'nascimento',
   'notificacoes',
 ];
+
+/** Os lembretes sem prazo: cada um tem o seu "Agora não" (7 dias, naquele aparelho). Ficam depois do que aconteceu e antes de ativar notificações. */
+export const LEMBRETES_SEM_PRAZO = ['figurinha-pronta', 'recado-figurinha', 'uniforme', 'card', 'nascimento'];
 
 /** De que chave de `proximoAviso` vem cada tipo, e se ele conta os que esperam atrás ("+N"). */
 const FONTES = {

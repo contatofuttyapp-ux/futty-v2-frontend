@@ -7,14 +7,16 @@ Cada arquivo é gerado por um script em `scripts/` (que também guarda a fonte e
 
 | Pasta / arquivo | O que é | Fonte | Licença |
 |---|---|---|---|
-| `public/dados/bairros/<UF>.json` (27 arquivos) | Os bairros do Brasil: nome, município (código IBGE) e ponto central em 2 casas. 17.596 bairros em 896 municípios | **IBGE — Censo Demográfico 2022**, malha de bairros (`BR_bairros_CD2022.zip`): <https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos/bairros/shp/BR/> · e, só para o Distrito Federal (que o arquivo de bairros não traz), os subdistritos do mesmo Censo (`DF_subdistritos_CD2022.zip`), que são as 33 Regiões Administrativas · gerado por `scripts/gerar-bairros.mjs` | Dados públicos do IBGE, uso livre com citação da fonte: "Fonte: IBGE, Censo Demográfico 2022" |
+| `public/dados/bairros/<UF>.json` (27 arquivos) | Os bairros do Brasil: nome, município (código IBGE) e ponto central em 2 casas. 22.873 itens em 2.590 municípios (895 com bairros do Censo + 1.695 pelos distritos e subdistritos) | **IBGE — Censo Demográfico 2022**, malha de bairros (`BR_bairros_CD2022.zip`): <https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos/bairros/shp/BR/> · e, nos municípios que o arquivo de bairros não traz, os distritos e subdistritos do mesmo Censo (`<UF>_subdistritos_CD2022.zip`, um por estado: <https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos/subdistritos/shp/UF/>), quando o município tem 2 ou mais — no Distrito Federal são as 33 Regiões Administrativas, em São Paulo capital os 96 distritos · gerado por `scripts/gerar-bairros.mjs` | Dados públicos do IBGE, uso livre com citação da fonte: "Fonte: IBGE, Censo Demográfico 2022" |
 | `public/dados/freguesias.json` | As freguesias de Portugal (o "bairro" lá), com o ponto central | CAOP 2025 da Direção-Geral do Território (continente) e Wikidata (ilhas) · `scripts/gerar-freguesias.js` | DGT: dados abertos · Wikidata: CC0 |
 | `public/dados/cidades.json` | Os 5.571 municípios do Brasil e os 308 concelhos de Portugal | IBGE via `kelvins/municipios-brasileiros` (MIT, © 2016 Kelvin S. do Prado) e Wikidata · `scripts/gerar-cidades.js` | MIT · CC0 |
 
 O IBGE só delimita bairros nos municípios em que eles existem em lei: 895 dos 5.571. São Paulo (capital), Goiânia, São Luís, Palmas, Rio Branco e o
-Distrito Federal não estão no arquivo de bairros. Município sem bairros na lista = o campo Bairro não aparece no app (decisão do dono, 4-out). Do DF entram
-as 33 Regiões Administrativas (Guará, Núcleo Bandeirante, Candangolândia…), dadas pelo próprio IBGE como subdistritos; "Asa Norte" não existe no Censo (é parte
-do Plano Piloto).
+Distrito Federal não estão no arquivo de bairros. Para esses (e para os outros municípios sem bairros) entram os **distritos e subdistritos oficiais do mesmo
+Censo**, quando o município tem 2 ou mais — 1.695 municípios a mais: o DF com as 33 Regiões Administrativas (Guará, Núcleo Bandeirante, Candangolândia…), São Paulo
+capital com os 96 distritos (Pinheiros, Mooca, Butantã…), Goiânia com os 64 subdistritos (sem o "U.T.P." que o IBGE põe na frente), Palmas com os 3 distritos.
+O distrito-sede (o que tem o nome do município) usa o ponto da cidade, não o centro da área dele (que abrange a zona rural). Município com um distrito só (Rio
+Branco, São Luís…) fica sem lista; sem lista = o campo Bairro não aparece no app (decisão do dono, 4-out). "Asa Norte" não existe no Censo (é parte do Plano Piloto).
 
 ## Sons (`public/sons/`) — gerados por nós (16 set 2026, Rodada 14A)
 
