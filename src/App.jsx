@@ -47,6 +47,7 @@ const Equipa = lazyComRetry(() => import('./pages/Equipa'));
 const Convite = lazyComRetry(() => import('./pages/Convite'));
 const Jogos = lazyComRetry(() => import('./pages/Jogos'));
 const NovoJogo = lazyComRetry(() => import('./pages/NovoJogo'));
+const JogoPassado = lazyComRetry(() => import('./pages/JogoPassado'));
 const Jogo = lazyComRetry(() => import('./pages/Jogo'));
 const Ranking = lazyComRetry(importarRanking);
 const Campeonato = lazyComRetry(() => import('./pages/Campeonato'));
@@ -131,6 +132,7 @@ const ROTAS_PRIVADAS = [
   ['/time/:slug/campeonato/:id', Campeonato],
   ['/time/:slug/jogador/:userId', JogadorPerfil],
   ['/time/:slug/jogo/novo', NovoJogo],
+  ['/time/:slug/jogo/passado', JogoPassado], // 29S-B: o passo a passo (abre de "Jogo passado →" no Marcar jogo)
   ['/time/:slug/jogo/:id/sorteio', SorteioShow],
   ['/time/:slug/jogo/:id', JogoRoute],
   ['/admin/:slug', AdminPanel],

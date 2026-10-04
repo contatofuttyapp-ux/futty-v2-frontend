@@ -25,11 +25,11 @@ import PlayerAvatar from '../components/PlayerAvatar';
 import EscudoEquipa from '../components/EscudoEquipa';
 import EditorEscudo from '../components/EditorEscudo';
 import ModeracaoFila from '../components/ModeracaoFila';
-import UploadComCrop from '../components/UploadComCrop';
+import ResultadoModal from '../components/ResultadoModal';
+import { inputStyle, lbl, secLbl } from '../components/camposDoAdmin';
 import NumberStepper from '../components/NumberStepper';
 import RegistarJornada from '../components/RegistarJornada';
 import { nomeCampeao } from '../utils/campeonato';
-import { celebrarCerveja } from '../hooks/useConfetti';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
 import { EscolhaPapel, TEXTO_ADMIN_E_POSICAO } from '../components/EscolhaLinhaGol';
 import { ARTILHEIRO, DESTAQUE, GOLS, alternarArtilheiro, alternarGols } from '../components/golsEPremios';
@@ -55,19 +55,6 @@ const VIS_DESC = {
 };
 
 const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12 };
-// fontSize 16: abaixo disso o iPhone dá zoom ao focar (Rodada 8A, ver index.css).
-const inputStyle = {
-  width: '100%',
-  boxSizing: 'border-box',
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid #222222',
-  background: '#0c0c0c',
-  color: '#fff',
-  fontSize: 16,
-};
-const lbl = { fontSize: 12, color: 'var(--text-dim)' };
-const secLbl = { fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-dim)', textTransform: 'uppercase' };
 // "há 5 h": tempo decorrido, não data de calendário — não tem fuso (29I, achado 83); vale o relógio de quem olha.
 function haQuantoTempo(iso) {
   const ts = new Date(iso).getTime();
@@ -1684,170 +1671,6 @@ function EditarJogoModal({ jogo, fuso, cidade, onClose, onSaved, showToast }) {
       </div>
     </div>,
     document.body
-  );
-}
-
-// ─── RESULTADO (era a aba Resultados; agora "Lançar resultado" nos jogos passados da aba Jogos) ─────────
-// `premios` (29H, item 44): o que o time deixou ligado no painel ("Artilheiro do dia" / "Destaque do dia"). Desligado, a seção some —
-// a menos que o jogo JÁ tenha o prêmio (editar um resultado antigo não pode apagá-lo em silêncio: o prêmio continua à vista).
-function ResultadoModal({ jogo, fuso, cidade = null, premios = { artilheiro: true, destaque: true }, onClose, onSaved, showToast }) {
-  const [detail, setDetail] = useState(null);
-  const [campeaoIdx, setCampeaoIdx] = useState(null);
-  const [campeaoFoto, setCampeaoFoto] = useState(null);
-  const [temArt, setTemArt] = useState(false);
-  const [artId, setArtId] = useState('');
-  const [artGols, setArtGols] = useState(1);
-  const [temDest, setTemDest] = useState(false);
-  const [destId, setDestId] = useState('');
-  const [destTitulo, setDestTitulo] = useState('');
-  const [temRodada, setTemRodada] = useState(false);
-  const [rodadaId, setRodadaId] = useState('');
-  const [rodadaFoto, setRodadaFoto] = useState(null);
-  const [saving, setSaving] = useState(false);
-
-  // Carrega o detalhe do jogo e pré-preenche (edição de resultado existente).
-  useEffect(() => {
-    let ativo = true;
-    apiFetch(`/api/games/${jogo.id}`)
-      .then((d) => {
-        if (!ativo) return;
-        setDetail(d);
-        const g = d.game || {};
-        if (g.campeao_time_index !== null && g.campeao_time_index !== undefined) setCampeaoIdx(g.campeao_time_index);
-        if (g.campeao_foto_url) setCampeaoFoto(g.campeao_foto_url);
-        if (g.artilheiro_user_id) {
-          setTemArt(true);
-          setArtId(g.artilheiro_user_id);
-          setArtGols(g.artilheiro_gols || 1);
-        }
-        if (g.destaque_user_id) {
-          setTemDest(true);
-          setDestId(g.destaque_user_id);
-          setDestTitulo(g.destaque_titulo || '');
-        }
-        if (g.rodada_user_id) {
-          setTemRodada(true);
-          setRodadaId(g.rodada_user_id);
-          if (g.rodada_foto_url) setRodadaFoto(g.rodada_foto_url);
-        }
-      })
-      .catch((e) => ativo && showToast(e.message, 'error'));
-    return () => {
-      ativo = false;
-    };
-  }, [jogo.id, showToast]);
-
-  const times = detail?.game?.times_resultado?.times || [];
-  const confirmados = (detail?.players || []).filter((p) => p.confirmado);
-
-  async function guardar() {
-    if (saving || campeaoIdx === null) return;
-    setSaving(true);
-    try {
-      const patch = { campeao_time_index: campeaoIdx };
-      if (campeaoFoto) patch.campeao_foto_url = campeaoFoto;
-      // Artilheiro/destaque/rodada: envia ou limpa conforme o toggle.
-      patch.artilheiro_user_id = temArt && artId ? artId : null;
-      patch.artilheiro_gols = temArt && artId ? Math.max(1, Number(artGols) || 1) : null;
-      patch.destaque_user_id = temDest && destId ? destId : null;
-      patch.destaque_titulo = temDest && destId ? destTitulo.trim() || null : null;
-      patch.rodada_user_id = temRodada && rodadaId ? rodadaId : null;
-      if (temRodada && rodadaId && rodadaFoto) patch.rodada_foto_url = rodadaFoto;
-      const res = await apiFetch(`/api/feed/games/${jogo.id}/resultado`, { method: 'PATCH', body: JSON.stringify(patch) });
-      if (res?.game?.rodada_user_id) celebrarCerveja();
-      onSaved(jogo.id);
-    } catch (e) {
-      showToast(e.message, 'error');
-      setSaving(false);
-    }
-  }
-
-  return createPortal(
-    <div className="modal-overlay" role="presentation" onClick={() => !saving && onClose()}>
-      <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
-        <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 16, maxHeight: '82vh', overflowY: 'auto' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado: {formatDateTime(jogo.data, fuso, { cidade })}</h2>
-
-          {!detail ? (
-            <LoadingFutty />
-          ) : (
-            <>
-              {/* 1. CAMPEÃO */}
-              <div style={{ display: 'grid', gap: 8 }}>
-                <span style={secLbl}>Campeão</span>
-                {times.length === 0 ? (
-                  <p className="muted" style={{ fontSize: 12 }}>Este jogo não tem times sorteados.</p>
-                ) : (
-                  times.map((t, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setCampeaoIdx(i)}
-                      style={{ textAlign: 'left', padding: 10, borderRadius: 10, cursor: 'pointer', border: `1px solid ${campeaoIdx === i ? 'var(--neon)' : '#222'}`, background: campeaoIdx === i ? 'rgba(139,92,246,0.1)' : 'transparent', color: '#fff' }}
-                    >
-                      <div style={{ fontWeight: 700 }}>{t.nome || `Time ${i + 1}`}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{(t.jogadores || []).map((p) => p.nome).join(' · ')}</div>
-                    </button>
-                  ))
-                )}
-                <UploadComCrop onUpload={(url) => setCampeaoFoto(url)} accept="image/*" aspect={4 / 3} label={campeaoFoto ? '✓ Foto do campeão' : 'Foto do campeão'} />
-              </div>
-
-              {/* 2. ARTILHEIRO */}
-              {premios.artilheiro || temArt ? (
-                <Seccao titulo="Artilheiro" ligado={temArt} onToggle={setTemArt}>
-                  <SelectJogador value={artId} onChange={setArtId} confirmados={confirmados} />
-                  <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Nº de gols</span><input type="number" min={1} value={artGols} onChange={(e) => setArtGols(e.target.value)} style={inputStyle} /></label>
-                </Seccao>
-              ) : null}
-
-              {/* 3. DESTAQUE */}
-              {premios.destaque || temDest ? (
-                <Seccao titulo="Destaque" ligado={temDest} onToggle={setTemDest}>
-                  <SelectJogador value={destId} onChange={setDestId} confirmados={confirmados} />
-                  <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Título</span><input value={destTitulo} onChange={(e) => setDestTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Melhor em campo" style={inputStyle} /></label>
-                </Seccao>
-              ) : null}
-
-              {/* 4. RODADA DE CERVEJA */}
-              <Seccao titulo="Rodada de cerveja" ligado={temRodada} onToggle={setTemRodada}>
-                <SelectJogador value={rodadaId} onChange={setRodadaId} confirmados={confirmados} />
-                <UploadComCrop onUpload={(url) => setRodadaFoto(url)} accept="image/*" aspect={1} label={rodadaFoto ? '✓ Foto da rodada' : 'Foto da rodada'} />
-              </Seccao>
-
-              <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving || campeaoIdx === null} onClick={guardar}>
-                {saving ? 'Salvando…' : 'Salvar resultado'}
-              </button>
-              {campeaoIdx === null ? <div style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center' }}>Escolha o time campeão para salvar.</div> : null}
-            </>
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-function Seccao({ titulo, ligado, onToggle, children }) {
-  return (
-    <div style={{ display: 'grid', gap: 8, borderTop: '1px solid #222', paddingTop: 12 }}>
-      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-        <span style={secLbl}>{titulo}</span>
-        <input type="checkbox" checked={ligado} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#8b5cf6' }} />
-      </label>
-      {ligado ? children : null}
-    </div>
-  );
-}
-
-function SelectJogador({ value, onChange, confirmados }) {
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
-      <option value="">Escolher jogador</option>
-      {confirmados.map((p) => (
-        <option key={p.user_id} value={p.user_id}>{p.nome}</option>
-      ))}
-    </select>
   );
 }
 

@@ -575,7 +575,72 @@ const TELAS = [
       await espera(500);
     },
   },
+  {
+    // Rodada 29S-B (achado 153): o Jogo passado, passo 2 (Quem jogou?), no Várzea FC. A captura só preenche o formulário na tela (nada é gravado: o jogo só
+    // é gravado no "Salvar jogo", que ela NUNCA toca) — marca quatro jogadores, o selo GOL no primeiro e um convidado sem app. A lista de membros é maior que
+    // a tela, então esta imagem é a PÁGINA INTEIRA (390 px de largura, do topo ao "Continuar"): é o único jeito de ver, numa imagem só, a barra, a lista e a caixa do convidado.
+    arq: '31-jogo-passado-quem-jogou', fullPage: true, sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC (precisa ser admin dele)',
+    rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/passado`, caminho: /^\/time\/[^/]+\/jogo\/passado$/, seletor: '[data-barra-de-passos]',
+    depois: async (p) => {
+      await irAoPasso2DoJogoPassado(p);
+      await marcarQuemJogou(p, 4);
+      await p.getByPlaceholder('Nome de quem jogou').fill('Zé da Esquina');
+      await p.getByRole('button', { name: 'Adicionar', exact: true }).click();
+      await espera(400);
+      await exigirTextosDoJogoPassado(p, ['Quem jogou?', 'Alguém sem o app jogou?', 'Escreva o nome: entra no jogo, mas não conta no ranking.']);
+    },
+  },
+  {
+    // Rodada 29S-B: o passo 4 (Como terminou?) com 2 times, sem salvar. Passa pelos passos 1 a 3 só na tela (data, quem jogou, os times) e responde "Quem ganhou?".
+    arq: '32-jogo-passado-como-terminou', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC (precisa ser admin dele)',
+    rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/passado`, caminho: /^\/time\/[^/]+\/jogo\/passado$/, seletor: '[data-barra-de-passos]',
+    depois: async (p) => {
+      await irAoPasso2DoJogoPassado(p);
+      await marcarQuemJogou(p, 4);
+      await p.locator('[data-continuar]').click();
+      await p.locator('[data-jogo-passado-passo="3"]').waitFor({ timeout: 15000 });
+      const livres = () => p.locator('button.camp-chip', { hasText: '＋' });
+      await p.locator('button.camp-chip', { hasText: /^Time Ouro/ }).click();
+      await livres().first().click();
+      await livres().first().click();
+      await p.locator('button.camp-chip', { hasText: /^Time Roxo/ }).click();
+      await livres().first().click();
+      await livres().first().click();
+      await p.locator('[data-continuar]').click();
+      await p.locator('[data-jogo-passado-passo="4"]').waitFor({ timeout: 15000 });
+      await p.locator('[data-vencedor="A"]').click();
+      await espera(500);
+      await exigirTextosDoJogoPassado(p, ['Como terminou?', 'Quem ganhou?']);
+      const botoes = (await p.locator('[data-vencedor]').allInnerTexts()).map((x) => x.trim().toLowerCase()).join('|');
+      if (botoes !== 'time ouro|empate|time roxo') throw new Error(`a pergunta "Quem ganhou?" tem os botões "${botoes}" (esperado Time Ouro, Empate, Time Roxo)`);
+      console.log(`      ${(await p.locator('[data-resumo]').innerText()).trim()}`);
+    },
+  },
 ];
+
+// ── O Jogo passado nas capturas (29S-B) ──────────────────────────────────────────────────────────────────────────────────────────
+// O passo a passo só tem estado na tela: nada vai ao banco até o "Salvar jogo", que nenhuma captura toca (e o contexto ainda responde a qualquer
+// escrita em /api sem chegar a ele). Os dois passos que a captura precisa são: a data (3 dias atrás) e quem jogou.
+async function irAoPasso2DoJogoPassado(p) {
+  const dia = new Date(Date.now() - 3 * 86400000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  await p.locator('#data').fill(dia);
+  await p.locator('[data-continuar]').click();
+  await p.locator('[data-jogo-passado-passo="2"]').waitFor({ timeout: 15000 });
+}
+
+async function marcarQuemJogou(p, quantos) {
+  const caixas = p.locator('[data-quem-jogou] label:not(.check-inline) input[type="checkbox"]');
+  const total = await caixas.count();
+  if (total < quantos) throw new Error(`o Várzea FC tem ${total} jogador(es) que jogam; a captura precisa de ${quantos}`);
+  for (let i = 0; i < quantos; i += 1) await caixas.nth(i).check();
+  await p.locator('[data-quem-jogou] .check-inline input').first().check(); // o selo GOL do primeiro
+}
+
+async function exigirTextosDoJogoPassado(p, esperados) {
+  const texto = (await p.locator('main').innerText()).replace(/\s+/g, ' ').toLowerCase();
+  for (const e of esperados) if (!texto.includes(e.toLowerCase())) throw new Error(`o Jogo passado não mostra "${e}"`);
+  if (/Monte os times|vai jogar|vão sair|Já aconteceu/i.test(texto)) throw new Error('o Jogo passado ainda tem texto no presente');
+}
 
 // ── O Marcar jogo nas capturas (29S-A) ───────────────────────────────────────────────────────────────────────────────────────────
 // Digita uma data (daqui a 10 dias, no relógio do time) e o local — só no formulário, nada vai ao banco — e confere que o ingresso acompanhou, que
@@ -655,7 +720,7 @@ async function capturar(navegador, t, estado, dados) {
     const { problemas, avisos } = await conferir(pagina, t);
     const medida = t.medirCookies ? await medirFaixaDeCookies(pagina) : null;
     if (t.medirCookies && !medida) problemas.push('a faixa de cookies ou a barra de navegação não apareceu');
-    await pagina.screenshot({ path: rascunho, fullPage: false });
+    await pagina.screenshot({ path: rascunho, fullPage: !!t.fullPage });
     if (larguraDoPng(rascunho) !== LARGURA) problemas.push(`imagem com ${larguraDoPng(rascunho)}px de largura`);
     if (problemas.length) return { arq: t.arq, ok: false, motivo: problemas.join('; '), avisos };
     fs.copyFileSync(rascunho, final);

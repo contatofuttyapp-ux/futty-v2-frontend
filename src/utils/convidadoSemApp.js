@@ -6,3 +6,7 @@ export const CONVIDADO_LINHA = 'Escreva o nome: a pessoa entra no sorteio, mas n
 export const CONVIDADO_LINHA_CAMPEONATO = 'Escreva o nome: a pessoa entra no sorteio.';
 export const CONVIDADO_CAMPO = 'Nome de quem vai jogar';
 export const CONVIDADO_BOTAO = 'Adicionar';
+// Rodada 29S, bloco B: a versão no PASSADO, do Jogo passado (o jogo já rolou: "jogou", não "vai jogar"). O botão é o mesmo.
+export const CONVIDADO_TITULO_PASSADO = 'Alguém sem o app jogou?';
+export const CONVIDADO_LINHA_PASSADO = 'Escreva o nome: entra no jogo, mas não conta no ranking.';
+export const CONVIDADO_CAMPO_PASSADO = 'Nome de quem jogou';

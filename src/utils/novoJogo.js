@@ -5,11 +5,10 @@ import { dataComDiaPorExtenso, diaDeCalendario, formatarHora, instanteNoCampo, r
 export const HORA_PADRAO = '20:00';
 
 /**
- * Para onde vai o "Jogo passado →" do Novo jogo. UM ponto só: o bloco B troca esta linha pela rota própria do passo a passo
- * (/time/:slug/jogo/passado) e nada mais muda. Até lá abre o modo antigo "Já aconteceu" do Novo jogo, pela URL.
+ * Para onde vai o "Jogo passado →" do Novo jogo: a rota própria do passo a passo (bloco B). UM ponto só — a URL mora aqui e em mais lugar nenhum.
  */
 export function caminhoDoJogoPassado(slug) {
-  return `/time/${slug}/jogo/novo?passado=1`;
+  return `/time/${slug}/jogo/passado`;
 }
 
 /**

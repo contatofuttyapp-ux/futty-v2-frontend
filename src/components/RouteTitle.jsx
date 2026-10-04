@@ -33,6 +33,7 @@ const TITULOS = [
   ['/time/:slug/campeonato', 'Campeonato'],
   ['/time/:slug/jogador/:userId', 'Jogador'],
   ['/time/:slug/jogo/novo', 'Novo jogo'],
+  ['/time/:slug/jogo/passado', 'Jogo passado'],
   ['/time/:slug/jogo/:id', 'Jogo'],
   ['/admin/:slug', 'Admin'],
   ['/time/:slug', 'Time'],

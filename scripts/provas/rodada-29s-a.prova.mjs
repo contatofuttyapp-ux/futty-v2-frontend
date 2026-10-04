@@ -1,7 +1,7 @@
 // Prova no navegador da Rodada 29S, bloco A (o Novo jogo de novo): o que só um Chromium de verdade confirma, com as MESMAS fontes e o MESMO CSS do app.
 //   · Marcar jogo (151, 155, 156): abre direto no formulário (sem os três chips); a hora nasce em 20:00 (ou na do último jogo do time, vinda do cache do
 //     Início); o ingresso se preenche enquanto a pessoa digita (dia por extenso, hora, local, rabicho só em outro relógio); "Só neste jogo" em ROXO e a
-//     volta ao padrão; "Criar jogo" na primeira tela de 390×844 e o POST de sempre; "Jogo passado →" embaixo e o modo antigo por ?passado=1.
+//     volta ao padrão; "Criar jogo" na primeira tela de 390×844 e o POST de sempre; "Jogo passado →" embaixo, levando ao passo a passo (a prova do passo a passo é a rodada-29s-b).
 //   · O Jogo (152, 153): sem times, "Como vão sair os times?" com Sortear e Montar à mão lado a lado (só o Sortear pulsa); Montar à mão salva em
 //     times-manuais com quem confirmou + os convidados da tela; com times, "Trocar os times: Sortear de novo · Montar à mão" com confirmação.
 // O motor é de mentira (/api/** respondido por page.route) e a sessão também (chave do Supabase no localStorage): nada sai para a rede.
@@ -215,7 +215,7 @@ export async function rodar({ navegador, base, t }) {
     await ctx.close();
   }
 
-  // ── "Jogo passado →": a linha discreta embaixo do botão, e o modo antigo (até o bloco B) pela URL ─────────────────────────────────────────
+  // ── "Jogo passado →": a linha discreta embaixo do botão e o destino (o passo a passo do bloco B); o link antigo (?passado=1) abre o Marcar jogo ────────
   {
     const { ctx, page, motor } = await abrir(navegador, base);
     await page.locator('[data-jogo-passado]').waitFor({ timeout: 25000 });
@@ -224,19 +224,18 @@ export async function rodar({ navegador, base, t }) {
     const link = page.locator('[data-jogo-passado] a');
     t('embaixo do botão, uma linha discreta: "Esse jogo já aconteceu? Jogo passado →"', linha.y > botao.y + botao.height && /^Esse jogo já aconteceu\?\s*Jogo passado →$/.test((await page.locator('[data-jogo-passado]').innerText()).replace(/\s+/g, ' ').trim()));
     t('discreta de verdade: letra de 13 px, texto apagado, nada que pareça um segundo botão', (await page.locator('[data-jogo-passado]').evaluate((el) => getComputedStyle(el).fontSize)) === '13px' && !(await link.evaluate((el) => el.className)).includes('btn'));
-    t('o link leva a /time/varzea-fc/jogo/novo?passado=1 (o destino mora em um ponto só, para o bloco B trocar)', (await link.getAttribute('href')) === '/time/varzea-fc/jogo/novo?passado=1');
+    t('o link leva à rota própria do passo a passo: /time/varzea-fc/jogo/passado (o destino mora em um ponto só)', (await link.getAttribute('href')) === '/time/varzea-fc/jogo/passado');
     await link.click();
-    await page.locator('[data-jogo-passado-aviso]').waitFor({ timeout: 8000 });
-    t('o "Jogo passado" abre o modo antigo: sem ingresso, "Continuar → montar", hora opcional e vazia', (await page.locator('[data-ingresso]').count()) === 0 && (await page.getByRole('button', { name: 'Continuar → montar' }).count()) === 1 && (await page.locator('#hora').inputValue()) === '' && /\(opcional\)/.test(await page.locator('label[for="hora"]').innerText()));
-    t('...com a data limitada a hoje, sem "Jogadores por time" e com o caminho de volta "Marcar jogo →"', (await page.locator('#data').getAttribute('max')) === proxima(0) && (await page.locator('[data-jogadores-por-time]').count()) === 0 && (await page.locator('[data-marcar-jogo] a').getAttribute('href')) === '/time/varzea-fc/jogo/novo');
-    await page.locator('#data').fill(proxima(-3));
-    await page.getByRole('button', { name: 'Continuar → montar' }).click();
-    await page.getByText('Quem jogou', { exact: true }).waitFor({ timeout: 8000 });
-    const post = motor.chamadas.find((c) => c.caminho === '/api/games');
-    t('a fase de montar de hoje continua: o jogo é gravado com historico: true', !!post && post.corpo.historico === true && !('jogadores_por_time' in post.corpo));
-    const corpo = await texto(page);
-    t('...com a ajuda no passado ("Toque num time e depois em quem jogou nele.") e sem "ex.: 5º A vs 5º B"', /Toque num time e depois em quem jogou nele\./.test(corpo) && !/5º A vs 5º B|Quem sobra não joga/.test(corpo));
-    await page.getByText('Ana', { exact: true }).first().click().catch(() => {});
+    await page.locator('[data-barra-de-passos]').waitFor({ timeout: 8000 });
+    t('o "Jogo passado" abre o passo a passo (bloco B): barra de 4 passos, "Quando foi o jogo?", e nada gravado', caminhoAtual(page) === '/time/varzea-fc/jogo/passado' && (await page.locator('[data-barra-de-passos] li').count()) === 4 && /Quando foi o jogo\?/.test(await texto(page)) && motor.chamadas.length === 0);
+    await ctx.close();
+  }
+
+  // ── um link antigo para o Novo jogo (?passado=1) abre o Marcar jogo: o modo "Já aconteceu" saiu daqui ────────────────────────────────────
+  {
+    const { ctx, page } = await abrir(navegador, base, { caminho: '/time/varzea-fc/jogo/novo?passado=1' });
+    await page.locator('[data-ingresso]').waitFor({ timeout: 25000 });
+    t('/jogo/novo?passado=1 abre o Marcar jogo (ingresso, "Criar jogo", hora 20:00), sem o aviso nem o botão do modo antigo', (await page.getByRole('button', { name: 'Criar jogo', exact: true }).count()) === 1 && (await page.locator('#hora').inputValue()) === '20:00' && (await page.locator('[data-jogo-passado-aviso]').count()) === 0 && (await page.getByRole('button', { name: 'Continuar → montar' }).count()) === 0);
     await ctx.close();
   }
 

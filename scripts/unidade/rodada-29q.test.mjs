@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO_TITULO,
+  CONVIDADO_CAMPO_PASSADO, CONVIDADO_LINHA_PASSADO, CONVIDADO_TITULO_PASSADO,
 } from '../../src/utils/convidadoSemApp.js';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
@@ -85,10 +86,11 @@ test('29Q · os textos do convidado sem app, uma fonte só (utils/convidadoSemAp
   assert.match(CONVIDADO_LINHA, /não conta no ranking/);
 });
 
-test('29Q · Jogo, Novo jogo e Campeonato usam o MESMO texto do convidado (e nenhum escreve o seu)', () => {
+// 29S-B: o Novo jogo não tem mais a caixa do convidado (o modo "Times à mão" foi para o Jogo e o "Já aconteceu" virou o passo a passo do Jogo
+// passado, que tem a sua, no passado — conferida logo abaixo).
+test('29Q · Jogo e Campeonato usam o MESMO texto do convidado (e nenhum escreve o seu)', () => {
   const lugares = [
     { arq: 'src/pages/Jogo.jsx', linha: 'CONVIDADO_LINHA' },
-    { arq: 'src/pages/NovoJogo.jsx', linha: 'CONVIDADO_LINHA' },
     { arq: 'src/pages/Campeonato.jsx', linha: 'CONVIDADO_LINHA_CAMPEONATO' },
   ];
   for (const { arq, linha } of lugares) {
@@ -107,6 +109,24 @@ test('29Q · Jogo, Novo jogo e Campeonato usam o MESMO texto do convidado (e nen
   assert.doesNotMatch(semComentarios(ler('src/pages/Campeonato.jsx')), /CONVIDADO_LINHA\}/, 'o Campeonato usa a linha SEM ranking');
   // A regra não muda: só o nome, entra no sorteio. Nenhuma das três telas manda convidado para users.
   assert.match(semComentarios(ler('src/pages/Jogo.jsx')), /setConvidados\(\(c\) => \[\.\.\.c, novoConvidado\.trim\(\)\]\)/);
+});
+
+test('29S-B · o Jogo passado usa o texto do convidado NO PASSADO, da mesma fonte (utils/convidadoSemApp.js); o Novo jogo não tem mais a caixa', () => {
+  assert.equal(CONVIDADO_TITULO_PASSADO, 'Alguém sem o app jogou?');
+  assert.equal(CONVIDADO_LINHA_PASSADO, 'Escreva o nome: entra no jogo, mas não conta no ranking.');
+  assert.equal(CONVIDADO_CAMPO_PASSADO, 'Nome de quem jogou');
+  for (const texto of [CONVIDADO_TITULO_PASSADO, CONVIDADO_LINHA_PASSADO, CONVIDADO_CAMPO_PASSADO]) {
+    assert.doesNotMatch(texto, /—|–| - |por favor|usuário|vai jogar|vão jogar/i, texto);
+  }
+  const fonte = ler('src/pages/JogoPassado.jsx');
+  const tela = semComentarios(fonte);
+  assert.match(fonte, /from '\.\.\/utils\/convidadoSemApp';/);
+  assert.match(tela, /\{CONVIDADO_TITULO_PASSADO\}/, 'o título');
+  assert.match(tela, /\{CONVIDADO_LINHA_PASSADO\}/, 'a linha');
+  assert.match(tela, /placeholder=\{CONVIDADO_CAMPO_PASSADO\}/, 'o campo');
+  assert.match(tela, /\{CONVIDADO_BOTAO\}/, 'o botão (o mesmo "Adicionar")');
+  assert.equal(tela.split('{CONVIDADO_TITULO_PASSADO}').length - 1, 1, 'uma caixa só');
+  assert.doesNotMatch(semComentarios(ler('src/pages/NovoJogo.jsx')), /CONVIDADO_|convidado/i, 'o Marcar jogo não tem caixa de convidado (ela está no Jogo, quando os times vão ser formados)');
 });
 
 // ── 3 · Criar time, passo 4 ───────────────────────────────────────────────────────────────────────────────────────────────────────

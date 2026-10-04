@@ -4,6 +4,17 @@
 > Fase: implementa-se **JUNTO com o jogo manual** (é a MESMA peça de composição) — a vaga
 > seguinte. Cross-ref **SPEC-JOGO-MANUAL** (o `ComporTimes` extraído é o pré-requisito comum).
 
+> **ATUALIZAÇÃO 29S-B (4-out-2026, aprovada pelo dono): o "Jogo passado" é um passo a passo, todo no passado, gravado só no fim.**
+> Rota `/time/:slug/jogo/passado` (`pages/JogoPassado.jsx`), aberta pelo "Jogo passado →" do Marcar jogo (o modo "Já aconteceu" e a fase de montar
+> saíram do `NovoJogo.jsx`). Quatro passos, cada um uma entrada do histórico (o Voltar do sistema recua um passo): **Quando foi** (data até hoje, hora
+> opcional já em 20:00, local opcional) · **Quem jogou** (membros com selo GOL + convidado sem app, só o nome) · **Times** (2, 3 ou 4, no `ComporTimes`;
+> "Pular" salva sem times) · **Como terminou** (2 times: "Quem ganhou?" + placar opcional + gols de cada um; 3 ou 4: campeão; depois artilheiro e
+> destaque do dia, só o que o time conta). O jogo SÓ é gravado no "Salvar jogo", em sequência e retomável (`utils/jogoPassado.js#executarPlano`):
+> `POST /api/games` (historico: true) → `/presencas` → (com times) `/times-manuais` → (com resultado) `PATCH /api/games/:id/resultado` → (com campeão
+> ou prêmio) `PATCH /api/feed/games/:id/resultado`. Quem ganhou vai para `time_vencedor` E (se não é empate) `campeao_time_index`. Com 3 ou 4 times só
+> o campeão (`campeao_time_index`): o motor só entende A, B ou empate em `time_vencedor` e nos gols. Fotos e rodada de cerveja ficam em Ajustes → Jogos.
+> O texto abaixo (§0 a §4) é o registro de como o motor foi pensado em 26-jul; a tela é a descrita acima.
+
 ## 0. O que existe HOJE (verificado no código real)
 - **(a) Data passada — JÁ ACEITE.** `POST /api/games` grava `data: new Date(data).toISOString()`
   **sem validar futuro** (`routes/games.js`); o input do `NovoJogo.jsx` (`type="date"`) **não

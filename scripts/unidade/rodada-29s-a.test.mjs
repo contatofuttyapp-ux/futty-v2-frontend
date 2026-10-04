@@ -44,7 +44,7 @@ test('155 · o Novo jogo não faz pedido novo para a hora: lê o cache do Iníci
   const tela = semComentarios(ler('src/pages/NovoJogo.jsx'));
   assert.match(tela, /import \{ caminhoDoJogoPassado, horaSugerida \} from '\.\.\/utils\/novoJogo';/);
   assert.match(tela, /useState\(\(\) => lerCache\(session\?\.user\?\.id, 'inicio'\)\?\.convites\?\.games \|\| null\)/, 'lido uma vez, sem pedido');
-  assert.match(tela, /const hora = horaDigitada \?\? \(retro \? '' : horaSugerida\(jogosEmCache, \{ slug, fuso: team\?\.fuso \}\)\);/, 'a sugestão vale até a pessoa digitar');
+  assert.match(tela, /const hora = horaDigitada \?\? horaSugerida\(jogosEmCache, \{ slug, fuso: team\?\.fuso \}\);/, 'a sugestão vale até a pessoa digitar');
   assert.match(tela, /onChange=\{\(e\) => setHoraDigitada\(e\.target\.value\)\}/);
   assert.doesNotMatch(tela, /apiFetch\(`\/api\/teams\/\$\{slug\}\/games`/, 'nenhum pedido de jogos só para achar a hora');
 });
@@ -57,16 +57,18 @@ test('151 · o Novo jogo abre direto no Marcar jogo: saem os chips Sortear / Tim
   assert.doesNotMatch(tela, />Já aconteceu</, 'sem o chip Já aconteceu');
   assert.doesNotMatch(tela, /setModo|modo === 'manual'|'manual'/, 'o modo "Times à mão" saiu do Novo jogo (foi para o Jogo)');
   assert.doesNotMatch(tela, /Você define os times à mão|Agende um jogo\. Os times saem do sorteio/, 'os textos de cada modo saíram');
-  assert.match(tela, /const retro = params\.get\('passado'\) === '1';/, 'o único modo que sobra vem da URL, até o bloco B');
-  assert.match(tela, /\{loading \? 'Criando…' : retro \? 'Continuar → montar' : 'Criar jogo'\}/, 'o botão dourado: Criar jogo');
+  // 29S-B: o modo antigo "Já aconteceu" (?passado=1) e a fase de montar saíram; o Marcar jogo é a única coisa que a página faz.
+  assert.doesNotMatch(tela, /useSearchParams|params\.get|retro|Continuar → montar|setFase|ComporTimes/, 'sem o modo "Já aconteceu" nem a fase de montar');
+  assert.match(tela, /\{loading \? 'Criando…' : 'Criar jogo'\}/, 'o botão dourado: Criar jogo');
+  assert.match(tela, /historico: false,/, 'o jogo marcado é um jogo normal (avisa o time), não histórico');
   assert.match(tela, /navigate\(`\/time\/\$\{slug\}\/jogo\/\$\{game\.id\}`, \{ replace: true \}\)/, 'vai para o jogo, como hoje');
 });
 
-test('153 · "Jogo passado →": uma linha discreta embaixo do botão, num destino só (o bloco B troca esse destino)', () => {
-  assert.equal(caminhoDoJogoPassado('missa-de-quinta'), '/time/missa-de-quinta/jogo/novo?passado=1');
+test('153 · "Jogo passado →": uma linha discreta embaixo do botão, num destino só — a rota própria do passo a passo (bloco B)', () => {
+  assert.equal(caminhoDoJogoPassado('missa-de-quinta'), '/time/missa-de-quinta/jogo/passado');
   const tela = ler('src/pages/NovoJogo.jsx');
   assert.match(tela, /Esse jogo já aconteceu\?\{' '\}\s*<Link to=\{caminhoDoJogoPassado\(slug\)\}[^>]*>Jogo passado →<\/Link>/);
-  assert.doesNotMatch(semComentarios(tela), /passado=1/, 'a URL do jogo passado mora só em utils/novoJogo.js');
+  assert.doesNotMatch(semComentarios(tela), /jogo\/passado|passado=1/, 'a URL do jogo passado mora só em utils/novoJogo.js');
   // Discreta: dentro de um <p> de 13 px, depois do formulário — não é um cartão nem um botão do peso do "Criar jogo".
   assert.ok(tela.indexOf('<p data-jogo-passado style') > tela.indexOf('</form>'), 'depois do formulário, embaixo do botão');
   assert.match(tela, /data-jogo-passado style=\{\{ textAlign: 'center', margin: '8px 0 0', fontSize: 13/);
@@ -245,8 +247,10 @@ test('153 · ComporTimes: a ajuda vem por prop; o Campeonato mantém a de hoje; 
   assert.match(camp, /<ComporTimes nomes=\{nomes\} pool=\{pool\} atrib=\{atrib\} onChangeAtrib=\{setAtrib\} ajuda=\{AJUDA_DOS_TIMES\} \/>/);
   assert.match(ler('src/components/TimesDoJogo.jsx'), /export const AJUDA_DO_JOGO = 'Toque num time e depois em quem vai jogar nele\.';/);
   assert.match(ler('src/components/TimesDoJogo.jsx'), /ajuda=\{AJUDA_DO_JOGO\} opcional=\{false\}/, 'no Jogo montar os times não é "(opcional)"');
-  assert.match(ler('src/pages/NovoJogo.jsx'), /ajuda="Toque num time e depois em quem jogou nele\."/, 'no jogo passado, no passado');
-  for (const arq of ['src/pages/Jogo.jsx', 'src/pages/NovoJogo.jsx', 'src/components/TimesDoJogo.jsx']) {
+  // 29S-B: a ajuda do jogo passado (que morava no modo antigo do Novo jogo) mora nos textos do passo a passo, no passado.
+  assert.match(ler('src/utils/jogoPassado.js'), /ajudaDosTimes: 'Toque num time e depois em quem jogou nele\.'/, 'no jogo passado, no passado');
+  assert.match(ler('src/pages/JogoPassado.jsx'), /ajuda=\{TEXTOS\.ajudaDosTimes\}/);
+  for (const arq of ['src/pages/Jogo.jsx', 'src/pages/NovoJogo.jsx', 'src/pages/JogoPassado.jsx', 'src/utils/jogoPassado.js', 'src/components/TimesDoJogo.jsx']) {
     assert.ok(!semComentarios(ler(arq)).includes('5º A vs 5º B'), `${arq} ainda tem o exemplo do campeonato de escola`);
   }
 });
