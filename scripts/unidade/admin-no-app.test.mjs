@@ -5,8 +5,9 @@
 //     ao próximo jogo do time;
 //   · a página do time tem as abas Jogos · Elenco · Ajustes (Ajustes só para o admin, com o selo ADMIN), "Voltar" pelo histórico;
 //   · o Perfil não tem mais "Painel de administração"; tem "Meus times" (cada um leva ao time) e as Notificações por tipo;
-//   · os textos: "AÇÕES DEFINITIVAS" (nome do dono), "Pedir para votar de novo" zera as notas, item 69 (admin ≠ posição), e a hora do
-//     jogo nunca é "fuso"/"hora do campo"/"horário de Brasília" na tela.
+//   · os textos: "AÇÕES DEFINITIVAS" (nome do dono; na 29R a única ação dela virou o cartão "Nova temporada de notas" e a seção saiu),
+//     "Nova temporada de notas" (era "Pedir para votar de novo") zera as notas, item 69 (admin ≠ posição), e a hora do jogo nunca é
+//     "fuso"/"hora do campo"/"horário de Brasília" na tela.
 //
 // Uso: npm test
 import { test } from 'node:test';
@@ -30,7 +31,7 @@ test('card "Seu time": uma linha por pendência, na ordem, cada uma levando ao l
   });
   assert.deepEqual(linhas, [
     { chave: 'pedidos', para: '/time/missa?aba=elenco', texto: '2 pedidos de entrada' },
-    { chave: 'presenca', para: '/time/missa?aba=jogos', texto: 'Quinta, 8 de out.: presença ainda não aberta' }, // 29L, achado 128
+    { chave: 'presenca', para: '/time/missa?aba=jogos&abrir-presenca=g2', texto: 'Quinta, 8 de out.: presença ainda não aberta' }, // 29L, achado 128; 29R, achado 147: leva ao jogo
     { chave: 'resultado', para: '/time/missa?aba=jogos', texto: 'Resultado de qui., 1 de out. por lançar' },
     { chave: 'denuncias', para: '/time/missa?aba=ajustes#denuncias', texto: '1 denúncia para ver' },
   ]);
@@ -89,13 +90,71 @@ test('Perfil: sai "Painel de administração"; fica "Meus times" (cada um leva a
   assert.match(prefs, /soAdmin: true/, 'Pedidos de entrada só para quem administra');
 });
 
-test('Ajustes: "AÇÕES DEFINITIVAS" (nunca "Zona de perigo"); "Pedir para votar de novo" zera as notas, com confirmação', () => {
+test('Ajustes: "Nova temporada de notas" (nunca "Zona de perigo") zera as notas, com confirmação; "Ações definitivas" não existe mais', () => {
   const painel = ler('src/pages/AdminPanel.jsx');
-  assert.match(painel, /titulo="Ações definitivas"/);
-  assert.doesNotMatch(semComentarios(painel), /Zona de perigo/);
-  assert.match(painel, /pedir-revotacao`, \{ method: 'POST', body: JSON\.stringify\(\{ zerar: true \}\) \}/);
-  assert.match(painel, /<ConfirmModal\s+texto="Zerar as notas do time e pedir para todo mundo votar de novo\? Não dá para desfazer\."/);
-  for (const secao of ['O time', 'Notificações do admin', 'Avisar o time', 'Denúncias']) assert.match(painel, new RegExp(`titulo="${secao}"`), secao);
+  // 29R (achado 150): a única ação de "Ações definitivas" saiu para o cartão próprio; a seção, vazia, saiu junto.
+  assert.doesNotMatch(semComentarios(painel), /Ações definitivas|Zona de perigo/);
+  assert.match(painel, /pedir-revotacao`, \{ method: 'POST', body: JSON\.stringify\(\{ zerar: true \}\) \}/, 'a chamada ao motor não mudou');
+  assert.match(painel, /<ConfirmModal\s+texto="Começar uma nova temporada\? As notas de todo mundo voltam a zero\. Não dá para desfazer\."/);
+  assert.match(painel, /confirmarLabel="Zerar e começar"/);
+  assert.match(painel, /showToast\('Nova temporada aberta\. O time foi avisado para dar as notas\.'\)/);
+  for (const secao of ['O time', 'Notificações do admin', 'Avisar o time', 'Denúncias', 'Notas do time']) assert.match(painel, new RegExp(`titulo="${secao}"`), secao);
+  // O cartão vem DEPOIS das Denúncias (é o último dos Ajustes), com o texto de apoio da decisão do dono.
+  assert.ok(painel.indexOf('titulo="Denúncias"') < painel.indexOf('titulo="Notas do time"'), 'o cartão fica no fim dos Ajustes');
+  assert.match(painel, /Zera as notas e o time avalia todo mundo de novo, do zero\./);
+});
+
+test('150 · a temporada de notas: o botão é o dourado da casa (cta-gold, ícone Star), nunca vermelho; só a confirmação é vermelha', () => {
+  const painel = ler('src/pages/AdminPanel.jsx');
+  const componente = painel.match(/function PedirVotarDeNovo\([\s\S]*?\r?\n\}\r?\n/)?.[0] || '';
+  const botao = componente.split(/\r?\n/).find((l) => l.includes('data-pedir-votar-de-novo')) || ''; // a tag de abertura do botão, numa linha só
+  assert.match(botao, /className="btn hud-corners-s cta-gold"/, 'o dourado da casa');
+  assert.doesNotMatch(botao, /danger|fda4af|239,\s*68,\s*68|#f87171|ef4444/i, 'o botão não tem vermelho nenhum');
+  assert.match(componente, /<Star size=\{18\}/, 'ícone Star do lucide');
+  assert.match(componente, /\{busy \? 'Abrindo…' : 'Nova temporada de notas'\}/, 'o rótulo');
+  assert.match(painel, /import \{[^}]*\bStar\b[^}]*\} from 'lucide-react'/);
+  // O cartão não tem borda vermelha (era o que dizia "perigo" antes de a pessoa tocar).
+  assert.doesNotMatch(semComentarios(componente), /borderColor/);
+  // A confirmação segue vermelha: `perigo` no ConfirmModal, que pinta o botão de confirmar com --danger.
+  assert.match(componente, /<ConfirmModal[\s\S]*?\bperigo\b[\s\S]*?\/>/);
+  assert.match(painel, /style=\{\{ width: '100%', \.\.\.\(perigo \? \{ background: 'var\(--danger\)', color: '#fff' \} : \{\}\) \}\}/);
+  // Nada do texto antigo.
+  for (const antigo of ['Pedir para votar de novo', 'Zerar e pedir', 'Zerando…']) assert.ok(!semComentarios(painel).includes(antigo), antigo);
+});
+
+test('150 · o Início: o cartão de votação diz "Nova temporada de notas no <time>" e "Dê sua nota aos companheiros." (o resto não muda)', () => {
+  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  assert.match(inicio, /`Nova temporada de notas no \$\{votacaoTop\.nome\}`/);
+  assert.match(inicio, /'Dê sua nota aos companheiros\.'/);
+  assert.doesNotMatch(inicio, /pediu nova avaliação|companheiros do último jogo/);
+  // O resto do cartão: o que vale sem pedido de revotação, o botão e o destino.
+  assert.match(inicio, /'Você tem colegas para avaliar'/);
+  assert.match(inicio, /plural\(votacaoTop\.faltam, 'Falta', 'Faltam'\)/);
+  assert.match(inicio, /to=\{`\/time\/\$\{votacaoTop\.slug\}\/ranking`\}/);
+});
+
+test('147 · a linha "presença ainda não aberta" leva ao jogo certo (?abrir-presenca=<game_id>); o texto e as outras linhas não mudam', () => {
+  const pend = (extra) => linhasDePendencia({ slug: 'missa', fuso: SP, pendencias: { presenca: { game_id: 'g-9', data: '2026-10-09T23:00:00Z' }, resultado: { game_id: 'g1', data: '2026-10-01T23:00:00Z' }, ...extra } });
+  const [presenca, resultado] = pend();
+  assert.equal(presenca.para, '/time/missa?aba=jogos&abrir-presenca=g-9');
+  assert.equal(presenca.texto, 'Sexta, 9 de out.: presença ainda não aberta');
+  assert.equal(resultado.para, '/time/missa?aba=jogos', 'o resultado por lançar continua só na aba Jogos');
+  // O id vai codificado: nunca quebra o endereço.
+  assert.equal(linhasDePendencia({ slug: 'm', fuso: SP, pendencias: { presenca: { game_id: 'a b&c', data: '2026-10-09T23:00:00Z' } } })[0].para, '/time/m?aba=jogos&abrir-presenca=a%20b%26c');
+  // Resposta antiga do motor, sem game_id: a aba, como antes (nunca "abrir-presenca=undefined").
+  assert.equal(linhasDePendencia({ slug: 'm', fuso: SP, pendencias: { presenca: { data: '2026-10-09T23:00:00Z' } } })[0].para, '/time/m?aba=jogos');
+});
+
+test('147 · a página do time lê ?abrir-presenca, entrega ao jogo e apaga do endereço sem empilhar histórico; trocar de aba também apaga', () => {
+  const equipa = semComentarios(ler('src/pages/Equipa.jsx'));
+  assert.match(equipa, /searchParams\.get\('abrir-presenca'\)/);
+  assert.match(equipa, /<JogosDoAdmin [\s\S]*?abrirPresencaDe=\{abrirPresencaDe\} aoUsarAbrirPresenca=\{usouAbrirPresenca\}/);
+  assert.match(equipa, /p\.delete\('abrir-presenca'\);\s*return p;\s*\}, \{ replace: true \}\)/, 'sai do endereço trocando a entrada do histórico: "Voltar" não reabre');
+  const painel = semComentarios(ler('src/pages/AdminPanel.jsx'));
+  assert.match(painel, /useState\(abrirInicial\)/, 'o "Abrir presença" do jogo certo já nasce aberto (o mesmo estado do botão)');
+  assert.match(painel, /abrirInicial=\{!!abrirPresencaDe && String\(g\.id\) === String\(abrirPresencaDe\)\}/, 'só o jogo do parâmetro');
+  assert.match(painel, /className=\{destaque === g\.id \? 'jogo-destaque' : undefined\}/, 'destaque curto no cartão');
+  assert.match(ler('src/styles/app.css'), /\.jogo-destaque \{ animation: jogoDestaque 2\.4s/);
 });
 
 test('item 69: a tela diz que "admin" e "posição em campo" são coisas separadas', () => {

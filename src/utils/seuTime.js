@@ -9,7 +9,9 @@ export function linhasDePendencia({ slug, fuso, pendencias: p = {} } = {}) {
   const linhas = [];
   if (p.pedidos > 0) linhas.push({ chave: 'pedidos', para: `${base}?aba=elenco`, texto: `${p.pedidos} ${plural(p.pedidos, 'pedido', 'pedidos')} de entrada` });
   // Rodada 29L (achado 128): "Sexta, 9 de out.: presença ainda não aberta" (era "Jogo de sex., 9 de out. sem presença aberta", que lia mal).
-  if (p.presenca) linhas.push({ chave: 'presenca', para: `${base}?aba=jogos`, texto: `${dataComDiaPorExtenso(p.presenca.data, fuso)}: presença ainda não aberta` });
+  // Rodada 29R (achado 147): o toque levava à aba Jogos sem dizer onde agir. Agora leva ao jogo certo e já abre o "Abrir presença" dele
+  // (?abrir-presenca=<game_id>, que a página do time lê e apaga do endereço). Sem game_id (resposta antiga do motor): a aba, como antes.
+  if (p.presenca) linhas.push({ chave: 'presenca', para: `${base}?aba=jogos${p.presenca.game_id ? `&abrir-presenca=${encodeURIComponent(p.presenca.game_id)}` : ''}`, texto: `${dataComDiaPorExtenso(p.presenca.data, fuso)}: presença ainda não aberta` });
   if (p.resultado) linhas.push({ chave: 'resultado', para: `${base}?aba=jogos`, texto: `Resultado de ${formatarData(p.resultado.data, fuso)} por lançar` });
   if (p.denuncias > 0) linhas.push({ chave: 'denuncias', para: `${base}?aba=ajustes#denuncias`, texto: `${p.denuncias} ${plural(p.denuncias, 'denúncia', 'denúncias')} para ver` });
   return linhas;

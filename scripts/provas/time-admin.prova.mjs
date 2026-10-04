@@ -1,7 +1,7 @@
 // Prova no navegador (Rodada 29I, bloco 3 — "admin não é um lugar"): a página do time de verdade, num Chromium, com o motor de mentira.
 //   · admin: abas Jogos · Elenco · Ajustes (Ajustes com o selo ADMIN); trocar de aba muda o endereço sem empilhar histórico; o jogo
 //     passado sem resultado tem "Lançar resultado"; um toque no nome do membro abre o que o admin faz com ele (sem "⋯"); Ajustes termina
-//     em AÇÕES DEFINITIVAS e mostra o escudo em 84, 36 e 20 px; "Voltar" volta para onde a pessoa estava;
+//     no cartão "Nova temporada de notas" (era AÇÕES DEFINITIVAS) e mostra o escudo em 84, 36 e 20 px; "Voltar" volta para onde a pessoa estava;
 //   · jogador: duas abas, sem Ajustes (nem pelo endereço);
 //   · o escudo: os seis padrões nos três tamanhos das bancadas do dono, com a régua das iniciais;
 //   · o card "Seu time" do Início: uma linha por pendência, os quatro atalhos com nome e o "Tudo tranquilo por aqui.".
@@ -9,7 +9,7 @@ export const nome = 'Página do time (abas, Voltar pelo histórico, membro por t
 
 const DIA = 86400000;
 
-function motor(papel, { comLogo = false } = {}) {
+function motor(papel, { comLogo = false, doisFuturos = false } = {}) {
   const agora = Date.now();
   const team = {
     id: 'T1', slug: 'varzea-fc', nome: 'Várzea FC', cor: 'vinho', escudo_cor2: 'ouro', escudo_padrao: 'faixa', role: papel, joga: true,
@@ -23,6 +23,8 @@ function motor(papel, { comLogo = false } = {}) {
   const games = [
     { id: 'g-futuro', data: new Date(agora + 3 * DIA).toISOString(), local: 'Campo da Vila', status: 'agendado', confirmados: 4, sorteio_realizado: false },
     { id: 'g-passado', data: new Date(agora - 2 * DIA).toISOString(), local: 'Quadra 2', status: 'terminado', confirmados: 10, sorteio_realizado: true, campeao_time_index: null, resultado_nivel: 0 },
+    // 29R (achado 147): o 2º jogo futuro, para provar que "abrir presença" abre no jogo CERTO. Tem o id que o card "Seu time" da bancada aponta (g2).
+    ...(doisFuturos ? [{ id: 'g2', data: new Date(agora + 5 * DIA).toISOString(), local: 'Arena Norte', status: 'agendado', confirmados: 0, sorteio_realizado: false }] : []),
   ];
   const membro = (id, nome, role, goleiro) => ({ user_id: id, nome, role, goleiro, email: `${nome.toLowerCase()}@futtymock.com`, pode_postar: true, visivel_ranking: true, ativo: true, presencas_recentes: [] });
   const respostas = {
@@ -34,6 +36,7 @@ function motor(papel, { comLogo = false } = {}) {
     '/api/teams/varzea-fc/convites': { convites: [] },
     '/api/push/preferencias': { preferencias: { jogos: true, pedidos: true, figurinha: true, resenha: true }, admin: true, salvavel: true },
     '/api/jogos/g-futuro/rsvp': { rsvp_aberto: false, rsvp_fechado: false, confirmados: [], recusados: [], pendentes: [], fuso: 'America/Sao_Paulo' },
+    '/api/jogos/g2/rsvp': { rsvp_aberto: false, rsvp_fechado: false, confirmados: [], recusados: [], pendentes: [], fuso: 'America/Sao_Paulo' },
     '/api/feed/denuncias': { denuncias: [] },
     '/api/denuncias/fila': { fila: [] },
     '/api/teams/varzea-fc/logo': { ok: true },
@@ -102,9 +105,10 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('[data-ajustes-do-time]').waitFor({ timeout: 15000 });
     await page.locator('[data-previa-escudo]').waitFor({ timeout: 5000 });
     const ajustes = await page.locator('[data-ajustes-do-time]').innerText();
-    t('Ajustes: O time, Admins, Notificações do admin, Avisar o time, Denúncias e, no fim, AÇÕES DEFINITIVAS',
-      /o time[\s\S]*admins[\s\S]*notificações do admin[\s\S]*avisar o time[\s\S]*denúncias[\s\S]*ações definitivas/i.test(ajustes), ajustes.slice(0, 160).replace(/\s+/g, ' '));
-    t('Ajustes: "Pedir para votar de novo" mora em Ações definitivas', /ações definitivas[\s\S]*Pedir para votar de novo/i.test(ajustes));
+    t('Ajustes: O time, Admins, Notificações do admin, Avisar o time, Denúncias e, no fim, o cartão "Nova temporada de notas" (29R; era AÇÕES DEFINITIVAS)',
+      /o time[\s\S]*admins[\s\S]*notificações do admin[\s\S]*avisar o time[\s\S]*denúncias[\s\S]*notas do time[\s\S]*nova temporada de notas/i.test(ajustes), ajustes.slice(0, 160).replace(/\s+/g, ' '));
+    t('Ajustes: "Nova temporada de notas" (era "Pedir para votar de novo") mora no cartão próprio; "Ações definitivas" saiu',
+      /nova temporada de notas/i.test(ajustes) && !/ações definitivas|pedir para votar de novo/i.test(ajustes));
     t('Ajustes: nenhum "Zona de perigo" e nenhuma "Cor de fundo do avatar"', !/Zona de perigo|Cor de fundo do avatar/i.test(ajustes));
     const tamanhos = await page.locator('[data-previa-escudo] [data-escudo]').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
     t('Escudo do time: prévia ao vivo em 84, 36 e 20 px', JSON.stringify(tamanhos) === '[84,36,20]', JSON.stringify(tamanhos));
@@ -127,7 +131,7 @@ export async function rodar({ navegador, base, t }) {
     const abas = (await page.locator('[role="tab"]').allInnerTexts()).map((s) => s.trim());
     t('jogador vê duas abas (sem Ajustes)', abas.length === 2 && !abas.some((a) => /ajustes/i.test(a)), abas.join(' | '));
     t('jogador que abre ?aba=ajustes cai em Jogos', (await page.locator('[data-aba="jogos"]').getAttribute('aria-selected')) === 'true');
-    t('nada do admin para o jogador (sem Ações definitivas, sem "Novo jogo")', !/Ações definitivas|Novo jogo/i.test(await page.locator('body').innerText()));
+    t('nada do admin para o jogador (sem Nova temporada de notas, sem "Novo jogo")', !/Ações definitivas|Nova temporada de notas|Novo jogo/i.test(await page.locator('body').innerText()));
     t('a página do jogador roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }
@@ -210,6 +214,111 @@ export async function rodar({ navegador, base, t }) {
       Math.abs(alturaConfirmar - alturaDeReferencia) <= 2, `confirmado ${alturaConfirmar}px, referência ${alturaDeReferencia}px`);
     t('sem o logo, o editor de escudo (864 combinações) aparece', (await page.locator('[data-previa-escudo]').count()) === 1);
     t('achado 124: roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
+  // ── achado 150 (29R): "Nova temporada de notas" — o botão é dourado, a confirmação é vermelha ────────────────────────────────────
+  {
+    const { ctx, page, erros } = await abrir(navegador, base, 'admin');
+    const escritas = []; // tudo o que não é leitura: o que chegaria ao motor
+    page.on('request', (r) => { if (r.method() !== 'GET') escritas.push(`${r.method()} ${new URL(r.url()).pathname} ${r.postData() || ''}`.trim()); });
+    await irPara(page, '/time/varzea-fc?aba=ajustes');
+    const botao = page.locator('[data-pedir-votar-de-novo]');
+    await botao.waitFor({ timeout: 15000 });
+    const vermelho = (cor) => { const [r, g, b] = (cor.match(/\d+(\.\d+)?/g) || []).map(Number); return r > 180 && g < 120 && b < 120; };
+    const estilo = await botao.evaluate((el) => { const cs = getComputedStyle(el); return { classe: el.className, borda: cs.borderTopColor, letra: cs.color, fundo: cs.backgroundColor, estrela: !!el.querySelector('svg'), texto: el.textContent.trim() }; });
+    t('150 · o botão "Nova temporada de notas" é o dourado da casa (cta-gold), com estrela, e nada nele é vermelho',
+      /cta-gold/.test(estilo.classe) && estilo.estrela && estilo.texto === 'Nova temporada de notas' && ![estilo.borda, estilo.letra, estilo.fundo].some(vermelho), JSON.stringify(estilo));
+    t('150 · o apoio diz "Zera as notas e o time avalia todo mundo de novo, do zero."', (await page.locator('[data-ajustes-do-time]').innerText()).includes('Zera as notas e o time avalia todo mundo de novo, do zero.'));
+
+    await botao.click();
+    const modal = page.locator('.modal-card');
+    await modal.waitFor({ timeout: 5000 });
+    t('150 · a confirmação diz o perigo: "Começar uma nova temporada? As notas de todo mundo voltam a zero. Não dá para desfazer."',
+      (await modal.innerText()).includes('Começar uma nova temporada? As notas de todo mundo voltam a zero. Não dá para desfazer.'));
+    const fundoConfirmar = await modal.getByRole('button', { name: 'Zerar e começar' }).evaluate((el) => getComputedStyle(el).backgroundColor);
+    t('150 · o botão da confirmação ("Zerar e começar") é vermelho de perigo', vermelho(fundoConfirmar), fundoConfirmar);
+    await modal.getByRole('button', { name: 'Cancelar' }).click();
+    await modal.waitFor({ state: 'detached', timeout: 5000 });
+    t('150 · cancelar a confirmação não chama o motor', escritas.length === 0, escritas.join(' | '));
+
+    await botao.click();
+    await modal.getByRole('button', { name: 'Zerar e começar' }).click();
+    await page.getByText('Nova temporada aberta. O time foi avisado para dar as notas.').waitFor({ timeout: 5000 });
+    t('150 · confirmar chama pedir-revotacao com zerar: true (o motor não mudou) e o aviso diz "Nova temporada aberta. O time foi avisado para dar as notas."',
+      escritas.length === 1 && escritas[0] === 'POST /api/teams/varzea-fc/pedir-revotacao {"zerar":true}', escritas.join(' | '));
+    t('150: roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
+  // ── achado 147 (29R): a linha "presença ainda não aberta" do Início leva ao jogo certo e já abre o "Abrir presença" dele ───────────
+  {
+    const { ctx, page, erros } = await abrir(navegador, base, 'admin', { doisFuturos: true });
+    const escritas = [];
+    page.on('request', (r) => { if (r.method() !== 'GET') escritas.push(`${r.method()} ${new URL(r.url()).pathname}`); });
+    await page.setViewportSize({ width: 390, height: 520 }); // tela curta: o 2º jogo fica abaixo da dobra e o "rolar até ele" tem o que provar
+    await irPara(page, '/seu-time');
+    const linha = page.locator('[data-com-pendencias] [data-pendencia="presenca"]');
+    await linha.waitFor({ timeout: 10000 });
+    t('147 · a linha "presença ainda não aberta" leva ao jogo: ?aba=jogos&abrir-presenca=<game_id>',
+      (await linha.getAttribute('href')) === '/time/varzea-fc?aba=jogos&abrir-presenca=g2', String(await linha.getAttribute('href')));
+
+    const historicoAntes = await page.evaluate(() => window.history.length);
+    await linha.click(); // o toque de verdade: Início → página do time
+    const campoPrazo = (id) => page.locator(`[data-jogo="${id}"] input[type="datetime-local"]`);
+    await campoPrazo('g2').waitFor({ timeout: 15000 });
+    t('147 · o toque abre o "Abrir presença" do jogo certo (g2): o campo do prazo está na tela', (await campoPrazo('g2').count()) === 1);
+    await page.locator('[data-jogo="g-futuro"]').getByRole('button', { name: 'Abrir presença' }).waitFor({ timeout: 5000 });
+    t('147 · o outro jogo (g-futuro) fica como estava: só o botão "Abrir presença", sem campo aberto', (await campoPrazo('g-futuro').count()) === 0);
+    t('147 · aba Jogos, a mesma de sempre', (await page.locator('[data-aba="jogos"]').getAttribute('aria-selected')) === 'true');
+
+    await page.waitForFunction(() => !location.search.includes('abrir-presenca'), null, { timeout: 5000 });
+    t('147 · depois de usado, o parâmetro sai do endereço e a aba fica (?aba=jogos)', new URL(page.url()).search === '?aba=jogos', page.url());
+    t('147 · sem empilhar histórico: Início → página do time é UMA entrada a mais, não duas', (await page.evaluate(() => window.history.length)) === historicoAntes + 1);
+
+    await page.locator('[data-jogo="g2"].jogo-destaque').waitFor({ timeout: 5000 });
+    t('147 · o cartão do jogo ganha um destaque curto (.jogo-destaque)', (await page.locator('[data-jogo="g2"].jogo-destaque').count()) === 1);
+    await page.waitForFunction(() => { const r = document.querySelector('[data-jogo="g2"]').getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight + 1; }, null, { timeout: 5000 });
+    const rolou = await page.evaluate(() => window.scrollY);
+    t('147 · a tela rolou até o cartão (ele cabe inteiro na tela de 520 px, que o 2º jogo não cabia sem rolar)', rolou > 0, `scrollY ${rolou}`);
+    await page.waitForFunction(() => !document.querySelector('.jogo-destaque'), null, { timeout: 8000 });
+    t('147 · o destaque é curto: some sozinho', (await page.locator('.jogo-destaque').count()) === 0);
+
+    await page.locator('[data-jogo="g2"]').getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await campoPrazo('g2').waitFor({ state: 'detached', timeout: 5000 });
+    const depoisDeCancelar = await page.evaluate(() => { const r = document.querySelector('[data-jogo="g2"]').getBoundingClientRect(); return { dentro: r.top >= 0 && r.top < window.innerHeight }; });
+    t('147 · Cancelar fecha o campo e deixa a pessoa na aba Jogos, no jogo certo: o botão "Abrir presença" volta',
+      (await page.locator('[data-jogo="g2"]').getByRole('button', { name: 'Abrir presença' }).count()) === 1 && (await page.locator('[data-aba="jogos"]').getAttribute('aria-selected')) === 'true' && depoisDeCancelar.dentro);
+
+    await page.goBack(); // /seu-time
+    await linha.waitFor({ timeout: 5000 });
+    await page.goForward(); // a página do time de novo, SEM o parâmetro: nada reabre
+    await page.locator('[data-jogo="g2"]').getByRole('button', { name: 'Abrir presença' }).waitFor({ timeout: 15000 });
+    await page.waitForTimeout(800);
+    t('147 · "Voltar" e depois avançar não reabre nada (o parâmetro já saiu da entrada do histórico)',
+      (await page.locator('input[type="datetime-local"]').count()) === 0 && !page.url().includes('abrir-presenca'), page.url());
+    t('147 · nada foi gravado: abrir o campo não abre a presença (só o "Confirmar" faria isso)', escritas.length === 0, escritas.join(' | '));
+    t('147: roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
+  // ── achado 147 (29R): sem o parâmetro nada muda; com um jogo que não está na lista, nada abre e o parâmetro sai ──────────────────
+  {
+    const { ctx, page, erros } = await abrir(navegador, base, 'admin', { doisFuturos: true });
+    await page.setViewportSize({ width: 390, height: 520 });
+    await irPara(page, '/time/varzea-fc?aba=jogos');
+    await page.locator('[data-jogo="g2"]').getByRole('button', { name: 'Abrir presença' }).waitFor({ timeout: 15000 });
+    await page.locator('[data-jogo="g-futuro"]').getByRole('button', { name: 'Abrir presença' }).waitFor({ timeout: 5000 });
+    await page.waitForTimeout(1200);
+    t('147 · sem o parâmetro, nada muda: nenhum campo aberto, nenhum destaque, a tela no topo',
+      (await page.locator('input[type="datetime-local"]').count()) === 0 && (await page.locator('.jogo-destaque').count()) === 0 && (await page.evaluate(() => window.scrollY)) === 0);
+
+    await irPara(page, '/time/varzea-fc?aba=jogos&abrir-presenca=jogo-que-nao-existe');
+    await page.waitForFunction(() => !location.search.includes('abrir-presenca'), null, { timeout: 5000 });
+    await page.waitForTimeout(800);
+    t('147 · um jogo que não está na lista (ou já passou): nada abre e o parâmetro sai do endereço mesmo assim',
+      (await page.locator('input[type="datetime-local"]').count()) === 0 && (await page.locator('.jogo-destaque').count()) === 0 && new URL(page.url()).search === '?aba=jogos', page.url());
+    t('147: o jogo sem parâmetro roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }
 }

@@ -182,7 +182,8 @@ export async function rodar({ navegador, base, t }) {
       aberto.atalhos.map((a) => a[0]).join(' · ') === 'Novo jogo · Sortear · Convidar · Ajustes'
       && aberto.atalhos[0][1] === '/time/missa/jogo/novo' && aberto.atalhos[1][1] === '/time/missa/jogo/g2'
       && aberto.atalhos[2][1] === '/time/missa?aba=elenco&convidar=1' && aberto.atalhos[3][1] === '/time/missa?aba=ajustes', JSON.stringify(aberto));
-    t('aberta, a linha mostra a pendência como link e um "Abrir o time" (o time continua a um toque)', aberto.pendencia === '/time/missa?aba=jogos' && aberto.abrir === '/time/missa', JSON.stringify(aberto));
+    // 29R (achado 147): a linha de presença deixou de levar só à aba Jogos; leva ao jogo (g2) e já abre o "Abrir presença" dele.
+    t('aberta, a linha mostra a pendência como link para o jogo (?abrir-presenca=g2) e um "Abrir o time" (o time continua a um toque)', aberto.pendencia === '/time/missa?aba=jogos&abrir-presenca=g2' && aberto.abrir === '/time/missa', JSON.stringify(aberto));
     t('aria-expanded vira true na linha aberta', (await linha1.getAttribute('aria-expanded')) === 'true');
 
     await linha2.click();

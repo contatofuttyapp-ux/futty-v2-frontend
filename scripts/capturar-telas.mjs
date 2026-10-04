@@ -271,7 +271,16 @@ const TELAS = [
   { arq: '04-inicio', sessao: true, rota: () => '/home', caminho: /^\/home$/, seletor: '.games-label, .home-empty' },
   { arq: '05-time-aba-jogos', ...aba('jogos') },
   { arq: '06-time-aba-elenco', ...aba('elenco') },
-  { arq: '07-time-aba-ajustes', ...aba('ajustes') },
+  {
+    // Rodada 29R (achado 150): o cartão "Nova temporada de notas" é o último dos Ajustes — fica abaixo da primeira tela, então a captura
+    // rola até ele (sem isso a imagem regenerada não mostraria o que mudou). Só olha: nenhum toque no botão.
+    arq: '07-time-aba-ajustes', ...aba('ajustes'),
+    depois: async (p) => {
+      await p.locator('[data-pedir-votar-de-novo]').waitFor({ timeout: 20000 });
+      await p.locator('[data-pedir-votar-de-novo]').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      await espera(600);
+    },
+  },
   {
     arq: '08-jogo', sessao: true, precisa: 'jogoQualquer', dica: 'o time não tem nenhum jogo',
     rota: (d) => `/time/${d.slug}/jogo/${d.jogoQualquer.id}`, caminho: /^\/time\/[^/]+\/jogo\/[^/?]+$/, seletor: 'main',
@@ -382,6 +391,30 @@ const TELAS = [
       await p.getByText('Seu time está no ar!').first().waitFor({ timeout: 15000 });
       await espera(1200);
       exigirSemRolagem(await medirBotao(p, 'Ir para o time'), 'a festa', 'Ir para o time');
+    },
+  },
+  {
+    // Rodada 29R (achado 147): a linha "presença ainda não aberta" do Missa de Quinta, tocada de verdade no Início, leva ao jogo certo e já
+    // abre o "Abrir presença" dele. A captura para ali, com o campo do prazo aberto: NUNCA toca em "Confirmar" (abrir presença é gravar no
+    // banco, e o banco é o de produção; o contexto já responde a qualquer escrita em /api sem chegar a ele, mas nem se tenta).
+    arq: '27-presenca-direto', sessao: true, rota: () => '/home', caminho: /^\/time\/[^/]+\?aba=jogos$/,
+    seletor: '[data-seu-time], [data-seus-times]', dica: 'o Início não mostrou o card "Seu time"/"Seus times" (a conta precisa ser admin de um time)',
+    depois: async (p) => {
+      const TIME = 'Missa de Quinta';
+      const linhaDoTime = p.locator('[data-time-linha]', { hasText: TIME });
+      const varios = (await linhaDoTime.count()) > 0; // "Seus times": a linha do time abre os atalhos ao toque
+      if (varios) await linhaDoTime.locator('button[aria-expanded]').click();
+      const alvo = (varios ? linhaDoTime : p.locator('[data-seu-time]', { hasText: TIME })).locator('[data-pendencia="presenca"]');
+      if (!(await alvo.count())) throw new Error(`o ${TIME} não mostra "presença ainda não aberta" agora (a presença de algum jogo já foi aberta? crie ou escolha um jogo sem presença)`);
+      const idDoJogo = new URL(await alvo.getAttribute('href'), BASE).searchParams.get('abrir-presenca');
+      if (!idDoJogo) throw new Error('a linha de presença chegou sem ?abrir-presenca=<jogo> (o motor local está velho? feche e reabra o LIGAR-FUTTY.bat)');
+      await alvo.click();
+      const campo = p.locator(`[data-jogo="${idDoJogo}"] input[type="datetime-local"]`);
+      await campo.waitFor({ timeout: 25000 }).catch(() => { throw new Error(`o "Abrir presença" do jogo ${idDoJogo} não abriu`); });
+      await p.locator(`[data-jogo="${idDoJogo}"].jogo-destaque`).waitFor({ timeout: 5000 }).catch(() => { throw new Error('o cartão do jogo não ganhou o destaque'); });
+      await espera(500);
+      const dentro = await p.evaluate((id) => { const r = document.querySelector(`[data-jogo="${id}"]`).getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight; }, idDoJogo);
+      if (!dentro) throw new Error('o cartão do jogo não está inteiro na tela (a rolagem até ele não chegou)');
     },
   },
 ];

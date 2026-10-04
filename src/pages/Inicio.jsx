@@ -1110,11 +1110,11 @@ export default function Inicio() {
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#f0c94a' }}>
-                {votacaoTop.pedido_revotacao ? `A ${votacaoTop.nome} pediu nova avaliação` : 'Você tem colegas para avaliar'}
+                {votacaoTop.pedido_revotacao ? `Nova temporada de notas no ${votacaoTop.nome}` : 'Você tem colegas para avaliar'}
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                 {votacaoTop.pedido_revotacao
-                  ? 'Dê sua nota aos companheiros do último jogo.'
+                  ? 'Dê sua nota aos companheiros.'
                   : `${plural(votacaoTop.faltam, 'Falta', 'Faltam')} ${votacaoTop.faltam} na ${votacaoTop.nome}: sua nota conta para o ranking.`}
               </span>
             </span>

@@ -3245,3 +3245,15 @@
 @media (max-width: 340px) {
   .aba-time { font-size: 12px; padding: 0 4px; letter-spacing: 0; }
 }
+
+/* Rodada 29R (achado 147): o jogo que a linha "presença ainda não aberta" do Início apontou (aba Jogos do admin). Um anel dourado que
+   acende e some em 2,4 s; a classe sai do cartão aos 2,6 s (AdminPanel, TabJogos). Estado natural = cartão normal, nada fica escondido.
+   Movimento reduzido: sem animação, só a borda dourada fixa enquanto a classe estiver lá (o !important vence o estilo em linha do cartão). */
+.jogo-destaque { animation: jogoDestaque 2.4s ease-out 1; }
+@keyframes jogoDestaque {
+  0%, 40% { border-color: rgba(212, 160, 23, 0.95); box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.55), 0 0 18px rgba(212, 160, 23, 0.32); }
+  100% { border-color: rgba(255, 255, 255, 0.10); box-shadow: 0 0 0 0 rgba(212, 160, 23, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jogo-destaque { animation: none; border-color: rgba(212, 160, 23, 0.95) !important; }
+}

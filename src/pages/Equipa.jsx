@@ -5,7 +5,7 @@
 // era o painel /admin/<slug> mora nelas: Jogos (+ resultados + campeonato), Elenco (+ convites) e Ajustes (só o admin vê, com o selo
 // ADMIN). A aba fica no endereço (?aba=elenco), trocar de aba não empilha histórico, e "Voltar" volta para onde a pessoa estava.
 // As partes do admin vêm de pages/AdminPanel.jsx em lazy: quem não é admin não baixa nada delas.
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
@@ -154,9 +154,21 @@ export default function Equipa() {
       const p = new URLSearchParams(prev);
       p.set('aba', k);
       p.delete('convidar');
+      p.delete('abrir-presenca');
       return p;
     }, { replace: true });
   }
+  // Rodada 29R (achado 147): a linha "presença ainda não aberta" do Início chega com ?abrir-presenca=<game_id>. A aba Jogos rola até o
+  // jogo e abre o "Abrir presença" dele; depois de usado o parâmetro sai do endereço (troca a entrada do histórico, não empilha), então
+  // "Voltar" e recarregar não reabrem nada.
+  const abrirPresencaDe = searchParams.get('abrir-presenca');
+  const usouAbrirPresenca = useCallback(() => {
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.delete('abrir-presenca');
+      return p;
+    }, { replace: true });
+  }, [setSearchParams]);
   const [versaoConvites, setVersaoConvites] = useState(0); // o "Convidar" gerou um link → a lista de links ativos recarrega
   const { perfil: me } = usePerfil();
   const [confirmarSaida, setConfirmarSaida] = useState(false);
@@ -360,7 +372,7 @@ export default function Equipa() {
             {aba === 'jogos' ? (
               ehAdmin ? (
                 <Suspense fallback={<LoadingFutty />}>
-                  <JogosDoAdmin slug={slug} team={team} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} navigate={navigate} />
+                  <JogosDoAdmin slug={slug} team={team} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} navigate={navigate} abrirPresencaDe={abrirPresencaDe} aoUsarAbrirPresenca={usouAbrirPresenca} />
                 </Suspense>
               ) : (
                 <JogosDoTime slug={slug} />

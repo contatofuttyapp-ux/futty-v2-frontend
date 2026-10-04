@@ -4,14 +4,15 @@
 //   · Dashboard            → card "Seu time" no Início (pendências + Novo jogo · Sortear · Convidar · Ajustes)
 //   · Jogos + Resultados + Campeonato → aba JOGOS da página do time (JogosDoAdmin)
 //   · Membros + Convites   → aba ELENCO (ElencoDoAdmin; as ações de cada membro abrem com um toque no nome, sem o "⋯")
-//   · Time + Comunicação + Denúncias + Zona de perigo → aba AJUSTES (AjustesDoTime; a zona virou AÇÕES DEFINITIVAS)
+//   · Time + Comunicação + Denúncias + Zona de perigo → aba AJUSTES (AjustesDoTime; a zona virou AÇÕES DEFINITIVAS e, na 29R, a única
+//     ação dela virou o cartão "Nova temporada de notas")
 //   · Estatísticas         → Ranking do time (EstatisticasDoTime), para o admin
 // /admin/<slug>?tab=… (link antigo, favorito) continua valendo: leva à aba nova (lib/rotasAntigas.js#caminhoDoAdminAntigo).
 // A página do time carrega este arquivo só para quem é admin (lazy): o jogador não paga por ele.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, ChevronRight, ShieldCheck, ShieldOff, RotateCcw, UserMinus } from 'lucide-react';
+import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, ChevronRight, ShieldCheck, ShieldOff, RotateCcw, UserMinus, Star } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { SEM_NOTA_AINDA, formatDateTime, STATUS_LABELS } from '../utils/format';
@@ -1176,13 +1177,16 @@ function ListaUsers({ users, titulo }) {
 }
 
 // Gestão do RSVP de um jogo (admin): abrir / acompanhar / fechar / sortear.
-function RSVPAdmin({ gameId, slug, navigate, showToast }) {
+// Rodada 29R (achado 147): `abrirInicial` = a pessoa chegou pela linha "presença ainda não aberta" do Início; o "Abrir presença" deste jogo
+// já nasce aberto e, quando o cartão tem a forma final (a presença carregou), `aoPronto` rola até ele e o destaca. Só vale no nascimento.
+function RSVPAdmin({ gameId, slug, navigate, showToast, abrirInicial = false, aoPronto = null }) {
   const [info, setInfo] = useState(null);
   const [erro, setErro] = useState('');
   const [busy, setBusy] = useState(false);
-  const [abrirModal, setAbrirModal] = useState(false);
+  const [abrirModal, setAbrirModal] = useState(abrirInicial);
   const [prazoInput, setPrazoInput] = useState('');
   const [confirmarFechar, setConfirmarFechar] = useState(false);
+  const faltaAvisarPronto = useRef(abrirInicial);
 
   const carregar = useCallback(async () => {
     try {
@@ -1207,6 +1211,13 @@ function RSVPAdmin({ gameId, slug, navigate, showToast }) {
       ativo = false;
     };
   }, [gameId]);
+
+  // 29R: com a presença carregada (ou o erro dela na tela) o cartão não muda mais de altura; é a hora de rolar até ele. Uma vez só.
+  useEffect(() => {
+    if (!faltaAvisarPronto.current || !(info || erro)) return;
+    faltaAvisarPronto.current = false;
+    aoPronto?.(gameId);
+  }, [info, erro, aoPronto, gameId]);
 
   // Polling de 30s enquanto o RSVP está aberto (atualização em tempo real).
   useEffect(() => {
@@ -1404,13 +1415,32 @@ function FormRecorrentes({ slug, fuso, cidade, showToast, onClose, onCriado }) {
   );
 }
 
-function TabJogos({ slug, team, showToast, navigate }) {
+function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoUsarAbrirPresenca = null }) {
   const fuso = team?.fuso;
   const [games, setGames] = useState(null);
   const [editar, setEditar] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null);
   const [motivoCancel, setMotivoCancel] = useState('');
   const [lancar, setLancar] = useState(null); // o jogo do "Lançar resultado" (era a aba Resultados)
+  const [destaque, setDestaque] = useState(null); // 29R: o jogo que a linha do Início apontou, em destaque por um instante
+
+  // Rodada 29R (achado 147): o parâmetro vale UMA vez. Com a lista na tela (o RSVPAdmin do jogo certo acabou de nascer lendo-o), sai do
+  // endereço — achado ou não (jogo cancelado, já passado ou de outro time): voltar e recarregar não reabrem nada.
+  useEffect(() => {
+    if (games !== null && abrirPresencaDe) aoUsarAbrirPresenca?.();
+  }, [games, abrirPresencaDe, aoUsarAbrirPresenca]);
+
+  const destacarJogo = useCallback((id) => {
+    const cartao = [...document.querySelectorAll('[data-jogo]')].find((el) => el.getAttribute('data-jogo') === String(id));
+    const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    cartao?.scrollIntoView({ block: 'center', behavior: reduzido ? 'auto' : 'smooth' });
+    setDestaque(id);
+  }, []);
+  useEffect(() => {
+    if (!destaque) return undefined;
+    const t = setTimeout(() => setDestaque(null), 2600);
+    return () => clearTimeout(t);
+  }, [destaque]);
 
   useEffect(() => {
     let ativo = true;
@@ -1503,7 +1533,7 @@ function TabJogos({ slug, team, showToast, navigate }) {
                 );
               }
               return (
-                <div key={g.id} data-jogo={g.id} style={{ ...CARD, padding: 12 }}>
+                <div key={g.id} data-jogo={g.id} className={destaque === g.id ? 'jogo-destaque' : undefined} style={{ ...CARD, padding: 12 }}>
                   <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
                     {formatDateTime(g.data, fuso)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
@@ -1526,7 +1556,7 @@ function TabJogos({ slug, team, showToast, navigate }) {
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
                     <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>Cancelar jogo</button>
                   </div>
-                  <RSVPAdmin gameId={g.id} slug={slug} navigate={navigate} showToast={showToast} />
+                  <RSVPAdmin gameId={g.id} slug={slug} navigate={navigate} showToast={showToast} abrirInicial={!!abrirPresencaDe && String(g.id) === String(abrirPresencaDe)} aoPronto={destacarJogo} />
                 </div>
               );
             })}
@@ -2004,7 +2034,11 @@ function NotificacoesDoAdmin({ showToast }) {
   );
 }
 
-// ─── AJUSTES → AÇÕES DEFINITIVAS (nome do dono, no lugar de "Zona de perigo") ──
+// ─── AJUSTES → NOVA TEMPORADA DE NOTAS ──────────────────────────────────────────
+// Rodada 29R (achado 150, dono): era "Pedir para votar de novo", em vermelho dentro de "Ações definitivas" — parecia "excluir a conta".
+// Agora é "Nova temporada de notas": cartão próprio, botão dourado da casa. O perigo (zera as notas, sem volta) fica dito só na
+// confirmação, que segue vermelha. O motor não mudou: POST pedir-revotacao com zerar: true. (O nome do componente e o data-attribute
+// ficaram os de antes: as provas apontam para eles.)
 function PedirVotarDeNovo({ slug, showToast }) {
   const [confirmar, setConfirmar] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -2013,7 +2047,7 @@ function PedirVotarDeNovo({ slug, showToast }) {
     setBusy(true);
     try {
       await apiFetch(`/api/teams/${slug}/pedir-revotacao`, { method: 'POST', body: JSON.stringify({ zerar: true }) });
-      showToast('Notas zeradas. O time foi avisado para votar de novo.');
+      showToast('Nova temporada aberta. O time foi avisado para dar as notas.');
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -2021,16 +2055,17 @@ function PedirVotarDeNovo({ slug, showToast }) {
     }
   }
   return (
-    <div style={{ ...CARD, padding: 14, borderColor: 'rgba(239,68,68,0.4)', display: 'grid', gap: 8 }}>
-      <button type="button" disabled={busy} onClick={() => setConfirmar(true)} data-pedir-votar-de-novo style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--danger)', background: 'transparent', color: '#fda4af', fontWeight: 700, cursor: 'pointer' }}>
-        {busy ? 'Zerando…' : 'Pedir para votar de novo'}
+    <div style={{ ...CARD, padding: 14, display: 'grid', gap: 10 }}>
+      <button type="button" disabled={busy} onClick={() => setConfirmar(true)} data-pedir-votar-de-novo className="btn hud-corners-s cta-gold" style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <Star size={18} aria-hidden="true" />
+        {busy ? 'Abrindo…' : 'Nova temporada de notas'}
       </button>
-      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Zera as notas de todo mundo no time e pede para cada um votar de novo. Não dá para desfazer.</span>
+      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Zera as notas e o time avalia todo mundo de novo, do zero.</span>
       {confirmar ? (
         <ConfirmModal
-          texto="Zerar as notas do time e pedir para todo mundo votar de novo? Não dá para desfazer."
+          texto="Começar uma nova temporada? As notas de todo mundo voltam a zero. Não dá para desfazer."
           perigo
-          confirmarLabel="Zerar e pedir"
+          confirmarLabel="Zerar e começar"
           onConfirm={pedir}
           onCancel={() => setConfirmar(false)}
         />
@@ -2042,7 +2077,7 @@ function PedirVotarDeNovo({ slug, showToast }) {
 // ─── As abas da página do time (Rodada 29I, bloco 3) ─────────────────────────
 
 /** Aba JOGOS do admin: "Novo jogo" é a ação principal (o dourado); recorrentes e campeonato, secundários no topo; depois a lista. */
-export function JogosDoAdmin({ slug, team, showToast, navigate }) {
+export function JogosDoAdmin({ slug, team, showToast, navigate, abrirPresencaDe = null, aoUsarAbrirPresenca = null }) {
   const [painel, setPainel] = useState(null); // 'recorrentes' | 'campeonato'
   const [versao, setVersao] = useState(0); // remonta a lista depois de criar os recorrentes
   const alternar = (k) => setPainel((p) => (p === k ? null : k));
@@ -2062,7 +2097,7 @@ export function JogosDoAdmin({ slug, team, showToast, navigate }) {
         <FormRecorrentes slug={slug} fuso={team?.fuso} cidade={team?.cidade} showToast={showToast} onClose={() => setPainel(null)} onCriado={async () => setVersao((v) => v + 1)} />
       ) : null}
       {painel === 'campeonato' ? <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} /> : null}
-      <TabJogos key={versao} slug={slug} team={team} showToast={showToast} navigate={navigate} />
+      <TabJogos key={versao} slug={slug} team={team} showToast={showToast} navigate={navigate} abrirPresencaDe={abrirPresencaDe} aoUsarAbrirPresenca={aoUsarAbrirPresenca} />
     </div>
   );
 }
@@ -2094,7 +2129,7 @@ export function ElencoDoAdmin({ slug, meId, showToast, versaoConvites = 0 }) {
   );
 }
 
-/** Aba AJUSTES (só admin): o time, admins, notificações do admin, avisar o time, denúncias e, no fim, AÇÕES DEFINITIVAS. */
+/** Aba AJUSTES (só admin): o time, admins, notificações do admin, avisar o time, denúncias e, no fim, a Nova temporada de notas. */
 export function AjustesDoTime({ slug, team, members = [], showToast, onMudou }) {
   const admins = members.filter((m) => m.role === 'admin');
   return (
@@ -2123,7 +2158,8 @@ export function AjustesDoTime({ slug, team, members = [], showToast, onMudou }) 
         <ModeracaoFila slug={slug} />
         <TabDenuncias showToast={showToast} />
       </Secao>
-      <Secao titulo="Ações definitivas" perigo>
+      {/* 29R: cartão próprio. "Ações definitivas" só tinha esta ação; sem ela a seção ficaria vazia e saiu. */}
+      <Secao titulo="Notas do time">
         <PedirVotarDeNovo slug={slug} showToast={showToast} />
       </Secao>
     </div>
