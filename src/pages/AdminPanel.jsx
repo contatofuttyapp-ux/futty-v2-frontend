@@ -31,6 +31,7 @@ import { nomeCampeao } from '../utils/campeonato';
 import { celebrarCerveja } from '../hooks/useConfetti';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
 import { EscolhaPapel, TEXTO_ADMIN_E_POSICAO } from '../components/EscolhaLinhaGol';
+import { ARTILHEIRO, DESTAQUE, GOLS, alternarArtilheiro, alternarGols } from '../components/golsEPremios';
 import CampoBairro from '../components/CampoBairro';
 import { avisoDaCidade } from '../utils/cidades';
 import { TEXTO_APOIO_BAIRRO, avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
@@ -484,19 +485,18 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
     }
   }
 
-  // "Mostrar gols" — equipa casual pode esconder gols/artilharia (radar, tiles, perfil).
+  // "Gols de cada um" (29O): desligar leva o artilheiro junto, no mesmo pedido (o motor recusa "gols desligados, artilheiro ligado").
+  // Religar os gols NÃO religa o artilheiro: quem decide é a pessoa.
   async function guardarMostrarGols(v) {
     const golsAntes = mostrarGols;
     const artilheiroAntes = mostrarArtilheiro;
-    // Achado 78 (decisão do dono): desligar os gols desliga o artilheiro junto (o troféu faz parte dos gols), e as duas chaves vão no
-    // mesmo pedido — o motor recusa a combinação "gols desligados, artilheiro ligado". Religar os gols NÃO religa o artilheiro: quem decide
-    // é a pessoa, no botão dele.
-    const desligaArtilheiroJunto = !v && artilheiroAntes;
-    setMostrarGols(v);
-    if (desligaArtilheiroJunto) setMostrarArtilheiro(false);
+    const novo = alternarGols(artilheiroAntes, v);
+    const desligaArtilheiroJunto = artilheiroAntes && !novo.mostrarArtilheiro;
+    setMostrarGols(novo.mostrarGols);
+    setMostrarArtilheiro(novo.mostrarArtilheiro);
     try {
       await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ mostrar_gols: v, ...(desligaArtilheiroJunto ? { mostrar_artilheiro: false } : {}) }) });
-      showToast(v ? 'Gols visíveis.' : desligaArtilheiroJunto ? 'Gols escondidos. O artilheiro do dia foi desligado junto.' : 'Gols escondidos.');
+      showToast(v ? 'Gols de cada um ligados.' : desligaArtilheiroJunto ? 'Gols de cada um desligados. O artilheiro do dia foi desligado junto.' : 'Gols de cada um desligados.');
     } catch (err) {
       setMostrarGols(golsAntes);
       setMostrarArtilheiro(artilheiroAntes);
@@ -504,16 +504,32 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
     }
   }
 
-  // Os dois prêmios do dia (29H, item 44): guarda ao tocar, como "Mostrar gols"; reverte em erro (sem a migração 073 o motor
-  // diz "ainda não está disponível").
-  async function guardarPremio(campo, v, definir, mensagem) {
-    const anterior = campo === 'mostrar_artilheiro' ? mostrarArtilheiro : mostrarDestaque;
-    definir(v);
+  // Ligar o artilheiro liga os gols junto, no mesmo pedido (o motor recusa "gols desligados, artilheiro ligado").
+  async function guardarArtilheiro(v) {
+    const golsAntes = mostrarGols;
+    const artilheiroAntes = mostrarArtilheiro;
+    const novo = alternarArtilheiro(golsAntes, v);
+    const ligaGolsJunto = novo.mostrarGols !== golsAntes;
+    setMostrarGols(novo.mostrarGols);
+    setMostrarArtilheiro(novo.mostrarArtilheiro);
     try {
-      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ [campo]: v }) });
-      showToast(v ? mensagem.liga : mensagem.desliga);
+      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ mostrar_artilheiro: v, ...(ligaGolsJunto ? { mostrar_gols: true } : {}) }) });
+      showToast(v ? (ligaGolsJunto ? 'Gols de cada um e artilheiro do dia ligados.' : 'Artilheiro do dia ligado.') : 'Artilheiro do dia desligado.');
     } catch (err) {
-      definir(anterior);
+      setMostrarGols(golsAntes);
+      setMostrarArtilheiro(artilheiroAntes);
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function guardarDestaque(v) {
+    const anterior = mostrarDestaque;
+    setMostrarDestaque(v);
+    try {
+      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ mostrar_destaque: v }) });
+      showToast(v ? 'Destaque do dia ligado.' : 'Destaque do dia desligado.');
+    } catch (err) {
+      setMostrarDestaque(anterior);
       showToast(err.message, 'error');
     }
   }
@@ -559,7 +575,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
     <div style={{ display: 'grid', gap: 14 }}>
     <div style={{ ...CARD, padding: 14, display: 'grid', gap: 14 }}>
       <div style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Meu papel</span>
+        <span style={lbl}>Você também joga?</span>
         <EscolhaPapel joga={joga} ocupado={jogaOcupado} aoTrocar={guardarJoga} />
         {/* Item 69 (Rodada 29): "admin" e "posição em campo" são coisas separadas. */}
         <p className="texto-apoio" data-texto-admin-posicao style={{ marginTop: 0 }}>{TEXTO_ADMIN_E_POSICAO}</p>
@@ -684,57 +700,14 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{VIS_DESC[modo]}</span>
       </div>
 
-      {/* MOSTRAR GOLS */}
-      <div style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Mostrar gols</span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={mostrarGols}
-          aria-label="Mostrar gols"
-          onClick={() => guardarMostrarGols(!mostrarGols)}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${mostrarGols ? 'var(--neon)' : '#1a1a1a'}`, background: mostrarGols ? 'rgba(139,92,246,0.08)' : '#080808', color: '#fff' }}
-        >
-          <span style={{ fontSize: 13, fontWeight: 700 }}>{mostrarGols ? 'Gols visíveis' : 'Gols escondidos'}</span>
-          <span style={{ width: 40, height: 22, borderRadius: 999, background: mostrarGols ? 'var(--neon)' : '#333', position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
-            <span style={{ position: 'absolute', top: 2, left: mostrarGols ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
-          </span>
-        </button>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: esconde gols e artilharia (radar, perfil e blocos), e desliga o artilheiro do dia. Para futebol casual.</span>
-      </div>
+      {/* GOLS (29O): os mesmos títulos e frases do passo 2 do Criar time (golsEPremios.js). */}
+      <Interruptor ligado={mostrarGols} aoTrocar={guardarMostrarGols} rotulo={GOLS.titulo} apoio={GOLS.apoio} />
 
-      {/* PRÊMIOS DO DIA (29H, item 44): o editor de resultado só oferece o artilheiro / o destaque quando ligados. */}
-      <div style={{ display: 'grid', gap: 6 }}>
+      {/* PRÊMIOS DO DIA (29O): o editor de resultado só oferece o artilheiro / o destaque quando ligados. */}
+      <div style={{ display: 'grid', gap: 8 }}>
         <span style={lbl}>Prêmios do dia</span>
-        {[
-          { campo: 'mostrar_artilheiro', rotulo: 'Artilheiro do dia', valor: mostrarArtilheiro, definir: setMostrarArtilheiro, liga: 'Artilheiro do dia ligado.', desliga: 'Artilheiro do dia desligado.' },
-          { campo: 'mostrar_destaque', rotulo: 'Destaque do dia', valor: mostrarDestaque, definir: setMostrarDestaque, liga: 'Destaque do dia ligado.', desliga: 'Destaque do dia desligado.' },
-        ].map((p) => {
-          // O artilheiro fica apagado enquanto os gols estão desligados (achado 78): sem clique, com a razão escrita embaixo.
-          const apagado = p.campo === 'mostrar_artilheiro' && !mostrarGols;
-          return (
-          <button
-            key={p.campo}
-            type="button"
-            role="switch"
-            aria-checked={p.valor}
-            aria-label={p.rotulo}
-            aria-disabled={apagado}
-            disabled={apagado}
-            data-premio-do-time={p.campo}
-            onClick={() => guardarPremio(p.campo, !p.valor, p.definir, { liga: p.liga, desliga: p.desliga })}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: apagado ? 'not-allowed' : 'pointer', opacity: apagado ? 0.5 : 1, border: `1px solid ${p.valor ? 'var(--neon)' : '#1a1a1a'}`, background: p.valor ? 'rgba(139,92,246,0.08)' : '#080808', color: '#fff' }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 700, textAlign: 'left' }}>
-              {p.rotulo}
-              {apagado ? <span data-premio-apagado style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-dim)', marginTop: 2 }}>Precisa dos gols ligados.</span> : null}
-            </span>
-            <span style={{ width: 40, height: 22, borderRadius: 999, background: p.valor ? 'var(--neon)' : '#333', position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
-              <span style={{ position: 'absolute', top: 2, left: p.valor ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
-            </span>
-          </button>
-          );
-        })}
+        <Interruptor ligado={mostrarArtilheiro} aoTrocar={guardarArtilheiro} rotulo={ARTILHEIRO.titulo} apoio={ARTILHEIRO.apoio} />
+        <Interruptor ligado={mostrarDestaque} aoTrocar={guardarDestaque} rotulo={DESTAQUE.titulo} apoio={DESTAQUE.apoio} />
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: o editor de resultado não oferece o troféu nem o destaque. O que já foi premiado continua no histórico.</span>
       </div>
 

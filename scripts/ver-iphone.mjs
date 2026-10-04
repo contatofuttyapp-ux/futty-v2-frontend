@@ -9090,23 +9090,19 @@ async function cenaRodada29bOrganiza(navegador) {
   const respostaDoPost = (joga) => (caminho, metodo) => (metodo === 'POST' && caminho === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' }, joga } : null);
   const chips = (pagina, sel = '[data-escolha-papel]') => pagina.locator(`${sel} button`).evaluateAll((els) => els.map((b) => ({ t: b.textContent.trim(), ativo: b.getAttribute('aria-pressed') === 'true' })));
 
-  // 1) criar o time: "Eu jogo" (padrão) / "Só organizo o time" — com o texto que explica
+  // 1) criar o time: "Sim, eu jogo" (padrão) / "Não, só organizo" — sem texto embaixo dos chips (29O)
   {
     const { contexto, pagina, escritas } = await abrir('/criar-time', { extra: respostaDoPost(false) }, 'criar-organiza');
     await criarAtePapel(pagina, 'Time do Organizador');
     const c = await chips(pagina);
-    verificar('criar time, passo 2: "Eu jogo" é o padrão e há "Só organizo o time"', c.length === 2 && c[0].t === 'Eu jogo' && c[0].ativo && c[1].t === 'Só organizo o time' && !c[1].ativo, JSON.stringify(c));
-    // 29H (item 43): o texto de apoio acompanha a opção marcada — com "Eu jogo" (padrão) diz o que ela faz, e só ao marcar
-    // "Só organizo o time" diz que não entra na presença, no sorteio nem no ranking.
+    verificar('criar time, passo 2: "Sim, eu jogo" é o padrão e há "Não, só organizo"', c.length === 2 && c[0].t === 'Sim, eu jogo' && c[0].ativo && c[1].t === 'Não, só organizo' && !c[1].ativo, JSON.stringify(c));
     const tJoga = await texto(pagina);
-    verificar('criar time: com "Eu jogo" o texto diz que entra na presença, no sorteio e no ranking (não o de "só organizo")', /Você joga e também cuida de tudo: entra na lista de presença, no sorteio e no ranking/.test(tJoga) && !/não ocupa vaga no pacote/.test(tJoga));
+    verificar('criar time: o papel não tem texto embaixo dos chips (29O)', !/Você joga e também cuida de tudo/.test(tJoga) && !/não ocupa vaga no pacote/.test(tJoga));
     await capturar(pagina, '1-criar-papel');
-    await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Não, só organizo' }).tap();
     await espera(450);
-    const t = await texto(pagina);
-    verificar('criar time: com "Só organizo o time" o texto explica (não entra na presença, no sorteio nem no ranking; nem vaga do pacote)', /não entra na lista de presença, no sorteio nem no ranking/.test(t) && /não ocupa vaga no pacote de figurinhas/.test(t) && /Dá para mudar depois/.test(t));
     const c2 = await chips(pagina);
-    verificar('tocar em "Só organizo o time" troca o chip ativo', c2[1].ativo && !c2[0].ativo, JSON.stringify(c2));
+    verificar('tocar em "Não, só organizo" troca o chip ativo', c2[1].ativo && !c2[0].ativo, JSON.stringify(c2));
     await capturar(pagina, '2-criar-so-organizo');
     await terminarCriacao(pagina);
     const post = corpoCompleto(escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/teams'));
@@ -9125,7 +9121,7 @@ async function cenaRodada29bOrganiza(navegador) {
     // o motor sem a migração 067 cria o time com o criador jogando e responde joga: true
     const { contexto, pagina } = await abrir('/criar-time', { extra: respostaDoPost(true) }, 'criar-sem-067');
     await criarAtePapel(pagina, 'Time Sem 067');
-    await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Não, só organizo' }).tap();
     await terminarCriacao(pagina);
     // 29H (item 46): o aviso era um toast de 2 s, ilegível — agora é texto fixo na tela do passo 4 (nenhum toast).
     await pagina.locator('[data-aviso-papel]').waitFor({ timeout: 8000 }).catch(() => {});
@@ -9134,7 +9130,7 @@ async function cenaRodada29bOrganiza(navegador) {
     await contexto.close();
   }
 
-  // 2) painel do time: "Meu papel" muda na hora e reverte se o motor recusar
+  // 2) painel do time: "Você também joga?" muda na hora e reverte se o motor recusar
   {
     const falharJoga = { ligado: false };
     const { contexto, pagina, patches } = await abrir(`/admin/${slug}?tab=time`, {
@@ -9144,18 +9140,18 @@ async function cenaRodada29bOrganiza(navegador) {
     await pagina.locator('[data-escolha-papel]').waitFor({ timeout: 30000 });
     await espera(500);
     const c = await chips(pagina);
-    verificar('painel: "Meu papel" abre com "Só organizo o time" marcado (o motor diz joga: false)', c.length === 2 && c[1].ativo && !c[0].ativo, JSON.stringify(c));
+    verificar('painel: "Você também joga?" abre com "Não, só organizo" marcado (o motor diz joga: false)', c.length === 2 && c[1].ativo && !c[0].ativo, JSON.stringify(c));
     await capturar(pagina, '3-painel-so-organizo');
-    await pagina.locator('[data-escolha-papel] button', { hasText: 'Eu jogo' }).tap();
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Sim, eu jogo' }).tap();
     await espera(900);
     verificar('painel: tocar em "Eu jogo" grava PATCH .../membros/joga { joga: true }', patches.length === 1 && patches[0].joga === true, JSON.stringify(patches));
     verificar('painel: o aviso "Você voltou a jogar."', /Você voltou a jogar\./.test(await texto(pagina)));
-    await pagina.locator('[data-escolha-papel] button', { hasText: 'Só organizo o time' }).tap();
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Não, só organizo' }).tap();
     await pagina.getByText('Agora você só organiza o time.').first().waitFor({ timeout: 6000 }).catch(() => {});
-    verificar('painel: tocar em "Só organizo o time" grava { joga: false } e avisa', patches.length === 2 && patches[1].joga === false && /Agora você só organiza o time\./.test(await texto(pagina)), JSON.stringify(patches));
+    verificar('painel: tocar em "Não, só organizo" grava { joga: false } e avisa', patches.length === 2 && patches[1].joga === false && /Agora você só organiza o time\./.test(await texto(pagina)), JSON.stringify(patches));
     // o motor recusa (sem a 067): o chip volta e o motivo aparece
     falharJoga.ligado = true;
-    await pagina.locator('[data-escolha-papel] button', { hasText: 'Eu jogo' }).tap();
+    await pagina.locator('[data-escolha-papel] button', { hasText: 'Sim, eu jogo' }).tap();
     await espera(1200);
     const depois = await chips(pagina);
     verificar('painel: se o motor recusa, o chip VOLTA ao que era (não finge que trocou)', depois[1].ativo && !depois[0].ativo, JSON.stringify(depois));

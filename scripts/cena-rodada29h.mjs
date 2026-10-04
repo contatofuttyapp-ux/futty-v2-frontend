@@ -410,26 +410,25 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await capturar(pagina, 'F1-criar-bairro');
     await pagina.getByRole('button', { name: 'Continuar' }).tap();
 
-    // passo 2: papel (texto por opção) e os dois prêmios clicáveis
+    // passo 2 (29O): o papel sem texto embaixo; gols, artilheiro e destaque nascem desligados; ligar o artilheiro liga os gols junto
     await pagina.locator('[data-escolha-papel]').waitFor({ timeout: 15000 });
-    const textoPapel = async () => (await pagina.locator('[data-texto-papel]').innerText()).trim();
-    const joga = await textoPapel();
-    await pagina.getByRole('button', { name: 'Só organizo o time' }).tap();
-    const organiza = await textoPapel();
-    await pagina.getByRole('button', { name: 'Eu jogo' }).tap();
-    const jogaDeNovo = await textoPapel();
-    verificar('F · o texto do papel acompanha a opção (Eu jogo → só organizo → Eu jogo)', /^Você joga e também cuida de tudo/.test(joga) && /^Você cuida de tudo, mas não entra na lista de presença/.test(organiza) && jogaDeNovo === joga && joga !== organiza, JSON.stringify({ joga, organiza }));
-    await pagina.getByRole('button', { name: 'Só organizo o time' }).tap();
+    const semTextoNoPapel = (await pagina.locator('[data-texto-papel]').count()) === 0;
+    await pagina.getByRole('button', { name: 'Sim, eu jogo' }).tap();
+    await pagina.getByRole('button', { name: 'Não, só organizo' }).tap();
+    const organizaAtivo = await pagina.getByRole('button', { name: 'Não, só organizo' }).getAttribute('aria-pressed');
+    verificar('F · o papel não tem texto embaixo dos chips, e "Sim, eu jogo" / "Não, só organizo" trocam', semTextoNoPapel && organizaAtivo === 'true', JSON.stringify({ semTextoNoPapel, organizaAtivo }));
+    const gols = pagina.getByRole('button', { name: 'Gols de cada um' });
     const art = pagina.getByRole('button', { name: 'Artilheiro do dia' });
     const dest = pagina.getByRole('button', { name: 'Destaque do dia' });
-    const antes = [await art.getAttribute('aria-pressed'), await dest.getAttribute('aria-pressed')];
-    const habilitados = [await art.isEnabled(), await dest.isEnabled()];
+    const antes = [await gols.getAttribute('aria-pressed'), await art.getAttribute('aria-pressed'), await dest.getAttribute('aria-pressed')];
+    const habilitados = [await gols.isEnabled(), await art.isEnabled(), await dest.isEnabled()];
     await art.tap();
+    const depoisArt = [await gols.getAttribute('aria-pressed'), await art.getAttribute('aria-pressed')];
     await dest.tap();
-    const depois = [await art.getAttribute('aria-pressed'), await dest.getAttribute('aria-pressed')];
-    verificar('F · "Artilheiro do dia" e "Destaque do dia" são botões de verdade: ligados de saída, clicáveis, e desligam ao toque', habilitados.every(Boolean) && antes.join() === 'true,true' && depois.join() === 'false,false', JSON.stringify({ habilitados, antes, depois }));
-    const apoios = await pagina.locator('[data-premio] .texto-apoio').allInnerTexts();
-    verificar('F · a frase de cada prêmio diz o efeito da escolha ("sem troféu…" / "sem destaque…")', apoios.join('|') === 'sem troféu de artilheiro nos jogos|sem destaque do dia nos jogos', apoios.join('|'));
+    const depois = [await gols.getAttribute('aria-pressed'), await art.getAttribute('aria-pressed'), await dest.getAttribute('aria-pressed')];
+    verificar('F · os três nascem desligados; ligar o artilheiro liga os gols junto; os três são botões de verdade', habilitados.every(Boolean) && antes.join() === 'false,false,false' && depoisArt.join() === 'true,true' && depois.join() === 'true,true,true', JSON.stringify({ habilitados, antes, depoisArt, depois }));
+    const apoios = await pagina.locator('[data-jogo-item] .texto-apoio').allInnerTexts();
+    verificar('F · cada linha diz o que faz, com a frase fixa (29O)', apoios.join('|') === 'Registra quantos gols cada jogador marcou.|Quem fez mais gols no jogo ganha o troféu.|O jogador que fez a diferença em campo, escolhido por você.', apoios.join('|'));
     await capturar(pagina, 'F2-papel-e-premios');
     await pagina.getByRole('button', { name: 'Continuar' }).tap();
 
@@ -445,7 +444,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     const post = escritaDe(escritas, 'POST', '/api/teams')[0];
     let corpo = {};
     try { corpo = JSON.parse(post?.corpo || '{}'); } catch { /* cortado em 200 caracteres */ }
-    verificar('F · o POST leva o bairro, os dois prêmios desligados e "só organizo"', /"bairro":"Savassi"/.test(post?.corpo || '') && /"mostrar_artilheiro":false/.test(post?.corpo || '') && /"mostrar_destaque":false/.test(post?.corpo || '') && /"joga":false/.test(post?.corpo || '') || (corpo.bairro === 'Savassi'), post?.corpo || '(sem POST)');
+    verificar('F · o POST leva o bairro e "só organizo"; os prêmios ligados por toque não vão desligados', /"bairro":"Savassi"/.test(post?.corpo || '') && /"joga":false/.test(post?.corpo || '') && !/"mostrar_artilheiro":false/.test(post?.corpo || '') && !/"mostrar_destaque":false/.test(post?.corpo || '') || (corpo.bairro === 'Savassi'), post?.corpo || '(sem POST)');
     const patch = escritaDe(escritas, 'PATCH', '/api/teams/prova-r29h')[0];
     verificar('F · a política "Só com a sua aprovação" vai no PATCH (publico_aprovacao)', /publico_aprovacao/.test(patch?.corpo || ''), patch?.corpo || '(sem PATCH)');
     // passo 4: avisos como TEXTO NA TELA (item 46), nunca toast
@@ -638,7 +637,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     const respostas = (caminho, metodo, corpoCompleto) => (metodo === 'PATCH' && caminho === `/api/teams/${slug}` && (corposDoPatch.push(corpoCompleto || ''), true) ? { team: { id: idDoTime, slug, nome: NOME, cidade: 'Lisboa, Portugal', bairro: 'Alvalade' }, geo: { encontrada: true, nomeOficial: 'Lisboa, Portugal' }, bairro: { encontrado: true, nomeOficial: 'Alvalade, Lisboa, Portugal' } } : null);
     const { contexto, pagina, escritas } = await abrir(fx.gratis, 'K-admin', `/admin/${slug}?tab=time`, { respostas });
     await pagina.getByText('Bairro').first().waitFor({ timeout: 30000 });
-    const premios = pagina.locator('[data-premio-do-time]');
+    const premios = pagina.getByRole('switch', { name: /^(Artilheiro do dia|Destaque do dia)$/ });
     verificar('K · painel do time: "Prêmios do dia" — dois interruptores (Artilheiro do dia, Destaque do dia) ligados de saída', (await premios.count()) === 2 && (await premios.evaluateAll((els) => els.map((e) => e.getAttribute('aria-checked')))).join() === 'true,true');
     const textoVis = norm(await texto(pagina));
     verificar('K · os textos de entrada aprovados também no painel', textoVis.includes('Só entra quem receber o seu link de convite. Não aparece no Explorar.') || textoVis.includes('Quem achar o time no Explorar pede para entrar') || textoVis.includes('Qualquer um que achar o time no Explorar entra na hora.'), textoVis.slice(0, 100));

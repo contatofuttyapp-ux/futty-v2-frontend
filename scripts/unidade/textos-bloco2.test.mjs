@@ -93,16 +93,17 @@ test('77, 79, 81, 82 e 78 · a criação do time: "a cidade", 3/3, nome do botã
   assert.doesNotMatch(criar, /\[1, 2, 3, 4\]\.map/);
   assert.match(criar, /passo === 4 \? 'Pronto' : `\$\{passo\}\/3`/, '3/3, e a tela de convites diz "Pronto"');
   assert.doesNotMatch(criar, /\/4`/, 'nenhum "/4"');
-  assert.match(criar, /rotulo="Mostrar gols"/, 'o botão de gols tem nome (achado 81)');
+  assert.match(criar, /rotulo=\{titulo\}/, 'o botão de gols tem nome (achado 81)');
   assert.match(criar, /cursor: rest\.disabled \? 'not-allowed' : 'pointer'/, 'apagado = not-allowed (achado 82)');
   assert.match(criar, /Nome do time \(obrigatório\)/);
   assert.match(criar, /Cidade \(obrigatória em time aberto\)/);
   assert.match(criar, /Falta o nome do time\./);
   assert.match(criar, /Time aberto precisa de cidade\./);
-  // achado 78: desligar os gols desliga o artilheiro; religar os gols NÃO religa; o artilheiro apagado diz por quê
-  assert.match(criar, /if \(mostrarGols\) setMostrarArtilheiro\(false\); setMostrarGols\(!mostrarGols\)/);
-  assert.match(criar, /disabled=\{!mostrarGols\}/);
-  assert.match(criar, /'Precisa dos gols ligados\.'/);
+  // achado 78 (29O: regra nas funções puras de golsEPremios.js): o artilheiro nunca fica apagado, e a chave dele liga os gols junto
+  assert.match(criar, /alternarGols\(mostrarArtilheiro, ligar\)/);
+  assert.match(criar, /alternarArtilheiro\(mostrarGols, ligar\)/);
+  assert.doesNotMatch(criar, /disabled=\{!mostrarGols\}/);
+  assert.doesNotMatch(criar, /Precisa dos gols ligados/);
   assert.match(criar, /if \(!mostrarArtilheiro \|\| !mostrarGols\) bodyCriar\.mostrar_artilheiro = false/, 'nunca manda gols off com artilheiro on');
   // achado 80: a pergunta antes de sair, com o texto aprovado
   assert.match(criar, /Sair da criação\? Você perde o que preencheu\./);
@@ -112,9 +113,8 @@ test('78 · o painel do admin (Ajustes) segue a mesma regra: gols off desliga o 
   const painel = ler('src/pages/AdminPanel.jsx');
   assert.match(painel, /desligaArtilheiroJunto/);
   assert.match(painel, /mostrar_gols: v, \.\.\.\(desligaArtilheiroJunto \? \{ mostrar_artilheiro: false \} : \{\}\)/);
-  assert.match(painel, /const apagado = p\.campo === 'mostrar_artilheiro' && !mostrarGols;/);
-  assert.match(painel, /Precisa dos gols ligados\./);
-  assert.match(painel, /aria-label="Mostrar gols"/);
+  assert.doesNotMatch(painel, /Precisa dos gols ligados/);
+  assert.match(painel, /rotulo=\{GOLS\.titulo\}/, 'a chave de gols tem o nome do passo 2 (29O)');
 });
 
 test('101 · o número "por jogo" do painel diz do quê: confirmados por jogo', () => {

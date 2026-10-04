@@ -16,19 +16,19 @@ export const TEXTO_ADMIN_E_POSICAO = 'Admin é quem organiza o time. Não tem na
 export const TEXTO_APOIO_PAPEL = 'Você cuida de tudo, mas não entra na lista de presença, no sorteio nem no ranking, e não ocupa vaga no pacote de figurinhas. Dá para mudar depois.';
 export const TEXTO_APOIO_JOGA = 'Você joga e também cuida de tudo: entra na lista de presença, no sorteio e no ranking. Dá para mudar depois.';
 
-/** Os dois chips "Eu jogo" / "Só organizo o time" e o texto que explica. */
-export function EscolhaPapel({ joga, ocupado = false, aoTrocar }) {
+/** Os dois chips "Sim, eu jogo" / "Não, só organizo" e, salvo `semTexto`, o texto que explica a opção marcada. */
+export function EscolhaPapel({ joga, ocupado = false, aoTrocar, semTexto = false }) {
   return (
     <div data-escolha-papel>
-      <div role="group" aria-label="Seu papel no time" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div role="group" aria-label="Você também joga?" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" className={`chip ${joga ? 'chip--active' : ''}`} aria-pressed={joga} disabled={ocupado} onClick={() => aoTrocar(true)}>
-          Eu jogo
+          Sim, eu jogo
         </button>
         <button type="button" className={`chip ${!joga ? 'chip--active' : ''}`} aria-pressed={!joga} disabled={ocupado} onClick={() => aoTrocar(false)}>
-          Só organizo o time
+          Não, só organizo
         </button>
       </div>
-      <p className="texto-apoio" data-texto-papel={joga ? 'joga' : 'organiza'} style={{ marginTop: 8 }}>{joga ? TEXTO_APOIO_JOGA : TEXTO_APOIO_PAPEL}</p>
+      {semTexto ? null : <p className="texto-apoio" data-texto-papel={joga ? 'joga' : 'organiza'} style={{ marginTop: 8 }}>{joga ? TEXTO_APOIO_JOGA : TEXTO_APOIO_PAPEL}</p>}
     </div>
   );
 }

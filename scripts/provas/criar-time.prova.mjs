@@ -96,26 +96,30 @@ export async function rodar({ navegador, base, t }) {
     await page.context().close();
   }
 
-  // ── 4. Gols × artilheiro ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+  // ── 4. Gols, artilheiro e destaque (29O: tudo nasce desligado; ligar o artilheiro liga os gols; desligar os gols desliga o artilheiro) ──
   {
     const page = await nova();
     await entrar(page);
     await campoNome(page).fill('Gols FC');
     await page.getByRole('button', { name: 'Continuar' }).click(); await esperar(page);
-    const gols = page.getByRole('button', { name: 'Mostrar gols' });
+    const gols = page.getByRole('button', { name: 'Gols de cada um' });
     const art = page.getByRole('button', { name: 'Artilheiro do dia' });
-    t('"Mostrar gols" tem nome para leitor de tela (achado 81)', (await gols.count()) === 1);
-    t('os dois começam ligados', (await gols.getAttribute('aria-pressed')) === 'true' && (await art.getAttribute('aria-pressed')) === 'true' && !(await art.isDisabled()));
+    const dest = page.getByRole('button', { name: 'Destaque do dia' });
+    t('gols, artilheiro e destaque têm nome para leitor de tela (achado 81)', (await gols.count()) === 1 && (await art.count()) === 1 && (await dest.count()) === 1);
+    t('os três nascem desligados (29O)', (await gols.getAttribute('aria-pressed')) === 'false' && (await art.getAttribute('aria-pressed')) === 'false' && (await dest.getAttribute('aria-pressed')) === 'false');
+    const corpo = await texto(page);
+    t('cada um diz o que faz, com a frase fixa', /Registra quantos gols cada jogador marcou\./.test(corpo) && /Quem fez mais gols no jogo ganha o troféu\./.test(corpo) && /O jogador que fez a diferença em campo, escolhido por você\./.test(corpo));
+    t('sai o jargão: sem "Como funciona", "radar" nem "MVP"', !/Como funciona o seu time|radar|MVP/i.test(corpo));
+    t('o título do passo 2 fica só para leitor de tela (1px, fora da tela)', await page.getByRole('heading', { name: 'Passo 2 de 3' }).evaluate((el) => el.getBoundingClientRect().width <= 1));
+    t('o artilheiro nunca fica apagado (sem "Precisa dos gols ligados.")', !(await art.isDisabled()) && !/Precisa dos gols ligados\./.test(corpo));
+    await art.click();
+    t('ligar o artilheiro liga os gols junto', (await art.getAttribute('aria-pressed')) === 'true' && (await gols.getAttribute('aria-pressed')) === 'true');
     await gols.click();
-    t('desligar os gols desliga o artilheiro junto (achado 78)', (await art.getAttribute('aria-pressed')) === 'false');
-    t('...e o deixa apagado, com a linha "Precisa dos gols ligados."', (await art.isDisabled()) && /Precisa dos gols ligados\./.test(await texto(page)));
-    const cursorArt = await art.evaluate((el) => getComputedStyle(el).cursor);
-    t('o artilheiro apagado não parece clicável (not-allowed)', cursorArt === 'not-allowed', cursorArt);
+    t('desligar os gols desliga o artilheiro junto (achado 78)', (await gols.getAttribute('aria-pressed')) === 'false' && (await art.getAttribute('aria-pressed')) === 'false');
     await gols.click();
     t('religar os gols NÃO religa o artilheiro', (await gols.getAttribute('aria-pressed')) === 'true' && (await art.getAttribute('aria-pressed')) === 'false');
-    t('...mas libera o artilheiro para a pessoa decidir', !(await art.isDisabled()));
-    await art.click();
-    t('e ela liga se quiser', (await art.getAttribute('aria-pressed')) === 'true');
+    await dest.click();
+    t('o destaque liga sozinho, sem mexer nos gols', (await dest.getAttribute('aria-pressed')) === 'true' && (await gols.getAttribute('aria-pressed')) === 'true');
     await page.context().close();
   }
 
@@ -130,7 +134,6 @@ export async function rodar({ navegador, base, t }) {
     await entrar(page);
     await campoNome(page).fill('Criado FC');
     await page.getByRole('button', { name: 'Continuar' }).click(); await esperar(page);
-    await page.getByRole('button', { name: 'Mostrar gols' }).click(); // gols off (e artilheiro off junto)
     await page.getByRole('button', { name: 'Continuar' }).click(); await esperar(page);
     await page.getByRole('button', { name: /Aberto/ }).click();
     t('time aberto sem cidade: "Criar o time" apagado e diz por quê', (await page.getByRole('button', { name: 'Criar o time' }).isDisabled()) && /Time aberto precisa de cidade/.test(await texto(page)));
@@ -138,7 +141,7 @@ export async function rodar({ navegador, base, t }) {
     await page.getByRole('button', { name: 'Criar o time' }).click();
     await page.locator('text=Chame o seu time').waitFor({ timeout: 5000 });
     await esperar(page);
-    t('o POST leva mostrar_gols:false e mostrar_artilheiro:false juntos (nunca incoerente)', corpos.length === 1 && corpos[0].mostrar_gols === false && corpos[0].mostrar_artilheiro === false, JSON.stringify(corpos));
+    t('time criado sem tocar em nada: o POST leva os três desligados (29O)', corpos.length === 1 && corpos[0].mostrar_gols === false && corpos[0].mostrar_artilheiro === false && corpos[0].mostrar_destaque === false, JSON.stringify(corpos));
     t('depois de criar a tela de convites diz "Pronto" (e não "3/4")', (await progresso(page)) === 'Pronto' && !/\/4/.test(await texto(page)), await progresso(page));
     await page.goBack(); await esperar(page, 600);
     t('Voltar depois de criar sai da criação direto (não volta a passo nenhum nem pergunta)', (await page.locator('[data-casa]').count()) === 1 && (await page.locator('[data-sair-da-criacao]').count()) === 0, `${caminho(page)} ${await progresso(page)}`);

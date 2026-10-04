@@ -322,6 +322,23 @@ const TELAS = [
     arq: '21-404-sem-sessao', sessao: false, rota: () => ROTA_404, caminho: /./, permite: ['404'],
     seletor: 'text=Página não encontrada',
   },
+  {
+    // Rodada 29O: o passo 2 do Criar time, sem título nem subtítulo. Só avança com o nome; não grava nada (o time nasce no passo 3).
+    arq: '22-criar-time-passo-2', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: 'input[placeholder="ex.: Domingueira FC"]',
+    depois: async (p) => {
+      await p.locator('input[placeholder="ex.: Domingueira FC"]').fill('Time Teste');
+      await p.getByRole('button', { name: 'Continuar' }).click();
+      await p.getByText('Você também joga?').first().waitFor({ timeout: 10000 });
+      await espera(700);
+      const { rola, fundoDoContinuar } = await p.evaluate(() => {
+        const botao = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continuar');
+        return { rola: document.documentElement.scrollHeight > window.innerHeight + 1, fundoDoContinuar: botao ? Math.round(botao.getBoundingClientRect().bottom) : null };
+      });
+      if (rola || fundoDoContinuar === null || fundoDoContinuar > ALTURA) {
+        throw new Error(`o passo 2 não cabe em ${ALTURA} px sem rolar (rola: ${rola}; "Continuar" termina em ${fundoDoContinuar} px)`);
+      }
+    },
+  },
 ];
 
 async function conferir(pagina, t) {

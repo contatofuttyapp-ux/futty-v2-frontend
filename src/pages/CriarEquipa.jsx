@@ -2,8 +2,8 @@
 // A página antiga (formulário único com selector de cor) morreu: a cor é fallback
 // automático interno (o backend cai para 'verde'; muda-se nas definições do admin).
 // Passos: (1) nome + preview do escudo-iniciais ao vivo → POST /api/teams ·
-// (2) toggles "como funciona" (mostrar_gols, artilheiro e destaque do dia persistem — 29H, item 44: antes os dois últimos
-// eram chaves apagadas) · (3) política de entrada → PATCH modo_visibilidade · depois de criar, a tela de convites (link curto +
+// (2) "Você também joga?" e "O que contar nos jogos?" (gols, artilheiro e destaque do dia — tudo nasce desligado, 29O) ·
+// (3) política de entrada → PATCH modo_visibilidade · depois de criar, a tela de convites (link curto +
 // WhatsApp), que não é um passo da criação: o contador é 3/3 e ela diz "Pronto" (29I, achado 79).
 //
 // 29I (achado 80): cada passo é UMA entrada do histórico (location.state.passo) — o Voltar do sistema (Alt+seta, o gesto do Android, o
@@ -24,7 +24,9 @@ import { avisoLogoRecusado, motivoDoLogo } from '../utils/logoTime';
 import { copiarTexto } from '../utils/clipboard';
 import { enderecoDoWhatsapp, linkDoConvite } from '../utils/convite';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
+import { Star, Target, Trophy } from 'lucide-react';
 import { EscolhaPapel } from '../components/EscolhaLinhaGol';
+import { ARTILHEIRO, DESTAQUE, GOLS, alternarArtilheiro, alternarGols } from '../components/golsEPremios';
 import CampoBairro from '../components/CampoBairro';
 import { avisoDaCidade } from '../utils/cidades';
 import { TEXTO_APOIO_BAIRRO, avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
@@ -34,6 +36,8 @@ const RAJ = "'Rajdhani', sans-serif";
 const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)';
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)' };
+// Título de leitor de tela: existe para quem usa leitor, sem aparecer na tela.
+const SO_LEITOR = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' };
 
 const iniciais = (s) => s.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
@@ -68,23 +72,9 @@ function Falta({ children }) {
   return <p className="texto-apoio" role="status" data-falta style={{ margin: '8px 0 0', textAlign: 'center' }}>{children}</p>;
 }
 
-// Mini-radar do preview (5 ou 3 eixos) — o efeito do toggle mostrar_gols.
-function MiniRadar({ n }) {
-  const R = 20, cx = 27, cy = 27;
-  const pts = Array.from({ length: n }, (_, i) => {
-    const a = ((-90 + i * (360 / n)) * Math.PI) / 180;
-    return [cx + Math.cos(a) * R, cy + Math.sin(a) * R].join(',');
-  }).join(' ');
+function Toggle({ on, onClick, rotulo }) {
   return (
-    <svg viewBox="0 0 54 54" style={{ width: 54, height: 54, flexShrink: 0 }}>
-      <polygon points={pts} fill="rgba(139,92,246,0.25)" stroke="#8b5cf6" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-function Toggle({ on, onClick, disabled, rotulo }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-pressed={on} aria-label={rotulo} style={{ width: 38, height: 20, borderRadius: 20, background: on ? 'rgba(212,160,23,0.55)' : 'rgba(255,255,255,0.12)', position: 'relative', flexShrink: 0, cursor: disabled ? 'not-allowed' : 'pointer', border: 'none', opacity: disabled ? 0.45 : 1 }}>
+    <button type="button" onClick={onClick} aria-pressed={on} aria-label={rotulo} style={{ width: 38, height: 20, borderRadius: 20, background: on ? 'rgba(212,160,23,0.55)' : 'rgba(255,255,255,0.12)', position: 'relative', flexShrink: 0, cursor: 'pointer', border: 'none' }}>
       <i style={{ position: 'absolute', top: 2, left: on ? 20 : 2, width: 16, height: 16, borderRadius: '50%', background: on ? '#f0c94a' : '#fff', transition: 'left .2s' }} />
     </button>
   );
@@ -102,9 +92,10 @@ export default function CriarEquipa() {
   const [bairro, setBairro] = useState('');
   const [bairroEscolha, setBairroEscolha] = useState(null);
   const [avisoBairro, setAvisoBairro] = useState(null); // depois de criar: "Encontramos: <bairro>, <cidade>" ou o aviso
-  const [mostrarGols, setMostrarGols] = useState(true);
-  const [mostrarArtilheiro, setMostrarArtilheiro] = useState(true); // 29H (item 44): "Artilheiro do dia"
-  const [mostrarDestaque, setMostrarDestaque] = useState(true); // 29H (item 44): "Destaque do dia"
+  // Tudo nasce desligado (29O): a pessoa liga o que quiser.
+  const [mostrarGols, setMostrarGols] = useState(false);
+  const [mostrarArtilheiro, setMostrarArtilheiro] = useState(false);
+  const [mostrarDestaque, setMostrarDestaque] = useState(false);
   const [avisoPapel, setAvisoPapel] = useState(''); // depois de criar: o que não pôde ser gravado (texto fixo, não toast)
   const [joga, setJoga] = useState(true); // Rodada 29B (E): "Eu jogo" (padrão) / "Só organizo o time"
   const [modo, setModo] = useState('privado'); // privado | publico_aprovacao | publico_aberto
@@ -118,6 +109,17 @@ export default function CriarEquipa() {
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
+
+  function tocarGols(ligar) {
+    const r = alternarGols(mostrarArtilheiro, ligar);
+    setMostrarGols(r.mostrarGols);
+    setMostrarArtilheiro(r.mostrarArtilheiro);
+  }
+  function tocarArtilheiro(ligar) {
+    const r = alternarArtilheiro(mostrarGols, ligar);
+    setMostrarGols(r.mostrarGols);
+    setMostrarArtilheiro(r.mostrarArtilheiro);
+  }
 
   // ── Os passos no histórico (achado 80) ───────────────────────────────────────────────────────────────────────────────────────────
   // `passo` não é um useState: vem da entrada do histórico em que a pessoa está (location.state.passo). Time criado = tela de convites
@@ -354,42 +356,27 @@ export default function CriarEquipa() {
 
         {passo === 2 && (
           <>
-            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Como funciona o seu time?</h1>
-            <p className="texto-apoio" style={{ marginBottom: 14 }}>Cada escolha mostra o efeito. Você pode mudar tudo depois no painel de admin.</p>
+            <h1 style={SO_LEITOR}>Passo 2 de 3</h1>
             <div data-papel style={{ ...VIDRO, clipPath: CLIP, padding: 12, marginBottom: 10 }}>
-              <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Seu papel no time</div>
-              <EscolhaPapel joga={joga} aoTrocar={setJoga} />
+              <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Você também joga?</div>
+              <EscolhaPapel joga={joga} aoTrocar={setJoga} semTexto />
             </div>
-            <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
-              <MiniRadar n={mostrarGols ? 5 : 3} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Mostrar gols</div>
-                <div className="texto-apoio" style={{ marginTop: 2 }}>
-                  {mostrarGols ? 'radar de 5 eixos, bloco de Gols e troféu de Artilheiro' : 'radar cai para 3: presença · vitórias · destaque'}
+            <div data-jogo-itens style={{ ...VIDRO, clipPath: CLIP, padding: 12, marginBottom: 10 }}>
+              <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>O que contar nos jogos?</div>
+              {[
+                { chave: 'gols', Icone: Target, ...GOLS, ligado: mostrarGols, aoTocar: () => tocarGols(!mostrarGols) },
+                { chave: 'artilheiro', Icone: Trophy, ...ARTILHEIRO, ligado: mostrarArtilheiro, aoTocar: () => tocarArtilheiro(!mostrarArtilheiro) },
+                { chave: 'destaque', Icone: Star, ...DESTAQUE, ligado: mostrarDestaque, aoTocar: () => setMostrarDestaque(!mostrarDestaque) },
+              ].map(({ chave, Icone, titulo, apoio, ligado, aoTocar }) => (
+                <div key={chave} data-jogo-item={chave} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Icone size={22} strokeWidth={1.75} aria-hidden="true" style={{ flexShrink: 0, color: ligado ? '#f0c94a' : 'rgba(255,255,255,0.35)' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>{titulo}</div>
+                    <div className="texto-apoio" style={{ marginTop: 2 }}>{apoio}</div>
+                  </div>
+                  <Toggle on={ligado} rotulo={titulo} onClick={aoTocar} />
                 </div>
-              </div>
-              {/* Achado 78: desligar os gols desliga o artilheiro junto (o troféu faz parte dos gols). Religar os gols NÃO religa o
-                  artilheiro: quem decide é a pessoa. Achado 81: o botão ganha nome para leitor de tela. */}
-              <Toggle on={mostrarGols} rotulo="Mostrar gols" onClick={() => { if (mostrarGols) setMostrarArtilheiro(false); setMostrarGols(!mostrarGols); }} />
-            </div>
-            {/* 29H (item 44): eram chaves apagadas (<Toggle on disabled />, "em breve") — o dono tocava e nada acontecia. Agora
-                cada uma é uma escolha do time (teams.mostrar_artilheiro / mostrar_destaque): ligada, o editor de resultado
-                oferece o troféu; desligada, esconde a seção. A frase embaixo diz o efeito da escolha de agora. */}
-            <div data-premio="artilheiro" style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Artilheiro do dia</div>
-                <div className="texto-apoio" style={{ marginTop: 2 }}>
-                  {!mostrarGols ? 'Precisa dos gols ligados.' : mostrarArtilheiro ? 'troféu no fim de cada jogo' : 'sem troféu de artilheiro nos jogos'}
-                </div>
-              </div>
-              <Toggle on={mostrarGols && mostrarArtilheiro} disabled={!mostrarGols} onClick={() => setMostrarArtilheiro(!mostrarArtilheiro)} rotulo="Artilheiro do dia" />
-            </div>
-            <div data-premio="destaque" style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>Destaque do dia</div>
-                <div className="texto-apoio" style={{ marginTop: 2 }}>{mostrarDestaque ? 'o MVP escolhido no fim de cada jogo' : 'sem destaque do dia nos jogos'}</div>
-              </div>
-              <Toggle on={mostrarDestaque} onClick={() => setMostrarDestaque(!mostrarDestaque)} rotulo="Destaque do dia" />
+              ))}
             </div>
             <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
               <Cta cheio onClick={() => irParaPasso(3)}>Continuar</Cta>

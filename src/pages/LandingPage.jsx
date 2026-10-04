@@ -74,7 +74,7 @@ function PaginaInicial() {
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
-          gap: 22,
+          gap: 18,
         }}
       >
         {/* O F oficial, sozinho, com a aura dourada da casa a respirar atrás */}
@@ -97,6 +97,11 @@ function PaginaInicial() {
         >
           O seu time.<br />A sua figurinha.
         </h1>
+
+        {/* Rodada 29O: o nome e o que o app faz, para quem chega sem ler nada (é o que o Google pede para verificar a marca). */}
+        <p className="texto-apoio" style={{ margin: '-8px 0 0', maxWidth: 300 }}>
+          Futty: sorteio justo, ranking e figurinha de colecionador para o futebol do seu time.
+        </p>
 
         <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 320 }}>
           {/* A Apple vem primeiro no iPhone: a regra 4.8 da App Store pede que o
