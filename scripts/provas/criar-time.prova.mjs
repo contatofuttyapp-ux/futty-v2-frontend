@@ -2,7 +2,8 @@
 // do passo 1 pergunta antes de sair, depois de criar sai direto; o contador é 3/3; o Continuar do passo 1 só aparece com nome E cidade
 // (da lista, ou texto livre quando a lista não sugere nada); a lixeira tira o logo; o artilheiro depende dos gols; o passo 4 é a festa
 // (a máquina com o nome, "Seu time está no ar!") e "Ir para o time" não reabre boas-vindas.
-export const nome = 'Criar time (histórico dos passos, 3/3, cidade obrigatória, lixeira, gols × artilheiro, a festa)';
+// 29Q: a festa chega com o link do convite PRONTO (gerado sozinho, uma vez); o botão "Gerar link do convite" só volta se a geração falhar.
+export const nome = 'Criar time (histórico dos passos, 3/3, cidade obrigatória, lixeira, gols × artilheiro, a festa, link do convite pronto)';
 
 // Um PNG de 1×1 (o motor é interceptado: só a prévia e a lixeira interessam aqui).
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
@@ -10,7 +11,9 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 export async function rodar({ navegador, base, t }) {
   const erros = [];
 
-  async function nova() {
+  // `convite`: 'ok' responde o token e o código; 'falha-e-depois-ok' falha o 1º pedido (o automático) e atende o do botão de reserva.
+  // `pedidosConvite` recebe um item por POST de convite que chegou ao motor de mentira.
+  async function nova({ convite = 'ok', pedidosConvite = [] } = {}) {
     const ctx = await navegador.newContext({ viewport: { width: 390, height: 800 } });
     const page = await ctx.newPage();
     page.on('pageerror', (e) => erros.push(e.message));
@@ -20,6 +23,13 @@ export async function rodar({ navegador, base, t }) {
       const u = new URL(req.url());
       if (u.pathname === '/api/teams' && req.method() === 'POST') {
         return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ team: { id: 't1', slug: 'time-teste', nome: 'Time Teste' }, joga: true }) });
+      }
+      if (u.pathname === '/api/teams/time-teste/convite' && req.method() === 'POST') {
+        pedidosConvite.push(Date.now());
+        if (convite === 'falha-e-depois-ok' && pedidosConvite.length === 1) {
+          return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Não deu para gerar o link agora.' }) });
+        }
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 'tok-123', codigo: 'ABC123' }) });
       }
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     });
@@ -188,7 +198,8 @@ export async function rodar({ navegador, base, t }) {
 
   // ── 7. Passo 3 e a FESTA (29P): o corpo do POST é coerente; a máquina com o nome; "Pronto"; o Voltar sai direto ─────────────────
   {
-    const page = await nova();
+    const pedidosConvite = [];
+    const page = await nova({ pedidosConvite });
     const corpos = [];
     await page.route('**/api/teams', async (route) => {
       if (route.request().method() === 'POST') corpos.push(JSON.parse(route.request().postData() || '{}'));
@@ -216,7 +227,12 @@ export async function rodar({ navegador, base, t }) {
     t('embaixo do nome, a cidade como informação do time (sem "Encontramos:")', cidadeDoTime === 'Kyoto' && !/Encontramos:/.test(t4), cidadeDoTime);
     t('"Seu time está no ar!" e "Chame a galera pelo link. Ele vale 30 dias."', /Seu time está no ar!/.test(t4) && /Chame a galera pelo link\. Ele vale 30 dias\./.test(t4));
     t('saíram "Chame o seu time", "Você pode pular este passo." e "Logo do time enviado"', !/Chame o seu time|Você pode pular este passo|Logo do time enviado/.test(t4));
-    t('ficam o link do convite e o "Ir para o time"', (await page.getByRole('button', { name: 'Gerar link do convite' }).count()) === 1 && (await page.getByRole('button', { name: 'Ir para o time' }).count()) === 1);
+    // 29Q: o link chega pronto — o campo já está preenchido, sem ninguém tocar em nada, e o botão de gerar não existe.
+    await page.locator('input[readonly]').waitFor({ timeout: 5000 });
+    t('o link do convite chega PRONTO (o curto, /c/<código>), com "Copiar link" e "Compartilhar no WhatsApp"', /\/c\/ABC123$/.test(await page.locator('input[readonly]').inputValue()) && (await page.getByRole('button', { name: 'Copiar link' }).count()) === 1 && (await page.getByRole('button', { name: 'Compartilhar no WhatsApp' }).count()) === 1);
+    t('o botão "Gerar link do convite" SUMIU (a geração deu certo)', (await page.getByRole('button', { name: 'Gerar link do convite' }).count()) === 0 && !/Preparando o link do convite/.test(await texto(page)));
+    t('o convite foi pedido UMA vez só, sem ninguém tocar em nada', pedidosConvite.length === 1, String(pedidosConvite.length));
+    t('ficam o link do convite e o "Ir para o time"', (await page.getByRole('button', { name: 'Ir para o time' }).count()) === 1);
     t('depois de criar a tela diz "Pronto" (e não "3/4")', (await progresso(page)) === 'Pronto' && !/\/4/.test(t4), await progresso(page));
     await page.goBack(); await esperar(page, 600);
     t('Voltar depois de criar sai da criação direto (não volta a passo nenhum nem pergunta)', (await page.locator('[data-casa]').count()) === 1 && (await page.locator('[data-sair-da-criacao]').count()) === 0, `${caminho(page)} ${await progresso(page)}`);
@@ -236,6 +252,25 @@ export async function rodar({ navegador, base, t }) {
     const estado = await page.evaluate(() => window.history.state?.usr ?? null);
     t('"Ir para o time" leva à página do time sem o state criouAgora (a comemoração já aconteceu no passo 4)', caminho(page) === '/time/time-teste' && (await page.locator('[data-time]').count()) === 1 && !(estado && estado.criouAgora), JSON.stringify({ caminho: caminho(page), estado }));
     t('nenhuma caixa de boas-vindas aberta', (await page.locator('.bv[role="dialog"]').count()) === 0);
+    await page.context().close();
+  }
+
+  // ── 9. Se a geração sozinha falhar, o botão volta como reserva (com o aviso de sempre) e funciona ──────────────────────────────
+  {
+    const pedidosConvite = [];
+    const page = await nova({ convite: 'falha-e-depois-ok', pedidosConvite });
+    await entrar(page);
+    await passo1Pronto(page, 'Reserva FC');
+    await continuar(page).click(); await esperar(page);
+    await continuar(page).click(); await esperar(page);
+    await page.getByRole('button', { name: 'Criar o time' }).click();
+    await page.locator('text=Seu time está no ar!').waitFor({ timeout: 5000 });
+    const botao = page.getByRole('button', { name: 'Gerar link do convite' });
+    await botao.waitFor({ timeout: 5000 });
+    t('a geração sozinha falhou: o botão "Gerar link do convite" volta como reserva, com o aviso de erro, e nenhum link', (await botao.count()) === 1 && /Não deu para gerar o link agora\./.test(await texto(page)) && (await page.locator('input[readonly]').count()) === 0);
+    await botao.click();
+    await page.locator('input[readonly]').waitFor({ timeout: 5000 });
+    t('o botão de reserva gera o link (o 2º pedido) e some', /\/c\/ABC123$/.test(await page.locator('input[readonly]').inputValue()) && (await page.getByRole('button', { name: 'Gerar link do convite' }).count()) === 0 && pedidosConvite.length === 2, String(pedidosConvite.length));
     await page.context().close();
   }
 

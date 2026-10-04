@@ -22,6 +22,7 @@ import Icon from '../components/Icon';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
+import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
@@ -424,9 +425,9 @@ export default function Jogo() {
                 nunca em users/ranking. */}
             {isAdmin ? (
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '10px 12px', marginBottom: 10 }}>
-                <div style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#9a8fc0', textTransform: 'uppercase', marginBottom: 6 }}>
-                  Convidados sem app <span style={{ color: '#6f6a80', textTransform: 'none', letterSpacing: 0 }}>(só o nome, não entram no ranking)</span>
-                </div>
+                {/* 29Q: os textos vêm de utils/convidadoSemApp.js, os mesmos do Novo jogo e do Campeonato. */}
+                <div data-convidado-titulo style={{ fontFamily: RAJ, fontSize: 15, fontWeight: 700, color: '#fff' }}>{CONVIDADO_TITULO}</div>
+                <p className="texto-apoio" data-convidado-linha style={{ margin: '2px 0 8px' }}>{CONVIDADO_LINHA}</p>
                 {convidados.length ? (
                   <div className="chips-row" style={{ marginBottom: 8 }}>
                     {convidados.map((n, i) => (
@@ -442,13 +443,14 @@ export default function Jogo() {
                     className="input input--hud"
                     value={novoConvidado}
                     maxLength={24}
-                    placeholder="Nome do convidado…"
+                    placeholder={CONVIDADO_CAMPO}
+                    aria-label={CONVIDADO_CAMPO}
                     onChange={(e) => setNovoConvidado(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && novoConvidado.trim()) { setConvidados((c) => [...c, novoConvidado.trim()]); setNovoConvidado(''); } }}
                     style={{ flex: 1, minWidth: 0, fontFamily: RAJ }}
                   />
                   <button type="button" className="btn btn--sm btn--outline hud-corners-s" disabled={!novoConvidado.trim()} onClick={() => { setConvidados((c) => [...c, novoConvidado.trim()]); setNovoConvidado(''); }}>
-                    + Convidado
+                    {CONVIDADO_BOTAO}
                   </button>
                 </div>
               </div>

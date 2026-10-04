@@ -459,8 +459,9 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     const cidadeDoTime = await pagina.locator('[data-cidade-do-time]').innerText().catch(() => '');
     verificar('F · o aviso do "só organizo" que não pôde ser gravado vira texto fixo na tela do passo 4, e nenhum toast aparece', /"Só organizo" não pôde ser salvo agora: você entrou jogando\./.test(avisoPapel) && (await pagina.locator('.futty-toast').count()) === 0, avisoPapel);
     verificar('F · (29P) a festa: a máquina deitada com o nome, e embaixo "Savassi · Belo Horizonte, MG" (sem "Encontramos:")', (await pagina.locator('[data-festa] .maq .letreiro').count()) === 1 && cidadeDoTime.trim().toUpperCase() === 'SAVASSI · BELO HORIZONTE, MG' && !/Encontramos:/.test(await texto(pagina)), cidadeDoTime);
-    await pagina.getByRole('button', { name: 'Gerar link do convite' }).tap();
+    // 29Q: o link do convite chega PRONTO na festa (gerado sozinho); o botão "Gerar link do convite" só volta se a geração falhar.
     await pagina.locator('input[readonly]').waitFor({ timeout: 15000 });
+    verificar('F · (29Q) o botão "Gerar link do convite" sumiu: o link chegou sozinho', (await pagina.getByRole('button', { name: 'Gerar link do convite' }).count()) === 0);
     const link = await pagina.locator('input[readonly]').inputValue();
     verificar('F · o link do convite é o curto: <site>/c/<código>', link === `${BASE}/c/k7m2p9qx`, link);
     const wa = await pagina.locator('a[href^="https://wa.me/"]').getAttribute('href');
@@ -553,12 +554,13 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   await bloco('H21', async () => {
     const { contexto, pagina } = await abrir(fx.membroFoto, 'H-inicio', '/home');
     await pagina.locator('.chips-row').waitFor({ timeout: 30000 });
-    const chip = pagina.locator('.chips-row [data-criar-time]');
-    verificar('H · Início: chip "＋ Criar time" ao lado dos times (antes só havia o botão do Início vazio)', (await chip.count()) === 1 && /Criar time/.test(await chip.innerText()));
+    // 29Q: o "Criar time" saiu da fila de chips e virou um cartão (ao lado do "Radar de peladas"), logo embaixo do "Seus times".
+    const chip = pagina.locator('[data-atalho-do-inicio="criar-time"]');
+    verificar('H · Início: cartão "Criar time" à vista (29Q: saiu da fila de chips)', (await chip.count()) === 1 && /Criar time/.test(await chip.innerText()) && (await pagina.locator('.chips-row [data-criar-time]').count()) === 0);
     await capturar(pagina, 'H2-inicio-criar-time');
     await chip.tap();
     await pagina.waitForURL('**/criar-time', { timeout: 15000 }).catch(() => {});
-    verificar('H · o chip leva ao Criar time', /\/criar-time$/.test(pagina.url()));
+    verificar('H · o cartão leva ao Criar time', /\/criar-time$/.test(pagina.url()));
     await contexto.close();
   });
   await bloco('H22', async () => {

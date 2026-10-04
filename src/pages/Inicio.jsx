@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Radar, RefreshCw, Trophy } from 'lucide-react';
+import { RefreshCw, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { tomarConvitePendente } from '../lib/convitePendente';
 import { usePerfil } from '../context/PerfilContext';
@@ -10,6 +10,7 @@ import { usePerfil } from '../context/PerfilContext';
 import '../lib/alinharCard';
 import { useInicio } from '../context/InicioContext';
 import CardSeuTime from '../components/CardSeuTime';
+import AtalhosDoInicio from '../components/AtalhosDoInicio';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useIndicadorDeRolagem } from '../hooks/useIndicadorDeRolagem';
@@ -1291,6 +1292,10 @@ export default function Inicio() {
           <EmptyState />
         ) : (
           <>
+            {/* Rodada 29Q: o Radar de peladas e o Criar time à vista, logo embaixo do "Seus times" (ou do avatar, quem não administra
+                time). Eram os dois últimos chips da fila, onde ninguém chegava (dono, 4-out). */}
+            <AtalhosDoInicio />
+
             {/* Chips de equipas. O 45° entra pelo USE SITE e não pela classe .chip:
                 ela é partilhada com o Feed e o AdminPanel, que ainda não passaram
                 pelo cânone — varrer a classe mudava-lhes o desenho sem os rever.
@@ -1323,15 +1328,8 @@ export default function Inicio() {
                   ) : null}
                 </button>
               ))}
-              {/* Rodada 29H (item 62): criar o próprio time sempre à mão — antes o botão só existia no Início vazio. */}
-              <Link to="/criar-time" className="chip chip--explore hud-corners-s" data-criar-time>
-                ＋ Criar time
-              </Link>
-              {/* 29P: "Radar de peladas" (era "＋ Explorar"); o ícone no lugar do "＋" para o chip não ficar largo. */}
-              <Link to="/explorar" className="chip chip--explore hud-corners-s" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Radar size={14} strokeWidth={2} aria-hidden="true" />
-                Radar de peladas
-              </Link>
+              {/* Rodada 29Q: a fila é só o filtro dos jogos por time. "Criar time" (29H, item 62) e "Radar de peladas" (29P) saíram daqui
+                  para os dois cartões acima (<AtalhosDoInicio />). */}
             </div>
 
             {/* Jogos */}

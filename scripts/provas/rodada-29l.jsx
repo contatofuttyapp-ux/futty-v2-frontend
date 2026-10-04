@@ -49,7 +49,8 @@ function Faixas() {
         </FaixaRolavel>
       </div>
       <div className="chips-row" data-chips ref={aoMontar} data-mais-esq={esquerda ? '1' : undefined} data-mais-dir={direita ? '1' : undefined}>
-        {['Todas', 'Missa de Quinta', 'Várzea FC', '＋ Criar time', 'Radar de peladas'].map((t) => <button key={t} type="button" className="chip hud-corners-s">{t}</button>)}
+        {/* 29Q: a fila do Início é só o filtro dos jogos (Todas + os times); o "Criar time" e o "Radar de peladas" saíram para dois cartões. */}
+        {['Todas', 'Missa de Quinta', 'Várzea FC', 'Quinta Raiz', 'Pelada do Bairro'].map((t) => <button key={t} type="button" className="chip hud-corners-s">{t}</button>)}
       </div>
     </div>
   );

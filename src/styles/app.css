@@ -1398,16 +1398,6 @@
   }
 }
 
-.chip--explore {
-  background: transparent;
-  border: 1px solid var(--purple);
-  color: #b69cff;
-}
-
-.chip--explore:hover {
-  text-decoration: none;
-}
-
 /* Lista de jogos */
 .games-label {
   font-family: 'Rajdhani', var(--sans);

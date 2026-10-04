@@ -12,6 +12,7 @@ import Icon from '../components/Icon';
 import { contar } from '../utils/plural';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
 import ComporTimes from '../components/ComporTimes';
+import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
 import '../styles/app.css';
 
@@ -179,15 +180,17 @@ function Wizard({ slug, onCancel, onCriado }) {
             ))}
             {nomes.length < 8 ? <button type="button" onClick={addTime} style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.06em', color: '#f0c94a', background: 'rgba(212,160,23,.08)', border: '1px dashed rgba(212,160,23,.5)', padding: '7px 12px', cursor: 'pointer', clipPath: 'polygon(8% 0,92% 0,100% 28%,100% 72%,92% 100%,8% 100%,0 72%,0 28%)' }}>＋ Time</button> : null}
 
-            <div className="section-title" style={{ fontSize: 13 }}>Convidados sem app <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(só o nome, entram no sorteio)</span></div>
+            {/* 29Q: os textos vêm de utils/convidadoSemApp.js, os mesmos do Jogo e do Novo jogo (aqui não há ranking, a linha é a do campeonato). */}
+            <div className="section-title" data-convidado-titulo>{CONVIDADO_TITULO}</div>
+            <p className="texto-apoio" data-convidado-linha style={{ margin: '2px 0 8px' }}>{CONVIDADO_LINHA_CAMPEONATO}</p>
             <div className="row" style={{ marginBottom: 8 }}>
               {convidados.map((c, i) => (
                 <span key={i} className="camp-chip camp-chip--roxo" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{c}<span onClick={() => setConvidados((cur) => cur.filter((_, k) => k !== i))} style={{ cursor: 'pointer' }}>✕</span></span>
               ))}
             </div>
             <div className="row">
-              <input className="input input--hud" value={convInput} onChange={(e) => setConvInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addConv())} placeholder="Nome do convidado…" style={{ flex: 1, fontFamily: RAJ }} />
-              <button type="button" className="btn btn--purple btn--sm" onClick={addConv}>＋</button>
+              <input className="input input--hud" value={convInput} onChange={(e) => setConvInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addConv())} placeholder={CONVIDADO_CAMPO} aria-label={CONVIDADO_CAMPO} style={{ flex: 1, fontFamily: RAJ }} />
+              <button type="button" className="btn btn--purple btn--sm" onClick={addConv}>{CONVIDADO_BOTAO}</button>
             </div>
 
             <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 16 }}>

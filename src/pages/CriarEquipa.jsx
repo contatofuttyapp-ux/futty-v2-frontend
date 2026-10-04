@@ -14,6 +14,8 @@
 // 29H: o texto do papel acompanha a opção (43); textos de entrada aprovados pelo dono (45); o aviso do "só organizo" que
 // ficava num toast de 2 s ilegível (46) virou texto fixo na tela do passo 4; bairro opcional (42); a frase do WhatsApp (47)
 // e o link curto /c/<código> (49).
+// 29Q: o link do convite chega PRONTO na festa (gerado sozinho assim que o time existe); o botão "Gerar link do convite" só volta, como
+// reserva, se a geração falhar.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -115,6 +117,7 @@ export default function CriarEquipa() {
   const [logoEnviado, setLogoEnviado] = useState(false);
   const logoInputRef = useRef(null);
   const [inviteLink, setInviteLink] = useState('');
+  const [conviteFalhou, setConviteFalhou] = useState(false); // 29Q: a geração sozinha falhou — só então o botão de reserva aparece
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
@@ -276,6 +279,12 @@ export default function CriarEquipa() {
       // aqui: o efeito de "time criado" só reage a trocas de entrada).
       irParaPasso(4, { substituir: true });
       setTeam(t);
+      // 29Q: o link do convite chega PRONTO. Gerado aqui, uma vez só: o passo 4 nasce com o time e não há outro caminho até ele (o time
+      // criado trava o histórico, então voltar não repete a chamada). Sem await: a festa abre na hora e o link entra quando chegar.
+      pedirConvite(t.slug).catch((e) => {
+        setConviteFalhou(true);
+        setToast({ tipo: 'error', mensagem: e.message });
+      });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {
@@ -283,12 +292,18 @@ export default function CriarEquipa() {
     }
   }
 
+  // 29Q: a chamada do convite é uma só — a da geração sozinha (logo que o time existe) e a do botão de reserva.
+  async function pedirConvite(slug) {
+    const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
+    setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
+  }
+
+  // O botão de reserva: só aparece se a geração sozinha falhou.
   async function gerarConvite() {
     if (busy || !team) return;
     setBusy(true);
     try {
-      const { token, codigo } = await apiFetch(`/api/teams/${team.slug}/convite`, { method: 'POST' });
-      setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
+      await pedirConvite(team.slug);
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {
@@ -469,8 +484,10 @@ export default function CriarEquipa() {
                   </a>
                 </div>
               </>
-            ) : (
+            ) : conviteFalhou ? (
               <Cta onClick={gerarConvite} disabled={busy}>{busy ? 'Gerando…' : 'Gerar link do convite'}</Cta>
+            ) : (
+              <p className="texto-apoio texto-apoio--centro" role="status" data-gerando-convite>Preparando o link do convite…</p>
             )}
             <div style={{ marginTop: 22 }}>
               {/* 29P: sem state nenhum — a comemoração já aconteceu aqui; a página do time abre direto. */}

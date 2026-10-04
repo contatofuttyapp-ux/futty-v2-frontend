@@ -12,6 +12,7 @@ import Topbar from '../components/Topbar';
 import NumberStepper from '../components/NumberStepper';
 import ComporTimes from '../components/ComporTimes';
 import Toast from '../components/Toast';
+import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -206,8 +207,9 @@ export default function NovoJogo() {
               {(members || []).length === 0 ? <p className="muted" style={{ fontSize: 12 }}>Sem membros no time.</p> : null}
             </div>
 
-            {/* Convidados sem app (nome solto) */}
-            <div className="section-title">Convidados <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(sem app, só nome)</span></div>
+            {/* Convidados sem app (nome solto). 29Q: os textos vêm de utils/convidadoSemApp.js, os mesmos do Jogo e do Campeonato. */}
+            <div className="section-title" data-convidado-titulo>{CONVIDADO_TITULO}</div>
+            <p className="texto-apoio" data-convidado-linha style={{ margin: '2px 0 8px' }}>{CONVIDADO_LINHA}</p>
             <div className="hud-corners" style={{ padding: '10px 12px', marginBottom: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)' }}>
               {convidados.length ? (
                 <div className="chips-row" style={{ marginBottom: 8 }}>
@@ -217,8 +219,8 @@ export default function NovoJogo() {
                 </div>
               ) : null}
               <div style={{ display: 'flex', gap: 8 }}>
-                <input className="input input--hud" value={convInput} maxLength={24} placeholder="Nome do convidado…" onChange={(e) => setConvInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addConv(); } }} style={{ flex: 1, minWidth: 0, fontFamily: RAJ }} />
-                <button type="button" className="btn btn--sm btn--outline hud-corners-s" disabled={!convInput.trim()} onClick={addConv}>+ Convidado</button>
+                <input className="input input--hud" value={convInput} maxLength={24} placeholder={CONVIDADO_CAMPO} aria-label={CONVIDADO_CAMPO} onChange={(e) => setConvInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addConv(); } }} style={{ flex: 1, minWidth: 0, fontFamily: RAJ }} />
+                <button type="button" className="btn btn--sm btn--outline hud-corners-s" disabled={!convInput.trim()} onClick={addConv}>{CONVIDADO_BOTAO}</button>
               </div>
             </div>
 

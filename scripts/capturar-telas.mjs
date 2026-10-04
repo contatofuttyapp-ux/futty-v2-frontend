@@ -194,11 +194,21 @@ async function descobrir(navegador, estado) {
   const contexto = await novoContexto(navegador, { estado });
   const pagina = await abrir(contexto);
   const jogos = [];
+  // Rodada 29Q: a lista de times da conta e os jogos de cada um, para achar o Várzea FC (a captura 26 abre um jogo dele).
+  const listaDeTimes = [];
+  const jogosPorTime = new Map();
   pagina.on('response', async (r) => {
     try {
       const u = new URL(r.url());
-      if (r.request().method() === 'GET' && /\/api\/teams\/[^/]+\/games$/.test(u.pathname)) {
-        for (const g of (await r.json())?.games || []) jogos.push(g);
+      if (r.request().method() !== 'GET') return;
+      const doTime = u.pathname.match(/^\/api\/teams\/([^/]+)\/games$/);
+      if (doTime) {
+        const lista = (await r.json())?.games || [];
+        for (const g of lista) jogos.push(g);
+        jogosPorTime.set(doTime[1], lista);
+      } else if (u.pathname === '/api/teams') {
+        const corpo = await r.json();
+        for (const t of Array.isArray(corpo) ? corpo : corpo?.teams || []) listaDeTimes.push(t);
       }
     } catch { /* resposta sem corpo */ }
   });
@@ -223,11 +233,25 @@ async function descobrir(navegador, estado) {
     const href = await pagina.$eval('a[href*="/jogador/"]', (a) => a.getAttribute('href'));
     const userId = href.match(/\/jogador\/([^/?#]+)/)?.[1] || null;
 
+    // O Várzea FC (captura 26): só olha — acha o time na lista da conta e um jogo dele, de preferência ainda sem sorteio.
+    let jogoVarzea = null;
+    const varzea = listaDeTimes.find((t) => /v[áa]rzea fc/i.test(t?.nome || '') && t.slug);
+    if (varzea) {
+      if (!jogosPorTime.has(varzea.slug)) {
+        await pagina.goto(`${BASE}/time/${varzea.slug}/jogos`, { waitUntil: 'domcontentloaded' });
+        await ficarPronta(pagina);
+      }
+      const dele = jogosPorTime.get(varzea.slug) || [];
+      const jogo = dele.find((g) => !g.sorteio_realizado) || dele[0] || null;
+      if (jogo) jogoVarzea = { slug: varzea.slug, id: jogo.id };
+    }
+
     return {
       slug,
       userId,
       jogoSorteado: jogos.find((g) => g.sorteio_realizado) || null,
       jogoQualquer: jogos[0] || null,
+      jogoVarzea,
     };
   } finally {
     try { await guardarSessao(contexto); sessaoRegravada = true; } catch { /* sem sessão no navegador: não mexe no arquivo */ }
@@ -268,7 +292,23 @@ const TELAS = [
   { arq: '01-landing', sessao: false, rota: () => '/', caminho: /^\/$/, extraMs: 1500 },
   { arq: '02-criar-conta', sessao: false, rota: () => '/register', caminho: /^\/register$/, seletor: 'input[type="email"]', permite: ['senha'] },
   { arq: '03-entrar', sessao: false, rota: () => '/login', caminho: /^\/login$/, seletor: 'input[type="email"]', permite: ['senha'] },
-  { arq: '04-inicio', sessao: true, rota: () => '/home', caminho: /^\/home$/, seletor: '.games-label, .home-empty' },
+  {
+    // Rodada 29Q: os cartões "Radar de peladas" e "Criar time" ficam à vista, e o rótulo "Próximos jogos" continua inteiro na primeira
+    // tela de 390×844 (lei da 29L, achado 127). Se não couber a imagem NÃO sai: a saída é encolher os cartões (altura, respiro), nunca a letra.
+    arq: '04-inicio', sessao: true, rota: () => '/home', caminho: /^\/home$/, seletor: '.games-label, .home-empty',
+    depois: async (p) => {
+      const r = await p.evaluate(() => {
+        const rotulo = [...document.querySelectorAll('.games-label')].find((el) => /próximos jogos/i.test(el.textContent));
+        const b = rotulo ? rotulo.getBoundingClientRect() : null;
+        return { cartoes: document.querySelectorAll('[data-atalho-do-inicio]').length, chipsFora: document.querySelectorAll('.chips-row a').length, rotuloBase: b ? Math.round(b.bottom) : null };
+      });
+      if (r.cartoes !== 2) throw new Error(`a Início mostra ${r.cartoes} cartões (esperado 2: Radar de peladas e Criar time)`);
+      if (r.chipsFora) throw new Error('a fila de chips ainda tem links (o "Criar time" e o "Radar de peladas" saíram dela)');
+      if (r.rotuloBase === null) throw new Error('não achei o rótulo "Próximos jogos" na Início');
+      if (r.rotuloBase > ALTURA) throw new Error(`o rótulo "Próximos jogos" termina em ${r.rotuloBase} px, abaixo da primeira tela (${ALTURA} px): encolha os cartões (altura, respiro), nunca a letra`);
+      console.log(`      "Próximos jogos" termina em ${r.rotuloBase} px de ${ALTURA}`);
+    },
+  },
   { arq: '05-time-aba-jogos', ...aba('jogos') },
   { arq: '06-time-aba-elenco', ...aba('elenco') },
   {
@@ -387,10 +427,31 @@ const TELAS = [
       await p.getByText('Você também joga?').first().waitFor({ timeout: 10000 });
       await p.getByRole('button', { name: 'Continuar' }).click();
       await p.getByText('Aceita novos membros?').first().waitFor({ timeout: 10000 });
+      // 29Q: o link do convite chega pronto. O POST do convite também é respondido AQUI, com um código de mentira (nada é gravado).
+      await p.route('**/api/teams/*/convite', (route) => (route.request().method() === 'POST'
+        ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 'captura', codigo: 'CAPTURA' }) })
+        : route.fallback()));
       await p.getByRole('button', { name: 'Criar o time' }).click();
       await p.getByText('Seu time está no ar!').first().waitFor({ timeout: 15000 });
+      await p.locator('input[readonly]').waitFor({ timeout: 10000 }).catch(() => { throw new Error('a festa abriu sem o link do convite pronto'); });
+      if (await p.getByRole('button', { name: 'Gerar link do convite' }).count()) throw new Error('a festa ainda mostra o botão "Gerar link do convite"');
       await espera(1200);
       exigirSemRolagem(await medirBotao(p, 'Ir para o time'), 'a festa', 'Ir para o time');
+    },
+  },
+  {
+    // Rodada 29Q: a caixa do convidado sem app num jogo do Várzea FC, só abrindo a tela: nenhum toque, nada digitado, nada gravado.
+    arq: '26-jogo-convidado', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC com algum jogo (precisa ser admin dele)',
+    rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/${d.jogoVarzea.id}`, caminho: /^\/time\/[^/]+\/jogo\/[^/?]+$/, seletor: '[data-convidado-titulo]',
+    depois: async (p) => {
+      const titulo = p.locator('[data-convidado-titulo]');
+      const texto = (await p.locator('main').innerText()).replace(/\s+/g, ' ');
+      for (const esperado of ['Alguém sem o app vai jogar?', 'Escreva o nome: a pessoa entra no sorteio, mas não conta no ranking.']) {
+        if (!texto.includes(esperado)) throw new Error(`a caixa do convidado não mostra "${esperado}"`);
+      }
+      if (!(await p.getByPlaceholder('Nome de quem vai jogar').count()) || !(await p.getByRole('button', { name: 'Adicionar', exact: true }).count())) throw new Error('a caixa não tem o campo "Nome de quem vai jogar" e o botão "Adicionar"');
+      await titulo.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      await espera(600);
     },
   },
   {

@@ -120,8 +120,12 @@ test('29P · o Explorar virou "Radar de peladas" em tudo o que aparece na tela (
   assert.match(ler('src/pages/Explorar.jsx'), /<Topbar hud="RADAR DE PELADAS" back="\/home" \/>/);
   assert.match(ler('src/components/RouteTitle.jsx'), /\['\/explorar', 'Radar de peladas'\]/);
   const inicio = ler('src/pages/Inicio.jsx');
-  assert.match(inicio, /import \{ Radar, RefreshCw, Trophy \} from 'lucide-react';/);
-  assert.match(inicio, /<Radar size=\{14\} strokeWidth=\{2\} aria-hidden="true" \/>\s*Radar de peladas/, 'o chip do Início: ícone Radar + o nome');
+  // 29Q: o chip da fila saiu; o Radar de peladas vive num cartão (components/AtalhosDoInicio.jsx), com o mesmo ícone e o mesmo nome.
+  assert.match(inicio, /import \{ RefreshCw, Trophy \} from 'lucide-react';/);
+  assert.doesNotMatch(inicio, /<Radar /, 'o ícone do Radar já não vive no Início: foi para o cartão');
+  const cartoes = ler('src/components/AtalhosDoInicio.jsx');
+  assert.match(cartoes, /import \{ CirclePlus, Radar \} from 'lucide-react';/);
+  assert.match(cartoes, /Icone=\{Radar\}[^>]*rotulo="Radar de peladas"/, 'o cartão do Início: ícone Radar + o nome');
   assert.match(inicio, /Sem drama: há mais times no "Radar de peladas"\./);
   assert.match(inicio, /<Link to="\/explorar" className="btn btn--purple hud-corners">\s*Radar de peladas/);
   assert.match(ler('src/components/EstadoSemTime.jsx'), /Radar de peladas/);
