@@ -50,7 +50,7 @@ test('29P · landing para valer: sem o Avise-me, com o F, o slogan, a frase e as
   assert.doesNotMatch(ler('src/components/Layout.jsx'), /avise-me/);
 });
 
-test('29P · Criar time, passo 1: sem título nem textos de apoio; rótulos limpos; Continuar só com nome e cidade; lixeira do logo', () => {
+test('29P · Criar time, passo 1: sem título nem textos de apoio; rótulos limpos; Continuar só acende com nome e cidade; lixeira do logo', () => {
   const criar = ler('src/pages/CriarEquipa.jsx');
   const passo1 = criar.slice(criar.indexOf('{passo === 1 && ('), criar.indexOf('{passo === 2 && ('));
   assert.match(passo1, /<h1 style=\{SO_LEITOR\}>Passo 1 de 3<\/h1>/);
@@ -62,7 +62,9 @@ test('29P · Criar time, passo 1: sem título nem textos de apoio; rótulos limp
   assert.match(passo1, /<Lbl grande>Logo do time \(opcional\)<\/Lbl>/);
   assert.doesNotMatch(passo1, /\(obrigatóri[oa]/);
   assert.doesNotMatch(criar, /Falta o nome do time/);
-  assert.match(passo1, /\{podeContinuar \? \(/, 'o Continuar só existe com nome e cidade');
+  // 29T (achado 166): o Continuar existe desde o começo, apagado, e só acende com nome e cidade.
+  assert.match(passo1, /<Cta cheio disabled=\{!podeContinuar\} data-continuar-passo-1 onClick=\{\(\) => irParaPasso\(2\)\}>Continuar<\/Cta>/, 'o Continuar está lá, apagado, até haver nome e cidade');
+  assert.doesNotMatch(passo1, /\{podeContinuar \? \(/, 'e não some mais quando falta nome ou cidade');
   assert.match(criar, /const cidadeOk = cidadePreenchida\(\{ texto: cidade, escolha: cidadeEscolha, temSugestoes \}\);/);
   assert.match(criar, /const podeContinuar = !!nome\.trim\(\) && cidadeOk;/);
   assert.match(passo1, /aoSugestoes=\{aoSugestoes\}/, 'o campo diz se a lista sugere algo');

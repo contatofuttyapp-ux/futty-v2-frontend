@@ -403,11 +403,11 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
       return null;
     };
     const { contexto, pagina, escritas } = await abrir(fx.gratis, 'F-criar', '/criar-time', { respostas });
-    await pagina.getByPlaceholder('ex.: Domingueira FC').fill('Savassi FC');
+    await pagina.getByPlaceholder('Ex.: Domingueira FC').fill('Savassi FC');
     // a cidade (da lista) e o bairro
     const bairro = pagina.locator('[data-campo-bairro]');
     verificar('F · o campo Bairro (opcional) fica desligado sem cidade, com "Escolha a cidade primeiro"', await bairro.isDisabled() && (await bairro.getAttribute('placeholder')) === 'Escolha a cidade primeiro');
-    const cidade = pagina.getByPlaceholder('Ex: Brasília');
+    const cidade = pagina.getByPlaceholder('Ex.: Brasília');
     await cidade.click();
     await cidade.fill('Belo Horizonte');
     await pagina.locator('[data-sugestoes-cidade] button').first().click({ timeout: 20000 });
@@ -473,8 +473,8 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   await bloco('F16', async () => {
     // F2: bairro em Portugal — a freguesia da lista, com coordenada
     const { contexto, pagina, escritas } = await abrir(fx.gratis, 'F-criar-pt', '/criar-time', { respostas: (c, m) => (m === 'POST' && c === '/api/teams' ? { team: { id: 'x', slug: 'prova-r29h-pt', nome: 'Alvalade FC' }, geo: { encontrada: true, nomeOficial: 'Lisboa, Portugal' }, bairro: { encontrado: true, nomeOficial: 'Alvalade, Lisboa, Portugal' }, joga: true } : null) });
-    await pagina.getByPlaceholder('ex.: Domingueira FC').fill('Alvalade FC');
-    const cidade = pagina.getByPlaceholder('Ex: Brasília');
+    await pagina.getByPlaceholder('Ex.: Domingueira FC').fill('Alvalade FC');
+    const cidade = pagina.getByPlaceholder('Ex.: Brasília');
     await cidade.click();
     await cidade.fill('Lisboa');
     await pagina.locator('[data-sugestoes-cidade] button', { hasText: 'Lisboa, Portugal' }).first().click({ timeout: 20000 });
@@ -497,8 +497,8 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   await bloco('F17', async () => {
     // F3: bairro que o motor não achou: aviso amarelo, o time fica no ponto da cidade
     const { contexto, pagina } = await abrir(fx.gratis, 'F-criar-nao-achou', '/criar-time', { respostas: (c, m) => (m === 'POST' && c === '/api/teams' ? { team: { id: 'x', slug: 'prova-r29h-b', nome: 'Sem Bairro FC' }, geo: { encontrada: true, nomeOficial: 'Belo Horizonte, MG' }, bairro: { encontrado: false }, joga: true } : null) });
-    await pagina.getByPlaceholder('ex.: Domingueira FC').fill('Sem Bairro FC');
-    const cidade = pagina.getByPlaceholder('Ex: Brasília');
+    await pagina.getByPlaceholder('Ex.: Domingueira FC').fill('Sem Bairro FC');
+    const cidade = pagina.getByPlaceholder('Ex.: Brasília');
     await cidade.click();
     await cidade.fill('Belo Horizonte');
     await pagina.locator('[data-sugestoes-cidade] button').first().click({ timeout: 20000 });
@@ -654,7 +654,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await espera(600);
     verificar('K · desligar o artilheiro grava mostrar_artilheiro: false (PATCH interceptado) e o interruptor acompanha', escritaDe(escritas, 'PATCH', `/api/teams/${slug}`).some((e) => /"mostrar_artilheiro":false/.test(e.corpo || '')) && (await premios.first().getAttribute('aria-checked')) === 'false');
     // cidade de Portugal (da lista) + freguesia
-    const cidade = pagina.getByPlaceholder('Ex: Brasília');
+    const cidade = pagina.getByPlaceholder('Ex.: Brasília');
     await cidade.click();
     await cidade.fill('Lisboa');
     await pagina.locator('[data-sugestoes-cidade] button', { hasText: 'Lisboa, Portugal' }).first().click({ timeout: 20000 });

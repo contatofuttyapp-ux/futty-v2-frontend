@@ -7,6 +7,8 @@
 // Rodada 29L (achado 127, decisão do dono de 3-out): com UM time o card é o de sempre, byte a byte. Com DOIS ou mais, vira UM card só,
 // "Seus times": cada time numa linha compacta (escudo · nome · a pendência, se houver) e os quatro atalhos aparecem ao tocar na linha.
 // Antes, dois cards de quatro botões ocupavam a primeira tela inteira e os PRÓXIMOS JOGOS ficavam abaixo da dobra.
+// Rodada 29T (achado 168): "Seus times" mostra até 2 linhas; com mais, "Ver todos (N)" abre o resto no lugar (e "Ver menos" fecha). Quatro times
+// empurravam o rótulo "Próximos jogos" para 973 px numa tela de 844.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarClock, ChevronDown, ChevronRight, CirclePlus, Flag, Settings, Shuffle, Trophy, UserPlus } from 'lucide-react';
@@ -15,6 +17,8 @@ import { destinoDoSortear, linhasDePendencia, resumoDoTime } from '../utils/seuT
 
 const RAJ = "'Rajdhani', sans-serif";
 const ICONE = { pedidos: UserPlus, presenca: CalendarClock, resultado: Trophy, denuncias: Flag };
+/** Quantos times o card mostra antes de pedir "Ver todos (N)". */
+export const TIMES_VISIVEIS = 2;
 const CASCA = { padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.28)' };
 const ROTULO = { display: 'block', fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' };
 
@@ -82,11 +86,14 @@ function UmTime({ time, team, games }) {
 
 function SeusTimes({ seuTime, teams, games }) {
   const [aberto, setAberto] = useState(null); // o slug do time com os atalhos à mostra; um por vez, para o card não crescer
+  const [verTodos, setVerTodos] = useState(false);
+  const sobram = seuTime.length - TIMES_VISIVEIS;
+  const mostrados = verTodos ? seuTime : seuTime.slice(0, TIMES_VISIVEIS);
 
   return (
     <div className="hud-corners" data-seus-times style={{ display: 'grid', ...CASCA }}>
       <span style={ROTULO}>Seus times</span>
-      {seuTime.map((time, i) => {
+      {mostrados.map((time, i) => {
         const team = teams.find((t) => t.id === time.team_id);
         const linhas = linhasDePendencia(time);
         const resumo = resumoDoTime(time);
@@ -122,6 +129,18 @@ function SeusTimes({ seuTime, teams, games }) {
           </div>
         );
       })}
+      {sobram > 0 ? (
+        <button
+          type="button"
+          data-ver-todos
+          aria-expanded={verTodos}
+          onClick={() => setVerTodos(!verTodos)}
+          style={{ justifySelf: 'start', display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 44, padding: '4px 0', background: 'transparent', border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', width: '100%', color: '#c9c2d6', font: 'inherit', fontFamily: RAJ, fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', cursor: 'pointer' }}
+        >
+          {verTodos ? 'Ver menos' : `Ver todos (${seuTime.length})`}
+          <ChevronDown size={14} style={{ transform: verTodos ? 'rotate(180deg)' : 'none' }} />
+        </button>
+      ) : null}
     </div>
   );
 }

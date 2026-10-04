@@ -589,14 +589,14 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
 
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Localização</span>
-        <input value={localizacao} onChange={(e) => setLocalizacao(e.target.value.slice(0, 100))} placeholder="Ex: São Paulo · Campo do Zé" style={inputStyle} />
+        <input value={localizacao} onChange={(e) => setLocalizacao(e.target.value.slice(0, 100))} placeholder="Ex.: São Paulo · Campo do Zé" style={inputStyle} />
       </label>
 
       {/* GEO — opt-in implícito (preencher = consentir). Texto obrigatório junto ao campo.
           O nome da cidade é guardado + mostrado; do ponto guarda-se só o arredondado. */}
       <div style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Cidade <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· busca por proximidade</span></span>
-        <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setAvisoCidade(null); setBairroEscolha(null); }} placeholder="Ex: Brasília" className="" style={inputStyle} />
+        <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setAvisoCidade(null); setBairroEscolha(null); }} placeholder="Ex.: Brasília" className="" style={inputStyle} />
         {avisoCidade ? (
           <span role="status" data-aviso-cidade={avisoCidade.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: avisoCidade.tipo === 'ok' ? '#7bd88f' : '#f0c94a' }}>{avisoCidade.texto}</span>
         ) : null}
@@ -1154,7 +1154,8 @@ function TabConvites({ slug, showToast, semBotao = false }) {
 
 // ─── TAB: JOGOS ──────────────────────────────────────────────────────────────
 // "sex., 20 de jun. · 22:00" para o prazo do RSVP — no relógio do campo (fuso do time, 29I achado 83).
-const fmtPrazoAdmin = (iso, fuso) => formatarDataHora(iso, fuso);
+// 29T (achado 165): com o rabicho, a cidade do time ("horário de Brasília"), não a do fuso.
+const fmtPrazoAdmin = (iso, fuso, cidade) => formatarDataHora(iso, fuso, { cidade });
 
 // Lista compacta de jogadores (avatar + nome) com título opcional.
 function ListaUsers({ users, titulo }) {
@@ -1179,7 +1180,7 @@ function ListaUsers({ users, titulo }) {
 // Gestão do RSVP de um jogo (admin): abrir / acompanhar / fechar / sortear.
 // Rodada 29R (achado 147): `abrirInicial` = a pessoa chegou pela linha "presença ainda não aberta" do Início; o "Abrir presença" deste jogo
 // já nasce aberto e, quando o cartão tem a forma final (a presença carregou), `aoPronto` rola até ele e o destaca. Só vale no nascimento.
-function RSVPAdmin({ gameId, slug, navigate, showToast, abrirInicial = false, aoPronto = null }) {
+function RSVPAdmin({ gameId, slug, cidade = null, navigate, showToast, abrirInicial = false, aoPronto = null }) {
   const [info, setInfo] = useState(null);
   const [erro, setErro] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1293,7 +1294,7 @@ function RSVPAdmin({ gameId, slug, navigate, showToast, abrirInicial = false, ao
   if (info.rsvp_aberto) {
     return (
       <div style={linha}>
-        <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700 }}>Aberto até {fmtPrazoAdmin(info.rsvp_prazo, info.fuso)}</div>
+        <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700 }}>Aberto até {fmtPrazoAdmin(info.rsvp_prazo, info.fuso, cidade)}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
           {info.confirmados.length} {plural(info.confirmados.length, 'confirmado', 'confirmados')} · {info.recusados.length} {plural(info.recusados.length, 'recusado', 'recusados')} · {info.pendentes.length} {plural(info.pendentes.length, 'pendente', 'pendentes')}
         </div>
@@ -1515,7 +1516,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
                         <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
                         <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 8px' }}>Cancelado</span>
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso)}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso, { cidade: team?.cidade })}</div>
                       {g.motivo_cancelamento ? (
                         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>Motivo: {g.motivo_cancelamento}</div>
                       ) : null}
@@ -1536,7 +1537,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
                 <div key={g.id} data-jogo={g.id} className={destaque === g.id ? 'jogo-destaque' : undefined} style={{ ...CARD, padding: 12 }}>
                   <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-                    {formatDateTime(g.data, fuso)} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
+                    {formatDateTime(g.data, fuso, { cidade: team?.cidade })} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
                   </div>
                   {g.max_jogadores != null ? (() => {
                     const cheio = g.confirmados >= g.max_jogadores;
@@ -1556,7 +1557,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
                     <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>Cancelar jogo</button>
                   </div>
-                  <RSVPAdmin gameId={g.id} slug={slug} navigate={navigate} showToast={showToast} abrirInicial={!!abrirPresencaDe && String(g.id) === String(abrirPresencaDe)} aoPronto={destacarJogo} />
+                  <RSVPAdmin gameId={g.id} slug={slug} cidade={team?.cidade} navigate={navigate} showToast={showToast} abrirInicial={!!abrirPresencaDe && String(g.id) === String(abrirPresencaDe)} aoPronto={destacarJogo} />
                 </div>
               );
             })}
@@ -1598,13 +1599,13 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
       </div>
 
       {editar ? <EditarJogoModal jogo={editar} fuso={fuso} cidade={team?.cidade} onClose={() => setEditar(null)} onSaved={onEditado} showToast={showToast} /> : null}
-      {lancar ? <ResultadoModal jogo={lancar} fuso={fuso} premios={{ artilheiro: team?.mostrar_artilheiro !== false, destaque: team?.mostrar_destaque !== false }} onClose={() => setLancar(null)} onSaved={onResultado} showToast={showToast} /> : null}
+      {lancar ? <ResultadoModal jogo={lancar} fuso={fuso} cidade={team?.cidade} premios={{ artilheiro: team?.mostrar_artilheiro !== false, destaque: team?.mostrar_destaque !== false }} onClose={() => setLancar(null)} onSaved={onResultado} showToast={showToast} /> : null}
 
       {confirmacao ? (
         <ConfirmModal
           texto={
             confirmacao.tipo === 'cancelar'
-              ? `Cancelar o jogo de ${formatDateTime(confirmacao.jogo.data, fuso)}? Esta ação envia notificação a todos os membros.`
+              ? `Cancelar o jogo de ${formatDateTime(confirmacao.jogo.data, fuso, { cidade: team?.cidade })}? Esta ação envia notificação a todos os membros.`
               : 'Excluir este jogo? Esta ação é irreversível.'
           }
           perigo
@@ -1689,7 +1690,7 @@ function EditarJogoModal({ jogo, fuso, cidade, onClose, onSaved, showToast }) {
 // ─── RESULTADO (era a aba Resultados; agora "Lançar resultado" nos jogos passados da aba Jogos) ─────────
 // `premios` (29H, item 44): o que o time deixou ligado no painel ("Artilheiro do dia" / "Destaque do dia"). Desligado, a seção some —
 // a menos que o jogo JÁ tenha o prêmio (editar um resultado antigo não pode apagá-lo em silêncio: o prêmio continua à vista).
-function ResultadoModal({ jogo, fuso, premios = { artilheiro: true, destaque: true }, onClose, onSaved, showToast }) {
+function ResultadoModal({ jogo, fuso, cidade = null, premios = { artilheiro: true, destaque: true }, onClose, onSaved, showToast }) {
   const [detail, setDetail] = useState(null);
   const [campeaoIdx, setCampeaoIdx] = useState(null);
   const [campeaoFoto, setCampeaoFoto] = useState(null);
@@ -1765,7 +1766,7 @@ function ResultadoModal({ jogo, fuso, premios = { artilheiro: true, destaque: tr
     <div className="modal-overlay" role="presentation" onClick={() => !saving && onClose()}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 16, maxHeight: '82vh', overflowY: 'auto' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado: {formatDateTime(jogo.data, fuso)}</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Resultado: {formatDateTime(jogo.data, fuso, { cidade })}</h2>
 
           {!detail ? (
             <LoadingFutty />
@@ -1804,7 +1805,7 @@ function ResultadoModal({ jogo, fuso, premios = { artilheiro: true, destaque: tr
               {premios.destaque || temDest ? (
                 <Seccao titulo="Destaque" ligado={temDest} onToggle={setTemDest}>
                   <SelectJogador value={destId} onChange={setDestId} confirmados={confirmados} />
-                  <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Título</span><input value={destTitulo} onChange={(e) => setDestTitulo(e.target.value.slice(0, 60))} placeholder="Ex: Melhor em campo" style={inputStyle} /></label>
+                  <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Título</span><input value={destTitulo} onChange={(e) => setDestTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Melhor em campo" style={inputStyle} /></label>
                 </Seccao>
               ) : null}
 

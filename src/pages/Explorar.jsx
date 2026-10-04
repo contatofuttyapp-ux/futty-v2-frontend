@@ -6,7 +6,7 @@
 // do utilizador nunca sai do dispositivo). Regra na SPEC-EQUIPAS §b.
 import { Search, MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import Topbar from '../components/Topbar';
 import EscudoEquipa from '../components/EscudoEquipa';
@@ -14,6 +14,7 @@ import Toast from '../components/Toast';
 import { plural } from '../utils/plural';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
 import { timeCasaPorCidade } from '../utils/cidades';
+import { depoisDePedirEntrada, tituloDoRadar } from '../utils/radar';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -48,6 +49,9 @@ export default function Explorar() {
   const [zona, setZona] = useState(''); // Rodada 29B (D): a cidade da pessoa, escolhida na lista (ou digitada)
   const [zonaEscolhida, setZonaEscolhida] = useState(false);
   const [posUser, setPosUser] = useState(null); // {lat,lng} SÓ em memória — nunca enviada/guardada
+  // 29T (achado 161): de onde veio a posição decide o título da lista ("Perto de você" só com a localização; "Em <cidade>" com a cidade).
+  const [origemPos, setOrigemPos] = useState(null); // 'localizacao' | 'cidade' | null
+  const [cidadeDaPos, setCidadeDaPos] = useState(''); // a cidade como a pessoa a escolheu (não o que ela digita depois)
   const [raio, setRaio] = useState(null); // km (null = sem filtro de distância)
   const [busy, setBusy] = useState(null); // slug em processamento
   const [toast, setToast] = useState(null);
@@ -101,6 +105,7 @@ export default function Explorar() {
       (p) => {
         // A posição fica SÓ em memória (React state) — nunca é enviada ao servidor nem guardada.
         setPosUser({ lat: p.coords.latitude, lng: p.coords.longitude });
+        setOrigemPos('localizacao');
         setGeoPedida(true);
         if (!raio) setRaio(10);
         setToast({ tipo: 'success', mensagem: 'Localização ativa (só neste celular).' });
@@ -119,6 +124,8 @@ export default function Explorar() {
       const arr = await r.json();
       if (Array.isArray(arr) && arr[0]) {
         setPosUser({ lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon) });
+        setOrigemPos('cidade');
+        setCidadeDaPos(cidade);
         setGeoPedida(true);
         if (!raio) setRaio(10);
         setToast({ tipo: 'success', mensagem: `Sua zona: ${cidade}` });
@@ -133,7 +140,8 @@ export default function Explorar() {
     try {
       const r = await apiFetch(`/api/teams/${equipa.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
       const entrou = !!r?.entrou;
-      setEquipas((cur) => cur.map((t) => (t.slug === equipa.slug ? { ...t, ja_membro: entrou || t.ja_membro, pedido_pendente: !entrou } : t)));
+      // 29T (achado 159): quem acabou de entrar não é "já era membro": o card comemora ("Você entrou!" + "Ver o time") e a contagem sobe 1.
+      setEquipas((cur) => depoisDePedirEntrada(cur, equipa.slug, entrou));
       setToast({ tipo: 'success', mensagem: entrou ? `Você entrou no time ${equipa.nome}!` : 'Pedido enviado. O admin decide e você vê o desfecho no Início.' });
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
@@ -195,6 +203,8 @@ export default function Explorar() {
               setZonaEscolhida(!!escolha);
               if (escolha) {
                 setPosUser({ lat: escolha.lat, lng: escolha.lng });
+                setOrigemPos('cidade');
+                setCidadeDaPos(texto);
                 setGeoPedida(true);
                 if (!raio) setRaio(10);
                 setToast({ tipo: 'success', mensagem: `Sua zona: ${texto}` });
@@ -226,7 +236,7 @@ export default function Explorar() {
 
         <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', color: '#9a8fc0', textTransform: 'uppercase', margin: '20px 2px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* 29I (achado 106): a lista traz times de entrada aberta E times com aprovação (com o botão PEDIR ENTRADA); o título antigo prometia só os abertos. */}
-          Times perto de você · {filtradas.length}
+          {tituloDoRadar({ origem: origemPos, cidade: cidadeDaPos })} · {filtradas.length}
           <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(139,92,246,0.4), transparent)' }} />
         </div>
 
@@ -256,7 +266,14 @@ export default function Explorar() {
                   {equipa.membro_count} {plural(equipa.membro_count, 'membro', 'membros')} · {equipa.modo_visibilidade === 'publico_aberto' ? 'aberto' : 'com aprovação'}
                 </div>
               </div>
-              {equipa.ja_membro ? (
+              {equipa.entrou_agora ? (
+                <div data-entrou-agora style={{ display: 'grid', gap: 4, justifyItems: 'end', flexShrink: 0 }}>
+                  <span style={{ fontFamily: RAJ, fontSize: 12, fontWeight: 800, color: '#7bd88f', letterSpacing: '0.06em' }}>Você entrou!</span>
+                  <Link to={`/time/${equipa.slug}`} state={{ primeiraEntrada: true }} onClick={(e) => e.stopPropagation()} style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: '#f0c94a', textDecoration: 'underline', textUnderlineOffset: 3, minHeight: 44, display: 'inline-flex', alignItems: 'center', padding: '0 6px', margin: '-6px -6px -6px 0' }}>
+                    Ver o time
+                  </Link>
+                </div>
+              ) : equipa.ja_membro ? (
                 <span style={{ flexShrink: 0, fontFamily: RAJ, fontSize: 11, fontWeight: 800, color: '#7bd88f', letterSpacing: '0.06em' }}>Você já é membro</span>
               ) : equipa.pedido_pendente ? (
                 <div style={{ display: 'grid', gap: 4, justifyItems: 'end', flexShrink: 0 }}>

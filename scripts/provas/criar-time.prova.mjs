@@ -41,9 +41,11 @@ export async function rodar({ navegador, base, t }) {
   const progresso = async (page) => (await page.locator('[data-progresso]').innerText().catch(() => '')).trim();
   const esperar = (page, ms = 250) => page.waitForTimeout(ms);
   const caminho = (page) => new URL(page.url()).pathname;
-  const campoNome = (page) => page.locator('input[placeholder="ex.: Domingueira FC"]');
-  const campoCidade = (page) => page.getByPlaceholder('Ex: Brasília');
+  const campoNome = (page) => page.locator('input[placeholder="Ex.: Domingueira FC"]');
+  const campoCidade = (page) => page.getByPlaceholder('Ex.: Brasília');
   const continuar = (page) => page.getByRole('button', { name: 'Continuar' });
+  // 29T (achado 166): o Continuar existe desde o começo; "aceso" = existe E está habilitado.
+  const continuarAceso = async (page) => (await continuar(page).count()) === 1 && (await continuar(page).isEnabled());
   const entrar = async (page) => {
     await page.locator('[data-ir]').click();
     await page.locator('[data-progresso]').waitFor();
@@ -77,20 +79,20 @@ export async function rodar({ navegador, base, t }) {
     t('sem título nem subtítulo na tela ("Dê nome ao seu time" saiu); o h1 fica só para leitor de tela', !/Dê nome ao seu time|O escudo nasce das iniciais/.test(corpo) && (await page.getByRole('heading', { name: 'Passo 1 de 3' }).evaluate((el) => el.getBoundingClientRect().width <= 1)));
     t('rótulos limpos: "Nome do time", "Cidade", "Bairro (opcional)", "Logo do time (opcional)" — nenhum "(obrigatório)"', /NOME DO TIME/i.test(corpo) && /\bCIDADE\b/i.test(corpo) && /BAIRRO \(OPCIONAL\)/i.test(corpo) && /LOGO DO TIME \(OPCIONAL\)/i.test(corpo) && !/obrigatóri/i.test(corpo));
     t('sem textos de apoio embaixo dos campos', !/nunca o endereço|Só a cidade|até 2 MB/.test(corpo));
-    t('sem nome: o Continuar NEM aparece (e nada de "Falta o nome do time.")', (await continuar(page).count()) === 0 && !/Falta o nome do time\./.test(corpo));
+    t('sem nome: o Continuar está lá, apagado (e nada de "Falta o nome do time.")', (await continuar(page).count()) === 1 && !(await continuarAceso(page)) && !/Falta o nome do time\./.test(corpo));
     t('o bairro apagado diz "Escolha a cidade primeiro" (achado 77)', (await page.locator('[data-campo-bairro]').getAttribute('placeholder')) === 'Escolha a cidade primeiro');
 
     await campoNome(page).fill('Domingueira FC');
     await esperar(page);
-    t('com nome mas sem cidade: ainda sem Continuar (cidade obrigatória, 29P)', (await continuar(page).count()) === 0);
+    t('com nome mas sem cidade: o Continuar segue apagado (cidade obrigatória, 29P)', !(await continuarAceso(page)));
     await campoCidade(page).click();
     await campoCidade(page).fill('Bras');
     await page.locator('[data-sugestoes-cidade] button').first().waitFor({ timeout: 15000 });
     await esperar(page);
-    t('"Bras" tem sugestões na lista: a pessoa escolhe uma — o Continuar ainda não aparece', (await continuar(page).count()) === 0);
+    t('"Bras" tem sugestões na lista: a pessoa escolhe uma — o Continuar ainda está apagado', !(await continuarAceso(page)));
     await page.locator('[data-sugestoes-cidade] button', { hasText: 'Brasília, DF' }).first().click();
     await esperar(page);
-    t('escolhida "Brasília, DF": o Continuar aparece', (await continuar(page).count()) === 1 && (await campoCidade(page).inputValue()) === 'Brasília, DF');
+    t('escolhida "Brasília, DF": o Continuar acende', (await continuarAceso(page)) && (await campoCidade(page).inputValue()) === 'Brasília, DF');
     t('o escudo das iniciais fica ("DF" de Domingueira FC)', (await page.locator('[data-escudo-iniciais]').innerText()).trim() === 'DF');
 
     await continuar(page).click(); await esperar(page);
@@ -133,12 +135,12 @@ export async function rodar({ navegador, base, t }) {
     await entrar(page);
     await campoNome(page).fill('Time de Kyoto');
     await cidadeLivre(page, 'K');
-    t('uma letra só não é cidade: sem Continuar', (await continuar(page).count()) === 0);
+    t('uma letra só não é cidade: o Continuar segue apagado', !(await continuarAceso(page)));
     await cidadeLivre(page, 'Kyoto');
-    t('"Kyoto" não tem sugestão na lista (fora do Brasil e de Portugal): o texto vale e o Continuar aparece', (await continuar(page).count()) === 1);
+    t('"Kyoto" não tem sugestão na lista (fora do Brasil e de Portugal): o texto vale e o Continuar acende', await continuarAceso(page));
     await campoCidade(page).fill('');
     await esperar(page, 300);
-    t('apagar a cidade some com o Continuar', (await continuar(page).count()) === 0);
+    t('apagar a cidade apaga o Continuar', !(await continuarAceso(page)));
     await page.context().close();
   }
 

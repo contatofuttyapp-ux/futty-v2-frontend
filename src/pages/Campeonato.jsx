@@ -142,7 +142,7 @@ function Wizard({ slug, onCancel, onCriado }) {
             <div className="camp-title" style={{ fontSize: 20, textAlign: 'center' }}>NOVO CAMPEONATO</div>
             <p className="muted" style={{ fontSize: 12, textAlign: 'center', margin: '0 0 18px' }}>Um torneio interno: os times são do campeonato; o ranking do time fica intocado.</p>
             <label className="lbl-hud" style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Nome do campeonato</label>
-            <input className="input input--hud" value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} placeholder="ex.: Copa da Resenha" style={{ width: '100%', fontFamily: RAJ, fontSize: 16, fontWeight: 700 }} />
+            <input className="input input--hud" value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Copa da Resenha" style={{ width: '100%', fontFamily: RAJ, fontSize: 16, fontWeight: 700 }} />
             <div style={{ marginTop: 22, display: 'grid', gap: 9 }}>
               <button type="button" className="btn hud-corners cta-gold" disabled={!nome.trim()} onClick={() => setPasso(2)}>Continuar</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={onCancel}>Cancelar</button>

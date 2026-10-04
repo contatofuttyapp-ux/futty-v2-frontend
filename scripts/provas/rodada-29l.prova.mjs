@@ -194,6 +194,9 @@ export async function rodar({ navegador, base, t }) {
     await linha2.click();
     t('tocar de novo fecha', (await dois.locator('[data-time-atalhos]').count()) === 0);
 
+    // 29T (achado 168): "Seus times" mostra até 2 linhas; a terceira está atrás de "Ver todos (3)".
+    t('com 3 times: só 2 linhas à mostra e o botão "Ver todos (3)" (29T)', (await page.locator('[data-tres] [data-time-linha]').count()) === 2 && (await page.locator('[data-tres] [data-ver-todos]').innerText()).trim() === 'Ver todos (3)');
+    await page.locator('[data-tres] [data-ver-todos]').click();
     const tres = await page.evaluate(() => [...document.querySelectorAll('[data-tres] [data-time-linha]')].map((l) => l.querySelector('[data-resumo-do-time]')?.innerText.trim() ?? null));
     t('com 3 times: mais de uma pendência vira "N pendências", uma só mostra o texto, nenhuma mostra nada', tres[0] === '3 pendências' && tres[1] === null && tres[2] === '1 denúncia para ver', JSON.stringify(tres));
     t('o card roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));

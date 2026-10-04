@@ -2263,7 +2263,7 @@ async function cenaCriarTime(navegador, sessoes) {
   await pagina.locator('input').first().fill('Varredura FC');
   await espera(300);
   // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
-  await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto');
+  await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto');
   await espera(500);
   await pagina.screenshot({ path: foto('1-nome') });
   await pagina.locator('button', { hasText: /^Continuar$/ }).first().click(); // passo 1 → 2
@@ -6678,8 +6678,8 @@ async function cenaRodada29aApoio(navegador, sessao) {
     ['equipa', `/time/${TIME}`, async () => {}],
     ['criar-time-1', '/criar-time', async () => {}],
     // 29P: a cidade é obrigatória no passo 1; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
-    ['criar-time-2', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto'); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
-    ['criar-time-3', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto'); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
+    ['criar-time-2', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="Ex.:"]').fill('Time de Prova'); await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto'); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
+    ['criar-time-3', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="Ex.:"]').fill('Time de Prova'); await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto'); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
   ];
   for (const [nome, rota, preparar] of telas) {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false });
@@ -6836,12 +6836,12 @@ async function cenaRodada29aLogo(navegador, sessao) {
     pagina.on('pageerror', (e) => erros.push(e.message));
     await pagina.goto(`${BASE}/criar-time`, { waitUntil: 'domcontentloaded' });
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
-    await pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
+    await pagina.locator('input[placeholder^="Ex.:"]').waitFor({ timeout: 30000 });
     return { contexto, pagina, escritas, enviosLogo };
   };
   const ate4 = async (pagina) => {
     // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
-    await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto');
+    await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto');
     await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(500);
@@ -6856,7 +6856,7 @@ async function cenaRodada29aLogo(navegador, sessao) {
   // A) logo aceito
   {
     const { contexto, pagina, escritas, enviosLogo } = await abrir({ status: 200, contentType: 'application/json', body: JSON.stringify({ logo_url: 'https://exemplo.invalid/logo.png' }) });
-    await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova');
+    await pagina.locator('input[placeholder^="Ex.:"]').fill('Time de Prova');
     verificar('passo 1: o campo "Logo do time (opcional)" existe', /logo do time \(opcional\)/i.test(await corpo(pagina)));
     verificar('passo 1: o texto velho "no painel de admin" saiu', !/carregue o logo do time no painel de admin/i.test(await corpo(pagina)));
     await pagina.locator('input[type="file"]').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
@@ -6880,7 +6880,7 @@ async function cenaRodada29aLogo(navegador, sessao) {
   // B) moderação recusa: o time nasce igual e a tela avisa
   {
     const { contexto, pagina, enviosLogo } = await abrir({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'Esta imagem não é permitida.' }) });
-    await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova');
+    await pagina.locator('input[placeholder^="Ex.:"]').fill('Time de Prova');
     await pagina.locator('input[type="file"]').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
     await pagina.locator('img[alt="Prévia do logo do time"]').waitFor({ timeout: 8000 });
     await ate4(pagina);
@@ -6895,7 +6895,7 @@ async function cenaRodada29aLogo(navegador, sessao) {
   // C) sem logo: nada é enviado; tipo errado e arquivo grande são barrados na hora
   {
     const { contexto, pagina, enviosLogo } = await abrir({ status: 200, contentType: 'application/json', body: '{}' });
-    await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova');
+    await pagina.locator('input[placeholder^="Ex.:"]').fill('Time de Prova');
     await pagina.locator('input[type="file"]').setInputFiles({ name: 'logo.gif', mimeType: 'image/gif', buffer: Buffer.from('GIF89a') });
     await espera(500);
     verificar('gif é barrado: "Use uma imagem PNG, JPG ou WEBP."', (await corpo(pagina)).includes('Use uma imagem PNG, JPG ou WEBP.'));
@@ -7854,9 +7854,9 @@ async function cenaRodada29bBoasVindas(navegador) {
   {
     const respostaDoPost = (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: fx.times.gratis.id, slug, nome: 'Prova R29B Grátis' }, geo: { encontrada: true, nomeOficial: 'Kyoto, Kyoto Prefecture' } } : null);
     const { contexto, pagina, escritas } = await abrir(fx.gratis, 'criador', { rota: '/criar-time', esp: false, respostas: respostaDoPost });
-    await pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
-    await pagina.locator('input[placeholder^="ex.:"]').fill('Prova R29B Grátis');
-    await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto'); // 29P: cidade obrigatória; fora da lista, o texto vale
+    await pagina.locator('input[placeholder^="Ex.:"]').waitFor({ timeout: 30000 });
+    await pagina.locator('input[placeholder^="Ex.:"]').fill('Prova R29B Grátis');
+    await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto'); // 29P: cidade obrigatória; fora da lista, o texto vale
     await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(400);
@@ -8008,7 +8008,7 @@ async function cenaRodada29d(navegador) {
     const prog3 = await lerProgresso(pagina);
     verificar('"deixar para depois" → passo 3 (nome), 3 traços acesos', prog3.n === 3 && prog3.acesos === 3, JSON.stringify(prog3));
     await capturar(pagina, 'onboarding-3-nome');
-    await pagina.locator('input[placeholder^="ex.:"]').fill('Prova 29D');
+    await pagina.locator('input[placeholder^="Ex.:"]').fill('Prova 29D');
     await pagina.getByRole('button', { name: /^Entrar$/ }).tap();
     await pagina.waitForURL('**/home', { timeout: 30000 }).catch(() => {});
     verificar('"Entrar" grava o nome e sela o onboarding (PATCH /api/me + POST onboarding-completo, interceptados) e vai ao Início', pagina.url().endsWith('/home') && escritas.some((e) => e.metodo === 'PATCH' && e.rota === '/api/me' && /Prova 29D/.test(e.corpo || '')) && escritas.some((e) => e.metodo === 'POST' && e.rota === '/api/me/onboarding-completo'), JSON.stringify({ url: pagina.url().replace(BASE, ''), escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
@@ -8872,7 +8872,7 @@ async function cenaRodada29bCidades(navegador) {
     return { lista, valor: await campo.inputValue() };
   };
   const criarAteOFim = async (pagina, nome) => {
-    await pagina.locator('input[placeholder^="ex.:"]').fill(nome);
+    await pagina.locator('input[placeholder^="Ex.:"]').fill(nome);
     return pagina;
   };
   const seguirCriacao = async (pagina) => {
@@ -8887,7 +8887,7 @@ async function cenaRodada29bCidades(navegador) {
   // 29P: a cidade achada vira informação do time na festa ("São Paulo, SP", sem "Encontramos:").
   const cidadeDaFesta = async (pagina) => (await pagina.locator('[data-cidade-do-time]').innerText().catch(() => '')).trim();
   const respostaDoPost = (geo) => (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' }, ...(geo ? { geo } : {}) } : null);
-  const esperarCriar = (pagina) => pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
+  const esperarCriar = (pagina) => pagina.locator('input[placeholder^="Ex.:"]').waitFor({ timeout: 30000 });
 
   // 1) criar time — cidade DA LISTA: manda o pacote todo, e "Encontramos: …" no fim
   {
@@ -9088,12 +9088,12 @@ async function cenaRodada29bOrganiza(navegador) {
     return { contexto, pagina, escritas, patches };
   };
   const texto = (pagina) => pagina.locator('body').innerText();
-  const esperarCriar = (pagina) => pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
+  const esperarCriar = (pagina) => pagina.locator('input[placeholder^="Ex.:"]').waitFor({ timeout: 30000 });
   const criarAtePapel = async (pagina, nome) => {
     await esperarCriar(pagina);
-    await pagina.locator('input[placeholder^="ex.:"]').fill(nome);
+    await pagina.locator('input[placeholder^="Ex.:"]').fill(nome);
     // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
-    await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto');
+    await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto');
     await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await pagina.locator('[data-escolha-papel]').waitFor({ timeout: 15000 });
@@ -9195,10 +9195,11 @@ async function cenaRodada29bOrganiza(navegador) {
     await espera(800);
     const t1 = await texto(org.pagina);
     const botoes1 = await org.pagina.locator('button.pbtn, .gcard__presence button').count();
-    verificar('Início (só organiza): o card do jogo diz "Você só organiza este time." (a explicação completa vem uma vez, acima)', await org.pagina.locator('.gcard [data-so-organizo]').first().innerText().then((x) => x.trim() === 'Você só organiza este time.').catch(() => false));
+    verificar('Início (só organiza): o card do jogo diz "Você só organiza este time." (uma vez só, 29T)', await org.pagina.locator('.gcard [data-so-organizo]').first().innerText().then((x) => x.trim() === 'Você só organiza este time.').catch(() => false));
     verificar('Início (só organiza): nenhum "Vou" / "Não vou" (nem o cartão de presença, mesmo com o RSVP aberto)', botoes1 === 0 && !/^Vou$/m.test(t1) && !/^Não vou$/m.test(t1) && !/Confirme sua presença|Você vai\?/i.test(t1), `botões ${botoes1}`);
     verificar('Início (só organiza): sem "Avisar que não vou"', !/Avisar que não vou/.test(t1));
-    verificar('Início (só organiza): a frase de apoio do próximo jogo ("Dá para mudar nas configurações do time.")', /Você só organiza este time, então não entra na lista de presença\. Dá para mudar nas configurações do time\./.test(t1));
+    // 29T (achado 163): a frase comprida saiu de cima dos Próximos jogos; fica só a linha de dentro do card (acima).
+    verificar('Início (só organiza): a frase de apoio "então não entra na lista de presença" NÃO aparece mais em cima dos Próximos jogos', !/então não entra na lista de presença/.test(t1));
     await capturar(org.pagina, '5-inicio-so-organizo');
     await org.contexto.close();
 

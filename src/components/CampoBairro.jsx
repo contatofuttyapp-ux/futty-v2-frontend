@@ -8,7 +8,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { carregarFreguesias } from '../lib/freguesiasDados';
 import { buscarFreguesias, escolhaDaFreguesia } from '../utils/freguesias';
 
-export default function CampoBairro({ valor, aoMudar, concelho = null, desabilitado = false, placeholder = 'Ex: Pinheiros', maxLength = 80, className = 'input input--hud', style, ...resto }) {
+export default function CampoBairro({ valor, aoMudar, concelho = null, desabilitado = false, placeholder = 'Onde vocês jogam', maxLength = 80, className = 'input input--hud', style, ...resto }) {
   const idLista = useId();
   const raiz = useRef(null);
   const [indice, setIndice] = useState(null);

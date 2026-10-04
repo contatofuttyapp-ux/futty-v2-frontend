@@ -5,7 +5,7 @@ import { Suspense, lazy } from 'react';
 
 const CampoCidade = lazy(() => import('./CampoCidade'));
 
-export default function CampoCidadeLazy({ valor, aoMudar, aoSugestoes = null, placeholder = 'Ex: Brasília', maxLength = 100, className = 'input input--hud', style, ...resto }) {
+export default function CampoCidadeLazy({ valor, aoMudar, aoSugestoes = null, placeholder = 'Ex.: Brasília', maxLength = 100, className = 'input input--hud', style, ...resto }) {
   return (
     <Suspense
       fallback={(

@@ -52,9 +52,10 @@ test('os pontos saem com uma casa decimal (formatScore)', () => {
   assert.equal(formatScore(null), '0.0');
 });
 
-test('Explorar: "Times perto de você · N" no lugar de "Times abertos · N"', () => {
+test('Explorar: o título da lista leva o "· N" e não promete "perto de você" sem localização (29T, achado 161)', () => {
   const tela = ler('src/pages/Explorar.jsx');
-  assert.match(tela, /Times perto de você · \{filtradas\.length\}/);
+  assert.match(tela, /\{tituloDoRadar\(\{ origem: origemPos, cidade: cidadeDaPos \}\)\} · \{filtradas\.length\}/);
+  assert.doesNotMatch(tela, /Times perto de você/, 'o título fixo "Times perto de você" saiu');
   assert.doesNotMatch(tela, /Times abertos/i);
 });
 

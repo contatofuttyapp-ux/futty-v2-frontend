@@ -9,7 +9,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { carregarCidades } from '../lib/cidadesDados';
 import { buscarCidades, escolhaDaLinha, rotuloDaCidade } from '../utils/cidades';
 
-export default function CampoCidade({ valor, aoMudar, aoSugestoes = null, placeholder = 'Ex: Brasília', maxLength = 100, className = 'input input--hud', style, ...resto }) {
+export default function CampoCidade({ valor, aoMudar, aoSugestoes = null, placeholder = 'Ex.: Brasília', maxLength = 100, className = 'input input--hud', style, ...resto }) {
   const idLista = useId();
   const raiz = useRef(null);
   const [indice, setIndice] = useState(null);

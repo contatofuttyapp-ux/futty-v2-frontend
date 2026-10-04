@@ -34,6 +34,7 @@ import { MaquinaDoTime } from '../components/BoasVindas';
 import CampoBairro from '../components/CampoBairro';
 import { avisoDaCidade, cidadePreenchida } from '../utils/cidades';
 import { avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
+import { initials } from '../utils/teamColors';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -42,8 +43,6 @@ const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px)
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)' };
 // Título de leitor de tela: existe para quem usa leitor, sem aparecer na tela.
 const SO_LEITOR = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' };
-
-const iniciais = (s) => s.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
 function Cta({ children, cheio, sec, ...rest }) {
   return (
@@ -343,12 +342,12 @@ export default function CriarEquipa() {
         {passo === 1 && (
           <>
             {/* 29P: sem título nem subtítulo; a tela começa no nome (a estrela), em letra maior. O escudo das iniciais fica — é a parte
-                divertida — sem o texto que o explicava. Rótulos limpos, sem marca de campo exigido: sem nome e cidade o Continuar nem aparece. */}
+                divertida — sem o texto que o explicava. Rótulos limpos, sem marca de campo exigido: sem nome e cidade o Continuar fica apagado (29T). */}
             <h1 style={SO_LEITOR}>Passo 1 de 3</h1>
             <Lbl grande>Nome do time</Lbl>
-            <input className="input input--hud" value={nome} maxLength={40} required aria-required="true" onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }} />
+            <input className="input input--hud" value={nome} maxLength={40} required aria-required="true" onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }} />
             <Lbl grande>Cidade</Lbl>
-            <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setBairroEscolha(null); }} aoSugestoes={aoSugestoes} placeholder="Ex: Brasília" aria-required="true" style={{ fontSize: 17, fontWeight: 600 }} />
+            <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setBairroEscolha(null); }} aoSugestoes={aoSugestoes} placeholder="Ex.: Brasília" aria-required="true" style={{ fontSize: 17, fontWeight: 600 }} />
             {/* 29H (item 12): o bairro, opcional. Em Portugal sugere as freguesias do concelho; no resto é texto livre. */}
             <Lbl grande>Bairro (opcional)</Lbl>
             <CampoBairro
@@ -363,7 +362,7 @@ export default function CriarEquipa() {
               <img src={logoPrevia} alt="Prévia do logo do time" width={128} height={128} style={{ display: 'block', width: 128, height: 128, borderRadius: '50%', objectFit: 'cover', margin: '10px auto 8px', border: '2.5px solid #8b5cf6', boxShadow: '0 0 28px rgba(139,92,246,0.5), 0 0 64px rgba(212,160,23,0.16)' }} />
             ) : (
               <div data-escudo-iniciais style={{ width: 128, height: 128, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 46, letterSpacing: '0.04em', color: '#fff', background: 'linear-gradient(180deg, rgba(139,92,246,0.14), rgba(255,255,255,0.03))', border: '2.5px solid #8b5cf6', margin: '10px auto 8px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 28px rgba(139,92,246,0.5), 0 0 64px rgba(212,160,23,0.16)', textShadow: '0 0 14px rgba(240,201,74,0.45)' }}>
-                {iniciais(nome)}
+                {initials(nome) || '?'}
               </div>
             )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
@@ -377,11 +376,10 @@ export default function CriarEquipa() {
               ) : null}
             </div>
             <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={aoEscolherLogo} style={{ display: 'none' }} />
-            {podeContinuar ? (
-              <div style={{ marginTop: 24 }}>
-                <Cta cheio onClick={() => irParaPasso(2)}>Continuar</Cta>
-              </div>
-            ) : null}
+            {/* 29T (achado 166): o Continuar está aí desde o começo, apagado, e acende com nome e cidade — a pessoa vê que existe um próximo passo. */}
+            <div style={{ marginTop: 24 }}>
+              <Cta cheio disabled={!podeContinuar} data-continuar-passo-1 onClick={() => irParaPasso(2)}>Continuar</Cta>
+            </div>
           </>
         )}
 

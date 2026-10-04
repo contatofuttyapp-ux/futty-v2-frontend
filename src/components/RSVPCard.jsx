@@ -5,8 +5,9 @@ import { responderComOtimismo } from '../lib/rsvp';
 import { formatarDataHora } from '../utils/dataHora';
 
 // "até qui., 8 de out. · 20:00" — o prazo, como o jogo, é lido no relógio do CAMPO (fuso do time, 29I achado 83).
-function formatarPrazo(iso, fuso) {
-  return formatarDataHora(iso, fuso);
+// 29T (achado 165): com o rabicho, a cidade é a do time ("horário de Brasília"), não a do fuso.
+function formatarPrazo(iso, fuso, cidade) {
+  return formatarDataHora(iso, fuso, { cidade });
 }
 
 // RODADA 12A — a paleta de presença da casa (--presenca-* em index.css), a mesma
@@ -43,7 +44,7 @@ function botaoNao(sel) {
   };
 }
 
-export default function RSVPCard({ gameId, prazo, fuso, respostaActual, onResposta, cheio = false, minhaPosicaoEspera = null }) {
+export default function RSVPCard({ gameId, prazo, fuso, cidade = null, respostaActual, onResposta, cheio = false, minhaPosicaoEspera = null }) {
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
   // Posição na fila: seed do servidor, atualizada localmente nas ações.
@@ -84,7 +85,7 @@ export default function RSVPCard({ gameId, prazo, fuso, respostaActual, onRespos
     <div style={{ border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.06)', borderRadius: 'var(--radius-md)', padding: 14, marginBottom: 12 }}>
       <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Confirme presença</div>
       {/* Rodada 29L (achado 137): o --label-color (branco a 40%, ~3,7:1) não chega a 4,5:1; o --text-dim passa folgado. */}
-      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>até {formatarPrazo(prazo, fuso)}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>até {formatarPrazo(prazo, fuso, cidade)}</div>
 
       {modoEspera ? (
         posEspera != null ? (

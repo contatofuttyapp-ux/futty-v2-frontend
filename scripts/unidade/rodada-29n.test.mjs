@@ -34,13 +34,14 @@ test('29N · o card "Seus times" vem DEPOIS das stats do avatar e ANTES dos chip
   assert.ok(card < chips, 'o card vem antes de .chips-row');
 });
 
-test('29N · os avisos (push, nascimento, figurinha) continuam ACIMA do avatar; o card não é mais a primeira coisa da página', () => {
+test('29N · os avisos (jogo sem resposta, pedido, notificações, nascimento, figurinha) continuam ACIMA do avatar; o card não é mais a primeira coisa da página', () => {
   const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
   const main = inicio.indexOf('<main className="app-main"');
   assert.ok(main >= 0);
   const card = inicio.indexOf('<CardSeuTime ');
   const cromo = inicio.indexOf('<CromoInicio ');
-  for (const aviso of ['pushEstado === \'suportado\'', 'precisaDob ?', 'ctaFigurinha ?']) {
+  // 29T: os três avisos da fila (jogo, pedido, notificações) saem de um slot só, o primeiro da página.
+  for (const aviso of ['aviso?.tipo === \'jogo\'', 'aviso?.tipo === \'pedido\'', 'aviso?.tipo === \'notificacoes\'', 'precisaDob ?', 'ctaFigurinha ?']) {
     const i = inicio.indexOf(aviso, main);
     assert.ok(i > main && i < cromo, `${aviso}: depois do <main> e antes do avatar`);
   }

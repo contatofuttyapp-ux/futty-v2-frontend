@@ -16,12 +16,15 @@ export function colorOf(key) {
   return TEAM_COLORS[chaveDaCor(key)];
 }
 
-/** Iniciais (até 2 letras) de um nome, para avatares. */
+// As palavras que ligam o nome e não entram nas iniciais (29T, achado 158): "Racha do Guará" é RG, não RD.
+const LIGACOES = new Set(['do', 'da', 'de', 'dos', 'das', 'e']);
+
+/** Iniciais (até 2 letras) do nome de um time, sem do/da/de/dos/das/e: "Racha do Guará" → "RG". Um nome só de ligações ainda dá letras. */
 export function initials(name = '') {
-  return name
-    .trim()
-    .split(/\s+/)
+  const palavras = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+  const nomes = palavras.filter((w) => !LIGACOES.has(w.toLowerCase()));
+  return (nomes.length ? nomes : palavras)
     .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() || '')
+    .map((w) => w[0].toUpperCase())
     .join('');
 }

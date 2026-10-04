@@ -72,7 +72,7 @@ const tentativasProducao = [];
 const escritasBloqueadas = [];
 let midiasServidasLocalmente = 0;
 
-async function novoContexto(navegador, { estado = null, cookiesAceitos = true } = {}) {
+async function novoContexto(navegador, { estado = null, cookiesAceitos = true, pushPendente = false } = {}) {
   const contexto = await navegador.newContext({
     viewport: { width: LARGURA, height: ALTURA },
     deviceScaleFactor: 1,
@@ -85,6 +85,11 @@ async function novoContexto(navegador, { estado = null, cookiesAceitos = true } 
   });
   if (cookiesAceitos) {
     await contexto.addInitScript(() => { try { localStorage.setItem('futty_cookies', 'aceite'); } catch { /* sem storage */ } });
+  }
+  if (pushPendente) {
+    // 29T: o Chromium sem tela nasce com a permissão de notificações NEGADA e o aviso "Ativar notificações" nunca entra na fila do Início. Aqui
+    // ela fica como no navegador de quem ainda não decidiu ("default") — só leitura da permissão; nada é pedido nem gravado.
+    await contexto.addInitScript(() => { try { Object.defineProperty(window.Notification, 'permission', { get: () => 'default', configurable: true }); } catch { /* sem Notification */ } });
   }
   await contexto.route('**/api/**', async (route) => {
     const pedido = route.request();
@@ -121,6 +126,10 @@ async function abrir(contexto) {
   pagina.on('request', (r) => pagina.__pendentes.add(r));
   pagina.on('requestfinished', (r) => pagina.__pendentes.delete(r));
   pagina.on('requestfailed', (r) => pagina.__pendentes.delete(r));
+  // 29T: o /api/inicio que a página recebeu, para a captura conferir que o estado é o que ela promete (pedido pendente, 4 times…).
+  pagina.on('response', async (r) => {
+    try { if (r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/inicio') pagina.__inicio = await r.json(); } catch { /* sem corpo */ }
+  });
   return pagina;
 }
 
@@ -286,27 +295,64 @@ async function medirFaixaDeCookies(pagina) {
   });
 }
 
-const CAMPO_NOME_DO_TIME = 'input[placeholder="ex.: Domingueira FC"]';
+const CAMPO_NOME_DO_TIME = 'input[placeholder="Ex.: Domingueira FC"]';
+
+// Rodada 29T (achado 168): a lei da primeira tela do Início. UM aviso por vez no topo; o próximo jogo que pede resposta (Vou / Não vou) aparece em
+// 390×844 sem rolar — no aviso do topo ou, sem aviso de jogo, no rótulo "Próximos jogos". Devolve a medida e reprova se a lei não vale.
+async function exigirLeiDaPrimeiraTela(p) {
+  const r = await p.evaluate(() => {
+    const base = (el) => (el ? Math.round(el.getBoundingClientRect().bottom) : null);
+    const rotulo = [...document.querySelectorAll('.games-label')].find((el) => /próximos jogos/i.test(el.textContent));
+    const aviso = document.querySelector('[data-aviso]');
+    const jogo = document.querySelector('[data-aviso="jogo"]');
+    return {
+      cartoes: document.querySelectorAll('[data-atalho-do-inicio]').length,
+      chipsFora: document.querySelectorAll('.chips-row a').length,
+      rotuloBase: base(rotulo),
+      avisos: document.querySelectorAll('[data-aviso]').length,
+      tipoDoAviso: aviso ? aviso.getAttribute('data-aviso') : null,
+      avisoDoJogoBase: base(jogo),
+      linhasDeTimes: document.querySelectorAll('[data-seus-times] [data-time-linha]').length,
+    };
+  });
+  if (r.cartoes !== 2) throw new Error(`a Início mostra ${r.cartoes} cartões (esperado 2: Radar de peladas e Criar time)`);
+  if (r.chipsFora) throw new Error('a fila de chips ainda tem links (o "Criar time" e o "Radar de peladas" saíram dela)');
+  if (r.avisos > 1) throw new Error(`a Início mostra ${r.avisos} avisos no topo (é UM por vez)`);
+  if (r.rotuloBase === null) throw new Error('não achei o rótulo "Próximos jogos" na Início');
+  if (r.tipoDoAviso !== 'jogo') throw new Error(`o topo da Início não mostra o aviso do jogo (mostra: ${r.tipoDoAviso || 'nada'}); a conta precisa ter um jogo esperando Vou / Não vou`);
+  if (r.avisoDoJogoBase > ALTURA) throw new Error(`o aviso do jogo termina em ${r.avisoDoJogoBase} px, abaixo da primeira tela (${ALTURA} px)`);
+  console.log(`      aviso do jogo termina em ${r.avisoDoJogoBase} px de ${ALTURA}; "Próximos jogos" em ${r.rotuloBase} px`);
+  return r;
+}
 
 const TELAS = [
   { arq: '01-landing', sessao: false, rota: () => '/', caminho: /^\/$/, extraMs: 1500 },
   { arq: '02-criar-conta', sessao: false, rota: () => '/register', caminho: /^\/register$/, seletor: 'input[type="email"]', permite: ['senha'] },
   { arq: '03-entrar', sessao: false, rota: () => '/login', caminho: /^\/login$/, seletor: 'input[type="email"]', permite: ['senha'] },
   {
-    // Rodada 29Q: os cartões "Radar de peladas" e "Criar time" ficam à vista, e o rótulo "Próximos jogos" continua inteiro na primeira
-    // tela de 390×844 (lei da 29L, achado 127). Se não couber a imagem NÃO sai: a saída é encolher os cartões (altura, respiro), nunca a letra.
+    // Rodada 29T (achado 168): a LEI DA PRIMEIRA TELA mudou (troca a da 29L, achado 127). Em 390×844 o próximo jogo que pede resposta aparece sem rolar —
+    // no aviso do topo ou na lista. O aviso do jogo (um aviso por vez) sobe para o topo, e é ele que esta captura mostra. Os cartões "Radar de peladas"
+    // e "Criar time" continuam à vista (29Q). Se o jogo não couber a imagem NÃO sai.
     arq: '04-inicio', sessao: true, rota: () => '/home', caminho: /^\/home$/, seletor: '.games-label, .home-empty',
+    depois: async (p) => { await exigirLeiDaPrimeiraTela(p); },
+  },
+  {
+    // Rodada 29T (achado 168): o estado PESADO — pedido pendente + "Ativar notificações" na fila + 4 times em "Seus times". Antes (29Q) o rótulo
+    // "Próximos jogos" ia a 973 px numa tela de 844; agora o aviso do jogo sobe para o topo, o "Seus times" mostra 2 linhas e o jogo tem de aparecer
+    // na primeira tela. A permissão de notificações fica "default" (como em quem ainda não decidiu) para o aviso entrar na fila.
+    arq: '04b-inicio-pesado', sessao: true, pushPendente: true, rota: () => '/home', caminho: /^\/home$/, seletor: '.games-label, .home-empty',
     depois: async (p) => {
-      const r = await p.evaluate(() => {
-        const rotulo = [...document.querySelectorAll('.games-label')].find((el) => /próximos jogos/i.test(el.textContent));
-        const b = rotulo ? rotulo.getBoundingClientRect() : null;
-        return { cartoes: document.querySelectorAll('[data-atalho-do-inicio]').length, chipsFora: document.querySelectorAll('.chips-row a').length, rotuloBase: b ? Math.round(b.bottom) : null };
-      });
-      if (r.cartoes !== 2) throw new Error(`a Início mostra ${r.cartoes} cartões (esperado 2: Radar de peladas e Criar time)`);
-      if (r.chipsFora) throw new Error('a fila de chips ainda tem links (o "Criar time" e o "Radar de peladas" saíram dela)');
-      if (r.rotuloBase === null) throw new Error('não achei o rótulo "Próximos jogos" na Início');
-      if (r.rotuloBase > ALTURA) throw new Error(`o rótulo "Próximos jogos" termina em ${r.rotuloBase} px, abaixo da primeira tela (${ALTURA} px): encolha os cartões (altura, respiro), nunca a letra`);
-      console.log(`      "Próximos jogos" termina em ${r.rotuloBase} px de ${ALTURA}`);
+      const inicio = p.__inicio;
+      if (!inicio) throw new Error('não peguei o /api/inicio desta captura (o motor local está fora do ar?)');
+      const pendentes = (inicio.pedidos?.pedidos || []).filter((x) => x.status === 'pending').length;
+      const times = (inicio.seu_time || []).length;
+      if (!pendentes) throw new Error('a conta não tem pedido de entrada pendente (o estado pesado precisa de um)');
+      if (times < 4) throw new Error(`a conta administra ${times} time(s) (o estado pesado precisa de 4 em "Seus times")`);
+      const permissao = await p.evaluate(() => (typeof Notification === 'undefined' ? 'sem' : Notification.permission));
+      if (permissao !== 'default') throw new Error(`a permissão de notificações está "${permissao}" (o aviso "Ativar notificações" não entraria na fila)`);
+      const r = await exigirLeiDaPrimeiraTela(p);
+      if (r.linhasDeTimes !== 2) throw new Error(`o "Seus times" mostra ${r.linhasDeTimes} linhas (esperado 2, com "Ver todos")`);
+      console.log(`      estado pesado: ${pendentes} pedido(s) pendente(s) + notificações na fila + ${times} times; "Próximos jogos" termina em ${r.rotuloBase} px (era 973 antes do aviso do topo)`);
     },
   },
   { arq: '05-time-aba-jogos', ...aba('jogos') },
@@ -359,7 +405,15 @@ const TELAS = [
     seletor: '.perfil-glow, main', extraMs: 2000,
   },
   { arq: '17-perfil', sessao: true, rota: () => '/perfil', caminho: /^\/perfil$/ },
-  { arq: '18-explorar', sessao: true, rota: () => '/explorar', caminho: /^\/explorar$/, extraMs: 1500 },
+  {
+    // Rodada 29T (achado 161): sem localização nem cidade escolhida a lista não promete "perto de você". A captura só olha: não toca na localização.
+    arq: '18-explorar', sessao: true, rota: () => '/explorar', caminho: /^\/explorar$/, extraMs: 1500,
+    depois: async (p) => {
+      const texto = (await p.locator('main').innerText()).replace(/\s+/g, ' ');
+      if (!/Peladas abertas a novos jogadores · \d+/i.test(texto)) throw new Error('o título da lista do Radar não é "Peladas abertas a novos jogadores · N"');
+      if (/Times perto de você/i.test(texto)) throw new Error('o Radar ainda diz "Times perto de você" sem localização');
+    },
+  },
   { arq: '19-gabinete', sessao: true, rota: () => '/gabinete', caminho: /^\/gabinete$/, dica: 'o Gabinete só abre para super-admin; use uma conta super-admin', extraMs: 1500 },
   {
     arq: '20a-cookies-faixa-sobre-barra-sem-sessao', sessao: false, cookies: 'nao', rota: () => ROTA_404, caminho: /./,
@@ -385,11 +439,15 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29P: o passo 1 vazio — sem título, rótulos limpos, e NENHUM Continuar enquanto não há nome e cidade.
+    // Rodada 29P/29T: o passo 1 vazio — sem título, rótulos limpos, e o Continuar apagado enquanto não há nome e cidade.
     arq: '23-criar-time-passo-1', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
       await espera(500);
-      if (await p.getByRole('button', { name: 'Continuar' }).count()) throw new Error('o passo 1 vazio mostra "Continuar" (não devia, sem nome e cidade)');
+      // 29T (achado 166): o Continuar existe desde o começo, apagado, e só acende com nome e cidade.
+      const continuar = p.getByRole('button', { name: 'Continuar' });
+      if ((await continuar.count()) !== 1) throw new Error('o passo 1 vazio não mostra o "Continuar" (devia estar lá, apagado)');
+      if (await continuar.isEnabled()) throw new Error('o "Continuar" do passo 1 vazio está aceso (devia estar apagado até haver nome e cidade)');
+      exigirSemRolagem(await medirBotao(p, 'Continuar'), 'o passo 1 vazio', 'Continuar');
     },
   },
   {
@@ -484,7 +542,7 @@ const TELAS = [
 // Nome + cidade da lista ("Brasília, DF"): o passo 1 só libera o Continuar com os dois.
 async function preencherPasso1(p) {
   await p.locator(CAMPO_NOME_DO_TIME).fill('Time Teste');
-  const cidade = p.getByPlaceholder('Ex: Brasília');
+  const cidade = p.getByPlaceholder('Ex.: Brasília');
   await cidade.click();
   await cidade.fill('Brasíl');
   await p.locator('[data-sugestoes-cidade] button', { hasText: 'Brasília, DF' }).first().click({ timeout: 15000 });
@@ -531,7 +589,7 @@ async function capturar(navegador, t, estado, dados) {
   const rascunho = path.join(PREPARO, `${t.arq}.png`);
   fs.rmSync(final, { force: true });
   fs.rmSync(rascunho, { force: true });
-  const contexto = await novoContexto(navegador, { estado: t.sessao ? estado : null, cookiesAceitos: t.cookies !== 'nao' });
+  const contexto = await novoContexto(navegador, { estado: t.sessao ? estado : null, cookiesAceitos: t.cookies !== 'nao', pushPendente: !!t.pushPendente });
   const pagina = await abrir(contexto);
   try {
     await pagina.goto(BASE + t.rota(dados), { waitUntil: 'domcontentloaded', timeout: 45000 });

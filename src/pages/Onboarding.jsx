@@ -435,7 +435,7 @@ export default function Onboarding() {
                 value={nome}
                 maxLength={18}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder="ex.: Bruninho"
+                placeholder="Ex.: Bruninho"
                 style={{ width: '100%', fontFamily: RAJ, fontSize: 17, fontWeight: 700, textAlign: 'center' }}
               />
               <div style={{ marginTop: 30 }}>

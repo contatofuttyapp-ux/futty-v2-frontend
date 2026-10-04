@@ -26,8 +26,10 @@ import { gerarFigurinhaCanvas, enquadrarAvatar, enquadrarFotoComum, mostraFiguri
 import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
+import AvisoDeJogo from '../components/AvisoDeJogo';
 import { MSG_FALHA_RSVP, responderComOtimismo } from '../lib/rsvp';
 import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../utils/presenca';
+import { jogosQuePedemResposta, proximoAviso } from '../utils/avisosDoInicio';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -241,11 +243,14 @@ function CromoInicio({ cromo, previa, modoPrevia, fundo, nome, refCromo, destino
 }
 
 // Nome por baixo do cromo, em texto livre grande (o quadrado não o traz baked). Base
-// 44px; encolhe até caber numa linha (mínimo 28px, sem quebrar), como o fit-to-width
-// da placa do card. A medição é impura (scrollWidth) → useLayoutEffect, antes do paint,
-// para o utilizador não ver um salto de tamanho. Reajusta em resize e quando as fontes
-// carregam (a Rajdhani mede diferente da fallback).
-function NomeCromo({ nome }) {
+// 44px; encolhe até caber numa linha, como o nome da figurinha (29T, achado 164: o piso de 28px
+// cortava "Chavo, el matad…" no computador — agora a letra desce até o nome caber, em qualquer
+// largura). Só como defesa teórica há um piso (PISO_NOME) e, abaixo dele, a reticência.
+// A medição é impura (scrollWidth) → useLayoutEffect, antes do paint, para o utilizador não
+// ver um salto de tamanho. Reajusta em resize e quando as fontes carregam (a Rajdhani mede
+// diferente da fallback).
+const PISO_NOME = 9;
+export function NomeCromo({ nome }) {
   const ref = useRef(null);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -254,8 +259,13 @@ function NomeCromo({ nome }) {
       let f = 44;
       el.style.fontSize = `${f}px`;
       // scrollWidth = largura do texto (nowrap); clientWidth = largura disponível
-      // (o div é bloco → ocupa a coluna). Reduz até caber ou atingir o mínimo.
-      while (el.scrollWidth > el.clientWidth && f > 28) {
+      // (o div é bloco → ocupa a coluna). Primeiro o palpite proporcional (a largura do texto
+      // cresce com a letra), depois o ajuste fino de 1 em 1 px até caber.
+      if (el.scrollWidth > el.clientWidth && el.clientWidth > 0) {
+        f = Math.max(PISO_NOME, Math.floor((f * el.clientWidth) / el.scrollWidth));
+        el.style.fontSize = `${f}px`;
+      }
+      while (el.scrollWidth > el.clientWidth && f > PISO_NOME) {
         f -= 1;
         el.style.fontSize = `${f}px`;
       }
@@ -291,7 +301,7 @@ function NomeCromo({ nome }) {
 }
 
 // ----- Card de jogo -----
-export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo = false, index = 0 }) {
+export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo = false, index = 0, cidade = null }) {
   const today = ehHoje(game.date, game.fuso); // "hoje" é o dia do campo (fuso do time), não o do aparelho
   const isPast = game.status === 'finished';
   const isDrawn = game.status === 'drawn';
@@ -340,7 +350,7 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
 
         <div className="gcard__meta">
           <span className={`gcard__date ${today ? 'gcard__date--today' : ''}`}>
-            {game.date ? formatDateTime(game.date, game.fuso) : 'Data a definir'}
+            {game.date ? formatDateTime(game.date, game.fuso, { cidade }) : 'Data a definir'}
           </span>
           {` · ${game.confirmed_count} ${plural(game.confirmed_count, 'confirmado', 'confirmados')}`}
         </div>
@@ -556,13 +566,12 @@ export default function Inicio() {
 
   // Presença com estado otimista + chamada à API (Rodada 29I, achado 86): o botão escolhido acende e o contador de confirmados
   // mexe NA HORA; se o pedido falhar, volta ao estado de antes e diz o que fazer.
+  // Devolve como acabou: true (valeu), false (falhou e a tela voltou ao que era) ou 'espera' (o jogo estava cheio). O aviso do topo usa isto
+  // para dizer "Presença confirmada" só quando valeu.
   async function onPresence(gameId, going) {
-    // Com o RSVP aberto para o próximo jogo a resposta que vale é a do RSVP: o "Vou / Não vou" do card do jogo e o do cartão
-    // "Confirme presença" são o MESMO — um destino só, um número só.
-    if (gameId === nextId && rsvpValeParaOProximo) {
-      await responderRsvp(going ? 'confirmado' : 'recusado');
-      return;
-    }
+    // Com o RSVP aberto para o jogo do RSVP a resposta que vale é a do RSVP: o "Vou / Não vou" do card do jogo, o do aviso do topo e o do
+    // cartão "Confirme presença" são o MESMO — um destino só, um número só.
+    if (rsvpValeParaOJogo(gameId)) return responderRsvp(gameId, going ? 'confirmado' : 'recusado');
     setError('');
     setBusyId(gameId);
     const antes = (games || []).find((g) => g.id === gameId);
@@ -580,10 +589,12 @@ export default function Inicio() {
         method: 'POST',
         body: JSON.stringify({ confirmado: going }),
       });
+      return true;
     } catch {
       // Volta ao estado de antes (o do jogo que a tela mostrava) e avisa — sem deixar o botão aceso por um pedido que não valeu.
       if (antes) setGames((prev) => (prev || []).map((g) => (g.id === gameId ? { ...g, user_status: antes.user_status, confirmed_count: antes.confirmed_count } : g)));
       setToast({ msg: MSG_FALHA_RSVP, tipo: 'error' });
+      return false;
     } finally {
       setBusyId(null);
     }
@@ -591,18 +602,27 @@ export default function Inicio() {
 
   // A resposta no RSVP do próximo jogo (o "Vou / Não vou" do card do jogo quando o RSVP está aberto). O cartão "Confirme presença"
   // faz o mesmo por conta própria (components/RSVPCard.jsx) e avisa a tela por `onResposta`.
-  async function responderRsvp(status) {
-    if (!nextId) return;
-    setBusyId(nextId);
-    const r = await responderComOtimismo({ gameId: nextId, status, anterior: minhaResposta, aplicar: setMinhaResposta });
+  async function responderRsvp(gameId, status) {
+    setBusyId(gameId);
+    const r = await responderComOtimismo({ gameId, status, anterior: minhaResposta, aplicar: setMinhaResposta });
+    let fim = true;
     if (!r.ok) {
       setToast({ msg: r.erro, tipo: 'error' });
+      fim = false;
     } else if (r.espera != null) {
       // O jogo está cheio: não confirmou, entrou na fila. Recarrega para o cartão mostrar a posição.
       setToast({ msg: 'O jogo está cheio. Você entrou na lista de espera.', tipo: 'success' });
       await inicio.reload();
+      fim = 'espera';
     }
     setBusyId(null);
+    return fim;
+  }
+
+  // O "Vou / Não vou" do aviso do topo (29T): a mesma chamada dos cards; só acrescenta a confirmação, porque o aviso some assim que a resposta vale.
+  async function responderDoAviso(gameId, going) {
+    const fim = await onPresence(gameId, going);
+    if (fim === true) setToast({ msg: going ? 'Presença confirmada.' : 'Anotado: você não vai.', tipo: 'success' });
   }
 
   const user = me?.user;
@@ -919,6 +939,9 @@ export default function Inicio() {
   // ser outro jogo — aí o RSVP não é dele, e o card dele fica com o que o motor contou para ele.
   const jogoDoRsvpId = (dadosInicio?.convites?.games || []).find((g) => g.status !== 'finished')?.id ?? null;
   const rsvpValeParaOProximo = rsvpAbertoNoProximo && nextId != null && nextId === jogoDoRsvpId;
+  // O mesmo RSVP, visto do jogo dele — com ou sem chip de time escolhido. É por aqui que o aviso do topo responde (ele não segue o chip).
+  const rsvpAbertoNoJogoDoRsvp = !!(rsvpData && jogoDoRsvpId != null && rsvpData.rsvp_aberto && !rsvpData.rsvp_fechado);
+  const rsvpValeParaOJogo = (id) => id != null && id === jogoDoRsvpId && rsvpAbertoNoJogoDoRsvp && (games || []).find((g) => g.id === id)?.eu_jogo !== false;
   const confirmadosNoRsvp = confirmadosComResposta(rsvpData, me?.user?.id, minhaResposta);
   const comRsvp = (g) => (g.id === nextId && rsvpValeParaOProximo && confirmadosNoRsvp != null
     ? { ...g, confirmed_count: confirmadosNoRsvp, user_status: statusDoJogoPelaResposta(minhaResposta) }
@@ -984,6 +1007,19 @@ export default function Inicio() {
     apiFetch(`/api/teams/${p.team.slug}/pedir-entrada`, { method: 'DELETE' }).catch(() => {});
   }
 
+  // Rodada 29T (achado 168): UM aviso por vez no topo, o mais importante primeiro — (1) o jogo sem resposta, (2) o pedido pendente,
+  // (3) ativar notificações. Respondeu ou fechou → entra o próximo da fila (utils/avisosDoInicio.js). O aviso do jogo não segue o chip de time:
+  // quem tem jogo esperando resposta o vê em qualquer filtro. Para o jogo do RSVP a resposta de agora é a do RSVP (a otimista inclusive).
+  const jogosParaAviso = (games || []).map((g) => (rsvpValeParaOJogo(g.id)
+    ? { ...g, user_status: statusDoJogoPelaResposta(minhaResposta) || (rsvpData?.minha_posicao_espera != null ? 'espera' : null) }
+    : g));
+  const aviso = proximoAviso({
+    jogos: jogosQuePedemResposta(jogosParaAviso),
+    pedidos: pedidosPendentes,
+    notificacoes: pushEstado === 'suportado' && !pushBannerFechado,
+  });
+  const timeDoJogo = (teamId) => teams.find((t) => t.id === teamId) || null;
+
   // P1-3 — a votação era invisível fora do Ranking. Banner no Início quando há
   // avaliações por dar (agregado de todas as equipas); dispensável por sessão.
   const votacoes = dadosInicio?.votacoes_pendentes?.pendentes || [];
@@ -1020,9 +1056,38 @@ export default function Inicio() {
     <div className="app-shell inicio-reveal">
       <Topbar hud="INÍCIO" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10 }}>
-        {/* Banner discreto para ativar notificações push */}
-        {pushEstado === 'suportado' && !pushBannerFechado ? (
-          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
+        {/* Rodada 29T (achado 168): UM aviso por vez, o mais importante primeiro. O que pede ação sobe; o resto é consulta. */}
+        {aviso?.tipo === 'jogo' ? (
+          <AvisoDeJogo game={aviso.item} team={timeDoJogo(aviso.item.team_id)} mais={aviso.mais} busy={busyId === aviso.item.id} onPresence={responderDoAviso} />
+        ) : null}
+
+        {/* P1-4 — PEDIDO PENDENTE: enquanto o admin não decide, o candidato vê aqui "pedido pendente na {equipa} · cancelar" (antes só
+            existia no "Radar de peladas"). Card discreto, roxo — é espera, não desfecho. Mais de um: o mais recente e um "+N". */}
+        {aviso?.tipo === 'pedido' ? (
+          <div data-aviso="pedido" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.28)' }}>
+            <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+              <Icon name="espera" size={18} color="#b69cff" />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#c9c2d6' }}>
+                Pedido pendente na {aviso.item.team?.nome}
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                Esperando a aprovação do admin. Avisamos você aqui quando decidir.
+              </span>
+            </span>
+            {aviso.mais > 0 ? (
+              <span data-aviso-mais aria-label={`Mais ${aviso.mais} ${plural(aviso.mais, 'pedido pendente', 'pedidos pendentes')}`} style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', color: 'var(--text-dim)', border: '1px solid rgba(255,255,255,0.18)', padding: '1px 7px', borderRadius: 2 }}>+{aviso.mais}</span>
+            ) : null}
+            <button type="button" onClick={() => cancelarPedidoPendente(aviso.item)} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '6px 12px', flexShrink: 0, borderRadius: 2 }}>
+              Cancelar
+            </button>
+          </div>
+        ) : null}
+
+        {/* Banner discreto para ativar notificações push (o último da fila) */}
+        {aviso?.tipo === 'notificacoes' ? (
+          <div data-aviso="notificacoes" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Ativar notificações para não perder nenhum jogo</span>
             {/* Secundário: o cânone tira o verde daqui — activar notificações não é
                 a acção principal da página (o Início não tem uma; ver EmptyState). */}
@@ -1057,28 +1122,6 @@ export default function Inicio() {
             <button type="button" aria-label="Fechar" onClick={fecharDesfecho} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}
-
-        {/* P1-4 — PEDIDOS PENDENTES: enquanto o admin não decide, o candidato vê
-            aqui "pedido pendente na {equipa} · cancelar" (antes só existia no
-            "Radar de peladas"). Card discreto, roxo — é espera, não desfecho. */}
-        {pedidosPendentes.map((p) => (
-          <div key={p.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.28)' }}>
-            <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
-              <Icon name="espera" size={18} color="#b69cff" />
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#c9c2d6' }}>
-                Pedido pendente na {p.team?.nome}
-              </span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                À espera de aprovação do admin, avisamos você aqui quando decidir.
-              </span>
-            </span>
-            <button type="button" onClick={() => cancelarPedidoPendente(p)} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '6px 12px', flexShrink: 0, borderRadius: 2 }}>
-              Cancelar
-            </button>
-          </div>
-        ))}
 
         {/* DESFECHOS dos meus pedidos de entrada (ciclo v1, sem push): aceite →
             destaque + link para a equipa; recusado → aviso digno. Dispensar apaga. */}
@@ -1336,10 +1379,7 @@ export default function Inicio() {
             <div>
               <div className="games-label">Próximos Jogos</div>
             {rsvpAbertoNoProximo ? (
-              <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
-            ) : null}
-            {proximoSoOrganizo ? (
-              <p className="texto-apoio" data-so-organizo>Você só organiza este time, então não entra na lista de presença. Dá para mudar nas configurações do time.</p>
+              <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} cidade={timeDoJogo(proximoJogo?.team_id)?.cidade} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
             ) : null}
             {/* Aviso de ausência (Rodada 8A). Com o RSVP aberto para ESTE jogo, some
                 — o card acima já tem Vou / Não vou, e é a resposta dele que vale. */}
@@ -1379,6 +1419,7 @@ export default function Inicio() {
                       onVerSorteio={verSorteio}
                       abrindo={abrindoSorteioId === item.game.id}
                       index={i}
+                      cidade={timeDoJogo(item.game.team_id)?.cidade}
                     />
                   )
                 )}
@@ -1392,7 +1433,7 @@ export default function Inicio() {
               <div style={{ marginTop: 16 }}>
                 <div className="games-label">Últimos Jogos</div>
                 {ultimosJogos.map((g) => (
-                  <GameCard key={g.id} game={g} busy={false} isNext={false} onPresence={onPresence} onVerSorteio={verSorteio} abrindo={abrindoSorteioId === g.id} />
+                  <GameCard key={g.id} game={g} busy={false} isNext={false} onPresence={onPresence} onVerSorteio={verSorteio} abrindo={abrindoSorteioId === g.id} cidade={timeDoJogo(g.team_id)?.cidade} />
                 ))}
               </div>
             ) : null}
