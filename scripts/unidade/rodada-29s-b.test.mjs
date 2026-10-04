@@ -22,7 +22,7 @@ import {
 } from '../../src/utils/convidadoSemApp.js';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
-const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
+const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
 const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
 const SP = 'America/Sao_Paulo';
 

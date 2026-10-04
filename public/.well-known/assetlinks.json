@@ -4,7 +4,10 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.futty.app",
-      "sha256_cert_fingerprints": ["SHA256_DO_PLAY_APP_SIGNING"]
+      "sha256_cert_fingerprints": [
+        "74:10:28:A7:D3:9B:21:A0:07:E3:71:38:DB:97:99:2D:2D:86:96:8E:96:0B:AF:62:3F:5E:A3:F1:85:02:F6:0A",
+        "0F:94:DE:93:82:F0:95:4A:F9:01:C3:F1:2D:ED:95:6C:F7:BC:20:C2:B8:14:90:7C:D9:F1:BE:FA:93:5E:62:E4"
+      ]
     }
   }
 ]

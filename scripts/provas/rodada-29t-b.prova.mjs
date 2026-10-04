@@ -91,7 +91,7 @@ function criarRoteador(base, { inicio = null, chamadas, explorar = [], respostas
   };
 }
 
-async function abrir(navegador, base, { largura = 390, altura = ALTURA, caminho = '/home', inicio = null, explorar = [], respostas = {}, plantar = {} } = {}) {
+export async function abrir(navegador, base, { largura = 390, altura = ALTURA, caminho = '/home', inicio = null, explorar = [], respostas = {}, plantar = {} } = {}) {
   const ctx = await navegador.newContext({ viewport: { width: largura, height: altura }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: 'pt-BR', timezoneId: SP });
   await ctx.addInitScript((itens) => {
     // `plantar`: chaves do localStorage já postas antes de o app abrir (o "Agora não" de dias atrás, por exemplo)

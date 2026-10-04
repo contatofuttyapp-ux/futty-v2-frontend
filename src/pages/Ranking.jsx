@@ -300,7 +300,7 @@ export default function Ranking() {
 
             {mostrarBanner ? (
               <div className="rank-banner hud-corners">
-                <span style={{ flex: 1 }}>Atualize suas notas</span>
+                <span style={{ flex: 1, minWidth: 0 }}><span style={{ display: 'block' }}>Nova temporada de notas</span><span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', marginTop: 2 }}>Dê sua nota aos companheiros.</span></span>
                 <button type="button" className="rank-banner__close" aria-label="Fechar" onClick={() => setBannerFechado(true)}>✕</button>
               </div>
             ) : null}

@@ -34,7 +34,7 @@
             <!-- Rodada 29B (bloco 3, C): links que abrem no app. Tocar em https://futtyapp.com.br/convite/…
                  (ou /time, o antigo /equipa, /jogo) no WhatsApp abre o app e não o navegador. autoVerify: o Android confere
                  https://futtyapp.com.br/.well-known/assetlinks.json (public/.well-known/) — que precisa do
-                 SHA-256 da chave de ASSINATURA DO APP do Play Console (trocar o texto SHA256_DO_PLAY_APP_SIGNING).
+                 SHA-256 da chave de ASSINATURA DO APP do Play Console (já está em public/.well-known/assetlinks.json).
                  Sem o app instalado (ou sem a verificação), o link abre o site como sempre. Os caminhos daqui, os
                  do AASA do iOS e src/lib/linkDoSite.js têm de bater (há um teste). Capturado por
                  components/DeepLinkListener.jsx via appUrlOpen, como o retorno do Google acima. -->

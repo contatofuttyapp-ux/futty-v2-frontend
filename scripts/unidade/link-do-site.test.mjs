@@ -83,17 +83,15 @@ test('coerência: o entitlement do iOS associa o domínio do parser', () => {
   assert.match(ler('ios/App/App.xcodeproj/project.pbxproj'), /CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/);
 });
 
-test('coerência: o Android — assetlinks.json do pacote certo e intent-filter autoVerify com os mesmos prefixos', (t) => {
+test('coerência: o Android — assetlinks.json do pacote certo e intent-filter autoVerify com os mesmos prefixos', () => {
   const links = JSON.parse(ler('public/.well-known/assetlinks.json'));
   assert.equal(links.length, 1);
   assert.deepEqual(links[0].relation, ['delegate_permission/common.handle_all_urls']);
   assert.equal(links[0].target.namespace, 'android_app');
   assert.equal(links[0].target.package_name, 'com.futty.app');
   assert.match(ler('android/app/build.gradle'), /applicationId "com\.futty\.app"/);
-  assert.equal(links[0].target.sha256_cert_fingerprints.length, 1);
-  if (links[0].target.sha256_cert_fingerprints[0] === 'SHA256_DO_PLAY_APP_SIGNING') {
-    t.diagnostic('PENDENTE: public/.well-known/assetlinks.json ainda tem SHA256_DO_PLAY_APP_SIGNING — trocar pelo SHA-256 da assinatura do app do Play Console antes do build Android');
-  }
+  assert.equal(links[0].target.sha256_cert_fingerprints.length, 2, 'as duas impressões: a do app assinado pelo Play e a outra listada na mesma página');
+  assert.ok(!links[0].target.sha256_cert_fingerprints.includes('SHA256_DO_PLAY_APP_SIGNING'), 'assetlinks.json ainda tem o texto de exemplo');
 
   const manifesto = ler('android/app/src/main/AndroidManifest.xml');
   const filtro = manifesto.match(/<intent-filter android:autoVerify="true">[\s\S]*?<\/intent-filter>/);
