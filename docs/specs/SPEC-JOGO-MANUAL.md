@@ -3,6 +3,12 @@
 > Pergunta do utilizador (25 jul 2026). **ZERO implementação** — só verificação + registo.
 > Fase: **DEPOIS do transplante do sorteio** (o sorteio fecha o look primeiro).
 
+> **Atualização (4-out-2026, Rodada 29S-A, achados 151 e 152).** O "Times à mão" **saiu do Novo jogo**: o Novo jogo é só o **Marcar jogo** (um jogo que vai
+> acontecer). A escolha de COMO os times saem mora no **Jogo**, depois das confirmações: sem times, "Como vão sair os times?" com **Sortear** (dourado) e
+> **Montar à mão** (roxo) lado a lado; com times, "Trocar os times: Sortear de novo · Montar à mão", cada um com confirmação. Montar à mão usa quem
+> confirmou + os convidados sem app da tela e grava em `POST /api/games/:id/times-manuais` (sem seed, sem cerimônia, não avisa ninguém). O que está
+> escrito abaixo é o histórico do desenho. Código: `components/TimesDoJogo.jsx`, `utils/timesAMao.js`, `pages/Jogo.jsx`.
+
 ## 0. O que existe HOJE (verificado no código real)
 - **Não há caminho manual antes do sorteio.** `NovoJogo.jsx` só recolhe data/hora/local +
   `jogadores_por_time` e faz POST `/api/games` (sem times); o texto diz "o nº de times é

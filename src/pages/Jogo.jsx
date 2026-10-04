@@ -15,6 +15,7 @@ import SilhuetaJogador from '../components/SilhuetaJogador';
 import DrawnTeams from '../components/DrawnTeams';
 import ResultadoEditor from '../components/ResultadoEditor';
 import TimesEditor from '../components/TimesEditor';
+import { EscolhaDosTimes, MontarTimesAMao } from '../components/TimesDoJogo';
 import CountdownSorteio from '../components/CountdownSorteio';
 import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
@@ -31,6 +32,8 @@ const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(25
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
 const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)';
 const RAJ = "'Rajdhani', sans-serif";
+// Os dois links discretos de "Trocar os times" (29S): texto sublinhado com área de toque de 44 px de altura.
+const LINK_DISCRETO = { minHeight: 44, padding: '0 4px', border: 'none', background: 'transparent', color: '#c9b6ff', font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' };
 
 // Moldura V1 (família do Ranking/Equipa).
 // Sem foto, mas com identidade (userId), mostra o avatar genérico da casa — nunca
@@ -77,7 +80,10 @@ export default function Jogo() {
   const [convidados, setConvidados] = useState([]); // SPEC-SORTEIO §11: nomes sem app
   const [novoConvidado, setNovoConvidado] = useState('');
   const [toast, setToast] = useState(null);
-  const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'cancelar-presenca' | 'campeonato' | null
+  const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'refazer-a-mao' | 'cancelar-presenca' | 'campeonato' | null
+  // 29S: a composição à mão aberta (quem confirmou + os convidados da tela) e o POST dos times em curso.
+  const [montando, setMontando] = useState(false);
+  const [salvandoTimes, setSalvandoTimes] = useState(false);
   const [criandoCamp, setCriandoCamp] = useState(false);
   // Item 74: o código do link curto (/s/<código>) é pedido quando o sorteio existe — antes do toque em "copiar", para a cópia sair na
   // hora (o Safari só deixa copiar logo depois do toque). Sem código, o link longo.
@@ -163,6 +169,23 @@ export default function Jogo() {
     }
   }
 
+  // Montar à mão (29S): o motor grava os times direto (sem seed, sem cerimônia, sem avisar ninguém) e exige que quem tem conta esteja confirmado —
+  // por isso o pool é quem confirmou (mais os convidados sem app desta tela). Presença já está marcada: não há "presenças" a mandar antes.
+  async function salvarTimes(corpo) {
+    setActionError('');
+    setSalvandoTimes(true);
+    try {
+      await apiFetch(`/api/games/${id}/times-manuais`, { method: 'POST', body: JSON.stringify(corpo) });
+      await reload();
+      setMontando(false);
+      setToast({ tipo: 'success', mensagem: 'Times salvos.' });
+    } catch (err) {
+      setToast({ tipo: 'error', mensagem: err.message }); // fica na composição: nada do que a pessoa montou se perde
+    } finally {
+      setSalvandoTimes(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="app-shell">
@@ -198,6 +221,11 @@ export default function Jogo() {
   // "Confirmados suficientes" = dá para encher dois times. Abaixo disso o botão
   // continua lá (o admin pode sortear com menos), só não chama o toque.
   const podeSortear = !game?.sorteio_realizado && confirmados.length >= porTimeEfectivo * 2;
+  // Quem pode entrar nos times montados à mão: quem confirmou + os convidados sem app escritos nesta tela (user_id null, só o nome).
+  const poolMao = [
+    ...confirmados.map((p) => ({ key: `u:${p.user_id}`, user_id: p.user_id, nome: p.nome || 'Jogador', avatar_url: p.avatar_url || null, convidado: false })),
+    ...convidados.map((c, i) => ({ key: `g:${i}:${c}`, user_id: null, nome: c, avatar_url: null, convidado: true })),
+  ];
   const estouConfirmado = !!meuEstado?.confirmado;
   const souGoleiro = !!meuEstado?.goleiro;
 
@@ -397,7 +425,7 @@ export default function Jogo() {
             )}
 
             {/* Sorteio */}
-            <SecLabel>Sorteio</SecLabel>
+            <SecLabel>Times</SecLabel>
             {!game.sorteio_realizado && (
               <div style={{ marginBottom: 12 }}>
                 <CountdownSorteio jogo={game} />
@@ -456,16 +484,26 @@ export default function Jogo() {
               </div>
             ) : null}
 
-            {/* P2-7: re-sortear apaga o sorteio actual (e o replay) — confirmação
-                inline, no mesmo padrão de "sair da equipa". */}
-            {isAdmin && game.sorteio_realizado && confirmacao === 're-sorteio' && (
-              <div style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginBottom: 10, borderColor: 'rgba(240,201,74,0.4)' }}>
-                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: '#f0c94a' }}>Sortear de novo?</div>
-                <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>Isto substitui o sorteio atual: perde-se o resultado e o replay deste.</div>
+            {/* Trocar os times de um jogo que JÁ tem times (29S): os dois caminhos pedem confirmação antes, no padrão inline de sempre ("sair da
+                equipa"). Texto em PT-BR: o replay só entra na frase quando havia sorteio (tem seed); os times à mão não têm replay. */}
+            {isAdmin && game.sorteio_realizado && (confirmacao === 're-sorteio' || confirmacao === 'refazer-a-mao') && (
+              <div data-confirmar-trocar-times={confirmacao} style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginBottom: 10, borderColor: confirmacao === 're-sorteio' ? 'rgba(240,201,74,0.4)' : 'rgba(139,92,246,0.5)' }}>
+                <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: confirmacao === 're-sorteio' ? '#f0c94a' : '#c9b6ff' }}>
+                  {confirmacao === 're-sorteio' ? 'Sortear de novo?' : 'Montar os times à mão?'}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>
+                  Os times de agora saem.{game.times_resultado?.seed != null ? ' O replay do sorteio também.' : ''}
+                </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => { setConfirmacao(null); sortear(); }} disabled={busy}>
-                    {busy ? 'Processando…' : 'Substituir sorteio'}
-                  </button>
+                  {confirmacao === 're-sorteio' ? (
+                    <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => { setConfirmacao(null); sortear(); }} disabled={busy}>
+                      {busy ? 'Processando…' : 'Sortear de novo'}
+                    </button>
+                  ) : (
+                    <button type="button" className="btn btn--sm hud-corners-s btn--purple" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => { setConfirmacao(null); setMontando(true); }} disabled={busy}>
+                      Montar à mão
+                    </button>
+                  )}
                   <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setConfirmacao(null)} disabled={busy}>
                     Manter
                   </button>
@@ -473,19 +511,17 @@ export default function Jogo() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {isAdmin && confirmacao !== 're-sorteio' && (
-                // RODADA 12A — com gente confirmada para dois times, sortear é A
-                // ação da página: pulsa. Já sorteado, o destaque passa ao "Ver
-                // sorteio" ao lado (duas coisas a pulsar não destacam nenhuma).
-                // RODADA 13 — a receita cheia do .cta-gold (largura total,
-                // troféu), igual ao "Compartilhar" da Figurinha.
-                <span className={`cta-gold-glow ${podeSortear ? 'pulse-glow' : ''}`} style={{ display: 'flex', width: '100%' }}>
-                  <button type="button" className={`btn hud-corners cta-gold ${podeSortear ? 'pulse-active' : ''}`} style={{ flex: 1 }} onClick={() => game.sorteio_realizado ? setConfirmacao('re-sorteio') : sortear()} disabled={busy}>
-                    <Trophy size={16} /> {busy ? 'Processando…' : game.sorteio_realizado ? 'Sortear novamente' : 'Sortear times'}
-                  </button>
-                </span>
-              )}
+            {/* SEM TIMES ainda (29S, achados 151 e 152): "Como vão sair os times?" e dois cartões lado a lado — Sortear (a máquina, como sempre) ou
+                Montar à mão (a pessoa escolhe, com quem confirmou). Só o Sortear pulsa, com a regra de sempre (RODADA 12A: gente para dois times). */}
+            {isAdmin && montando ? (
+              <MontarTimesAMao pool={poolMao} salvando={salvandoTimes} onSalvar={salvarTimes} onCancelar={() => setMontando(false)} />
+            ) : isAdmin && !game.sorteio_realizado ? (
+              <EscolhaDosTimes pulsaSortear={podeSortear} busy={busy} onSortear={() => sortear()} onMontar={() => setMontando(true)} />
+            ) : null}
+
+            {/* COM TIMES: o "Ver sorteio" continua o destaque (quando há sorteio); o resto é consulta. */}
+            {game.sorteio_realizado ? (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: montando ? 14 : 0 }}>
               {/* LEI: jogo manual/histórico (times à mão → sem seed) NÃO abre cerimónia.
                   Só o sorteio (com seed) tem replay/"Ver sorteio". */}
               {game.sorteio_realizado && game.times_resultado?.seed != null && (
@@ -506,6 +542,17 @@ export default function Jogo() {
                 </button>
               )}
             </div>
+            ) : null}
+
+            {/* Trocar os times (29S): discreto, embaixo. Sortear de novo ou Montar à mão — os dois pedem confirmação antes (acima). */}
+            {isAdmin && game.sorteio_realizado && !montando && confirmacao !== 're-sorteio' && confirmacao !== 'refazer-a-mao' ? (
+              <div data-trocar-os-times style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0 4px', marginTop: 8, fontSize: 13, color: 'var(--text-dim)' }}>
+                <span>Trocar os times:</span>
+                <button type="button" data-trocar="sortear" style={LINK_DISCRETO} onClick={() => setConfirmacao('re-sorteio')} disabled={busy}>Sortear de novo</button>
+                <span aria-hidden="true">·</span>
+                <button type="button" data-trocar="a-mao" style={LINK_DISCRETO} onClick={() => setConfirmacao('refazer-a-mao')} disabled={busy}>Montar à mão</button>
+              </div>
+            ) : null}
 
             {/* Campeonato a partir do sorteio: só o formato — plantéis já vêm prontos. */}
             {isAdmin && confirmacao === 'campeonato' && (

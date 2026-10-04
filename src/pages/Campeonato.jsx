@@ -16,6 +16,9 @@ import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO
 import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
 import '../styles/app.css';
 
+// O texto de ajuda do ComporTimes é de quem o usa (29S): o Campeonato mantém o de sempre.
+const AJUDA_DOS_TIMES = 'Toque em um jogador para colocá-lo no time selecionado. Quem sobra não joga (não é reserva). Você pode deixar tudo vazio e criar times só com nome (ex.: 5º A vs 5º B).';
+
 const RAJ = "'Rajdhani', sans-serif";
 
 export default function Campeonato() {
@@ -215,7 +218,7 @@ function Wizard({ slug, onCancel, onCriado }) {
               </div>
             </div>
 
-            <ComporTimes nomes={nomes} pool={pool} atrib={atrib} onChangeAtrib={setAtrib} />
+            <ComporTimes nomes={nomes} pool={pool} atrib={atrib} onChangeAtrib={setAtrib} ajuda={AJUDA_DOS_TIMES} />
 
             <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
               <button type="button" className="btn hud-corners cta-gold" disabled={criando} onClick={() => criar('manual')}>{criando ? 'Criando…' : 'Criar campeonato'}</button>

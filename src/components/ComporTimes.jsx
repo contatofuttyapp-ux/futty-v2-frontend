@@ -19,7 +19,10 @@ function MiniAvatar({ p, size = 20 }) {
   return <span style={{ width: size, height: size, display: 'grid', placeItems: 'center', color: 'rgba(201,182,255,0.9)' }}><SilhuetaJogador size="92%" interrogacao={false} /></span>;
 }
 
-export default function ComporTimes({ nomes, pool, atrib, onChangeAtrib, cores }) {
+// Rodada 29S: o texto de ajuda vem de QUEM USA (`ajuda`) — o Campeonato tem o dele ("Quem sobra não joga…", "ex.: 5º A vs 5º B"), o Jogo e o Jogo
+// passado têm o seu. `opcional` (omissão: sim, como no Campeonato) escreve o "(opcional)" do título; no Jogo montar os times não é opcional.
+// `semJogadores` troca a frase de quando não há ninguém para pôr nos times (a de omissão manda "voltar atrás", que só existe nos passos).
+export default function ComporTimes({ nomes, pool, atrib, onChangeAtrib, cores, ajuda = null, opcional = true, semJogadores = 'Sem jogadores. Volte atrás para juntar convidados, ou crie só com os nomes.' }) {
   const CORES = cores || CORES_PADRAO;
   const [timeSelRaw, setTimeSel] = useState(0);
   const timeSel = Math.max(0, Math.min(timeSelRaw, nomes.length - 1)); // clamp (times podem encolher)
@@ -34,8 +37,8 @@ export default function ComporTimes({ nomes, pool, atrib, onChangeAtrib, cores }
 
   return (
     <>
-      <div className="section-title" style={{ marginTop: 2 }}>Monte os times <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(opcional)</span></div>
-      <p className="muted" style={{ fontSize: 11, margin: '0 0 10px', lineHeight: 1.5 }}>Toque em um jogador para colocá-lo no time selecionado. Quem sobra não joga (não é reserva). Você pode deixar tudo vazio e criar times só com nome (ex.: 5º A vs 5º B).</p>
+      <div className="section-title" style={{ marginTop: 2 }}>Monte os times{opcional ? <> <span className="muted" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(opcional)</span></> : null}</div>
+      {ajuda ? <p className="muted" data-ajuda-dos-times style={{ fontSize: 11, margin: '0 0 10px', lineHeight: 1.5 }}>{ajuda}</p> : null}
 
       {/* separador de times (toca para selecionar) */}
       <div className="row" style={{ marginBottom: 10 }}>
@@ -64,7 +67,7 @@ export default function ComporTimes({ nomes, pool, atrib, onChangeAtrib, cores }
       {/* pool disponível */}
       <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.1em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', margin: '0 0 6px' }}>Disponíveis · {livres.length}</div>
       {pool.length === 0 ? (
-        <p className="muted" style={{ fontSize: 12 }}>Sem jogadores. Volte atrás para juntar convidados, ou crie só com os nomes.</p>
+        <p className="muted" style={{ fontSize: 12 }}>{semJogadores}</p>
       ) : livres.length === 0 ? (
         <p className="muted" style={{ fontSize: 12 }}>Todos colocados.</p>
       ) : (

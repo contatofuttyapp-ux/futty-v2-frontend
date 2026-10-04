@@ -536,7 +536,64 @@ const TELAS = [
       if (!dentro) throw new Error('o cartão do jogo não está inteiro na tela (a rolagem até ele não chegou)');
     },
   },
+  {
+    // Rodada 29S-A (achados 151, 155, 156): o Marcar jogo no Várzea FC (NUNCA no Missa de Quinta, que é time de verdade). O "ingresso" se preenche com o
+    // que a captura digita; NADA é gravado (o "Criar jogo" nem é tocado — e o contexto já responde a qualquer escrita em /api sem chegar ao banco).
+    arq: '28-novo-jogo', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC (precisa ser admin dele)',
+    rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/novo`, caminho: /^\/time\/[^/]+\/jogo\/novo$/, seletor: '[data-ingresso]',
+    depois: async (p) => { await preencherMarcarJogo(p); },
+  },
+  {
+    // Rodada 29S-A (achado 156): o mesmo, com "mudar só neste jogo" tocado — o selo, o seletor e o bloco em ROXO, e o 6 por time no ingresso.
+    arq: '29-novo-jogo-so-neste', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC (precisa ser admin dele)',
+    rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/novo`, caminho: /^\/time\/[^/]+\/jogo\/novo$/, seletor: '[data-ingresso]',
+    depois: async (p) => {
+      await preencherMarcarJogo(p);
+      await p.locator('[data-mudar-so-neste]').click();
+      await p.locator('[data-selo-so-neste]').waitFor({ timeout: 5000 });
+      await p.locator('[data-stepper] [aria-label="Mais"]').click();
+      await espera(400);
+      if (!(await p.locator('[data-ingresso-so-neste]').count())) throw new Error('o ingresso não mostra o "por time · só neste jogo" em roxo');
+      exigirSemRolagem(await medirBotao(p, 'Criar jogo'), 'o Marcar jogo com o seletor roxo', 'Criar jogo');
+    },
+  },
+  {
+    // Rodada 29S-A (achados 151 e 152): a pergunta "Como vão sair os times?" e os dois cartões, num jogo do Várzea FC ainda sem times. Só olha: não toca em
+    // "Sortear" nem em "Montar à mão". Se o jogo achado já tem times, a captura sai com o estado COM times e o script diz isso.
+    arq: '30-jogo-como-saem-os-times', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC com algum jogo (precisa ser admin dele)',
+    rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/${d.jogoVarzea.id}`, caminho: /^\/time\/[^/]+\/jogo\/[^/?]+$/, seletor: '[data-como-saem-os-times], [data-trocar-os-times]',
+    depois: async (p) => {
+      const semTimes = (await p.locator('[data-como-saem-os-times]').count()) > 0;
+      if (!semTimes) {
+        console.log('      ATENÇÃO: o jogo do Várzea FC que achei JÁ TEM TIMES; a imagem mostra o estado com times ("Trocar os times"), não os dois cartões');
+        await p.locator('[data-trocar-os-times]').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      } else {
+        await p.locator('[data-como-saem-os-times]').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+        const caixas = await p.evaluate(() => ['sortear', 'a-mao'].map((k) => { const r = document.querySelector(`[data-escolha="${k}"]`).getBoundingClientRect(); return { x: r.x, y: Math.round(r.y), w: r.width, b: Math.round(r.bottom) }; }));
+        if (Math.abs(caixas[0].y - caixas[1].y) > 2 || caixas[1].x < caixas[0].x + caixas[0].w || caixas[1].x + caixas[1].w > LARGURA || caixas[0].b > ALTURA) throw new Error(`os dois cartões não estão lado a lado e inteiros na tela: ${JSON.stringify(caixas)}`);
+      }
+      await espera(500);
+    },
+  },
 ];
+
+// ── O Marcar jogo nas capturas (29S-A) ───────────────────────────────────────────────────────────────────────────────────────────
+// Digita uma data (daqui a 10 dias, no relógio do time) e o local — só no formulário, nada vai ao banco — e confere que o ingresso acompanhou, que
+// a hora nasceu em 20:00 e que o time é o Várzea FC. "Criar jogo" tem de caber na primeira tela; se não couber, encolhe o ingresso, nunca a letra.
+async function preencherMarcarJogo(p) {
+  const nomeDoTime = (await p.locator('[data-ingresso-time]').innerText()).trim();
+  if (!/v[áa]rzea fc/i.test(nomeDoTime)) throw new Error(`o Marcar jogo abriu no time "${nomeDoTime}" (as capturas de administração são SÓ no Várzea FC)`);
+  const dia = new Date(Date.now() + 10 * 86400000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  await p.locator('#data').fill(dia);
+  await p.locator('#local').fill('Society Madalena — campo 2');
+  await espera(400);
+  const hora = await p.locator('#hora').inputValue();
+  if (hora !== '20:00') throw new Error(`a hora nasceu em ${hora || 'vazio'} (esperado 20:00)`);
+  const ingresso = await p.evaluate(() => ({ dia: document.querySelector('[data-ingresso-dia]').innerText.trim(), hora: document.querySelector('[data-ingresso-hora]').innerText.trim(), local: document.querySelector('[data-ingresso-local]').innerText.trim() }));
+  if (ingresso.hora !== '20:00' || ingresso.local !== 'Society Madalena — campo 2' || !/\d/.test(ingresso.dia)) throw new Error(`o ingresso não acompanhou o que foi digitado: ${JSON.stringify(ingresso)}`);
+  exigirSemRolagem(await medirBotao(p, 'Criar jogo'), 'o Marcar jogo', 'Criar jogo');
+  console.log(`      ingresso: ${ingresso.dia} · ${ingresso.hora} · ${ingresso.local}`);
+}
 
 // ── O Criar time nas capturas (29O/29P) ────────────────────────────────────────────────────────────────────────────────────────
 // Nome + cidade da lista ("Brasília, DF"): o passo 1 só libera o Continuar com os dois.

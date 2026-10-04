@@ -1,59 +1,77 @@
-// Futty v2.0 — Criar jogo (só admin).
-// 3 modos: SORTEAR (normal, o sorteio é o caminho padrão) · TIMES À MÃO (manual, hoje)
-// · JÁ ACONTECEU (retroativo, data passada). Os 2 últimos partilham a mesma peça de
-// composição (ComporTimes) e NÃO abrem cerimónia (times_resultado sem seed). O
-// retroativo é histórico: NÃO notifica ninguém. Ver SPEC-JOGO-MANUAL / SPEC-JOGO-RETROATIVO.
+// Futty v2.0 — Marcar jogo (/time/:slug/jogo/novo, só admin).
+// Rodada 29S, bloco A (achados 151 a 156): a página abre DIRETO no "Marcar jogo" — um jogo que vai acontecer. Saíram os três chips (Sortear /
+// Times à mão / Já aconteceu): COMO os times se formam (sorteio ou à mão) é uma decisão do JOGO, depois das confirmações (Jogo.jsx).
+// No topo, o "ingresso" do jogo se preenche enquanto a pessoa digita; a hora nasce em 20:00 (ou na hora do último jogo do time, se já está em
+// cache); "Só neste jogo" aparece em ROXO. "Jogo passado →" é uma linha discreta embaixo do botão.
+// Até o bloco B, o "Jogo passado" abre o modo antigo "Já aconteceu" pela URL (?passado=1) com a fase de montar de sempre — o destino mora em
+// utils/novoJogo.js (caminhoDoJogoPassado), um ponto só. Esse modo é histórico: NÃO notifica ninguém. Ver SPEC-JOGO-RETROATIVO.
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Calendar, Clock, MapPin } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { lerCache } from '../lib/cacheLocal';
+import { useAuth } from '../hooks/useAuth';
 import { useTeam } from '../hooks/useTeam';
 import { diaDeCalendario, instanteNoCampo, rabichoDoFuso } from '../utils/dataHora';
+import { caminhoDoJogoPassado, horaSugerida } from '../utils/novoJogo';
+import { corpoDosTimes, nomesDosTimes, podeSalvarTimes } from '../utils/timesAMao';
 import Topbar from '../components/Topbar';
 import NumberStepper from '../components/NumberStepper';
 import ComporTimes from '../components/ComporTimes';
+import IngressoDoJogo from '../components/IngressoDoJogo';
 import Toast from '../components/Toast';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
-const NOMES_PALETA = ['Time Ouro', 'Time Roxo', 'Time Prata', 'Time Bronze'];
+// O roxo do "Só neste jogo" (achado 156): o que vale só para este jogo se distingue do padrão do time.
+const ROXO = '#8b5cf6';
+const ROXO_CLARO = '#c9b6ff';
+const CAMPO_GRANDE = { fontFamily: RAJ, fontSize: 18, fontWeight: 600 };
+const ROTULO_COM_ICONE = { display: 'flex', alignItems: 'center', gap: 6 };
+const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
 
 export default function NovoJogo() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const { session } = useAuth();
   const { members, team } = useTeam(slug);
 
-  const [modo, setModo] = useState('sortear'); // 'sortear' | 'manual' | 'retro'
-  const [fase, setFase] = useState('form'); // 'form' | 'compor'
+  // O modo antigo "Já aconteceu" (Jogo passado, até o bloco B) vem da URL; sem ela é o Marcar jogo.
+  const retro = params.get('passado') === '1';
+  const [fase, setFase] = useState('form'); // 'form' | 'compor' (só o jogo passado)
   const [gameId, setGameId] = useState(null);
 
   const [data, setData] = useState('');
-  const [hora, setHora] = useState('');
+  // A hora nasce em 20:00 (achado 155) — ou na hora do último jogo do time no fuso do time, se os jogos do time já estão em cache (o do Início):
+  // nenhum pedido novo só para isso. `null` = a pessoa ainda não mexeu; a sugestão vale até ela digitar. O jogo passado segue com a hora opcional.
+  const [horaDigitada, setHoraDigitada] = useState(null);
+  const [jogosEmCache] = useState(() => lerCache(session?.user?.id, 'inicio')?.convites?.games || null);
+  const hora = horaDigitada ?? (retro ? '' : horaSugerida(jogosEmCache, { slug, fuso: team?.fuso }));
   const [local, setLocal] = useState('');
   // Item 68 (Rodada 29): jogadores por time é UM padrão do time (Ajustes) — o jogo já nasce com ele, dobrado em "Padrão do time: 5 ·
-  // mudar só neste jogo". `porTime` null = o padrão (o motor usa o do time); com número, vale só para este jogo.
+  // mudar só neste jogo". `porTime` null = o padrão (o motor usa o do time); com número, vale só para este jogo (ROXO, achado 156).
   const [porTime, setPorTime] = useState(null);
   const padraoDoTime = team?.jogadores_por_time || 5;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // fase 'compor' (manual/retro)
+  // fase 'compor' (jogo passado)
   const [presentes, setPresentes] = useState({}); // { [user_id]: { jogou, gr } }
   const [convidados, setConvidados] = useState([]);
   const [convInput, setConvInput] = useState('');
   const [nTimes, setNTimes] = useState(2);
   const [atrib, setAtrib] = useState([]);
 
-  const eManual = modo === 'manual' || modo === 'retro';
-  const nomesTimes = NOMES_PALETA.slice(0, nTimes);
+  const nomesTimes = nomesDosTimes(nTimes);
 
   const pool = [
     ...(members || []).filter((m) => presentes[m.id]?.jogou).map((m) => ({ key: `u:${m.id}`, user_id: m.id, nome: m.nome || 'Jogador', avatar_url: m.avatar_url || null, convidado: false })),
     ...convidados.map((c, i) => ({ key: `g:${i}:${c}`, user_id: null, nome: c, avatar_url: null, convidado: true })),
   ];
-  const poolByKey = Object.fromEntries(pool.map((p) => [p.key, p]));
-  const podeGuardar = nomesTimes.every((_, i) => (atrib[i] || []).length >= 1);
+  const podeGuardar = podeSalvarTimes(nomesTimes, atrib);
 
   function toggleJogou(id) {
     setPresentes((c) => ({ ...c, [id]: { jogou: !c[id]?.jogou, gr: c[id]?.jogou ? false : c[id]?.gr } }));
@@ -66,8 +84,8 @@ export default function NovoJogo() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!data) { setError('Informe a data do jogo.'); return; }
-    if (modo === 'sortear' && !hora) { setError('Informe a hora do jogo.'); return; }
-    if (modo === 'sortear' && porTime != null && (!porTime || Number(porTime) < 2)) { setError('Informe quantos jogadores por time (mínimo 2).'); return; }
+    if (!retro && !hora) { setError('Informe a hora do jogo.'); return; }
+    if (!retro && porTime != null && (!porTime || Number(porTime) < 2)) { setError('Informe quantos jogadores por time (mínimo 2).'); return; }
     setError('');
     setLoading(true);
     try {
@@ -82,10 +100,10 @@ export default function NovoJogo() {
           data: iso,
           local: local.trim() || null,
           ...(porTime != null ? { jogadores_por_time: Number(porTime) } : {}), // sem número: o padrão do time
-          historico: modo === 'retro',
+          historico: retro,
         }),
       });
-      if (eManual) { setGameId(game.id); setFase('compor'); setLoading(false); }
+      if (retro) { setGameId(game.id); setFase('compor'); setLoading(false); }
       // replace: o "Voltar" do jogo leva para onde a pessoa estava antes do formulário, não de volta a ele.
       else navigate(`/time/${slug}/jogo/${game.id}`, { replace: true });
     } catch (err) {
@@ -102,11 +120,7 @@ export default function NovoJogo() {
       const jogadores = (members || []).filter((m) => presentes[m.id]?.jogou).map((m) => ({ user_id: m.id, goleiro: !!presentes[m.id]?.gr }));
       await apiFetch(`/api/games/${gameId}/presencas`, { method: 'POST', body: JSON.stringify({ jogadores }) });
       // 2) times definidos à mão → times_resultado (sem seed, sem cerimónia)
-      const times = nomesTimes.map((nome, i) => ({
-        nome,
-        jogadores: (atrib[i] || []).map((k) => poolByKey[k]).filter(Boolean).map((p) => ({ user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url, convidado: p.convidado })),
-      }));
-      await apiFetch(`/api/games/${gameId}/times-manuais`, { method: 'POST', body: JSON.stringify({ times }) });
+      await apiFetch(`/api/games/${gameId}/times-manuais`, { method: 'POST', body: JSON.stringify(corpoDosTimes(nomesTimes, atrib, pool)) });
       navigate(`/time/${slug}/jogo/${gameId}`, { replace: true });
     } catch (err) {
       setToast({ tipo: 'error', mensagem: err.message });
@@ -114,50 +128,54 @@ export default function NovoJogo() {
     }
   }
 
+  const rabichoDaHora = rabichoDoFuso(new Date(), team?.fuso, { cidade: team?.cidade });
+
   return (
     <div className="app-shell">
       <Topbar hud="NOVO JOGO" back="voltar" backFallback={`/time/${slug}?aba=jogos`} />
       <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
         {fase === 'form' ? (
           <>
-            {/* Modo */}
-            <div className="chips-row" style={{ margin: '4px 0 14px' }}>
-              <button type="button" className={`chip ${modo === 'sortear' ? 'chip--active' : ''}`} onClick={() => setModo('sortear')}>Sortear</button>
-              <button type="button" className={`chip ${modo === 'manual' ? 'chip--active' : ''}`} onClick={() => setModo('manual')}>Times à mão</button>
-              <button type="button" className={`chip ${modo === 'retro' ? 'chip--active' : ''}`} onClick={() => setModo('retro')}>Já aconteceu</button>
-            </div>
-            <p className="muted" style={{ fontSize: 12, margin: '0 0 14px', lineHeight: 1.5 }}>
-              {modo === 'sortear' ? 'Agende um jogo. Os times saem do sorteio.'
-                : modo === 'manual' ? 'Você define os times à mão. Sem sorteio, sem cerimônia.'
-                  : 'Cadastre um jogo que já aconteceu (data passada). Silencioso: não notifica ninguém.'}
-            </p>
+            {retro ? (
+              <p className="muted" data-jogo-passado-aviso style={{ fontSize: 12, margin: '4px 0 14px', lineHeight: 1.5 }}>
+                Jogo passado · cadastre um jogo que já aconteceu (data passada). Silencioso: não notifica ninguém.
+              </p>
+            ) : (
+              <IngressoDoJogo team={team} data={data} hora={hora} local={local} porTime={porTime} />
+            )}
 
-            <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)', padding: '16px 16px 18px', display: 'grid', gap: 14 }}>
+            <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: CLIP, padding: '16px 16px 18px', display: 'grid', gap: 14 }}>
               {error && <div className="alert alert--error">{error}</div>}
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <div className="field" style={{ flex: 1 }}>
-                  <label htmlFor="data">Data</label>
-                  <input id="data" type="date" className="input input--hud" value={data} max={modo === 'retro' ? diaDeCalendario(new Date(), team?.fuso) : undefined} onChange={(e) => setData(e.target.value)} />
+                  <label htmlFor="data" style={ROTULO_COM_ICONE}><Calendar size={15} aria-hidden="true" /> Data</label>
+                  <input id="data" type="date" className="input input--hud" style={CAMPO_GRANDE} value={data} max={retro ? diaDeCalendario(new Date(), team?.fuso) : undefined} onChange={(e) => setData(e.target.value)} />
                 </div>
                 <div className="field" style={{ flex: 1 }}>
-                  {/* 29I, bloco 3 (dono): "Hora do jogo" — nunca "fuso". O rabicho aparece só para quem está noutro relógio que o do time. */}
-                  <label htmlFor="hora">Hora do jogo {modo !== 'sortear' ? <span className="muted" style={{ fontSize: 11 }}>(opcional)</span> : null}</label>
-                  <input id="hora" type="time" className="input input--hud" value={hora} onChange={(e) => setHora(e.target.value)} />
-                  {rabichoDoFuso(new Date(), team?.fuso, { cidade: team?.cidade }) ? (
-                    <span className="muted" data-rabicho-hora style={{ fontSize: 11, marginTop: 4 }}>{rabichoDoFuso(new Date(), team?.fuso, { cidade: team?.cidade })}</span>
+                  {/* 29I, bloco 3 (dono): "Hora do jogo" — nunca "fuso". O rabicho aparece só para quem está noutro relógio que o do time
+                      (no Marcar jogo ele mora no ingresso, ao lado da hora). */}
+                  <label htmlFor="hora" style={ROTULO_COM_ICONE}><Clock size={15} aria-hidden="true" /> Hora do jogo {retro ? <span className="muted" style={{ fontSize: 11 }}>(opcional)</span> : null}</label>
+                  <input id="hora" type="time" className="input input--hud" style={CAMPO_GRANDE} value={hora} onChange={(e) => setHoraDigitada(e.target.value)} />
+                  {retro && rabichoDaHora ? (
+                    <span className="muted" data-rabicho-hora style={{ fontSize: 11, marginTop: 4 }}>{rabichoDaHora}</span>
                   ) : null}
                 </div>
               </div>
 
               <div className="field">
-                <label htmlFor="local">Local</label>
-                <input id="local" className="input input--hud" placeholder="Ex.: Campo Municipal" value={local} onChange={(e) => setLocal(e.target.value)} maxLength={120} />
+                <label htmlFor="local" style={ROTULO_COM_ICONE}><MapPin size={15} aria-hidden="true" /> Local</label>
+                <input id="local" className="input input--hud" style={CAMPO_GRANDE} placeholder="Ex.: Campo Municipal" value={local} onChange={(e) => setLocal(e.target.value)} maxLength={120} />
               </div>
 
-              {modo === 'sortear' ? (
-                <div className="field" data-jogadores-por-time>
-                  <label>Jogadores por time</label>
+              {!retro ? (
+                <div className="field" data-jogadores-por-time style={porTime != null ? { padding: '10px 12px', border: '1px solid rgba(139,92,246,0.55)', background: 'rgba(139,92,246,0.08)' } : undefined}>
+                  <label style={{ ...ROTULO_COM_ICONE, justifyContent: 'space-between' }}>
+                    Jogadores por time
+                    {porTime != null ? (
+                      <span data-selo-so-neste style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: ROXO_CLARO, border: `1px solid ${ROXO}`, background: 'rgba(139,92,246,0.22)', padding: '2px 8px', borderRadius: 2 }}>Só neste jogo</span>
+                    ) : null}
+                  </label>
                   {porTime == null ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
                       <span>Padrão do time: <b>{padraoDoTime}</b></span>
@@ -165,8 +183,8 @@ export default function NovoJogo() {
                     </div>
                   ) : (
                     <>
-                      <NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} />
-                      <button type="button" className="btn btn--ghost btn--sm" style={{ justifySelf: 'start', marginTop: 6 }} onClick={() => setPorTime(null)}>Voltar ao padrão do time ({padraoDoTime})</button>
+                      <NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} cor={ROXO_CLARO} />
+                      <button type="button" className="btn btn--ghost btn--sm" data-voltar-ao-padrao style={{ justifySelf: 'start', marginTop: 6, color: ROXO_CLARO, borderColor: 'rgba(139,92,246,0.5)' }} onClick={() => setPorTime(null)}>voltar ao padrão ({padraoDoTime})</button>
                     </>
                   )}
                   <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>O número de times sai no sorteio, conforme os confirmados. O padrão muda em Ajustes do time.</span>
@@ -174,15 +192,28 @@ export default function NovoJogo() {
               ) : null}
 
               <button type="submit" className="btn hud-corners-s cta-gold" style={{ width: '100%', marginTop: 8, fontFamily: RAJ, letterSpacing: '0.08em', textTransform: 'uppercase' }} disabled={loading}>
-                {loading ? 'Criando…' : eManual ? 'Continuar → montar' : 'Criar jogo'}
+                {loading ? 'Criando…' : retro ? 'Continuar → montar' : 'Criar jogo'}
               </button>
             </form>
+
+            {/* A porta do outro caminho. Importância menor (dono, 4-out): uma linha discreta, nunca um cartão do mesmo peso do botão. */}
+            {retro ? (
+              <p data-marcar-jogo style={{ textAlign: 'center', margin: '8px 0 0', fontSize: 13, color: 'var(--text-dim)' }}>
+                Esse jogo ainda vai acontecer?{' '}
+                <Link to={`/time/${slug}/jogo/novo`} style={{ color: ROXO_CLARO, textDecoration: 'underline', textUnderlineOffset: 3, display: 'inline-block', padding: '12px 2px' }}>Marcar jogo →</Link>
+              </p>
+            ) : (
+              <p data-jogo-passado style={{ textAlign: 'center', margin: '8px 0 0', fontSize: 13, color: 'var(--text-dim)' }}>
+                Esse jogo já aconteceu?{' '}
+                <Link to={caminhoDoJogoPassado(slug)} style={{ color: ROXO_CLARO, textDecoration: 'underline', textUnderlineOffset: 3, display: 'inline-block', padding: '12px 2px' }}>Jogo passado →</Link>
+              </p>
+            )}
           </>
         ) : (
           <>
-            {/* FASE COMPOR (manual/retro) */}
+            {/* FASE COMPOR (jogo passado) */}
             <p className="muted" style={{ fontSize: 12, margin: '4px 0 12px', lineHeight: 1.5 }}>
-              {modo === 'retro' ? 'Jogo histórico' : 'Jogo manual'} · marque quem jogou e monte os times à mão.
+              Jogo histórico · marque quem jogou e monte os times à mão.
             </p>
 
             {/* Quem jogou (checklist dos membros, marcada pelo admin) */}
@@ -234,8 +265,8 @@ export default function NovoJogo() {
               </div>
             </div>
 
-            {/* Composição (a MESMA peça do campeonato) */}
-            <ComporTimes nomes={nomesTimes} pool={pool} atrib={atrib} onChangeAtrib={setAtrib} />
+            {/* Composição (a MESMA peça do campeonato e do jogo). O texto de ajuda é nosso: no passado e sem "ex.: 5º A vs 5º B". */}
+            <ComporTimes nomes={nomesTimes} pool={pool} atrib={atrib} onChangeAtrib={setAtrib} ajuda="Toque num time e depois em quem jogou nele." />
 
             <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
               <button type="button" className="btn hud-corners cta-gold" disabled={!podeGuardar || loading} onClick={guardarManual}>
