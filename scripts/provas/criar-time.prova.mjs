@@ -1,6 +1,11 @@
-// Prova no navegador (Rodada 29I, achados 78, 79, 80, 81, 82): o wizard "Criar time" — o Voltar do sistema recua um passo por vez, do passo 1
-// pergunta antes de sair, depois de criar sai direto; o contador é 3/3; o botão apagado diz o que falta; o artilheiro depende dos gols.
-export const nome = 'Criar time (histórico dos passos, 3/3, gols × artilheiro)';
+// Prova no navegador (Rodada 29I, achados 78, 79, 80, 81, 82; 29O; 29P): o wizard "Criar time" — o Voltar do sistema recua um passo por vez,
+// do passo 1 pergunta antes de sair, depois de criar sai direto; o contador é 3/3; o Continuar do passo 1 só aparece com nome E cidade
+// (da lista, ou texto livre quando a lista não sugere nada); a lixeira tira o logo; o artilheiro depende dos gols; o passo 4 é a festa
+// (a máquina com o nome, "Seu time está no ar!") e "Ir para o time" não reabre boas-vindas.
+export const nome = 'Criar time (histórico dos passos, 3/3, cidade obrigatória, lixeira, gols × artilheiro, a festa)';
+
+// Um PNG de 1×1 (o motor é interceptado: só a prévia e a lixeira interessam aqui).
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
 
 export async function rodar({ navegador, base, t }) {
   const erros = [];
@@ -27,37 +32,66 @@ export async function rodar({ navegador, base, t }) {
   const esperar = (page, ms = 250) => page.waitForTimeout(ms);
   const caminho = (page) => new URL(page.url()).pathname;
   const campoNome = (page) => page.locator('input[placeholder="ex.: Domingueira FC"]');
+  const campoCidade = (page) => page.getByPlaceholder('Ex: Brasília');
+  const continuar = (page) => page.getByRole('button', { name: 'Continuar' });
   const entrar = async (page) => {
     await page.locator('[data-ir]').click();
     await page.locator('[data-progresso]').waitFor();
     await esperar(page);
   };
+  // A cidade da lista: digita e escolhe a sugestão (a lista pública /dados/cidades.json desce do próprio Vite).
+  const escolherCidade = async (page, digitar, opcao) => {
+    await campoCidade(page).click();
+    await campoCidade(page).fill(digitar);
+    await page.locator('[data-sugestoes-cidade] button', { hasText: opcao }).first().click({ timeout: 15000 });
+    await esperar(page);
+  };
+  // Cidade fora da lista (sem sugestão): o texto vale.
+  const cidadeLivre = async (page, nomeCidade) => {
+    await campoCidade(page).click();
+    await campoCidade(page).fill(nomeCidade);
+    await esperar(page, 400);
+  };
+  const passo1Pronto = async (page, nomeTime = 'Domingueira FC') => {
+    await campoNome(page).fill(nomeTime);
+    await cidadeLivre(page, 'Kyoto');
+  };
 
-  // ── 1. Passo a passo, indo e voltando pelo Voltar do sistema ─────────────────────────────────────────────────────────────────────
+  // ── 1. Passo 1 (29P): sem título; Continuar só com nome E cidade; a cidade da lista; e os passos pelo Voltar do sistema ───────────
   {
     const page = await nova();
     await entrar(page);
     t('abre no passo 1/3', (await progresso(page)) === '1/3', await progresso(page));
     t('o contador é x/3, nunca x/4 (achado 79)', !/\/4/.test(await texto(page)));
-    const continuar = page.getByRole('button', { name: 'Continuar' });
-    t('"Continuar" apagado sem nome', await continuar.isDisabled());
-    const cursor = await continuar.evaluate((el) => getComputedStyle(el).cursor);
-    t('cursor not-allowed no "Continuar" apagado (achado 82)', cursor === 'not-allowed', cursor);
-    t('diz o que falta: "Falta o nome do time."', /Falta o nome do time\./.test(await texto(page)));
-    t('"Nome do time" e "Cidade" estão marcados como obrigatórios', /NOME DO TIME \(OBRIGATÓRIO\)/i.test(await texto(page)) && /CIDADE \(OBRIGATÓRIA EM TIME ABERTO\)/i.test(await texto(page)));
+    const corpo = await texto(page);
+    t('sem título nem subtítulo na tela ("Dê nome ao seu time" saiu); o h1 fica só para leitor de tela', !/Dê nome ao seu time|O escudo nasce das iniciais/.test(corpo) && (await page.getByRole('heading', { name: 'Passo 1 de 3' }).evaluate((el) => el.getBoundingClientRect().width <= 1)));
+    t('rótulos limpos: "Nome do time", "Cidade", "Bairro (opcional)", "Logo do time (opcional)" — nenhum "(obrigatório)"', /NOME DO TIME/i.test(corpo) && /\bCIDADE\b/i.test(corpo) && /BAIRRO \(OPCIONAL\)/i.test(corpo) && /LOGO DO TIME \(OPCIONAL\)/i.test(corpo) && !/obrigatóri/i.test(corpo));
+    t('sem textos de apoio embaixo dos campos', !/nunca o endereço|Só a cidade|até 2 MB/.test(corpo));
+    t('sem nome: o Continuar NEM aparece (e nada de "Falta o nome do time.")', (await continuar(page).count()) === 0 && !/Falta o nome do time\./.test(corpo));
     t('o bairro apagado diz "Escolha a cidade primeiro" (achado 77)', (await page.locator('[data-campo-bairro]').getAttribute('placeholder')) === 'Escolha a cidade primeiro');
 
     await campoNome(page).fill('Domingueira FC');
-    t('com nome, a linha "Falta" some', !/Falta o nome do time\./.test(await texto(page)));
-    await continuar.click(); await esperar(page);
+    await esperar(page);
+    t('com nome mas sem cidade: ainda sem Continuar (cidade obrigatória, 29P)', (await continuar(page).count()) === 0);
+    await campoCidade(page).click();
+    await campoCidade(page).fill('Bras');
+    await page.locator('[data-sugestoes-cidade] button').first().waitFor({ timeout: 15000 });
+    await esperar(page);
+    t('"Bras" tem sugestões na lista: a pessoa escolhe uma — o Continuar ainda não aparece', (await continuar(page).count()) === 0);
+    await page.locator('[data-sugestoes-cidade] button', { hasText: 'Brasília, DF' }).first().click();
+    await esperar(page);
+    t('escolhida "Brasília, DF": o Continuar aparece', (await continuar(page).count()) === 1 && (await campoCidade(page).inputValue()) === 'Brasília, DF');
+    t('o escudo das iniciais fica ("DF" de Domingueira FC)', (await page.locator('[data-escudo-iniciais]').innerText()).trim() === 'DF');
+
+    await continuar(page).click(); await esperar(page);
     t('Continuar leva ao passo 2/3', (await progresso(page)) === '2/3', await progresso(page));
-    await page.getByRole('button', { name: 'Continuar' }).click(); await esperar(page);
+    await continuar(page).click(); await esperar(page);
     t('e ao 3/3, o último (tem o botão CRIAR O TIME)', (await progresso(page)) === '3/3' && (await page.getByRole('button', { name: 'Criar o time' }).count()) === 1, await progresso(page));
 
     await page.goBack(); await esperar(page);
     t('Voltar do sistema no passo 3 recua para o 2 (não vai ao Início) — achado 80', (await progresso(page)) === '2/3' && caminho(page) === '/criar-time', `${await progresso(page)} ${caminho(page)}`);
     await page.goBack(); await esperar(page);
-    t('Voltar de novo: passo 1, com o nome preenchido (nada se perdeu)', (await progresso(page)) === '1/3' && (await campoNome(page).inputValue()) === 'Domingueira FC');
+    t('Voltar de novo: passo 1, com o nome e a cidade preenchidos (nada se perdeu)', (await progresso(page)) === '1/3' && (await campoNome(page).inputValue()) === 'Domingueira FC' && (await campoCidade(page).inputValue()) === 'Brasília, DF');
     await page.goForward(); await esperar(page);
     t('Avançar do sistema volta ao passo 2', (await progresso(page)) === '2/3');
     await page.goBack(); await esperar(page);
@@ -83,25 +117,54 @@ export async function rodar({ navegador, base, t }) {
     await page.context().close();
   }
 
-  // ── 3. O chevron do topo faz o mesmo que o Voltar do sistema ───────────────────────────────────────────────────────────────────
+  // ── 3. Cidade fora da lista (sem sugestão): o texto vale — e uma letra só não ──────────────────────────────────────────────────
   {
     const page = await nova();
     await entrar(page);
-    await campoNome(page).fill('Meu Time');
-    await page.getByRole('button', { name: 'Continuar' }).click(); await esperar(page);
+    await campoNome(page).fill('Time de Kyoto');
+    await cidadeLivre(page, 'K');
+    t('uma letra só não é cidade: sem Continuar', (await continuar(page).count()) === 0);
+    await cidadeLivre(page, 'Kyoto');
+    t('"Kyoto" não tem sugestão na lista (fora do Brasil e de Portugal): o texto vale e o Continuar aparece', (await continuar(page).count()) === 1);
+    await campoCidade(page).fill('');
+    await esperar(page, 300);
+    t('apagar a cidade some com o Continuar', (await continuar(page).count()) === 0);
+    await page.context().close();
+  }
+
+  // ── 4. O chevron do topo faz o mesmo que o Voltar do sistema ───────────────────────────────────────────────────────────────────
+  {
+    const page = await nova();
+    await entrar(page);
+    await passo1Pronto(page, 'Meu Time');
+    await continuar(page).click(); await esperar(page);
     await page.getByRole('button', { name: '← voltar' }).click(); await esperar(page);
-    t('"← voltar" da tela recua um passo e preserva o estado', (await progresso(page)) === '1/3' && (await campoNome(page).inputValue()) === 'Meu Time');
+    t('"← voltar" da tela recua um passo e preserva o estado', (await progresso(page)) === '1/3' && (await campoNome(page).inputValue()) === 'Meu Time' && (await campoCidade(page).inputValue()) === 'Kyoto');
     await page.getByRole('button', { name: 'Voltar' }).first().click(); await esperar(page);
     t('o chevron do topo, no passo 1, pergunta antes de sair', (await page.locator('[data-sair-da-criacao]').count()) === 1);
     await page.context().close();
   }
 
-  // ── 4. Gols, artilheiro e destaque (29O: tudo nasce desligado; ligar o artilheiro liga os gols; desligar os gols desliga o artilheiro) ──
+  // ── 5. O logo: a prévia, e a lixeira que tira o logo (29P) ─────────────────────────────────────────────────────────────────────
   {
     const page = await nova();
     await entrar(page);
-    await campoNome(page).fill('Gols FC');
-    await page.getByRole('button', { name: 'Continuar' }).click(); await esperar(page);
+    await campoNome(page).fill('Logo FC');
+    await page.locator('input[type="file"]').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: PNG });
+    await page.locator('img[alt="Prévia do logo do time"]').waitFor({ timeout: 8000 });
+    const lixeira = page.getByRole('button', { name: 'Tirar logo' });
+    t('com logo: "Trocar logo" e a LIXEIRA (ícone, com nome "Tirar logo" para leitor de tela); sem o chip "Tirar"', (await page.getByRole('button', { name: 'Trocar logo' }).count()) === 1 && (await lixeira.count()) === 1 && (await lixeira.locator('svg').count()) === 1 && !/\bTirar\b/.test(await texto(page)));
+    await lixeira.click(); await esperar(page);
+    t('a lixeira tira o logo: a prévia some, o escudo das iniciais volta e o chip diz "Escolher logo"', (await page.locator('img[alt="Prévia do logo do time"]').count()) === 0 && (await page.locator('[data-escudo-iniciais]').count()) === 1 && (await page.getByRole('button', { name: 'Escolher logo' }).count()) === 1 && (await lixeira.count()) === 0);
+    await page.context().close();
+  }
+
+  // ── 6. Gols, artilheiro e destaque (29O: tudo nasce desligado; ligar o artilheiro liga os gols; desligar os gols desliga o artilheiro) ──
+  {
+    const page = await nova();
+    await entrar(page);
+    await passo1Pronto(page, 'Gols FC');
+    await continuar(page).click(); await esperar(page);
     const gols = page.getByRole('button', { name: 'Gols de cada um' });
     const art = page.getByRole('button', { name: 'Artilheiro do dia' });
     const dest = page.getByRole('button', { name: 'Destaque do dia' });
@@ -123,7 +186,7 @@ export async function rodar({ navegador, base, t }) {
     await page.context().close();
   }
 
-  // ── 5. Criar: o corpo do POST é coerente; depois de criar, "Pronto" e o Voltar sai direto ───────────────────────────────────────
+  // ── 7. Passo 3 e a FESTA (29P): o corpo do POST é coerente; a máquina com o nome; "Pronto"; o Voltar sai direto ─────────────────
   {
     const page = await nova();
     const corpos = [];
@@ -132,19 +195,47 @@ export async function rodar({ navegador, base, t }) {
       return route.fallback();
     });
     await entrar(page);
-    await campoNome(page).fill('Criado FC');
-    await page.getByRole('button', { name: 'Continuar' }).click(); await esperar(page);
-    await page.getByRole('button', { name: 'Continuar' }).click(); await esperar(page);
+    await passo1Pronto(page, 'Criado FC');
+    await continuar(page).click(); await esperar(page);
+    await continuar(page).click(); await esperar(page);
+    const t3 = await texto(page);
+    t('passo 3 sem o subtítulo "Como se entra no seu time."', /Aceita novos membros\?/.test(t3) && !/Como se entra no seu time/.test(t3));
+    t('passo 3: os textos citam o "Radar de peladas", entre aspas', /Quem achar o time no "Radar de peladas" pede para entrar\. Você aceita ou não\./.test(t3) && /Qualquer um que achar o time no "Radar de peladas" entra na hora\./.test(t3) && !/Explorar/.test(t3));
     await page.getByRole('button', { name: /Aberto/ }).click();
-    t('time aberto sem cidade: "Criar o time" apagado e diz por quê', (await page.getByRole('button', { name: 'Criar o time' }).isDisabled()) && /Time aberto precisa de cidade/.test(await texto(page)));
+    t('time aberto COM cidade (ela é obrigatória agora): "Criar o time" segue aceso, sem "Time aberto precisa de cidade"', !(await page.getByRole('button', { name: 'Criar o time' }).isDisabled()) && !/Time aberto precisa de cidade/.test(await texto(page)));
     await page.getByRole('button', { name: /Fechado/ }).click();
     await page.getByRole('button', { name: 'Criar o time' }).click();
-    await page.locator('text=Chame o seu time').waitFor({ timeout: 5000 });
-    await esperar(page);
-    t('time criado sem tocar em nada: o POST leva os três desligados (29O)', corpos.length === 1 && corpos[0].mostrar_gols === false && corpos[0].mostrar_artilheiro === false && corpos[0].mostrar_destaque === false, JSON.stringify(corpos));
-    t('depois de criar a tela de convites diz "Pronto" (e não "3/4")', (await progresso(page)) === 'Pronto' && !/\/4/.test(await texto(page)), await progresso(page));
+    await page.locator('text=Seu time está no ar!').waitFor({ timeout: 5000 });
+    await esperar(page, 400);
+    t('time criado sem tocar em nada: o POST leva os três desligados (29O) e a cidade', corpos.length === 1 && corpos[0].mostrar_gols === false && corpos[0].mostrar_artilheiro === false && corpos[0].mostrar_destaque === false && corpos[0].cidade === 'Kyoto', JSON.stringify(corpos));
+    const t4 = await texto(page);
+    // O letreiro e a cidade vão em CAIXA ALTA pelo CSS; o texto de verdade (textContent) é o que o motor devolveu.
+    const letreiro = (await page.locator('[data-festa] .maq .letreiro').textContent()).trim();
+    t('a festa: a máquina deitada (sem logo) com o nome do time (o que o motor devolveu) como letreiro', (await page.locator('[data-festa] .maq').count()) === 1 && (await page.locator('[data-festa] .maq.quadrada').count()) === 0 && letreiro === 'Time Teste', letreiro);
+    const cidadeDoTime = (await page.locator('[data-cidade-do-time]').textContent()).trim();
+    t('embaixo do nome, a cidade como informação do time (sem "Encontramos:")', cidadeDoTime === 'Kyoto' && !/Encontramos:/.test(t4), cidadeDoTime);
+    t('"Seu time está no ar!" e "Chame a galera pelo link. Ele vale 30 dias."', /Seu time está no ar!/.test(t4) && /Chame a galera pelo link\. Ele vale 30 dias\./.test(t4));
+    t('saíram "Chame o seu time", "Você pode pular este passo." e "Logo do time enviado"', !/Chame o seu time|Você pode pular este passo|Logo do time enviado/.test(t4));
+    t('ficam o link do convite e o "Ir para o time"', (await page.getByRole('button', { name: 'Gerar link do convite' }).count()) === 1 && (await page.getByRole('button', { name: 'Ir para o time' }).count()) === 1);
+    t('depois de criar a tela diz "Pronto" (e não "3/4")', (await progresso(page)) === 'Pronto' && !/\/4/.test(t4), await progresso(page));
     await page.goBack(); await esperar(page, 600);
     t('Voltar depois de criar sai da criação direto (não volta a passo nenhum nem pergunta)', (await page.locator('[data-casa]').count()) === 1 && (await page.locator('[data-sair-da-criacao]').count()) === 0, `${caminho(page)} ${await progresso(page)}`);
+    await page.context().close();
+  }
+
+  // ── 8. "Ir para o time" NÃO reabre a festa (sem criouAgora no state) ───────────────────────────────────────────────────────────
+  {
+    const page = await nova();
+    await entrar(page);
+    await passo1Pronto(page, 'Festa FC');
+    await continuar(page).click(); await esperar(page);
+    await continuar(page).click(); await esperar(page);
+    await page.getByRole('button', { name: 'Criar o time' }).click();
+    await page.locator('text=Seu time está no ar!').waitFor({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Ir para o time' }).click(); await esperar(page, 400);
+    const estado = await page.evaluate(() => window.history.state?.usr ?? null);
+    t('"Ir para o time" leva à página do time sem o state criouAgora (a comemoração já aconteceu no passo 4)', caminho(page) === '/time/time-teste' && (await page.locator('[data-time]').count()) === 1 && !(estado && estado.criouAgora), JSON.stringify({ caminho: caminho(page), estado }));
+    t('nenhuma caixa de boas-vindas aberta', (await page.locator('.bv[role="dialog"]').count()) === 0);
     await page.context().close();
   }
 

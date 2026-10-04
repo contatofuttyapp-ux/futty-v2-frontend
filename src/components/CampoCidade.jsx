@@ -9,7 +9,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { carregarCidades } from '../lib/cidadesDados';
 import { buscarCidades, escolhaDaLinha, rotuloDaCidade } from '../utils/cidades';
 
-export default function CampoCidade({ valor, aoMudar, placeholder = 'Ex: Brasília', maxLength = 100, className = 'input input--hud', style, ...resto }) {
+export default function CampoCidade({ valor, aoMudar, aoSugestoes = null, placeholder = 'Ex: Brasília', maxLength = 100, className = 'input input--hud', style, ...resto }) {
   const idLista = useId();
   const raiz = useRef(null);
   const [indice, setIndice] = useState(null);
@@ -25,6 +25,12 @@ export default function CampoCidade({ valor, aoMudar, placeholder = 'Ex: Brasíl
   const sugestoes = aberto && !escolhido && indice ? buscarCidades(indice, valor) : [];
 
   useEffect(() => { setAtiva(-1); }, [valor]); // eslint-disable-line react-hooks/set-state-in-effect -- a seleção do teclado recomeça a cada letra
+
+  // Rodada 29P: quem usa o campo pode querer saber se a lista tem sugestão para o texto (a cidade obrigatória do Criar time conta
+  // o texto livre só quando a lista não sugere nada). Sem a lista (ainda não desceu, ou falhou), zero: nunca trava quem está fora.
+  useEffect(() => {
+    if (aoSugestoes) aoSugestoes(indice ? buscarCidades(indice, valor).length : 0);
+  }, [aoSugestoes, indice, valor]);
 
   // A lista fecha com um toque FORA do campo (e ao escolher, e no Esc) — não no blur. No iPhone o blur do campo chega
   // antes do clique na sugestão: a lista sumia debaixo do dedo e a escolha nunca acontecia (achado da cena).

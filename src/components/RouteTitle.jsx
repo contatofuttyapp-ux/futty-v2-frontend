@@ -18,7 +18,7 @@ const TITULOS = [
   ['/diagnostico', 'Diagnóstico'],
   ['/planos', 'Figurinhas'],
   ['/ranking', 'Ranking'],
-  ['/explorar', 'Explorar'],
+  ['/explorar', 'Radar de peladas'],
   ['/super', 'Super-Admin'],
   ['/gabinete', 'Gabinete'],
   ['/termos', 'Termos'],

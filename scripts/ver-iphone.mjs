@@ -2262,6 +2262,9 @@ async function cenaCriarTime(navegador, sessoes) {
   await espera(3000);
   await pagina.locator('input').first().fill('Varredura FC');
   await espera(300);
+  // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
+  await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto');
+  await espera(500);
   await pagina.screenshot({ path: foto('1-nome') });
   await pagina.locator('button', { hasText: /^Continuar$/ }).first().click(); // passo 1 → 2
   await espera(700);
@@ -2279,7 +2282,7 @@ async function cenaCriarTime(navegador, sessoes) {
 
   await espera(2500);
   const naPasso4 = await texto();
-  passos.chegouPasso4 = /Chame o seu time/i.test(naPasso4);
+  passos.chegouPasso4 = /Seu time está no ar/i.test(naPasso4);
   // Rodada 29A: o presente do criador foi ABOLIDO — a cena agora exige que ele NÃO exista (API e tela).
   passos.ganhouBrilhanteNaTela = /Você ganhou \d+ gerações|Gerar agora/i.test(naPasso4);
   await pagina.screenshot({ path: foto('3-presente') });
@@ -6674,8 +6677,9 @@ async function cenaRodada29aApoio(navegador, sessao) {
     ['figurinha', '/figurinha', async () => {}],
     ['equipa', `/time/${TIME}`, async () => {}],
     ['criar-time-1', '/criar-time', async () => {}],
-    ['criar-time-2', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
-    ['criar-time-3', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
+    // 29P: a cidade é obrigatória no passo 1; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
+    ['criar-time-2', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto'); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
+    ['criar-time-3', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="ex.:"]').fill('Time de Prova'); await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto'); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
   ];
   for (const [nome, rota, preparar] of telas) {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false });
@@ -6836,12 +6840,15 @@ async function cenaRodada29aLogo(navegador, sessao) {
     return { contexto, pagina, escritas, enviosLogo };
   };
   const ate4 = async (pagina) => {
+    // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
+    await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto');
+    await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(500);
     await pagina.locator('button', { hasText: /Criar o time/i }).first().tap();
-    await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
+    await pagina.getByText('Seu time está no ar!').waitFor({ timeout: 15000 });
     await espera(400);
   };
   const corpo = (pagina) => pagina.locator('body').innerText();
@@ -6865,7 +6872,7 @@ async function cenaRodada29aLogo(navegador, sessao) {
     await ate4(pagina);
     verificar('criou o time (POST /api/teams interceptado)', escritas.some((e) => e.metodo === 'POST' && e.rota === '/api/teams'), escritas.map((e) => `${e.metodo} ${e.rota}`).join(' | '));
     verificar('enviou o logo DEPOIS do time, em multipart, para /api/teams/time-de-prova/logo', enviosLogo.length === 1 && /multipart\/form-data/.test(enviosLogo[0].tipo) && /\/api\/teams\/time-de-prova\/logo$/.test(enviosLogo[0].url) && enviosLogo[0].campoLogo, JSON.stringify(enviosLogo));
-    verificar('passo 4: "Logo do time enviado ✓"', (await corpo(pagina)).includes('Logo do time enviado'));
+    verificar('passo 4 (29P, a festa): o logo aceito aparece na máquina quadrada, sem "Logo do time enviado"', (await pagina.locator('[data-festa] .maq.quadrada img').count()) === 1 && !(await corpo(pagina)).includes('Logo do time enviado'));
     await capturar(pagina, '2-aceito');
     await contexto.close();
   }
@@ -6901,7 +6908,7 @@ async function cenaRodada29aLogo(navegador, sessao) {
     await espera(400);
     await ate4(pagina);
     verificar('sem logo: nenhum envio de logo', enviosLogo.length === 0, String(enviosLogo.length));
-    verificar('sem logo: nenhum aviso de logo no passo 4', !/Logo não aceito|Logo do time enviado/.test(await corpo(pagina)));
+    verificar('sem logo: nenhum aviso de logo no passo 4, e a máquina é a deitada', !/Logo não aceito|Logo do time enviado/.test(await corpo(pagina)) && (await pagina.locator('[data-festa] .maq.quadrada').count()) === 0 && (await pagina.locator('[data-festa] .maq').count()) === 1);
     await contexto.close();
   }
   return { verificacoes, capturas, erros, pasta };
@@ -7053,7 +7060,7 @@ async function cenaRodada29bConvite(navegador, sessao) {
     const { contexto, pagina } = await abrir({ time: TIME_COM_LOGO, resposta: { valido: false, motivo: 'expirado' } }, 'expirado');
     const t = await corpo(pagina);
     verificar('expirado: "Convite inválido" + "Este convite expirou."', /Convite inválido/i.test(t) && t.includes('Este convite expirou.'), t.slice(0, 160).replace(/\n/g, ' | '));
-    verificar('expirado: sai pela porta certa (entrar na conta para pedir entrada no time + Explorar)', t.includes('Entre na conta para pedir entrada em Várzea FC') && t.includes('Procurar times no Explorar'));
+    verificar('expirado: sai pela porta certa (entrar na conta para pedir entrada no time + Radar de peladas)', t.includes('Entre na conta para pedir entrada em Várzea FC') && t.includes('Procurar times no Radar de peladas'));
     verificar('expirado: nenhum "Criar conta e entrar"', !t.includes('Criar conta e entrar'));
     await capturar(pagina, '4-expirado');
     await contexto.close();
@@ -7610,9 +7617,9 @@ async function cenaRodada29bBoasVindas(navegador) {
   const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
   const slug = fx.times.gratis.slug;
   const LOGO = `${BASE}/icons/icon-192.png`; // um PNG real do site faz de logo do time (não há time com logo nas contas de prova)
+  // 29P: a variante do criador saiu (a festa passou para o fim do Criar time); só a frase do convidado continua.
   const FRASES = {
     convidado: 'Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.',
-    criador: 'Seu time está no ar. Chame a galera pelo link, confirme presença, sorteie e faça a figurinha de cada um.',
   };
   const erros = [];
   const verificacoes = [];
@@ -7842,34 +7849,41 @@ async function cenaRodada29bBoasVindas(navegador) {
     await contexto.close();
   }
 
-  // 6) CRIADOR: cria o time (POST interceptado → o time grátis, de que `gratis` é dono) e toca "Ir para o time"
+  // 6) CRIADOR (29P): a festa é o passo 4 do Criar time — a máquina deitada com o nome na janela, na hora em que o time nasce;
+  //    "Ir para o time" NÃO abre boas-vindas nenhuma (a pessoa já comemorou), e nada é gravado como "visto".
   {
-    const respostaDoPost = (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: fx.times.gratis.id, slug, nome: 'Prova R29B Grátis' } } : null);
+    const respostaDoPost = (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: fx.times.gratis.id, slug, nome: 'Prova R29B Grátis' }, geo: { encontrada: true, nomeOficial: 'Kyoto, Kyoto Prefecture' } } : null);
     const { contexto, pagina, escritas } = await abrir(fx.gratis, 'criador', { rota: '/criar-time', esp: false, respostas: respostaDoPost });
     await pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
     await pagina.locator('input[placeholder^="ex.:"]').fill('Prova R29B Grátis');
+    await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto'); // 29P: cidade obrigatória; fora da lista, o texto vale
+    await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(400);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(400);
     await pagina.locator('button', { hasText: /Criar o time/i }).first().tap();
-    await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
-    await pagina.locator('button', { hasText: /^Ir para o time$/ }).tap();
-    await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
-    verificar('"Ir para o time" leva ao time e abre as boas-vindas do CRIADOR', (await pagina.locator('.bv').count()) === 1 && pagina.url().endsWith(`/time/${slug}`), pagina.url().replace(BASE, ''));
+    await pagina.getByText('Seu time está no ar!').waitFor({ timeout: 15000 });
     await espera(900);
-    const r = await lerTela(pagina);
-    verificar('criador: a frase do time no ar, sem a escolha linha/gol (já escolheu no Criar time), um "Vamos lá"', r.variante === 'criador' && r.frase === FRASES.criador && r.chips.length === 0 && r.botoes.length === 1 && r.botoes[0].t === 'Vamos lá' && r.botoes[0].ouro, JSON.stringify({ variante: r.variante, frase: r.frase, chips: r.chips.length, botoes: r.botoes }));
-    verificar('criador sem logo → máquina deitada com o nome do time na janela', !r.quadrada && r.luzes === 92 && r.nomeNaJanela && r.nome === 'Prova R29B Grátis' && r.nomeCabe, JSON.stringify({ quadrada: r.quadrada, nome: r.nome, naJanela: r.nomeNaJanela }));
+    const festa = await pagina.evaluate(() => {
+      const f = document.querySelector('[data-festa]');
+      const maq = f?.querySelector('.maq');
+      const nome = f?.querySelector('.letreiro');
+      return {
+        existe: !!f, quadrada: !!maq?.classList.contains('quadrada'), luzes: f ? f.querySelectorAll('.luz').length : 0,
+        nomeNaJanela: !!nome && !!nome.closest('.janela'), nome: nome?.textContent?.trim() || '',
+        nomeCabe: !!nome && nome.scrollWidth <= nome.clientWidth + 1, cidade: f?.querySelector('[data-cidade-do-time]')?.textContent?.trim() || '',
+        texto: document.body.innerText,
+      };
+    });
+    verificar('criador (29P): a festa no passo 4 — máquina deitada (92 luzes) com o nome do time na janela, a cidade embaixo', festa.existe && !festa.quadrada && festa.luzes === 92 && festa.nomeNaJanela && festa.nome === 'Prova R29B Grátis' && festa.nomeCabe && festa.cidade.toUpperCase() === 'KYOTO, KYOTO PREFECTURE', JSON.stringify({ ...festa, texto: undefined }));
+    verificar('criador (29P): "Seu time está no ar!" e "Chame a galera pelo link. Ele vale 30 dias."; sem "Chame o seu time" nem "Você pode pular"', /Seu time está no ar!/.test(festa.texto) && /Chame a galera pelo link\. Ele vale 30 dias\./.test(festa.texto) && !/Chame o seu time|Você pode pular este passo/.test(festa.texto));
     await capturar(pagina, '6-criador');
-    await pagina.locator('.bv button.cta-gold').tap();
-    await pagina.locator('.bv').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
-    const marcas = await marcasDe(pagina);
-    verificar('"Vamos lá" do criador: fecha, marca futty_onboarding_<time>, NÃO liga o CTA da figurinha e não grava posição', (await pagina.locator('.bv').count()) === 0 && marcas.visto.length === 1 && marcas.visto[0][0] === `futty_onboarding_${fx.times.gratis.id}` && marcas.cta === null && !escritas.some((e) => /posicao/.test(e.rota)), JSON.stringify({ marcas, escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
-    await pagina.reload({ waitUntil: 'domcontentloaded' });
-    await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 2500 }).catch(() => {});
+    await pagina.locator('button', { hasText: /^Ir para o time$/ }).tap();
+    await pagina.waitForURL(`**/time/${slug}`, { timeout: 30000 }).catch(() => {});
     await espera(3500);
-    verificar('criador: depois de "visto" a página não volta (nem com o state ainda na história)', (await pagina.locator('.bv').count()) === 0);
+    const marcas = await marcasDe(pagina);
+    verificar('"Ir para o time" leva ao time e NÃO abre boas-vindas (nem grava "visto", nem liga o CTA da figurinha, nem grava posição)', pagina.url().endsWith(`/time/${slug}`) && (await pagina.locator('.bv').count()) === 0 && marcas.visto.length === 0 && marcas.cta === null && !escritas.some((e) => /posicao/.test(e.rota)), JSON.stringify({ url: pagina.url().replace(BASE, ''), marcas, escritas: escritas.map((e) => `${e.metodo} ${e.rota}`) }));
     await contexto.close();
   }
 
@@ -8867,9 +8881,11 @@ async function cenaRodada29bCidades(navegador) {
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(500);
     await pagina.locator('button', { hasText: /Criar o time/i }).first().tap();
-    await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
+    await pagina.getByText('Seu time está no ar!').waitFor({ timeout: 15000 });
     await espera(400);
   };
+  // 29P: a cidade achada vira informação do time na festa ("São Paulo, SP", sem "Encontramos:").
+  const cidadeDaFesta = async (pagina) => (await pagina.locator('[data-cidade-do-time]').innerText().catch(() => '')).trim();
   const respostaDoPost = (geo) => (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' }, ...(geo ? { geo } : {}) } : null);
   const esperarCriar = (pagina) => pagina.locator('input[placeholder^="ex.:"]').waitFor({ timeout: 30000 });
 
@@ -8887,8 +8903,8 @@ async function cenaRodada29bCidades(navegador) {
     const post = corpoJson(escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/teams'));
     verificar('o POST leva { cidade, uf, pais, lat, lng, origem: "lista" } (o motor usa a coordenada da lista)', post && post.cidade === 'São Paulo' && post.uf === 'SP' && post.pais === 'BR' && post.origem === 'lista' && Number.isFinite(post.lat) && Number.isFinite(post.lng) && post.lat < -23 && post.lat > -24, JSON.stringify(post));
     verificar('nenhuma chamada ao Nominatim (a cidade da lista é instantânea)', nominatim.length === 0, String(nominatim.length));
-    const t = await pagina.locator('body').innerText();
-    verificar('passo 4 diz "Encontramos: São Paulo, SP"', t.includes('Encontramos: São Paulo, SP'), (t.match(/Encontramos[^\n]*/) || ['sem aviso'])[0]);
+    const cidadeFesta = await cidadeDaFesta(pagina);
+    verificar('passo 4 (29P): embaixo do nome, só "São Paulo, SP" (sem "Encontramos:")', cidadeFesta.toUpperCase() === 'SÃO PAULO, SP' && !/Encontramos:/.test(await pagina.locator('body').innerText()), cidadeFesta || 'sem cidade');
     await capturar(pagina, '2-criar-encontramos');
     await contexto.close();
   }
@@ -8906,7 +8922,7 @@ async function cenaRodada29bCidades(navegador) {
     const post = corpoJson(escritas.find((e) => e.metodo === 'POST' && e.rota === '/api/teams'));
     verificar('o POST leva só o texto digitado (sem origem, sem coordenada): o motor tenta o Nominatim', post && post.cidade === 'Vila Xyzzy' && !('origem' in post) && !('lat' in post), JSON.stringify(post));
     const aviso = await pagina.locator('[data-aviso-cidade="aviso"]').innerText().catch(() => '');
-    verificar('passo 4: "Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente \'Vila Xyzzy\'."', aviso.trim() === "Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente 'Vila Xyzzy'.", aviso.trim());
+    verificar('passo 4: "Não achamos essa cidade. Seu time só aparece no "Radar de peladas" para quem escrever exatamente \'Vila Xyzzy\'."', aviso.trim() === 'Não achamos essa cidade. Seu time só aparece no "Radar de peladas" para quem escrever exatamente \'Vila Xyzzy\'.', aviso.trim());
     await capturar(pagina, '3-criar-nao-achou');
     await contexto.close();
   }
@@ -8920,8 +8936,8 @@ async function cenaRodada29bCidades(navegador) {
     await campo.fill('Kyoto');
     await espera(500);
     await seguirCriacao(pagina);
-    const t = await pagina.locator('body').innerText();
-    verificar('fora da lista, achada pelo Nominatim: "Encontramos: Kyoto, Kyoto Prefecture"', t.includes('Encontramos: Kyoto, Kyoto Prefecture'));
+    const cidadeKyoto = await cidadeDaFesta(pagina);
+    verificar('fora da lista, achada pelo Nominatim: a festa mostra "Kyoto, Kyoto Prefecture" embaixo do nome', cidadeKyoto.toUpperCase() === 'KYOTO, KYOTO PREFECTURE', cidadeKyoto || 'sem cidade');
     await contexto.close();
   }
 
@@ -9076,6 +9092,9 @@ async function cenaRodada29bOrganiza(navegador) {
   const criarAtePapel = async (pagina, nome) => {
     await esperarCriar(pagina);
     await pagina.locator('input[placeholder^="ex.:"]').fill(nome);
+    // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
+    await pagina.getByPlaceholder('Ex: Brasília').fill('Kyoto');
+    await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await pagina.locator('[data-escolha-papel]').waitFor({ timeout: 15000 });
     await espera(400);
@@ -9084,7 +9103,7 @@ async function cenaRodada29bOrganiza(navegador) {
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(500);
     await pagina.locator('button', { hasText: /Criar o time/i }).first().tap();
-    await pagina.getByText('Chame o seu time').waitFor({ timeout: 15000 });
+    await pagina.getByText('Seu time está no ar!').waitFor({ timeout: 15000 });
     await espera(400);
   };
   const respostaDoPost = (joga) => (caminho, metodo) => (metodo === 'POST' && caminho === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' }, joga } : null);
@@ -9275,88 +9294,48 @@ async function cenaRodada29bAvise(navegador) {
   const formulario = (p) => p.locator('[data-avise-me="form"]');
   const texto = (p) => p.locator('body').innerText();
 
-  // 1) a página inicial pública: o bloco, sem rolar, e o envio
+  // 1) a página inicial pública (29P): o bloco do Avise-me SAIU — a página já é a de verdade, numa tela só
   {
     const { contexto, pagina, envios } = await abrir('/', {}, 'landing');
-    await formulario(pagina).waitFor({ timeout: 30000 });
+    await pagina.locator('h1').waitFor({ timeout: 30000 });
     await espera(700);
     const t = await texto(pagina);
-    verificar(`a página inicial tem o bloco "${T.titulo}"`, t.includes(T.titulo));
-    verificar('…com e-mail, botão, UMA linha de consentimento (LGPD) e "Você pode sair da lista quando quiser."', await pagina.locator('input[type="email"]').count() === 1 && t.includes(T.botao) && t.includes(T.consent) && t.includes(T.sair));
+    verificar(`a página inicial NÃO tem mais o bloco "${T.titulo}" (nem campo de e-mail, nem o botão)`, !t.includes(T.titulo) && !t.includes(T.botao) && (await formulario(pagina).count()) === 0 && (await pagina.locator('input[type="email"]').count()) === 0 && envios.length === 0);
+    verificar('…e tem o F, o slogan, a frase do que o app faz e as portas de entrada', t.includes('O seu time.') && /Futty: sorteio justo, ranking e figurinha de colecionador/.test(t) && /Entrar com Google/.test(t) && /Criar conta/.test(t));
     const tela = await pagina.evaluate(() => {
-      const raiz = document.querySelector('[data-page]')?.firstElementChild || document.body;
-      const rolavel = [...document.querySelectorAll('div')].find((d) => getComputedStyle(d).overflowY === 'auto' && d.scrollHeight > 0 && d.querySelector('[data-avise-me]'));
-      return { rolavel: rolavel ? { cabe: rolavel.scrollHeight <= rolavel.clientHeight + 1, altura: rolavel.scrollHeight, janela: rolavel.clientHeight } : null, horizontal: document.scrollingElement.scrollWidth <= window.innerWidth + 1, raiz: !!raiz };
+      const rolavel = [...document.querySelectorAll('div')].find((d) => getComputedStyle(d).overflowY === 'auto' && d.querySelector('h1'));
+      return { cabe: rolavel ? rolavel.scrollHeight <= rolavel.clientHeight + 1 : null, horizontal: document.scrollingElement.scrollWidth <= window.innerWidth + 1 };
     });
-    verificar('no celular normal (430×932) continua tudo numa tela só: sem rolagem vertical nem horizontal', tela.rolavel?.cabe === true && tela.horizontal, JSON.stringify(tela));
-    const isca = await pagina.evaluate(() => { const i = document.querySelector('input[name="site"]'); const r = i.getBoundingClientRect(); return { tab: i.tabIndex, oculto: i.getAttribute('aria-hidden'), foraDaTela: r.right < 0 || r.left < -1000 }; });
-    verificar('a isca de robô (campo "site") está fora da tela, fora do teclado e escondida de leitor de tela', isca.tab === -1 && isca.oculto === 'true' && isca.foraDaTela, JSON.stringify(isca));
+    verificar('no celular normal (430×932) continua tudo numa tela só: sem rolagem vertical nem horizontal', tela.cabe === true && tela.horizontal, JSON.stringify(tela));
     await capturar(pagina, '1-landing');
-
-    // e-mail torto: a tela avisa e nada é enviado
-    await pagina.locator('input[type="email"]').fill('maria@');
-    await pagina.locator('button[type="submit"]').tap();
-    await espera(500);
-    verificar('e-mail torto: "Esse e-mail não parece certo. Confira e tente de novo." e nenhum envio', (await texto(pagina)).includes('Esse e-mail não parece certo. Confira e tente de novo.') && envios.length === 0);
-    await pagina.locator('input[type="email"]').fill('');
-    await pagina.locator('button[type="submit"]').tap();
-    await espera(400);
-    verificar('e-mail vazio: "Escreva seu e-mail."', (await texto(pagina)).includes('Escreva seu e-mail.') && envios.length === 0);
-
-    // e-mail certo
-    await pagina.locator('input[type="email"]').fill('Maria@Gmail.com');
-    await pagina.locator('button[type="submit"]').tap();
-    await pagina.locator('[data-avise-me="feito"]').waitFor({ timeout: 10000 }).catch(() => {});
-    verificar('enviar manda POST /api/avise-me { email, origem: "site", site: "" } (a isca vazia)', envios.length === 1 && envios[0].email === 'Maria@Gmail.com' && envios[0].origem === 'site' && envios[0].site === '', JSON.stringify(envios));
-    const feito = await texto(pagina);
-    verificar('depois de enviar: "Anotado! A gente avisa você por e-mail quando o Futty chegar nas lojas." e a linha de sair da lista', feito.includes('Anotado! A gente avisa você por e-mail quando o Futty chegar nas lojas.') && feito.includes(T.sair));
-    verificar('o formulário some (não dá para mandar duas vezes sem querer)', (await formulario(pagina).count()) === 0);
-    await capturar(pagina, '2-landing-anotado');
     await contexto.close();
   }
 
-  // 1b) tela curta (iPhone SE): o F encolhe e o formulário continua ao alcance (a página rola em vez de cortar)
+  // 1b) tela curta (iPhone SE): o F encolhe e continua tudo numa tela só
   {
     const { contexto, pagina } = await abrir('/', { viewport: { width: 375, height: 667 } }, 'landing-curta');
-    await formulario(pagina).waitFor({ timeout: 30000 });
+    await pagina.locator('h1').waitFor({ timeout: 30000 });
     await espera(600);
-    await pagina.locator('button[type="submit"]').scrollIntoViewIfNeeded();
-    const visivel = await pagina.locator('button[type="submit"]').evaluate((b) => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight && r.width > 100; });
-    verificar('tela curta (375×667): o botão do Avise-me fica alcançável (rolando) e dentro da largura', visivel && (await pagina.evaluate(() => document.scrollingElement.scrollWidth <= window.innerWidth + 1)));
+    const tela = await pagina.evaluate(() => {
+      const rolavel = [...document.querySelectorAll('div')].find((d) => getComputedStyle(d).overflowY === 'auto' && d.querySelector('h1'));
+      return { cabe: rolavel ? rolavel.scrollHeight <= rolavel.clientHeight + 1 : null, horizontal: document.scrollingElement.scrollWidth <= window.innerWidth + 1 };
+    });
+    verificar('tela curta (375×667): sem rolagem vertical nem horizontal', tela.cabe === true && tela.horizontal, JSON.stringify(tela));
     await capturar(pagina, '3-landing-tela-curta');
     await contexto.close();
   }
 
-  // 1c) o motor recusa (sem a migração 068): a tela diz e deixa tentar de novo
-  {
-    const { contexto, pagina } = await abrir('/', { resposta: { status: 503, corpo: { error: 'Ainda não estamos recebendo e-mails. Tente de novo mais tarde.' } } }, 'landing-503');
-    await formulario(pagina).waitFor({ timeout: 30000 });
-    await pagina.locator('input[type="email"]').fill('maria@gmail.com');
-    await pagina.locator('button[type="submit"]').tap();
-    await pagina.getByText('Ainda não estamos recebendo e-mails.').waitFor({ timeout: 8000 }).catch(() => {});
-    verificar('o motor responde 503: a tela mostra a mensagem do motor e o formulário continua (dá para tentar de novo)', (await texto(pagina)).includes('Ainda não estamos recebendo e-mails. Tente de novo mais tarde.') && (await formulario(pagina).count()) === 1);
-    await contexto.close();
-  }
-
-  // 2) a página /avise-me (destino dos links das redes), com utm
+  // 2) /avise-me (o destino antigo dos links das redes) leva para a página inicial, com ou sem utm; nada é enviado
   {
     const { contexto, pagina, envios } = await abrir('/avise-me?utm_source=Instagram&utm_campaign=bio', {}, 'pagina');
-    await formulario(pagina).waitFor({ timeout: 30000 });
+    await pagina.locator('h1').waitFor({ timeout: 30000 });
     await espera(600);
-    const t = await texto(pagina);
-    verificar('/avise-me: a página do destino tem o título, o texto e o formulário', t.includes('O seu time.') && t.includes('O Futty está chegando nas lojas') && t.includes(T.botao) && t.includes(T.consent));
+    verificar('/avise-me (com utm) leva para "/" — a página inicial, sem formulário e sem envio', new URL(pagina.url()).pathname === '/' && (await formulario(pagina).count()) === 0 && envios.length === 0, pagina.url().replace(BASE, ''));
     await capturar(pagina, '4-pagina-avise-me');
-    await pagina.locator('input[type="email"]').fill('joao@exemplo.com.br');
-    await pagina.locator('button[type="submit"]').tap();
-    await pagina.locator('[data-avise-me="feito"]').waitFor({ timeout: 10000 }).catch(() => {});
-    verificar('/avise-me com utm: a origem vai como "Instagram:bio" (o motor põe em minúsculas)', envios.length === 1 && envios[0].origem === 'Instagram:bio', JSON.stringify(envios));
     await contexto.close();
     const sem = await abrir('/avise-me', {}, 'pagina-sem-utm');
-    await formulario(sem.pagina).waitFor({ timeout: 30000 });
-    await sem.pagina.locator('input[type="email"]').fill('ana@exemplo.com');
-    await sem.pagina.locator('button[type="submit"]').tap();
-    await sem.pagina.locator('[data-avise-me="feito"]').waitFor({ timeout: 10000 }).catch(() => {});
-    verificar('/avise-me sem utm: a origem é "avise-me"', sem.envios.length === 1 && sem.envios[0].origem === 'avise-me', JSON.stringify(sem.envios));
+    await sem.pagina.locator('h1').waitFor({ timeout: 30000 });
+    verificar('/avise-me sem utm: também cai na página inicial', new URL(sem.pagina.url()).pathname === '/', sem.pagina.url().replace(BASE, ''));
     await sem.contexto.close();
   }
 

@@ -46,11 +46,11 @@ const VIS_OPCOES = [
   { k: 'publico_aprovacao', icon: LockOpen, label: 'Com aprovação' },
   { k: 'publico_aberto', icon: Globe, label: 'Aberto' },
 ];
-// 29H (item 45): os textos de entrada aprovados pelo dono (2-out), os mesmos do Criar time.
+// 29H (item 45): os textos de entrada aprovados pelo dono (2-out), os mesmos do Criar time; 29P: "Radar de peladas" (era Explorar).
 const VIS_DESC = {
-  privado: 'Só entra quem receber o seu link de convite. Não aparece no Explorar.',
-  publico_aprovacao: 'Quem achar o time no Explorar pede para entrar; você aceita ou não.',
-  publico_aberto: 'Qualquer um que achar o time no Explorar entra na hora.',
+  privado: 'Só entra quem receber o seu link de convite. Não aparece no "Radar de peladas".',
+  publico_aprovacao: 'Quem achar o time no "Radar de peladas" pede para entrar. Você aceita ou não.',
+  publico_aberto: 'Qualquer um que achar o time no "Radar de peladas" entra na hora.',
 };
 
 const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12 };

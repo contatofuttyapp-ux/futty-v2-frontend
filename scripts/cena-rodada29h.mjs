@@ -115,11 +115,18 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   const escritaDe = (escritas, metodo, rota) => escritas.filter((e) => e.metodo === metodo && e.rota === rota);
 
   // ───────────────────────────────── A · a barra de navegação ─────────────────────────────────
-  for (const [rota, rotulo] of [['/avise-me', 'avise-me'], ['/termos', 'termos'], ['/privacidade', 'privacidade']]) {
+  for (const [rota, rotulo] of [['/termos', 'termos'], ['/privacidade', 'privacidade']]) {
     const { contexto, pagina } = await abrir(null, `A-${rotulo}`, rota);
     await espera(1500);
     verificar(`A · ${rota} sem sessão: nenhuma barra de navegação do app`, (await barra(pagina).count()) === 0);
-    if (rotulo === 'avise-me') await capturar(pagina, 'A1-avise-me-sem-barra');
+    await contexto.close();
+  }
+  {
+    // 29P: a página do Avise-me saiu; o link antigo das redes cai na página inicial (sem barra, como sempre na "/").
+    const { contexto, pagina } = await abrir(null, 'A-avise-me', '/avise-me');
+    await espera(1500);
+    verificar('A · /avise-me leva para a página inicial ("/"), sem barra', new URL(pagina.url()).pathname === '/' && (await barra(pagina).count()) === 0, pagina.url().replace(BASE, ''));
+    await capturar(pagina, 'A1-avise-me-vai-para-inicial');
     await contexto.close();
   }
   await bloco('A1', async () => {
@@ -406,7 +413,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await pagina.locator('[data-sugestoes-cidade] button').first().click({ timeout: 20000 });
     verificar('F · com a cidade escolhida o Bairro liga', await bairro.isEnabled());
     await bairro.fill('Savassi');
-    verificar('F · o texto de apoio do bairro: "Só o bairro e a cidade, nunca o endereço."', (await texto(pagina)).includes('Só o bairro e a cidade, nunca o endereço.'));
+    verificar('F · (29P) o passo 1 não tem textos de apoio embaixo dos campos', !(await texto(pagina)).includes('Só o bairro e a cidade, nunca o endereço.'));
     await capturar(pagina, 'F1-criar-bairro');
     await pagina.getByRole('button', { name: 'Continuar' }).tap();
 
@@ -435,11 +442,11 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     // passo 3: os textos de entrada aprovados
     await pagina.getByText('Aceita novos membros?').waitFor({ timeout: 15000 });
     const t3 = norm(await texto(pagina));
-    verificar('F · textos de entrada aprovados: "Só com a sua aprovação" + "Quem achar o time no Explorar pede para entrar; você aceita ou não." · "Aberto" + "Qualquer um que achar o time no Explorar entra na hora."', t3.includes('Só com a sua aprovação') && t3.includes('Quem achar o time no Explorar pede para entrar; você aceita ou não.') && t3.includes('Aberto') && t3.includes('Qualquer um que achar o time no Explorar entra na hora.') && !/Com aprovação|pedem no Explorar/.test(t3), t3.slice(0, 260));
+    verificar('F · textos de entrada (29P): "Só com a sua aprovação" + "Quem achar o time no "Radar de peladas" pede para entrar. Você aceita ou não." · "Aberto" + "Qualquer um que achar o time no "Radar de peladas" entra na hora."; sem o subtítulo', t3.includes('Só com a sua aprovação') && t3.includes('Quem achar o time no "Radar de peladas" pede para entrar. Você aceita ou não.') && t3.includes('Aberto') && t3.includes('Qualquer um que achar o time no "Radar de peladas" entra na hora.') && !/Como se entra no seu time|Explorar/.test(t3), t3.slice(0, 260));
     await capturar(pagina, 'F3-entrada');
     await pagina.getByRole('button', { name: /Só com a sua aprovação/ }).tap();
     await pagina.getByRole('button', { name: 'Criar o time' }).tap();
-    await pagina.getByText('Chame o seu time').waitFor({ timeout: 20000 });
+    await pagina.getByText('Seu time está no ar!').waitFor({ timeout: 20000 });
     await espera(600);
     const post = escritaDe(escritas, 'POST', '/api/teams')[0];
     let corpo = {};
@@ -449,9 +456,9 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     verificar('F · a política "Só com a sua aprovação" vai no PATCH (publico_aprovacao)', /publico_aprovacao/.test(patch?.corpo || ''), patch?.corpo || '(sem PATCH)');
     // passo 4: avisos como TEXTO NA TELA (item 46), nunca toast
     const avisoPapel = await pagina.locator('[data-aviso-papel]').innerText().catch(() => '');
-    const avisoBairro = await pagina.locator('[data-aviso-bairro="ok"]').innerText().catch(() => '');
+    const cidadeDoTime = await pagina.locator('[data-cidade-do-time]').innerText().catch(() => '');
     verificar('F · o aviso do "só organizo" que não pôde ser gravado vira texto fixo na tela do passo 4, e nenhum toast aparece', /"Só organizo" não pôde ser salvo agora: você entrou jogando\./.test(avisoPapel) && (await pagina.locator('.futty-toast').count()) === 0, avisoPapel);
-    verificar('F · o bairro achado: "Encontramos: Savassi, Belo Horizonte, MG"', avisoBairro === 'Encontramos: Savassi, Belo Horizonte, MG', avisoBairro);
+    verificar('F · (29P) a festa: a máquina deitada com o nome, e embaixo "Savassi · Belo Horizonte, MG" (sem "Encontramos:")', (await pagina.locator('[data-festa] .maq .letreiro').count()) === 1 && cidadeDoTime.trim().toUpperCase() === 'SAVASSI · BELO HORIZONTE, MG' && !/Encontramos:/.test(await texto(pagina)), cidadeDoTime);
     await pagina.getByRole('button', { name: 'Gerar link do convite' }).tap();
     await pagina.locator('input[readonly]').waitFor({ timeout: 15000 });
     const link = await pagina.locator('input[readonly]').inputValue();
@@ -481,7 +488,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await pagina.getByRole('button', { name: 'Continuar' }).tap();
     await pagina.getByRole('button', { name: 'Continuar' }).tap();
     await pagina.getByRole('button', { name: 'Criar o time' }).tap();
-    await pagina.getByText('Chame o seu time').waitFor({ timeout: 20000 });
+    await pagina.getByText('Seu time está no ar!').waitFor({ timeout: 20000 });
     const post = escritaDe(escritas, 'POST', '/api/teams')[0];
     verificar('F · a freguesia escolhida vai ao motor COM a coordenada da lista (sem depender do Nominatim)', /"bairro":"Alvalade"/.test(post?.corpo || '') && /"bairro_origem":"lista"/.test(post?.corpo || ''), post?.corpo || '(sem POST)');
     await contexto.close();
@@ -498,7 +505,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await pagina.getByRole('button', { name: 'Continuar' }).tap();
     await pagina.getByRole('button', { name: 'Continuar' }).tap();
     await pagina.getByRole('button', { name: 'Criar o time' }).tap();
-    await pagina.getByText('Chame o seu time').waitFor({ timeout: 20000 });
+    await pagina.getByText('Seu time está no ar!').waitFor({ timeout: 20000 });
     const aviso = await pagina.locator('[data-aviso-bairro="aviso"]').innerText().catch(() => '');
     verificar('F · bairro que ninguém achou: "Não achamos esse bairro. Seu time fica no ponto da cidade."', aviso === 'Não achamos esse bairro. Seu time fica no ponto da cidade.', aviso);
     await contexto.close();
@@ -640,7 +647,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     const premios = pagina.getByRole('switch', { name: /^(Artilheiro do dia|Destaque do dia)$/ });
     verificar('K · painel do time: "Prêmios do dia" — dois interruptores (Artilheiro do dia, Destaque do dia) ligados de saída', (await premios.count()) === 2 && (await premios.evaluateAll((els) => els.map((e) => e.getAttribute('aria-checked')))).join() === 'true,true');
     const textoVis = norm(await texto(pagina));
-    verificar('K · os textos de entrada aprovados também no painel', textoVis.includes('Só entra quem receber o seu link de convite. Não aparece no Explorar.') || textoVis.includes('Quem achar o time no Explorar pede para entrar') || textoVis.includes('Qualquer um que achar o time no Explorar entra na hora.'), textoVis.slice(0, 100));
+    verificar('K · os textos de entrada aprovados também no painel (29P: "Radar de peladas")', textoVis.includes('Só entra quem receber o seu link de convite. Não aparece no "Radar de peladas".') || textoVis.includes('Quem achar o time no "Radar de peladas" pede para entrar') || textoVis.includes('Qualquer um que achar o time no "Radar de peladas" entra na hora.'), textoVis.slice(0, 100));
     await premios.first().click();
     await espera(600);
     verificar('K · desligar o artilheiro grava mostrar_artilheiro: false (PATCH interceptado) e o interruptor acompanha', escritaDe(escritas, 'PATCH', `/api/teams/${slug}`).some((e) => /"mostrar_artilheiro":false/.test(e.corpo || '')) && (await premios.first().getAttribute('aria-checked')) === 'false');

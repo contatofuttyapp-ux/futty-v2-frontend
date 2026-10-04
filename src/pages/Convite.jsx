@@ -169,7 +169,7 @@ export default function Convite() {
           )
         ) : null}
         <Link to="/explorar" className="btn" style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.22)', color: 'var(--text-dim)' }}>
-          Procurar times no Explorar
+          Procurar times no Radar de peladas
         </Link>
       </div>
       <Link to="/home" className="convite__ja-tenho">

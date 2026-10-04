@@ -1,7 +1,7 @@
 // Futty v2.0 — Boas-vindas (rota "/") para visitantes não autenticados.
-// Tela ÚNICA sem scroll (decisão 31-jul): o F oficial com a aura da casa, o slogan
-// e as três portas de entrada. As secções antigas (figurinha/como-funciona/planos/
-// CTA final) morreram — quem quer saber mais entra.
+// Tela ÚNICA sem scroll (decisão 31-jul): o F oficial com a aura da casa, o slogan, a frase do que o app faz e as portas de
+// entrada. As secções antigas (figurinha/como-funciona/planos/CTA final) morreram — quem quer saber mais entra. O bloco
+// "Avise-me" (29B) saiu na 29P: a página inicial já é a de verdade; a lista de e-mails continua no Gabinete.
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { entrarComGoogle } from '../lib/googleAuth';
@@ -10,22 +10,12 @@ import FuttyIconeFlutuante from '../components/FuttyIconeFlutuante';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import Toast from '../components/Toast';
-import AviseMe, { AviseMeForm } from './AviseMe';
 import '../styles/app.css';
 
-/**
- * A página inicial do site. `soAviseMe` (a rota /avise-me, destino dos links das redes) mostra só a página do Avise-me —
- * o mesmo chunk lazy, sem um `import()` a mais no arranque do app.
- */
-export default function LandingPage({ soAviseMe = false }) {
-  return soAviseMe ? <AviseMe /> : <PaginaInicial />;
-}
-
-function PaginaInicial() {
+export default function LandingPage() {
   const [erro, setErro] = useState('');
-  // Rodada 29B (F): o bloco "Avise-me" entrou na tela. No celular normal tudo continua numa tela só; em tela curta
-  // (iPhone SE) o F encolhe e, se ainda assim não couber, a página rola em vez de cortar o formulário.
-  const [tamanhoF] = useState(() => (typeof window !== 'undefined' && window.innerHeight < 760 ? 112 : 176));
+  // O F ganha a tela (29P): em tela curta (iPhone SE) encolhe para tudo continuar numa tela só.
+  const [tamanhoF] = useState(() => (typeof window !== 'undefined' && window.innerHeight < 760 ? 150 : 220));
   // Toast de passagem (ex.: "Conta excluída..." depois de MeuPerfil.jsx
   // navegar para "/" com state) — location.state some numa próxima
   // navegação, por isso é lido só uma vez no estado inicial.
@@ -90,8 +80,8 @@ function PaginaInicial() {
             fontFamily: "'Rajdhani', sans-serif",
             fontWeight: 800,
             color: '#fff',
-            fontSize: 36,
-            lineHeight: 1.12,
+            fontSize: 42,
+            lineHeight: 1.1,
             margin: 0,
           }}
         >
@@ -99,7 +89,7 @@ function PaginaInicial() {
         </h1>
 
         {/* Rodada 29O: o nome e o que o app faz, para quem chega sem ler nada (é o que o Google pede para verificar a marca). */}
-        <p className="texto-apoio" style={{ margin: '-8px 0 0', maxWidth: 300 }}>
+        <p className="texto-apoio" style={{ margin: '-6px 0 0', maxWidth: 310, fontSize: 15 }}>
           Futty: sorteio justo, ranking e figurinha de colecionador para o futebol do seu time.
         </p>
 
@@ -167,11 +157,6 @@ function PaginaInicial() {
           >
             Já tenho conta → <span style={{ color: '#d4a017' }}>Entrar</span>
           </Link>
-        </div>
-
-        {/* Rodada 29B (F): quem chega das redes e ainda não pode baixar o app deixa o e-mail. */}
-        <div style={{ width: '100%', maxWidth: 320, borderTop: '1px solid rgba(255,255,255,0.10)', paddingTop: 18 }}>
-          <AviseMeForm origemPadrao="site" />
         </div>
       </div>
 

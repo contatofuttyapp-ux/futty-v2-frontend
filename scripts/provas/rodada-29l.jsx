@@ -49,7 +49,7 @@ function Faixas() {
         </FaixaRolavel>
       </div>
       <div className="chips-row" data-chips ref={aoMontar} data-mais-esq={esquerda ? '1' : undefined} data-mais-dir={direita ? '1' : undefined}>
-        {['Todas', 'Missa de Quinta', 'Várzea FC', '＋ Criar time', '＋ Explorar'].map((t) => <button key={t} type="button" className="chip hud-corners-s">{t}</button>)}
+        {['Todas', 'Missa de Quinta', 'Várzea FC', '＋ Criar time', 'Radar de peladas'].map((t) => <button key={t} type="button" className="chip hud-corners-s">{t}</button>)}
       </div>
     </div>
   );

@@ -159,7 +159,7 @@ export default function Explorar() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="EXPLORAR TIMES" back="/home" />
+      <Topbar hud="RADAR DE PELADAS" back="/home" />
       <main className="app-main page-reveal">
         {/* BUSCA por cidade/nome */}
         <div style={{ ...VIDRO, clipPath: CLIP_S, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>

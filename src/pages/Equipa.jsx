@@ -192,19 +192,16 @@ export default function Equipa() {
 
   // Boas-vindas (Rodada 29B, C + 29C), uma vez por time (localStorage por equipa, a mesma marca do modal antigo):
   // `convidado` — 1ª vez de um jogador que não fundou a equipa, logo depois de aceitar o convite (a página do convite
-  // manda `state.primeiraEntrada`) ou, como antes, sem avatar ainda; `criador` — o admin que acabou de criar o time e
-  // tocou "Ir para o time" (CriarEquipa manda `state.criouAgora`).
+  // manda `state.primeiraEntrada`) ou, como antes, sem avatar ainda. O admin que acabou de criar o time já comemorou no
+  // fim do Criar time (29P): aqui não abre nada para ele.
   const [onboardingDispensado, setOnboardingDispensado] = useState(false);
   const onboardingKey = team ? `futty_onboarding_${team.id}` : null;
   // Rodada 29D: quem foi aceito num pedido também chega como primeira entrada — pelo card do Início (state) ou pela
   // notificação do motor (`/time/:slug?entrou=1`).
   const entrouAgora = !!location.state?.primeiraEntrada || new URLSearchParams(location.search).get('entrou') === '1';
-  const criouAgora = !!location.state?.criouAgora;
-  const varianteBoasVindas = !team
+  const varianteBoasVindas = !team || team.role === 'admin'
     ? null
-    : team.role === 'admin'
-      ? (criouAgora ? 'criador' : null)
-      : (entrouAgora || !me?.user?.avatar_url ? 'convidado' : null);
+    : (entrouAgora || !me?.user?.avatar_url ? 'convidado' : null);
   const mostrarOnboarding =
     !!me &&
     !!varianteBoasVindas &&

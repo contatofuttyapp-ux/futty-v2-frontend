@@ -262,6 +262,8 @@ async function medirFaixaDeCookies(pagina) {
   });
 }
 
+const CAMPO_NOME_DO_TIME = 'input[placeholder="ex.: Domingueira FC"]';
+
 const TELAS = [
   { arq: '01-landing', sessao: false, rota: () => '/', caminho: /^\/$/, extraMs: 1500 },
   { arq: '02-criar-conta', sessao: false, rota: () => '/register', caminho: /^\/register$/, seletor: 'input[type="email"]', permite: ['senha'] },
@@ -323,23 +325,90 @@ const TELAS = [
     seletor: 'text=Página não encontrada',
   },
   {
-    // Rodada 29O: o passo 2 do Criar time, sem título nem subtítulo. Só avança com o nome; não grava nada (o time nasce no passo 3).
-    arq: '22-criar-time-passo-2', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: 'input[placeholder="ex.: Domingueira FC"]',
+    // Rodada 29O: o passo 2 do Criar time, sem título nem subtítulo. Só avança com nome e cidade (29P); não grava nada (o time nasce no passo 3).
+    arq: '22-criar-time-passo-2', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
-      await p.locator('input[placeholder="ex.: Domingueira FC"]').fill('Time Teste');
+      await preencherPasso1(p);
       await p.getByRole('button', { name: 'Continuar' }).click();
       await p.getByText('Você também joga?').first().waitFor({ timeout: 10000 });
       await espera(700);
-      const { rola, fundoDoContinuar } = await p.evaluate(() => {
-        const botao = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continuar');
-        return { rola: document.documentElement.scrollHeight > window.innerHeight + 1, fundoDoContinuar: botao ? Math.round(botao.getBoundingClientRect().bottom) : null };
-      });
-      if (rola || fundoDoContinuar === null || fundoDoContinuar > ALTURA) {
-        throw new Error(`o passo 2 não cabe em ${ALTURA} px sem rolar (rola: ${rola}; "Continuar" termina em ${fundoDoContinuar} px)`);
-      }
+      exigirSemRolagem(await medirBotao(p, 'Continuar'), 'o passo 2', 'Continuar');
+    },
+  },
+  {
+    // Rodada 29P: o passo 1 vazio — sem título, rótulos limpos, e NENHUM Continuar enquanto não há nome e cidade.
+    arq: '23-criar-time-passo-1', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
+    depois: async (p) => {
+      await espera(500);
+      if (await p.getByRole('button', { name: 'Continuar' }).count()) throw new Error('o passo 1 vazio mostra "Continuar" (não devia, sem nome e cidade)');
+    },
+  },
+  {
+    // Rodada 29P: o passo 1 com nome e cidade — o Continuar aparece e cabe na tela.
+    arq: '23-criar-time-passo-1-preenchido', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
+    depois: async (p) => {
+      await preencherPasso1(p);
+      await espera(500);
+      exigirSemRolagem(await medirBotao(p, 'Continuar'), 'o passo 1 preenchido', 'Continuar');
+    },
+  },
+  {
+    // Rodada 29P: o passo 3 sem subtítulo, com os textos do "Radar de peladas".
+    arq: '24-criar-time-passo-3', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
+    depois: async (p) => {
+      await preencherPasso1(p);
+      await p.getByRole('button', { name: 'Continuar' }).click();
+      await p.getByText('Você também joga?').first().waitFor({ timeout: 10000 });
+      await p.getByRole('button', { name: 'Continuar' }).click();
+      await p.getByText('Aceita novos membros?').first().waitFor({ timeout: 10000 });
+      await espera(700);
+      exigirSemRolagem(await medirBotao(p, 'Criar o time'), 'o passo 3', 'Criar o time');
+    },
+  },
+  {
+    // Rodada 29P: a FESTA (passo 4). O POST /api/teams é respondido AQUI, com um time de mentira: nada chega ao banco (o contexto
+    // já bloqueia toda escrita em /api; esta rota da página responde antes dele, com o corpo que a festa precisa).
+    arq: '25-criar-time-pronto', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
+    depois: async (p) => {
+      await p.route('**/api/teams', (route) => (route.request().method() === 'POST'
+        ? route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ team: { id: 'captura', slug: 'time-de-captura', nome: 'Time Teste' }, geo: { encontrada: true, nomeOficial: 'Brasília, DF' }, joga: true }) })
+        : route.fallback()));
+      await preencherPasso1(p);
+      await p.getByRole('button', { name: 'Continuar' }).click();
+      await p.getByText('Você também joga?').first().waitFor({ timeout: 10000 });
+      await p.getByRole('button', { name: 'Continuar' }).click();
+      await p.getByText('Aceita novos membros?').first().waitFor({ timeout: 10000 });
+      await p.getByRole('button', { name: 'Criar o time' }).click();
+      await p.getByText('Seu time está no ar!').first().waitFor({ timeout: 15000 });
+      await espera(1200);
+      exigirSemRolagem(await medirBotao(p, 'Ir para o time'), 'a festa', 'Ir para o time');
     },
   },
 ];
+
+// ── O Criar time nas capturas (29O/29P) ────────────────────────────────────────────────────────────────────────────────────────
+// Nome + cidade da lista ("Brasília, DF"): o passo 1 só libera o Continuar com os dois.
+async function preencherPasso1(p) {
+  await p.locator(CAMPO_NOME_DO_TIME).fill('Time Teste');
+  const cidade = p.getByPlaceholder('Ex: Brasília');
+  await cidade.click();
+  await cidade.fill('Brasíl');
+  await p.locator('[data-sugestoes-cidade] button', { hasText: 'Brasília, DF' }).first().click({ timeout: 15000 });
+  await espera(400);
+}
+
+async function medirBotao(p, rotulo) {
+  return p.evaluate((r) => {
+    const botao = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === r);
+    return { rola: document.documentElement.scrollHeight > window.innerHeight + 1, fundo: botao ? Math.round(botao.getBoundingClientRect().bottom) : null };
+  }, rotulo);
+}
+
+function exigirSemRolagem({ rola, fundo }, tela, rotulo) {
+  if (rola || fundo === null || fundo > ALTURA) {
+    throw new Error(`${tela} não cabe em ${ALTURA} px sem rolar (rola: ${rola}; "${rotulo}" termina em ${fundo} px)`);
+  }
+}
 
 async function conferir(pagina, t) {
   const problemas = [];

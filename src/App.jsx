@@ -172,9 +172,8 @@ function AnimatedRoutes() {
           <Route path="/equipa/*" element={<RedirecionaEquipa />} />
           <Route path="/equipa" element={<RedirecionaEquipa />} />
           <Route path="/criar-equipa" element={<Navigate to="/criar-time" replace />} />
-          {/* Rodada 29B (F): /avise-me sai do MESMO chunk lazy da página inicial (soAviseMe) — uma rota nova com import()
-              próprio custava 172 B do arranque, que tem teto de 320 KiB. */}
-          <Route path="/avise-me" element={<LandingPage soAviseMe />} />
+          {/* Rodada 29P: a página do Avise-me saiu (a inicial já é a de verdade); os links antigos das redes caem na inicial. */}
+          <Route path="/avise-me" element={<Navigate to="/" replace />} />
           <Route path="/convite/:token" element={<ConviteRoute />} />
           {/* Rodada 29H (item 7): o link curto do convite, futtyapp.com.br/c/<código> — a mesma tela. */}
           <Route path="/c/:token" element={<ConviteRoute />} />

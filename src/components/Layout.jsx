@@ -61,10 +61,9 @@ const HIDE_NAV_PATTERNS = [
   /^\/time\/[^/]+\/jogador\//,
 ];
 
-// Rodada 29H (item 2): páginas que existem para quem ainda não tem conta (o destino dos links das redes, os Termos e a
-// Privacidade abertos do cadastro ou do "Saiba mais" do banner) — sem sessão a barra do app não faz sentido; com sessão
-// (Perfil → Termos) ela continua.
-const HIDE_NAV_SEM_SESSAO = [/^\/avise-me/, /^\/termos/, /^\/privacidade/];
+// Rodada 29H (item 2): páginas que existem para quem ainda não tem conta (os Termos e a Privacidade abertos do cadastro ou do
+// "Saiba mais" do banner) — sem sessão a barra do app não faz sentido; com sessão (Perfil → Termos) ela continua.
+const HIDE_NAV_SEM_SESSAO = [/^\/termos/, /^\/privacidade/];
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function shouldShowNav(pathname, comSessao = true) {

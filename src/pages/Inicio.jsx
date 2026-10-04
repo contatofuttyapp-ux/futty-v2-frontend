@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { RefreshCw, Trophy } from 'lucide-react';
+import { Radar, RefreshCw, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { tomarConvitePendente } from '../lib/convitePendente';
 import { usePerfil } from '../context/PerfilContext';
@@ -428,7 +428,7 @@ function EmptyState() {
           </Link>
         </div>
         <Link to="/explorar" className="btn btn--purple hud-corners">
-          Explorar times
+          Radar de peladas
         </Link>
         <Link to="/figurinha" className="btn btn--purple-outline hud-corners">
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1059,7 +1059,7 @@ export default function Inicio() {
 
         {/* P1-4 — PEDIDOS PENDENTES: enquanto o admin não decide, o candidato vê
             aqui "pedido pendente na {equipa} · cancelar" (antes só existia no
-            Explorar). Card discreto, roxo — é espera, não desfecho. */}
+            "Radar de peladas"). Card discreto, roxo — é espera, não desfecho. */}
         {pedidosPendentes.map((p) => (
           <div key={p.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.28)' }}>
             <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
@@ -1088,7 +1088,7 @@ export default function Inicio() {
                 {p.status === 'approved' ? `Você entrou no time ${p.team?.nome}!` : `O pedido para ${p.team?.nome} não seguiu`}
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                {p.status === 'approved' ? 'O admin aceitou seu pedido, bem-vindo.' : 'Sem drama: há mais times no Explorar.'}
+                {p.status === 'approved' ? 'O admin aceitou seu pedido, bem-vindo.' : 'Sem drama: há mais times no "Radar de peladas".'}
               </span>
             </span>
             {/* Rodada 29D: quem foi aceito entra no time como primeira entrada (abre as boas-vindas do time). */}
@@ -1327,8 +1327,10 @@ export default function Inicio() {
               <Link to="/criar-time" className="chip chip--explore hud-corners-s" data-criar-time>
                 ＋ Criar time
               </Link>
-              <Link to="/explorar" className="chip chip--explore hud-corners-s">
-                ＋ Explorar
+              {/* 29P: "Radar de peladas" (era "＋ Explorar"); o ícone no lugar do "＋" para o chip não ficar largo. */}
+              <Link to="/explorar" className="chip chip--explore hud-corners-s" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Radar size={14} strokeWidth={2} aria-hidden="true" />
+                Radar de peladas
               </Link>
             </div>
 

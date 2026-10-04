@@ -61,14 +61,16 @@ test('29O · o passo 2 não tem título nem texto de apoio na tela: título só 
   assert.match(passo2, /\{ chave: 'gols', Icone: Target, \.\.\.GOLS/);
   assert.match(passo2, /\{ chave: 'artilheiro', Icone: Trophy, \.\.\.ARTILHEIRO/);
   assert.match(passo2, /\{ chave: 'destaque', Icone: Star, \.\.\.DESTAQUE/);
-  assert.match(criar, /import \{ Star, Target, Trophy \} from 'lucide-react';/);
+  assert.match(criar, /import \{ Star, Target, Trash2, Trophy \} from 'lucide-react';/);
   assert.doesNotMatch(passo2, /style=\{\{ marginBottom: 14 \}\}>/, 'nenhum subtítulo de tela abaixo do título');
 });
 
 test('29O · o passo 2 não usa o jargão antigo: sem "radar", "eixos", "MVP", "Como funciona" nem o painel de admin', () => {
   const criar = ler('src/pages/CriarEquipa.jsx');
+  // 29P: o "Radar de peladas" (o nome novo do Explorar) aparece no passo 3; o jargão do radar de 5 eixos é outra coisa e não volta.
+  const semRadarDePeladas = criar.replace(/Radar de peladas/g, '');
   for (const velho of ['Como funciona o seu time?', 'radar', 'eixos', 'MVP', 'MiniRadar', 'Você joga na linha', 'painel de admin', 'Precisa dos gols ligados']) {
-    assert.ok(!criar.toLowerCase().includes(velho.toLowerCase()), `saiu do Criar time: ${velho}`);
+    assert.ok(!semRadarDePeladas.toLowerCase().includes(velho.toLowerCase()), `saiu do Criar time: ${velho}`);
   }
 });
 

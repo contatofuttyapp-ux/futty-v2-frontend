@@ -119,11 +119,11 @@ test('escolha: manda { cidade, uf, pais, lat, lng, origem: "lista" } (uf = distr
   assert.deepEqual(escolhaDaLinha(lx), { cidade: 'Lisboa', uf: 'Lisboa', pais: 'PT', lat: lx[3], lng: lx[4], origem: 'lista' });
 });
 
-test('textos da tela: "Encontramos: <nome oficial>" e "Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente \'<texto>\'."', () => {
+test('textos da tela: "Encontramos: <nome oficial>" e "Não achamos essa cidade. Seu time só aparece no "Radar de peladas" para quem escrever exatamente \'<texto>\'."', () => {
   assert.equal(avisoAchou('Belo Horizonte, MG'), 'Encontramos: Belo Horizonte, MG');
-  assert.equal(avisoNaoAchou('  Vila Xyzzy '), "Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente 'Vila Xyzzy'.");
+  assert.equal(avisoNaoAchou('  Vila Xyzzy '), 'Não achamos essa cidade. Seu time só aparece no "Radar de peladas" para quem escrever exatamente \'Vila Xyzzy\'.');
   assert.deepEqual(avisoDaCidade({ encontrada: true, nomeOficial: 'Kyoto, Kyoto Prefecture' }, 'Kyoto'), { tipo: 'ok', texto: 'Encontramos: Kyoto, Kyoto Prefecture' });
-  assert.deepEqual(avisoDaCidade({ encontrada: false }, 'Vila Xyzzy'), { tipo: 'aviso', texto: "Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente 'Vila Xyzzy'." });
+  assert.deepEqual(avisoDaCidade({ encontrada: false }, 'Vila Xyzzy'), { tipo: 'aviso', texto: 'Não achamos essa cidade. Seu time só aparece no "Radar de peladas" para quem escrever exatamente \'Vila Xyzzy\'.' });
   assert.equal(avisoDaCidade(null, 'x'), null);
   assert.equal(avisoDaCidade(undefined, 'x'), null);
 });

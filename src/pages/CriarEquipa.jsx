@@ -1,10 +1,11 @@
 // Futty v2.0 — Criar time: o WIZARD do admin (3 passos de escolha + a tela de convites que vem depois de criar, SPEC-EQUIPAS v2).
 // A página antiga (formulário único com selector de cor) morreu: a cor é fallback
 // automático interno (o backend cai para 'verde'; muda-se nas definições do admin).
-// Passos: (1) nome + preview do escudo-iniciais ao vivo → POST /api/teams ·
+// Passos: (1) nome + cidade — a cidade sempre exigida (29P): da lista, ou texto livre quando a lista não sugere nada — + escudo-iniciais ao vivo ·
 // (2) "Você também joga?" e "O que contar nos jogos?" (gols, artilheiro e destaque do dia — tudo nasce desligado, 29O) ·
-// (3) política de entrada → PATCH modo_visibilidade · depois de criar, a tela de convites (link curto +
-// WhatsApp), que não é um passo da criação: o contador é 3/3 e ela diz "Pronto" (29I, achado 79).
+// (3) política de entrada → POST /api/teams (+ PATCH modo_visibilidade) · depois de criar, a FESTA (29P): a máquina das boas-vindas
+// com o nome do time como letreiro, "Seu time está no ar!" e o link do convite. Não é um passo da criação: o contador é 3/3 e ela
+// diz "Pronto" (29I, achado 79). "Ir para o time" não reabre boas-vindas: a pessoa já comemorou aqui.
 //
 // 29I (achado 80): cada passo é UMA entrada do histórico (location.state.passo) — o Voltar do sistema (Alt+seta, o gesto do Android, o
 // swipe do iPhone) recua um passo por vez, igual ao "← voltar" da tela, em vez de jogar no Início e apagar tudo. Antes do passo 1
@@ -13,7 +14,7 @@
 // 29H: o texto do papel acompanha a opção (43); textos de entrada aprovados pelo dono (45); o aviso do "só organizo" que
 // ficava num toast de 2 s ilegível (46) virou texto fixo na tela do passo 4; bairro opcional (42); a frase do WhatsApp (47)
 // e o link curto /c/<código> (49).
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch, apiUpload } from '../lib/api';
@@ -24,12 +25,13 @@ import { avisoLogoRecusado, motivoDoLogo } from '../utils/logoTime';
 import { copiarTexto } from '../utils/clipboard';
 import { enderecoDoWhatsapp, linkDoConvite } from '../utils/convite';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
-import { Star, Target, Trophy } from 'lucide-react';
+import { Star, Target, Trash2, Trophy } from 'lucide-react';
 import { EscolhaPapel } from '../components/EscolhaLinhaGol';
 import { ARTILHEIRO, DESTAQUE, GOLS, alternarArtilheiro, alternarGols } from '../components/golsEPremios';
+import { MaquinaDoTime } from '../components/BoasVindas';
 import CampoBairro from '../components/CampoBairro';
-import { avisoDaCidade } from '../utils/cidades';
-import { TEXTO_APOIO_BAIRRO, avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
+import { avisoDaCidade, cidadePreenchida } from '../utils/cidades';
+import { avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -63,8 +65,9 @@ function Cta({ children, cheio, sec, ...rest }) {
   );
 }
 
-function Lbl({ children }) {
-  return <span style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#9a8fc0', textTransform: 'uppercase', display: 'block', margin: '14px 0 6px' }}>{children}</span>;
+// `grande`: a régua do passo 1 (29P), onde o nome do time é a estrela da tela.
+function Lbl({ children, grande = false }) {
+  return <span style={{ fontFamily: RAJ, fontSize: grande ? 13 : 11, fontWeight: 700, letterSpacing: grande ? '0.14em' : '0.12em', color: grande ? '#c9b6ff' : '#9a8fc0', textTransform: 'uppercase', display: 'block', margin: grande ? '16px 0 8px' : '14px 0 6px' }}>{children}</span>;
 }
 
 // O que falta para seguir: uma linha curta abaixo do botão apagado (achado 82). Texto pela VOZ: diz o que fazer, sem cerimônia.
@@ -87,11 +90,17 @@ export default function CriarEquipa() {
   const [cidade, setCidade] = useState('');
   // Rodada 29B (D): a escolha da lista ({ cidade, uf, pais, lat, lng, origem: 'lista' }) — null enquanto a pessoa digita.
   const [cidadeEscolha, setCidadeEscolha] = useState(null);
-  const [avisoCidade, setAvisoCidade] = useState(null); // depois de criar: { tipo: 'ok' | 'aviso', texto } sobre a cidade
+  // 29P: a cidade é obrigatória. Da lista vale sempre; texto livre só quando a lista não tem sugestão para ele (quem está fora do
+  // Brasil e de Portugal nunca trava). `temSugestoes` vem do próprio campo.
+  const [temSugestoes, setTemSugestoes] = useState(false);
+  const aoSugestoes = useCallback((n) => setTemSugestoes(n > 0), []);
+  const [avisoCidade, setAvisoCidade] = useState(null); // depois de criar, só quando deu errado: { tipo: 'aviso', texto }
+  const [cidadeDoTime, setCidadeDoTime] = useState(''); // depois de criar: a cidade como o motor a achou (ou como foi escrita)
   // 29H (item 12): o bairro opcional. `bairroEscolha` é a freguesia da lista (Portugal), com a coordenada; null enquanto digita.
   const [bairro, setBairro] = useState('');
   const [bairroEscolha, setBairroEscolha] = useState(null);
-  const [avisoBairro, setAvisoBairro] = useState(null); // depois de criar: "Encontramos: <bairro>, <cidade>" ou o aviso
+  const [avisoBairro, setAvisoBairro] = useState(null); // depois de criar, só quando deu errado
+  const [bairroDoTime, setBairroDoTime] = useState('');
   // Tudo nasce desligado (29O): a pessoa liga o que quiser.
   const [mostrarGols, setMostrarGols] = useState(false);
   const [mostrarArtilheiro, setMostrarArtilheiro] = useState(false);
@@ -228,8 +237,13 @@ export default function CriarEquipa() {
       if (!mostrarArtilheiro || !mostrarGols) bodyCriar.mostrar_artilheiro = false;
       if (!mostrarDestaque) bodyCriar.mostrar_destaque = false;
       const { team: t, geo, bairro: bairroResposta, joga: jogaGravado, premios_salvos: premiosSalvos } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
-      setAvisoCidade(avisoDaCidade(geo, cidade.trim()));
-      setAvisoBairro(avisoDoBairro(bairroResposta));
+      // 29P: a cidade achada vira informação do time na festa (só "Brasília, DF", sem "Encontramos:"); o aviso fica só quando deu errado.
+      const sobreCidade = avisoDaCidade(geo, cidade.trim());
+      setCidadeDoTime(sobreCidade?.tipo === 'ok' ? geo.nomeOficial : cidade.trim());
+      setAvisoCidade(sobreCidade?.tipo === 'aviso' ? sobreCidade : null);
+      const sobreBairro = avisoDoBairro(bairroResposta);
+      setBairroDoTime(sobreBairro?.tipo === 'ok' ? (t.bairro || bairro.trim()) : '');
+      setAvisoBairro(sobreBairro?.tipo === 'aviso' ? sobreBairro : null);
       // O motor sem a migração 067 cria o time com o criador jogando: a tela não finge que gravou o outro papel. Um toast de
       // 2 s não dava para ler uma frase assim (item 46): vira texto fixo no passo 4, junto dos outros avisos.
       const avisos = [];
@@ -289,8 +303,13 @@ export default function CriarEquipa() {
   }
 
   const waHref = inviteLink ? enderecoDoWhatsapp({ nomeTime: nome, link: inviteLink }) : null;
-  // Time aberto (com aprovação ou aberto de vez) sem cidade: o motor não deixa criar (é como se acha o time no Explorar) — o botão avisa antes.
+  // 29P: o Continuar do passo 1 só existe com nome E cidade. A cidade conta da lista, ou como texto quando a lista não sugere nada.
+  const cidadeOk = cidadePreenchida({ texto: cidade, escolha: cidadeEscolha, temSugestoes });
+  const podeContinuar = !!nome.trim() && cidadeOk;
+  // Defesa (não deve mais aparecer, 29P): time aberto sem cidade — o motor não deixa criar (é como se acha o time no "Radar de peladas").
   const faltaCidade = modo !== 'privado' && !cidade.trim();
+  // A festa mostra o logo que o motor aceitou: a prévia local já está carregada (o endereço do motor chegaria pelo proxy, mais tarde).
+  const logoDaFesta = logoEnviado ? logoPrevia : null;
 
   return (
     <div className="app-shell">
@@ -308,32 +327,27 @@ export default function CriarEquipa() {
 
         {passo === 1 && (
           <>
-            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Dê nome ao seu time</h1>
-            <p className="texto-apoio" style={{ marginBottom: 14 }}>O escudo nasce das iniciais. Veja-o se formar enquanto você escreve.</p>
-            <Lbl>Nome do time (obrigatório)</Lbl>
-            <input className="input input--hud" value={nome} maxLength={40} required aria-required="true" onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 16 }} />
-            {/* A cidade só é obrigatória para time aberto (14-set): é como quem está perto encontra o time no Explorar. No time fechado
-                é opcional — por isso o rótulo diz quando vale, em vez de fingir que sempre vale (achado 82). */}
-            <Lbl>Cidade (obrigatória em time aberto)</Lbl>
-            <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setBairroEscolha(null); }} placeholder="Ex: Brasília" />
-            <p className="texto-apoio">
-              É assim que jogadores perto de você encontram o time. Só a cidade, nunca o endereço.
-            </p>
+            {/* 29P: sem título nem subtítulo; a tela começa no nome (a estrela), em letra maior. O escudo das iniciais fica — é a parte
+                divertida — sem o texto que o explicava. Rótulos limpos, sem marca de campo exigido: sem nome e cidade o Continuar nem aparece. */}
+            <h1 style={SO_LEITOR}>Passo 1 de 3</h1>
+            <Lbl grande>Nome do time</Lbl>
+            <input className="input input--hud" value={nome} maxLength={40} required aria-required="true" onChange={(e) => setNome(e.target.value)} placeholder="ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }} />
+            <Lbl grande>Cidade</Lbl>
+            <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setBairroEscolha(null); }} aoSugestoes={aoSugestoes} placeholder="Ex: Brasília" aria-required="true" style={{ fontSize: 17, fontWeight: 600 }} />
             {/* 29H (item 12): o bairro, opcional. Em Portugal sugere as freguesias do concelho; no resto é texto livre. */}
-            <Lbl>Bairro (opcional)</Lbl>
+            <Lbl grande>Bairro (opcional)</Lbl>
             <CampoBairro
               valor={bairro}
               aoMudar={(texto, escolha) => { setBairro(texto); setBairroEscolha(escolha); }}
               concelho={concelhoDePortugal(cidade, cidadeEscolha)}
               desabilitado={!cidade.trim()}
             />
-            <p className="texto-apoio">{TEXTO_APOIO_BAIRRO}</p>
-            <Lbl>Logo do time (opcional)</Lbl>
+            <Lbl grande>Logo do time (opcional)</Lbl>
             {/* Prévia REDONDA do logo; sem logo, o escudo com as iniciais (nasce enquanto você escreve o nome). */}
             {logoPrevia ? (
-              <img src={logoPrevia} alt="Prévia do logo do time" width={110} height={110} style={{ display: 'block', width: 110, height: 110, borderRadius: '50%', objectFit: 'cover', margin: '8px auto 6px', border: '2.5px solid #8b5cf6', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }} />
+              <img src={logoPrevia} alt="Prévia do logo do time" width={128} height={128} style={{ display: 'block', width: 128, height: 128, borderRadius: '50%', objectFit: 'cover', margin: '10px auto 8px', border: '2.5px solid #8b5cf6', boxShadow: '0 0 28px rgba(139,92,246,0.5), 0 0 64px rgba(212,160,23,0.16)' }} />
             ) : (
-              <div style={{ width: 110, height: 110, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 38, color: '#fff', background: 'rgba(255,255,255,0.04)', border: '2.5px solid #8b5cf6', margin: '8px auto 6px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
+              <div data-escudo-iniciais style={{ width: 128, height: 128, display: 'grid', placeItems: 'center', fontFamily: RAJ, fontWeight: 800, fontSize: 46, letterSpacing: '0.04em', color: '#fff', background: 'linear-gradient(180deg, rgba(139,92,246,0.14), rgba(255,255,255,0.03))', border: '2.5px solid #8b5cf6', margin: '10px auto 8px', clipPath: 'polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%)', boxShadow: '0 0 28px rgba(139,92,246,0.5), 0 0 64px rgba(212,160,23,0.16)', textShadow: '0 0 14px rgba(240,201,74,0.45)' }}>
                 {iniciais(nome)}
               </div>
             )}
@@ -341,16 +355,18 @@ export default function CriarEquipa() {
               <button type="button" className="chip" onClick={() => logoInputRef.current?.click()} style={{ color: '#f0c94a', borderColor: 'rgba(212,160,23,0.5)', background: 'rgba(212,160,23,0.08)' }}>
                 {logoArquivo ? 'Trocar logo' : 'Escolher logo'}
               </button>
-              {logoArquivo ? <button type="button" className="chip" onClick={tirarLogo}>Tirar</button> : null}
+              {logoArquivo ? (
+                <button type="button" className="chip" aria-label="Tirar logo" onClick={tirarLogo} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px' }}>
+                  <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
+                </button>
+              ) : null}
             </div>
             <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={aoEscolherLogo} style={{ display: 'none' }} />
-            <p className="texto-apoio texto-apoio--centro" style={{ maxWidth: 300 }}>
-              PNG, JPG ou WEBP, até 2 MB. Passa por uma conferência. Sem logo, o escudo usa as iniciais.
-            </p>
-            <div style={{ marginTop: 24 }}>
-              <Cta cheio disabled={!nome.trim()} onClick={() => irParaPasso(2)}>Continuar</Cta>
-              {!nome.trim() ? <Falta>Falta o nome do time.</Falta> : null}
-            </div>
+            {podeContinuar ? (
+              <div style={{ marginTop: 24 }}>
+                <Cta cheio onClick={() => irParaPasso(2)}>Continuar</Cta>
+              </div>
+            ) : null}
           </>
         )}
 
@@ -387,13 +403,12 @@ export default function CriarEquipa() {
 
         {passo === 3 && (
           <>
-            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Aceita novos membros?</h1>
-            <p className="texto-apoio" style={{ marginBottom: 14 }}>Como se entra no seu time.</p>
+            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 14px' }}>Aceita novos membros?</h1>
             {[
-              // 29H (item 45): textos aprovados pelo dono (2-out). "Fechado" segue a mesma linha da casa.
+              // 29H (item 45): textos aprovados pelo dono (2-out); 29P: o Explorar virou "Radar de peladas" (em frase, entre aspas).
               { k: 'privado', t: 'Fechado', d: 'Só entra quem receber o seu link de convite.' },
-              { k: 'publico_aprovacao', t: 'Só com a sua aprovação', d: 'Quem achar o time no Explorar pede para entrar; você aceita ou não.' },
-              { k: 'publico_aberto', t: 'Aberto', d: 'Qualquer um que achar o time no Explorar entra na hora.' },
+              { k: 'publico_aprovacao', t: 'Só com a sua aprovação', d: 'Quem achar o time no "Radar de peladas" pede para entrar. Você aceita ou não.' },
+              { k: 'publico_aberto', t: 'Aberto', d: 'Qualquer um que achar o time no "Radar de peladas" entra na hora.' },
             ].map((o) => (
               <button key={o.k} type="button" onClick={() => setModo(o.k)} style={{ ...VIDRO, clipPath: CLIP, display: 'block', width: '100%', textAlign: 'left', padding: '12px 14px', marginBottom: 8, cursor: 'pointer', borderColor: modo === o.k ? 'rgba(212,160,23,0.65)' : 'rgba(255,255,255,0.10)', background: modo === o.k ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.03)', color: 'inherit' }}>
                 <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 14, display: 'block', color: modo === o.k ? '#f0c94a' : '#fff' }}>{o.t}</span>
@@ -410,25 +425,28 @@ export default function CriarEquipa() {
 
         {passo === 4 && team && (
           <>
-            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Chame o seu time</h1>
-            <p className="texto-apoio" style={{ marginBottom: 14 }}>O <b style={{ color: '#f0c94a' }}>{team.nome}</b> está criado. Manda no grupo do seu time: o link vale 30 dias. Você pode pular este passo.</p>
+            {/* 29P: a FESTA. A máquina das boas-vindas (deitada sem logo, quadrada com logo) com o nome do time como letreiro, na hora em
+                que o time nasce. Embaixo do nome, a cidade (e o bairro) como informação do time. Sem som; prefers-reduced-motion para tudo. */}
+            <div className="bv bv--festa" data-festa aria-labelledby="festa-nome">
+              <MaquinaDoTime nome={team.nome} logo={logoDaFesta} idNome="festa-nome" />
+              {cidadeDoTime ? (
+                <p data-cidade-do-time style={{ margin: 0, fontFamily: RAJ, fontSize: 14, fontWeight: 700, letterSpacing: '0.08em', color: '#c9b6ff', textTransform: 'uppercase' }}>
+                  {bairroDoTime ? `${bairroDoTime} · ` : ''}{cidadeDoTime}
+                </p>
+              ) : null}
+            </div>
+            <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 24, margin: '14px 0 4px', textAlign: 'center', color: '#f0c94a' }}>Seu time está no ar!</h1>
+            <p className="texto-apoio texto-apoio--centro" style={{ marginBottom: 14 }}>Chame a galera pelo link. Ele vale 30 dias.</p>
+            {/* Avisos só quando algo deu errado: cidade não achada, bairro não achado, "só organizo" não gravado, logo recusado. */}
             {avisoCidade ? (
-              avisoCidade.tipo === 'ok' ? (
-                <p className="texto-apoio" data-aviso-cidade="ok" style={{ marginTop: 0, marginBottom: 14 }}>{avisoCidade.texto}</p>
-              ) : (
-                <div role="status" data-aviso-cidade="aviso" className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
-                  {avisoCidade.texto}
-                </div>
-              )
+              <div role="status" data-aviso-cidade="aviso" className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
+                {avisoCidade.texto}
+              </div>
             ) : null}
             {avisoBairro ? (
-              avisoBairro.tipo === 'ok' ? (
-                <p className="texto-apoio" data-aviso-bairro="ok" style={{ marginTop: 0, marginBottom: 14 }}>{avisoBairro.texto}</p>
-              ) : (
-                <div role="status" data-aviso-bairro="aviso" className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
-                  {avisoBairro.texto}
-                </div>
-              )
+              <div role="status" data-aviso-bairro="aviso" className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
+                {avisoBairro.texto}
+              </div>
             ) : null}
             {avisoPapel ? (
               <div role="status" data-aviso-papel className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
@@ -436,11 +454,9 @@ export default function CriarEquipa() {
               </div>
             ) : null}
             {avisoLogo ? (
-              <div role="status" className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
+              <div role="status" data-aviso-logo className="hud-corners-s" style={{ margin: '0 0 14px', padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
                 {avisoLogo}
               </div>
-            ) : logoEnviado ? (
-              <p className="texto-apoio" style={{ marginTop: 0, marginBottom: 14 }}>Logo do time enviado ✓</p>
             ) : null}
             {inviteLink ? (
               <>
@@ -457,8 +473,8 @@ export default function CriarEquipa() {
               <Cta onClick={gerarConvite} disabled={busy}>{busy ? 'Gerando…' : 'Gerar link do convite'}</Cta>
             )}
             <div style={{ marginTop: 22 }}>
-              {/* Rodada 29C: `criouAgora` abre as boas-vindas do criador na página do time (uma vez por time). */}
-              <Cta cheio onClick={() => navigate(`/time/${team.slug}`, { state: { criouAgora: true } })}>Ir para o time</Cta>
+              {/* 29P: sem state nenhum — a comemoração já aconteceu aqui; a página do time abre direto. */}
+              <Cta cheio onClick={() => navigate(`/time/${team.slug}`)}>Ir para o time</Cta>
             </div>
           </>
         )}

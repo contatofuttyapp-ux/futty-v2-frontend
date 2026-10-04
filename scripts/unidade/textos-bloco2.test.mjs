@@ -95,10 +95,12 @@ test('77, 79, 81, 82 e 78 · a criação do time: "a cidade", 3/3, nome do botã
   assert.doesNotMatch(criar, /\/4`/, 'nenhum "/4"');
   assert.match(criar, /rotulo=\{titulo\}/, 'o botão de gols tem nome (achado 81)');
   assert.match(criar, /cursor: rest\.disabled \? 'not-allowed' : 'pointer'/, 'apagado = not-allowed (achado 82)');
-  assert.match(criar, /Nome do time \(obrigatório\)/);
-  assert.match(criar, /Cidade \(obrigatória em time aberto\)/);
-  assert.match(criar, /Falta o nome do time\./);
-  assert.match(criar, /Time aberto precisa de cidade\./);
+  // 29P: rótulos sem "(obrigatório)"; sem nome e cidade o Continuar nem aparece (sai o "Falta o nome do time.")
+  assert.match(criar, /<Lbl grande>Nome do time<\/Lbl>/);
+  assert.match(criar, /<Lbl grande>Cidade<\/Lbl>/);
+  assert.doesNotMatch(criar, /\(obrigatóri[oa]/);
+  assert.doesNotMatch(criar, /Falta o nome do time\./);
+  assert.match(criar, /Time aberto precisa de cidade\./, 'a defesa do passo 3 fica');
   // achado 78 (29O: regra nas funções puras de golsEPremios.js): o artilheiro nunca fica apagado, e a chave dele liga os gols junto
   assert.match(criar, /alternarGols\(mostrarArtilheiro, ligar\)/);
   assert.match(criar, /alternarArtilheiro\(mostrarGols, ligar\)/);

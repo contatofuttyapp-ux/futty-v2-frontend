@@ -69,7 +69,17 @@ export function avisoAchou(nomeOficial) {
 
 /** O aviso quando nada achou a cidade: o time fica só com o texto. */
 export function avisoNaoAchou(texto) {
-  return `Não achamos essa cidade. Seu time só aparece no Explorar para quem escrever exatamente '${String(texto ?? '').trim()}'.`;
+  return `Não achamos essa cidade. Seu time só aparece no "Radar de peladas" para quem escrever exatamente '${String(texto ?? '').trim()}'.`;
+}
+
+/**
+ * A cidade conta como preenchida (Rodada 29P): escolhida da lista, ou um texto para o qual a lista não tem sugestão nenhuma
+ * (cidade fora do Brasil e de Portugal: o motor geocodifica). Com sugestões na lista, a pessoa escolhe uma. Nunca trava quem está fora.
+ */
+export function cidadePreenchida({ texto, escolha, temSugestoes }) {
+  if (escolha) return true;
+  const limpo = String(texto ?? '').trim();
+  return limpo.length >= MINIMO_DE_LETRAS && !temSugestoes;
 }
 
 /** O aviso certo para a resposta `geo` do motor ({ encontrada, nomeOficial }), ou null se não houve cidade. */

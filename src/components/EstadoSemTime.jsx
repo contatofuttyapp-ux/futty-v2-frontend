@@ -19,7 +19,7 @@ export default function EstadoSemTime({ icone, mensagem }) {
           </Link>
         </div>
         <Link to="/explorar" className="btn btn--purple hud-corners">
-          Explorar times
+          Radar de peladas
         </Link>
       </div>
     </div>

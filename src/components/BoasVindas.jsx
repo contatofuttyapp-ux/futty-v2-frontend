@@ -1,11 +1,11 @@
 // Futty v2.0 — Rodada 29C: as boas-vindas do time — UMA página, as duas máquinas da prova aprovada pelo dono
 // (FUT/DESIGN/prova-boas-vindas-v2.html): a DEITADA (A), para time sem logo, com o nome como letreiro na janela; e a
-// QUADRADA (B), com dois anéis contínuos de lâmpadas, para time com logo. Duas variantes na mesma tela: `convidado`
-// (1ª vez no time depois de aceitar o convite ou de ter o pedido aceito) e `criador` ("Ir para o time" no fim do Criar
-// time"). 29H (item 1): o convidado vê esta tela como a 1ª página do onboarding (`comConvite`: "Você foi convidado para o <time>.
-// …", `gravar={false}`: a pessoa ainda não é do time, então a escolha linha/gol só volta no onClose e é gravada depois de
-// entrar). A variante de quem só baixou o app saiu na 29D (o Onboarding ganhou o mini sorteio). Lâmpadas de CSS, 0 KB de
-// mídia, sem som (não há gesto); prefers-reduced-motion: tudo parado e sem "tchan". Quem mostra e marca "visto" é a Equipa.
+// QUADRADA (B), com dois anéis contínuos de lâmpadas, para time com logo. Quem vê é o `convidado` (1ª vez no time depois de
+// aceitar o convite ou de ter o pedido aceito). 29H (item 1): o convidado vê esta tela como a 1ª página do onboarding
+// (`comConvite`: "Você foi convidado para o <time>. …", `gravar={false}`: a pessoa ainda não é do time, então a escolha linha/gol
+// só volta no onClose e é gravada depois de entrar). A variante de quem só baixou o app saiu na 29D (o Onboarding ganhou o mini
+// sorteio); a do criador saiu na 29P (a festa passou para o fim do Criar time, que reaproveita `MaquinaDoTime`). Lâmpadas de CSS,
+// 0 KB de mídia, sem som (não há gesto); prefers-reduced-motion: tudo parado e sem "tchan". Quem mostra e marca "visto" é a Equipa.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
@@ -13,10 +13,7 @@ import { urlAsset, urlImagem } from '../utils/avatar';
 import { anelDeLuzes, reguaDeLuzes } from '../utils/luzesSlot';
 import '../styles/boas-vindas.css';
 
-const FRASES = {
-  convidado: 'Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.',
-  criador: 'Seu time está no ar. Chame a galera pelo link, confirme presença, sorteie e faça a figurinha de cada um.',
-};
+const FRASE_CONVIDADO = 'Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.';
 
 // Geometria da prova: deitada com réguas de 22 (em cima) e 24 (na base); quadrada de 248 px com anéis em 8 e 19 px, passo 11.
 const LADO = 248;
@@ -86,8 +83,47 @@ function Lampada({ luz }) {
 }
 
 /**
+ * A máquina com o nome do time como letreiro: deitada para time sem logo, quadrada (com o logo na janela) para time com logo.
+ * Vive dentro de um `.bv` (a folha boas-vindas.css escopa tudo nele). `logo` já é a URL pronta (ou null).
+ */
+export function MaquinaDoTime({ nome, logo = null, idNome = 'bv-nome' }) {
+  const premio = useTchan();
+  const quadrada = !!logo;
+  const { ref: refNome, quebra } = useLetreiro(nome, quadrada ? 30 : 34, quadrada ? 18 : 20);
+  const letreiro = (classe) => (
+    <h2 id={idNome} ref={refNome} className={`letreiro ${classe}${quebra ? ' quebra' : ''}`}>{nome}</h2>
+  );
+  return quadrada ? (
+    <>
+      <div className={`maq quadrada${premio ? ' premio' : ''}`} aria-hidden="true">
+        <div className="anel dourado">{ANEIS.dourado.map((l) => <Lampada key={l.i} luz={l} />)}</div>
+        <div className="anel roxo">{ANEIS.roxo.map((l) => <Lampada key={l.i} luz={l} />)}</div>
+        <div className="janela">
+          <div className="logo-wrap">
+            <span className="aura">
+              <img src={logo} alt="" decoding="async" />
+            </span>
+          </div>
+        </div>
+      </div>
+      {letreiro('abaixo')}
+    </>
+  ) : (
+    <div className={`maq${premio ? ' premio' : ''}`}>
+      <div className="luzes" aria-hidden="true">{REGUAS.cima.map((l) => <Lampada key={l.i} luz={l} />)}</div>
+      <div className="luzes roxa" aria-hidden="true">{REGUAS.cimaRoxa.map((l) => <Lampada key={l.i} luz={l} />)}</div>
+      <div className="janela">{letreiro('na-janela')}</div>
+      <div className="baseluz" aria-hidden="true">
+        <div className="fila">{REGUAS.base.map((l) => <Lampada key={l.i} luz={l} />)}</div>
+        <div className="fila roxa">{REGUAS.baseRoxa.map((l) => <Lampada key={l.i} luz={l} />)}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * @param {object}  p
- * @param {'convidado'|'criador'} p.variante
+ * @param {'convidado'} p.variante
  * @param {object}  p.team             o time ({ nome, logo_url })
  * @param {string}  [p.slug]           para o PATCH de posição (convidado)
  * @param {boolean} [p.goleiroInicial] como a pessoa já está no time (padrão: linha)
@@ -95,16 +131,13 @@ function Lampada({ luz }) {
  * @param {boolean} [p.gravar]         false = não grava a posição (a pessoa ainda não é do time); o escolhido volta em `goleiro`
  * @param {(r: { mudou: boolean, erro: string|null, goleiro: boolean }) => void} p.onClose  chamado no "Vamos lá"
  */
-export default function BoasVindas({ variante, team = null, slug = '', goleiroInicial = false, comConvite = false, gravar = true, onClose }) {
+export default function BoasVindas({ variante = 'convidado', team = null, slug = '', goleiroInicial = false, comConvite = false, gravar = true, onClose }) {
   const [goleiro, setGoleiro] = useState(!!goleiroInicial);
   const [ocupado, setOcupado] = useState(false);
-  const premio = useTchan();
 
   const nome = team?.nome || '';
   // O logo nunca é cortado ao quadrado (utils/avatar.js): um escudo largo cortado ao meio seria um defeito.
   const logo = team?.logo_url ? urlImagem(urlAsset(team.logo_url), 256) : null;
-  const quadrada = !!logo;
-  const { ref: refNome, quebra } = useLetreiro(nome, quadrada ? 30 : 34, quadrada ? 18 : 20);
 
   async function vamosLa() {
     if (ocupado) return;
@@ -121,41 +154,12 @@ export default function BoasVindas({ variante, team = null, slug = '', goleiroIn
     onClose({ mudou: mudou && !erro, erro, goleiro });
   }
 
-  const letreiro = (classe) => (
-    <h2 id="bv-nome" ref={refNome} className={`letreiro ${classe}${quebra ? ' quebra' : ''}`}>{nome}</h2>
-  );
-
   // Portal para o body: `fixed` dentro do [data-page] animado ancora na página, não na tela (nota em LoadingFutty.jsx).
   return createPortal(
     <div className="modal-overlay" role="presentation">
       <div className="bv" role="dialog" aria-modal="true" aria-labelledby="bv-nome" data-variante={variante}>
-        {quadrada ? (
-          <>
-            <div className={`maq quadrada${premio ? ' premio' : ''}`} aria-hidden="true">
-              <div className="anel dourado">{ANEIS.dourado.map((l) => <Lampada key={l.i} luz={l} />)}</div>
-              <div className="anel roxo">{ANEIS.roxo.map((l) => <Lampada key={l.i} luz={l} />)}</div>
-              <div className="janela">
-                <div className="logo-wrap">
-                  <span className="aura">
-                    <img src={logo} alt="" decoding="async" />
-                  </span>
-                </div>
-              </div>
-            </div>
-            {letreiro('abaixo')}
-          </>
-        ) : (
-          <div className={`maq${premio ? ' premio' : ''}`}>
-            <div className="luzes" aria-hidden="true">{REGUAS.cima.map((l) => <Lampada key={l.i} luz={l} />)}</div>
-            <div className="luzes roxa" aria-hidden="true">{REGUAS.cimaRoxa.map((l) => <Lampada key={l.i} luz={l} />)}</div>
-            <div className="janela">{letreiro('na-janela')}</div>
-            <div className="baseluz" aria-hidden="true">
-              <div className="fila">{REGUAS.base.map((l) => <Lampada key={l.i} luz={l} />)}</div>
-              <div className="fila roxa">{REGUAS.baseRoxa.map((l) => <Lampada key={l.i} luz={l} />)}</div>
-            </div>
-          </div>
-        )}
-        <p className="bv-frase">{comConvite && variante === 'convidado' ? `Você foi convidado para o ${nome}. ` : ''}{FRASES[variante]}</p>
+        <MaquinaDoTime nome={nome} logo={logo} />
+        <p className="bv-frase">{comConvite ? `Você foi convidado para o ${nome}. ` : ''}{FRASE_CONVIDADO}</p>
         {variante === 'convidado' ? (
           <div className="bv-posicao" role="group" aria-label="Como você joga">
             <button type="button" className={`chip ${!goleiro ? 'chip--active' : ''}`} aria-pressed={!goleiro} disabled={ocupado} onClick={() => setGoleiro(false)}>
