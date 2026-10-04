@@ -1,49 +1,76 @@
-// Futty v2.0 — Rodada 29H (item 12): o campo "Bairro" do time (Criar time e painel do time). Opcional. Em Portugal a cidade escolhida
-// é um concelho e o campo sugere as freguesias dele (a lista vem do site SÓ quando a pessoa toca no campo — lib/freguesiasDados.js);
-// fora de Portugal é texto livre, que o motor geocodifica uma vez ("bairro, cidade"). Escolher uma freguesia manda a coordenada da
-// lista e dispensa a chamada. Sem cidade o campo fica desligado: o bairro só existe dentro de uma cidade.
-// `aoMudar(texto, escolha)`: `escolha` é null enquanto a pessoa digita. O texto de apoio ("Só o bairro e a cidade, nunca o
-// endereço.") é de quem usa o campo (cada tela o põe na sua diagramação).
+// Futty v2.0 — Rodada 29H (item 12), refeito na 29T (bloco B, achado 157): o campo "Bairro" do time (Criar time e Ajustes do time). Opcional.
+// O bairro é de LISTA, como a cidade (dono, 4-out: "só aceita o que tiver lá"): no Brasil os bairros do IBGE (Censo 2022), em Portugal as
+// freguesias — `itens` é a lista da cidade escolhida (hooks/useBairrosDaCidade.js: { linha: [bairro, lat, lng], chave }[]). Sem texto livre:
+// o que a pessoa digita só busca; vale o que ela ESCOLHE. Texto que a lista não tem volta ao que valia antes (o bairro já escolhido, ou o
+// que o time já tinha salvo — o bairro antigo escrito à mão continua até alguém editar). Quem usa o campo só o desenha quando a cidade TEM
+// lista (cidade sem bairros na lista = sem campo) e põe `key` com a cidade, para a escolha de uma cidade nunca vazar para a outra.
+// `aoMudar(texto, escolha)`: `escolha` é { bairro, bairro_origem: 'lista', bairro_lat, bairro_lng } quando veio da lista, null enquanto digita.
+// O texto de apoio ("Só o bairro e a cidade, nunca o endereço.") é de quem usa o campo (cada tela o põe na sua diagramação).
 import { useEffect, useId, useRef, useState } from 'react';
-import { carregarFreguesias } from '../lib/freguesiasDados';
-import { buscarFreguesias, escolhaDaFreguesia } from '../utils/freguesias';
+import { buscarBairros, escolhaDoBairro, linhaDaLista } from '../utils/bairros';
 
-export default function CampoBairro({ valor, aoMudar, concelho = null, desabilitado = false, placeholder = 'Onde vocês jogam', maxLength = 80, className = 'input input--hud', style, ...resto }) {
+export default function CampoBairro({ valor, aoMudar, itens, placeholder = 'Onde vocês jogam', maxLength = 80, className = 'input input--hud', style, ...resto }) {
   const idLista = useId();
   const raiz = useRef(null);
-  const [indice, setIndice] = useState(null);
   const [aberto, setAberto] = useState(false);
   const [ativa, setAtiva] = useState(-1);
-  // Só sugere o que a pessoa DIGITOU (ou, vazio, as primeiras do concelho): logo depois de escolher, a lista fecha.
+  // Só sugere o que a pessoa DIGITOU (ou, vazio, os primeiros da lista): logo depois de escolher, a lista fecha.
   const [escolhido, setEscolhido] = useState(false);
+  // O que vale agora: o texto da última escolha (ou o que o campo trouxe ao nascer) e a escolha que o acompanha.
+  const valendo = useRef({ texto: valor, escolha: null });
+  // Os valores de agora para os ouvintes de fora do campo (que nascem uma vez, quando a lista abre).
+  const agora = useRef({ valor, itens, aoMudar });
+  useEffect(() => { agora.current = { valor, itens, aoMudar }; });
 
-  function carregar() {
-    if (concelho) carregarFreguesias().then(setIndice).catch(() => {});
-  }
-
-  const sugestoes = aberto && !escolhido && indice && concelho ? buscarFreguesias(indice, concelho, valor) : [];
+  const sugestoes = aberto && !escolhido ? buscarBairros(itens, valor) : [];
 
   useEffect(() => { setAtiva(-1); }, [valor]); // eslint-disable-line react-hooks/set-state-in-effect -- a seleção do teclado recomeça a cada letra
 
+  /** Fecha a lista e confere o texto: vazio vale (sem bairro); o que a lista escreve por inteiro vira escolha; o resto volta ao que valia. */
+  function encerrar() {
+    setAberto(false);
+    const { valor: escrito, itens: lista, aoMudar: mudar } = agora.current;
+    const texto = escrito.trim();
+    if (!texto) {
+      valendo.current = { texto: '', escolha: null };
+      if (escrito) mudar('', null);
+      return;
+    }
+    if (texto === valendo.current.texto) return;
+    const exata = linhaDaLista(lista, texto);
+    if (exata) {
+      valendo.current = { texto: exata[0], escolha: escolhaDoBairro(exata) };
+      setEscolhido(true);
+      mudar(exata[0], valendo.current.escolha);
+      return;
+    }
+    mudar(valendo.current.texto, valendo.current.escolha);
+  }
+
   useEffect(() => {
     if (!aberto) return undefined;
-    const fora = (e) => { if (raiz.current && !raiz.current.contains(e.target)) setAberto(false); };
+    const fora = (e) => { if (raiz.current && !raiz.current.contains(e.target)) encerrar(); };
     document.addEventListener('pointerdown', fora, true);
     return () => document.removeEventListener('pointerdown', fora, true);
   }, [aberto]);
 
   function escolher(linha) {
+    valendo.current = { texto: linha[0], escolha: escolhaDoBairro(linha) };
     setEscolhido(true);
     setAberto(false);
-    aoMudar(linha[0], escolhaDaFreguesia(linha));
+    aoMudar(linha[0], valendo.current.escolha);
   }
 
   function aoTeclar(e) {
+    if (e.key === 'Escape') { encerrar(); return; }
+    if (e.key === 'Enter') {
+      const exata = linhaDaLista(itens, valor);
+      if (ativa >= 0 && sugestoes[ativa]) { e.preventDefault(); escolher(sugestoes[ativa]); } else if (exata) { e.preventDefault(); escolher(exata); }
+      return;
+    }
     if (!sugestoes.length) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); setAtiva((i) => Math.min(sugestoes.length - 1, i + 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setAtiva((i) => Math.max(0, i - 1)); }
-    else if (e.key === 'Enter' && ativa >= 0) { e.preventDefault(); escolher(sugestoes[ativa]); }
-    else if (e.key === 'Escape') setAberto(false);
   }
 
   return (
@@ -54,17 +81,17 @@ export default function CampoBairro({ valor, aoMudar, concelho = null, desabilit
         className={className}
         value={valor}
         maxLength={maxLength}
-        placeholder={desabilitado ? 'Escolha a cidade primeiro' : placeholder}
-        disabled={desabilitado}
+        placeholder={placeholder}
         autoComplete="off"
         autoCorrect="off"
-        role={concelho ? 'combobox' : undefined}
+        role="combobox"
         aria-expanded={sugestoes.length > 0}
         aria-controls={idLista}
-        aria-autocomplete={concelho ? 'list' : undefined}
+        aria-autocomplete="list"
         style={{ width: '100%', fontFamily: "'Rajdhani', sans-serif", fontSize: 16, ...style }}
-        onFocus={() => { carregar(); setAberto(true); }}
-        onBlur={(e) => { const p = e.relatedTarget; if (p && raiz.current && !raiz.current.contains(p)) setAberto(false); }}
+        onFocus={() => setAberto(true)}
+        // Tab para outro campo: confere e fecha. Sem relatedTarget (o toque num botão não dá foco no Safari) não fecha aqui — o toque fora é quem fecha.
+        onBlur={(e) => { const p = e.relatedTarget; if (p && raiz.current && !raiz.current.contains(p)) encerrar(); }}
         onKeyDown={aoTeclar}
         onChange={(e) => { setEscolhido(false); setAberto(true); aoMudar(e.target.value, null); }}
       />

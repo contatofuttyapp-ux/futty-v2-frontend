@@ -40,7 +40,7 @@ const pedido = (id, nomeDoTime) => ({ id, status: 'pending', updated_at: new Dat
 function payloadInicio({ jogos = [], pedidos = [], times = TIMES, admin = 0, rsvp = null } = {}) {
   return {
     me: {
-      user: { id: 'U1', nome: 'Chavo', nome_jogador: 'Chavo, el matador del Pelé', onboarding_completo: true, birthdate: '1990-01-01', foto_url: null, avatar_url: null, plano: 'free', fundo_figurinha: 'estadio' },
+      user: { id: 'U1', nome: 'Chavo', nome_jogador: 'Chavo, el matador del Pelé', onboarding_completo: true, birthdate: '1990-01-01', foto_url: '/imagens-prova/bom.png', avatar_url: null, plano: 'free', fundo_figurinha: 'estadio' },
       stats: { nota: 0, jogos: 0, gols: 0 },
     },
     teams: { teams: times.map((t) => ({ ...t, role: 'admin', joga: true, logo_url: null })) },

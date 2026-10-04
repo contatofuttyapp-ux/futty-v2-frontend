@@ -4,6 +4,23 @@
 
 export const TITULO_SEM_LOCAL = 'Peladas abertas a novos jogadores';
 
+// Rodada 29T (bloco B, achado 157): o time se apresenta no Radar. Dentro do card, embaixo do nome: "Bairro · Cidade" e o "Sobre o time" em até 2 linhas;
+// tocar no card abre um pop-up com tudo (escudo, nome, local, membros, aberto ou com aprovação, o "Sobre o time" inteiro e o botão de entrar).
+
+/** "Guará · Brasília, DF": o bairro junto da cidade; só a cidade quando não há bairro (cidade sem bairros na lista, ou time antigo); sem cidade, a localização que o time escreveu. */
+export function localDoTime({ bairro, cidade, localizacao } = {}) {
+  const lugar = String(cidade || localizacao || '').trim();
+  return [String(bairro ?? '').trim(), lugar].filter(Boolean).join(' · ');
+}
+
+/** Como o time recebe gente: "aberto" (entra na hora) ou "com aprovação" (o admin decide). */
+export function rotuloDoModo(modo) {
+  return modo === 'publico_aberto' ? 'aberto' : 'com aprovação';
+}
+
+/** O que o pop-up diz de um time antigo que ainda não escreveu o "Sobre o time". */
+export const SEM_SOBRE_NO_POPUP = 'Este time ainda não contou como ele é.';
+
 /**
  * @param {{ origem?: 'localizacao'|'cidade'|null, cidade?: string }} [opcoes]
  *   origem  de onde veio a posição da pessoa: o botão "Usar minha localização" ou a cidade que ela escolheu (null = nenhuma)

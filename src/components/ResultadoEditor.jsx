@@ -17,7 +17,8 @@ const NIVEIS = [
   { n: 3, label: 'Stats' },
 ];
 
-const inputPlacar = { width: 48, textAlign: 'center', padding: '8px 6px', borderRadius: 8, border: '1px solid #222', background: '#0c0c0c', color: '#fff', fontSize: 18, fontWeight: 800 };
+// 29T-B: a borda se vê (era #222 sobre #0c0c0c: duas caixas pretas, sem forma) e o "0" apagado mostra o que se escreve ali (class placar-input, app.css).
+const inputPlacar = { width: 48, textAlign: 'center', padding: '8px 6px', borderRadius: 8, border: '1.5px solid rgba(255,255,255,0.32)', background: '#0c0c0c', color: '#fff', fontSize: 18, fontWeight: 800 };
 const stepBtn = { width: 28, height: 28, borderRadius: 8, border: '1px solid #333', background: 'transparent', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', lineHeight: 1 };
 // O título de cada pergunta do modo "devolver": o .section-title da casa (18 px, caixa normal: é pergunta, não letreiro — VOZ-FUTTY §5).
 const TITULO_DA_PERGUNTA = { margin: '18px 0 8px' };
@@ -140,9 +141,9 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
           {devolver ? <div className="section-title" style={TITULO_DA_PERGUNTA}>Placar <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>(opcional)</span></div> : null}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: devolver ? 0 : 12, color: '#fff', fontWeight: 700 }}>
             <span style={{ fontSize: 13 }}>{nomeA}</span>
-            <input type="number" min="0" inputMode="numeric" aria-label={`Gols do ${nomeA}`} data-placar="a" value={placar.a} onChange={(e) => mudar({ placarA: e.target.value })} style={inputPlacar} />
+            <input type="number" min="0" inputMode="numeric" placeholder="0" className="placar-input" aria-label={`Gols do ${nomeA}`} data-placar="a" value={placar.a} onChange={(e) => mudar({ placarA: e.target.value })} style={inputPlacar} />
             <span style={{ color: 'var(--text-dim)' }}>×</span>
-            <input type="number" min="0" inputMode="numeric" aria-label={`Gols do ${nomeB}`} data-placar="b" value={placar.b} onChange={(e) => mudar({ placarB: e.target.value })} style={inputPlacar} />
+            <input type="number" min="0" inputMode="numeric" placeholder="0" className="placar-input" aria-label={`Gols do ${nomeB}`} data-placar="b" value={placar.b} onChange={(e) => mudar({ placarB: e.target.value })} style={inputPlacar} />
             <span style={{ fontSize: 13 }}>{nomeB}</span>
           </div>
         </>

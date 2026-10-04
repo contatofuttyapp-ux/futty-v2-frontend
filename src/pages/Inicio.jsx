@@ -1007,17 +1007,12 @@ export default function Inicio() {
     apiFetch(`/api/teams/${p.team.slug}/pedir-entrada`, { method: 'DELETE' }).catch(() => {});
   }
 
-  // Rodada 29T (achado 168): UM aviso por vez no topo, o mais importante primeiro — (1) o jogo sem resposta, (2) o pedido pendente,
-  // (3) ativar notificações. Respondeu ou fechou → entra o próximo da fila (utils/avisosDoInicio.js). O aviso do jogo não segue o chip de time:
-  // quem tem jogo esperando resposta o vê em qualquer filtro. Para o jogo do RSVP a resposta de agora é a do RSVP (a otimista inclusive).
+  // Rodada 29T (achado 168): UM aviso por vez no topo, o mais importante primeiro (a fila inteira, montada logo abaixo, depois dos estados de cada aviso).
+  // O aviso do jogo não segue o chip de time: quem tem jogo esperando resposta o vê em qualquer filtro. Para o jogo do RSVP a resposta de agora é a
+  // do RSVP (a otimista inclusive).
   const jogosParaAviso = (games || []).map((g) => (rsvpValeParaOJogo(g.id)
     ? { ...g, user_status: statusDoJogoPelaResposta(minhaResposta) || (rsvpData?.minha_posicao_espera != null ? 'espera' : null) }
     : g));
-  const aviso = proximoAviso({
-    jogos: jogosQuePedemResposta(jogosParaAviso),
-    pedidos: pedidosPendentes,
-    notificacoes: pushEstado === 'suportado' && !pushBannerFechado,
-  });
   const timeDoJogo = (teamId) => teams.find((t) => t.id === teamId) || null;
 
   // P1-3 — a votação era invisível fora do Ranking. Banner no Início quando há
@@ -1037,6 +1032,25 @@ export default function Inicio() {
     setDesfechoFechado(true);
     sessionStorage.setItem('futty_denuncia_desfecho', '1');
   }
+
+  // Rodada 29T-B (ajuste da Freaky, 4-out): TODOS os avisos do topo numa fila só, um por vez (utils/avisosDoInicio.js tem a ordem: jogo sem resposta →
+  // pedido pendente → votação → figurinha pronta → os demais → ativar notificações por último). Cada um mantém a regra de "vale agora" que já tinha;
+  // o que mudou é que só o primeiro da fila aparece, e fechar ou resolver faz entrar o próximo.
+  const cardSemFoto = !meLoading && !!user && !user.foto_url;
+  const aviso = proximoAviso({
+    jogos: jogosQuePedemResposta(jogosParaAviso),
+    pedidos: pedidosPendentes,
+    votacoes: votacaoTop ? [votacaoTop] : [],
+    figurinhaPronta: !figurinhaGerando && !figurinhaFalhou && podeGerarBrilhante,
+    desfechos: desfechosResolvidos,
+    figurinhaNascendo: figurinhaGerando ? { estado: 'gerando' } : figurinhaFalhou ? { estado: 'falhou' } : null,
+    uniforme: timeSemUniforme,
+    recadoFigurinha: !podeGerarBrilhante ? recadoBrilhante : null,
+    nascimento: precisaDob,
+    denuncia: denunciaDesfechos > 0 && !desfechoFechado,
+    card: figurinhaGerando || figurinhaFalhou ? null : cardSemFoto ? { variante: 'sem-foto' } : ctaFigurinha ? { variante: 'pos-onboarding' } : null,
+    notificacoes: pushEstado === 'suportado' && !pushBannerFechado,
+  });
 
   // REVELAÇÃO — VELOCIDADE 4, a inversão que faz a diferença no celular.
   //
@@ -1098,8 +1112,8 @@ export default function Inicio() {
 
         {/* Pedido único de data de nascimento (Opção B) — para confirmar os 18 anos do app.
             Não-bloqueante; dispensável. */}
-        {precisaDob ? (
-          <div className="hud-corners" style={{ display: 'grid', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.25)' }}>
+        {aviso?.tipo === 'nascimento' ? (
+          <div data-aviso="nascimento" className="hud-corners" style={{ display: 'grid', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.25)' }}>
             <span style={{ fontSize: 13, color: '#fff', lineHeight: 1.45 }}>
               Informe sua <b>data de nascimento</b> para confirmarmos que você tem {IDADE_MINIMA} anos ou mais.
             </span>
@@ -1116,8 +1130,8 @@ export default function Inicio() {
 
         {/* Tijolo 3 — DESFECHO discreto ao denunciante (sem veredicto: protege alvo e
             denunciante). Uma linha no Início, dispensável. */}
-        {denunciaDesfechos > 0 && !desfechoFechado ? (
-          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(123,216,143,0.05)', border: '1px solid rgba(123,216,143,0.25)' }}>
+        {aviso?.tipo === 'denuncia' ? (
+          <div data-aviso="denuncia" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(123,216,143,0.05)', border: '1px solid rgba(123,216,143,0.25)' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Sua denúncia foi analisada. <b style={{ color: '#9fd8a8' }}>Obrigado por cuidar da casa.</b></span>
             <button type="button" aria-label="Fechar" onClick={fecharDesfecho} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
@@ -1125,8 +1139,8 @@ export default function Inicio() {
 
         {/* DESFECHOS dos meus pedidos de entrada (ciclo v1, sem push): aceite →
             destaque + link para a equipa; recusado → aviso digno. Dispensar apaga. */}
-        {desfechosResolvidos.map((p) => (
-          <div key={p.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: p.status === 'approved' ? 'rgba(123,216,143,0.08)' : 'rgba(255,255,255,0.03)', border: p.status === 'approved' ? '1px solid rgba(123,216,143,0.5)' : '1px solid rgba(255,255,255,0.14)' }}>
+        {(aviso?.tipo === 'desfecho' ? [aviso.item] : []).map((p) => (
+          <div key={p.id} data-aviso="desfecho" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: p.status === 'approved' ? 'rgba(123,216,143,0.08)' : 'rgba(255,255,255,0.03)', border: p.status === 'approved' ? '1px solid rgba(123,216,143,0.5)' : '1px solid rgba(255,255,255,0.14)' }}>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: p.status === 'approved' ? '#7bd88f' : '#c9c2d6' }}>
                 {p.status === 'approved' ? `Você entrou no time ${p.team?.nome}!` : `O pedido para ${p.team?.nome} não seguiu`}
@@ -1141,14 +1155,17 @@ export default function Inicio() {
                 Ir ao time
               </Link>
             ) : null}
+            {aviso.mais > 0 ? (
+              <span data-aviso-mais aria-label={`Mais ${aviso.mais} ${plural(aviso.mais, 'aviso de pedido', 'avisos de pedidos')}`} style={{ flexShrink: 0, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', color: 'var(--text-dim)', border: '1px solid rgba(255,255,255,0.18)', padding: '1px 7px', borderRadius: 2 }}>+{aviso.mais}</span>
+            ) : null}
             <button type="button" aria-label="Dispensar" onClick={() => dispensarDesfecho(p.id)} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
           </div>
         ))}
 
         {/* P1-3 — VOTAÇÃO VISÍVEL: sinal no Início de que há colegas por avaliar.
             Dourado porque é uma acção do utilizador (leva ao Ranking, onde se vota). */}
-        {votacaoTop ? (
-          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.07)', border: '1px solid rgba(212,160,23,0.45)' }}>
+        {aviso?.tipo === 'votacao' ? (
+          <div data-aviso="votacao" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.07)', border: '1px solid rgba(212,160,23,0.45)' }}>
             <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
               <Icon name="estrela" size={20} color="#f0c94a" />
             </span>
@@ -1175,8 +1192,8 @@ export default function Inicio() {
             foto da pessoa com um brilho dourado passando em vez do CTA normal —
             sem isso pareceria que nada está acontecendo por ~45s (motor em duas
             passadas, 22-set). */}
-        {figurinhaGerando ? (
-          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.4)' }}>
+        {aviso?.tipo === 'figurinha-nascendo' && aviso.item.estado === 'gerando' ? (
+          <div data-aviso="figurinha-nascendo" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.4)' }}>
             <span className="figurinha-gerando-moldura" style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.5)', background: '#101012' }}>
               {user?.foto_url ? (
                 <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1187,8 +1204,8 @@ export default function Inicio() {
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>leva uns 45 segundos</span>
             </span>
           </div>
-        ) : figurinhaFalhou ? (
-          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
+        ) : aviso?.tipo === 'figurinha-nascendo' ? (
+          <div data-aviso="figurinha-nascendo" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
             <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(248,113,113,0.5)', background: '#101012', overflow: 'hidden' }}>
               {user?.foto_url ? (
                 <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1210,8 +1227,8 @@ export default function Inicio() {
             time ativa; cada pessoa é gerada quando abre o app, e quem nunca
             abre não custa nada. O toque leva à Figurinha, onde o botão dourado
             está à espera — não se dispara uma geração paga sem alguém pedir. */}
-        {!figurinhaGerando && !figurinhaFalhou && podeGerarBrilhante ? (
-          <Link to="/figurinha" className="hud-corners cta-gold-glow" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.55)', textDecoration: 'none', color: 'inherit' }}>
+        {aviso?.tipo === 'figurinha-pronta' ? (
+          <Link to="/figurinha" data-aviso="figurinha-pronta" className="hud-corners cta-gold-glow" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.55)', textDecoration: 'none', color: 'inherit' }}>
             <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.6)', background: '#101012' }}>
               {user?.foto_url ? (
                 <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1232,14 +1249,14 @@ export default function Inicio() {
             competiria com ele. Pendente diz que está na fila; recusado diz o
             motivo que o dono escreveu. Ativado nunca chega aqui: vira direito. */}
         {/* P2 — pacote ativo sem uniforme: o dono escolhe e o time inteiro passa a poder gerar. */}
-        {timeSemUniforme ? (
-          <Link to={`/planos?uniforme=${timeSemUniforme.id}`} className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
+        {aviso?.tipo === 'uniforme' ? (
+          <Link to={`/planos?uniforme=${timeSemUniforme.id}`} data-aviso="uniforme" className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: '#f0c94a', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.45)' }}>
             Falta escolher o uniforme das figurinhas do {timeSemUniforme.nome}. O time só gera depois disso. Escolher →
           </Link>
         ) : null}
 
-        {!podeGerarBrilhante && recadoBrilhante ? (
-          <Link to="/planos" className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: recadoBrilhante.recusado ? 'rgba(255,255,255,0.75)' : '#f0c94a', background: recadoBrilhante.recusado ? 'rgba(255,255,255,0.03)' : 'rgba(212,160,23,0.08)', border: `1px solid ${recadoBrilhante.recusado ? 'rgba(255,255,255,0.14)' : 'rgba(212,160,23,0.45)'}` }}>
+        {aviso?.tipo === 'recado-figurinha' ? (
+          <Link to="/planos" data-aviso="recado-figurinha" className="hud-corners" style={{ display: 'block', padding: '10px 13px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.45, textDecoration: 'none', color: recadoBrilhante.recusado ? 'rgba(255,255,255,0.75)' : '#f0c94a', background: recadoBrilhante.recusado ? 'rgba(255,255,255,0.03)' : 'rgba(212,160,23,0.08)', border: `1px solid ${recadoBrilhante.recusado ? 'rgba(255,255,255,0.14)' : 'rgba(212,160,23,0.45)'}` }}>
             {recadoBrilhante.texto}
           </Link>
         ) : null}
@@ -1250,8 +1267,8 @@ export default function Inicio() {
             22-set: a condição passou de `!user.avatar_url` para `!user.foto_url`.
             Quem tem foto já tem figurinha (a comum) — continuar a pedir "complete
             sua figurinha" a quem acabou de a completar era o convite a mentir. */}
-        {figurinhaGerando || figurinhaFalhou ? null : !meLoading && user && !user.foto_url ? (
-          <Link to="/figurinha" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,160,23,0.4)', textDecoration: 'none', color: 'inherit' }}>
+        {aviso?.tipo === 'card' && aviso.item.variante === 'sem-foto' ? (
+          <Link to="/figurinha" data-aviso="card" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,160,23,0.4)', textDecoration: 'none', color: 'inherit' }}>
             <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
               <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: '#101012', border: '1.5px solid rgba(212,160,23,0.5)', clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(212,160,23,0.65)" strokeWidth="1.6"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
@@ -1263,8 +1280,8 @@ export default function Inicio() {
             </span>
             <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 11, color: '#f0c94a', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>Adicionar →</span>
           </Link>
-        ) : ctaFigurinha ? (
-          <div className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
+        ) : aviso?.tipo === 'card' ? (
+          <div data-aviso="card" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.12)', border: '1px solid var(--purple)' }}>
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Complete seu card</span>
             <Link to="/figurinha" className="btn btn--purple btn--sm hud-corners-s" onClick={dispensarCtaFigurinha}>Ir para Figurinha</Link>
             <button type="button" aria-label="Fechar" onClick={dispensarCtaFigurinha} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>

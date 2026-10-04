@@ -70,7 +70,7 @@
 
 # Lista de cidades do campo "Cidade" (Rodada 29B, D; scripts/gerar-cidades.js). O app nativo a busca daqui (não a leva no
 # pacote) — por isso o CORS. O nome do arquivo não muda quando a lista é regerada, então o cache é de 1 semana, não
-# immutable.
+# immutable. A pasta dados/bairros/ (um arquivo por estado, 29T-B, scripts/gerar-bairros.mjs) cai nesta mesma regra.
 /dados/*
   Cache-Control: public, max-age=604800
   Access-Control-Allow-Origin: *

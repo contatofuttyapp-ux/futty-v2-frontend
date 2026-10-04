@@ -2,8 +2,8 @@
 //
 // Em Portugal o "bairro" é a freguesia: public/dados/freguesias.json (scripts/gerar-freguesias.js, CAOP + Wikidata das ilhas) traz
 // [[concelho, distrito|ilha, [[freguesia, lat, lng], …]], …] e o campo sugere as freguesias do concelho da cidade que a pessoa
-// escolheu. Fora de Portugal não há lista: o bairro é texto livre e o motor o geocodifica UMA vez ("bairro, cidade", Nominatim).
-// A normalização é a MESMA de utils/cidades.js (e do motor): sem acento, sem maiúscula, espaços duplos fora.
+// escolheu. Rodada 29T (bloco B): no Brasil o bairro também é de lista (IBGE, utils/bairros.js) e a pessoa só escolhe o que a lista tem —
+// sem texto livre, no Brasil nem em Portugal. A normalização é a MESMA de utils/cidades.js (e do motor): sem acento, sem maiúscula, espaços duplos fora.
 import { normalizarCidade } from './cidades';
 
 /** O texto de apoio do campo (dono, 2-out). */
@@ -30,19 +30,23 @@ export function indexarFreguesias(lista) {
   return mapa;
 }
 
-/**
- * Sugestões de freguesia para o que a pessoa digitou, dentro do concelho: sem digitar nada, as primeiras (a pessoa vê as
- * opções ao tocar no campo); com texto, as que começam com ele, depois as que têm alguma palavra que começa e depois as que o
- * contêm. Devolve as linhas [freguesia, lat, lng]. Concelho sem lista (ou fora de Portugal): [].
- */
-export function buscarFreguesias(indice, concelho, consulta, max = 8) {
+/** Todas as freguesias do concelho, no formato do índice ({ linha: [freguesia, lat, lng], chave }[]); concelho sem lista (ou fora de Portugal): []. */
+export function freguesiasDoConcelho(indice, concelho) {
   if (!indice || !concelho) return [];
   const grupos = (indice.get(normalizarCidade(concelho.nome)) || []).filter((g) => !concelho.distrito || normalizarCidade(g.distrito) === normalizarCidade(concelho.distrito));
-  const itens = grupos.flatMap((g) => g.itens);
+  return grupos.flatMap((g) => g.itens);
+}
+
+/**
+ * A busca do campo Bairro numa lista de itens ({ linha, chave }): sem digitar nada, os primeiros (a pessoa vê as opções ao tocar no campo);
+ * com texto, os que começam com ele, depois os que têm alguma palavra que começa e depois os que o contêm — sem acento nem maiúscula.
+ * Devolve as linhas [nome, lat, lng]. Serve às freguesias de Portugal e aos bairros do Brasil (utils/bairros.js).
+ */
+export function buscarNosItens(itens, consulta, max = 8) {
   const q = normalizarCidade(consulta);
-  if (!q) return itens.slice(0, max).map((x) => x.linha);
+  if (!q) return (itens || []).slice(0, max).map((x) => x.linha);
   const tres = [[], [], []];
-  for (const item of itens) {
+  for (const item of itens || []) {
     const i = item.chave.indexOf(q);
     if (i < 0) continue;
     if (i === 0) tres[0].push(item);
@@ -50,6 +54,14 @@ export function buscarFreguesias(indice, concelho, consulta, max = 8) {
     else tres[2].push(item);
   }
   return tres.flat().slice(0, max).map((x) => x.linha);
+}
+
+/**
+ * Sugestões de freguesia para o que a pessoa digitou, dentro do concelho (a busca de `buscarNosItens`). Devolve as linhas
+ * [freguesia, lat, lng]. Concelho sem lista (ou fora de Portugal): [].
+ */
+export function buscarFreguesias(indice, concelho, consulta, max = 8) {
+  return buscarNosItens(freguesiasDoConcelho(indice, concelho), consulta, max);
 }
 
 /** O que a escolha de uma freguesia manda ao motor: { bairro, bairro_origem: 'lista', bairro_lat, bairro_lng } (a coordenada da lista). */

@@ -77,10 +77,11 @@ export async function rodar({ navegador, base, t }) {
     t('o contador é x/3, nunca x/4 (achado 79)', !/\/4/.test(await texto(page)));
     const corpo = await texto(page);
     t('sem título nem subtítulo na tela ("Dê nome ao seu time" saiu); o h1 fica só para leitor de tela', !/Dê nome ao seu time|O escudo nasce das iniciais/.test(corpo) && (await page.getByRole('heading', { name: 'Passo 1 de 3' }).evaluate((el) => el.getBoundingClientRect().width <= 1)));
-    t('rótulos limpos: "Nome do time", "Cidade", "Bairro (opcional)", "Logo do time (opcional)" — nenhum "(obrigatório)"', /NOME DO TIME/i.test(corpo) && /\bCIDADE\b/i.test(corpo) && /BAIRRO \(OPCIONAL\)/i.test(corpo) && /LOGO DO TIME \(OPCIONAL\)/i.test(corpo) && !/obrigatóri/i.test(corpo));
+    // 29T-B: o bairro é de lista e só existe com cidade que tem lista — sem cidade o rótulo e o campo nem aparecem (o resto dos rótulos segue).
+    t('rótulos limpos: "Nome do time", "Cidade", "Logo do time (opcional)" — nenhum "(obrigatório)"; o "Bairro (opcional)" só aparece com cidade que tem bairros', /NOME DO TIME/i.test(corpo) && /\bCIDADE\b/i.test(corpo) && !/BAIRRO/i.test(corpo) && /LOGO DO TIME \(OPCIONAL\)/i.test(corpo) && !/obrigatóri/i.test(corpo));
     t('sem textos de apoio embaixo dos campos', !/nunca o endereço|Só a cidade|até 2 MB/.test(corpo));
     t('sem nome: o Continuar está lá, apagado (e nada de "Falta o nome do time.")', (await continuar(page).count()) === 1 && !(await continuarAceso(page)) && !/Falta o nome do time\./.test(corpo));
-    t('o bairro apagado diz "Escolha a cidade primeiro" (achado 77)', (await page.locator('[data-campo-bairro]').getAttribute('placeholder')) === 'Escolha a cidade primeiro');
+    t('sem cidade, o campo Bairro nem existe: não há mais um campo apagado dizendo "Escolha a cidade primeiro" (29T-B, achado 157)', (await page.locator('[data-campo-bairro]').count()) === 0);
 
     await campoNome(page).fill('Domingueira FC');
     await esperar(page);
@@ -215,7 +216,10 @@ export async function rodar({ navegador, base, t }) {
     t('passo 3 sem o subtítulo "Como se entra no seu time."', /Aceita novos membros\?/.test(t3) && !/Como se entra no seu time/.test(t3));
     t('passo 3: os textos citam o "Radar de peladas", entre aspas', /Quem achar o time no "Radar de peladas" pede para entrar\. Você aceita ou não\./.test(t3) && /Qualquer um que achar o time no "Radar de peladas" entra na hora\./.test(t3) && !/Explorar/.test(t3));
     await page.getByRole('button', { name: /Aberto/ }).click();
-    t('time aberto COM cidade (ela é obrigatória agora): "Criar o time" segue aceso, sem "Time aberto precisa de cidade"', !(await page.getByRole('button', { name: 'Criar o time' }).isDisabled()) && !/Time aberto precisa de cidade/.test(await texto(page)));
+    // 29T-B (achado 157): o time aberto também se apresenta — com a cidade, "Criar o time" só acende depois do "Sobre o time".
+    t('time aberto COM cidade (ela é obrigatória agora): sem "Time aberto precisa de cidade"; "Criar o time" espera o "Sobre o time" e acende com ele', !/Time aberto precisa de cidade/.test(await texto(page)) && (await page.getByRole('button', { name: 'Criar o time' }).isDisabled()) && (await page.locator('#sobre-o-time').count()) === 1);
+    await page.locator('#sobre-o-time').fill('Turma que joga na quinta.');
+    t('...com o texto escrito, "Criar o time" acende', !(await page.getByRole('button', { name: 'Criar o time' }).isDisabled()));
     await page.getByRole('button', { name: /Fechado/ }).click();
     await page.getByRole('button', { name: 'Criar o time' }).click();
     await page.locator('text=Seu time está no ar!').waitFor({ timeout: 5000 });

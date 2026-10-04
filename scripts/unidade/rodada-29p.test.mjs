@@ -58,7 +58,7 @@ test('29P · Criar time, passo 1: sem título nem textos de apoio; rótulos limp
   assert.doesNotMatch(passo1, /texto-apoio/, 'nenhum texto de apoio embaixo dos campos');
   assert.match(passo1, /<Lbl grande>Nome do time<\/Lbl>/);
   assert.match(passo1, /<Lbl grande>Cidade<\/Lbl>/);
-  assert.match(passo1, /<Lbl grande>Bairro \(opcional\)<\/Lbl>/);
+  assert.match(passo1, /\{bairros\.estado === 'lista' \? \([\s\S]*?<Lbl grande>Bairro \(opcional\)<\/Lbl>/, '29T-B: o bairro só aparece quando a cidade tem lista');
   assert.match(passo1, /<Lbl grande>Logo do time \(opcional\)<\/Lbl>/);
   assert.doesNotMatch(passo1, /\(obrigatóri[oa]/);
   assert.doesNotMatch(criar, /Falta o nome do time/);

@@ -87,7 +87,9 @@ test('76 · a landing tem o rodapé legal: Termos de Uso, Privacidade e o aviso 
 });
 
 test('77, 79, 81, 82 e 78 · a criação do time: "a cidade", 3/3, nome do botão, obrigatórios, e o artilheiro depende dos gols', () => {
-  assert.match(ler('src/components/CampoBairro.jsx'), /'Escolha a cidade primeiro'/);
+  // 29T-B (achado 157): o bairro é de lista; sem cidade (ou com cidade sem bairros na lista) o campo nem aparece — não há mais um campo apagado
+  // dizendo "Escolha a cidade primeiro".
+  assert.doesNotMatch(ler('src/components/CampoBairro.jsx'), /Escolha a cidade primeiro/);
   const criar = ler('src/pages/CriarEquipa.jsx');
   assert.match(criar, /\[1, 2, 3\]\.map/, 'a barra tem três passos');
   assert.doesNotMatch(criar, /\[1, 2, 3, 4\]\.map/);

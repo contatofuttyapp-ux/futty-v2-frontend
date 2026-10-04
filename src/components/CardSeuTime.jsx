@@ -9,11 +9,13 @@
 // Antes, dois cards de quatro botões ocupavam a primeira tela inteira e os PRÓXIMOS JOGOS ficavam abaixo da dobra.
 // Rodada 29T (achado 168): "Seus times" mostra até 2 linhas; com mais, "Ver todos (N)" abre o resto no lugar (e "Ver menos" fecha). Quatro times
 // empurravam o rótulo "Próximos jogos" para 973 px numa tela de 844.
+// Rodada 29T-B (ajuste da Freaky): os times com pendência vêm primeiro (depois, a ordem de hoje) e um time com pendência nunca fica escondido atrás
+// do "Ver todos": a lista fechada tem 2 linhas OU todos os times com pendência, se forem mais.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarClock, ChevronDown, ChevronRight, CirclePlus, Flag, Settings, Shuffle, Trophy, UserPlus } from 'lucide-react';
 import EscudoEquipa from './EscudoEquipa';
-import { destinoDoSortear, linhasDePendencia, resumoDoTime } from '../utils/seuTime';
+import { destinoDoSortear, linhasDePendencia, quantosTimesMostrar, resumoDoTime, timesComPendenciaPrimeiro } from '../utils/seuTime';
 
 const RAJ = "'Rajdhani', sans-serif";
 const ICONE = { pedidos: UserPlus, presenca: CalendarClock, resultado: Trophy, denuncias: Flag };
@@ -84,11 +86,14 @@ function UmTime({ time, team, games }) {
   );
 }
 
-function SeusTimes({ seuTime, teams, games }) {
+function SeusTimes({ seuTime: doMotor, teams, games }) {
   const [aberto, setAberto] = useState(null); // o slug do time com os atalhos à mostra; um por vez, para o card não crescer
   const [verTodos, setVerTodos] = useState(false);
-  const sobram = seuTime.length - TIMES_VISIVEIS;
-  const mostrados = verTodos ? seuTime : seuTime.slice(0, TIMES_VISIVEIS);
+  // 29T-B: os times com pendência vêm primeiro e nenhum deles fica atrás do "Ver todos" (a lista fechada cresce até caberem todos).
+  const seuTime = timesComPendenciaPrimeiro(doMotor);
+  const visiveis = quantosTimesMostrar(seuTime, TIMES_VISIVEIS);
+  const sobram = seuTime.length - visiveis;
+  const mostrados = verTodos ? seuTime : seuTime.slice(0, visiveis);
 
   return (
     <div className="hud-corners" data-seus-times style={{ display: 'grid', ...CASCA }}>

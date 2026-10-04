@@ -17,6 +17,27 @@ export function linhasDePendencia({ slug, fuso, pendencias: p = {} } = {}) {
   return linhas;
 }
 
+/** O time tem pelo menos uma pendência (pedido de entrada, presença por abrir, resultado por lançar, denúncia)? */
+export function temPendencia(time) {
+  return linhasDePendencia(time).length > 0;
+}
+
+/**
+ * Rodada 29T-B (ajuste do bloco A, decisão da Freaky): em "Seus times" os times com pendência vêm primeiro; depois, a ordem de hoje (a que o motor mandou).
+ * A ordem dentro de cada grupo não muda. Devolve uma lista nova.
+ */
+export function timesComPendenciaPrimeiro(seuTime = []) {
+  return [...seuTime.filter(temPendencia), ...seuTime.filter((t) => !temPendencia(t))];
+}
+
+/**
+ * Quantos times "Seus times" mostra fechado: os 2 de sempre — ou todos os que têm pendência, se forem mais. Um time com pendência nunca fica
+ * escondido atrás do "Ver todos". `ordenados` é o que `timesComPendenciaPrimeiro` devolveu.
+ */
+export function quantosTimesMostrar(ordenados = [], minimo = 2) {
+  return Math.max(minimo, ordenados.filter(temPendencia).length);
+}
+
 /** Para onde vai o atalho "Sortear": o próximo jogo do time (é lá que se sorteia); sem jogo marcado, o Novo jogo. */
 export function destinoDoSortear(slug, teamId, games = []) {
   const proximo = (games || [])

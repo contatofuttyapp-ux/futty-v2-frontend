@@ -3247,3 +3247,9 @@
 @media (prefers-reduced-motion: reduce) {
   .jogo-destaque { animation: none; border-color: rgba(212, 160, 23, 0.95) !important; }
 }
+
+/* Rodada 29T-B: as caixas do placar (ResultadoEditor) mostram um "0" apagado enquanto vazias — a pessoa vê o que se escreve ali. */
+.placar-input::placeholder {
+  color: rgba(255, 255, 255, 0.28);
+  opacity: 1;
+}

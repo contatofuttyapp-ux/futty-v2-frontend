@@ -16,6 +16,8 @@
 // e o link curto /c/<código> (49).
 // 29Q: o link do convite chega PRONTO na festa (gerado sozinho assim que o time existe); o botão "Gerar link do convite" só volta, como
 // reserva, se a geração falhar.
+// 29T-B (achado 157): o bairro é de LISTA (IBGE no Brasil, freguesias em Portugal) e o campo só aparece quando a cidade tem lista; no passo 3, "Aberto" e
+// "Só com a sua aprovação" pedem o "Sobre o time" (sem ele o time não é criado), que o Radar de peladas mostra no card do time.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -32,8 +34,10 @@ import { EscolhaPapel } from '../components/EscolhaLinhaGol';
 import { ARTILHEIRO, DESTAQUE, GOLS, alternarArtilheiro, alternarGols } from '../components/golsEPremios';
 import { MaquinaDoTime } from '../components/BoasVindas';
 import CampoBairro from '../components/CampoBairro';
+import { useBairrosDaCidade } from '../hooks/useBairrosDaCidade';
 import { avisoDaCidade, cidadePreenchida } from '../utils/cidades';
-import { avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
+import { avisoDoBairro } from '../utils/freguesias';
+import { EXEMPLO_SOBRE_O_TIME, FALTA_SOBRE_NA_CRIACAO, MAX_SOBRE_O_TIME, faltaSobre, precisaDeSobre } from '../utils/sobreOTime';
 import { initials } from '../utils/teamColors';
 import '../styles/app.css';
 
@@ -97,9 +101,13 @@ export default function CriarEquipa() {
   const aoSugestoes = useCallback((n) => setTemSugestoes(n > 0), []);
   const [avisoCidade, setAvisoCidade] = useState(null); // depois de criar, só quando deu errado: { tipo: 'aviso', texto }
   const [cidadeDoTime, setCidadeDoTime] = useState(''); // depois de criar: a cidade como o motor a achou (ou como foi escrita)
-  // 29H (item 12): o bairro opcional. `bairroEscolha` é a freguesia da lista (Portugal), com a coordenada; null enquanto digita.
+  // 29H (item 12): o bairro opcional. 29T (bloco B): de LISTA, no Brasil (IBGE) e em Portugal (freguesias) — o campo só existe quando a cidade tem
+  // lista, e só vale o que a pessoa escolhe. `bairroEscolha` é o bairro da lista, com a coordenada; null enquanto digita.
   const [bairro, setBairro] = useState('');
   const [bairroEscolha, setBairroEscolha] = useState(null);
+  const bairros = useBairrosDaCidade(cidade, cidadeEscolha);
+  // 29T (achado 157): o "Sobre o time" é pedido no passo 3 quando o time é aberto ao público (aberto ou com aprovação); "Fechado" não pede.
+  const [sobre, setSobre] = useState('');
   const [avisoBairro, setAvisoBairro] = useState(null); // depois de criar, só quando deu errado
   const [bairroDoTime, setBairroDoTime] = useState('');
   // Tudo nasce desligado (29O): a pessoa liga o que quiser.
@@ -223,6 +231,11 @@ export default function CriarEquipa() {
       irParaPasso(1, { substituir: true });
       return;
     }
+    // Defesa (o botão já fica apagado): o time aberto ao público se apresenta (29T, achado 157).
+    if (faltaSobre({ modo, sobre })) {
+      setToast({ tipo: 'error', mensagem: FALTA_SOBRE_NA_CRIACAO });
+      return;
+    }
     setBusy(true);
     try {
       // Sem cor no body: o backend cai para o fallback interno ('verde'); muda-se
@@ -230,8 +243,10 @@ export default function CriarEquipa() {
       const bodyCriar = { nome: nome.trim() };
       // Cidade da lista: manda o pacote todo (o motor guarda a coordenada da lista, sem Nominatim). Digitada: só o texto.
       if (cidade.trim()) Object.assign(bodyCriar, cidadeEscolha || { cidade: cidade.trim() });
-      // O bairro só existe dentro de uma cidade; freguesia da lista leva a coordenada, texto digitado o motor geocodifica.
-      if (cidade.trim() && bairro.trim()) Object.assign(bodyCriar, bairroEscolha && bairroEscolha.bairro === bairro.trim() ? bairroEscolha : { bairro: bairro.trim() });
+      // O bairro só existe dentro de uma cidade e só vale o da LISTA (29T): leva a coordenada da lista; texto que ninguém escolheu não vai.
+      if (cidade.trim() && bairros.estado === 'lista' && bairroEscolha && bairroEscolha.bairro === bairro.trim()) Object.assign(bodyCriar, bairroEscolha);
+      // O "Sobre o time" (29T): obrigatório no time aberto ao público; no fechado vai se a pessoa escreveu.
+      if (sobre.trim()) bodyCriar.descricao = sobre.trim().slice(0, MAX_SOBRE_O_TIME);
       if (!joga) bodyCriar.joga = false;
       // 29I (achado 78): os gols vão no próprio POST (antes iam num PATCH logo depois) e o artilheiro nunca vai ligado com os gols
       // desligados — o app apaga um quando o outro é desligado, e o motor recusa a combinação incoerente.
@@ -347,15 +362,20 @@ export default function CriarEquipa() {
             <Lbl grande>Nome do time</Lbl>
             <input className="input input--hud" value={nome} maxLength={40} required aria-required="true" onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }} />
             <Lbl grande>Cidade</Lbl>
-            <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setBairroEscolha(null); }} aoSugestoes={aoSugestoes} placeholder="Ex.: Brasília" aria-required="true" style={{ fontSize: 17, fontWeight: 600 }} />
-            {/* 29H (item 12): o bairro, opcional. Em Portugal sugere as freguesias do concelho; no resto é texto livre. */}
-            <Lbl grande>Bairro (opcional)</Lbl>
-            <CampoBairro
-              valor={bairro}
-              aoMudar={(texto, escolha) => { setBairro(texto); setBairroEscolha(escolha); }}
-              concelho={concelhoDePortugal(cidade, cidadeEscolha)}
-              desabilitado={!cidade.trim()}
-            />
+            <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { if (texto !== cidade) { setBairro(''); setBairroEscolha(null); } setCidade(texto); setCidadeEscolha(escolha); }} aoSugestoes={aoSugestoes} placeholder="Ex.: Brasília" aria-required="true" style={{ fontSize: 17, fontWeight: 600 }} />
+            {/* 29H (item 12), 29T (achado 157): o bairro, opcional, é de LISTA — os do IBGE no Brasil, as freguesias em Portugal. Cidade sem bairros
+                na lista (ou ainda sem cidade): o campo nem aparece, e o time mostra só a cidade. */}
+            {bairros.estado === 'lista' ? (
+              <>
+                <Lbl grande>Bairro (opcional)</Lbl>
+                <CampoBairro
+                  key={bairros.chave}
+                  valor={bairro}
+                  aoMudar={(texto, escolha) => { setBairro(texto); setBairroEscolha(escolha); }}
+                  itens={bairros.itens}
+                />
+              </>
+            ) : null}
             <Lbl grande>Logo do time (opcional)</Lbl>
             {/* Prévia REDONDA do logo; sem logo, o escudo com as iniciais (nasce enquanto você escreve o nome). */}
             {logoPrevia ? (
@@ -428,9 +448,29 @@ export default function CriarEquipa() {
                 <span className="texto-apoio" style={{ marginTop: 2 }}>{o.d}</span>
               </button>
             ))}
+            {/* 29T (achado 157): quem acha o time no "Radar de peladas" só tem isto para decidir. Aberto ou com aprovação pedem; Fechado não. */}
+            {precisaDeSobre(modo) ? (
+              <div data-sobre-o-time style={{ marginTop: 14 }}>
+                <label htmlFor="sobre-o-time" style={{ fontFamily: RAJ, fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', color: '#c9b6ff', textTransform: 'uppercase', display: 'block', margin: '0 0 8px' }}>Sobre o time</label>
+                <textarea
+                  id="sobre-o-time"
+                  className="input input--hud"
+                  value={sobre}
+                  rows={3}
+                  maxLength={MAX_SOBRE_O_TIME}
+                  required
+                  aria-required="true"
+                  onChange={(e) => setSobre(e.target.value.slice(0, MAX_SOBRE_O_TIME))}
+                  placeholder={EXEMPLO_SOBRE_O_TIME}
+                  style={{ width: '100%', resize: 'vertical', fontFamily: RAJ, fontSize: 16, fontWeight: 600, lineHeight: 1.35 }}
+                />
+                <div className="texto-apoio" data-sobre-contagem style={{ textAlign: 'right', marginTop: 4 }}>{sobre.length}/{MAX_SOBRE_O_TIME}</div>
+              </div>
+            ) : null}
             <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
-              <Cta cheio onClick={criarESeguir} disabled={busy || faltaCidade}>{busy ? 'Criando…' : 'Criar o time'}</Cta>
+              <Cta cheio onClick={criarESeguir} disabled={busy || faltaCidade || faltaSobre({ modo, sobre })}>{busy ? 'Criando…' : 'Criar o time'}</Cta>
               {faltaCidade ? <Falta>Time aberto precisa de cidade. Volte ao passo 1 e escolha a cidade.</Falta> : null}
+              {!faltaCidade && faltaSobre({ modo, sobre }) ? <Falta>{FALTA_SOBRE_NA_CRIACAO}</Falta> : null}
               <Cta sec onClick={() => navigate(-1)} disabled={busy}>← voltar</Cta>
             </div>
           </>

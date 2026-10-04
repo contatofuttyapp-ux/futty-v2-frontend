@@ -35,7 +35,9 @@ import { EscolhaPapel, TEXTO_ADMIN_E_POSICAO } from '../components/EscolhaLinhaG
 import { ARTILHEIRO, DESTAQUE, GOLS, alternarArtilheiro, alternarGols } from '../components/golsEPremios';
 import CampoBairro from '../components/CampoBairro';
 import { avisoDaCidade } from '../utils/cidades';
-import { TEXTO_APOIO_BAIRRO, avisoDoBairro, concelhoDePortugal } from '../utils/freguesias';
+import { useBairrosDaCidade } from '../hooks/useBairrosDaCidade';
+import { TEXTO_APOIO_BAIRRO, avisoDoBairro } from '../utils/freguesias';
+import { EXEMPLO_SOBRE_O_TIME, FALTA_SOBRE_NOS_AJUSTES, MAX_SOBRE_O_TIME, faltaSobre, precisaDeSobre } from '../utils/sobreOTime';
 import { linkDoConvite } from '../utils/convite';
 import { caminhoDoAdminAntigo } from '../lib/rotasAntigas';
 import { separarFuturosPassados } from '../utils/jogosFuturoPassado';
@@ -108,7 +110,7 @@ function Secao({ titulo, id, children, perigo = false }) {
 // Pequeno modal de confirmação reutilizável. Os três modais desta página vão por
 // PORTAL para o body (Rodada 8A): fixed dentro do [data-page] animado ancora na
 // página, não na tela — ver a nota em LoadingFutty.jsx.
-function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, onConfirm, onCancel, children = null }) {
+function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, confirmarDesabilitado = false, onConfirm, onCancel, children = null }) {
   return createPortal(
     <div className="modal-overlay" role="presentation" onClick={onCancel}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
@@ -119,6 +121,7 @@ function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, onC
             type="button"
             className="btn btn--primary"
             style={{ width: '100%', ...(perigo ? { background: 'var(--danger)', color: '#fff' } : {}) }}
+            disabled={confirmarDesabilitado}
             onClick={onConfirm}
           >
             {confirmarLabel}
@@ -368,7 +371,13 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
   const [bairroGuardado, setBairroGuardado] = useState(team.bairro || '');
   const [bairroEscolha, setBairroEscolha] = useState(null);
   const [avisoBairro, setAvisoBairro] = useState(null);
+  // 29T (bloco B, achado 157): o bairro é de LISTA (IBGE no Brasil, freguesias em Portugal) — o campo só existe quando a cidade tem lista.
+  const bairros = useBairrosDaCidade(cidade, cidadeEscolha);
+  // O "Sobre o time" (era "Descrição"): obrigatório no time aberto ao público. `pedindoSobre` = a política que a pessoa tocou sem ter o texto
+  // (a pergunta abre, o motor só é chamado com o texto na mão); `sobreRascunho` = o que ela escreve na pergunta.
   const [descricao, setDescricao] = useState(team.descricao || '');
+  const [pedindoSobre, setPedindoSobre] = useState(null);
+  const [sobreRascunho, setSobreRascunho] = useState('');
   const [logoUrl, setLogoUrl] = useState(team.logo_url || null);
   const [previewLogo, setPreviewLogo] = useState(null);
   const [modo, setModo] = useState(team.modo_visibilidade || 'privado');
@@ -444,11 +453,22 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
   }
 
   // Modo de visibilidade (guarda logo ao selecionar; reverte em erro).
-  async function guardarModo(novoModo) {
+  // 29T (achado 157): tornar o time aberto ao público sem "Sobre o time" pede o texto ANTES de salvar (a pergunta abaixo); com ele, o texto vai junto
+  // no mesmo pedido, então um time público nunca fica sem apresentação no motor.
+  async function guardarModo(novoModo, sobreNovo = null) {
+    const sobre = sobreNovo ?? descricao;
+    if (faltaSobre({ modo: novoModo, sobre })) {
+      setSobreRascunho('');
+      setPedindoSobre(novoModo);
+      return;
+    }
     const anterior = modo;
     setModo(novoModo);
+    const corpo = { modo_visibilidade: novoModo };
+    if (precisaDeSobre(novoModo)) corpo.descricao = sobre.trim().slice(0, MAX_SOBRE_O_TIME);
     try {
-      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify({ modo_visibilidade: novoModo }) });
+      await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify(corpo) });
+      if (corpo.descricao !== undefined) setDescricao(corpo.descricao);
       showToast('Visibilidade atualizada.');
     } catch (err) {
       setModo(anterior);
@@ -524,6 +544,11 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
 
   async function guardar() {
     if (saving) return;
+    // 29T (achado 157): time aberto ao público se apresenta — sem o "Sobre o time" não salva.
+    if (faltaSobre({ modo, sobre: descricao })) {
+      showToast(FALTA_SOBRE_NOS_AJUSTES, 'error');
+      return;
+    }
     setSaving(true);
     try {
       // Rodada 29B (D): a cidade só vai no corpo quando MUDOU (antes ia a cada "Salvar" e geocodificava de novo).
@@ -531,10 +556,12 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
       const corpo = { nome: nome.trim(), localizacao: localizacao.trim(), descricao: descricao.trim() };
       const mudouCidade = cidade.trim() !== cidadeGuardada.trim();
       if (mudouCidade) Object.assign(corpo, cidade.trim() ? (cidadeEscolha || { cidade: cidade.trim() }) : { cidade: '' });
-      // 29H (item 12): o bairro vai quando mudou — e também quando a CIDADE mudou e há bairro (ele é procurado na cidade nova).
-      const mudouBairro = bairro.trim() !== bairroGuardado.trim();
-      const mandaBairro = mudouBairro || (mudouCidade && !!bairro.trim());
-      if (mandaBairro) Object.assign(corpo, bairro.trim() ? (bairroEscolha && bairroEscolha.bairro === bairro.trim() ? bairroEscolha : { bairro: bairro.trim() }) : { bairro: '' });
+      // 29H (item 12), 29T (achado 157): o bairro vai quando mudou, e SÓ o da lista (leva a coordenada). Apagado, sai ('' — também quando a CIDADE
+      // mudou: o bairro é da cidade antiga e o campo foi limpo). Texto que ninguém escolheu não vai; o bairro antigo escrito à mão fica como está.
+      const textoDoBairro = bairro.trim();
+      const bairroDaLista = textoDoBairro && bairroEscolha && bairroEscolha.bairro === textoDoBairro ? bairroEscolha : null;
+      const mandaBairro = textoDoBairro === '' ? bairroGuardado.trim() !== '' : !!bairroDaLista && textoDoBairro !== bairroGuardado.trim();
+      if (mandaBairro) Object.assign(corpo, bairroDaLista || { bairro: '' });
       const r = await apiFetch(`/api/teams/${slug}`, { method: 'PATCH', body: JSON.stringify(corpo) });
       if (mudouCidade) {
         setAvisoCidade(avisoDaCidade(r?.geo, cidade.trim()));
@@ -583,7 +610,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
           O nome da cidade é guardado + mostrado; do ponto guarda-se só o arredondado. */}
       <div style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Cidade <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· busca por proximidade</span></span>
-        <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { setCidade(texto); setCidadeEscolha(escolha); setAvisoCidade(null); setBairroEscolha(null); }} placeholder="Ex.: Brasília" className="" style={inputStyle} />
+        <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { if (texto !== cidade) { setBairro(''); setBairroEscolha(null); } setCidade(texto); setCidadeEscolha(escolha); setAvisoCidade(null); }} placeholder="Ex.: Brasília" className="" style={inputStyle} />
         {avisoCidade ? (
           <span role="status" data-aviso-cidade={avisoCidade.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: avisoCidade.tipo === 'ok' ? '#7bd88f' : '#f0c94a' }}>{avisoCidade.texto}</span>
         ) : null}
@@ -592,26 +619,31 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         </span>
       </div>
 
-      {/* 29H (item 12): o bairro, opcional — põe o time no ponto do bairro (e não no centro da cidade). Em Portugal, a freguesia. */}
-      <div style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Bairro <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· opcional</span></span>
-        <CampoBairro
-          valor={bairro}
-          aoMudar={(texto, escolha) => { setBairro(texto); setBairroEscolha(escolha); setAvisoBairro(null); }}
-          concelho={concelhoDePortugal(cidade, cidadeEscolha)}
-          desabilitado={!cidade.trim()}
-          className=""
-          style={inputStyle}
-        />
-        {avisoBairro ? (
-          <span role="status" data-aviso-bairro={avisoBairro.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: avisoBairro.tipo === 'ok' ? '#7bd88f' : '#f0c94a' }}>{avisoBairro.texto}</span>
-        ) : null}
-        <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>{TEXTO_APOIO_BAIRRO}</span>
-      </div>
+      {/* 29H (item 12), 29T (achado 157): o bairro, opcional, é de LISTA — os do IBGE no Brasil, as freguesias em Portugal — e põe o time no ponto do
+          bairro (e não no centro da cidade). Cidade sem bairros na lista: o campo não aparece; o bairro antigo escrito à mão fica salvo até alguém editar. */}
+      {bairros.estado === 'lista' ? (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <span style={lbl}>Bairro <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· opcional</span></span>
+          <CampoBairro
+            key={bairros.chave}
+            valor={bairro}
+            aoMudar={(texto, escolha) => { setBairro(texto); setBairroEscolha(escolha); setAvisoBairro(null); }}
+            itens={bairros.itens}
+            className=""
+            style={inputStyle}
+          />
+          {avisoBairro ? (
+            <span role="status" data-aviso-bairro={avisoBairro.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: avisoBairro.tipo === 'ok' ? '#7bd88f' : '#f0c94a' }}>{avisoBairro.texto}</span>
+          ) : null}
+          <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>{TEXTO_APOIO_BAIRRO}</span>
+        </div>
+      ) : null}
 
+      {/* 29T (achado 157): era "Descrição". É o que o time diz de si no Radar de peladas; obrigatório no time aberto ao público. */}
       <label style={{ display: 'grid', gap: 6 }}>
-        <span style={lbl}>Descrição</span>
-        <textarea value={descricao} onChange={(e) => setDescricao(e.target.value.slice(0, 300))} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+        <span style={lbl}>Sobre o time</span>
+        <textarea data-sobre-o-time value={descricao} onChange={(e) => setDescricao(e.target.value.slice(0, MAX_SOBRE_O_TIME))} rows={3} maxLength={MAX_SOBRE_O_TIME} placeholder={EXEMPLO_SOBRE_O_TIME} style={{ ...inputStyle, resize: 'vertical' }} />
+        <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>{descricao.length}/{MAX_SOBRE_O_TIME}</span>
       </label>
 
       {/* LOGO */}
@@ -710,6 +742,28 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         {saving ? 'Salvando…' : 'Salvar'}
       </button>
     </div>
+
+    {pedindoSobre ? (
+      <ConfirmModal
+        texto={'Antes de abrir o time, conte como ele é. É o que quem achar o time no "Radar de peladas" vai ler.'}
+        confirmarLabel="Salvar"
+        confirmarDesabilitado={!sobreRascunho.trim()}
+        onConfirm={() => { const novo = pedindoSobre; const texto = sobreRascunho; setPedindoSobre(null); guardarModo(novo, texto); }}
+        onCancel={() => setPedindoSobre(null)}
+      >
+        <textarea
+          data-sobre-o-time-pergunta
+          autoFocus
+          value={sobreRascunho}
+          onChange={(e) => setSobreRascunho(e.target.value.slice(0, MAX_SOBRE_O_TIME))}
+          rows={4}
+          maxLength={MAX_SOBRE_O_TIME}
+          placeholder={EXEMPLO_SOBRE_O_TIME}
+          aria-label="Sobre o time"
+          style={{ ...inputStyle, width: '100%', resize: 'vertical' }}
+        />
+      </ConfirmModal>
+    ) : null}
 
     {confirmRemoverLogo ? (
       <ConfirmModal

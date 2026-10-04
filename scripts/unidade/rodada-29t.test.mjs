@@ -97,7 +97,8 @@ test('168 · respondeu → entra o próximo da fila (jogo → outro jogo → ped
 test('168 · o Início usa a fila: um slot só no topo, o aviso do jogo chama a MESMA função dos cards e o pedido segue com "Cancelar"', () => {
   const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
   assert.match(inicio, /import \{ jogosQuePedemResposta, proximoAviso \} from '\.\.\/utils\/avisosDoInicio';/);
-  assert.match(inicio, /const aviso = proximoAviso\(\{\s*jogos: jogosQuePedemResposta\(jogosParaAviso\),\s*pedidos: pedidosPendentes,\s*notificacoes: pushEstado === 'suportado' && !pushBannerFechado,\s*\}\);/);
+  // 29T-B: a mesma fila, agora com todos os avisos do topo (a ordem em si é travada em rodada-29t-b.test.mjs).
+  assert.match(inicio, /const aviso = proximoAviso\(\{\s*jogos: jogosQuePedemResposta\(jogosParaAviso\),\s*pedidos: pedidosPendentes,[\s\S]*?notificacoes: pushEstado === 'suportado' && !pushBannerFechado,\s*\}\);/);
   // O aviso do jogo: os botões chamam responderDoAviso → onPresence, a função que os cards dos Próximos jogos também usam.
   assert.match(inicio, /<AvisoDeJogo game=\{aviso\.item\} team=\{timeDoJogo\(aviso\.item\.team_id\)\} mais=\{aviso\.mais\} busy=\{busyId === aviso\.item\.id\} onPresence=\{responderDoAviso\} \/>/);
   assert.match(inicio, /async function responderDoAviso\(gameId, going\) \{\s*const fim = await onPresence\(gameId, going\);/);
@@ -132,7 +133,9 @@ test('168 · o aviso do jogo: escudo, dia e hora pela dataHora.js (com a cidade 
 test('168 · "Seus times" mostra até 2 linhas; com mais, "Ver todos (N)" abre o resto no lugar e "Ver menos" fecha', () => {
   const card = ler('src/components/CardSeuTime.jsx');
   assert.match(card, /export const TIMES_VISIVEIS = 2;/);
-  assert.match(card, /const mostrados = verTodos \? seuTime : seuTime\.slice\(0, TIMES_VISIVEIS\);/);
+  // 29T-B: a lista fechada tem 2 linhas OU todos os times com pendência (e eles vêm primeiro); a conta em si é travada em rodada-29t-b.test.mjs.
+  assert.match(card, /const visiveis = quantosTimesMostrar\(seuTime, TIMES_VISIVEIS\);/);
+  assert.match(card, /const mostrados = verTodos \? seuTime : seuTime\.slice\(0, visiveis\);/);
   assert.match(card, /\{mostrados\.map\(\(time, i\) => \{/);
   assert.match(card, /\{verTodos \? 'Ver menos' : `Ver todos \(\$\{seuTime\.length\}\)`\}/);
   assert.match(card, /\{sobram > 0 \? \(/, 'com 2 times ou menos o botão nem existe');
@@ -202,11 +205,12 @@ test('159 · pediu entrada (time com aprovação): fica pendente, sem comemorar 
 
 test('159 · "Você já é membro" só para quem já era antes de abrir a tela; quem acabou de entrar vê "Você entrou!" e o link "Ver o time"', () => {
   const tela = ler('src/pages/Explorar.jsx');
-  assert.match(tela, /\{equipa\.entrou_agora \? \(/);
+  // 29T-B: o que fica à direita do time (card e pop-up) é um componente só, AcaoDoTime; a ordem dos estados é a mesma.
+  assert.match(tela, /if \(equipa\.entrou_agora\) \{/);
   assert.match(tela, />Você entrou!<\/span>/);
   assert.match(tela, /Ver o time\s*<\/Link>/);
   assert.match(tela, /to=\{`\/time\/\$\{equipa\.slug\}`\} state=\{\{ primeiraEntrada: true \}\}/, 'abre as boas-vindas do time, como o aceite do pedido');
-  assert.ok(tela.indexOf('{equipa.entrou_agora ? (') < tela.indexOf(') : equipa.ja_membro ? ('), 'o "entrou agora" vem antes do "já é membro"');
+  assert.ok(tela.indexOf('if (equipa.entrou_agora) {') < tela.indexOf('if (equipa.ja_membro) {'), 'o "entrou agora" vem antes do "já é membro"');
   assert.match(tela, />Você já é membro</, 'quem já era membro continua vendo a frase');
   assert.match(tela, /setEquipas\(\(cur\) => depoisDePedirEntrada\(cur, equipa\.slug, entrou\)\);/);
 });

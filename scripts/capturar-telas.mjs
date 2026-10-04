@@ -129,6 +129,8 @@ async function abrir(contexto) {
   // 29T: o /api/inicio que a página recebeu, para a captura conferir que o estado é o que ela promete (pedido pendente, 4 times…).
   pagina.on('response', async (r) => {
     try { if (r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/inicio') pagina.__inicio = await r.json(); } catch { /* sem corpo */ }
+    // 29T-B: o /api/teams/explorar que o Radar recebeu, para a captura dizer se o motor mandou o bairro e o "Sobre o time" de cada time.
+    try { if (r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/teams/explorar') pagina.__explorar = await r.json(); } catch { /* sem corpo */ }
   });
   return pagina;
 }
@@ -412,6 +414,36 @@ const TELAS = [
       const texto = (await p.locator('main').innerText()).replace(/\s+/g, ' ');
       if (!/Peladas abertas a novos jogadores · \d+/i.test(texto)) throw new Error('o título da lista do Radar não é "Peladas abertas a novos jogadores · N"');
       if (/Times perto de você/i.test(texto)) throw new Error('o Radar ainda diz "Times perto de você" sem localização');
+      // 29T-B (achado 157): o time se apresenta dentro do card — "Bairro · Cidade" e o "Sobre o time" em até 2 linhas.
+      const recebidos = p.__explorar?.teams || [];
+      const comBio = await p.locator('[data-sobre-do-time]').count();
+      if (!comBio) throw new Error('nenhum card do Radar mostra o "Sobre o time" (nenhum time público do motor local tem texto em "descricao"?)');
+      const mediu = await p.locator('[data-sobre-do-time]').evaluateAll((els) => els.map((el) => Math.round(el.clientHeight / parseFloat(getComputedStyle(el).lineHeight))));
+      if (mediu.some((linhas) => linhas > 2)) throw new Error(`algum "Sobre o time" passa de 2 linhas no card: ${mediu.join(', ')}`);
+      const bairrosRecebidos = recebidos.filter((x) => x.bairro).length;
+      const cartoesComBairro = await p.locator('[data-local-do-time]').evaluateAll((els) => els.filter((el) => el.textContent.includes(' · ')).length);
+      if (bairrosRecebidos && !cartoesComBairro) throw new Error(`o motor mandou bairro em ${bairrosRecebidos} time(s), mas nenhum card mostra "Bairro · Cidade"`);
+      console.log(`      ${comBio} card(s) com "Sobre o time" (no máximo ${Math.max(...mediu)} linha(s)); ${cartoesComBairro} com "Bairro · Cidade"; o motor mandou bairro em ${bairrosRecebidos} de ${recebidos.length} time(s)`);
+      if (!bairrosRecebidos) console.log('      ATENÇÃO: o motor local NÃO mandou "bairro" em nenhum time do Radar (o /api/teams/explorar do motor ainda não devolve a coluna): os cards saem só com a cidade');
+    },
+  },
+  {
+    // Rodada 29T-B (achado 157): tocar no card (fora do botão) abre o pop-up com escudo, nome, bairro e cidade, membros, aberto ou com aprovação, o "Sobre o time"
+    // inteiro e o mesmo botão. A captura só ABRE o pop-up: nunca toca em "Entrar" / "Pedir entrada" (e o contexto já responde a qualquer escrita em /api sem chegar ao banco).
+    arq: '18b-explorar-time', sessao: true, rota: () => '/explorar', caminho: /^\/explorar$/, seletor: '[data-card-do-time]', extraMs: 1500,
+    depois: async (p) => {
+      const alvo = p.locator('[data-card-do-time]:has([data-sobre-do-time]):not(:has-text("Você já é membro")):not(:has-text("Pedido enviado")) [data-abrir-time]').first();
+      if (!(await alvo.count())) throw new Error('nenhum time do Radar com "Sobre o time" e sem a conta nele (o pop-up só abre para quem ainda não é membro)');
+      await alvo.click();
+      const popup = p.locator('[data-popup-do-time]');
+      await popup.waitFor({ timeout: 8000 }).catch(() => { throw new Error('tocar no card não abriu o pop-up'); });
+      await espera(600);
+      const dentro = (await popup.innerText()).replace(/\s+/g, ' ');
+      if (!/Sobre o time/i.test(dentro)) throw new Error('o pop-up não tem a seção "Sobre o time"');
+      if (!(await popup.getByRole('button', { name: /^(Entrar|Pedir entrada)$/ }).count())) throw new Error('o pop-up não tem o botão Entrar / Pedir entrada');
+      if (!/\d+ (membro|membros) · (aberto|com aprovação)/.test(dentro)) throw new Error(`o pop-up não diz membros · aberto/com aprovação: "${dentro.slice(0, 160)}"`);
+      const caixa = await p.locator('.modal-card').boundingBox();
+      if (!caixa || caixa.x < 0 || caixa.x + caixa.width > LARGURA || caixa.y < 0 || caixa.y + caixa.height > ALTURA) throw new Error(`o pop-up não cabe na tela: ${JSON.stringify(caixa)}`);
     },
   },
   { arq: '19-gabinete', sessao: true, rota: () => '/gabinete', caminho: /^\/gabinete$/, dica: 'o Gabinete só abre para super-admin; use uma conta super-admin', extraMs: 1500 },
@@ -460,7 +492,27 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29P: o passo 3 sem subtítulo, com os textos do "Radar de peladas".
+    // Rodada 29T-B (achado 157): o campo Bairro é de LISTA. Brasília, DF aparece com o campo e, digitando "gu", sugere as Regiões Administrativas do IBGE (Guará…).
+    // Só preenche e abre a lista na tela: nada é gravado (o time nasce no passo 3).
+    arq: '23-criar-time-bairro', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
+    depois: async (p) => {
+      await preencherPasso1(p);
+      const bairro = p.locator('[data-campo-bairro]');
+      await bairro.waitFor({ timeout: 15000 }).catch(() => { throw new Error('Brasília, DF não mostrou o campo Bairro (a lista /dados/bairros/DF.json desceu?)'); });
+      await bairro.click();
+      await bairro.fill('gu');
+      await p.locator('[data-sugestoes-bairro] button').first().waitFor({ timeout: 10000 }).catch(() => { throw new Error('digitar "gu" não abriu sugestões de bairro'); });
+      const opcoes = await p.locator('[data-sugestoes-bairro] button').allInnerTexts();
+      if (!opcoes.includes('Guará')) throw new Error(`as sugestões de "gu" em Brasília não trazem "Guará": ${opcoes.join(', ')}`);
+      await espera(600);
+      const lista = await p.locator('[data-sugestoes-bairro]').boundingBox();
+      if (!lista || lista.y + lista.height > ALTURA) throw new Error(`a lista de sugestões não cabe na tela: ${JSON.stringify(lista)}`);
+      console.log(`      sugestões de "gu" em Brasília, DF: ${opcoes.join(', ')}`);
+    },
+  },
+  {
+    // Rodada 29P: o passo 3 sem subtítulo, com os textos do "Radar de peladas". 29T-B (achado 157): em "Aberto" aparece o "Sobre o time" (obrigatório);
+    // a captura escolhe Aberto e escreve o exemplo do dono — só na tela, nada é gravado.
     arq: '24-criar-time-passo-3', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
       await preencherPasso1(p);
@@ -468,7 +520,13 @@ const TELAS = [
       await p.getByText('Você também joga?').first().waitFor({ timeout: 10000 });
       await p.getByRole('button', { name: 'Continuar' }).click();
       await p.getByText('Aceita novos membros?').first().waitFor({ timeout: 10000 });
+      const criar = p.getByRole('button', { name: 'Criar o time', exact: true });
+      await p.getByRole('button', { name: /^Aberto/ }).click();
+      await p.locator('#sobre-o-time').waitFor({ timeout: 5000 }).catch(() => { throw new Error('"Aberto" não mostrou o campo "Sobre o time"'); });
+      if (await criar.isEnabled()) throw new Error('"Criar o time" está aceso com o "Sobre o time" vazio (devia estar apagado)');
+      await p.locator('#sobre-o-time').fill('Turma de 40+, joga domingo de manhã perto do Cruzeiro.');
       await espera(700);
+      if (!(await criar.isEnabled())) throw new Error('"Criar o time" não acendeu com o "Sobre o time" preenchido');
       exigirSemRolagem(await medirBotao(p, 'Criar o time'), 'o passo 3', 'Criar o time');
     },
   },

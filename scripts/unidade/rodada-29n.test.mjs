@@ -40,8 +40,8 @@ test('29N · os avisos (jogo sem resposta, pedido, notificações, nascimento, f
   assert.ok(main >= 0);
   const card = inicio.indexOf('<CardSeuTime ');
   const cromo = inicio.indexOf('<CromoInicio ');
-  // 29T: os três avisos da fila (jogo, pedido, notificações) saem de um slot só, o primeiro da página.
-  for (const aviso of ['aviso?.tipo === \'jogo\'', 'aviso?.tipo === \'pedido\'', 'aviso?.tipo === \'notificacoes\'', 'precisaDob ?', 'ctaFigurinha ?']) {
+  // 29T: os avisos da fila saem de um slot só, o primeiro da página. 29T-B: TODOS os avisos do topo entram nela (nascimento e "Complete seu card" também).
+  for (const aviso of ['aviso?.tipo === \'jogo\'', 'aviso?.tipo === \'pedido\'', 'aviso?.tipo === \'notificacoes\'', 'aviso?.tipo === \'nascimento\'', 'aviso?.tipo === \'card\'']) {
     const i = inicio.indexOf(aviso, main);
     assert.ok(i > main && i < cromo, `${aviso}: depois do <main> e antes do avatar`);
   }
