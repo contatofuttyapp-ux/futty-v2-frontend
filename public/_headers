@@ -29,7 +29,7 @@
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: camera=(self), microphone=(), geolocation=(self), payment=(), usb=()
   Referrer-Policy: strict-origin-when-cross-origin
-  Content-Security-Policy-Report-Only: default-src 'self'; connect-src 'self' https://ynzmjcvqdljffgbeqglh.supabase.co https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; img-src 'self' data: blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'
+  Content-Security-Policy-Report-Only: default-src 'self'; connect-src 'self' https://ynzmjcvqdljffgbeqglh.supabase.co https://api.futtyapp.com.br wss://api.futtyapp.com.br https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; img-src 'self' data: blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://api.futtyapp.com.br https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'
 
 # Saída do bundler — nome com hash, conteúdo nunca muda.
 /assets/*

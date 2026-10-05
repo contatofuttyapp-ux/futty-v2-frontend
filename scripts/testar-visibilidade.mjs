@@ -35,6 +35,7 @@
 // Corre no `npm run build`, portanto também no CI do iPhone.
 //
 // Uso: node scripts/testar-visibilidade.mjs   (precisa de dist/ já construído)
+import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -281,7 +282,12 @@ async function medirRecuperacaoDeOculto(browser, rota, cenario) {
 // `.anim-slide-in` (um post-anúncio na Resenha, um jogo no Início) — não um
 // backend de mentira completo, só o que basta para não confiar em produção
 // alguma durante o build.
-const SUPABASE_REF = 'ynzmjcvqdljffgbeqglh'; // o mesmo VITE_SUPABASE_URL do .env — ver AuthContext.jsx
+// A URL do Supabase é a do BUILD (.env.production, o que o `vite build` usa), não um endereço fixo: a chave da sessão no localStorage sai
+// do host (supabase-js: `sb-<primeiro pedaço do host>-auth-token`), então trocar o domínio (api.futtyapp.com.br, 5-out) não pode deixar a
+// sessão falsa numa chave que o app não procura. Ver AuthContext.jsx.
+const SUPABASE_URL = (fs.readFileSync(path.join(RAIZ, '.env.production'), 'utf8').match(/^VITE_SUPABASE_URL=(.+)$/m)?.[1] || '').trim();
+if (!SUPABASE_URL) throw new Error('testar-visibilidade: falta VITE_SUPABASE_URL em .env.production');
+const SUPABASE_REF = new URL(SUPABASE_URL).hostname.split('.')[0];
 const FAKE_USER_ID = '99999999-9999-4999-8999-999999999999';
 
 function sessaoFalsa() {
@@ -374,7 +380,7 @@ async function medirCardEscondidoAutenticado(browser, path, seletorCard, respost
   // nasceu pronta acima; qualquer pedido até lá fica pendurado (nunca
   // resolve), o que é inofensivo: nada no app espera por ele dentro da
   // janela de 1 s desta medição.
-  await ctx.route(`https://${SUPABASE_REF}.supabase.co/**`, () => new Promise(() => {}));
+  await ctx.route(`${SUPABASE_URL}/**`, () => new Promise(() => {}));
   for (const [padrao, corpo] of Object.entries(respostasApi)) {
     // Pelo caminho, não pelo glob da URL inteira: a Resenha pede `/api/feed?limite=20` desde a 29B (em páginas) e `**/api/feed` não casa com
     // a query — o dado de mentira nunca chegava e o card da Resenha não nascia (falha antiga, achada na 29V).
