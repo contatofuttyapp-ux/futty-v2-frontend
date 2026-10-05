@@ -186,10 +186,17 @@ async function medirLoadingCentrado(browser, rota, tamanho) {
 
 // HOTFIX (23-set) — os dois cenários que reproduzem a tela preta do Chrome.
 // Nos dois o critério é o mesmo: opacidade EFETIVA de [data-page] chega a 1
-// em até 300 ms, sem gesto nenhum além do próprio evento de visibilidade (ou
+// dentro do teto do cenário (TETO_OCULTO_MS), sem gesto nenhum além do próprio evento de visibilidade (ou
 // nem isso, no segundo caso) — não pode depender de a pessoa mexer na aba
 // outra vez para "destravar".
 const CENARIOS_OCULTO = ['hidden-no-arranque', 'nasce-com-data-oculto'];
+
+// Teto de cada cenário, em ms. 'nasce-com-data-oculto' tem 1000 de propósito: a
+// prova pega "nunca aparece" (opacidade presa em 0 para sempre), não o tempo de
+// montagem numa máquina carregada. Nesta máquina o mesmo cenário oscila entre
+// 195 e 331 ms; se um dia passar de 1000 ms, aí é defeito e se investiga.
+// Decisão da Freaky (5-out). 'hidden-no-arranque' continua nos 300 ms.
+const TETO_OCULTO_MS = { 'hidden-no-arranque': 300, 'nasce-com-data-oculto': 1000 };
 
 /**
  * 'hidden-no-arranque' — document.hidden é forçado a true ANTES de qualquer
@@ -230,7 +237,7 @@ async function medirRecuperacaoDeOculto(browser, rota, cenario) {
   // [data-page] só nasce quando o chunk lazy da rota resolve — está DENTRO do
   // Suspense (App.jsx), não no fallback. O tempo de rede/chunk não é o que se
   // quer medir aqui (varia por rota — apanhado no /login, cujo chunk é maior
-  // que o da LandingPage); os 300 ms do teto começam a contar só a partir de
+  // que o da LandingPage); o teto do cenário começa a contar só a partir de
   // a página já estar montada, achando ou não achando o elemento.
   await pagina.waitForSelector('[data-page]', { timeout: 5000 }).catch(() => null);
 
@@ -259,12 +266,12 @@ async function medirRecuperacaoDeOculto(browser, rota, cenario) {
       }
       return e;
     });
-    if (efetiva >= 0.99 || Date.now() - t0 >= 300) break;
+    if (efetiva >= 0.99 || Date.now() - t0 >= TETO_OCULTO_MS[cenario]) break;
     await pagina.waitForTimeout(20);
   }
   const ms = Date.now() - t0;
   await ctx.close();
-  return { efetiva, ms, erros };
+  return { efetiva, ms, erros, teto: TETO_OCULTO_MS[cenario] };
 }
 
 // HOTFIX (24-set, Rodada 21) — quarto bug da MESMA família: os cards
@@ -502,7 +509,7 @@ try {
       const o = await medirRecuperacaoDeOculto(browser, rota, cenario);
       if (o.efetiva < 0.99) {
         falhas.push(
-          `${etiquetaOculto}: NÃO recuperou — opacidade efetiva ${o.efetiva.toFixed(3)} depois de ${o.ms}ms (teto 300ms).`
+          `${etiquetaOculto}: NÃO recuperou — opacidade efetiva ${o.efetiva.toFixed(3)} depois de ${o.ms}ms (teto ${o.teto}ms).`
         );
       } else {
         console.log(`[visibilidade] ok  ${etiquetaOculto} — opacidade efetiva 1 em ${o.ms}ms.`);
