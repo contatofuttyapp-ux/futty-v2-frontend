@@ -30,12 +30,18 @@
 //   · sorteio e ranking — os jogadores da demo ganham ROSTO: o `avatar_url` deles (hoje a silhueta genérica do
 //               bucket `kits`) é trocado, na resposta, pelos avatares que já existem em public/onboarding/ (modelos
 //               gerados, não são pessoas do Futty). Ver ROSTOS_DA_DEMO. O Bruninho continua com a figurinha dele.
+//   · sorteio — (ajuste 2 do dono, 5-out) os 4 lugares que sobravam com a silhueta ganham FIGURINHA, no enquadramento da do Bruninho:
+//               LOJA/demo-avatares/<arquivo>-avatar.png, servidos por esta captura em /__demo-avatares/ (tabela e nomes em
+//               figurinhas-do-sorteio.mjs). "Índio" e "Nego Di" saem da peça: viram o Paredão e o dono.
+//   · ranking — (ajuste 2) Paulinho Gaúcho em 3º e Dudu em 6º: a linha inteira troca entre os dois (pontos, nota e o resto da
+//               linha), cada um com o seu nome e o seu rosto. Ver comPaulinhoEmTerceiro.
 //
 // Saída: LOJA/<--cruas>/<tela>.png — 8 arquivos, consumidos por scripts/loja/gerar-imagens.mjs.
 import { readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { FIGURINHAS_DO_SORTEIO } from './figurinhas-do-sorteio.mjs';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const LOJA = resolve(AQUI, '..', '..', '..', '..', 'LOJA');
@@ -257,6 +263,45 @@ function comRostos(corpo) {
   return andar(corpo);
 }
 
+// Ajuste 2 do dono: as 4 figurinhas novas do Sorteio (figurinhas-do-sorteio.mjs). Sem o arquivo, a captura para — peça sem o rosto
+// pedido não sai em silêncio. Servidas aqui mesmo em /__demo-avatares/ (nada novo em public/, nada no banco).
+const PASTA_AVATARES = join(LOJA, 'demo-avatares');
+const ROTA_DOS_AVATARES = '/__demo-avatares/';
+const avatarDaPeca = (arquivo) => join(PASTA_AVATARES, `${arquivo}-avatar.png`);
+const FIGURINHA_POR_NOME = Object.fromEntries(FIGURINHAS_DO_SORTEIO.map((f) => [f.noBanco, f]));
+
+/** Os 4 lugares do Sorteio: avatar novo e, para o Índio e o Nego Di, o nome novo — em qualquer lugar da resposta onde o jogador apareça. */
+function comFigurinhasDoSorteio(corpo) {
+  const andar = (no) => {
+    if (Array.isArray(no)) return no.map(andar);
+    if (!no || typeof no !== 'object') return no;
+    const saida = Object.fromEntries(Object.entries(no).map(([k, v]) => [k, andar(v)]));
+    const f = FIGURINHA_POR_NOME[saida.nome_jogador || saida.nome];
+    if (!saida.user_id || !('avatar_url' in saida) || !f) return saida;
+    return {
+      ...saida,
+      ...('nome' in saida ? { nome: f.nome } : {}),
+      ...('nome_jogador' in saida ? { nome_jogador: f.nome } : {}),
+      avatar_url: `${BASE}${ROTA_DOS_AVATARES}${f.arquivo}-avatar.png`,
+    };
+  };
+  return andar(corpo);
+}
+
+// Ajuste 2 do dono: Paulinho Gaúcho em 3º e Dudu em 6º. Troca a LINHA INTEIRA entre os dois — pontos, nota, vitórias, gols, destaques,
+// presença, a categoria (o selo) e o meu voto —, e cada um leva só o que é dele: nome, foto e rosto. Assim a ordem continua sendo a
+// dos pontos, como a própria tela diz ("A ordem é por eles").
+const QUEM_E = new Set(['user_id', 'sou_eu', 'nome', 'nome_jogador', 'foto_url', 'avatar_url', 'avatar_generico', 'cor_frame']);
+function comPaulinhoEmTerceiro(corpo) {
+  const lista = [...(corpo?.ranking || [])];
+  const p = lista.findIndex((j) => j.nome_jogador === 'Paulinho Gaúcho');
+  const d = lista.findIndex((j) => j.nome_jogador === 'Dudu');
+  if (p < 0 || d < 0) throw new Error('o Ranking da demo não tem o Paulinho Gaúcho e o Dudu');
+  const trocar = (linha, pessoa) => Object.fromEntries(Object.keys(linha).map((c) => [c, QUEM_E.has(c) ? pessoa[c] : linha[c]]));
+  [lista[d], lista[p]] = [trocar(lista[d], lista[p]), trocar(lista[p], lista[d])];
+  return { ...corpo, ranking: lista };
+}
+
 // ── As 8 telas ────────────────────────────────────────────────────────────────────────────────────────
 for (const r of rostoUnico) if (!existsSync(join(PASTA_ROSTOS, `${r}.webp`))) throw new Error(`falta o avatar public/onboarding/${r}.webp`);
 mkdirSync(CRUAS, { recursive: true });
@@ -288,7 +333,9 @@ if (quer('figurinha')) {
 
 // 5 · Ranking
 if (quer('ranking')) {
-  await page.route(`**/api/teams/${estado.teamSlug}/ranking`, (route) => (route.request().method() === 'GET' ? responderComJson(route, comRostos) : route.fallback()));
+  await page.route(`**/api/teams/${estado.teamSlug}/ranking`, (route) => (route.request().method() === 'GET'
+    ? responderComJson(route, (corpo) => comRostos(comPaulinhoEmTerceiro(corpo)))
+    : route.fallback()));
   await page.goto(`${BASE}/time/${estado.teamSlug}/ranking`);
   await page.waitForSelector('.rank-list .rank-row', { timeout: 60000 });
   await assentar(page);
@@ -301,6 +348,12 @@ if (quer('ranking')) {
   if (rostos.some((r) => !r.ok)) throw new Error(`rosto que não carregou no Ranking: ${rostos.filter((r) => !r.ok).map((r) => r.src).join(', ')}`);
   if (new Set(rostos.map((r) => r.src)).size !== rostos.length) throw new Error(`rosto repetido no Ranking: ${rostos.map((r) => r.src).join(', ')}`);
   console.log(`      Ranking: ${rostos.length} rosto(s), nenhum repetido — ${rostos.map((r) => r.src.replace('.webp', '')).join(', ')}`);
+  // Ajuste 2: o 3º é o Paulinho Gaúcho e o 6º é o Dudu, com os pontos em ordem.
+  const linhas = await page.locator('.rank-list .rank-row').evaluateAll((els) => els.map((el) => el.innerText.replace(/\s+/g, ' ')));
+  if (!linhas[2]?.includes('Paulinho Gaúcho') || !linhas[5]?.includes('Dudu')) throw new Error(`o Ranking não ficou com o Paulinho Gaúcho em 3º e o Dudu em 6º: ${linhas.slice(0, 6).map((l, i) => `${i + 1}. ${l.slice(0, 40)}`).join(' | ')}`);
+  const pontos = linhas.map((l) => Number((l.match(/(\d+,\d+)\s*pontos/) || [])[1]?.replace(',', '.'))).filter((n) => !Number.isNaN(n));
+  if (pontos.some((n, i) => i && n > pontos[i - 1])) throw new Error(`os pontos do Ranking saíram fora de ordem: ${pontos.join(' · ')}`);
+  console.log(`      Ranking: 3º ${linhas[2].slice(0, 36)} · 6º ${linhas[5].slice(0, 36)}`);
   await capturar(page, 'ranking');
   await page.unroute(`**/api/teams/${estado.teamSlug}/ranking`);
 }
@@ -427,9 +480,16 @@ if (quer('sorteio')) {
   const sorteado = jogos.find((g) => g.sorteio_realizado);
   if (!sorteado) throw new Error('o time da demo não tem nenhum jogo sorteado (rode backend/scripts/demo-loja.js --sortear)');
 
-  // Os rostos da demo entram na resposta do jogo (o sorteio guardado), como no Ranking. Só o GET do jogo; o resto passa direto.
+  // Os rostos da demo entram na resposta do jogo (o sorteio guardado), como no Ranking, e as 4 figurinhas do ajuste 2 nos lugares que
+  // sobravam com a silhueta. Só o GET do jogo; o resto passa direto.
+  for (const f of FIGURINHAS_DO_SORTEIO) if (!existsSync(avatarDaPeca(f.arquivo))) throw new Error(`falta ${avatarDaPeca(f.arquivo)} (rode backend/scripts/_bench/gerar-modelos-ficticios.js --loja)`);
+  await p2.route(`**${ROTA_DOS_AVATARES}*.png`, (route) => {
+    const arquivo = new URL(route.request().url()).pathname.slice(ROTA_DOS_AVATARES.length).replace(/-avatar\.png$/, '');
+    if (!FIGURINHAS_DO_SORTEIO.some((f) => f.arquivo === arquivo)) return route.fulfill({ status: 404, body: '' });
+    return route.fulfill({ status: 200, contentType: 'image/png', body: readFileSync(avatarDaPeca(arquivo)) });
+  });
   await p2.route('**/api/games/*', (route) => (route.request().method() === 'GET' && new URL(route.request().url()).pathname === `/api/games/${sorteado.id}`
-    ? responderComJson(route, comRostos)
+    ? responderComJson(route, (corpo) => comFigurinhasDoSorteio(comRostos(corpo)))
     : route.fallback()));
   await p2.goto(`${BASE}/time/${estado.teamSlug}/jogo/${sorteado.id}/sorteio`);
   await p2.waitForSelector('.smaq .saltar.on', { timeout: 60000 });
@@ -438,6 +498,30 @@ if (quer('sorteio')) {
   await p2.waitForFunction(() => { const s = document.querySelector('.smaq .saltar'); return !!s && !s.classList.contains('on'); }, null, { timeout: 30000 });
   await p2.getByText('Compartilhar os times', { exact: false }).first().waitFor({ timeout: 15000 });
   await assentar(p2, { minimo: 1500 });
+  // Ajuste 2: nenhuma silhueta sobra, as 4 figurinhas carregaram, nenhum rosto repete, e "Índio"/"Nego Di" não aparecem mais.
+  const molduras = await p2.locator('.smaq .grupo .mmold').evaluateAll((els) => els.map((el) => {
+    const img = el.querySelector('img');
+    const nm = el.querySelector('.nm');
+    return {
+      src: img?.src || '', ok: !!img && img.complete && img.naturalWidth > 0, nome: nm?.textContent || '',
+      linhas: nm ? Math.round((nm.getBoundingClientRect().height - 11) / 9) : 0, cabe: nm ? nm.scrollWidth <= nm.clientWidth : true,
+    };
+  }));
+  if (!molduras.length) throw new Error('o Sorteio terminou sem nenhuma moldura de jogador');
+  const semRosto = molduras.filter((m) => m.src.startsWith('data:') || m.src.includes('avatar-generico'));
+  if (semRosto.length) throw new Error(`lugar do Sorteio ainda com a silhueta: ${semRosto.map((m) => m.nome).join(', ')}`);
+  if (molduras.some((m) => !m.ok)) throw new Error(`avatar que não carregou no Sorteio: ${molduras.filter((m) => !m.ok).map((m) => m.nome).join(', ')}`);
+  if (new Set(molduras.map((m) => m.src)).size !== molduras.length) throw new Error('rosto repetido no Sorteio');
+  for (const f of FIGURINHAS_DO_SORTEIO) {
+    const m = molduras.find((x) => x.src.endsWith(`${ROTA_DOS_AVATARES}${f.arquivo}-avatar.png`));
+    if (!m || m.nome !== f.nome) throw new Error(`a figurinha ${f.arquivo} não está no lugar do ${f.noBanco} com o nome "${f.nome}"`);
+  }
+  if (molduras.some((m) => !m.cabe)) throw new Error(`nome cortado no Sorteio: ${molduras.filter((m) => !m.cabe).map((m) => m.nome).join(', ')}`);
+  const sorteioTexto = await p2.evaluate(() => document.body.innerText);
+  if (/Índio|Nego Di/.test(sorteioTexto)) throw new Error('o Sorteio ainda mostra "Índio" ou "Nego Di"');
+  console.log(`      Sorteio: ${molduras.length} moldura(s), todas com rosto, nenhum repetido — ${FIGURINHAS_DO_SORTEIO.map((f) => f.nome).join(', ')} com a figurinha nova`);
+  const emDuas = molduras.filter((m) => m.linhas > 1);
+  if (emDuas.length) console.log(`      Sorteio: nome em ${emDuas.map((m) => `${m.linhas} linhas (${m.nome})`).join(', ')}`);
   await capturar(p2, 'sorteio');
   await c2.close();
 }

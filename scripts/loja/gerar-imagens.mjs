@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { FIGURINHAS_DO_SORTEIO } from './figurinhas-do-sorteio.mjs';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(AQUI, '..', '..');
@@ -43,13 +44,14 @@ const ESCALA = LARGURA / 1080;
 const OURO = '#D4AF37';
 const OURO_TEXTO = '#f0c94a'; // o dourado de texto da marca (MARCA.md)
 
-// LOJA-PRINTS-OUT.md, tabela aprovada em 5-out: ordem, rótulo (dourado, pequeno) e frase.
+// LOJA-PRINTS-OUT.md, tabela aprovada em 5-out: ordem, rótulo (dourado, pequeno) e frase. As frases da 01, 02 e 05 são as do
+// "Ajuste 2" do dono (5-out, noite).
 const PECAS = [
-  { arquivo: '01.png', tela: 'sorteio.png', kicker: 'Sorteio', titulo: 'Sorteio justo e com show' },
-  { arquivo: '02.png', tela: 'figurinha.png', kicker: 'Figurinha', titulo: 'Sua figurinha de craque' },
+  { arquivo: '01.png', tela: 'sorteio.png', kicker: 'Sorteio', titulo: 'Sorteio justo' },
+  { arquivo: '02.png', tela: 'figurinha.png', kicker: 'Figurinha', titulo: 'Vire figurinha de colecionador' },
   { arquivo: '03.png', tela: 'inicio.png', kicker: 'Presença', titulo: 'Confirme presença em um toque' },
   { arquivo: '04.png', tela: 'novo-jogo.png', kicker: 'Novo jogo', titulo: 'Marque o jogo em segundos' },
-  { arquivo: '05.png', tela: 'ranking.png', kicker: 'Ranking', titulo: 'Ranking que vale discussão' },
+  { arquivo: '05.png', tela: 'ranking.png', kicker: 'Ranking', titulo: 'Ranking com votação dos melhores jogadores' },
   { arquivo: '06.png', tela: 'resenha.png', kicker: 'Resenha', titulo: 'A resenha do time' },
   { arquivo: '07.png', tela: 'radar.png', kicker: 'Radar de peladas', titulo: 'Encontre uma pelada perto de você' },
   { arquivo: '08.png', tela: 'criar-time.png', kicker: 'Criar time', titulo: 'Seu time no ar em um minuto' },
@@ -181,6 +183,35 @@ function htmlRevisao(pecas, faixa) {
   </div></body></html>`;
 }
 
+// Folha dos 4 cartões novos do Sorteio (ajuste 2 do dono): as figurinhas da bancada lado a lado, cada uma com o nome na placa, como a
+// figurinha do app — o nome encolhe até caber, nunca é cortado. Só para olhar; não vai para loja nenhuma.
+function htmlFolhaAvatares(cartoes, custo) {
+  const CARTAO = 300;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>
+    ${FONTES}
+    html, body { margin:0; width:${cartoes.length * CARTAO + (cartoes.length + 1) * 24}px; background:#0b0d14; color:#fff;
+      font-family:'Rajdhani', system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+    .folha { padding:26px 24px 30px; }
+    h1 { margin:0 0 4px; font-size:32px; font-weight:700; letter-spacing:.02em; }
+    .sub { margin:0 0 22px; font-size:18px; color:#aaa; }
+    .linha { display:flex; gap:24px; }
+    figure { margin:0; width:${CARTAO}px; }
+    .cartao { position:relative; width:${CARTAO}px; height:${CARTAO * 1.5}px; }
+    .cartao img { display:block; width:100%; height:100%; }
+    .placa { position:absolute; left:11%; right:11%; bottom:8.5%; height:44px; display:flex; align-items:center; justify-content:center;
+      background:rgba(10,10,14,.84); border:1px solid rgba(212,175,55,.35); border-radius:8px; overflow:hidden; }
+    .placa span { font-weight:700; font-size:28px; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; padding:0 8px; }
+    figcaption { margin-top:10px; font-size:17px; color:#aaa; line-height:1.25; }
+    figcaption b { display:block; color:${OURO}; font-size:14px; letter-spacing:.16em; text-transform:uppercase; }
+  </style></head><body><div class="folha">
+    <h1>Sorteio — os 4 lugares novos</h1>
+    <p class="sub">Receita V6 de produção, uniforme Dark Gold, mesmo enquadramento da figurinha do Bruninho.${custo != null ? ` Custo real lido da fal: US$${custo.toFixed(3).replace('.', ',')}.` : ''}</p>
+    <div class="linha">
+      ${cartoes.map((c) => `<figure><div class="cartao"><img src="${c.src}" alt=""><div class="placa"><span>${c.nome}</span></div></div><figcaption><b>${c.time}</b>${c.nome} · ${c.nota}</figcaption></figure>`).join('')}
+    </div>
+  </div></body></html>`;
+}
+
 async function renderizar(page, html, largura, altura, destino) {
   await page.setViewportSize({ width: largura, height: altura || 10 });
   await page.setContent(html, { waitUntil: 'load' });
@@ -190,16 +221,31 @@ async function renderizar(page, html, largura, altura, destino) {
   console.log('✓', destino);
 }
 
-/** O título não pode encostar no celular: encolhe a fonte até caber acima dele (frases longas como a do Radar). */
-async function fonteQueCabe(page, peca) {
+/**
+ * UM tamanho de frase para as 8 peças (ajuste 2 do dono, 5-out): todas no mesmo tamanho, cada uma em no máximo duas linhas e acima do
+ * celular. Começa nos 104 de sempre e, se alguma frase não couber, desce de 2 em 2 para TODAS. Antes cada peça encolhia sozinha e as
+ * frases saíam em tamanhos diferentes. As linhas são contadas pela altura do título (line-height .96), com a Rajdhani já carregada.
+ */
+async function fonteDasFrases(page) {
   const limite = LAYOUT.celularTopo - 34;
-  for (let fonte = 104; fonte >= 74; fonte -= 6) {
-    await page.setContent(htmlPeca({ ...peca, fonteTitulo: fonte }), { waitUntil: 'load' });
-    await page.evaluate(() => document.fonts.ready);
-    const base = await page.evaluate(() => Math.round(document.querySelector('h1').getBoundingClientRect().bottom));
-    if (base / ESCALA <= limite) return fonte;
+  for (let fonte = 104; fonte >= 60; fonte -= 2) {
+    const medidas = [];
+    for (const peca of PECAS) {
+      await page.setContent(htmlPeca({ ...peca, tela: '', fonteTitulo: fonte }), { waitUntil: 'load' });
+      const m = await page.evaluate(async (f) => {
+        await Promise.all([document.fonts.load(`700 ${f}px Rajdhani`), document.fonts.load('600 36px Rajdhani')]);
+        await document.fonts.ready;
+        const r = document.querySelector('h1').getBoundingClientRect();
+        return { altura: r.height, base: r.bottom, rajdhani: document.fonts.check(`700 ${f}px Rajdhani`) };
+      }, fonte);
+      if (!m.rajdhani) throw new Error('a Rajdhani não carregou: medir a frase com a fonte de reserva daria outro tamanho');
+      medidas.push({ peca, linhas: Math.round(m.altura / ESCALA / (fonte * 0.96)), base: m.base / ESCALA });
+    }
+    const fora = medidas.filter((m) => m.linhas > 2 || m.base > limite);
+    if (!fora.length) return fonte;
+    console.log(`  · ${fonte}px não serve: ${fora.map((m) => `${m.peca.arquivo} em ${m.linhas} linhas`).join(', ')}`);
   }
-  return 74;
+  throw new Error('nenhum tamanho entre 104 e 60 px põe todas as frases em duas linhas');
 }
 
 const navegador = await chromium.launch();
@@ -210,6 +256,35 @@ if (opcao('faixa')) {
   const destino = join(LOJA, opcao('faixa'), 'faixa-1024x500.png');
   mkdirSync(dirname(destino), { recursive: true });
   await renderizar(page, htmlFaixa(), 1024, 500, destino);
+  await navegador.close();
+  process.exit(0);
+}
+
+// ── folha dos 4 cartões novos do Sorteio ─────────────────────────────────────────────────────────────
+if (opcao('avatares')) {
+  const pasta = join(LOJA, opcao('avatares'));
+  const cartoes = FIGURINHAS_DO_SORTEIO.map((f) => {
+    const caminho = join(pasta, `${f.arquivo}-card.png`);
+    if (!existsSync(caminho)) throw new Error(`falta ${caminho} (rode backend/scripts/_bench/gerar-modelos-ficticios.js --loja)`);
+    return { ...f, src: dataUri(caminho, 'image/png') };
+  });
+  let custo = null;
+  try { custo = JSON.parse(readFileSync(join(pasta, 'custos.json'), 'utf8')).total_usd ?? null; } catch { /* sem custos.json, a folha sai sem o custo */ }
+  const largura = cartoes.length * 300 + (cartoes.length + 1) * 24;
+  await page.setViewportSize({ width: largura, height: 10 });
+  await page.setContent(htmlFolhaAvatares(cartoes, custo), { waitUntil: 'load' });
+  await page.evaluate(async () => {
+    await document.fonts.load('700 28px Rajdhani');
+    await document.fonts.ready;
+    // O nome nunca é cortado: encolhe até caber na placa.
+    for (const span of document.querySelectorAll('.placa span')) {
+      let px = 28;
+      while (span.scrollWidth > span.parentElement.clientWidth && px > 12) { px -= 1; span.style.fontSize = `${px}px`; }
+    }
+  });
+  const destino = join(pasta, 'folha.png');
+  await page.screenshot({ path: destino, type: 'png', fullPage: true });
+  console.log('✓', destino);
   await navegador.close();
   process.exit(0);
 }
@@ -231,12 +306,12 @@ if (opcao('revisao')) {
 
 // ── as 8 peças ────────────────────────────────────────────────────────────────────────────────────────
 mkdirSync(SAIDA, { recursive: true });
+const fonte = await fonteDasFrases(page);
+console.log(`  · as 8 frases em ${fonte}px (unidades de 1080), no máximo duas linhas cada`);
 for (const peca of PECAS) {
   const crua = join(CRUAS, peca.tela);
   if (!existsSync(crua)) { console.warn('! falta a captura', crua, '— peça pulada'); continue; }
   const comTela = { ...peca, tela: dataUri(crua, 'image/png'), recorte: peca.recorte?.[TAMANHO] ?? 0 };
-  const fonte = await fonteQueCabe(page, comTela);
-  if (fonte !== 104) console.log(`  · ${peca.arquivo}: título em ${fonte}px (a frase é longa)`);
   await renderizar(page, htmlPeca({ ...comTela, fonteTitulo: fonte }), LARGURA, ALTURA, join(SAIDA, peca.arquivo));
 }
 
