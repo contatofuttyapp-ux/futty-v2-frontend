@@ -13,11 +13,12 @@
 // crédito ou ativar um pacote, a rota é a aba "Brilhantes" (routes/gabinete.js),
 // que também resolve o pedido pendente da pessoa — duplicar a escrita aqui
 // deixaria duas portas para a mesma coisa desalinharem.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
 import { urlImagem } from '../../utils/avatar';
 import { contar } from '../../utils/plural';
+import { CRITERIOS, colunaDoCriterio, sentidoDoCriterio, proximoCriterio, ordenarTimes, lerCriterioLembrado, guardarCriterio } from '../../utils/ordenarTimes';
 import EstadoErroRede from '../../components/EstadoErroRede';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -35,6 +36,9 @@ const btn = {
 };
 const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #222' };
 const td = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid #1a1a1a', verticalAlign: 'middle' };
+// Título clicável (Rodada 29Y): o botão herda a cara do título; o navegador não a põe sozinho.
+const botaoTitulo = { background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit', cursor: 'pointer' };
+const seletor = { padding: '6px 10px', borderRadius: 8, border: '1px solid #2a2a2a', background: '#0c0c0c', color: '#fff', fontSize: 13 };
 
 // 29I (achado 83): data de SISTEMA (quando algo aconteceu na conta/no time), lida pelo dono no Gabinete — vale o relógio de quem está olhando,
 // não o fuso de time nenhum. É de propósito: o fuso do time é só para a hora de JOGO (src/utils/dataHora.js).
@@ -122,9 +126,31 @@ function TabUsers({ showMsg }) {
 }
 
 // ─── SUB-ABA: EQUIPAS ────────────────────────────────────────────────────────
+// Rodada 29Y: a lista sai na ordem escolhida (seletor "Ordenar por" ou clique no título). A escolha fica lembrada no aparelho
+// e sobrevive a excluir/suspender/reativar: o reload só troca os dados; o critério é estado desta aba.
 function TabTeams({ showMsg }) {
   const { data, loading, error, reload } = useApi('/api/super/teams');
-  const teams = data?.teams || [];
+  const [criterio, setCriterio] = useState(lerCriterioLembrado);
+  const teams = useMemo(() => ordenarTimes(data?.teams, criterio), [data, criterio]);
+  const coluna = colunaDoCriterio(criterio);
+  const sentido = sentidoDoCriterio(criterio);
+
+  function escolher(chave) {
+    setCriterio(chave);
+    guardarCriterio(chave);
+  }
+
+  // Título clicável: o clique é o mesmo que escolher no seletor; a coluna ativa leva ▲/▼ e aria-sort.
+  const cabecalho = (chave, rotulo) => {
+    const ativa = coluna === chave;
+    return (
+      <th style={th} aria-sort={ativa ? (sentido === 'asc' ? 'ascending' : 'descending') : undefined}>
+        <button type="button" style={botaoTitulo} onClick={() => escolher(proximoCriterio(criterio, chave))}>
+          {rotulo}{ativa ? (sentido === 'asc' ? ' ▲' : ' ▼') : ''}
+        </button>
+      </th>
+    );
+  };
 
   async function apagar(t) {
     const resp = window.prompt(`Você vai APAGAR o time "${t.nome}" e todos os seus dados (jogos, membros, votos…). Isso é irreversível.\n\nEscreva APAGAR para confirmar:`);
@@ -156,45 +182,57 @@ function TabTeams({ showMsg }) {
   if (error) return <div style={{ ...CARD, padding: 14, color: 'var(--danger)' }}>{error}</div>;
 
   return (
-    <div style={{ ...CARD, overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
-        <thead>
-          <tr>
-            <th style={th}>Nome</th>
-            <th style={th}>Slug</th>
-            <th style={th}>Membros</th>
-            <th style={th}>Criado</th>
-            <th style={th}>Estado</th>
-            <th style={th}>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {teams.map((t) => (
-            <tr key={t.id} style={t.suspensa ? { opacity: 0.6 } : undefined}>
-              <td style={td}>{t.nome}</td>
-              <td style={td}><code style={{ color: 'var(--text-dim)' }}>{t.slug}</code></td>
-              <td style={td}>{t.nr_membros}</td>
-              <td style={td}>{fmtData(t.created_at)}</td>
-              <td style={td}>
-                {t.suspensa
-                  ? <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 12 }}>Suspenso</span>
-                  : <span style={{ color: '#7bd88f', fontSize: 12 }}>Ativo</span>}
-              </td>
-              <td style={td}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {t.suspensa
-                    ? <button type="button" style={btn} onClick={() => definirSuspensao(t, false)}>Reativar</button>
-                    : <button type="button" style={{ ...btn, borderColor: '#f0a35a', color: '#f0a35a' }} onClick={() => definirSuspensao(t, true)}>Suspender</button>}
-                  <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => apagar(t)}>Excluir</button>
-                </div>
-              </td>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-dim)' }}>
+          Ordenar por
+          <select value={criterio} onChange={(e) => escolher(e.target.value)} style={seletor}>
+            {CRITERIOS.map((c) => <option key={c.chave} value={c.chave}>{c.rotulo}</option>)}
+          </select>
+        </label>
+        {data ? <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{contar(teams.length, 'time', 'times')}</span> : null}
+      </div>
+
+      <div style={{ ...CARD, overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+          <thead>
+            <tr>
+              {cabecalho('nome', 'Nome')}
+              <th style={th}>Slug</th>
+              {cabecalho('membros', 'Membros')}
+              {cabecalho('criado', 'Criado')}
+              {cabecalho('estado', 'Estado')}
+              <th style={th}>Ações</th>
             </tr>
-          ))}
-          {!teams.length && !loading && (
-            <tr><td style={td} colSpan={6}>Sem times.</td></tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {teams.map((t) => (
+              <tr key={t.id} style={t.suspensa ? { opacity: 0.6 } : undefined}>
+                <td style={td}>{t.nome}</td>
+                <td style={td}><code style={{ color: 'var(--text-dim)' }}>{t.slug}</code></td>
+                <td style={td}>{t.nr_membros}</td>
+                <td style={td}>{fmtData(t.created_at)}</td>
+                <td style={td}>
+                  {t.suspensa
+                    ? <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 12 }}>Suspenso</span>
+                    : <span style={{ color: '#7bd88f', fontSize: 12 }}>Ativo</span>}
+                </td>
+                <td style={td}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {t.suspensa
+                      ? <button type="button" style={btn} onClick={() => definirSuspensao(t, false)}>Reativar</button>
+                      : <button type="button" style={{ ...btn, borderColor: '#f0a35a', color: '#f0a35a' }} onClick={() => definirSuspensao(t, true)}>Suspender</button>}
+                    <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => apagar(t)}>Excluir</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!teams.length && !loading && (
+              <tr><td style={td} colSpan={6}>Sem times.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
