@@ -1,5 +1,6 @@
 // Futty v2.0 — Funções puras de formatação.
 import { diaDoMes, formatarDataHora, mesCurto } from './dataHora';
+import { formatarNota, formatarPontos } from './numero';
 
 export const STATUS_LABELS = {
   agendado: 'Agendado',
@@ -28,12 +29,12 @@ export function dayMonth(iso, fuso) {
 // para a mesma coisa. Uma só, que diga o que é (a vitrine já dizia certo: "Sem nota ainda").
 export const SEM_NOTA_AINDA = 'sem nota ainda';
 
-/** Média de votos formatada (2 casas) ou SEM_NOTA_AINDA se não houver votos. */
+/** Nota formatada em PT-BR com UMA casa ("9,1") ou SEM_NOTA_AINDA se não houver votos. Rodada 29Z: era "9.10". */
 export function formatRating(value) {
-  return Number(value) > 0 ? Number(value).toFixed(2) : SEM_NOTA_AINDA;
+  return Number(value) > 0 ? formatarNota(value) : SEM_NOTA_AINDA;
 }
 
-/** Score do ranking formatado (1 casa decimal). */
+/** Score do ranking em PT-BR, uma casa ("77,9"). */
 export function formatScore(value) {
-  return Number(value || 0).toFixed(1);
+  return formatarPontos(value || 0);
 }

@@ -142,6 +142,8 @@ async function assentar(page, { minimo = 1800 } = {}) {
 
 // Nada de preço, venda ou "em breve" numa peça de loja (lei do produto: a tela diz a verdade).
 const PROIBIDO = /R\$|€|brilhante|pre[çc]o|comprar|pagar|em breve/i;
+// 77.9, 9.10 — fora horas (20:00), datas, versões e IPs (a mesma régua de scripts/medir-estreito.mjs).
+const NUMERO_COM_PONTO = /(^|[^\d.:/])\d+\.\d+(?![\d.:/]|\s*(?:km|MB|KB))/;
 
 async function capturar(page, nome, { rolarAte = null } = {}) {
   // Tira o foco e desfaz o "zoom" do celular: tocar num campo (a hora do Novo jogo) faz o Chromium aproximar a
@@ -158,8 +160,14 @@ async function capturar(page, nome, { rolarAte = null } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
   }
   await page.waitForTimeout(400);
-  const achado = (await page.evaluate(() => document.body.innerText)).match(PROIBIDO);
+  const textoDaTela = await page.evaluate(() => document.body.innerText);
+  const achado = textoDaTela.match(PROIBIDO);
   if (achado) throw new Error(`${nome}: a tela mostra "${achado[0]}" e não vai para a loja`);
+  // Rodada 29Z: brasileiro escreve 77,9 e 9,1 — peça de loja com "77.9" ou "9.10" não sai (os prints de 5-out saíram assim).
+  const comPonto = textoDaTela.match(NUMERO_COM_PONTO);
+  if (comPonto) throw new Error(`${nome}: a tela mostra o número "${comPonto[0].trim()}" com ponto decimal; no app de verdade é vírgula (src/utils/numero.js)`);
+  const decimais = [...textoDaTela.matchAll(/\d+,\d+/g)].map((m) => m[0]);
+  if (decimais.length) console.log(`      números com casa decimal na peça: ${[...new Set(decimais)].join(' · ')}`);
   await page.screenshot({ path: join(CRUAS, `${nome}.png`), type: 'png', animations: 'disabled', caret: 'hide' });
   console.log('✓', `${nome}.png`);
 }

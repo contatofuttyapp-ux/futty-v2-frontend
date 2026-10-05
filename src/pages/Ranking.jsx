@@ -15,6 +15,7 @@ import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import { formatScore } from '../utils/format';
+import { formatarAte, formatarNota } from '../utils/numero';
 import AdCard from '../components/AdCard';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -101,27 +102,29 @@ function RankRow({ p, idx, slug, onVote }) {
           </div>
           {/* Rodada 29I (achado 95): a ordem do ranking é por PONTOS (o `score` 0–100 do motor: vitórias, gols, destaques, presença e
               nota), e a tela só mostrava a nota — que não acompanha a posição (1º 10.0, 2º 8.7, 3º 9.3…) e fazia o ranking parecer
-              quebrado. Agora o número que ordena aparece, rotulado "pontos", com a nota ao lado. Continua uma linha só (a altura da
-              linha é medida: ver .rank-row-esqueleto); o que não cabe no celular some no fim, que é o "por votar" — o botão ao lado
-              já diz o mesmo. */}
-          <div className="rank-votes" style={{ marginTop: 4, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              quebrado. Agora o número que ordena aparece, rotulado "pontos", com a nota ao lado.
+              Rodada 29Z: nunca mais reticências. Os pontos e a nota são dois grupos que não se partem por dentro; se os dois não cabem na
+              mesma linha (celular de 360 px, o botão "Alterar" ao lado), a nota desce para a segunda linha — e o "·" que os separava
+              fica de fora (ver .rank-votes no CSS). O "você deu / por votar" só aparece onde há folga: o botão ao lado já diz o mesmo. */}
+          <div className="rank-votes" style={{ marginTop: 4, fontSize: 12 }}>
             {p.score != null ? (
-              <>
+              <span className="rank-votes__grupo" data-grupo-pontos>
                 <span data-pontos style={{ fontFamily: "'Rajdhani', sans-serif", color: '#d4a017', fontWeight: 700, fontSize: notaFs }}>{formatScore(p.score)}</span>
-                <span className="muted" style={{ marginLeft: 3 }}>pontos</span>
-                <span className="muted" style={{ margin: '0 5px' }}>·</span>
-              </>
+                <span className="muted">{' '}pontos</span>
+              </span>
             ) : null}
-            <span className="muted">nota </span>
-            {p.nota != null ? (
-              <span data-nota style={{ fontFamily: "'Rajdhani', sans-serif", color: '#fff', fontWeight: 700 }}>{p.nota.toFixed(1)}</span>
-            ) : (
-              <span style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">--</span>
-            )}
+            <span className="rank-votes__grupo" data-grupo-nota>
+              <span className="muted">nota </span>
+              {p.nota != null ? (
+                <span data-nota style={{ fontFamily: "'Rajdhani', sans-serif", color: '#fff', fontWeight: 700 }}>{formatarNota(p.nota)}</span>
+              ) : (
+                <span style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">--</span>
+              )}
+            </span>
             {jaVotou ? (
-              <span className="muted" style={{ marginLeft: 8 }}>★ você deu {p.minha_nota}</span>
+              <span className="rank-votes__voto muted">★ você deu {formatarAte(p.minha_nota, 1)}</span>
             ) : (
-              <span className="muted" style={{ marginLeft: 8 }}>☆ por votar</span>
+              <span className="rank-votes__voto muted">☆ por votar</span>
             )}
           </div>
         </div>
@@ -175,7 +178,7 @@ function MeiaEstrelas({ value = 0, onChange }) {
           <div key={i} style={{ position: 'relative', width: 36, height: 36, fontSize: 36, lineHeight: '36px' }}>
             <span style={{ color: '#333' }}>★</span>
             <span style={{ position: 'absolute', left: 0, top: 0, width: `${fill}%`, overflow: 'hidden', color: '#d4a017' }}>★</span>
-            <button type="button" aria-label={`${i - 0.5} estrelas`} onClick={() => onChange(i - 0.5)} style={{ position: 'absolute', left: 0, top: 0, width: '50%', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer' }} />
+            <button type="button" aria-label={`${formatarAte(i - 0.5, 1)} estrelas`} onClick={() => onChange(i - 0.5)} style={{ position: 'absolute', left: 0, top: 0, width: '50%', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer' }} />
             <button type="button" aria-label={`${i} estrelas`} onClick={() => onChange(i)} style={{ position: 'absolute', right: 0, top: 0, width: '50%', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer' }} />
           </div>
         );
@@ -394,7 +397,7 @@ export default function Ranking() {
               <MeiaEstrelas value={modalNota} onChange={setModalNota} />
               <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)' }}>
                 {modalNota >= 0.5 ? (
-                  <>Sua nota: <b style={{ fontFamily: "'Rajdhani', sans-serif", color: 'var(--neon)', fontSize: 16 }}>{notaParaExibir(modalNota).toFixed(1)}</b></>
+                  <>Sua nota: <b style={{ fontFamily: "'Rajdhani', sans-serif", color: 'var(--neon)', fontSize: 16 }}>{formatarNota(notaParaExibir(modalNota))}</b></>
                 ) : (
                   'Escolha de 0,5 a 5 estrelas'
                 )}

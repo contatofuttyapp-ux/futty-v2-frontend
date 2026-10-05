@@ -31,7 +31,7 @@ export default function AvisoDeJogo({ game, team = null, mais = 0, busy = false,
         <span style={{ flex: 1, minWidth: 0 }}>
           <span data-aviso-quando style={{ display: 'block', fontFamily: RAJ, fontWeight: 800, fontSize: 15, lineHeight: 1.2, color: '#f0c94a' }}>{quando}</span>
           {nomeDoTime ? (
-            <span style={{ display: 'block', fontSize: 12, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeDoTime}</span>
+            <span data-nome-do-time style={{ display: 'block', fontSize: 12, color: 'var(--text-dim)', overflowWrap: 'anywhere' }}>{nomeDoTime}</span>
           ) : null}
         </span>
         {mais > 0 ? (

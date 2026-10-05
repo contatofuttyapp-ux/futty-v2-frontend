@@ -26,6 +26,7 @@ import { ehNativo } from '../lib/plataforma';
 import { apiFetch } from '../lib/api';
 import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
 import '../lib/ligarLoja';
+import { formatarDecimal } from '../utils/numero';
 import { useAuth } from '../hooks/useAuth';
 import '../styles/app.css';
 
@@ -72,9 +73,9 @@ function valorPago(c) {
   const n = Number(c.preco);
   if (!Number.isFinite(n)) return null;
   try {
-    return c.moeda ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: c.moeda }).format(n) : n.toFixed(2).replace('.', ',');
+    return c.moeda ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: c.moeda }).format(n) : formatarDecimal(n, 2);
   } catch {
-    return n.toFixed(2).replace('.', ',');
+    return formatarDecimal(n, 2);
   }
 }
 const espera = (ms) => new Promise((r) => { setTimeout(r, ms); });

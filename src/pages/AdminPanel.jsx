@@ -18,6 +18,7 @@ import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { SEM_NOTA_AINDA, formatDateTime, STATUS_LABELS } from '../utils/format';
 import { camposNoCampo, formatarData, formatarDataHora, instanteNoCampo, rabichoDoFuso } from '../utils/dataHora';
 import { LABEL_LINHA } from '../utils/posicoes';
+import { formatarNota } from '../utils/numero';
 import { arredondarMedia, contar, formatarMedia, plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import LoadingFutty from '../components/LoadingFutty';
@@ -972,7 +973,7 @@ function TabMembros({ slug, meId, showToast }) {
                 {inativo ? <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', borderRadius: 999, padding: '2px 6px' }}>Inativo</span> : null}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-dim)' }}>
-                <span style={{ fontWeight: 800, color: m.nota_media == null ? 'var(--text-dim)' : m.nota_media >= 7 ? '#d4a017' : '#fff' }}>{m.nota_media == null ? SEM_NOTA_AINDA : `★ ${m.nota_media.toFixed(1)}`}</span>
+                <span style={{ fontWeight: 800, color: m.nota_media == null ? 'var(--text-dim)' : m.nota_media >= 7 ? '#d4a017' : '#fff' }}>{m.nota_media == null ? SEM_NOTA_AINDA : `★ ${formatarNota(m.nota_media)}`}</span>
                 <span style={{ display: 'inline-flex', gap: 4 }} aria-hidden>
                   {Array.from({ length: 5 }).map((_, idx) => {
                     const p = (m.presencas_recentes || [])[idx];

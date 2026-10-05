@@ -18,6 +18,7 @@ import { lerDiagnostico, limparDiagnostico } from '../lib/diagnosticoRelatorio';
 import { lerUltimoErro, limparUltimoErro } from '../lib/ultimoErro';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
+import { formatarSegundos } from '../utils/numero';
 import '../styles/app.css';
 
 const CARTAO = {
@@ -108,10 +109,10 @@ function linhasDoCromo(cromo) {
 function linhaDePreaquecimento(p) {
   if (!p) return null;
   if (p.estado) {
-    const previsto = p.previstoEmMs != null ? `, previsto aos ${(p.previstoEmMs / 1000).toFixed(1)}s` : '';
-    return `Adiantamento em segundo plano: ${p.estado}. Precisa de ${(p.esperaMs / 1000).toFixed(1)}s sem toque${previsto}`;
+    const previsto = p.previstoEmMs != null ? `, previsto aos ${formatarSegundos(p.previstoEmMs)}` : '';
+    return `Adiantamento em segundo plano: ${p.estado}. Precisa de ${formatarSegundos(p.esperaMs)} sem toque${previsto}`;
   }
-  return `Adiantou em segundo plano: ${p.itens} telas e ${p.imagens} imagens (${(p.ms / 1000).toFixed(1)}s)`;
+  return `Adiantou em segundo plano: ${p.itens} telas e ${p.imagens} imagens (${formatarSegundos(p.ms)})`;
 }
 
 // Rota sem a query, e encurtada pela ponta ESQUERDA: o que distingue
@@ -222,7 +223,7 @@ export default function Diagnostico() {
               <>
                 <br />
                 <span style={{ color: 'var(--text-dim)' }}>
-                  Em segundo plano: {resumo.segundoPlano.vezes}× · {(resumo.segundoPlano.msTotal / 1000).toFixed(1)}s no total (não conta como travada)
+                  Em segundo plano: {resumo.segundoPlano.vezes}× · {formatarSegundos(resumo.segundoPlano.msTotal)} no total (não conta como travada)
                 </span>
               </>
             ) : null}
@@ -232,7 +233,7 @@ export default function Diagnostico() {
               {resumo.travadas.piores.slice(0, 6).map((t, i) => (
                 <div key={i} style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                   <span style={{ color: t.ms >= 250 ? '#f8b4b4' : '#f0c94a', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>{t.ms} ms</span>
-                  {' · '}{t.fase}{' · aos '}{(t.em / 1000).toFixed(1)}s
+                  {' · '}{t.fase}{' · aos '}{formatarSegundos(t.em)}
                   {/* Rodada 12A: o que estava a correr. "arranque" sozinho não
                       aponta para conserto nenhum; "arranque · cromo:compor" sim. */}
                   {t.tarefas?.length ? <span style={{ color: '#b69cff' }}>{' · '}{t.tarefas.join(', ')}</span> : null}

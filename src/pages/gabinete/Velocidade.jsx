@@ -7,6 +7,7 @@
 import { Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import EstadoErroRede from '../../components/EstadoErroRede';
+import { formatarDecimal } from '../../utils/numero';
 import { contar, plural } from '../../utils/plural';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -23,7 +24,7 @@ function corDoTempo(ms) {
 }
 function fmtMs(ms) {
   if (ms == null) return '-';
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1).replace('.', ',')} s` : `${ms} ms`;
+  return ms >= 1000 ? `${formatarDecimal(ms / 1000, 1)} s` : `${ms} ms`;
 }
 
 function Secao({ titulo, sub, children }) {

@@ -24,6 +24,7 @@ import Velocidade from './gabinete/Velocidade';
 import AviseMeLista from './gabinete/AviseMe';
 import { MOSTRAR_AVANCADO } from '../config/flags';
 import { useIndicadorDeRolagem } from '../hooks/useIndicadorDeRolagem';
+import { formatarDecimal, formatarEUR, formatarUSD } from '../utils/numero';
 import { contar, plural } from '../utils/plural';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -55,8 +56,9 @@ function fmtUptime(s) {
   if (h > 0) return `${h}h ${m}min`;
   return `${m}min`;
 }
-function fmtUSD(n) { return `US$${Number(n || 0).toFixed(2)}`; }
-function fmtEUR(n) { return `€${Number(n || 0).toFixed(2).replace('.', ',')}`; }
+// Rodada 29Z: dinheiro do sistema em PT-BR ("US$12,34", "€7,24"), pelo helper único de src/utils/numero.js.
+const fmtUSD = formatarUSD;
+const fmtEUR = formatarEUR;
 function diasAte(dataISO) {
   if (!dataISO) return null;
   const ms = new Date(`${dataISO}T00:00:00Z`) - new Date(`${hojeISO()}T00:00:00Z`);
@@ -470,7 +472,7 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
       <div style={{ ...CARD, padding: 14 }}>
         {(pub?.campanhas || []).length === 0 ? <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem campanhas. Crie a 1ª abaixo.</div>
           : pub.campanhas.map((c) => {
-            const ctr = c.imp ? (c.cli / c.imp * 100).toFixed(1) : '0.0';
+            const ctr = formatarDecimal(c.imp ? (c.cli / c.imp) * 100 : 0, 1);
             return (
               <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr auto auto', alignItems: 'center', gap: 8, padding: '9px 0', borderTop: '1px solid #1a1a1a', fontSize: 12.5 }}>
                 <div><div style={{ fontWeight: 700, fontSize: 13.5 }}>{c.nome}</div><div style={muted}>{c.anunciante || '-'} · {(c.paginas || []).map((pg) => NOMES_PAGINA[pg] || pg).join(', ') || 'sem página'} · <span style={{ color: c.cls === 'livre' ? '#7bd88f' : '#fda4af' }}>{c.cls === 'livre' ? 'livre' : '18+'}</span></div></div>

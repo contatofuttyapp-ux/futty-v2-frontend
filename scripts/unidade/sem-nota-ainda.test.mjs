@@ -6,11 +6,12 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { SEM_NOTA_AINDA, formatRating } from '../../src/utils/format.js';
 
-test('formatRating: sem voto nenhum (null, undefined, 0, negativo) devolve SEM_NOTA_AINDA; com voto, 2 casas', () => {
+test('formatRating: sem voto nenhum (null, undefined, 0, negativo) devolve SEM_NOTA_AINDA; com voto, UMA casa e vírgula (29Z)', () => {
   assert.equal(SEM_NOTA_AINDA, 'sem nota ainda');
   for (const v of [null, undefined, 0, -1]) assert.equal(formatRating(v), SEM_NOTA_AINDA, String(v));
-  assert.equal(formatRating(8), '8.00');
-  assert.equal(formatRating(7.5), '7.50');
+  assert.equal(formatRating(8), '8,0');
+  assert.equal(formatRating(7.5), '7,5');
+  assert.equal(formatRating(9.1), '9,1', 'era "9.10" no Início (achado dos prints de 5-out)');
 });
 
 test('achado 119: nenhum "--" nem "★ -" nem "—" solto para nota, nas quatro telas — todas usam SEM_NOTA_AINDA', () => {

@@ -88,11 +88,13 @@ function LinhaMeuTime({ time, meuId, semBorda, aoErro }) {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderBottom: semBorda ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
+    // Rodada 29Z (item 3e): a linha quebra — o nome do time ocupa a linha de cima e "Jogo na linha | No gol" desce, quando os dois não cabem
+    // lado a lado (em 360 px o nome ficava com 16 px e virava "D…"); e o nome quebra em duas linhas em vez de ser cortado.
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px 12px', padding: '12px 16px', borderBottom: semBorda ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
       {/* 29I, bloco 3: cada time leva à página dele (o admin acha lá a aba Ajustes). */}
-      <Link to={`/time/${time.slug}`} data-meu-time={time.slug} style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', textDecoration: 'none' }}>
+      <Link to={`/time/${time.slug}`} data-meu-time={time.slug} style={{ minWidth: 0, flex: '1 1 100px', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', textDecoration: 'none' }}>
         <EscudoEquipa team={time} size={20} />
-        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{time.nome}</span>
+        <span data-nome-do-time style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{time.nome}</span>
         {time.role === 'admin' ? <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#f0c94a', border: '1px solid rgba(212,160,23,0.6)', padding: '1px 5px' }}>ADMIN</span> : null}
       </Link>
       {eu ? (

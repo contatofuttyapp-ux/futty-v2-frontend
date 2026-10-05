@@ -2,6 +2,7 @@
 import { TriangleAlert } from 'lucide-react';
 import { colorOf } from '../utils/teamColors';
 import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
+import { formatarAte } from '../utils/numero';
 import PlayerAvatar from './PlayerAvatar';
 
 export default function DrawnTeams({ resultado, teamCor }) {
@@ -24,7 +25,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
           <div className="sorteio-team" key={i}>
             <div className="sorteio-team__head" style={{ borderColor: c.hex }}>
               <span>{nomeDoTimeNaTela(time.nome, i)}</span>
-              <span className="sorteio-team__avg">★ {time.rating_medio}</span>
+              <span className="sorteio-team__avg">★ {formatarAte(time.rating_medio, 2)}</span>
             </div>
             {time.jogadores.map((j) => (
               <div className="sorteio-player" key={j.user_id}>
@@ -32,7 +33,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {j.cabeca_chave && <span className="sorteio-player__cap">C</span>}
                   {j.goleiro && <span className="sorteio-player__gk">GOL</span>}
-                  <span className="rating-pill">{j.rating}</span>
+                  <span className="rating-pill">{formatarAte(j.rating, 1)}</span>
                 </span>
               </div>
             ))}
@@ -63,7 +64,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                       </span>
                     )}
                   </div>
-                  <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{r.rating}</span>
+                  <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{formatarAte(r.rating, 1)}</span>
                 </div>
               );
             })}

@@ -1,4 +1,6 @@
 // Futty v2.0 — Plural simples PT-BR: plural(1, 'membro', 'membros') → 'membro'.
+import { formatarAte } from './numero';
+
 export function plural(n, singular, pluralForm) {
   return n === 1 ? singular : pluralForm;
 }
@@ -12,7 +14,7 @@ export function arredondarMedia(n) {
 /** Uma média para a tela: sem casa decimal quando é inteira ("0", "12") e com uma, em vírgula, quando não é ("13,1"). */
 export function formatarMedia(n) {
   const v = arredondarMedia(n);
-  return Number.isInteger(v) ? String(v) : v.toFixed(1).replace('.', ',');
+  return formatarAte(v, 1);
 }
 
 /** Rodada 29L (achado 136): o número e a palavra concordando — contar(1, 'jogo', 'jogos') → '1 jogo'; contar(0, …) → '0 jogos'. */

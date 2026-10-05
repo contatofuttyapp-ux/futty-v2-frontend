@@ -69,6 +69,18 @@ async function abrir(navegador, base, papel, opcoesMotor) {
   await page.goto(`${base}/scripts/provas/time-admin.html`, { waitUntil: 'domcontentloaded' });
   return { ctx, page, erros };
 }
+// Espera a altura da página PARAR de mudar (duas leituras iguais, 250 ms entre elas): as seções do Ajustes entram uma a uma, e medir logo depois do primeiro
+// elemento é correr contra o motor de mentira — com a máquina carregada a medição pegava a página no meio do caminho (Rodada 29Z).
+async function alturaEstavel(page) {
+  let anterior = -1;
+  for (let i = 0; i < 40; i += 1) {
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    if (h === anterior) return h;
+    anterior = h;
+    await page.waitForTimeout(250);
+  }
+  return anterior;
+}
 const irPara = (page, caminho) => page.evaluate((c) => { window.history.pushState({}, '', c); window.dispatchEvent(new PopStateEvent('popstate')); }, caminho);
 
 export async function rodar({ navegador, base, t }) {
@@ -206,14 +218,14 @@ export async function rodar({ navegador, base, t }) {
     const { ctx, page, erros } = await abrir(navegador, base, 'admin', { comLogo: true });
     await irPara(page, '/time/varzea-fc?aba=ajustes');
     await page.locator('[data-ajustes-do-time]').waitFor({ timeout: 15000 });
-    const alturaAntes = await page.evaluate(() => document.documentElement.scrollHeight);
+    const alturaAntes = await alturaEstavel(page);
 
     // Abrir e CANCELAR: nada muda de dado nenhum — a altura tem de voltar ao byte.
     await page.locator('[data-ajustes-do-time] button:has-text("Remover logo")').click();
     await page.locator('.modal-card').waitFor({ timeout: 5000 });
     await page.getByRole('button', { name: 'Cancelar' }).click();
     await page.locator('.modal-card').waitFor({ state: 'detached', timeout: 5000 });
-    const alturaCancelar = await page.evaluate(() => document.documentElement.scrollHeight);
+    const alturaCancelar = await alturaEstavel(page);
     t('cancelar o diálogo de "Remover logo" não deixa resíduo: a altura volta ao que era',
       alturaCancelar === alturaAntes, `antes ${alturaAntes}px, depois de cancelar ${alturaCancelar}px`);
 
@@ -225,12 +237,12 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('.modal-card button:has-text("Remover logo")').click();
     await page.locator('.modal-card').waitFor({ state: 'detached', timeout: 5000 });
     await page.locator('[data-previa-escudo]').waitFor({ timeout: 5000 });
-    const alturaConfirmar = await page.evaluate(() => document.documentElement.scrollHeight);
+    const alturaConfirmar = await alturaEstavel(page);
 
     const semLogo = await abrir(navegador, base, 'admin', { comLogo: false });
     await irPara(semLogo.page, '/time/varzea-fc?aba=ajustes');
     await semLogo.page.locator('[data-previa-escudo]').waitFor({ timeout: 15000 });
-    const alturaDeReferencia = await semLogo.page.evaluate(() => document.documentElement.scrollHeight);
+    const alturaDeReferencia = await alturaEstavel(semLogo.page);
     await semLogo.ctx.close();
 
     t('confirmar "Remover logo": a altura final bate com a de um time que já nasce sem logo (só cresceu o conteúdo novo, sem resíduo)',

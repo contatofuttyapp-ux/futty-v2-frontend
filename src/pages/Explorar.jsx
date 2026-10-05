@@ -95,7 +95,9 @@ function CardDoTime({ equipa, busy, aoTocar, aoPedir, aoCancelar }) {
     >
       <EscudoEquipa team={equipa} size={44} />
       <button type="button" data-abrir-time aria-label={`${equipa.nome}: ver sobre o time`} style={{ flex: 1, minWidth: 0, display: 'block', padding: 0, border: 'none', background: 'transparent', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
-        <span style={{ display: 'block', fontFamily: RAJ, fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{equipa.nome}</span>
+        {/* Rodada 29Z (item 3e): o nome do time quebra em duas linhas em vez de ser cortado com "…" ("Racha da Asa Norte" saía "Racha da As…"
+            em 360 px, com o botão "Pedir entrada" ao lado). */}
+        <span data-nome-do-time style={{ display: 'block', fontFamily: RAJ, fontWeight: 800, fontSize: 15, lineHeight: 1.2, overflowWrap: 'anywhere' }}>{equipa.nome}</span>
         {local || equipa.dist != null ? (
           <span data-local-do-time style={{ display: 'block', fontSize: 12, color: '#c9c2d6', marginTop: 2, overflowWrap: 'break-word' }}>
             {equipa.dist != null ? <b style={{ color: '#b69cff' }}>a {equipa.dist < 1 ? '<1' : Math.round(equipa.dist)} km{local ? ' · ' : ''}</b> : null}

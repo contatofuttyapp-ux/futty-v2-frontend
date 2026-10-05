@@ -84,15 +84,19 @@ export default function NovoJogo() {
       <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
         <IngressoDoJogo team={team} data={data} hora={hora} local={local} porTime={porTime} />
 
-        <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: CLIP, padding: '16px 16px 18px', display: 'grid', gap: 14 }}>
+        {/* Rodada 29Z (item 3e): a coluna do cartão é `minmax(0, 1fr)`, não a implícita `auto` — a `auto` cresce até o conteúdo mínimo (dois
+            campos de data e hora lado a lado, 327 px) e, num celular de 360 px (caixa de 310), o recorte de 45° do cartão cortava 17 px à
+            direita: sumia o fim de "Hora do jogo", a borda do campo Local e a do botão "Criar jogo". Data e hora ficam lado a lado só se
+            cada uma tem 146 px (o "12/10/2026" em Rajdhani 18 px precisa disso; medido: a 133 px a primeira letra some); senão, uma por linha. */}
+        <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', clipPath: CLIP, padding: '16px 16px 18px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
           {error && <div className="alert alert--error">{error}</div>}
 
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div className="field" style={{ flex: 1 }}>
+          <div data-data-e-hora style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(146px, 1fr))', gap: '0 12px' }}>
+            <div className="field" style={{ minWidth: 0 }}>
               <label htmlFor="data" style={ROTULO_COM_ICONE}><Calendar size={15} aria-hidden="true" /> Data</label>
               <input id="data" type="date" className="input input--hud" style={CAMPO_GRANDE} value={data} onChange={(e) => setData(e.target.value)} />
             </div>
-            <div className="field" style={{ flex: 1 }}>
+            <div className="field" style={{ minWidth: 0 }}>
               {/* 29I, bloco 3 (dono): "Hora do jogo" — nunca "fuso". O rabicho (a cidade do time, só para quem está noutro relógio) mora no ingresso, ao lado da hora. */}
               <label htmlFor="hora" style={ROTULO_COM_ICONE}><Clock size={15} aria-hidden="true" /> Hora do jogo</label>
               <input id="hora" type="time" className="input input--hud" style={CAMPO_GRANDE} value={hora} onChange={(e) => setHoraDigitada(e.target.value)} />

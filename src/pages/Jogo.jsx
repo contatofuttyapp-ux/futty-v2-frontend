@@ -7,6 +7,7 @@ import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { useApi } from '../hooks/useApi';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
 import { diaDoMes, mesCurto } from '../utils/dataHora';
+import { formatarAte } from '../utils/numero';
 import { plural } from '../utils/plural';
 import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import Topbar from '../components/Topbar';
@@ -418,7 +419,7 @@ export default function Jogo() {
                         {p.goleiro && <span className="sorteio-player__gk">GOL</span>}
                       </>
                     )}
-                    <span className="rating-pill">★ {p.rating}</span>
+                    <span className="rating-pill">★ {formatarAte(p.rating, 1)}</span>
                   </div>
                 ))}
               </div>

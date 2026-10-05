@@ -23,9 +23,9 @@ test('Ranking: a linha mostra os PONTOS (o score que ordena), rotulados, com a n
   const tela = ler('src/pages/Ranking.jsx');
   assert.match(tela, /formatScore\(p\.score\)/, 'o número que ordena aparece na linha');
   assert.match(tela, /data-pontos/);
-  assert.match(tela, />pontos</, 'rotulado "pontos"');
+  assert.match(tela, /\{' '\}pontos</, 'rotulado "pontos" (com um espaço de verdade: o texto lê "77,9 pontos", não "77,9pontos")');
   assert.match(tela, /<span className="muted">nota <\/span>/, 'a nota continua, ao lado');
-  assert.match(tela, /p\.nota\.toFixed\(1\)/);
+  assert.match(tela, /formatarNota\(p\.nota\)/, 'a nota passa pelo helper PT-BR (9,1), nunca toFixed (9.1)');
 });
 
 test('Ranking: uma linha curta no topo diz o que conta (texto pela régua da VOZ: curto, sem travessão, sem gíria)', () => {
@@ -40,16 +40,28 @@ test('Ranking: uma linha curta no topo diz o que conta (texto pela régua da VOZ
   assert.ok(frase.length <= 90, `uma linha curta (${frase.length} letras)`);
 });
 
-test('Ranking: a altura da linha não muda — continua uma linha de números só (o esqueleto mede 79 px)', () => {
+// Rodada 29Z: a linha "77,9 pontos · nota 9,1" era cortada pelo botão "Alterar" (reticências). Agora são dois grupos que não se partem
+// por dentro e quebram de linha — a nota desce para a segunda linha quando não cabem juntos —, sem white-space:nowrap e sem ellipsis
+// no contêiner. A medição de verdade (360 e 390 px, o botão ao lado) é a prova do navegador "rodada-29z".
+test('Ranking: pontos e nota nunca levam reticências — dois grupos que quebram de linha (29Z)', () => {
   const tela = ler('src/pages/Ranking.jsx');
-  assert.match(tela, /className="rank-votes" style=\{\{ marginTop: 4, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' \}\}/);
+  assert.match(tela, /className="rank-votes" style=\{\{ marginTop: 4, fontSize: 12 \}\}/, 'o contêiner não força nowrap nem ellipsis no estilo');
+  assert.match(tela, /className="rank-votes__grupo" data-grupo-pontos/);
+  assert.match(tela, /className="rank-votes__grupo" data-grupo-nota/);
+  const css = ler('src/styles/app.css');
+  const regra = css.match(/\.rank-votes \{([^}]*)\}/);
+  assert.ok(regra, 'a regra .rank-votes existe');
+  assert.match(regra[1], /flex-wrap:\s*wrap/, 'os grupos quebram de linha');
+  assert.doesNotMatch(regra[1], /text-overflow/, 'sem reticências');
+  assert.match(css, /\.rank-votes__grupo \{[^}]*white-space:\s*nowrap/, 'cada grupo não se parte por dentro');
 });
 
-test('os pontos saem com uma casa decimal (formatScore)', () => {
-  assert.equal(formatScore(87.36), '87.4');
-  assert.equal(formatScore(100), '100.0');
-  assert.equal(formatScore(0), '0.0');
-  assert.equal(formatScore(null), '0.0');
+test('os pontos saem com uma casa decimal e vírgula (formatScore, 29Z)', () => {
+  assert.equal(formatScore(87.36), '87,4');
+  assert.equal(formatScore(77.9), '77,9');
+  assert.equal(formatScore(100), '100,0');
+  assert.equal(formatScore(0), '0,0');
+  assert.equal(formatScore(null), '0,0');
 });
 
 test('Explorar: o título da lista leva o "· N" e não promete "perto de você" sem localização (29T, achado 161)', () => {

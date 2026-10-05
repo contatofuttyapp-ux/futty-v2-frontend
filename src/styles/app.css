@@ -921,9 +921,41 @@
   font-weight: 700;
 }
 
+/* Rodada 29Z: "77,9 pontos · nota 9,1" nunca mais leva reticências. Os pontos e a nota são dois grupos que não se partem por dentro; se
+   os dois não cabem na mesma linha (360 px com o botão "Alterar" ao lado), a nota desce para a segunda. O "·" que os separa é desenhado
+   no vão entre os grupos (::before do segundo, 10 px à esquerda): se o segundo desce, o "·" cai fora da caixa e o overflow o apara —
+   nunca sobra um ponto solto no fim da primeira linha. O "você deu / por votar" só aparece onde há folga (acima de 480 px). */
 .rank-votes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 1px;
+  overflow: hidden;
   font-size: 12px;
   color: var(--text-dim);
+}
+
+.rank-votes__grupo {
+  position: relative;
+  white-space: nowrap;
+}
+
+.rank-votes__grupo + .rank-votes__grupo::before {
+  content: '·';
+  position: absolute;
+  left: -10px;
+  width: 10px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.rank-votes__voto {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .rank-votes__voto { display: none; }
 }
 
 

@@ -75,7 +75,7 @@ function UmTime({ time, team, games }) {
         <EscudoEquipa team={team || { nome: time.nome }} size={36} />
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={ROTULO}>Seu time</span>
-          <span style={{ display: 'block', fontFamily: RAJ, fontWeight: 800, fontSize: 16, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{time.nome}</span>
+          <span data-nome-do-time style={{ display: 'block', fontFamily: RAJ, fontWeight: 800, fontSize: 16, lineHeight: 1.2, color: '#fff', overflowWrap: 'anywhere' }}>{time.nome}</span>
         </span>
         <ChevronRight size={16} color="var(--text-dim)" />
       </Link>
@@ -115,7 +115,7 @@ function SeusTimes({ seuTime: doMotor, teams, games }) {
             >
               <EscudoEquipa team={team || { nome: time.nome }} size={32} />
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontFamily: RAJ, fontWeight: 800, fontSize: 16, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{time.nome}</span>
+                <span data-nome-do-time style={{ display: 'block', fontFamily: RAJ, fontWeight: 800, fontSize: 16, lineHeight: 1.2, color: '#fff', overflowWrap: 'anywhere' }}>{time.nome}</span>
                 {resumo ? (
                   <span data-resumo-do-time style={{ display: 'block', fontSize: 12, color: '#f0c94a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{resumo}</span>
                 ) : null}

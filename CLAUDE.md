@@ -66,6 +66,15 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
 - Post nasce/vive na equipa (team_id); alcance global nunca.
 - v1 sem upload de vídeo (link embed YouTube/TikTok/IG); partilha = LINK + imagem 9:16.
 - Flag `teams.mostrar_gols` (admin) esconde gols/artilharia (radar 5↔3).
+- **NÚMERO COM CASA DECIMAL = PT-BR, POR UM HELPER SÓ (29Z, igual à lei da hora).** Brasileiro escreve 77,9 e 9,1, nunca 77.9 nem 9.10.
+  Todo número decimal que vira TEXTO passa por `src/utils/numero.js` (`formatarNota` uma casa, `formatarDecimal`, `formatarAte`,
+  `formatarUSD`/`formatarEUR`, `formatarSegundos`; `Intl.NumberFormat('pt-BR')`). Nada de `.toFixed(` em texto: só valor de CSS/SVG/animação/
+  chave de cache, e cada um está na lista de `scripts/unidade/numero-ptbr.test.mjs` (um `.toFixed(` novo reprova). A prova do navegador
+  `rodada-29z` e a captura das lojas também reprovam número com ponto no texto da tela.
+- **CELULAR ESTREITO (29Z): a régua é 360 × 780 além da 390.** Nada rola para o lado nem corta campo, botão ou nome; nome de time quebra em
+  duas linhas, nunca vira "…". `node scripts/varrer-estreito.mjs --base=http://localhost:<porta>` mede as telas principais (servidor local,
+  conta demo, nada gravado); a régua (`scripts/medir-estreito.mjs`) é a mesma da prova `rodada-29z`. Cartão de formulário em grid usa
+  `gridTemplateColumns: 'minmax(0, 1fr)'` (a coluna `auto` cresce até o conteúdo e o recorte de 45° aparava o excesso).
 - Onboarding dia-1 pede SÓ o que o dia-1 usa (foto quase-obrigatória, nome). O "Você é
   goleiro?" saiu (15-set, dono): o sorteio usa o goleiro marcado na confirmação de
   presença ou pelo admin.

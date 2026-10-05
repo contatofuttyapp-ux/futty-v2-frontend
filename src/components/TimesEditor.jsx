@@ -2,6 +2,7 @@
 // Move jogadores entre times/reservas, adiciona atrasados e grava via PATCH.
 import { useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
+import { formatarAte } from '../utils/numero';
 
 const EDITOR_CSS = `
 @keyframes teDropPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(139,92,246,0.5); } 50% { box-shadow: 0 0 0 4px rgba(139,92,246,0.15); } }
@@ -121,7 +122,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
         <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>{j.nome}</span>
         {j.cabeca_chave ? <span className="sorteio-player__cap">C</span> : null}
         {j.goleiro ? <span className="sorteio-player__gk">GOL</span> : null}
-        <span className="rating-pill">{j.rating}</span>
+        <span className="rating-pill">{formatarAte(j.rating, 1)}</span>
       </div>
     );
   }
@@ -145,7 +146,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
           >
             <div className="sorteio-team__head">
               <span>{t.nome}</span>
-              <span className="sorteio-team__avg">★ {media(t.jogadores)}</span>
+              <span className="sorteio-team__avg">★ {formatarAte(media(t.jogadores), 2)}</span>
             </div>
             {t.jogadores.map((j) => (
               <Jogador key={j.user_id} j={j} />

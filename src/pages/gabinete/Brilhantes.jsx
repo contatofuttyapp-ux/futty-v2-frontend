@@ -18,6 +18,7 @@ import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
 import EstadoErroRede from '../../components/EstadoErroRede';
 import { KITS_FIGURINHA } from '../../utils/kitsFigurinha';
+import { formatarDecimal, formatarUSD } from '../../utils/numero';
 import { contar } from '../../utils/plural';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -51,9 +52,9 @@ function fmtPreco(c) {
   if (c.loja === 'gabinete') return 'cortesia';
   if (c.preco == null) return '—';
   try {
-    return c.moeda ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: c.moeda }).format(c.preco) : String(c.preco);
+    return c.moeda ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: c.moeda }).format(c.preco) : formatarDecimal(c.preco, 2, String(c.preco));
   } catch {
-    return `${c.preco} ${c.moeda || ''}`.trim();
+    return `${formatarDecimal(c.preco, 2, String(c.preco))} ${c.moeda || ''}`.trim();
   }
 }
 function fmtDataHora(iso) {
@@ -269,7 +270,7 @@ export default function Brilhantes({ showMsg }) {
                       <td style={td}>{NOME_LOJA[c.loja] || c.loja}</td>
                       <td style={td}>
                         <div>{fmtPreco(c)}</div>
-                        {c.preco_usd != null && c.loja !== 'gabinete' ? <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>US${Number(c.preco_usd).toFixed(2)}</div> : null}
+                        {c.preco_usd != null && c.loja !== 'gabinete' ? <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{formatarUSD(c.preco_usd)}</div> : null}
                       </td>
                       <td style={{ ...td, color: sandbox ? 'var(--text-dim)' : undefined }}>{sandbox ? 'sandbox' : 'produção'}</td>
                       <td style={{ ...td, color: COR_ESTADO[c.estado] || undefined }}>{c.estado}</td>
@@ -317,12 +318,12 @@ export default function Brilhantes({ showMsg }) {
                       {t.geradas_sem_custo ? <span style={{ fontSize: 11, color: 'var(--text-dim)' }}> · {t.geradas_sem_custo} jogador(es) sem custo gravado</span> : null}
                     </td>
                     <td style={td}>
-                      <div>US${t.custo_usd.toFixed(2)}</div>
+                      <div>{formatarUSD(t.custo_usd)}</div>
                       {Array.isArray(t.custo_por_mes) && t.custo_por_mes.length ? (
                         <div style={{ display: 'grid', gap: 2, marginTop: 4, fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
                           {t.custo_por_mes.map((m) => (
                             <span key={m.mes}>
-                              {fmtMes(m.mes)}: US${m.custo_usd.toFixed(2)} · {m.geracoes} {m.geracoes === 1 ? 'geração' : 'gerações'}{m.sem_custo ? ` (${m.sem_custo} sem custo)` : ''}
+                              {fmtMes(m.mes)}: {formatarUSD(m.custo_usd)} ·{m.geracoes} {m.geracoes === 1 ? 'geração' : 'gerações'}{m.sem_custo ? ` (${m.sem_custo} sem custo)` : ''}
                             </span>
                           ))}
                         </div>

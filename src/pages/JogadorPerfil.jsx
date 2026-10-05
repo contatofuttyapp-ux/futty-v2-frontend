@@ -18,6 +18,7 @@ import LoadingFutty from '../components/LoadingFutty';
 import EscudoEquipa from '../components/EscudoEquipa';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import Icon from '../components/Icon';
+import { formatarDecimal, formatarNota } from '../utils/numero';
 import '../styles/app.css';
 
 const GOLD = '#d4a017';
@@ -98,7 +99,7 @@ function CountUp({ end, decimals = 0, prefix = '', className, style }) {
     return () => cancelAnimationFrame(raf);
   }, [end]);
   const val = prefersReduce || end == null ? end : n;
-  return <span className={className} style={style}>{end == null ? '—' : `${prefix}${val.toFixed(decimals)}`}</span>;
+  return <span className={className} style={style}>{end == null ? '—' : `${prefix}${formatarDecimal(val, decimals)}`}</span>;
 }
 
 export default function JogadorPerfil() {
@@ -332,7 +333,7 @@ export default function JogadorPerfil() {
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
                   {jogador.posicao != null ? (
                     <div>
-                      <div className="perfil-num" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 34, color: OURO, lineHeight: 1, animationDelay: '0.6s' }}>{notaShow.toFixed(1)}</div>
+                      <div className="perfil-num" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 34, color: OURO, lineHeight: 1, animationDelay: '0.6s' }}>{formatarNota(notaShow)}</div>
                       <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Nota</div>
                     </div>
                   ) : (
@@ -346,7 +347,7 @@ export default function JogadorPerfil() {
                 <div style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                   <div style={{ fontSize: 22, fontWeight: 700 }}>Top <CountUp end={jogador.posicao} className="perfil-num" style={{ display: 'inline-block' }} /></div>
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>de {jogador.total_com_nota} com nota</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: OURO, marginTop: 8 }}>{(notaAlvo ?? 0).toFixed(1)} / 10</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: OURO, marginTop: 8 }}>{formatarNota(notaAlvo ?? 0)} / 10</div>
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>média recebida</div>
                 </div>
               ) : (

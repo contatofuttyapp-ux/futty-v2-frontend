@@ -31,7 +31,7 @@ export default function IngressoDoJogo({ team = null, data, hora, local, porTime
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <EscudoEquipa team={team || { nome: '' }} size={44} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div data-ingresso-time style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 18, lineHeight: 1.15, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team?.nome || 'Seu time'}</div>
+          <div data-ingresso-time style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 18, lineHeight: 1.15, color: '#fff', overflowWrap: 'anywhere' }}>{team?.nome || 'Seu time'}</div>
           <div data-ingresso-dia style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 15, color: dia ? '#f0c94a' : 'var(--text-dim)', marginTop: 2 }}>{dia || 'Escolha o dia'}</div>
         </div>
         {/* o "canhoto": a hora em destaque, separada por uma linha pontilhada, como num ingresso */}
@@ -42,7 +42,7 @@ export default function IngressoDoJogo({ team = null, data, hora, local, porTime
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: nomeLocal ? '#fff' : 'var(--text-dim)' }}>
         <MapPin size={14} aria-hidden="true" style={{ flexShrink: 0, color: '#d4a017' }} />
-        <span data-ingresso-local style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeLocal || 'Onde vai ser o jogo'}</span>
+        <span data-ingresso-local style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{nomeLocal || 'Onde vai ser o jogo'}</span>
       </div>
       {porTime != null ? (
         <span data-ingresso-so-neste style={{ justifySelf: 'start', fontFamily: RAJ, fontWeight: 800, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: ROXO, border: '1px solid rgba(139,92,246,0.7)', background: 'rgba(139,92,246,0.16)', padding: '2px 8px', borderRadius: 2 }}>{porTime} por time · só neste jogo</span>
