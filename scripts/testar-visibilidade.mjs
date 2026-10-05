@@ -376,7 +376,9 @@ async function medirCardEscondidoAutenticado(browser, path, seletorCard, respost
   // janela de 1 s desta medição.
   await ctx.route(`https://${SUPABASE_REF}.supabase.co/**`, () => new Promise(() => {}));
   for (const [padrao, corpo] of Object.entries(respostasApi)) {
-    await ctx.route(`**${padrao}`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(corpo) }));
+    // Pelo caminho, não pelo glob da URL inteira: a Resenha pede `/api/feed?limite=20` desde a 29B (em páginas) e `**/api/feed` não casa com
+    // a query — o dado de mentira nunca chegava e o card da Resenha não nascia (falha antiga, achada na 29V).
+    await ctx.route((url) => url.pathname.endsWith(padrao), (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(corpo) }));
   }
 
   const pagina = await ctx.newPage();

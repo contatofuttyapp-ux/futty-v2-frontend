@@ -2,9 +2,11 @@
 // Fixo no fundo, mas ACIMA da BottomNav (a navegação nunca é tapada); uma linha;
 // fecha ao Aceitar OU na primeira interação real (scroll/toque/tecla). Só aparece
 // enquanto localStorage 'futty_cookies' não for 'aceite'.
+// Só no SITE (29V, 5-out): no app da loja (Capacitor) ela não existe — foi ela que gerou as perguntas da Apple na revisão.
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { shouldShowNav } from './Layout';
+import { ehNativo } from '../lib/plataforma';
 import { useAuth } from '../hooks/useAuth';
 import '../styles/app.css';
 
@@ -16,6 +18,7 @@ export default function CookieBanner() {
   const navVisivel = shouldShowNav(pathname, !!session);
   const bannerRef = useRef(null);
   const [visivel, setVisivel] = useState(() => {
+    if (ehNativo()) return false; // app da loja: nunca aparece (nem registra os ouvintes de interação abaixo)
     try {
       return localStorage.getItem(KEY) !== 'aceite';
     } catch {
