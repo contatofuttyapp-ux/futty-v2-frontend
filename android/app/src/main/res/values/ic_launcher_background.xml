@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 23-set: quem desenha o background do ícone adaptativo agora é o mipmap
-         PNG (vinheta+aro, ver ic_launcher.xml) — este valor não é mais lido por
+         PNG (a vinheta, sem aro desde a 29W; ver ic_launcher.xml) — este valor não é mais lido por
          nenhuma tela de ícone. Fica só como registo, atualizado para a mesma
          vinheta (#0b0a12) em vez do azul antigo (#050810), para não mentir a
          quem vier ler esta cor depois achando que ainda é ela quem manda. -->

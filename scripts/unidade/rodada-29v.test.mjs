@@ -1,5 +1,5 @@
 // Futty v2.0 — Rodada 29V (5-out): o F sem o círculo em todo lugar e a faixa de cookies só no site. O dono viu o ícone do app com o F dentro de um anel
-// dourado; o certo é o das lojas (FUT\LOJA\icone-512.png): quadrado escuro com o F dourado. Aqui trava o RESULTADO — o desenho dos arquivos, não a
+// dourado; a 29V pôs o das lojas (FUT\LOJA\icone-512.png, F amarelo chapado — arte antiga; a 29W trocou pelo "ouro vivo", ver rodada-29w.test.mjs). Aqui trava o RESULTADO — o desenho dos arquivos, não a
 // receita —, e a faixa que não aparece no app nativo roda de verdade num Chromium em scripts/provas/rodada-29v.prova.mjs (npm run provar:navegador).
 //
 // Uso: npm test
@@ -92,22 +92,23 @@ test('29V · o badge das notificações é só a silhueta do F: branca, com o fu
   assert.ok(parte > 0.2 && parte < 0.6, `o F ocupa uma boa parte do quadrado (${(parte * 100).toFixed(0)}%), sem sobrar nem faltar`);
 });
 
-test('29V · as notificações e o site apontam para o ícone novo (e saem do cache de 1 ano com o ?v=29v)', () => {
+// A versão exata (?v=, nome do cache) muda a cada troca de ícone e mora no teste da rodada que trocou (hoje, rodada-29w.test.mjs).
+test('29V · as notificações e o site apontam para o ícone, com ?v= (saem do cache de 1 ano) e o badge é a silhueta', () => {
   const sw = ler('public/sw.js');
-  assert.match(sw, /icon: '\/icons\/icon-192\.png\?v=29v'/);
+  assert.match(sw, /icon: '\/icons\/icon-192\.png\?v=\w+'/);
   assert.match(sw, /badge: '\/icons\/badge-96\.png'/, 'o badge é a silhueta, não o ícone colorido');
-  assert.match(sw, /const CACHE_NAME = 'futty-v5';/, 'o cache subiu de nome para jogar fora o ícone antigo');
+  assert.match(sw, /const CACHE_NAME = 'futty-v\d+';/);
   assert.ok(fs.existsSync(path.join(RAIZ, 'public/icons/badge-96.png')));
   const manifesto = JSON.parse(ler('public/manifest.json'));
-  assert.deepEqual(manifesto.icons.map((i) => i.src), ['/icons/icon-192.png?v=29v', '/icons/icon-512.png?v=29v']);
+  assert.match(manifesto.icons[0].src, /^\/icons\/icon-192\.png\?v=\w+$/);
+  assert.match(manifesto.icons[1].src, /^\/icons\/icon-512\.png\?v=\w+$/);
   assert.ok(manifesto.icons.every((i) => i.purpose === 'any maskable'), 'continua "any maskable"');
-  assert.match(ler('index.html'), /<link rel="apple-touch-icon" href="\/icons\/icon-192\.png\?v=29v" \/>/);
+  assert.match(ler('index.html'), /<link rel="apple-touch-icon" href="\/icons\/icon-192\.png\?v=\w+" \/>/);
 });
 
 test('29V · o gerador de ícones só redimensiona o asset real — o script que desenhava um F à mão saiu', () => {
   assert.equal(fs.existsSync(path.join(RAIZ, 'scripts/gen-icons.mjs')), false, 'o gen-icons.mjs desenhava um F e sobrescreveria os ícones');
   const gerador = ler('scripts/gerar-icones.mjs');
-  assert.match(gerador, /LOJA/, 'a fonte é o ícone das lojas');
   assert.doesNotMatch(semComentarios(gerador), /fal\.run|openai|createCanvas|<path /, 'nada de gerar nem desenhar');
 });
 

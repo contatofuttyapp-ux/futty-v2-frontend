@@ -6,7 +6,8 @@
 // v4 (15-set, Velocidade 6B): entraram /avatares/, /sorteio-assets/ e /sons/.
 // Subir o nome é o que faz o activate jogar fora o cache antigo.
 // v5 (5-out, 29V): os ícones do app trocaram (o F sem o anel) com o mesmo nome de arquivo.
-const CACHE_NAME = 'futty-v5';
+// v6 (5-out, 29W): trocaram de novo — o "ouro vivo" que o dono escolheu em 23-set, no lugar do F amarelo chapado da 29V.
+const CACHE_NAME = 'futty-v6';
 const STATIC_ASSETS = ['/', '/home', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -83,9 +84,9 @@ self.addEventListener('push', (e) => {
   const title = data.title || 'Futty';
   const options = {
     body: data.body || '',
-    // 29V (5-out): o F sem o anel. O ?v=29v troca a chave do cache — o /icons/* sai com `immutable` por 1 ano e o nome do
+    // 29V/29W (5-out): o "ouro vivo", sem anel. O ?v=29w troca a chave do cache — o /icons/* sai com `immutable` por 1 ano e o nome do
     // arquivo não mudou. O badge é só a silhueta (branca, fundo transparente): é o que o Android pinta na barra de status.
-    icon: '/icons/icon-192.png?v=29v',
+    icon: '/icons/icon-192.png?v=29w',
     badge: '/icons/badge-96.png',
     data: data.url || '/home',
   };

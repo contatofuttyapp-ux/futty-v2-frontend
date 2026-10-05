@@ -4,9 +4,12 @@
      Em launcher redondo saía um quadradão escuro a flutuar no branco.
      23-set — "ouro vivo + aro" (scripts/_bench/aplicar-icone.js, backend): o
      background voltou a ser PNG (não @color), mas por outro motivo — é a
-     vinheta #0b0a12→#1a1826 com o aro dourado da moldura da figurinha, que uma
-     cor chapada não desenha. O foreground continua só o F, transparente, com
-     o respiro da safe zone (66dp de 108) embutido no PNG. -->
+     vinheta #0b0a12→#1a1826, que uma cor chapada não desenha. O foreground
+     continua só o F, transparente, com o respiro da safe zone (66dp de 108)
+     embutido no PNG.
+     5-out, 29W — SEM ANEL (dono): a vinheta é a mesma, mas o aro dourado saiu
+     do background (com o F por cima, quase todo Android mostrava o F dentro de
+     um anel). Foreground e monochrome não mudaram. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background" />
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />
