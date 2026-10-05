@@ -140,13 +140,16 @@ test('29W · o F do site é o "ouro vivo" (degradê com brilho sobre a vinheta),
   }
 });
 
-test('29W · o ícone troca de chave no cache: ?v=29w no sw.js, no manifest e no apple-touch-icon, e o service worker em futty-v6', () => {
+// A versão exata (?v=, nome do cache) muda a cada troca de ícone e mora no teste da rodada que trocou (hoje, rodada-29x.test.mjs).
+test('29W · o ícone troca de chave no cache: ?v= (de 29w em diante) no sw.js, no manifest e no apple-touch-icon, e o service worker em futty-v6 ou mais', () => {
   const sw = ler('public/sw.js');
-  assert.match(sw, /icon: '\/icons\/icon-192\.png\?v=29w'/);
-  assert.match(sw, /const CACHE_NAME = 'futty-v6';/, 'o cache subiu de nome para jogar fora o ícone da 29V');
+  assert.match(sw, /icon: '\/icons\/icon-192\.png\?v=29[w-z]'/);
+  const cache = Number(sw.match(/const CACHE_NAME = 'futty-v(\d+)';/)?.[1]);
+  assert.ok(cache >= 6, 'o cache subiu de nome para jogar fora o ícone da 29V');
   const manifesto = JSON.parse(ler('public/manifest.json'));
-  assert.deepEqual(manifesto.icons.map((i) => i.src), ['/icons/icon-192.png?v=29w', '/icons/icon-512.png?v=29w']);
-  assert.match(ler('index.html'), /<link rel="apple-touch-icon" href="\/icons\/icon-192\.png\?v=29w" \/>/);
+  assert.match(manifesto.icons[0].src, /^\/icons\/icon-192\.png\?v=29[w-z]$/);
+  assert.match(manifesto.icons[1].src, /^\/icons\/icon-512\.png\?v=29[w-z]$/);
+  assert.match(ler('index.html'), /<link rel="apple-touch-icon" href="\/icons\/icon-192\.png\?v=29[w-z]" \/>/);
   for (const arquivo of ['public/sw.js', 'public/manifest.json', 'index.html']) assert.doesNotMatch(ler(arquivo), /\?v=29v/, `${arquivo} ainda aponta para o ícone da 29V`);
 });
 
