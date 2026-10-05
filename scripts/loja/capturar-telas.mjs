@@ -24,10 +24,15 @@
 //               com o último jogo remarcado para o próximo domingo e sem resposta minha, que é o que faz o
 //               aviso "Você vai?" subir ao topo. Nenhuma linha do banco muda.
 //   · radar   — tira as seis peladas radar-teste-* (são de demonstração, com jogadores fictícios) e põe o
-//               bairro nos três times públicos da demo, que nasceram antes da coluna `bairro` (migração 073).
+//               bairro nos três times públicos da demo, que nasceram antes da coluna `bairro` (migração 073), e o
+//               LOGO de cada um (LOJA/demo-logos/<time>.png, desenhados pela Freaky), servido por esta própria
+//               captura no endereço /__demo-logos/<time>.png — nada novo em public/, nada no banco.
+//   · sorteio e ranking — os jogadores da demo ganham ROSTO: o `avatar_url` deles (hoje a silhueta genérica do
+//               bucket `kits`) é trocado, na resposta, pelos avatares que já existem em public/onboarding/ (modelos
+//               gerados, não são pessoas do Futty). Ver ROSTOS_DA_DEMO. O Bruninho continua com a figurinha dele.
 //
 // Saída: LOJA/<--cruas>/<tela>.png — 8 arquivos, consumidos por scripts/loja/gerar-imagens.mjs.
-import { readFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -201,16 +206,59 @@ const BAIRROS_DA_DEMO = {
   'society-lago-sul-demo': 'Lago Sul',
 };
 
-/** O Radar só com os times da demo: as seis peladas radar-teste-* (de demonstração, jogadores fictícios) saem da lista. */
+/** O Radar só com os times da demo: as seis peladas radar-teste-* (de demonstração, jogadores fictícios) saem da lista; cada time da demo ganha bairro e logo. */
 function radarSoDaDemo(corpo) {
   const times = (corpo?.teams || [])
     .filter((t) => !String(t.slug || '').startsWith('radar-teste-'))
-    .map((t) => (BAIRROS_DA_DEMO[t.slug] ? { ...t, bairro: BAIRROS_DA_DEMO[t.slug] } : t));
+    .map((t) => (BAIRROS_DA_DEMO[t.slug] ? { ...t, bairro: BAIRROS_DA_DEMO[t.slug], logo_url: `${BASE}${ROTA_DOS_LOGOS}${t.slug.replace(/-demo$/, '')}.png` } : t));
   if (!times.length) throw new Error('o Radar ficou sem nenhum time depois de tirar as peladas de teste');
   return { ...corpo, teams: times };
 }
 
+// Os logos dos três times da demo (desenhados pela Freaky em LOJA/demo-logos). Sem arquivo, a captura para: peça de loja sem o logo
+// que o dono pediu não sai em silêncio.
+const PASTA_LOGOS = join(LOJA, 'demo-logos');
+const logoDoTime = (slug) => join(PASTA_LOGOS, `${String(slug).replace(/-demo$/, '')}.png`);
+const ROTA_DOS_LOGOS = '/__demo-logos/';
+
+// Os rostos da demo: avatares que JÁ existem em public/onboarding/ (nada novo no repositório). O nome casa → o mesmo rosto (Dudu → dudu,
+// Tiãozinho → tiagao); o Cabeção fica com o goncalo (ordem do dono, 5-out). Os rostos que sobram (caio, nando, pedrao, rafa) vão, na ordem
+// do Ranking, para quem aparece logo depois no alto da lista. Os que não aparecem aqui ficam com a silhueta da casa (a mistura de foto e
+// figurinha é de propósito). O Bruninho não entra: continua com a figurinha dele. Nenhum rosto serve a dois jogadores — a tabela é conferida
+// abaixo, e por isso nenhum rosto repete numa mesma tela.
+const PASTA_ROSTOS = join(AQUI, '..', '..', 'public', 'onboarding');
+const ROSTOS_DA_DEMO = {
+  Dudu: 'dudu',
+  'Tiãozinho': 'tiagao',
+  'Cabeção': 'goncalo',
+  Fabinho: 'caio',
+  'Paulinho Gaúcho': 'nando',
+  Marquinhos: 'pedrao',
+  Renatinho: 'rafa',
+};
+const rostoUnico = new Set(Object.values(ROSTOS_DA_DEMO));
+if (rostoUnico.size !== Object.keys(ROSTOS_DA_DEMO).length) throw new Error('ROSTOS_DA_DEMO repete um rosto: nenhum rosto serve a dois jogadores');
+if ('Bruninho' in ROSTOS_DA_DEMO) throw new Error('o Bruninho continua com a figurinha dele: não entra em ROSTOS_DA_DEMO');
+const rostosUsados = new Map(); // nome → rosto, o que de fato foi trocado (para o relatório)
+
+/** Troca o avatar dos jogadores da demo pelo rosto da tabela, em qualquer lugar da resposta onde apareça um jogador (user_id + nome). */
+function comRostos(corpo) {
+  const andar = (no) => {
+    if (Array.isArray(no)) return no.map(andar);
+    if (!no || typeof no !== 'object') return no;
+    const saida = Object.fromEntries(Object.entries(no).map(([k, v]) => [k, andar(v)]));
+    const nome = saida.nome_jogador || saida.nome;
+    if (saida.user_id && 'avatar_url' in saida && ROSTOS_DA_DEMO[nome]) {
+      rostosUsados.set(nome, ROSTOS_DA_DEMO[nome]);
+      return { ...saida, avatar_url: `/onboarding/${ROSTOS_DA_DEMO[nome]}.webp` };
+    }
+    return saida;
+  };
+  return andar(corpo);
+}
+
 // ── As 8 telas ────────────────────────────────────────────────────────────────────────────────────────
+for (const r of rostoUnico) if (!existsSync(join(PASTA_ROSTOS, `${r}.webp`))) throw new Error(`falta o avatar public/onboarding/${r}.webp`);
 mkdirSync(CRUAS, { recursive: true });
 const navegador = await chromium.launch();
 const { ctx, page } = await novoContexto(navegador, { reducedMotion: 'reduce' });
@@ -240,13 +288,21 @@ if (quer('figurinha')) {
 
 // 5 · Ranking
 if (quer('ranking')) {
+  await page.route(`**/api/teams/${estado.teamSlug}/ranking`, (route) => (route.request().method() === 'GET' ? responderComJson(route, comRostos) : route.fallback()));
   await page.goto(`${BASE}/time/${estado.teamSlug}/ranking`);
   await page.waitForSelector('.rank-list .rank-row', { timeout: 60000 });
   await assentar(page);
   // Confete do pódio (canvas-confetti): o canvas some quando a animação acaba.
   await page.waitForFunction(() => !document.querySelector('canvas'), null, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(500);
+  // Os rostos de verdade: cada avatar de /onboarding/ carregou, e nenhum rosto aparece duas vezes na tela.
+  const rostos = await page.evaluate(() => [...document.querySelectorAll('.rank-row img')].filter((i) => i.src.includes('/onboarding/')).map((i) => ({ src: i.src.split('/').pop(), ok: i.complete && i.naturalWidth > 0 })));
+  if (!rostos.length) throw new Error('o Ranking não mostra nenhum rosto de /onboarding/');
+  if (rostos.some((r) => !r.ok)) throw new Error(`rosto que não carregou no Ranking: ${rostos.filter((r) => !r.ok).map((r) => r.src).join(', ')}`);
+  if (new Set(rostos.map((r) => r.src)).size !== rostos.length) throw new Error(`rosto repetido no Ranking: ${rostos.map((r) => r.src).join(', ')}`);
+  console.log(`      Ranking: ${rostos.length} rosto(s), nenhum repetido — ${rostos.map((r) => r.src.replace('.webp', '')).join(', ')}`);
   await capturar(page, 'ranking');
+  await page.unroute(`**/api/teams/${estado.teamSlug}/ranking`);
 }
 
 // 6 · Resenha
@@ -257,8 +313,15 @@ if (quer('resenha')) {
   await capturar(page, 'resenha');
 }
 
-// 7 · Radar de peladas (só os times da demo, com bairro e "Sobre o time")
+// 7 · Radar de peladas (só os times da demo, com bairro, logo próprio e "Sobre o time")
 if (quer('radar')) {
+  // Os logos saem de LOJA/demo-logos, servidos aqui mesmo no endereço que a resposta simulada põe em `logo_url` (nada novo em public/).
+  for (const slug of Object.keys(BAIRROS_DA_DEMO)) if (!existsSync(logoDoTime(slug))) throw new Error(`falta o logo ${logoDoTime(slug)} (desenhado pela Freaky)`);
+  await page.route(`**${ROTA_DOS_LOGOS}*.png`, (route) => {
+    const nomeDoLogo = new URL(route.request().url()).pathname.slice(ROTA_DOS_LOGOS.length).replace(/.png$/, '');
+    if (!/^[a-z-]+$/.test(nomeDoLogo) || !existsSync(logoDoTime(nomeDoLogo))) return route.fulfill({ status: 404, body: '' });
+    return route.fulfill({ status: 200, contentType: 'image/png', body: readFileSync(logoDoTime(nomeDoLogo)) });
+  });
   await page.route('**/api/teams/explorar*', (route) => (route.request().method() === 'GET'
     ? responderComJson(route, radarSoDaDemo)
     : route.fallback()));
@@ -274,8 +337,13 @@ if (quer('radar')) {
   if (comBairro < cartoes.length) throw new Error(`${cartoes.length - comBairro} card(s) do Radar sem "Bairro · Cidade"`);
   if (!(await page.locator('[data-sobre-do-time]').count())) throw new Error('nenhum card do Radar mostra o "Sobre o time"');
   console.log(`      Radar: ${cartoes.length} time(s) da demo, todos com bairro — ${cartoes.join(', ')}`);
+  const logos = await page.locator('[data-card-do-time] [data-escudo="logo"] img').evaluateAll((els) => els.map((el) => ({ src: el.src.split('/').pop(), ok: el.complete && el.naturalWidth > 0 })));
+  if (logos.length !== cartoes.length) throw new Error(`${cartoes.length - logos.length} card(s) do Radar sem o logo próprio (iniciais no lugar)`);
+  if (logos.some((l) => !l.ok)) throw new Error(`logo que não carregou no Radar: ${logos.filter((l) => !l.ok).map((l) => l.src).join(', ')}`);
+  console.log(`      Radar: ${logos.length} logo(s) próprio(s) carregado(s) — ${logos.map((l) => l.src).join(', ')}`);
   await capturar(page, 'radar', { rolarAte: 'input[placeholder^="Cidade ou nome"]' });
   await page.unroute('**/api/teams/explorar*');
+  await page.unroute(`**${ROTA_DOS_LOGOS}*.png`);
 }
 
 // 4 · Novo jogo com o ingresso preenchido (nada é gravado: o "Criar jogo" não é tocado)
@@ -359,6 +427,10 @@ if (quer('sorteio')) {
   const sorteado = jogos.find((g) => g.sorteio_realizado);
   if (!sorteado) throw new Error('o time da demo não tem nenhum jogo sorteado (rode backend/scripts/demo-loja.js --sortear)');
 
+  // Os rostos da demo entram na resposta do jogo (o sorteio guardado), como no Ranking. Só o GET do jogo; o resto passa direto.
+  await p2.route('**/api/games/*', (route) => (route.request().method() === 'GET' && new URL(route.request().url()).pathname === `/api/games/${sorteado.id}`
+    ? responderComJson(route, comRostos)
+    : route.fallback()));
   await p2.goto(`${BASE}/time/${estado.teamSlug}/jogo/${sorteado.id}/sorteio`);
   await p2.waitForSelector('.smaq .saltar.on', { timeout: 60000 });
   const saltar = p2.locator('.smaq .saltar button');
