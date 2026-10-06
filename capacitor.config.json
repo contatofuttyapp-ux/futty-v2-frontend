@@ -12,5 +12,11 @@
   },
   "ios": {
     "backgroundColor": "#080808"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": true,
+      "appId": "com.futty.app"
+    }
   }
 }

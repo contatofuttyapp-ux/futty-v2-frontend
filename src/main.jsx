@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { marcarArranque, observarImagens, vigiarLargura } from './lib/diagnostico'
 import { prepararSentry } from './lib/sentryTardio'
 import { pararAnimacoesForaDeVista } from './lib/ritmo'
+import { ehNativo } from './lib/plataforma'
 
 // VELOCIDADE 8 (16-set) — PRIMEIRA LINHA DO CORPO, de propósito. Em ESM os
 // imports acima já foram buscados, lidos e EXECUTADOS quando esta linha corre,
@@ -39,6 +40,17 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+// Capgo (6-out) — atualização ao vivo das telas, sem passar pela loja (CAPGO.md). `notifyAppReady` avisa a camada
+// nativa de que ESTE bundle abriu: sem o aviso (10 s por padrão) o Capgo acha que o app travou e desfaz a atualização.
+// A doc manda chamar logo no arranque, antes de qualquer rede — por isso aqui, colado ao render, e não numa tela.
+// Import dinâmico e só no nativo: o plugin não entra no peso do arranque e a web nunca o carrega. Falhar aqui só
+// vai para o log; o app segue (o pior caso é o Capgo voltar ao bundle anterior, nunca o app ficar sem abrir).
+if (ehNativo()) {
+  import('@capgo/capacitor-updater')
+    .then(({ CapacitorUpdater }) => CapacitorUpdater.notifyAppReady())
+    .catch((err) => console.warn('[Futty] Capgo notifyAppReady:', err))
+}
 
 // Regista o service worker (PWA instalável + base para push). Falha em silêncio.
 if ('serviceWorker' in navigator) {
