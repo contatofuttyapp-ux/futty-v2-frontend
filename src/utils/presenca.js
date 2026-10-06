@@ -1,7 +1,9 @@
-// Futty v2.0 — Rodada 29I (achado 86): as contas da presença (RSVP) que o Início faz na tela — puras (sem React, sem rede), para testar no Node.
+// Futty v2.0 — as contas da presença (RSVP) que o Início faz na tela — puras (sem React, sem rede), para
+// testar no Node.
 //
-// O "Vou / Não vou" grava no RSVP do jogo. A tela mostra o resultado NA HORA (estado otimista) e, se o pedido falhar, volta ao que
-// estava: tudo se resume a "qual é a resposta de agora" — `respostaAgora` — e o número de confirmados e o status do botão saem dela.
+// O "Vou / Não vou" grava no RSVP do jogo. A tela mostra o resultado NA HORA (estado otimista) e, se o
+// pedido falhar, volta ao que estava: tudo se resume a "qual é a resposta de agora" — `respostaAgora` — e o
+// número de confirmados e o status do botão saem dela.
 
 /** A resposta de presença de `meuId` no RSVP que o motor mandou: 'confirmado' | 'recusado' | null (ainda não respondeu). */
 export function respostaNoRsvp(rsvp, meuId) {

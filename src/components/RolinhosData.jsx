@@ -1,17 +1,19 @@
-// Futty v2.0 — Rodada 29H (item 3): a data de nascimento em ROLINHOS (dia · mês · ano), um componente só para o
-// cadastro, o onboarding e o banner do Início — igual no iPhone, no Android e no computador (o <input type="date">
-// era um seletor diferente em cada sistema, e o do iPhone nem mostrava o dia).
+// Futty v2.0 — A data de nascimento em ROLINHOS (dia · mês · ano), um componente só para o cadastro, o
+// onboarding e o banner do Início — igual no iPhone, no Android e no computador (o <input type="date"> era
+// um seletor diferente em cada sistema, e o do iPhone nem mostrava o dia).
 //
-// Regras: nenhum ano futuro (a lista de anos acaba em ano atual − IDADE_MINIMA, o mesmo teto de `nascimentoMaximo()`);
-// o dia acompanha o mês (30, 31, fevereiro 28/29). O componente só entrega a data (`onChange('AAAA-MM-DD')`) quando a
-// pessoa mexeu nos TRÊS rolos (rolou, tocou na coluna ou apertou as setas) — o valor de partida é só um lugar para os
-// rolos começarem, nunca uma resposta; tocar na coluna já vale como "mexi" (quem nasceu no dia 15, o dia de partida,
-// confirma o 15 só de tocar nele). Quem decide se a idade serve é quem chama (`menorQueIdadeMinima`, `MSG_MENOR`); aqui um mês/dia depois do teto no último
-// ano continua escolhível de propósito, para a frase da casa aparecer em vez de o rolo recusar em silêncio.
+// Regras: nenhum ano futuro (a lista de anos acaba em ano atual − IDADE_MINIMA, o mesmo teto de
+// `nascimentoMaximo()`); o dia acompanha o mês (30, 31, fevereiro 28/29). O componente só entrega a data
+// (`onChange('AAAA-MM-DD')`) quando a pessoa mexeu nos TRÊS rolos (rolou, tocou na coluna ou apertou as
+// setas) — o valor de partida é só um lugar para os rolos começarem, nunca uma resposta; tocar na coluna
+// já vale como "mexi" (quem nasceu no dia 15, o dia de partida, confirma o 15 só de tocar nele). Quem
+// decide se a idade serve é quem chama (`menorQueIdadeMinima`, `MSG_MENOR`); aqui um mês/dia depois do
+// teto no último ano continua escolhível de propósito, para a frase da casa aparecer em vez de o rolo
+// recusar em silêncio.
 //
-// Rolo = lista com rolagem e `scroll-snap` (CSS em app.css, ".rolinhos"): o item no centro é o escolhido. Toque num
-// item o leva ao centro; setas ↑ ↓ andam um item (teclado e leitor de tela: role="listbox"). Estado natural visível,
-// sem animação em JS.
+// Rolo = lista com rolagem e `scroll-snap` (CSS em app.css, ".rolinhos"): o item no centro é o escolhido.
+// Toque num item o leva ao centro; setas ↑ ↓ andam um item (teclado e leitor de tela: role="listbox").
+// Estado natural visível, sem animação em JS.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ANO_MINIMO, MESES, anoMaximo as anoMaximoDeHoje, comporData, diasDoMes } from '../utils/dataRolinhos';
 

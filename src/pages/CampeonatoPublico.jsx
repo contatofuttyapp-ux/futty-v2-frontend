@@ -1,4 +1,4 @@
-// Futty v2.0 — Vista pública do campeonato (Vaga 11B): o link partilhável.
+// Futty v2.0 — Vista pública do campeonato: o link partilhável.
 // Sem login. Marca FUTTY + tabela/bracket + campeão celebrado + CTA de registo.
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';

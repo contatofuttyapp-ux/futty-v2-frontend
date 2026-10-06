@@ -1,9 +1,11 @@
-// Futty v2.0 — Rodada 29Z (item 3e): a RÉGUA do celular estreito, uma só para a varredura (scripts/varrer-estreito.mjs, contra o servidor local
-// com a conta demo) e para a prova do navegador (scripts/provas/rodada-29z.prova.mjs, com o motor de mentira). Roda DENTRO da página
-// (page.evaluate(medir, larguraDaJanela)) e por isso não pode usar nada de fora dela: tudo que precisa mora dentro da função.
+// Futty v2.0 — a RÉGUA do celular estreito, uma só para a varredura (scripts/varrer-estreito.mjs, contra o
+// servidor local com a conta demo) e para a prova do navegador (em scripts/provas/, com o motor de
+// mentira). Roda DENTRO da página (page.evaluate(medir, larguraDaJanela)) e por isso não pode usar nada de
+// fora dela: tudo que precisa mora dentro da função.
 //
-// Devolve a lista de defeitos que a pessoa sentiria: rolagem para o lado, texto com reticências, campo/botão/texto cortado por um cartão,
-// elemento que passa da borda da janela, e número com PONTO decimal no texto (a lei de números em PT-BR da 29Z).
+// Devolve a lista de defeitos que a pessoa sentiria: rolagem para o lado, texto com reticências,
+// campo/botão/texto cortado por um cartão, elemento que passa da borda da janela, e número com PONTO
+// decimal no texto (a lei de números em PT-BR).
 
 
 export function medir(larguraJanela) {

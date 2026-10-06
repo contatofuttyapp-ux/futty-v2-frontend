@@ -248,7 +248,6 @@ test('161 · o Radar liga o título à origem da posição: o botão da localiza
   assert.doesNotMatch(tela, /Times perto de você/);
 });
 
-// ── G · achado 162 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 test('162 · "Esperando a aprovação do admin" — e nenhum "À espera" de aprovação em lugar nenhum do app', () => {
   assert.match(ler('src/pages/Inicio.jsx'), /Esperando a aprovação do admin\. Avisamos você aqui quando decidir\./);
   const achados = [];
@@ -263,7 +262,6 @@ test('162 · "Esperando a aprovação do admin" — e nenhum "À espera" de apro
   assert.deepEqual(achados, []);
 });
 
-// ── H · achado 163 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 test('163 · a frase "Você só organiza este time, então não entra na lista de presença…" sai de cima dos Próximos jogos; fica a linha do card', () => {
   const inicio = ler('src/pages/Inicio.jsx');
   assert.doesNotMatch(inicio, /então não entra na lista de presença/);
@@ -271,7 +269,6 @@ test('163 · a frase "Você só organiza este time, então não entra na lista d
   assert.equal((inicio.match(/Você só organiza este time\./g) || []).length, 1, 'uma vez só');
 });
 
-// ── I · achado 165 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 test('165 · o rabicho com a cidade do time: "horário de Brasília" para um time de Brasília visto de Lisboa', () => {
   assert.equal(rabichoDoFuso('2026-10-08T23:00:00Z', SP, { cidade: 'Brasília - DF', olhando: LISBOA }), 'horário de Brasília');
   assert.equal(formatarDataHora('2026-10-08T23:00:00Z', SP, { cidade: 'Brasília, DF', olhando: LISBOA }), 'qui., 8 de out. · 20:00 · horário de Brasília');
@@ -304,7 +301,6 @@ test('165 · em todo lugar que mostra o rabicho a cidade do time vai junto (nenh
   assert.match(ler('src/pages/AdminPanel.jsx'), /<RSVPAdmin gameId=\{g\.id\} slug=\{slug\} cidade=\{team\?\.cidade\}/);
 });
 
-// ── J · achado 166 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 test('166 · Criar time, passo 1: o Continuar está lá desde o começo, apagado (não-permitido), e acende com nome e cidade', () => {
   const criar = ler('src/pages/CriarEquipa.jsx');
   assert.match(criar, /<Cta cheio disabled=\{!podeContinuar\} data-continuar-passo-1 onClick=\{\(\) => irParaPasso\(2\)\}>Continuar<\/Cta>/);
@@ -313,7 +309,6 @@ test('166 · Criar time, passo 1: o Continuar está lá desde o começo, apagado
   assert.match(criar, /opacity: rest\.disabled \? 0\.5 : 1/);
 });
 
-// ── K · achado 167 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 test('167 · o bairro não exemplifica "Pinheiros": o placeholder é "Onde vocês jogam"', () => {
   assert.match(ler('src/components/CampoBairro.jsx'), /placeholder = 'Onde vocês jogam'/);
   const achados = [];
@@ -349,7 +344,6 @@ test('167 · os exemplos dos campos têm um formato só: "Ex.: …" (nunca "Ex: 
   assert.match(ler('src/pages/CriarEquipa.jsx'), /placeholder="Ex\.: Domingueira FC"/);
 });
 
-// ── L · achado 164 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 test('164 · o nome no Início nunca corta: a letra desce até caber (o piso de 28 px saiu), como o nome da figurinha', () => {
   const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
   const nome = inicio.slice(inicio.indexOf('function NomeCromo'), inicio.indexOf('// ----- Card de jogo'));

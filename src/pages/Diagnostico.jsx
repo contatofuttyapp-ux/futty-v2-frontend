@@ -1,4 +1,4 @@
-// Futty v2.0 — Diagnóstico: o que o app mediu de si próprio (VELOCIDADE 4).
+// Futty v2.0 — Diagnóstico: o que o app mediu de si próprio.
 //
 // Existe para trocar "está lento" por números, e sobretudo para separar as duas
 // coisas que toda gente confunde:
@@ -9,8 +9,8 @@
 //   REDE  — o que sobra. É a distância a cobrar: de Lisboa a São Paulo são
 //           ~250 ms de ida e volta, e nenhum código nosso encurta isso.
 //
-// RODADA 28 — só o super-admin chega aqui (App.jsx: SuperAdminGuard), pelo
-// Gabinete. Para toda gente, quem traz o número do aparelho agora é a telemetria
+// Só o super-admin chega aqui (App.jsx: SuperAdminGuard), pelo
+// Gabinete. Para toda gente, quem traz o número do aparelho é a telemetria
 // anônima de velocidade (lib/telemetria.js → Gabinete, aba Velocidade), sem botão.
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
@@ -50,7 +50,7 @@ function Numero({ rotulo, stat, sufixo = 'ms' }) {
   );
 }
 
-// Rodada 8A: os instantes finos de uma tela, numa linha só
+// Os instantes finos de uma tela, numa linha só
 // ("lista 12 · 1º quadro 30 · maior quadro 1800@40 · imagem 850").
 const NOMES_MARCAS = [
   ['lista', 'lista'],
@@ -67,7 +67,7 @@ function linhaDeMarcas(marcas) {
   return partes.join(' · ');
 }
 
-// Velocidade 8 — "travadas >100 ms: n (pior x ms, fase y)".
+// Resumo: "travadas >100 ms: n (pior x ms, fase y)".
 function linhaDeTravadas(t) {
   if (!t) return null;
   if (!t.leves) return 'Travadas: nenhuma (nenhum quadro passou de 50 ms)';
@@ -81,8 +81,8 @@ function linhaDeFases(t) {
   return fases.length ? fases.map(([nome, n]) => `${nome} ${n}`).join(' · ') : null;
 }
 
-// Velocidade 8 — "arranque: compilação a ms, React b ms, Início c ms".
-// Fluidez 2 — diz também POR ONDE o app entrou: 1200 ms a abrir direto no
+// Resumo: "arranque: compilação a ms, React b ms, Início c ms".
+// Diz também POR ONDE o app entrou: 1200 ms a abrir direto no
 // Início e 18000 ms a passar pelo login são números de coisas diferentes.
 function linhaDeArranque(a) {
   if (!a || a.compilacaoMs == null) return null;
@@ -163,13 +163,13 @@ export default function Diagnostico() {
           servidor; <b style={{ color: '#b69cff' }}>rede</b> é o que a distância cobra.
         </p>
 
-        {/* ─── Último erro fatal (build 10) ─── */}
+        {/* ─── Último erro fatal ─── */}
         {ultimoErro ? (
           <div>
             <div className="games-label">Último erro (crash)</div>
             <div className="hud-corners-s" style={{ ...CARTAO, display: 'grid', gap: 6 }}>
               <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                {/* 29I (achado 83): o instante do crash é lido no relógio de quem olha (o do aparelho que travou), não no fuso de time nenhum. */}
+                {/* O instante do crash é lido no relógio de quem olha (o do aparelho que travou), não no fuso de time nenhum. */}
                 {new Date(ultimoErro.data).toLocaleString('pt-BR')} · rota {ultimoErro.rota || '—'}
               </div>
               <div style={{ fontSize: 12.5, lineHeight: 1.5, color: '#f8b4b4', wordBreak: 'break-word' }}>
@@ -194,10 +194,10 @@ export default function Diagnostico() {
           <Numero rotulo="Tela na frente" stat={resumo.pintura} />
         </div>
 
-        {/* ─── Fluidez (VELOCIDADE 8) ───
+        {/* ─── Fluidez ───
             Uma travada é um quadro que demorou mais do que devia: acima de 50 ms
             a rolagem sente-se aos solavancos, acima de 100 ms a pessoa vê a tela
-            parar. A FASE é o que aponta para o conserto — travar no arranque, no
+            parar. A fase é o que aponta para o conserto — travar no arranque, no
             pré-aquecimento ou ao trocar de tela são três problemas diferentes. */}
         <div className="hud-corners-s" style={CARTAO}>
           <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>
@@ -217,7 +217,7 @@ export default function Diagnostico() {
                 {linhaDeArranque(resumo.arranque)}
               </>
             ) : null}
-            {/* Rodada 12A: o tempo com o app noutra coisa, separado das travadas
+            {/* O tempo com o app noutra coisa, separado das travadas
                 (ver o porquê em lib/diagnostico.js). */}
             {resumo.segundoPlano?.vezes ? (
               <>
@@ -234,7 +234,7 @@ export default function Diagnostico() {
                 <div key={i} style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                   <span style={{ color: t.ms >= 250 ? '#f8b4b4' : '#f0c94a', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700 }}>{t.ms} ms</span>
                   {' · '}{t.fase}{' · aos '}{formatarSegundos(t.em)}
-                  {/* Rodada 12A: o que estava a correr. "arranque" sozinho não
+                  {/* O que estava a correr. "arranque" sozinho não
                       aponta para conserto nenhum; "arranque · cromo:compor" sim. */}
                   {t.tarefas?.length ? <span style={{ color: '#b69cff' }}>{' · '}{t.tarefas.join(', ')}</span> : null}
                 </div>
@@ -256,7 +256,7 @@ export default function Diagnostico() {
               : 'Conexão: o aparelho não informa'}
             <br />
             Telas abertas: {resumo.navegacoes} · pintaram do cache: {resumo.pinturasDoCache}
-            {/* Velocidade 6B: quantas imagens o app mostrou e quantas nem foram
+            {/* Quantas imagens o app mostrou e quantas nem foram
                 à rede. É o número que diz se o ganho é real no aparelho. */}
             {resumo.imagens ? (
               <>
@@ -264,7 +264,7 @@ export default function Diagnostico() {
                 Imagens: {resumo.imagens.n} · média {resumo.imagens.mediaMs}ms · {resumo.imagens.pctDoCache}% do cache
               </>
             ) : null}
-            {/* Velocidade 7B + Rodada 12A: o que conta é o transbordo contra a
+            {/* O que conta é o transbordo contra a
                 tela NA ORIENTAÇÃO da altura — deitado, 932 em 932 é zero. */}
             {resumo.largura ? (
               <>
@@ -300,7 +300,7 @@ export default function Diagnostico() {
           </div>
         ) : null}
 
-        {/* ─── Falhas silenciosas (VELOCIDADE 5) ─── */}
+        {/* ─── Falhas silenciosas ─── */}
         {falhas.length > 0 ? (
           <div>
             <div className="games-label">Não apareceu ({falhas.length})</div>
@@ -372,7 +372,7 @@ export default function Diagnostico() {
                       <td style={{ padding: '7px 10px' }}>
                         {rotaCurta(n.rota)}
                         {n.doCache ? <span style={{ color: '#7bd88f', fontSize: 11 }}> · cache</span> : null}
-                        {/* Velocidade 7B: que loader a pintura esperou (código da tela, sessão, a própria tela). */}
+                        {/* Que loader a pintura esperou (código da tela, sessão, a própria tela). */}
                         {n.esperou?.length ? <span style={{ color: '#f0c94a', fontSize: 11 }}> · esperou {n.esperou.join(', ')}</span> : null}
                         {linhaDeMarcas(n.marcas) ? (
                           <div style={{ color: 'var(--text-dim)', fontSize: 10.5, lineHeight: 1.4, marginTop: 2 }}>{linhaDeMarcas(n.marcas)}</div>

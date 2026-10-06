@@ -16,12 +16,12 @@ export const COR_POR_TIME = ['verde', 'azul', 'vermelho', 'preto'];
 const CORES_VALIDAS = ['verde', 'azul', 'vermelho', 'preto'];
 
 // ─── Mídia que não viaja dentro do app ───────────────────────────────────────
-// 13-set. O pacote da loja leva só a casca: código, CSS, fontes, ícones, splash
+// O pacote da loja leva só a casca: código, CSS, fontes, ícones, splash
 // e os fundos que entram em canvas. O resto da mídia é buscado da web na hora e
 // fica em cache no aparelho (Cache-Control immutable — ver public/_headers).
 //
-// Só estas pastas (Rodada 29B, D: + /dados/, a lista de cidades do campo "Cidade", ~230 KB). As imagens de fundo da figurinha (stadium_bg,
-// futty-logo-flat, as chapas) continuam DENTRO do app de propósito: elas entram
+// Só estas pastas (inclui /dados/, a lista de cidades do campo "Cidade", ~230 KB). As imagens de fundo
+// da figurinha (stadium_bg, futty-logo-flat, as chapas) continuam DENTRO do app de propósito: elas entram
 // em canvas com crossOrigin desligado, e servi-las de outra origem contaminaria
 // o canvas — o toBlob() passaria a lançar e o download da figurinha morria.
 // São 457 KB; não vale o risco.
@@ -53,10 +53,9 @@ export function urlAsset(caminho) {
   return `${backendBase()}${s.startsWith('/') ? s : `/${s}`}`;
 }
 
-// ─── Tamanho da imagem (Velocidade 6B, 15-set) ───────────────────────────────
-// O motor (Velocidade 6A) passou a servir o proxy de imagem já redimensionado e
-// em WebP: `?w=128|256|512|1024`. Antes, uma lista de 20 jogadores baixava 20
-// figurinhas em tamanho de cartaz (418 KB cada) para as mostrar a 48 px.
+// ─── Tamanho da imagem ───────────────────────────────────────────────────────
+// O motor serve o proxy de imagem já redimensionado e em WebP: `?w=128|256|512|1024`. Sem isso, uma
+// lista de 20 jogadores baixaria 20 figurinhas em tamanho de cartaz (418 KB cada) para as mostrar a 48 px.
 //
 // Só mexe em URLs do NOSSO proxy. Tudo o resto passa intacto de propósito: os
 // kits e avatares genéricos (bucket público `kits`), a foto do login Google

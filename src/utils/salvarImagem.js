@@ -1,4 +1,4 @@
-// Futty v2.0 — Salvar/compartilhar uma imagem gerada no app (Rodada 8A, 15-set).
+// Futty v2.0 — Salvar/compartilhar uma imagem gerada no app.
 //
 // "Baixar figurinha" não fazia nada no iPhone: o <a download> é ignorado pelo
 // WKWebView (e pelo WebView do Android) — num app não há "Transferências". No

@@ -1,5 +1,5 @@
 // Futty v2.0 — Último erro fatal (ErrorBoundary), guardado para o Pedro ler
-// depois em Perfil → Diagnóstico (build 10, achado real: o app não abria
+// depois em Perfil → Diagnóstico (o app não abria
 // depois de um deploy e ninguém tinha o console do Chrome remoto no bolso
 // para ver porquê). localStorage, não a caixa-preta em memória de
 // lib/diagnostico.js: o crash costuma vir seguido de um reload (ver

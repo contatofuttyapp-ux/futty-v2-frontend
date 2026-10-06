@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // ═══════════════════════════════════════════════════════════════════════════════
-// PROVA DE TOM — a linha do jackpot sobe ou fica, nunca desce (Rodada 16A).
+// PROVA DE TOM — a linha do jackpot sobe ou fica, nunca desce.
 //
-// Lei nova do dono (16A): no jackpot NADA desce de tom. Isto mede o arquivo MP3
+// Lei do dono: no jackpot NADA desce de tom. Isto mede o arquivo MP3
 // já pronto — não o buffer em memória — e desenha a prova:
 //
 //   MP3 → ffmpeg (PCM f32 mono) → janelas de 50 ms com Hann → FFT 4096 →

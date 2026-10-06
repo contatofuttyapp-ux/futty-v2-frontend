@@ -1,6 +1,7 @@
-// Futty v2.0 — o pedido de presença (RSVP), a frase de quando ele falha e o jeito de responder com estado OTIMISTA. Vive aqui, e não no
-// RSVPCard, porque o card "Confirme presença" e o "Vou / Não vou" do jogo no Início respondem pelo MESMO caminho (Rodada 29I,
-// achado 86: um destino só, um número só). O miolo é puro de React, para testar no Node.
+// Futty v2.0 — o pedido de presença (RSVP), a frase de quando ele falha e o jeito de responder com estado
+// OTIMISTA. Vive aqui, e não no RSVPCard, porque o card "Confirme presença" e o "Vou / Não vou" do jogo no
+// Início respondem pelo MESMO caminho (um destino só, um número só). O miolo é puro de React, para testar no
+// Node.
 
 export const MSG_FALHA_RSVP = 'Não deu para registrar sua resposta. Tente de novo.';
 
@@ -11,9 +12,10 @@ export async function enviarRsvp(gameId, status) {
 }
 
 /**
- * Responde presença com estado otimista (achado 86): `aplicar(status)` roda ANTES do pedido — o botão acende e o contador mexe na
- * hora —, o pedido segue por trás, e se ele falhar `aplicar(anterior)` desfaz e o retorno traz a frase curta do erro. Se o jogo
- * estava cheio e a pessoa entrou na fila (`espera`), o "Vou" não valeu: desfaz também e devolve a posição.
+ * Responde presença com estado otimista: `aplicar(status)` roda ANTES do pedido — o botão acende e o contador
+ * mexe na hora —, o pedido segue por trás, e se ele falhar `aplicar(anterior)` desfaz e o retorno traz a
+ * frase curta do erro. Se o jogo estava cheio e a pessoa entrou na fila (`espera`), o "Vou" não valeu: desfaz
+ * também e devolve a posição.
  *   anterior  a resposta de antes ('confirmado' | 'recusado' | null), para onde voltar
  *   aplicar   põe na tela uma resposta (o `setState` de quem chama)
  *   otimista  false = não mexe na tela antes (o jogo cheio, em que "Vou" é entrar na fila)

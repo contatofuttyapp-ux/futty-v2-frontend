@@ -1,4 +1,4 @@
-// Futty v2.0 — Entrar com a Apple (13-set, iOS). Partilhado por
+// Futty v2.0 — Entrar com a Apple (iOS). Partilhado por
 // LandingPage/Login/Register, irmão do lib/googleAuth.js.
 //
 // Por que existe: a App Store exige o Entrar com a Apple em qualquer app que
@@ -11,7 +11,7 @@
 // isso o DeepLinkListener não participa deste fluxo.
 import { Capacitor } from '@capacitor/core';
 import { SignInWithApple } from '@capacitor-community/apple-sign-in';
-// Velocidade 8: por obterSupabase(), como o googleAuth — o supabase-js não pode
+// Por obterSupabase(), como o googleAuth — o supabase-js não pode
 // voltar ao modulepreload por um caminho de import estático qualquer.
 import { obterSupabase } from './supabaseAsync';
 import { apiFetch } from './api';

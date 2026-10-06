@@ -1,6 +1,6 @@
-// Futty v2.0 — o que a tela do sorteio mostra, dado o que a API devolveu (Rodada 29J, achado 120:
-// REGRESSÃO onde um erro de rede/sessão caía no MESMO "ainda não foi realizado" do sorteio nunca
-// feito — a tela dizia isso com o sorteio intacto no banco, só porque a ida à API falhou).
+// Futty v2.0 — o que a tela do sorteio mostra, dado o que a API devolveu. Um erro de rede/sessão não pode
+// cair no MESMO "ainda não foi realizado" do sorteio nunca feito: a tela diria isso com o sorteio intacto
+// no banco, só porque a ida à API falhou.
 // Usado por SorteioShow (com login) e SorteioPublico (link /p/): as duas leem de `useApi`, as duas
 // precisam do MESMO critério — 'erro' nunca se confunde com 'nao_feito'.
 

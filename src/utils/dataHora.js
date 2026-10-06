@@ -1,17 +1,20 @@
-// Futty v2.0 — Rodada 29I (achado 83): UM lugar só para escrever data e hora de jogo.
+// Futty v2.0 — UM lugar só para escrever data e hora de jogo.
 //
-// A hora de um jogo é a hora do CAMPO, sempre: quem viaja continua vendo "quinta, 20h". O jogo chega do motor como instante
-// (ISO, UTC) e o time diz em que relógio ele se lê (`fuso`, nome IANA: America/Sao_Paulo, Europe/Lisbon…). Tudo aqui usa
-// Intl.DateTimeFormat com timeZone EXPLÍCITO e locale pt-BR — nunca o relógio do aparelho. Sem `fuso` (resposta antiga, time
-// sem a migração 076) vale TZ_PADRAO.
+// A hora de um jogo é a hora do CAMPO, sempre: quem viaja continua vendo "quinta, 20h". O jogo chega do
+// motor como instante (ISO, UTC) e o time diz em que relógio ele se lê (`fuso`, nome IANA:
+// America/Sao_Paulo, Europe/Lisbon…). Tudo aqui usa Intl.DateTimeFormat com timeZone EXPLÍCITO e locale
+// pt-BR — nunca o relógio do aparelho. Sem `fuso` (resposta antiga, time sem a migração 076) vale
+// TZ_PADRAO.
 //
-// Onde o relógio do aparelho vale de propósito (e este arquivo NÃO se usa): o Gabinete (o dono olhando datas do sistema, no
-// relógio dele), o "há 5 h" (tempo decorrido, não data de calendário) e o Diagnóstico.
+// Onde o relógio do aparelho vale de propósito (e este arquivo NÃO se usa): o Gabinete (o dono olhando
+// datas do sistema, no relógio dele), o "há 5 h" (tempo decorrido, não data de calendário) e o
+// Diagnóstico.
 //
-// A PALAVRA NA TELA (dono, 3-out): "Hora do jogo", ou só "Hora" — nunca "hora do campo", "fuso" ou "horário de Brasília". O jogador
-// não tem de saber que existe fuso. A única exceção é o RABICHO: quando o relógio do time é outro que o de quem está olhando, a hora
-// ganha "· horário de São Paulo" (o nome da CIDADE do time, nunca o identificador IANA) — quem viajou, ou entrou num time de outro
-// país, não chega atrasado. Para quem está no mesmo relógio (quase todo mundo) não aparece nada. Ver rabichoDoFuso.
+// A PALAVRA NA TELA (do dono): "Hora do jogo", ou só "Hora" — nunca "hora do campo", "fuso" ou "horário
+// de Brasília". O jogador não tem de saber que existe fuso. A única exceção é o RABICHO: quando o relógio
+// do time é outro que o de quem está olhando, a hora ganha "· horário de São Paulo" (o nome da CIDADE do
+// time, nunca o identificador IANA) — quem viajou, ou entrou num time de outro país, não chega atrasado.
+// Para quem está no mesmo relógio (quase todo mundo) não aparece nada. Ver rabichoDoFuso.
 
 export const TZ_PADRAO = 'America/Sao_Paulo';
 

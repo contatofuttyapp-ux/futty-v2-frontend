@@ -129,8 +129,8 @@ export default function CropModal({ file, aspect = 1, aspectos = ASPECTS, miniat
         background: '#000',
         display: 'flex',
         flexDirection: 'column',
-        // Achado 124 (29K): o wrapper não deixa um arrasto fora do cropper (o Cropper cuida do
-        // seu próprio gesto) encadear a rolagem para o body por trás, no WebKit.
+        // O wrapper não deixa um arrasto fora do cropper (o Cropper cuida do seu próprio gesto) encadear a rolagem
+        // para o body por trás, no WebKit.
         overflow: 'hidden',
         overscrollBehavior: 'contain',
       }}
@@ -154,11 +154,10 @@ export default function CropModal({ file, aspect = 1, aspectos = ASPECTS, miniat
         ) : null}
       </div>
 
-      {/* Controlos — fixed inset:0 escapa à casca do Layout (createPortal), por
-          isso o inset de baixo é resolvido aqui (14-set, VELOCIDADE 5): sem
-          isto, "Confirmar"/"Cancelar" nasciam debaixo da barra de gesto. */}
+      {/* Controlos — fixed inset:0 escapa à casca do Layout (createPortal), por isso o inset de baixo é resolvido
+          aqui: sem isto, "Confirmar"/"Cancelar" nasceriam debaixo da barra de gesto. */}
       <div style={{ padding: '16px 16px max(16px, env(safe-area-inset-bottom, 0px))', background: '#0c0c0c', display: 'grid', gap: 14 }}>
-        {/* A miniatura ao vivo (29H-B): a moldura real do app, com a janela do quadrado tracejado. */}
+        {/* A miniatura ao vivo: a moldura real do app, com a janela do quadrado tracejado. */}
         {miniatura ? (
           <div data-miniatura-legenda style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <MiniaturaAoVivo src={src} area={areaAoVivo} natural={natural} lado={52} />

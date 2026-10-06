@@ -1,6 +1,6 @@
-// Futty v2.0 — Rodada 29I (achado 103): as rotas em português de Portugal viraram PT-BR (/equipa → /time, /criar-equipa → /criar-time,
-// ?tab=equipa → ?tab=time), e as antigas continuam valendo: link que já foi para o grupo do WhatsApp, favorito, notificação já enviada.
-// Puro (sem React), para testar no Node; App.jsx e AdminPanel.jsx usam estas contas.
+// Rotas antigas em português de Portugal → as de PT-BR (/equipa → /time, /criar-equipa → /criar-time,
+// ?tab=equipa → ?tab=time). As antigas continuam valendo: link que já foi para o grupo do WhatsApp, favorito,
+// notificação já enviada. Puro (sem React), para testar no Node; App.jsx e AdminPanel.jsx usam estas contas.
 
 /** O caminho novo de um endereço antigo de time: /equipa/missa/jogo/9 → /time/missa/jogo/9. O que não é /equipa fica como está. */
 export function caminhoNovoDeEquipa(pathname) {
@@ -13,9 +13,9 @@ export function abaDoAdmin(parametro) {
   return aba === 'equipa' ? 'time' : aba;
 }
 
-// ─── Rodada 29I, bloco 3: "admin não é um lugar" ───────────────────────────────────────────────────────────────────────
-// O painel /admin/<slug>?tab=… acabou: cada seção mudou para uma aba da página do time (/time/<slug>?aba=jogos|elenco|ajustes) ou
-// para o Ranking. O endereço antigo continua valendo e leva para a casa nova da mesma seção.
+// ─── "Admin não é um lugar" ───────────────────────────────────────────────────────────────────────────
+// O endereço antigo /admin/<slug>?tab=… continua valendo e leva para a casa nova da mesma seção: uma aba da
+// página do time (/time/<slug>?aba=jogos|elenco|ajustes) ou o Ranking.
 export const ABAS_DO_TIME = ['jogos', 'elenco', 'ajustes'];
 const CASA_NOVA = {
   dashboard: '', // virou o card "Seu time" do Início; a página do time é o lugar natural de quem chega pelo link

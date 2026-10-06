@@ -1,7 +1,7 @@
 // Futty v2.0 — Selector numérico +/- (ex.: jogadores por time).
 // Clampa entre min e max; o valor é sempre um número inteiro.
-// Rodada 29S (achado 156): `cor` pinta o seletor com uma cor de destaque (o Novo jogo usa o ROXO quando o número vale "só neste jogo");
-// sem `cor`, é o seletor de sempre.
+// `cor` pinta o seletor com uma cor de destaque (o Novo jogo usa o ROXO quando o número vale "só neste
+// jogo"); sem `cor`, é o seletor de sempre.
 const BTN = {
   width: 36,
   height: 36,

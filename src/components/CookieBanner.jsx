@@ -1,8 +1,9 @@
 // Futty v2.0 — Banner de consentimento de cookies/armazenamento local.
-// Fixo no fundo, mas ACIMA da BottomNav (a navegação nunca é tapada); uma linha;
-// fecha ao Aceitar OU na primeira interação real (scroll/toque/tecla). Só aparece
-// enquanto localStorage 'futty_cookies' não for 'aceite'.
-// Só no SITE (29V, 5-out): no app da loja (Capacitor) ela não existe — foi ela que gerou as perguntas da Apple na revisão.
+// Fixo no fundo, mas ACIMA da BottomNav (a navegação nunca é tapada); uma linha; fecha ao Aceitar OU na
+// primeira interação real (scroll/toque/tecla). Só aparece enquanto localStorage 'futty_cookies' não for
+// 'aceite'.
+// Só no SITE: no app da loja (Capacitor) ela não existe — foi ela que gerou as perguntas da Apple na
+// revisão.
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { shouldShowNav } from './Layout';
@@ -70,11 +71,10 @@ export default function CookieBanner() {
         position: 'fixed',
         left: 0,
         right: 0,
-        // ACIMA da BottomNav quando ela existe — a navegação nunca é tapada.
-        // Sem nav, o inset é só do banner (14-set, VELOCIDADE 5: era `0` fixo
-        // — colava na barra de gesto nas rotas sem BottomNav, ex. /jogo/:id).
-        // Rodada 29L (achado 125): a altura da barra vem de UM lugar (--altura-barra-nav, app.css). Eram 58 px "de cabeça" para uma
-        // barra de 75: 17 px da faixa ficavam por baixo e o "Aceitar" encostava no "PERFIL".
+        // ACIMA da BottomNav quando ela existe — a navegação nunca é tapada. Sem nav, o inset é só do banner (um
+        // `0` fixo colaria na barra de gesto nas rotas sem BottomNav, ex. /jogo/:id). A altura da barra vem de UM
+        // lugar (--altura-barra-nav, app.css), não de um número "de cabeça": com 58 px para uma barra de 75, 17 px
+        // da faixa ficavam por baixo e o "Aceitar" encostava no "PERFIL".
         bottom: navVisivel ? 'var(--altura-barra-nav)' : 'env(safe-area-inset-bottom, 0px)',
         zIndex: 40, // abaixo da nav (z-index:50) — nunca a cobre
         background: 'var(--surface-1)',

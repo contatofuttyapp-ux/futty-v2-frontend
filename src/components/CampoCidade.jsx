@@ -1,9 +1,10 @@
-// Futty v2.0 — Rodada 29B (D): o campo "Cidade" com sugestão (Explorar, criar time, painel do time).
+// Futty v2.0 — O campo "Cidade" com sugestão (Explorar, criar time, painel do time).
 //
-// Busca a lista (Brasil e Portugal) SÓ no foco, sugere a partir de 2 letras sem acento nem maiúscula e mostra
-// "Cidade, UF" / "Concelho, Portugal". Escolher manda { cidade, uf, pais, lat, lng, origem: 'lista' } — o motor guarda a
-// coordenada da própria lista, sem chamada externa. Quem digita uma cidade que não está na lista segue com texto livre
-// (o motor tenta o Nominatim e avisa o que achou). `aoMudar(texto, escolha)`: escolha é null enquanto a pessoa digita.
+// Busca a lista (Brasil e Portugal) SÓ no foco, sugere a partir de 2 letras sem acento nem maiúscula e
+// mostra "Cidade, UF" / "Concelho, Portugal". Escolher manda { cidade, uf, pais, lat, lng, origem: 'lista'
+// } — o motor guarda a coordenada da própria lista, sem chamada externa. Quem digita uma cidade que não
+// está na lista segue com texto livre (o motor tenta o Nominatim e avisa o que achou). `aoMudar(texto,
+// escolha)`: escolha é null enquanto a pessoa digita.
 // Carregado em lazy (ver CampoCidadeLazy.jsx): o JSON e o código só descem quando o campo aparece.
 import { useEffect, useId, useRef, useState } from 'react';
 import { carregarCidades } from '../lib/cidadesDados';
@@ -26,14 +27,15 @@ export default function CampoCidade({ valor, aoMudar, aoSugestoes = null, placeh
 
   useEffect(() => { setAtiva(-1); }, [valor]); // eslint-disable-line react-hooks/set-state-in-effect -- a seleção do teclado recomeça a cada letra
 
-  // Rodada 29P: quem usa o campo pode querer saber se a lista tem sugestão para o texto (a cidade obrigatória do Criar time conta
-  // o texto livre só quando a lista não sugere nada). Sem a lista (ainda não desceu, ou falhou), zero: nunca trava quem está fora.
+  // Quem usa o campo pode querer saber se a lista tem sugestão para o texto (a cidade obrigatória do Criar
+  // time conta o texto livre só quando a lista não sugere nada). Sem a lista (ainda não desceu, ou falhou),
+  // zero: nunca trava quem está fora.
   useEffect(() => {
     if (aoSugestoes) aoSugestoes(indice ? buscarCidades(indice, valor).length : 0);
   }, [aoSugestoes, indice, valor]);
 
-  // A lista fecha com um toque FORA do campo (e ao escolher, e no Esc) — não no blur. No iPhone o blur do campo chega
-  // antes do clique na sugestão: a lista sumia debaixo do dedo e a escolha nunca acontecia (achado da cena).
+  // A lista fecha com um toque FORA do campo (e ao escolher, e no Esc) — não no blur. No iPhone o blur do
+  // campo chega antes do clique na sugestão: a lista sumiria debaixo do dedo e a escolha nunca aconteceria.
   useEffect(() => {
     if (!aberto) return undefined;
     const fora = (e) => { if (raiz.current && !raiz.current.contains(e.target)) setAberto(false); };

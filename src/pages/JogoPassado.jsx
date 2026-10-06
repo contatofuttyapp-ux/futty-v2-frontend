@@ -1,15 +1,19 @@
-// Futty v2.0 — Jogo passado (/time/:slug/jogo/passado, só admin). Rodada 29S, bloco B (achados 153 e 154).
-// Um jogo que já rolou, em quatro passos — Quando foi · Quem jogou · Times · Como terminou — TUDO NO PASSADO. O jogo SÓ É GRAVADO NO FIM
-// ("Salvar jogo"): quem desiste no meio não deixa um jogo vazio para trás. Antes, "Continuar → montar" gravava o jogo no primeiro passo.
+// Futty v2.0 — Jogo passado (/time/:slug/jogo/passado, só admin).
+// Um jogo que já rolou, em quatro passos — Quando foi · Quem jogou · Times · Como terminou — TUDO NO
+// PASSADO. O jogo SÓ É GRAVADO NO FIM ("Salvar jogo"): quem desiste no meio não deixa um jogo vazio
+// para trás.
 //
-// Cada passo é UMA entrada do histórico (location.state.passo), como no Criar time (achado 80): o Voltar do sistema (Alt+seta, o gesto do Android,
-// o swipe do iPhone) e o chevron do topo recuam um passo por vez. O que a pessoa preencheu fica nesta página: voltar a um passo não apaga nada.
+// Cada passo é UMA entrada do histórico (location.state.passo), como no Criar time: o Voltar do sistema
+// (Alt+seta, o gesto do Android, o swipe do iPhone) e o chevron do topo recuam um passo por vez. O que a
+// pessoa preencheu fica nesta página: voltar a um passo não apaga nada.
 //
-// "Salvar jogo" grava em sequência (utils/jogoPassado.js#planoDoJogoPassado): POST /api/games (historico: true) → presenças → (com times) times à mão
-// → (com resultado) resultado do jogo → (com campeão ou prêmio) resultado do feed. Se um pedido falha no meio, a pessoa fica no passo 4 com o aviso e
-// "Tentar de novo" continua de onde parou, sem criar outro jogo (executarPlano guarda o progresso).
-// Avisos: presença e times não avisam ninguém. O último pedido avisa o time ("Resultado registrado!"), como hoje quando o admin lança qualquer resultado.
-// Fotos e rodada de cerveja ficam de fora: dá para pôr depois, em Ajustes → Jogos.
+// "Salvar jogo" grava em sequência (utils/jogoPassado.js#planoDoJogoPassado): POST /api/games
+// (historico: true) → presenças → (com times) times à mão → (com resultado) resultado do jogo → (com
+// campeão ou prêmio) resultado do feed. Se um pedido falha no meio, a pessoa fica no passo 4 com o aviso
+// e "Tentar de novo" continua de onde parou, sem criar outro jogo (executarPlano guarda o progresso).
+// Avisos: presença e times não avisam ninguém. O último pedido avisa o time ("Resultado registrado!"),
+// como quando o admin lança qualquer resultado.
+// Fotos e cerveja ficam de fora: dá para pôr depois, em Ajustes → Jogos.
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin } from 'lucide-react';
@@ -115,10 +119,11 @@ export default function JogoPassado() {
   const [erroAoSalvar, setErroAoSalvar] = useState('');
   const [jogoCriado, setJogoCriado] = useState(false);
 
-  // ── Os passos no histórico (achado 80) ───────────────────────────────────────────────────────────────────────────────────────────
-  // `passo` não é um useState: vem da entrada do histórico em que a pessoa está (location.state.passo). Entrada de passo 2 em diante sem data
-  // (a entrada sobreviveu a um recarregar, o formulário não) volta ao 1. Com o jogo já criado (um pedido falhou no meio) é sempre o 4: voltar a
-  // um passo e mudar quem jogou não mudaria o que já foi gravado.
+  // ── Os passos no histórico ───────────────────────────────────────────────────────────────────────────
+  // `passo` não é um useState: vem da entrada do histórico em que a pessoa está (location.state.passo).
+  // Entrada de passo 2 em diante sem data (a entrada sobreviveu a um recarregar, o formulário não) volta
+  // ao 1. Com o jogo já criado (um pedido falhou no meio) é sempre o 4: voltar a um passo e mudar quem
+  // jogou não mudaria o que já foi gravado.
   const passoDoEndereco = Number(location.state?.passo) || 1;
   const passo = jogoCriado ? 4 : passoDoEndereco >= 2 && !data ? 1 : Math.min(passoDoEndereco, 4);
   /** Vai para o passo `n` como uma entrada nova do histórico (o Voltar do sistema volta ao passo de antes). */

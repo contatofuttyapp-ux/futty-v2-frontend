@@ -1,11 +1,10 @@
-// Futty v2.0 — O card mudou: tudo o que guarda o rosto antigo muda junto (RODADA 27, 25-set).
+// Futty v2.0 — O card mudou: tudo o que guarda o rosto antigo muda junto.
 //
-// Relato do dono, conta backup no celular: "não sei se o reenquadramento chega ao Início". Não chegava
-// direito. A foto nova entrava no perfil (PerfilContext) e no cache `me`, mas o cache do Início
-// (`inicio`, com o `me` de ANTES lá dentro) e os do Ranking, do Feed e dos times seguiam com o rosto
-// velho — e o Início, ao montar, hidratava o perfil A PARTIR desse cache velho e pintava o cromo
-// antigo por ~2 s, até o /api/inicio responder (medido no iPhone simulado: "cromo antigo → cromo novo",
-// 3,9 s; o Ranking nem trocou, porque o cache dele é "fresco" por 30 s e a tela nem pede de novo).
+// Sem isto, a foto nova entra no perfil (PerfilContext) e no cache `me`, mas o cache do Início
+// (`inicio`, com o `me` de ANTES lá dentro) e os do Ranking, do Feed e dos times seguem com o rosto
+// velho — e o Início, ao montar, hidrata o perfil A PARTIR desse cache velho e pinta o cromo antigo
+// por ~2 s, até o /api/inicio responder (o Ranking nem troca, porque o cache dele é "fresco" por 30 s
+// e a tela nem pede de novo).
 //
 // Aqui mora tudo o que se faz DEPOIS de uma mudança no card, num sítio só:
 //
@@ -42,13 +41,13 @@ export function chavesDoCache(userId) {
 }
 
 /**
- * Reescreve o conteúdo de uma entrada que JÁ existe, SEM renovar o carimbo (Rodada 27).
+ * Reescreve o conteúdo de uma entrada que JÁ existe, SEM renovar o carimbo.
  *
  * Emendar não é buscar: a resposta continua tão velha quanto era (é a idade dela que decide se a
  * tela revalida por trás), só que agora concorda com uma mudança que a própria pessoa acabou de
- * fazer — trocou a foto, o enquadramento, o genérico. Sem isto, a foto nova morava no perfil e a
- * antiga ficava viva no cache do Início, do Ranking, da Resenha, e voltava a aparecer na primeira
- * tela que a lesse (o "reenquadramento não chega ao Início" do relato do dono).
+ * fazer — trocou a foto, o enquadramento, o genérico. Sem isto, a foto nova mora no perfil e a
+ * antiga fica viva no cache do Início, do Ranking, da Resenha, e volta a aparecer na primeira
+ * tela que a ler.
  *
  * `emendar(dados)` recebe o conteúdo já lido e devolve o novo — ou `undefined` para deixar a
  * entrada como está (nada é regravado). Devolve true se regravou. Nunca lança.

@@ -1,30 +1,25 @@
-// Futty v2.0 — Pré-aquecimento dos chunks das abas (VELOCIDADE 4).
+// Futty v2.0 — Pré-aquecimento dos chunks das abas.
 //
-// Cada tela vive no seu próprio chunk (lazy() em App.jsx) e, até 14-set, esse
-// chunk só começava a ser lido no TOQUE: a pessoa tocava em "Resenha" e ficava
-// a olhar para a tela antiga enquanto o ficheiro era buscado, lido e executado.
-// Na web isso é uma ida à rede; no app é leitura de disco mais o custo de
-// executar o módulo — menos, mas ainda o suficiente para o toque parecer morto.
+// Cada tela vive no seu próprio chunk (lazy() em App.jsx) e, sem pré-aquecimento, esse chunk só começa a ser
+// lido no TOQUE: a pessoa toca em "Resenha" e fica a olhar para a tela antiga enquanto o ficheiro é buscado,
+// lido e executado. Na web isso é uma ida à rede; no app é leitura de disco mais o custo de executar o
+// módulo — menos, mas ainda o suficiente para o toque parecer morto.
 //
-// Aqui as quatro vizinhas do Início são carregadas quando o aparelho está
-// PARADO, depois da primeira tela já estar desenhada.
+// Aqui as quatro vizinhas do Início são carregadas quando o aparelho está PARADO, depois da primeira tela já
+// estar desenhada.
 //
-// VELOCIDADE 8 (16-set) — "parado" era requestIdleCallback com setTimeout(1200)
-// de reserva. O Safari não tem requestIdleCallback: no iPhone era sempre o
-// setTimeout, e 1,2 s depois de abrir o app cinco chunks de JS chegavam ao
-// mesmo tempo para serem COMPILADOS — em cima do primeiro toque da pessoa.
-// Destes cinco, quatro são telas que ela talvez nem visite. É o mais caro dos
-// trabalhos de segundo plano (compilar é trabalho de thread principal; uma
-// imagem pelo menos descodifica-se de lado), por isso é o que mais tinha a
-// ganhar em esperar. Agora quem decide é o lib/ritmo.js, e as abas entram UMA
-// DE CADA VEZ, com um toque a mandar parar entre elas.
+// "Parado" não é requestIdleCallback com setTimeout(1200) de reserva: o Safari não tem requestIdleCallback, e
+// no iPhone seria sempre o setTimeout — 1,2 s depois de abrir o app, cinco chunks de JS chegariam ao mesmo
+// tempo para serem COMPILADOS, em cima do primeiro toque da pessoa. Destes cinco, quatro são telas que ela
+// talvez nem visite. É o mais caro dos trabalhos de segundo plano (compilar é trabalho de thread principal;
+// uma imagem pelo menos descodifica-se de lado), por isso é o que mais tem a ganhar em esperar. Quem decide é
+// o lib/ritmo.js, e as abas entram UMA DE CADA VEZ, com um toque a mandar parar entre elas.
 //
-// As mesmas funções servem o lazy() em App.jsx — é de propósito. O registo de
-// módulos do browser devolve sempre a MESMA promessa para o mesmo import(), por
-// isso pré-aquecer e depois navegar não descarrega duas vezes, e pré-aquecer a
-// meio de um lazy() em curso não atrapalha nada.
+// As mesmas funções servem o lazy() em App.jsx — é de propósito. O registo de módulos do browser devolve
+// sempre a MESMA promessa para o mesmo import(), por isso pré-aquecer e depois navegar não descarrega duas
+// vezes, e pré-aquecer a meio de um lazy() em curso não atrapalha nada.
 
-// Velocidade 7B: cada função lembra o módulo depois de carregado
+// Cada função lembra o módulo depois de carregado
 // (`jaCarregado()`). O React.lazy suspende na primeira renderização sempre que
 // recebe uma promessa — mesmo já resolvida — e ainda segura o fallback ~300 ms;
 // com o módulo em mãos, utils/lazyComRetry.js entrega-o sem suspender.
@@ -60,7 +55,7 @@ export function preaquecerAbas() {
   jaPediu = true;
 
   let parado = false;
-  // Velocidade 9: com teto de 6 s. Os chunks das abas são o adiantamento mais
+  // Com teto de 6 s. Os chunks das abas são o adiantamento mais
   // barato que existe (o do Feed são 49 KB) e o mais rentável — sem eles, cada
   // primeira ida a uma aba espera ~300 ms só pelo ficheiro, com a tela antiga à
   // frente. Esperar por silêncio absoluto era esperar para sempre.

@@ -1,23 +1,20 @@
 // Futty v2.0 — Página de erro (404 / crash), na linguagem da casa.
 //
-// FASE 3.61 — ANTES ESTAVA PARTIDA. Usava `import Lottie from 'lottie-react'` para uma
-// bola a saltar, mas o pacote tem duplo default (interop CJS→ESM): o default é o
-// objecto {LottiePlayer, default, useLottie, useLottieInteractivity}, não o componente.
-// O React rebentava com "Element type is invalid... got: object" — e como esta é
-// justamente a página que o ErrorBoundary mostra, QUALQUER 404 ou crash dava ECRÃ
-// BRANCO. O bug escondia-se a si próprio.
-//
-// A correcção mata o import problemático em vez de o remendar: o Lottie sai e entra o
-// F da casa (o mesmo FuttyLoader de todo o app). Menos uma dependência, menos um
-// asset, e a página de erro passa a falar a linguagem do resto.
+// Sem Lottie: o pacote `lottie-react` tem duplo default (interop CJS→ESM) — o default é o objecto
+// {LottiePlayer, default, useLottie, useLottieInteractivity}, não o componente — e o React rebentaria com
+// "Element type is invalid... got: object". Como esta é justamente a página que o ErrorBoundary mostra,
+// QUALQUER 404 ou crash daria ECRÃ BRANCO: o bug se esconderia a si próprio. Em vez de remendar o import,
+// entra o F da casa (o mesmo FuttyLoader de todo o app): menos uma dependência, menos um asset, e a página
+// de erro fala a linguagem do resto.
 import FuttyLoader from './FuttyLoader';
 
-// Rodada 29B (D.3): é também a tela cheia dos avisos do shell — "Conta suspensa" (AuthGuard) e
-// "Sem permissão" (SuperAdminGuard) eram cópias deste layout (~1 KB do arranque, que tem teto).
+// É também a tela cheia dos avisos do shell — "Conta suspensa" (AuthGuard) e "Sem permissão"
+// (SuperAdminGuard) usam este layout, em vez de cópias dele (~1 KB do arranque, que tem teto).
 //   acao          — { rotulo, aoTocar }: troca o botão de ouro e tira o 2º elo (retry/descobrir peladas).
 //   larguraTexto  — maxWidth do parágrafo (padrão 280).
-//   semSessao     — Rodada 29L (achado 126): a pessoa ainda não tem conta. O "início" dela é a landing (o /home a mandaria para o login) e a
-//                   porta alternativa é criar a conta: o Explorar exige conta, então oferecê-lo aqui era um beco que terminava no login.
+//   semSessao     — a pessoa ainda não tem conta. O "início" dela é a landing (o /home a mandaria para o
+//                   login) e a porta alternativa é criar a conta: o Explorar exige conta, então oferecê-lo
+//                   aqui seria um beco que terminaria no login.
 export default function ErrorPage({ onRetry, mensagem, titulo, acao, larguraTexto = 280, semSessao = false }) {
   const irAoInicio = () => { window.location.href = semSessao ? '/' : '/home'; };
   return (
@@ -43,8 +40,8 @@ export default function ErrorPage({ onRetry, mensagem, titulo, acao, larguraText
         {mensagem || 'O servidor está descansando. Tente de novo daqui a pouco.'}
       </p>
 
-      {/* Rodada 29I (achado 75): a linha técnica em letra pequena (build 10) saiu da tela — inglês cru ("Failed to fetch dynamically
-          imported module…") numa tela que fala com a pessoa. A mensagem técnica fica no console e no Diagnóstico (lib/ultimoErro). */}
+      {/* Sem linha técnica em letra pequena: seria inglês cru ("Failed to fetch dynamically imported module…")
+          numa tela que fala com a pessoa. A mensagem técnica fica no console e no Diagnóstico (lib/ultimoErro). */}
 
       {/* A acção primária (ouro) tira o utilizador do beco: se há como repetir, repete;
           senão, leva ao Início (onde vivem os próximos jogos). O 2º elo é uma porta

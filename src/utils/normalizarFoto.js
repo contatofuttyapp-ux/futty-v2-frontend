@@ -1,5 +1,5 @@
 // Futty v2.0 — Normaliza a orientação EXIF de uma foto ANTES do CropModal
-// (build 9, achado real: selfie no iPhone aparecia girada 180°). Causa: a
+// (caso real: selfie no iPhone aparecia girada 180°). Causa: a
 // câmera do iPhone grava o pixel "deitado" e só a tag EXIF Orientation diz
 // como desenhar em pé; nem todo canvas/lib respeita essa tag por igual
 // (o CropModal usa react-easy-crop sobre uma <img>, que segue o EXIF no

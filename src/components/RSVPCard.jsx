@@ -4,19 +4,18 @@ import { apiFetch } from '../lib/api';
 import { responderComOtimismo } from '../lib/rsvp';
 import { formatarDataHora } from '../utils/dataHora';
 
-// "até qui., 8 de out. · 20:00" — o prazo, como o jogo, é lido no relógio do CAMPO (fuso do time, 29I achado 83).
-// 29T (achado 165): com o rabicho, a cidade é a do time ("horário de Brasília"), não a do fuso.
+// "até qui., 8 de out. · 20:00" — o prazo, como o jogo, é lido no relógio do CAMPO (fuso do time). Com o
+// rabicho, a cidade é a do time ("horário de Brasília"), não a do fuso.
 function formatarPrazo(iso, fuso, cidade) {
   return formatarDataHora(iso, fuso, { cidade });
 }
 
-// RODADA 12A — a paleta de presença da casa (--presenca-* em index.css), a mesma
-// do "Vou"/"Não vou" do card de jogo. O verde #16a34a e o vermelho #dc2626 que
-// estavam aqui saíram: num app dourado e roxo o par de semáforo lê-se como
-// alerta de sistema. Dizer que não é uma resposta legítima, não um erro — por
-// isso os dois são fantasma, e não um botão saturado a gritar. RODADA 13: o
-// "Vou" deixou de ser dourado (agora é só do "Ver sorteio"/"Sortear") e passou
-// a usar a MESMA receita do "Não vou" — só a cor muda.
+// A paleta de presença da casa (--presenca-* em index.css), a mesma
+// do "Vou"/"Não vou" do card de jogo. Sem o verde #16a34a e o vermelho #dc2626:
+// num app dourado e roxo o par de semáforo lê-se como alerta de sistema. Dizer
+// que não é uma resposta legítima, não um erro — por isso os dois são fantasma,
+// e não um botão saturado a gritar. O "Vou" não é dourado (o dourado é só do
+// "Ver sorteio"/"Sortear") e usa a MESMA receita do "Não vou" — só a cor muda.
 const BASE_BOTAO = {
   flex: 1,
   height: 42,
@@ -53,9 +52,9 @@ export default function RSVPCard({ gameId, prazo, fuso, cidade = null, respostaA
   // Jogo cheio e ainda não confirmado → fluxo de lista de espera.
   const modoEspera = cheio && respostaActual !== 'confirmado';
 
-  // Rodada 29I (achado 86): estado OTIMISTA. O botão escolhido acende e o contador de confirmados mexe NA HORA (`onResposta` já
-  // aplica o novo estado na tela do Início); o pedido segue por trás. Se falhar, volta ao que estava e diz o que fazer. Antes a
-  // tela só mudava depois de a resposta chegar (ou só depois de recarregar), e a pessoa tocava de novo sem ver nada.
+  // Estado OTIMISTA. O botão escolhido acende e o contador de confirmados mexe NA HORA (`onResposta` já
+  // aplica o novo estado na tela do Início); o pedido segue por trás. Se falhar, volta ao que estava e diz o
+  // que fazer. Esperar a resposta chegar (ou recarregar) deixaria a pessoa tocar de novo sem ver nada.
   async function responder(status) {
     if (busy) return;
     setBusy(true);
@@ -84,7 +83,7 @@ export default function RSVPCard({ gameId, prazo, fuso, cidade = null, respostaA
   return (
     <div style={{ border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.06)', borderRadius: 'var(--radius-md)', padding: 14, marginBottom: 12 }}>
       <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>Confirme presença</div>
-      {/* Rodada 29L (achado 137): o --label-color (branco a 40%, ~3,7:1) não chega a 4,5:1; o --text-dim passa folgado. */}
+      {/* O --label-color (branco a 40%, ~3,7:1) não chega a 4,5:1; o --text-dim passa folgado. */}
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>até {formatarPrazo(prazo, fuso, cidade)}</div>
 
       {modoEspera ? (

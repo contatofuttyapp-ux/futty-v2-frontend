@@ -1,16 +1,19 @@
-// Futty v2.0 — O card "Seu time" do Início (Rodada 29I, bloco 3, item 1). Só para quem administra algum time, no topo, com a cara dos
-// outros cards do Início. É o que era o Dashboard do painel do admin: as pendências, uma por linha (pedido de entrada, jogo sem
-// presença aberta, resultado por lançar, denúncia), e quatro atalhos com nome — Novo jogo · Sortear · Convidar · Ajustes.
-// SEMPRE aparece para o admin (decisão do dono); sem pendência fica compacto, com "Tudo tranquilo por aqui.".
-// As pendências vêm prontas do motor (GET /api/inicio → seu_time); o texto e o destino de cada linha, em utils/seuTime.js.
+// Futty v2.0 — O card "Seu time" do Início. Só para quem administra algum time, no topo, com a cara dos
+// outros cards do Início: as pendências, uma por linha (pedido de entrada, jogo sem presença aberta,
+// resultado por lançar, denúncia), e quatro atalhos com nome — Novo jogo · Sortear · Convidar · Ajustes.
+// SEMPRE aparece para o admin (o dono decidiu); sem pendência fica compacto, com "Tudo tranquilo por
+// aqui.". As pendências vêm prontas do motor (GET /api/inicio → seu_time); o texto e o destino de cada
+// linha, em utils/seuTime.js.
 //
-// Rodada 29L (achado 127, decisão do dono de 3-out): com UM time o card é o de sempre, byte a byte. Com DOIS ou mais, vira UM card só,
-// "Seus times": cada time numa linha compacta (escudo · nome · a pendência, se houver) e os quatro atalhos aparecem ao tocar na linha.
-// Antes, dois cards de quatro botões ocupavam a primeira tela inteira e os PRÓXIMOS JOGOS ficavam abaixo da dobra.
-// Rodada 29T (achado 168): "Seus times" mostra até 2 linhas; com mais, "Ver todos (N)" abre o resto no lugar (e "Ver menos" fecha). Quatro times
-// empurravam o rótulo "Próximos jogos" para 973 px numa tela de 844.
-// Rodada 29T-B (ajuste da Freaky): os times com pendência vêm primeiro (depois, a ordem de hoje) e um time com pendência nunca fica escondido atrás
-// do "Ver todos": a lista fechada tem 2 linhas OU todos os times com pendência, se forem mais.
+// Com UM time o card é o de sempre, byte a byte. Com DOIS ou mais, vira UM card só, "Seus times" (o dono
+// decidiu): cada time numa linha compacta (escudo · nome · a pendência, se houver) e os quatro atalhos
+// aparecem ao tocar na linha. Dois cards de quatro botões ocupariam a primeira tela inteira e os PRÓXIMOS
+// JOGOS ficariam abaixo da dobra.
+// "Seus times" mostra até 2 linhas; com mais, "Ver todos (N)" abre o resto no lugar (e "Ver menos" fecha).
+// Quatro times empurrariam o rótulo "Próximos jogos" para 973 px numa tela de 844.
+// Os times com pendência vêm primeiro (depois, a ordem de hoje) e um time com pendência nunca fica
+// escondido atrás do "Ver todos": a lista fechada tem 2 linhas OU todos os times com pendência, se forem
+// mais.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarClock, ChevronDown, ChevronRight, CirclePlus, Flag, Settings, Shuffle, Trophy, UserPlus } from 'lucide-react';
@@ -89,7 +92,8 @@ function UmTime({ time, team, games }) {
 function SeusTimes({ seuTime: doMotor, teams, games }) {
   const [aberto, setAberto] = useState(null); // o slug do time com os atalhos à mostra; um por vez, para o card não crescer
   const [verTodos, setVerTodos] = useState(false);
-  // 29T-B: os times com pendência vêm primeiro e nenhum deles fica atrás do "Ver todos" (a lista fechada cresce até caberem todos).
+  // Os times com pendência vêm primeiro e nenhum deles fica atrás do "Ver todos" (a lista fechada cresce até
+  // caberem todos).
   const seuTime = timesComPendenciaPrimeiro(doMotor);
   const visiveis = quantosTimesMostrar(seuTime, TIMES_VISIVEIS);
   const sobram = seuTime.length - visiveis;

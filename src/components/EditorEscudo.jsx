@@ -1,7 +1,7 @@
-// Futty v2.0 — "Escudo do time" (Rodada 29I, bloco 3, achado 102): UM controle no lugar dos dois de antes ("Cor" e "Cor de fundo do
-// avatar", sem dizer a diferença). Cor principal + padrão + segunda cor, da paleta fixa (utils/escudo.js), com a prévia ao vivo nos
-// três tamanhos em que o escudo aparece no app (84, 36 e 20 px — os das bancadas do dono). Cada toque grava na hora, como a
-// visibilidade do time; se o motor recusar (sem a migração 077: "Essa opção ainda não está disponível."), volta ao que era.
+// Futty v2.0 — "Escudo do time": UM controle só. Cor principal + padrão + segunda cor, da paleta fixa
+// (utils/escudo.js), com a prévia ao vivo nos três tamanhos em que o escudo aparece no app (84, 36 e 20 px
+// — os das bancadas do dono). Cada toque grava na hora, como a visibilidade do time; se o motor recusar
+// (sem a migração 077: "Essa opção ainda não está disponível."), volta ao que era.
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { PALETA, PADROES, chaveDaCor, segundaCorSugerida } from '../utils/escudo';

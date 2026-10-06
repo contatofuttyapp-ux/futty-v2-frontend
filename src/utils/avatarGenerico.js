@@ -1,9 +1,9 @@
-// Futty v2.0 — Avatar genérico da casa (31-jul, ordem do dono). Jogador faceless
+// Futty v2.0 — Avatar genérico da casa. Jogador faceless
 // vestindo o kit Dark Gold, usado como card do jogador ENQUANTO ele não gera o
 // avatar IA próprio — substitui as iniciais e o empty state "espera por você".
 // 6 variantes (masc m1-m3, fem f1-f3): o app NÃO pergunta sexo — a pessoa escolhe
 // o dela num seletor (ver AvatarGenericoSheet); sem escolha, rodízio masculino por
-// hash do id (comportamento original, antes de existir escolha).
+// hash do id.
 const BASE = 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits';
 
 export const AVATARES_GENERICOS_MASC = [

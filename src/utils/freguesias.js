@@ -1,12 +1,12 @@
-// Futty v2.0 — Rodada 29H (item 12): o campo "Bairro" do time. Puro (sem React, sem rede).
+// Futty v2.0 — o campo "Bairro" do time. Puro (sem React, sem rede).
 //
-// Em Portugal o "bairro" é a freguesia: public/dados/freguesias.json (scripts/gerar-freguesias.js, CAOP + Wikidata das ilhas) traz
-// [[concelho, distrito|ilha, [[freguesia, lat, lng], …]], …] e o campo sugere as freguesias do concelho da cidade que a pessoa
-// escolheu. Rodada 29T (bloco B): no Brasil o bairro também é de lista (IBGE, utils/bairros.js) e a pessoa só escolhe o que a lista tem —
-// sem texto livre, no Brasil nem em Portugal. A normalização é a MESMA de utils/cidades.js (e do motor): sem acento, sem maiúscula, espaços duplos fora.
+// Em Portugal o "bairro" é a freguesia: public/dados/freguesias.json (scripts/gerar-freguesias.js, CAOP +
+// Wikidata das ilhas) traz [[concelho, distrito|ilha, [[freguesia, lat, lng], …]], …] e o campo sugere as
+// freguesias do concelho da cidade que a pessoa escolheu. No Brasil o bairro também é de lista (IBGE,
+// utils/bairros.js) e a pessoa só escolhe o que a lista tem — sem texto livre, no Brasil nem em Portugal.
+// A normalização é a MESMA de utils/cidades.js (e do motor): sem acento, sem maiúscula, espaços duplos fora.
 import { normalizarCidade } from './cidades';
 
-/** O texto de apoio do campo (dono, 2-out). */
 export const TEXTO_APOIO_BAIRRO = 'Só o bairro e a cidade, nunca o endereço.';
 
 /**

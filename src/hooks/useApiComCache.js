@@ -1,18 +1,14 @@
-// Futty v2.0 — Wrapper de useApi com cache local (13-set, "Velocidade 3":
-// stale-while-revalidate). Mostra a última resposta boa na hora (sem
-// LoadingFutty) e busca por trás.
+// Futty v2.0 — Wrapper de useApi com cache local (stale-while-revalidate). Mostra a última resposta boa
+// na hora (sem LoadingFutty) e busca por trás.
 //
-// VELOCIDADE 6B (15-set), duas mudanças:
-//
-// 1. A leitura do cache passou a ser SÍNCRONA, no useState inicial. Antes
-//    acontecia num microtask depois do primeiro render — ou seja, o primeiro
-//    render era sempre sem dados, e a tela piscava o LoadingFutty a CADA troca
+// 1. A leitura do cache é SÍNCRONA, no useState inicial. Num microtask depois do primeiro render, o
+//    primeiro render seria sempre sem dados, e a tela piscaria o LoadingFutty a CADA troca
 //    de aba mesmo tendo tudo em cache.
 //
 // 2. `frescoMs`: se a entrada foi gravada há menos de X (o pré-aquecimento
 //    acabou de passar por ali — ver lib/preaquecerDados.js), nem se pede de
 //    novo. Passa-se path=null ao useApi e pronto: trocar de aba não custa
-//    pedido nenhum. Passado esse prazo, volta ao comportamento de sempre
+//    pedido nenhum. Passado esse prazo, volta ao comportamento normal
 //    (pinta do cache, revalida por trás). O `reload()` manual ignora a janela.
 import { useCallback, useEffect, useState } from 'react';
 import { useApi } from './useApi';
@@ -46,15 +42,13 @@ export function useApiComCache(path, cacheKey, opts = {}) {
   // aí a janela de frescor é ignorada.
   const [forcado, setForcado] = useState(false);
 
-  // RODADA 8A — revalidar DEPOIS de pintar (opt-in; o Ranking usa). Nos
-  // relatórios do iPhone (builds 17 e 18, mesma conta e aparelho) o Ranking com
-  // cache VELHO pintou em 1389, 2121 e 1866 ms — os dados chegaram antes da
-  // pintura (704, 436, 809) —, e com cache FRESCO, sem pedido nenhum, em 226 a
-  // 332 ms. A 1ª pintura dessa tela é cara no iPhone (23 linhas, pódio e botões
-  // animados), e a resposta a chegar a meio dela custava mais um segundo. Com
-  // isto a lista do cache pinta sozinha, e o pedido sai dois quadros depois.
-  // O WebKit do PC não reproduz a demora; as marcas novas do Diagnóstico
-  // (lista, listaNova, 1º quadro, maior quadro) confirmam no próximo relatório.
+  // Revalidar DEPOIS de pintar (opt-in; o Ranking usa). A 1ª pintura do Ranking é cara no iPhone (23
+  // linhas, pódio e botões animados): nos relatórios do iPhone (mesma conta e aparelho) com cache VELHO
+  // pintou em 1389, 2121 e 1866 ms — os dados chegaram antes da pintura (704, 436, 809) —, e com cache
+  // FRESCO, sem pedido nenhum, em 226 a 332 ms. A resposta a chegar a meio dela custava mais um
+  // segundo. Com isto a lista do cache pinta sozinha, e o pedido sai dois quadros depois. O WebKit do PC
+  // não reproduz a demora; quem a confirma são as marcas do Diagnóstico (lista, listaNova, 1º quadro,
+  // maior quadro).
   const esperaPara = (entrada) => adiarRevalidacao && !!entrada && !ehFresco(entrada);
   const [esperandoPintura, setEsperandoPintura] = useState(() => esperaPara(doCache));
 
@@ -108,7 +102,7 @@ export function useApiComCache(path, cacheKey, opts = {}) {
     }
   }, [error, doCache, path]);
 
-  // VELOCIDADE 8 (16-set) — o app voltou à frente: a aba que está na tela
+  // O app voltou à frente: a aba que está na tela
   // revalida, se o que ela mostra já passou da janela de frescor. A idade lê-se
   // do cache OUTRA VEZ (não do `doCache` em estado): aquela foi medida no
   // instante da montagem e não envelhece sozinha — o app pode ter passado uma

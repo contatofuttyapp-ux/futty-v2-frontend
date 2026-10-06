@@ -1,7 +1,8 @@
-// Futty v2.0 — Gabinete, aba "Avise-me" (Rodada 29B, F): quem deixou o e-mail no site para ser avisado quando o Futty
-// chegar nas lojas. A contagem, de onde veio cada um (utm) e os mais recentes; "Baixar CSV" leva TODOS (para o dia do
-// lançamento). O ENVIO do "chegou nas lojas" não existe ainda — é no dia do lançamento, e esta aba é a fonte da lista.
-// A lista vive em `avisos_lancamento` (migração 068); sem ela a aba diz que falta aplicar.
+// Futty v2.0 — Gabinete, aba "Avise-me": quem deixou o e-mail no site para ser avisado quando o Futty
+// chegar nas lojas. A contagem, de onde veio cada um (utm) e os mais recentes; "Baixar CSV" leva TODOS
+// (para o dia do lançamento). O ENVIO do "chegou nas lojas" não existe ainda — é no dia do lançamento,
+// e esta aba é a fonte da lista. A lista vive em `avisos_lancamento` (migração 068); sem ela a aba diz
+// que falta aplicar.
 import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useApi } from '../../hooks/useApi';
@@ -12,8 +13,9 @@ const CARD = { background: '#111111', border: '1px solid #222222', borderRadius:
 const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #222' };
 const td = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid #1a1a1a', verticalAlign: 'middle' };
 
-// 29I (achado 83): data de SISTEMA (quando algo aconteceu na conta/no time), lida pelo dono no Gabinete — vale o relógio de quem está olhando,
-// não o fuso de time nenhum. É de propósito: o fuso do time é só para a hora de JOGO (src/utils/dataHora.js).
+// Data de SISTEMA (quando algo aconteceu na conta/no time), lida pelo dono no Gabinete — vale o
+// relógio de quem está olhando, não o fuso de time nenhum. É de propósito: o fuso do time é só para a
+// hora de JOGO (src/utils/dataHora.js).
 const dataCurta = (iso) => {
   try { return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return '-'; }
 };

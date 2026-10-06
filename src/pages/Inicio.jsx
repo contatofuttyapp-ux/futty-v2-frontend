@@ -6,7 +6,7 @@ import { RefreshCw, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { tomarConvitePendente } from '../lib/convitePendente';
 import { usePerfil } from '../context/PerfilContext';
-// Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
+// Liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
 import { useInicio } from '../context/InicioContext';
 import CardSeuTime from '../components/CardSeuTime';
@@ -44,12 +44,13 @@ import { urlAsset, urlImagem } from '../utils/avatar';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
 import '../styles/app.css';
 
-// "quinta-feira, 08/10" — o dia do jogo na pergunta do aviso de ausência. No relógio do CAMPO (fuso do time, 29I achado 83).
+// "quinta-feira, 08/10" — o dia do jogo na pergunta do aviso de ausência. No relógio do CAMPO (fuso do time).
 function diaDoJogo(iso, fuso) {
   return formatarData(iso, fuso, 'longa') || null;
 }
 
-// 29T-C: o "Agora não" dos lembretes sem prazo — esconde o lembrete por 7 dias neste aparelho e a fila anda (a conta está em utils/lembretes.js).
+// O "Agora não" dos lembretes sem prazo — esconde o lembrete por 7 dias neste aparelho e a fila anda (a
+// conta está em utils/lembretes.js).
 function AgoraNao({ onClick }) {
   return (
     <button type="button" data-agora-nao onClick={onClick} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', padding: '4px 2px', flexShrink: 0 }}>
@@ -78,7 +79,7 @@ function AgoraNao({ onClick }) {
 // mexe nos pixéis. Mudar o fundo na Figurinha muda a chave e regenera sozinho:
 // não há invalidação manual para alguém se esquecer de chamar.
 //
-// VELOCIDADE 4: este Map morre quando a aba morre. O cromo guardado em
+// Este Map morre quando a aba morre. O cromo guardado em
 // IndexedDB (lib/cromoCache.js) é o que atravessa ABERTURAS — sem ele, toda
 // abertura do app redesenhava a figurinha do zero.
 const cromoCache = new Map();
@@ -107,19 +108,14 @@ async function gerarCromoDataURL(opts, chave, userId) {
 
 // Presentacional: recebe o cromo JÁ gerado (dataURL) do Início.
 //
-// VELOCIDADE 4 — até 14-set a página inteira esperava o cromo estar desenhado
-// para aparecer, e por isso este componente nunca precisava de um estado
-// intermédio. Agora é o contrário: a tela aparece primeiro e o cromo chega
-// quando fica pronto, então há um instante sem ele. Esse instante é preenchido
-// com a própria foto da pessoa (`previa`), no mesmo sítio e no mesmo tamanho —
-// sem isso a tela nascia com um buraco quadrado no meio, que é pior do que
-// esperar. Sem avatar IA o canvas já veio com o genérico da casa desenhado (ver
-// `jogadorCard` em Inicio()) — não há overlay de convite: o card em si é o
-// convite (rodízio 31-jul).
-// O fundo do cromo, em CSS, para a prévia. Os que têm asset usam o MESMO
-// ficheiro que o canvas desenha (e com o mesmo enquadramento: `cover` ancorado a
-// 22% do topo é o biasTopo do retrato quadrado). Os desenhados ficam pela base —
-// o honeycomb do Épico é alpha 0.065 e não se distingue num placeholder.
+// A tela aparece primeiro e o cromo chega quando fica pronto, então há um instante sem ele. Esse
+// instante é preenchido com a própria foto da pessoa (`previa`), no mesmo sítio e no mesmo tamanho —
+// sem isso a tela nasce com um buraco quadrado no meio, que é pior do que esperar. Sem avatar IA o
+// canvas já vem com o genérico da casa desenhado (ver `jogadorCard` em Inicio()) — não há overlay de
+// convite: o card em si é o convite.
+// O fundo do cromo, em CSS, para a prévia. Os que têm asset usam o MESMO ficheiro que o canvas desenha
+// (e com o mesmo enquadramento: `cover` ancorado a 22% do topo é o biasTopo do retrato quadrado). Os
+// desenhados ficam pela base — o honeycomb do Épico é alpha 0.065 e não se distingue num placeholder.
 function fundoDaPrevia(fundo) {
   if (fundo === 'estadio') return { backgroundImage: 'url(/stadium_bg.webp)' };
   if (fundo === 'golden') return { backgroundImage: 'url(/golden-plate.jpg)', backgroundPosition: '50% 50%' };
@@ -132,26 +128,20 @@ function fundoDaPrevia(fundo) {
 }
 
 // A PRÉVIA — o cromo inteiro composto em DOM, pronto na primeira pintura.
-// O avatar é medido e posicionado com a conta do canvas (enquadrarAvatar), em
-// percentagens: assim os dois põem o jogador no mesmo sítio e a troca da prévia
-// pelo cromo desenhado não salta.
+// O avatar é medido e posicionado com a conta do canvas (enquadrarAvatar), em percentagens: assim os
+// dois põem o jogador no mesmo sítio e a troca da prévia pelo cromo desenhado não salta.
 //
-// RODADA 12A (16-set) — a composição entra INTEIRA, num quadro só.
+// A composição entra INTEIRA, num quadro só: a moldura dourada pintada antes do avatar é, no aparelho,
+// uma moldura vazia à espera de uma cara. Por isso nada da composição vai à tela antes de a imagem estar
+// DECODIFICADA — decode(), não onLoad: o onLoad garante os bytes, não os pixéis prontos a desenhar, e é
+// entre um e outro que o WebKit segura o quadro. Até lá fica só a área reservada com o fundo escolhido:
+// o mesmo lugar, o mesmo tamanho, sem forma pela metade.
 //
-// Até aqui a moldura dourada pintava no primeiro quadro e o avatar entrava
-// depois, no onLoad: no aparelho isso é uma moldura vazia à espera de uma cara,
-// e foi o que o Pedro viu no build 21. Agora nada da composição vai à tela antes
-// de a imagem estar DECODIFICADA — decode(), não onLoad: o onLoad garante os
-// bytes, não os pixéis prontos a desenhar, e é entre um e outro que o WebKit
-// segura o quadro. Até lá fica só a área reservada com o fundo escolhido: o
-// mesmo lugar, o mesmo tamanho, sem forma pela metade.
-//
-// Se a foto não chegar em PRAZO_AVATAR_MS, a composição aparece na mesma com a
-// silhueta da casa (SVG, não espera rede nenhuma) e a foto entra quando chegar.
-// Uma espera sem fim não é transição, é defeito — a mesma lição da Velocidade 5.
+// Se a foto não chegar em PRAZO_AVATAR_MS, a composição aparece na mesma com a silhueta da casa (SVG,
+// não espera rede nenhuma) e a foto entra quando chegar. Uma espera sem fim não é transição, é defeito.
 const PRAZO_AVATAR_MS = 1500;
 
-// RODADA 27 — o anel dourado da prévia: o conteúdo mora `inset: 1.75%` dentro dele (app.css,
+// O anel dourado da prévia: o conteúdo mora `inset: 1.75%` dentro dele (app.css,
 // .cromo-previa__dentro), que é o corpo grosso do frame do canvas (7*k, k = lado/400).
 const INSET_DO_ANEL = 1.75;
 
@@ -252,10 +242,10 @@ function CromoInicio({ cromo, previa, modoPrevia, fundo, nome, refCromo, destino
   );
 }
 
-// Nome por baixo do cromo, em texto livre grande (o quadrado não o traz baked). Base
-// 44px; encolhe até caber numa linha, como o nome da figurinha (29T, achado 164: o piso de 28px
-// cortava "Chavo, el matad…" no computador — agora a letra desce até o nome caber, em qualquer
-// largura). Só como defesa teórica há um piso (PISO_NOME) e, abaixo dele, a reticência.
+// Nome por baixo do cromo, em texto livre grande (o quadrado não o traz baked). Base 44px; encolhe até
+// caber numa linha, como o nome da figurinha: a letra desce até o nome caber, em qualquer largura (um
+// piso de 28px cortava "Chavo, el matad…" no computador). Só como defesa teórica há um piso
+// (PISO_NOME) e, abaixo dele, a reticência.
 // A medição é impura (scrollWidth) → useLayoutEffect, antes do paint, para o utilizador não
 // ver um salto de tamanho. Reajusta em resize e quando as fontes carregam (a Rajdhani mede
 // diferente da fallback).
@@ -294,7 +284,7 @@ export function NomeCromo({ nome }) {
         fontWeight: 700,
         fontSize: 44,
         letterSpacing: '0.04em',
-        // Sem forçar maiúsculas (29I, achado 94): o nome sai como a pessoa escreveu, igual à Resenha e ao resto do app.
+        // Sem forçar maiúsculas: o nome sai como a pessoa escreveu, igual à Resenha e ao resto do app.
         color: '#f0c94a',
         textAlign: 'center',
         lineHeight: 1.05,
@@ -317,7 +307,7 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
   const isDrawn = game.status === 'drawn';
   const going = game.user_status === 'going';
   const notGoing = game.user_status === 'not_going';
-  const soOrganizo = game.eu_jogo === false; // Rodada 29B (E): só organiza este time — não responde presença
+  const soOrganizo = game.eu_jogo === false; // só organiza este time — não responde presença
 
   return (
     // Wrapper e card separados porque o card passou a levar cantos a 45°: a ordem
@@ -347,9 +337,10 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
       <div className={`gcard hud-corners ${isPast ? 'gcard--past' : ''} ${isNext ? 'gcard--next' : ''}`}>
         {isNext ? <div className="gcard__next-badge hud-corners-s">PRÓXIMO</div> : null}
         <div className="gcard__top">
-          {/* Achado 84: o card inteiro abre a tela do jogo. Link de verdade (abre em nova aba, dá para copiar o endereço): o <a> está
-              no título e a camada que cobre o card é o ::after dele (.gcard__link, app.css) — os botões "Vou / Não vou" e "Ver sorteio"
-              ficam por cima (z-index) e continuam funcionando sem abrir o jogo. Sem botão dentro de <a>. */}
+          {/* O card inteiro abre a tela do jogo. Link de verdade (abre em nova aba, dá para copiar o endereço): o
+              <a> está no título e a camada que cobre o card é o ::after dele (.gcard__link, app.css) — os botões
+              "Vou / Não vou" e "Ver sorteio" ficam por cima (z-index) e continuam funcionando sem abrir o jogo.
+              Sem botão dentro de <a>. */}
           <span className="gcard__title">
             {game.team_slug
               ? <Link className="gcard__link" to={`/time/${game.team_slug}/jogo/${game.id}`} aria-label={`Abrir o jogo ${game.name}`}>{game.name}</Link>
@@ -380,15 +371,15 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
                 </span>
               </span>
             </div>
-            {/* RODADA 13 — ver o sorteio é A ação do card: dourado forte,
+            {/* Ver o sorteio é A ação do card: dourado forte,
                 largura total, nada mais no card compete (chips e bordas ficam
                 nos tons apagados). Mesmo par de sempre para o clip a 45°: o
                 glow no wrapper (drop-shadow atravessa o recorte), o
                 .pulse-active no botão (a metade dele que anima a borda
                 sobrevive ao clip-path). */}
             <span className="cta-gold-glow pulse-glow" style={{ display: 'flex', marginTop: 12 }}>
-              {/* Achado 88: tocar e não ver nada por vários segundos parecia botão quebrado. Agora o botão responde NA HORA ("Abrindo…",
-                  apagado, sem tocar duas vezes) e a tela abre pelo roteador, sem recarregar o app inteiro. */}
+              {/* O botão responde NA HORA ("Abrindo…", apagado, sem tocar duas vezes) e a tela abre pelo roteador,
+                  sem recarregar o app inteiro: tocar e não ver nada por vários segundos parecia botão quebrado. */}
               <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} disabled={abrindo} aria-busy={abrindo} onClick={() => onVerSorteio(game)}>
                 {abrindo ? 'Abrindo…' : <><Trophy size={16} /> Ver sorteio</>}
               </button>
@@ -463,13 +454,14 @@ function EmptyState() {
 }
 
 export default function Inicio() {
-  // Rodada 29B (A): quem tocou em "Criar conta e entrar" no convite passou pelo cadastro e chegou aqui — o bilhete que a
+  // Quem tocou em "Criar conta e entrar" no convite passou pelo cadastro e chegou aqui — o bilhete que a
   // página do convite deixou no aparelho a devolve ao convite (uma vez só; sem bilhete, nada acontece).
   const navigate = useNavigate();
   const { perfil: me, carregando: meLoading, recarregar: recarregarPerfil, hidratar: hidratarPerfil } = usePerfil();
-  // Rodada 29H (item 1): o bilhete só é tomado por conta que JÁ terminou o onboarding. Antes, uma conta nova do Google/Apple que
-  // caía aqui por um instante (a trava do onboarding só a manda para /onboarding no mesmo ciclo) tinha o bilhete tomado e era
-  // levada à página do convite sem foto e sem nome — e o Onboarding abria sem saber do convite.
+  // O bilhete só é tomado por conta que JÁ terminou o onboarding. Uma conta nova do Google/Apple cai aqui
+  // por um instante (a trava do onboarding só a manda para /onboarding no mesmo ciclo); se o bilhete fosse
+  // tomado, ela seria levada à página do convite sem foto e sem nome — e o Onboarding abriria sem saber do
+  // convite.
   const onboardingCompleto = me?.user?.onboarding_completo;
   useEffect(() => {
     if (onboardingCompleto === false) return;
@@ -477,16 +469,15 @@ export default function Inicio() {
     if (token) navigate(`/convite/${token}`, { replace: true });
   }, [navigate, onboardingCompleto]);
   const { teams, loading: teamsLoading, error: teamsErro } = useTeams();
-  // Início (11-set): 1 pedido só (GET /api/inicio, via Layout.jsx que monta o
-  // InicioProvider só nesta rota) alimenta jogos, RSVP, campeonato, pedidos,
-  // votações pendentes, desfechos de denúncia e o anúncio — em vez dos ~9
-  // pedidos que esta página disparava em paralelo. As AÇÕES (confirmar
-  // presença, ausência, etc.) continuam a ir direto à API de sempre.
+  // Início: 1 pedido só (GET /api/inicio, via Layout.jsx que monta o InicioProvider só nesta rota)
+  // alimenta jogos, RSVP, campeonato, pedidos, votações pendentes, desfechos de denúncia e o anúncio —
+  // em vez de ~9 pedidos em paralelo. As AÇÕES (confirmar presença, ausência, etc.) continuam a ir
+  // direto à API de sempre.
   const inicio = useInicio();
   const dadosInicio = inicio.dados;
 
   // O cromo é gerado AQUI (não dentro do CromoInicio) porque o Início é quem
-  // sabe o avatar, o fundo e o nome. VELOCIDADE 4: já NÃO segura a página —
+  // sabe o avatar, o fundo e o nome. Não segura a página —
   // começa a null, a tela aparece na mesma, e ele entra quando estiver pronto
   // (do IndexedDB na hora, ou do canvas um segundo depois).
   const [cromo, setCromo] = useState(null);
@@ -498,7 +489,7 @@ export default function Inicio() {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState('all');
-  // Rodada 29L (achado 138): a faixa de chips de time rola; a borda esmaece onde há mais, e o "Várzea FC" cortado deixa de parecer erro.
+  // A faixa de chips de time rola; a borda esmaece onde há mais, e o "Várzea FC" cortado deixa de parecer erro.
   const { aoMontar: montarFaixaDeChips, esquerda: chipsEscondidosEsq, direita: chipsEscondidosDir } = useIndicadorDeRolagem();
   const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
   const [ausenciaBusy, setAusenciaBusy] = useState(false);
@@ -506,13 +497,15 @@ export default function Inicio() {
   const [toast, setToast] = useState(null); // { msg, tipo }
   const celebrouCamp = useRef(false);
 
-  // Pedido ÚNICO de data de nascimento (Opção B): sem ela, o /p/ cai em silhueta e o anúncio 18+
-  // nunca aparece (a idade manda; o app é 18+, Rodada 29G). Banner não-bloqueante e dispensável.
+  // Pedido ÚNICO de data de nascimento: sem ela, o /p/ cai em silhueta e o anúncio 18+ nunca aparece (a
+  // idade manda; o app é 18+). Banner não-bloqueante e dispensável.
   const [dobInput, setDobInput] = useState('');
   const [dobBusy, setDobBusy] = useState(false);
   const [dobFeito, setDobFeito] = useState(false);
-  // 29T-C: o "Agora não" dos lembretes sem prazo (figurinha para gerar, recado, uniforme, card, data de nascimento — e a figurinha que não saiu) esconde o
-  // lembrete por 7 dias NAQUELE aparelho (utils/lembretes.js, com try/catch) e a fila anda. O estado guarda o mesmo para a tela atual, mesmo sem localStorage.
+  // O "Agora não" dos lembretes sem prazo (figurinha para gerar, recado, uniforme, card, data de
+  // nascimento — e a figurinha que não saiu) esconde o lembrete por 7 dias NAQUELE aparelho
+  // (utils/lembretes.js, com try/catch) e a fila anda. O estado guarda o mesmo para a tela atual, mesmo
+  // sem localStorage.
   const [agoraNaoDeles, setAgoraNaoDeles] = useState(() => lembretesEscondidos([...LEMBRETES_SEM_PRAZO, 'figurinha-falhou']));
   const escondido = (id) => agoraNaoDeles.has(id);
   function agoraNao(id) {
@@ -551,10 +544,10 @@ export default function Inicio() {
     setCtaFigurinha(false);
   }
 
-  // "Ver sorteio": a cerimónia corre na PÁGINA do sorteio (SPEC-SORTEIO §13d).
-  // Achados 88 e 89: antes a tela abria por um recarregamento da página — o app INTEIRO de novo (vários segundos, sem indicador nenhum). Agora navega
-  // pelo roteador (como o botão "Sortear" da tela do jogo já fazia) e o botão mostra "Abrindo…" no mesmo instante do toque. Sem state
-  // `euSorteei`: quem só vai ver o resultado abre com o som desligado (regra da casa, 16-set).
+  // "Ver sorteio": a cerimónia corre na PÁGINA do sorteio (SPEC-SORTEIO §13d). Navega pelo roteador (como
+  // o botão "Sortear" da tela do jogo) — um recarregamento da página refaria o app INTEIRO, vários
+  // segundos sem indicador nenhum — e o botão mostra "Abrindo…" no mesmo instante do toque. Sem state
+  // `euSorteei`: quem só vai ver o resultado abre com o som desligado (regra da casa).
   const [abrindoSorteioId, setAbrindoSorteioId] = useState(null);
   function verSorteio(game) {
     if (abrindoSorteioId) return;
@@ -575,10 +568,10 @@ export default function Inicio() {
     if (dadosInicio?.convites) setGames(dadosInicio.convites.games || []);
   }
 
-  // Presença com estado otimista + chamada à API (Rodada 29I, achado 86): o botão escolhido acende e o contador de confirmados
+  // Presença com estado otimista + chamada à API: o botão escolhido acende e o contador de confirmados
   // mexe NA HORA; se o pedido falhar, volta ao estado de antes e diz o que fazer.
-  // Devolve como acabou: true (valeu), false (falhou e a tela voltou ao que era) ou 'espera' (o jogo estava cheio). O aviso do topo usa isto
-  // para dizer "Presença confirmada" só quando valeu.
+  // Devolve como acabou: true (valeu), false (falhou e a tela voltou ao que era) ou 'espera' (o jogo
+  // estava cheio). O aviso do topo usa isto para dizer "Presença confirmada" só quando valeu.
   async function onPresence(gameId, going) {
     // Com o RSVP aberto para o jogo do RSVP a resposta que vale é a do RSVP: o "Vou / Não vou" do card do jogo, o do aviso do topo e o do
     // cartão "Confirme presença" são o MESMO — um destino só, um número só.
@@ -630,7 +623,8 @@ export default function Inicio() {
     return fim;
   }
 
-  // O "Vou / Não vou" do aviso do topo (29T): a mesma chamada dos cards; só acrescenta a confirmação, porque o aviso some assim que a resposta vale.
+  // O "Vou / Não vou" do aviso do topo: a mesma chamada dos cards; só acrescenta a confirmação, porque o
+  // aviso some assim que a resposta vale.
   async function responderDoAviso(gameId, going) {
     const fim = await onPresence(gameId, going);
     if (fim === true) setToast({ msg: going ? 'Presença confirmada.' : 'Anotado: você não vai.', tipo: 'success' });
@@ -638,19 +632,18 @@ export default function Inicio() {
 
   const user = me?.user;
   const stats = me?.stats;
-  const nome = nomeExibicao(user); // a regra única do nome (nome de jogador → nome completo → "Jogador"; nunca o e-mail) — 29I, achado 94
+  const nome = nomeExibicao(user); // a regra única do nome (nome de jogador → nome completo → "Jogador"; nunca o e-mail)
 
-  // Figurinha IA no card agora? Quem diz é o motor (Rodada 28, mostraFigurinha) — mesma regra da Figurinha.
+  // Figurinha IA no card agora? Quem diz é o motor (mostraFigurinha) — mesma regra da Figurinha.
   const cromoAvatarEhIA = mostraFigurinha(user);
   const cromoFundo = user?.fundo_figurinha || 'estadio';
   // Com Brilhante, o cromo de sempre; sem Brilhante mas com FOTO, a figurinha COMUM (a foto, a cobrir o
   // cromo); sem foto, o genérico da casa. Uma conta só: o canvas e a prévia em DOM leem a mesma.
   const modoDoCromo = !cromoAvatarEhIA && user?.foto_url ? 'comum' : 'brilhante';
 
-  // Figurinha automática do cadastro (12-set): o Onboarding dispara a geração
-  // em fundo e marca o sessionStorage; aqui o Início mostra "criando..." em vez
-  // do CTA normal, com polling de /api/me até sair de 'gerando'. O sessionStorage
-  // cobre o instante entre o disparo e o /api/me confirmar 'gerando' — sem ele o
+  // Figurinha automática do cadastro: o Onboarding dispara a geração em fundo e marca o sessionStorage;
+  // aqui o Início mostra "criando..." em vez do CTA normal, com polling de /api/me até sair de 'gerando'.
+  // O sessionStorage cobre o instante entre o disparo e o /api/me confirmar 'gerando' — sem ele o
   // usuário veria o CTA normal piscar por 1 beat antes do estado de loading.
   const [figurinhaSessaoMarcada, setFigurinhaSessaoMarcada] = useState(() => {
     try {
@@ -660,10 +653,10 @@ export default function Inicio() {
     }
   });
   const figurinhaStatus = user?.figurinha_status || null;
-  // RODADA 17 — `&& !user?.avatar_url` saiu: só cobria o cadastro (1ª figurinha
+  // Sem `&& !user?.avatar_url`: essa condição só cobria o cadastro (1ª figurinha
   // de todas, sem avatar_url nenhum ainda). Numa TROCA de foto/uniforme
   // (Figurinha.jsx, gerarAvatarIA) o usuário já tem avatar_url — o antigo — e
-  // essa condição bloqueava o marcador exactamente no caso que ele existe para
+  // ela bloquearia o marcador exactamente no caso que ele existe para
   // cobrir: navegar para o Início enquanto a geração ainda corre, antes de o
   // /api/me fresco confirmar 'gerando'. O marcador continua a sumir sozinho
   // (linhas abaixo) assim que figurinhaStatus sai de 'gerando' — nunca fica
@@ -708,8 +701,8 @@ export default function Inicio() {
     return () => clearInterval(id);
   }, [figurinhaGerando, recarregarPerfil]);
 
-  // Escolha do avatar genérico (31-jul): undefined = usa o que veio do servidor;
-  // definido = override otimista local (PATCH em curso ou já confirmado).
+  // Escolha do avatar genérico: undefined = usa o que veio do servidor; definido = override otimista local
+  // (PATCH em curso ou já confirmado).
   const [sheetAvatarAberto, setSheetAvatarAberto] = useState(false);
   const [avatarGenericoOverride, setAvatarGenericoOverride] = useState(undefined);
   const avatarGenericoEscolha = avatarGenericoOverride !== undefined ? avatarGenericoOverride : user?.avatar_generico ?? null;
@@ -718,10 +711,10 @@ export default function Inicio() {
     setAvatarGenericoOverride(key);
     try {
       await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ avatar_generico: key }) });
-      // Achado 4: o PerfilContext partilhado aprende a escolha — outras páginas (Perfil, Figurinha,
-      // Ranking) que leem o avatar genérico sem override próprio ficam frescas. RODADA 27: sem reler o
-      // /api/me inteiro (a escolha é o que o PATCH acabou de gravar); o hidratar também alinha os
-      // caches do Ranking e do Feed com o genérico novo (lib/cacheCard.js).
+      // O PerfilContext partilhado aprende a escolha — outras páginas (Perfil, Figurinha, Ranking) que leem o
+      // avatar genérico sem override próprio ficam frescas. Sem reler o /api/me inteiro (a escolha é o que o
+      // PATCH acabou de gravar); o hidratar também alinha os caches do Ranking e do Feed com o genérico novo
+      // (lib/cacheCard.js).
       if (me?.user) hidratarPerfil({ ...me, user: { ...me.user, avatar_generico: key } });
       else recarregarPerfil();
     } catch (e) {
@@ -733,7 +726,7 @@ export default function Inicio() {
   // Gera o cromo assim que o user existe. corFrame/zoom são os defaults FIXOS da
   // Figurinha — divergir dava dois cromos diferentes para o mesmo utilizador.
   //
-  // VELOCIDADE 4 — a ordem passa a ser: memória → IndexedDB → canvas. Só se
+  // A ordem é: memória → IndexedDB → canvas. Só se
   // chega ao canvas (o passo de um a três segundos no celular) quando não há
   // nada guardado, ou quando a composição mudou. Nada disto segura a tela.
   useEffect(() => {
@@ -752,10 +745,9 @@ export default function Inicio() {
     // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
     // download nem a montra do tile do seletor — densidade de repouso própria.
     const opts = { jogador: jogadorCard, fundo: cromoFundo, corFrame: 'dourado', avatarZoom: 1.1, formato: 'quadrado', fundoGlints: 'discreto', modo: modoCromo };
-    // O modo entra na chave: a mesma pessoa com a mesma foto desenha DUAS
-    // coisas diferentes antes e depois de ter Brilhante, e servir o cromo
-    // errado do cache seria o bug de 22-set outra vez, por outra porta.
-    // 29H-B: a aura mudou de desenho (dobro do tamanho, −25% de opacidade) — a chave dela muda, senão o IndexedDB servia o cromo antigo.
+    // O modo entra na chave: a mesma pessoa com a mesma foto desenha DUAS coisas diferentes antes e depois
+    // de ter Brilhante, e servir o cromo errado do cache seria um bug. Quem muda o desenho da aura (hoje o
+    // dobro do tamanho, −25% de opacidade) muda a chave dela, senão o IndexedDB serve o cromo antigo.
     const chave = `q${cromoFundo === 'aura' ? '2' : ''}|${modoCromo}|${jogadorCard.avatar_url || jogadorCard.foto_url || '-'}|${cromoFundo}|${nome}`;
 
     const naMemoria = cromoCache.get(chave);
@@ -767,31 +759,20 @@ export default function Inicio() {
       return () => { vivo = false; };
     }
 
-    // VELOCIDADE 5 (14-set) — o cromo não pode depender de ninguém para sempre.
-    // No iPhone da loja apanhámos o placeholder desfocado eternamente: o
-    // lerCromo() do IndexedDB não tinha prazo e, com o WebKit a travar a base
-    // (outra aba a segurar o upgrade, modo privado, disco a responder mal), a
-    // promessa nunca assentava — e como o desenhar() estava DENTRO do .then(),
-    // o canvas também nunca corria. Uma otimização de cache a segurar a coisa
-    // que ela devia acelerar.
-    //
-    // Agora quem manda é o relógio: passados 400 ms sem resposta do cache,
+    // O cromo não pode depender de ninguém para sempre. O lerCromo() do IndexedDB não pode ficar sem prazo:
+    // com o WebKit a travar a base (outra aba a segurar o upgrade, modo privado, disco a responder mal), a
+    // promessa nunca assenta — e, se o desenhar() estiver DENTRO do .then(), o canvas também nunca corre:
+    // uma otimização de cache a segurar a coisa que ela devia acelerar (já apanhámos no iPhone da loja o
+    // placeholder desfocado eternamente). Quem manda é o relógio: passados 400 ms sem resposta do cache,
     // desenha-se na mesma. Perde-se o atalho, nunca a figurinha.
     //
-    // FLUIDEZ 2 (16-set) — o canvas deixa de esperar o aparelho PARAR.
-    //
-    // A Velocidade 8 pô-lo atrás do `quandoParado` (3 s sem tocar na tela)
-    // porque compor era de um a três segundos de thread principal. Isso resolvia
-    // o engasgo e criava outro: o relatório do build 20 mostra a travada de
-    // 6402 ms aos 82 s — o cromo a compor quando a pessoa finalmente parou, ou
-    // seja no pior momento possível, já depois de ter desistido de esperar.
-    //
-    // Agora compor custa ~100 ms e é fatiado (ver figurinhaCanvas), por isso o
-    // certo é o contrário: começar CEDO, dois quadros depois da primeira
-    // pintura. Dois quadros porque o primeiro ainda cai antes do desenho e o
-    // segundo já corre com a tela na frente — o mesmo critério da marcação da
-    // pintura em lib/diagnostico.js. Os atalhos (memória e IndexedDB) continuam
-    // imediatos: é deles que vem o cromo instantâneo de quem já abriu o app.
+    // O canvas também não espera o aparelho PARAR: atrás do `quandoParado` (3 s sem tocar na tela) o cromo
+    // compunha no pior momento possível — um relatório mostra a travada de 6402 ms aos 82 s, com a pessoa
+    // já desistida de esperar. Compor custa ~100 ms e é fatiado (ver figurinhaCanvas), por isso o certo é
+    // começar CEDO, dois quadros depois da primeira pintura. Dois quadros porque o primeiro ainda cai antes
+    // do desenho e o segundo já corre com a tela na frente — o mesmo critério da marcação da pintura em
+    // lib/diagnostico.js. Os atalhos (memória e IndexedDB) continuam imediatos: é deles que vem o cromo
+    // instantâneo de quem já abriu o app.
     let desenhou = false;
     let quadro1 = null;
     let quadro2 = null;
@@ -815,8 +796,7 @@ export default function Inicio() {
       // 600×600 para uma tela que mostra 99 px é rasterizar e codificar seis
       // vezes mais pixéis do que se vê (ver ladoDoCromo).
       const larguraExibida = refCromo.current?.getBoundingClientRect().width || null;
-      // Rodada 12A: enquanto o canvas compõe, qualquer quadro perdido fica
-      // anotado com esta tarefa. É o que faltava à travada de 5,7 s do build 21.
+      // Enquanto o canvas compõe, qualquer quadro perdido fica anotado com esta tarefa.
       const fimDaTarefa = tarefaEmCurso('cromo:compor');
       gerarCromoDataURL({ ...opts, larguraExibida }, chave, user.id)
         .then((url) => {
@@ -856,8 +836,8 @@ export default function Inicio() {
     // passo caro). Fica registado para se ver no Gabinete — é a diferença
     // entre "o cromo demora" e "o cromo não vem".
     //
-    // Velocidade 8: a vigia conta a partir do INÍCIO do desenho, não da montagem
-    // — agora o canvas espera o aparelho parar, e contar da montagem daria um
+    // A vigia conta a partir do INÍCIO do desenho, não da montagem
+    // — o canvas espera o aparelho parar, e contar da montagem daria um
     // alarme falso sempre que a pessoa estivesse a mexer na tela.
     const vigia = setInterval(() => {
       if (!vivo || cromoCache.get(chave)) return;
@@ -889,21 +869,19 @@ export default function Inicio() {
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
-  // Achado 8: "Próximos Jogos" só mostra o que ainda vai acontecer (nem encerrado
-  // nem cancelado); o que já passou vai para "Últimos jogos" (máx. 3, mais recente
-  // primeiro — a lista vem ordenada por data ascendente).
+  // "Próximos Jogos" só mostra o que ainda vai acontecer (nem encerrado nem cancelado); o que já passou
+  // vai para "Últimos jogos" (máx. 3, mais recente primeiro — a lista vem ordenada por data ascendente).
   const proximosJogos = filtered.filter((g) => g.status !== 'finished');
   const ultimosJogos = filtered.filter((g) => g.status === 'finished' && !g.cancelado).slice(-3).reverse();
   // Próximo jogo = o primeiro que não está encerrado (lista vem ordenada por data).
   const proximoJogo = proximosJogos[0] || null;
   const nextId = proximoJogo?.id ?? null;
 
-  // Aviso de ausência ao próximo jogo (declaração proactiva, sem RSVP).
-  // Rodada 8A: "Não vou ao próximo jogo / Afinal vou" lia como ESTADO, não como
-  // ação. Agora o botão diz o que faz ("Avisar que não vou"), pergunta antes, e
-  // depois fica a faixa "Você avisou que não vai · Desfazer". O servidor já
-  // fazia o resto: quando o admin abre o RSVP, quem avisou entra como "Não vou"
-  // (routes/rsvp.js), e a marca zera quando o resultado do jogo é lançado.
+  // Aviso de ausência ao próximo jogo (declaração proactiva, sem RSVP). O botão diz o que faz ("Avisar
+  // que não vou") em vez de ler como ESTADO ("Não vou ao próximo jogo / Afinal vou"), pergunta antes, e
+  // depois fica a faixa "Você avisou que não vai · Desfazer". O servidor faz o resto: quando o admin abre
+  // o RSVP, quem avisou entra como "Não vou" (routes/rsvp.js), e a marca zera quando o resultado do jogo
+  // é lançado.
   async function definirAusencia(novo) {
     if (!proximoJogo?.team_slug || ausenciaBusy) return;
     const teamId = proximoJogo.team_id;
@@ -932,7 +910,7 @@ export default function Inicio() {
   const rsvpData = dadosInicio?.rsvp || null;
   const rsvpInfo = nextId ? { ...(rsvpData || { rsvp_aberto: false }), gameId: nextId } : null;
   // O RSVPCard do próximo jogo está na tela (e com ele o Vou / Não vou).
-  // Rodada 29B (E): quem só organiza o time não responde presença — nem o cartão, nem o aviso de ausência.
+  // Quem só organiza o time não responde presença — nem o cartão, nem o aviso de ausência.
   const proximoSoOrganizo = proximoJogo?.eu_jogo === false;
   const rsvpAbertoNoProximo = !proximoSoOrganizo && !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado);
   // Sincronizado DURANTE o render (mesmo padrão de MeuPerfil.jsx), não num
@@ -943,11 +921,13 @@ export default function Inicio() {
     setRsvpDataAnterior(rsvpData);
     if (rsvpData) setMinhaResposta(respostaNoRsvp(rsvpData, me?.user?.id));
   }
-  // O que o card do próximo jogo mostra enquanto o RSVP está aberto (29I, achado 86): UM número só — os confirmados do RSVP, que é
-  // o que o "Vou" grava — e a resposta da pessoa. `minhaResposta` já inclui o estado otimista; o número parte do que o motor
-  // contou e soma/tira a diferença entre a resposta de agora e a que o motor conhecia. Sem RSVP aberto vale o que o motor mandou.
-  // O RSVP que o motor mandou é o do 1º jogo não encerrado de TODOS os times; com um chip de time escolhido o "próximo" da tela pode
-  // ser outro jogo — aí o RSVP não é dele, e o card dele fica com o que o motor contou para ele.
+  // O que o card do próximo jogo mostra enquanto o RSVP está aberto: UM número só — os confirmados do
+  // RSVP, que é o que o "Vou" grava — e a resposta da pessoa. `minhaResposta` já inclui o estado
+  // otimista; o número parte do que o motor contou e soma/tira a diferença entre a resposta de agora e a
+  // que o motor conhecia. Sem RSVP aberto vale o que o motor mandou.
+  // O RSVP que o motor mandou é o do 1º jogo não encerrado de TODOS os times; com um chip de time
+  // escolhido o "próximo" da tela pode ser outro jogo — aí o RSVP não é dele, e o card dele fica com o
+  // que o motor contou para ele.
   const jogoDoRsvpId = (dadosInicio?.convites?.games || []).find((g) => g.status !== 'finished')?.id ?? null;
   const rsvpValeParaOProximo = rsvpAbertoNoProximo && nextId != null && nextId === jogoDoRsvpId;
   // O mesmo RSVP, visto do jogo dele — com ou sem chip de time escolhido. É por aqui que o aviso do topo responde (ele não segue o chip).
@@ -979,15 +959,14 @@ export default function Inicio() {
   });
   if (proximosJogos.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
 
-  // RODADA 28 (bug visto 25-set no Chrome): com a sessão morta o /api/inicio devolvia 401 e o Início
-  // dizia "Bem-vindo, crie seu time" a quem TEM time. "Sem time" só depois de uma resposta que diga
-  // isso; falha sem dado nenhum é erro com "Tentar de novo" (e 401 já vai para o login, lib/api.js).
+  // "Sem time" só depois de uma resposta que diga isso: com a sessão morta o /api/inicio devolve 401 e o
+  // Início diria "Bem-vindo, crie seu time" a quem TEM time. Falha sem dado nenhum é erro com "Tentar de
+  // novo" (e 401 já vai para o login, lib/api.js).
   const semDadosPorErro = !!inicio.erro && !dadosInicio;
   const noTeams = !teamsLoading && !teamsErro && !semDadosPorErro && teams.length === 0;
 
-  // Rodada 12C: para onde o cromo leva. A vitrine vive DENTRO de um time (a
-  // rota é /time/:slug/jogador/:id), por isso só existe com time e com
-  // sessão carregada; até lá, a Figurinha continua a ser um destino honesto.
+  // Para onde o cromo leva. A vitrine vive DENTRO de um time (a rota é /time/:slug/jogador/:id), por isso
+  // só existe com time e com sessão carregada; até lá, a Figurinha continua a ser um destino honesto.
   const destinoCromo = noTeams
     ? { to: '/criar-time', label: 'Criar meu time' }
     : campSlug && user?.id
@@ -1018,9 +997,9 @@ export default function Inicio() {
     apiFetch(`/api/teams/${p.team.slug}/pedir-entrada`, { method: 'DELETE' }).catch(() => {});
   }
 
-  // Rodada 29T (achado 168): UM aviso por vez no topo, o mais importante primeiro (a fila inteira, montada logo abaixo, depois dos estados de cada aviso).
-  // O aviso do jogo não segue o chip de time: quem tem jogo esperando resposta o vê em qualquer filtro. Para o jogo do RSVP a resposta de agora é a
-  // do RSVP (a otimista inclusive).
+  // UM aviso por vez no topo, o mais importante primeiro (a fila inteira, montada logo abaixo, depois dos
+  // estados de cada aviso). O aviso do jogo não segue o chip de time: quem tem jogo esperando resposta o
+  // vê em qualquer filtro. Para o jogo do RSVP a resposta de agora é a do RSVP (a otimista inclusive).
   const jogosParaAviso = (games || []).map((g) => (rsvpValeParaOJogo(g.id)
     ? { ...g, user_status: statusDoJogoPelaResposta(minhaResposta) || (rsvpData?.minha_posicao_espera != null ? 'espera' : null) }
     : g));
@@ -1044,11 +1023,13 @@ export default function Inicio() {
     sessionStorage.setItem('futty_denuncia_desfecho', '1');
   }
 
-  // Rodada 29T-B (ajuste da Freaky, 4-out): TODOS os avisos do topo numa fila só, um por vez (utils/avisosDoInicio.js tem a ordem: jogo sem resposta →
-  // pedido pendente → votação → figurinha pronta → os demais → ativar notificações por último). Cada um mantém a regra de "vale agora" que já tinha;
-  // o que mudou é que só o primeiro da fila aparece, e fechar ou resolver faz entrar o próximo.
+  // TODOS os avisos do topo numa fila só, um por vez (utils/avisosDoInicio.js tem a ordem: jogo sem
+  // resposta → pedido pendente → votação → figurinha pronta → os demais → ativar notificações por último).
+  // Cada um mantém a regra de "vale agora"; só o primeiro da fila aparece, e fechar ou resolver faz
+  // entrar o próximo.
   const cardSemFoto = !meLoading && !!user && !user.foto_url;
-  // 29T-C: primeiro o que aconteceu ou tem prazo, depois os lembretes sem prazo (cada um com o "Agora não" de 7 dias), por último ativar notificações.
+  // Primeiro o que aconteceu ou tem prazo, depois os lembretes sem prazo (cada um com o "Agora não" de 7
+  // dias), por último ativar notificações.
   const aviso = proximoAviso({
     jogos: jogosQuePedemResposta(jogosParaAviso),
     pedidos: pedidosPendentes,
@@ -1082,7 +1063,7 @@ export default function Inicio() {
     <div className="app-shell inicio-reveal">
       <Topbar hud="INÍCIO" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10 }}>
-        {/* Rodada 29T (achado 168): UM aviso por vez, o mais importante primeiro. O que pede ação sobe; o resto é consulta. */}
+        {/* UM aviso por vez, o mais importante primeiro. O que pede ação sobe; o resto é consulta. */}
         {aviso?.tipo === 'jogo' ? (
           <AvisoDeJogo game={aviso.item} team={timeDoJogo(aviso.item.team_id)} mais={aviso.mais} busy={busyId === aviso.item.id} onPresence={responderDoAviso} />
         ) : null}
@@ -1129,7 +1110,7 @@ export default function Inicio() {
             <span style={{ fontSize: 13, color: '#fff', lineHeight: 1.45 }}>
               Informe sua <b>data de nascimento</b> para confirmarmos que você tem {IDADE_MINIMA} anos ou mais.
             </span>
-            {/* 29H (item 3): rolinhos dia · mês · ano, como no cadastro e no onboarding. */}
+            {/* Rolinhos dia · mês · ano, como no cadastro e no onboarding. */}
             <RolinhosData id="inicio-nascimento" onChange={setDobInput} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <button type="button" className="btn btn--purple btn--sm hud-corners-s" disabled={!dobInput || dobBusy} onClick={guardarDob}>
@@ -1161,7 +1142,7 @@ export default function Inicio() {
                 {p.status === 'approved' ? 'O admin aceitou seu pedido, bem-vindo.' : 'Sem drama: há mais times no "Radar de peladas".'}
               </span>
             </span>
-            {/* Rodada 29D: quem foi aceito entra no time como primeira entrada (abre as boas-vindas do time). */}
+            {/* Quem foi aceito entra no time como primeira entrada (abre as boas-vindas do time). */}
             {p.status === 'approved' && p.team?.slug ? (
               <Link to={`/time/${p.team.slug}`} state={{ primeiraEntrada: true }} className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0 }} onClick={() => dispensarDesfecho(p.id)}>
                 Ir ao time
@@ -1198,12 +1179,10 @@ export default function Inicio() {
           </div>
         ) : null}
 
-        {/* Figurinha automática do cadastro (12-set) e QUALQUER geração daqui em
-            diante (RODADA 17: troca de foto/uniforme dispara o mesmo marcador,
-            ver figurinhaGerando acima) — enquanto a IA gera em fundo, mostra a
-            foto da pessoa com um brilho dourado passando em vez do CTA normal —
-            sem isso pareceria que nada está acontecendo por ~45s (motor em duas
-            passadas, 22-set). */}
+        {/* Figurinha automática do cadastro e QUALQUER geração daqui em diante (troca de foto/uniforme dispara
+            o mesmo marcador, ver figurinhaGerando acima) — enquanto a IA gera em fundo, mostra a foto da pessoa
+            com um brilho dourado passando em vez do CTA normal — sem isso pareceria que nada está acontecendo
+            por ~45s (motor em duas passadas). */}
         {aviso?.tipo === 'figurinha-nascendo' && aviso.item.estado === 'gerando' ? (
           <div data-aviso="figurinha-nascendo" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.4)' }}>
             <span className="figurinha-gerando-moldura" style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.5)', background: '#101012' }}>
@@ -1223,9 +1202,8 @@ export default function Inicio() {
                 <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </span>
-            {/* Texto neutro (14-set): 'falhou' também cobre IA_INDISPONIVEL (motor
-                recusado pela fal, nada a ver com a foto) — "tente outra foto" seria
-                enganoso nesse caso. */}
+            {/* Texto neutro: 'falhou' também cobre IA_INDISPONIVEL (motor recusado pela fal, nada a ver com a
+                foto) — "tente outra foto" seria enganoso nesse caso. */}
             <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: '#f8b4b4', lineHeight: 1.4 }}>Não deu para gerar sua figurinha agora. Tente de novo na aba Figurinha.</span>
             <span style={{ flexShrink: 0, display: 'grid', justifyItems: 'center', gap: 2 }}>
               <Link to="/figurinha" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.06em', textDecoration: 'none' }}>
@@ -1292,11 +1270,9 @@ export default function Inicio() {
         ) : null}
 
         {/* CARD PERSISTENTE — sem FOTO não há cromo: moldura V1 vazia + convite.
-            Sem X: persiste até haver foto (a estratégia "quase-obrigatória" do
-            onboarding dia-1).
-            22-set: a condição passou de `!user.avatar_url` para `!user.foto_url`.
-            Quem tem foto já tem figurinha (a comum) — continuar a pedir "complete
-            sua figurinha" a quem acabou de a completar era o convite a mentir. */}
+            Sem X: persiste até haver foto (a estratégia "quase-obrigatória" do onboarding dia-1).
+            A condição é `!user.foto_url`, não `!user.avatar_url`: quem tem foto já tem figurinha (a comum), e
+            pedir "complete sua figurinha" a quem acabou de a completar seria o convite a mentir. */}
         {aviso?.tipo === 'card' && aviso.item.variante === 'sem-foto' ? (
           <div data-aviso="card" className="hud-corners" style={{ marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,160,23,0.4)' }}>
             <Link to="/figurinha" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px 4px', textDecoration: 'none', color: 'inherit' }}>
@@ -1331,7 +1307,7 @@ export default function Inicio() {
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: '8px 0 18px', paddingTop: 'var(--space-lg)' }}>
           <div className="inicio-vline" aria-hidden="true" />
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            {/* RODADA 12C — o cromo abre a VITRINE, não a oficina.
+            {/* O cromo abre a VITRINE, não a oficina.
                 O cromo é o retrato da pessoa como jogadora; o destino natural
                 de tocar nele é a página que mostra o que ela fez (nota, gols,
                 conquistas), a mesma que se abre pelo avatar no Ranking. Editar
@@ -1355,7 +1331,7 @@ export default function Inicio() {
             ) : null}
           </div>
           <NomeCromo nome={nome} />
-          {/* Com o card "Seus times" logo abaixo, o nome do time sai daqui: o card já diz o time (29N, decisão da Freaky). */}
+          {/* Com o card "Seus times" logo abaixo, o nome do time sai daqui: o card já diz o time. */}
           {teams[0] && !(dadosInicio?.seu_time || []).length ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-dim)' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neon)' }} />
@@ -1375,8 +1351,8 @@ export default function Inicio() {
           </div>
         </div>
 
-        {/* Rodada 29N: embaixo do avatar, decisão do dono. Era a primeira coisa da página (29I, bloco 3: o card "Seu time", só para
-            quem administra algum time — o Dashboard do painel do admin); o olho da pessoa cai no avatar, não no topo (achado 146). */}
+        {/* Embaixo do avatar, como o dono quis: o olho da pessoa cai no avatar, não no topo. O card "Seu time"
+            só aparece para quem administra algum time (o Dashboard do painel do admin). */}
         <CardSeuTime seuTime={dadosInicio?.seu_time || []} teams={teams || []} games={games || []} />
 
         {(error || (inicio.erro && !semDadosPorErro)) && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error || inicio.erro}</div>}
@@ -1387,8 +1363,8 @@ export default function Inicio() {
           <EmptyState />
         ) : (
           <>
-            {/* Rodada 29Q: o Radar de peladas e o Criar time à vista, logo embaixo do "Seus times" (ou do avatar, quem não administra
-                time). Eram os dois últimos chips da fila, onde ninguém chegava (dono, 4-out). */}
+            {/* O Radar de peladas e o Criar time à vista, logo embaixo do "Seus times" (ou do avatar, quem não
+                administra time): no fim da fila de chips ninguém chegava. */}
             <AtalhosDoInicio />
 
             {/* Chips de equipas. O 45° entra pelo USE SITE e não pela classe .chip:
@@ -1423,8 +1399,8 @@ export default function Inicio() {
                   ) : null}
                 </button>
               ))}
-              {/* Rodada 29Q: a fila é só o filtro dos jogos por time. "Criar time" (29H, item 62) e "Radar de peladas" (29P) saíram daqui
-                  para os dois cartões acima (<AtalhosDoInicio />). */}
+              {/* A fila é só o filtro dos jogos por time. "Criar time" e "Radar de peladas" moram nos dois cartões
+                  acima (<AtalhosDoInicio />). */}
             </div>
 
             {/* Jogos */}
@@ -1433,8 +1409,8 @@ export default function Inicio() {
             {rsvpAbertoNoProximo ? (
               <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} cidade={timeDoJogo(proximoJogo?.team_id)?.cidade} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
             ) : null}
-            {/* Aviso de ausência (Rodada 8A). Com o RSVP aberto para ESTE jogo, some
-                — o card acima já tem Vou / Não vou, e é a resposta dele que vale. */}
+            {/* Aviso de ausência. Com o RSVP aberto para ESTE jogo, some — o card acima já tem Vou / Não vou, e é a
+                resposta dele que vale. */}
             {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo && !proximoSoOrganizo ? (
               proximoJogo.ausente_proximo ? (
                 <div className="hud-corners-s" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 4px', padding: '8px 12px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
@@ -1479,8 +1455,7 @@ export default function Inicio() {
             )}
             </div>
 
-            {/* Achado 8: jogos já encerrados saem do "Próximos Jogos" e ficam aqui,
-                no máximo 3, mais recente primeiro. */}
+            {/* Jogos já encerrados saem do "Próximos Jogos" e ficam aqui, no máximo 3, mais recente primeiro. */}
             {!loadingGames && ultimosJogos.length > 0 ? (
               <div style={{ marginTop: 16 }}>
                 <div className="games-label">Últimos Jogos</div>

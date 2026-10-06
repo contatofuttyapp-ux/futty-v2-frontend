@@ -1,4 +1,4 @@
-// Futty v2.0 — Rodada 29A (D): o enquadramento de um avatar numa moldura pequena, numa função só.
+// Futty v2.0 — o enquadramento de um avatar numa moldura pequena, numa função só.
 //
 // A figurinha de IA leva a cabeça no topo da imagem, com folga: `objectPosition: 'top'` é o certo. A foto
 // crua do card grátis (a pessoa como ela é, com o fundo dela) tem o rosto mais para o meio: com 'top' o corte
@@ -7,11 +7,12 @@
 // No app a URL chega pelo proxy (`/api/media/<token>`), e o token é `base64url(JSON {b: bucket, p: caminho})`
 // + assinatura: dá para LER o caminho sem chave nenhuma (a assinatura só serve para o servidor confiar).
 //
-// O recorte 2:3 do CARD (Rodada 28) já vai assado no arquivo do avatar (PUT /api/me/avatar/recorte); o zoom
-// (−/+) do card só vive na tela da Figurinha. RODADA 29B (bloco 3, E): a MINIATURA tem recorte próprio —
-// a janela quadrada {x, y, escala} que a pessoa escolhe no editor (components/EnquadroMiniatura.jsx), gravada em
-// users.avatar_recorte. O motor a aplica em todas as miniaturas quadradas (`sq=1`) e a deixa na URL do proxy
-// como `?rc=x,y,escala` — por isso aqui basta LER a URL: quem a recebe sabe se há recorte, de quem for o avatar.
+// O recorte 2:3 do CARD já vai assado no arquivo do avatar (PUT /api/me/avatar/recorte); o zoom (−/+) do
+// card só vive na tela da Figurinha. A MINIATURA tem recorte próprio — a janela quadrada {x, y, escala} que a
+// pessoa enquadra ao escolher a foto (o quadrado tracejado do CropModal, ver recorteDaMolduraUnica), gravada
+// em users.avatar_recorte (lib/miniatura.js). O motor a aplica em todas as miniaturas quadradas (`sq=1`) e a
+// deixa na URL do proxy como `?rc=x,y,escala` — por isso aqui basta LER a URL: quem a recebe sabe se há
+// recorte, de quem for o avatar.
 
 export const ENQUADRO_FIGURINHA = 'top';
 export const ENQUADRO_FOTO = '50% 35%';
@@ -59,14 +60,15 @@ export function enquadroAvatar(url, { recorte = null } = {}) {
 /**
  * Pedir ao motor o quadrado (`sq=1`) corta SEMPRE a partir do topo — o que serve à figurinha e come o rosto da
  * foto crua. Para a foto, o app pede o derivado inteiro (2:3) e o `enquadroAvatar` escolhe a janela. Com recorte
- * escolhido (`?rc=`), o quadrado vem do motor JÁ na janela da pessoa — também para a foto crua (Rodada 29B, E).
+ * escolhido (`?rc=`), o quadrado vem do motor JÁ na janela da pessoa — também para a foto crua.
  */
 export const avatarQuadrado = (url) => tipoDoAvatar(url) !== 'foto' || temRecorte(url);
 
-// ─── O recorte da miniatura (Rodada 29B, bloco 3, E) ──────────────────────────────────────────────────────────
-// ATENÇÃO: `validarRecorte` e `janelaDoRecorte` são cópias de backend/utils/recorteAvatar.js — a ÚNICA definição da
-// janela que o motor corta. Os dois lados são provados contra a MESMA tabela de casos (scripts/unidade/enquadro-recorte.test.mjs
-// ↔ backend/tests/recorte-avatar.test.js): o que a pessoa vê ao arrastar a miniatura é o que o proxy entrega depois.
+// ─── O recorte da miniatura ─────────────────────────────────────────────────────────────────────────────
+// ATENÇÃO: `validarRecorte` e `janelaDoRecorte` são cópias de backend/utils/recorteAvatar.js — a ÚNICA
+// definição da janela que o motor corta. Os dois lados são provados contra a MESMA tabela de casos
+// (scripts/unidade/enquadro-recorte.test.mjs ↔ backend/tests/recorte-avatar.test.js): o que a pessoa vê ao
+// arrastar a miniatura é o que o proxy entrega depois.
 //   x, y    o CENTRO da janela, em fração da imagem (0–1)
 //   escala  o zoom: 1 = a janela tem a largura da imagem (o maior quadrado que cabe); até ESCALA_MAX_RECORTE
 
@@ -102,10 +104,11 @@ export function recortePadrao(largura, altura) {
 }
 
 /**
- * Rodada 29H-B (item 55): o ENQUADRAMENTO ÚNICO. O quadrado tracejado dentro da moldura 2:3 do card (CropModal com `miniatura`) é
- * o quadrado do TOPO, da largura do card — a mesma janela que o motor corta sem recorte para a figurinha. Gravá-lo em
- * users.avatar_recorte (lib/miniatura.js) é o que faz a FOTO crua (que sem recorte o app mostrava em 50%/35%) seguir o que a
- * pessoa viu no tracejado. `largura`/`altura` são as do arquivo que sai do recorte (2:3).
+ * O ENQUADRAMENTO ÚNICO. O quadrado tracejado dentro da moldura 2:3 do card (CropModal com `miniatura`) é o
+ * quadrado do TOPO, da largura do card — a mesma janela que o motor corta sem recorte para a figurinha.
+ * Gravá-lo em users.avatar_recorte (lib/miniatura.js) é o que faz a FOTO crua (que sem recorte o app mostra
+ * em 50%/35%) seguir o que a pessoa viu no tracejado. `largura`/`altura` são as do arquivo que sai do
+ * recorte (2:3).
  */
 export const recorteDaMolduraUnica = (largura, altura) => recortePadrao(largura, altura);
 

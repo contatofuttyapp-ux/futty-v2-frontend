@@ -1,27 +1,31 @@
-// Futty v2.0 — Rodada 29H-A: as cenas dos 14 pontos, no WebKit do iPhone, em servidor LOCAL (CLAUDE.md, 25-set) com as contas de prova
-// do backend (scripts/_bench/prova-rodada29b.js) e TODA escrita interceptada (nada chega ao banco; o signUp também é de mentira).
+// Futty v2.0 — as cenas A a L abaixo, no WebKit do iPhone, em servidor LOCAL (regra do CLAUDE.md) com as
+// contas de prova do backend (scripts/_bench/) e TODA escrita interceptada (nada chega ao banco; o signUp
+// também é de mentira).
 //
-// Roda pelo ver-iphone.mjs (que injeta os utilitários):
-//   node scripts/ver-iphone.mjs --url http://localhost:5233 --cenas rodada29h --etiqueta r29h
+// Roda pelo ver-iphone.mjs (que injeta os utilitários), com --cenas <nome desta cena, registrado lá>:
+//   node scripts/ver-iphone.mjs --url http://localhost:5233 --cenas <cena> --etiqueta <rótulo>
 //
-//   A · barra de navegação: some em /avise-me, /termos e /privacidade SEM sessão (com sessão fica), no convite (longo e curto, e no
-//       "Saiba mais" do banner de cookies) e no onboarding                                                               (item 2)
-//   B · rolinhos de data: dia/mês/ano no cadastro, no onboarding e no Início; sem ano futuro, teto ano atual − 18; dia que acompanha o
-//       mês; data de menor mostra a frase da casa e o signUp nem sai                                                      (item 3)
-//   C · convidado: abre nas boas-vindas do time (frase "Você foi convidado…", linha/gol, Vamos lá) → foto → nome → time; o bilhete
-//       sobrevive a Google/Apple (conta nova que cai em /home vai ao onboarding, não à página do convite); convite morto vira cadastro
-//       comum; quem já tem conta pronta segue o caminho de sempre                                                      (item 1)
-//   D · página 1: o Register e o Login aquecem o chunk do Onboarding e as 8 figurinhas; imagens com ?v=<hash>          (itens 4 e 37)
-//   E · "deixar para depois": escondido até ~2 s e aparece então                                                         (item 5)
-//   F · Criar time: texto do papel por opção; Artilheiro/Destaque clicáveis e gravados; textos de entrada aprovados; o aviso do
-//       "só organizo" é texto na tela (nada de toast); bairro opcional; frase do WhatsApp e link curto                   (itens 6, 7, 12)
-//   G · convite: time sem logo = só o nome em destaque; og:image com o ícone do app 1200×630                             (item 7)
-//   H · chips linha/gol lado a lado no card do jogador e no Perfil; "＋ Criar time" no Início e no Perfil               (itens 8 e 11)
-//   I · painel do admin: frase aprovada e nenhum "IA" fora da figurinha                                                  (item 9)
-//   J · figurinha: um botão só no celular, "Baixar" só no computador; Planos: seção "Figurinhas do time" só para dono, textos
-//       rediagramados                                                                                                    (item 10)
-//   K · painel do time: bairro (freguesias em Portugal) e prêmios do dia                                                  (itens 12 e 44)
-//   L · ajustes finais: o F antes do JavaScript; landing com os pontos; "Você entrou no time <nome>!"                    (item 13)
+//   A · barra de navegação: some em /avise-me, /termos e /privacidade SEM sessão (com sessão fica), no
+//       convite (longo e curto, e no "Saiba mais" do banner de cookies) e no onboarding
+//   B · rolinhos de data: dia/mês/ano no cadastro, no onboarding e no Início; sem ano futuro, teto ano
+//       atual − 18; dia que acompanha o mês; data de menor mostra a frase da casa e o signUp nem sai
+//   C · convidado: abre nas boas-vindas do time (frase "Você foi convidado…", linha/gol, Vamos lá) → foto →
+//       nome → time; o bilhete sobrevive a Google/Apple (conta nova que cai em /home vai ao onboarding, não
+//       à página do convite); convite morto vira cadastro comum; quem já tem conta pronta segue o caminho
+//       de sempre
+//   D · página 1: o Register e o Login aquecem o chunk do Onboarding e as 8 figurinhas; imagens com
+//       ?v=<hash>
+//   E · "deixar para depois": escondido até ~2 s e aparece então
+//   F · Criar time: texto do papel por opção; Artilheiro/Destaque clicáveis e gravados; textos de entrada
+//       aprovados; o aviso do "só organizo" é texto na tela (nada de toast); bairro opcional; frase do
+//       WhatsApp e link curto
+//   G · convite: time sem logo = só o nome em destaque; og:image com o ícone do app 1200×630
+//   H · chips linha/gol lado a lado no card do jogador e no Perfil; "＋ Criar time" no Início e no Perfil
+//   I · painel do admin: frase aprovada e nenhum "IA" fora da figurinha
+//   J · figurinha: um botão só no celular, "Baixar" só no computador; Planos: seção "Figurinhas do time"
+//       só para dono, textos rediagramados
+//   K · painel do time: bairro (freguesias em Portugal) e prêmios do dia
+//   L · ajustes finais: o F antes do JavaScript; landing com os pontos; "Você entrou no time <nome>!"
 import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -103,9 +107,10 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
       return route.fulfill({ response: resposta, json });
     });
   };
-  // Um SCRIPT (string), não uma função: uma função com variáveis de fora perde as variáveis ao ir para a página (a 1ª rodada desta
-  // cena gravou um bilhete sem time e o onboarding abriu a página "Começar"). O script roda a CADA navegação: o sessionStorage garante
-  // que o bilhete é posto UMA vez só (senão a cena o repunha depois de a página o gastar).
+  // Um SCRIPT (string), não uma função: uma função com variáveis de fora perde as variáveis ao ir para a
+  // página (o bilhete saía sem time e o onboarding abria a página "Começar"). O script roda a CADA
+  // navegação: o sessionStorage garante que o bilhete é posto UMA vez só (senão a cena o repunha depois de a
+  // página o gastar).
   const bilhete = (time = { nome: NOME, logo_url: null, cor_fundo: null }) => `try { if (!sessionStorage.getItem('__bilhete_da_cena')) { sessionStorage.setItem('__bilhete_da_cena', '1'); localStorage.setItem('futty_convite_pendente', JSON.stringify({ token: 'token-de-prova', em: Date.now(), time: ${JSON.stringify(time)} })); } } catch (e) { /* nada */ }`;
   const lerProgresso = (pagina) => pagina.evaluate(() => {
     const tracos = [...document.querySelectorAll('[data-progresso] i')];
@@ -122,7 +127,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await contexto.close();
   }
   {
-    // 29P: a página do Avise-me saiu; o link antigo das redes cai na página inicial (sem barra, como sempre na "/").
+    // A página do Avise-me saiu; o link antigo das redes cai na página inicial (sem barra, como sempre na "/").
     const { contexto, pagina } = await abrir(null, 'A-avise-me', '/avise-me');
     await espera(1500);
     verificar('A · /avise-me leva para a página inicial ("/"), sem barra', new URL(pagina.url()).pathname === '/' && (await barra(pagina).count()) === 0, pagina.url().replace(BASE, ''));
@@ -417,7 +422,8 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await capturar(pagina, 'F1-criar-bairro');
     await pagina.getByRole('button', { name: 'Continuar' }).tap();
 
-    // passo 2 (29O): o papel sem texto embaixo; gols, artilheiro e destaque nascem desligados; ligar o artilheiro liga os gols junto
+    // Passo 2: o papel sem texto embaixo; gols, artilheiro e destaque nascem desligados; ligar o artilheiro
+    // liga os gols junto
     await pagina.locator('[data-escolha-papel]').waitFor({ timeout: 15000 });
     const semTextoNoPapel = (await pagina.locator('[data-texto-papel]').count()) === 0;
     await pagina.getByRole('button', { name: 'Sim, eu jogo' }).tap();
@@ -459,7 +465,8 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     const cidadeDoTime = await pagina.locator('[data-cidade-do-time]').innerText().catch(() => '');
     verificar('F · o aviso do "só organizo" que não pôde ser gravado vira texto fixo na tela do passo 4, e nenhum toast aparece', /"Só organizo" não pôde ser salvo agora: você entrou jogando\./.test(avisoPapel) && (await pagina.locator('.futty-toast').count()) === 0, avisoPapel);
     verificar('F · (29P) a festa: a máquina deitada com o nome, e embaixo "Savassi · Belo Horizonte, MG" (sem "Encontramos:")', (await pagina.locator('[data-festa] .maq .letreiro').count()) === 1 && cidadeDoTime.trim().toUpperCase() === 'SAVASSI · BELO HORIZONTE, MG' && !/Encontramos:/.test(await texto(pagina)), cidadeDoTime);
-    // 29Q: o link do convite chega PRONTO na festa (gerado sozinho); o botão "Gerar link do convite" só volta se a geração falhar.
+    // O link do convite chega PRONTO na festa (gerado sozinho); o botão "Gerar link do convite" só volta se a
+    // geração falhar.
     await pagina.locator('input[readonly]').waitFor({ timeout: 15000 });
     verificar('F · (29Q) o botão "Gerar link do convite" sumiu: o link chegou sozinho', (await pagina.getByRole('button', { name: 'Gerar link do convite' }).count()) === 0);
     const link = await pagina.locator('input[readonly]').inputValue();
@@ -554,7 +561,8 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
   await bloco('H21', async () => {
     const { contexto, pagina } = await abrir(fx.membroFoto, 'H-inicio', '/home');
     await pagina.locator('.chips-row').waitFor({ timeout: 30000 });
-    // 29Q: o "Criar time" saiu da fila de chips e virou um cartão (ao lado do "Radar de peladas"), logo embaixo do "Seus times".
+    // O "Criar time" é um cartão (ao lado do "Radar de peladas"), logo embaixo do "Seus times" — não está na
+    // fila de chips.
     const chip = pagina.locator('[data-atalho-do-inicio="criar-time"]');
     verificar('H · Início: cartão "Criar time" à vista (29Q: saiu da fila de chips)', (await chip.count()) === 1 && /Criar time/.test(await chip.innerText()) && (await pagina.locator('.chips-row [data-criar-time]').count()) === 0);
     await capturar(pagina, 'H2-inicio-criar-time');

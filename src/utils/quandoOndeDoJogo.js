@@ -1,6 +1,6 @@
-// Futty v2.0 — Rodada 29K, achado 112: "qui., 8 de out · 20:00 · Society Madalena — campo 2" —
+// Futty v2.0 — "qui., 8 de out · 20:00 · Society Madalena — campo 2" —
 // a linha de quando e onde é o jogo, para a página pública do sorteio (/p/, /s/), no relógio do
-// CAMPO (fuso do time, achado 83) com o rabicho da cidade quando for diferente do de quem olha.
+// CAMPO (fuso do time) com o rabicho da cidade quando for diferente do de quem olha.
 import { formatarDataHora } from './dataHora';
 
 /**

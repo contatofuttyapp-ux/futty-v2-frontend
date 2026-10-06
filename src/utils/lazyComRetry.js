@@ -1,4 +1,4 @@
-// Futty v2.0 — lazy() com retry para falhas de chunk (build 10, achado real:
+// Futty v2.0 — lazy() com retry para falhas de chunk (caso real:
 // uma resposta ruim transitória da CDN ficou presa no cache do service worker
 // — ver public/sw.js — e o import dinâmico de uma tela quebrava com "Failed
 // to fetch dynamically imported module"; o ErrorBoundary caía em "Algo deu
@@ -33,7 +33,7 @@ function aguardar(ms) {
 
 export function lazyComRetry(importarFn) {
   return lazy(() => {
-    // Velocidade 7B: módulo já carregado (lib/preaquecerAbas.js) vai por um
+    // Módulo já carregado (lib/preaquecerAbas.js) vai por um
     // thenable SÍNCRONO — o React.lazy resolve-o na própria renderização e a
     // tela aparece sem passar pelo F do Suspense (e sem os ~300 ms que o React
     // segura o fallback antes de revelar). Uma promessa, mesmo resolvida, suspende.

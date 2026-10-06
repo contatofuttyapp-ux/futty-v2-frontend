@@ -172,7 +172,6 @@ test('139 · o jogo ativo tem Editar e Cancelar jogo; "Excluir" só aparece no j
   assert.match(painel, /\{g\.confirmados === 0 \? \(\s*<div style=\{\{ marginTop: 10 \}\}>\s*<button[^>]*data-excluir-jogo/);
 });
 
-// ── C9 · achado 129 · C10 · 131 · C11 · 132 · C16 · 134 ───────────────────────────────────────────────────────────────────────────
 test('129 · as abas do time têm a largura do próprio texto, e o selo ADMIN vira ponto dourado em telas estreitas', () => {
   const equipa = semComentarios(ler('src/pages/Equipa.jsx'));
   assert.doesNotMatch(equipa.slice(equipa.indexOf('const ESTILO_ABA'), equipa.indexOf('function AbasDoTime')), /flex: 1|fontSize|letterSpacing/, 'largura e fonte moram na classe, não no estilo em linha');
@@ -208,7 +207,6 @@ test('134 · "Baixar" volta ao lado de "Compartilhar" também no celular (decis�
   assert.match(fig, /onClick=\{partilhar\}[\s\S]*?Compartilhar/);
 });
 
-// ── C12 · achado 140 · C13 · 133 · C15 · 142 ─────────────────────────────────────────────────────────────────────────────────────
 test('140 · "Criar jogos recorrentes" e "Criar campeonato": cada um numa linha, na largura do texto', () => {
   const painel = ler('src/pages/AdminPanel.jsx');
   const par = painel.slice(painel.indexOf("aria-pressed={painel === 'recorrentes'}") - 140, painel.indexOf('Criar campeonato</button>') + 30);
@@ -228,7 +226,6 @@ test('142 · na tela do jogo o atalho diz o que é: "Ranking do time", com o tro
   assert.match(jogo, /data-ranking-do-time[^>]*>\s*<Trophy size=\{14\} aria-hidden="true" \/> Ranking do time\s*<\/Link>/);
 });
 
-// ── C17 · achado 125 · C18 · 126 ───────────────────────────────────────────────────────────────────────────────────────────────────
 test('125 · a faixa de cookies fica na altura EXATA da barra de navegação (uma variável só, conferida contra o CSS da barra)', () => {
   const css = ler('src/styles/app.css');
   const barra = css.match(/\.bottom-nav \{[^}]*\}/)[0];

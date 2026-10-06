@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Futty v2.0 — LIMPEZA TOTAL (23-set): confere que o Gabinete abre sem erro
-// nas 8 abas para um super-admin, contra o par isolado de bancada.
+// Futty v2.0 — confere que o Gabinete abre sem erro nas 8 abas para um super-admin, contra o par isolado
+// de bancada.
 //
-// Usa a conta DESCARTÁVEL "super" de backend/scripts/_bench/contas-varredura.js
-// — não mexe na senha real de contatofuttyapp@gmail.com.
+// Usa a conta DESCARTÁVEL "super" de backend/scripts/_bench/contas-varredura.js — não mexe na senha real
+// de contatofuttyapp@gmail.com.
 //
 // Uso: node scripts/_bench/verificar-gabinete-abas.mjs --url http://localhost:4699
 import { webkit } from 'playwright';

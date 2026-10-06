@@ -9,7 +9,7 @@ import { quandoParado } from '../lib/ritmo';
 // Estado inicial derivado do browser (sem useEffect → evita set-state-in-effect).
 function estadoInicial() {
   if (typeof window === 'undefined') return 'idle';
-  // 14-set (Android): Web Push não existe dentro do WebView do Capacitor — o banner
+  // Android: Web Push não existe dentro do WebView do Capacitor — o banner
   // "Ativar notificações" (Inicio.jsx) e o toggle (MeuPerfil.jsx) já escondem sozinhos
   // com 'nao_suportado', então basta a origem do estado saber que está no nativo.
   // Entra depois via FCM (@capacitor/push-notifications), quando existir.
@@ -20,13 +20,16 @@ function estadoInicial() {
   return 'suportado';
 }
 
-// COFRE 25-set — o par VAPID do motor foi trocado, e uma subscrição de push nasce amarrada à chave com que foi
-// feita: as antigas passam a ser recusadas (403) sem a pessoa ver nada. Uma vez por abertura do app, quem já
-// autorizou as notificações e tem subscrição confere a chave que o motor serve hoje e, se mudou, se inscreve de novo
-// — em silêncio: a permissão já foi concedida, então nem pergunta nada nem mostra aviso. Ver lib/chavePush.js.
-// Corre com o aparelho PARADO (lib/ritmo: 1ª pintura feita + 3 s sem toque, no máximo 15 s): são dois pedidos e uma
-// ida ao push service que não podem competir com o /api/inicio nem com o primeiro toque da pessoa.
-// Falhou (sem rede, push service fora)? Tenta de novo da próxima vez que uma tela que usa o hook montar.
+// O par VAPID do motor foi trocado, e uma subscrição de push nasce amarrada à chave com que foi
+// feita: as antigas passam a ser recusadas (403) sem a pessoa ver nada. Uma vez por abertura do app,
+// quem já autorizou as notificações e tem subscrição confere a chave que o motor serve hoje e, se
+// mudou, se inscreve de novo — em silêncio: a permissão já foi concedida, então nem pergunta nada
+// nem mostra aviso. Ver lib/chavePush.js.
+// Corre com o aparelho PARADO (lib/ritmo: 1ª pintura feita + 3 s sem toque, no máximo 15 s): são
+// dois pedidos e uma ida ao push service que não podem competir com o /api/inicio nem com o
+// primeiro toque da pessoa.
+// Falhou (sem rede, push service fora)? Tenta de novo da próxima vez que uma tela que usa o hook
+// montar.
 let jaSincronizou = false;
 
 async function sincronizarChaveVapid() {

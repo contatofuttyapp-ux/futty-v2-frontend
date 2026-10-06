@@ -1,28 +1,36 @@
 #!/usr/bin/env node
-// Futty v2.0 — Rodada 29W/29X: gera os ícones do app a partir das DUAS camadas do ícone adaptativo do Android, que são o "ouro vivo" que o dono
-// escolheu em 23-set, sem anel em lugar nenhum (dono, 5-out):
-//   · fundo  — a vinheta (#1a1826 no centro → #0b0a12 nos cantos), SEM o aro (android/.../mipmap-*/ic_launcher_background.png);
-//   · frente — só o F ouro vivo com o brilho, transparente, dentro da zona segura (66/108) (android/.../mipmap-*/ic_launcher_foreground.png).
-// O F é sempre o asset real: aqui só se compõe, redimensiona e recorta em círculo — nada é desenhado nem gerado. (O gen-icons.mjs antigo
-// desenhava um F à mão; saiu na 29V. A 29V também usou o ícone antigo das lojas, F amarelo chapado sobre #050810; a 29W trocou a fonte.)
+// Futty v2.0 — gera os ícones do app a partir das DUAS camadas do ícone adaptativo do Android, que são o
+// "ouro vivo" que o dono escolheu, sem anel em lugar nenhum:
+//   · fundo  — a vinheta (#1a1826 no centro → #0b0a12 nos cantos), SEM o aro
+//     (android/.../mipmap-<densidade>/ic_launcher_background.png);
+//   · frente — só o F ouro vivo com o brilho, transparente, dentro da zona segura (66/108)
+//     (android/.../mipmap-<densidade>/ic_launcher_foreground.png).
+// O F é sempre o asset real: aqui só se compõe, redimensiona e recorta em círculo — nada é desenhado nem
+// gerado.
 //
 // A composição (fundo + frente, 108 dp inteiros) é o que vai para:
-//   · public/icons/icon-512.png e icon-192.png   — o ícone do site ("any maskable"), do "adicionar à tela inicial", do apple-touch-icon e das
-//     notificações: o F fica dentro do círculo central de 80% do lado, que é o que sobrevive a qualquer recorte. 29X: saem das camadas
-//     renderizadas no TAMANHO CHEIO (1024 px, pela receita da bancada de 23-set) e reduzidas — não das de 432 px ampliadas, que deixavam a borda do F mole;
-//   · android/.../mipmap-*/ic_launcher.png (quadrado) e ic_launcher_round.png (o mesmo recortado em círculo, sem anel) — os ícones antigos do
-//     Android (anteriores ao 8), a partir das camadas de 432 px do repositório (que são só reduzir, nunca ampliar);
-//   · as camadas do ldpi (81 px), que nasceram da arte antiga e não tinham quem as refizesse: reduzidas das do xxxhdpi;
-//   · public/icons/badge-96.png — a silhueta do F (branca, fundo transparente) que o Android pede para a barra de status, tirada do
-//     ic_launcher_monochrome. Não depende das camadas coloridas: sai igual a cada rodada.
-// O ícone do iPhone (AppIcon-512@2x.png, com a moldura fina) é do backend (scripts/_bench/aplicar-icone.js --so-ios); o splash é do gerar-splash.mjs;
-// o favicon.svg não é de ninguém aqui. NÃO são tocados por este script.
+//   · public/icons/icon-512.png e icon-192.png   — o ícone do site ("any maskable"), do "adicionar à tela
+//     inicial", do apple-touch-icon e das notificações: o F fica dentro do círculo central de 80% do lado,
+//     que é o que sobrevive a qualquer recorte. Saem das camadas renderizadas no TAMANHO CHEIO (1024 px,
+//     pela receita da bancada) e reduzidas — não das de 432 px ampliadas, que deixavam a borda do F mole;
+//   · android/.../mipmap-<densidade>/ic_launcher.png (quadrado) e ic_launcher_round.png (o mesmo recortado
+//     em círculo, sem anel) — os ícones antigos do Android (anteriores ao 8), a partir das camadas de 432 px
+//     do repositório (que são só reduzir, nunca ampliar);
+//   · as camadas do ldpi (81 px): reduzidas das do xxxhdpi;
+//   · public/icons/badge-96.png — a silhueta do F (branca, fundo transparente) que o Android pede para a
+//     barra de status, tirada do ic_launcher_monochrome. Não depende das camadas coloridas: sai igual a
+//     cada execução.
+// O ícone do iPhone (AppIcon-512@2x.png, com a moldura fina) é do backend (scripts/_bench/aplicar-icone.js
+// --so-ios); o splash é do gerar-splash.mjs; o favicon.svg não é de ninguém aqui. NÃO são tocados por este
+// script.
 //
-// A receita é a da bancada de 23-set (backend/scripts/_bench/testar-icone.js, variante 1 "ouro vivo", sem aro — a mesma função da variante 2 que o
-// aplicar-icone.js usou para o iPhone, menos o aro). Ela roda no backend (processo filho; ver _camadas.mjs) e a conferência abaixo garante que o
-// mestre de 1024 px, reduzido a 432, ainda é a camada que está no repositório: se alguém mudar a receita ou a camada, o script para.
+// A receita é a da bancada (backend/scripts/_bench/testar-icone.js, variante 1 "ouro vivo", sem aro — a
+// mesma função da variante 2 que o aplicar-icone.js usou para o iPhone, menos o aro). Ela roda no backend
+// (processo filho; ver _camadas.mjs) e a conferência abaixo garante que o mestre de 1024 px, reduzido a
+// 432, ainda é a camada que está no repositório: se alguém mudar a receita ou a camada, o script para.
 //
-// Uso (a partir de FUTTY-V2/frontend, com o backend ao lado e o npm install feito nos dois):  node scripts/gerar-icones.mjs
+// Uso (a partir de FUTTY-V2/frontend, com o backend ao lado e o npm install feito nos dois):
+//   node scripts/gerar-icones.mjs
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -129,8 +137,8 @@ for (const [densidade, lado] of Object.entries(DENSIDADES)) {
   gravar(path.join(pasta, 'ic_launcher_round.png'), redondo);
 }
 
-// 3) As camadas do ldpi (108 dp × 0,75 = 81 px): não vieram da receita de 23-set (que vai de mdpi a xxxhdpi) e sobraram da arte antiga — o fundo
-// branco chapado e um F amarelo com o escuro embutido. Aqui são as do xxxhdpi, só reduzidas.
+// 3) As camadas do ldpi (108 dp × 0,75 = 81 px) não vêm da receita (que vai de mdpi a xxxhdpi): aqui são as
+// do xxxhdpi, só reduzidas.
 const ldpi = path.join(RES, 'mipmap-ldpi');
 gravar(path.join(ldpi, 'ic_launcher_background.png'), await redimensionarCamada(fundo, 81));
 gravar(path.join(ldpi, 'ic_launcher_foreground.png'), await redimensionarCamada(frente, 81));

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Futty v2.0 — PROVA: a Figurinha fica presa no cache do aparelho? (22-set)
+// Futty v2.0 — PROVA: a Figurinha fica presa no cache do aparelho?
 //
 // Relato do dono: depois de trocar a foto, o Início mostrava a nova e a
 // Figurinha continuava com a antiga — no PC dele. A suspeita não é o aparelho:
@@ -47,7 +47,7 @@ const navegador = await chromium.launch();
 
 // ── 1. Entrar e apanhar sessão + o cache que o app gravou sozinho ──
 // serviceWorkers: 'block' — com o SW ligado o route() não intercepta e o
-// armazenamento não é o que se pensa que é (achado de rodadas anteriores).
+// armazenamento não é o que se pensa que é.
 const ctxLogin = await navegador.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: 'block' });
 const pLogin = await ctxLogin.newPage();
 await pLogin.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });

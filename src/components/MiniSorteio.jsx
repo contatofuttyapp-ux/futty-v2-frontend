@@ -1,13 +1,13 @@
-// Futty v2.0 — Rodada 29E2/29E3: o mini sorteio ao vivo do passo 1 do Onboarding — a máquina pequena na receita da máquina do
-// sorteio (styles/sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) e, dentro, dois grupos, TIME A (ouro) e
-// TIME B (roxo), com 4 ROLOS de slot machine cada (29E3, dono: 4 jogadores por time; .rolo/.strip/.scel de lá, a 56×75, 4 por
-// linha). Os 8 rolos giram rápido com as 8 figurinhas FICTÍCIAS (utils/miniSorteio.js); a partir de 0,4 s um por vez desacelera
-// (.slow, 1,5 s) e trava (.stop) na figurinha sorteada, que entra por cima na moldura do sorteio real (.rev com revPop, micro-
-// lâmpadas .mb piscando, nome), alternando A/B a cada 0,75 s (29H-B: giro inicial pela metade, revelação 1,5×); quando o 8º trava
-// (7,15 s), as réguas dão UM pulso (premio, 0,8 s) e os times seguram 2,5 s; fade 0,4 s; os rolos voltam a girar e recomeça com outra
-// ordem — ciclo de ~10,7 s, sem som (não há
-// gesto), só CSS + um relógio de setTimeout. prefers-reduced-motion: os 8 travados, sem giro. Estado natural (antes do JS
-// correr): os 8 travados.
+// Futty v2.0 — O mini sorteio ao vivo do passo 1 do Onboarding — a máquina pequena na receita da máquina
+// do sorteio (styles/sorteio-maquina.css: .maq, .luz em mqCalm, .janela, .baseluz) e, dentro, dois grupos,
+// TIME A (ouro) e TIME B (roxo), com 4 ROLOS de slot machine cada (dono: 4 jogadores por time;
+// .rolo/.strip/.scel de lá, a 56×75, 4 por linha). Os 8 rolos giram rápido com as 8 figurinhas FICTÍCIAS
+// (utils/miniSorteio.js); a partir de 0,4 s um por vez desacelera (.slow, 1,5 s) e trava (.stop) na
+// figurinha sorteada, que entra por cima na moldura do sorteio real (.rev com revPop, micro-lâmpadas .mb
+// piscando, nome), alternando A/B a cada 0,75 s; quando o 8º trava (7,15 s), as réguas dão UM pulso
+// (premio, 0,8 s) e os times seguram 2,5 s; fade 0,4 s; os rolos voltam a girar e recomeça com outra ordem
+// — ciclo de ~10,7 s, sem som (não há gesto), só CSS + um relógio de setTimeout. prefers-reduced-motion:
+// os 8 travados, sem giro. Estado natural (antes do JS correr): os 8 travados.
 import { useEffect, useState } from 'react';
 import { urlAsset } from '../utils/avatar';
 import { reguaDeLuzes } from '../utils/luzesSlot';
@@ -113,8 +113,8 @@ export default function MiniSorteio() {
           <div className="fila roxa">{REGUAS.baseRoxa.map((l) => <Lampada key={l.i} luz={l} />)}</div>
         </div>
       </div>
-      {/* Legenda (dono, 2-out): o estilo do subtítulo. Os espaços dentro de cada frase são duros — em tela estreita a linha só
-          quebra depois de um "·", em duas linhas parecidas, nunca uma palavra sozinha. */}
+      {/* Legenda (dono): o estilo do subtítulo. Os espaços dentro de cada frase são duros — em tela estreita a
+          linha só quebra depois de um "·", em duas linhas parecidas, nunca uma palavra sozinha. */}
       <p className="msq-legenda">SORTEIO&nbsp;JUSTO&nbsp;· RANKING&nbsp;· FIGURINHA&nbsp;DE&nbsp;COLECIONADOR</p>
     </div>
   );

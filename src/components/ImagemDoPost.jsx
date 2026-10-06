@@ -1,7 +1,8 @@
-// Futty v2.0 — Rodada 29L (achado 141): a foto de um post que não carrega. No campo de várzea, com sinal ruim, vai acontecer muito. Antes,
-// a <img> quebrada ficava com a altura reservada (width/height na tag): ~400 px de buraco com o ícone de imagem quebrada. Agora a
-// foto que falha vira UMA linha curta, na voz da casa, e um toque tenta de novo (o endereço ganha ?r=N, para o navegador não reaproveitar o
-// erro). A foto boa é o que sempre foi: um botão que abre a imagem em tela cheia. Os dois nunca se aninham (botão dentro de botão).
+// Futty v2.0 — A foto de um post que não carrega. No campo de várzea, com sinal ruim, vai acontecer muito.
+// Uma <img> quebrada ficaria com a altura reservada (width/height na tag): ~400 px de buraco com o ícone
+// de imagem quebrada. Por isso a foto que falha vira UMA linha curta, na voz da casa, e um toque tenta de
+// novo (o endereço ganha ?r=N, para o navegador não reaproveitar o erro). A foto boa é um botão que abre a
+// imagem em tela cheia. Os dois nunca se aninham (botão dentro de botão).
 import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { comTentativa } from '../utils/comTentativa';

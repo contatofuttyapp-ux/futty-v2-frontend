@@ -1,8 +1,7 @@
-// Futty v2.0 — Sentry, mas depois (VELOCIDADE 8, 16-set).
+// Futty v2.0 — Sentry, mas depois.
 //
-// O Sentry.init() corria na 5ª linha do main.jsx, síncrono, e por isso os 84 KB
-// do @sentry/react tinham de ser buscados, lidos e COMPILADOS antes de o React
-// existir. Isso é caro exactamente quando dói: na 1ª abertura depois de
+// Um Sentry.init() síncrono na 5ª linha do main.jsx obrigaria os 84 KB do @sentry/react a serem buscados,
+// lidos e COMPILADOS antes de o React existir. Isso é caro exactamente quando dói: na 1ª abertura depois de
 // instalar/atualizar, com o WebKit sem cache de bytecode nenhum.
 //
 // Um relatório de erro não tem pressa nenhuma — o que tem pressa é a tela. Aqui
@@ -18,8 +17,8 @@ import { Capacitor } from '@capacitor/core';
 import { aposPrimeiraPintura } from './diagnostico';
 
 // Depois da 1ª pintura ainda há trabalho por acabar (dados a chegar, imagens a
-// decodificar). 3 s é o pedido do dono e é o mesmo espírito do resto da
-// Velocidade 8: nada em segundo plano enquanto a tela ainda se está a compor.
+// decodificar). 3 s é o pedido do dono: nada em segundo plano enquanto a tela
+// ainda se está a compor.
 const ESPERA_MS = 3000;
 // Teto da fila: se o app está a lançar erros aos magotes, o problema não é a
 // falta de registo — e guardar mil não ajuda ninguém.

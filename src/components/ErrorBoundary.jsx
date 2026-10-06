@@ -15,8 +15,8 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('ErrorBoundary:', error, info);
-    // Build 10: sem isto, um crash no celular morria no console — ninguém
-    // tinha acesso remoto na hora. Fica em localStorage (Perfil → Diagnóstico
+    // Sem isto, um crash no celular morre no console — ninguém
+    // tem acesso remoto na hora. Fica em localStorage (Perfil → Diagnóstico
     // lê); "Algo deu errado" continua a mensagem principal, isto é só a letra
     // pequena por baixo, para quem sabe o que está a ler.
     gravarUltimoErro(error, window.location.pathname);
@@ -24,8 +24,9 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      // 29I (achado 75): a linha técnica ("Failed to fetch dynamically imported module: …/LandingPage-xxx.js") NÃO vai para a tela — ficou
-      // no console (componentDidCatch) e no Diagnóstico (gravarUltimoErro). Na tela, só a frase da casa.
+      // A linha técnica ("Failed to fetch dynamically imported module: …/LandingPage-xxx.js") NÃO vai para a
+      // tela — fica no console (componentDidCatch) e no Diagnóstico (gravarUltimoErro). Na tela, só a frase da
+      // casa.
       return <ErrorPage onRetry={() => this.setState({ hasError: false, error: null })} />;
     }
     return this.props.children;

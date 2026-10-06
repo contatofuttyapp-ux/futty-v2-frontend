@@ -1,4 +1,4 @@
-// Futty v2.0 — Rodada 29H (item 3): as contas puras dos rolinhos da data de nascimento (components/RolinhosData.jsx). Sem React.
+// Futty v2.0 — as contas puras dos rolinhos da data de nascimento (components/RolinhosData.jsx). Sem React.
 import { nascimentoMaximo } from './idade';
 
 export const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];

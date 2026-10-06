@@ -1,12 +1,10 @@
-// Futty v2.0 — Anúncio de uma página (Velocidade 6B, 15-set).
+// Futty v2.0 — Anúncio de uma página.
 //
-// O AdCard buscava o anúncio ele próprio, e na Resenha ele só é montado entre o
-// 3º e o 4º item do feed — ou seja, o pedido do anúncio só COMEÇAVA depois do
-// /api/feed inteiro ter chegado e a lista ter sido pintada. Duas idas a São
-// Paulo em fila por uma faixa de 100 px.
+// Não há pedido POR TELA: um pedido do próprio AdCard só começaria depois de o /api/feed inteiro
+// ter chegado e a lista ter sido pintada (na Resenha ele só é montado entre o 3º e o 4º item do
+// feed) — duas idas a São Paulo em fila por uma faixa de 100 px.
 //
-// VELOCIDADE 9 (23-set): deixou de haver pedido POR TELA. Os slots das cinco
-// páginas vêm todos juntos — dentro do /api/inicio, ou de um `/api/ads/sessao`
+// Os slots das cinco páginas vêm todos juntos — dentro do /api/inicio, ou de um `/api/ads/sessao`
 // para quem não entrou pelo Início — e ficam em lib/ads.js por alguns minutos.
 // Este hook só lê de lá; quando já há resposta em mãos (o caso normal a partir
 // da segunda tela), devolve o anúncio no primeiro render, sem rede nenhuma.

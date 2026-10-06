@@ -224,7 +224,7 @@ for (const b of bairrosDoIbge) {
 }
 if (municipios.size !== ESPERADO.municipios) erros.push(`municípios com bairros: ${municipios.size}, esperava ${ESPERADO.municipios}`);
 
-// ── 29T-C: onde o Censo não tem bairros, os distritos e subdistritos oficiais (2 ou mais por município) ─────────────────────────────
+// ── Onde o Censo não tem bairros, os distritos e subdistritos oficiais (2 ou mais por município) ─────
 const comBairrosDoCenso = new Set(municipios.keys());
 /** codigo do município → as linhas (distrito ou subdistrito) do IBGE */
 const divisoes = new Map();

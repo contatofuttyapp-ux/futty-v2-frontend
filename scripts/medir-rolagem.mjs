@@ -1,9 +1,6 @@
-// Futty v2.0 — Rolagem da Resenha e 1ª visita ao Ranking, no WebKit (FLUIDEZ 2).
+// Futty v2.0 — Rolagem da Resenha e 1ª visita ao Ranking, no WebKit.
 //
-// O relatório do build 20 (iPhone 15 Pro Max) diz:
-//   · rolagem: 61 travadas, as piores de 1338, 1096 e 1066 ms, na Resenha;
-//   · Ranking na 1ª visita: 40 travadas, pior 1785 ms (nas visitas seguintes
-//     84-125 ms — ou seja, é o PRIMEIRO desenho que custa, não os dados).
+// No Ranking, é o PRIMEIRO desenho que custa, não os dados (nas visitas seguintes são 84-125 ms).
 //
 // "Travada" aqui é o que a pessoa sente: um quadro que demorou mais do que devia.
 // Mede-se com o mesmo relógio de quadros que o app usa no aparelho

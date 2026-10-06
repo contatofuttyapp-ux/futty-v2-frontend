@@ -44,7 +44,7 @@ import { urlAsset } from '../utils/avatar';
 // sons não viajam dentro do pacote, vêm do site e ficam em cache.
 const TIQUES = ['/sons/tique-1.mp3', '/sons/tique-2.mp3', '/sons/tique-3.mp3'];
 const CAMINHOS = { clac: '/sons/clac.mp3', jackpot: '/sons/jackpot.mp3' };
-// Volumes da lei (Rodada 14A). Vivem AQUI, não em quem chama.
+// Volumes da lei. Vivem AQUI, não em quem chama.
 const VOL = { tique: 0.5, clac: 0.7, jackpot: 1.0 };
 // As rodas de todos os efeitos, para o prepararNoGesto abrir de uma vez.
 const RODAS = [['tique', TIQUES, 3], ['clac', [CAMINHOS.clac], 3], ['jackpot', [CAMINHOS.jackpot], 1]];
@@ -57,10 +57,9 @@ const PASSO_LENTO = 115;
 const CHAVE_SOM = 'futty_sorteio_som';
 const falhou = {};
 let ligado = false;
-// RODADA 12A — "nunca escolheu" e "escolheu desligado" deixam de ser a mesma
-// coisa. Os dois davam som desligado, mas só o primeiro pode ser sobreposto pelo
-// padrão de quem toca em "Sortear": quem desligou à mão desligou, e o app não
-// tem o direito de voltar a ligar sozinho.
+// "Nunca escolheu" e "escolheu desligado" não são a mesma coisa. Os dois dão som desligado, mas só o
+// primeiro pode ser sobreposto pelo padrão de quem toca em "Sortear": quem desligou à mão desligou, e
+// o app não tem o direito de voltar a ligar sozinho.
 let escolheu = false;
 try {
   const guardado = localStorage.getItem(CHAVE_SOM);
@@ -116,7 +115,7 @@ function pararTrem() {
 
 const SomSorteio = {
   get ligado() { return ligado; },
-  /** A pessoa já decidiu sobre o som neste aparelho? (Rodada 12A) */
+  /** A pessoa já decidiu sobre o som neste aparelho? */
   get escolhido() { return escolheu; },
   toggle(v) {
     ligado = (v === undefined) ? !ligado : !!v;
@@ -126,12 +125,11 @@ const SomSorteio = {
     return ligado;
   },
   /**
-   * Liga o som por omissão para quem acabou de tocar em "Sortear" (Rodada 12A).
+   * Liga o som por omissão para quem acabou de tocar em "Sortear".
    *
-   * NÃO grava nada: o localStorage guarda a escolha da PESSOA, e um padrão
-   * gravado vazava para as aberturas seguintes — inclusive as de quem só abre o
-   * resultado pelo link, que tem de continuar em silêncio. Quem já escolheu
-   * alguma coisa neste aparelho manda, ligado ou desligado.
+   * NÃO grava nada: o localStorage guarda a escolha da PESSOA, e um padrão gravado vazava para as aberturas
+   * seguintes — inclusive as de quem só abre o resultado pelo link, que tem de continuar em silêncio. Quem
+   * já escolheu alguma coisa neste aparelho manda, ligado ou desligado.
    */
   ligarPorOmissao() {
     if (escolheu) return ligado;
@@ -139,12 +137,10 @@ const SomSorteio = {
     return true;
   },
   /**
-   * Desfaz o `ligarPorOmissao` quando a cerimónia sai de cena sem ninguém ter
-   * tocado no botão de som (Rodada 12A).
+   * Desfaz o `ligarPorOmissao` quando a cerimónia sai de cena sem ninguém ter tocado no botão de som.
    *
-   * Sem isto, `ligado` ficava verdadeiro para o resto da SESSÃO: quem sorteava
-   * um jogo e a seguir abria o resultado de outro — ou a vista pública /p/ —
-   * ouvia som numa tela que a lei manda entregar muda.
+   * Sem isto, `ligado` ficava verdadeiro para o resto da SESSÃO: quem sorteava um jogo e a seguir abria o
+   * resultado de outro — ou a vista pública /p/ — ouvia som numa tela que a lei manda entregar muda.
    */
   desfazerOmissao() {
     if (escolheu) return ligado;
@@ -169,10 +165,11 @@ const SomSorteio = {
   /** O JACKPOT: os times ficaram prontos. Um só por cerimônia. */
   fecharTime() { tocar('jackpot', [CAMINHOS.jackpot], 1, VOL.jackpot); },
   /**
-   * Destrava o áudio no gesto (29H-B). Chamar SÍNCRONO dentro do toque — "Sortear" no Jogo, a alavanca na cerimônia —, antes de
-   * qualquer await. Cria as rodas de todos os efeitos e dá a cada elemento um play() mudo seguido de pause(): no Safari/WebKit do
-   * site é isso que autoriza o play() de depois, vindo de um temporizador. Não liga o som nem grava nada (quem manda nisso continua
-   * sendo a escolha da pessoa e o ligarPorOmissao); quem desligou à mão nem baixa os arquivos.
+   * Destrava o áudio no gesto. Chamar SÍNCRONO dentro do toque — "Sortear" no Jogo, a alavanca na cerimônia
+   * —, antes de qualquer await. Cria as rodas de todos os efeitos e dá a cada elemento um play() mudo
+   * seguido de pause(): no Safari/WebKit do site é isso que autoriza o play() de depois, vindo de um
+   * temporizador. Não liga o som nem grava nada (quem manda nisso continua sendo a escolha da pessoa e o
+   * ligarPorOmissao); quem desligou à mão nem baixa os arquivos.
    */
   prepararNoGesto() {
     if (escolheu && !ligado) return;

@@ -1,19 +1,21 @@
-// Futty v2.0 — Rodada 29T (achado 168), a fila dos avisos do topo do Início. UM aviso por vez, o mais importante primeiro; respondeu ou fechou, entra o próximo.
+// Futty v2.0 — a fila dos avisos do topo do Início. UM aviso por vez, o mais importante primeiro;
+// respondeu ou fechou, entra o próximo.
 // Mais de um do mesmo tipo → o mais próximo e um "+N" discreto.
 //
-// Bloco A: jogo sem resposta → pedido de entrada pendente → ativar notificações.
-// Bloco B (ajuste da Freaky, 4-out): os outros avisos que ficavam empilhados abaixo da fila entram na MESMA fila, um por vez.
-// Bloco C (a fila não trava, Freaky, 4-out): primeiro o que ACONTECEU ou TEM PRAZO, depois os lembretes SEM PRAZO, por último ativar notificações.
-// Os lembretes sem prazo (LEMBRETES_SEM_PRAZO) ganham "Agora não", que os esconde por 7 dias naquele aparelho (utils/lembretes.js): a fila anda. A ordem
-// (ORDEM_DOS_AVISOS):
-//   1. jogo sem resposta (o próximo jogo com presença aberta e sem Vou / Não vou) — a pessoa abre o app para responder "vou ou não vou";
+// A fila não trava: primeiro o que ACONTECEU ou TEM PRAZO, depois os lembretes SEM PRAZO, por último
+// ativar notificações.
+// Os lembretes sem prazo (LEMBRETES_SEM_PRAZO) ganham "Agora não", que os esconde por 7 dias naquele
+// aparelho (utils/lembretes.js): a fila anda. A ordem (ORDEM_DOS_AVISOS):
+//   1. jogo sem resposta (o próximo jogo com presença aberta e sem Vou / Não vou) — a pessoa abre o app
+//      para responder "vou ou não vou";
 //   2. pedido de entrada pendente;
 //   3. a resposta do pedido de entrada (aceito / recusado);
 //   4. votação (você tem colegas para avaliar / nova temporada de notas);
 //   5. o desfecho da denúncia;
 //   6. a figurinha nascendo (ou que não saiu);
 //   — daqui para baixo, lembretes sem prazo —
-//   7. "Você tem uma figurinha para gerar" · 8. o recado do pedido de figurinha · 9. o uniforme por escolher · 10. "Complete seu card" · 11. a data de nascimento;
+//   7. "Você tem uma figurinha para gerar" · 8. o recado do pedido de figurinha · 9. o uniforme por
+//      escolher · 10. "Complete seu card" · 11. a data de nascimento;
 //   12. ativar notificações, por último.
 // Puro (sem React, sem rede): o Início só desenha o que esta fila devolve, e o teste roda no Node.
 

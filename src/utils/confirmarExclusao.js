@@ -1,4 +1,4 @@
-// Futty v2.0 — Rodada 29A (A): a confirmação de "Excluir minha conta".
+// Futty v2.0 — a confirmação de "Excluir minha conta".
 // No iPhone o teclado corrige "EXCLUIR" para "Excluir" (ou "excluir ", com espaço) e o botão, que só
 // ligava com as 7 letras em maiúsculas, ficava cinza sem explicar — e a Apple exige exclusão fácil de
 // concluir. Aqui a comparação é normalizada: sem espaço nas pontas, sem diferença de maiúsculas e sem

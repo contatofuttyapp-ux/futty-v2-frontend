@@ -1,7 +1,8 @@
-// Futty v2.0 — Rodada 29I (achado 92): o primeiro nome de uma pessoa, sem a pontuação colada.
+// Futty v2.0 — o primeiro nome de uma pessoa, sem a pontuação colada.
 //
-// A conta "CHAVO, EL MATADOR" virava "Solte a resenha, Chavo,…" — o app cortava no primeiro espaço e a vírgula ia junto. Qualquer nome
-// com vírgula, ponto ou hífen no fim da primeira palavra fazia isso. Puro (sem React), para testar no Node.
+// A conta "CHAVO, EL MATADOR" virava "Solte a resenha, Chavo,…" — cortar no primeiro espaço levava a
+// vírgula junto. Qualquer nome com vírgula, ponto ou hífen no fim da primeira palavra fazia isso. Puro (sem
+// React), para testar no Node.
 
 // vírgula, ponto, ponto e vírgula, dois-pontos, hífens/travessões e o espaço que sobrar — do começo e do FIM da palavra, nunca do meio
 // ("João-Pedro" é um nome só).

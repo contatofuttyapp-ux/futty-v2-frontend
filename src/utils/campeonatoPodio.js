@@ -1,4 +1,4 @@
-// Futty v2.0 — Pódio do campeonato (Vaga 11C). Puro (sem React) para ser
+// Futty v2.0 — Pódio do campeonato. Puro (sem React) para ser
 // partilhado pela vista (CampeonatoVistas) e pelo cartão 9:16 (campeonatoCartao).
 // pontos: top-3 da tabela final. mata: campeão / vice (perdedor da final) /
 // semifinalistas eliminados (3º partilhado quando há 2 semis).

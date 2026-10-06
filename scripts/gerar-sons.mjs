@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ═══════════════════════════════════════════════════════════════════════════════
-// GERADOR DOS SONS DO SORTEIO — Rodada 16A (17-set-2026; nasceu na 14A, 16-set)
+// GERADOR DOS SONS DO SORTEIO
 //
 // Direito autoral 100% nosso: cada efeito nasce AQUI, em código. Nenhum arquivo
 // baixado, nenhuma biblioteca de áudio, nenhuma IA de música. A semente é fixa,
@@ -12,17 +12,14 @@
 // (já nas devDependencies) → MP3 96 kbps. A receita de cada som está em SONS.md,
 // na raiz do frontend — é o registro de autoria.
 //
-// O que a 16A mudou (avaliação do dono no aparelho, build 24):
-//   • TIQUE — o lado digital quase não aparecia. Agora são duas camadas em pé de
-//     igualdade: o clique mecânico (como estava) e um tom de TECLA de videogame
-//     a -6 dB dele, 1,6 / 1,9 / 2,2 kHz conforme a variante.
-//   • JACKPOT — o "tan tan tan tan" descia de tom no fim e soava a derrota.
-//     Lei nova: no jackpot NADA desce; toda frase sobe ou fica. Foi rearranjado
-//     e a prova sai em gráfico (scripts/prova-tom.mjs) — se a linha descer, esta
-//     geração FALHA.
-//   • CLAC — inalterado, e de propósito: a semente continua a mesma e cada tique
-//     consome exatamente as mesmas 46 tiragens de antes, então o clac sai
-//     bit a bit igual ao da 14A.
+// Regras de cada som:
+//   • TIQUE — duas camadas em pé de igualdade: o clique mecânico e um tom de TECLA
+//     de videogame a -6 dB dele, 1,6 / 1,9 / 2,2 kHz conforme a variante.
+//   • JACKPOT — lei do dono: NADA desce de tom (o "tan tan tan tan" que descia no
+//     fim soava a derrota); toda frase sobe ou fica. A prova sai em gráfico
+//     (scripts/prova-tom.mjs) — se a linha descer, esta geração FALHA.
+//   • CLAC — inalterado, e de propósito: a semente é a mesma e cada tique consome
+//     exatamente as mesmas 46 tiragens, então o clac sai bit a bit igual.
 // ═══════════════════════════════════════════════════════════════════════════════
 import { writeFileSync, statSync, mkdirSync, unlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';

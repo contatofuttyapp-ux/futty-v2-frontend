@@ -1,5 +1,8 @@
-/* Futty v2.0 — Rodada 29B (A): a página do convite. Centrada, sem cartão: a marca no alto, o logo do time grande no meio,
-   o nome em destaque, três fatos e UM botão. Só o Convite importa este arquivo (chunk lazy) — fora do arranque. */
+/*
+ * Futty v2.0 — a página do convite. Centrada, sem cartão: a marca no alto, o logo do time grande no meio,
+ * o nome em destaque, três fatos e UM botão. Só o Convite importa este arquivo (chunk lazy) — fora do
+ * arranque.
+ */
 
 .convite {
   min-height: 100svh;
@@ -94,7 +97,7 @@
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
-/* Time sem logo (29H, item 23): sem escudo, o nome é o destaque — maior, sem a folga de cima que o escudo pedia. */
+/* Time sem logo: sem escudo, o nome é o destaque — maior, sem a folga de cima que o escudo pedia. */
 .convite__nome--sozinho {
   margin-top: 4px;
   font-size: 44px;

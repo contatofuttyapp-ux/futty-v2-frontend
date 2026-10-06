@@ -1,8 +1,9 @@
-// Futty v2.0 — Perfil → Notificações (Rodada 29I, bloco 3, item 4): um interruptor por tipo — jogos e presença; pedidos de entrada (só
-// para quem administra algum time); figurinha pronta; Resenha. Todos ligados por padrão. A escolha mora na conta (motor,
-// users.notificacoes) e vale em qualquer aparelho: o motor nem manda o aviso do tipo desligado. Os avisos que o admin manda
-// ("Avisar o time") não se desligam aqui: é o time falando.
-// Sem a migração 079 o motor responde `salvavel: false`: a tela mostra tudo ligado, sem deixar mexer, e diz por quê.
+// Futty v2.0 — Perfil → Notificações: um interruptor por tipo — jogos e presença; pedidos de entrada (só
+// para quem administra algum time); figurinha pronta; Resenha. Todos ligados por padrão. A escolha mora na
+// conta (motor, users.notificacoes) e vale em qualquer aparelho: o motor nem manda o aviso do tipo
+// desligado. Os avisos que o admin manda ("Avisar o time") não se desligam aqui: é o time falando.
+// Sem a migração 079 o motor responde `salvavel: false`: a tela mostra tudo ligado, sem deixar mexer, e
+// diz por quê.
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
 

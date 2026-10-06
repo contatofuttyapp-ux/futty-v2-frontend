@@ -2,7 +2,7 @@
 // Duas saídas, MESMA identidade visual (peças partilhadas, não imitação):
 //   gerarCartao916      — 1 imagem POR equipa (botões "9:16 · Time X").
 //   gerarCartazEscalacao — o cartaz ÚNICO com TODOS os times (botão "Guardar" da máquina).
-// Canvas puro (1080×1920) → PNG. A entrega é do utils/salvarImagem.js (Rodada 8A):
+// Canvas puro (1080×1920) → PNG. A entrega é do utils/salvarImagem.js:
 // na web baixa; no app abre a folha de compartilhar — o <a download> não faz nada
 // dentro do WebView.
 import { urlAsset, urlImagem } from './avatar';
@@ -46,9 +46,9 @@ function carregarImagem(src) {
     img.src = src;
   });
 }
-// object-fit: cover dentro de (dx,dy,dw,dh); focoY = object-position vertical (0..1). RODADA 27: 0 = do TOPO
-// do recorte, como o CSS da cerimônia (object-position 50% 0%) e o canvas do cromo — os 0,08 de antes
-// deslocavam a foto do que a pessoa enquadrou (e cada tela, um pouco diferente da outra).
+// object-fit: cover dentro de (dx,dy,dw,dh); focoY = object-position vertical (0..1). 0 = do TOPO
+// do recorte, como o CSS da cerimônia (object-position 50% 0%) e o canvas do cromo — um 0,08 como
+// default deslocava a foto do que a pessoa enquadrou (e cada tela, um pouco diferente da outra).
 function desenharCover(cx, img, dx, dy, dw, dh, focoY = 0) {
   const ir = img.width / img.height; const dr = dw / dh;
   let sw; let sh; let sx; let sy;
@@ -186,11 +186,11 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
 
   // título = o NOME DO TIME (o cartaz é sobre ESTE time), mesmo tratamento gradiente.
   let y = 96;
-  // Rodada 29M (achado 143): o nome é o MESMO da cerimônia e dos botões ("Time Ouro"), não o "Time A" do motor.
+  // O nome é o MESMO da cerimônia e dos botões ("Time Ouro"), não o "Time A" do motor.
   const nomeDoTime = nomeDoTimeNaTela(time.nome, timeIndex);
   const baseline = desenharTituloGradiente(cx, nomeDoTime.toUpperCase(), W, y, 110);
-  // Item 73 (Rodada 29, no bloco 3 da 29I): a linha de baixo DESCE — colada no título, ela cobria a cedilha (Ç) e as descendentes
-  // do nome do time. DESCE_META px abaixo da linha de base: livra a perna mais funda das letras do título (~0,22 do corpo).
+  // A linha de baixo DESCE — colada no título, ela cobria a cedilha (Ç) e as descendentes do nome do time.
+  // DESCE_META px abaixo da linha de base: livra a perna mais funda das letras do título (~0,22 do corpo).
   cx.fillStyle = '#a99fc0'; cx.textAlign = 'center'; cx.font = '600 30px Rajdhani, sans-serif';
   cx.fillText([nomeEquipa, 'sorteio'].filter(Boolean).join(' · ').toUpperCase(), W / 2, baseline + DESCE_META_916);
 

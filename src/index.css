@@ -15,13 +15,14 @@
   --border: #222222;
   --radius: 16px;
 
-  /* Presença — "Vou" / "Não vou" (Rodada 12A → revertido na Rodada 13,
-     decisão do dono, build 22). O "Vou" dourado durou uma rodada: o dourado
-     tinha de ser único e forte, e o "Ver sorteio"/"Sortear" — a ação mais
-     importante do app — é quem precisa dele, não um botão de presença. O
-     "Vou" vira fantasma VERDE, o gémeo exato do "Não vou" vermelho: mesma
-     opacidade (0.45 na borda, 0.15 no preenchimento), mesmo peso — só troca a
-     cor. Nenhum dos dois pode ler-se como semáforo saturado nem como dourado. */
+  /*
+   * Presença — "Vou" / "Não vou" (escolha do dono). O "Vou" não é dourado: o dourado
+   * tem de ser único e forte, e o "Ver sorteio"/"Sortear" — a ação mais
+   * importante do app — é quem precisa dele, não um botão de presença. O
+   * "Vou" é fantasma VERDE, o gémeo exato do "Não vou" vermelho: mesma
+   * opacidade (0.45 na borda, 0.15 no preenchimento), mesmo peso — só troca a
+   * cor. Nenhum dos dois pode ler-se como semáforo saturado nem como dourado.
+   */
   --presenca-sim-borda: rgba(74, 222, 128, 0.45);
   --presenca-sim-fundo: rgba(74, 222, 128, 0.15);
   --presenca-sim-texto: #4ade80;
@@ -185,45 +186,47 @@ body {
   .aurora-particle { animation: none; opacity: var(--aurora-po, 0.11); }
 }
 
-/* VELOCIDADE 8 (16-set) — com o app em segundo plano ou a tela bloqueada, nada
-   se anima. O `data-oculto` é posto no <html> por lib/ritmo.js a ouvir o
-   visibilitychange; o CSS não tem como ver o document.hidden sozinho.
-   Vale para TODAS as animações DECORATIVAS: se ninguém está a ver, nada do que
-   parar pode mudar de aspeto. `paused` (e não `none`) é o que faz a animação
-   retomar de onde ficou quando a pessoa volta, sem saltos. */
-/* HOTFIX (23-set) — tela preta após login com Google no Chrome. Esta regra
-   pausa TUDO, e é isso que a torna perigosa para uma classe de animação
-   específica: as de ENTRADA DE CONTEÚDO (fade de opacity 0 → 1 ao montar, com
-   `animation-fill-mode: backwards`/`both`). Se um desses elementos nasce com
-   `document.hidden = true` (aba em 2º plano durante o redirect do OAuth, ou
-   qualquer outra forma de a página montar escondida), esta regra pausa a
-   animação em currentTime 0 ANTES de ela correr um só quadro — e o
-   `backwards`/`both` mantém o elemento no estado "antes de começar", que é
-   invisível. Sem outro gesto a acontecer, fica assim para sempre: conteúdo no
-   DOM, tela preta. Violação direta da lei "Visibilidade nunca depende de
-   animação JS" (CLAUDE.md) — só que aqui quem prende é o PRÓPRIO CSS, pausado
-   pela nossa regra.
-   Busca em app.css por keyframes com opacity de 0 a 1: das que decidem se
-   CONTEÚDO aparece (excluídas abaixo) — `.page-transition` (pageEntra, todas
-   as rotas), `.inicio-reveal`/`.page-reveal` (inicioReveal, Início e a maioria
-   das outras páginas), `.fig-card-enter` (figCardIn, o card da Figurinha),
-   `.perfil-tile` (perfilTile, os blocos de estatística do Jogador) — e das que
-   são só efeito visual e continuam pausáveis: aurora (index.css, acima),
-   shine/glint/twinkle (cardShine, nomeShine, futtyFrameShine, ctaGlint,
-   figGlint*, futtyDotTwinkle, planosCoroaTwinkle), pulso/respiração
-   (heroicPulse, cromo-previa-pulso, homeBreath, silRespira, rankEsqueletoRespira),
-   e tudo da Cerimónia do Sorteio (cerLuz/cerClunk/cerFlash/cerChase/cerBob/
-   cerSeg/cerCoin, campConfete, campCoin) — nenhuma delas esconde conteúdo: só
-   atrasa um brilho, o que não é o mesmo defeito.
-   As de entrada de conteúdo ficam de fora desta pausa: melhor uma animação de
-   180 ms a correr com a aba escondida (custo zero de bateria — dura menos que
-   o olho vê) do que o risco de a página nunca mais aparecer.
-   FICOU DE FORA na varredura original (achado no mesmo dia, hotfix separado):
-   `.anim-slide-in` (notifSlide, `backwards` — os cards da Resenha em /feed e o
-   card do jogo no Início) e `.futty-lockup-f` (futtyLockupIn, `both` — o F da
-   LandingPage). Mesmo defeito (conteúdo preso em opacity 0), mesma correção:
-   entram na exclusão. Rodada 29A: `.futty-toast` (components/Toast.jsx) também — um aviso que nasce com a aba
-   escondida não pode ficar preso em opacity 0. */
+/*
+ * Com o app em segundo plano ou a tela bloqueada, nada
+ * se anima. O `data-oculto` é posto no <html> por lib/ritmo.js a ouvir o
+ * visibilitychange; o CSS não tem como ver o document.hidden sozinho.
+ * Vale para TODAS as animações DECORATIVAS: se ninguém está a ver, nada do que
+ * parar pode mudar de aspeto. `paused` (e não `none`) é o que faz a animação
+ * retomar de onde ficou quando a pessoa volta, sem saltos.
+ */
+/*
+ * Esta regra pausa TUDO, e é isso que a torna perigosa para uma classe de animação
+ * específica: as de ENTRADA DE CONTEÚDO (fade de opacity 0 → 1 ao montar, com
+ * `animation-fill-mode: backwards`/`both`). Se um desses elementos nasce com
+ * `document.hidden = true` (aba em 2º plano durante o redirect do OAuth, ou
+ * qualquer outra forma de a página montar escondida), esta regra pausa a
+ * animação em currentTime 0 ANTES de ela correr um só quadro — e o
+ * `backwards`/`both` mantém o elemento no estado "antes de começar", que é
+ * invisível. Sem outro gesto a acontecer, fica assim para sempre: conteúdo no
+ * DOM, tela preta (já aconteceu: tela preta após login com Google no Chrome).
+ * Violação direta da lei "Visibilidade nunca depende de
+ * animação JS" (CLAUDE.md) — só que aqui quem prende é o PRÓPRIO CSS, pausado
+ * pela nossa regra.
+ * Os keyframes de app.css com opacity de 0 a 1 se dividem em: os que decidem se
+ * CONTEÚDO aparece (excluídos abaixo) — `.page-transition` (pageEntra, todas
+ * as rotas), `.inicio-reveal`/`.page-reveal` (inicioReveal, Início e a maioria
+ * das outras páginas), `.fig-card-enter` (figCardIn, o card da Figurinha),
+ * `.perfil-tile` (perfilTile, os blocos de estatística do Jogador) — e os que
+ * são só efeito visual e continuam pausáveis: aurora (index.css, acima),
+ * shine/glint/twinkle (cardShine, nomeShine, futtyFrameShine, ctaGlint,
+ * figGlint*, futtyDotTwinkle, planosCoroaTwinkle), pulso/respiração
+ * (heroicPulse, cromo-previa-pulso, homeBreath, silRespira, rankEsqueletoRespira),
+ * e tudo da Cerimónia do Sorteio (cerLuz/cerClunk/cerFlash/cerChase/cerBob/
+ * cerSeg/cerCoin, campConfete, campCoin) — nenhuma delas esconde conteúdo: só
+ * atrasa um brilho, o que não é o mesmo defeito.
+ * As de entrada de conteúdo ficam de fora desta pausa: melhor uma animação de
+ * 180 ms a correr com a aba escondida (custo zero de bateria — dura menos que
+ * o olho vê) do que o risco de a página nunca mais aparecer.
+ * Também ficam de fora: `.anim-slide-in` (notifSlide, `backwards` — os cards da Resenha em /feed e o
+ * card do jogo no Início), `.futty-lockup-f` (futtyLockupIn, `both` — o F da
+ * LandingPage) e `.futty-toast` (components/Toast.jsx). Mesmo defeito (conteúdo preso em opacity 0),
+ * mesma correção: um aviso que nasce com a aba escondida não pode ficar preso em opacity 0.
+ */
 html[data-oculto] *:not(.page-transition):not(.inicio-reveal):not(.page-reveal):not(.fig-card-enter):not(.perfil-tile):not(.anim-slide-in):not(.futty-lockup-f):not(.futty-toast),
 html[data-oculto] *::before,
 html[data-oculto] *::after {
@@ -237,11 +240,12 @@ html[data-oculto] *::after {
   background: transparent;
 }
 
-/* Guarda contra rolagem lateral (Velocidade 7B). Se algo passar da largura da
-   tela, o WebKit do iPhone alarga a viewport para caber e ENCOLHE a página
-   inteira (o print da Resenha a ~66%). `clip` corta sem virar contêiner de
-   rolagem — o sticky da topbar continua a funcionar, ao contrário de `hidden`,
-   que também forçaria overflow-y:auto. Safari < 16 ignora (sem guarda, sem dano). */
+/*
+ * Guarda contra rolagem lateral. Se algo passar da largura da tela, o WebKit do iPhone alarga a
+ * viewport para caber e ENCOLHE a página inteira (o print da Resenha a ~66%). `clip` corta sem virar
+ * contêiner de rolagem — o sticky da topbar continua a funcionar, ao contrário de `hidden`, que também
+ * forçaria overflow-y:auto. Safari < 16 ignora (sem guarda, sem dano).
+ */
 #root,
 [data-page] {
   overflow-x: clip;
@@ -280,12 +284,14 @@ button {
   font-size: 1rem;
 }
 
-/* ZOOM DO iOS (Rodada 8A, 15-set). Campo com fonte abaixo de 16 px faz o iPhone
-   dar zoom na página inteira ao focar — e o zoom não volta sozinho: a Resenha
-   "desenquadrava" ao tocar no comentário (13 px). 16 px é o PISO de todo campo:
-   maior pode, menor nunca. Estilo inline ganha desta regra, por isso os campos
-   com fontSize inline também foram subidos para 16. O index.html leva ainda
-   maximum-scale=1. */
+/*
+ * ZOOM DO iOS. Campo com fonte abaixo de 16 px faz o iPhone
+ * dar zoom na página inteira ao focar — e o zoom não volta sozinho: a Resenha
+ * "desenquadrava" ao tocar no comentário (13 px). 16 px é o PISO de todo campo:
+ * maior pode, menor nunca. Estilo inline ganha desta regra, por isso os campos
+ * com fontSize inline também usam 16. O index.html leva ainda
+ * maximum-scale=1.
+ */
 input,
 textarea,
 select {
@@ -313,14 +319,13 @@ select {
   animation: notifSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 
-/* VAGA 3 — lineReveal/lineShimmer removidos: eram as linhas decorativas do nome do
-   Início, que saiu quando o cromo real (com a placa do nome) passou a ser o
-   destaque. Zero consumidores. */
-
-/* Toast (Rodada 29A, 30-set) — o aviso de uma linha no MEIO da tela. Um componente só (components/Toast.jsx).
-   A entrada é @keyframes com o estado natural VISÍVEL (opacity 1 no CSS base): se a animação for pausada no
-   quadro 0 (ver `data-oculto` acima) o pior caso é o aviso aparecer sem animar — e `.futty-toast` está na lista
-   de exclusão daquela pausa, como as outras entradas de conteúdo. A saída é `transition` (não anima parado). */
+/*
+ * Toast — o aviso de uma linha no MEIO da tela. Um componente só (components/Toast.jsx).
+ * A entrada é @keyframes com o estado natural VISÍVEL (opacity 1 no CSS base): se a animação for
+ * pausada no quadro 0 (ver `data-oculto` acima) o pior caso é o aviso aparecer sem animar — e
+ * `.futty-toast` está na lista de exclusão daquela pausa, como as outras entradas de conteúdo.
+ * A saída é `transition` (não anima parado).
+ */
 .futty-toast {
   position: fixed;
   top: 50%;
@@ -401,10 +406,13 @@ select {
   }
 }
 
-/* Texto de apoio (Rodada 29A, 30-set): a frase de ajuda que fica debaixo de um campo ou de um título. Um tamanho
-   só (13 px), cor apagada, largura máxima de ~34 em (não vira uma linha comprida), altura de linha 1,5 e
-   alinhada ao campo a que se refere (à esquerda; `--centro` para as telas que centram o bloco). `display: block`
-   porque o `max-width` e a margem de cima não valem em <span> solto. Frases curtas. */
+/*
+ * Texto de apoio: a frase de ajuda que fica debaixo de um campo ou de um título. Um tamanho
+ * só (13 px), cor apagada, largura máxima de ~34 em (não vira uma linha comprida), altura de
+ * linha 1,5 e alinhada ao campo a que se refere (à esquerda; `--centro` para as telas que centram
+ * o bloco). `display: block` porque o `max-width` e a margem de cima não valem em <span> solto.
+ * Frases curtas.
+ */
 .texto-apoio {
   display: block;
   max-width: 34em;

@@ -1,22 +1,21 @@
 // Futty v2.0 — Criar time: o WIZARD do admin (3 passos de escolha + a tela de convites que vem depois de criar, SPEC-EQUIPAS v2).
-// A página antiga (formulário único com selector de cor) morreu: a cor é fallback
+// Não há seletor de cor: a cor é fallback
 // automático interno (o backend cai para 'verde'; muda-se nas definições do admin).
-// Passos: (1) nome + cidade — a cidade sempre exigida (29P): da lista, ou texto livre quando a lista não sugere nada — + escudo-iniciais ao vivo ·
-// (2) "Você também joga?" e "O que contar nos jogos?" (gols, artilheiro e destaque do dia — tudo nasce desligado, 29O) ·
-// (3) política de entrada → POST /api/teams (+ PATCH modo_visibilidade) · depois de criar, a FESTA (29P): a máquina das boas-vindas
+// Passos: (1) nome + cidade — a cidade sempre exigida: da lista, ou texto livre quando a lista não sugere nada — + escudo-iniciais ao vivo ·
+// (2) "Você também joga?" e "O que contar nos jogos?" (gols, artilheiro e destaque do dia — tudo nasce desligado) ·
+// (3) política de entrada → POST /api/teams (+ PATCH modo_visibilidade) · depois de criar, a FESTA: a máquina das boas-vindas
 // com o nome do time como letreiro, "Seu time está no ar!" e o link do convite. Não é um passo da criação: o contador é 3/3 e ela
-// diz "Pronto" (29I, achado 79). "Ir para o time" não reabre boas-vindas: a pessoa já comemorou aqui.
+// diz "Pronto". "Ir para o time" não reabre boas-vindas: a pessoa já comemorou aqui.
 //
-// 29I (achado 80): cada passo é UMA entrada do histórico (location.state.passo) — o Voltar do sistema (Alt+seta, o gesto do Android, o
+// Cada passo é UMA entrada do histórico (location.state.passo) — o Voltar do sistema (Alt+seta, o gesto do Android, o
 // swipe do iPhone) recua um passo por vez, igual ao "← voltar" da tela, em vez de jogar no Início e apagar tudo. Antes do passo 1
 // há uma entrada-guarda: o Voltar a partir do passo 1 pergunta "Sair da criação?" antes de sair. Depois de criado, o Voltar sai direto
 // (o time já existe: voltar a um passo e criar de novo faria um time repetido).
-// 29H: o texto do papel acompanha a opção (43); textos de entrada aprovados pelo dono (45); o aviso do "só organizo" que
-// ficava num toast de 2 s ilegível (46) virou texto fixo na tela do passo 4; bairro opcional (42); a frase do WhatsApp (47)
-// e o link curto /c/<código> (49).
-// 29Q: o link do convite chega PRONTO na festa (gerado sozinho assim que o time existe); o botão "Gerar link do convite" só volta, como
+// O texto do papel acompanha a opção; textos de entrada aprovados pelo dono; o aviso do "só organizo" é texto fixo na tela
+// do passo 4 (num toast de 2 s ficaria ilegível); bairro opcional; a frase do WhatsApp e o link curto /c/<código>.
+// O link do convite chega PRONTO na festa (gerado sozinho assim que o time existe); o botão "Gerar link do convite" só aparece, como
 // reserva, se a geração falhar.
-// 29T-B (achado 157): o bairro é de LISTA (IBGE no Brasil, freguesias em Portugal) e o campo só aparece quando a cidade tem lista; no passo 3, "Aberto" e
+// O bairro é de LISTA (IBGE no Brasil, freguesias em Portugal) e o campo só aparece quando a cidade tem lista; no passo 3, "Aberto" e
 // "Só com a sua aprovação" pedem o "Sobre o time" (sem ele o time não é criado), que o Radar de peladas mostra no card do time.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -56,7 +55,7 @@ function Cta({ children, cheio, sec, ...rest }) {
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         fontFamily: RAJ, fontWeight: 800, fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase',
-        // Apagado não é clicável e não pode parecer: cursor not-allowed (o mesmo do "Publicar" da Resenha) — achado 82.
+        // Apagado não é clicável e não pode parecer: cursor not-allowed (o mesmo do "Publicar" da Resenha).
         padding: '13px 20px', cursor: rest.disabled ? 'not-allowed' : 'pointer', width: '100%', clipPath: CLIP_S,
         color: cheio ? '#1a1408' : sec ? '#c9c2d6' : '#f0c94a',
         background: cheio ? 'linear-gradient(180deg,#f0c94a,#d4a017)' : sec ? 'rgba(255,255,255,0.03)' : 'rgba(30,24,8,0.9)',
@@ -70,12 +69,12 @@ function Cta({ children, cheio, sec, ...rest }) {
   );
 }
 
-// `grande`: a régua do passo 1 (29P), onde o nome do time é a estrela da tela.
+// `grande`: a régua do passo 1, onde o nome do time é a estrela da tela.
 function Lbl({ children, grande = false }) {
   return <span style={{ fontFamily: RAJ, fontSize: grande ? 13 : 11, fontWeight: 700, letterSpacing: grande ? '0.14em' : '0.12em', color: grande ? '#c9b6ff' : '#9a8fc0', textTransform: 'uppercase', display: 'block', margin: grande ? '16px 0 8px' : '14px 0 6px' }}>{children}</span>;
 }
 
-// O que falta para seguir: uma linha curta abaixo do botão apagado (achado 82). Texto pela VOZ: diz o que fazer, sem cerimônia.
+// O que falta para seguir: uma linha curta abaixo do botão apagado. Texto pela VOZ: diz o que fazer, sem cerimônia.
 function Falta({ children }) {
   return <p className="texto-apoio" role="status" data-falta style={{ margin: '8px 0 0', textAlign: 'center' }}>{children}</p>;
 }
@@ -93,29 +92,29 @@ export default function CriarEquipa() {
   const location = useLocation();
   const [nome, setNome] = useState('');
   const [cidade, setCidade] = useState('');
-  // Rodada 29B (D): a escolha da lista ({ cidade, uf, pais, lat, lng, origem: 'lista' }) — null enquanto a pessoa digita.
+  // A escolha da lista ({ cidade, uf, pais, lat, lng, origem: 'lista' }) — null enquanto a pessoa digita.
   const [cidadeEscolha, setCidadeEscolha] = useState(null);
-  // 29P: a cidade é obrigatória. Da lista vale sempre; texto livre só quando a lista não tem sugestão para ele (quem está fora do
+  // A cidade é obrigatória. Da lista vale sempre; texto livre só quando a lista não tem sugestão para ele (quem está fora do
   // Brasil e de Portugal nunca trava). `temSugestoes` vem do próprio campo.
   const [temSugestoes, setTemSugestoes] = useState(false);
   const aoSugestoes = useCallback((n) => setTemSugestoes(n > 0), []);
   const [avisoCidade, setAvisoCidade] = useState(null); // depois de criar, só quando deu errado: { tipo: 'aviso', texto }
   const [cidadeDoTime, setCidadeDoTime] = useState(''); // depois de criar: a cidade como o motor a achou (ou como foi escrita)
-  // 29H (item 12): o bairro opcional. 29T (bloco B): de LISTA, no Brasil (IBGE) e em Portugal (freguesias) — o campo só existe quando a cidade tem
+  // O bairro opcional, de LISTA, no Brasil (IBGE) e em Portugal (freguesias) — o campo só existe quando a cidade tem
   // lista, e só vale o que a pessoa escolhe. `bairroEscolha` é o bairro da lista, com a coordenada; null enquanto digita.
   const [bairro, setBairro] = useState('');
   const [bairroEscolha, setBairroEscolha] = useState(null);
   const bairros = useBairrosDaCidade(cidade, cidadeEscolha);
-  // 29T (achado 157): o "Sobre o time" é pedido no passo 3 quando o time é aberto ao público (aberto ou com aprovação); "Fechado" não pede.
+  // O "Sobre o time" é pedido no passo 3 quando o time é aberto ao público (aberto ou com aprovação); "Fechado" não pede.
   const [sobre, setSobre] = useState('');
   const [avisoBairro, setAvisoBairro] = useState(null); // depois de criar, só quando deu errado
   const [bairroDoTime, setBairroDoTime] = useState('');
-  // Tudo nasce desligado (29O): a pessoa liga o que quiser.
+  // Tudo nasce desligado: a pessoa liga o que quiser.
   const [mostrarGols, setMostrarGols] = useState(false);
   const [mostrarArtilheiro, setMostrarArtilheiro] = useState(false);
   const [mostrarDestaque, setMostrarDestaque] = useState(false);
   const [avisoPapel, setAvisoPapel] = useState(''); // depois de criar: o que não pôde ser gravado (texto fixo, não toast)
-  const [joga, setJoga] = useState(true); // Rodada 29B (E): "Eu jogo" (padrão) / "Só organizo o time"
+  const [joga, setJoga] = useState(true); // "Eu jogo" (padrão) / "Só organizo o time"
   const [modo, setModo] = useState('privado'); // privado | publico_aprovacao | publico_aberto
   const [team, setTeam] = useState(null); // criada no fim do passo 3
   const [logoArquivo, setLogoArquivo] = useState(null);
@@ -124,7 +123,7 @@ export default function CriarEquipa() {
   const [logoEnviado, setLogoEnviado] = useState(false);
   const logoInputRef = useRef(null);
   const [inviteLink, setInviteLink] = useState('');
-  const [conviteFalhou, setConviteFalhou] = useState(false); // 29Q: a geração sozinha falhou — só então o botão de reserva aparece
+  const [conviteFalhou, setConviteFalhou] = useState(false); // a geração sozinha falhou — só então o botão de reserva aparece
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
@@ -140,7 +139,7 @@ export default function CriarEquipa() {
     setMostrarArtilheiro(r.mostrarArtilheiro);
   }
 
-  // ── Os passos no histórico (achado 80) ───────────────────────────────────────────────────────────────────────────────────────────
+  // ── Os passos no histórico ─────────────────────────────────────────────────────────────────────────────────
   // `passo` não é um useState: vem da entrada do histórico em que a pessoa está (location.state.passo). Time criado = tela de convites
   // (4), sempre. Passo 2 ou 3 sem nome (a entrada sobreviveu a um recarregar, o formulário não) volta ao 1.
   const passoDoEndereco = Number(location.state?.passo) || 1;
@@ -223,7 +222,7 @@ export default function CriarEquipa() {
   // Passo 3 → cria a equipa de uma vez (nome+cidade → POST; flags → PATCH) e segue p/ convites.
   async function criarESeguir() {
     if (busy) return;
-    // Cidade é obrigatória em times públicos (14-set): é como jogadores perto
+    // Cidade é obrigatória em times públicos: é como jogadores perto
     // encontram o time no Explorar/distância. No privado fica opcional. Manda
     // de volta ao passo 1 (onde fica o campo) com um toast claro.
     if (modo !== 'privado' && !cidade.trim()) {
@@ -231,7 +230,7 @@ export default function CriarEquipa() {
       irParaPasso(1, { substituir: true });
       return;
     }
-    // Defesa (o botão já fica apagado): o time aberto ao público se apresenta (29T, achado 157).
+    // Defesa (o botão já fica apagado): o time aberto ao público se apresenta.
     if (faltaSobre({ modo, sobre })) {
       setToast({ tipo: 'error', mensagem: FALTA_SOBRE_NA_CRIACAO });
       return;
@@ -243,18 +242,18 @@ export default function CriarEquipa() {
       const bodyCriar = { nome: nome.trim() };
       // Cidade da lista: manda o pacote todo (o motor guarda a coordenada da lista, sem Nominatim). Digitada: só o texto.
       if (cidade.trim()) Object.assign(bodyCriar, cidadeEscolha || { cidade: cidade.trim() });
-      // O bairro só existe dentro de uma cidade e só vale o da LISTA (29T): leva a coordenada da lista; texto que ninguém escolheu não vai.
+      // O bairro só existe dentro de uma cidade e só vale o da LISTA: leva a coordenada da lista; texto que ninguém escolheu não vai.
       if (cidade.trim() && bairros.estado === 'lista' && bairroEscolha && bairroEscolha.bairro === bairro.trim()) Object.assign(bodyCriar, bairroEscolha);
-      // O "Sobre o time" (29T): obrigatório no time aberto ao público; no fechado vai se a pessoa escreveu.
+      // O "Sobre o time": obrigatório no time aberto ao público; no fechado vai se a pessoa escreveu.
       if (sobre.trim()) bodyCriar.descricao = sobre.trim().slice(0, MAX_SOBRE_O_TIME);
       if (!joga) bodyCriar.joga = false;
-      // 29I (achado 78): os gols vão no próprio POST (antes iam num PATCH logo depois) e o artilheiro nunca vai ligado com os gols
+      // Os gols vão no próprio POST e o artilheiro nunca vai ligado com os gols
       // desligados — o app apaga um quando o outro é desligado, e o motor recusa a combinação incoerente.
       if (!mostrarGols) bodyCriar.mostrar_gols = false;
       if (!mostrarArtilheiro || !mostrarGols) bodyCriar.mostrar_artilheiro = false;
       if (!mostrarDestaque) bodyCriar.mostrar_destaque = false;
       const { team: t, geo, bairro: bairroResposta, joga: jogaGravado, premios_salvos: premiosSalvos } = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify(bodyCriar) });
-      // 29P: a cidade achada vira informação do time na festa (só "Brasília, DF", sem "Encontramos:"); o aviso fica só quando deu errado.
+      // A cidade achada vira informação do time na festa (só "Brasília, DF", sem "Encontramos:"); o aviso fica só quando deu errado.
       const sobreCidade = avisoDaCidade(geo, cidade.trim());
       setCidadeDoTime(sobreCidade?.tipo === 'ok' ? geo.nomeOficial : cidade.trim());
       setAvisoCidade(sobreCidade?.tipo === 'aviso' ? sobreCidade : null);
@@ -293,7 +292,7 @@ export default function CriarEquipa() {
       // aqui: o efeito de "time criado" só reage a trocas de entrada).
       irParaPasso(4, { substituir: true });
       setTeam(t);
-      // 29Q: o link do convite chega PRONTO. Gerado aqui, uma vez só: o passo 4 nasce com o time e não há outro caminho até ele (o time
+      // O link do convite chega PRONTO. Gerado aqui, uma vez só: o passo 4 nasce com o time e não há outro caminho até ele (o time
       // criado trava o histórico, então voltar não repete a chamada). Sem await: a festa abre na hora e o link entra quando chegar.
       pedirConvite(t.slug).catch((e) => {
         setConviteFalhou(true);
@@ -306,7 +305,7 @@ export default function CriarEquipa() {
     }
   }
 
-  // 29Q: a chamada do convite é uma só — a da geração sozinha (logo que o time existe) e a do botão de reserva.
+  // A chamada do convite é uma só — a da geração sozinha (logo que o time existe) e a do botão de reserva.
   async function pedirConvite(slug) {
     const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
     setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
@@ -332,10 +331,10 @@ export default function CriarEquipa() {
   }
 
   const waHref = inviteLink ? enderecoDoWhatsapp({ nomeTime: nome, link: inviteLink }) : null;
-  // 29P: o Continuar do passo 1 só existe com nome E cidade. A cidade conta da lista, ou como texto quando a lista não sugere nada.
+  // O Continuar do passo 1 só vale com nome E cidade. A cidade conta da lista, ou como texto quando a lista não sugere nada.
   const cidadeOk = cidadePreenchida({ texto: cidade, escolha: cidadeEscolha, temSugestoes });
   const podeContinuar = !!nome.trim() && cidadeOk;
-  // Defesa (não deve mais aparecer, 29P): time aberto sem cidade — o motor não deixa criar (é como se acha o time no "Radar de peladas").
+  // Defesa (não deve aparecer): time aberto sem cidade — o motor não deixa criar (é como se acha o time no "Radar de peladas").
   const faltaCidade = modo !== 'privado' && !cidade.trim();
   // A festa mostra o logo que o motor aceitou: a prévia local já está carregada (o endereço do motor chegaria pelo proxy, mais tarde).
   const logoDaFesta = logoEnviado ? logoPrevia : null;
@@ -346,7 +345,7 @@ export default function CriarEquipa() {
       <Topbar hud="CRIAR TIME" back="voltar" backFallback="/home" />
       <main className="app-main page-reveal" style={{ maxWidth: 480 }}>
         {/* barra de progresso: 3 passos de escolha (3/3 é o último — tem o botão CRIAR O TIME). A tela de convites, depois de criar,
-            não é um passo: a barra fica cheia e o rótulo diz "Pronto" (achado 79: dizia 3/4 sem existir um 4º). */}
+            não é um passo: a barra fica cheia e o rótulo diz "Pronto". */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '4px 0 20px' }}>
           {[1, 2, 3].map((n) => (
             <div key={n} style={{ flex: 1, height: 3, background: n <= passo ? 'linear-gradient(90deg,#d4a017,#f0c94a)' : 'rgba(255,255,255,0.10)', boxShadow: n <= passo ? '0 0 8px rgba(212,160,23,0.5)' : 'none' }} />
@@ -356,14 +355,14 @@ export default function CriarEquipa() {
 
         {passo === 1 && (
           <>
-            {/* 29P: sem título nem subtítulo; a tela começa no nome (a estrela), em letra maior. O escudo das iniciais fica — é a parte
-                divertida — sem o texto que o explicava. Rótulos limpos, sem marca de campo exigido: sem nome e cidade o Continuar fica apagado (29T). */}
+            {/* Sem título nem subtítulo; a tela começa no nome (a estrela), em letra maior. O escudo das iniciais fica — é a parte
+                divertida — sem texto que o explique. Rótulos limpos, sem marca de campo exigido: sem nome e cidade o Continuar fica apagado. */}
             <h1 style={SO_LEITOR}>Passo 1 de 3</h1>
             <Lbl grande>Nome do time</Lbl>
             <input className="input input--hud" value={nome} maxLength={40} required aria-required="true" onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Domingueira FC" style={{ width: '100%', fontFamily: RAJ, fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }} />
             <Lbl grande>Cidade</Lbl>
             <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { if (texto !== cidade) { setBairro(''); setBairroEscolha(null); } setCidade(texto); setCidadeEscolha(escolha); }} aoSugestoes={aoSugestoes} placeholder="Ex.: Brasília" aria-required="true" style={{ fontSize: 17, fontWeight: 600 }} />
-            {/* 29H (item 12), 29T (achado 157): o bairro, opcional, é de LISTA — os do IBGE no Brasil, as freguesias em Portugal. Cidade sem bairros
+            {/* O bairro, opcional, é de LISTA — os do IBGE no Brasil, as freguesias em Portugal. Cidade sem bairros
                 na lista (ou ainda sem cidade): o campo nem aparece, e o time mostra só a cidade. */}
             {bairros.estado === 'lista' ? (
               <>
@@ -396,7 +395,7 @@ export default function CriarEquipa() {
               ) : null}
             </div>
             <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={aoEscolherLogo} style={{ display: 'none' }} />
-            {/* 29T (achado 166): o Continuar está aí desde o começo, apagado, e acende com nome e cidade — a pessoa vê que existe um próximo passo. */}
+            {/* O Continuar está aí desde o começo, apagado, e acende com nome e cidade — a pessoa vê que existe um próximo passo. */}
             <div style={{ marginTop: 24 }}>
               <Cta cheio disabled={!podeContinuar} data-continuar-passo-1 onClick={() => irParaPasso(2)}>Continuar</Cta>
             </div>
@@ -438,7 +437,7 @@ export default function CriarEquipa() {
           <>
             <h1 style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, margin: '0 0 14px' }}>Aceita novos membros?</h1>
             {[
-              // 29H (item 45): textos aprovados pelo dono (2-out); 29P: o Explorar virou "Radar de peladas" (em frase, entre aspas).
+              // Textos aprovados pelo dono; o nome do Explorar é "Radar de peladas" (em frase, entre aspas).
               { k: 'privado', t: 'Fechado', d: 'Só entra quem receber o seu link de convite.' },
               { k: 'publico_aprovacao', t: 'Só com a sua aprovação', d: 'Quem achar o time no "Radar de peladas" pede para entrar. Você aceita ou não.' },
               { k: 'publico_aberto', t: 'Aberto', d: 'Qualquer um que achar o time no "Radar de peladas" entra na hora.' },
@@ -448,7 +447,7 @@ export default function CriarEquipa() {
                 <span className="texto-apoio" style={{ marginTop: 2 }}>{o.d}</span>
               </button>
             ))}
-            {/* 29T (achado 157): quem acha o time no "Radar de peladas" só tem isto para decidir. Aberto ou com aprovação pedem; Fechado não. */}
+            {/* Quem acha o time no "Radar de peladas" só tem isto para decidir. Aberto ou com aprovação pedem; Fechado não. */}
             {precisaDeSobre(modo) ? (
               <div data-sobre-o-time style={{ marginTop: 14 }}>
                 <label htmlFor="sobre-o-time" style={{ fontFamily: RAJ, fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', color: '#c9b6ff', textTransform: 'uppercase', display: 'block', margin: '0 0 8px' }}>Sobre o time</label>
@@ -478,7 +477,7 @@ export default function CriarEquipa() {
 
         {passo === 4 && team && (
           <>
-            {/* 29P: a FESTA. A máquina das boas-vindas (deitada sem logo, quadrada com logo) com o nome do time como letreiro, na hora em
+            {/* A FESTA. A máquina das boas-vindas (deitada sem logo, quadrada com logo) com o nome do time como letreiro, na hora em
                 que o time nasce. Embaixo do nome, a cidade (e o bairro) como informação do time. Sem som; prefers-reduced-motion para tudo. */}
             <div className="bv bv--festa" data-festa aria-labelledby="festa-nome">
               <MaquinaDoTime nome={team.nome} logo={logoDaFesta} idNome="festa-nome" />
@@ -528,7 +527,7 @@ export default function CriarEquipa() {
               <p className="texto-apoio texto-apoio--centro" role="status" data-gerando-convite>Preparando o link do convite…</p>
             )}
             <div style={{ marginTop: 22 }}>
-              {/* 29P: sem state nenhum — a comemoração já aconteceu aqui; a página do time abre direto. */}
+              {/* Sem state nenhum — a comemoração já aconteceu aqui; a página do time abre direto. */}
               <Cta cheio onClick={() => navigate(`/time/${team.slug}`)}>Ir para o time</Cta>
             </div>
           </>
@@ -536,7 +535,7 @@ export default function CriarEquipa() {
       </main>
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
-      {/* Achado 80: o Voltar do sistema a partir do passo 1 pergunta antes de jogar fora o que foi preenchido. Portal para o body (overlay
+      {/* O Voltar do sistema a partir do passo 1 pergunta antes de jogar fora o que foi preenchido. Portal para o body (overlay
           fixo nunca dentro do [data-page], ver LoadingFutty.jsx). */}
       {perguntaSair
         ? createPortal(

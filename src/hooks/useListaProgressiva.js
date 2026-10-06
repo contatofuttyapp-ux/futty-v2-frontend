@@ -1,10 +1,9 @@
-// Futty v2.0 — Listas em duas levas (VELOCIDADE 8, 16-set).
+// Futty v2.0 — Listas em duas levas.
 //
-// O PROBLEMA: a Resenha punha os 20 itens do feed no MESMO commit do React —
-// cada um com avatar, foto, barra de reações e a prévia de até 2 comentários com
-// mais avatares. Isso é uma leva de layout e de pintura enorme, num só quadro, e
-// a pessoa não vê nada até ela acabar. O Ranking faz o mesmo com 23 linhas, cada
-// uma com moldura, pódio e botões animados (os relatórios do iPhone: 1389, 1866
+// O PROBLEMA: pôr os 20 itens do feed da Resenha no MESMO commit do React — cada um com avatar, foto,
+// barra de reações e a prévia de até 2 comentários com mais avatares — é uma leva de layout e de
+// pintura enorme, num só quadro, e a pessoa não vê nada até ela acabar. O Ranking tem o mesmo problema
+// com 23 linhas, cada uma com moldura, pódio e botões animados (os relatórios do iPhone: 1389, 1866
 // e 2121 ms para pintar).
 //
 // A ideia é simples: os primeiros itens — os que cabem na tela — pintam já; o
@@ -27,9 +26,10 @@ function mudou(a, b) {
 }
 
 /**
- * A lista só CRESCEU no fim (Rodada 29B, a Resenha em páginas: "Ver mais antigos" acrescenta 20 itens depois dos que já estão na
- * tela)? Então o que já foi desenhado continua desenhado: voltar aos 6 primeiros encolheria a página debaixo do dedo e perderia a
- * posição da rolagem. Os itens antigos têm de ser os MESMOS objetos, nas mesmas posições (a ponta e o último da lista anterior).
+ * A lista só CRESCEU no fim (a Resenha em páginas: "Ver mais antigos" acrescenta 20 itens depois dos
+ * que já estão na tela)? Então o que já foi desenhado continua desenhado: voltar aos 6 primeiros
+ * encolheria a página debaixo do dedo e perderia a posição da rolagem. Os itens antigos têm de ser os
+ * MESMOS objetos, nas mesmas posições (a ponta e o último da lista anterior).
  */
 export function soCresceuNoFim(anterior, nova) {
   return anterior.length > 0
@@ -38,15 +38,12 @@ export function soCresceuNoFim(anterior, nova) {
     && nova[anterior.length - 1] === anterior[anterior.length - 1];
 }
 
-// FLUIDEZ 2 (16-set) — o "resto" deixa de ser UMA leva.
+// O "resto" não é UMA leva: os primeiros itens pintam já e o resto entra dois quadros depois — mas se
+// esse resto fosse um commit único, numa Resenha com 20 posts o segundo commit montaria 14 cartões de
+// uma vez, cada um com avatar, foto, barra de reações e prévia de comentários. É menos mau do que 20
+// num só quadro, mas ainda é um quadro que a pessoa sente.
 //
-// A Velocidade 8 partiu a lista em duas: os primeiros já, o resto dois quadros
-// depois. Só que "o resto" continuava a ser um commit único — numa Resenha com
-// 20 posts, o segundo commit monta 14 cartões de uma vez, cada um com avatar,
-// foto, barra de reações e prévia de comentários. É menos mau do que 20 num só
-// quadro, mas ainda é um quadro que a pessoa sente.
-//
-// Agora o resto entra de 5 em 5, com um quadro entre lotes. Cinco porque é
+// Por isso o resto entra de 5 em 5, com um quadro entre lotes. Cinco porque é
 // pouco mais do que cabe numa tela de telemóvel: grande o suficiente para a
 // lista não demorar a completar-se, pequeno o suficiente para nenhum lote
 // segurar a tela.

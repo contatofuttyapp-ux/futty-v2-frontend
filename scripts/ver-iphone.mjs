@@ -88,9 +88,8 @@ const ARQUIVO_SESSOES = opcao('sessoes', path.join(RAIZ, 'scripts', 'capturas', 
 const ARQUIVO_SESSOES_VARREDURA = opcao('sessoes-varredura', path.join(RAIZ, 'scripts', 'capturas', 'sessao-varredura.json'));
 const CENAS = opcao('cenas', 'arranque,ranking,resenha').split(',').map((c) => c.trim()).filter(Boolean);
 const LENTO = args.includes('--lento');
-// VELOCIDADE 9 — atraso artificial por pedido à /api, para a bancada sentir o
-// que o dono sente de Lisboa (o piso medido Lisboa↔São Paulo é ~400 ms de ida e
-// volta; ver "Velocidade 6" no ONDE-ESTAMOS). 0 = rede local, sem atraso.
+// Atraso artificial por pedido à /api, para a bancada sentir o que o dono sente de Lisboa (o piso
+// medido Lisboa↔São Paulo é ~400 ms de ida e volta). 0 = rede local, sem atraso.
 const LATENCIA_MS = Number(opcao('latencia', '400')) || 0;
 const PASTA = path.join(RAIZ, 'scripts', 'capturas');
 const LARGURA_APARELHO = 430;
@@ -207,7 +206,7 @@ function geometriaAvatares() {
   });
 }
 
-// Rodada 8A: campos de texto visíveis e a fonte COMPUTADA de cada um. Abaixo de
+// Campos de texto visíveis e a fonte COMPUTADA de cada um. Abaixo de
 // 16 px o iOS dá zoom ao focar (e não desfaz sozinho).
 function camposDaTela() {
   const ignorar = new Set(['hidden', 'file', 'checkbox', 'radio', 'range', 'color', 'submit', 'button']);
@@ -219,7 +218,7 @@ function camposDaTela() {
     }));
 }
 
-// Rodada 8A: 1ª visita ao Ranking — observado de FORA do app. Quadros (gaps de
+// 1ª visita ao Ranking — observado de FORA do app. Quadros (gaps de
 // requestAnimationFrame), 1ª linha do ranking no DOM, 1ª imagem de linha
 // carregada e o toque na aba. Tudo em performance.now() da própria página, a
 // mesma base do Diagnóstico do app.
@@ -260,11 +259,10 @@ function observadorRanking({ lento }) {
   }
 }
 
-// `amostrar: false` = cenas da Rodada 8A: sem o amostrador de largura e com o
-// service worker BLOQUEADO — com ele ativo, o WebKit passa os pedidos da página
-// pelo SW e o Playwright deixa de os ver: a interceção das escritas falhava em
-// silêncio (medido no 1º "antes": o PATCH da ausência e o POST do Diagnóstico
-// chegaram a produção). O app da loja também não usa o SW.
+// `amostrar: false` = sem o amostrador de largura e com o service worker BLOQUEADO — com ele ativo, o WebKit
+// passa os pedidos da página pelo SW e o Playwright deixa de os ver: a interceção das escritas falhava em
+// silêncio (já aconteceu: o PATCH da ausência e o POST do Diagnóstico chegaram a produção). O app da loja
+// também não usa o SW.
 async function novoContexto(navegador, sessao, { amostrar = true, viewport = null, extra = {} } = {}) {
   const contexto = await navegador.newContext({
     ...IPHONE,
@@ -277,8 +275,8 @@ async function novoContexto(navegador, sessao, { amostrar = true, viewport = nul
   return contexto;
 }
 
-// Rodada 8A: nas cenas novas nada escreve no banco. Toda escrita à /api é
-// respondida aqui; `extra` devolve um corpo próprio para rotas específicas.
+// Nada escreve no banco: toda escrita à /api é respondida aqui; `extra` devolve um corpo próprio para rotas
+// específicas.
 async function travarEscritas(contexto, extra = () => null) {
   const escritas = [];
   await contexto.route('**/api/**', async (route) => {
@@ -298,7 +296,7 @@ async function entrar(navegador) {
   const pagina = await contexto.newPage();
   await pagina.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('input[type="email"]', { timeout: 30000 });
-  // Rodada 8A: os campos do login também dão zoom no iPhone se a fonte for < 16 px.
+  // Os campos do login também dão zoom no iPhone se a fonte for < 16 px.
   const camposLogin = await pagina.evaluate(camposDaTela);
   await pagina.fill('input[type="email"]', EMAIL);
   await pagina.fill('input[type="password"]', lerSenha());
@@ -554,15 +552,13 @@ async function cenaAviso(navegador, sessao) {
 }
 
 // ─── Cena "resenha": varredura estado a estado ────────────────────────────────
-// Rodada 9, item 3. O Pedro no iPhone: "ao adicionar uma foto a tela aumenta e
-// fica desproporcional". O WebKit faz isso quando ALGUMA coisa fica mais larga
-// que a tela: ele alarga a viewport para caber e encolhe a página inteira. Aqui
-// passa-se por cada estado da Resenha e mede-se, em cada um, a largura rolável,
-// a escala da viewport, o elemento que passa da borda e as imagens sem travão.
+// Sintoma no iPhone ao adicionar uma foto: "a tela aumenta e fica desproporcional". O WebKit faz isso quando
+// ALGUMA coisa fica mais larga que a tela: ele alarga a viewport para caber e encolhe a página inteira. Aqui
+// passa-se por cada estado da Resenha e mede-se, em cada um, a largura rolável, a escala da viewport, o
+// elemento que passa da borda e as imagens sem travão.
 //
-// As fotos são sintéticas (geradas aqui, servidas por interceção) para as
-// proporções serem exatas: 3:4 (retrato) e 16:9 (paisagem). Nada é publicado —
-// toda escrita é interceptada, o upload devolve a URL falsa.
+// As fotos são sintéticas (geradas aqui, servidas por interceção) para as proporções serem exatas: 3:4
+// (retrato) e 16:9 (paisagem). Nada é publicado — toda escrita é interceptada, o upload devolve a URL falsa.
 function crc32(buf) {
   let c = ~0;
   for (let i = 0; i < buf.length; i++) {
@@ -947,7 +943,7 @@ async function cenaResenha(navegador, sessao, { largura, altura, rotulo }) {
 }
 
 // ─── Cena "fixos": position:fixed que não ancora na TELA ──────────────────────
-// Rodada 9, item 4. O mesmo defeito do modal de votar: um `position: fixed`
+// O mesmo defeito do modal de votar: um `position: fixed`
 // dentro do [data-page] pode ancorar na PÁGINA em vez da tela — basta um
 // ancestral com transform, filter, backdrop-filter, perspective, will-change
 // dessas, contain ou container-type. Aqui a prova é empírica, não teórica:
@@ -1146,19 +1142,16 @@ async function umaVisitaRanking(navegador, sessao, { comCache }) {
   await pagina.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('.bottom-nav__tab--ranking', { timeout: 30000 });
   await pagina.waitForSelector('.games-label, .home-empty', { timeout: 30000 });
-  // Velocidade 8 (16-set): esperar que a aba já aponte para o TIME. O marcador
-  // (.games-label) pode aparecer com `teams` ainda vazio, e nessa janela o href
-  // da aba é "/ranking" (a rota sem slug, que mostra "crie o seu time"). Tocar
-  // aí levava a cena para a tela errada e ela morria num timeout de 30 s à
-  // espera de uma .rank-row que nunca ia existir — apanhado 3 vezes em 5 nesta
-  // máquina, onde o backend, o servidor da build e o WebKit disputam a mesma
-  // CPU. Não era defeito do app (confirmado à parte); era a bancada a medir
-  // outra coisa. Teto de 5 s para não trocar um timeout por outro.
+  // Espera a aba já apontar para o TIME. O marcador (.games-label) pode aparecer com `teams` ainda vazio, e
+  // nessa janela o href da aba é "/ranking" (a rota sem slug, que mostra "crie o seu time"). Tocar aí leva a
+  // cena para a tela errada e ela morre num timeout de 30 s à espera de uma .rank-row que nunca vai existir
+  // (visto numa máquina onde o backend, o servidor da build e o WebKit disputam a mesma CPU). Não é defeito
+  // do app; é a bancada a medir outra coisa. Teto de 5 s para não trocar um timeout por outro.
   await pagina
     .locator('.bottom-nav__tab--ranking[href*="/time/"]')
     .waitFor({ timeout: 5000 })
     .catch(() => {});
-  // No relatório do build 18 o toque veio 214 ms depois de o /api/inicio voltar
+  // Num relatório real o toque veio 214 ms depois de o /api/inicio voltar
   // (o Início já tinha pintado do cache) — antes do pré-aquecimento (1,5 s).
   // force: sem a espera de "elemento parado" do Playwright, que com quadros
   // lentos passava de 1 s e perdia a corrida para o aquecimento.
@@ -1167,8 +1160,7 @@ async function umaVisitaRanking(navegador, sessao, { comCache }) {
   await pagina.waitForSelector('.rank-row', { timeout: 30000 });
   await espera(4500);
   const fora = await pagina.evaluate(() => window.__futtyRanking);
-  // Quando o pedido do ranking saiu, contado do toque (o que muda com a Rodada 8A:
-  // com cache velho, só depois de a lista pintar).
+  // Quando o pedido do ranking saiu, contado do toque (com cache velho, só depois de a lista pintar).
   const pedidoRankingMs = await pagina.evaluate((toque) => {
     const e = performance.getEntriesByType('resource').find((x) => new URL(x.name).pathname.endsWith('/ranking') && x.startTime >= (toque || 0));
     return e ? Math.round(e.startTime - toque) : null;
@@ -1201,10 +1193,9 @@ async function cenaRanking1(navegador, sessao) {
   return [await umaVisitaRanking(navegador, sessao, { comCache: false }), await umaVisitaRanking(navegador, sessao, { comCache: true })];
 }
 
-// ─── Cena "rodada12a" (16-set): as provas dos itens 1 a 6 ─────────────────────
-// Cada item tem um número que decide sozinho se passou, e uma captura ao lado
-// para o Pedro confirmar a olho. Tudo com o service worker bloqueado e as
-// escritas interceptadas — nada desta cena chega ao banco.
+// ─── Cena "rodada12a": cada prova tem um número que decide sozinho se passou, e uma captura ao lado para
+// confirmar a olho. Tudo com o service worker bloqueado e as escritas interceptadas — nada desta cena
+// chega ao banco.
 
 // Item 1 — o cromo do Início tem de entrar INTEIRO. O defeito era a moldura
 // dourada a pintar sozinha, à espera de o avatar carregar. Isto amostra a área
@@ -1214,11 +1205,9 @@ function vigiarCromo() {
   const t0 = performance.now();
   const amostras = [];
   window.__futtyCromo = amostras;
-  // VISÍVEL, não "existe no DOM". O código antigo já punha o <img> do avatar na
-  // árvore desde o primeiro quadro, com opacity:0 até o onLoad o medir — medir a
-  // presença dava "0 molduras soltas" também no build 21, que é exactamente o
-  // defeito que esta rodada veio corrigir. Uma prova que não distingue o antes
-  // do depois não prova nada (apanhado ao correr a etiqueta "antes").
+  // VISÍVEL, não "existe no DOM": o <img> do avatar pode estar na árvore desde o primeiro quadro, com
+  // opacity:0 até o onLoad o medir — medir a presença daria "0 molduras soltas" mesmo com o defeito. Uma
+  // prova que não distingue o antes do depois não prova nada.
   const visivel = (el) => {
     if (!el) return false;
     const cs = getComputedStyle(el);
@@ -1264,8 +1253,8 @@ async function provaCromo(navegador, sessao) {
     capturas.push({ ms, real: Date.now() - t0, arquivo: path.relative(RAIZ, arquivo) });
   }
   // As três de cima contam do goto, e num arranque frio ainda apanham o F de
-  // carregamento (a sessão e o perfil demoram mais do que 600 ms). Para se VER o
-  // que esta rodada mudou, mais três ancoradas no instante em que a área do
+  // carregamento (a sessão e o perfil demoram mais do que 600 ms). Para se VER
+  // o resultado, mais três ancoradas no instante em que a área do
   // cromo aparece: a primeira é o quadro em que ela nasce.
   await pagina.waitForSelector('.cromo-previa, .cromo-previa__reserva, .fig-aura', { timeout: 20000 }).catch(() => {});
   const t1 = Date.now();
@@ -1378,8 +1367,8 @@ async function provaSorteio(navegador, sessao, jogo) {
     return {
       barra: !!barra,
       barraFixa: barra ? getComputedStyle(barra).position : null,
-      // Presa à TELA: com a página rolada, o topo da barra tem de continuar a
-      // bater com a altura da janela (é o teste da cena "fixos" da Rodada 9).
+      // Presa à TELA: com a página rolada, o topo da barra tem de continuar a bater com a altura da janela (é o
+      // teste da cena "fixos").
       barraCaixa: r ? { topo: Math.round(r.top), baixo: Math.round(r.bottom), altura: Math.round(r.height) } : null,
       barraNaTela: r ? r.bottom <= window.innerHeight + 1 && r.top >= 0 : null,
       botoes,
@@ -1515,10 +1504,9 @@ async function cenaRodada12a(navegador, sessao) {
   return { jogo, cromo, ranking, presenca, sorteio };
 }
 
-// ─── Cena "rodada12c" (16-set): publicidade nas 5 telas, vitrine e mudo ───────
-// A campanha de prévia já está ligada de verdade no Gabinete (backend, 12B/12C),
-// por isso aqui NÃO se serve anúncio nenhum por interceção: o que a cena mede é
-// o que o app recebe da API real. As escritas continuam travadas.
+// ─── Cena "rodada12c": Publicidade nas 5 telas, vitrine e mudo ───────────────────────────────
+// A campanha de prévia já está ligada de verdade no Gabinete, por isso aqui NÃO se serve anúncio nenhum por
+// interceção: o que a cena mede é o que o app recebe da API real. As escritas continuam travadas.
 
 /** Mede o slot de publicidade visível na tela (o AdCard, em qualquer variante). */
 function medirAnuncio() {
@@ -1571,7 +1559,7 @@ async function telaComAnuncio(navegador, sessao, { nome, rota, prepararFn = null
 }
 
 /**
- * RODADA 14A — a linha do tempo do som da cerimônia.
+ * A linha do tempo do som da cerimônia.
  *
  * Ninguém ouve um teste automático, então a prova é outra: instrumenta o
  * `Audio.prototype.play` ANTES do app carregar e registra o que foi tocado,
@@ -1634,7 +1622,7 @@ async function cenaRodada14a(navegador, sessao) {
 }
 
 /**
- * RODADA 14B — o fim do sorteio como prêmio, e UM caminho para compartilhar.
+ * O fim do sorteio como prêmio, e UM caminho para compartilhar.
  *
  * Três passagens pela mesma página:
  *   A) quem SORTEOU (o euSorteei entra por history.state, exatamente como o
@@ -1872,11 +1860,9 @@ async function cenaRodada14b(navegador, sessao) {
 }
 
 /**
- * RODADA 16B — a luz do prêmio, segunda versão (17-set).
- * O dono reprovou no aparelho a chuva de moedas (canvas-confetti) e os raios
- * cônicos a girar atrás dos avatares. No lugar: 3 varreduras de brilho, pulsos
- * de glow nas bordas (retângulo + avatares) nos três ataques do jackpot e 10
- * pontos de brilho em cruz em posições fixas. Aqui:
+ * A luz do prêmio: 3 varreduras de brilho, pulsos de glow nas bordas (retângulo + avatares) nos três
+ * ataques do jackpot e 10 pontos de brilho em cruz em posições fixas — sem chuva de moedas (canvas-confetti)
+ * e sem raios cônicos a girar atrás dos avatares. Aqui:
  *   A) quem sorteou: 6 quadros a contar do instante do jackpot; a meio, a prova
  *      de que NADA gira no interior (nenhum elemento com rotação na matriz de
  *      transform nem animação de nome rotativo), nenhum <canvas> de moedas, e
@@ -2063,7 +2049,7 @@ async function cenaRodada16b(navegador, sessao) {
   return saida;
 }
 
-// ═══ RODADA 17 — botão dourado pós-foto + "sendo criada" em toda geração ═══
+// ═══ Botão dourado pós-foto + "sendo criada" em toda geração ═══
 //
 // Ponta a ponta, sem interceptar nenhuma escrita: troca a foto (upload real,
 // grátis) → confere o botão "Gerar Avatar IA" dourado e pulsando → toca nele
@@ -2107,7 +2093,7 @@ async function cenaRodada17(navegador, sessao) {
       direita: Math.round(r.right),
       larguraViewport: window.innerWidth,
       // scrollWidth > innerWidth = algo empurrou a página para o lado (o
-      // defeito real que o overflow-x:clip existe para conter — Velocidade 7B).
+      // defeito real que o overflow-x:clip existe para conter).
       scrollWidthDoc: document.scrollingElement?.scrollWidth ?? null,
     };
   });
@@ -2128,7 +2114,7 @@ async function cenaRodada17(navegador, sessao) {
   const posFoto = await medirBotao();
   await pagina.screenshot({ path: foto('2-botao-dourado') });
   // Zoom no botão: prova visual de que o glow não estoura nem é cortado pelo
-  // overflow-x:clip de #root/[data-page] (index.css, Velocidade 7B).
+  // overflow-x:clip de #root/[data-page] (index.css).
   const caixaBotao = await pagina.evaluate(() => {
     const btn = [...document.querySelectorAll('button')].find((b) => /Gerar Avatar IA/.test(b.textContent || ''));
     const r = btn?.getBoundingClientRect();
@@ -2171,7 +2157,7 @@ async function cenaRodada17(navegador, sessao) {
   };
 }
 
-// ═══ FIGURINHA 3 — comum grátis, Brilhante por direito (22-set) ═══
+// ═══ Comum grátis, Brilhante por direito ═══
 //
 // O percurso de quem chega hoje: cadastro → foto → figurinha COMUM na hora
 // (sem esperar IA, sem custo) → o bloco "Vire figurinha" no lugar dos
@@ -2181,11 +2167,11 @@ async function cenaRodada17(navegador, sessao) {
 // scripts/_bench/conta-de-prova.js escreve a sessão), porque a conta demo tem
 // a Brilhante das lojas e não pode ser desfeita para provar a comum.
 //
-// SEM a migração 054 aplicada (é o Pedro que a aplica), a metade PAGA do
+// SEM a migração 054 aplicada, a metade PAGA do
 // percurso não existe: ninguém tem direito, o botão dourado não aparece e o
 // pedido responde 503 digno. A cena regista o que encontrar em vez de fingir.
 // ═══════════════════════════════════════════════════════════════════════════
-// FIGURINHA 3 — BLOCO 2: o pacote do time, de ponta a ponta.
+// O pacote do time, de ponta a ponta.
 //
 // Três pessoas, três contextos do navegador (sessões separadas, como na vida):
 //   1. o DONO abre os Planos e pede a ativação do pacote;
@@ -2195,8 +2181,7 @@ async function cenaRodada17(navegador, sessao) {
 //
 // Custa uma geração real (~US$0,11). O resto é grátis.
 // ═══════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
-// VARREDURA GERAL PÓS-FIGURINHA 3 (22-set) — três cenas:
+// VARREDURA GERAL — três cenas:
 //
 //   1. cenaCriarTime       dono cria o 1º time pela UI, ganha o presente do
 //                          criador, gera a Brilhante real (~US$0,11)
@@ -2262,7 +2247,7 @@ async function cenaCriarTime(navegador, sessoes) {
   await espera(3000);
   await pagina.locator('input').first().fill('Varredura FC');
   await espera(300);
-  // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
+  // A cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
   await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto');
   await espera(500);
   await pagina.screenshot({ path: foto('1-nome') });
@@ -2283,7 +2268,7 @@ async function cenaCriarTime(navegador, sessoes) {
   await espera(2500);
   const naPasso4 = await texto();
   passos.chegouPasso4 = /Seu time está no ar/i.test(naPasso4);
-  // Rodada 29A: o presente do criador foi ABOLIDO — a cena agora exige que ele NÃO exista (API e tela).
+  // O presente do criador foi ABOLIDO — a cena exige que ele NÃO exista (API e tela).
   passos.ganhouBrilhanteNaTela = /Você ganhou \d+ gerações|Gerar agora/i.test(naPasso4);
   await pagina.screenshot({ path: foto('3-presente') });
 
@@ -2412,11 +2397,11 @@ function pagUrlTem(pagina, trecho) {
   return pagina.url().includes(trecho);
 }
 
-// Rotas concretas de App.jsx (22-set, varredura pós-Figurinha 3). IDs reais de
+// Rotas concretas de App.jsx. IDs reais de
 // dados demo já existentes (domingueira-fc-demo, vila-olimpica-fc-demo-vila) —
 // só leitura em toda a lista, nada aqui clica em nada. `/jogo/:id/sorteio`
 // fica de fora de propósito: sortear é uma ação real sobre o jogo pendente do
-// time demo, que outras cenas (rodada14a) usam — não se arrisca aqui.
+// time demo, que outras cenas usam — não se arrisca aqui.
 function montarRotasVarredura(incluirEstaticas) {
   const TIME_A = 'domingueira-fc-demo';
   const JOGO_A = 'f2ea1dd4-6ef7-47c6-b0fc-feabc05a8595'; // já sorteado
@@ -2424,8 +2409,7 @@ function montarRotasVarredura(incluirEstaticas) {
   const TIME_B = 'vila-olimpica-fc-demo-vila';
   // O campeonato "Vaga 11B" (N times) vive em Storage (utils/campeonatoStore.js),
   // não na tabela `campeonatos` (026, 2 times fixos, intocada). Um id daquela
-  // tabela aqui dava "Campeonato não encontrado" — achado desta varredura, no
-  // MEU dado de prova, não no produto (ver ONDE-ESTAMOS.md).
+  // tabela aqui dava "Campeonato não encontrado".
   const CAMPEONATO_B = '11c1e8c8-4faa-4367-bdfc-7a6a6d6497e6'; // "em_curso", pontos corridos
   const rotas = [
     { path: '/home', nome: 'home' },
@@ -2626,7 +2610,8 @@ async function cenaFigurinha3Pacote(navegador, sessoes) {
   await espera(5000);
   const naFigurinha = await membro.texto();
   passos.membroTemBotaoGerar = /Gerar minha figurinha/i.test(naFigurinha);
-  // Rodada 29B (B): a frase "uniforme que o dono escolheu" saiu; o uniforme do time é o tile aberto (pintável) da grade.
+  // A frase "uniforme que o dono escolheu" não existe; o uniforme do time é o tile aberto (pintável) da
+  // grade.
   passos.figurinhaDizUniformeDoTime = (await membro.pagina.locator('[data-grade="uniformes"] [data-estado="geravel"]').count()) === 1;
   await membro.pagina.screenshot({ path: foto('8-membro-antes-de-gerar') });
 
@@ -2825,7 +2810,7 @@ async function cenaRodada12c(navegador, sessao) {
     telas.push(await telaComAnuncio(navegador, sessao, {
       nome: 'sorteio',
       rota: `/time/${TIME}/jogo/${jogo.id}/sorteio`,
-      // A cerimónia tem de ACABAR para o slot aparecer (Rodada 12A).
+      // A cerimónia tem de ACABAR para o slot aparecer.
       prepararFn: async (pagina) => {
         const saltar = pagina.locator('.saltar button');
         if (await saltar.count()) await saltar.click({ force: true }).catch(() => {});
@@ -2916,12 +2901,10 @@ async function cenaRodada12c(navegador, sessao) {
   return { jogo, telas, mudo, vitrine, cromo, voltar };
 }
 
-// ─── Cena "rodada13" (16-set): Vou verde, "Ver sorteio" com vida ─────────────
-// Item 1 — a paleta de presença troca de novo: "Vou" perde o dourado e vira
-// fantasma VERDE, gémeo do "Não vou" vermelho — nenhum dos dois pode sair
-// dourado, que agora é só do "Ver sorteio"/"Sortear" (decisão do dono, build
-// 22). Item 2 — "Ver sorteio" no card do Início ganha a receita cheia do
-// .cta-gold: largura total do card, altura 46.
+// ─── Cena "rodada13": Cena do "Vou" verde e do "Ver sorteio" com vida ─────────────────────
+// A paleta de presença: "Vou" é fantasma VERDE, gémeo do "Não vou" vermelho — nenhum dos dois pode sair
+// dourado, que é só do "Ver sorteio"/"Sortear" (escolha do dono). "Ver sorteio" no card do Início tem a
+// receita cheia do .cta-gold: largura total do card, altura 46.
 //
 // Acha, na resposta REAL de /api/inicio, o primeiro jogo (em qualquer
 // profundidade do payload — não se assume a forma exata) que passa no filtro,
@@ -3028,11 +3011,10 @@ async function cenaRodada13(navegador, sessao) {
   return { presenca, verSorteio, erros };
 }
 
-// ═══ RODADA 18 — "Mostrar minha foto" / "Mostrar minha figurinha" ═══
+// ═══ "Mostrar minha foto" / "Mostrar minha figurinha" ═══
 //
-// A conta demo já tem foto E figurinha (usada nas provas anteriores) — nada
-// aqui gera nada nem gasta direito, só exercita o interruptor nela. Termina
-// devolvendo o modo a 'figurinha': outras cenas e a revisão da loja contam
+// A conta demo já tem foto E figurinha — nada aqui gera nada nem gasta direito, só exercita o
+// interruptor nela. Termina devolvendo o modo a 'figurinha': outras cenas e a revisão da loja contam
 // com essa conta mostrando a figurinha.
 async function cenaRodada18(navegador, sessao) {
   const PASTA_R18 = path.join(PASTA, 'rodada-18');
@@ -3117,9 +3099,9 @@ async function cenaRodada18(navegador, sessao) {
   };
 }
 
-// ═══ VELOCIDADE 9 — o percurso do dono, medido com a distância dele ═══
+// ═══ O percurso do dono, medido com a distância dele ═══
 //
-// O relatório do build 28 veio de Lisboa: motor 77 ms de média, rede 458. Numa
+// O relatório do dono veio de Lisboa: motor 77 ms de média, rede 458. Numa
 // bancada local a rede é zero e todo defeito de cascata desaparece — uma tela
 // que faz três pedidos em fila parece igual a uma que faz um. Por isso aqui
 // cada chamada à /api leva `LATENCIA_MS` de atraso antes de sair.
@@ -3200,7 +3182,7 @@ async function cenaVelocidade9(navegador, sessao) {
     rolagem = await rolarUmPouco(700).catch(() => null);
     await espera(200);
   }
-  // Quantos cartões a Resenha chegou a montar (a meta da rodada fala em 60).
+  // Quantos cartões a Resenha chegou a montar (a meta é 60).
   const cartoesNaResenha = await pagina.locator('.feed-item').count().catch(() => null);
   await pagina.screenshot({ path: foto('3-resenha-rolada') });
 
@@ -3265,9 +3247,10 @@ function tabelaVelocidade9(r) {
   });
 }
 
-// Rodada 29H (item 3): a data de nascimento são ROLINHOS (components/RolinhosData.jsx), não um <input type="date">. `escolherData` põe cada
-// rolo no item pedido (rolagem programática → o mesmo caminho do dedo: onScroll → índice) e espera o rolo confirmar. `so` limita a
-// quais rolos mexer (['ano', 'mes']); a ordem é sempre ano → mês → dia, porque o dia depende do mês.
+// A data de nascimento são ROLINHOS (components/RolinhosData.jsx), não um <input type="date">.
+// `escolherData` põe cada rolo no item pedido (rolagem programática → o mesmo caminho do dedo: onScroll →
+// índice) e espera o rolo confirmar. `so` limita a quais rolos mexer (['ano', 'mes']); a ordem é sempre
+// ano → mês → dia, porque o dia depende do mês.
 async function escolherDataNosRolinhos(pagina, raiz, data, { so = null } = {}) {
   const [a, m, d] = data.split('-').map(Number);
   for (const [nome, valor] of [['ano', a], ['mes', m], ['dia', d]]) {
@@ -3491,8 +3474,8 @@ try {
     const r = await cenaRodada13(navegador, sessao);
     saida.rodada13 = r;
     const ok = (bom) => (bom ? 'OK' : 'FALHA');
-    // As cores computadas do dourado antigo (--presenca-sim* de antes da
-    // Rodada 13): borda/fundo #d4a017, texto #f0c94a, fundo escuro rgba(30,24,8).
+    // As cores computadas do dourado antigo (--presenca-sim*): borda/fundo #d4a017, texto #f0c94a, fundo
+    // escuro rgba(30,24,8).
     const DOURADO = /rgba?\(\s*212,\s*160,\s*23|rgba?\(\s*240,\s*201,\s*74|rgba?\(\s*30,\s*24,\s*8/;
     const semDourado = (b) => b?.achou && !DOURADO.test(b.cor) && !DOURADO.test(b.fundo) && !DOURADO.test(b.borda);
 
@@ -3651,7 +3634,7 @@ try {
       console.log(`   arranque: compilação ${n(d.resumo.arranque?.compilacaoMs)} · React ${n(d.resumo.arranque?.reactMs)} · Início ${n(d.resumo.arranque?.inicioMs)} ms`);
       console.log(`   travadas: ${d.resumo.travadas?.graves || 0} graves / ${d.resumo.travadas?.leves || 0} leves · pior ${n(d.resumo.travadas?.pior?.ms)} ms (${d.resumo.travadas?.pior?.fase || '—'})`);
       console.log(`   por fase: ${JSON.stringify(d.resumo.travadas?.porFase || {})}`);
-      // A meta da rodada é sobre ROLAR: nenhuma travada > 200 ms com o dedo na tela.
+      // A meta é sobre ROLAR: nenhuma travada > 200 ms com o dedo na tela.
       const naRolagem = (d.resumo.travadas?.piores || []).filter((t) => t.fase === 'rolagem');
       const piorRolagem = naRolagem.length ? Math.max(...naRolagem.map((t) => t.ms)) : 0;
       console.log(`   rolagem: ${r.cartoesNaResenha ?? '—'} cartões na Resenha · ${d.resumo.travadas?.porFase?.rolagem || 0} travadas · pior ${piorRolagem || '—'} ms`);
@@ -4130,9 +4113,8 @@ try {
   await navegador.close();
 }
 
-// ─── Cena "rodada19" (23-set): enquadrar dentro de "Trocar foto", Minhas
-// figurinhas (histórico), miniatura quadrada pelo topo. Lê a sessão gravada
-// por scripts/_bench/prova-rodada19.js (backend) — conta já membro de
+// ─── Cena "rodada19": Enquadrar dentro de "Trocar foto", Minhas figurinhas (histórico), miniatura quadrada pelo topo ───
+// Lê a sessão gravada pelo script de prova do backend (scripts/_bench) — conta já membro de
 // domingueira-fc-demo, confirmada em 3 jogos (Ranking já pode listá-la).
 async function cenaRodada19(navegador) {
   const arqSessao = path.join(RAIZ, 'scripts', 'capturas', 'sessao-rodada19.json');
@@ -4140,8 +4122,8 @@ async function cenaRodada19(navegador) {
   const pasta = path.join(PASTA, 'rodada-19');
   mkdirSync(pasta, { recursive: true });
   const arq = (nome) => path.join(pasta, `${nome}.png`);
-  // A foto-problema da bancada anterior (achado: miniatura quadrada mostrava
-  // o pulso, não o rosto) — mesmo arquivo, para prova direta do antes/depois.
+  // A foto-problema da bancada anterior (a miniatura quadrada mostrava o pulso, não o rosto) — mesmo
+  // arquivo, para prova direta do antes/depois.
   const FOTO_PROBLEMA = path.join(RAIZ, '..', '..', 'BANCADA-FOTOS', 'Menor K churras.jpeg');
 
   const contexto = await novoContexto(navegador, sessao, { amostrar: false });
@@ -4186,9 +4168,9 @@ async function cenaRodada19(navegador) {
   // Confirma o recorte — sobe avatar + original juntos. O card grande só
   // repinta depois de o canvas BUSCAR a imagem nova pelo proxy (Figurinha.jsx,
   // useEffect com jogador.avatar_url nas deps) e desenhar as camadas — esperar
-  // só o upload não basta (achado desta rodada: 1,5s fixo pegava o card a
-  // meio da repintura, ainda com o kit genérico). networkidle cobre as
-  // buscas do canvas sem apostar em qual delas é "a certa".
+  // só o upload não basta (1,5s fixo pegava o card a meio da repintura, ainda com
+  // o kit genérico). networkidle cobre as buscas do canvas sem apostar em qual
+  // delas é "a certa".
   await capturar('c-foto-trocada', async () => {
     await pagina.locator('[role="dialog"] button', { hasText: /^Confirmar$/ }).click();
     await pagina.getByText(/Foto trocada|Adicione uma foto/).waitFor({ timeout: 8000 }).catch(() => {});
@@ -4235,7 +4217,7 @@ async function cenaRodada19(navegador) {
   return { pasta, capturas, erros };
 }
 
-// ─── Cena "cerimonia-mista" (23-set): sorteio com jogadores de foto e de
+// ─── Cena "cerimonia-mista": sorteio com jogadores de foto e de
 // figurinha lado a lado, montado por scripts/_bench/prova-mista.js (backend).
 // Lê o estado/sessão gravados por aquele script — não cria nem sorteia nada
 // aqui, só reproduz e captura a cerimônia real (replay exacto pela seed).
@@ -4279,8 +4261,7 @@ async function cenaCerimoniaMista(navegador) {
   // (b) o momento do prêmio — TIMES SORTEADOS + os dois times revelados.
   // Janela estreita: o texto entra letra a letra (stagger 70ms × 15 + anim
   // 500ms, settle ~1,48s) e começa a sair aos 1,7s (finalLockIn) — 1,55s
-  // pega todas as letras já formadas e ainda opacas (achado desta rodada:
-  // nada de errado no produto, só a captura cedo/tarde demais).
+  // pega todas as letras já formadas e ainda opacas.
   await capturar('b-premio', async () => {
     await pagina.waitForSelector('.maq.premio', { timeout: 30000 });
     await espera(1550);
@@ -4326,10 +4307,10 @@ async function cenaCerimoniaMista(navegador) {
   return { seed: estado.seed, pasta, capturas, erros };
 }
 
-// ─── Cena "rodada20" (23-set): convite reutilizável (30 dias, várias
+// ─── Cena "rodada20": Convite reutilizável (30 dias, várias
 // entradas pelo MESMO link) + interruptor "Mostrar minha foto/figurinha"
-// correto numa conta nova. Lê o estado/sessões gravados por
-// scripts/_bench/prova-rodada20.js (backend) — 4 sessões próprias (cada
+// correto numa conta nova. Lê o estado/sessões gravados pelo script de prova
+// do backend (scripts/_bench) — 4 sessões próprias (cada
 // captura abre e fecha o SEU contexto, papéis diferentes não se misturam).
 async function cenaRodada20(navegador) {
   const pastaSessoes = path.join(RAIZ, 'scripts', 'capturas');
@@ -4374,7 +4355,7 @@ async function cenaRodada20(navegador) {
   });
 
   // (b) Convite JÁ usado por outra conta ("primeiro", na bancada) — "segundo"
-  // ainda entra pelo MESMO link (a prova central desta rodada).
+  // ainda entra pelo MESMO link (a prova central).
   await capturar('b-convite-reutilizado', async () => {
     const { contexto, pagina } = await abrir('segundo');
     await pagina.goto(`${BASE}/convite/${estado.tokenUsado}`, { waitUntil: 'domcontentloaded' });
@@ -4417,9 +4398,8 @@ async function cenaRodada20(navegador) {
   return { pasta, capturas, erros };
 }
 
-// ─── Cena "rodada21" (24-set): gerações generosas + uniformes guardados. Lê a
-// sessão gravada por scripts/_bench/prova-rodada21.js (backend) — conta com 3
-// créditos, o kit dark-gold já pintado (os outros 4 por pintar), super-admin.
+// ─── Cena "rodada21": Gerações generosas + uniformes guardados. Lê a sessão gravada pelo script de prova do backend
+// (scripts/_bench) — conta com 3 créditos, o kit dark-gold já pintado (os outros 4 por pintar), super-admin.
 async function cenaRodada21(navegador) {
   const arqSessao = path.join(RAIZ, 'scripts', 'capturas', 'sessao-rodada21.json');
   const sessao = JSON.parse(readFileSync(arqSessao, 'utf8'));
@@ -4477,7 +4457,7 @@ async function cenaRodada21(navegador) {
   await contexto.close();
 
   // (d) Planos — os números do pacote (por jogador) e da Minha Figurinha (10
-  // gerações). Sem número fixo aqui: mudou de 3 para 5 na Rodada 22.
+  // gerações). Sem número fixo aqui: já mudou de 3 para 5.
   await capturar('d-planos-numeros-novos', async () => {
     const c2 = await novoContexto(navegador, sessao, { amostrar: false });
     const p2 = await c2.newPage();
@@ -4506,8 +4486,8 @@ async function cenaRodada21(navegador) {
   return { pasta, capturas, erros };
 }
 
-// ─── Cena "rodada22" (24-set; números da Rodada 29A): o pacote do time diz "2 gerações por
-// jogador" (Planos; eram 5) e o contato vira contato@futtyapp.com nas três telas
+// ─── Cena "rodada22": o pacote do time diz "2 gerações por
+// jogador" (Planos) e o contato é contato@futtyapp.com nas três telas
 // públicas que o mostram (Termos, Privacidade, Excluir conta). Só leitura: usa
 // a sessão da demo (o /planos exige login) e nenhuma escrita; nenhuma geração
 // de IA (custo zero).
@@ -4574,8 +4554,8 @@ async function cenaRodada22(navegador, sessao) {
   return { pasta, capturas, erros };
 }
 
-// Ajudantes das cenas "sem preço" (rodada23 e rodada24): abrem a tela como app da loja
-// (Capacitor simulado) ou como site, remendam GETs e juntam as verificações.
+// Ajudantes das cenas "sem preço": abrem a tela como app da loja (Capacitor simulado) ou como site,
+// remendam GETs e juntam as verificações.
 function bancadaDePreco(navegador, sessao, nomePasta) {
   const pasta = path.join(PASTA, nomePasta);
   mkdirSync(pasta, { recursive: true });
@@ -4586,7 +4566,7 @@ function bancadaDePreco(navegador, sessao, nomePasta) {
   const PROIBIDO = /R\$|€|comprar|pagar|pre[çc]o/i;
   const fecharCookies = (pagina) => pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
 
-  // P2 (26-set): as cenas "sem preço" fixam a loja DESLIGADA no estado (loja_pronta: false) — o resultado não
+  // As cenas "sem preço" fixam a loja DESLIGADA no estado (loja_pronta: false) — o resultado não
   // depende do PAGAMENTOS_ATIVOS do motor local nem de a build ter a chave do RevenueCat.
   const SEM_DIREITO = (j) => ({ ...j, direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0, loja_pronta: false });
   const SEM_LOJA = (j) => ({ ...j, loja_pronta: false });
@@ -4677,14 +4657,13 @@ function bancadaDePreco(navegador, sessao, nomePasta) {
   return { pasta, erros, verificacoes, capturas, verificar, abrir, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, gradeUniformes, trancadosDizemOConvite, SEM_DIREITO, SEM_LOJA, SEM_FIGURINHA, fecharCookies };
 }
 
-// ─── Cena "rodada23" (25-set; textos de 26-set, Pagamentos P2): Loja Apple — sem preço no app
+// ─── Cena "rodada23": Loja Apple — sem preço no app
 // da loja enquanto a loja não está ligada (Apple 3.1.1 / Google Payments). A conta demo abre Planos e
 // Figurinha duas vezes: como app da loja (o Capacitor do navegador enxerga a plataforma "ios" pelo
 // CapacitorCustomPlatform, lido quando o módulo carrega) e como site. Nas duas: nenhum R$, €,
 // "comprar", "pagar" ou "preço" nessas telas e sem "Manto próprio" — o pedido de ativação.
-// P2: o interruptor PAGAMENTOS_ATIVOS saiu do frontend (o --pagamentos morreu com ele). A loja só
-// aparece no app nativo com o motor ligado (loja_pronta) E a chave do RevenueCat no build; estas
-// cenas fixam loja_pronta: false no estado, então valem com qualquer build e qualquer motor local.
+// A loja só aparece no app nativo com o motor ligado (loja_pronta) E a chave do RevenueCat no build;
+// estas cenas fixam loja_pronta: false no estado, então valem com qualquer build e qualquer motor local.
 // Nada escreve no banco e nada gera figurinha. A conta demo já tem figurinha e créditos, então o
 // estado de cada tela é montado remendando dois GETs (/api/me e /api/brilhantes/estado), senão o
 // bloco "Vire figurinha" nem apareceria.
@@ -4710,8 +4689,8 @@ async function cenaRodada23(navegador, sessao) {
     for (const t of ['Figurinhas do time', 'O dono do time ativa para todo mundo', 'Pedir ativação', 'Minha Figurinha', '10 gerações no uniforme que você escolher', 'Pedir a minha']) mostra(nome, c, t);
   }
 
-  // (2) Figurinha, foto sem figurinha e sem gerações: o bloco "Vire figurinha" grande. Desde a
-  // Rodada 28 ele traz só o convite do pacote para a dona do time (a Minha virou a grade).
+  // (2) Figurinha, foto sem figurinha e sem gerações: o bloco "Vire figurinha" grande. Ele traz só o
+  // convite do pacote para a dona do time (a Minha é a grade).
   for (const nativo of [true, false]) {
     const nome = `figurinha-bloco-${nativo ? 'app' : 'site'}`;
     const c = await ler(nome, nativo, '/figurinha', {
@@ -4724,8 +4703,8 @@ async function cenaRodada23(navegador, sessao) {
     for (const t of ['Vire figurinha', 'Pedir ativação para o meu time', 'Ver o que cada um dá']) mostra(nome, c, t);
   }
 
-  // (3) Figurinha com figurinha feita e sem gerações: aba Uniforme. Desde a Rodada 28 o convite é a
-  // grade de uniformes (o cadeado leva aos Planos); P2: o tile trancado diz o texto do convite.
+  // (3) Figurinha com figurinha feita e sem gerações: aba Uniforme. O convite é a
+  // grade de uniformes (o cadeado leva aos Planos); o tile trancado diz o texto do convite.
   for (const nativo of [true, false]) {
     const nome = `figurinha-uniforme-${nativo ? 'app' : 'site'}`;
     const c = await ler(nome, nativo, '/figurinha', {
@@ -4747,12 +4726,12 @@ async function cenaRodada23(navegador, sessao) {
   return { pasta, verificacoes, capturas, erros };
 }
 
-// ─── Cena "rodada24" (25-set; textos de 26-set, Pagamentos P2): o SITE continua sem vender. No
+// ─── Cena "rodada24": O SITE não vende. No
 // SITE (sem Capacitor simulado, contra a build de produção servida por `vite preview`) Planos e
 // Figurinha não mostram preço e usam a mesma lista do app (o pedido de ativação) — a loja só existe
-// no app nativo. Termos e Privacidade trazem as cláusulas de compra do P2 (compras avulsas pela App
-// Store / Google Play, RevenueCat na lista de fornecedores) e a data de hoje, sem o "não cobra nada"
-// de 25-set. Nada escreve no banco e nada gera figurinha (custo de IA zero). Depois, a varredura de
+// no app nativo. Termos e Privacidade trazem as cláusulas de compra (compras avulsas pela App
+// Store / Google Play, RevenueCat na lista de fornecedores) e a data de hoje, sem o "não cobra nada".
+// Nada escreve no banco e nada gera figurinha (custo de IA zero). Depois, a varredura de
 // texto pelas outras telas do site.
 async function cenaRodada24(navegador, sessao) {
   const { pasta, erros, verificacoes, capturas, verificar, ler, varrer, semPreco, mostra, naoMostra, cartoes, blocoFigurinha, gradeUniformes, trancadosDizemOConvite, SEM_DIREITO, SEM_LOJA, SEM_FIGURINHA } = bancadaDePreco(navegador, sessao, 'rodada-24');
@@ -4788,8 +4767,8 @@ async function cenaRodada24(navegador, sessao) {
     }
   }
 
-  // (3) Figurinha no site: aba Uniforme (figurinha feita, sem gerações) — desde a Rodada 28 o convite
-  // é a grade; P2: o tile trancado diz o texto do convite.
+  // (3) Figurinha no site: aba Uniforme (figurinha feita, sem gerações) — o convite
+  // é a grade; o tile trancado diz o texto do convite.
   {
     const nome = 'figurinha-uniforme-site';
     const c = await ler(nome, false, '/figurinha', {
@@ -4806,7 +4785,7 @@ async function cenaRodada24(navegador, sessao) {
     }
   }
 
-  // (4) Termos: §7 de compras (P2), sem o "não cobra nada" de 25-set, com a data de hoje.
+  // (4) Termos: §7 de compras, sem o "não cobra nada", com a data de hoje.
   {
     const nome = 'termos';
     const c = await ler(nome, false, '/termos', {
@@ -4838,7 +4817,7 @@ async function cenaRodada24(navegador, sessao) {
   return { pasta, verificacoes, capturas, erros };
 }
 
-// ─── Cena "hotfix26" (25-set): "Trocar foto" numa conta SEM figurinha muda o card. ───
+// ─── Cena "hotfix26": "Trocar foto" numa conta SEM figurinha muda o card. ───
 // A conta vem de scripts/_bench/conta-hotfix26.js (backend), no estado do bug: foto_url e
 // um avatar_url DIFERENTE dela que não é figurinha nossa (o que a foto do Google deixava
 // lá). Esta cena ESCREVE de verdade (sobe uma foto ao motor local, que grava no Storage e no
@@ -5060,8 +5039,8 @@ async function cenaHotfix26(navegador) {
   return { pasta, verificacoes, capturas, erros, envios: envios.map((e) => e.status) };
 }
 
-// ─── Cena "rodada27" (25-set): CHECK-UP DA FOTO DE VERDADE ───────────────────────
-// O que o dono relatou pelo celular, medido em servidor LOCAL (390×844) antes de corrigir:
+// ─── Cena "rodada27": CHECK-UP DA FOTO DE VERDADE ───────────────────────
+// O que a cena mede, em servidor LOCAL (390×844):
 //   1. "Trocar visual" não muda o genérico de quem já tem foto; sem foto tem de trocar na
 //      hora, e Ranking/Presença/Início têm de mostrar o MESMO genérico escolhido;
 //   2. a foto demora a aparecer: tempo do POST, do clique em Confirmar até o card mostrar a
@@ -5074,16 +5053,17 @@ async function cenaHotfix26(navegador) {
 // O INSTRUMENTO DE ENQUADRAMENTO. A foto de prova é um GRADIENTE CINZA (R = G = B): num passe
 // o brilho é x/largura, no outro y/altura da imagem de origem, com um anel branco e um
 // quadrado de cor em cada canto só para o olho. Cinza porque o brilho é o que os codecs com
-// perda (JPEG do recorte, WebP do proxy) preservam melhor — no primeiro desenho, R e G
-// coloridos erravam ±2 níveis (±2 px num card) por causa da croma. Uma captura de qualquer
+// perda (JPEG do recorte, WebP do proxy) preservam melhor — com R e G coloridos o erro era de
+// ±2 níveis (±2 px num card) por causa da croma. Uma captura de qualquer
 // tela que mostre a foto diz, por regressão sobre o miolo, que janela do recorte ela mostra
 // (u0..u1 num passe, v0..v1 no outro). Independe de moldura, de véu e de placa: ficam fora
 // do miolo. Um CONTROLE mede o próprio recorte no mesmo pipeline (a imagem numa <img> de
 // 200×300): as telas se comparam com ele, não com a teoria, e o viés dos codecs some.
 //
 // Só roda contra servidor LOCAL e ESCREVE de verdade (sobe fotos, muda o genérico). Custo de IA
-// zero. Precisa de backend/scripts/_bench/time-rodada27.js rodado antes (as contas e o time).
-//   node scripts/ver-iphone.mjs --url http://127.0.0.1:5297 --cenas rodada27 --etiqueta antes
+// zero. Precisa de que o script do time de prova (backend/scripts/_bench) tenha rodado antes (as contas e
+// o time).
+//   node scripts/ver-iphone.mjs --url http://127.0.0.1:5297 --cenas <cena> --etiqueta antes
 //   --partes 1,2,4   (1 = genérico · 2 = foto: tempos, caches e enquadramento · 4 = troca de tela ·
 //                     5 = "Ajustar enquadramento" chega às telas · padrão: 1,2,4,5)
 
@@ -5443,7 +5423,7 @@ async function cenaRodada27(navegador) {
       item1.semFoto.cardTrocouEmMs = mudou.ok ? Math.round(tMudou - cliqueVisual) : null;
       item1.semFoto.recursosDoGenerico = await B.pagina.evaluate(() => window.__r27.recursos('avatar-generico-'));
       item1.semFoto.patchEnviado = patches.some((p) => /avatar_generico/.test(p.corpo || ''));
-      // Rodada 28: o gancho devolve uma promessa (o montador do relatório chega sob demanda).
+      // O gancho devolve uma promessa (o montador do relatório chega sob demanda).
       item1.semFoto.fasesDoCard = (await B.pagina.evaluate(async () => (window.__futtyDiagnostico ? (await window.__futtyDiagnostico()).resumo.cromo : null)).catch(() => null))?.['camadas/estadio'] ?? null;
       await espera(1500);
       await capturar(B.pagina, '1b-sem-foto-depois');
@@ -5833,10 +5813,11 @@ async function cenaRodada27(navegador) {
   } catch (e) { erros.push(`item4: ${e.message.split('\n')[0]}`); verificar('item 4 rodou até o fim', false, e.message.split('\n')[0]); }
 
   // ════════════════ 5. AJUSTAR ENQUADRAMENTO: o recorte novo chega a TODAS as telas ════════════════
-  // "Não sei se o reenquadramento chega ao Início" (dono, 25-set). Um contexto só do começo ao fim — é o cache de
-  // sessão que se testa: sobe uma foto (gradiente), aquece Início, Ranking e Perfil com ela, REENQUADRA pela tela
-  // (Trocar foto → Ajustar enquadramento → zoom 2 → Confirmar: PUT do recorte) e olha, em cada tela, QUAL arquivo a
-  // <img> mostra (e, no Início, se o cromo desenhado é outro). Zoom 2 muda o recorte de verdade: metade da largura.
+  // Verifica se o reenquadramento chega ao Início. Um contexto só do começo ao fim — é o cache de sessão que
+  // se testa: sobe uma foto (gradiente), aquece Início, Ranking e Perfil com ela, REENQUADRA pela tela
+  // (Trocar foto → Ajustar enquadramento → zoom 2 → Confirmar: PUT do recorte) e olha, em cada tela, QUAL
+  // arquivo a <img> mostra (e, no Início, se o cromo desenhado é outro). Zoom 2 muda o recorte de verdade:
+  // metade da largura.
   const item5 = {};
   medidas.item5 = item5;
   if (PARTES.has('5')) try {
@@ -5947,23 +5928,23 @@ async function cenaRodada27(navegador) {
   return { pasta, verificacoes, capturas, erros, medidas };
 }
 
-// ─── Cena "rodada28" (25-set): produto, sessão, cadastro 18+ (29G), Diagnóstico, telemetria ─────
-// Prova pela tela, em servidor LOCAL (nunca a produção — CLAUDE.md, 25-set), o que a Rodada 28 mudou:
+// ─── Cena "rodada28": Produto, sessão, cadastro 18+, Diagnóstico, telemetria ─────
+// Prova pela tela, em servidor LOCAL (nunca a produção — CLAUDE.md):
 //   A · card com a FOTO (conta no estado da "foto do Google": avatar_url ≠ foto_url sem ser figurinha):
 //       sem seletor de fundos; a foto cobre a moldura (camada do jogador opaca em todo o octógono) e o
 //       zoom tem piso nisso (o "−" nasce travado); grade de uniformes com o 1º liberado e os outros com
-//       cadeado → Planos (sem preço); Baixar/Compartilhar voltaram. Conta do pacote: o uniforme do
+//       cadeado → Planos (sem preço); Baixar/Compartilhar presentes. Conta do pacote: o uniforme do
 //       time é o 1º, pintável, com aviso — e a cena NÃO pinta (toca em "Agora não");
 //   B · "Sair" só deste aparelho (outro aparelho da mesma conta continua dentro); 401 do motor: renova e
 //       repete; 401 de novo → login com "Sua sessão terminou", e o Início nunca diz "Bem-vindo ao Futty.";
-//   C · cadastro com menos de 18 anos (Rodada 29G; antes 13): o formulário não chama o signUp; o onboarding
+//   C · cadastro com menos de 18 anos: o formulário não chama o signUp; o onboarding
 //       pede a data antes da foto — adulto segue, menor vê o login com "O Futty é para maiores de 18 anos.";
 //   D · Perfil sem Diagnóstico; /diagnostico só para o super-admin, pelo Gabinete;
 //   E · telemetria: uma vez por tela, sem Authorization, só os campos combinados, telas como padrão;
 //   H · Gabinete: aba Figurinhas com jogadores/gerações; aba Velocidade.
-// Precisa de backend/scripts/_bench/prova-rodada28.js rodado antes. Escreve de verdade no banco
+// Precisa de que o script de prova do backend (scripts/_bench) tenha rodado antes. Escreve de verdade no banco
 // (datas de nascimento, onboarding, contas @futtymock) — custo de IA zero.
-//   node scripts/ver-iphone.mjs --url http://127.0.0.1:5228 --cenas rodada28 --etiqueta r28
+//   node scripts/ver-iphone.mjs --url http://127.0.0.1:5228 --cenas <cena> --etiqueta <etiqueta>
 async function cenaRodada28(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada28 escreve no banco: só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -6096,11 +6077,11 @@ async function cenaRodada28(navegador) {
 
     const tiles = pagina.locator('[data-grade="uniformes"] button');
     const estados = await tiles.evaluateAll((els) => els.map((b) => ({ estado: b.dataset.estado, nome: b.getAttribute('aria-label') })));
-    // Rodada 29B (B): sem direito TODOS com cadeado (antes o 1º, o Dark Gold, vinha "livre" e sem cadeado).
+    // Sem direito, TODOS os tiles têm cadeado, inclusive o 1º (o Dark Gold).
     verificar('A3 · grade de uniformes (grátis): 5 tiles, todos com cadeado', estados.length === 5 && estados.every((e) => e.estado === 'trancado' && /bloqueado/.test(e.nome)), JSON.stringify(estados));
     const t = await texto(pagina);
     verificar('A3 · sem "Pedir a minha" e sem "em breve" na tela', !/Pedir a minha/i.test(t) && !/em breve/i.test(t));
-    // 29H (item 58): no celular (tela de toque) fica UM botão, "Compartilhar"; "Baixar" só no computador.
+    // No celular (tela de toque) fica UM botão, "Compartilhar"; "Baixar" só no computador.
     verificar('A · Compartilhar voltou ao card com a foto (um botão só no celular; Baixar só no computador — 29H)', /Compartilhar/.test(t) && !/Baixar/.test(t));
     await pagina.locator('[data-grade="uniformes"]').evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {});
     await espera(600);
@@ -6200,7 +6181,8 @@ async function cenaRodada28(navegador) {
   }
 
   // ── C · cadastro com menos de 18 anos ──
-  // 29H: o rolo só vai até o ano atual − 18 — "menor de 18" é o último ano oferecido, no fim de dezembro (sempre menor, salvo em 31/12).
+  // O rolo só vai até o ano atual − 18 — "menor de 18" é o último ano oferecido, no fim de dezembro (sempre
+  // menor, salvo em 31/12).
   const dezAnos = `${new Date().getUTCFullYear() - 18}-12-31`;
   const cR = await navegador.newContext({ ...IPHONE, serviceWorkers: 'block' });
   try {
@@ -6213,7 +6195,8 @@ async function cenaRodada28(navegador) {
     await pagina.fill('#email', `prova-r28-registro-${Date.now()}@futtymock.com`);
     await pagina.fill('#password', 'Prova!R28-registro');
     await pagina.fill('#confirm', 'Prova!R28-registro');
-    // 29H: rolinhos — o ano mais alto é o ano atual − 18; "menor de 18" aqui é o último ano oferecido, no fim de dezembro.
+    // Rolinhos — o ano mais alto é o ano atual − 18; "menor de 18" aqui é o último ano oferecido, no fim de
+    // dezembro.
     await escolherDataNosRolinhos(pagina, '#birthdate', `${new Date().getUTCFullYear() - 18}-12-31`);
     await pagina.locator('input[type="checkbox"]').check();
     await pagina.locator('button[type="submit"]').click();
@@ -6447,11 +6430,12 @@ async function cenaRodada29aExcluir(navegador, sessao) {
   return { verificacoes, capturas, escritas, erros, pasta };
 }
 
-// ─── Cena "rodada29a-csp" (30-set): violações da CSP em Report-Only (Rodada 29A, parte C). ─────────────
-// O `_headers` da Cloudflare só vale no ar; aqui ele é emulado: o cabeçalho Content-Security-Policy-Report-Only
-// é lido do próprio public/_headers (bloco `/*`) e posto na resposta de cada DOCUMENTO pelo Playwright. O servidor
-// tem de ser o BUILD (`vite preview`), não o `vite dev` (o dev usa scripts inline e WebSocket do HMR, que sujariam
-// a lista). Cada `securitypolicyviolation` da página entra na lista; nada é bloqueado — é só relatório.
+// ─── Cena "rodada29a-csp": Violações da CSP em Report-Only ──────────────────
+// O `_headers` da Cloudflare só vale no ar; aqui ele é emulado: o cabeçalho
+// Content-Security-Policy-Report-Only é lido do próprio public/_headers (bloco `/*`) e posto na resposta
+// de cada DOCUMENTO pelo Playwright. O servidor tem de ser o BUILD (`vite preview`), não o `vite dev` (o dev
+// usa scripts inline e WebSocket do HMR, que sujariam a lista). Cada `securitypolicyviolation` da página
+// entra na lista; nada é bloqueado — é só relatório.
 // Só leitura: toda escrita à /api é interceptada.
 async function cenaRodada29aCsp(navegador, sessao) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
@@ -6527,7 +6511,7 @@ async function cenaRodada29aCsp(navegador, sessao) {
   return { csp, telas, resumo, erros, pasta };
 }
 
-// ─── Cena "rodada29a-toast" (30-set): os avisos no MEIO da tela (Rodada 29A, parte E). ──────────────────
+// ─── Cena "rodada29a-toast": Os avisos no MEIO da tela ──────────────────
 // Usa o Perfil: "Salvar dados" (sucesso), o mesmo PATCH devolvendo 500 (erro) e "Relatar um problema" (info).
 // Toda escrita à /api é interceptada (nada chega ao banco); o 500 é fabricado aqui.
 async function cenaRodada29aToast(navegador, sessao) {
@@ -6622,8 +6606,7 @@ async function cenaRodada29aToast(navegador, sessao) {
     await contexto.close();
   }
 
-  // 3) info: no Explorar, "Usar minha localização" num aparelho sem localização avisa (sem rede). Rodada 29B (D): o botão
-  //    "usar a cidade escrita" saiu do Explorar (virou o campo de cidade com sugestão); o aviso "i" é o mesmo.
+  // 3) info: no Explorar, "Usar minha localização" num aparelho sem localização avisa (sem rede).
   {
     const contexto = await novoContexto(navegador, sessao, { amostrar: false });
     await contexto.addInitScript(() => {
@@ -6657,9 +6640,9 @@ async function cenaRodada29aToast(navegador, sessao) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29a-apoio" (30-set): os textos de apoio (.texto-apoio) nas telas (Rodada 29A, parte F). ──────
-// Confere, tela a tela, que cada texto de apoio tem 13 px, altura de linha 1,5, largura máxima de 34 em, cor apagada
-// e que a tela não ganhou rolagem lateral. Só leitura (toda escrita é interceptada).
+// ─── Cena "rodada29a-apoio": Os textos de apoio (.texto-apoio) nas telas ──────────────────
+// Confere, tela a tela, que cada texto de apoio tem 13 px, altura de linha 1,5, largura máxima de 34 em,
+// cor apagada e que a tela não ganhou rolagem lateral. Só leitura (toda escrita é interceptada).
 async function cenaRodada29aApoio(navegador, sessao) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29a-apoio só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -6677,7 +6660,8 @@ async function cenaRodada29aApoio(navegador, sessao) {
     ['figurinha', '/figurinha', async () => {}],
     ['equipa', `/time/${TIME}`, async () => {}],
     ['criar-time-1', '/criar-time', async () => {}],
-    // 29P: a cidade é obrigatória no passo 1; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
+    // A cidade é obrigatória no passo 1; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar
+    // aparece.
     ['criar-time-2', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="Ex.:"]').fill('Time de Prova'); await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto'); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
     ['criar-time-3', '/criar-time', async (pagina) => { await pagina.locator('input[placeholder^="Ex.:"]').fill('Time de Prova'); await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto'); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); await espera(500); await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap(); }],
   ];
@@ -6714,7 +6698,7 @@ async function cenaRodada29aApoio(navegador, sessao) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29a-linhagol" (30-set): linha ou gol à vista (Rodada 29A, parte G). ────────────────────
+// ─── Cena "rodada29a-linhagol": Linha ou gol à vista ────────────────────
 // Na página do time a escolha sobe para o card do próprio jogador, no topo; o Perfil ganha "Meus times".
 // A escrita (PATCH /api/equipas/:slug/membros/posicao) é interceptada: a cena confere o CORPO enviado.
 async function cenaRodada29aLinhaGol(navegador, sessao) {
@@ -6742,7 +6726,8 @@ async function cenaRodada29aLinhaGol(navegador, sessao) {
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
     return { contexto, pagina, escritas };
   };
-  // Rodada 29H (item 8/50): o botão "Você joga na linha · trocar" virou DOIS chips lado a lado — "Jogo na linha" | "No gol" —, um aceso.
+  // São DOIS chips lado a lado — "Jogo na linha" | "No gol" —, um aceso (não um botão "Você joga na linha ·
+  // trocar").
   const grupo = '[data-escolha-linha-gol]';
   const lerChips = (pagina) => pagina.locator(`${grupo}`).first().locator('.chip').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { texto: e.innerText.trim(), x: Math.round(r.x), y: Math.round(r.y), ativo: e.classList.contains('chip--active') }; }));
 
@@ -6798,7 +6783,7 @@ async function cenaRodada29aLinhaGol(navegador, sessao) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29a-logo" (30-set): logo do time na criação (Rodada 29A, parte H). ─────────────────────
+// ─── Cena "rodada29a-logo": Logo do time na criação ─────────────────────
 // Passo 1 do wizard: campo opcional, prévia redonda, 2 MB, png/jpg/webp. Depois do POST /api/teams: POST
 // /api/teams/:slug/logo; se a moderação recusar, o time nasce igual e o passo 4 avisa. NADA chega ao banco:
 // o POST /api/teams e o do logo são respondidos aqui (o de recusa, com o 403 que o motor daria).
@@ -6840,7 +6825,7 @@ async function cenaRodada29aLogo(navegador, sessao) {
     return { contexto, pagina, escritas, enviosLogo };
   };
   const ate4 = async (pagina) => {
-    // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
+    // A cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
     await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto');
     await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
@@ -6903,7 +6888,7 @@ async function cenaRodada29aLogo(navegador, sessao) {
     await pagina.locator('input[type="file"]').setInputFiles({ name: 'grande.png', mimeType: 'image/png', buffer: Buffer.concat([png, Buffer.alloc(3 * 1024 * 1024)]) });
     await espera(500);
     verificar('3 MB é barrado: "O logo pode ter no máximo 2 MB."', (await corpo(pagina)).includes('O logo pode ter no máximo 2 MB.'));
-    // Aviso de erro fica até tocar (Rodada 29A, E): a pessoa toca nele, como faria, e segue.
+    // Aviso de erro fica até tocar: a pessoa toca nele, como faria, e segue.
     await pagina.locator('.futty-toast').tap();
     await espera(400);
     await ate4(pagina);
@@ -6914,11 +6899,10 @@ async function cenaRodada29aLogo(navegador, sessao) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29b-convite" (30-set): a página do convite refeita (Rodada 29B, parte A). ──────────────────
-// GET /api/convite/:token é respondido aqui (nenhum convite real é tocado) e toda escrita é interceptada. Estados:
-// válido com logo, sem logo, sem fatos (time novo), expirado, já membro, logado que ainda não é membro; e o caminho
-// "Criar conta e entrar" (bilhete no aparelho → Início devolve ao convite). Substitui a cena rodada29a-convite, que
-// conferia o desenho antigo (cartão à esquerda, wordmark roxo, iniciais num quadrado azul).
+// ─── Cena "rodada29b-convite": A página do convite ──────────────────────
+// GET /api/convite/:token é respondido aqui (nenhum convite real é tocado) e toda escrita é interceptada.
+// Estados: válido com logo, sem logo, sem fatos (time novo), expirado, já membro, logado que ainda não é
+// membro; e o caminho "Criar conta e entrar" (bilhete no aparelho → Início devolve ao convite).
 async function cenaRodada29bConvite(navegador, sessao) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-convite só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -7029,7 +7013,7 @@ async function cenaRodada29bConvite(navegador, sessao) {
     await contexto.close();
   }
 
-  // 2) sem logo: só o nome em destaque (29H, item 23: o quadrado de iniciais saiu)
+  // 2) sem logo: só o nome em destaque (sem o quadrado de iniciais)
   {
     const { contexto, pagina } = await abrir({ time: TIME_SEM_LOGO }, 'sem-logo');
     const r = await pagina.evaluate(() => {
@@ -7113,10 +7097,11 @@ async function cenaRodada29bConvite(navegador, sessao) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29b-uniformes" (30-set): a grade de uniformes igual para os três direitos (Rodada 29B, parte B). ──
-// Contas de prova do backend (scripts/_bench/prova-rodada29b.js → scripts/capturas/sessao-rodada29b.json): grátis,
-// pacote do time (card com a foto e com a figurinha vestida) e Minha Figurinha (idem). Nada gera figurinha e toda
-// escrita à /api é interceptada (o toque num uniforme pintado manda PUT /api/me/kit, respondido aqui). Só servidor LOCAL.
+// ─── Cena "rodada29b-uniformes": A grade de uniformes igual para os três direitos ──────────
+// Contas de prova do backend (gravadas pelo script de prova em scripts/_bench, em scripts/capturas): grátis,
+// pacote do time (card com a foto e com a figurinha vestida) e Minha Figurinha (idem). Nada gera figurinha e
+// toda escrita à /api é interceptada (o toque num uniforme pintado manda PUT /api/me/kit, respondido aqui).
+// Só servidor LOCAL.
 async function cenaRodada29bUniformes(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-uniformes só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -7397,7 +7382,7 @@ async function cenaRodada29bPintura(navegador) {
   await nunca100(A.pagina, 'demorando');
   verificar('NUNCA 100% antes de existir a imagem (todas as amostras ≤ 90)', pendentes.length >= 20 && pendentes.every((p) => Number(p.split(':')[1]) <= 90), pendentes.join(' '));
   const textoCard = await A.pagina.locator('body').innerText();
-  // 29H (item 59): o aviso foi rediagramado — título numa linha (com o F) e a explicação embaixo, no texto de apoio da casa.
+  // O aviso tem o título numa linha (com o F) e a explicação embaixo, no texto de apoio da casa.
   verificar('o texto sob o card avisa que dá para sair da tela ("Pode sair da tela. A gente avisa quando ficar pronta.")', /Pode sair da tela. A gente avisa quando ficar pronta./.test(textoCard));
   const aviso59 = await A.pagina.evaluate(() => { const el = document.querySelector('[data-pintando-aviso]'); if (!el) return null; const apoio = el.querySelector('.texto-apoio'); return { titulo: el.firstElementChild?.textContent.trim(), apoio: apoio?.textContent.trim(), largura: apoio ? Math.round(apoio.getBoundingClientRect().width) : null, maxEm: apoio ? parseFloat(getComputedStyle(apoio).fontSize) * 34 : null }; });
   verificar('o aviso da pintura: título "Sua figurinha está sendo pintada…" e a explicação no texto de apoio (≤ 34 em), em duas linhas', !!aviso59 && aviso59.titulo === 'Sua figurinha está sendo pintada…' && aviso59.apoio === 'Pode sair da tela. A gente avisa quando ficar pronta.' && aviso59.largura <= aviso59.maxEm + 1, JSON.stringify(aviso59));
@@ -7485,12 +7470,13 @@ async function cenaRodada29bPintura(navegador) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29b-pesada" (1-out): a conta pesada (super-admin, 2 times, histórico) no Início e na Resenha (Rodada 29B, bloco 2, B). ──
-// Contas de prova do backend (scripts/_bench/prova-conta-pesada.js → sessao-pesada.json, sessao-leve.json): a pesada está em 2 times (um
-// "Missa" com 30 jogos de histórico e 16 posts com foto; um "Várzea" com 22 membros, 9 jogos e 9 posts) e é super-admin; a leve, em 1.
-// Prova no navegador: o Início faz UM pedido no arranque e a lista de jogos não carrega o histórico; a Resenha vem em páginas de 20 e o
-// "Ver mais antigos" completa a lista sem repetir; o pré-aquecimento baixa no máximo 12 imagens e nada de super-admin sai. Só LEITURA e só
-// servidor LOCAL (CLAUDE.md, 25-set).
+// ─── Cena "rodada29b-pesada": A conta pesada (super-admin, 2 times, histórico) no Início e na Resenha ──
+// Contas de prova do backend (scripts/_bench/prova-conta-pesada.js → sessao-pesada.json, sessao-leve.json):
+// a pesada está em 2 times (um "Missa" com 30 jogos de histórico e 16 posts com foto; um "Várzea" com 22
+// membros, 9 jogos e 9 posts) e é super-admin; a leve, em 1. Prova no navegador: o Início faz UM pedido no
+// arranque e a lista de jogos não carrega o histórico; a Resenha vem em páginas de 20 e o "Ver mais antigos"
+// completa a lista sem repetir; o pré-aquecimento baixa no máximo 12 imagens e nada de super-admin sai. Só
+// LEITURA e só servidor LOCAL (CLAUDE.md).
 async function cenaRodada29bPesada(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-pesada só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -7601,13 +7587,13 @@ async function cenaRodada29bPesada(navegador) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29b-boasvindas" (30-set; refeita na Rodada 29C, 1-out — alias "rodada29c-boasvindas"): as boas-vindas ──
-// do time, em UMA página (components/BoasVindas.jsx). Contas de prova (scripts/_bench/prova-rodada29b.js): `novato`
-// (membro do time grátis, sem foto), `membroFoto` (membro, com foto) e `gratis` (dono do time grátis). As duas variantes
-// (convidado, criador — a de quem só baixou o app saiu na 29D) e as duas máquinas da prova aprovada (deitada para time sem
-// logo; quadrada, com dois anéis contínuos, para logo). Toda escrita à /api é interceptada (o "No gol" manda o PATCH de
-// posição, o Criar time manda o POST — respondidos aqui); o logo do time entra por cima da resposta REAL do motor (route.fetch).
-// Só servidor LOCAL.
+// ─── Cena "rodada29b-boasvindas" (alias "rodada29c-boasvindas"): as boas-vindas do time, em UMA página (components/BoasVindas.jsx) ──
+// Contas de prova (scripts/_bench/prova-rodada29b.js): `novato` (membro do time grátis, sem foto),
+// `membroFoto` (membro, com foto) e `gratis` (dono do time grátis). A variante do convidado (a do criador
+// não existe: a festa é o fim do Criar time) e as duas máquinas da prova aprovada (deitada para time sem
+// logo; quadrada, com dois anéis contínuos, para logo). Toda escrita à /api é interceptada (o "No gol"
+// manda o PATCH de posição, o Criar time manda o POST — respondidos aqui); o logo do time entra por cima
+// da resposta REAL do motor (route.fetch). Só servidor LOCAL.
 async function cenaRodada29bBoasVindas(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-boasvindas só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -7617,7 +7603,7 @@ async function cenaRodada29bBoasVindas(navegador) {
   const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
   const slug = fx.times.gratis.slug;
   const LOGO = `${BASE}/icons/icon-192.png`; // um PNG real do site faz de logo do time (não há time com logo nas contas de prova)
-  // 29P: a variante do criador saiu (a festa passou para o fim do Criar time); só a frase do convidado continua.
+  // Sem variante do criador (a festa é o fim do Criar time); só a frase do convidado.
   const FRASES = {
     convidado: 'Aqui a gente confirma presença, sorteia os times, guarda o ranking e faz sua figurinha.',
   };
@@ -7849,14 +7835,15 @@ async function cenaRodada29bBoasVindas(navegador) {
     await contexto.close();
   }
 
-  // 6) CRIADOR (29P): a festa é o passo 4 do Criar time — a máquina deitada com o nome na janela, na hora em que o time nasce;
-  //    "Ir para o time" NÃO abre boas-vindas nenhuma (a pessoa já comemorou), e nada é gravado como "visto".
+  // 6) CRIADOR: a festa é o passo 4 do Criar time — a máquina deitada com o nome na janela, na hora em que
+  //    o time nasce; "Ir para o time" NÃO abre boas-vindas nenhuma (a pessoa já comemorou), e nada é gravado
+  //    como "visto".
   {
     const respostaDoPost = (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: fx.times.gratis.id, slug, nome: 'Prova R29B Grátis' }, geo: { encontrada: true, nomeOficial: 'Kyoto, Kyoto Prefecture' } } : null);
     const { contexto, pagina, escritas } = await abrir(fx.gratis, 'criador', { rota: '/criar-time', esp: false, respostas: respostaDoPost });
     await pagina.locator('input[placeholder^="Ex.:"]').waitFor({ timeout: 30000 });
     await pagina.locator('input[placeholder^="Ex.:"]').fill('Prova R29B Grátis');
-    await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto'); // 29P: cidade obrigatória; fora da lista, o texto vale
+    await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto'); // cidade obrigatória; fora da lista, o texto vale
     await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
     await espera(400);
@@ -7900,11 +7887,12 @@ async function cenaRodada29bBoasVindas(navegador) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29d" (1-out): onboarding em 3 páginas com o mini sorteio, o F dentro do ícone do app, aceite de pedido ──
-// com boas-vindas. Contas de prova (scripts/_bench/prova-rodada29b.js): `novato` e `membroFoto` (membros do time grátis).
-// O Onboarding abre direto (a gate só manda PARA ele, nunca para fora); o "Entrar" (PATCH /api/me + POST onboarding-completo),
-// o convite (GET falso, POST aceitar) e o aceite do pedido (/api/inicio real com um pedido aprovado por cima) são
-// interceptados — nada chega ao banco. Só servidor LOCAL.
+// ─── Cena "rodada29d": Onboarding em 3 páginas com o mini sorteio, o F dentro do ícone do app, aceite de pedido com
+// boas-vindas ──
+// Contas de prova (gravadas pelo script de prova do backend): `novato` e `membroFoto` (membros do time grátis).
+// O Onboarding abre direto (a gate só manda PARA ele, nunca para fora); o "Entrar" (PATCH /api/me + POST
+// onboarding-completo), o convite (GET falso, POST aceitar) e o aceite do pedido (/api/inicio real com um
+// pedido aprovado por cima) são interceptados — nada chega ao banco. Só servidor LOCAL.
 async function cenaRodada29d(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29d só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -7986,7 +7974,8 @@ async function cenaRodada29d(navegador) {
     await contexto.close();
   }
 
-  // 2) Onboarding SEM convite: passo 1 com o ícone (110 px) e 3 traços (o mini sorteio é da cena rodada29e); depois foto e nome
+  // 2) Onboarding SEM convite: passo 1 com o ícone (110 px) e 3 traços (o mini sorteio é da cena rodada29e);
+  //    depois foto e nome
   {
     const { contexto, pagina, escritas } = await abrir(fx.novato, 'onboarding', '/onboarding');
     await pagina.locator('.msq .maq').waitFor({ timeout: 30000 });
@@ -7994,7 +7983,8 @@ async function cenaRodada29d(navegador) {
     const marca = await lerMarca(pagina);
     const prog = await lerProgresso(pagina);
     const t = await texto(pagina);
-    // ±2 px: o ícone flutua (bob/sway) e o getBoundingClientRect arredonda no meio do movimento. O mini sorteio é da cena rodada29e.
+    // ±2 px: o ícone flutua (bob/sway) e o getBoundingClientRect arredonda no meio do movimento. O mini sorteio
+    // é da cena rodada29e.
     verificar('passo 1: "BEM-VINDO AO FUTTY" com o ícone do app a 110 px (sem F solto) e 3 traços, o 1º aceso', /BEM-VINDO AO FUTTY/.test(t) && marca.icones.length === 1 && Math.abs(marca.icones[0] - 110) <= 2 && marca.soltos === 0 && prog.n === 3 && prog.acesos === 1, JSON.stringify({ marca, prog }));
     await capturar(pagina, 'onboarding-1');
     await pagina.getByRole('button', { name: /^Começar$/ }).tap();
@@ -8002,7 +7992,7 @@ async function cenaRodada29d(navegador) {
     const prog2 = await lerProgresso(pagina);
     verificar('"Começar" → passo 2 (foto), 2 de 3 traços acesos, sem o mini sorteio', prog2.n === 3 && prog2.acesos === 2 && (await pagina.locator('.msq').count()) === 0, JSON.stringify(prog2));
     await capturar(pagina, 'onboarding-2-foto');
-    await espera(2300); // "deixar para depois" aparece aos ~2 s (29H; era ~4 s)
+    await espera(2300); // "deixar para depois" aparece aos ~2 s
     await pagina.getByRole('button', { name: /deixar para depois/i }).tap();
     await pagina.getByText(/Como te chamam/).first().waitFor({ timeout: 15000 });
     const prog3 = await lerProgresso(pagina);
@@ -8015,8 +8005,9 @@ async function cenaRodada29d(navegador) {
     await contexto.close();
   }
 
-  // 3) Onboarding COM convite pendente — 29H (item 1): começa nas boas-vindas do time (a máquina), depois foto e nome (3 traços); o convite
-  //    é aceito no fim e a pessoa cai direto no time. A prova completa desse caminho é a cena rodada29h (seção C).
+  // 3) Onboarding COM convite pendente: começa nas boas-vindas do time (a máquina), depois foto e nome (3
+  //    traços); o convite é aceito no fim e a pessoa cai direto no time. A prova completa desse caminho é a
+  //    cena rodada29h (seção C).
   {
     const { contexto, pagina, escritas } = await abrir(fx.membroFoto, 'onboarding-convite', '/onboarding', { inicial: bilheteDoConvite, antes: rotasDoConvite, respostas: (c, m) => (m === 'POST' && c.endsWith('/aceitar') ? { team: { id: fx.times.gratis.id, slug, nome: 'Prova R29B Grátis' } } : null) });
     await pagina.locator('.bv').waitFor({ timeout: 30000 }).catch(() => {});
@@ -8029,7 +8020,7 @@ async function cenaRodada29d(navegador) {
     const prog = await lerProgresso(pagina);
     verificar('"Vamos lá" → foto: 3 traços, o 2º aceso', prog.n === 3 && prog.acesos === 2, JSON.stringify(prog));
     await capturar(pagina, 'convite-2-foto');
-    await espera(2300); // "deixar para depois" aparece aos ~2 s (29H)
+    await espera(2300); // "deixar para depois" aparece aos ~2 s
     await pagina.getByRole('button', { name: /deixar para depois/i }).tap();
     await pagina.getByText(/Como te chamam/).first().waitFor({ timeout: 15000 });
     const prog2 = await lerProgresso(pagina);
@@ -8130,7 +8121,8 @@ async function cenaRodada29g(navegador) {
     await pagina.goto(`${BASE}/register`, { waitUntil: 'domcontentloaded' });
     await aceitarCookies(pagina);
     await pagina.waitForSelector('#birthdate [data-rolo="ano"]', { timeout: 30000 });
-    // 29H: rolinhos — o ano mais alto que o rolo oferece é o ano atual − 18 (o teto do mês/dia, quem confere é o envio, abaixo).
+    // Rolinhos — o ano mais alto que o rolo oferece é o ano atual − 18 (o teto do mês/dia, quem confere é o
+    // envio, abaixo).
     const anosOferecidos = await pagina.locator('#birthdate [data-rolo="ano"] [data-valor]').evaluateAll((els) => els.map((e) => Number(e.dataset.valor)));
     verificar('A · o seletor de data oferece até hoje − 18 anos (o ano mais alto é o ano atual − 18)', anosOferecidos[anosOferecidos.length - 1] === new Date().getUTCFullYear() - 18, `ano mais alto=${anosOferecidos[anosOferecidos.length - 1]}`);
     verificar('A · a frase "O Futty é para maiores de 18 anos." mora sob o campo da data', (await pagina.locator('#birthdate').locator('xpath=..').innerText().catch(() => '')).includes(FRASE));
@@ -8230,7 +8222,8 @@ async function cenaRodada29g(navegador) {
     const anosDoInicio = await pagina.locator('#inicio-nascimento [data-rolo="ano"] [data-valor]').evaluateAll((els) => els.map((e) => Number(e.dataset.valor)));
     verificar('C · o seletor de data do Início também para em hoje − 18 anos (rolinhos: o ano mais alto é o ano atual − 18)', anosDoInicio[anosDoInicio.length - 1] === new Date().getUTCFullYear() - 18, `ano mais alto=${anosDoInicio[anosDoInicio.length - 1]}`);
     await capturar(pagina, 'C1-inicio-pede-a-data');
-    // 29H: o rolo só vai até o ano atual − 18; "menor" aqui é quem faz 18 amanhã (último ano oferecido, dia de amanhã).
+    // O rolo só vai até o ano atual − 18; "menor" aqui é quem faz 18 amanhã (último ano oferecido, dia de
+    // amanhã).
     await escolherDataNosRolinhos(pagina, '#inicio-nascimento', aniversarioHoje(18, 1));
     await pagina.getByRole('button', { name: 'Salvar' }).click();
     await pagina.getByRole('heading', { name: FRASE }).waitFor({ timeout: 15000 }).catch(() => {});
@@ -8274,21 +8267,25 @@ async function cenaRodada29g(navegador) {
   return { pasta, verificacoes, capturas, erros };
 }
 
-// ─── Cena "rodada29e2" (2-out): o mini sorteio do onboarding em ROLOS de slot machine, a legenda e o CTA novos, sem barra ──
-// O que prova pela tela, em servidor LOCAL (CLAUDE.md, 25-set), com a conta de prova `novato` (prova-rodada29b.js) e toda
+// ─── Cena "rodada29e2": O mini sorteio do onboarding em ROLOS de slot machine, a legenda e o CTA, sem barra ──
+// O que prova pela tela, em servidor LOCAL (CLAUDE.md), com a conta de prova `novato` e toda
 // escrita interceptada:
-//   A · 1ª página: título e subtítulo; a legenda "SORTEIO JUSTO · RANKING · FIGURINHA DE COLECIONADOR" no estilo do subtítulo
-//       (Rajdhani 700, caixa alta, .14em, #c9c2d6, 12–13 px) em ≤ 2 linhas — e, a 320 px, em DUAS linhas parecidas sem palavra
-//       sozinha; o botão Começar é o CTA dourado da casa (.btn.cta-gold dentro de .cta-gold-glow, 50 px, ≤ 290, 24 px acima e abaixo);
-//   B · a barra de navegação não aparece na 1ª nem na 2ª página do onboarding (a regra é por rota — a 3ª é a mesma rota);
-//   C · a máquina: 6 rolos (3 por time), cada tira com as 6 figurinhas duas vezes girando em msqSpin; um ciclo inteiro medido na
-//       página (MutationObserver): o 1º rolo trava ~1,8 s depois de girarem, um a cada ~0,5 s alternando A/B, desacelera ~1 s
-//       (.slow) antes de parar (.stop + .rev.on com msqRevPop + micro-lâmpadas msqMbPisca), o pulso único das réguas (.maq.premio
-//       ~0,8 s) quando o 6º trava, seguram ~2,5 s, fade ~0,4 s, ciclo ~7,8 s, e o ciclo seguinte vem noutra ordem;
-//   D · no fim do ciclo os 6 rolos travados mostram as 6 figurinhas (3 por time, nome e busto 112×150 de /onboarding/);
-//   E · os 6 arquivos: 200, image/webp, ≤ 6 KB; sem som;
-//   F · prefers-reduced-motion: os 6 travados, nada gira nem pisca, e 3,5 s depois tudo igual.
-//   node scripts/ver-iphone.mjs --url http://localhost:5232 --cenas rodada29e2 --etiqueta r29e2
+//   A · 1ª página: título e subtítulo; a legenda "SORTEIO JUSTO · RANKING · FIGURINHA DE COLECIONADOR" no
+//       estilo do subtítulo (Rajdhani 700, caixa alta, .14em, #c9c2d6, 12–13 px) em ≤ 2 linhas — e, a 320 px,
+//       em DUAS linhas parecidas sem palavra sozinha; o botão Começar é o CTA dourado da casa (.btn.cta-gold
+//       dentro de .cta-gold-glow, 50 px, ≤ 290, 24 px acima e abaixo);
+//   B · a barra de navegação não aparece na 1ª nem na 2ª página do onboarding (a regra é por rota — a 3ª é
+//       a mesma rota);
+//   C · a máquina: 8 rolos (4 por time), cada tira com as figurinhas duas vezes girando em msqSpin; um ciclo
+//       inteiro medido na página (MutationObserver): o 1º rolo trava ~1,9 s depois de girarem, um a cada
+//       ~0,75 s alternando A/B, desacelera ~1,5 s (.slow) antes de parar (.stop + .rev.on com msqRevPop +
+//       micro-lâmpadas msqMbPisca), o pulso único das réguas (.maq.premio ~0,8 s) quando o 8º trava,
+//       seguram ~2,5 s, fade ~0,4 s, ciclo ~10,65 s, e o ciclo seguinte vem noutra ordem;
+//   D · no fim do ciclo os 8 rolos travados mostram as 8 figurinhas (4 por time, nome e busto 112×150 de
+//       /onboarding/);
+//   E · os 8 arquivos: 200, image/webp, ≤ 6 KB; sem som;
+//   F · prefers-reduced-motion: os 8 travados, nada gira nem pisca, e 3,5 s depois tudo igual.
+//   node scripts/ver-iphone.mjs --url http://localhost:5232 --cenas <cena> --etiqueta <etiqueta>
 async function cenaRodada29e2(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29e2 só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -8296,7 +8293,7 @@ async function cenaRodada29e2(navegador) {
   const pasta = path.join(PASTA, 'rodada-29e2');
   mkdirSync(pasta, { recursive: true });
   const fx = JSON.parse(readFileSync(path.join(PASTA, 'sessao-rodada29b.json'), 'utf8'));
-  // 29E3 (dono, 2-out): 4 jogadores por time — 8 figurinhas em 8 rolos (2 linhas de 4); LÉO virou GONÇALO (goncalo.webp).
+  // 4 jogadores por time — 8 figurinhas em 8 rolos (2 linhas de 4), entre elas GONÇALO (goncalo.webp).
   const NOMES = ['BRUNINHO', 'TIAGÃO', 'GONÇALO', 'PEDRÃO', 'RAFA', 'DUDU', 'NANDO', 'CAIO'];
   const IDS = ['bruninho', 'tiagao', 'goncalo', 'pedrao', 'rafa', 'dudu', 'nando', 'caio'];
   const N = 8;
@@ -8344,7 +8341,8 @@ async function cenaRodada29e2(navegador) {
         const rev = r.querySelector('.rev');
         const img = rev?.querySelector('.fr img');
         const mb = rev?.querySelector('.mb');
-        // 29E3: o nome tem de caber na cartinha de 56 (GONÇALO como BRUNINHO): a largura do texto medida com um Range.
+        // O nome tem de caber na cartinha de 56 (GONÇALO como BRUNINHO): a largura do texto medida com um
+        // Range.
         const nm = rev?.querySelector('.nm');
         let nmLargura = null;
         if (nm?.firstChild) { const rg = document.createRange(); rg.selectNodeContents(nm); nmLargura = rg.getBoundingClientRect().width; }
@@ -8392,7 +8390,8 @@ async function cenaRodada29e2(navegador) {
       largura: maq ? Math.round(maq.getBoundingClientRect().width) : null,
       luzes: luzes.length, luzAnim: luzes[0] ? cs(luzes[0]).animationName : null, luzOpacidades: [...new Set(luzes.map((l) => cs(l).opacity))],
       grupos, rolos: m ? m.querySelectorAll('.rolo').length : 0, travados: m ? m.querySelectorAll('.rolo.stop .rev.on').length : 0,
-      // 29E3: a geometria das 2 linhas de 4 — a máquina não pode estourar a largura (nem a 320 px) nem a janela cortar um rolo.
+      // A geometria das 2 linhas de 4 — a máquina não pode estourar a largura (nem a 320 px) nem a janela cortar
+      // um rolo.
       geometria: (maq && m.querySelector('.janela')) ? (() => {
         const j = m.querySelector('.janela');
         const jr = j.getBoundingClientRect();
@@ -8422,7 +8421,8 @@ async function cenaRodada29e2(navegador) {
   });
   const esperarFase = (pagina, fase, limite = 12000) => pagina.waitForFunction((f) => document.querySelector('.msq')?.dataset.fase === f, fase, { timeout: limite }).then(() => true, () => false);
   const todosRolos = (r) => r.grupos.flatMap((g) => g.rolos.map((x) => ({ ...x, time: g.time })));
-  // 29E3: a máquina cabe na tela (nada rola de lado), 2 linhas de 4 rolos de 56 dentro da janela (nenhum cortado pelo overflow).
+  // A máquina cabe na tela (nada rola de lado), 2 linhas de 4 rolos de 56 dentro da janela (nenhum cortado
+  // pelo overflow).
   const geoOk = (G) => !!G && G.docScroll <= G.viewport && G.bodyScroll <= G.viewport && G.maq.esq >= 0 && G.maq.dir <= G.viewport
     && G.janela.scroll <= G.janela.client && G.linhas.length === 2 && G.linhas.every((l) => l.n === 4 && l.scroll <= l.client && l.larguras.every((w) => w === 56))
     // e ar entre os rolos: os 3 espaços de cada linha somam ≥ 12 px (≥ 4 cada), também a 320 (mini-sorteio.css, @media ≤ 340)
@@ -8472,7 +8472,7 @@ async function cenaRodada29e2(navegador) {
       };
       obs = new MutationObserver(anotar);
       obs.observe(m, { attributes: true, subtree: true, attributeFilter: ['class', 'data-fase', 'data-ciclo', 'data-travadas'] });
-      setTimeout(() => { obs.disconnect(); res({ ok: false, log }); }, 32000); // 29H-B: dois ciclos de ~10,65 s cabem com folga
+      setTimeout(() => { obs.disconnect(); res({ ok: false, log }); }, 32000); // dois ciclos de ~10,65 s cabem com folga
     }));
     const log = medido.log;
     const cheios = log.filter((x) => x.ev === 'fase:cheio');
@@ -8500,7 +8500,8 @@ async function cenaRodada29e2(navegador) {
       segura: saindo0 && cheio0 ? saindo0.t - cheio0.t : null, fade: girando0 && saindo0 ? girando0.t - saindo0.t : null,
       periodo: cheio1 && cheio0 ? cheio1.t - cheio0.t : null, ordem0: cheio0?.ids, ordem1: cheio1?.ids,
     };
-    // 29H-B (item 40): giro inicial 0,4 s, um rolo a cada 0,75 s, desacelera 1,5 s → 1ª trava ~1,9 s, 8ª ~7,15 s; ciclo ~10,65 s.
+    // Giro inicial 0,4 s, um rolo a cada 0,75 s, desacelera 1,5 s → 1ª trava ~1,9 s, 8ª ~7,15 s; ciclo
+    // ~10,65 s.
     verificar('C · os 8 rolos travam um por vez, alternando A/B a cada ~0,75 s, o 1º ~1,9 s depois de começarem a girar e o 8º ~7,15 s (29H-B)', medido.ok && stops1.length === N && medidas.times === 'ABABABAB' && passos.every((p) => p >= 600 && p <= 950) && medidas.primeiraTrava >= 1600 && medidas.primeiraTrava <= 2400 && medidas.ultimaTrava >= 6700 && medidas.ultimaTrava <= 7800 && new Set(medidas.rolos).size === N, JSON.stringify({ rolos: medidas.rolos, passos, primeira: medidas.primeiraTrava, ultima: medidas.ultimaTrava }));
     verificar('C · cada rolo desacelera (.slow) ~1,5 s antes de travar (.stop) (29H-B)', slows1.length === N && desaceleras.every((d) => d !== null && d >= 1300 && d <= 1750), JSON.stringify(desaceleras));
     verificar('C · quando o 8º trava, as réguas dão UM pulso de ~0,8 s (.maq.premio) e só esse', premioOn && premioOff && Math.abs(medidas.pulsoNoUltimo) <= 150 && medidas.pulso >= 600 && medidas.pulso <= 1050 && log.filter((x) => x.ev === 'premio-on' && x.ciclo === c0).length === 1 && premioOff.t < (saindo0?.t ?? Infinity), JSON.stringify({ noUltimo: medidas.pulsoNoUltimo, pulso: medidas.pulso }));
@@ -8514,7 +8515,8 @@ async function cenaRodada29e2(navegador) {
     const rolosCheio = todosRolos(cheio);
     verificar('D · fase cheia: 8 rolos travados (.stop, tira parada), cada um com a figurinha sorteada na moldura (.rev.on, msqRevPop), nome e busto 112×150 de /onboarding/', cheio.travados === N && rolosCheio.every((x) => x.estado === 'travado' && x.spin?.play === 'paused' && x.rev?.on && IDS.includes(x.rev.id) && NOMES.includes(x.rev.nome) && new RegExp(`/onboarding/${x.rev.id}\\.webp(\\?v=[0-9a-f]{8})?$`).test(x.rev.src || '') && x.rev.natural?.[0] === 112 && x.rev.natural?.[1] === 150 && x.rev.anim === 'msqRevPop' && Number(x.rev.opacidade) === 1) && new Set(rolosCheio.map((x) => x.rev.id)).size === N && cheio.grupos.every((g) => g.rolos.length === 4), JSON.stringify(rolosCheio.map((x) => [x.time + x.vaga, x.rev?.id, x.rev?.natural, x.spin?.play])));
     verificar('D · fase cheia: as micro-lâmpadas das molduras piscam (msqMbPisca)', rolosCheio.every((x) => x.rev?.mb?.anim === 'msqMbPisca'), JSON.stringify(rolosCheio.map((x) => x.rev?.mb?.anim)));
-    // 29E3: GONÇALO (com cedilha, arquivo goncalo.webp) aparece e cabe na cartinha de 56 como BRUNINHO: texto ≤ 54 px, sem estourar.
+    // GONÇALO (com cedilha, arquivo goncalo.webp) aparece e cabe na cartinha de 56 como BRUNINHO: texto
+    // ≤ 54 px, sem estourar.
     const nomes = rolosCheio.map((x) => ({ id: x.rev?.id, nome: x.rev?.nome, src: x.rev?.src, ...(x.nm || {}) }));
     const goncalo = nomes.find((x) => x.id === 'goncalo');
     const bruninho = nomes.find((x) => x.id === 'bruninho');
@@ -8524,7 +8526,7 @@ async function cenaRodada29e2(navegador) {
     // mede-se no ciclo SEGUINTE, sem captura no meio, amostrando a opacidade a cada 25 ms (setTimeout — a cadência do rAF no
     // WebKit sem janela não é de confiança) desde o instante em que a fase vira "saindo": a curva tem de descer de ~1 até ~0.
     await esperarFase(pagina, 'girando', 5000);
-    await esperarFase(pagina, 'cheio', 11000); // 29H-B: o 8º trava 7,15 s depois de girar
+    await esperarFase(pagina, 'cheio', 11000); // o 8º trava 7,15 s depois de girar
     const fade = await pagina.evaluate(() => new Promise((res) => {
       const m = document.querySelector('.msq');
       const revs = [...m.querySelectorAll('.rolo .rev')];
@@ -8623,11 +8625,12 @@ async function cenaRodada29e2(navegador) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29e" (1-out): a 1ª página do onboarding — o ícone do app a 110 px flutuando, os textos da landing, e o mini ──
-// sorteio com as 6 figurinhas FICTÍCIAS caindo em dois times (TIME A ouro / TIME B roxo) nas molduras do sorteio real: o
-// ciclo inteiro medido na página (vazio → 6 entradas alternando A/B a cada 0,45 s → cheio com as micro-lâmpadas piscando por
-// 2,5 s → esvazia → recomeça noutra ordem), os bustos servidos de /onboarding/ (112×150 WebP, ≤ 6 KB), sem som, e o
-// movimento reduzido (os 6 no lugar, parados). Conta de prova `novato` (prova-rodada29b.js). Só servidor LOCAL.
+// ─── Cena "rodada29e": A 1ª página do onboarding — o ícone do app a 110 px flutuando, os textos da landing, e o mini ──
+// sorteio com as 6 figurinhas FICTÍCIAS caindo em dois times (TIME A ouro / TIME B roxo) nas molduras do
+// sorteio real: o ciclo inteiro medido na página (vazio → 6 entradas alternando A/B a cada 0,45 s → cheio
+// com as micro-lâmpadas piscando por 2,5 s → esvazia → recomeça noutra ordem), os bustos servidos de
+// /onboarding/ (112×150 WebP, ≤ 6 KB), sem som, e o movimento reduzido (os 6 no lugar, parados). Conta de
+// prova `novato`. Só servidor LOCAL.
 async function cenaRodada29e(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29e só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -8815,10 +8818,11 @@ async function cenaRodada29e(navegador) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29b-cidades" (30-set): o campo "Cidade" com sugestão — criar time, painel do time e Explorar
-// (Rodada 29B, parte D). Contas de prova (scripts/_bench/prova-rodada29b.js): `gratis` é dono do time prova-r29b-gratis.
-// Toda escrita à /api é interceptada (o POST/PATCH da cidade é respondido aqui, como o motor responderia) e o Nominatim
-// do navegador também. A lista vem de public/dados/cidades.json, servida pelo servidor local. Só servidor LOCAL.
+// ─── Cena "rodada29b-cidades": O campo "Cidade" com sugestão — criar time, painel do time e Explorar ──
+// Contas de prova (gravadas pelo script de prova do backend): `gratis` é dono do time prova-r29b-gratis.
+// Toda escrita à /api é interceptada (o POST/PATCH da cidade é respondido aqui, como o motor responderia) e
+// o Nominatim do navegador também. A lista vem de public/dados/cidades.json, servida pelo servidor local.
+// Só servidor LOCAL.
 async function cenaRodada29bCidades(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-cidades só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -8884,7 +8888,7 @@ async function cenaRodada29bCidades(navegador) {
     await pagina.getByText('Seu time está no ar!').waitFor({ timeout: 15000 });
     await espera(400);
   };
-  // 29P: a cidade achada vira informação do time na festa ("São Paulo, SP", sem "Encontramos:").
+  // A cidade achada vira informação do time na festa ("São Paulo, SP", sem "Encontramos:").
   const cidadeDaFesta = async (pagina) => (await pagina.locator('[data-cidade-do-time]').innerText().catch(() => '')).trim();
   const respostaDoPost = (geo) => (rota, metodo) => (metodo === 'POST' && rota === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' }, ...(geo ? { geo } : {}) } : null);
   const esperarCriar = (pagina) => pagina.locator('input[placeholder^="Ex.:"]').waitFor({ timeout: 30000 });
@@ -9034,10 +9038,11 @@ async function cenaRodada29bCidades(navegador) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29b-organiza" (30-set): "Só organizo" — o papel de quem administra o time (Rodada 29B, parte E). ──
-// A migração 067 (team_members.joga) NÃO está aplicada no banco compartilhado, então esta cena lê as respostas REAIS do
-// motor local e troca `joga` / `eu_jogo` por cima (route.fetch + alteração do JSON) — o app é o mesmo, só o dado muda.
-// Toda escrita à /api é interceptada (o PATCH do papel e o POST da criação são respondidos aqui). Só servidor LOCAL.
+// ─── Cena "rodada29b-organiza": "Só organizo" — o papel de quem administra o time ──
+// A migração 067 (team_members.joga) NÃO está aplicada no banco compartilhado, então esta cena lê as
+// respostas REAIS do motor local e troca `joga` / `eu_jogo` por cima (route.fetch + alteração do JSON) — o
+// app é o mesmo, só o dado muda. Toda escrita à /api é interceptada (o PATCH do papel e o POST da criação
+// são respondidos aqui). Só servidor LOCAL.
 async function cenaRodada29bOrganiza(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-organiza só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -9092,7 +9097,7 @@ async function cenaRodada29bOrganiza(navegador) {
   const criarAtePapel = async (pagina, nome) => {
     await esperarCriar(pagina);
     await pagina.locator('input[placeholder^="Ex.:"]').fill(nome);
-    // 29P: a cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
+    // A cidade é obrigatória; "Kyoto" não tem sugestão na lista, então o texto vale e o Continuar aparece.
     await pagina.getByPlaceholder('Ex.: Brasília').fill('Kyoto');
     await espera(500);
     await pagina.locator('button', { hasText: /^Continuar$/ }).first().tap();
@@ -9109,7 +9114,7 @@ async function cenaRodada29bOrganiza(navegador) {
   const respostaDoPost = (joga) => (caminho, metodo) => (metodo === 'POST' && caminho === '/api/teams' ? { team: { id: 'time-de-prova', slug: 'time-de-prova', nome: 'Time de Prova' }, joga } : null);
   const chips = (pagina, sel = '[data-escolha-papel]') => pagina.locator(`${sel} button`).evaluateAll((els) => els.map((b) => ({ t: b.textContent.trim(), ativo: b.getAttribute('aria-pressed') === 'true' })));
 
-  // 1) criar o time: "Sim, eu jogo" (padrão) / "Não, só organizo" — sem texto embaixo dos chips (29O)
+  // 1) criar o time: "Sim, eu jogo" (padrão) / "Não, só organizo" — sem texto embaixo dos chips
   {
     const { contexto, pagina, escritas } = await abrir('/criar-time', { extra: respostaDoPost(false) }, 'criar-organiza');
     await criarAtePapel(pagina, 'Time do Organizador');
@@ -9142,7 +9147,7 @@ async function cenaRodada29bOrganiza(navegador) {
     await criarAtePapel(pagina, 'Time Sem 067');
     await pagina.locator('[data-escolha-papel] button', { hasText: 'Não, só organizo' }).tap();
     await terminarCriacao(pagina);
-    // 29H (item 46): o aviso era um toast de 2 s, ilegível — agora é texto fixo na tela do passo 4 (nenhum toast).
+    // O aviso é texto fixo na tela do passo 4 (nenhum toast): um toast de 2 s era ilegível.
     await pagina.locator('[data-aviso-papel]').waitFor({ timeout: 8000 }).catch(() => {});
     const aviso = await pagina.locator('[data-aviso-papel]').innerText().catch(() => '');
     verificar('se o motor não gravou o papel, a tela diz a verdade (sem fingir que gravou), em texto fixo e sem toast', /não pôde ser salvo agora/.test(aviso) && /entrou jogando/.test(aviso) && (await pagina.locator('.futty-toast').count()) === 0, aviso.replace(/\s+/g, ' '));
@@ -9198,7 +9203,7 @@ async function cenaRodada29bOrganiza(navegador) {
     verificar('Início (só organiza): o card do jogo diz "Você só organiza este time." (uma vez só, 29T)', await org.pagina.locator('.gcard [data-so-organizo]').first().innerText().then((x) => x.trim() === 'Você só organiza este time.').catch(() => false));
     verificar('Início (só organiza): nenhum "Vou" / "Não vou" (nem o cartão de presença, mesmo com o RSVP aberto)', botoes1 === 0 && !/^Vou$/m.test(t1) && !/^Não vou$/m.test(t1) && !/Confirme sua presença|Você vai\?/i.test(t1), `botões ${botoes1}`);
     verificar('Início (só organiza): sem "Avisar que não vou"', !/Avisar que não vou/.test(t1));
-    // 29T (achado 163): a frase comprida saiu de cima dos Próximos jogos; fica só a linha de dentro do card (acima).
+    // A frase comprida não aparece acima dos Próximos jogos; fica só a linha de dentro do card (acima).
     verificar('Início (só organiza): a frase de apoio "então não entra na lista de presença" NÃO aparece mais em cima dos Próximos jogos', !/então não entra na lista de presença/.test(t1));
     await capturar(org.pagina, '5-inicio-so-organizo');
     await org.contexto.close();
@@ -9251,9 +9256,9 @@ async function cenaRodada29bOrganiza(navegador) {
   return { verificacoes, capturas, erros, pasta };
 }
 
-// ─── Cena "rodada29b-avise" (30-set): a lista "Avise-me" — bloco na página inicial, página /avise-me e aba do Gabinete
-// (Rodada 29B, parte F). O POST /api/avise-me é respondido AQUI (nenhum e-mail entra na lista de verdade: a migração 068
-// não está aplicada) e o Gabinete lê uma lista fabricada. Só servidor LOCAL.
+// ─── Cena "rodada29b-avise": A lista "Avise-me" — bloco na página inicial, página /avise-me e aba do Gabinete ──
+// O POST /api/avise-me é respondido AQUI (nenhum e-mail entra na lista de verdade: a migração 068 não está
+// aplicada) e o Gabinete lê uma lista fabricada. Só servidor LOCAL.
 async function cenaRodada29bAvise(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-avise só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);
@@ -9295,7 +9300,7 @@ async function cenaRodada29bAvise(navegador) {
   const formulario = (p) => p.locator('[data-avise-me="form"]');
   const texto = (p) => p.locator('body').innerText();
 
-  // 1) a página inicial pública (29P): o bloco do Avise-me SAIU — a página já é a de verdade, numa tela só
+  // 1) a página inicial pública: sem bloco do Avise-me — a página já é a de verdade, numa tela só
   {
     const { contexto, pagina, envios } = await abrir('/', {}, 'landing');
     await pagina.locator('h1').waitFor({ timeout: 30000 });

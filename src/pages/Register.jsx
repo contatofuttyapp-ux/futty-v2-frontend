@@ -33,7 +33,7 @@ export default function Register() {
   const [reenviarErro, setReenviarErro] = useState('');
   const [cooldown, setCooldown] = useState(0);
 
-  // Rodada 29H (item 4): a próxima parada é o onboarding — o chunk e as 8 figurinhas dele vêm a caminho enquanto a pessoa digita.
+  // A próxima parada é o onboarding: o chunk e as 8 figurinhas dele vêm a caminho enquanto a pessoa digita.
   useEffect(() => { preaquecerOnboarding({ convidado: temConvitePendente() }); }, []);
 
   // Contagem regressiva do "Reenviar e-mail": 1 setTimeout por tick, dependency
@@ -49,10 +49,10 @@ export default function Register() {
   // desta tela (a folha da Apple; o appUrlOpen do Google — este já navega
   // sozinho no DeepLinkListener, mas o efeito é reforço).
   //
-  // Rodada 29H (item 4): quem ACABOU de criar a conta (cadastro com sessão imediata) vai a /onboarding — e não a /home. Antes,
-  // o evento de sessão chegava depois do navigate('/onboarding') do envio e este efeito mandava para /home (medido: 60 ms
-  // depois); o Início era carregado (chunk grande + /api/inicio) só para a trava do onboarding devolver a pessoa a /onboarding
-  // quando a resposta chegava. Era essa a demora da página 1 (medida: ~3,8 s; o Onboarding em si pesava ~0,3 s).
+  // Quem ACABOU de criar a conta (cadastro com sessão imediata) vai a /onboarding, e não a /home: o evento
+  // de sessão chega depois do navigate('/onboarding') do envio (medido: 60 ms depois), e mandar para /home
+  // carregaria o Início (chunk grande + /api/inicio) só para a trava do onboarding devolver a pessoa a
+  // /onboarding quando a resposta chegasse.
   const acabouDeCadastrar = useRef(false);
   useEffect(() => {
     if (!sessaoCarregando && session) navigate(acabouDeCadastrar.current ? '/onboarding' : '/home', { replace: true });
@@ -79,7 +79,7 @@ export default function Register() {
       setError('Data de nascimento inválida.');
       return;
     }
-    // Rodada 29G: abaixo de 18 anos a conta não é criada — nem chega ao Supabase.
+    // Abaixo de 18 anos a conta não é criada — nem chega ao Supabase.
     if (menorQueIdadeMinima(birthdate)) {
       setError(MSG_MENOR);
       return;
@@ -249,7 +249,7 @@ export default function Register() {
 
             <div className="auth-field">
               <span id="birthdate-rotulo" className="auth-field__rotulo">Data de nascimento *</span>
-              {/* Rodada 29H (item 3): rolinhos dia · mês · ano, sem ano futuro e com teto ano atual − 18 (RolinhosData.jsx).
+              {/* Rolinhos dia · mês · ano, sem ano futuro e com teto ano atual − 18 (RolinhosData.jsx).
                   A data acima do teto (último ano, mês/dia depois de hoje) mostra a frase da casa no envio. */}
               <RolinhosData id="birthdate" onChange={setBirthdate} rotulo="Data de nascimento" />
               <span style={{ display: 'block', marginTop: 6, fontSize: 12, lineHeight: 1.4, color: 'var(--text-dim)' }}>{MSG_MENOR}</span>

@@ -1,7 +1,8 @@
 // Futty v2.0 — Logo da marca.
-// variant: 'icone' (Rodada 29D, lei da casa: o F como MARCA vai dentro do quadrado de cantos arredondados do ícone da
-// loja) | 'flat'/'metallic' (F SOLTO — F_CONTORNO, viewBox 1080 — com a PELE METÁLICA v4: SVG inline, casa com o loader;
-// desde a 29D só onde o F é mecânica: LoadingFutty, figurinha, máquina do sorteio) | 'wordmark' (lettering "FUTTY").
+// variant: 'icone' (lei da casa: o F como MARCA vai dentro do quadrado de cantos arredondados do ícone da
+// loja) | 'flat'/'metallic' (F SOLTO — F_CONTORNO, viewBox 1080 — com a PELE METÁLICA v4: SVG inline, casa
+// com o loader; só onde o F é mecânica: LoadingFutty, figurinha, máquina do sorteio) | 'wordmark'
+// (lettering "FUTTY").
 import { useId } from 'react';
 import { F_CONTORNO } from '../utils/futtyMonograma';
 

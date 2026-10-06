@@ -1,4 +1,4 @@
-// Futty v2.0 — Cache local por utilizador (13-set, "Velocidade 3": "mostrar na
+// Futty v2.0 — Cache local por utilizador ("mostrar na
 // hora, atualizar por trás"). Guarda a ÚLTIMA resposta boa de cada pedido em
 // localStorage — ao montar, os contextos/telas mostram esse dado IMEDIATAMENTE
 // (sem LoadingFutty) e disparam o pedido normal por trás; quando a resposta
@@ -32,9 +32,9 @@ export function lerCache(userId, chave) {
 }
 
 /**
- * Como lerCache, mas diz também QUANDO foi gravado. A Velocidade 6B (15-set)
- * precisa disto: se o pré-aquecimento acabou de passar por esta chave, a tela
- * pinta do cache e NÃO repete o pedido — ver `frescoMs` em useApiComCache.
+ * Como lerCache, mas diz também QUANDO foi gravado. Precisa disto: se o pré-aquecimento
+ * acabou de passar por esta chave, a tela pinta do cache e NÃO repete o pedido — ver
+ * `frescoMs` em useApiComCache.
  * Devolve `{ dados, idadeMs }` ou null.
  */
 export function lerCacheComIdade(userId, chave) {

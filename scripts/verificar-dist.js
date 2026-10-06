@@ -1,20 +1,16 @@
 #!/usr/bin/env node
-// Futty v2.0 — Confere a integridade do grafo de chunks do build (build 10,
-// achado real: um chunk referenciado deixou de existir no CDN depois de um
-// deploy e o import dinâmico quebrava em produção, sem NADA no build local
-// avisar disso). Lê dist/index.html, segue os imports — estáticos (import
-// entre chunks) e dinâmicos (o mapa de preload do rolldown/vite,
-// __vite__mapDeps) — e falha se algum .js/.css referenciado não existir
-// dentro de dist/assets. Corre depois de `vite build`, antes de publicar.
+// Futty v2.0 — Confere a integridade do grafo de chunks do build: já aconteceu de um chunk referenciado
+// deixar de existir no CDN depois de um deploy e o import dinâmico quebrar em produção, sem NADA no build
+// local avisar disso. Lê dist/index.html, segue os imports — estáticos (import entre chunks) e dinâmicos
+// (o mapa de preload do rolldown/vite, __vite__mapDeps) — e falha se algum .js/.css referenciado não
+// existir dentro de dist/assets. Corre depois de `vite build`, antes de publicar.
 //
-// VELOCIDADE 8 (16-set) — confere também o PESO DO ARRANQUE: a soma de tudo o
-// que o index.html manda o browser buscar e compilar antes de a 1ª tela existir
-// (o <script type=module> da entrada mais todos os <link rel=modulepreload>).
-// Esse número é o que explica o "na primeira vez trava muito até fluir": na 1ª
-// abertura depois de instalar/atualizar o WebKit compila tudo sem cache de
-// bytecode. Estava em 592 KiB e passa a ter TETO, senão volta lá sozinho — foi
-// exactamente assim que os 200 KB do supabase-js lá foram parar, arrastados por
-// uma constante de 40 caracteres importada na raiz.
+// Confere também o PESO DO ARRANQUE: a soma de tudo o que o index.html manda o browser buscar e compilar
+// antes de a 1ª tela existir (o <script type=module> da entrada mais todos os <link rel=modulepreload>).
+// Esse número é o que explica o "na primeira vez trava muito até fluir": na 1ª abertura depois de
+// instalar/atualizar o WebKit compila tudo sem cache de bytecode. Tem TETO, senão volta a crescer sozinho
+// — foi exactamente assim que os 200 KB do supabase-js foram parar lá, arrastados por uma constante de 40
+// caracteres importada na raiz.
 //
 // Uso: node scripts/verificar-dist.js  (chamado por `npm run build`)
 import fs from 'node:fs';
@@ -106,10 +102,11 @@ function main() {
 }
 
 /**
- * Rodada 29H (item 4): o index.html carrega /preload-onboarding.js (plugin preloadDoOnboardingNoFrio do vite.config.js), que no caminho
- * /onboarding pede o chunk, o CSS e as 8 imagens da página 1 junto com o index.js. O arquivo é gerado a cada build com os nomes COM hash:
- * se um chunk mudar de nome sem o plugin acompanhar, o preload pediria arquivos que não existem (404 por pessoa, em silêncio). Aqui se
- * confere que o <script> está no HTML e que TODA URL do arquivo existe em dist/.
+ * O index.html carrega /preload-onboarding.js (plugin preloadDoOnboardingNoFrio do vite.config.js), que no
+ * caminho /onboarding pede o chunk, o CSS e as 8 imagens da página 1 junto com o index.js. O arquivo é
+ * gerado a cada build com os nomes COM hash: se um chunk mudar de nome sem o plugin acompanhar, o preload
+ * pediria arquivos que não existem (404 por pessoa, em silêncio). Aqui se confere que o <script> está no
+ * HTML e que TODA URL do arquivo existe em dist/.
  *
  * @returns {boolean} false se algo faltar (o chamador falha a build).
  */
@@ -160,8 +157,8 @@ function pesoDoArranque(html) {
   }
   console.log(`   ${'—'.repeat(4)}`);
   console.log(`   ${kib.toFixed(1)} KiB (${(total / 1000).toFixed(1)} kB) · teto ${TETO_ARRANQUE_KIB} KiB`);
-  // Em bytes exatos: o arredondado em KiB esconde os últimos ~100 B, e é a folga
-  // em bytes que as rodadas negociam (Rodada 29B). Formato fixo, fácil de grepar.
+  // Em bytes exatos: o arredondado em KiB esconde os últimos ~100 B, e é a folga em bytes que se negocia.
+  // Formato fixo, fácil de grepar.
   const tetoBytes = TETO_ARRANQUE_KIB * 1024;
   console.log(`   ARRANQUE_BYTES=${total} TETO_BYTES=${tetoBytes} FOLGA_BYTES=${tetoBytes - total}`);
 

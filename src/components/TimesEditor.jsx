@@ -218,5 +218,5 @@ const selStyle = {
   border: '1px solid #222',
   background: '#0c0c0c',
   color: '#fff',
-  fontSize: 16, // abaixo de 16 o iPhone dá zoom ao focar (Rodada 8A, ver index.css)
+  fontSize: 16, // abaixo de 16 o iPhone dá zoom ao focar (ver index.css)
 };

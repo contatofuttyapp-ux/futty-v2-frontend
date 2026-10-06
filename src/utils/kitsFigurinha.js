@@ -11,11 +11,11 @@ export const KIT_IMG = {
   'royal-purple': 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits/kit5-royal-purple.png',
 };
 
-// Os 5 kits do lançamento (31-jul, dono): mesmo design, cores diferentes. Os NOMES são em português (29I, achado 91: "Dark Gold", "White Gold"…
-// eram inglês numa casa toda PT-BR); os ids continuam os de KITS_IA no motor — são chaves internas, nunca aparecem na tela. Este
-// seletor só existe para quem já tem Brilhante — o cadeado de cada tile é
-// DIREITO (crédito ou pacote do time, ver escolherKit), não plano; `estado`
-// só distingue 'breve' (kit sem asset, nem aparece) dos demais.
+// Os 5 kits do lançamento (dono): mesmo design, cores diferentes. Os NOMES são em português ("Dark Gold",
+// "White Gold"… eram inglês numa casa toda PT-BR); os ids continuam os de KITS_IA no motor — são chaves
+// internas, nunca aparecem na tela. Este seletor só existe para quem já tem Brilhante — o cadeado de cada
+// tile é DIREITO (crédito ou pacote do time, ver escolherKit), não plano; `estado` só distingue 'breve'
+// (kit sem asset, nem aparece) dos demais.
 export const KITS_FIGURINHA = [
   { id: 'dark-gold', nome: 'Ouro Escuro', base: '#0d0d12', acento: '#d4a017', estado: 'ativo' },
   { id: 'dark-purple', nome: 'Roxo Escuro', base: '#0d0d12', acento: '#8b5cf6', estado: 'ativo' },

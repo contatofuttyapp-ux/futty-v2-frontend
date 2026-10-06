@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Futty v2.0 — PROVA DO FLUXO REAL: trocar a foto e ver o cromo (22-set).
+// Futty v2.0 — PROVA DO FLUXO REAL: trocar a foto e ver o cromo.
 //
 // O relato do dono: "no Início já deu certo, na Figurinha ainda está a foto
 // antiga". A prova sintética (plantar um cache velho) NÃO reproduziu — o

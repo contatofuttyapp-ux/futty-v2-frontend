@@ -9,16 +9,14 @@ import CATALOGO from './i18n-catalogo';
 
 export const IDIOMA_PADRAO = 'pt-BR';
 
-// Achado 7 (roteiro 10-set): trocar de idioma só muda o rótulo do seletor — nav,
-// Início e Perfil continuam em pt-BR. Enquanto o i18n não estiver completo, o
-// seletor fica escondido (o catálogo e a lógica ficam intactos, só a UI some).
+// Trocar de idioma só muda o rótulo do seletor — nav, Início e Perfil continuam em pt-BR. Enquanto o i18n não
+// estiver completo, o seletor fica escondido (o catálogo e a lógica ficam intactos, só a UI some).
 export const MOSTRAR_IDIOMA = false;
 
-// As 6 línguas. `nome` = o idioma NA PRÓPRIA LÍNGUA (quem procura o seu idioma
-// procura a palavra que conhece). Bandeira do Reino Unido para o inglês; Chéquia (cs).
-// 31-jul (ordem do dono): pt-PT REMOVIDO (o português do app é um só, BR);
-// francês ENTRA. Preferências antigas 'pt-PT' caem sozinhas em pt-BR (idiomaGuardado
-// só aceita ids desta lista e a deteção manda qualquer 'pt*' para pt-BR).
+// As 6 línguas. `nome` = o idioma NA PRÓPRIA LÍNGUA (quem procura o seu idioma procura a palavra que conhece).
+// Bandeira do Reino Unido para o inglês; Chéquia (cs). Ordem do dono: o português do app é um só, BR (não há
+// pt-PT). Preferências antigas 'pt-PT' caem sozinhas em pt-BR (idiomaGuardado só aceita ids desta lista e a
+// deteção manda qualquer 'pt*' para pt-BR).
 export const IDIOMAS = [
   { id: 'pt-BR', bandeira: '🇧🇷', nome: 'Português (Brasil)' },
   { id: 'en', bandeira: '🇬🇧', nome: 'English' },
@@ -41,7 +39,7 @@ export function detectarIdioma() {
     const navs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]) || [];
     for (const raw of navs) {
       const l = String(raw || '').toLowerCase();
-      if (l.startsWith('pt')) return 'pt-BR'; // qualquer português → BR (31-jul)
+      if (l.startsWith('pt')) return 'pt-BR'; // qualquer português → BR
       if (l.startsWith('en')) return 'en';
       if (l.startsWith('es')) return 'es';
       if (l.startsWith('fr')) return 'fr';

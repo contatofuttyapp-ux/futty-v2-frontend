@@ -1,13 +1,9 @@
 // Futty v2.0 — Termos de Uso (/termos). Página legal, PT-BR, sem login.
-// Versão final para uso (31-jul): sem aviso de revisão jurídica, sem travessões,
-// com as cláusulas de proteção novas (fotos de terceiros, uso aceitável, créditos,
-// limitação de responsabilidade, lei e foro).
-// 25-set: §7 sem cobrança por enquanto; o texto anterior fica em CLAUSULA_PAGAMENTO_FUTURA.
-// 26-set (Pagamentos P2): §7 volta a falar de compras. A CLAUSULA_PAGAMENTO_FUTURA, revista para os
-// produtos de hoje (compras avulsas e consumíveis pela App Store / Google Play, sem assinatura), entrou
-// no lugar do "7. Cobrança" e saiu do comentário.
-// 1-out (Rodada 29G): o Futty é para maiores de 18 anos. §2 traz a cláusula de idade (o número vem de
-// IDADE_MINIMA, utils/idade.js), §7 perde o aviso de responsável e §8 diz que o anúncio 18+ depende da data.
+// Sem aviso de revisão jurídica e sem travessões, com as cláusulas de proteção (fotos de terceiros, uso
+// aceitável, créditos, limitação de responsabilidade, lei e foro).
+// O Futty é para maiores de 18 anos: §2 traz a cláusula de idade (o número vem de IDADE_MINIMA,
+// utils/idade.js) e §8 diz que o anúncio 18+ depende da data de nascimento.
+// §7 fala de compras (avulsas e consumíveis pela App Store / Google Play, sem assinatura).
 import { Link } from 'react-router-dom';
 import { IDADE_MINIMA } from '../utils/idade';
 import '../styles/app.css';

@@ -1,11 +1,10 @@
 // Futty v2.0 — Brilhantes (/planos): os três produtos da Figurinha Brilhante.
 //
-// SPEC-FIGURINHA-3 (22-set): Free/Pro/Elite saíram — nunca chegaram a cobrar
-// nada e prometiam "avatares IA por mês" num modelo que a casa abandonou. No
-// lugar ficam três compras de uma vez só (pacote do time, manto próprio, minha
-// Brilhante), cuja tabela vive em lib/planos.js.
+// Três compras de uma vez só (pacote do time, manto próprio, minha Brilhante), cuja tabela vive em
+// lib/planos.js (SPEC-FIGURINHA-3). Free/Pro/Elite não existem: nunca chegaram a cobrar nada e
+// prometiam "avatares IA por mês" num modelo que a casa abandonou.
 //
-// PAGAMENTOS P2 (26-set) — duas maneiras, nunca misturadas na mesma tela:
+// Duas maneiras de comprar, nunca misturadas na mesma tela:
 //   · LOJA LIGADA (o motor diz `loja_pronta`, é o app nativo e o SDK do RevenueCat tem a chave —
 //     lib/loja.js#lojaLigada): o botão diz "Comprar · R$9,90", com o preço que a LOJA formata, e
 //     abre a folha de compra da App Store / Google Play. Depois da compra a tela pede ao motor para
@@ -30,8 +29,8 @@ import { formatarDecimal } from '../utils/numero';
 import { useAuth } from '../hooks/useAuth';
 import '../styles/app.css';
 
-// FASE A — durações do sway por card. Não partilham divisores comuns úteis, por isso as
-// três oscilações nunca caem em fase: a página respira em vez de pulsar em bloco.
+// Durações do sway por card. Não partilham divisores comuns úteis, por isso as três oscilações nunca
+// caem em fase: a página respira em vez de pulsar em bloco.
 const SWAY_DUR = { pacote: '7.1s', manto: '9.7s', minha: '8.3s' };
 
 // Atmosfera: partículas douradas de fundo. Valores fixos por partícula → nunca sincronizam.
@@ -63,7 +62,7 @@ const NOME_ESTADO = { creditada: 'Confirmada', reembolsada: 'Reembolsada' };
 // da Figurinha chega-se à Minha; do convite do dono (P2: o bloco agora traz para cá), ao pacote.
 const REALCE = { minha: 'Escolher o uniforme é aqui', pacote: 'As figurinhas do time todo são aqui', manto: 'O manto do seu time é aqui' };
 
-// 29I (achado 83): data de COMPRA (do sistema), no relógio de quem olha — o fuso do time é só para a hora de jogo.
+// Data de COMPRA (do sistema), no relógio de quem olha — o fuso do time é só para a hora de jogo.
 function dataCurta(iso) {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -112,7 +111,7 @@ export default function Planos() {
 
   const lojaLigada = calcularLojaLigada(estado);
 
-  /** Guarda o estado novo na tela e no Início guardado (Rodada 27: a Figurinha nasce dele). */
+  /** Guarda o estado novo na tela e no Início guardado (a Figurinha nasce dele). */
   function aplicarEstado(novo) {
     setEstado(novo);
     if (!novo.indisponivel) espelharBrilhantesNoInicio(userId, novo);
@@ -211,7 +210,7 @@ export default function Planos() {
         setToast(chegou
           ? { tipo: 'success', mensagem: 'Figurinhas do time ativadas' }
           : { tipo: 'info', mensagem: 'Compra feita! O pacote do time aparece em instantes.' });
-        // Sem uniforme, ninguém do time gera: a escolha abre na hora (achado do P1).
+        // Sem uniforme, ninguém do time gera: a escolha abre na hora.
         const timeNovo = (novo?.times || []).find((t) => t.id === time?.id);
         if (chegou && timeNovo && !timeNovo.brilhante_kit) setUniformeDe(timeNovo);
       } else {
@@ -267,12 +266,9 @@ export default function Planos() {
       {/* paddings do .app-main apertados (default 32/64 = 96px de espaço morto): os 3
           cards + CTAs passam a caber sem scroll em 390×844 e 430×932. O padding
           inferior mantém folga para a bottom nav fixa (75px). */}
-      {/* ATMOSFERA — partículas douradas atrás dos cards. Reusa .fig-particle/futtyFall
-          da figurinha; o container leva containerType:size (o keyframe usa cqh).
-          FASE 3.57 — durações ×1.45 (média 10.3s → 15.0s, ~86 → ~59 px/s): com o dobro
-          das partículas e +50% de tamanho, a mesma velocidade lia-se agitada.
-          AFINAÇÃO — a contagem e o tamanho recuaram, mas as durações FICAM: a queda
-          lenta é o que faz isto ler-se como atmosfera e não como confete. */}
+      {/* ATMOSFERA — partículas douradas atrás dos cards. Reusa .fig-particle/futtyFall da figurinha; o
+          container leva containerType:size (o keyframe usa cqh). Durações longas (média 15.0s, ~59 px/s): a
+          queda lenta é o que faz isto ler-se como atmosfera e não como confete. */}
       <div
         aria-hidden="true"
         // AFINAÇÃO — opacity 1 → 0.66, desfazendo a subida da 3.56. O keyframe futtyFall
@@ -294,14 +290,14 @@ export default function Planos() {
             Layout compacto para caber sem scroll em viewports normais. */}
         <div style={{ display: 'grid', gap: 10, maxWidth: 460, margin: '0 auto' }}>
           {/* Cabeçalho curto: o que estas três coisas são, em uma linha. */}
-          {/* 29H (item 60): duas frases, duas linhas — antes eram uma só, quebrando no meio. A palavra "IA" fica: a figurinha
-              é arte gerada por IA e a casa diz isso (VOZ §3). */}
+          {/* Duas frases, duas linhas (uma frase só quebraria no meio). A palavra "IA" fica: a figurinha é arte
+              gerada por IA e a casa diz isso (VOZ §3). */}
           <p className="texto-apoio texto-apoio--centro" data-planos-apoio style={{ marginTop: 0, marginBottom: 2 }}>
             <span style={{ display: 'block' }}>Seu card com a foto não custa nada.</span>
             <span style={{ display: 'block', marginTop: 2 }}><b style={{ color: '#f0c94a' }}>Figurinha</b>: a versão em arte, feita por IA no uniforme do Futty.</span>
           </p>
-          {/* Achado 110 (29K): no site os cartões aparecem sem preço e sem "Comprar" — certo, o preço é
-              da loja e só existe no app nativo —, mas sem isto ninguém entende por quê. */}
+          {/* No site os cartões aparecem sem preço e sem "Comprar" — certo, o preço é da loja e só existe no app
+              nativo —, mas sem isto ninguém entende por quê. */}
           {!ehNativo() ? (
             <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0, marginBottom: 2 }}>
               A compra só acontece no app, pela App Store ou pelo Google Play.
@@ -334,8 +330,9 @@ export default function Planos() {
             </div>
           ) : null}
           {produtos.map((p) => {
-            // 29H (item 60): o pacote e o manto são DO TIME — só aparecem para quem é dono de um (antes apareciam para todo mundo,
-            // trancados com "Só para quem criou um time", sem explicar do que se tratava). A seção ganha título e uma linha de apoio.
+            // O pacote e o manto são DO TIME — só aparecem para quem é dono de um (para todo mundo apareceriam
+            // trancados com "Só para quem criou um time", sem explicar do que se tratava). A seção ganha título e
+            // uma linha de apoio.
             if (p.soDono && !meusTimes.length) return null;
             const abreSecaoDoTime = p.id === 'pacote' && meusTimes.length > 0;
             // Pacote e manto são do dono do time; sem time próprio, o cartão
@@ -365,14 +362,11 @@ export default function Planos() {
                   flexDirection: 'column',
                   gap: 10,
                   padding: 16,
-                  // FASE 3.63 — MATERIAL DE CARD DO CÂNONE: o véu do Perfil, extraído
-                  // dos valores computados reais dessa página. Não é escuro translúcido
-                  // (era rgba(13,13,18,0.45) + blur 4px até à 3.57) — é um VÉU BRANCO a
-                  // 3%, sem blur nenhum: o card não tapa o fundo, tinge-o. As partículas
-                  // passam a ver-se mais, não menos.
-                  // O radius 12px do Perfil NÃO vem junto: os cantos são os 45° do
-                  // .hud-corners. O Perfil é candidato a vaga; o que se herda dele é o
-                  // material, não o que nele viola o cânone.
+                  // MATERIAL DE CARD DO CÂNONE: o véu do Perfil, extraído dos valores computados reais dessa página. Não é
+                  // escuro translúcido (rgba(13,13,18,0.45) + blur 4px) — é um VÉU BRANCO a 3%, sem blur nenhum: o card
+                  // não tapa o fundo, tinge-o. As partículas se veem mais, não menos.
+                  // O radius 12px do Perfil NÃO vem junto: os cantos são os 45° do .hud-corners. O Perfil é candidato a
+                  // vaga; o que se herda dele é o material, não o que nele viola o cânone.
                   background: 'rgba(255, 255, 255, 0.03)',
                   // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da
                   // figurinha. INTOCADO pela 3.63: a borda/glow do plano actual é
@@ -396,21 +390,19 @@ export default function Planos() {
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#fff' }}>{p.nome}</span>
                   </span>
                   {atual || pendente ? (
-                    // FASE 3.49 — cantos 45° (.hud-corners-s) em vez do radius-pill:
-                    // era o último elemento redondo órfão da linguagem HUD.
+                    // Cantos 45° (.hud-corners-s) em vez do radius-pill, para não haver elemento redondo órfão na linguagem
+                    // HUD.
                     <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#d4a017', border: '1px solid rgba(212,160,23,0.5)', padding: '3px 8px', whiteSpace: 'nowrap' }}>
                       {atual ? 'Já é seu' : 'Pedido enviado'}
                     </span>
                   ) : null}
                 </div>
 
-                {/* FASE 3.63 — text-shadow SÓ no preço. O véu de 3% quase não escurece,
-                    por isso o texto assenta no fundo variável da página. Medido: features
-                    (branco 0.8) e nome passam em todos os cenários (mín. 5.88); o preço
-                    #d4a017 sobre o pico do blob DOURADO cai a 3.42 — dourado sobre
-                    dourado, abaixo do AA 4.5. A sombra devolve-lhe a leitura sem mexer na
-                    opacidade do card.
-                    P2: o preço é o que a LOJA formatou (priceString) — só existe com a loja ligada. */}
+                {/* text-shadow SÓ no preço. O véu de 3% quase não escurece, por isso o texto assenta no fundo variável
+                    da página. Medido: features (branco 0.8) e nome passam em todos os cenários (mín. 5.88); o preço
+                    #d4a017 sobre o pico do blob DOURADO cai a 3.42 — dourado sobre dourado, abaixo do AA 4.5. A sombra
+                    devolve-lhe a leitura sem mexer na opacidade do card.
+                    O preço é o que a LOJA formatou (priceString) — só existe com a loja ligada. */}
                 {p.preco ? (
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#d4a017', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{p.preco}</span>
@@ -501,13 +493,12 @@ export default function Planos() {
                 )}
               </div>
             );
-            // FASE A — SUSPENSÃO. Os três cards ganham sombra no chão + sway; só o Pro
-            // faz bob, e só a sombra dele responde em contra-fase.
+            // SUSPENSÃO. Os três cards têm sombra no chão + sway; só um (`heroi`) faz bob, e só a sombra dele
+            // responde em contra-fase.
             //
-            // A ordem das camadas mudou face à 3.40, por física: antes a sombra vivia
-            // DENTRO do .planos-bob e subia com o card — uma sombra que acompanha o
-            // objecto não é sombra, é decalque. Agora o wrapper exterior é estático, a
-            // sombra fica no chão, e só o card sobe por cima dela.
+            // O wrapper exterior é estático, a sombra fica no chão, e só o card sobe por cima dela: uma sombra
+            // DENTRO do .planos-bob subiria com o card, e uma sombra que acompanha o objecto não é sombra, é
+            // decalque.
             return (
               <Fragment key={p.id}>
               {abreSecaoDoTime ? (

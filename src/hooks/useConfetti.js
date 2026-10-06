@@ -1,11 +1,10 @@
 // Futty v2.0 — Celebrações premium com canvas-confetti.
 //
-// FLUIDEZ 2 (16-set) — a biblioteca passa a ser buscada SÓ quando há festa.
+// A biblioteca é buscada SÓ quando há festa.
 //
-// O `import confetti from 'canvas-confetti'` no topo era estático, e o Ranking e
-// o Início importam este arquivo. Resultado: 12 KB de confete entravam no chunk
-// de cada uma dessas telas e o WebKit compilava-os na PRIMEIRA visita, antes de
-// haver qualquer coisa na tela — para uma festa que quase nunca acontece (só
+// Um `import confetti from 'canvas-confetti'` estático no topo poria 12 KB de confete no chunk de
+// cada tela que importa este arquivo (o Ranking e o Início) e o WebKit os compilaria na PRIMEIRA
+// visita, antes de haver qualquer coisa na tela — para uma festa que quase nunca acontece (só
 // quem está no top 3, só quando o campeonato acaba).
 //
 // Com `import()` dentro da função, o download e a compilação só acontecem no
@@ -29,10 +28,6 @@ async function confetti(opcoes) {
     /* sem festa desta vez */
   }
 }
-
-// RODADA 16B (17-set): a chuva de moedas do prêmio do sorteio (F, Rodada 14B)
-// saiu — reprovada pelo dono no aparelho. A cerimónia do sorteio deixou de
-// importar este arquivo; a biblioteca continua a servir as outras festas.
 
 const FESTA = ['#d4a017', '#f5e070', '#8b5cf6', '#a78bfa', '#ffffff'];
 

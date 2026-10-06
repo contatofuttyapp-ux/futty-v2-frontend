@@ -401,10 +401,8 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
     return (
       <>
         <div style={{ display: 'flex', gap: 10 }}>
-          {/* RODADA 12C — avatar e nome abrem a vitrine do autor. O caminho já
-              existia (irParaPerfil, usado nas menções @); o que faltava era a
-              porta mais óbvia. Sem `teamSlug` o irParaPerfil não navega, então
-              fica um clique inerte em vez de um link partido. */}
+          {/* Avatar e nome abrem a vitrine do autor pelo irParaPerfil, o mesmo das menções @. Sem `teamSlug` o
+              irParaPerfil não navega, então fica um clique inerte em vez de um link partido. */}
           <span
             role={teamSlug ? 'button' : undefined}
             tabIndex={teamSlug ? 0 : undefined}
@@ -540,8 +538,8 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
         />
       </div>
 
-      {/* Modal de confirmação de apagar — portal para o body (Rodada 8A), mesma
-          razão do LoadingFutty.jsx: fixed dentro do [data-page] não ancora na tela. */}
+      {/* Modal de confirmação de apagar — portal para o body, mesma razão do LoadingFutty.jsx: fixed dentro do
+          [data-page] não ancora na tela. */}
       {apagarId ? createPortal(
         <div className="modal-overlay" role="presentation" onClick={() => setApagarId(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
@@ -572,9 +570,8 @@ export default function Comentarios({ parentType, parentId, visivel = false, isA
       {/* Toast */}
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
-      {/* Fullscreen de anexo — portal para o body (15-set), mesma razão do
-          LoadingFutty.jsx: fixed dentro do [data-page] animado não confia no
-          viewport no WebKit do iPhone. */}
+      {/* Fullscreen de anexo — portal para o body, mesma razão do LoadingFutty.jsx: fixed dentro do [data-page]
+          animado não confia no viewport no WebKit do iPhone. */}
       {imgFull
         ? createPortal(
             <div

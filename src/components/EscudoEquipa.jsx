@@ -1,8 +1,8 @@
-// Futty v2.0 — O escudo do time. Com logo, o logo; sem logo, as iniciais sobre o escudo que o admin escolheu (Rodada 29I, bloco 3):
-// cor principal + segunda cor + padrão, da paleta fixa — utils/escudo.js. O desenho é o das bancadas aprovadas pelo dono
-// (DESIGN/escudo-cores.html e escudo-padroes.html): círculo, anel claro de 1,5 px, sombra curta, iniciais 800 com sombra. Legível em
-// 84, 36 e 20 px. Tamanhos livres via `size`.
-// Rodada 29T (achado 160): o logo que não carrega (endereço quebrado, foto apagada) cai nas iniciais — o escudo nunca fica vazio.
+// Futty v2.0 — O escudo do time. Com logo, o logo; sem logo, as iniciais sobre o escudo que o admin
+// escolheu: cor principal + segunda cor + padrão, da paleta fixa — utils/escudo.js. O desenho é o das
+// bancadas aprovadas pelo dono (DESIGN/escudo-cores.html e escudo-padroes.html): círculo, anel claro de
+// 1,5 px, sombra curta, iniciais 800 com sombra. Legível em 84, 36 e 20 px. Tamanhos livres via `size`.
+// O logo que não carrega (endereço quebrado, foto apagada) cai nas iniciais — o escudo nunca fica vazio.
 import { useState } from 'react';
 import { initials } from '../utils/teamColors';
 import { camadasDoEscudo, letraDoEscudo } from '../utils/escudo';
@@ -14,7 +14,7 @@ const SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 export default function EscudoEquipa({ team = {}, size = 22 }) {
   const ini = initials(team.nome) || '?';
   const raw = team.logo_url || null;
-  // Velocidade 6B: o escudo vive entre 20 e 84 px CSS — 192 cobre tudo em 2x.
+  // O escudo vive entre 20 e 84 px CSS — 192 cobre tudo em 2x.
   const srcDoLogo = raw ? (raw.startsWith('blob:') || raw.startsWith('data:') ? raw : urlImagem(assetUrl(raw), size > 64 ? 192 : 128)) : null;
   // O endereço que falhou fica guardado: um logo novo (outro endereço) volta a ser tentado, sem efeito nem reinício de estado.
   const [logoQuebrado, setLogoQuebrado] = useState(null);

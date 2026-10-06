@@ -1,5 +1,6 @@
-// Futty v2.0 — Rodada 29S, bloco A: os times montados à mão, puros (sem React, sem rede). O Jogo (Montar à mão) e o Jogo passado (bloco B)
-// montam o corpo do POST /api/games/:id/times-manuais pela MESMA função; o motor grava sem seed (sem cerimônia) e não avisa ninguém.
+// Futty v2.0 — os times montados à mão, puros (sem React, sem rede). O Jogo (Montar à mão) e o Jogo passado
+// montam o corpo do POST /api/games/:id/times-manuais pela MESMA função; o motor grava sem seed (sem
+// cerimônia) e não avisa ninguém.
 import { NOMES_DAS_CORES } from './nomeDoTime';
 
 /** Os nomes da casa para 2, 3 ou 4 times: Time Ouro, Time Roxo, Time Prata, Time Bronze. */

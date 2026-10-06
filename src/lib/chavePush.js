@@ -1,13 +1,15 @@
-// Futty v2.0 — a chave VAPID do push e a re-inscrição silenciosa (COFRE 25-set).
+// Futty v2.0 — a chave VAPID do push e a re-inscrição silenciosa.
 //
-// O par VAPID do motor foi trocado (o antigo vazou). Uma subscrição de push nasce amarrada à chave pública com que foi
-// feita: depois da troca o push service recusa os envios do motor (403) e a subscrição de cada pessoa vira letra morta —
-// sem a pessoa saber e sem nenhum erro na tela. Aqui mora o que faz o app se curar sozinho: comparar a chave com que a
-// subscrição foi feita com a que o motor serve HOJE e, se mudou, refazer a inscrição (sem pedir permissão de novo: ela
-// já foi concedida) e avisar o motor.
+// O par VAPID do motor foi trocado (o antigo vazou). Uma subscrição de push nasce amarrada à chave
+// pública com que foi feita: depois da troca o push service recusa os envios do motor (403) e a
+// subscrição de cada pessoa vira letra morta — sem a pessoa saber e sem nenhum erro na tela. Aqui
+// mora o que faz o app se curar sozinho: comparar a chave com que a subscrição foi feita com a que o
+// motor serve HOJE e, se mudou, refazer a inscrição (sem pedir permissão de novo: ela já foi
+// concedida) e avisar o motor.
 //
-// Sem React, sem rede e sem `window`: só contas e a ordem das chamadas, com as dependências injetadas — para poderem
-// ser provadas no Node (scripts/unidade/chave-push.test.mjs). O hook (hooks/usePushNotifications.js) traz as de verdade.
+// Sem React, sem rede e sem `window`: só contas e a ordem das chamadas, com as dependências
+// injetadas — para poderem ser provadas no Node (scripts/unidade/chave-push.test.mjs). O hook
+// (hooks/usePushNotifications.js) traz as de verdade.
 
 const ehArrayBuffer = (v) => v instanceof ArrayBuffer || Object.prototype.toString.call(v) === '[object ArrayBuffer]';
 

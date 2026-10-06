@@ -29,11 +29,12 @@ const btn = {
 const btnGold = { ...btn, background: 'linear-gradient(180deg,#f5e070,#d4a017)', color: '#0d0d12', border: 'none' };
 const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #222' };
 const td = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid #1a1a1a', verticalAlign: 'middle' };
-// fontSize 16: abaixo disso o iPhone dá zoom ao focar (Rodada 8A).
+// fontSize 16: abaixo disso o iPhone dá zoom ao focar.
 const inp = { fontSize: 16, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '6px 8px', borderRadius: 6 };
 
-// 29I (achado 83): data de SISTEMA (quando algo aconteceu na conta/no time), lida pelo dono no Gabinete — vale o relógio de quem está olhando,
-// não o fuso de time nenhum. É de propósito: o fuso do time é só para a hora de JOGO (src/utils/dataHora.js).
+// Data de SISTEMA (quando algo aconteceu na conta/no time), lida pelo dono no Gabinete — vale o
+// relógio de quem está olhando, não o fuso de time nenhum. É de propósito: o fuso do time é só para a
+// hora de JOGO (src/utils/dataHora.js).
 function fmtData(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '-';
@@ -62,7 +63,10 @@ function fmtDataHora(iso) {
   if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
-/** "dark-gold" → "Ouro Escuro". O catálogo é do motor (KITS_IA); o nome em português sai de utils/kitsFigurinha.js (29I, achado 91). */
+/**
+ * "dark-gold" → "Ouro Escuro". O catálogo é do motor (KITS_IA); o nome em português sai de
+ * utils/kitsFigurinha.js.
+ */
 function nomeKit(id) {
   const conhecido = KITS_FIGURINHA.find((k) => k.id === id);
   if (conhecido) return conhecido.nome;
@@ -87,7 +91,7 @@ export default function Brilhantes({ showMsg }) {
   // Ativação do pacote: o uniforme é escolhido aqui, time a time.
   const [kitPorTime, setKitPorTime] = useState({});
   const [creditoPorPessoa, setCreditoPorPessoa] = useState({});
-  // RODADA 21 — "Dar crédito a um e-mail": quem ainda não tem pedido nem
+  // "Dar crédito a um e-mail": quem ainda não tem pedido nem
   // crédito nenhum não aparece em nenhuma das duas listas abaixo.
   const [emailCredito, setEmailCredito] = useState('');
   const [quantidadeEmail, setQuantidadeEmail] = useState(10);
@@ -121,7 +125,7 @@ export default function Brilhantes({ showMsg }) {
     agir(`credito-${userId}`, '/api/super/gabinete/brilhantes/creditos', { userId, quantidade }, 'Créditos dados e pessoa avisada.');
   }
 
-  // RODADA 21 — mesma rota, mas SEM userId em mãos: quem ainda não pediu nada
+  // Mesma rota, mas SEM userId em mãos: quem ainda não pediu nada
   // (0 créditos, nenhum pedido) não está em nenhuma das listas que o Gabinete
   // já lê; o servidor resolve o e-mail para userId (routes/gabinete.js).
   function darCreditosPorEmail() {
@@ -310,8 +314,8 @@ export default function Brilhantes({ showMsg }) {
                         : <span style={{ color: 'var(--text-dim)' }}>só pedido</span>}
                     </td>
                     <td style={td}>{t.brilhante_kit ? nomeKit(t.brilhante_kit) : <span style={{ color: 'var(--text-dim)' }}>—</span>}</td>
-                    {/* Rodada 28: jogadores (vagas do pacote usadas, de 25) e gerações (cada um pode
-                        refazer até 5) são coisas diferentes — antes "geradas" contava pessoas. */}
+                    {/* jogadores (vagas do pacote usadas, de 25) e gerações (cada um pode refazer até 5) são coisas
+                        diferentes. */}
                     <td style={td}>{t.jogadores ?? 0}/{t.limite}</td>
                     <td style={td}>
                       {t.geradas}
@@ -353,7 +357,7 @@ export default function Brilhantes({ showMsg }) {
         )}
       </Secao>
 
-      {/* ── 3. DAR CRÉDITO A UM E-MAIL — RODADA 21: quem ainda não pediu nada
+      {/* ── 3. DAR CRÉDITO A UM E-MAIL — quem ainda não pediu nada
           (0 créditos, nenhum pedido) não aparece em nenhuma lista acima nem
           abaixo; este é o único jeito de ativar essa pessoa. ── */}
       <Secao titulo="Dar crédito a um e-mail" sub="Para quem ainda não pediu nada e não tem crédito. Não está em nenhuma lista acima">

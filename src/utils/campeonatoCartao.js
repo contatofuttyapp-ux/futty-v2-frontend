@@ -1,7 +1,7 @@
 // Futty v2.0 — Cartões 9:16 do campeonato (v2) — espelho da celebração aprovada.
 // Canvas 1080×1920, fundo da casa, marca FUTTY. Troféu DA CASA (mesmo path do Icon)
 // desenhado grande; escudos dos times; confete composto à mão (não aleatório feio).
-// PNG entregue por utils/salvarImagem.js (Rodada 8A): baixa na web, folha de
+// PNG entregue por utils/salvarImagem.js: baixa na web, folha de
 // compartilhar no app. Dois cartões: campeão e pódio.
 import { podioDe } from './campeonatoPodio';
 import { salvarOuCompartilhar } from './salvarImagem';

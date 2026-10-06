@@ -1,5 +1,6 @@
-// Futty v2.0 — Rodada 29L (achados 130 e 138): diz se um trilho horizontal tem mais conteúdo escondido à esquerda e/ou à direita. Quem usa
-// põe `ref={aoMontar}` no trilho e `data-mais-esq` / `data-mais-dir` nele (o CSS da casa, em app.css, esmaece a borda e a pessoa vê que continua).
+// Futty v2.0 — diz se um trilho horizontal tem mais conteúdo escondido à esquerda e/ou à direita. Quem usa
+// põe `ref={aoMontar}` no trilho e `data-mais-esq` / `data-mais-dir` nele (o CSS da casa, em app.css,
+// esmaece a borda e a pessoa vê que continua).
 // Só re-renderiza quando um dos dois lados MUDA (não a cada pixel rolado).
 import { useEffect, useState } from 'react';
 import { estadoDaFaixa } from '../utils/faixaRolavel';

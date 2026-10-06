@@ -1,4 +1,4 @@
-// Futty v2.0 — Rodada 29L (achados 130 e 138): uma faixa que rola para o lado tem de DIZER que rola. Esta é a conta, pura para testar no
+// Futty v2.0 — uma faixa que rola para o lado tem de DIZER que rola. Esta é a conta, pura para testar no
 // Node: dado o que o navegador mede num trilho horizontal, há mais coisa à esquerda? à direita?
 export const FOLGA_PX = 4;
 

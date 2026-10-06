@@ -1,13 +1,16 @@
-// Futty v2.0 — Rodada 29T (bloco B, achado 157): o campo "Bairro" do time é de LISTA, como a cidade (dono, 4-out: "só aceita o que tiver lá").
+// Futty v2.0 — o campo "Bairro" do time é de LISTA, como a cidade (o dono: "só aceita o que tiver lá").
 // Puro (sem React, sem rede).
 //
-// Brasil: a lista oficial do IBGE (Censo 2022), um arquivo por estado em public/dados/bairros/<UF>.json (scripts/gerar-bairros.mjs):
-// [[codigoIbge, municipio, [[bairro, lat, lng], …]], …]. O IBGE só tem bairros em 895 dos 5.571 municípios; nos outros entram os distritos e subdistritos
-// oficiais do mesmo IBGE quando o município tem 2 ou mais (29T-C: o DF, São Paulo capital, Goiânia, Palmas…; 2.590 municípios no total). Cidade sem nada na
-// lista (Rio Branco, São Luís: um distrito só) = o campo Bairro NÃO aparece (ele é opcional) e o time mostra só a cidade.
-// Portugal: as freguesias (utils/freguesias.js), como desde a 29H.
-// A lista de cidades (public/dados/cidades.json) não traz o código do IBGE, então o campo liga o bairro à cidade escolhida por NOME + UF
-// (o script grava o município com a mesma grafia do cidades.json). Escolher da lista manda a coordenada junto.
+// Brasil: a lista oficial do IBGE (Censo 2022), um arquivo por estado em public/dados/bairros/<UF>.json
+// (scripts/gerar-bairros.mjs): [[codigoIbge, municipio, [[bairro, lat, lng], …]], …]. O IBGE só tem
+// bairros em 895 dos 5.571 municípios; nos outros entram os distritos e subdistritos oficiais do mesmo
+// IBGE quando o município tem 2 ou mais (o DF, São Paulo capital, Goiânia, Palmas…; 2.590 municípios no
+// total). Cidade sem nada na lista (Rio Branco, São Luís: um distrito só) = o campo Bairro NÃO aparece
+// (ele é opcional) e o time mostra só a cidade.
+// Portugal: as freguesias (utils/freguesias.js).
+// A lista de cidades (public/dados/cidades.json) não traz o código do IBGE, então o campo liga o bairro à
+// cidade escolhida por NOME + UF (o script grava o município com a mesma grafia do cidades.json).
+// Escolher da lista manda a coordenada junto.
 import { normalizarCidade } from './cidades';
 import { buscarNosItens, concelhoDePortugal } from './freguesias';
 

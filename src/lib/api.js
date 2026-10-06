@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { obterSupabase } from './supabaseAsync';
 import { registarChamada, lerServerTiming, marcarDadosDaTela } from './diagnostico';
 
-// VELOCIDADE 4 — de onde sai o /api depende de onde a tela está a correr:
+// De onde sai o /api depende de onde a tela está a correr:
 //
 //   web em produção  → caminho RELATIVO (''). O /api passa a viver no mesmo
 //     domínio das telas, servido pela Cloudflare Pages Function
@@ -26,13 +26,13 @@ import { registarChamada, lerServerTiming, marcarDadosDaTela } from './diagnosti
 const MOTOR = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 const API_URL = !Capacitor.isNativePlatform() && import.meta.env.PROD ? '' : MOTOR;
 
-// A frase da casa para "a rede caiu" (Rodada 29G): é o que o `apiFetch` devolve no lugar do erro cru do navegador.
+// A frase da casa para "a rede caiu": é o que o `apiFetch` devolve no lugar do erro cru do navegador.
 export const MSG_SEM_REDE = 'Sem internet agora. Tente de novo.';
 
 // Resolução de assets: fonte única em utils/avatar.js (re-exportado como assetUrl).
 export { urlAsset as assetUrl } from '../utils/avatar';
 
-// VELOCIDADE 7B — o mesmo GET em paralelo é UMA ida à rede: quem chega com um
+// O mesmo GET em paralelo é UMA ida à rede: quem chega com um
 // pedido igual ainda no ar recebe a mesma promessa. O caso real: o
 // pré-aquecimento pedia /api/me/selos (e o ranking) e a tela, aberta nesse
 // instante, pedia outra vez. Só GET sem corpo; a entrada sai assim que a
@@ -45,8 +45,8 @@ export { urlAsset as assetUrl } from '../utils/avatar';
 // num GET que saiu antes do voto e devolver a lista velha.
 const getsEmVoo = new Map();
 
-// RODADA 28 — 401 do motor quer dizer "a sessão acabou" (saiu de todos os aparelhos noutro lugar,
-// conta apagada, refresh revogado): o motor só o devolve quando o Supabase recusou o token (com o
+// 401 do motor quer dizer "a sessão acabou" (saiu de todos os aparelhos noutro lugar,
+// conta apagada, refresh invalidado): o motor só o devolve quando o Supabase recusou o token (com o
 // Supabase fora do ar é 503). Quem decide o que fazer é o AuthContext — renova UMA vez; se não der,
 // sai só deste aparelho e o login avisa porquê. Registro, não import: o AuthContext já importa isto.
 let aoSessaoInvalida = null;
@@ -58,7 +58,7 @@ export function registrarSessaoInvalida(fn) {
 // `segundoPlano: true` (pré-aquecimento): a chamada não conta como dados da tela
 // no Diagnóstico.
 export async function apiFetch(path, { segundoPlano = false, ...options } = {}) {
-  // VELOCIDADE 8: o cliente chega por import dinâmico (lib/supabaseAsync.js).
+  // O cliente chega por import dinâmico (lib/supabaseAsync.js).
   // Aqui já se está dentro de uma função assíncrona que ia esperar pelo
   // getSession de qualquer maneira — o await a mais não custa ida à rede
   // nenhuma, e o AuthProvider já pediu o módulo na montagem.
@@ -90,7 +90,7 @@ export async function apiFetch(path, { segundoPlano = false, ...options } = {}) 
 }
 
 async function pedir(path, options, token, segundoPlano) {
-  // Rodada 28: no máximo duas voltas — a 2ª só depois de a sessão ter sido renovada por um 401.
+  // No máximo duas voltas — a 2ª só depois de a sessão ter sido renovada por um 401.
   for (let volta = 0; ; volta += 1) {
     // Upload (FormData): o browser põe o Content-Type com o boundary sozinho.
     const headers = options.body instanceof FormData ? { ...(options.headers || {}) } : { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -98,7 +98,7 @@ async function pedir(path, options, token, segundoPlano) {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    // VELOCIDADE 4 — a caixa-preta mede AQUI, no único sítio por onde todas as
+    // A caixa-preta mede AQUI, no único sítio por onde todas as
     // chamadas passam. Só rota, estado e tempos; nunca corpo nem token.
     const t0 = performance.now();
     let res;
@@ -142,10 +142,10 @@ export async function apiUpload(path, file, field = 'file') {
   return apiUploadCampos(path, { [field]: file });
 }
 
-// RODADA 19 — variante com vários campos (ex.: "avatar" + "original" no
-// mesmo pedido) e método à escolha (POST/PUT). RODADA 28: passa pelo mesmo
+// Variante com vários campos (ex.: "avatar" + "original" no
+// mesmo pedido) e método à escolha (POST/PUT). Passa pelo mesmo
 // apiFetch de tudo (sessão, 401, caixa-preta — o tempo do upload da foto entra
-// no Diagnóstico e na telemetria); era uma segunda cópia da lógica de sessão.
+// no Diagnóstico e na telemetria), sem uma segunda cópia da lógica de sessão.
 export async function apiUploadCampos(path, campos, { method = 'POST' } = {}) {
   const fd = new FormData();
   for (const [campo, arquivo] of Object.entries(campos)) {

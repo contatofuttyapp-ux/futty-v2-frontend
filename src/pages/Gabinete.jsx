@@ -1,18 +1,13 @@
-// Futty v2.0 — Gabinete do Dono (/gabinete). Gabinete 2.0 (11-set,
-// PAINEL-E-CUSTOS.md secção 6): substitui as duas páginas antigas (/gabinete
-// com 16 secções + /super) por UMA página com 7 abas, desktop primeiro (menu
-// lateral de abas à esquerda, conteúdo largo à direita, tabelas sem esconder
-// colunas). No celular as abas viram scroll horizontal no topo.
+// Futty v2.0 — Gabinete do Dono (/gabinete). UMA página de abas, desktop primeiro (menu lateral de abas
+// à esquerda, conteúdo largo à direita, tabelas sem esconder colunas). No celular as abas viram scroll
+// horizontal no topo (PAINEL-E-CUSTOS.md secção 6).
 //
-// Um pedido só (GET /resumo) alimenta Visão geral/Dinheiro/Segurança/
-// Registros; Pessoas & times e Anúncios usam os endpoints próprios
-// (paginação e ações; campanhas com métricas ao vivo). Ajuste do dono
-// (11-set): Anúncios virou aba própria (interruptor geral + interruptores
-// por página + campanhas + receita), Burn & margem voltou para o fim de
-// Dinheiro, e Cobertura de venda ganhou aba própria — as três saíram da
-// flag MOSTRAR_AVANCADO. Só ficaram atrás dela DPAs por operador e
-// Documentos & canal do titular (aba Segurança) e MRR (sem cartão próprio,
-// sem fonte real ainda).
+// Um pedido só (GET /resumo) alimenta Visão geral/Dinheiro/Segurança/Registros; Pessoas & times e
+// Anúncios usam os endpoints próprios (paginação e ações; campanhas com métricas ao vivo). Anúncios é
+// aba própria (interruptor geral + interruptores por página + campanhas + receita), Burn & margem fica
+// no fim de Dinheiro e Cobertura de venda tem aba própria. Só ficam atrás da flag MOSTRAR_AVANCADO:
+// DPAs por operador e Documentos & canal do titular (aba Segurança) e MRR (sem cartão próprio, sem
+// fonte real ainda).
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -35,7 +30,7 @@ const btn = {
 const btnGold = { ...btn, background: 'linear-gradient(180deg,#f5e070,#d4a017)', color: '#0d0d12', border: 'none', padding: '8px 16px' };
 const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #222' };
 const td = { padding: '6px 8px', fontSize: 13, borderBottom: '1px solid #1a1a1a', verticalAlign: 'middle' };
-// fontSize 16: abaixo disso o iPhone dá zoom ao focar (Rodada 8A, ver index.css).
+// fontSize 16: abaixo disso o iPhone dá zoom ao focar (ver index.css).
 const inp = { fontSize: 16, color: '#e8e8ef', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.14)', padding: '6px 8px', borderRadius: 6, width: '100%', boxSizing: 'border-box' };
 
 const CORES = { verde: '#7bd88f', amarelo: '#f0c94a', vermelho: '#fda4af', cinza: '#8a8a98' };
@@ -56,7 +51,7 @@ function fmtUptime(s) {
   if (h > 0) return `${h}h ${m}min`;
   return `${m}min`;
 }
-// Rodada 29Z: dinheiro do sistema em PT-BR ("US$12,34", "€7,24"), pelo helper único de src/utils/numero.js.
+// Dinheiro do sistema em PT-BR ("US$12,34", "€7,24"), pelo helper único de src/utils/numero.js.
 const fmtUSD = formatarUSD;
 const fmtEUR = formatarEUR;
 function diasAte(dataISO) {
@@ -92,7 +87,7 @@ const ABAS = [
 export default function Gabinete() {
   const [searchParams, setSearchParams] = useSearchParams();
   const aba = ABAS.some((a) => a.k === searchParams.get('aba')) ? searchParams.get('aba') : 'visao';
-  // Rodada 29L (achado 130): no celular as abas viram uma faixa que rola; a borda esmaece onde há mais abas escondidas.
+  // No celular as abas viram uma faixa que rola; a borda esmaece onde há mais abas escondidas.
   const { aoMontar: montarFaixaDeAbas, esquerda: abasEscondidasEsq, direita: abasEscondidasDir } = useIndicadorDeRolagem();
 
   const [dados, setDados] = useState(null); // /resumo
@@ -161,12 +156,12 @@ export default function Gabinete() {
     <div className="app-shell">
       <GabCSS />
       <main className="app-main gab2-main" style={{ maxWidth: 1320, padding: 0 }}>
-        {/* Rodada 29L (achado 133): em 390 px o título e os dois links não cabem numa linha e cada um quebrava em duas. Agora o bloco
-            dos links nunca parte ao meio (cada link numa linha só) e, sem largura, desce inteiro para baixo do título. */}
+        {/* O bloco dos links nunca parte ao meio (cada link numa linha só) e, sem largura (em 390 px o título e
+            os dois links não cabem numa linha), desce inteiro para baixo do título. */}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: 12, rowGap: 6, padding: '20px 20px 0' }}>
           <h1 style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 26, margin: 0, whiteSpace: 'nowrap' }}>Gabinete <span style={{ color: '#f0c94a' }}>do Dono</span></h1>
           <span data-links-do-gabinete style={{ display: 'flex', gap: 14, alignItems: 'baseline', whiteSpace: 'nowrap' }}>
-            {/* Rodada 28: a caixa-preta DESTE aparelho mora aqui (saiu do Perfil de todo mundo). */}
+            {/* A caixa-preta DESTE aparelho mora aqui, e não no Perfil de todo mundo. */}
             <Link to="/diagnostico" style={{ fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none' }}>Diagnóstico deste aparelho</Link>
             <Link to="/home" style={{ fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none' }}>← Início</Link>
           </span>
@@ -394,9 +389,8 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCamb
   );
 }
 
-// As telas com espaço de publicidade. Rodada 12C (16-set): entraram Resenha,
-// Ranking e Figurinha — a Resenha pedia o anúncio do Início emprestado (não dava
-// para ligar uma sem a outra) e as outras duas não tinham slot nenhum.
+// As telas com espaço de publicidade, cada uma com o seu slot (a Resenha não pega o anúncio do Início
+// emprestado: senão não daria para ligar uma sem a outra).
 // A ordem aqui é a ordem em que aparecem na tela do dono.
 const NOMES_PAGINA = {
   inicio: 'Início',
@@ -428,12 +422,10 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
 
   return (
     <div>
-      {/* Regra de 15-set (dono): publicidade passou a valer para todos os planos —
-          Pro/Elite veem metade das oportunidades elegíveis, nunca zero. 22-set
-          (SPEC-FIGURINHA-3): Free/Pro/Elite saíram das telas sem nunca terem
-          cobrado nada, e ninguém tem `plan` pago hoje — na prática todo mundo
-          vê. A régua de metade (services/inicio.js#metadeDasVezes) fica no
-          código, dormente, para quando existirem planos pagos de anúncios. */}
+      {/* Regra do dono: publicidade vale para todos os planos — Pro/Elite veem metade das oportunidades
+          elegíveis, nunca zero. Ninguém tem `plan` pago hoje (Free/Pro/Elite saíram das telas sem nunca terem
+          cobrado nada), então na prática todo mundo vê. A régua de metade (services/inicio.js#metadeDasVezes)
+          fica no código, dormente, para quando existirem planos pagos de anúncios. */}
       <p style={{ ...muted, marginBottom: 14 }}>
         Todos veem anúncios; a regra de metade fica para quando houver planos pagos de anúncios.
       </p>
@@ -507,7 +499,7 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
 }
 
 // ─── ABA 4: SEGURANÇA ────────────────────────────────────────────────────────
-// VELOCIDADE 4 — relatórios que os testadores enviaram do próprio aparelho
+// Relatórios que os testadores enviaram do próprio aparelho
 // (Perfil → Diagnóstico). Cada linha já traz as médias; o JSON inteiro só é
 // buscado quando se abre um, porque é o que tem as 50 chamadas.
 //

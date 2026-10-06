@@ -1,7 +1,7 @@
-// Futty v2.0 — Figurinha (/figurinha): selos de honra (Vaga 11C) no cromo + olhinho.
 // Futty v2.0 — Figurinha (/figurinha): "card studio". Card 2:3 com tilt 3D e
 // entrada animada; opções em tabs (Fundo/Frame/Uniforme) + toggles compactos.
-// Trocar foto é preview local (sem backend). Tudo no cliente (canvas).
+// Selos de honra no cromo + olhinho. Trocar foto é preview local (sem backend).
+// Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
@@ -13,7 +13,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useAd } from '../hooks/useAd';
 import { usePerfil } from '../context/PerfilContext';
 import { lerCacheComIdade, gravarCache } from '../lib/cacheLocal';
-// Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
+// Liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
 // Pagamentos P2: liga a loja (SDK do RevenueCat) à conta — esta aba é pré-carregada em ócio.
 import '../lib/ligarLoja';
@@ -50,25 +50,21 @@ import Toast from '../components/Toast';
 import '../styles/app.css';
 
 // Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
-// GATES CONFIRMADOS (ordem do dono): Aura, Golden e Royal são PREMIUM (verdade no
-// servidor, ver FUNDOS_PREMIUM em backend/routes/auth.js; o `premium: true` aqui é
-// só o cadeado do desejo). Épico virou GRÁTIS (15-set, decisão do dono) — deixou de
-// ter `premium`. LEI DA REGRA JUSTA: quem já tinha Aura equipado mantém — o gate só
-// corre ao TROCAR (ver escolherFundo).
+// GATES (ordem do dono): Aura, Golden e Royal são PREMIUM (verdade no servidor, ver FUNDOS_PREMIUM em
+// backend/routes/auth.js; o `premium: true` aqui é só o cadeado do desejo). Épico é GRÁTIS (ordem do
+// dono) — não tem `premium`. LEI DA REGRA JUSTA: quem já tinha Aura equipado mantém — o gate só corre
+// ao TROCAR (ver escolherFundo).
 const FUNDOS = [
-  // ORDEM (dono, 15-set — 3ª revisão): Neutro, Épico, Estádio, Aura, Golden, Royal
-  // — os GRÁTIS primeiro (Neutro, Épico, Estádio), os pagos depois (Aura, Golden,
-  // Royal). Revoga a ordem de 14-set (Neutro, Estádio, Épico, Aura...). Só o
-  // SELETOR muda: o fundo de quem não escolheu continua a ser 'estadio'
-  // (useState abaixo e cromoFundo no Início).
+  // ORDEM (ordem do dono): Neutro, Épico, Estádio, Aura, Golden, Royal — os GRÁTIS primeiro (Neutro,
+  // Épico, Estádio), os pagos depois (Aura, Golden, Royal). Só o SELETOR tem esta ordem: o fundo de
+  // quem não escolheu continua a ser 'estadio' (useState abaixo e cromoFundo no Início).
   { k: 'preto', label: 'Neutro' },
-  { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label novo — GRÁTIS (15-set)
+  { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label Épico — GRÁTIS
   { k: 'estadio', label: 'Estádio' },
   { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
-  // REVERSÃO (dono, 3-out, Rodada 29J): "Golden" e "Royal" são nomes de PRODUTO batizados pelo dono em
-  // 15-set, não texto de interface — ficam em inglês, como "Golden" fica no cadeado GOLDEN. O bloco 2 da
-  // 29I traduziu para "Dourado"/"Real" por conta própria; a regra do PT-BR vale para o que o app DIZ, não
-  // para o que o app BATIZA. Não reabrir sem o dono pedir.
+  // "Golden" e "Royal" são nomes de PRODUTO batizados pelo dono, não texto de interface — ficam em
+  // inglês, como "Golden" fica no cadeado GOLDEN. A regra do PT-BR vale para o que o app DIZ, não para
+  // o que o app BATIZA. Não reabrir sem o dono pedir.
   { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
   { k: 'royal', label: 'Royal', premium: true }, // par de luxo do Golden — chapa roxa da casa
 ];
@@ -79,11 +75,12 @@ const FUNDO_BG = {
   // Este valor é só o FALLBACK (base escura) até o render real do fundo ficar pronto
   // — o tile passa a mostrar o fundo verdadeiro em miniatura (ver `epicoTile`).
   gradiente: 'linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
-  // FASE 3.51 — 'preto' (label "Neutro") re-baseado: mesma base escura do épico, sem
-  // padrão. O tile é o gradiente liso, condizente com o card real.
+  // 'preto' (label "Neutro"): mesma base escura do épico, sem padrão. O tile é o gradiente liso,
+  // condizente com o card real.
   preto: 'linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
-  // 'aura' — tile fiel ao glow do card: elipse dourada (mesmos stops) sobre o escuro da casa. O card real desenha o glow com
-  // blur no canvas; aqui a elipse já é suave. 29H-B: o dobro do tamanho (70%×56% → 140%×112%) e os alphas a 3/4, como no canvas.
+  // 'aura' — tile fiel ao glow do card: elipse dourada (mesmos stops) sobre o escuro da casa. O card real
+  // desenha o glow com blur no canvas; aqui a elipse já é suave. Tamanho 140%×112% e alphas a 3/4, como
+  // no canvas.
   aura: 'radial-gradient(ellipse 140% 112% at 50% 44%, rgba(212,160,23,0.7125) 0%, rgba(212,160,23,0.36) 40%, rgba(212,160,23,0.12) 64%, transparent 92%), linear-gradient(180deg, #0a0a12 0%, #070812 55%, #050609 100%)',
   // 'golden' — FALLBACK (foil dourado) até o render real da chapa ficar pronto (ver `goldenTile`).
   golden: 'linear-gradient(160deg, #b8860b 0%, #e6bd52 28%, #a9760f 54%, #dcab3a 76%, #855a0b 100%)',
@@ -134,14 +131,15 @@ const GOLDEN_GLINTS_UI = [
 // Recorte octogonal do card (cut/W = 32/400 = 8%; cut/H = 32/600 ≈ 5.3%). Usado
 // nos overlays de card inteiro para os cantos coincidirem com o PNG octogonal.
 const CLIP_OCTOGONO = 'polygon(8% 0, 92% 0, 100% 5.3%, 100% 94.7%, 92% 100%, 8% 100%, 0 94.7%, 0 5.3%)';
-// 6-out (dono): a cabeça cortou nas duas tentativas com esta foto → o recado leva a escolher OUTRA foto. Tentar de novo com ela daria o mesmo.
+// Ordem do dono: a cabeça cortou nas duas tentativas com esta foto → o recado leva a escolher OUTRA
+// foto. Tentar de novo com ela daria o mesmo.
 const RECADO_FOTO_RECUSADA = 'Essa foto não deu certo. Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.';
 
 // Limites do zoom do avatar. ZOOM_MIN subiu de 0.88 (80% exibido) para 0.99 (90%):
 // o degrau de 80% deixou de existir. Qualquer valor abaixo é normalizado no arranque.
 const ZOOM_MIN = 0.99;
 const ZOOM_MAX = 1.43;
-// RODADA 28 — zoom do card com a FOTO: 1 = a foto cobre a moldura por completo (o piso — nunca faixa
+// Zoom do card com a FOTO: 1 = a foto cobre a moldura por completo (o piso — nunca faixa
 // vazia nem borda à mostra, ver enquadrarFotoComum); cada toque aproxima 10%, até 40%.
 const FOTO_ZOOM_MAX = 1.4;
 
@@ -184,14 +182,12 @@ function EstrelaIA({ size = 16, color = '#d4a017', style }) {
   );
 }
 
-// ─── O que a Figurinha aproveita do Início (VELOCIDADE 9, 23-set) ────────────
+// ─── O que a Figurinha aproveita do Início ──────────────────────────────────────────────
 //
-// Esta tela abria com três pedidos: o anúncio, os selos e /api/brilhantes/estado
-// (539 + 540 + 606 ms no relatório do build 28 — de Lisboa, tudo distância).
-// Nenhum dos três traz novidade nenhuma para quem chegou aqui pelo Início: o
-// /api/inicio já traz o direito, os créditos, os pedidos vivos e — desde esta
-// rodada — as colunas do pacote em cada time. Fica tudo no cache de sessão, com
-// a mesma chave que o InicioContext usa; daqui só se lê.
+// Três pedidos que a tela abriria sozinha — o anúncio, os selos e /api/brilhantes/estado (539 + 540 +
+// 606 ms, de Lisboa: tudo distância) — não trazem novidade nenhuma para quem chegou pelo Início: o
+// /api/inicio já traz o direito, os créditos, os pedidos vivos e as colunas do pacote em cada time.
+// Fica tudo no cache de sessão, com a mesma chave que o InicioContext usa; daqui só se lê.
 const FRESCOR_DO_INICIO_MS = 60000;
 
 /** Idade (ms) do payload de /api/inicio guardado, ou null se não houver. */
@@ -229,11 +225,9 @@ function brilhanteDoInicio(userId) {
 
 export default function Figurinha() {
   const navigate = useNavigate();
-  // Velocidade 2 (12-set): esta página tinha o seu próprio GET /api/me — o
-  // PerfilContext já carrega isso 1x por sessão; agora só usa o `perfil` de lá
-  // para inicializar o espelho local `me` (que continua a existir porque a
-  // página precisa de merges finos — slots, kit_ativo, avatar_url — que o card
-  // usa de imediato, sem esperar round-trip) e as escolhas guardadas
+  // O PerfilContext já carrega o /api/me 1x por sessão: esta página só usa o `perfil` de lá para
+  // inicializar o espelho local `me` (que existe porque a página precisa de merges finos — slots,
+  // kit_ativo, avatar_url — que o card usa de imediato, sem esperar round-trip) e as escolhas guardadas
   // (fundo/avatar genérico/fase da estreia).
   const { perfil, erro: erroPerfil, deCache: perfilDeCache, recarregar: recarregarPerfilGlobal, hidratar: hidratarPerfilGlobal } = usePerfil();
   const { session } = useAuth();
@@ -246,49 +240,49 @@ export default function Figurinha() {
   const corFrame = 'dourado';
   const [fotoLocal, setFotoLocal] = useState(null);
   const [uploadFoto, setUploadFoto] = useState(false);
-  // RODADA 29B (bloco 2, A) — a pintura roda em SEGUNDO PLANO no motor: o POST devolve um jobId e o app consulta
-  // GET /api/figurinha/job/:id. `pintura` = { jobId, kit, estreia, estimativaSegundos, etapa, decorridoMs, baseEm } (o
-  // decorridoMs do motor + o relógio local desde `baseEm`). Nasce do que ficou guardado no aparelho: quem saiu da tela
-  // (ou fechou o app) e volta reencontra a pintura — pronta, ou ainda correndo. `agora` é o relógio da barra.
+  // A pintura roda em SEGUNDO PLANO no motor: o POST devolve um jobId e o app consulta
+  // GET /api/figurinha/job/:id. `pintura` = { jobId, kit, estreia, estimativaSegundos, etapa,
+  // decorridoMs, baseEm } (o decorridoMs do motor + o relógio local desde `baseEm`). Nasce do que ficou
+  // guardado no aparelho: quem saiu da tela (ou fechou o app) e volta reencontra a pintura — pronta, ou
+  // ainda correndo. `agora` é o relógio da barra.
   const [pintura, setPintura] = useState(() => lerPinturaGuardada(userId));
   const [agora, setAgora] = useState(() => Date.now());
   const [gerandoIA, setGerandoIA] = useState(() => !!lerPinturaGuardada(userId));
-  // RODADA 21 — kit escolhido na grelha que ainda não foi pintado: abre o
-  // diálogo "Pintar no uniforme X?" em vez do window.confirm() de antes (não
-  // tem como levar o "N gerações" nem o "~45s" no texto de um confirm nativo).
+  // Kit escolhido na grelha que ainda não foi pintado: abre o diálogo "Pintar no uniforme X?" em vez
+  // do window.confirm() (não tem como levar o "N gerações" nem o "~45s" no texto de um confirm nativo).
   const [kitParaPintar, setKitParaPintar] = useState(null);
   const [limiteIA, setLimiteIA] = useState(false);
   const [erroIA, setErroIA] = useState(false); // falha da geração (≠ 403) → estado de erro no overlay
   const [erroIAmsg, setErroIAmsg] = useState(''); // mensagem específica (ex.: foto inválida); vazio = texto genérico
   const [semGeracoes, setSemGeracoes] = useState(false); // o erro foi SEM_DIREITO (as gerações acabaram)
   const [fotoRecusada, setFotoRecusada] = useState(false); // o erro foi FOTO_RECUSADA (cabeça cortada nas duas): o recado manda trocar de foto, não tentar de novo
-  // Toast curto e genérico (build 9): { mensagem, tipo }. Dois usos — aviso
+  // Toast curto e genérico: { mensagem, tipo }. Dois usos — aviso
   // quando /avatar/ai reutiliza o slot (mesma foto de antes, sem isto o botão
   // "carregava e nada acontecia"), e erro do PATCH de fundo (ver escolherFundo).
   const [toast, setToast] = useState(null);
-  // Destaque pulsante no botão Gerar (build 9): true assim que uma foto NOVA
+  // Destaque pulsante no botão Gerar: true assim que uma foto NOVA
   // sobe nesta sessão, até a próxima geração terminar (reutilizada ou não) —
   // guia quem trocou a foto e não percebeu que falta tocar em Gerar.
   const [fotoTrocadaSemGerar, setFotoTrocadaSemGerar] = useState(false);
-  const [emailNaoConfirmado, setEmailNaoConfirmado] = useState(false); // gate anti-abuso (11-ago): geração exige e-mail confirmado
+  const [emailNaoConfirmado, setEmailNaoConfirmado] = useState(false); // gate anti-abuso: geração exige e-mail confirmado
   const [reenviarBusy, setReenviarBusy] = useState(false);
   const [reenviarFeito, setReenviarFeito] = useState(false);
   const [modalFoto, setModalFoto] = useState(false); // modal "A tua foto" (foto actual + estado IA + carregar nova)
-  const [trocandoModo, setTrocandoModo] = useState(false); // Rodada 18: PUT /api/me/avatar/modo em voo
+  const [trocandoModo, setTrocandoModo] = useState(false); // PUT /api/me/avatar/modo em voo
   const [activeTab, setActiveTab] = useState('fundo');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
   const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
   const ultimoFicheiro = useRef(null); // retém a foto p/ "tentar de novo"
   const ultimoRecorte = useRef(null); // idem, para o "Ajustar enquadramento" (PUT do recorte)
-  const ultimoRecorteMini = useRef(null); // 29H-B: o quadrado tracejado da miniatura do último recorte (gravado depois de subir)
+  const ultimoRecorteMini = useRef(null); // o quadrado tracejado da miniatura do último recorte (gravado depois de subir)
   // Zoom do avatar no card. Escala interna 0.88–1.43 (passo 0.11); exibida ÷1.1
   // → 80/90/100/110/120/130%. Base 1.1 = 100% exibido. Reinicia sempre a 110%.
   // Clamp defensivo no arranque: normaliza qualquer valor fora de [ZOOM_MIN, ZOOM_MAX]
   // (ex.: um 0.88 herdado) para dentro dos limites novos.
   const [avatarZoom, setAvatarZoom] = useState(() => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, 1.1)));
-  // Rodada 28: o do card com a foto. Só da vista e do que se baixa/compartilha daqui — o enquadramento
-  // salvo (Trocar foto → Ajustar enquadramento) continua a ser o de todas as telas; volta a 1 com foto nova.
+  // Zoom do card com a foto. Só da vista e do que se baixa/compartilha daqui — o enquadramento salvo
+  // (Trocar foto → Ajustar enquadramento) continua a ser o de todas as telas; volta a 1 com foto nova.
   const [fotoZoom, setFotoZoom] = useState(1);
   // Flow de estreia (1ª visita sem foto/avatar): null = a decidir, 'foto' |
   // 'gerando' | 'pronto' = ecrãs A/B/C, 'fim' = studio normal.
@@ -302,7 +296,7 @@ export default function Figurinha() {
   const [goldenTile, setGoldenTile] = useState(null); // render real do fundo Golden p/ o tile
   const [royalTile, setRoyalTile] = useState(null); // render real do fundo Royal p/ o tile
   const fileRef = useRef(null);
-  // RODADA 19 — enquadrar dentro de "Trocar foto". cropFile alimenta o
+  // Enquadrar dentro de "Trocar foto". cropFile alimenta o
   // CropModal nos dois fluxos ("Escolher outra foto" e "Ajustar
   // enquadramento"); cropModo decide o que "Confirmar" faz. origParaEnviar só
   // é usado no modo 'nova' (a normalizada vai junto do recorte como a "original").
@@ -323,16 +317,14 @@ export default function Figurinha() {
   // um avatar IA confirmado (foto_url e avatar_url existem e são diferentes —
   // logo após o upload o backend grava a foto crua em ambos, então é igual).
   const fotoOriginal = me?.user?.foto_url || null;
-  // `avatarEhIA` = o card mostra AGORA uma figurinha (IA). RODADA 28: quem diz é o motor
-  // (`figurinha_ativa`, pelo nome do arquivo — mostraFigurinha). Era foto_url ≠ avatar_url, e a foto
-  // do Google em avatar_url virava "figurinha": seletor de fundos e zoom abaixo da moldura numa foto.
+  // `avatarEhIA` = o card mostra AGORA uma figurinha (IA). Quem diz é o motor
+  // (`figurinha_ativa`, pelo nome do arquivo — mostraFigurinha), e não foto_url ≠ avatar_url: a foto
+  // do Google em avatar_url virava "figurinha" — seletor de fundos e zoom abaixo da moldura numa foto.
   const avatarEhIA = mostraFigurinha(me?.user);
-  // Rodada 18: existe uma figurinha (mesmo que o card esteja em modo 'foto'
-  // agora) — o sinal certo para "há algo para o interruptor escolher", ao
-  // contrário de avatarEhIA, que só diz o que está ativo NESTE instante.
-  // RODADA 20 (achado da 19): era `!!kit_ativo`, mas kit_ativo é só "qual
-  // uniforme", não "já gerou" — toda conta nova aparecia com o interruptor
-  // sem nunca ter gerado nada. tem_figurinha vem calculado do servidor
+  // Existe uma figurinha (mesmo que o card esteja em modo 'foto' agora) — o sinal certo para "há algo
+  // para o interruptor escolher", ao contrário de avatarEhIA, que só diz o que está ativo NESTE instante.
+  // Não serve `!!kit_ativo`: kit_ativo é só "qual uniforme", não "já gerou" — toda conta nova apareceria
+  // com o interruptor sem nunca ter gerado nada. tem_figurinha vem calculado do servidor
   // (services/inicio.js), que sabe de verdade se existe alguma figurinha.
   const temFigurinhaAlguma = !!me?.user?.tem_figurinha;
   // MODO DO CARD (§3/§4): com Brilhante, o card de sempre (avatar recortado
@@ -341,7 +333,7 @@ export default function Figurinha() {
   // continua a ser o convite (nunca um buraco).
   const modoCard = avatarEhIA ? 'brilhante' : 'comum';
   const temFoto = !!fotoOriginal;
-  // RODADA 28 — o "Tamanho −/+" serve aos dois cards: na figurinha é o tamanho do jogador recortado; na
+  // O "Tamanho −/+" serve aos dois cards: na figurinha é o tamanho do jogador recortado; na
   // FOTO é o zoom da foto, com piso em "cobre a moldura por completo" (o − para em 1).
   const zoomDaFoto = !avatarEhIA && temFoto;
   const zoomNoMinimo = zoomDaFoto ? fotoZoom <= 1 : avatarZoom <= ZOOM_MIN;
@@ -356,22 +348,20 @@ export default function Figurinha() {
   // A2 — kit vestido + kits já gerados (slots). Vindos do GET /api/me.
   const kitAtivo = me?.user?.kit_ativo || 'dark-gold';
   const slotsKits = me?.slots || [];
-  // RODADA 17 — o botão "Gerar Avatar IA" vira o CTA dourado (receita do "Ver
+  // O botão "Gerar Avatar IA" vira o CTA dourado (receita do "Ver
   // sorteio", Inicio.jsx) exactamente na janela em que ele é a única ação que
   // falta: foto nova já subiu, ainda não gerou. Fora dessa janela (idle, ou já
   // gerando) continua roxo — dourado é reservado para "toque aqui agora".
   const brilharGerar = fotoTrocadaSemGerar && !gerandoIA;
-  // DIREITO DE GERAR (SPEC-FIGURINHA-3 §5) — quem pode gerar uma Brilhante e
-  // com que uniforme. Carregado uma vez ao abrir a tela; recarregado depois de
-  // gerar (o crédito baixa) e depois de pedir ativação.
-  // VELOCIDADE 9 (23-set): nasce com o que o /api/inicio já trouxe (cache de
-  // sessão), em vez de null. Era o terceiro pedido desta tela — 606 ms de
-  // Lisboa no relatório do build 28 — para saber coisas que estavam em casa.
+  // DIREITO DE GERAR (SPEC-FIGURINHA-3 §5) — quem pode gerar uma Brilhante e com que uniforme. Carregado
+  // uma vez ao abrir a tela; recarregado depois de gerar (o crédito baixa) e depois de pedir ativação.
+  // Nasce com o que o /api/inicio já trouxe (cache de sessão), em vez de null: pedir de novo seria mais
+  // um pedido (606 ms de Lisboa) para saber coisas que estão em casa.
   const [brilhante, setBrilhante] = useState(() => brilhanteDoInicio(userId));
-  // Rodada 27: o estado que chega do servidor (depois de gerar, de pedir ativação) também vai para o
-  // Início guardado — a Figurinha nasce a partir dele (brilhanteDoInicio), e sem isto o contador
-  // "N gerações restantes" abria com o número de ANTES de gerar. Uma resposta que falhou (o
-  // estadoBrilhantes devolve "ninguém tem nada" e marca indisponivel) não vira verdade guardada.
+  // O estado que chega do servidor (depois de gerar, de pedir ativação) também vai para o Início
+  // guardado — a Figurinha nasce a partir dele (brilhanteDoInicio), e sem isto o contador "N gerações
+  // restantes" abriria com o número de ANTES de gerar. Uma resposta que falhou (o estadoBrilhantes
+  // devolve "ninguém tem nada" e marca indisponivel) não vira verdade guardada.
   const aplicarBrilhante = (e) => {
     if (!e) return;
     setBrilhante(e);
@@ -380,9 +370,8 @@ export default function Figurinha() {
   const temDireitoDeGerar = !!brilhante?.direito?.fonte;
   const fonteDireito = brilhante?.direito?.fonte || null;
   const kitDoTime = fonteDireito === 'time' ? brilhante.direito.kit_id : null;
-  // RODADA 21 — gerações que sobram no direito ESCOLHIDO (créditos, ou o que
+  // Gerações que sobram no direito ESCOLHIDO (créditos, ou o que
   // falta no pacote do time): é o "N" do contador e do diálogo de confirmação.
-  // Antes só existia para crédito (o pacote não tinha saldo, era 1 tiro só).
   const restantesDireito = brilhante?.direito?.restantes ?? 0;
   const meuTimeBrilhante = (brilhante?.times || []).find((t) => t.sou_dono) || null;
   // PAGAMENTOS P2 — com a loja ligada (o motor diz `loja_pronta`, é o app nativo e o SDK do RevenueCat
@@ -404,17 +393,17 @@ export default function Figurinha() {
     const verbo = produto === 'pacote' ? 'Comprar para o meu time' : 'Comprar';
     return preco ? `${verbo} · ${preco}` : verbo;
   }
-  // BLOCO 2 — o recado do pedido SOBREVIVE a fechar o app: vem do estado
-  // gravado, não só do clique desta sessão. Pendente diz que está na fila;
-  // recusado diz o motivo que o dono escreveu no Gabinete; ativado não aparece
-  // aqui de todo — quem foi ativado já vê o botão dourado, e um recado sobre um
-  // pedido resolvido só ia competir com ele.
-  // RODADA 29B (B) — A GRADE DE UNIFORMES (a mesma .fig-seletor-grade dos fundos) é sempre a mesma, nos dois cards
-  // e para os três casos; o que muda é o estado de cada tile, que sai do DIREITO (utils/uniformesGrade.js):
+  // O recado do pedido SOBREVIVE a fechar o app: vem do estado gravado, não só do clique desta sessão.
+  // Pendente diz que está na fila; recusado diz o motivo que o dono escreveu no Gabinete; ativado não
+  // aparece aqui de todo — quem foi ativado já vê o botão dourado, e um recado sobre um pedido
+  // resolvido só ia competir com ele.
+  // A GRADE DE UNIFORMES (a mesma .fig-seletor-grade dos fundos) é sempre a mesma, nos dois cards e para
+  // os três casos; o que muda é o estado de cada tile, que sai do DIREITO (utils/uniformesGrade.js):
   //   grátis — todos com cadeado; o toque leva à Minha Figurinha (Planos, sem preço no app da loja: ehNativo)
   //   pacote — o uniforme do time aberto (pintável) e os outros com cadeado → Minha Figurinha
   //   minha  — todos abertos; os ainda não pintados com o selo "pintar · 1 geração · ~45 s"
-  // Estados de tile: vestido (✓) · pintado (um toque veste, grátis) · geravel (confirma e gasta 1) · trancado.
+  // Estados de tile: vestido (✓) · pintado (um toque veste, grátis) · geravel (confirma e gasta 1) ·
+  // trancado.
   // Nada de "em breve"; o pacote do time, para o dono, continua no convite "Vire figurinha" mais abaixo.
   const temCredito = fonteDireito === 'credito' || (brilhante?.creditos || 0) > 0;
   const direitoDaGradeAgora = direitoDaGrade({ fonteDireito, creditos: brilhante?.creditos });
@@ -466,7 +455,7 @@ export default function Figurinha() {
                     <Check size={10} strokeWidth={3} />
                   </span>
                 ) : null}
-                {/* Gerável (com direito, sem slot): avisa que custa 1 geração e quanto demora — Rodada 21 e 29B.
+                {/* Gerável (com direito, sem slot): avisa que custa 1 geração e quanto demora.
                     O tile tem 76 px: o selo quebra em duas linhas ("pintar · 1 geração" / "~45 s"). */}
                 {estado === 'geravel' ? (
                   <span data-selo="pintar" style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', display: 'grid', justifyItems: 'center', gap: 0, padding: '2px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.78)', color: '#d4a017', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, lineHeight: 1.15, fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -510,20 +499,18 @@ export default function Figurinha() {
     estadoBrilhantes({ segundoPlano: true }).then((e) => {
       if (!vivo || !e) return;
       setBrilhante(e);
-      if (!e.indisponivel) espelharBrilhantesNoInicio(userId, e); // Rodada 27 — ver aplicarBrilhante
+      if (!e.indisponivel) espelharBrilhantesNoInicio(userId, e); // ver aplicarBrilhante
     });
     return () => { vivo = false; };
   }, [userId]);
 
-  // SELOS DE HONRA (Vaga 11C): busca os selos do utilizador; mostra no cromo os 2
-  // de maior prioridade que NÃO estejam ocultos (olhinho, persistido). Vêm já
-  // ordenados por prioridade (campeonato > ranking) do backend.
-  // Velocidade 7B: os selos do cache entram JÁ no primeiro render (antes vinham
-  // num microtask, e essa chegada tardia recomeçava o desenho do cromo). Os
-  // selos nunca seguram a tela: sem cache, o cromo desenha sem eles e redesenha
-  // uma vez quando o /api/me/selos chegar.
-  // Rodada 12C: anúncio pedido no topo da tela, em paralelo com o resto (mesmo
-  // motivo da Resenha e do Ranking — ver useAd).
+  // SELOS DE HONRA: busca os selos do utilizador; mostra no cromo os 2 de maior prioridade que NÃO
+  // estejam ocultos (olhinho, persistido). Vêm já ordenados por prioridade (campeonato > ranking) do
+  // backend. Os selos do cache entram JÁ no primeiro render: vindos num microtask, a chegada tardia
+  // recomeçava o desenho do cromo. Os selos nunca seguram a tela: sem cache, o cromo desenha sem eles e
+  // redesenha uma vez quando o /api/me/selos chegar.
+  // Anúncio pedido no topo da tela, em paralelo com o resto (mesmo motivo da Resenha e do Ranking — ver
+  // useAd).
   const { ad: adFigurinha, pronto: adPronto } = useAd('figurinha');
   const [selos, setSelos] = useState(() => lerCacheComIdade(userId, 'selos')?.dados ?? []);
   const [selosDoUsuario, setSelosDoUsuario] = useState(userId);
@@ -538,11 +525,10 @@ export default function Figurinha() {
     let ativo = true;
     const comIdade = lerCacheComIdade(userId, 'selos');
     const doCache = comIdade?.dados ?? null;
-    // Velocidade 6B: mesma janela de frescor do useApiComCache. Se o
+    // Janela de frescor de 5 minutos NESTA tela (a do useApiComCache é de 30 s). Se o
     // pré-aquecimento acabou de trazer os selos, não se pedem outra vez.
     //
-    // Velocidade 9: a janela sobe de 30 s para 5 minutos NESTA tela. Um selo é
-    // uma conquista (campeonato, 1º do ranking) — não muda enquanto a pessoa
+    // Um selo é uma conquista (campeonato, 1º do ranking) — não muda enquanto a pessoa
     // escolhe um fundo. Com 30 s, abrir a Figurinha um minuto depois do Início
     // pagava 540 ms por dois emblemas que já estavam em casa. Fora da janela,
     // revalida por trás: o cromo desenha com os selos do cache e redesenha uma
@@ -585,18 +571,16 @@ export default function Figurinha() {
   useEffect(() => {
     if (inicializadoRef.current) return undefined;
     if (!perfil && !erroPerfil) return undefined;
-    // Adiado ao microtask (mesmo padrão do PerfilContext): setState síncrono
-    // no corpo do efeito dispara cascading renders.
+    // Adiado ao microtask (mesmo padrão do PerfilContext): setState síncrono no corpo do efeito dispara
+    // cascading renders.
     //
-    // O `inicializadoRef` é marcado DENTRO do microtask, não antes dele
-    // (22-set). Marcá-lo aqui fora deixava a página vazia em `npm run dev`: o
-    // StrictMode monta, desmonta e remonta cada efeito, e o cleanup da
-    // primeira montagem punha `ativo = false` antes de o microtask correr — o
-    // setMe nunca acontecia, e na remontagem o guard já estava fechado.
-    // Resultado: `me` ficava null para sempre e a Figurinha abria a pedir
-    // "Adicionar foto" numa conta que tem foto e figurinha. Em produção não
-    // aparecia (uma montagem só), mas o dev e o LIGAR-FUTTY.bat são onde a
-    // casa testa — uma tela que mente na bancada não serve de bancada.
+    // O `inicializadoRef` é marcado DENTRO do microtask, não antes dele. Marcá-lo aqui fora deixava a
+    // página vazia em `npm run dev`: o StrictMode monta, desmonta e remonta cada efeito, e o cleanup da
+    // primeira montagem punha `ativo = false` antes de o microtask correr — o setMe nunca acontecia, e na
+    // remontagem o guard já estava fechado. Resultado: `me` ficava null para sempre e a Figurinha abria a
+    // pedir "Adicionar foto" numa conta que tem foto e figurinha. Em produção não aparecia (uma montagem
+    // só), mas o dev e o LIGAR-FUTTY.bat são onde a casa testa — uma tela que mente na bancada não serve
+    // de bancada.
     let ativo = true;
     Promise.resolve().then(() => {
       if (!ativo) return;
@@ -618,22 +602,18 @@ export default function Figurinha() {
     };
   }, [perfil, erroPerfil]);
 
-  // O ESPELHO TEM DE OUVIR O DADO FRESCO UMA VEZ (22-set, relato do dono: "no
-  // Início já deu certo, na Figurinha ainda está a foto antiga").
+  // O ESPELHO TEM DE OUVIR O DADO FRESCO UMA VEZ.
   //
-  // O efeito acima semeia `me` com o PRIMEIRO `perfil` que chega — e o
-  // PerfilContext entrega primeiro o CACHE LOCAL deste aparelho
-  // (stale-while-revalidate) e só depois a resposta do /api/me. O guard por ref
-  // existe por bom motivo (o flow da estreia não pode reiniciar a meio), mas
-  // apanhava também a actualização: o cromo desta página ficava preso na
-  // figurinha gravada no cache, enquanto o Início — que lê o contexto directo —
-  // já mostrava a nova. Quem nunca tinha aberto o app naquele aparelho via o
-  // certo; quem já tinha, via o antigo. Daí parecer coisa de PC contra celular.
+  // O efeito acima semeia `me` com o PRIMEIRO `perfil` que chega — e o PerfilContext entrega primeiro o
+  // CACHE LOCAL deste aparelho (stale-while-revalidate) e só depois a resposta do /api/me. O guard por
+  // ref existe por bom motivo (o flow da estreia não pode reiniciar a meio), mas apanharia também a
+  // actualização: o cromo desta página ficaria preso na figurinha gravada no cache, enquanto o Início —
+  // que lê o contexto directo — já mostraria a nova. Quem nunca tinha aberto o app naquele aparelho
+  // veria o certo; quem já tinha, veria o antigo — parece coisa de PC contra celular.
   //
-  // Sincroniza-se só o que vem do servidor e não se edita aqui. Fundo, zoom e
-  // avatar genérico ficam como o utilizador os deixou. E se houver acção local
-  // em voo (upload, geração, foto por gerar), ela é mais nova do que este
-  // fresco — desiste-se sem aplicar, para não desfazer o que ele acabou de fazer.
+  // Sincroniza-se só o que vem do servidor e não se edita aqui. Fundo, zoom e avatar genérico ficam como
+  // o utilizador os deixou. E se houver acção local em voo (upload, geração, foto por gerar), ela é mais
+  // nova do que este fresco — desiste-se sem aplicar, para não desfazer o que ele acabou de fazer.
   const frescoAplicadoRef = useRef(false);
   useEffect(() => {
     if (frescoAplicadoRef.current || perfilDeCache || !perfil) return undefined;
@@ -651,7 +631,7 @@ export default function Figurinha() {
           foto_url: perfil.user?.foto_url ?? m.user?.foto_url,
           avatar_url: perfil.user?.avatar_url ?? m.user?.avatar_url,
           kit_ativo: perfil.user?.kit_ativo ?? m.user?.kit_ativo,
-          // Rodada 28: o que o card mostra anda junto com o avatar_url.
+          // o que o card mostra anda junto com o avatar_url.
           figurinha_ativa: perfil.user?.figurinha_ativa ?? m.user?.figurinha_ativa,
           tem_figurinha: perfil.user?.tem_figurinha ?? m.user?.tem_figurinha,
         },
@@ -672,11 +652,10 @@ export default function Figurinha() {
     if (estreiaFase === 'pronto') celebrarCromoPronto();
   }, [estreiaFase]);
 
-  // Velocidade 7B: uma geração do cromo só é jogada fora se já houver cromo NA
-  // TELA. Antes, qualquer mudança a meio — os selos a chegarem do cache ou da
-  // rede — descartava o desenho quase pronto e o card ficava no F até a geração
-  // seguinte acabar: "a Figurinha só pinta quando /api/me/selos chega". Agora a
-  // primeira a terminar pinta, e a mais nova substitui quando terminar.
+  // Uma geração do cromo só é jogada fora se já houver cromo NA TELA. Descartar a cada mudança a
+  // meio — os selos a chegarem do cache ou da rede — jogava fora o desenho quase pronto e o card
+  // ficava no F até a geração seguinte acabar: "a Figurinha só pinta quando /api/me/selos chega".
+  // Assim a primeira a terminar pinta, e a mais nova substitui quando terminar.
   const geracaoCromoRef = useRef(0);
   const cromoNaTelaRef = useRef({ fim: false, estreia: false });
   const montadaRef = useRef(true);
@@ -717,9 +696,8 @@ export default function Figurinha() {
     gerar();
     // selosKey: regenera o cromo quando os selos visíveis mudam (chegam da API ou
     // o utilizador oculta/mostra no olhinho). me?.user?.id: a 1ª geração espera o perfil.
-  // `jogador?.foto_url` entra nas deps por causa do modo COMUM (22-set): ali a
-  // base do card é a FOTO, e trocá-la tem de repintar o cromo — no modo
-  // brilhante quem muda é o avatar_url, que já estava aqui.
+  // `jogador?.foto_url` entra nas deps por causa do modo COMUM: ali a base do card é a FOTO, e trocá-la
+  // tem de repintar o cromo — no modo brilhante quem muda é o avatar_url, que já estava aqui.
   }, [me?.user?.id, fundo, avatarZoom, fotoZoom, avatarEhIA, jogador?.avatar_url, jogador?.foto_url, avatarGenericoEscolha, estreiaFase, selosKey]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
@@ -736,8 +714,8 @@ export default function Figurinha() {
         const cv = document.createElement('canvas');
         cv.width = 120;
         cv.height = 120;
-        // FASE 3.51/3.55 — intensidade 3.0: a 120×120 as arestas a alpha do card (0.065)
-        // desapareciam. Mesma geometria, alpha subido só para a miniatura se ler.
+        // Intensidade 3.0: a 120×120 as arestas a alpha do card (0.065) desapareciam. Mesma geometria, alpha
+        // subido só para a miniatura se ler.
         await desenharFundoEpico(cv.getContext('2d'), 120, 120, { intensidade: 3.0 });
         if (vivo) setEpicoTile(cv.toDataURL('image/png'));
       } catch { /* fallback: fica o gradiente base do FUNDO_BG */ }
@@ -786,7 +764,7 @@ export default function Figurinha() {
   // Geração IA durante a estreia: ao concluir (ou falhar), revela o cromo.
   // Declarada antes de subirFoto porque este chama-a no auto-trigger da estreia.
   async function gerarAvatarIAEstreia() {
-    // RODADA 17 — mesmo marcador do Onboarding (dispararFigurinhaIA): o Início
+    // Mesmo marcador do Onboarding (dispararFigurinhaIA): o Início
     // lê isto no PRÓPRIO useState inicial (uma vez, ao montar), por isso tem
     // de estar gravado ANTES do POST — se a pessoa for para lá enquanto isto
     // ainda corre, o Início já nasce sabendo que há uma geração em voo, em vez
@@ -802,8 +780,8 @@ export default function Figurinha() {
     let emSegundoPlano = false;
     let falhou = null; // a falha desta geração: a fase que volta (foto ou cromo) depende dela
     try {
-      // RODADA 29B (bloco 2, A): o POST devolve `{ jobId }` na hora; quem conclui é acompanharPintura (aplicarPinturaPronta
-      // / aplicarPinturaFalhou). Sem jobId (resposta imediata) o fluxo é o de sempre.
+      // O POST devolve `{ jobId }` na hora; quem conclui é acompanharPintura (aplicarPinturaPronta /
+      // aplicarPinturaFalhou). Sem jobId (resposta imediata) o fluxo é o de sempre.
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold', assincrono: true }) });
       if (data.jobId) {
         iniciarPintura(data, { kit: 'dark-gold', estreia: true });
@@ -824,12 +802,11 @@ export default function Figurinha() {
     }
   }
 
-  // SEM_DIREITO (22-set) não é o "limite" morto — mostrar o card de quota
-  // (que mandaria "Ver Brilhantes" para um 403 que já significa isso)
-  // seria só ruído; o card comum já está pronto, é só revelar. `subirFoto`
-  // só chama a geração da estreia quando já há direito confirmado, mas o direito
-  // pode ter acabado entre a checagem e a resposta (corrida rara) — cai
-  // aqui na mesma, sem erro na tela. Serve ao POST e ao desfecho 'falhou' do job.
+  // SEM_DIREITO não é o "limite" morto — mostrar o card de quota (que mandaria "Ver Brilhantes" para um
+  // 403 que já significa isso) seria só ruído; o card comum já está pronto, é só revelar. `subirFoto` só
+  // chama a geração da estreia quando já há direito confirmado, mas o direito pode ter acabado entre a
+  // checagem e a resposta (corrida rara) — cai aqui na mesma, sem erro na tela. Serve ao POST e ao
+  // desfecho 'falhou' do job.
   function tratarFalhaDaEstreia(err) {
     if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(aplicarBrilhante);
     else if (err?.code === 'FOTO_RECUSADA') setFotoRecusada(true); // o recado vai na fase 'foto' (ver faseAposFalhaDaEstreia)
@@ -837,23 +814,23 @@ export default function Figurinha() {
     else setErro(err?.message || 'Não deu para gerar sua figurinha. Tente de novo.');
   }
 
-  // 6-out: FOTO_RECUSADA na estreia volta a "Adicione uma foto" com o recado (a pessoa escolhe outra); as outras falhas seguem ao cromo, como sempre.
+  // FOTO_RECUSADA na estreia volta a "Adicione uma foto" com o recado (a pessoa escolhe outra); as
+  // outras falhas seguem ao cromo.
   function faseAposFalhaDaEstreia(err) {
     return err?.code === 'FOTO_RECUSADA' ? 'foto' : 'pronto';
   }
 
-  // Trocar foto: upload para o servidor e, CONFIRMADO o 200, preview local imediato.
-  // Antes o preview (e a linha "Foto trocada") nasciam ao escolher o arquivo, antes
-  // do upload: com o upload falhando a tela dizia que a foto já tinha mudado
-  // (Hotfix 26). Agora só há preview depois do 200; com erro, só o erro.
-  // Na estreia, dispara automaticamente a geração da Brilhante — só quando já
-  // há direito (crédito ou pacote do time); sem ele, a comum já está pronta.
-  // Núcleo do upload, reutilizado pelo "tentar de novo" (P1-5). `emEstreia` decide
-  // se dispara a geração IA automática a seguir. RODADA 19: `file` já é o
-  // RECORTE (saído do CropModal); `original` (opcional) é a foto de antes do
-  // recorte, mandada junto para "Ajustar enquadramento" mais tarde.
-  // 29H-B: `recorteMini` é o quadrado tracejado da miniatura (enquadramento único), gravado em users.avatar_recorte depois do 200 —
-  // só quando o card passa a mostrar a FOTO (com figurinha ativa, o arquivo do avatar continua sendo a figurinha; o recorte dela fica).
+  // Trocar foto: upload para o servidor e, CONFIRMADO o 200, preview local imediato. O preview (e a
+  // linha "Foto trocada") só nascem depois do 200: com o upload falhando a tela não pode dizer que a
+  // foto já mudou; com erro, só o erro.
+  // Na estreia, dispara automaticamente a geração da Brilhante — só quando já há direito (crédito ou
+  // pacote do time); sem ele, a comum já está pronta.
+  // Núcleo do upload, reutilizado pelo "tentar de novo". `emEstreia` decide se dispara a geração IA
+  // automática a seguir. `file` já é o RECORTE (saído do CropModal); `original` (opcional) é a foto de
+  // antes do recorte, mandada junto para "Ajustar enquadramento" mais tarde.
+  // `recorteMini` é o quadrado tracejado da miniatura (enquadramento único), gravado em
+  // users.avatar_recorte depois do 200 — só quando o card passa a mostrar a FOTO (com figurinha ativa,
+  // o arquivo do avatar continua sendo a figurinha; o recorte dela fica).
   async function subirFoto(file, emEstreia, original, recorteMini = null) {
     setFotoLocal(null); // some a confirmação de uma troca anterior enquanto esta corre
     setFotoRecusada(false); // foto nova: some o recado da foto anterior
@@ -894,11 +871,10 @@ export default function Figurinha() {
       origParaEnviar.current = null;
       if (recorteMini && !data.figurinha_ativa) gravarMiniaturaDaFoto(recorteMini);
       if (emEstreia) {
-        // SPEC-FIGURINHA-3 (22-set): a estreia só tenta gerar a Brilhante com
-        // direito confirmado (crédito ou pacote do time) — sem isso o POST
-        // dava 403 SEM_DIREITO e a tela mostrava o card de "limite" (que nem
-        // existe mais). Sem direito, a comum já está pronta (o upload acima
-        // gravou foto_url): só falta revelar o cromo, sem tentar nem errar.
+        // SPEC-FIGURINHA-3: a estreia só tenta gerar a Brilhante com direito confirmado (crédito ou pacote do
+        // time) — sem isso o POST dava 403 SEM_DIREITO e a tela mostrava o card de "limite" (que nem existe
+        // mais). Sem direito, a comum já está pronta (o upload acima gravou foto_url): só falta revelar o
+        // cromo, sem tentar nem errar.
         if (temDireitoDeGerar) await gerarAvatarIAEstreia();
         else setEstreiaFase('pronto');
       } else setFotoTrocadaSemGerar(true); // fora da estreia, quem decide gerar é o próprio usuário
@@ -910,8 +886,8 @@ export default function Figurinha() {
     }
   }
 
-  // 29H-B: grava o quadrado tracejado como a miniatura de verdade (best-effort, sem segurar a tela); com o 200, o avatar_url novo
-  // já traz o `?rc=` e as miniaturas de todo lado passam a cortar nele.
+  // Grava o quadrado tracejado como a miniatura de verdade (best-effort, sem segurar a tela); com o 200,
+  // o avatar_url novo já traz o `?rc=` e as miniaturas de todo lado passam a cortar nele.
   function gravarMiniaturaDaFoto(recorteMini) {
     gravarMiniatura(recorteMini).then((url) => {
       if (!url) return;
@@ -920,7 +896,7 @@ export default function Figurinha() {
     });
   }
 
-  // RODADA 19 — "Ajustar enquadramento": regrava só o recorte (PUT), sem
+  // "Ajustar enquadramento": regrava só o recorte (PUT), sem
   // mandar original nenhuma (a que já está guardada não muda).
   async function enviarRecorte(blob, recorteMini = null) {
     const file = new File([blob], 'recorte.jpg', { type: 'image/jpeg' });
@@ -959,10 +935,9 @@ export default function Figurinha() {
     setCropFile(normalizada);
   }
 
-  // "Ajustar enquadramento": reabre o CropModal sobre a foto ORIGINAL
-  // guardada (foto_original_url). Fail-safe (fotos de antes desta rodada, ou
-  // sem a migração 057): sem original, reabre sobre o RECORTE atual — dá
-  // para aproximar, não para recuperar área perdida no primeiro recorte.
+  // "Ajustar enquadramento": reabre o CropModal sobre a foto ORIGINAL guardada (foto_original_url).
+  // Fail-safe (fotos de antes de a original ser guardada, ou sem a migração 057): sem original, reabre
+  // sobre o RECORTE atual — dá para aproximar, não para recuperar área perdida no primeiro recorte.
   async function abrirAjustarEnquadramento() {
     const fonte = jogador.foto_original_url || fotoOriginal;
     if (!fonte) return;
@@ -988,7 +963,7 @@ export default function Figurinha() {
   // foto" e "Ajustar enquadramento") só diferem no que fazem com o recorte.
   async function aoConfirmarCrop(blob, extra) {
     setCropFile(null);
-    const recorteMini = extra?.recorte || null; // 29H-B: o quadrado tracejado da miniatura
+    const recorteMini = extra?.recorte || null; // o quadrado tracejado da miniatura
     ultimoRecorteMini.current = recorteMini;
     if (cropModo === 'ajustar') {
       await enviarRecorte(blob, recorteMini);
@@ -1013,7 +988,7 @@ export default function Figurinha() {
     else if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto', origParaEnviar.current, ultimoRecorteMini.current);
   }
 
-  // RODADA 19 — "Minhas figurinhas": até 6, mais recente primeiro. Recarrega
+  // "Minhas figurinhas": até 6, mais recente primeiro. Recarrega
   // toda vez que o modal "Sua foto" abre (pode ter mudado desde a última).
   function carregarHistorico() {
     return apiFetch('/api/me/avatar/historico')
@@ -1044,10 +1019,10 @@ export default function Figurinha() {
     }
   }
 
-  // Aviso de erro partilhado (P1-5): erro de upload com mensagem accionável +
+  // Aviso de erro partilhado: erro de upload com mensagem accionável +
   // "tentar de novo" inline; senão, o erro genérico da página. No studio o erro do
   // upload sai SOB O CARD (`avisoUploadErro`), onde a pessoa está olhando, e o fim da
-  // página fica só com o genérico (`avisoErroGenerico`): Hotfix 26 — um erro que mora
+  // página fica só com o genérico (`avisoErroGenerico`): um erro que mora
   // abaixo das abas ninguém vê, e a tela ainda dizia que a foto já tinha mudado.
   const avisoUploadErro = uploadErro ? (
     <div className="alert alert--error" role="alert" style={{ margin: 0, display: 'grid', gap: 8, justifyItems: 'start' }}>
@@ -1064,9 +1039,8 @@ export default function Figurinha() {
   ) : null;
   const avisoErro = avisoUploadErro || avisoErroGenerico;
 
-  // Partilha do cromo no momento da estreia (imagem do card + texto viral).
-  // No app (Rodada 8A) vai direto à folha de compartilhar do sistema: o
-  // navigator.share do WebView não é garantido, e o <a download> é ignorado.
+  // Partilha do cromo no momento da estreia (imagem do card + texto viral). No app vai direto à folha de
+  // compartilhar do sistema: o navigator.share do WebView não é garantido, e o <a download> é ignorado.
   async function partilharCromo() {
     celebrarPartilha(frameHex);
     try {
@@ -1095,7 +1069,7 @@ export default function Figurinha() {
   async function gerarAvatarIA(kitId) {
     if (gerandoIA) return;
     const kit = typeof kitId === 'string' ? kitId : kitAtivo;
-    // RODADA 17 — mesmo marcador de gerarAvatarIAEstreia/dispararFigurinhaIA
+    // Mesmo marcador de gerarAvatarIAEstreia/dispararFigurinhaIA
     // (Onboarding): cobre a TROCA de foto/uniforme, não só o cadastro. Antes
     // do POST — é o que o Início lê ao montar, se a pessoa sair desta tela
     // enquanto a geração ainda corre.
@@ -1114,8 +1088,8 @@ export default function Figurinha() {
     setEmailNaoConfirmado(false);
     let emSegundoPlano = false;
     try {
-      // RODADA 29B (bloco 2, A): o POST devolve `{ jobId }` na hora e a pintura segue em segundo plano (ver
-      // acompanharPintura). Uniforme já pintado da mesma foto responde na hora com a figurinha, sem job.
+      // O POST devolve `{ jobId }` na hora e a pintura segue em segundo plano (ver acompanharPintura).
+      // Uniforme já pintado da mesma foto responde na hora com a figurinha, sem job.
       const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit, assincrono: true }) });
       if (data.jobId) {
         iniciarPintura(data, { kit });
@@ -1134,7 +1108,7 @@ export default function Figurinha() {
       // relê, para o contador e o botão dourado contarem a verdade.
       estadoBrilhantes().then(aplicarBrilhante);
       setFotoTrocadaSemGerar(false); // gerou (ou reutilizou de propósito) — some o pulso
-      // reutilizado:true (motor, build 9) — o slot deste kit já valia para a
+      // reutilizado:true (motor) — o slot deste kit já valia para a
       // foto atual e não gerou de novo. Sem aviso, parecia que o toque no
       // botão não fez nada.
       if (data.reutilizado) setToast({ tipo: 'info', mensagem: 'Sua figurinha já estava pronta' });
@@ -1148,12 +1122,11 @@ export default function Figurinha() {
   // O que a tela faz com cada falha da geração — serve ao POST (as validações seguem síncronas no motor) e ao
   // desfecho 'falhou' da pintura em segundo plano: os códigos e as mensagens são os mesmos de antes do job.
   function tratarFalhaDaGeracao(err) {
-    // EMAIL_NAO_CONFIRMADO: gate anti-abuso (11-ago) — mesmo status 403 do limite
-    // de quota, por isso tem de ser verificado PRIMEIRO (código distingue os dois).
+    // EMAIL_NAO_CONFIRMADO: gate anti-abuso — mesmo status 403 do limite de quota, por isso tem de ser
+    // verificado PRIMEIRO (código distingue os dois).
     if (err?.code === 'EMAIL_NAO_CONFIRMADO') setEmailNaoConfirmado(true);
-    // SEM_DIREITO (22-set, SPEC-FIGURINHA-3) — também 403, mas não é limite
-    // nenhum: é o direito que acabou (ou o pacote do time que não existe).
-    // Recarrega o estado para o bloco "Vire Brilhante" aparecer sozinho; o
+    // SEM_DIREITO (SPEC-FIGURINHA-3) — também 403, mas não é limite nenhum: é o direito que acabou (ou o
+    // pacote do time que não existe). Recarrega o estado para o bloco "Vire Brilhante" aparecer sozinho; o
     // card de quota do plano NÃO serve aqui, e mostrá-lo seria mentir.
     else if (err?.code === 'SEM_DIREITO') {
       estadoBrilhantes().then(aplicarBrilhante);
@@ -1163,29 +1136,26 @@ export default function Figurinha() {
       setSemGeracoes(true);
       setErroIA(true);
     } else if (err?.code === 'FOTO_RECUSADA') {
-      // FOTO_RECUSADA (6-out): a cabeça cortou nas duas tentativas com esta foto — o motor já não a pinta. O
-      // overlay mostra o recado e leva a escolher outra foto (sem "tentar de novo", que daria o mesmo).
+      // FOTO_RECUSADA: a cabeça cortou nas duas tentativas com esta foto — o motor já não a pinta. O overlay
+      // mostra o recado e leva a escolher outra foto (sem "tentar de novo", que daria o mesmo).
       setFotoRecusada(true);
       setErroIA(true);
     } else if (err?.status === 403) setLimiteIA(true); // gate antigo de plano (morto, fica de rede)
     else {
       // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO / IA_INDISPONIVEL / FOTO_DESATUALIZADA / FIGURINHA_DEFEITUOSA:
-      // causas acionáveis com mensagem digna própria, em vez do genérico
-      // "não deu desta vez". IA_INDISPONIVEL (14-set: fal recusou por
-      // chave/crédito, falha do MOTOR) usa a mensagem que já vem do backend —
-      // nunca sugere "tente outra foto", porque o problema não é a foto.
-      // FOTO_DESATUALIZADA (22-set) é a trava de hash do motor: a foto que
-      // ele baixou ainda não era a que acabou de subir, e ele recusou gerar
-      // em vez de fazer a figurinha da foto errada. Nada a corrigir do lado
-      // de cá — é esperar uns segundos e tocar de novo, e o botão de repetir
-      // do overlay já está lá. Resto (fal fora do ar, etc.) mantém o genérico
-      // com retry, que já cobre bem o transitório.
+      // causas acionáveis com mensagem digna própria, em vez do genérico "não deu desta vez".
+      // IA_INDISPONIVEL (fal recusou por chave/crédito, falha do MOTOR) usa a mensagem que já vem do
+      // backend — nunca sugere "tente outra foto", porque o problema não é a foto. FOTO_DESATUALIZADA é a
+      // trava de hash do motor: a foto que ele baixou ainda não era a que acabou de subir, e ele recusou
+      // gerar em vez de fazer a figurinha da foto errada. Nada a corrigir do lado de cá — é esperar uns
+      // segundos e tocar de novo, e o botão de repetir do overlay já está lá. Resto (fal fora do ar, etc.)
+      // mantém o genérico com retry, que já cobre bem o transitório.
       if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL', 'FOTO_DESATUALIZADA', 'SEM_DIREITO', 'FIGURINHA_DEFEITUOSA', 'GERACAO_INTERROMPIDA'].includes(err?.code) || err?.mostrar) setErroIAmsg(err.message);
       setErroIA(true); // qualquer falha → estado de erro com retry no overlay
     }
   }
 
-  // ── A PINTURA EM SEGUNDO PLANO (Rodada 29B, bloco 2, A) ──────────────────────────────────────────────
+  // ── A PINTURA EM SEGUNDO PLANO ──────────────────────────────────────────────────────────────────
   // O POST respondeu `{ jobId, estimativaSegundos }`: a barra começa e o app passa a consultar o motor.
   function iniciarPintura(data, { kit, estreia = false }) {
     const nova = {
@@ -1302,8 +1272,8 @@ export default function Figurinha() {
     })
     : null;
 
-  // Reenvia o e-mail de confirmação (gate anti-abuso, 11-ago) — supabase.auth.resend
-  // usa a MESMA sessão activa, não precisa senha nem novo login.
+  // Reenvia o e-mail de confirmação (gate anti-abuso) — supabase.auth.resend usa a MESMA sessão activa,
+  // não precisa senha nem novo login.
   async function reenviarEmailConfirmacao() {
     if (reenviarBusy || !me?.user?.email) return;
     setReenviarBusy(true);
@@ -1322,14 +1292,12 @@ export default function Figurinha() {
   // PUT (não gasta direito); sem slot e sem direito → /planos; sem slot e com
   // direito → confirma e gera.
   async function escolherKit(kit) {
-    // Rodada 28: "já vestido" só vale com a figurinha no card — no card com a FOTO nenhum uniforme está
-    // vestido (kit_ativo nasce 'dark-gold' pelo default da coluna), e tocar nele tem de pintar/vestir.
+    // "Já vestido" só vale com a figurinha no card — no card com a FOTO nenhum uniforme está vestido
+    // (kit_ativo nasce 'dark-gold' pelo default da coluna), e tocar nele tem de pintar/vestir.
     if (kit.estado === 'breve' || (avatarEhIA && kit.id === kitAtivo) || gerandoIA) return;
-    // 22-set: o cadeado deixou de ser por PLANO e passou a ser por DIREITO
-    // (§5). Vestir um uniforme que já se gerou é sempre livre (slot, custo
-    // zero); gerar um novo precisa de crédito ou do pacote do time — e é isso
-    // que /planos resolve. Um membro do pacote via o PRÓPRIO uniforme do time
-    // trancado, porque o dark-purple estava marcado "pro".
+    // O cadeado é por DIREITO (§5), não por PLANO. Vestir um uniforme que já se gerou é sempre livre (slot,
+    // custo zero); gerar um novo precisa de crédito ou do pacote do time — e é isso que /planos resolve.
+    // Por plano, um membro do pacote veria o PRÓPRIO uniforme do time trancado.
     if (slotsKits.includes(kit.id)) {
       try {
         const data = await apiFetch('/api/me/kit', { method: 'PUT', body: JSON.stringify({ kit: kit.id }) });
@@ -1356,27 +1324,22 @@ export default function Figurinha() {
     if (kit) await gerarAvatarIA(kit.id);
   }
 
-  // VELOCIDADE 9 (23-set) — escrever no perfil SEM o reler a seguir.
+  // Escrever no perfil SEM o reler a seguir.
   //
-  // O relatório do build 28 trouxe seis `/api/me` seguidos (530/311/279/276/
-  // 380/305 ms) e a leitura óbvia — "polling" — estava errada: eram três PARES
-  // PATCH+GET. Cada toque num fundo gravava a preferência e chamava
-  // `recarregarPerfilGlobal()` atrás, que é um GET /api/me inteiro para saber
-  // uma coisa que o próprio toque acabou de decidir. Numa tela feita para
+  // Cada toque num fundo grava a preferência e não chama `recarregarPerfilGlobal()` atrás: seria um GET
+  // /api/me inteiro para saber uma coisa que o próprio toque acabou de decidir. Numa tela feita para
   // experimentar fundos e uniformes, isso é meia ida a São Paulo por toque.
   //
-  // `hidratar` põe o mesmo estado no contexto (e no cache local) sem rede. A
-  // releitura só se justifica quando a escrita muda coisas que não sabemos —
-  // é o caso da geração de figurinha, que mexe em créditos e estado; essas
-  // continuam a chamar `recarregarPerfilGlobal()`.
+  // `hidratar` põe o mesmo estado no contexto (e no cache local) sem rede. A releitura só se justifica
+  // quando a escrita muda coisas que não sabemos — é o caso da geração de figurinha, que mexe em
+  // créditos e estado; essas continuam a chamar `recarregarPerfilGlobal()`.
   function aplicarNoPerfilGlobal(campos) {
     if (!perfil) return;
     hidratarPerfilGlobal({ ...perfil, user: { ...perfil.user, ...campos } });
   }
 
-  // Rodada 18 — interruptor "Mostrar minha foto" / "Mostrar minha figurinha"
-  // (modal "Sua foto"): troca o que o card mostra sem apagar nada — a
-  // figurinha continua no slot, sempre. avatarEhIA já diz qual dos dois está
+  // Interruptor "Mostrar minha foto" / "Mostrar minha figurinha" (modal "Sua foto"): troca o que o card
+  // mostra sem apagar nada — a figurinha continua no slot, sempre. avatarEhIA já diz qual dos dois está
   // ativo agora, então um toque no modo já ativo não faz nada.
   async function trocarModo(modo) {
     if (trocandoModo || (modo === 'figurinha') === avatarEhIA) return;
@@ -1401,15 +1364,12 @@ export default function Figurinha() {
   // vale para esta sessão e não se estraga o ecrã por causa de uma preferência.
   async function escolherFundo(k) {
     if (k === fundo) return;
-    // 22-set (SPEC-FIGURINHA-3 §4/§9): os 6 fundos vêm COM a Brilhante — são
-    // composição do card, custo zero. O gate antigo era por plano (Pro/Elite),
-    // e os planos saíram das telas: um membro do pacote do time via o Aura
-    // trancado no card que o time acabou de pagar, com "Os 6 fundos liberados"
-    // escrito na compra. Sem Brilhante não há seletor nenhum, portanto chegar
-    // aqui já significa ter direito ao fundo.
-    // Guarda o anterior para reverter se o PATCH falhar (build 9, achado real:
-    // constraint do Royal sem a migração aplicada dava 500 — o tile ficava
-    // marcado no fundo novo com o banco silenciosamente no antigo).
+    // SPEC-FIGURINHA-3 §4/§9: os 6 fundos vêm COM a Brilhante — são composição do card, custo zero. Não há
+    // gate por plano (Pro/Elite; os planos saíram das telas): um membro do pacote do time veria o Aura
+    // trancado no card que o time acabou de pagar, com "Os 6 fundos liberados" escrito na compra. Sem
+    // Brilhante não há seletor nenhum, portanto chegar aqui já significa ter direito ao fundo.
+    // Guarda o anterior para reverter se o PATCH falhar (caso real: constraint do Royal sem a migração
+    // aplicada dava 500 — o tile ficava marcado no fundo novo com o banco silenciosamente no antigo).
     const anterior = fundo;
     setFundo(k);
     try {
@@ -1422,7 +1382,7 @@ export default function Figurinha() {
     }
   }
 
-  // Escolha do avatar genérico (31-jul) — mesmo padrão optimista do fundo.
+  // Escolha do avatar genérico — mesmo padrão optimista do fundo.
   async function escolherAvatarGenerico(k) {
     setAvatarGenericoEscolha(k);
     try {
@@ -1475,7 +1435,8 @@ export default function Figurinha() {
     }
   }
 
-  // 6-out: foto recusada → o botão do recado leva direto ao seletor de foto (o mesmo de "Trocar foto"). Nada gasta.
+  // Foto recusada → o botão do recado leva direto ao seletor de foto (o mesmo de "Trocar foto"). Nada
+  // gasta.
   function escolherOutraFoto() {
     setFotoRecusada(false);
     setErroIA(false);
@@ -1483,15 +1444,14 @@ export default function Figurinha() {
     fileRef.current?.click();
   }
 
-  // Overlay do card: "a gerar" OU, se a geração falhou (≠403), estado de ERRO com
-  // retry. No erro o logo fica ESTÁTICO — sinal de que parou.
+  // Overlay do card: "a gerar" OU, se a geração falhou (≠403), estado de ERRO com retry. No erro o logo
+  // fica ESTÁTICO — sinal de que parou.
   //
-  // FASE 3.57 — usa o FuttyLoader DIRECTO, não o <LoadingFutty />. O LoadingFutty é o
-  // padrão de ECRÃ e traz minHeight: calc(100dvh - 120px) (~724px); dentro deste card
-  // de ~450px transbordava e empurrava o F para baixo. Aqui o centro é o do CARD, e
-  // quem o dá é o placeItems:center do próprio overlay.
+  // Usa o FuttyLoader DIRECTO, não o <LoadingFutty />. O LoadingFutty é o padrão de ECRÃ e traz
+  // minHeight: calc(100dvh - 120px) (~724px); dentro deste card de ~450px transbordava e empurrava o F
+  // para baixo. Aqui o centro é o do CARD, e quem o dá é o placeItems:center do próprio overlay.
   const overlayGerando = (
-    // Velocidade 8: sem backdrop-filter. Este overlay fica por cima do card
+    // Sem backdrop-filter. Este overlay fica por cima do card
     // ENQUANTO o F de carregamento se pinta — ou seja, o compositor teria de
     // refazer o desfoque a cada quadro da animação, e o que está por baixo é a
     // figurinha parada. 0,75 + blur ≈ 0,92 chapado no mesmo tom.
@@ -1512,7 +1472,8 @@ export default function Figurinha() {
           </button>
         </div>
       ) : erroIA && fotoRecusada ? (
-        // 6-out: a cabeça cortou nas duas tentativas com ESTA foto. Tentar de novo daria o mesmo: o recado leva a outra foto.
+        // A cabeça cortou nas duas tentativas com ESTA foto. Tentar de novo daria o mesmo: o recado leva a
+        // outra foto.
         <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
           <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{RECADO_FOTO_RECUSADA}</span>
@@ -1531,8 +1492,8 @@ export default function Figurinha() {
           </button>
         </div>
       ) : situacaoPintura ? (
-        // RODADA 29B (bloco 2, A) — a barra HONESTA: avança pelo tempo típico até 90%, segura em "finalizando…" e
-        // nunca marca 100% antes de a imagem existir. O F continua pintando em cima.
+        // A barra HONESTA: avança pelo tempo típico até 90%, segura em "finalizando…" e nunca marca 100% antes
+        // de a imagem existir. O F continua pintando em cima.
         <div style={{ display: 'grid', justifyItems: 'center', gap: 14, padding: 12 }}>
           <FuttyLoader size={96} label={null} />
           <BarraPintura situacao={situacaoPintura} estimativaSegundos={pintura.estimativaSegundos} />
@@ -1570,13 +1531,7 @@ export default function Figurinha() {
                     alt="figurinha"
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
-                : /* GRUPO B 6a — enquanto o preview não gera, mostra o F a carregar e
-                     não o PlayerCard. O PlayerCard é a geração ANTERIOR do cromo (DOM,
-                     sem octógono, sem placa, sem o enquadramento das fases 3.2x–3.4x):
-                     usá-lo aqui fazia o utilizador ver, por instantes, um cromo
-                     visivelmente diferente do final — um salto, não um carregamento.
-                     VAGA 3 — o Início deixou de o usar (mostra este mesmo cromo,
-                     composto); o PlayerCard só sobrevive na LandingPage. */
+                : /* O F a carregar, não o PlayerCard (geração anterior do cromo): seria um salto, não um carregamento. */
                   <div style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%' }}>
                     <FuttyLoader size={96} label={null} />
                   </div>
@@ -1663,9 +1618,8 @@ export default function Figurinha() {
                         })}
                       </div>
                     ) : null}
-                    {/* FASE 3.31 — Névoa REMOVIDA no fundo Épico: o facetado é gráfico,
-                        não atmosférico; a bruma por cima embaçava o lapidado. As
-                        partículas (chuva) ficam — dão o "premium discreto" sem embaçar. */}
+                    {/* Sem névoa no fundo Épico: o facetado é gráfico, não atmosférico; a bruma por cima embaçaria o
+                        lapidado. As partículas (chuva) ficam — dão o "premium discreto" sem embaçar. */}
 
                     {/* GOLDEN — mina encantada VIVA no preview: poeira de diamante a z3,
                         ATRÁS do jogador (lei do brilho do cromo). O download leva o pico
@@ -1742,10 +1696,9 @@ export default function Figurinha() {
             {/* Sem avatar IA o card já veste o genérico da casa (ver `jogadorCard`
                 acima) — não há mais empty state de silhueta a desenhar aqui. */}
             {gerandoIA || erroIA ? overlayGerando : null}
-            {/* Trocar visual — só quando o card veste o genérico da casa: sem Brilhante E SEM FOTO.
-                RODADA 27 (25-set, conta backup no celular): com foto o card mostra a foto, o
-                genérico não aparece em lugar nenhum e o botão "não mudava nada" — era um botão
-                sem efeito. Sem foto, a escolha vale para todas as telas (Início, Ranking, Presença). */}
+            {/* Trocar visual — só quando o card veste o genérico da casa: sem Brilhante E SEM FOTO. Com foto o card
+                mostra a foto e o genérico não aparece em lugar nenhum: o botão não mudaria nada. Sem foto, a
+                escolha vale para todas as telas (Início, Ranking, Presença). */}
             {!avatarEhIA && !temFoto && !fotoLocal && !uploadFoto && !gerandoIA && !erroIA ? (
               <button
                 type="button"
@@ -1760,20 +1713,15 @@ export default function Figurinha() {
           </div>
         </div>
 
-        {/* (Faixa "Avatar IA ativo · Ver foto" removida na FASE 3.21 — a informação
-            passou toda para o modal "A tua foto", aberto pelo botão Trocar foto.) */}
-
         {/* Foto subida mas ainda sem avatar IA gerado (a foto não entra no card).
-            RODADA 17 — gerandoIA vem PRIMEIRO: fotoLocal só é limpo no sucesso/
-            falha de gerarAvatarIA (não no início), então sem esta ordem as duas
-            geração já em curso mostrava "Foto carregada, gere seu avatar" por
-            cima do botão já dizendo "Gerando…" — duas mensagens discordando.
-            HOTFIX 26 — depois vêm o envio e o erro do upload, ANTES de "Foto
-            trocada": essa linha só existe depois do 200 (fotoLocal nasce lá), e
-            com o upload falhando a pessoa vê o erro aqui, sob o card. */}
+            gerandoIA vem PRIMEIRO: fotoLocal só é limpo no sucesso/falha de gerarAvatarIA (não no início),
+            então sem esta ordem uma geração já em curso mostrava "Foto carregada, gere seu avatar" por cima
+            do botão já dizendo "Gerando…" — duas mensagens discordando.
+            Depois vêm o envio e o erro do upload, ANTES de "Foto trocada": essa linha só existe depois do
+            200 (fotoLocal nasce lá), e com o upload falhando a pessoa vê o erro aqui, sob o card. */}
         {gerandoIA ? (
-          // 29H (item 59): antes era UMA linha de 11 px com as duas frases coladas (quebrava no meio, sem alinhamento). Agora o
-          // título numa linha, com o F, e a explicação embaixo no texto de apoio da casa (≤ 34 em, 2 linhas, centrada).
+          // Título numa linha, com o F, e a explicação embaixo no texto de apoio da casa (≤ 34 em, 2 linhas,
+          // centrada); as duas frases coladas numa linha só de 11 px quebrariam no meio, sem alinhamento.
           <div role="status" data-pintando-aviso style={{ display: 'grid', justifyItems: 'center', gap: 2, padding: '4px 0', marginBottom: 10 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.02em', color: '#d4a017' }}>
               <FuttyLoader size={16} label={null} /> Sua figurinha está sendo pintada…
@@ -1799,12 +1747,12 @@ export default function Figurinha() {
 
         {/* 2. CONTROLOS — tabs + painel + detalhes */}
         <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
-          {/* FASE 3.36 — Zoom saiu de cima do card: linha discreta ABAIXO, à direita.
-              Mesma família visual das tabs. RODADA 28: também no card com a FOTO (ver zoomDaFoto). */}
+          {/* Zoom: linha discreta ABAIXO do card, à direita. Mesma família visual das tabs. Vale também no card
+              com a FOTO (ver zoomDaFoto). */}
           {(avatarEhIA || temFoto) && !fotoLocal ? (
-            // Rodada 29L (achado 131): os botões − e + tinham 24 px; o mínimo para o dedo é 44. A linha cresce para 44 e as margens negativas
-            // crescem junto (−13 e −15 no lugar de −4 e −6): a altura que ela ocupa na página continua a mesma (44 − 13 − 15 = 16 = 26 − 4 − 6),
-            // então o card e os botões de baixo não se mexem e a figurinha continua cabendo na primeira tela.
+            // Os botões − e + precisam de 44 px (o mínimo para o dedo): a linha tem 44 de altura e as margens
+            // negativas (−13 e −15) compensam, para a altura que ela ocupa na página ser 16 (44 − 13 − 15) — o
+            // card e os botões de baixo não se mexem e a figurinha continua cabendo na primeira tela.
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0, height: 44, marginTop: -13, marginBottom: -15 }}>
               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)', marginRight: 2 }}>{zoomDaFoto ? 'Zoom' : 'Tamanho'}</span>
               <button
@@ -1827,8 +1775,9 @@ export default function Figurinha() {
               </button>
             </div>
           ) : null}
-          {/* Trocar foto + Gerar Avatar IA (na mesma linha). Rodada 29L (achado 132): em telas estreitas demais para os dois lado a lado (320 px),
-              o "Gerar" desce inteiro para a linha de baixo, em vez de estourar a tela ou partir o rótulo em duas linhas. */}
+          {/* Trocar foto + Gerar Avatar IA (na mesma linha). Em telas estreitas demais para os dois lado a lado
+              (320 px), o "Gerar" desce inteiro para a linha de baixo, em vez de estourar a tela ou partir o
+              rótulo em duas linhas. */}
           <div style={{ display: 'grid', gap: 4 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <button
@@ -1850,10 +1799,9 @@ export default function Figurinha() {
                 </div>
               ) : !temDireitoDeGerar && !gerandoIA ? null : (
                 brilharGerar || (temDireitoDeGerar && !avatarEhIA) ? (
-                  // RODADA 17 — EXACTAMENTE a receita do "Ver sorteio" (Inicio.jsx
-                  // ~337): o glow fica no WRAPPER, em drop-shadow (filter não é
-                  // cortado pelo clip-path); o pulso de BORDA fica no botão (essa
-                  // metade sobrevive ao recorte a 45° do hud-corners). fig-io-btn
+                  // EXACTAMENTE a receita do "Ver sorteio" (Inicio.jsx): o glow fica no WRAPPER, em
+                  // drop-shadow (filter não é cortado pelo clip-path); o pulso de BORDA fica no botão
+                  // (essa metade sobrevive ao recorte a 45° do hud-corners). fig-io-btn
                   // continua nas duas classes só para a ALTURA: .cta-gold sozinho
                   // vale 46px e quebraria a linha com "Trocar foto" (40px, 34px em
                   // ecrãs curtos) — o par .fig-io-btn.cta-gold no app.css resolve
@@ -1890,34 +1838,23 @@ export default function Figurinha() {
                 )
               )}
             </div>
-            {/* Contador de gerações restantes (RODADA 21, §7). Desde a 059 o
-                pacote do time também tem saldo (2 por jogador desde a Rodada 29A, não
-                "uma por time") — o contador passou a valer para os dois direitos. */}
+            {/* Contador de gerações restantes (§7). O pacote do time também tem saldo (2 por jogador, não "uma por
+                time") — o contador vale para os dois direitos. */}
             {restantesDireito > 0 ? (
               <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
                 {restantesDireito === 1 ? 'Resta 1 geração' : `Restam ${restantesDireito} gerações`}
                 {kitDoTime ? '' : ' · uniforme à sua escolha'}
               </span>
             ) : null}
-            {/* "Pode demorar até 30 segundos" (própria, sob o botão) saiu nesta
-                rodada: virou redundante e desatualizada com a mensagem nova
-                acima da linha ("Seu avatar está sendo criado… leva uns 45
-                segundos"), que já cobre gerandoIA com o tempo real do motor
-                em duas passadas. Duas legendas de tempo diferentes ao mesmo
-                tempo (30s aqui, 45s ali) confundia mais do que ajudava. */}
+            {/* Sem legenda de tempo própria sob o botão: a mensagem acima da linha já cobre gerandoIA, e duas
+                legendas de tempo diferentes ao mesmo tempo confundem mais do que ajudam. */}
           </div>
 
-          {/* O editor da miniatura à parte ("Enquadrar", Rodada 29B) SAIU na 29H-B (item 55): o enquadramento é um só, ao
-              escolher ou trocar a foto — o quadrado tracejado dentro do card, no CropModal com `miniatura`. */}
-
-          {/* VIRE BRILHANTE ✨ (SPEC-FIGURINHA-3 §3/§7) — o convite do card com a
-              FOTO para quem ainda não tem geração. Um exemplo FIXO (o modelo
-              fictício da conta demo, nunca gerado na hora: gerar um exemplo
-              custaria US$0,11 por pessoa que abrisse a tela). `loading="lazy"` +
-              WebP no dobro do tamanho de exibição (lei do app leve, 14-set).
-              RODADA 28: o "Pedir a minha" saiu daqui — a escolha agora é a grade
-              de uniformes logo abaixo (cadeado → Planos). Fica o pacote para o
-              dono do time: resolve o time inteiro. */}
+          {/* VIRE BRILHANTE ✨ (SPEC-FIGURINHA-3 §3/§7) — o convite do card com a FOTO para quem ainda não tem
+              geração. Um exemplo FIXO (o modelo fictício da conta demo, nunca gerado na hora: gerar um exemplo
+              custaria US$0,11 por pessoa que abrisse a tela). `loading="lazy"` + WebP no dobro do tamanho de
+              exibição (lei do app leve). Não há "Pedir a minha" aqui: a escolha é a grade de uniformes logo
+              abaixo (cadeado → Planos). Fica o pacote para o dono do time: resolve o time inteiro. */}
           {!avatarEhIA && temFoto && !temDireitoDeGerar && brilhante ? (
             <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '16px', display: 'grid', gap: 12 }}>
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
@@ -1989,11 +1926,9 @@ export default function Figurinha() {
             </div>
           ) : null}
 
-          {/* (l) 403 sem código conhecido — defensivo: hoje o motor só devolve
-              EMAIL_NAO_CONFIRMADO ou SEM_DIREITO (cada um com seu próprio
-              card), tratados ANTES deste no catch. Isto é o que sobra se um
-              dia aparecer um terceiro — mensagem digna, nunca "limite do mês"
-              (não há limite mensal desde 22-set). */}
+          {/* (l) 403 sem código conhecido — defensivo: hoje o motor só devolve EMAIL_NAO_CONFIRMADO ou
+              SEM_DIREITO (cada um com seu próprio card), tratados ANTES deste no catch. Isto é o que sobra se um
+              dia aparecer um terceiro — mensagem digna, nunca "limite do mês" (não há limite mensal). */}
           {limiteIA ? (
             <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
@@ -2004,7 +1939,7 @@ export default function Figurinha() {
             </div>
           ) : null}
 
-          {/* (m) E-MAIL NÃO CONFIRMADO — gate anti-abuso (11-ago), mesma família HUD. */}
+          {/* (m) E-MAIL NÃO CONFIRMADO — gate anti-abuso, mesma família HUD. */}
           {emailNaoConfirmado ? (
             <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
@@ -2026,12 +1961,11 @@ export default function Figurinha() {
             </div>
           ) : null}
 
-          {/* Tab strip — SÓ com a figurinha (SPEC-FIGURINHA-3 §3). Os fundos são composição
-              no card, custo zero, mas são um prêmio de quem pagou — e a foto já tem o fundo
-              dela. RODADA 28: só as abas ficam exclusivas daqui; o card com a FOTO ganha a grade
-              de uniformes (logo abaixo, no outro ramo), e as ações, o anúncio e os selos voltam a
-              valer para os dois (desde 22-set este bloco embrulhava também o Baixar/Compartilhar,
-              e o card com a foto não tinha como ser baixado nem compartilhado). */}
+          {/* Tab strip — SÓ com a figurinha (SPEC-FIGURINHA-3 §3). Os fundos são composição no card, custo zero,
+              mas são um prêmio de quem pagou — e a foto já tem o fundo dela. Só as abas ficam exclusivas daqui;
+              o card com a FOTO tem a grade de uniformes (logo abaixo, no outro ramo), e as ações, o anúncio e os
+              selos valem para os dois (se este bloco os embrulhasse, o card com a foto não teria como ser baixado
+              nem compartilhado). */}
           {avatarEhIA ? (
           <>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -2067,21 +2001,15 @@ export default function Figurinha() {
 
           {/* Painel da tab activa */}
           {activeTab === 'fundo' ? (
-            // UMA linha só, scroll horizontal (nunca 2 linhas — ordem do dono). Tiles
-            // com largura FIXA (não fração do container) para não encolher/quebrar;
-            // scroll-snap para o gesto de arrastar assentar num tile de cada vez.
-            // Grade partilhada com a tab Uniforme (.fig-seletor-grade / .fig-seletor-tile
-            // em app.css) — ver nota de 15-set ali.
+            // UMA linha só, scroll horizontal (nunca 2 linhas — ordem do dono). Tiles com largura FIXA (não fração
+            // do container) para não encolher/quebrar; scroll-snap para o gesto de arrastar assentar num tile de
+            // cada vez. Grade partilhada com a tab Uniforme (.fig-seletor-grade / .fig-seletor-tile em app.css) —
+            // ver a nota ali.
             <FaixaRolavel className="fig-seletor-grade" envoltorioClassName="faixa-rolavel--grade" data-grade="fundos" rotuloMais="Ver mais fundos" rotuloAnteriores="Ver fundos anteriores">
               {FUNDOS.map((f) => {
                 const sel = fundo === f.k;
-                // Cadeado premium (mesma regra dos kits): fundo premium + plano não pago.
-                // `!sel` — LEI DA REGRA JUSTA: quem já está equipado neste fundo (ficou de
-                // antes do gate) não vê cadeado no que já é seu; o cadeado é só para quem
-                // tentaria EQUIPAR agora. O gate real (escolherFundo) não muda: ao trocar
-                // pra outro fundo e tentar voltar, sel vira false e o cadeado aparece.
-                // Os 6 são de quem tem Brilhante (§4) — e este seletor só existe
-                // com Brilhante. Nenhum cadeado aqui desde 22-set.
+                // Nenhum cadeado aqui: os 6 fundos são de quem tem Brilhante (§4), e este seletor só existe com
+                // Brilhante.
                 return (
                   <button
                     key={f.k}
@@ -2122,11 +2050,10 @@ export default function Figurinha() {
               })}
             </FaixaRolavel>
           ) : (
-            // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile em app.css, nota de
-            // 15-set). RODADA 29B: a MESMA grade nos três casos (grátis, pacote do time, Minha Figurinha) — o
-            // que não se pode pintar aparece com cadeado (leva à Minha Figurinha) em vez de sumir. No pacote
-            // já não há cartão de texto à parte ("o uniforme do time vem por conta do pacote" saiu): o
-            // uniforme do time é o tile aberto, e o "Refazer" virou ação pequena embaixo da grade.
+            // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile em app.css). A MESMA grade
+            // nos três casos (grátis, pacote do time, Minha Figurinha) — o que não se pode pintar aparece com
+            // cadeado (leva à Minha Figurinha) em vez de sumir. No pacote não há cartão de texto à parte: o
+            // uniforme do time é o tile aberto, e o "Refazer" é uma ação pequena embaixo da grade.
             <>
               {gradeDeUniformes()}
               {refazerAtual ? (
@@ -2145,7 +2072,7 @@ export default function Figurinha() {
           )}
           </>
           ) : temFoto ? (
-            // RODADA 28 — card com a FOTO: sem seletor de fundos (o fundo é o da própria foto) e, no lugar
+            // Card com a FOTO: sem seletor de fundos (o fundo é o da própria foto) e, no lugar
             // do "Pedir a minha", os uniformes — o 1º liberado, os outros com cadeado (ver gradeDeUniformes).
             <div style={{ display: 'grid', gap: 8 }}>
               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)' }}>
@@ -2157,23 +2084,15 @@ export default function Figurinha() {
 
           {avisoErroGenerico}
 
-          {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os
-              botões do topo (40px) → hierarquia: topo = configurar, fundo = agir.
-
-              VELOCIDADE 8 (16-set) — NO APP FICA UM BOTÃO SÓ. Os dois faziam
-              exactamente a MESMA coisa: no nativo não existe "baixar" (o <a
-              download> é ignorado pelo WKWebView), por isso tanto o "Salvar /
-              compartilhar" como o "Compartilhar" caíam em salvarOuCompartilhar
-              e abriam a mesma folha do sistema — a folha que já tem "Salvar
-              imagem" lá dentro. Dois botões para uma ação não são uma escolha,
-              são uma dúvida: a pessoa pára a decidir qual é qual, e qualquer
-              que escolha vê o mesmo ecrã. Fica o dourado, à largura toda.
-              Na WEB os dois continuam, porque lá são mesmo coisas diferentes:
-              "Baixar" grava o ficheiro, "Compartilhar" abre o navigator.share. */}
-          {/* Rodada 29L (achado 134, decisão do dono de 3-out): "Baixar" VOLTA ao lado de "Compartilhar", também no celular. A 29H (item 58)
-              o tinha tirado do celular por parecer o mesmo botão; o dono quer os dois: compartilhar abre a folha do sistema (WhatsApp,
-              Instagram), baixar guarda a figurinha para a pessoa (no navegador, o arquivo; no app da loja, a folha do sistema, que tem
-              "Salvar imagem" — gravar direto no rolo da câmera pede um plugin nativo, que não está instalado). */}
+          {/* 3. AÇÕES — logo abaixo do painel de tiles. Mais altas (46px) que os botões do topo (40px) →
+              hierarquia: topo = configurar, fundo = agir.
+              No nativo não existe "baixar" (o <a download> é ignorado pelo WKWebView): tanto "Baixar" como
+              "Compartilhar" caem em salvarOuCompartilhar e abrem a folha do sistema, que já tem "Salvar imagem".
+              Na WEB são coisas diferentes: "Baixar" grava o ficheiro, "Compartilhar" abre o navigator.share. */}
+          {/* "Baixar" fica ao lado de "Compartilhar", também no celular (o dono quer os dois): compartilhar abre
+              a folha do sistema (WhatsApp, Instagram), baixar guarda a figurinha para a pessoa (no navegador, o
+              arquivo; no app da loja, a folha do sistema, que tem "Salvar imagem" — gravar direto no rolo da
+              câmera pede um plugin nativo, que não está instalado). */}
           <div style={{ display: 'flex', gap: 12 }}>
             {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente. */}
             <button
@@ -2186,9 +2105,8 @@ export default function Figurinha() {
             >
               <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
             </button>
-            {/* FASE 3.47 — CTA dourado partilhado com o "Assinar Pro" dos Planos:
-                gradiente, texto, altura, glow e shine vivem em .cta-gold/.cta-gold-glow
-                (app.css). O glow fica no wrapper SEM clip porque o clip-path do botão
+            {/* CTA dourado partilhado com o "Assinar Pro" dos Planos: gradiente, texto, altura, glow e shine vivem
+                em .cta-gold/.cta-gold-glow (app.css). O glow fica no wrapper SEM clip porque o clip-path do botão
                 cortaria a sombra. */}
             <div className="cta-gold-glow" style={{ flex: 1, display: 'flex' }}>
               <button
@@ -2203,7 +2121,7 @@ export default function Figurinha() {
             </div>
           </div>
 
-          {/* RODADA 12C — o anúncio entra DEPOIS da linha de ações, nunca antes
+          {/* O anúncio entra DEPOIS da linha de ações, nunca antes
               da figurinha: esta tela é a figurinha, e uma faixa por cima dela
               venderia o lugar errado. Aqui já se rolou uma dobra, a figurinha
               foi vista e a ação principal foi tomada. */}
@@ -2211,7 +2129,7 @@ export default function Figurinha() {
             <AdCard pagina="figurinha" variant="banner320x100" ad={adFigurinha} prontoExterno={adPronto} />
           </div>
 
-          {/* SELOS DE HONRA (Vaga 11C) — SECÇÃO PRÓPRIA full-width, ABAIXO da linha
+          {/* SELOS DE HONRA — SECÇÃO PRÓPRIA full-width, ABAIXO da linha
               Baixar/Compartilhar; alcançável só por scroll (nunca empurra a 1ª dobra).
               Olhinho: mostra/oculta cada selo do cromo (máx 2; a honra fica na vitrine). */}
           {selos.length ? (
@@ -2253,9 +2171,9 @@ export default function Figurinha() {
         onEscolher={escolherAvatarGenerico}
       />
 
-      {/* Modal "A tua foto" — foto actual + estado do avatar IA + carregar nova.
-          Portal para o body (15-set): fixed dentro do [data-page] animado não
-          confia no viewport no WebKit do iPhone — ver nota em LoadingFutty.jsx. */}
+      {/* Modal "A tua foto" — foto actual + estado do avatar IA + carregar nova. Portal para o body: fixed
+          dentro do [data-page] animado não confia no viewport no WebKit do iPhone — ver nota em
+          LoadingFutty.jsx. */}
       {modalFoto
         ? createPortal(
         <div
@@ -2302,10 +2220,9 @@ export default function Figurinha() {
               <path d="M0 5 H70 L75 1 H200" stroke="url(#modalhudline)" strokeWidth="1" fill="none" />
             </svg>
 
-            {/* Rodada 18 — interruptor "Mostrar minha foto" / "Mostrar minha
-                figurinha": só aparece pra quem já tem uma figurinha gerada
-                (mesmo que o card esteja mostrando a foto agora). Um toque
-                troca avatar_url na hora — a prévia abaixo segue junto. */}
+            {/* Interruptor "Mostrar minha foto" / "Mostrar minha figurinha": só aparece pra quem já tem uma
+                figurinha gerada (mesmo que o card esteja mostrando a foto agora). Um toque troca avatar_url na hora
+                — a prévia abaixo segue junto. */}
             {temFigurinhaAlguma ? (
               <div role="radiogroup" aria-label="O que o card mostra" style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
                 <button
@@ -2348,14 +2265,14 @@ export default function Figurinha() {
             {/* Preview da foto actual (cantos 45° coerentes com o sistema visual) */}
             {fotoOriginal ? (
               // contain + fundo escuro sólido → mostra a pessoa INTEIRA, sem cortar topo/base.
-              /* FASE 3.35 — moldura ADAPTATIVA: sem height fixa, o container cresce com
-                 a foto (o maxHeight trava as muito altas). As barras que sobrem em
-                 #0d0d12 lêem como moldura intencional, não como corte. */
+              /*
+               * Moldura ADAPTATIVA: sem height fixa, o container cresce com a foto (o maxHeight trava as muito
+               * altas). As barras que sobrem em #0d0d12 lêem como moldura intencional, não como corte.
+               */
               <div className="hud-corners" style={{ width: '100%', background: '#0d0d12' }}>
                 <img
-                  // Rodada 27: logo depois de trocar a foto/o enquadramento o preview é o LOCAL (o recorte
-                  // que o servidor acabou de confirmar). Trocar só o src deixava a foto ANTIGA na tela
-                  // até o derivado novo chegar pelo proxy.
+                  // Logo depois de trocar a foto/o enquadramento o preview é o LOCAL (o recorte que o servidor acabou de
+                  // confirmar). Trocar só o src deixava a foto ANTIGA na tela até o derivado novo chegar pelo proxy.
                   src={fotoLocal || urlImagem(urlAsset(fotoOriginal), 512)}
                   alt="Sua foto"
                   style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '46vh', objectFit: 'contain', display: 'block', margin: '0 auto' }}
@@ -2365,8 +2282,8 @@ export default function Figurinha() {
               <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--label-color)', fontSize: 13 }}>Você ainda não tem foto.</div>
             )}
 
-            {/* Estado do card — prévia ao vivo do que os outros veem (Rodada
-                18: muda na hora com o interruptor acima, sem esperar reload). */}
+            {/* Estado do card — prévia ao vivo do que os outros veem (muda na hora com o interruptor acima, sem
+                esperar reload). */}
             <div style={{ marginTop: 14 }}>
               {avatarEhIA ? (
                 /* (j) Badge com glow dourado suave — mesma família dos dots. */
@@ -2408,7 +2325,7 @@ export default function Figurinha() {
               )}
             </div>
 
-            {/* RODADA 19 — "Minhas figurinhas": até 6, miniaturas + "Usar esta"
+            {/* "Minhas figurinhas": até 6, miniaturas + "Usar esta"
                 (sem custo — troca avatar_url/kit_ativo, respeita card_modo).
                 Some sozinha sem histórico (conta nova, ou 057 por aplicar). */}
             {historico.length ? (
@@ -2445,10 +2362,9 @@ export default function Figurinha() {
               </div>
             ) : null}
 
-            {/* Duas ações (decisão do dono, 23-set): "Escolher outra foto" leva
-                ao CropModal 2:3 de sempre; "Ajustar enquadramento" reabre o
-                MESMO CropModal sobre a foto original guardada, sem upload novo.
-                A 2ª só existe havendo foto (nada para ajustar sem ela). */}
+            {/* Duas ações (ordem do dono): "Escolher outra foto" leva ao CropModal 2:3; "Ajustar enquadramento"
+                reabre o MESMO CropModal sobre a foto original guardada, sem upload novo. A 2ª só existe havendo
+                foto (nada para ajustar sem ela). */}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button
                 type="button"
@@ -2477,14 +2393,14 @@ export default function Figurinha() {
           )
         : null}
 
-      {/* RODADA 19 — o mesmo CropModal do Onboarding, para "Escolher outra
+      {/* O mesmo CropModal do Onboarding, para "Escolher outra
           foto" (cropModo='nova') e "Ajustar enquadramento" (cropModo='ajustar');
           só o que aoConfirmarCrop faz com o resultado muda entre os dois. */}
       {cropFile ? (
         <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} miniatura onConfirm={aoConfirmarCrop} onCancel={aoCancelarCrop} />
       ) : null}
 
-      {/* RODADA 21 — "Pintar no uniforme X?" antes de qualquer geração nova
+      {/* "Pintar no uniforme X?" antes de qualquer geração nova
           (SPEC-FIGURINHA-3 §2). Mesmo padrão do DenunciaModal (modal-overlay/
           modal-card, portal no body); fecha ao tocar fora, igual aos outros. */}
       {kitParaPintar
@@ -2497,8 +2413,8 @@ export default function Figurinha() {
                   </h2>
                   <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
                     {(() => {
-                      // Rodada 28: uniforme que não é o do pacote do time sai dos CRÉDITOS (o motor
-                      // usa o crédito para ele) — o número é o dos créditos, não o do pacote.
+                      // Uniforme que não é o do pacote do time sai dos CRÉDITOS (o motor usa o crédito para ele) — o número
+                      // é o dos créditos, não o do pacote.
                       const n = kitDoTime && kitParaPintar.id !== kitDoTime && temCredito ? (brilhante?.creditos ?? restantesDireito) : restantesDireito;
                       return `Usa 1 das suas ${n === 1 ? '1 geração' : `${n} gerações`} · leva ~45 s`;
                     })()}

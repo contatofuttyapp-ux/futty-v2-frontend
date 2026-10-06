@@ -9,16 +9,15 @@ import LoadingFutty from './LoadingFutty';
 export default function SuperAdminGuard({ children }) {
   const { perfil: me, carregando: loading, deCache } = usePerfil();
 
-  // deCache (14-set): bloqueio/permissão desta área nunca decide a partir do
-  // cache local — mesma regra do OnboardingGate/suspenso, senão um admin
-  // recém-promovido (ou rebaixado) veria por um instante o ecrã errado até o
-  // /api/me fresco confirmar.
+  // deCache: bloqueio/permissão desta área nunca decide a partir do cache local — mesma regra do
+  // OnboardingGate/suspenso, senão um admin recém-promovido (ou rebaixado) veria por um instante o ecrã
+  // errado até o /api/me fresco confirmar.
   if (loading || deCache) {
     return <LoadingFutty />;
   }
 
   if (me?.user?.is_super_admin !== true) {
-    // Rodada 29B (D.3): o layout é o do ErrorPage (era uma cópia dele aqui).
+    // O layout é o do ErrorPage.
     return (
       <ErrorPage
         titulo="Sem permissão"

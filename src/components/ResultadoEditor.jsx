@@ -1,8 +1,9 @@
 // Futty v2.0 — Editor do resultado do jogo (admin): 4 níveis de detalhe.
-// Rodada 29S, bloco B: dois modos. `salvar` (o de sempre, no Jogo): escolhe o nível, salva em PATCH /api/games/:id/resultado. `devolver` (o passo
-// "Como terminou?" do Jogo passado): o jogo ainda não existe, então nada é salvo aqui — a cada toque o editor devolve o que foi preenchido
-// (`aoMudar`) e quem usa grava tudo no fim. Em `devolver` não há seletor de nível: é UMA pergunta (quem ganhou); o placar é opcional e os gols
-// de cada um aparecem depois dela; o nível sai das contas de utils/resultadoDoJogo.js.
+// Dois modos. `salvar` (o de sempre, no Jogo): escolhe o nível, salva em PATCH /api/games/:id/resultado.
+// `devolver` (o passo "Como terminou?" do Jogo passado): o jogo ainda não existe, então nada é salvo aqui
+// — a cada toque o editor devolve o que foi preenchido (`aoMudar`) e quem usa grava tudo no fim. Em
+// `devolver` não há seletor de nível: é UMA pergunta (quem ganhou); o placar é opcional e os gols de cada
+// um aparecem depois dela; o nível sai das contas de utils/resultadoDoJogo.js.
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { urlAsset, urlImagem, iniciaisNome } from '../utils/avatar';
@@ -17,14 +18,15 @@ const NIVEIS = [
   { n: 3, label: 'Stats' },
 ];
 
-// 29T-B: a borda se vê (era #222 sobre #0c0c0c: duas caixas pretas, sem forma) e o "0" apagado mostra o que se escreve ali (class placar-input, app.css).
+// A borda se vê sobre o #0c0c0c (com #222 eram duas caixas pretas, sem forma) e o "0" apagado mostra o que
+// se escreve ali (class placar-input, app.css).
 const inputPlacar = { width: 48, textAlign: 'center', padding: '8px 6px', borderRadius: 8, border: '1.5px solid rgba(255,255,255,0.32)', background: '#0c0c0c', color: '#fff', fontSize: 18, fontWeight: 800 };
 const stepBtn = { width: 28, height: 28, borderRadius: 8, border: '1px solid #333', background: 'transparent', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', lineHeight: 1 };
 // O título de cada pergunta do modo "devolver": o .section-title da casa (18 px, caixa normal: é pergunta, não letreiro — VOZ-FUTTY §5).
 const TITULO_DA_PERGUNTA = { margin: '18px 0 8px' };
 
-// Achado 9: sem resultado antes do jogo acontecer — exceto jogo histórico
-// (criado pelo "Jogo passado"), que não tem essa trava.
+// Sem resultado antes do jogo acontecer — exceto jogo histórico (criado pelo "Jogo passado"), que não tem
+// essa trava.
 function jaComecouJogo(game) {
   return !!game.data && new Date(game.data).getTime() <= Date.now();
 }

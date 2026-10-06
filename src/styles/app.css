@@ -13,10 +13,11 @@
   padding: 0 16px;
   height: 52px;
   position: sticky;
-  /* env(), não 0 (14-set, VELOCIDADE 5): o padding-top da casca (Layout.jsx)
-     só acerta a posição INICIAL, antes de rolar — ao colar (sticky), este
-     "top" é que decide onde ela para, e um valor fixo em 0 cola-a no y=0 REAL
-     do ecrã, debaixo do relógio/ilha, assim que a página rola. */
+  /*
+   * env(), não 0: o padding-top da casca (Layout.jsx) só acerta a posição INICIAL, antes de rolar — ao
+   * colar (sticky), este "top" é que decide onde ela para, e um valor fixo em 0 cola-a no y=0 REAL do
+   * ecrã, debaixo do relógio/ilha, assim que a página rola.
+   */
   top: env(safe-area-inset-top, 0px);
   z-index: 100;
   background: rgba(5, 8, 15, 0.8);
@@ -737,9 +738,10 @@
   opacity: 0.55;
 }
 
-/* A respiração fica só nos primeiros (ver Ranking.jsx): num time de 60, animar
-   50 camadas recortadas para sempre é carga contínua na tela que esta rodada
-   veio desafogar — e ninguém vê piscar o que está muito abaixo da dobra. */
+/*
+ * A respiração fica só nos primeiros (ver Ranking.jsx): num time de 60, animar 50 camadas recortadas
+ * para sempre é carga contínua na tela — e ninguém vê piscar o que está muito abaixo da dobra.
+ */
 .rank-row-esqueleto--respira {
   animation: rankEsqueletoRespira 1.4s ease-in-out infinite;
 }
@@ -866,9 +868,10 @@
 @media (prefers-reduced-motion: reduce) {
   .rank-shimmer { animation: none; }
 }
-/* Figurinha automática do cadastro (12-set): brilho dourado passando na
-   moldura enquanto a IA gera em fundo — mesmo padrão do .rank-shimmer acima,
-   cor dourada em vez de branca. */
+/*
+ * Figurinha automática do cadastro: brilho dourado passando na moldura enquanto a IA gera em fundo —
+ * mesmo padrão do .rank-shimmer acima, cor dourada em vez de branca.
+ */
 .figurinha-gerando-moldura {
   position: relative;
   overflow: hidden;
@@ -921,10 +924,13 @@
   font-weight: 700;
 }
 
-/* Rodada 29Z: "77,9 pontos · nota 9,1" nunca mais leva reticências. Os pontos e a nota são dois grupos que não se partem por dentro; se
-   os dois não cabem na mesma linha (360 px com o botão "Alterar" ao lado), a nota desce para a segunda. O "·" que os separa é desenhado
-   no vão entre os grupos (::before do segundo, 10 px à esquerda): se o segundo desce, o "·" cai fora da caixa e o overflow o apara —
-   nunca sobra um ponto solto no fim da primeira linha. O "você deu / por votar" só aparece onde há folga (acima de 480 px). */
+/*
+ * "77,9 pontos · nota 9,1" nunca leva reticências. Os pontos e a nota são dois grupos que não se partem
+ * por dentro; se os dois não cabem na mesma linha (360 px com o botão "Alterar" ao lado), a nota desce
+ * para a segunda. O "·" que os separa é desenhado no vão entre os grupos (::before do segundo, 10 px à
+ * esquerda): se o segundo desce, o "·" cai fora da caixa e o overflow o apara — nunca sobra um ponto
+ * solto no fim da primeira linha. O "você deu / por votar" só aparece onde há folga (acima de 480 px).
+ */
 .rank-votes {
   display: flex;
   flex-wrap: wrap;
@@ -982,13 +988,15 @@
   flex-shrink: 0;
 }
 
-/* min-width/min-height 0 (Velocidade 7B): a caixa é um grid e a <img> um item
-   dele. Com o mínimo automático, o WebKit do iPhone estica a linha do grid até
-   a altura que a foto teria pela proporção dela — num avatar retrato (a
-   silhueta genérica é 368×680) a linha fica quase o dobro da caixa, e o
-   place-items:center empurra a imagem 20–27 px para baixo: cabeça no fundo,
-   resto cortado. Foto quadrada não mexe, por isso "só alguns" saíam errados.
-   O Chrome não faz isto. */
+/*
+ * min-width/min-height 0: a caixa é um grid
+ * e a <img> um item dele. Com o mínimo automático, o WebKit do iPhone estica a linha do grid até
+ * a altura que a foto teria pela proporção dela — num avatar retrato (a
+ * silhueta genérica é 368×680) a linha fica quase o dobro da caixa, e o
+ * place-items:center empurra a imagem 20–27 px para baixo: cabeça no fundo,
+ * resto cortado. Foto quadrada não mexe, por isso "só alguns" saíam errados.
+ * O Chrome não faz isto.
+ */
 .pavatar img {
   display: block;
   width: 100%;
@@ -1072,8 +1080,10 @@
 .avatar-frame__lc--br { bottom: -1px; right: -1px; border-bottom: 2px solid #d4a017; border-right: 2px solid #d4a017; border-radius: 0 0 2px 0; }
 .avatar-frame__lc--bl { bottom: -1px; left: -1px; border-bottom: 2px solid #d4a017; border-left: 2px solid #d4a017; border-radius: 0 0 0 2px; }
 
-/* Cards da Resenha (Velocidade 7B): nunca mais largos que a coluna, e nenhuma
-   imagem dentro deles mais larga que o card. */
+/*
+ * Cards da Resenha: nunca mais largos que a coluna, e nenhuma
+ * imagem dentro deles mais larga que o card.
+ */
 .feed-card {
   min-width: 0;
   max-width: 100%;
@@ -1122,27 +1132,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Achado 124 (29K): sem overflow/overscroll-behavior próprios, um arrasto no véu (fora do
-     card, onde não há nada para rolar) ENCADEIA para o body por baixo — no WebKit do iPhone,
-     isso rola a página por trás do modal; ao fechar, o body fica numa posição que não bate
-     com o conteúdo novo (achado 124: "dois terços do topo em preto"), e só um reload acerta.
-     `overflow: hidden` + `overscroll-behavior: contain` fazem o véu ABSORVER o arrasto, em
-     vez de deixá-lo passar para trás. */
+  /*
+   * Sem overflow/overscroll-behavior próprios, um arrasto no véu (fora do card, onde não há nada para
+   * rolar) ENCADEIA para o body por baixo — no WebKit do iPhone, isso rola a página por trás do modal; ao
+   * fechar, o body fica numa posição que não bate com o conteúdo novo ("dois terços do topo em preto"), e
+   * só um reload acerta. `overflow: hidden` + `overscroll-behavior: contain` fazem o véu ABSORVER o
+   * arrasto, em vez de deixá-lo passar para trás.
+   */
   overflow: hidden;
   overscroll-behavior: contain;
-  /* max(): nunca menos que os 16px de sempre, mais o que o notch/gesto exigir
-     (14-set, VELOCIDADE 5) — um modal alto não pode nascer com o card colado
-     ao relógio ou à barra de gesto. Sheets de fundo (AvatarGenericoSheet, o
-     de idioma em MeuPerfil.jsx) sobrepõem `padding: 0` inline e resolvem o
-     próprio inset de baixo à parte — não são afetados por isto.
-     Laterais (Rodada 8A): o mesmo max() — com o iPhone deitado, o recorte da
-     câmera fica de lado. */
+  /*
+   * max(): nunca menos que os 16px de sempre, mais o que o notch/gesto exigir — um modal alto não pode
+   * nascer com o card colado ao relógio ou à barra de gesto. Sheets de fundo (AvatarGenericoSheet, o de
+   * idioma em MeuPerfil.jsx) sobrepõem `padding: 0` inline e resolvem o próprio inset de baixo à parte —
+   * não são afetados por isto.
+   * Laterais: o mesmo max() — com o iPhone deitado, o recorte da câmera fica de lado.
+   */
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
-/* O modal é filho do BODY, por portal (Rodada 8A — Ranking, Resenha, comentários,
-   denúncia, admin, onboarding do time). Dentro do [data-page] o transform da
-   animação de entrada vira o "chão" do position:fixed: o modal centrava-se na
-   página inteira e, com a lista rolada, saía de quadro. */
+/*
+ * O modal é filho do BODY, por portal (Ranking, Resenha, comentários, denúncia, admin, onboarding do
+ * time). Dentro do [data-page] o transform da animação de entrada vira o "chão" do position:fixed: o
+ * modal se centra na página inteira e, com a lista rolada, sai de quadro.
+ */
 
 .modal-card {
   width: 100%;
@@ -1158,8 +1170,10 @@
   border-radius: calc(var(--radius) - 2px);
   padding: 24px 20px;
   text-align: center;
-  /* Achado 124 (29K): quando o conteúdo é alto e leva overflow-y: auto próprio (ex.: o modal de
-     resultado), rolar até à borda não pode encadear para o body por baixo do véu. */
+  /*
+   * Quando o conteúdo é alto e leva overflow-y: auto próprio (ex.: o modal de resultado), rolar até à
+   * borda não pode encadear para o body por baixo do véu.
+   */
   overscroll-behavior: contain;
 }
 
@@ -1453,10 +1467,12 @@
   background: linear-gradient(to right, #d4a017, transparent);
 }
 
-/* VAGA 3 — o card do jogo passou a levar cantos a 45° (.hud-corners, no use site).
-   Como clip-path corta TUDO o que o elemento pinta para fora da caixa, a elevação
-   mudou-se para o wrapper .gcard-lift e aqui fica só o que o recorte respeita:
-   fundo, bordas, padding e o inset (pintado DENTRO da caixa — esse sobrevive). */
+/*
+ * O card do jogo leva cantos a 45° (.hud-corners, no use site).
+ * Como clip-path corta TUDO o que o elemento pinta para fora da caixa, a elevação
+ * mora no wrapper .gcard-lift e aqui fica só o que o recorte respeita:
+ * fundo, bordas, padding e o inset (pintado DENTRO da caixa — esse sobrevive).
+ */
 .gcard {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, #0d0d12 8%);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1687,55 +1703,52 @@
   .fig-card-enter { animation: none; }
 }
 
-/* Conjunto completo (card + botões + tabs + tiles + Baixar/Compartilhar) cabe
-   em 100dvh SEM rolagem (build 9 — revoga a versão de 14-set que aceitava
-   "rolagem ligeira" em ecrãs curtos: deixou de ser aceitável, Baixar/
-   Compartilhar têm de estar sempre visíveis). RESERVA = tudo o que não é o
-   card, remedido linha a linha: Topbar HUD 44 + app-main padTop 10 + zona do
-   card (padding 4+16) 20 + grelha de controlos (gap 14 × 4) 56 + linha de
-   zoom 26 + Trocar-foto/Gerar 40 + tabs 36 + painel de tiles ~105 + Baixar/
-   Compartilhar 46 + app-main padBottom 24 + reserva da bottom nav (fixed,
-   Layout.jsx) 70 = 477px. Faltava aqui a CAUSA do bug (build 8, "Velocidade
-   5"): a área segura do iPhone (relógio/ilha em cima, barra de gesto embaixo)
-   passou a empurrar tudo com env(safe-area-inset-top/bottom) — sem somar os
-   dois ao cálculo, a reserva ficava pequena demais em qualquer aparelho com
-   notch, e o card nascia grande demais para caber. Sem tiers por breakpoint
-   (a divergência entre 3 números copiados à mão foi o que deixou este cálculo
-   sair de sincronia da última vez) — UMA fórmula, o card encolhe sozinho em
-   qualquer altura de ecrã. Tecto 78vw (card não cresce demais em ecrãs largos). */
+/*
+ * Conjunto completo (card + botões + tabs + tiles + Baixar/Compartilhar) cabe em 100dvh SEM rolagem:
+ * Baixar/Compartilhar têm de estar sempre visíveis, e uma "rolagem ligeira" em ecrãs curtos não é
+ * aceitável. RESERVA = tudo o que não é o card, remedido linha a linha: Topbar HUD 44 + app-main padTop
+ * 10 + zona do card (padding 4+16) 20 + grelha de controlos (gap 14 × 4) 56 + linha de zoom 26 +
+ * Trocar-foto/Gerar 40 + tabs 36 + painel de tiles ~105 + Baixar/Compartilhar 46 + app-main padBottom
+ * 24 + reserva da bottom nav (fixed, Layout.jsx) 70 = 477px. A área segura do iPhone (relógio/ilha em
+ * cima, barra de gesto embaixo) empurra tudo com env(safe-area-inset-top/bottom): os dois entram no
+ * cálculo, senão a reserva fica pequena demais em qualquer aparelho com notch, e o card nasce grande
+ * demais para caber. Sem tiers por breakpoint (a divergência entre 3 números copiados à mão deixa este
+ * cálculo sair de sincronia) — UMA fórmula, o card encolhe sozinho em qualquer altura de ecrã. Tecto
+ * 78vw (card não cresce demais em ecrãs largos).
+ */
 .fig-studio-card {
   width: min(78vw, calc((100dvh - 477px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 2 / 3));
   aspect-ratio: 2 / 3;
 }
 .fig-io-btn { height: 40px; }
-/* RODADA 17 — quando o "Gerar Avatar IA" vira o CTA dourado (.cta-gold, que
-   sozinho vale 46px de altura própria), .fig-io-btn TEM de ganhar o empate:
-   a linha ao lado do "Trocar foto" não pode saltar de altura só porque o
-   botão pulsou dourado. Duas classes na seletor (especificidade 0,0,2,0)
-   ganham de .cta-gold sozinho (0,0,1,0) INDEPENDENTE da ordem no ficheiro —
-   sem isto, dependeria de qual das duas regras vem depois aqui embaixo. */
+/*
+ * Quando o "Gerar Avatar IA" vira o CTA dourado (.cta-gold, que
+ * sozinho vale 46px de altura própria), .fig-io-btn TEM de ganhar o empate:
+ * a linha ao lado do "Trocar foto" não pode saltar de altura só porque o
+ * botão pulsou dourado. Duas classes no seletor (especificidade 0,0,2,0)
+ * ganham de .cta-gold sozinho (0,0,1,0) INDEPENDENTE da ordem no ficheiro —
+ * sem isto, dependeria de qual das duas regras vem depois aqui embaixo.
+ */
 .fig-io-btn.cta-gold { height: 40px; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   CROMO DO INÍCIO. O retrato QUADRADO da /figurinha (600×600, sem placa), reduzido
-   e clicável.
-
-   A MEDIDA: pela LARGURA da tela, min(49vw, 236px) — 191 px num iPhone de 390, teto
-   de 236 px no computador. Igual em qualquer navegador. Até 3-out (29N-B) a largura
-   era 78% da do card da Figurinha, a mesma fórmula do .fig-studio-card (acima) com a
-   altura da tela dentro; a Figurinha precisa disso, porque tem de caber sem rolar. O
-   Início rola, e a ancoragem dependia de 100dvh: no Safari do iPhone com as barras
-   (100dvh = 664) o avatar saía com 97 px, no app da tela de início (844) com 191 px,
-   e mudava de tamanho quando as barras sumiam ao rolar. O avatar segue a largura, não
-   a altura. Não voltar a ligar esta regra ao .fig-studio-card.
-
-   SEM .hud-corners: o octógono a 45° já vem desenhado no PNG do canvas — recortar
-   por cima só arriscava desalinhar dois octógonos.
-
-   O feedback (press/hover/focus) vive AQUI e não no .fig-bob/.fig-sway: aqueles
-   dois têm transform animado, e um transform de :active no mesmo elemento
-   substituiria o keyframe em vez de se somar a ele. Em camadas separadas, compõem.
-   ───────────────────────────────────────────────────────────────────────────── */
+/*
+ * CROMO DO INÍCIO. O retrato QUADRADO da /figurinha (600×600, sem placa), reduzido e clicável.
+ *
+ * A MEDIDA: pela LARGURA da tela, min(49vw, 236px) — 191 px num iPhone de 390, teto de 236 px no
+ * computador. Igual em qualquer navegador. Não pela fórmula do .fig-studio-card (acima), que leva a
+ * altura da tela dentro: a Figurinha precisa disso, porque tem de caber sem rolar. O Início rola, e uma
+ * ancoragem em 100dvh muda com as barras do navegador: no Safari do iPhone com as barras (100dvh = 664)
+ * o avatar sai com 97 px, no app da tela de início (844) com 191 px, e mudaria de tamanho quando as
+ * barras sumissem ao rolar. O avatar segue a largura, não a altura. Não voltar a ligar esta regra ao
+ * .fig-studio-card.
+ *
+ * SEM .hud-corners: o octógono a 45° já vem desenhado no PNG do canvas — recortar
+ * por cima só arriscava desalinhar dois octógonos.
+ *
+ * O feedback (press/hover/focus) vive AQUI e não no .fig-bob/.fig-sway: aqueles
+ * dois têm transform animado, e um transform de :active no mesmo elemento
+ * substituiria o keyframe em vez de se somar a ele. Em camadas separadas, compõem.
+ */
 /* Revelação do Início: a página só aparece com o cromo já desenhado (ver pageReady),
    e entra com um fade suave. Antes disto, o LoadingFutty segura o ecrã sozinho — um só
    F, nunca o do loader + o placeholder do cromo sobrepostos. */
@@ -1760,55 +1773,48 @@
   .page-reveal { animation: none; }
 }
 
-/* Transição de entrada de TODA página (components/PageTransition.jsx, build 11).
-   Era framer-motion e deixava o app invisível quando a rota suspendia depois de
-   já ter montado — ver o comentário no PageTransition.jsx. Aqui quem toca é o
-   motor do browser: o estado natural do elemento é VISÍVEL (opacity 1), a
-   animação só encena a entrada, e se ela não correr por qualquer motivo a página
-   aparece na mesma. É a diferença que importa — nenhum JS precisa de terminar
-   para o conteúdo ser visto. */
-/* VELOCIDADE 8 (16-set) — SÓ OPACIDADE. O deslize de 8 px custava, a cada troca
-   de tela, promover a página inteira a camada própria e recompô-la a cada quadro
-   — e a tela inteira, no iPhone 15 Pro Max, é 430×932 a 3x, ou seja 3,6 milhões
-   de pixéis por quadro. Oito pixéis de deslize não pagam isso, e é o momento em
-   que o Pedro diz que "engasga ao trocar de página".
-   De lambuja resolve de vez o `position: fixed` com chão falso: sem transform no
-   keyframe, a .page-transition nunca pode ser containing block de ninguém —
-   a razão pela qual a Rodada 9 teve de trocar `both` por `backwards`. */
+/*
+ * Transição de entrada de TODA página (components/PageTransition.jsx).
+ * Não é framer-motion: ele deixava o app invisível quando a rota suspendia depois de
+ * já ter montado — ver o comentário no PageTransition.jsx. Aqui quem toca é o
+ * motor do browser: o estado natural do elemento é VISÍVEL (opacity 1), a
+ * animação só encena a entrada, e se ela não correr por qualquer motivo a página
+ * aparece na mesma. É a diferença que importa — nenhum JS precisa de terminar
+ * para o conteúdo ser visto.
+ */
+/*
+ * SÓ OPACIDADE. Um deslize de 8 px custaria, a cada troca de tela, promover a página inteira a camada
+ * própria e recompô-la a cada quadro — e a tela inteira, no iPhone 15 Pro Max, é 430×932 a 3x, ou seja
+ * 3,6 milhões de pixéis por quadro. Oito pixéis de deslize não pagam isso.
+ * De lambuja resolve de vez o `position: fixed` com chão falso: sem transform no keyframe, a
+ * .page-transition nunca pode ser containing block de ninguém. Um `transform: none` animado e congelado
+ * resolve-se em `matrix(1, 0, 0, 1, 0, 0)`, que não move nada mas faz da página o "chão" de todo
+ * `position: fixed` lá dentro (atirava o banner do Jogo para 3051 px, punha o toast do sorteio abaixo da
+ * dobra e fazia o fundo dos Planos rolar com a página).
+ */
 @keyframes pageEntra {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-/* `backwards`, não `both` (Rodada 9). Com `both` o keyframe final ficava
-   CONGELADO no elemento para sempre — e um `transform: none` animado resolve-se
-   em `matrix(1, 0, 0, 1, 0, 0)`, que não move nada mas faz da página o "chão" de
-   todo `position: fixed` lá dentro. Era isso que atirava o banner do Jogo para
-   3051 px (fora da tela), punha o toast do sorteio abaixo da dobra e fazia o
-   fundo dos Planos rolar com a página. Registo histórico — ver o hotfix abaixo,
-   que troca `backwards` por `none`: sem transform nenhum no keyframe desde a
-   Velocidade 8, nenhum dos dois fill-mode tem chão falso para congelar. */
-/* HOTFIX (23-set) — tela preta após login com Google no Chrome, reproduzida
-   pela Freaky. Medido em futtyapp.com.br/home: o conteúdo estava no DOM, mas
-   `.page-transition` tinha opacity 0 porque a animação nascia PAUSADA em
-   currentTime 0 — a página montou com document.hidden=true (aba em 2º plano
-   durante o redirect do OAuth) e a regra de index.css (`html[data-oculto] *`)
-   pausou `pageEntra` antes de ela correr um só quadro. Com `backwards`, o
-   estado "antes de começar" é `from { opacity: 0 }` — e paused-no-nascimento
-   FICA nesse estado antes de começar, para sempre, porque nunca chega a haver
-   um quadro rodado que o tire de lá.
-   `none` é a correção: o "antes de começar" deixa de ter estado próprio — o
-   elemento mostra o seu estilo normal (opacity 1, nenhuma outra regra define
-   `.page-transition { opacity: ... }`), e a animação só ACRESCENTA o fade de
-   180 ms enquanto de facto corre. Junto com a exclusão em index.css (que impede
-   este congelamento de acontecer) e a rede de segurança em lib/ritmo.js
-   (`pararAnimacoesForaDeVista`, que termina qualquer entrada pendurada ao
-   voltar a ficar visível) — a lei do build 11 continua de pé: o estado natural
-   é VISÍVEL, e agora vale também para o caso "nasceu escondida". */
+/*
+ * Fill-mode `none`, não `backwards`: com `backwards` o estado "antes de começar" é `from { opacity: 0 }`,
+ * e uma animação que nasce PAUSADA em currentTime 0 FICA nele para sempre, porque nunca chega a haver um
+ * quadro rodado que a tire de lá. Foi o que deixou a tela preta após o login com Google no Chrome: o
+ * conteúdo estava no DOM, mas `.page-transition` tinha opacity 0 — a página montou com document.hidden=true
+ * (aba em 2º plano durante o redirect do OAuth) e a regra de index.css (`html[data-oculto] *`) pausou
+ * `pageEntra` antes de ela correr um só quadro.
+ * `none` é a correção: o "antes de começar" deixa de ter estado próprio — o elemento mostra o seu estilo
+ * normal (opacity 1, nenhuma outra regra define `.page-transition { opacity: ... }`), e a animação só
+ * ACRESCENTA o fade de 180 ms enquanto de facto corre. Junto com a exclusão em index.css (que impede este
+ * congelamento de acontecer) e a rede de segurança em lib/ritmo.js (`pararAnimacoesForaDeVista`, que
+ * termina qualquer entrada pendurada ao voltar a ficar visível): o estado natural é VISÍVEL, também no
+ * caso "nasceu escondida".
+ */
 .page-transition {
   animation: pageEntra 0.18s ease-out none;
 }
 @media (prefers-reduced-motion: reduce) {
-  /* Só o fade, sem deslize — e mais curto. Mesmo hotfix: `none`, não `both`. */
+  /* Só o fade, sem deslize — e mais curto. `none`, não `both`, igual à regra acima. */
   .page-transition { animation: inicioReveal 0.12s ease-out none; }
 }
 
@@ -1826,31 +1832,30 @@
   transform: scale(0.97);
 }
 
-/* A foto que segura o lugar do cromo enquanto o canvas desenha. Quando o cromo
-   real entra, a troca é entre duas imagens do mesmo tamanho, no mesmo sítio —
-   sem salto. A respiração morre com prefers-reduced-motion.
-
-   VELOCIDADE 5 (14-set) — NÍTIDA. Nasceu desfocada (blur 2px, opacity 0.4) para
-   se ler como "ainda a compor", e a ideia só se aguenta enquanto o cromo chega
-   logo a seguir. No iPhone da loja não chegava: a pessoa ficava a olhar para a
-   própria cara borrada, sem nunca perceber que aquilo era uma espera. Uma
-   espera que não acaba não é um estado de transição, é um defeito — e entre
-   mostrar o rosto nítido ou desfocado, quando pode ser o último quadro, mostra-se
-   nítido. O pulso (mais discreto agora) é o que continua a dizer "vem aí mais". */
-/* FLUIDEZ 2 (16-set) — a prévia deixou de ser "a foto da pessoa a segurar o
-   lugar" e passou a ser O CROMO INTEIRO, composto em DOM: fundo escolhido +
-   avatar no mesmo enquadramento + moldura dourada. Antes, o primeiro quadro
-   mostrava um retrato solto no meio da página e a moldura só aparecia quando o
-   canvas acabava — o Pedro apanhou isso no aparelho ("o frame do cromo do
-   Início aparece depois do avatar"). Agora a pessoa vê um cromo desde a
-   primeira pintura, e o que o canvas traz depois é o acabamento, não a forma.
-
-   O enquadramento do avatar NÃO está aqui: vem do enquadrarAvatar() do
-   figurinhaCanvas, a mesma conta que o canvas usa, aplicada em percentagens.
-   Duas contas divergiriam e a troca saltava à vista.
-
-   O dourado fica POR BAIXO e o conteúdo por cima, encolhido: o anel que sobra é
-   a moldura. É mais barato que recortar um buraco e dá o mesmo desenho. */
+/*
+ * A prévia que segura o lugar do cromo enquanto o canvas desenha. Quando o cromo
+ * real entra, a troca é entre duas imagens do mesmo tamanho, no mesmo sítio —
+ * sem salto. A respiração morre com prefers-reduced-motion.
+ *
+ * NÍTIDA: nada de blur 2px nem opacity 0.4. O desfoque lê-se como "ainda a compor", e a ideia só se
+ * aguenta enquanto o cromo chega logo a seguir. No iPhone da loja não chegava: a pessoa ficava a olhar
+ * para a própria cara borrada, sem nunca perceber que aquilo era uma espera. Uma espera que não acaba não
+ * é um estado de transição, é um defeito — e entre mostrar o rosto nítido ou desfocado, quando pode ser
+ * o último quadro, mostra-se nítido. O pulso (discreto) é o que continua a dizer "vem aí mais".
+ */
+/*
+ * A prévia é O CROMO INTEIRO, composto em DOM: fundo escolhido + avatar no mesmo enquadramento + moldura
+ * dourada. Assim a pessoa vê um cromo desde a primeira pintura, e o que o canvas traz depois é o
+ * acabamento, não a forma (um retrato solto no meio da página, com a moldura só quando o canvas
+ * acabasse, faria o frame do cromo do Início aparecer depois do avatar).
+ *
+ * O enquadramento do avatar NÃO está aqui: vem do enquadrarAvatar() do
+ * figurinhaCanvas, a mesma conta que o canvas usa, aplicada em percentagens.
+ * Duas contas divergiriam e a troca saltaria à vista.
+ *
+ * O dourado fica POR BAIXO e o conteúdo por cima, encolhido: o anel que sobra é
+ * a moldura. É mais barato que recortar um buraco e dá o mesmo desenho.
+ */
 .cromo-previa {
   position: absolute;
   inset: 0;
@@ -1885,17 +1890,19 @@
   filter: drop-shadow(0 1% 6% rgba(0, 0, 0, 0.9));
 }
 
-/* RODADA 27 — a figurinha COMUM: a foto é o fundo (cover), sem sombra — o canvas também não a
-   desenha (não há nada a flutuar). A posição vem do enquadrarFotoComum, a mesma conta do canvas. */
+/*
+ * A figurinha COMUM: a foto é o fundo (cover), sem sombra — o canvas também não a
+ * desenha (não há nada a flutuar). A posição vem do enquadrarFotoComum, a mesma conta do canvas.
+ */
 .cromo-previa__avatar--comum {
   filter: none;
 }
 
-/* RODADA 12A — o lugar do cromo enquanto o avatar ainda não decodificou. Só a
-   silhueta octogonal e o fundo escolhido: SEM a moldura dourada, porque uma
-   moldura sozinha lê-se como cromo partido — o defeito que esta rodada corrige.
-   Mesma área e mesmo recorte da .cromo-previa, para a composição não saltar
-   quando entrar. */
+/*
+ * O lugar do cromo enquanto o avatar ainda não decodificou. Só a silhueta octogonal e o fundo escolhido:
+ * SEM a moldura dourada, porque uma moldura sozinha lê-se como cromo partido. Mesma área e mesmo recorte
+ * da .cromo-previa, para a composição não saltar quando entrar.
+ */
 .cromo-previa__reserva {
   position: absolute;
   inset: 0;
@@ -1945,10 +1952,12 @@
   }
 }
 
-/* FASE 3.29 — Cantos a 45° (identidade HUD), partilhados pelos controlos.
-   O clip-path MANDA: qualquer border-radius existente deixa de ter efeito.
-   ATENÇÃO: clip-path corta box-shadows → para glow, pôr o shadow num wrapper
-   SEM clip e o clip só no elemento interior (ver botão Compartilhar). */
+/*
+ * Cantos a 45° (identidade HUD), partilhados pelos controlos.
+ * O clip-path MANDA: qualquer border-radius existente deixa de ter efeito.
+ * ATENÇÃO: clip-path corta box-shadows → para glow, pôr o shadow num wrapper
+ * SEM clip e o clip só no elemento interior (ver botão Compartilhar).
+ */
 .hud-corners {
   clip-path: polygon(
     8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
@@ -2023,22 +2032,24 @@
   .cta-gold { transition: filter 0.12s ease; }
   .cta-gold:active { transform: none; }
 }
-/* Ecrãs curtos (iPhone SE e afins, <700px): a fórmula base já encolhe o card
-   sozinha, mas os botões Trocar-foto/Gerar (.fig-io-btn) ainda valem 40px de
-   reserva fixa — 6px a menos aqui devolvem-se ao card, e saem do cálculo
-   acima só neste tier (a reserva de 477 assume os 40px cheios nos ecrãs
-   normais). Build 9: revoga o tier anterior, que aceitava rolagem. */
+/*
+ * Ecrãs curtos (iPhone SE e afins, <700px): a fórmula base já encolhe o card sozinha, mas os botões
+ * Trocar-foto/Gerar (.fig-io-btn) ainda valem 40px de reserva fixa — 6px a menos aqui devolvem-se ao
+ * card, e saem do cálculo acima só neste tier (a reserva de 477 assume os 40px cheios nos ecrãs
+ * normais).
+ */
 @media (max-height: 700px) {
   .fig-io-btn { height: 34px; }
   .fig-io-btn.cta-gold { height: 34px; }
 }
 
-/* Figurinha studio — grade do seletor (fundo/uniforme) PADRONIZADA (15-set): os dois
-   painéis (tab Fundo e tab Uniforme) usam a MESMA classe — antes cada um tinha o seu
-   85%/tamanho de tile em inline style e desalinhavam na tela do dono (iPhone). Uma
-   única classe compartilhada: mesma largura total, mesmo tile, mesmo gap, mesmo
-   padding lateral, mesma rolagem horizontal (scroll-snap) mesmo quando o conteúdo
-   cabe sem precisar rolar (caso do Uniforme, hoje com só 4 kits). */
+/*
+ * Figurinha studio — grade do seletor (fundo/uniforme) PADRONIZADA: os dois painéis (tab Fundo e tab
+ * Uniforme) usam a MESMA classe — um 85%/tamanho de tile em inline style por painel desalinhava na tela
+ * do dono (iPhone). Uma única classe compartilhada: mesma largura total, mesmo tile, mesmo gap, mesmo
+ * padding lateral, mesma rolagem horizontal (scroll-snap) mesmo quando o conteúdo cabe sem precisar
+ * rolar (caso do Uniforme, hoje com só 4 kits).
+ */
 .fig-seletor-grade {
   display: flex;
   flex-wrap: nowrap;
@@ -2063,9 +2074,12 @@
   text-align: center;
 }
 
-/* Rodada 29L (achados 130 e 138) — FAIXA QUE ROLA AVISA QUE ROLA. O hook useIndicadorDeRolagem põe data-mais-esq / data-mais-dir no
-   trilho quando ainda há conteúdo escondido daquele lado; a borda esmaece (a peça cortada deixa de parecer "o fim da fila" e passa a
-   dizer "continua"). Vale para qualquer trilho que use o hook: fundos e uniformes da Figurinha, abas do Gabinete, chips de time do Início. */
+/*
+ * FAIXA QUE ROLA AVISA QUE ROLA. O hook useIndicadorDeRolagem põe data-mais-esq / data-mais-dir no
+ * trilho quando ainda há conteúdo escondido daquele lado; a borda esmaece (a peça cortada deixa de
+ * parecer "o fim da fila" e passa a dizer "continua"). Vale para qualquer trilho que use o hook: fundos
+ * e uniformes da Figurinha, abas do Gabinete, chips de time do Início.
+ */
 [data-mais-dir="1"] {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent 100%);
   mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent 100%);
@@ -2217,8 +2231,10 @@
 }
 
 /* Botão do controlo de zoom (estilo Futty, dourado). */
-/* Rodada 29L (achado 131): a área de toque é de 44 px (o mínimo para o dedo); o que se VÊ continua o de antes — o ícone e, ao tocar, o
-   círculo dourado de 24 px (agora no ::before). Eram 24 px de botão. */
+/*
+ * A área de toque é de 44 px (o mínimo para o dedo); o que se VÊ é o ícone e, ao tocar, o círculo
+ * dourado de 24 px (no ::before).
+ */
 .fig-zoom-btn {
   position: relative;
   width: 44px;
@@ -2246,8 +2262,10 @@
 .fig-zoom-btn:active:not(:disabled)::before { background: rgba(212, 160, 23, 0.15); }
 .fig-zoom-btn:disabled { opacity: 0.35; cursor: default; }
 
-/* Rodada 29L (achado 132): "Gerar minha figurinha" numa linha só, com o mesmo respiro lateral do "Trocar foto" (12 px, não os 20 do .btn); o
-   rótulo curto (components/RotuloGerar.jsx) só aparece nas telas estreitas. */
+/*
+ * "Gerar minha figurinha" numa linha só, com o mesmo respiro lateral do "Trocar foto" (12 px, não os 20
+ * do .btn); o rótulo curto (components/RotuloGerar.jsx) só aparece nas telas estreitas.
+ */
 .fig-gerar { white-space: nowrap; min-width: 0; padding-left: 12px; padding-right: 12px; }
 .rotulo-gerar-curto { display: none; }
 /* 410 px: medido com a Inter de 16 px do botão, o "Gerar minha figurinha" precisa de ~221 px ao lado do "Trocar foto" (134 px); a 390 px sobram
@@ -2274,12 +2292,13 @@
   animation: futtyDotTwinkle 5.5s ease-in-out infinite;
 }
 
-/* FASE 3.40 — PLANOS: hierarquia de movimento. Mesmas curvas/durações da figurinha,
-   mas com amplitude REDUZIDA: o card Pro é herói da página sem competir com o cromo.
-   FASE A — SUSPENSÃO: os TRÊS cards passam a ter sombra no chão + sway (durações
-   7.1/8.3/9.7s, definidas por card no JSX → nunca sincronizam). Só o Pro tem bob
-   vertical, e só a sombra DELE responde em contra-fase. É isso que mantém a
-   hierarquia: todos flutuam, um só respira. */
+/*
+ * PLANOS: hierarquia de movimento. Mesmas curvas/durações da figurinha, mas com amplitude REDUZIDA: o
+ * card Pro é herói da página sem competir com o cromo.
+ * SUSPENSÃO: os TRÊS cards têm sombra no chão + sway (durações 7.1/8.3/9.7s, definidas por card no JSX →
+ * nunca sincronizam). Só o Pro tem bob vertical, e só a sombra DELE responde em contra-fase. É isso que
+ * mantém a hierarquia: todos flutuam, um só respira.
+ */
 @keyframes planosBob {
   0%, 100% { transform: translateY(0px); }
   50%      { transform: translateY(-4px); }
@@ -2323,8 +2342,7 @@
   .planos-bob, .planos-sway, .planos-shadow, .planos-coroa-twinkle { animation: none; }
 }
 
-/* FASE 3.47 — o shine do CTA Pro (era .planos-cta-shine, 4.2s/16%) foi absorvido pela
-   classe partilhada .cta-gold, agora ao ritmo do card (8s/45%). Ver "LEI DOS GÉMEOS". */
+/* O shine do CTA Pro é o da classe partilhada .cta-gold, ao ritmo do card (8s/45%). Ver "LEI DOS GÉMEOS". */
 @media (prefers-reduced-motion: reduce) {
   .fig-bob, .fig-sway, .fig-shadow, .fig-aura, .fig-name-glow,
   .fig-particle, .fig-light,
@@ -2334,17 +2352,19 @@
   .fig-glint__cross { animation: none; opacity: 0; }
 }
 
-/* FASE 3.42/3.46 — Loader oficial: o monograma F é PINTADO por uma escova que corre
-   a sua espinha (ver FuttyLoader.jsx). O traço usa pathLength="1" no SVG, daí o
-   dasharray/offset serem 1 e não o comprimento real do esqueleto.
-
-   FASE 3.61 — CICLO DE 3 TEMPOS (2.7s), em vez do corte seco a 1.6s:
-     desenho  0 → 59.3%  (1.6s — inalterado)
-     respiro  59.3 → 77.8%  (0.5s: o F inteiro segura, e é AQUI que o glint passa)
-     fade-out 77.8 → 100%   (0.6s, ease-out: dissolve-se)
-   O fade vive na ESCOVA e não no <svg>: assim o trilho ténue do F fica sempre, e no
-   reinício a escova volta a opacity 1 já com dashoffset 1 (nada pintado) — sem flash.
-   Fazer o fade no svg inteiro faria o trilho piscar na emenda do loop. */
+/*
+ * Loader oficial: o monograma F é PINTADO por uma escova que corre
+ * a sua espinha (ver FuttyLoader.jsx). O traço usa pathLength="1" no SVG, daí o
+ * dasharray/offset serem 1 e não o comprimento real do esqueleto.
+ *
+ * CICLO DE 3 TEMPOS (2.7s):
+ *   desenho  0 → 59.3%  (1.6s)
+ *   respiro  59.3 → 77.8%  (0.5s: o F inteiro segura, e é AQUI que o glint passa)
+ *   fade-out 77.8 → 100%   (0.6s, ease-out: dissolve-se)
+ * O fade vive na ESCOVA e não no <svg>: assim o trilho ténue do F fica sempre, e no
+ * reinício a escova volta a opacity 1 já com dashoffset 1 (nada pintado) — sem flash.
+ * Fazer o fade no svg inteiro faria o trilho piscar na emenda do loop.
+ */
 @keyframes futtyLoaderDraw {
   0%     { stroke-dashoffset: 1; opacity: 1; }
   59.3%  { stroke-dashoffset: 0; opacity: 1; }
@@ -2369,20 +2389,18 @@
   .futty-loader-shine { animation: none; display: none; }
 }
 
-/* Rodada 29D: o lockup da landing (o F solto em metal, .futty-lockup-f, glint) saiu — o F de marca vai dentro do ícone do
-   app (FuttyLogo variant="icone", FuttyIconeFlutuante); a flutuação abaixo é a mesma. */
-
-/* FASE B — FLUTUAÇÃO DAS DUAS MARCAS. Classes partilhadas pelo FuttyLoader e pelo
-   FuttyIconeFlutuante: mesma física, não duas imitações uma da outra.
-
-   Porque são TRÊS wrappers e não tudo no <svg>: cada camada anima uma propriedade
-   diferente e o CSS só deixa uma animação por propriedade num elemento. O bob mexe
-   translateY, o sway mexe rotate — ambos são `transform`, logo teriam de competir.
-   E no lockup o próprio <svg> já anima transform (a entrada, scale 0.92→1). Separados,
-   compõem-se; juntos, a última ganhava e as outras desapareciam.
-
-   A sombra fica FORA do bob — no chão. Se subisse com o F não era sombra, era decalque
-   (o mesmo erro que a Fase A corrigiu nos Planos). */
+/*
+ * FLUTUAÇÃO DAS DUAS MARCAS. Classes partilhadas pelo FuttyLoader e pelo
+ * FuttyIconeFlutuante: mesma física, não duas imitações uma da outra.
+ *
+ * Porque são TRÊS wrappers e não tudo no <svg>: cada camada anima uma propriedade
+ * diferente e o CSS só deixa uma animação por propriedade num elemento. O bob mexe
+ * translateY, o sway mexe rotate — ambos são `transform`, logo teriam de competir.
+ * E no lockup o próprio <svg> já anima transform (a entrada, scale 0.92→1). Separados,
+ * compõem-se; juntos, a última ganha e as outras desaparecem.
+ *
+ * A sombra fica FORA do bob — no chão. Se subisse com o F não era sombra, era decalque.
+ */
 @keyframes futtyFBob {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-5px); }
@@ -2439,7 +2457,7 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
-  /* Rodada 29L (achado 137): --neon sobre o chip roxo translúcido dava ~4,3:1 em 10 px; #a78bfa (da paleta) passa de 4,5:1 com folga. */
+  /* --neon sobre o chip roxo translúcido dá ~4,3:1 em 10 px; #a78bfa (da paleta) passa de 4,5:1 com folga. */
   color: #a78bfa;
   background: rgba(139, 92, 246, 0.08);
   border: 1px solid rgba(139, 92, 246, 0.2);
@@ -2464,7 +2482,10 @@
   flex: 0 0 auto;
   font-size: 9px;
   font-weight: 700;
-  /* Rodada 29L (achado 137): o roxo da casa (#8b5cf6) sobre o roxo translúcido do chip dava ~4,1:1 em 9 px. O #a78bfa (já da paleta) dá ~7:1. */
+  /*
+   * O roxo da casa (#8b5cf6) sobre o roxo translúcido do chip dá ~4,1:1 em 9 px. O #a78bfa (já da paleta)
+   * dá ~7:1.
+   */
   color: #a78bfa;
   background: rgba(139, 92, 246, 0.12);
   border: 1px solid rgba(139, 92, 246, 0.35);
@@ -2487,8 +2508,10 @@
 
 .gcard__meta {
   font-size: 13px;
-  /* Rodada 29L (achado 137): era #333333 (~1,6:1) — a contagem de confirmados, que diz se vale ir ao jogo, quase sumia. O --text-dim
-     (#aaaaaa) dá ~8:1 sobre o card, bem acima do 4,5:1 do WCAG AA para texto normal. */
+  /*
+   * A contagem de confirmados, que diz se vale ir ao jogo, tem de se ler: o --text-dim (#aaaaaa) dá ~8:1
+   * sobre o card, bem acima do 4,5:1 do WCAG AA para texto normal (#333333, ~1,6:1, quase sumia).
+   */
   color: var(--text-dim);
   margin-top: 6px;
 }
@@ -2540,10 +2563,12 @@
   50%      { filter: drop-shadow(0 0 10px rgba(212, 160, 23, 0.5)); }
 }
 
-/* RODADA 13 — o "Vou" perde o dourado (ver --presenca-* em index.css): o glow
-   do wrapper segue o mesmo verde da borda/preenchimento. Classe própria (não
-   .pulse-glow) porque é o único wrapper de presença que pulsa — "Não vou" é
-   fantasma parado. */
+/*
+ * O "Vou" não é dourado (ver --presenca-* em index.css): o glow
+ * do wrapper segue o mesmo verde da borda/preenchimento. Classe própria (não
+ * .pulse-glow) porque é o único wrapper de presença que pulsa — "Não vou" é
+ * fantasma parado.
+ */
 .pbtn-pulse {
   animation: pulseGlowVerde 2.6s ease-in-out infinite;
 }
@@ -2580,10 +2605,11 @@
   cursor: default;
 }
 
-/* RODADA 13 (decisão do dono, build 22) — o "Vou" perde o dourado: no card o
-   dourado passa a ser só o "Ver sorteio"/"Sortear", a ação mais importante.
-   "Vou" vira fantasma verde, o gémeo exato do "Não vou" (ver --presenca-* em
-   index.css) — mesma receita, cores trocadas. */
+/*
+ * O "Vou" não leva o dourado: o dono decidiu que no card o dourado é só o "Ver sorteio"/"Sortear", a ação
+ * mais importante. "Vou" é fantasma verde, o gémeo exato do "Não vou" (ver --presenca-* em index.css) —
+ * mesma receita, cores trocadas.
+ */
 .pbtn--go {
   border-color: var(--presenca-sim-borda);
   color: var(--text-dim);
@@ -2637,7 +2663,10 @@
   border: 1px solid rgba(139, 92, 246, 0.2);
   color: var(--neon);
 }
-/* Rodada 29L (achado 137): no card de jogo o "Sorteado" em --neon sobre o roxo translúcido dava ~4,3:1; o #a78bfa passa de 4,5:1 com folga. */
+/*
+ * No card de jogo o "Sorteado" em --neon sobre o roxo translúcido dá ~4,3:1; o #a78bfa passa de 4,5:1
+ * com folga.
+ */
 .gcard .badge--sorteado { color: #a78bfa; }
 
 .badge--encerrado {
@@ -2681,11 +2710,13 @@
 
 
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   VAGA 6 — VITRINE DO JOGADOR (/time/:slug/jogador/:id)
-   Herói = recorte puro com aura + respiração; stats-espectáculo (anel/radar/
-   sparkline/tiles em cascata). Namespace .perfil-*, aditivo. reduced-motion estático.
-   ═══════════════════════════════════════════════════════════════════════════════ */
+/*
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * VITRINE DO JOGADOR (/time/:slug/jogador/:id)
+ * Herói = recorte puro com aura + respiração; stats-espectáculo (anel/radar/
+ * sparkline/tiles em cascata). Namespace .perfil-*, aditivo. reduced-motion estático.
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
 /* HERÓI — TRANSPLANTE DIRETO do harness glow-organico.html, VARIANTE A (byte a byte).
    NADA reescalado: o harness É a resposta. Palco 330×470; glow 300×344 (blur 46, a
    respiração respiraA vai no PRÓPRIO glow — o cutout fica estático); cutout 250×284 com
@@ -2856,11 +2887,13 @@
 .cer-float { animation: cerBob 4.8s ease-in-out infinite; will-change: transform; }
 @keyframes cerBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 /* jackpot roxo em cinema */
-/* Velocidade 8 (16-set): o estado PARADO já não declara backdrop-filter. Um
-   `blur(0)` não desfoca nada — mas declarar backdrop-filter num elemento fixo de
-   ecrã inteiro obriga o WebKit a manter uma raiz de composição para ele durante
-   a cerimónia inteira, que é o momento mais animado do app. O `.on` fica como
-   está: é o palco selado do sorteio. */
+/*
+ * O estado PARADO não declara backdrop-filter. Um
+ * `blur(0)` não desfoca nada — mas declarar backdrop-filter num elemento fixo de
+ * ecrã inteiro obriga o WebKit a manter uma raiz de composição para ele durante
+ * a cerimónia inteira, que é o momento mais animado do app. O `.on` o declara:
+ * é o palco selado do sorteio.
+ */
 .cer-jack { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; pointer-events: none;
   opacity: 0; transition: opacity .4s; }
 .cer-jack.on { opacity: 1; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65);
@@ -2891,10 +2924,12 @@
   .cer-jack.on .cer-seg { animation: none; opacity: 1; color: #e4d9ff; }
 }
 
-/* ===================================================================
-   CAMPEONATO (Vaga 11B) — tabela, bracket, celebracao e wizard.
-   Canone: vidro 45, lider dourado, campeao familia jackpot ouro/roxo.
-   =================================================================== */
+/*
+ * ===================================================================
+ * CAMPEONATO — tabela, bracket, celebracao e wizard.
+ * Canone: vidro 45, lider dourado, campeao familia jackpot ouro/roxo.
+ * ===================================================================
+ */
 .camp-title{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:24px;letter-spacing:.02em;margin:2px 0 6px;
   background:linear-gradient(90deg,#fff2cc,#f0c94a 40%,#d4a017 55%,#f0c94a 70%,#fff2cc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .camp-chip{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
@@ -2983,7 +3018,7 @@
   clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
 .camp-card__n{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px}
 
-/* PODIO (Vaga 11C) — degraus 2 · 1 · 3, escudo por cima, 1o ouro maior+glow */
+/* PODIO — degraus 2 · 1 · 3, escudo por cima, 1o ouro maior+glow */
 .camp-podio{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin:4px 0 2px;position:relative;z-index:1}
 .camp-podio__col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:33%}
 .camp-podio__crest{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-weight:700;color:#fff;text-align:center;padding:5px 6px;border:1px solid;border-radius:6px;background:rgba(255,255,255,0.04);min-height:38px;justify-content:center;width:100%}
@@ -2992,11 +3027,13 @@
 .camp-podio__step--2{height:54px}
 .camp-podio__step--3{height:40px}
 
-/* CHUVA DE CONFETE (Vaga 11C celebracao v3) — ambiente, nao protagonista.
-   Duas camadas (tras desfocada .3 / frente nitida .5), TODAS nascem acima do
-   ecra (top:-8%) e caem para baixo de 100%; loop recomeca sempre no topo, nada
-   aparece/some no meio. Atras do escudo/nome (z-index). reduced-motion = estatico.
-   (O jackpot do SORTEIO mantem as moedas — .cer-* nao se toca.) */
+/*
+ * CHUVA DE CONFETE (celebracao) — ambiente, nao protagonista.
+ * Duas camadas (tras desfocada .3 / frente nitida .5), TODAS nascem acima do
+ * ecra (top:-8%) e caem para baixo de 100%; loop recomeca sempre no topo, nada
+ * aparece/some no meio. Atras do escudo/nome (z-index). reduced-motion = estatico.
+ * (O jackpot do SORTEIO mantem as moedas — .cer-* nao se toca.)
+ */
 .camp-cel__confete{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .camp-cel__confete i{position:absolute;top:-8%;border-radius:1px;will-change:transform;
   animation-name:campConfete;animation-timing-function:linear;animation-iteration-count:infinite}
@@ -3013,7 +3050,7 @@
   .camp-cel__confete i{top:var(--st);animation:none;transform:none}
 }
 
-/* SELO DE HONRA (Vaga 11C) — forma A postal denteado + varrimento de vidro. */
+/* SELO DE HONRA — forma A postal denteado + varrimento de vidro. */
 .seloh{position:relative;aspect-ratio:5/6;flex:0 0 auto;
   clip-path:polygon(22% 0,78% 0,100% 22%,100% 78%,78% 100%,22% 100%,0 78%,0 22%);
   display:grid;grid-template-rows:1fr auto;place-items:center;overflow:hidden;
@@ -3037,13 +3074,15 @@
 
 /* P2-11 — post recém-publicado: brilho dourado que se apaga em 2s (não mexe no layout,
    só box-shadow em anel). Respeita reduce-motion. */
-/* FLUIDEZ 2 (16-set) — cada cartão da Resenha é uma ilha.
-   `contain: layout paint` diz ao motor que nada dentro do cartão afecta o que
-   está fora dele, nem transborda: um cartão que muda (uma reação, uma imagem a
-   chegar) deixa de obrigar a recalcular a lista inteira.
-   `content-visibility: auto` salta layout e desenho dos cartões fora da tela, e
-   o `contain-intrinsic-size` guarda a altura que eles tinham, para a barra de
-   rolagem não saltar. 420px é a altura típica de um post com foto. */
+/*
+ * Cada cartão da Resenha é uma ilha.
+ * `contain: layout paint` diz ao motor que nada dentro do cartão afecta o que
+ * está fora dele, nem transborda: um cartão que muda (uma reação, uma imagem a
+ * chegar) deixa de obrigar a recalcular a lista inteira.
+ * `content-visibility: auto` salta layout e desenho dos cartões fora da tela, e
+ * o `contain-intrinsic-size` guarda a altura que eles tinham, para a barra de
+ * rolagem não saltar. 420px é a altura típica de um post com foto.
+ */
 .feed-item{contain:layout paint;content-visibility:auto;contain-intrinsic-size:auto 420px}
 
 .post-recem{border-radius:12px;animation:postRecem 2s ease-out 1}
@@ -3059,9 +3098,7 @@
   padding:0 5px;border-radius:9px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11px;line-height:1;
   color:#1a1408;background:#f0c94a;border:1px solid #d4a017;box-shadow:0 0 8px rgba(212,160,23,.5)}
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   BOAS-VINDAS (31-jul) — tela única. Namespace .landing-*, aditivo.
-   ═══════════════════════════════════════════════════════════════════════════════ */
+/* BOAS-VINDAS — tela única. Namespace .landing-*, aditivo. */
 /* Aura atrás do F: a receita do glow selado da vitrine REPLICADA (valores copiados
    de .perfil-glow, padrão Aura — copiar, nunca reescalar o selado). Reusa respiraA. */
 .landing-glow {
@@ -3101,14 +3138,18 @@
   .landing-drift { animation: none; }
 }
 
-/* A barra de compartilhar presa ao fundo (Rodada 12A) saiu na Rodada 14B:
-   cobria parte do retângulo dos times. Compartilhar vive agora dentro da
-   cerimónia — ver .compartilhar em sorteio-maquina.css. */
+/*
+ * Compartilhar vive dentro da cerimónia — ver .compartilhar em sorteio-maquina.css. Uma barra de
+ * compartilhar presa ao fundo cobria parte do retângulo dos times.
+ */
 
-/* Rodada 29H-B (item 55): o ENQUADRAMENTO ÚNICO. Dentro da moldura 2:3 do card (a área de recorte do react-easy-crop, ou a moldura
-   do onboarding depois de a foto subir), o quadrado tracejado dourado marca o que vira a foto da miniatura (Início, ranking,
-   sorteio): o quadrado do TOPO, da largura do card — a conta de lib/enquadroAvatar.js#recorteDaMolduraUnica. Só desenho: o
-   pointer-events: none deixa o arrasto passar para o cropper. */
+/*
+ * O ENQUADRAMENTO ÚNICO. Dentro da moldura 2:3 do card (a área de recorte do react-easy-crop, ou a moldura
+ * do onboarding depois de a foto subir), o quadrado tracejado dourado marca o que vira a foto da
+ * miniatura (Início, ranking, sorteio): o quadrado do TOPO, da largura do card — a conta de
+ * lib/enquadroAvatar.js#recorteDaMolduraUnica. Só desenho: o pointer-events: none deixa o arrasto passar
+ * para o cropper.
+ */
 .reactEasyCrop_CropArea.crop-area--miniatura::after,
 .moldura-unica::after {
   content: '';
@@ -3123,9 +3164,12 @@
   pointer-events: none;
 }
 
-/* Rodada 29H (item 3): a data de nascimento em rolinhos (components/RolinhosData.jsx). Três rolos com scroll-snap; o item no
-   centro é o escolhido, a faixa dourada o marca. 5 linhas de 40 px = 200 px; as pontas somem num degradê. Antes de a pessoa
-   mexer nos três, o item do centro fica apagado (é só o ponto de partida, não uma resposta). */
+/*
+ * A data de nascimento em rolinhos (components/RolinhosData.jsx). Três rolos com scroll-snap; o item no
+ * centro é o escolhido, a faixa dourada o marca. 5 linhas de 40 px = 200 px; as pontas somem num
+ * degradê. Antes de a pessoa mexer nos três, o item do centro fica apagado (é só o ponto de partida,
+ * não uma resposta).
+ */
 .rolinhos {
   position: relative;
   display: grid;
@@ -3180,9 +3224,12 @@
 .rolinhos--completo .rolo__item--atual,
 .rolo[data-escolhido]:not([data-escolhido=""]) .rolo__item--atual { color: #f0c94a; }
 
-/* Rodada 29I (achado 84) — o card do jogo inteiro abre a tela do jogo, com um link de verdade. O <a> é o título (.gcard__link); a camada que
-   cobre o card é o ::after dele. Os controles de dentro (Vou / Não vou, Ver sorteio) sobem de nível (z-index) e seguem funcionando sem abrir
-   o jogo. Nada de botão dentro de <a>. O clip-path de 45° do .gcard também recorta a camada: o toque nos cantos cortados não pega. */
+/*
+ * O card do jogo inteiro abre a tela do jogo, com um link de verdade. O <a> é o título (.gcard__link); a
+ * camada que cobre o card é o ::after dele. Os controles de dentro (Vou / Não vou, Ver sorteio) sobem de
+ * nível (z-index) e seguem funcionando sem abrir o jogo. Nada de botão dentro de <a>. O clip-path de 45°
+ * do .gcard também recorta a camada: o toque nos cantos cortados não pega.
+ */
 .gcard { position: relative; }
 .gcard__link { color: inherit; text-decoration: none; }
 .gcard__link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
@@ -3192,8 +3239,11 @@
 .gcard .cta-gold-glow,
 .gcard button { position: relative; z-index: 2; }
 
-/* Rodada 29I (achado 93) — o esqueleto da Resenha: enquanto os posts não chegam, três cartões com a forma dos de verdade (avatar, linhas, foto)
-   em vez de uma tela que parece vazia. Mesmo brilho que passa devagar do .rank-row-esqueleto/Explorar; sem movimento para quem pede menos. */
+/*
+ * O esqueleto da Resenha: enquanto os posts não chegam, três cartões com a forma dos de verdade (avatar,
+ * linhas, foto) em vez de uma tela que parece vazia. Mesmo brilho que passa devagar do
+ * .rank-row-esqueleto/Explorar; sem movimento para quem pede menos.
+ */
 .feed-esqueleto {
   position: relative;
   overflow: hidden;
@@ -3223,20 +3273,22 @@
   .feed-esqueleto::after { animation: none; }
 }
 
-/* ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-   RODADA 29L — a varredura visual em 390 px.
-   ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
-
-/* Achado 125 — A ALTURA DA BARRA DE NAVEGAÇÃO, num lugar só. A faixa de cookies ficava a 58 px do fundo, mas a barra tem 75 (8 de
-   respiro + 54 do toque + 1 da linha + 12 de base, ou a barra de gesto do iPhone se for maior): 17 px da faixa ficavam por baixo e o
-   "Aceitar" perdia 9, encostando no "PERFIL". Esta conta tem de bater com .bottom-nav (padding 8 + .bottom-nav__tab 54 + borda 1 +
-   max(12, safe-area)); o teste de unidade e a prova de navegador travam isso. */
+/*
+ * A ALTURA DA BARRA DE NAVEGAÇÃO, num lugar só. A faixa de cookies tem de ficar acima dela: a barra tem 75
+ * (8 de respiro + 54 do toque + 1 da linha + 12 de base, ou a barra de gesto do iPhone se for maior); a
+ * 58 px do fundo, 17 px da faixa ficariam por baixo e o "Aceitar" perderia 9, encostando no "PERFIL".
+ * Esta conta tem de bater com .bottom-nav (padding 8 + .bottom-nav__tab 54 + borda 1 + max(12,
+ * safe-area)); o teste de unidade e a prova de navegador travam isso.
+ */
 :root {
   --altura-barra-nav: calc(63px + max(12px, env(safe-area-inset-bottom, 0px)));
 }
 
-/* Achado 129 — as abas do time (Jogos · Elenco · Ajustes[ADMIN] · Ranking). Cada uma tem a largura do próprio texto e divide a sobra
-   (flex: 1 1 auto), em vez de partes iguais, onde "Ajustes" + selo estourava a sua parte e empurrava o "Ranking" para a borda. */
+/*
+ * As abas do time (Jogos · Elenco · Ajustes[ADMIN] · Ranking). Cada uma tem a largura do próprio texto e
+ * divide a sobra (flex: 1 1 auto), em vez de partes iguais, onde "Ajustes" + selo estourava a sua parte
+ * e empurrava o "Ranking" para a borda.
+ */
 .aba-time {
   flex: 1 1 auto;
   min-width: 0;
@@ -3268,9 +3320,12 @@
   .aba-time { font-size: 12px; padding: 0 4px; letter-spacing: 0; }
 }
 
-/* Rodada 29R (achado 147): o jogo que a linha "presença ainda não aberta" do Início apontou (aba Jogos do admin). Um anel dourado que
-   acende e some em 2,4 s; a classe sai do cartão aos 2,6 s (AdminPanel, TabJogos). Estado natural = cartão normal, nada fica escondido.
-   Movimento reduzido: sem animação, só a borda dourada fixa enquanto a classe estiver lá (o !important vence o estilo em linha do cartão). */
+/*
+ * O jogo que a linha "presença ainda não aberta" do Início apontou (aba Jogos do admin). Um anel dourado
+ * que acende e some em 2,4 s; a classe sai do cartão aos 2,6 s (AdminPanel, TabJogos). Estado natural =
+ * cartão normal, nada fica escondido. Movimento reduzido: sem animação, só a borda dourada fixa enquanto
+ * a classe estiver lá (o !important vence o estilo em linha do cartão).
+ */
 .jogo-destaque { animation: jogoDestaque 2.4s ease-out 1; }
 @keyframes jogoDestaque {
   0%, 40% { border-color: rgba(212, 160, 23, 0.95); box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.55), 0 0 18px rgba(212, 160, 23, 0.32); }
@@ -3280,7 +3335,10 @@
   .jogo-destaque { animation: none; border-color: rgba(212, 160, 23, 0.95) !important; }
 }
 
-/* Rodada 29T-B: as caixas do placar (ResultadoEditor) mostram um "0" apagado enquanto vazias — a pessoa vê o que se escreve ali. */
+/*
+ * As caixas do placar (ResultadoEditor) mostram um "0" apagado enquanto vazias — a pessoa vê o que se
+ * escreve ali.
+ */
 .placar-input::placeholder {
   color: rgba(255, 255, 255, 0.28);
   opacity: 1;

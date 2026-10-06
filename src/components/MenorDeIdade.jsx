@@ -1,9 +1,9 @@
-// Futty v2.0 — Rodada 29G (1-out): a tela de quem tem conta com data de nascimento menor de 18 anos.
+// Futty v2.0 — A tela de quem tem conta com data de nascimento menor de 18 anos.
 //
 // O Futty é 18+ de ponta a ponta. O cadastro novo barra o menor antes de a conta nascer (Register,
-// Onboarding, motor e banco); a conta que JÁ existia com data menor de 18 entra aqui: o AuthGuard
-// troca o app por esta tela cheia — a frase da casa e o botão "Excluir minha conta". O motor não
-// apaga conta existente sozinho; quem decide excluir é a pessoa (2 toques: botão → "Excluir de vez").
+// Onboarding, motor e banco); a conta que JÁ existia com data menor de 18 entra aqui: o AuthGuard troca o
+// app por esta tela cheia — a frase da casa e o botão "Excluir minha conta". O motor não apaga conta
+// existente sozinho; quem decide excluir é a pessoa (2 toques: botão → "Excluir de vez").
 // Lazy: só carrega para quem precisa dela (o arranque tem teto).
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';

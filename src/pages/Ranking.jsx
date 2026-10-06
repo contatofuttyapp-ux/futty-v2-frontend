@@ -27,13 +27,13 @@ import EscudoEquipa from '../components/EscudoEquipa';
 import { lazyComRetry } from '../utils/lazyComRetry';
 import '../styles/app.css';
 
-// Diagnóstico (Rodada 8A): a 1ª imagem da tela que terminou de carregar.
+// Diagnóstico: a 1ª imagem da tela que terminou de carregar.
 const marcarImagem = () => marcarInstante('imagem');
 
 // Moldura de avatar do cânone (V1): quadrado + cantos-L dourados + interior no material
 // da casa + véu. Moldura única da página — rows, pódio e modal partilham-na.
 // Sem foto nem figurinha, mas com identidade (userId), mostra o avatar genérico que a pessoa ESCOLHEU —
-// o mesmo da Presença, da Equipa e do Início — e nunca a silhueta "?" (Rodada 27: o Ranking ignorava a escolha).
+// o mesmo da Presença, da Equipa e do Início — e nunca a silhueta "?".
 function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 48 }) {
   const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
   return (
@@ -100,12 +100,13 @@ function RankRow({ p, idx, slug, onVote }) {
               <span className="hud-corners-s" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: '#b69cff', border: '1px solid var(--purple)', padding: '1px 6px' }}>GOL</span>
             ) : null}
           </div>
-          {/* Rodada 29I (achado 95): a ordem do ranking é por PONTOS (o `score` 0–100 do motor: vitórias, gols, destaques, presença e
-              nota), e a tela só mostrava a nota — que não acompanha a posição (1º 10.0, 2º 8.7, 3º 9.3…) e fazia o ranking parecer
-              quebrado. Agora o número que ordena aparece, rotulado "pontos", com a nota ao lado.
-              Rodada 29Z: nunca mais reticências. Os pontos e a nota são dois grupos que não se partem por dentro; se os dois não cabem na
-              mesma linha (celular de 360 px, o botão "Alterar" ao lado), a nota desce para a segunda linha — e o "·" que os separava
-              fica de fora (ver .rank-votes no CSS). O "você deu / por votar" só aparece onde há folga: o botão ao lado já diz o mesmo. */}
+          {/* A ordem do ranking é por PONTOS (o `score` 0–100 do motor: vitórias, gols, destaques, presença e
+              nota); a nota sozinha não acompanha a posição (1º 10.0, 2º 8.7, 3º 9.3…) e faria o ranking parecer
+              quebrado. Por isso o número que ordena aparece, rotulado "pontos", com a nota ao lado.
+              Nunca reticências: os pontos e a nota são dois grupos que não se partem por dentro; se os dois não
+              cabem na mesma linha (celular de 360 px, o botão "Alterar" ao lado), a nota desce para a segunda
+              linha — e o "·" que os separava fica de fora (ver .rank-votes no CSS). O "você deu / por votar" só
+              aparece onde há folga: o botão ao lado já diz o mesmo. */}
           <div className="rank-votes" style={{ marginTop: 4, fontSize: 12 }}>
             {p.score != null ? (
               <span className="rank-votes__grupo" data-grupo-pontos>
@@ -143,10 +144,10 @@ function RankRow({ p, idx, slug, onVote }) {
   );
 }
 
-// A lista. O useLayoutEffect corre no commit, antes do desenho: é o instante
-// "lista commitada" do Diagnóstico (Rodada 8A) — daí até a pintura, o tempo é do
-// navegador (estilo, layout, desenho), não dos dados. `ranking` muda de identidade
-// quando a resposta fresca substitui a do cache: esse commit é a "lista nova".
+// A lista. O useLayoutEffect corre no commit, antes do desenho: é o instante "lista commitada" do
+// Diagnóstico — daí até a pintura, o tempo é do navegador (estilo, layout, desenho), não dos dados.
+// `ranking` muda de identidade quando a resposta fresca substitui a do cache: esse commit é a "lista
+// nova".
 function ListaRanking({ ranking, children }) {
   // Compara a LISTA, não um "já montou": o StrictMode repete os efeitos em dev e
   // a repetição não é uma lista nova.
@@ -187,8 +188,8 @@ function MeiaEstrelas({ value = 0, onChange }) {
   );
 }
 
-// Rodada 29I, bloco 3: as estatísticas do time (eram a aba Estatísticas do painel do admin) moram no Ranking do time, só para o admin, e
-// só são baixadas quando ele abre (o mesmo chunk das abas do admin na página do time).
+// As estatísticas do time moram no Ranking do time, só para o admin, e só são baixadas quando ele abre
+// (o mesmo chunk das abas do admin na página do time).
 const EstatisticasDoTime = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.EstatisticasDoTime })));
 
 export default function Ranking() {
@@ -198,17 +199,14 @@ export default function Ranking() {
   // e useApi(null) já não disparam pedido nenhum com slug ausente.
   const semTime = !slug;
   const { ranking, loading, error, reload } = useRanking(slug);
-  // VELOCIDADE 8 (16-set) — listas grandes pintam em duas levas. As 10 primeiras
-  // são as que cabem na tela (e são as caras: o pódio leva moldura, glow e
-  // flutuação); o resto entra dois quadros depois. Os relatórios do iPhone dão
+  // Listas grandes pintam em duas levas. As 10 primeiras são as que cabem na tela (e são as caras: o
+  // pódio leva moldura, glow e flutuação); o resto entra dois quadros depois. Relatórios do iPhone deram
   // 1389, 1866 e 2121 ms para pintar esta tela com 23 linhas.
-  // Só divide acima de 15 linhas: abaixo disso a 1ª leva é a lista toda e o hook
-  // devolve-a inteira à primeira — dividir o que já cabe num quadro só
-  // acrescentava um quadro de espera.
+  // Só divide acima de 15 linhas: abaixo disso a 1ª leva é a lista toda e o hook devolve-a inteira à
+  // primeira — dividir o que já cabe num quadro só acrescentava um quadro de espera.
   const linhasADesenhar = useListaProgressiva(ranking, ranking.length > 15 ? 10 : ranking.length);
-  // Rodada 12C: o anúncio é pedido no topo da tela, em paralelo com o ranking —
-  // o mesmo motivo da Resenha (ver useAd): montado no meio da lista, o pedido
-  // dele só partiria depois de a lista inteira ter pintado.
+  // O anúncio é pedido no topo da tela, em paralelo com o ranking — o mesmo motivo da Resenha (ver useAd):
+  // montado no meio da lista, o pedido dele só partiria depois de a lista inteira ter pintado.
   const { ad: adRanking, pronto: adPronto } = useAd('ranking');
   const { teams, votacaoStatus } = useSessao();
   // votacaoStatus do SessaoContext já é da equipa PRINCIPAL (teams[0], 1x por
@@ -228,7 +226,7 @@ export default function Ranking() {
   const festaRef = useRef(null);
   useEffect(() => () => clearTimeout(festaRef.current), []);
 
-  // Confetti uma vez se o utilizador estiver no pódio (top 3). Velocidade 7B: sai
+  // Confetti uma vez se o utilizador estiver no pódio (top 3). Sai
   // 400 ms depois de a lista estar na tela — criar o canvas de tela cheia e o
   // worker do confetti no mesmo instante da primeira pintura disputava-a.
   useEffect(() => {
@@ -273,9 +271,9 @@ export default function Ranking() {
           <EstadoSemTime icone="trofeu" mensagem="O ranking nasce com o seu time. Crie o seu ou entre em um." />
         ) : (
           <>
-            {/* Cabeçalho: escudo + nome da equipa actual. Achado 96: com mais de um time os chips logo abaixo JÁ dizem qual é o atual
-                (o ativo é o dourado, com escudo e nome) — o título repetia o mesmo nome em cima do chip. O nome do time aparece UMA vez:
-                no título quando há um time só (não há chips), no chip ativo quando há vários. */}
+            {/* Cabeçalho: escudo + nome da equipa actual. Com mais de um time os chips logo abaixo JÁ dizem qual é o
+                atual (o ativo é o dourado, com escudo e nome) — o título repetia o mesmo nome em cima do chip. O nome
+                do time aparece UMA vez: no título quando há um time só (não há chips), no chip ativo quando há vários. */}
             {equipaAtual && teams.length <= 1 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <EscudoEquipa team={equipaAtual} size={40} />
@@ -326,13 +324,13 @@ export default function Ranking() {
               </div>
             ) : (
               <>
-              {/* Quanto vale cada coisa: uma linha, no topo, para a ordem não parecer defeito (achado 95). Texto pela régua da VOZ. */}
+              {/* Quanto vale cada coisa: uma linha, no topo, para a ordem não parecer defeito. Texto pela régua da VOZ. */}
               <p className="texto-apoio" data-ranking-criterio style={{ margin: '0 0 12px' }}>
                 Os pontos juntam vitórias, gols, destaques, presença e nota. A ordem é por eles.
               </p>
               <ListaRanking ranking={ranking}>
                 {linhasADesenhar.map((p, idx) => (
-                  // RODADA 12C — o anúncio entra DEPOIS do pódio: o top-3 é a
+                  // O anúncio entra DEPOIS do pódio: o top-3 é a
                   // razão de a pessoa abrir esta tela, e nada se mete entre o
                   // primeiro e o terceiro. Da 4ª linha em diante já é lista, e
                   // aí a faixa cabe sem atravessar o assunto.
@@ -345,19 +343,17 @@ export default function Ranking() {
                     <RankRow key={p.user_id} p={p} idx={idx} slug={slug} onVote={openVote} />
                   )
                 ))}
-                {/* RODADA 12A — as linhas que ainda não montaram ficam como
+                {/* As linhas que ainda não montaram ficam como
                     esqueleto, nunca como espaço vazio. A lista entra de 5 em 5
-                    (useListaProgressiva) e até aqui quem rolava depressa via a
+                    (useListaProgressiva) e sem o esqueleto quem rolava depressa via a
                     lista acabar a meio e voltar a crescer — lê-se como defeito,
                     não como carregamento. O esqueleto tem a altura exata da
                     linha, por isso a rolagem já nasce do tamanho certo e nada
                     salta quando a linha real ocupa o lugar. */}
                 {ranking.slice(linhasADesenhar.length).map((p, i) => (
-                  // Só os primeiros respiram. Todos reservam a altura — é para
-                  // isso que existem —, mas animar 50 camadas com clip-path para
-                  // sempre, num time grande, é carga contínua na tela que esta
-                  // rodada quer desafogar. Os que estão fora do alcance da
-                  // rolagem não têm quem os veja piscar.
+                  // Só os primeiros respiram. Todos reservam a altura — é para isso que existem —, mas animar 50 camadas
+                  // com clip-path para sempre, num time grande, é carga contínua na tela que se quer desafogar. Os que
+                  // estão fora do alcance da rolagem não têm quem os veja piscar.
                   <div key={`esqueleto-${p.user_id}`} className={`rank-row-esqueleto ${i < 6 ? 'rank-row-esqueleto--respira' : ''}`} aria-hidden="true" />
                 ))}
               </ListaRanking>
@@ -382,9 +378,8 @@ export default function Ranking() {
         )}
       </main>
 
-      {/* Modal de votação (meias estrelas). PORTAL para o body (Rodada 8A): dentro
-          do [data-page], o transform da animação de entrada vira o "chão" do
-          position:fixed e o modal centrava-se na PÁGINA inteira, não na tela — com
+      {/* Modal de votação (meias estrelas). PORTAL para o body: dentro do [data-page], o transform da animação
+          de entrada vira o "chão" do position:fixed e o modal centrava-se na PÁGINA inteira, não na tela — com
           a lista rolada ficava fora de quadro e a barra de baixo por cima do véu. */}
       {voteModal && createPortal(
         <div className="modal-overlay" role="presentation" onClick={() => !voteBusy && setVoteModal(null)}>

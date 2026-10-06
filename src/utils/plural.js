@@ -17,7 +17,7 @@ export function formatarMedia(n) {
   return formatarAte(v, 1);
 }
 
-/** Rodada 29L (achado 136): o número e a palavra concordando — contar(1, 'jogo', 'jogos') → '1 jogo'; contar(0, …) → '0 jogos'. */
+/** O número e a palavra concordando — contar(1, 'jogo', 'jogos') → '1 jogo'; contar(0, …) → '0 jogos'. */
 export function contar(n, singular, pluralForm) {
   return `${n} ${plural(Number(n), singular, pluralForm)}`;
 }

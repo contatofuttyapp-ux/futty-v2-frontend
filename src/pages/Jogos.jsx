@@ -1,5 +1,6 @@
-// Futty v2.0 — Lista de jogos do time (cânone, transversal lote 1). O corpo é o components/ListaDeJogos.jsx — o MESMO da aba Jogos da
-// página do time (Rodada 29I, bloco 3). "Voltar" volta para onde a pessoa estava (histórico); sem histórico, a página do time.
+// Futty v2.0 — Lista de jogos do time. O corpo é o components/ListaDeJogos.jsx — o MESMO da aba Jogos
+// da página do time. "Voltar" volta para onde a pessoa estava (histórico); sem histórico, a página do
+// time.
 import { Link, useParams } from 'react-router-dom';
 import { useTeamGames } from '../hooks/useTeam';
 import Topbar from '../components/Topbar';

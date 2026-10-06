@@ -1,7 +1,7 @@
 // Futty v2.0 — Página de convite: aceitar entrada numa equipa.
-// Rodada 29B (A): refeita inteira. Centrada, sem cartão; marca atual no alto (F dourado + FUTTY espaçado, o lockup do
+// Centrada, sem cartão; marca atual no alto (F dourado + FUTTY espaçado, o lockup do
 // e-mail); o logo do time grande no centro; nome em destaque; três fatos; UM botão. O desenho vive em convite.css.
-// Rodada 29H (itens 1 e 7): o link é o longo (/convite/<uuid>) ou o curto (/c/<código>) — a mesma tela; quem chega sem conta (ou
+// O link é o longo (/convite/<uuid>) ou o curto (/c/<código>) — a mesma tela; quem chega sem conta (ou
 // com conta que ainda não terminou o onboarding) deixa o bilhete do convite no aparelho e segue para o cadastro / o onboarding,
 // que ABRE nas boas-vindas do time; time sem logo = só o nome em destaque, sem quadrado de iniciais.
 import { useEffect, useState } from 'react';
@@ -39,7 +39,10 @@ const ICONE_DO_FATO = {
   cidade: <MapPin size={15} aria-hidden="true" />,
 };
 
-/** O escudo do time: o logo. Sem logo não há escudo (29H, item 23: nada de quadrado com iniciais — o nome em destaque basta). `vazio` = esqueleto enquanto o convite carrega. */
+/**
+ * O escudo do time: o logo. Sem logo não há escudo (nada de quadrado com iniciais — o nome em destaque basta).
+ * `vazio` = esqueleto enquanto o convite carrega.
+ */
 function Escudo({ team, vazio = false }) {
   if (vazio) return <div className="convite__escudo convite__escudo--vazio" aria-hidden="true" />;
   if (!team?.logo_url) return null;
@@ -86,7 +89,7 @@ export default function Convite() {
     };
   }, [token, authLoading]);
 
-  // O bilhete do convite (29H, item 1): sem conta, ou com conta que ainda não terminou o onboarding, o convite fica guardado
+  // O bilhete do convite: sem conta, ou com conta que ainda não terminou o onboarding, o convite fica guardado
   // no aparelho DESDE QUE a página abre — o cadastro por e-mail, o Google e a Apple levam a pessoa para fora (e o OAuth perde o
   // `state` do roteador), mas o bilhete sobrevive. O Onboarding o lê e começa nas boas-vindas do time; ao final, aceita o convite.
   // Para quem já tem conta pronta não há bilhete: "Entrar no time" resolve aqui mesmo.
@@ -116,7 +119,7 @@ export default function Convite() {
     try {
       const { team, jaMembro } = await apiFetch(`/api/convite/${token}/aceitar`, { method: 'POST' });
       tomarConvitePendente(); // entrou: o bilhete cumpriu a função (se houvesse)
-      // `primeiraEntrada`: a página do time abre as boas-vindas (Rodada 29B, C) — só para quem acabou de entrar.
+      // `primeiraEntrada`: a página do time abre as boas-vindas — só para quem acabou de entrar.
       navigate(`/time/${team.slug}`, { replace: true, state: jaMembro ? undefined : { primeiraEntrada: true } });
     } catch (err) {
       setError(err.message);

@@ -1,7 +1,10 @@
-// Futty v2.0 — Rodada 29T (bloco A, achado 168): o aviso do topo do Início para o jogo que espera resposta. A pessoa abre o app para
-// responder "vou ou não vou": o próximo jogo com presença aberta e sem resposta sobe para o topo, com os botões ali mesmo.
-// Os botões chamam a MESMA função dos cards dos Próximos jogos (`onPresence(idDoJogo, vou)`); este componente só desenha.
-// Dia e hora no relógio do campo (utils/dataHora.js), com o rabicho da cidade do time quando a pessoa está noutro relógio.
+// Futty v2.0 — O aviso do topo do Início para o jogo que espera resposta. A pessoa abre o app para
+// responder "vou ou não vou": o próximo jogo com presença aberta e sem resposta sobe para o topo, com os
+// botões ali mesmo.
+// Os botões chamam a MESMA função dos cards dos Próximos jogos (`onPresence(idDoJogo, vou)`); este
+// componente só desenha.
+// Dia e hora no relógio do campo (utils/dataHora.js), com o rabicho da cidade do time quando a pessoa está
+// noutro relógio.
 import EscudoEquipa from './EscudoEquipa';
 import { formatarDataHora } from '../utils/dataHora';
 import { plural } from '../utils/plural';

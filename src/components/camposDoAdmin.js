@@ -1,6 +1,6 @@
-// Futty v2.0 — Rodada 29S, bloco B: os três estilos de campo dos formulários do admin (AdminPanel e ResultadoModal), numa fonte só — o
-// ResultadoModal saiu do AdminPanel para components/ e os dois precisam dos mesmos campos.
-// fontSize 16: abaixo disso o iPhone dá zoom ao focar (Rodada 8A, ver index.css).
+// Futty v2.0 — Os três estilos de campo dos formulários do admin (AdminPanel e ResultadoModal), numa fonte
+// só: os dois precisam dos mesmos campos.
+// fontSize 16: abaixo disso o iPhone dá zoom ao focar (ver index.css).
 export const inputStyle = {
   width: '100%',
   boxSizing: 'border-box',

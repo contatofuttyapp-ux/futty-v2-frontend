@@ -1,6 +1,7 @@
-// Futty v2.0 — O link curto do sorteio, futtyapp.com.br/s/<código> (Rodada 29I, bloco 3, item 74 da Rodada 29). Sem login, como a vista
-// pública: pergunta ao motor para onde o código leva (GET /api/s/:codigo) e abre a página de sempre, /p/<slug>/<id do jogo>, no lugar
-// (replace: o "Voltar" do navegador não cai de novo aqui). O link longo continua valendo.
+// Futty v2.0 — O link curto do sorteio, futtyapp.com.br/s/<código>. Sem login, como a vista pública:
+// pergunta ao motor para onde o código leva (GET /api/s/:codigo) e abre a página de sempre,
+// /p/<slug>/<id do jogo>, no lugar (replace: o "Voltar" do navegador não cai de novo aqui). O link
+// longo continua valendo.
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import LoadingFutty from '../components/LoadingFutty';

@@ -1,11 +1,13 @@
-// Futty v2.0 — Rodada 29Z: UM lugar só para escrever número com casa decimal na tela.
+// Futty v2.0 — UM lugar só para escrever número com casa decimal na tela.
 //
-// Brasileiro escreve 77,9 e 9,1 — nunca 77.9 nem 9.10. Antes cada tela formatava por conta própria (toFixed, toFixed + replace, uma
-// delas com duas casas) e a vírgula só aparecia onde alguém lembrou. Agora toda casa decimal que é TEXTO passa por aqui: Intl.NumberFormat
-// com locale pt-BR explícito, nunca o do aparelho (a mesma lei da hora em dataHora.js: o número lê-se igual para todo mundo).
+// Brasileiro escreve 77,9 e 9,1 — nunca 77.9 nem 9.10. Cada tela formatando por conta própria (toFixed,
+// toFixed + replace, uma delas com duas casas) deixava a vírgula só onde alguém lembrou. Toda casa decimal
+// que é TEXTO passa por aqui: Intl.NumberFormat com locale pt-BR explícito, nunca o do aparelho (a mesma
+// lei da hora em dataHora.js: o número lê-se igual para todo mundo).
 //
-// Fica de fora só o que não é texto: valor de CSS (calc, translate, gradiente), ponto de SVG, atraso de animação, mapa de canvas. Esses
-// continuam com toFixed — a máquina lê ponto, a pessoa lê vírgula. O teste scripts/unidade/numero-ptbr.test.mjs trava as duas metades.
+// Fica de fora só o que não é texto: valor de CSS (calc, translate, gradiente), ponto de SVG, atraso de
+// animação, mapa de canvas. Esses continuam com toFixed — a máquina lê ponto, a pessoa lê vírgula. O teste
+// scripts/unidade/numero-ptbr.test.mjs trava as duas metades.
 
 const formatadores = new Map();
 function formatador(minimo, maximo) {

@@ -1,8 +1,8 @@
-// Futty v2.0 — Gabinete, "Pessoas & times → Times" (Rodada 29Y): a ordem da lista de equipas.
+// Futty v2.0 — Gabinete, "Pessoas & times → Times": a ordem da lista de equipas.
 // Funções puras (sem React, sem rede): a tela e os testes leem a mesma regra.
 //
-// Nome A–Z é ordem de DICIONÁRIO PT-BR: Intl.Collator com sensitivity 'base' ignora maiúscula e acento ("gajos" fica junto do G,
-// "Éden" junto do E). `numeric` põe "Time 2" antes de "Time 10".
+// Nome A–Z é ordem de DICIONÁRIO PT-BR: Intl.Collator com sensitivity 'base' ignora maiúscula e acento
+// ("gajos" fica junto do G, "Éden" junto do E). `numeric` põe "Time 2" antes de "Time 10".
 const colatorNome = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
 
 // Os oito critérios do seletor "Ordenar por". `coluna` é o título da tabela que os representa; `sentido` é o da seta (▲ asc, ▼ desc).

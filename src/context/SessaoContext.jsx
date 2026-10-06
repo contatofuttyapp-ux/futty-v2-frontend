@@ -1,16 +1,15 @@
-// Futty v2.0 — Contexto de sessão (12-set, "Velocidade 2"): equipas do
+// Futty v2.0 — Contexto de sessão: equipas do
 // utilizador (/api/teams) e votação da equipa principal, carregadas 1x por
-// sessão e partilhadas por toda a app — mesmo problema que o PerfilContext já
-// resolveu para /api/me, agora para /api/teams. Achado da varredura: Layout,
-// BottomNav (fora do Início), Feed, MeuPerfil e Ranking disparavam cada um o
-// seu próprio GET /api/teams a cada navegação; Layout em particular tinha um
-// bug real — chamava useTeams() no seu PRÓPRIO corpo, mas o InicioProvider é
-// montado como FILHO do Layout, então useInicio() aí dentro nunca via o
-// contexto do Início (contexto só flui para descendentes). Por isso este
-// provider tem de ficar ACIMA do Layout na árvore (ver App.jsx).
+// sessão e partilhadas por toda a app — mesmo problema que o PerfilContext
+// resolve para /api/me, agora para /api/teams: Layout, BottomNav (fora do Início),
+// Feed, MeuPerfil e Ranking disparariam cada um o seu próprio GET /api/teams a
+// cada navegação.
+// Este provider tem de ficar ACIMA do Layout na árvore (ver App.jsx): o InicioProvider
+// é montado como FILHO do Layout, então um useTeams() no PRÓPRIO corpo do Layout nunca
+// veria o contexto do Início (contexto só flui para descendentes).
 //
 // Na rota /home o InicioContext já traz teams/votacao_status dentro do
-// payload agregado de /api/inicio (1 pedido só, decisão de 11-set) — para não
+// payload agregado de /api/inicio (1 pedido só) — para não
 // duplicar esse pedido, este provider ADIA a sua própria carga inicial
 // enquanto o pathname ATUAL for /home (reavaliado a cada navegação — nunca
 // travado num pathname "da 1ª renderização": a "/" redireciona para "/home"
@@ -38,7 +37,7 @@ export function SessaoProvider({ children }) {
   const { pathname } = useLocation();
   const { perfil: me, recarregar: reloadMe } = usePerfil();
 
-  // "/" conta como Início (Velocidade 7B): no arranque frio a rota é "/" por um
+  // "/" conta como Início: no arranque frio a rota é "/" por um
   // instante antes do <Navigate> para "/home", e bastava esse instante para
   // disparar /api/teams + votacao-status em paralelo com o /api/inicio que traz
   // os dois — 3 pedidos frios em vez de 1. O PerfilContext já fazia o mesmo.
@@ -108,7 +107,7 @@ export function SessaoProvider({ children }) {
     if (jaTentouTeamsRef.current || noInicioAgora) return undefined; // hidratarTeams() pode cobrir
     jaTentouTeamsRef.current = true;
 
-    // Cache local (13-set, "Velocidade 3"): mostra as equipas da última visita
+    // Cache local: mostra as equipas da última visita
     // na hora, sem `carregandoTeams` a tapar a tela — carregarTeams() por
     // trás substitui assim que a resposta fresca chegar.
     const doCache = lerCache(userId, CACHE_TEAMS);
@@ -129,9 +128,8 @@ export function SessaoProvider({ children }) {
   // se o slug mudar antes de qualquer hidratação chegar, tenta de novo.
   const votacaoTentadaParaRef = useRef(null); // slug já tentado (própria ou hidratada)
   useEffect(() => {
-    // VELOCIDADE 6B (15-set): este efeito esperava `teams` — ou seja, esperava o
-    // /api/teams responder — antes de sequer começar o votacao-status. Duas idas
-    // a São Paulo em fila, ~500 ms só de espera. Mas o slug do time principal
+    // Este efeito não espera o /api/teams responder para começar o votacao-status:
+    // seriam duas idas a São Paulo em fila, ~500 ms só de espera. O slug do time principal
     // está no cache local desde a última visita: dá para arrancar já com ele.
     // Se o /api/teams trouxer outro slug (a pessoa mudou de time principal), o
     // efeito corre de novo com o slug certo — votacaoTentadaParaRef trata disso.
@@ -150,7 +148,7 @@ export function SessaoProvider({ children }) {
     if (votacaoTentadaParaRef.current === slug || noInicioAgora) return undefined; // hidratarVotacaoStatus() pode cobrir
     votacaoTentadaParaRef.current = slug;
 
-    // Cache local (13-set, "Velocidade 3"): mostra o status da última visita
+    // Cache local: mostra o status da última visita
     // na hora; o pedido por trás substitui assim que responder.
     const doCache = lerCache(userId, CACHE_VOTACAO);
     let ativo = true;
@@ -185,8 +183,7 @@ export function SessaoProvider({ children }) {
     teamsRef.current = teams;
   }, [teams]);
 
-  // userIdRef.current em vez do `userId` da closure (13-set → corrigido
-  // 14-set, "Velocidade 3"): estas funções são chamadas de FORA (o
+  // userIdRef.current em vez do `userId` da closure: estas funções são chamadas de FORA (o
   // InicioContext guarda a referência que recebeu de useSessao() no seu
   // próprio efeito) — se essa chamada vier de um efeito cujo useCallback foi
   // criado num render anterior (userId ainda nulo), gravarCache(null, …)
@@ -203,15 +200,15 @@ export function SessaoProvider({ children }) {
     gravarCache(userIdRef.current, CACHE_TEAMS, novasTeams);
   }, []);
 
-  // VELOCIDADE 9 (23-set) — `slug` passa a vir de quem hidrata.
+  // `slug` vem de quem hidrata.
   //
-  // A marca "já tentei para este time" era lida de `teamsRef.current`, e quem
+  // A marca "já tentei para este time" não pode ser lida de `teamsRef.current`, e quem
   // hidrata (InicioContext) chama `hidratarTeams` e `hidratarVotacaoStatus` no
   // MESMO instante: a ref ainda tem o valor anterior — numa abertura fria, uma
-  // lista vazia. A marca ficava `null`, e quando os times entravam o efeito de
-  // baixo via "slug diferente do que tentei" e pedia o votacao-status outra
+  // lista vazia. A marca ficaria `null`, e quando os times entrassem o efeito de
+  // baixo veria "slug diferente do que tentei" e pediria o votacao-status outra
   // vez — exactamente o dado que o /api/inicio tinha acabado de trazer. Não se
-  // via no Início (lá o efeito não corre); aparecia na tela SEGUINTE, uma ida a
+  // vê no Início (lá o efeito não corre); apareceria na tela SEGUINTE, uma ida a
   // São Paulo ao mudar para a Resenha.
   const hidratarVotacaoStatus = useCallback((status, slug = undefined) => {
     setVotacaoStatus(status ?? null);

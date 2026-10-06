@@ -1,8 +1,8 @@
 // Futty v2.0 — Perfil (/perfil): a página mais pessoal — define como o
 // utilizador aparece em todo o lado. Mobile-first, dark theme.
 //
-// VAGA 2 (B2) — a página entra no cânone: topbar HUD (a mesma da Figurinha e dos
-// Planos), cantos a 45° em vez do radius 12, Rajdhani no que é estrutura.
+// Topbar HUD (a mesma da Figurinha e dos Planos), cantos a 45° em vez do
+// radius 12, Rajdhani no que é estrutura.
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
@@ -11,7 +11,7 @@ import { limparCacheLocal } from '../lib/cacheLocal';
 import { useAuth } from '../hooks/useAuth';
 import { useApiComCache } from '../hooks/useApiComCache';
 import { usePerfil } from '../context/PerfilContext';
-// Rodada 27: liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
+// Liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
 import { useTeam, useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -66,9 +66,10 @@ function SecLabel({ children }) {
   );
 }
 
-// Rodada 29A (G): uma linha de "Meus times" — o time e a escolha "Você joga na linha/no gol · trocar".
-// Lê o time pela MESMA chave de cache da página do time (`team:<slug>`), então as duas telas nunca discordam;
-// depois de gravar, recarrega essa chave. O estado (`goleiro`) vem de team_members.categoria, no motor.
+// Uma linha de "Meus times" — o time e a escolha "Você joga na linha/no gol · trocar".
+// Lê o time pela MESMA chave de cache da página do time (`team:<slug>`), então as duas telas nunca
+// discordam; depois de gravar, recarrega essa chave. O estado (`goleiro`) vem de team_members.categoria,
+// no motor.
 function LinhaMeuTime({ time, meuId, semBorda, aoErro }) {
   const { members, loading, reload } = useTeam(time.slug);
   const [ocupado, setOcupado] = useState(false);
@@ -88,10 +89,11 @@ function LinhaMeuTime({ time, meuId, semBorda, aoErro }) {
   }
 
   return (
-    // Rodada 29Z (item 3e): a linha quebra — o nome do time ocupa a linha de cima e "Jogo na linha | No gol" desce, quando os dois não cabem
-    // lado a lado (em 360 px o nome ficava com 16 px e virava "D…"); e o nome quebra em duas linhas em vez de ser cortado.
+    // A linha quebra — o nome do time ocupa a linha de cima e "Jogo na linha | No gol" desce, quando os dois
+    // não cabem lado a lado (em 360 px o nome ficava com 16 px e virava "D…"); e o nome quebra em duas
+    // linhas em vez de ser cortado.
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px 12px', padding: '12px 16px', borderBottom: semBorda ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
-      {/* 29I, bloco 3: cada time leva à página dele (o admin acha lá a aba Ajustes). */}
+      {/* Cada time leva à página dele (o admin acha lá a aba Ajustes). */}
       <Link to={`/time/${time.slug}`} data-meu-time={time.slug} style={{ minWidth: 0, flex: '1 1 100px', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', textDecoration: 'none' }}>
         <EscudoEquipa team={time} size={20} />
         <span data-nome-do-time style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{time.nome}</span>
@@ -110,12 +112,13 @@ export default function MeuPerfil() {
   const { user, signOut } = useAuth();
   const { teams } = useTeams();
   const navigate = useNavigate();
-  // Achado 4 (roteiro 10-set): /api/me vem do PerfilContext partilhado — carregado
-  // 1x por sessão, em vez desta página o pedir 2x por conta própria (como fazia).
+  // /api/me vem do PerfilContext partilhado — carregado 1x por sessão, em vez desta página o pedir 2x por
+  // conta própria.
   const { perfil: perfilCtx, carregando: perfilCarregando, erro: erroCtx, recarregar: recarregarPerfil } = usePerfil();
   const { estado: pushEstado, subscrever: pushSubscrever, dessubscrever: pushDessubscrever } = usePushNotifications();
-  // Rodada 29I, bloco 3: o "Painel de administração" saiu daqui — admin não é um lugar. Cada time de "Meus times" leva à página do time,
-  // onde o admin tem a aba Ajustes (e o resto do que era o painel, nas abas Jogos e Elenco).
+  // Sem "Painel de administração" nesta página — admin não é um lugar. Cada time de "Meus times" leva à
+  // página do time, onde o admin tem a aba Ajustes (e o resto do que era o painel, nas abas Jogos e
+  // Elenco).
 
   // Rascunho local { user, stats }: espelha o contexto, mas a edição dos campos
   // (setField/patchMe) precisa de mutação optimista própria — não faz sentido
@@ -132,7 +135,7 @@ export default function MeuPerfil() {
   const [toast, setToast] = useState(null);
   const souSuperAdmin = perfil?.user?.is_super_admin === true;
   // Bloqueio entre jogadores (Apple UGC 1.2): lista de quem EU bloqueei.
-  // Velocidade 6B: entra no mesmo stale-while-revalidate do resto da casa — a
+  // Usa o mesmo stale-while-revalidate do resto da casa — a
   // lista de bloqueados quase nunca muda, e o pré-aquecimento já a trouxe.
   const { data: blocksData, reload: reloadBlocks } = useApiComCache('/api/blocks', 'blocks');
   const bloqueados = blocksData?.bloqueados || [];
@@ -143,12 +146,12 @@ export default function MeuPerfil() {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [nomeJogFocus, setNomeJogFocus] = useState(false);
   const [sheetIdioma, setSheetIdioma] = useState(false);
-  // Excluir conta (LGPD/exigência das lojas, 14-set).
+  // Excluir conta (LGPD/exigência das lojas).
   const [sheetExcluir, setSheetExcluir] = useState(false);
   const [confirmExcluir, setConfirmExcluir] = useState('');
   const [excluindo, setExcluindo] = useState(false);
   const campoExcluirRef = useRef(null);
-  // Rodada 29A: "excluir", "Excluir " e "EXCLUIR" valem (o teclado do iPhone corrige a palavra).
+  // "excluir", "Excluir " e "EXCLUIR" valem (o teclado do iPhone corrige a palavra).
   const confirmacaoOk = confirmacaoExcluirValida(confirmExcluir);
 
   function showToast(mensagem, tipo = 'success') {
@@ -179,7 +182,7 @@ export default function MeuPerfil() {
 
   // Abre o cliente de email; se não houver, mostra o email para copiar.
   function relatarProblema() {
-    // Rodada 28: suporte@futty.app era um domínio que não é nosso — o e-mail da casa é o dos Termos.
+    // suporte@futty.app não é um domínio nosso — o e-mail da casa é o dos Termos.
     window.location.href = 'mailto:contato@futtyapp.com?subject=Problema%20no%20Futty';
     setTimeout(() => {
       showToast('E-mail: contato@futtyapp.com', 'info');
@@ -221,8 +224,8 @@ export default function MeuPerfil() {
     try {
       const res = await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify(patch) });
       setPerfil((p) => (p ? { ...p, user: { ...p.user, ...res.user } } : p));
-      // Achado 4: invalida o PerfilContext partilhado depois de salvar — as outras
-      // páginas (Início, Figurinha, guards) deixam de ver dados velhos.
+      // Invalida o PerfilContext partilhado depois de salvar — as outras páginas (Início, Figurinha, guards)
+      // deixam de ver dados velhos.
       recarregarPerfil();
       return true;
     } catch (e) {
@@ -247,9 +250,9 @@ export default function MeuPerfil() {
   // O patchMe() fica — o guardarDados() usa-o para o nome.
 
   if (!perfil) {
-    // FASE 3.53 — era o shell da página com o título + <p>Carregando…</p>, e lia-se
-    // como "branco + texto". Passa ao padrão único: só o F, sem título nem legenda.
-    // O ramo de ERRO mantém a página com título — aí o utilizador precisa do contexto.
+    // Padrão único de carregamento: só o F, sem título nem legenda (o shell com título + <p>Carregando…</p>
+    // lia-se como "branco + texto"). O ramo de ERRO mantém a página com título — aí o utilizador precisa
+    // do contexto.
     return (
       <div className="app-shell">
         <Topbar hud="PERFIL" />
@@ -263,9 +266,8 @@ export default function MeuPerfil() {
   const u = perfil.user;
   const stats = perfil.stats || {};
   const nomeMostrar = nomeExibicao(u);
-  // O `creditos` (avatar_ia_creditos) saiu com o teaser de IA — só ele o lia.
-  // Rodada 12C: o time principal (o primeiro da lista) é o que dá a vitrine —
-  // com mais de um, é o mesmo critério que o Início já usa para o campeonato.
+  // O time principal (o primeiro da lista) é o que dá a vitrine — com mais de um, é o mesmo critério que o
+  // Início já usa para o campeonato.
   const vitrineSlug = teams[0]?.slug || null;
 
   return (
@@ -315,11 +317,11 @@ export default function MeuPerfil() {
           <span><b style={{ color: '#fff' }}>{stats.gols ?? 0}</b> {plural(stats.gols ?? 0, 'gol', 'gols')}</span>
         </div>
 
-        {/* RODADA 12C — a vitrine de jogador, a um toque.
+        {/* A vitrine de jogador, a um toque.
             Estas três estatísticas aqui em cima são o resumo do que a vitrine
-            mostra inteiro (radar, conquistas, histórico, evolução). Até aqui só
-            se chegava lá pelo avatar de outra pessoa no Ranking — a própria
-            vitrine, que é a que interessa mostrar aos amigos, não tinha porta.
+            mostra inteiro (radar, conquistas, histórico, evolução). Pelo avatar de
+            outra pessoa no Ranking só se chega à vitrine dela — a própria
+            vitrine, que é a que interessa mostrar aos amigos, precisa de porta.
             Só com time: a vitrine vive dentro de um (/time/:slug/jogador/:id). */}
         {vitrineSlug ? (
           <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 12 }}>
@@ -392,20 +394,18 @@ export default function MeuPerfil() {
             <span style={labelStyle}>E-mail</span>
             <div className="hud-corners-s" style={{ ...inputStyle, color: 'var(--text-dim)' }}>{u.email || user?.email || '—'}</div>
           </label>
-          {/* OUTLINE ROXO RECUADO. Percurso, para quem vier a seguir:
-              era .btn--purple (roxo cheio, rgba(124,58,237,0.18) + borda --purple) e,
-              depois de tudo à volta assentar, passou a ser o bloco mais saturado da
-              página — disputava o primeiro olhar com o nome de jogador, que é o hero.
-              Recuou até rgba(139,92,246,0.07) com texto branco e aí passou ao extremo
-              oposto: sumia. É a única acção da secção Dados; tem de se perceber que se
-              clica. Meio-termo: fundo transparente, borda 1.5px e o texto a levar a
-              cor — assim lê-se como botão sem voltar a gritar.
+          {/* OUTLINE ROXO RECUADO: fundo transparente, borda 1.5px e o texto a levar a
+              cor — lê-se como botão sem gritar. É a única acção da secção Dados; tem de se
+              perceber que se clica. Nem o roxo cheio (.btn--purple: rgba(124,58,237,0.18) +
+              borda --purple), que era o bloco mais saturado da página e disputava o primeiro
+              olhar com o nome de jogador, que é o hero; nem rgba(139,92,246,0.07) com texto
+              branco, que sumia.
               NÃO vai para .cta-gold: um segundo dourado a berrar tinha o mesmo
               problema ao contrário, e a Lei dos Gémeos não ganha um 4º irmão por isto.
               #a78bfa e não #b69cff: o segundo não é --purple nem --neon, não existe na
-              paleta, e é um dos órfãos que esta vaga varreu — reintroduzi-lo aqui era
-              reabrir o que se acabou de fechar. O #a78bfa é o roxo recuado que a Vaga 1
-              fixou nos links da auth: mesma leitura, dentro da casa. */}
+              paleta, e é um dos órfãos que foram varridos — reintroduzi-lo aqui era
+              reabrir o que se fechou. O #a78bfa é o roxo recuado dos links da auth:
+              mesma leitura, dentro da casa. */}
           <button
             type="button"
             className="btn hud-corners-s"
@@ -464,8 +464,8 @@ export default function MeuPerfil() {
           </>
         ) : null}
 
-        {/* SECÇÃO MEUS TIMES (Rodada 29A): a escolha linha/gol de cada time, à vista. Antes só existia num chip
-            dentro da página do time e o dono não a achou. Vale para os sorteios de cada time. */}
+        {/* SECÇÃO MEUS TIMES: a escolha linha/gol de cada time, à vista, e não escondida num chip dentro da
+            página do time. Vale para os sorteios de cada time. */}
         <SecLabel>Meus times</SecLabel>
         {teams.length ? (
           <>
@@ -477,7 +477,7 @@ export default function MeuPerfil() {
             <p className="texto-apoio">Vale para os sorteios de cada time. Dá para mudar em cada jogo.</p>
           </>
         ) : null}
-        {/* Rodada 29H (item 62): criar o próprio time sempre à mão, com ou sem time (a seção aparece mesmo vazia). */}
+        {/* Criar o próprio time sempre à mão, com ou sem time (a seção aparece mesmo vazia). */}
         <Link to="/criar-time" className="btn btn--purple-outline hud-corners" data-criar-time style={{ marginTop: teams.length ? 10 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           ＋ Criar time
         </Link>
@@ -541,7 +541,7 @@ export default function MeuPerfil() {
         {/* 6. SECÇÃO CONTA — no fim: é a zona de sessão, e o "Terminar sessão" é a
             última coisa que se quer encontrar por acidente. As notificações push são
             a primeira LINHA deste card (não secção própria), por isso vêm com ele. */}
-        {/* SEÇÃO NOTIFICAÇÕES (29I, bloco 3): neste aparelho (ligar/desligar o push) e, por tipo, o que você quer receber. */}
+        {/* SEÇÃO NOTIFICAÇÕES: neste aparelho (ligar/desligar o push) e, por tipo, o que você quer receber. */}
         <SecLabel>Notificações</SecLabel>
         <div className="hud-corners" style={{ ...CARD, overflow: 'hidden' }}>
           {pushEstado !== 'nao_suportado' ? (
@@ -573,8 +573,8 @@ export default function MeuPerfil() {
             <Icon name="bandeira" size={20} color="#d4a017" />
             Relatar um problema
           </ContaRow>
-          {/* RODADA 28 — o Diagnóstico saiu daqui: o número de todo mundo vem da
-              telemetria anônima; a tela ficou para o super-admin, dentro do Gabinete. */}
+          {/* O Diagnóstico não mora aqui: o número de todo mundo vem da
+              telemetria anônima; a tela é do super-admin, dentro do Gabinete. */}
           {souSuperAdmin ? (
             <ContaRow onClick={() => navigate('/gabinete')} cor="#8b5cf6">
               <Icon name="definicoes" size={20} color="#d4a017" />
@@ -694,12 +694,11 @@ export default function MeuPerfil() {
         document.body
       ) : null}
 
-      {/* Bottom sheet "Excluir conta" — mesmo padrão do sheet de idioma (portal
-          para o <body>, painel encostado em baixo; ver nota longa acima de
-          sheetIdioma sobre o porquê do portal). Fechar por fora fica ativo
+      {/* Bottom sheet "Excluir conta" — mesmo padrão do sheet de idioma (portal para o <body>, painel encostado
+          em baixo; ver nota longa acima de sheetIdioma sobre o porquê do portal). Fechar por fora fica ativo
           mesmo aqui: é reversível até o clique em "Excluir de vez".
-          Rodada 29A: com o teclado aberto a folha não some — o painel nunca passa de
-          100dvh, o texto rola dentro dele e o botão fica num rodapé que não rola. */}
+          Com o teclado aberto a folha não some — o painel nunca passa de 100dvh, o texto rola dentro dele e o
+          botão fica num rodapé que não rola. */}
       {sheetExcluir ? createPortal(
         <div
           className="modal-overlay"
@@ -816,7 +815,7 @@ const inputStyle = {
   background: 'rgba(255,255,255,0.04)',
   color: '#ffffff',
   fontFamily: 'var(--sans)',
-  fontSize: 16, // abaixo de 16 o iPhone dá zoom ao focar (Rodada 8A, ver index.css)
+  fontSize: 16, // abaixo de 16 o iPhone dá zoom ao focar (ver index.css)
 };
 
 // O HERO. O que se escreve aqui vai desenhado na placa do cromo, por isso o input

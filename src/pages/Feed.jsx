@@ -48,7 +48,7 @@ const CARD = {
 };
 
 // ─── Helpers de data ──────────────────────────────────────────────────────────
-// A data e a hora do jogo são as do CAMPO (`fuso` do time, que o motor manda em cada jogo — 29I, achado 83).
+// A data e a hora do jogo são as do CAMPO (`fuso` do time, que o motor manda em cada jogo).
 const dataExtensa = (iso, fuso) => formatarData(iso, fuso);
 const horaDe = (iso, fuso) => formatarHora(iso, fuso);
 
@@ -61,10 +61,9 @@ function timeCampeao(j) {
   return times[idx];
 }
 
-// RODADA 12C — envolve o que estiver dentro num link para a vitrine do jogador.
+// Envolve o que estiver dentro num link para a vitrine do jogador.
 // Sem `teamSlug` ou sem `userId` não há rota possível: devolve o conteúdo cru,
-// e a Resenha fica exactamente como era. É o mesmo destino que o avatar do
-// Ranking já abria — o que mudou é ter mais uma porta para ele.
+// sem link. É o mesmo destino que o avatar do Ranking já abre.
 function LinkVitrine({ teamSlug, userId, style, children }) {
   if (!teamSlug || !userId) return <span style={style}>{children}</span>;
   return (
@@ -191,8 +190,8 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
         <>
           {/* B) FOTO DO JOGO (sangra até às bordas) */}
           {foto ? (
-            // Foto de post: lazy; os atributos só reservam a proporção, o CSS manda no tamanho. Velocidade 9: 512 na lista (o toque abre o
-            // original). Rodada 29L (achado 141): se a foto falha, vira uma linha curta com "tentar de novo" (ImagemDoPost).
+            // Foto de post: lazy; os atributos só reservam a proporção, o CSS manda no tamanho. 512 na lista (o toque
+            // abre o original). Se a foto falha, vira uma linha curta com "tentar de novo" (ImagemDoPost).
             <ImagemDoPost
               src={urlImagem(foto, 512)}
               onAbrir={() => onOpenImage(foto)}
@@ -447,9 +446,9 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
     <div className="anim-slide-in feed-card" style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
       {/* A) HEADER */}
       <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        {/* RODADA 12C — avatar e nome abrem a vitrine do autor, como já
-            acontecia no Ranking. Só com `teamSlug`: a vitrine vive dentro de um
-            time, e sem ele não há rota. Sem slug ficam como eram, texto seco —
+        {/* Avatar e nome abrem a vitrine do autor, como no Ranking.
+            Só com `teamSlug`: a vitrine vive dentro de um
+            time, e sem ele não há rota. Sem slug ficam em texto seco —
             um nome que não leva a lado nenhum é melhor do que um link morto. */}
         <LinkVitrine teamSlug={teamSlug} userId={p.author_id} style={{ lineHeight: 0, flexShrink: 0 }}>
           <FeedAvatar nome={p.author_nome} avatarUrl={p.author_avatar_url} size={40} />
@@ -536,10 +535,11 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
           {media[0].media_type === 'video' ? (
             <video src={assetUrl(media[0].url)} controls style={{ width: '100%', maxHeight: 460, borderRadius: 10, display: 'block', background: '#000' }} />
           ) : (
-            // VELOCIDADE 9: 512, não 1024. A caixa tem 362 pt de largura — 1024 é quatro vezes mais pixels para descodificar do que o que
-            // cabe, e essa descodificação é na thread principal, a meio da rolagem. O toque abre o ORIGINAL em tela cheia (onOpenImage leva
-            // a url sem `w`), por isso ninguém perde detalhe nenhum: perde-se só o que estava a ser deitado fora na miniatura.
-            // Rodada 29L (achado 141): foto que falha vira uma linha curta com "tentar de novo", não um buraco de 460 px.
+            // 512, não 1024. A caixa tem 362 pt de largura — 1024 é quatro vezes mais pixels para descodificar do que o
+            // que cabe, e essa descodificação é na thread principal, a meio da rolagem. O toque abre o ORIGINAL em tela
+            // cheia (onOpenImage leva a url sem `w`), por isso ninguém perde detalhe nenhum: perde-se só o que estava a
+            // ser deitado fora na miniatura. Foto que falha vira uma linha curta com "tentar de novo", não um buraco de
+            // 460 px.
             <ImagemDoPost
               src={urlImagem(assetUrl(media[0].url), 512)}
               onAbrir={() => onOpenImage(assetUrl(media[0].url))}
@@ -607,7 +607,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
       ) : null}
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
 
-      {/* Modal de confirmação de apagar — portal para o body (Rodada 8A), mesma
+      {/* Modal de confirmação de apagar — portal para o body, mesma
           razão do LoadingFutty.jsx: fixed dentro do [data-page] não ancora na tela. */}
       {confirmar ? createPortal(
         <div className="modal-overlay" role="presentation" onClick={() => setConfirmar(false)}>
@@ -895,8 +895,9 @@ const linkBtn = {
 // Tamanho da página da Resenha (o motor aceita até 50; o app pede 20, que é o que cabe em três ou quatro telas).
 const PAGINA_FEED = 20;
 
-// Achado 93: a Resenha levava mais de 5 s para mostrar os posts e, enquanto isso, parecia vazia (só o campo de postar e "Ver mais antigos").
-// Enquanto não há NADA para mostrar, três cartões-esqueleto com a forma dos de verdade (avatar, linhas, foto) ocupam o lugar.
+// Enquanto não há NADA para mostrar, três cartões-esqueleto com a forma dos de verdade (avatar, linhas, foto)
+// ocupam o lugar: sem eles a Resenha, que levava mais de 5 s para mostrar os posts, parecia vazia (só o
+// campo de postar e "Ver mais antigos").
 function ResenhaEsqueleto() {
   return (
     <div role="status" aria-live="polite" aria-label="Carregando a resenha" data-resenha-esqueleto style={{ display: 'grid', gap: 14 }}>
@@ -931,23 +932,20 @@ export default function Feed() {
   // !teamsLoading evita mostrar isto por um instante antes de saber se há time.
   const semTime = !teamsLoading && teams.length === 0;
 
-  // VELOCIDADE 4 — a Resenha era a única das cinco abas sem cache nenhum: um
-  // apiFetch cru dentro de um efeito, e o loader a tapar a tela inteira até a
-  // resposta chegar de São Paulo. Quem está em Lisboa pagava essa espera em
-  // TODA visita à aba. Agora entra no mesmo stale-while-revalidate do resto da
-  // casa: pinta o feed da última visita na hora e actualiza por trás.
-  // RODADA 29B (bloco 2, B — conta pesada): a Resenha vem em PÁGINAS de 20 (jogos e posts juntos); "Ver mais antigos" busca a seguinte pelo
-  // cursor `proximo`. Antes vinham até 120 itens de uma vez — com comentários, reações e fotos de todos os times da pessoa.
+  // A Resenha entra no mesmo stale-while-revalidate do resto da casa: pinta o feed da última visita na hora e
+  // actualiza por trás. Sem cache, o loader tapava a tela inteira até a resposta chegar de São Paulo, e quem
+  // está em Lisboa pagava essa espera em TODA visita à aba.
+  // A Resenha vem em PÁGINAS de 20 (jogos e posts juntos); "Ver mais antigos" busca a seguinte pelo
+  // cursor `proximo`. Vir até 120 itens de uma vez era conta pesada, com comentários, reações e fotos de todos
+  // os times da pessoa.
   const { data: feedData, loading: feedCarregando, error: feedErro } = useApiComCache(`/api/feed?limite=${PAGINA_FEED}`, 'feed');
 
-  // VELOCIDADE 6B (15-set): o anúncio é pedido AQUI, no topo, em paralelo com o
-  // feed. Antes o AdCard só era montado entre o 3º e o 4º item da lista, por
-  // isso o pedido dele só começava depois do /api/feed inteiro ter chegado e
-  // sido pintado — duas idas a São Paulo em fila por uma faixa de 100 px.
+  // O anúncio é pedido AQUI, no topo, em paralelo com o feed. Montar o AdCard só entre o 3º e o 4º item da
+  // lista faria o pedido dele começar depois do /api/feed inteiro ter chegado e sido pintado — duas idas a
+  // São Paulo em fila por uma faixa de 100 px.
   //
-  // RODADA 12C: a página passa a ser 'resenha' (era 'inicio' emprestado, por
-  // não existir toggle próprio). Agora o dono liga e desliga esta tela sem
-  // mexer no Início — eram duas decisões presas numa chave só.
+  // A página é 'resenha' (e não 'inicio' emprestado, por não existir toggle próprio): o dono liga e desliga
+  // esta tela sem mexer no Início — eram duas decisões presas numa chave só.
   const { ad: adFeed, pronto: adPronto } = useAd('resenha');
 
   const [items, setItems] = useState(null); // null = ainda não há nada para mostrar
@@ -1004,12 +1002,11 @@ export default function Feed() {
     () => (items || []).filter((i) => selectedTeam === 'all' || i.team_id === selectedTeam),
     [items, selectedTeam]
   );
-  // VELOCIDADE 8 (16-set) — os 6 primeiros no 1º commit, o resto dois quadros
-  // depois. Um card da Resenha não é uma linha de texto: traz avatar, foto,
-  // reações e a prévia de até 2 comentários (com mais avatares) — vinte deles no
+  // Os 6 primeiros no 1º commit, o resto dois quadros depois. Um card da Resenha não é uma linha de texto:
+  // traz avatar, foto, reações e a prévia de até 2 comentários (com mais avatares) — vinte deles no
   // mesmo commit é uma leva de layout e pintura que segura a tela inteira.
-  // Os comentários em si já não montavam fechados (Comentarios devolve null
-  // quando `visivel` é falso, e os efeitos dele saem cedo) — confirmado.
+  // Os comentários em si já não montam fechados (Comentarios devolve null
+  // quando `visivel` é falso, e os efeitos dele saem cedo).
   const aDesenhar = useListaProgressiva(filtrados, 6);
 
   async function apagarPost(id) {
@@ -1083,7 +1080,7 @@ export default function Feed() {
               {loading ? (
                 <ResenhaEsqueleto />
               ) : filtrados.length === 0 ? (
-                // Estado vazio de verdade (achado 93): diz que está vazio e o que fazer — não só um "não há jogos". Com um time escolhido
+                // Estado vazio de verdade: diz que está vazio e o que fazer — não só um "não há jogos". Com um time escolhido
                 // no chip, a frase é desse time.
                 <div className="empty-state" data-resenha-vazia style={{ marginTop: 8 }}>
                   <div className="empty-state__emoji"><Icon name="resenha" size={40} /></div>
@@ -1157,7 +1154,7 @@ export default function Feed() {
               aria-modal="true"
               aria-label="Imagem"
               onClick={() => setImgFull(null)}
-              // Achado 124 (29K): sem isto, um arrasto no véu encadeia a rolagem para o body por trás (WebKit).
+              // Sem isto, um arrasto no véu encadeia a rolagem para o body por trás (WebKit).
               style={{ position: 'fixed', inset: 0, zIndex: 150, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflow: 'hidden', overscrollBehavior: 'contain' }}
             >
               <img src={imgFull} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />

@@ -26,17 +26,13 @@ function OnboardingGate({ pathname }) {
   const navigate = useNavigate();
   const { session } = useAuth();
   const ativa = !!session && !ROTAS_SEM_ONBOARDING.some((re) => re.test(pathname));
-  // Achado 4 (roteiro 10-set): usava o seu próprio useApi('/api/me') — como o
-  // Layout envolve TODAS as rotas, era um pedido extra em toda sessão nova. Agora
-  // lê do PerfilContext partilhado.
+  // Lê o perfil do PerfilContext partilhado, não de um useApi('/api/me') próprio: como o Layout envolve
+  // TODAS as rotas, seria um pedido extra em toda sessão nova.
   //
-  // BUG (13-set → corrigido 14-set, "Velocidade 3"): onboarding em loop sem
-  // fim. Ao concluir, Onboarding.jsx grava onboarding_completo=true no
-  // servidor e navega para /home; na recarga o cache local (Velocidade 3)
-  // mostra primeiro o perfil VELHO (onboarding_completo ainda false) — esta
-  // gate disparava o redirect de volta para /onboarding antes de o /api/me
-  // fresco chegar para corrigir. `!deCache` (nunca decide a partir de cache)
-  // fecha o loop.
+  // `!deCache` (nunca decide a partir de cache) evita o onboarding em loop sem fim: ao concluir,
+  // Onboarding.jsx grava onboarding_completo=true no servidor e navega para /home; na recarga o cache local
+  // mostra primeiro o perfil VELHO (onboarding_completo ainda false) — esta gate dispararia o redirect de
+  // volta para /onboarding antes de o /api/me fresco chegar para corrigir.
   const { perfil, deCache } = usePerfil();
   const incompleto = ativa && !deCache && perfil?.user?.onboarding_completo === false;
 
@@ -53,16 +49,17 @@ const HIDE_NAV_PATTERNS = [
   /^\/login/,
   /^\/register/,
   /^\/forgot-password/,
-  /^\/(convite|c)\//, // 29H: o link longo e o curto do convite
-  /^\/onboarding/, // Rodada 29E2 (item 33 da RODADA-29): a pessoa ainda não entrou — sem barra nas 3 páginas
+  /^\/(convite|c)\//, // o link longo e o curto do convite
+  /^\/onboarding/, // a pessoa ainda não entrou — sem barra nas 3 páginas
   /^\/p\//, // vista pública do sorteio (fullscreen)
   /^\/criar-time/,
   /^\/time\/[^/]+\/jogo\//, // jogo/:id e jogo/novo
   /^\/time\/[^/]+\/jogador\//,
 ];
 
-// Rodada 29H (item 2): páginas que existem para quem ainda não tem conta (os Termos e a Privacidade abertos do cadastro ou do
-// "Saiba mais" do banner) — sem sessão a barra do app não faz sentido; com sessão (Perfil → Termos) ela continua.
+// Páginas que existem para quem ainda não tem conta (os Termos e a Privacidade abertos do cadastro ou do
+// "Saiba mais" do banner) — sem sessão a barra do app não faz sentido; com sessão (Perfil → Termos) ela
+// continua.
 const HIDE_NAV_SEM_SESSAO = [/^\/termos/, /^\/privacidade/];
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -101,7 +98,7 @@ export default function Layout({ children }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { teams } = useTeams();
-  // Rodada 29G: conta com data menor de 18 anos vê a tela de exclusão (AuthGuard) — sem a barra por cima.
+  // Conta com data menor de 18 anos vê a tela de exclusão (AuthGuard) — sem a barra por cima.
   const { perfil: perfilDaConta } = usePerfil();
   const { session } = useAuth();
   const showNav = shouldShowNav(pathname, !!session) && !menorQueIdadeMinima(perfilDaConta?.user?.birthdate);
@@ -131,9 +128,8 @@ export default function Layout({ children }) {
   // Só intercepta o swipe quando a BottomNav está visível (tabs principais).
   const swipeProps = showNav ? swipeHandlers : {};
 
-  // Início (11-set): 1 pedido só (GET /api/inicio) alimenta a tela E a BottomNav
-  // (equipas, votacao-status) enquanto o utilizador está nela — ver InicioContext.
-  // Fora do /home o Provider nem monta; tudo o resto continua como sempre.
+  // Início: 1 pedido só (GET /api/inicio) alimenta a tela E a BottomNav (equipas, votacao-status) enquanto o
+  // utilizador está nela — ver InicioContext. Fora do /home o Provider nem monta.
   const naInicio = pathname === '/home';
   const conteudo = (
     <>
@@ -143,39 +139,30 @@ export default function Layout({ children }) {
   );
 
   return (
-    // ÁREA SEGURA — UM lugar só (14-set, VELOCIDADE 5). Este div embrulha TODA
-    // rota (App.jsx monta Layout por cima de AnimatedRoutes), por isso é a
-    // "casca" onde o topo se resolve para o app inteiro de uma vez —
-    // index.html ganhou viewport-fit=cover para o WebView desenhar por baixo
-    // do relógio/ilha, e é este padding-top que devolve o espaço.
+    // ÁREA SEGURA — UM lugar só. Este div embrulha TODA rota (App.jsx monta Layout por cima de
+    // AnimatedRoutes), por isso é a "casca" onde o topo se resolve para o app inteiro de uma vez — o
+    // index.html tem viewport-fit=cover para o WebView desenhar por baixo do relógio/ilha, e é este
+    // padding-top que devolve o espaço.
     //
-    // O de BAIXO fica em dois sítios, não um: a .bottom-nav (app.css) já tinha
-    // o seu próprio env(safe-area-inset-bottom) desde a Velocidade 4 — cresce
-    // sem empurrar os tabs (a altura deles não muda, só a folga por baixo). O
-    // que faltava era este padding aqui, que reserva o espaço da página para
-    // essa nav mais alta: os 70px fixos assumiam uma nav sem faixa de gesto por
-    // baixo — num iPhone com Home Indicator ela cresce para ~96px, e o fim da
-    // página ficava tapado pelos ~26px que sobravam.
+    // O de BAIXO fica em dois sítios, não um: a .bottom-nav (app.css) tem o seu próprio
+    // env(safe-area-inset-bottom) — cresce sem empurrar os tabs (a altura deles não muda, só a folga por
+    // baixo). Este padding reserva o espaço da página para essa nav mais alta: só os 70px fixos assumiriam uma
+    // nav sem faixa de gesto por baixo — num iPhone com Home Indicator ela cresce para ~96px, e o fim da
+    // página ficaria tapado pelos ~26px que sobrariam.
     //
-    // .app-topbar (sticky) tem o SEU PRÓPRIO top: env(safe-area-inset-top) no
-    // app.css — o padding-top daqui só acerta a posição INICIAL (antes de
-    // rolar); um elemento sticky, ao colar, esquece o padding do ancestral e
-    // volta a colar-se ao y=0 REAL do ecrã se o "top" dele continuar 0. Os
-    // dois têm de mudar juntos.
+    // .app-topbar (sticky) tem o SEU PRÓPRIO top: env(safe-area-inset-top) no app.css — o padding-top daqui só
+    // acerta a posição INICIAL (antes de rolar); um elemento sticky, ao colar, esquece o padding do ancestral
+    // e volta a colar-se ao y=0 REAL do ecrã se o "top" dele continuar 0. Os dois têm de mudar juntos.
     //
-    // Modais/sheets que fazem createPortal para document.body (CropModal,
-    // AvatarGenericoSheet) escapam a este div por completo — o inset deles é
-    // resolvido à parte, no próprio componente.
+    // Modais/sheets que fazem createPortal para document.body (CropModal, AvatarGenericoSheet) escapam a este
+    // div por completo — o inset deles é resolvido à parte, no próprio componente.
     //
-    // Android: Capacitor 8.5.0 (o instalado aqui) não tem a chave
-    // `android.adjustMarginsForEdgeToEdge` em nenhum pacote @capacitor/*
-    // (conferido no node_modules — grep sem resultado nenhum); não foi
-    // escrita no capacitor.config.json para não inventar uma opção que a
-    // versão instalada não reconhece. O MainActivity.java é um BridgeActivity
-    // sem overrides — o Capacitor já expõe os WindowInsets do Android como os
-    // MESMOS env(safe-area-inset-*) do iOS, então o CSS daqui serve os dois
-    // sem bifurcar; falta só medir no aparelho real quando o Pedro tiver um à
-    // mão (o Chrome do desktop não emula insets do Android).
+    // Android: Capacitor 8.5.0 (o instalado aqui) não tem a chave `android.adjustMarginsForEdgeToEdge` em
+    // nenhum pacote @capacitor/* (conferido no node_modules — grep sem resultado nenhum); não foi escrita no
+    // capacitor.config.json para não inventar uma opção que a versão instalada não reconhece. O
+    // MainActivity.java é um BridgeActivity sem overrides — o Capacitor já expõe os WindowInsets do Android
+    // como os MESMOS env(safe-area-inset-*) do iOS, então o CSS daqui serve os dois sem bifurcar; falta só
+    // medir no aparelho real (o Chrome do desktop não emula insets do Android).
     <div style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: showNav ? 'calc(70px + env(safe-area-inset-bottom, 0px))' : 0 }} {...swipeProps}>
       <AuroraBg />
       <OnboardingGate pathname={pathname} />

@@ -1,15 +1,20 @@
 #!/usr/bin/env node
-// Futty v2.0 — Rodada 29H-B, decisão do dono (2-out, noite): o fundo ROYAL do app tem de ser EXATAMENTE o da prancha
-// FUT/DESIGN/golden-variantes.png (roxo com estrelas e brilhos). Esta prova compara os dois, lado a lado e em números:
-//   • a referência — o card Royal recortado da própria prancha, e o MESMO render pelo pipeline real (gerarFigurinhaCanvas, 'pico');
-//   • o app — a prévia da Figurinha com o Royal escolhido (conta de prova minhaFig; o PATCH do fundo é interceptado, nada vai ao banco);
-//   • os números — a camada de fundo que a prévia usa (gerarCamadasFigurinha → fundoBlob) contra o fundo da prancha
-//     (desenharFundoRoyal 'pico'), pixel a pixel na faixa entre a moldura e a placa, e a luz em cada um dos 14 brilhos.
-// Antes da correção a prévia entrava SEM brilhos (a chapa nua: o overlay vivo só existia para o Golden); depois, os 14 no pico.
+// Futty v2.0 — o fundo ROYAL do app tem de ser EXATAMENTE o da prancha FUT/DESIGN/golden-variantes.png
+// (roxo com estrelas e brilhos), como o dono decidiu. Esta prova compara os dois, lado a lado e em números:
+//   • a referência — o card Royal recortado da própria prancha, e o MESMO render pelo pipeline real
+//     (gerarFigurinhaCanvas, 'pico');
+//   • o app — a prévia da Figurinha com o Royal escolhido (conta de prova minhaFig; o PATCH do fundo é
+//     interceptado, nada vai ao banco);
+//   • os números — a camada de fundo que a prévia usa (gerarCamadasFigurinha → fundoBlob) contra o fundo da
+//     prancha (desenharFundoRoyal 'pico'), pixel a pixel na faixa entre a moldura e a placa, e a luz em
+//     cada um dos 14 brilhos.
+// A prévia tem de mostrar os 14 brilhos no pico (sem eles era a chapa nua: o overlay vivo só existia para o
+// Golden).
 //
 //   node scripts/prova-royal.mjs --url http://localhost:5233 --etiqueta antes
 //   node scripts/prova-royal.mjs --url http://localhost:5233 --etiqueta depois --compor
-// Só servidor LOCAL (CLAUDE.md, 25-set). Capturas em scripts/capturas/rodada-29h/ (fora do git); a prancha final vai para FUT/DESIGN.
+// Só servidor LOCAL (regra do CLAUDE.md). Capturas em scripts/capturas/ (fora do git); a prancha final vai
+// para FUT/DESIGN.
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

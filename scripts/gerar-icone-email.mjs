@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// Futty v2.0 — Rodada 29B (G): gera public/email/icone-app-144.png, o ÍCONE DO APP para os e-mails do Supabase.
+// Futty v2.0 — gera public/email/icone-app-144.png, o ÍCONE DO APP para os e-mails do Supabase.
 //
-// O F solto (logo-144.png) dava ao Gmail uma cara de "qualquer remetente"; o ícone do app — o F dourado dentro do
-// quadrado de cantos arredondados, como aparece no iPhone — é o que a pessoa reconhece. Sai de resources/icon.png (o
-// mesmo ícone das lojas), reduzido a 144×144 com os cantos arredondados (raio de 22,4%, o do iOS) e transparentes,
-// e em PNG de paleta para caber em ≤ 8 KB (o e-mail é carregado de fora, a cada abertura).
+// O F solto (logo-144.png) dava ao Gmail uma cara de "qualquer remetente"; o ícone do app — o F dourado
+// dentro do quadrado de cantos arredondados, como aparece no iPhone — é o que a pessoa reconhece. Sai de
+// resources/icon.png (o mesmo ícone das lojas), reduzido a 144×144 com os cantos arredondados (raio de
+// 22,4%, o do iOS) e transparentes, e em PNG de paleta para caber em ≤ 8 KB (o e-mail é carregado de
+// fora, a cada abertura).
 //
 // A troca do logo-144.png por este nos 3 templates do Supabase é no painel (EMAILS-SUPABASE.md).
 //

@@ -1,12 +1,10 @@
-// Futty v2.0 — O desenho da figurinha é LEI (FLUIDEZ 2, 16-set).
+// Futty v2.0 — O desenho da figurinha é LEI.
 //
-// A rodada da fluidez mexeu no CAMINHO do canvas (cache do padrão Épico, glow do
-// Aura pré-desenhado, imagens descodificadas uma vez). Nada disso pode mudar um
-// pixel do que a pessoa vê — e "acho que está igual" não é prova.
+// Mexer no CAMINHO do canvas (cache do padrão Épico, glow do Aura pré-desenhado, imagens descodificadas
+// uma vez) não pode mudar um pixel do que a pessoa vê — e "acho que está igual" não é prova.
 //
-// Este script põe as duas versões a desenhar a MESMA figurinha, lado a lado, no
-// mesmo WebKit, e conta as diferenças. A versão antiga sai do git (o commit que
-// se quiser comparar), não de uma cópia à mão.
+// Este script põe as duas versões a desenhar a MESMA figurinha, lado a lado, no mesmo WebKit, e conta as
+// diferenças. A versão antiga sai do git (o commit que se quiser comparar), não de uma cópia à mão.
 //
 // Uso (com `npx vite --port 5175` a correr):
 //   node scripts/comparar-canvas.mjs

@@ -33,7 +33,7 @@ const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(25
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
 const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)';
 const RAJ = "'Rajdhani', sans-serif";
-// Os dois links discretos de "Trocar os times" (29S): texto sublinhado com área de toque de 44 px de altura.
+// Os dois links discretos de "Trocar os times": texto sublinhado com área de toque de 44 px de altura.
 const LINK_DISCRETO = { minHeight: 44, padding: '0 4px', border: 'none', background: 'transparent', color: '#c9b6ff', font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' };
 
 // Moldura V1 (família do Ranking/Equipa).
@@ -82,7 +82,7 @@ export default function Jogo() {
   const [novoConvidado, setNovoConvidado] = useState('');
   const [toast, setToast] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'refazer-a-mao' | 'cancelar-presenca' | 'campeonato' | null
-  // 29S: a composição à mão aberta (quem confirmou + os convidados da tela) e o POST dos times em curso.
+  // A composição à mão aberta (quem confirmou + os convidados da tela) e o POST dos times em curso.
   const [montando, setMontando] = useState(false);
   const [salvandoTimes, setSalvandoTimes] = useState(false);
   const [criandoCamp, setCriandoCamp] = useState(false);
@@ -139,15 +139,16 @@ export default function Jogo() {
       : { tipo: 'error', mensagem: 'Não deu para copiar, copie o link à mão.' });
   }
 
-  // `goleiro` omitido = o motor decide (o que já estiver marcado neste jogo ou,
-  // se ainda não houver, a flag de goleiro do time — Rodada 9).
+  // `goleiro` omitido = o motor decide (o que já estiver marcado neste jogo ou, se ainda não houver, a
+  // flag de goleiro do time).
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
   const marcar = (userId, patch) => runAction(`/api/games/${id}/jogador`, { user_id: userId, ...patch });
 
   // Sorteio: faz o POST, abre o overlay com o resultado e recarrega o jogo.
   async function sortear() {
-    // 29H-B: este toque é o único gesto de quem sorteia antes de a cerimônia tocar os efeitos (segundos depois, de temporizadores).
-    // No site (Safari) o áudio só toca destravado por um gesto; o app da loja não tem a regra. Síncrono, antes do primeiro await.
+    // Este toque é o único gesto de quem sorteia antes de a cerimônia tocar os efeitos (segundos depois, de
+    // temporizadores). No site (Safari) o áudio só toca destravado por um gesto; o app da loja não tem a
+    // regra. Síncrono, antes do primeiro await.
     SomSorteio.prepararNoGesto();
     setActionError('');
     setBusy(true);
@@ -158,10 +159,9 @@ export default function Jogo() {
       await apiFetch(`/api/games/${id}/sortear`, { method: 'POST', body: JSON.stringify(body) });
       // Junta os dados do jogo (local/data) ao resultado fresco (times_resultado).
       await reload();
-      // A cerimónia corre na PÁGINA do sorteio (SPEC §13d). `euSorteei` (Rodada
-      // 12A) diz à cerimónia que quem chega ali acabou de pedir o sorteio — é a
-      // única vista que pode nascer com som. Vai no state da navegação, não na
-      // URL: o link partilhado nunca pode trazer isto colado.
+      // A cerimónia corre na PÁGINA do sorteio (SPEC §13d). `euSorteei` diz à cerimónia que quem chega ali
+      // acabou de pedir o sorteio — é a única vista que pode nascer com som. Vai no state da navegação, não
+      // na URL: o link partilhado nunca pode trazer isto colado.
       navigate(`/time/${slug}/jogo/${id}/sorteio`, { state: { euSorteei: true } });
     } catch (err) {
       setActionError(err.message);
@@ -170,8 +170,9 @@ export default function Jogo() {
     }
   }
 
-  // Montar à mão (29S): o motor grava os times direto (sem seed, sem cerimônia, sem avisar ninguém) e exige que quem tem conta esteja confirmado —
-  // por isso o pool é quem confirmou (mais os convidados sem app desta tela). Presença já está marcada: não há "presenças" a mandar antes.
+  // Montar à mão: o motor grava os times direto (sem seed, sem cerimônia, sem avisar ninguém) e exige que
+  // quem tem conta esteja confirmado — por isso o pool é quem confirmou (mais os convidados sem app desta
+  // tela). Presença já está marcada: não há "presenças" a mandar antes.
   async function salvarTimes(corpo) {
     setActionError('');
     setSalvandoTimes(true);
@@ -200,12 +201,13 @@ export default function Jogo() {
 
   const { team, game, players, meuEstado } = data || {};
   const isAdmin = team?.role === 'admin';
-  // Rodada 29B (E): o motor diz (rsvp.eu_jogo) se a pessoa só organiza o time — aí não há presença a confirmar.
+  // O motor diz (rsvp.eu_jogo) se a pessoa só organiza o time — aí não há presença a confirmar.
   const soOrganizo = rsvpEstado?.eu_jogo === false;
   const golsResultado = data?.gols || [];
   // Times do sorteio (para nomes, jogadores do resultado e artilheiro).
   const timesSorteio = game?.times_resultado?.times || [];
-  // Achado 143 (29M): o placar também chama os times pelo nome da cerimônia ("Time Ouro × Time Roxo"), não pelo "Time A" do motor.
+  // O placar também chama os times pelo nome da cerimônia ("Time Ouro × Time Roxo"), não pelo "Time A" do
+  // motor.
   const nomeTimeA = nomeDoTimeNaTela(timesSorteio[0]?.nome, 0);
   const nomeTimeB = nomeDoTimeNaTela(timesSorteio[1]?.nome, 1);
   const jogadoresResultado = [
@@ -300,7 +302,7 @@ export default function Jogo() {
               </div>
             ) : null}
 
-            {/* Rodada 29L (achado 142): era um chip "Ranking" solto, sem dizer o que era nem de quem. Agora diz: "Ranking do time", com o troféu. */}
+            {/* O atalho diz o que é e de quem: "Ranking do time", com o troféu. */}
             <div className="header-actions">
               <Link to={`/time/${slug}/ranking`} className="btn btn--ghost btn--sm" data-ranking-do-time style={{ gap: 6 }}>
                 <Trophy size={14} aria-hidden="true" /> Ranking do time
@@ -322,8 +324,7 @@ export default function Jogo() {
               ) : null}
               {estouConfirmado ? (
                 <>
-                  {/* Rodada 12A: o verde saturado saiu — quem está confirmado
-                      veste o dourado da casa, como o "Vou" do card de jogo. */}
+                  {/* Quem está confirmado veste o dourado da casa, como o "Vou" do card de jogo (sem verde saturado). */}
                   <span style={{ fontFamily: RAJ, color: 'var(--presenca-sim-texto)', fontWeight: 800, letterSpacing: '0.04em' }}>✓ Você está confirmado</span>
                   <label className="check-inline" style={{ fontFamily: RAJ }}>
                     <input
@@ -454,7 +455,7 @@ export default function Jogo() {
                 nunca em users/ranking. */}
             {isAdmin ? (
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '10px 12px', marginBottom: 10 }}>
-                {/* 29Q: os textos vêm de utils/convidadoSemApp.js, os mesmos do Novo jogo e do Campeonato. */}
+                {/* Os textos vêm de utils/convidadoSemApp.js, os mesmos do Novo jogo e do Campeonato. */}
                 <div data-convidado-titulo style={{ fontFamily: RAJ, fontSize: 15, fontWeight: 700, color: '#fff' }}>{CONVIDADO_TITULO}</div>
                 <p className="texto-apoio" data-convidado-linha style={{ margin: '2px 0 8px' }}>{CONVIDADO_LINHA}</p>
                 {convidados.length ? (
@@ -485,8 +486,9 @@ export default function Jogo() {
               </div>
             ) : null}
 
-            {/* Trocar os times de um jogo que JÁ tem times (29S): os dois caminhos pedem confirmação antes, no padrão inline de sempre ("sair da
-                equipa"). Texto em PT-BR: o replay só entra na frase quando havia sorteio (tem seed); os times à mão não têm replay. */}
+            {/* Trocar os times de um jogo que JÁ tem times: os dois caminhos pedem confirmação antes, no padrão
+                inline de sempre ("sair da equipa"). Texto em PT-BR: o replay só entra na frase quando havia sorteio
+                (tem seed); os times à mão não têm replay. */}
             {isAdmin && game.sorteio_realizado && (confirmacao === 're-sorteio' || confirmacao === 'refazer-a-mao') && (
               <div data-confirmar-trocar-times={confirmacao} style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginBottom: 10, borderColor: confirmacao === 're-sorteio' ? 'rgba(240,201,74,0.4)' : 'rgba(139,92,246,0.5)' }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: confirmacao === 're-sorteio' ? '#f0c94a' : '#c9b6ff' }}>
@@ -512,8 +514,9 @@ export default function Jogo() {
               </div>
             )}
 
-            {/* SEM TIMES ainda (29S, achados 151 e 152): "Como vão sair os times?" e dois cartões lado a lado — Sortear (a máquina, como sempre) ou
-                Montar à mão (a pessoa escolhe, com quem confirmou). Só o Sortear pulsa, com a regra de sempre (RODADA 12A: gente para dois times). */}
+            {/* SEM TIMES ainda: "Como vão sair os times?" e dois cartões lado a lado — Sortear (a máquina, como
+                sempre) ou Montar à mão (a pessoa escolhe, com quem confirmou). Só o Sortear pulsa, com a regra de
+                sempre (gente para dois times). */}
             {isAdmin && montando ? (
               <MontarTimesAMao pool={poolMao} salvando={salvandoTimes} onSalvar={salvarTimes} onCancelar={() => setMontando(false)} />
             ) : isAdmin && !game.sorteio_realizado ? (
@@ -545,7 +548,8 @@ export default function Jogo() {
             </div>
             ) : null}
 
-            {/* Trocar os times (29S): discreto, embaixo. Sortear de novo ou Montar à mão — os dois pedem confirmação antes (acima). */}
+            {/* Trocar os times: discreto, embaixo. Sortear de novo ou Montar à mão — os dois pedem confirmação antes
+                (acima). */}
             {isAdmin && game.sorteio_realizado && !montando && confirmacao !== 're-sorteio' && confirmacao !== 'refazer-a-mao' ? (
               <div data-trocar-os-times style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0 4px', marginTop: 8, fontSize: 13, color: 'var(--text-dim)' }}>
                 <span>Trocar os times:</span>

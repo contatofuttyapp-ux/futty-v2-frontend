@@ -91,10 +91,12 @@
     font-size:21px;background:linear-gradient(180deg,#fff7d8,#f5d060 45%,#c8940f); 
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
     filter:drop-shadow(0 0 5px rgba(245,224,112,.8)) drop-shadow(0 0 14px rgba(139,92,246,.5))}
-/* RODADA 12A — o mudo tem de se ver DURANTE a cerimónia: com o som ligado por
-   omissão para quem sorteia, calar é uma saída que a pessoa pode precisar em
-   dois segundos (de noite, no trabalho). Era 30×26 em cinza-fantasma sobre uma
-   máquina cheia de luzes. Agora é 38×32, com o contraste do véu por baixo. */
+/*
+ * O mudo tem de se ver DURANTE a cerimónia: com o som ligado por
+ * omissão para quem sorteia, calar é uma saída que a pessoa pode precisar em
+ * dois segundos (de noite, no trabalho). Por isso 38×32, com o contraste do véu
+ * por baixo — não 30×26 em cinza-fantasma sobre uma máquina cheia de luzes.
+ */
 .smaq .somBtn{position:absolute;right:10px;top:10px;z-index:8;width:38px;height:32px;display:grid;place-items:center;cursor:pointer;
     background:rgba(8,6,16,.72);border:1px solid rgba(255,255,255,.34);color:#d8d8e4;
     clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)}
@@ -104,8 +106,11 @@
 .smaq .somBtn.on .waves{display:block}
 .smaq .janela{position:relative;background:rgba(0,0,0,.55);border:1px solid rgba(139,92,246,.4);
     padding:12px 8px 10px;overflow:hidden}
-/* Rodada 29M (achado 144): terminada a cerimônia, a janela dos rolos fica sem rolos e sem "Girando · …". Em vez de uma caixa preta vazia no topo
-   do resultado, ela sai de cena (a cerimônia pôs a classe junto com o véu e a tira quando recomeça). */
+/*
+ * Terminada a cerimônia, a janela dos rolos fica sem rolos e sem "Girando · …". Em vez de uma caixa preta
+ * vazia no topo do resultado, ela sai de cena (a cerimônia pôs a classe junto com o véu e a tira quando
+ * recomeça).
+ */
 .smaq .janela.encerrada{display:none}
 .smaq .quem{display:block;text-align:left;margin:0 4px 8px;font-family:'Rajdhani',sans-serif;font-weight:800;
     font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--qc,#f0c94a);text-shadow:0 0 10px var(--qg,rgba(212,160,23,.5));min-height:13px}
@@ -163,9 +168,10 @@
 .smaq .mmold .fr::before{content:'';position:absolute;inset:4px;z-index:4;pointer-events:none;
     border:1px solid color-mix(in srgb,var(--tc) 60%,#fff 12%);opacity:.5;
     clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)}
-/* RODADA 19 (23-set): 50% 0% (era 10%) — o recorte 2:3 já garante o rosto no
-   terço de cima (CropModal + proxy `sq=1`, ambos "pelo topo" agora); um corte
-   exatamente no topo do quadrado usa isso em vez de adivinhar com um degrau. */
+/*
+ * 50% 0%: o recorte 2:3 já garante o rosto no terço de cima (CropModal + proxy `sq=1`, ambos "pelo
+ * topo"); um corte exatamente no topo do quadrado usa isso em vez de adivinhar com um degrau.
+ */
 .smaq .mmold img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 0%}
 .smaq .mmold .nm{position:absolute;bottom:0;left:0;right:0;z-index:5;text-align:center;
     font-family:'Rajdhani',sans-serif;font-weight:800;font-size:7.5px;color:#fff;padding:8px 1px 3px;
@@ -345,24 +351,24 @@
 .smaq .saltar button{font-size:10.5px;color:#8a8a98;background:none;border:none;cursor:pointer;letter-spacing:.05em}
 .smaq .maqcap{font-size:11px;color:#8a8a98;text-align:center;margin-top:26px;line-height:1.55;max-width:800px;margin-left:auto;margin-right:auto}
 .smaq .maqcap b{color:#eee}
-/* ═══ RODADA 14B — O FIM DO SORTEIO COMO PRÊMIO (16-set) ═══════════════════════
-   O instante em que os times aparecem é "acabou de ganhar" numa slot machine.
-   Nada aqui redesenha a máquina: são estados novos (.maq.premio → .maq.premioCalmo)
-   sobre as peças que já existem, e três camadas de luz (16B) por cima do bloco
-   dos times. Tudo em transform/opacity — nem filter nem box-shadow animados. O
-   flash e a pílula vivem no body (prefixo .smaqx-, fora do escopo .smaq de propósito).
-
-   RODADA 16B (17-set, avaliação do dono no aparelho): saíram a chuva de moedas
-   e os raios cônicos a girar atrás dos avatares — "nada gira dentro do
-   retângulo". Marquise, flash, título, botão e pílula ficam como estavam.
-
-   Linha do tempo, contada do jackpot (T0 = "TIMES SORTEADOS" acende):
-     T0        flash (100 ms a 0,35) · marquise em sequência · título · 1º pulso de glow
-     T0..3,0 s 3 varreduras de brilho (0,05 / 1,05 / 2,05 s, cada uma mais fraca)
-               · 10 pontos de brilho a acender e apagar até 2,5 s
-               · pulsos de glow nas bordas nos 3 ataques do jackpot (0 · 0,54 · 2,70 s)
-     T0+3,0 s  marquise e glow passam a brilho suave (.premioCalmo) — fica assim
-     T0+5,1 s  o botão "Compartilhar os times" sobe (ver .compartilhar) */
+/*
+ * O FIM DO SORTEIO COMO PRÊMIO. O instante em que os times aparecem é "acabou de ganhar" numa slot
+ * machine. Nada aqui redesenha a máquina: são estados novos (.maq.premio → .maq.premioCalmo) sobre as
+ * peças que já existem, e três camadas de luz por cima do bloco dos times. Tudo em transform/opacity —
+ * nem filter nem box-shadow animados. O flash e a pílula vivem no body (prefixo .smaqx-, fora do escopo
+ * .smaq de propósito).
+ *
+ * Nada gira dentro do retângulo: sem chuva de moedas nem raios cônicos a girar atrás dos avatares
+ * (avaliação do dono no aparelho).
+ *
+ * Linha do tempo, contada do jackpot (T0 = "TIMES SORTEADOS" acende):
+ *   T0        flash (100 ms a 0,35) · marquise em sequência · título · 1º pulso de glow
+ *   T0..3,0 s 3 varreduras de brilho (0,05 / 1,05 / 2,05 s, cada uma mais fraca)
+ *             · 10 pontos de brilho a acender e apagar até 2,5 s
+ *             · pulsos de glow nas bordas nos 3 ataques do jackpot (0 · 0,54 · 2,70 s)
+ *   T0+3,0 s  marquise e glow passam a brilho suave (.premioCalmo) — fica assim
+ *   T0+5,1 s  o botão "Compartilhar os times" sobe (ver .compartilhar)
+ */
 
 /* (ii) A MARQUISE. As lâmpadas .mq (moldura da máquina) e .luz (réguas) já são a
    moldura do retângulo — o que muda é o que elas fazem. O branco é um ::after por
@@ -383,16 +389,18 @@
 @keyframes premioSuave{0%,100%{opacity:.5}50%{opacity:.88}}
 .smaq .maq.premioCalmo{box-shadow:0 0 26px 6px rgba(245,224,112,.28),0 0 60px 10px rgba(139,92,246,.14)}
 
-/* (iii) MAIS LUZ — Rodada 16B. Três camadas, todas em transform/opacity, todas
-   com o estado natural INVISÍVEL: sem .premio nada se vê; o que fica depois é o
-   brilho suave de .premioCalmo. O conteúdo sobe um nível (z 1); as luzes ficam
-   por cima dele (z 2-3) e por baixo do título (z 50).
-
-   (a) .premioShine — 3 varreduras de brilho a atravessar o retângulo na diagonal
-       (banda inclinada por skewX, a andar da esquerda para a direita), uma por
-       segundo, cada uma um degrau mais fraca (1 → 0,62 → 0,38). A banda começa
-       fora do retângulo à esquerda e acaba fora à direita: nos dois extremos
-       da animação, e sem animação, não há nada na tela. */
+/*
+ * (iii) MAIS LUZ. Três camadas, todas em transform/opacity, todas
+ * com o estado natural INVISÍVEL: sem .premio nada se vê; o que fica depois é o
+ * brilho suave de .premioCalmo. O conteúdo sobe um nível (z 1); as luzes ficam
+ * por cima dele (z 2-3) e por baixo do título (z 50).
+ *
+ * (a) .premioShine — 3 varreduras de brilho a atravessar o retângulo na diagonal
+ *     (banda inclinada por skewX, a andar da esquerda para a direita), uma por
+ *     segundo, cada uma um degrau mais fraca (1 → 0,62 → 0,38). A banda começa
+ *     fora do retângulo à esquerda e acaba fora à direita: nos dois extremos
+ *     da animação, e sem animação, não há nada na tela.
+ */
 .smaq .interiorConteudo{position:relative;z-index:1}
 .smaq .premioShine{position:absolute;inset:0;z-index:2;overflow:hidden;pointer-events:none}
 .smaq .premioShine i{position:absolute;top:0;bottom:0;left:-90%;width:46%;opacity:var(--f,1);

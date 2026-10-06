@@ -1,15 +1,17 @@
-// Futty v2.0 — Rodada 29E2/29E3: o que o mini sorteio do Onboarding (components/MiniSorteio.jsx) sorteia e QUANDO. Puro (sem React).
-// Oito FIGURINHAS FICTÍCIAS (modelos gerados por IA, 20–40 anos, nunca pessoa real; bancada
-// backend/scripts/_bench/gerar-modelos-ficticios.js --jovens..--jovens7; bustos em public/onboarding/, servidos do site) em oito
-// ROLOS de slot machine, 4 por time (29E3, dono: 4 jogadores por time) — TIME A (ouro) e TIME B (roxo). Os 8 giram; um por vez
-// desacelera e trava, alternando A/B; os times seguram; fade; recomeça com outra ordem. Nomes fictícios curtos (dono): nunca nomes
-// de gente real do app. GONÇALO (29E3, dono) é o nome do busto j12 — o arquivo é goncalo.webp (o id não leva cedilha: é URL).
-// A ordem natural (ciclo 0) alterna A/B: TIME A = bruninho, gonçalo, rafa, nando · TIME B = tiagão, pedrão, dudu, caio — 2 do
+// Futty v2.0 — o que o mini sorteio do Onboarding (components/MiniSorteio.jsx) sorteia e QUANDO. Puro (sem
+// React). Oito FIGURINHAS FICTÍCIAS (modelos gerados por IA, 20–40 anos, nunca pessoa real; bancada
+// backend/scripts/_bench/gerar-modelos-ficticios.js --jovens..--jovens7; bustos em public/onboarding/,
+// servidos do site) em oito ROLOS de slot machine, 4 por time (dono: 4 jogadores por time) — TIME A (ouro)
+// e TIME B (roxo). Os 8 giram; um por vez desacelera e trava, alternando A/B; os times seguram; fade;
+// recomeça com outra ordem. Nomes fictícios curtos (dono): nunca nomes de gente real do app. GONÇALO (dono)
+// é o nome do busto j12 — o arquivo é goncalo.webp (o id não leva cedilha: é URL). A ordem natural (ciclo
+// 0) alterna A/B: TIME A = bruninho, gonçalo, rafa, nando · TIME B = tiagão, pedrão, dudu, caio — 2 do
 // Brasil e 2 de Portugal em cada time.
 
-// Rodada 29H (item 37): o arquivo leva ?v=<hash do conteúdo> (vite.config.js define __VERSOES_ONBOARDING__ a cada build). O _headers
-// serve /onboarding/* com cache de 1 ano, imutável, e o nome do arquivo não muda quando a arte muda — sem a versão, quem já viu
-// o busto antigo continuava vendo. Fora do Vite (os testes no Node) não há versão e o caminho fica limpo.
+// O arquivo leva ?v=<hash do conteúdo> (vite.config.js define __VERSOES_ONBOARDING__ a cada build). O
+// _headers serve /onboarding/* com cache de 1 ano, imutável, e o nome do arquivo não muda quando a arte
+// muda — sem a versão, quem já viu o busto antigo continuava vendo. Fora do Vite (os testes no Node) não há
+// versão e o caminho fica limpo.
 /* global __VERSOES_ONBOARDING__ */
 const VERSOES = typeof __VERSOES_ONBOARDING__ !== 'undefined' ? __VERSOES_ONBOARDING__ : {};
 const arquivoDe = (id) => `/onboarding/${id}.webp${VERSOES[id] ? `?v=${VERSOES[id]}` : ''}`;
@@ -32,11 +34,10 @@ export const TIMES = [
 
 export const VAGAS_POR_TIME = 4;
 
-// O ciclo (~10,7 s). Rodada 29H-B (dono, 2-out, item 40): o giro inicial caiu pela metade (0,8 → 0,4 s) e a revelação ficou 1,5×
-// mais longa (um rolo a cada 0,75 s em vez de 0,5; a desaceleração acompanha, 1,5 s em vez de 1 s); a comemoração é a mesma.
-// Os 8 rolos girando rápido → a partir de 0,4 s um rolo por vez desacelera (1,5 s) e trava, alternando A/B a cada 0,75 s (o 8º trava
-// em 7,15 s) → quando o 8º trava, um pulso único de 0,8 s nas réguas e os times seguram 2,5 s → fade 0,4 s → os rolos voltam a girar
-// (0,6 s de respiro) → recomeça com outra ordem.
+// O ciclo (~10,7 s). Os 8 rolos girando rápido → a partir de 0,4 s um rolo por vez desacelera (1,5 s) e
+// trava, alternando A/B a cada 0,75 s (o 8º trava em 7,15 s) → quando o 8º trava, um pulso único de 0,8 s
+// nas réguas e os times seguram 2,5 s → fade 0,4 s → os rolos voltam a girar (0,6 s de respiro) → recomeça
+// com outra ordem.
 export const TEMPOS = { giroMs: 400, passoMs: 750, desaceleraMs: 1500, pulsoMs: 800, seguraMs: 2500, fadeMs: 400, respiroMs: 600 };
 
 /** Os instantes do ciclo, a partir do seu início (ms): o k-ésimo rolo da ordem desacelera em desaceleram[k] e trava em travam[k]. */

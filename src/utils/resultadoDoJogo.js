@@ -1,6 +1,7 @@
-// Futty v2.0 — Rodada 29S, bloco B: as contas do resultado de um jogo, puras (sem React, sem rede), para os DOIS editores — o ResultadoEditor (o do
-// Jogo: PATCH /api/games/:id/resultado) e o ResultadoModal (o de Ajustes: PATCH /api/feed/games/:id/resultado) — e para o passo a passo do Jogo
-// passado, onde eles devolvem os dados em vez de salvar. Um corpo só por pedido, montado aqui, seja qual for a tela que o manda.
+// Futty v2.0 — as contas do resultado de um jogo, puras (sem React, sem rede), para os DOIS editores — o
+// ResultadoEditor (o do Jogo: PATCH /api/games/:id/resultado) e o ResultadoModal (o de Ajustes: PATCH
+// /api/feed/games/:id/resultado) — e para o passo a passo do Jogo passado, onde eles devolvem os dados em
+// vez de salvar. Um corpo só por pedido, montado aqui, seja qual for a tela que o manda.
 
 /** Soma dos gols de cada time (0 = A, 1 = B) a partir do mapa { user_id: gols } e dos jogadores `{ user_id, timeIndex }`. */
 export function somaDeGolsPorTime(golsMap, jogadores) {

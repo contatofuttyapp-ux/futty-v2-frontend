@@ -1,4 +1,4 @@
-// Futty v2.0 — A loja (Pagamentos P2, 26-set): o ÚNICO lugar do app que fala com o RevenueCat.
+// Futty v2.0 — A loja: o ÚNICO lugar do app que fala com o RevenueCat.
 //
 // O app compra pela App Store / Google Play através do SDK do RevenueCat
 // (@revenuecat/purchases-capacitor). Quem credita é o MOTOR: o webhook do RevenueCat chega a

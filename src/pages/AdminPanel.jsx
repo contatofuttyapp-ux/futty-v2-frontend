@@ -1,11 +1,10 @@
-// Futty v2.0 — O que o admin faz no time. Rodada 29I, bloco 3 (decisão do dono): ADMIN NÃO É UM LUGAR, é um conjunto de botões a mais
-// nas telas que já existem. O painel /admin/<slug>, com 10 seções numa barra lateral que não conversava com o resto do app, acabou;
-// nada dele se perdeu, mudou de casa:
+// Futty v2.0 — O que o admin faz no time. O dono pediu: ADMIN NÃO É UM LUGAR, é um conjunto de botões a mais
+// nas telas que já existem. Cada coisa do admin vive na tela a que pertence:
 //   · Dashboard            → card "Seu time" no Início (pendências + Novo jogo · Sortear · Convidar · Ajustes)
 //   · Jogos + Resultados + Campeonato → aba JOGOS da página do time (JogosDoAdmin)
 //   · Membros + Convites   → aba ELENCO (ElencoDoAdmin; as ações de cada membro abrem com um toque no nome, sem o "⋯")
-//   · Time + Comunicação + Denúncias + Zona de perigo → aba AJUSTES (AjustesDoTime; a zona virou AÇÕES DEFINITIVAS e, na 29R, a única
-//     ação dela virou o cartão "Nova temporada de notas")
+//   · Time + Comunicação + Denúncias + Zona de perigo → aba AJUSTES (AjustesDoTime; a única ação da zona de
+//     perigo é o cartão "Nova temporada de notas")
 //   · Estatísticas         → Ranking do time (EstatisticasDoTime), para o admin
 // /admin/<slug>?tab=… (link antigo, favorito) continua valendo: leva à aba nova (lib/rotasAntigas.js#caminhoDoAdminAntigo).
 // A página do time carrega este arquivo só para quem é admin (lazy): o jogador não paga por ele.
@@ -44,13 +43,13 @@ import { caminhoDoAdminAntigo } from '../lib/rotasAntigas';
 import { separarFuturosPassados } from '../utils/jogosFuturoPassado';
 import '../styles/app.css';
 
-// Opções de visibilidade (a "cor de fundo do avatar" saiu — 29I, bloco 3, achado 102: o escudo é UM controle, EditorEscudo).
+// Opções de visibilidade. O escudo é UM controle (EditorEscudo): não há "cor de fundo do avatar".
 const VIS_OPCOES = [
   { k: 'privado', icon: Lock, label: 'Privado' },
   { k: 'publico_aprovacao', icon: LockOpen, label: 'Com aprovação' },
   { k: 'publico_aberto', icon: Globe, label: 'Aberto' },
 ];
-// 29H (item 45): os textos de entrada aprovados pelo dono (2-out), os mesmos do Criar time; 29P: "Radar de peladas" (era Explorar).
+// Textos de entrada aprovados pelo dono, os mesmos do Criar time; o nome do Explorar é "Radar de peladas".
 const VIS_DESC = {
   privado: 'Só entra quem receber o seu link de convite. Não aparece no "Radar de peladas".',
   publico_aprovacao: 'Quem achar o time no "Radar de peladas" pede para entrar. Você aceita ou não.',
@@ -58,7 +57,7 @@ const VIS_DESC = {
 };
 
 const CARD = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12 };
-// "há 5 h": tempo decorrido, não data de calendário — não tem fuso (29I, achado 83); vale o relógio de quem olha.
+// "há 5 h": tempo decorrido, não data de calendário — não tem fuso; vale o relógio de quem olha.
 function haQuantoTempo(iso) {
   const ts = new Date(iso).getTime();
   if (!Number.isFinite(ts)) return '';
@@ -74,7 +73,7 @@ function diasAte(iso) {
   return Math.max(0, Math.ceil(ms / 86400000));
 }
 
-// O rabicho embaixo de um campo de hora (29I, bloco 3): "horário de São Paulo" só para quem está noutro relógio que o do time; vazio
+// O rabicho embaixo de um campo de hora: "horário de São Paulo" só para quem está noutro relógio que o do time; vazio
 // para quem está no mesmo (quase todo mundo). O rótulo do campo é sempre "Hora do jogo" ou "Hora" — nunca "fuso".
 function RabichoDaHora({ fuso, cidade }) {
   const r = rabichoDoFuso(new Date(), fuso, { cidade });
@@ -109,7 +108,7 @@ function Secao({ titulo, id, children, perigo = false }) {
 }
 
 // Pequeno modal de confirmação reutilizável. Os três modais desta página vão por
-// PORTAL para o body (Rodada 8A): fixed dentro do [data-page] animado ancora na
+// PORTAL para o body: fixed dentro do [data-page] animado ancora na
 // página, não na tela — ver a nota em LoadingFutty.jsx.
 function ConfirmModal({ texto, confirmarLabel = 'Confirmar', perigo = false, confirmarDesabilitado = false, onConfirm, onCancel, children = null }) {
   return createPortal(
@@ -148,8 +147,8 @@ function MetricCard({ valor, label, alerta = false }) {
 }
 
 // ─── AJUSTES → AVISAR O TIME ─────────────────────────────────────────────────
-// 29I, bloco 3 (dono): "Avisar o time" = push + anúncio na Resenha, num formulário só (eram dois cartões com dois títulos e duas
-// mensagens). As duas saídas vêm ligadas; dá para mandar só uma. O push é o aviso que não se desliga no Perfil (é o admin falando).
+// "Avisar o time" = push + anúncio na Resenha, num formulário só (pedido do dono). As duas saídas vêm ligadas; dá
+// para mandar só uma. O push é o aviso que não se desliga no Perfil (é o admin falando).
 function AvisarOTime({ slug, showToast }) {
   const [titulo, setTitulo] = useState('');
   const [mensagem, setMensagem] = useState('');
@@ -362,17 +361,17 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
   const [nome, setNome] = useState(team.nome || '');
   const [localizacao, setLocalizacao] = useState(team.localizacao || '');
   const [cidade, setCidade] = useState(team.cidade || '');
-  // Rodada 29B (D): escolha da lista (null enquanto digita), o último texto GUARDADO (só se manda a cidade quando mudou)
+  // Escolha da lista (null enquanto digita), o último texto GUARDADO (só se manda a cidade quando mudou)
   // e o que o motor disse da cidade depois de salvar ({ tipo: 'ok' | 'aviso', texto }).
   const [cidadeEscolha, setCidadeEscolha] = useState(null);
   const [cidadeGuardada, setCidadeGuardada] = useState(team.cidade || '');
   const [avisoCidade, setAvisoCidade] = useState(null);
-  // 29H (item 12): o bairro (opcional). `bairroEscolha` = a freguesia da lista (Portugal) com a coordenada; null enquanto digita.
+  // O bairro (opcional). `bairroEscolha` = a freguesia da lista (Portugal) com a coordenada; null enquanto digita.
   const [bairro, setBairro] = useState(team.bairro || '');
   const [bairroGuardado, setBairroGuardado] = useState(team.bairro || '');
   const [bairroEscolha, setBairroEscolha] = useState(null);
   const [avisoBairro, setAvisoBairro] = useState(null);
-  // 29T (bloco B, achado 157): o bairro é de LISTA (IBGE no Brasil, freguesias em Portugal) — o campo só existe quando a cidade tem lista.
+  // O bairro é de LISTA (IBGE no Brasil, freguesias em Portugal) — o campo só existe quando a cidade tem lista.
   const bairros = useBairrosDaCidade(cidade, cidadeEscolha);
   // O "Sobre o time" (era "Descrição"): obrigatório no time aberto ao público. `pedindoSobre` = a política que a pessoa tocou sem ter o texto
   // (a pergunta abre, o motor só é chamado com o texto na mão); `sobreRascunho` = o que ela escreve na pergunta.
@@ -383,21 +382,21 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
   const [previewLogo, setPreviewLogo] = useState(null);
   const [modo, setModo] = useState(team.modo_visibilidade || 'privado');
   const [mostrarGols, setMostrarGols] = useState(team.mostrar_gols !== false);
-  // 29H (item 44): "Artilheiro do dia" / "Destaque do dia" — ligados, o editor de resultado oferece a seção.
-  // 29I (achado 78): o artilheiro depende dos gols — com os gols desligados ele aparece desligado (um time antigo que ficou com a
+  // "Artilheiro do dia" / "Destaque do dia" — ligados, o editor de resultado oferece a seção.
+  // O artilheiro depende dos gols — com os gols desligados ele aparece desligado (um time antigo que ficou com a
   // combinação incoerente é mostrado como o motor a trata: sem artilheiro).
   const [mostrarArtilheiro, setMostrarArtilheiro] = useState(team.mostrar_gols !== false && team.mostrar_artilheiro !== false);
   const [mostrarDestaque, setMostrarDestaque] = useState(team.mostrar_destaque !== false);
-  const [joga, setJoga] = useState(team.joga !== false); // Rodada 29B (E): "Eu jogo" / "Só organizo o time"
+  const [joga, setJoga] = useState(team.joga !== false); // "Eu jogo" / "Só organizo o time"
   const [jogaOcupado, setJogaOcupado] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  // Achado 118 (29J): sem isto não havia volta — quem subisse um logo errado ficava preso, e o
-  // editor de escudo (864 combinações) ficava inalcançável em qualquer time com logo.
+  // Sem isto não há volta — quem sobe um logo errado fica preso, e o
+  // editor de escudo (864 combinações) fica inalcançável em qualquer time com logo.
   const [removendoLogo, setRemovendoLogo] = useState(false);
   const [confirmRemoverLogo, setConfirmRemoverLogo] = useState(false);
   const logoInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
-  // Item 68 (Rodada 29): jogadores por time é UM padrão do time — o "Novo jogo" já vem com ele. Grava sozinho, um instante depois do
+  // Jogadores por time é UM padrão do time — o "Novo jogo" já vem com ele. Grava sozinho, um instante depois do
   // último toque no seletor (sem um pedido por toque); sem a migração 079 o motor diz "ainda não está disponível" e o número volta.
   const [porTime, setPorTime] = useState(team.jogadores_por_time || 5);
   const porTimeTimer = useRef(null);
@@ -436,7 +435,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
     }
   }
 
-  // Achado 118 (29J): remove o logo — o escudo do time (EditorEscudo) volta a aparecer.
+  // Remove o logo — o escudo do time (EditorEscudo) volta a aparecer.
   async function removerLogo() {
     setConfirmRemoverLogo(false);
     setRemovendoLogo(true);
@@ -454,7 +453,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
   }
 
   // Modo de visibilidade (guarda logo ao selecionar; reverte em erro).
-  // 29T (achado 157): tornar o time aberto ao público sem "Sobre o time" pede o texto ANTES de salvar (a pergunta abaixo); com ele, o texto vai junto
+  // Tornar o time aberto ao público sem "Sobre o time" pede o texto ANTES de salvar (a pergunta abaixo); com ele, o texto vai junto
   // no mesmo pedido, então um time público nunca fica sem apresentação no motor.
   async function guardarModo(novoModo, sobreNovo = null) {
     const sobre = sobreNovo ?? descricao;
@@ -477,7 +476,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
     }
   }
 
-  // Meu papel (Rodada 29B, E): guarda logo ao tocar, como a visibilidade; reverte em erro (o motor diz o porquê).
+  // Meu papel: guarda logo ao tocar, como a visibilidade; reverte em erro (o motor diz o porquê).
   async function guardarJoga(novo) {
     if (jogaOcupado || novo === joga) return;
     const anterior = joga;
@@ -494,7 +493,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
     }
   }
 
-  // "Gols de cada um" (29O): desligar leva o artilheiro junto, no mesmo pedido (o motor recusa "gols desligados, artilheiro ligado").
+  // "Gols de cada um": desligar leva o artilheiro junto, no mesmo pedido (o motor recusa "gols desligados, artilheiro ligado").
   // Religar os gols NÃO religa o artilheiro: quem decide é a pessoa.
   async function guardarMostrarGols(v) {
     const golsAntes = mostrarGols;
@@ -545,19 +544,19 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
 
   async function guardar() {
     if (saving) return;
-    // 29T (achado 157): time aberto ao público se apresenta — sem o "Sobre o time" não salva.
+    // Time aberto ao público se apresenta — sem o "Sobre o time" não salva.
     if (faltaSobre({ modo, sobre: descricao })) {
       showToast(FALTA_SOBRE_NOS_AJUSTES, 'error');
       return;
     }
     setSaving(true);
     try {
-      // Rodada 29B (D): a cidade só vai no corpo quando MUDOU (antes ia a cada "Salvar" e geocodificava de novo).
+      // A cidade só vai no corpo quando MUDOU (a cada "Salvar" geocodificaria de novo).
       // Da lista: o pacote todo (o motor usa a coordenada da lista); digitada: só o texto; vazia: sai da busca.
       const corpo = { nome: nome.trim(), localizacao: localizacao.trim(), descricao: descricao.trim() };
       const mudouCidade = cidade.trim() !== cidadeGuardada.trim();
       if (mudouCidade) Object.assign(corpo, cidade.trim() ? (cidadeEscolha || { cidade: cidade.trim() }) : { cidade: '' });
-      // 29H (item 12), 29T (achado 157): o bairro vai quando mudou, e SÓ o da lista (leva a coordenada). Apagado, sai ('' — também quando a CIDADE
+      // O bairro vai quando mudou, e SÓ o da lista (leva a coordenada). Apagado, sai ('' — também quando a CIDADE
       // mudou: o bairro é da cidade antiga e o campo foi limpo). Texto que ninguém escolheu não vai; o bairro antigo escrito à mão fica como está.
       const textoDoBairro = bairro.trim();
       const bairroDaLista = textoDoBairro && bairroEscolha && bairroEscolha.bairro === textoDoBairro ? bairroEscolha : null;
@@ -593,7 +592,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
       <div style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Você também joga?</span>
         <EscolhaPapel joga={joga} ocupado={jogaOcupado} aoTrocar={guardarJoga} />
-        {/* Item 69 (Rodada 29): "admin" e "posição em campo" são coisas separadas. */}
+        {/* "admin" e "posição em campo" são coisas separadas. */}
         <p className="texto-apoio" data-texto-admin-posicao style={{ marginTop: 0 }}>{TEXTO_ADMIN_E_POSICAO}</p>
       </div>
 
@@ -620,7 +619,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         </span>
       </div>
 
-      {/* 29H (item 12), 29T (achado 157): o bairro, opcional, é de LISTA — os do IBGE no Brasil, as freguesias em Portugal — e põe o time no ponto do
+      {/* O bairro, opcional, é de LISTA — os do IBGE no Brasil, as freguesias em Portugal — e põe o time no ponto do
           bairro (e não no centro da cidade). Cidade sem bairros na lista: o campo não aparece; o bairro antigo escrito à mão fica salvo até alguém editar. */}
       {bairros.estado === 'lista' ? (
         <div style={{ display: 'grid', gap: 6 }}>
@@ -640,7 +639,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         </div>
       ) : null}
 
-      {/* 29T (achado 157): era "Descrição". É o que o time diz de si no Radar de peladas; obrigatório no time aberto ao público. */}
+      {/* "Sobre o time" é o que o time diz de si no Radar de peladas; obrigatório no time aberto ao público. */}
       <label style={{ display: 'grid', gap: 6 }}>
         <span style={lbl}>Sobre o time</span>
         <textarea data-sobre-o-time value={descricao} onChange={(e) => setDescricao(e.target.value.slice(0, MAX_SOBRE_O_TIME))} rows={3} maxLength={MAX_SOBRE_O_TIME} placeholder={EXEMPLO_SOBRE_O_TIME} style={{ ...inputStyle, resize: 'vertical' }} />
@@ -679,7 +678,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         </div>
       </div>
 
-      {/* ESCUDO DO TIME (29I, bloco 3): só para o time sem logo — com logo, é o logo que aparece. */}
+      {/* ESCUDO DO TIME: só para o time sem logo — com logo, é o logo que aparece. */}
       {previewLogo || logoUrl ? (
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Com logo, o escudo não aparece: o app mostra o logo em todo lugar.</span>
       ) : (
@@ -721,10 +720,10 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{VIS_DESC[modo]}</span>
       </div>
 
-      {/* GOLS (29O): os mesmos títulos e frases do passo 2 do Criar time (golsEPremios.js). */}
+      {/* GOLS: os mesmos títulos e frases do passo 2 do Criar time (golsEPremios.js). */}
       <Interruptor ligado={mostrarGols} aoTrocar={guardarMostrarGols} rotulo={GOLS.titulo} apoio={GOLS.apoio} />
 
-      {/* PRÊMIOS DO DIA (29O): o editor de resultado só oferece o artilheiro / o destaque quando ligados. */}
+      {/* PRÊMIOS DO DIA: o editor de resultado só oferece o artilheiro / o destaque quando ligados. */}
       <div style={{ display: 'grid', gap: 8 }}>
         <span style={lbl}>Prêmios do dia</span>
         <Interruptor ligado={mostrarArtilheiro} aoTrocar={guardarArtilheiro} rotulo={ARTILHEIRO.titulo} apoio={ARTILHEIRO.apoio} />
@@ -836,7 +835,7 @@ function FormMensagem({ slug, membro, showToast, onClose }) {
 
 function TabMembros({ slug, meId, showToast }) {
   const [membros, setMembros] = useState(null);
-  const [abertoId, setAbertoId] = useState(null); // o membro cujo painel está aberto (29I, bloco 3: um toque no nome)
+  const [abertoId, setAbertoId] = useState(null); // o membro cujo painel está aberto (um toque no nome)
   const [mensagemAberta, setMensagemAberta] = useState(false);
   const [confirmacao, setConfirmacao] = useState(null);
 
@@ -916,8 +915,8 @@ function TabMembros({ slug, meId, showToast }) {
   }
 
   // Liga/desliga o goleiro de um membro (optimista) via endpoint dedicado.
-  // Rodada 10B: `goleiro` é o campo único (grava categoria) — este botão e o
-  // chip do próprio jogador (Equipa.jsx) nunca mais podem discordar.
+  // `goleiro` é o campo único (grava categoria) — este botão e o
+  // chip do próprio jogador (Equipa.jsx) nunca podem discordar.
   async function setGoleiro(m, ligado) {
     if (!!m.goleiro === ligado) return;
     const anterior = !!m.goleiro;
@@ -988,9 +987,9 @@ function TabMembros({ slug, meId, showToast }) {
         );
       })}
 
-      {/* O painel do membro (folha de baixo): tudo o que o admin faz com ele, num toque. Portal para o body (15-set): fixed dentro do
+      {/* O painel do membro (folha de baixo): tudo o que o admin faz com ele, num toque. Portal para o body: fixed dentro do
           [data-page] animado não confia no viewport no WebKit do iPhone (ver LoadingFutty.jsx).
-          Achado 124 (29K): overflow hidden + overscroll-behavior contain no véu (sem isso, um arrasto nele encadeia para o body por
+          overflow hidden + overscroll-behavior contain no véu (sem isso, um arrasto nele encadeia para o body por
           trás, no WebKit — ao fechar a folha, o body fica rolado numa posição que não bate com o conteúdo, "dois terços no topo em
           preto"); o mesmo contain na folha, que já rola por si (overflowY: auto). */}
       {aberto
@@ -1006,7 +1005,7 @@ function TabMembros({ slug, meId, showToast }) {
                   </div>
                 </div>
 
-                {/* Rodada 9/10B: goleiro ou linha, mais nada — o MESMO campo do card do próprio jogador. */}
+                {/* Goleiro ou linha, mais nada — o MESMO campo do card do próprio jogador. */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
                   <button type="button" aria-pressed={!!aberto.goleiro} onClick={() => setGoleiro(aberto, !aberto.goleiro)} style={pilula(!!aberto.goleiro, '#d4a017')}>Goleiro</button>
                   {aberto.goleiro ? null : <span style={{ fontSize: 11, color: 'var(--text-dim)', alignSelf: 'center' }}>{LABEL_LINHA}</span>}
@@ -1099,7 +1098,7 @@ function TabConvites({ slug, showToast, semBotao = false }) {
     };
   }, [slug, showToast]);
 
-  // 29H (item 7): o link curto (/c/<código>) quando o motor deu um código; senão o longo.
+  // O link curto (/c/<código>) quando o motor deu um código; senão o longo.
   function linkDe(token, codigo) {
     return linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo });
   }
@@ -1195,8 +1194,8 @@ function TabConvites({ slug, showToast, semBotao = false }) {
 }
 
 // ─── TAB: JOGOS ──────────────────────────────────────────────────────────────
-// "sex., 20 de jun. · 22:00" para o prazo do RSVP — no relógio do campo (fuso do time, 29I achado 83).
-// 29T (achado 165): com o rabicho, a cidade do time ("horário de Brasília"), não a do fuso.
+// "sex., 20 de jun. · 22:00" para o prazo do RSVP — no relógio do campo (fuso do time).
+// Com o rabicho, a cidade do time ("horário de Brasília"), não a do fuso.
 const fmtPrazoAdmin = (iso, fuso, cidade) => formatarDataHora(iso, fuso, { cidade });
 
 // Lista compacta de jogadores (avatar + nome) com título opcional.
@@ -1220,7 +1219,7 @@ function ListaUsers({ users, titulo }) {
 }
 
 // Gestão do RSVP de um jogo (admin): abrir / acompanhar / fechar / sortear.
-// Rodada 29R (achado 147): `abrirInicial` = a pessoa chegou pela linha "presença ainda não aberta" do Início; o "Abrir presença" deste jogo
+// `abrirInicial` = a pessoa chegou pela linha "presença ainda não aberta" do Início; o "Abrir presença" deste jogo
 // já nasce aberto e, quando o cartão tem a forma final (a presença carregou), `aoPronto` rola até ele e o destaca. Só vale no nascimento.
 function RSVPAdmin({ gameId, slug, cidade = null, navigate, showToast, abrirInicial = false, aoPronto = null }) {
   const [info, setInfo] = useState(null);
@@ -1255,7 +1254,7 @@ function RSVPAdmin({ gameId, slug, cidade = null, navigate, showToast, abrirInic
     };
   }, [gameId]);
 
-  // 29R: com a presença carregada (ou o erro dela na tela) o cartão não muda mais de altura; é a hora de rolar até ele. Uma vez só.
+  // Com a presença carregada (ou o erro dela na tela) o cartão não muda mais de altura; é a hora de rolar até ele. Uma vez só.
   useEffect(() => {
     if (!faltaAvisarPronto.current || !(info || erro)) return;
     faltaAvisarPronto.current = false;
@@ -1465,10 +1464,10 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
   const [confirmacao, setConfirmacao] = useState(null);
   const [motivoCancel, setMotivoCancel] = useState('');
   const [lancar, setLancar] = useState(null); // o jogo do "Lançar resultado" (era a aba Resultados)
-  const [destaque, setDestaque] = useState(null); // 29R: o jogo que a linha do Início apontou, em destaque por um instante
+  const [destaque, setDestaque] = useState(null); // o jogo que a linha do Início apontou, em destaque por um instante
 
-  // Rodada 29R (achado 147): o parâmetro vale UMA vez. Com a lista na tela (o RSVPAdmin do jogo certo acabou de nascer lendo-o), sai do
-  // endereço — achado ou não (jogo cancelado, já passado ou de outro time): voltar e recarregar não reabrem nada.
+  // O parâmetro vale UMA vez. Com a lista na tela (o RSVPAdmin do jogo certo acabou de nascer lendo-o), sai do
+  // endereço — encontrado ou não (jogo cancelado, já passado ou de outro time): voltar e recarregar não reabrem nada.
   useEffect(() => {
     if (games !== null && abrirPresencaDe) aoUsarAbrirPresenca?.();
   }, [games, abrirPresencaDe, aoUsarAbrirPresenca]);
@@ -1563,8 +1562,8 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
                         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>Motivo: {g.motivo_cancelamento}</div>
                       ) : null}
                     </div>
-                    {/* Rodada 29L (achado 139, decisão do dono de 3-out): "Excluir" só existe DEPOIS de cancelar. Cancelar avisa o time e
-                        é o primeiro passo; excluir apaga. Antes, os dois ficavam lado a lado, em vermelho, num dedo grosso. O motor só
+                    {/* Pedido do dono: "Excluir" só existe DEPOIS de cancelar. Cancelar avisa o time e
+                        é o primeiro passo; excluir apaga. Lado a lado, em vermelho, os dois ficariam num dedo grosso. O motor só
                         apaga jogo futuro SEM confirmados (409 "Cancele-o em vez de excluí-lo" nos outros); por isso o botão só aparece
                         quando o motor aceita, em vez de oferecer o que ele vai recusar. */}
                     {g.confirmados === 0 ? (
@@ -1677,8 +1676,8 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
 }
 
 function EditarJogoModal({ jogo, fuso, cidade, onClose, onSaved, showToast }) {
-  // Data e hora do formulário são as do CAMPO (fuso do time, 29I achado 83): é o que o motor lê ao salvar. Antes vinham do relógio
-  // do aparelho — o admin em Lisboa via, e salvava, a hora de Lisboa.
+  // Data e hora do formulário são as do CAMPO (fuso do time): é o que o motor lê ao salvar. Com o relógio
+  // do aparelho, o admin em Lisboa veria, e salvaria, a hora de Lisboa.
   const campos = camposNoCampo(jogo.data, fuso);
   const [date, setDate] = useState(campos.data);
   const [time, setTime] = useState(campos.hora);
@@ -1758,7 +1757,7 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
 
   const topGols = [...membros].sort((a, b) => (b.gols || 0) - (a.gols || 0)).slice(0, 5);
   const maxGols = topGols[0]?.gols || 0;
-  // 29I (achado 104): "Presença" é presença — os jogos em que a pessoa ESTEVE, ordenado por isso (antes listava vitórias).
+  // "Presença" é presença — os jogos em que a pessoa ESTEVE, ordenado por isso.
   const topPresenca = [...membros].sort((a, b) => (b.presencas || 0) - (a.presencas || 0)).slice(0, 5);
   const totalGols = membros.reduce((s, m) => s + (m.gols || 0), 0);
   const jogoMaisConf = [...games].sort((a, b) => (b.confirmados || 0) - (a.confirmados || 0))[0] || null;
@@ -1880,8 +1879,8 @@ function TabDenuncias({ showToast }) {
   );
 }
 
-// ─── AJUSTES → NOTIFICAÇÕES DO ADMIN ─────────────────────────────────────────
-// 29I, bloco 3: o admin recebe push quando chega pedido de entrada (o dono pediu) e pode desligar aqui. As outras ficam em Perfil →
+// ─── AJUSTES → NOTIFICAÇÕES DO ADMIN ─────────────────────────────────────
+// O admin recebe push quando chega pedido de entrada (o dono pediu) e pode desligar aqui. As outras ficam em Perfil →
 // Notificações (é a mesma escolha, guardada na conta).
 function NotificacoesDoAdmin({ showToast }) {
   const [prefs, setPrefs] = useState(null);
@@ -1914,10 +1913,10 @@ function NotificacoesDoAdmin({ showToast }) {
 }
 
 // ─── AJUSTES → NOVA TEMPORADA DE NOTAS ──────────────────────────────────────────
-// Rodada 29R (achado 150, dono): era "Pedir para votar de novo", em vermelho dentro de "Ações definitivas" — parecia "excluir a conta".
-// Agora é "Nova temporada de notas": cartão próprio, botão dourado da casa. O perigo (zera as notas, sem volta) fica dito só na
-// confirmação, que segue vermelha. O motor não mudou: POST pedir-revotacao com zerar: true. (O nome do componente e o data-attribute
-// ficaram os de antes: as provas apontam para eles.)
+// "Nova temporada de notas": cartão próprio, botão dourado da casa — em vermelho, dentro de "Ações definitivas",
+// parecia "excluir a conta". O perigo (zera as notas, sem volta) fica dito só na
+// confirmação, que segue vermelha. O motor: POST pedir-revotacao com zerar: true. O nome do componente e o
+// data-attribute são os de "Pedir para votar de novo" e ficam assim: as provas apontam para eles.
 function PedirVotarDeNovo({ slug, showToast }) {
   const [confirmar, setConfirmar] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1953,7 +1952,7 @@ function PedirVotarDeNovo({ slug, showToast }) {
   );
 }
 
-// ─── As abas da página do time (Rodada 29I, bloco 3) ─────────────────────────
+// ─── As abas da página do time ─────────────────────────────────────────
 
 /** Aba JOGOS do admin: "Novo jogo" é a ação principal (o dourado); recorrentes e campeonato, secundários no topo; depois a lista. */
 export function JogosDoAdmin({ slug, team, showToast, navigate, abrirPresencaDe = null, aoUsarAbrirPresenca = null }) {
@@ -1965,9 +1964,9 @@ export function JogosDoAdmin({ slug, team, showToast, navigate, abrirPresencaDe 
       <Link to={`/time/${slug}/jogo/novo`} className="btn hud-corners-s cta-gold" style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none' }}>
         + Novo jogo
       </Link>
-      {/* Rodada 29L (achado 140): o par era 50%/50% e "Criar jogos recorrentes" quebrava em duas linhas ao lado de "Criar campeonato" em uma.
-          Agora cada botão tem a largura do próprio texto (e divide a sobra), nunca parte o rótulo; se a tela for estreita demais para os
-          dois, o segundo desce inteiro para a linha de baixo. */}
+      {/* Cada botão tem a largura do próprio texto (e divide a sobra), nunca parte o rótulo; se a tela for estreita demais para os
+          dois, o segundo desce inteiro para a linha de baixo. Em 50%/50%, "Criar jogos recorrentes" quebraria em duas linhas
+          ao lado de "Criar campeonato" em uma. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <button type="button" className="btn btn--outline btn--sm hud-corners-s" aria-pressed={painel === 'recorrentes'} style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }} onClick={() => alternar('recorrentes')}>Criar jogos recorrentes</button>
         <button type="button" className="btn btn--outline btn--sm hud-corners-s" aria-pressed={painel === 'campeonato'} style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }} onClick={() => alternar('campeonato')}>Criar campeonato</button>
@@ -1994,10 +1993,10 @@ export function ElencoDoAdmin({ slug, meId, showToast, versaoConvites = 0 }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }} data-tres-numeros>
-        {/* Rodada 29L (achado 136): o rótulo concorda com o número ("1 jogo", "1 membro") e a média sem casa decimal quando é inteira ("0", não "0.0"). */}
+        {/* O rótulo concorda com o número ("1 jogo", "1 membro") e a média sem casa decimal quando é inteira ("0", não "0.0"). */}
         <MetricCard valor={stats ? stats.total_jogos ?? 0 : '–'} label={plural(stats?.total_jogos, 'jogo', 'jogos')} />
         <MetricCard valor={stats ? stats.total_membros ?? 0 : '–'} label={plural(stats?.total_membros, 'membro', 'membros')} />
-        {/* Achado 101: é a média de CONFIRMADOS por jogo (stats.media_confirmacoes), não de gols. */}
+        {/* É a média de CONFIRMADOS por jogo (stats.media_confirmacoes), não de gols. */}
         <MetricCard valor={stats ? formatarMedia(stats.media_confirmacoes ?? 0) : '–'} label={plural(arredondarMedia(stats?.media_confirmacoes), 'confirmado por jogo', 'confirmados por jogo')} />
       </div>
       <TabMembros slug={slug} meId={meId} showToast={showToast} />
@@ -2037,7 +2036,7 @@ export function AjustesDoTime({ slug, team, members = [], showToast, onMudou }) 
         <ModeracaoFila slug={slug} />
         <TabDenuncias showToast={showToast} />
       </Secao>
-      {/* 29R: cartão próprio. "Ações definitivas" só tinha esta ação; sem ela a seção ficaria vazia e saiu. */}
+      {/* Cartão próprio: a seção "Ações definitivas" não existe porque só tinha esta ação, e sem ela ficaria vazia. */}
       <Secao titulo="Notas do time">
         <PedirVotarDeNovo slug={slug} showToast={showToast} />
       </Secao>

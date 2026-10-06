@@ -1,10 +1,9 @@
-// Futty v2.0 — Cache do cromo do Início entre aberturas (VELOCIDADE 4).
+// Futty v2.0 — Cache do cromo do Início entre aberturas.
 //
 // O cromo é a figurinha real desenhada em canvas: 600×600, decodificar o avatar
 // e o fundo, compor, exportar. No celular isso leva de um a três segundos — e
-// até 14-set a tela do Início ESPERAVA por ele para aparecer. Agora a tela
-// aparece primeiro; isto aqui é o que faz o cromo aparecer na hora na abertura
-// seguinte, em vez de se redesenhar do zero toda vez.
+// a tela do Início não espera por ele para aparecer; isto aqui é o que faz o cromo
+// aparecer na hora na abertura seguinte, em vez de se redesenhar do zero toda vez.
 //
 // Porquê IndexedDB e não o cacheLocal (localStorage) do resto da casa: o PNG tem
 // algumas centenas de KB. Em localStorage teria de ir em base64 (+33%) e, com os

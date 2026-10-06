@@ -24,7 +24,7 @@ export default function SorteioShow() {
   const { slug, id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  // Rodada 12A: só quem chegou aqui pelo botão "Sortear" traz isto (ver Jogo.jsx).
+  // Só quem chegou aqui pelo botão "Sortear" traz isto (ver Jogo.jsx).
   // Lido UMA vez e apagado do histórico a seguir: o state vive na entrada do
   // histórico, e voltaria a valer se a pessoa recuasse e avançasse, ou se o
   // WebView recarregasse a rota ao retomar o app — som ligado sem ninguém ter
@@ -34,13 +34,12 @@ export default function SorteioShow() {
     if (euSorteei) navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corre uma vez, na montagem
   }, []);
-  // Achado 120 (29J) — REGRESSÃO: um erro de rede/sessão aqui caía no MESMO `!resultado`
-  // do sorteio nunca feito, e a tela dizia "ainda não foi realizado" com o sorteio
-  // intacto no banco. `error` distingue os dois agora (como Jogo.jsx já fazia).
+  // `error` distingue o erro de rede/sessão do sorteio nunca feito (como Jogo.jsx já faz): sem isso, o
+  // erro cai no MESMO `!resultado` e a tela diz "ainda não foi realizado" com o sorteio intacto no banco.
   const { data, loading, error, reload } = useApi(`/api/games/${id}`);
   const [toast, setToast] = useState(null);
   const [termoAberto, setTermoAberto] = useState(false);
-  // Item 74 (29I, bloco 3): o link curto do sorteio (/s/<código>), pedido assim que a página abre — a cópia sai na hora do toque.
+  // O link curto do sorteio (/s/<código>), pedido assim que a página abre — a cópia sai na hora do toque.
   const [codigoCurto, setCodigoCurto] = useState(null);
   useEffect(() => {
     let ativo = true;
@@ -57,7 +56,7 @@ export default function SorteioShow() {
   const game = data?.game;
   const resultado = game?.times_resultado;
   const estado = estadoSorteio({ loading, error, resultado });
-  // A data do cartaz é a do CAMPO (fuso do time, 29I achado 83): "8 out 2026".
+  // A data do cartaz é a do CAMPO (fuso do time): "8 out 2026".
   const dataCartaz = game?.data
     ? formatarData(game.data, data?.team?.fuso, 'comAno').replace(/ de /g, ' ').replace(/\./g, '')
     : '';
@@ -117,11 +116,11 @@ export default function SorteioShow() {
           <p className="muted">O sorteio ainda não foi realizado.</p>
         ) : (
           <>
-            {/* RODADA 14B — compartilhar vive DENTRO da cerimónia, logo abaixo do
+            {/* Compartilhar vive DENTRO da cerimónia, logo abaixo do
                 retângulo dos times: um botão dourado com a imagem dos dois times e
-                uma linha discreta com o 9:16 de cada um. É o único lugar: a barra
-                presa ao fundo da 12A (que cobria o retângulo) e os "Salvar" /
-                "Compartilhar" que a máquina tinha embaixo saíram. */}
+                uma linha discreta com o 9:16 de cada um. É o único lugar: sem a barra
+                presa ao fundo (que cobria o retângulo) e sem os "Salvar" /
+                "Compartilhar" que a máquina tinha embaixo. */}
             <CerimoniaSorteio
               resultado={resultado}
               equipa={data?.team?.nome || ''}
@@ -131,7 +130,7 @@ export default function SorteioShow() {
               euSorteei={euSorteei}
             />
 
-            {/* RODADA 12A — o espaço de publicidade da página do sorteio: IAB
+            {/* O espaço de publicidade da página do sorteio: IAB
                 320×100, servido com pagina='sorteio' (toggle do dono no
                 Gabinete, filtro etário fail-closed no servidor). Só depois da
                 cerimónia: durante ela a tela é para olhar. Sem campanha o
@@ -150,8 +149,8 @@ export default function SorteioShow() {
                 Copiar link do sorteio
               </button>
               <p className="muted" style={{ fontSize: 11, textAlign: 'center', margin: 0 }}>
-                {/* Achado 145 (29M): a "semente" é o nosso nome técnico do número que torna o sorteio reproduzível; para quem joga não quer dizer nada.
-                    A ideia é o que vale: quem abrir o link vê o mesmo sorteio, do mesmo jeito. */}
+                {/* Sem a palavra "semente" (nosso nome técnico do número que torna o sorteio reproduzível): para quem joga
+                    não quer dizer nada. O que vale é a ideia: quem abrir o link vê o mesmo sorteio, do mesmo jeito. */}
                 Quem abrir o link vê o mesmo sorteio, do mesmo jeito, sem precisar do app.
               </p>
             </div>

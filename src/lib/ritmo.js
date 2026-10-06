@@ -1,12 +1,10 @@
-// Futty v2.0 — O ritmo do trabalho em segundo plano (VELOCIDADE 8, 16-set).
+// Futty v2.0 — O ritmo do trabalho em segundo plano.
 //
-// O PROBLEMA, medido: tudo o que o app faz "quando o aparelho estiver parado"
-// usava requestIdleCallback. O Safari NÃO TEM requestIdleCallback — nem o do
-// iPhone, nem o WebView do app da loja. Então caía sempre no setTimeout de
-// reserva (1500 ms no pré-aquecimento de dados, 1200 ms no dos chunks das abas),
-// que não é "parado": é "daqui a um bocado", olhe o aparelho para o que estiver
-// a olhar. E daqui a um bocado é exactamente quando a pessoa está a tocar na
-// tela pela primeira vez. Daí o "às vezes engasga".
+// O PROBLEMA, medido: o que o app faz "quando o aparelho estiver parado" não pode usar requestIdleCallback.
+// O Safari NÃO TEM requestIdleCallback — nem o do iPhone, nem o WebView do app da loja. Então cairia sempre
+// no setTimeout de reserva (1500 ms no pré-aquecimento de dados, 1200 ms no dos chunks das abas), que não é
+// "parado": é "daqui a um bocado", olhe o aparelho para o que estiver a olhar. E daqui a um bocado é
+// exactamente quando a pessoa está a tocar na tela pela primeira vez. Daí o "às vezes engasga".
 //
 // "Parado de verdade" aqui é uma coisa só: a 1ª tela já pintou E passaram N
 // segundos sem um toque, uma rolagem ou uma tecla. Quem tem essa informação é o
@@ -128,30 +126,29 @@ export function quandoParado(fn, {
   return cancelar;
 }
 
-// ─── Animações param quando ninguém está a ver (VELOCIDADE 8) ────────────────
+// ─── Animações param quando ninguém está a ver ────────────────────────────
 // O fundo aurora (4 blobs com filter: blur(161px), a cada um 40-60% da tela, a
 // derivar e a rodar para sempre) está montado no Layout, ou seja em TODAS as
-// rotas. É a maior conta de desenho contínua do app — e continuava a correr com
-// o app em segundo plano ou com a tela bloqueada, a gastar bateria a desenhar
-// para ninguém.
+// rotas. É a maior conta de desenho contínua do app — e sem a pausa continuaria
+// a correr com o app em segundo plano ou com a tela bloqueada, a gastar bateria
+// a desenhar para ninguém.
 //
 // O CSS não sabe o que é document.hidden, por isso marca-se o <html> e o
 // index.css trata do resto (`html[data-oculto]`). Para as DECORATIVAS, não só
 // o fundo: escondido é escondido, nada do que pare pode mudar de aspeto.
 //
-// EXCEÇÃO (hotfix 23-set, tela preta após login com Google no Chrome) — as
-// animações de ENTRADA DE CONTEÚDO (`.page-transition` e as outras listadas em
-// index.css) já saem de baixo da pausa geral por seletor: `html[data-oculto]`
-// nem chega a tocar-lhes. Não há no app um sítio a depender de `animationend`
-// para AVANÇAR ESTADO (isso continua verdade) — mas há sítios cuja
-// VISIBILIDADE dependia de a animação correr até ao fim, e essa é a diferença
-// que este hotfix trata.
+// EXCEÇÃO (tela preta após login com Google no Chrome) — as animações de
+// ENTRADA DE CONTEÚDO (`.page-transition` e as outras listadas em index.css)
+// saem de baixo da pausa geral por seletor: `html[data-oculto]` nem chega a
+// tocar-lhes. Não há no app um sítio a depender de `animationend` para AVANÇAR
+// ESTADO — mas há sítios cuja VISIBILIDADE depende de a animação correr até ao
+// fim, e é essa a diferença que esta exceção trata.
 let vigiaLigada = false;
 
 // As mesmas classes excluídas da pausa em index.css — mantidas aqui para a
 // rede de segurança abaixo, não para decidir a pausa (isso é só CSS).
-// .anim-slide-in e .futty-lockup-f entraram no hotfix "cards invisíveis" (23-set,
-// mesma família da tela preta acima, caso que tinha ficado de fora).
+// `.anim-slide-in` e `.futty-lockup-f` também entram na lista: o caso dos "cards invisíveis" é da mesma
+// família da tela preta acima.
 const SELETORES_ENTRADA_DE_CONTEUDO = '.page-transition, .inicio-reveal, .page-reveal, .fig-card-enter, .perfil-tile, .anim-slide-in, .futty-lockup-f';
 
 /** Liga a vigia de visibilidade. Chamada uma vez, no arranque. */
@@ -164,7 +161,7 @@ export function pararAnimacoesForaDeVista() {
       return;
     }
     document.documentElement.removeAttribute('data-oculto');
-    // REDE DE SEGURANÇA (hotfix 23-set) — a exclusão em index.css já impede
+    // REDE DE SEGURANÇA — a exclusão em index.css já impede
     // estas animações de nascerem pausadas; isto é o cinto por cima do fio: se
     // por qualquer motivo uma ficou a meio (outra aba a pausar globalmente,
     // uma corrida rara), `.finish()` salta-a para o fim (opacity 1, o que a

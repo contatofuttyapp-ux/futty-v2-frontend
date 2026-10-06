@@ -15,6 +15,7 @@ o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nu
    **Gestos e histórico (29I):** `npm run provar:navegador` sobe um Vite sozinho e prova, num Chromium de verdade e sem login nem banco, o que
    o teste de unidade não alcança — o Voltar do sistema na criação do time, o toque que cai no link do card e não no botão, o salto da
    cerimônia medido em ms, o redirecionamento de /equipa para /time. Cada prova é um `scripts/provas/*.prova.mjs` (+ uma bancada .html/.jsx).
+5. Comentário no código explica o PORQUÊ da regra, sem data nem número de rodada; a história vai para HISTORICO.md.
 
 ## O cânone visual
 - Material: VIDRO — véu `rgba(255,255,255,0.03)` sobre base transparente; a aurora

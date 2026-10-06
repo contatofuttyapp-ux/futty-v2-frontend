@@ -1,5 +1,6 @@
-// Futty v2.0 — Rodada 29B (bloco 2, A): a barra de progresso honesta da pintura (vive dentro do card da figurinha).
-// Só apresenta o que utils/progressoPintura.js#situacaoDaPintura calculou: nada de tempo, rede ou estado aqui.
+// Futty v2.0 — A barra de progresso honesta da pintura (vive dentro do card da figurinha).
+// Só apresenta o que utils/progressoPintura.js#situacaoDaPintura calculou: nada de tempo, rede ou estado
+// aqui.
 // Estilo INLINE de propósito: CSS de página lazy entra no mapa de pré-carga do arranque (teto de 320 KiB).
 export default function BarraPintura({ situacao, estimativaSegundos }) {
   if (!situacao) return null;

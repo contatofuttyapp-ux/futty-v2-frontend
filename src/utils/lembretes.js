@@ -1,6 +1,8 @@
-// Futty v2.0 — Rodada 29T-C: o "Agora não" dos lembretes sem prazo do Início. Esconde o lembrete por 7 dias NAQUELE aparelho (localStorage) e a fila anda;
-// passados os 7 dias ele volta sozinho. Puro: o armazém e o relógio entram por parâmetro, o teste roda no Node. Tudo com try/catch — o localStorage some em
-// janela privada, com dados bloqueados e em pré-visualização; sem ele o lembrete só fica escondido enquanto a tela está aberta (o Início guarda o mesmo em estado).
+// Futty v2.0 — o "Agora não" dos lembretes sem prazo do Início. Esconde o lembrete por 7 dias NAQUELE aparelho
+// (localStorage) e a fila anda; passados os 7 dias ele volta sozinho. Puro: o armazém e o relógio entram por
+// parâmetro, o teste roda no Node. Tudo com try/catch — o localStorage some em janela privada, com dados
+// bloqueados e em pré-visualização; sem ele o lembrete só fica escondido enquanto a tela está aberta (o Início
+// guarda o mesmo em estado).
 export const DIAS_DO_AGORA_NAO = 7;
 const DURACAO_MS = DIAS_DO_AGORA_NAO * 24 * 60 * 60 * 1000;
 const PREFIXO = 'futty_agora_nao_';

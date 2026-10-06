@@ -1,16 +1,9 @@
-/* Futty v2.0 — Estilos partilhados das páginas de autenticação
- *
- * VAGA 1 (B2) — a porta de entrada ganha o cânone.
- *
- * Porque é que estas páginas tinham deriva própria: são as ÚNICAS do app que não
- * importam o app.css (todas as outras fazem `import '../styles/app.css'`). Sem ele
- * não havia .hud-corners-s, não havia .cta-gold — o vocabulário da casa não chegava
- * cá, e o que cresceu no vazio foi um dialecto: roxo neon, cantos redondos, azul de
- * focus do browser. O Login e o Registo passam a importar o app.css como toda a
- * gente; este ficheiro é só a camada por cima.
- *
- * O trio fecha completo: Login, Registo e ForgotPassword. Os três importam o app.css,
- * os três usam o CTA dourado da casa. Não sobra porta com dialecto.
+/*
+ * Futty v2.0 — Estilos partilhados das páginas de autenticação (Login, Registo e ForgotPassword).
+ * As três importam o app.css, como as outras páginas do app, e usam o CTA dourado da casa; este
+ * ficheiro é só a camada por cima. Sem o app.css o vocabulário da casa (.hud-corners-s, .cta-gold)
+ * não chegava cá, e o que cresceu no vazio foi um dialecto: roxo neon, cantos redondos, azul de
+ * focus do browser.
  */
 
 .auth-shell {
@@ -136,8 +129,10 @@
   gap: 6px;
 }
 
-/* Label = estrutura → Rajdhani 600. O valor que se escreve no input é leitura e
-   fica no --sans: a régua da Vaga 1 é "Rajdhani estrutural, leitura no resto". */
+/*
+ * Label = estrutura → Rajdhani 600. O valor que se escreve no input é leitura e
+ * fica no --sans: a régua é "Rajdhani estrutural, leitura no resto".
+ */
 .auth-field label,
 .auth-field__rotulo {
   font-family: 'Rajdhani', var(--sans);
@@ -174,19 +169,21 @@
   background: rgba(212, 160, 23, 0.06);
 }
 
-/* O AZUL ÓRFÃO. Ele existe, e não está em stylesheet nenhum: é o autofill do
-   Chrome, que pinta os campos guardados com rgba(70,90,126,0.4) — um azul-ardósia
-   — por cima do que aqui se declarar. Sobre o #101012 do card dá ~rgb(38,46,61).
-   Por isso não se encontrava a grep: não é código nosso, é o browser. Atropelava
-   duas regras da Vaga 1 ao mesmo tempo (fundo escuro translúcido, zero azul).
-   O background-color não o vence — o UA ganha sempre. O que o vence é um
-   box-shadow inset opaco, que o autofill não sobrepõe. Sendo opaco, não pode ser
-   translúcido: leva o valor JÁ COMPOSTO do design sobre o card (rgba(255,255,255,
-   0.03) sobre #101012 = rgb(23,23,25)), portanto o olho vê exactamente o mesmo.
-   O inset não briga com o clip-path do .hud-corners-s: pinta dentro da caixa e é
-   recortado com o resto — ao contrário de uma sombra exterior, que seria cortada.
-   O -webkit-text-fill-color é preciso à parte: o autofill também força a cor do
-   texto (escuro), e o `color` não lhe toca. */
+/*
+ * O AZUL ÓRFÃO. Ele existe, e não está em stylesheet nenhum: é o autofill do
+ * Chrome, que pinta os campos guardados com rgba(70,90,126,0.4) — um azul-ardósia
+ * — por cima do que aqui se declarar. Sobre o #101012 do card dá ~rgb(38,46,61).
+ * Por isso não se encontrava a grep: não é código nosso, é o browser. Atropelava
+ * duas regras ao mesmo tempo (fundo escuro translúcido, zero azul).
+ * O background-color não o vence — o UA ganha sempre. O que o vence é um
+ * box-shadow inset opaco, que o autofill não sobrepõe. Sendo opaco, não pode ser
+ * translúcido: leva o valor JÁ COMPOSTO do design sobre o card (rgba(255,255,255,
+ * 0.03) sobre #101012 = rgb(23,23,25)), portanto o olho vê exactamente o mesmo.
+ * O inset não briga com o clip-path do .hud-corners-s: pinta dentro da caixa e é
+ * recortado com o resto — ao contrário de uma sombra exterior, que seria cortada.
+ * O -webkit-text-fill-color é preciso à parte: o autofill também força a cor do
+ * texto (escuro), e o `color` não lhe toca.
+ */
 .auth-input:-webkit-autofill,
 .auth-input:-webkit-autofill:hover {
   -webkit-box-shadow: 0 0 0 1000px rgb(23, 23, 25) inset;

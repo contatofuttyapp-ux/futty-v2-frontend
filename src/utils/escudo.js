@@ -1,12 +1,13 @@
-// Futty v2.0 — Rodada 29I, bloco 3 (achado 102 + bancadas aprovadas pelo dono em 2-out): o escudo do time sem logo.
+// Futty v2.0 — o escudo do time sem logo.
 //
-// UM controle, "Escudo do time": cor principal + segunda cor + padrão. Paleta FIXA de 12 cores, igual no motor
-// (backend/utils/escudo.js) e na regra do banco (migração 077); 6 padrões = 864 escudos, todos legíveis em 84, 36 e 20 px.
-// O desenho é o das bancadas DESIGN/escudo-cores.html e DESIGN/escudo-padroes.html, copiado de lá (não reescalado).
-// Reprovados pelo dono e fora daqui: RGB livre, quadriculado, listras finas, pontinhos, gradiente.
+// UM controle, "Escudo do time": cor principal + segunda cor + padrão. Paleta FIXA de 12 cores, igual no
+// motor (backend/utils/escudo.js) e na regra do banco (migração 077); 6 padrões = 864 escudos, todos
+// legíveis em 84, 36 e 20 px. O desenho é o das bancadas aprovadas pelo dono, DESIGN/escudo-cores.html e
+// DESIGN/escudo-padroes.html, copiado de lá (não reescalado). Reprovados pelo dono e fora daqui: RGB
+// livre, quadriculado, listras finas, pontinhos, gradiente.
 //
-// A cor principal continua em teams.cor. A chave antiga 'verde' sempre foi mostrada como ROXO (#8b5cf6) e segue assim — por isso
-// o verde de verdade da paleta tem a chave 'gramado' (na tela, "Verde").
+// A cor principal continua em teams.cor. A chave antiga 'verde' sempre foi mostrada como ROXO (#8b5cf6)
+// e segue assim — por isso o verde de verdade da paleta tem a chave 'gramado' (na tela, "Verde").
 
 export const PALETA = [
   { chave: 'roxo', nome: 'Roxo', hex: '#8b5cf6' },

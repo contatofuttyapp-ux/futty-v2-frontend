@@ -1,6 +1,6 @@
-// Futty v2.0 — Publicidade de uma SESSÃO, não de uma tela (VELOCIDADE 9, 23-set).
+// Futty v2.0 — Publicidade de uma SESSÃO, não de uma tela.
 //
-// O PROBLEMA, medido no relatório do dono (build 28, iPhone, Lisboa): num
+// O PROBLEMA, medido no relatório do dono (iPhone, Lisboa): num
 // percurso de 20 segundos, 7 dos 22 pedidos eram publicidade — quatro
 // `GET /api/ads?pagina=…` (498, 539, 578, 323 ms) e três `POST /api/ads/evento`
 // (255, 264, 542 ms). Trabalho de servidor: 0 a 20 ms. Era tudo distância, paga
@@ -43,7 +43,7 @@ function valido() {
 }
 
 /**
- * Guarda o que veio de fora (o /api/inicio traz `ads` desde a Velocidade 9).
+ * Guarda o que veio de fora (o /api/inicio traz `ads`).
  * É o caminho normal: quem abre o app no Início nunca pede anúncios.
  */
 export function semearAds(ads) {

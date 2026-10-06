@@ -1,8 +1,9 @@
-// Futty v2.0 — Rodada 29I, bloco 3 (item 74 da Rodada 29): o link do sorteio que vai para o grupo.
+// Futty v2.0 — o link do sorteio que vai para o grupo.
 //
-// Era futtyapp.com.br/p/<slug do time>/<uuid de 36 caracteres> — comprido e feio no WhatsApp. Agora, quando o motor dá um código
-// (POST /api/games/:id/link-curto, migração 078), é futtyapp.com.br/s/<código de 8>, no mesmo molde do /c/<código> do convite. Sem
-// código (migração por aplicar, motor fora), o longo de sempre — que continua valendo.
+// Quando o motor dá um código (POST /api/games/:id/link-curto, migração 078), o link é
+// futtyapp.com.br/s/<código de 8>, no mesmo molde do /c/<código> do convite. O longo,
+// futtyapp.com.br/p/<slug do time>/<uuid de 36 caracteres>, é comprido e feio no WhatsApp: fica para quando
+// não há código (migração por aplicar, motor fora) e continua valendo.
 import { apiFetch } from '../lib/api';
 
 /** O link para mandar no grupo: o curto quando há código, o longo quando não há. Puro. */

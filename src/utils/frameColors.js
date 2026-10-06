@@ -1,5 +1,5 @@
 // Futty v2.0 — Mapa de cores do frame do jogador (fonte única do getFrameColor).
-// ⚠️ users.cor_frame é MORTO CONFIRMADO (vaga 4 do B2): nenhum UI o escreve e NADA o
+// ⚠️ users.cor_frame é MORTO CONFIRMADO: nenhum UI o escreve e NADA o
 // lê de forma viva. getFrameColor é sempre chamado com 'dourado' fixo (Figurinha,
 // figurinhaCanvas) ou com um valor de DEMO (PlayerCard na LandingPage). O Ranking —
 // que se assumia ser o último leitor — nunca leu a coluna: pinta ouro hardcoded

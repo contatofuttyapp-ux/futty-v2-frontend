@@ -1,4 +1,4 @@
-// Futty v2.0 — Bancada do CANVAS da figurinha, no WebKit (FLUIDEZ 2, 16-set).
+// Futty v2.0 — Bancada do CANVAS da figurinha, no WebKit.
 //
 // A PERGUNTA: o relatório do build 20 (iPhone 15 Pro Max, instalação do zero)
 // diz `/figurinha dados=8836 ms` e uma travada de 6402 ms na fase "outro" aos

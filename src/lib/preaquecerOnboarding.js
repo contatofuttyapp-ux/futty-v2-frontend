@@ -1,11 +1,11 @@
-// Futty v2.0 — Rodada 29H (item 4): a página 1 do onboarding abria devagar (o dono viu duas vezes, a 2ª menos). O que ela
-// espera é, na ordem: o chunk lazy do Onboarding (+ o CSS do mini sorteio), o /api/me do AuthGuard e as 8 figurinhas fictícias
-// (WebP, ~24 KB, servidas do site). O cadastro e o login são o último lugar em que a pessoa passa antes dela, e ali ela
-// gasta segundos digitando — por isso eles chamam isto ao montar: o chunk e as 8 imagens já vêm a caminho quando a pessoa
-// toca em "Criar conta"/"Entrar". Em tempo ocioso, uma vez por carga da página, sem bloquear nada; falha em silêncio (é só
-// um aquecimento: a página abre do mesmo jeito, só mais devagar). Módulo pequeno e sem React: só as telas lazy o importam.
-// Quem vem de um convite (`convidado`) não vê o mini sorteio — a 1ª página dele são as boas-vindas do time: aquece o chunk delas
-// em vez das 8 figurinhas.
+// Futty v2.0 — a página 1 do onboarding abre devagar. O que ela espera é, na ordem: o chunk lazy do Onboarding
+// (+ o CSS do mini sorteio), o /api/me do AuthGuard e as 8 figurinhas fictícias (WebP, ~24 KB, servidas do
+// site). O cadastro e o login são o último lugar em que a pessoa passa antes dela, e ali ela gasta segundos
+// digitando — por isso eles chamam isto ao montar: o chunk e as 8 imagens já vêm a caminho quando a pessoa
+// toca em "Criar conta"/"Entrar". Em tempo ocioso, uma vez por carga da página, sem bloquear nada; falha em
+// silêncio (é só um aquecimento: a página abre do mesmo jeito, só mais devagar). Módulo pequeno e sem React:
+// só as telas lazy o importam. Quem vem de um convite (`convidado`) não vê o mini sorteio — a 1ª página dele
+// são as boas-vindas do time: aquece o chunk delas em vez das 8 figurinhas.
 import { urlAsset } from '../utils/avatar';
 import { FIGURINHAS } from '../utils/miniSorteio';
 

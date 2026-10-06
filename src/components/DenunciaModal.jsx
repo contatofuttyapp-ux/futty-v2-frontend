@@ -36,8 +36,8 @@ export default function DenunciaModal({ targetType, targetId, onClose, onResult 
     }
   }
 
-  // Portal para o body (Rodada 8A): abre de dentro de um post ou comentário, no
-  // meio do [data-page] — fixed ali ancora na página, não na tela (LoadingFutty.jsx).
+  // Portal para o body: abre de dentro de um post ou comentário, no meio do [data-page] — fixed ali ancora
+  // na página, não na tela (LoadingFutty.jsx).
   return createPortal(
     <div className="modal-overlay" role="presentation" onClick={() => !busy && onClose?.()}>
       <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: 390 }} onClick={(e) => e.stopPropagation()}>

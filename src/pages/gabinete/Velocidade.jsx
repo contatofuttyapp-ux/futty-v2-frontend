@@ -1,4 +1,4 @@
-// Futty v2.0 — Gabinete, aba "Velocidade" (Rodada 28, bloco E).
+// Futty v2.0 — Gabinete, aba "Velocidade".
 //
 // O que os aparelhos de todo mundo mediram, sem ninguém dentro: a telemetria anônima (lib/telemetria.js)
 // manda, uma vez por tela por sessão, quanto a tela levou para ficar útil e quanto cada chamada ao motor

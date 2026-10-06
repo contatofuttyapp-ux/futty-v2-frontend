@@ -1,4 +1,4 @@
-// Futty v2.0 — O que fazer quando a sessão dá problema (Rodada 28, bloco B). Usado pelo AuthContext;
+// Futty v2.0 — O que fazer quando a sessão dá problema. Usado pelo AuthContext;
 // separado dele para o teste de unidade provar as regras sem React nem rede.
 
 /** "Sair" é SÓ deste aparelho: o padrão do Supabase ('global') derrubava a pessoa em todos os aparelhos. */

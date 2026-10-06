@@ -3,10 +3,10 @@
 //
 //   node scripts/loja/gerar-imagens.mjs --cruas=outubro/cruas --saida=outubro/play-celular
 //   node scripts/loja/gerar-imagens.mjs --tamanho=1290x2796 --cruas=outubro/apple/cruas --saida=outubro/apple
-//   node scripts/loja/gerar-imagens.mjs --faixa=outubro                  só a faixa → LOJA/outubro/faixa-1024x500.png
-//   node scripts/loja/gerar-imagens.mjs --revisao=outubro                folha de revisão (as 8 + a faixa)
+//   node scripts/loja/gerar-imagens.mjs --faixa=outubro      só a faixa → LOJA/outubro/faixa-1024x500.png
+//   node scripts/loja/gerar-imagens.mjs --revisao=outubro    folha de revisão (as 8 + a faixa)
 //
-// As 8 peças, os rótulos e as frases são a tabela de LOJA-PRINTS-OUT.md (aprovada pelo dono em 5-out).
+// As 8 peças, os rótulos e as frases são a tabela de LOJA-PRINTS-OUT.md (aprovada pelo dono).
 // A FAIXA segue MARCA.md: o símbolo é o ÍCONE DO APP (MARCA/icone-1024.png), nunca o F solto ao lado da
 // palavra ("F FUTTY" está aposentado), com FUTTY em branco e "A sua figurinha." em dourado #f0c94a.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -25,12 +25,11 @@ const opcao = (nome) => (process.argv.find((a) => a.startsWith(`--${nome}=`)) ||
 const CRUAS = join(LOJA, opcao('cruas') || join('outubro', 'cruas'));
 const SAIDA = join(LOJA, opcao('saida') || join('outubro', 'play-celular'));
 
-// O desenho é feito em 1080 unidades de largura; a peça inteira é escalada para
-// a largura pedida. `altura` é a altura em unidades (1920 = 9:16). Celular:
-// `celularLargura` é a caixa dentro da moldura, `telaLargura` a captura, `moldura`
-// a escala da borda/raio/sombra. Na Google Play a captura (760) é mais estreita que
-// a caixa (786) desde 13-set e sobra uma faixa de moldura à direita; fica assim
-// para as peças já enviadas. Na App Store a captura enche a caixa.
+// O desenho é feito em 1080 unidades de largura; a peça inteira é escalada para a largura pedida. `altura`
+// é a altura em unidades (1920 = 9:16). Celular: `celularLargura` é a caixa dentro da moldura,
+// `telaLargura` a captura, `moldura` a escala da borda/raio/sombra. Na Google Play a captura (760) é mais
+// estreita que a caixa (786) e sobra uma faixa de moldura à direita; fica assim para as peças já enviadas.
+// Na App Store a captura enche a caixa.
 const LAYOUTS = {
   '1080x1920': { altura: 1920, textoTopo: 150, celularTopo: 470, celularLargura: 786, telaLargura: 760, moldura: 1 },
   '1290x2796': { altura: 2796 / (1290 / 1080), textoTopo: 170, celularTopo: 520, celularLargura: 894, telaLargura: 894, moldura: 1.17 },
@@ -44,8 +43,7 @@ const ESCALA = LARGURA / 1080;
 const OURO = '#D4AF37';
 const OURO_TEXTO = '#f0c94a'; // o dourado de texto da marca (MARCA.md)
 
-// LOJA-PRINTS-OUT.md, tabela aprovada em 5-out: ordem, rótulo (dourado, pequeno) e frase. As frases da 01, 02 e 05 são as do
-// "Ajuste 2" do dono (5-out, noite).
+// LOJA-PRINTS-OUT.md, tabela aprovada pelo dono: ordem, rótulo (dourado, pequeno) e frase.
 const PECAS = [
   { arquivo: '01.png', tela: 'sorteio.png', kicker: 'Sorteio', titulo: 'Sorteio justo de times' },
   { arquivo: '02.png', tela: 'figurinha.png', kicker: 'Figurinha', titulo: 'Vire figurinha de colecionador' },
@@ -222,9 +220,10 @@ async function renderizar(page, html, largura, altura, destino) {
 }
 
 /**
- * UM tamanho de frase para as 8 peças (ajuste 2 do dono, 5-out): todas no mesmo tamanho, cada uma em no máximo duas linhas e acima do
- * celular. Começa nos 104 de sempre e, se alguma frase não couber, desce de 2 em 2 para TODAS. Antes cada peça encolhia sozinha e as
- * frases saíam em tamanhos diferentes. As linhas são contadas pela altura do título (line-height .96), com a Rajdhani já carregada.
+ * UM tamanho de frase para as 8 peças: todas no mesmo tamanho, cada uma em no máximo duas linhas e acima do
+ * celular. Começa nos 104 de sempre e, se alguma frase não couber, desce de 2 em 2 para TODAS (cada peça
+ * encolhendo sozinha deixava as frases em tamanhos diferentes). As linhas são contadas pela altura do
+ * título (line-height .96), com a Rajdhani já carregada.
  */
 async function fonteDasFrases(page) {
   const limite = LAYOUT.celularTopo - 34;

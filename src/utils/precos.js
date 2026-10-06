@@ -1,8 +1,8 @@
-// Futty v2.0 — Região por FUSO HORÁRIO do aparelho (13-set, "Velocidade 3"), só
+// Futty v2.0 — Região por FUSO HORÁRIO do aparelho, só
 // caindo para o IDIOMA quando o fuso não está disponível — nunca por IP/geo-
 // localização (sem permissão a pedir, sem custo de rede, funciona offline).
 //
-// Ordem (13-set — motivo: brasileiro em Lisboa com o celular ainda em pt-BR
+// Ordem (motivo: brasileiro em Lisboa com o celular ainda em pt-BR
 // pagava em real; o fuso é o sinal mais forte de ONDE a pessoa está agora):
 //  1) fuso está na lista FECHADA de fusos do Brasil → real;
 //  2) fuso existe e NÃO é do Brasil → euro (mesmo com idioma pt-BR);

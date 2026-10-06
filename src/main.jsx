@@ -7,7 +7,7 @@ import { prepararSentry } from './lib/sentryTardio'
 import { pararAnimacoesForaDeVista } from './lib/ritmo'
 import { ehNativo } from './lib/plataforma'
 
-// VELOCIDADE 8 (16-set) — PRIMEIRA LINHA DO CORPO, de propósito. Em ESM os
+// PRIMEIRA LINHA DO CORPO, de propósito. Em ESM os
 // imports acima já foram buscados, lidos e EXECUTADOS quando esta linha corre,
 // por isso este performance.now() é o custo inteiro de pôr o app de pé antes de
 // uma única linha nossa: HTML + download + parse + compilação de tudo o que
@@ -22,16 +22,16 @@ marcarArranque(performance.now());
 const FUTTY_BUILD = 'velocidade-8';
 console.log(`[Futty] build: ${FUTTY_BUILD}`);
 
-// Error tracking (só em produção; DSN via VITE_SENTRY_DSN). VELOCIDADE 8: o
+// Error tracking (só em produção; DSN via VITE_SENTRY_DSN). O
 // módulo chega 3 s depois da 1ª pintura; até lá uma fila guarda os erros para
 // não se perder nenhum (lib/sentryTardio.js).
 prepararSentry();
 
-// Velocidade 6B: passa a contar quantas imagens do proxy vieram do cache do
-// aparelho — é o número que diz se o ganho é real no celular de verdade.
+// Conta quantas imagens do proxy vieram do cache do aparelho —
+// é o número que diz se o ganho é real no celular de verdade.
 observarImagens();
 vigiarLargura();
-// Velocidade 8: com o app fora de vista, nada se anima (o fundo aurora é a maior
+// Com o app fora de vista, nada se anima (o fundo aurora é a maior
 // conta de desenho contínua do app e está em todas as rotas).
 pararAnimacoesForaDeVista();
 
@@ -41,11 +41,12 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-// Capgo (6-out) — atualização ao vivo das telas, sem passar pela loja (CAPGO.md). `notifyAppReady` avisa a camada
-// nativa de que ESTE bundle abriu: sem o aviso (10 s por padrão) o Capgo acha que o app travou e desfaz a atualização.
-// A doc manda chamar logo no arranque, antes de qualquer rede — por isso aqui, colado ao render, e não numa tela.
-// Import dinâmico e só no nativo: o plugin não entra no peso do arranque e a web nunca o carrega. Falhar aqui só
-// vai para o log; o app segue (o pior caso é o Capgo voltar ao bundle anterior, nunca o app ficar sem abrir).
+// Capgo — atualização ao vivo das telas, sem passar pela loja (CAPGO.md). `notifyAppReady` avisa a camada
+// nativa de que ESTE bundle abriu: sem o aviso (10 s por padrão) o Capgo acha que o app travou e desfaz a
+// atualização. A doc manda chamar logo no arranque, antes de qualquer rede — por isso aqui, colado ao render,
+// e não numa tela. Import dinâmico e só no nativo: o plugin não entra no peso do arranque e a web nunca o
+// carrega. Falhar aqui só vai para o log; o app segue (o pior caso é o Capgo voltar ao bundle anterior, nunca
+// o app ficar sem abrir).
 if (ehNativo()) {
   import('@capgo/capacitor-updater')
     .then(({ CapacitorUpdater }) => CapacitorUpdater.notifyAppReady())

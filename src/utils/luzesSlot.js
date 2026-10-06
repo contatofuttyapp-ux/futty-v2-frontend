@@ -1,6 +1,7 @@
-// Futty v2.0 — Rodada 29C: as lâmpadas das duas máquinas das boas-vindas (components/BoasVindas.jsx), com a geometria
-// da prova aprovada pelo dono (FUT/DESIGN/prova-boas-vindas-v2.html). Puro (sem React): só números. A animação é CSS e
-// acende cada lâmpada pela ordem do `i` (animation-delay: calc(var(--i) * -.09s)) — é o `i` que faz a onda correr.
+// Futty v2.0 — as lâmpadas das duas máquinas das boas-vindas (components/BoasVindas.jsx), com a geometria
+// da prova aprovada pelo dono (FUT/DESIGN/prova-boas-vindas-v2.html). Puro (sem React): só números. A
+// animação é CSS e acende cada lâmpada pela ordem do `i` (animation-delay: calc(var(--i) * -.09s)) — é o
+// `i` que faz a onda correr.
 
 /**
  * Régua da máquina deitada: n lâmpadas numa fila. O `i` continua a partir de `inicio` porque, na prova, um contador só

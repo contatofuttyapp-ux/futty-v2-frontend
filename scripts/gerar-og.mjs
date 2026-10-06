@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// Futty v2.0 — Rodada 29H (item 7): gera public/og/futty-1200x630-v1.png, a imagem de prévia do link (og:image) do site e do convite.
+// Futty v2.0 — gera public/og/futty-1200x630-v1.png, a imagem de prévia do link (og:image) do site e do
+// convite.
 //
-// A prévia do WhatsApp mostrava o F num círculo (o WhatsApp recortava o ícone pequeno). Agora a prévia é uma imagem de verdade,
-// 1200×630: o ÍCONE DO APP — o F dourado dentro do quadrado de cantos arredondados, o mesmo das lojas e dos e-mails — centrado
+// A prévia é uma imagem de verdade, 1200×630 (o WhatsApp recortava o ícone pequeno num círculo): o ÍCONE DO
+// APP — o F dourado dentro do quadrado de cantos arredondados, o mesmo das lojas e dos e-mails — centrado
 // sobre o fundo da casa (#050810, com o halo dourado e o roxo da landing). Sai de resources/icon.png.
 //
-// O nome leva a versão (-v1): a imagem é servida com cache longo e os apps de mensagem guardam a prévia por muito tempo; ao
-// trocar a arte, muda o nome (e o og:image do index.html) — ver o item 37 da Rodada 29.
+// O nome leva a versão (-v1): a imagem é servida com cache longo e os apps de mensagem guardam a prévia
+// por muito tempo; ao trocar a arte, muda o nome (e o og:image do index.html).
 //
 // Uso (a partir de FUTTY-V2/frontend):  node scripts/gerar-og.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';

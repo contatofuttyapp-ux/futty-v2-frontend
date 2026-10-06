@@ -4,13 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
 
 // Dois componentes a pedir o MESMO path ao mesmo tempo dão uma ida à rede só:
-// desde a Velocidade 7B essa coalescência vive no próprio apiFetch (lib/api.js),
+// essa coalescência vive no próprio apiFetch (lib/api.js),
 // e vale também para quem chama apiFetch direto (pré-aquecimento, Figurinha).
 
 /**
  * @param {string|null} path - null = não busca.
  * @param {{ pausado?: boolean }} [opts] - `pausado` não dispara ao montar, mas
- *   mantém o `path` vivo para o `reload()` (Velocidade 6B: o cache está fresco,
+ *   mantém o `path` vivo para o `reload()` (o cache está fresco,
  *   não vale a pena pedir — mas se a pessoa puxar para atualizar, pede).
  */
 export function useApi(path, opts = {}) {

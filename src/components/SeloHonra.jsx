@@ -1,4 +1,4 @@
-// Futty v2.0 — Selo de honra (Vaga 11C) — forma A (postal denteado), base metálica
+// Futty v2.0 — Selo de honra — forma A (postal denteado), base metálica
 // por tier (ouro/prata/bronze), troféu da casa + faixa com o texto, varrimento de
 // vidro (~6s; reduced-motion estático). Usado no olhinho da Figurinha e na vitrine.
 const TROFEU = 'M13 9 L35 9 L31 25 L17 25 Z M13.5 11 L8 11 L8 17 L15 20 M34.5 11 L40 11 L40 17 L33 20 M24 25 L24 32 M17 40 L31 40 L28 32 L20 32 Z';

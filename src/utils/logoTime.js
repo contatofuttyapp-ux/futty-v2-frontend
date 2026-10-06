@@ -1,4 +1,4 @@
-// Futty v2.0 — Rodada 29A (H): o logo do time na criação. Opcional, 2 MB, png/jpg/webp — o mesmo que o motor aceita
+// Futty v2.0 — o logo do time na criação. Opcional, 2 MB, png/jpg/webp — o mesmo que o motor aceita
 // em POST /api/teams/:slug/logo (a moderação e a verificação de imagem real acontecem lá, não aqui).
 export const LOGO_TIPOS = ['image/png', 'image/jpeg', 'image/webp'];
 export const LOGO_MAX_BYTES = 2 * 1024 * 1024;

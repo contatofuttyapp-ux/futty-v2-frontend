@@ -1,4 +1,4 @@
-// Futty v2.0 — Rodada 29B (F): o que a tela "Avise-me" decide sozinha (puro, sem React nem rede). O motor valida de novo
+// Futty v2.0 — o que a tela "Avise-me" decide sozinha (puro, sem React nem rede). O motor valida de novo
 // (backend/utils/aviseMe.js): aqui só se poupa a ida quando o erro é óbvio e se diz de onde a pessoa veio.
 
 /** Parece um e-mail? Só o óbvio (algo@dominio.tld, sem espaço) — quem decide é o motor. */

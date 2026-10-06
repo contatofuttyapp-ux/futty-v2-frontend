@@ -53,7 +53,7 @@ if (!LARGURA_PX || !ALTURA_PX || LARGURA_PX % 3 || ALTURA_PX % 3) throw new Erro
 const APARELHO = opcao('aparelho') || (LARGURA_PX >= 1290 ? 'iphone' : 'android');
 
 const fatal = (msg) => { console.error(`\nERRO: ${msg}`); process.exit(2); };
-// Regra da casa: bancada e capturas nunca contra produção (incidente de 25-set).
+// Regra da casa: bancada e capturas nunca contra produção (já deu incidente).
 if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(BASE).hostname)) {
   fatal(`--base=${BASE} não é local. As capturas das lojas rodam contra o servidor LOCAL (LIGAR-FUTTY.bat), nunca contra produção.`);
 }
@@ -89,7 +89,7 @@ const SEM_AVISOS = () => {
   localStorage.setItem('futty_cookies', 'aceite');
   localStorage.setItem('futty_tour_done', '1');
   localStorage.setItem('futty_figurinha_estreia', '1');
-  localStorage.setItem('futty_agora_nao_nascimento', String(Date.now())); // 29T-C: o "Agora não" da data de nascimento (7 dias)
+  localStorage.setItem('futty_agora_nao_nascimento', String(Date.now())); // O "Agora não" da data de nascimento (7 dias)
   localStorage.removeItem('futty_cta_figurinha');
   sessionStorage.setItem('futty_push_dismiss', '1');
   sessionStorage.setItem('futty_votacao_dismiss', '1');
@@ -174,7 +174,7 @@ async function capturar(page, nome, { rolarAte = null } = {}) {
   const textoDaTela = await page.evaluate(() => document.body.innerText);
   const achado = textoDaTela.match(PROIBIDO);
   if (achado) throw new Error(`${nome}: a tela mostra "${achado[0]}" e não vai para a loja`);
-  // Rodada 29Z: brasileiro escreve 77,9 e 9,1 — peça de loja com "77.9" ou "9.10" não sai (os prints de 5-out saíram assim).
+  // Brasileiro escreve 77,9 e 9,1 — peça de loja com "77.9" ou "9.10" não sai.
   const comPonto = textoDaTela.match(NUMERO_COM_PONTO);
   if (comPonto) throw new Error(`${nome}: a tela mostra o número "${comPonto[0].trim()}" com ponto decimal; no app de verdade é vírgula (src/utils/numero.js)`);
   const decimais = [...textoDaTela.matchAll(/\d+,\d+/g)].map((m) => m[0]);
@@ -227,11 +227,12 @@ const PASTA_LOGOS = join(LOJA, 'demo-logos');
 const logoDoTime = (slug) => join(PASTA_LOGOS, `${String(slug).replace(/-demo$/, '')}.png`);
 const ROTA_DOS_LOGOS = '/__demo-logos/';
 
-// Os rostos da demo: avatares que JÁ existem em public/onboarding/ (nada novo no repositório). O nome casa → o mesmo rosto (Dudu → dudu,
-// Tiãozinho → tiagao); o Cabeção fica com o goncalo (ordem do dono, 5-out). Os rostos que sobram (caio, nando, pedrao, rafa) vão, na ordem
-// do Ranking, para quem aparece logo depois no alto da lista. Os que não aparecem aqui ficam com a silhueta da casa (a mistura de foto e
-// figurinha é de propósito). O Bruninho não entra: continua com a figurinha dele. Nenhum rosto serve a dois jogadores — a tabela é conferida
-// abaixo, e por isso nenhum rosto repete numa mesma tela.
+// Os rostos da demo: avatares que JÁ existem em public/onboarding/ (nada novo no repositório). O nome casa
+// → o mesmo rosto (Dudu → dudu, Tiãozinho → tiagao); o Cabeção fica com o goncalo (ordem do dono). Os
+// rostos que sobram (caio, nando, pedrao, rafa) vão, na ordem do Ranking, para quem aparece logo depois no
+// alto da lista. Os que não aparecem aqui ficam com a silhueta da casa (a mistura de foto e figurinha é de
+// propósito). O Bruninho não entra: continua com a figurinha dele. Nenhum rosto serve a dois jogadores — a
+// tabela é conferida abaixo, e por isso nenhum rosto repete numa mesma tela.
 const PASTA_ROSTOS = join(AQUI, '..', '..', 'public', 'onboarding');
 const ROSTOS_DA_DEMO = {
   Dudu: 'dudu',

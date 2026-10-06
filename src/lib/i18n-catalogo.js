@@ -83,7 +83,7 @@ const CATALOGO = {
     'Começar': 'Empezar',
     'Bola parada…\nO servidor tá demorando mais que o normal': 'Balón parado…\nEl servidor está tardando más de lo normal',
   },
-  // Francês (entrou 31-jul no lugar do pt-PT). LOTE 1 cuidado; restantes lotes a preencher.
+  // Francês. LOTE 1 cuidado; restantes lotes a preencher.
   fr: {
     'Bem-vindo de volta': 'Bon retour',
     'Entre na sua conta para continuar.': 'Connectez-vous à votre compte pour continuer.',

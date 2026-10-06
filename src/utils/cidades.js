@@ -1,9 +1,10 @@
-// Futty v2.0 — Rodada 29B (D): a lista de cidades do campo "Cidade" (CampoCidade). Puro (sem React, sem rede).
+// Futty v2.0 — a lista de cidades do campo "Cidade" (CampoCidade). Puro (sem React, sem rede).
 //
-// A lista é public/dados/cidades.json (scripts/gerar-cidades.js): um vetor de [nome, uf|distrito, país, lat, lng] com
-// os 5.571 municípios do Brasil e os 308 concelhos de Portugal. O app a busca SÓ quando o campo ganha foco
-// (lib/cidadesDados.js) e nunca a leva no bundle. A normalização é a MESMA do motor (backend/utils/cidade.js) — o
-// Explorar casa por texto comparando as duas pontas, então as duas têm de concordar letra por letra.
+// A lista é public/dados/cidades.json (scripts/gerar-cidades.js): um vetor de [nome, uf|distrito, país, lat,
+// lng] com os 5.571 municípios do Brasil e os 308 concelhos de Portugal. O app a busca SÓ quando o campo
+// ganha foco (lib/cidadesDados.js) e nunca a leva no bundle. A normalização é a MESMA do motor
+// (backend/utils/cidade.js) — o Explorar casa por texto comparando as duas pontas, então as duas têm de
+// concordar letra por letra.
 
 const MINIMO_DE_LETRAS = 2;
 
@@ -73,8 +74,9 @@ export function avisoNaoAchou(texto) {
 }
 
 /**
- * A cidade conta como preenchida (Rodada 29P): escolhida da lista, ou um texto para o qual a lista não tem sugestão nenhuma
- * (cidade fora do Brasil e de Portugal: o motor geocodifica). Com sugestões na lista, a pessoa escolhe uma. Nunca trava quem está fora.
+ * A cidade conta como preenchida: escolhida da lista, ou um texto para o qual a lista não tem sugestão
+ * nenhuma (cidade fora do Brasil e de Portugal: o motor geocodifica). Com sugestões na lista, a pessoa
+ * escolhe uma. Nunca trava quem está fora.
  */
 export function cidadePreenchida({ texto, escolha, temSugestoes }) {
   if (escolha) return true;

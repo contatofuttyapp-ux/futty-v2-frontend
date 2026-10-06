@@ -1,10 +1,11 @@
-// Futty v2.0 — A página do time (hub no cânone, transversal lote 1): vidro + hud-corners + chips 45° + Rajdhani + .cta-gold. Posição
-// do jogador em DESTAQUE (regra: o próprio decide; GR no roxo).
+// Futty v2.0 — A página do time (hub no cânone): vidro + hud-corners + chips 45° + Rajdhani + .cta-gold.
+// Posição do jogador em DESTAQUE (regra: o próprio decide; GR no roxo).
 //
-// Rodada 29I, bloco 3 (dono): ADMIN NÃO É UM LUGAR. A página ganha abas no estilo da Figurinha — JOGOS · ELENCO · AJUSTES — e o que
-// era o painel /admin/<slug> mora nelas: Jogos (+ resultados + campeonato), Elenco (+ convites) e Ajustes (só o admin vê, com o selo
-// ADMIN). A aba fica no endereço (?aba=elenco), trocar de aba não empilha histórico, e "Voltar" volta para onde a pessoa estava.
-// As partes do admin vêm de pages/AdminPanel.jsx em lazy: quem não é admin não baixa nada delas.
+// ADMIN NÃO É UM LUGAR (dono). A página tem abas no estilo da Figurinha — JOGOS · ELENCO · AJUSTES — e o
+// painel do admin mora nelas: Jogos (+ resultados + campeonato), Elenco (+ convites) e Ajustes (só o admin
+// vê, com o selo ADMIN). A aba fica no endereço (?aba=elenco), trocar de aba não empilha histórico, e
+// "Voltar" volta para onde a pessoa estava. As partes do admin vêm de pages/AdminPanel.jsx em lazy: quem
+// não é admin não baixa nada delas.
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -29,11 +30,10 @@ import ListaDeJogos from '../components/ListaDeJogos';
 import EscolhaLinhaGol, { TEXTO_APOIO_LINHA_GOL } from '../components/EscolhaLinhaGol';
 import '../styles/app.css';
 
-// Rodada 29B (C) / 29C — EM LAZY: as boas-vindas só aparecem uma vez por time (convidado na 1ª entrada, criador ao
-// tocar "Ir para o time"; uma página, um botão; substituíram o modal de 3 passos e o tour do Início) e não têm motivo
-// para pesar no arranque.
+// Em lazy: as boas-vindas só aparecem uma vez por time (convidado na 1ª entrada, criador ao
+// tocar "Ir para o time"; uma página, um botão) e não têm motivo para pesar no arranque.
 const BoasVindas = lazy(() => import('../components/BoasVindas'));
-// O que só o admin usa (29I, bloco 3): um chunk só, baixado quando a pessoa é admin do time.
+// O que só o admin usa: um chunk só, baixado quando a pessoa é admin do time.
 const JogosDoAdmin = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.JogosDoAdmin })));
 const ElencoDoAdmin = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.ElencoDoAdmin })));
 const AjustesDoTime = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.AjustesDoTime })));
@@ -79,12 +79,13 @@ function Badge45({ children, gold }) {
 }
 
 // As abas, no estilo das da Figurinha (as mesmas medidas). Ajustes só para o admin, com o selo ADMIN.
-// Achado 117 (29J): o Ranking era uma barra solta, de largura total, acima desta linha — parecia
-// banner, não botão. Agora é um item do MESMO tamanho das abas, na mesma linha (mas é navegação
-// para outra página, não um aba.: por isso fica fora do role="tablist", sem role="tab").
-// Rodada 29L (achado 129): tudo o que decide a LARGURA da aba (fonte, espaçamento, selo) saiu do estilo em linha e foi para a classe
-// .aba-time (app.css), que muda por largura de tela. Com `flex: 1` (partes iguais) a aba "Ajustes" + selo ADMIN não cabia na sua parte
-// e empurrava o resto; agora cada aba tem a largura do próprio texto e divide a sobra. Em telas estreitas o selo vira um ponto dourado.
+// O Ranking é um item do MESMO tamanho das abas, na mesma linha — uma barra solta, de largura total,
+// parecia banner, não botão (mas é navegação para outra página, não uma aba: por isso fica fora do
+// role="tablist", sem role="tab").
+// Tudo o que decide a LARGURA da aba (fonte, espaçamento, selo) vive na classe .aba-time (app.css), que muda
+// por largura de tela, e não no estilo em linha. Com `flex: 1` (partes iguais) a aba "Ajustes" + selo ADMIN
+// não cabia na sua parte e empurrava o resto; por isso cada aba tem a largura do próprio texto e divide a
+// sobra. Em telas estreitas o selo vira um ponto dourado.
 const ESTILO_ABA = (on) => ({
   height: 36,
   border: on ? '1px solid var(--border-accent)' : '1px solid transparent',
@@ -158,9 +159,9 @@ export default function Equipa() {
       return p;
     }, { replace: true });
   }
-  // Rodada 29R (achado 147): a linha "presença ainda não aberta" do Início chega com ?abrir-presenca=<game_id>. A aba Jogos rola até o
-  // jogo e abre o "Abrir presença" dele; depois de usado o parâmetro sai do endereço (troca a entrada do histórico, não empilha), então
-  // "Voltar" e recarregar não reabrem nada.
+  // A linha "presença ainda não aberta" do Início chega com ?abrir-presenca=<game_id>. A aba Jogos rola até o
+  // jogo e abre o "Abrir presença" dele; depois de usado o parâmetro sai do endereço (troca a entrada do
+  // histórico, não empilha), então "Voltar" e recarregar não reabrem nada.
   const abrirPresencaDe = searchParams.get('abrir-presenca');
   const usouAbrirPresenca = useCallback(() => {
     setSearchParams((prev) => {
@@ -198,17 +199,17 @@ export default function Equipa() {
   const [toast, setToast] = useState(null);
 
   const meuId = me?.user?.id;
-  // Rodada 10B: `goleiro` é o campo único (fonte: team_members.categoria) —
-  // a pastilha "GR" do admin e este chip nunca mais podem discordar.
+  // `goleiro` é o campo único (fonte: team_members.categoria) —
+  // a pastilha "GR" do admin e este chip nunca podem discordar.
   const souGoleiroNoTime = !!members.find((m) => m.id === meuId)?.goleiro;
 
-  // Boas-vindas (Rodada 29B, C + 29C), uma vez por time (localStorage por equipa, a mesma marca do modal antigo):
-  // `convidado` — 1ª vez de um jogador que não fundou a equipa, logo depois de aceitar o convite (a página do convite
-  // manda `state.primeiraEntrada`) ou, como antes, sem avatar ainda. O admin que acabou de criar o time já comemorou no
-  // fim do Criar time (29P): aqui não abre nada para ele.
+  // Boas-vindas, uma vez por time (localStorage por equipa): `convidado` — 1ª vez de um jogador que não
+  // fundou a equipa, logo depois de aceitar o convite (a página do convite manda `state.primeiraEntrada`) ou
+  // ainda sem avatar. O admin que acabou de criar o time já comemorou no fim do Criar time: aqui não abre
+  // nada para ele.
   const [onboardingDispensado, setOnboardingDispensado] = useState(false);
   const onboardingKey = team ? `futty_onboarding_${team.id}` : null;
-  // Rodada 29D: quem foi aceito num pedido também chega como primeira entrada — pelo card do Início (state) ou pela
+  // Quem foi aceito num pedido também chega como primeira entrada — pelo card do Início (state) ou pela
   // notificação do motor (`/time/:slug?entrou=1`).
   const entrouAgora = !!location.state?.primeiraEntrada || new URLSearchParams(location.search).get('entrou') === '1';
   const varianteBoasVindas = !team || team.role === 'admin'
@@ -229,7 +230,7 @@ export default function Equipa() {
     if (erro) setToast({ tipo: 'error', mensagem: `Não deu para salvar sua posição: ${erro}` });
   }
 
-  // Liga/desliga o goleiro do time (Rodada 10B: booleano só, grava categoria).
+  // Liga/desliga o goleiro do time (booleano só, grava categoria).
   async function escolherGoleiro(ligado) {
     if (posBusy) return;
     setPosBusy(true);
@@ -245,7 +246,7 @@ export default function Equipa() {
 
   // Onboarding dia-1: "você é goleiro?" ficou em pref local — aplica-se aqui, no
   // 1º time em que o jogador entra ainda como jogador de linha (e a pref morre).
-  // Rodada 8A: o cadastro já não pergunta; isto só serve a quem respondeu antes.
+  // O cadastro já não pergunta; isto só serve a quem respondeu antes.
   // (set-state-in-effect justificado: é uma acção one-shot pós-onboarding — dispara
   // o MESMO fluxo do clique no chip, uma única vez, e a pref morre.)
   useEffect(() => {
@@ -293,7 +294,7 @@ export default function Equipa() {
     setGenerating(true);
     try {
       const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
-      // 29H (item 7): o link curto (/c/<código>) quando há código; o longo continua valendo.
+      // O link curto (/c/<código>) quando há código; o longo continua valendo.
       setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
       setVersaoConvites((v) => v + 1);
     } catch (err) {
@@ -341,10 +342,9 @@ export default function Equipa() {
               {team.role ? <Badge45 gold={team.role === 'admin'}>{team.role === 'admin' ? 'ADMIN' : 'MEMBRO'}</Badge45> : null}
             </div>
 
-            {/* O card do PRÓPRIO jogador, no topo (Rodada 29A): linha ou gol, escrito por extenso.
-                Antes era um chip no meio da página e ninguém o achava. Rodada 10B: `goleiro` é o campo
-                único (team_members.categoria) — a pastilha "GR" do admin e esta escolha nunca discordam.
-                Rodada 9: ligado, cada jogo deste time já nasce com você no gol. */}
+            {/* O card do PRÓPRIO jogador, no topo (num chip no meio da página ninguém o achava): linha ou gol, escrito
+                por extenso. `goleiro` é o campo único (team_members.categoria) — a pastilha "GR" do admin e esta escolha
+                nunca discordam. Ligado, cada jogo deste time já nasce com você no gol. */}
             {meuId && members.some((m) => m.id === meuId) ? (
               <div className="hud-corners" style={{ ...VIDRO, clipPath: CLIP, marginTop: 10, padding: '12px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -413,7 +413,8 @@ export default function Equipa() {
                     {copied ? 'Copiado' : 'Copiar'}
                   </button>
                 </div>
-                {/* 29H (item 7): a frase aprovada pelo dono já vem escrita no WhatsApp ("Bora jogar? Você foi chamado para o <time> no Futty…"). */}
+                {/* A frase aprovada pelo dono já vem escrita no WhatsApp ("Bora jogar? Você foi chamado para o <time> no
+                    Futty…"). */}
                 <a
                   href={enderecoDoWhatsapp({ nomeTime: team.nome, link: inviteLink })}
                   target="_blank"

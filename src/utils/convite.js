@@ -1,14 +1,14 @@
-// Futty v2.0 — Rodada 29B (A): o que a página do convite escreve. Puro (sem React, sem rede), para testar no Node.
+// Futty v2.0 — o que a página do convite escreve. Puro (sem React, sem rede), para testar no Node.
 import { plural } from './plural';
 import { TZ_PADRAO } from './dataHora';
 
 const UM_DIA = 86400000;
 
 /**
- * Data curta do próximo jogo, no relógio do CAMPO (fuso do time — Rodada 29I, achado 83): "hoje", "amanhã" ou "sáb, 4 out".
- * "Hoje" e "amanhã" também são os do campo: o jogo de amanhã às 20h em São Paulo é "amanhã" para quem abre o convite de Lisboa.
- * `fuso` é o do time (o motor manda em `info.fuso`); sem ele vale TZ_PADRAO, nunca o relógio do aparelho. `agora` só existe para o
- * teste ser determinístico.
+ * Data curta do próximo jogo, no relógio do CAMPO (fuso do time): "hoje", "amanhã" ou "sáb, 4 out".
+ * "Hoje" e "amanhã" também são os do campo: o jogo de amanhã às 20h em São Paulo é "amanhã" para quem abre
+ * o convite de Lisboa. `fuso` é o do time (o motor manda em `info.fuso`); sem ele vale TZ_PADRAO, nunca o
+ * relógio do aparelho. `agora` só existe para o teste ser determinístico.
  */
 export function dataCurta(iso, { agora = new Date(), fuso = TZ_PADRAO } = {}) {
   const d = new Date(iso);
@@ -45,15 +45,18 @@ export function fraseDoConvite({ convidadoPor, nomeTime }) {
 }
 
 /**
- * O link do convite que vai para o grupo (29H, item 7): o curto, futtyapp.com.br/c/<código>, quando o motor deu um código
- * (migração 072); senão o longo, /convite/<uuid>, que continua valendo. `origem` é a do SITE (ORIGEM_DO_SITE em lib/linkDoSite.js),
- * nunca a de quem está olhando (29I, achados 87 e 105).
+ * O link do convite que vai para o grupo: o curto, futtyapp.com.br/c/<código>, quando o motor deu um
+ * código (migração 072); senão o longo, /convite/<uuid>, que continua valendo. `origem` é a do SITE
+ * (ORIGEM_DO_SITE em lib/linkDoSite.js), nunca a de quem está olhando.
  */
 export function linkDoConvite({ origem, token, codigo }) {
   return codigo ? `${origem}/c/${codigo}` : `${origem}/convite/${token}`;
 }
 
-/** A frase do WhatsApp (dono, 2-out): "Bora jogar? Você foi chamado para o <time> no Futty. Entre pelo link: <link>". */
+/**
+ * A frase do WhatsApp (do dono): "Bora jogar? Você foi chamado para o <time> no Futty. Entre pelo link:
+ * <link>"
+ */
 export function textoDoConvite({ nomeTime, link }) {
   const nome = String(nomeTime ?? '').trim() || 'time';
   return `Bora jogar? Você foi chamado para o ${nome} no Futty. Entre pelo link: ${link}`;

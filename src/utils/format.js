@@ -10,9 +10,9 @@ export const STATUS_LABELS = {
 };
 
 /**
- * Data + hora do jogo (ex.: "qua., 18 de jun. · 22:00") no relógio do CAMPO: `fuso` é o do time (Rodada 29I, achado 83).
- * Uma forma só em toda tela — a de src/utils/dataHora.js, com o rabicho "· horário de <cidade>" para quem está noutro relógio
- * (`opcoes.cidade`: a do time).
+ * Data + hora do jogo (ex.: "qua., 18 de jun. · 22:00") no relógio do CAMPO: `fuso` é o do time.
+ * Uma forma só em toda tela — a de src/utils/dataHora.js, com o rabicho "· horário de <cidade>" para quem está
+ * noutro relógio (`opcoes.cidade`: a do time).
  */
 export function formatDateTime(iso, fuso, opcoes) {
   return formatarDataHora(iso, fuso, opcoes);
@@ -25,11 +25,11 @@ export function dayMonth(iso, fuso) {
   return { day: String(dia).padStart(2, '0'), month: mesCurto(iso, fuso) };
 }
 
-// Achado 119 (29J): "★ -" no Elenco, "--" no Início e no Perfil, "—" na vitrine — quatro formas
+// "★ -" no Elenco, "--" no Início e no Perfil, "—" na vitrine: quatro formas
 // para a mesma coisa. Uma só, que diga o que é (a vitrine já dizia certo: "Sem nota ainda").
 export const SEM_NOTA_AINDA = 'sem nota ainda';
 
-/** Nota formatada em PT-BR com UMA casa ("9,1") ou SEM_NOTA_AINDA se não houver votos. Rodada 29Z: era "9.10". */
+/** Nota formatada em PT-BR com UMA casa ("9,1") ou SEM_NOTA_AINDA se não houver votos. */
 export function formatRating(value) {
   return Number(value) > 0 ? formatarNota(value) : SEM_NOTA_AINDA;
 }

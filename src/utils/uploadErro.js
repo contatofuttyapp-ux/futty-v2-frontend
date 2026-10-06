@@ -2,14 +2,14 @@
 // diz ao utilizador o que fazer (repetir por rede, ou trocar/cortar a foto).
 // Usado no Onboarding e no Perfil, ao lado de um botão "tentar de novo".
 export function mensagemUploadFoto(err) {
-  // FOTO_FRACA (olheiro de entrada, 11-ago): foto pequena/corrompida/preta/estourada
+  // FOTO_FRACA (olheiro de entrada): foto pequena/corrompida/preta/estourada
   // — reprovada ANTES de guardar, sem gastar nada. Mensagem do backend já é a certa.
   if (err?.code === 'FOTO_FRACA') {
     return { texto: err.message, podeRepetir: true };
   }
   const m = String(err?.message || '').toLowerCase();
-  // Falha de rede: o fetch rejeita antes de haver resposta. Pelo apiFetch chega com code 'SEM_REDE'
-  // (Rodada 29G); as mensagens cruas do navegador seguem reconhecidas por quem não passa por ele.
+  // Falha de rede: o fetch rejeita antes de haver resposta. Pelo apiFetch chega com code 'SEM_REDE';
+  // as mensagens cruas do navegador seguem reconhecidas por quem não passa por ele.
   if (err?.code === 'SEM_REDE' || m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed') || m.includes('sem ligação')) {
     return { texto: 'Sem conexão. Verifique a internet e tente de novo.', podeRepetir: true };
   }

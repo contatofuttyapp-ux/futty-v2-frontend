@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Futty v2.0 — as PROVAS NO NAVEGADOR (Rodada 29I): telas e gestos que só um Chromium de verdade confirma — o Voltar do sistema, o toque que
-// cai no link e não no botão, o salto da cerimônia medido em milissegundos. Os testes de unidade (npm test) travam o texto e as contas; estas
-// provam o COMPORTAMENTO, sem login e sem banco: cada prova monta a tela (ou o pedaço dela) numa página-bancada em scripts/provas/*.html,
-// servida por um Vite que este script sobe sozinho, com a API de mentira (page.route) quando a tela fala com o motor.
+// Futty v2.0 — as PROVAS NO NAVEGADOR: telas e gestos que só um Chromium de verdade confirma — o Voltar do
+// sistema, o toque que cai no link e não no botão, o salto da cerimônia medido em milissegundos. Os testes
+// de unidade (npm test) travam o texto e as contas; estas provam o COMPORTAMENTO, sem login e sem banco:
+// cada prova monta a tela (ou o pedaço dela) numa página-bancada em scripts/provas/*.html, servida por um
+// Vite que este script sobe sozinho, com a API de mentira (page.route) quando a tela fala com o motor.
 //
 // Nunca contra produção: tudo roda em 127.0.0.1 e nenhuma prova faz pedido de verdade ao motor.
 //

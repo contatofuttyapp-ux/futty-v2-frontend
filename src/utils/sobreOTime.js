@@ -1,7 +1,8 @@
-// Futty v2.0 — Rodada 29T (bloco B, achado 157): o "Sobre o time" — a bio que o time mostra no Radar de peladas. Puro (sem React, sem rede).
-// É a coluna `teams.descricao` (até 300 letras) que o motor já aceita e devolve; só o nome na tela mudou (era "Descrição" em Ajustes).
-// Time aberto ao público (aberto ou com aprovação) PRECISA dizer como ele é: quem pede para entrar são estranhos, e quem acha o time no Radar
-// só tem isto para decidir. Time fechado não pede.
+// Futty v2.0 — o "Sobre o time" — a bio que o time mostra no Radar de peladas. Puro (sem React, sem rede).
+// É a coluna `teams.descricao` (até 300 letras) que o motor já aceita e devolve; o nome na tela é "Sobre o
+// time", não "Descrição". Time aberto ao público (aberto ou com aprovação) PRECISA dizer como ele é: quem
+// pede para entrar são estranhos, e quem acha o time no Radar só tem isto para decidir. Time fechado não
+// pede.
 
 /** Até onde o motor guarda (routes/teams.js: slice(0, 300)). */
 export const MAX_SOBRE_O_TIME = 300;

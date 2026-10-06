@@ -1,10 +1,10 @@
-// Futty v2.0 — O dono escolhe o uniforme das figurinhas do time (Pagamentos P2, 26-set).
+// Futty v2.0 — O dono escolhe o uniforme das figurinhas do time.
 //
-// O pacote comprado na loja chega sem uniforme quando o time ainda não tinha um — e sem uniforme
-// ninguém do time gera. Esta tela abre logo depois da compra (Planos), pelo recado do Início e
-// pelo botão da Figurinha (/planos?uniforme=<time>). Grava em PUT /api/teams/:slug/brilhante-kit:
-// só o dono, só com o pacote ativo, e trocar só enquanto ninguém gerou (o motor diz o porquê).
-// Mesma grade dos fundos e uniformes da Figurinha (.fig-seletor-grade, regra de 15-set).
+// O pacote comprado na loja chega sem uniforme quando o time ainda não tinha um — e sem uniforme ninguém
+// do time gera. Esta tela abre logo depois da compra (Planos), pelo recado do Início e pelo botão da
+// Figurinha (/planos?uniforme=<time>). Grava em PUT /api/teams/:slug/brilhante-kit: só o dono, só com o
+// pacote ativo, e trocar só enquanto ninguém gerou (o motor diz o porquê).
+// Mesma grade dos fundos e uniformes da Figurinha (.fig-seletor-grade).
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check } from 'lucide-react';

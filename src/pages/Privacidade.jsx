@@ -1,20 +1,15 @@
-// Futty v2.0 — Política de Privacidade (/privacidade). Página legal, PT-BR, sem
-// login. Versão final para uso (31-jul): sem aviso de revisão jurídica, sem nome
-// de pessoa física (identificação do responsável mediante solicitação; trocar por
-// razão social + CNPJ quando a empresa for constituída), sem travessões, com as
-// seções novas: transferência internacional, backups, registros de moderação e
-// alterações da política.
-// v2 (13-set): infraestrutura real (Cloud Run São Paulo + Cloudflare, não mais
-// Railway/Vercel), Resend e Sentry na lista de fornecedores, exclusão de conta
-// pelo próprio app (Perfil → Conta) como via principal.
-// v3 (25-set): sem pagamento por enquanto; o item da Apple / Google fica em CLAUSULA_PAGAMENTO_FUTURA.
-// v4 (25-set, Rodada 28): diagnóstico de desempenho anônimo (telemetria de velocidade, sem vínculo com a
-// identidade) e a idade mínima dita no cadastro.
-// v5 (26-set, Pagamentos P2): compras no app. A loja (Apple / Google) processa o pagamento e o Futty nunca vê
-// o cartão; o RevenueCat entra na lista de fornecedores; guardamos só transação, produto, valor, moeda e data.
-// A CLAUSULA_PAGAMENTO_FUTURA (o item Apple / Google) voltou, revista, à seção 3.
-// v6 (1-out, Rodada 29G): o Futty é para maiores de 18 anos. A seção 5 virou "Idade mínima" (o número vem
-// de IDADE_MINIMA, utils/idade.js) e a de menores de 13 / proteções de menores saiu.
+// Futty v2.0 — Política de Privacidade (/privacidade). Página legal, PT-BR, sem login. Sem aviso de
+// revisão jurídica, sem nome de pessoa física (identificação do responsável mediante solicitação;
+// trocar por razão social + CNPJ quando a empresa for constituída), sem travessões. Seções:
+// transferência internacional, backups, registros de moderação e alterações da política.
+// Infraestrutura real (Cloud Run São Paulo + Cloudflare); Resend, Sentry e RevenueCat na lista de
+// fornecedores; exclusão de conta pelo próprio app (Perfil → Conta) como via principal. Diagnóstico de
+// desempenho anônimo (telemetria de velocidade, sem vínculo com a identidade).
+// Compras no app: a loja (Apple / Google) processa o pagamento e o Futty nunca vê o cartão; guardamos
+// só transação, produto, valor, moeda e data. A CLAUSULA_PAGAMENTO_FUTURA (o item Apple / Google) fica
+// na seção 3.
+// O Futty é para maiores de 18 anos: a seção 5 é "Idade mínima" (o número vem de IDADE_MINIMA,
+// utils/idade.js) e a idade mínima é dita no cadastro.
 import { Link } from 'react-router-dom';
 import { IDADE_MINIMA } from '../utils/idade';
 import '../styles/app.css';

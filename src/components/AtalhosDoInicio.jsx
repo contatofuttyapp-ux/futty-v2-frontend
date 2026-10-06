@@ -1,7 +1,8 @@
-// Futty v2.0 — Rodada 29Q: os dois atalhos do Início, "Radar de peladas" e "Criar time", em dois cartões lado a lado logo embaixo do
-// card "Seus times" (para quem não administra time, embaixo do avatar, do nome e da nota). Antes eram os dois últimos chips da fila de
-// filtro dos jogos, onde ninguém chegava ("definitivamente no lugar errado", dono, 4-out). O cartão inteiro é o link (área de toque cheia).
-// Visual da casa: vidro, chanfro de 45° (.hud-corners), Rajdhani. O Radar veste o roxo da casa; o Criar time, o dourado (decisão do dono).
+// Futty v2.0 — Os dois atalhos do Início, "Radar de peladas" e "Criar time", em dois cartões lado a lado
+// logo embaixo do card "Seus times" (para quem não administra time, embaixo do avatar, do nome e da nota).
+// O cartão inteiro é o link (área de toque cheia).
+// Visual da casa: vidro, chanfro de 45° (.hud-corners), Rajdhani. O Radar veste o roxo da casa; o Criar
+// time, o dourado (o dono decidiu).
 import { Link } from 'react-router-dom';
 import { CirclePlus, Radar } from 'lucide-react';
 

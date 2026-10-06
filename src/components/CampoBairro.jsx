@@ -1,11 +1,15 @@
-// Futty v2.0 — Rodada 29H (item 12), refeito na 29T (bloco B, achado 157): o campo "Bairro" do time (Criar time e Ajustes do time). Opcional.
-// O bairro é de LISTA, como a cidade (dono, 4-out: "só aceita o que tiver lá"): no Brasil os bairros do IBGE (Censo 2022), em Portugal as
-// freguesias — `itens` é a lista da cidade escolhida (hooks/useBairrosDaCidade.js: { linha: [bairro, lat, lng], chave }[]). Sem texto livre:
-// o que a pessoa digita só busca; vale o que ela ESCOLHE. Texto que a lista não tem volta ao que valia antes (o bairro já escolhido, ou o
-// que o time já tinha salvo — o bairro antigo escrito à mão continua até alguém editar). Quem usa o campo só o desenha quando a cidade TEM
-// lista (cidade sem bairros na lista = sem campo) e põe `key` com a cidade, para a escolha de uma cidade nunca vazar para a outra.
-// `aoMudar(texto, escolha)`: `escolha` é { bairro, bairro_origem: 'lista', bairro_lat, bairro_lng } quando veio da lista, null enquanto digita.
-// O texto de apoio ("Só o bairro e a cidade, nunca o endereço.") é de quem usa o campo (cada tela o põe na sua diagramação).
+// Futty v2.0 — O campo "Bairro" do time (Criar time e Ajustes do time). Opcional.
+// O bairro é de LISTA, como a cidade (dono: "só aceita o que tiver lá"): no Brasil os bairros do IBGE
+// (Censo 2022), em Portugal as freguesias — `itens` é a lista da cidade escolhida
+// (hooks/useBairrosDaCidade.js: { linha: [bairro, lat, lng], chave }[]). Sem texto livre: o que a pessoa
+// digita só busca; vale o que ela ESCOLHE. Texto que a lista não tem volta ao que valia antes (o bairro já
+// escolhido, ou o que o time já tinha salvo — o bairro antigo escrito à mão continua até alguém editar).
+// Quem usa o campo só o desenha quando a cidade TEM lista (cidade sem bairros na lista = sem campo) e põe
+// `key` com a cidade, para a escolha de uma cidade nunca vazar para a outra.
+// `aoMudar(texto, escolha)`: `escolha` é { bairro, bairro_origem: 'lista', bairro_lat, bairro_lng } quando
+// veio da lista, null enquanto digita.
+// O texto de apoio ("Só o bairro e a cidade, nunca o endereço.") é de quem usa o campo (cada tela o põe na
+// sua diagramação).
 import { useEffect, useId, useRef, useState } from 'react';
 import { buscarBairros, escolhaDoBairro, linhaDaLista } from '../utils/bairros';
 

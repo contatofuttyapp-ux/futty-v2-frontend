@@ -1,10 +1,9 @@
-// Futty v2.0 — "O app voltou para a frente" (VELOCIDADE 8, 16-set).
+// Futty v2.0 — "O app voltou para a frente".
 //
-// O PEDRO, build 19: ficou horas com o app aberto e não viu um jogo novo. Não é
-// um bug de dados — é que nada, em lado nenhum, dizia ao app que ele tinha
-// voltado. O /api/inicio corria uma vez ao montar o InicioContext e mais nunca;
-// com o app em segundo plano a tela continuava a mostrar a fotografia do
-// momento em que foi deixada, por mais tempo que passasse.
+// O PEDRO ficou horas com o app aberto e não viu um jogo novo. Não é um bug de dados — é que nada, em lado
+// nenhum, dizia ao app que ele tinha voltado. Sem um aviso de regresso, o /api/inicio corre uma vez ao montar
+// o InicioContext e mais nunca; com o app em segundo plano a tela continua a mostrar a fotografia do momento
+// em que foi deixada, por mais tempo que passe.
 //
 // São DOIS sinais, não um, e é preciso ouvir os dois:
 //   visibilitychange — o do browser. Cobre a web e também o WebView quando o

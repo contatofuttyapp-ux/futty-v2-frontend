@@ -36,12 +36,13 @@ const btn = {
 };
 const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #222' };
 const td = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid #1a1a1a', verticalAlign: 'middle' };
-// Título clicável (Rodada 29Y): o botão herda a cara do título; o navegador não a põe sozinho.
+// Título clicável: o botão herda a cara do título; o navegador não a põe sozinho.
 const botaoTitulo = { background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit', cursor: 'pointer' };
 const seletor = { padding: '6px 10px', borderRadius: 8, border: '1px solid #2a2a2a', background: '#0c0c0c', color: '#fff', fontSize: 13 };
 
-// 29I (achado 83): data de SISTEMA (quando algo aconteceu na conta/no time), lida pelo dono no Gabinete — vale o relógio de quem está olhando,
-// não o fuso de time nenhum. É de propósito: o fuso do time é só para a hora de JOGO (src/utils/dataHora.js).
+// Data de SISTEMA (quando algo aconteceu na conta/no time), lida pelo dono no Gabinete — vale o
+// relógio de quem está olhando, não o fuso de time nenhum. É de propósito: o fuso do time é só para a
+// hora de JOGO (src/utils/dataHora.js).
 function fmtData(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '-';
@@ -126,8 +127,9 @@ function TabUsers({ showMsg }) {
 }
 
 // ─── SUB-ABA: EQUIPAS ────────────────────────────────────────────────────────
-// Rodada 29Y: a lista sai na ordem escolhida (seletor "Ordenar por" ou clique no título). A escolha fica lembrada no aparelho
-// e sobrevive a excluir/suspender/reativar: o reload só troca os dados; o critério é estado desta aba.
+// A lista sai na ordem escolhida (seletor "Ordenar por" ou clique no título). A escolha fica lembrada
+// no aparelho e sobrevive a excluir/suspender/reativar: o reload só troca os dados; o critério é estado
+// desta aba.
 function TabTeams({ showMsg }) {
   const { data, loading, error, reload } = useApi('/api/super/teams');
   const [criterio, setCriterio] = useState(lerCriterioLembrado);

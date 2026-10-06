@@ -1,13 +1,16 @@
-// Futty v2.0 — Rodada 29B (A) / 29H (item 1): o bilhete do convite. Quem abre um convite sem conta (ou com conta que ainda não
-// terminou o onboarding) passa por cadastro, foto, nome e, às vezes, confirmação por e-mail ou login pelo Google/Apple antes de
-// voltar ao time. O caminho do login leva o `from` junto, o do cadastro e o do OAuth não: este bilhete no aparelho guarda o convite
-// até a pessoa chegar lá. Dois leitores:
-//   · o Onboarding, que começa pelas boas-vindas DO TIME (quem convidou, nome, logo — o bilhete leva uma cópia deles para a
-//     tela abrir sem esperar a rede) e guarda ali a escolha linha/gol, que só vale depois de entrar;
-//   · o Início, que devolve a pessoa a /convite/:token (uma vez só) — mas só se a conta já terminou o onboarding (senão o Início
-//     "roubava" o bilhete antes do Onboarding e a pessoa nunca via as boas-vindas do time).
+// Futty v2.0 — o bilhete do convite. Quem abre um convite sem conta (ou com conta que ainda não
+// terminou o onboarding) passa por cadastro, foto, nome e, às vezes, confirmação por e-mail ou login pelo
+// Google/Apple antes de voltar ao time. O caminho do login leva o `from` junto, o do cadastro e o do OAuth
+// não: este bilhete no aparelho guarda o convite até a pessoa chegar lá. Dois leitores:
+//   · o Onboarding, que começa pelas boas-vindas DO TIME (quem convidou, nome, logo — o bilhete leva uma
+//     cópia deles para a tela abrir sem esperar a rede) e guarda ali a escolha linha/gol, que só vale
+//     depois de entrar;
+//   · o Início, que devolve a pessoa a /convite/:token (uma vez só) — mas só se a conta já terminou o
+//     onboarding (senão o Início "roubaria" o bilhete antes do Onboarding e a pessoa nunca veria as
+//     boas-vindas do time).
 // O `token` pode ser o longo (uuid) ou o código curto de /c/<código>: o motor aceita os dois.
-// Módulo pequeno, sem import: fica FORA do arranque (só Convite, Onboarding e Início o importam, todos lazy).
+// Módulo pequeno, sem import: fica FORA do arranque (só Convite, Onboarding e Início o importam,
+// todos lazy).
 const CHAVE = 'futty_convite_pendente';
 const VALIDADE_MS = 2 * 86400000; // o link do e-mail de confirmação vale 24 h; dois dias cobrem a pessoa distraída
 

@@ -35,16 +35,14 @@ const RES_MARCA = { n: 'RESERVA', nome: 'Reserva', c: '#8a90a0', g: 'rgba(138,14
 // Grelhas inteligentes: linhas por tamanho de time — nunca fila única.
 const LINHAS = { 0: [], 1: [1], 2: [2], 3: [3], 4: [2, 2], 5: [3, 2], 6: [3, 3], 7: [4, 3], 8: [4, 4], 9: [3, 3, 3], 10: [4, 3, 3], 11: [4, 4, 3] };
 const ASSET = '/sorteio-assets/';
-// LEI v8.25 — SÓ O BARALHO OFICIAL SELADO gira nos rolos: 5 bichos v9 + 4 cartas
-// da casa (baralho final, registado em SPEC-SORTEIO). As 2 cartas-F antigas
-// (dourada C / roxa C especular) morreram — a HÍBRIDA (palco ouro + F ametista)
-// ficou aprovada mas arquivada, não entra aqui (correção do dono).
-// 13-set: .png → .webp (1024×1536 a 416×624 — o rolo é flex:0 1 78px, nunca passa
-// de 78px de largura). 20 MB → 350 KB. E cada src passa por urlAsset(): na web
-// não muda nada, no app nativo estes arquivos não viajam dentro do pacote, vêm
-// da web. Estes <img> entram por innerHTML, sem onError: se um caminho aqui não
-// bater com o arquivo, sai o ícone de imagem quebrada e ninguém avisa. Mexer
-// nesta lista pede conferir public/.
+// LEI v8.25 — SÓ O BARALHO OFICIAL SELADO gira nos rolos: 5 bichos v9 + 4 cartas da casa (baralho final,
+// registado em SPEC-SORTEIO). As 2 cartas-F antigas (dourada C / roxa C especular) e a HÍBRIDA (palco ouro
+// + F ametista, aprovada mas arquivada) não entram aqui (correção do dono).
+// Os arquivos são .webp de 416×624 (o rolo é flex:0 1 78px, nunca passa de 78px de largura): 350 KB no
+// conjunto. E cada src passa por urlAsset(): na web não muda nada, no app nativo estes arquivos não viajam
+// dentro do pacote, vêm da web. Estes <img> entram por innerHTML, sem onError: se um caminho aqui não
+// bater com o arquivo, sai o ícone de imagem quebrada e ninguém avisa. Mexer nesta lista pede conferir
+// public/.
 const SIMB = [
   { t: 'av', src: urlAsset(`${ASSET}v9-jacare.webp`) }, { t: 'cd', src: urlAsset(`${ASSET}777-seta-ouro.webp`) },
   { t: 'av', src: urlAsset(`${ASSET}v9-et.webp`) }, { t: 'cd', src: urlAsset(`${ASSET}v94-trofeu-c.webp`) },
@@ -53,7 +51,7 @@ const SIMB = [
   { t: 'av', src: urlAsset(`${ASSET}v9-astronauta.webp`) },
 ];
 const MBPOS = [[20, 2], [80, 2], [2, 40], [97, 40], [2, 72], [97, 72]];
-// RODADA 16B — os pontos de brilho do prêmio: [x%, y%, atraso s, tamanho px], em
+// Os pontos de brilho do prêmio: [x%, y%, atraso s, tamanho px], em
 // posições FIXAS do interior, ao redor das cartas. Dez, não mais: elegantes,
 // nunca partículas a cair (a chuva de moedas foi reprovada pelo dono).
 const GLINTS = [
@@ -62,7 +60,7 @@ const GLINTS = [
   [72, 86, 1.85, 20], [24, 91, 1.95, 18],
 ];
 
-// RODADA 12A — som ligado para QUEM SORTEIA.
+// Som ligado para QUEM SORTEIA.
 //
 // A lei da casa é "som é opt-in, desligado por omissão", e ela continua de pé
 // para toda a gente que abre um resultado: pelo link, pela lista de jogos, por
@@ -104,12 +102,11 @@ function silhuetaURI(cor) {
 }
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// BannerAd do sorteio — agora SERVIDO a valer (/api/ads?pagina=sorteio): respeita o
-// toggle do dono (default OFF) e o filtro etário fail-closed no servidor. Mantém o look
-// selado da .faixaAd; conta impressão/clique. Sem campanha OU página OFF → não aparece.
-// VELOCIDADE 9 (23-set): lê a loja da sessão (lib/ads.js) como o AdCard — este
-// banner era o último sítio com pedido próprio por tela, e a cerimónia do
-// sorteio é justamente onde uma ida à rede a mais se sente.
+// BannerAd do sorteio — servido a valer (/api/ads?pagina=sorteio): respeita o toggle do dono (default OFF)
+// e o filtro etário fail-closed no servidor. Mantém o look selado da .faixaAd; conta impressão/clique. Sem
+// campanha OU página OFF → não aparece.
+// Lê a loja da sessão (lib/ads.js) como o AdCard: o banner não faz pedido próprio por tela, e a cerimónia
+// do sorteio é justamente onde uma ida à rede a mais se sente.
 function BannerSorteio() {
   const { ad, pronto } = useAd('sorteio');
   const impRef = useRef(null);
@@ -129,25 +126,25 @@ function BannerSorteio() {
 }
 
 /**
- * `bannerInterno` (Rodada 12A): a página do sorteio passou a ter o seu próprio
- * slot IAB 320×100, servido pelo AdCard e só depois da cerimónia acabar — dois
- * anúncios na mesma tela seriam duas impressões pela mesma vista. Quem tem slot
- * próprio passa `false`; o /p/ e o Campeonato continuam com a faixa de sempre.
+ * `bannerInterno`: a página do sorteio tem o seu próprio slot IAB 320×100, servido pelo AdCard e só depois
+ * da cerimónia acabar — dois anúncios na mesma tela seriam duas impressões pela mesma vista. Quem tem slot
+ * próprio passa `false`; o /p/ e o Campeonato ficam com a faixa.
  */
 export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data, bannerInterno = true, euSorteei = false }) {
   const rootRef = useRef(null);
   // props estáveis para o efeito (que corre 1x); um re-sorteio remonta via key no consumidor.
   const cbRef = useRef(aoTerminar);
   useEffect(() => { cbRef.current = aoTerminar; });
-  // RODADA 14B — compartilhar vive AQUI, logo abaixo do retângulo dos times, e é
+  // Compartilhar vive AQUI, logo abaixo do retângulo dos times, e é
   // o único lugar. Escondido enquanto a cerimónia corre (é o momento de olhar,
   // não de agir); sobe 5,1 s depois do jackpot, ou no fim se a pessoa saltou. A
   // alavanca esconde-o outra vez ao recomeçar.
   const [compartilharOn, setCompartilharOn] = useState(false);
   const [gerando, setGerando] = useState(false);
-  // Achado 90: "9:16 · Time A" não dava retorno nenhum. O toast da máquina é `position: fixed` dentro da página animada (o transform do
-  // [data-page] vira o "chão" do fixed) e podia ficar fora da tela, longe do botão. Agora o retorno é DO LADO do botão: ele diz
-  // "Gerando…" enquanto trabalha e, no fim, uma linha de status logo abaixo diz o que aconteceu (salvo, ou compartilhado).
+  // O toast da máquina é `position: fixed` dentro da página animada (o transform do [data-page] vira o
+  // "chão" do fixed) e podia ficar fora da tela, longe do botão. Por isso o retorno é DO LADO do botão: ele
+  // diz "Gerando…" enquanto trabalha e, no fim, uma linha de status logo abaixo diz o que aconteceu (salvo,
+  // ou compartilhado).
   const [gerandoQual, setGerandoQual] = useState(null); // índice do time cujo 9:16 está sendo gerado, ou 'todos'
   const [avisoCartao, setAvisoCartao] = useState('');
   const avisoTimer = useRef(null);
@@ -160,7 +157,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
   const btnRef = useRef(null);
   // O toast da máquina nasce dentro do efeito; os botões (React) falam com ele por aqui.
   const toastRef = useRef(() => {});
-  // RODADA 14B — a pílula-guia do rodapé (só quando o botão está fora da tela).
+  // A pílula-guia do rodapé (só quando o botão está fora da tela).
   // null = escondida; { base } = na tela, com `base` a dizer onde assenta: acima
   // da bottom-nav quando ela existe (Campeonato), ou null para a safe-area
   // (CSS) na página do sorteio, que não tem nav.
@@ -199,9 +196,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     let vivo = true;
     const timers = new Set();
     const clones = new Set();
-    // Achado 89: "» concluir já" levava 2,1 s medidos — o flag só era lido ENTRE as esperas, e a que estava em curso (o giro de 1,2 s, a
-    // desaceleração de 0,6 s, o voo do jogador) corria até o fim. Agora cada espera pode ser acordada na hora: ao saltar, todas
-    // as que estão dormindo acordam juntas e as novas nem dormem — o salto vai direto ao final.
+    // Cada espera pode ser acordada na hora ("» concluir já"): ao saltar, todas as que estão dormindo acordam
+    // juntas e as novas nem dormem — o salto vai direto ao final. Se o flag só fosse lido ENTRE as esperas, a
+    // que estivesse em curso (o giro de 1,2 s, a desaceleração de 0,6 s, o voo do jogador) correria até o fim:
+    // o salto levava 2,1 s medidos.
     const acordadores = new Set();
     const sleep = (ms) => new Promise((r) => {
       if (saltarFlag) { r(); return; }
@@ -217,9 +215,10 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
 
     // — visual de um jogador real: foto (urlAsset) ou silhueta da cor (privacidade).
     //   ti < 0 → RESERVA (silhueta cinza-aço).
-    //   RODADA 27: a foto vem no 2:3 do recorte (SEM quadrado): as molduras são 3:4 e o CSS as cobre do
+    //   A foto vem no 2:3 do recorte (SEM quadrado): as molduras são 3:4 e o CSS as cobre do
     //   topo (object-position 50% 0%), então aparecem as laterais inteiras e o topo do recorte — o que a
-    //   pessoa enquadrou. Com sq=1 o servidor mandava o quadrado do topo e o cover cortava 25% das laterais.
+    //   pessoa enquadrou. Com sq=1 o servidor mandaria o quadrado do topo e o cover cortaria 25% das
+    //   laterais.
     const vis = (j, ti) => ({
       nome: (j.convidado ? '· ' : '') + (j.nome || '?'),
       img: j.avatar_url ? urlImagem(urlAsset(j.avatar_url), 128) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
@@ -322,7 +321,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       }
     }
 
-    // — RODADA 14B: o flash de tela inteira. Vai para o body (não para o root):
+    // — O flash de tela inteira. Vai para o body (não para o root):
     //   dentro do [data-page] um ancestral com transform/filter prenderia o
     //   `fixed` à página. Entra no `clones` para o cleanup o apanhar.
     function flashTela() {
@@ -330,14 +329,14 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       document.body.appendChild(f); clones.add(f);
       const id = setTimeout(() => { f.remove(); clones.delete(f); }, 400); timers.add(id);
     }
-    // — RODADA 14B: O PRÊMIO. Corre UMA vez, no instante em que "TIMES SORTEADOS"
+    // — O PRÊMIO. Corre UMA vez, no instante em que "TIMES SORTEADOS"
     //   acende — o mesmo instante do jackpot.mp3. Marquise em sequência, título,
     //   varreduras de brilho, pulsos de glow e pontos de brilho são o estado
     //   .premio (só CSS); aos 3 s vira .premioCalmo, o brilho suave que fica.
     //   Nada disto roda enquanto a cerimónia ainda sorteia.
-    //   RODADA 16B: a chuva de moedas (canvas-confetti) e os raios a girar atrás
-    //   dos avatares saíram — reprovados pelo dono no aparelho. Esta tela não
-    //   importa mais a biblioteca de confete.
+    //   Sem a chuva de moedas (canvas-confetti) nem os raios a girar atrás
+    //   dos avatares: reprovados pelo dono no aparelho. Esta tela não
+    //   importa a biblioteca de confete.
     function premioAbrir() {
       maq.classList.remove('premioCalmo'); maq.classList.add('premio');
       flashTela();
@@ -363,12 +362,13 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         let fs = 26; caixa.style.setProperty('--fs', `${fs}px`);
         while (caixa.offsetWidth > alvo && fs > 13) { fs -= 1; caixa.style.setProperty('--fs', `${fs}px`); }
       }
-      // Rodada 29M (achado 144): a janela dos rolos já fez o que tinha de fazer. Esconde-se junto com o véu (o desfoque cobre o salto), em vez de
-      // ficar uma caixa preta vazia, de ~60 px, no topo do resultado. Volta quando a cerimônia recomeça (corpo / girarTime).
+      // A janela dos rolos já fez o que tinha de fazer. Esconde-se junto com o véu (o desfoque cobre o salto),
+      // em vez de ficar uma caixa preta vazia, de ~60 px, no topo do resultado. Volta quando a cerimônia
+      // recomeça (corpo / girarTime).
       q('.janela').classList.add('encerrada');
       q('.palcoStage').classList.add('veuTotal'); ft.classList.add('on');
-      // O time inteiro acabou de aparecer: o jackpot (Rodada 14A) e o prêmio
-      // (Rodada 14B) nascem no mesmo instante — é o segundo de "ganhei".
+      // O time inteiro acabou de aparecer: o jackpot e o prêmio nascem no mesmo instante — é o segundo de
+      // "ganhei".
       SomSorteio.fecharTime();
       premioAbrir();
       await sleep(1700); if (!vivo) return;
@@ -384,14 +384,13 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         m.style.setProperty('--bdl', `${(((i * 53) % 9) * 0.06).toFixed(2)}s`);
         m.classList.add('vivo');
       });
-      // Rodada 12C: sem a Victory, a festa das molduras deixa de esperar por
-      // música nenhuma — dura o mesmo com o som ligado ou desligado.
+      // A festa das molduras não espera por música nenhuma — dura o mesmo com o som ligado ou desligado.
       await sleep(4000);
       molds.forEach((m) => m.classList.remove('vivo'));
     }
 
     function preencherTudo() {
-      q('.rolos').innerHTML = ''; q('.quem').textContent = ''; q('.janela').classList.add('encerrada'); // achado 144: sem caixa vazia no resultado
+      q('.rolos').innerHTML = ''; q('.quem').textContent = ''; q('.janela').classList.add('encerrada'); // sem caixa vazia no resultado
       maq.classList.remove('giroOn', 'accel', 'burst', 'dim', 'pulseall');
       times.forEach((t, gi) => t.jogadores.forEach((j, i) => {
         const s = q(`.slot[data-g="${gi}"][data-i="${i}"]`);
@@ -402,8 +401,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     async function corpo() {
       const lv = q('.lever'); lv.classList.remove('pull'); void lv.offsetWidth; lv.classList.add('pull');
       q('.palcoStage').classList.remove('veuTotal'); q('.janela').classList.remove('encerrada'); montarGrupos(); q('.fimtxt').classList.remove('on');
-      // Rodada 14B: a alavanca repete a cerimónia — o prêmio da corrida anterior
-      // apaga-se antes de os rolos voltarem a girar.
+      // A alavanca repete a cerimónia — o prêmio da corrida anterior apaga-se antes de os rolos voltarem a
+      // girar.
       maq.classList.remove('premio', 'premioCalmo');
       // Movimento reduzido: sem cerimónia, e do prêmio só o flash e o brilho suave.
       if (reduzido) { preencherTudo(); flashTela(); maq.classList.add('premioCalmo'); return; }
@@ -445,10 +444,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     }, 80); timers.add(idFrame);
 
     // ── som (opt-in, lembrado) ──
-    // Rodada 12A: antes de pintar o botão, quem sorteou ganha o som ligado — só
-    // se nunca escolheu nada neste aparelho. O `ligouPorOmissao` fica guardado
-    // para o cleanup o desfazer: senão o som ficava ligado para o resto da
-    // sessão e vazava para as telas que têm de nascer mudas.
+    // Antes de pintar o botão, quem sorteou ganha o som ligado — só se nunca escolheu nada neste aparelho. O
+    // `ligouPorOmissao` fica guardado para o cleanup o desfazer: senão o som ficaria ligado para o resto da
+    // sessão e vazaria para as telas que têm de nascer mudas.
     const ligouPorOmissao = euSorteei && SOM_PADRAO_QUEM_SORTEIA && !SomSorteio.escolhido;
     if (ligouPorOmissao) SomSorteio.ligarPorOmissao();
     const somBtn = q('.somBtn');
@@ -457,10 +455,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     // (a pessoa acabou de escolher ouvir; sem retorno nenhum parece quebrado).
     const onSom = () => { const on = SomSorteio.toggle(); if (on) SomSorteio.revelar(); pintarSom(); };
     somBtn.addEventListener('click', onSom); pintarSom();
-    // 13-set: o autoTeste dá load() nos 5 sons para logar "SOM OK 5/5" — 43 KB
-    // baixados ao abrir a cerimônia, inclusive com o som desligado, que é o
-    // padrão. Fica só em desenvolvimento; em produção os sons entram um a um,
-    // no primeiro uso (as rodas do somSorteio.js nascem preguiçosas).
+    // O autoTeste dá load() nos 5 sons para logar "SOM OK 5/5" — 43 KB baixados ao abrir a cerimônia,
+    // inclusive com o som desligado, que é o padrão. Por isso fica só em desenvolvimento; em produção os sons
+    // entram um a um, no primeiro uso (as rodas do somSorteio.js nascem preguiçosas).
     if (import.meta.env.DEV) SomSorteio.autoTeste();
 
     // ── ALAVANCA: arrasto (mola) + tap + teclado ──
@@ -476,7 +473,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     const repor = () => { grip.style.transform = ''; lever.style.setProperty('--drag', '0'); lever.classList.remove('arrastando', 'armado'); prog = 0; };
     const disparar = () => { repor(); if (!aCorrer) cerimonia(); };
     const voltaElastica = () => { lever.classList.add('voltando'); repor(); const id = setTimeout(() => lever.classList.remove('voltando'), 360); timers.add(id); };
-    // 29H-B: o toque na alavanca é o gesto que destrava o áudio no site (ver prepararNoGesto) — síncrono, antes de qualquer espera.
+    // O toque na alavanca é o gesto que destrava o áudio no site (ver prepararNoGesto) — síncrono, antes de
+    // qualquer espera.
     const onDown = (e) => { if (aCorrer) return; SomSorteio.prepararNoGesto(); arrasto = true; movido = 0; y0 = e.clientY; pid = e.pointerId; lever.classList.remove('voltando'); try { lever.setPointerCapture(pid); } catch { /* */ } e.preventDefault(); };
     const onMove = (e) => { if (!arrasto) return; const dy = e.clientY - y0; movido = Math.max(movido, Math.abs(dy)); if (!reduzido && dy > 0) setProg(dy / MAX); e.preventDefault(); };
     const onUp = () => { if (!arrasto) return; arrasto = false; try { lever.releasePointerCapture(pid); } catch { /* */ } if (reduzido || movido < 6) { disparar(); return; } if (prog >= LIMIAR) disparar(); else voltaElastica(); };
@@ -508,9 +506,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     return () => {
       vivo = true; vivo = false;
       timers.forEach((id) => clearTimeout(id)); clones.forEach((c) => c.remove());
-      // Rodada 12A: o som que esta cerimónia ligou sozinha morre com ela. Se a
-      // pessoa tocou no botão pelo caminho, a escolha dela fica (o
-      // desfazerOmissao não mexe em quem já escolheu).
+      // O som que esta cerimónia ligou sozinha morre com ela. Se a pessoa tocou no botão pelo caminho, a escolha
+      // dela fica (o desfazerOmissao não mexe em quem já escolheu).
       if (ligouPorOmissao) SomSorteio.desfazerOmissao();
       SomSorteio.silenciar();
       somBtn.removeEventListener('click', onSom);
@@ -523,9 +520,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a cerimónia monta 1x; re-sorteio remonta via key
   }, []);
 
-  // Rodada 8A: na web baixa; no app abre a folha de compartilhar (o <a download>
-  // não faz nada no WebView). A folha já é o retorno; fechada sem escolher nada,
-  // não se diz "salvo".
+  // Na web baixa; no app abre a folha de compartilhar (o <a download> não faz nada no WebView). A folha já é
+  // o retorno; fechada sem escolher nada, não se diz "salvo".
   async function compartilharTimes() {
     if (gerando) return;
     setGerando(true); setGerandoQual('todos'); setAvisoCartao('');
@@ -591,10 +587,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
                   <div className="resv"><div className="rhead">Reserva · ordem do banco</div><div className="rrow" /></div>
                 </div>
               </div>
-              {/* Rodada 16B — a luz do prêmio, por cima do bloco dos times e por
-                  baixo do título: 3 varreduras de brilho na diagonal e 10 pontos
-                  de brilho em cruz, em posições fixas. Só CSS (transform/opacity),
-                  e o estado natural dos dois é invisível — sem .premio não se vê. */}
+              {/* A luz do prêmio, por cima do bloco dos times e por baixo do título: 3 varreduras de brilho na diagonal e
+                  10 pontos de brilho em cruz, em posições fixas. Só CSS (transform/opacity), e o estado natural dos dois
+                  é invisível — sem .premio não se vê. */}
               <div className="premioShine" aria-hidden="true"><i /><i /><i /></div>
               <div className="premioGlints" aria-hidden="true">
                 {GLINTS.map(([x, y, d, s], i) => (
@@ -606,9 +601,8 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
             <div className="baseluz"><div className="fila base1" /><div className="fila base2" /></div>
             <span className="placaFutty">Futty</span>
             <div className="maqveu" />
-            {/* Rodada 16B — o glow dourado das bordas do retângulo: pulsa 3 vezes com
-                o jackpot e assenta no brilho suave. Por dentro, porque o clip-path
-                da .maq cortaria qualquer sombra por fora. */}
+            {/* O glow dourado das bordas do retângulo: pulsa 3 vezes com o jackpot e assenta no brilho suave. Por
+                dentro, porque o clip-path da .maq cortaria qualquer sombra por fora. */}
             <div className="premioGlow" aria-hidden="true" />
           </div>
           <div className="lever6 lever" title="Puxar o F = repetir a cerimônia">
@@ -617,7 +611,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
           </div>
         </div></div>
       </div>
-      {/* RODADA 14B — UM caminho para compartilhar, logo abaixo do retângulo dos
+      {/* UM caminho para compartilhar, logo abaixo do retângulo dos
           times: a imagem dos dois times na receita do "Ver sorteio" (.cta-gold +
           glow + pulso), e por baixo uma linha discreta com o 9:16 de cada time. */}
       <div className={`compartilhar${compartilharOn ? ' on' : ''}`}>
@@ -635,7 +629,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
             </button>
           ))}
         </div>
-        {/* Achado 90: o que aconteceu, logo abaixo dos botões (e lido por leitor de tela). Some sozinho. */}
+        {/* O que aconteceu, logo abaixo dos botões (e lido por leitor de tela). Some sozinho. */}
         <p role="status" aria-live="polite" data-aviso-cartao style={{ margin: avisoCartao ? '8px 0 0' : 0, fontSize: 12, lineHeight: 1.4, textAlign: 'center', color: '#6ee7a0' }}>{avisoCartao}</p>
       </div>
       {/* A pílula vai por portal ao body: dentro do [data-page] um ancestral com

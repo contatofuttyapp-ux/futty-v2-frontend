@@ -1,8 +1,9 @@
 // Futty v2.0 — Cores dos times (chave -> apresentação) + helpers de avatar.
 //
-// Rodada 29I, bloco 3: a fonte das cores é a paleta fixa do escudo (utils/escudo.js, 12 cores, a mesma do motor). Este arquivo só
-// apresenta cada chave guardada em teams.cor — inclusive a antiga 'verde', que sempre foi mostrada como ROXO (31-jul: o hex dela
-// sempre foi #8b5cf6, o roxo da casa; o rótulo dizia "Verde" por herança e virou "Roxo"). A chave 'verde' NÃO muda no banco.
+// A fonte das cores é a paleta fixa do escudo (utils/escudo.js, 12 cores, a mesma do motor). Este arquivo
+// só apresenta cada chave guardada em teams.cor — inclusive a antiga 'verde', que sempre foi mostrada como
+// ROXO (o hex dela sempre foi #8b5cf6, o roxo da casa; o rótulo dizia "Verde" por herança e virou "Roxo").
+// A chave 'verde' NÃO muda no banco.
 import { PALETA, chaveDaCor } from './escudo';
 
 const TEXTO_ESCURO = new Set(['ouro', 'lima', 'ciano']);
@@ -16,7 +17,7 @@ export function colorOf(key) {
   return TEAM_COLORS[chaveDaCor(key)];
 }
 
-// As palavras que ligam o nome e não entram nas iniciais (29T, achado 158): "Racha do Guará" é RG, não RD.
+// As palavras que ligam o nome e não entram nas iniciais: "Racha do Guará" é RG, não RD.
 const LIGACOES = new Set(['do', 'da', 'de', 'dos', 'das', 'e']);
 
 /** Iniciais (até 2 letras) do nome de um time, sem do/da/de/dos/das/e: "Racha do Guará" → "RG". Um nome só de ligações ainda dá letras. */

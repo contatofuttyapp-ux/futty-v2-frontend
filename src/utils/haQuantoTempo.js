@@ -1,6 +1,6 @@
-// Futty v2.0 — "há 5 h": tempo decorrido, não data de calendário. Não tem fuso (29I, achado 83): vale o relógio de quem olha.
-// Rodada 29L (achado 136): estava copiada em três lugares (Resenha, comentários, painel do admin) e dizia "há 1 meses" entre 56 e 59 dias.
-// Uma só, concordando em tudo.
+// Futty v2.0 — "há 5 h": tempo decorrido, não data de calendário. Não tem fuso: vale o relógio de quem olha.
+// Uma só para a Resenha, os comentários e o painel do admin (cada um tinha a sua cópia, que dizia
+// "há 1 meses" entre 56 e 59 dias), concordando em tudo.
 import { plural } from './plural';
 
 /** `agora` só existe para o teste. */

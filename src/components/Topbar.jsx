@@ -2,12 +2,12 @@
 // só o título centrado. Com `hud`: wordmark dourado à esquerda + linha HUD (estilo
 // circuito). Sem nenhum: logo F flat (fallback de marca). Linha gradiente por baixo.
 //
-// RODADA 12C — `back` passa a aceitar a string 'voltar' além de uma URL.
+// `back` aceita a string 'voltar' além de uma URL.
 //
 // Com uma URL o chevron é um <Link> para um lugar FIXO, e isso está certo para
-// telas com um pai só (Planos → Perfil). Deixou de estar para a vitrine do
-// jogador, que agora se abre de quatro sítios: voltar sempre para o Ranking
-// mandava para uma tela onde a pessoa nunca esteve.
+// telas com um pai só (Planos → Perfil). Não serve para a vitrine do
+// jogador, que se abre de quatro sítios: voltar sempre para o Ranking
+// mandaria para uma tela onde a pessoa nunca esteve.
 //
 // Com 'voltar' o chevron vira um <button> que desfaz o último passo do
 // histórico. Quem chega por link direto (sem histórico interno) não tem passo
@@ -51,20 +51,18 @@ function HudTopbar({ hud, back, backFallback }) {
   const textRef = useRef(null);
   const [stepX, setStepX] = useState(128); // unidades do viewBox (default até medir)
 
-  // VELOCIDADE 8 (16-set) — mede UMA VEZ POR MONTAGEM, não a cada rota.
+  // Mede UMA VEZ POR MONTAGEM, não a cada rota.
   //
-  // Duas coisas mudaram. Primeira: as deps eram [hud], e como a Topbar é
-  // remontada a cada troca de tela (o PageTransition leva key={pathname}),
-  // TODA navegação voltava a ligar um ResizeObserver, a pedir dois
-  // getBoundingClientRect (que forçam layout síncrono) e a pendurar-se outra vez
-  // no document.fonts.ready — em cima do momento em que a tela nova está a
-  // pintar. Segunda: o ResizeObserver dispara SEMPRE uma vez ao observar, logo a
-  // seguir ao medir() de arranque: eram duas medições iguais por montagem, e a
-  // segunda podia ainda disparar um setState a meio da pintura.
+  // A Topbar é remontada a cada troca de tela (o PageTransition leva key={pathname}); medir por rota
+  // ligaria, em TODA navegação, outro ResizeObserver, dois getBoundingClientRect (que forçam layout
+  // síncrono) e mais uma espera no document.fonts.ready — em cima do momento em que a tela nova está a
+  // pintar. Além disso o ResizeObserver dispara SEMPRE uma vez ao observar, logo a seguir ao medir() de
+  // arranque: seriam duas medições iguais por montagem, e a segunda podia ainda disparar um setState a
+  // meio da pintura.
   //
-  // Agora: uma medição na montagem, e só se volta a medir se a largura do SVG
-  // mudar de verdade (rodar o telemóvel) ou quando as fontes assentarem — que é
-  // quando o fim do texto muda de sítio, o único motivo real para remedir.
+  // Por isso: uma medição na montagem, e só se volta a medir se a largura do SVG mudar de verdade (rodar
+  // o telemóvel) ou quando as fontes assentarem — que é quando o fim do texto muda de sítio, o único
+  // motivo real para remedir.
   useLayoutEffect(() => {
     let largura = 0;
     const medir = () => {

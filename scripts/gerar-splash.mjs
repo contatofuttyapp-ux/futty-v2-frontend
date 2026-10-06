@@ -1,24 +1,33 @@
 #!/usr/bin/env node
-// Futty v2.0 — Rodada 29X: gera o splash (a abertura do app) com o "ouro vivo", e as fontes de reserva do @capacitor/assets (frontend/assets/).
+// Futty v2.0 — gera o splash (a abertura do app) com o "ouro vivo", e as fontes de reserva do
+// @capacitor/assets (frontend/assets/).
 //
-// O splash é o F ouro vivo — a MESMA peça do ícone do iPhone (a receita da bancada de 23-set: backend/scripts/_bench/testar-icone.js, renderizada
-// pelo backend/scripts/_bench/renderizar-camadas.js; ver _camadas.mjs) — centrado sobre o fundo SÓLIDO #080808. Sem vinheta: #080808 é a mesma cor de
-// colors.xml, de capacitor.config.json e da variável --bg do index.css, e é isso que faz o arranque não ter degrau da abertura para o app.
-// O F é sempre o asset real: aqui só se compõe, redimensiona e recorta — nada é desenhado nem gerado.
+// O splash é o F ouro vivo — a MESMA peça do ícone do iPhone (a receita da bancada:
+// backend/scripts/_bench/testar-icone.js, renderizada pelo backend/scripts/_bench/renderizar-camadas.js;
+// ver _camadas.mjs) — centrado sobre o fundo SÓLIDO #080808. Sem vinheta: #080808 é a mesma cor de
+// colors.xml, de capacitor.config.json e da variável --bg do index.css, e é isso que faz o arranque não
+// ter degrau da abertura para o app. O F é sempre o asset real: aqui só se compõe, redimensiona e recorta —
+// nada é desenhado nem gerado.
 //
-// O F tem o MESMO tamanho físico do splash de antes: 928 px de altura no quadrado de 2732 px (34,0%), medido nos arquivos que estavam em
-// Splash.imageset. (A largura sai 3% maior, 784 contra 761 px: o F da receita é um pouco mais largo que o F chapado de antes.)
+// O F tem o MESMO tamanho físico do splash anterior: 928 px de altura no quadrado de 2732 px (34,0%). (A
+// largura sai 3% maior, 784 contra 761 px: o F da receita é um pouco mais largo que o F chapado anterior.)
 //
-//   · iPhone — ios/App/App/Assets.xcassets/Splash.imageset: as seis imagens do Contents.json (1x/2x/3x, claro e escuro), 2732×2732, recomprimidas
-//     em paleta de 256 cores (como estavam; sem canal alfa). Claro e escuro são a mesma imagem: o app é sempre escuro.
-//   · Android abaixo do 12 — android/.../res/drawable*/splash_logo.png: o F com fundo transparente, em cada densidade (mdpi a xxxhdpi; e o
-//     drawable/ sem sufixo, que é o xhdpi). O Android pega o da densidade do aparelho, então os cinco precisam trocar juntos. O F tem 117 dp de altura
-//     (como o de antes: 96×117 dp) e vem com a margem do brilho; o drawable/splash.xml o centra sobre @color/futtyFundo (#080808) sem escalar.
-//     Em paleta de 256 cores (com alfa), como o do iPhone. O Android 12+ NÃO usa estes: usa o ic_launcher_foreground (windowSplashScreenAnimatedIcon), que já é o ouro vivo.
-//   · fontes de reserva — assets/splash.png e assets/splash-dark.png (o mesmo splash, sem paleta) e assets/icon.png (cópia do ícone atual do iPhone,
-//     AppIcon-512@2x.png). Quem rodar `npx @capacitor/assets` parte daqui; nada volta para a arte antiga.
+//   · iPhone — ios/App/App/Assets.xcassets/Splash.imageset: as seis imagens do Contents.json (1x/2x/3x,
+//     claro e escuro), 2732×2732, recomprimidas em paleta de 256 cores (sem canal alfa). Claro e escuro são
+//     a mesma imagem: o app é sempre escuro.
+//   · Android abaixo do 12 — android/.../res/drawable[-<densidade>]/splash_logo.png: o F com fundo
+//     transparente, em cada densidade (mdpi a xxxhdpi; e o drawable/ sem sufixo, que é o xhdpi). O Android
+//     pega o da densidade do aparelho, então os cinco precisam trocar juntos. O F tem 117 dp de altura (o
+//     mesmo do anterior, que era 96×117 dp) e vem com a margem do brilho; o drawable/splash.xml o centra
+//     sobre @color/futtyFundo (#080808) sem escalar. Em paleta de 256 cores (com alfa), como o do iPhone.
+//     O Android 12+ NÃO usa estes: usa o ic_launcher_foreground (windowSplashScreenAnimatedIcon), que já é
+//     o ouro vivo.
+//   · fontes de reserva — assets/splash.png e assets/splash-dark.png (o mesmo splash, sem paleta) e
+//     assets/icon.png (cópia do ícone atual do iPhone, AppIcon-512@2x.png). Quem rodar
+//     `npx @capacitor/assets` parte daqui; nada volta para a arte antiga.
 //
-// Uso (a partir de FUTTY-V2/frontend, com o backend ao lado e o npm install feito nos dois):  node scripts/gerar-splash.mjs
+// Uso (a partir de FUTTY-V2/frontend, com o backend ao lado e o npm install feito nos dois):
+//   node scripts/gerar-splash.mjs
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

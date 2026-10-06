@@ -1,6 +1,5 @@
-// Futty v2.0 — O que as telas precisam saber sobre Figurinhas Brilhantes
-// (SPEC-FIGURINHA-3, 22-set). Um sítio só, para Planos, Figurinha e Início não
-// escreverem três versões da mesma pergunta.
+// Futty v2.0 — O que as telas precisam saber sobre Figurinhas Brilhantes. Um sítio só, para Planos,
+// Figurinha e Início não escreverem três versões da mesma pergunta.
 import { apiFetch } from './api';
 
 /**
@@ -11,14 +10,14 @@ import { apiFetch } from './api';
  */
 export async function estadoBrilhantes({ segundoPlano = false } = {}) {
   try {
-    // `segundoPlano` (Velocidade 9): revalidação por trás, com a tela já aberta
+    // `segundoPlano`: revalidação por trás, com a tela já aberta
     // a partir do que o /api/inicio trouxe. Marca a chamada como de fundo no
     // diagnóstico — não é espera de ninguém, e não pode entrar na conta de
     // "dados" da tela.
     return await apiFetch('/api/brilhantes/estado', { segundoPlano });
   } catch {
     // indisponivel: a tela mostra 'ninguém tem nada', mas isto NÃO é uma resposta do servidor — quem guarda
-    // o estado (cacheCard.espelharBrilhantesNoInicio) não pode guardá-lo como verdade (Rodada 27).
+    // o estado (cacheCard.espelharBrilhantesNoInicio) não pode guardá-lo como verdade.
     return { direito: { fonte: null, team_id: null, kit_id: null, restantes: 0 }, creditos: 0, times: [], pedidos: [], indisponivel: true };
   }
 }

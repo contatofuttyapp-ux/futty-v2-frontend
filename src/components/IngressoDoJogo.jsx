@@ -1,6 +1,8 @@
-// Futty v2.0 — Rodada 29S, bloco A (achados 155 e 156): o "ingresso" do jogo no topo do Marcar jogo. Preenche-se enquanto a pessoa digita:
-// escudo e nome do time, o dia por extenso, a hora e o local. Visual da casa (vidro, chanfro de 45°, Rajdhani), sem imagem nova.
-// Dia e hora SÓ pela dataHora.js (lei da hora do jogo): o rabicho com a cidade do time só aparece quando o relógio do time é outro.
+// Futty v2.0 — O "ingresso" do jogo no topo do Marcar jogo. Preenche-se enquanto a pessoa digita: escudo e
+// nome do time, o dia por extenso, a hora e o local. Visual da casa (vidro, chanfro de 45°, Rajdhani), sem
+// imagem nova.
+// Dia e hora SÓ pela dataHora.js (lei da hora do jogo): o rabicho com a cidade do time só aparece quando o
+// relógio do time é outro.
 import { MapPin } from 'lucide-react';
 import EscudoEquipa from './EscudoEquipa';
 import { dadosDoIngresso } from '../utils/novoJogo';

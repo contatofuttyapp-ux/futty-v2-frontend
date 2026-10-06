@@ -38,7 +38,7 @@ const RES = {
 };
 const prefersReduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// A data de cada jogo do histórico é a do CAMPO (fuso do time, 29I achado 83).
+// A data de cada jogo do histórico é a do CAMPO (fuso do time).
 function fmtLongo(iso, fuso) {
   return formatarData(iso, fuso);
 }
@@ -107,13 +107,12 @@ export default function JogadorPerfil() {
   const [searchParams] = useSearchParams();
   const { user: eu } = useAuth();
   const [bloqueado, setBloqueado] = useState(false);
-  // RODADA 12C — a vitrine deixa de nascer em branco a cada visita.
+  // A vitrine não nasce em branco a cada visita.
   //
   // Com o cromo do Início, o botão do Perfil e os autores da Resenha a abrirem
-  // esta tela, ela passou de "uma visita por sessão, vinda do Ranking" a um
-  // destino frequente — e cada abertura pagava a ida inteira a São Paulo antes
-  // de mostrar o que já se sabia. Chave por time+jogador: a vitrine do João não
-  // pode pintar com os dados da Maria enquanto a resposta dela não chega.
+  // esta tela, ela é um destino frequente — e sem cache cada abertura pagava a ida
+  // inteira a São Paulo antes de mostrar o que já se sabia. Chave por time+jogador:
+  // a vitrine do João não pode pintar com os dados da Maria enquanto a resposta dela não chega.
   const { data, loading, error } = useApiComCache(`/api/teams/${slug}/jogador/${userId}`, `jogador:${slug}:${userId}`);
   const { data: selosData } = useApiComCache(`/api/equipas/${slug}/jogador/${userId}/selos`, `jogador-selos:${slug}:${userId}`);
   const selos = selosData?.selos || [];
@@ -202,9 +201,8 @@ export default function JogadorPerfil() {
 
   return (
     <div className="app-shell page-reveal" style={{ '--vitrine': ROXO }}>
-      {/* Rodada 12C: volta para onde a pessoa estava (Início, Resenha, Perfil,
-          Ranking…). O Ranking fica como destino de quem abriu o link direto e
-          não tem histórico para desfazer. */}
+      {/* Volta para onde a pessoa estava (Início, Resenha, Perfil, Ranking…). O Ranking fica como destino de
+          quem abriu o link direto e não tem histórico para desfazer. */}
       <Topbar hud="PERFIL" back="voltar" backFallback={`/time/${slug}/ranking`} />
 
       {eu && eu.id !== userId ? (
@@ -226,8 +224,9 @@ export default function JogadorPerfil() {
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
         {error ? (
           <div className="glass" style={{ ...VIDRO, clipPath: CLIP, padding: '22px 16px', textAlign: 'center', marginTop: 16, color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.6 }}>
-            {/* 29I (achado 97): "só entre companheiros" é a resposta ao 403 do motor (quem não é do time) — não a de qualquer erro.
-                A própria pessoa nunca cai aqui por falta de time; e um tropeço de rede não pode dizer que o perfil "não está acessível". */}
+            {/* "só entre companheiros" é a resposta ao 403 do motor (quem não é do time) — não a de qualquer erro.
+                A própria pessoa nunca cai aqui por falta de time; e um tropeço de rede não pode dizer que o perfil
+                "não está acessível". */}
             {/não é membro/i.test(error) ? (
               <>
                 <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, color: '#fff' }}>Perfil só entre companheiros</div>
@@ -299,7 +298,7 @@ export default function JogadorPerfil() {
               })}
             </div>
 
-            {/* 2b. SELOS DE HONRA (Vaga 11C) — todas as honras (ativas + históricas). */}
+            {/* 2b. SELOS DE HONRA — todas as honras (ativas + históricas). */}
             {selos.length ? (
               <>
                 <SecLabel>Selos de honra</SecLabel>
@@ -337,8 +336,8 @@ export default function JogadorPerfil() {
                       <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Nota</div>
                     </div>
                   ) : (
-                    // Achado 119 (29J): era "--" aqui, "—" e "--" nos tiles ao lado — três formas pro mesmo "sem nota
-                    // ainda" já dito (bem) no cabeçalho desta página (linha 272). Uma mensagem só, no lugar dos três.
+                    // Uma mensagem só para o "sem nota ainda" já dito no cabeçalho desta página (nada de "--" ou "—" aqui e
+                    // nos tiles ao lado).
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--text-dim)', textTransform: 'uppercase', padding: '0 12px', lineHeight: 1.3 }}>Sem nota ainda</div>
                   )}
                 </div>

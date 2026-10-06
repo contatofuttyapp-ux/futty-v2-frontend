@@ -26,11 +26,11 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // RODADA 28 — avisos curtos, uma vez só: a sessão acabou sem a pessoa pedir (AuthContext: 401 do
-  // motor, refresh recusado) ou o cadastro parou nos 18 anos (Onboarding: o motor apagou a conta).
+  // Avisos curtos, uma vez só: a sessão acabou sem a pessoa pedir (AuthContext: 401 do motor, refresh
+  // recusado) ou o cadastro parou nos 18 anos (Onboarding: o motor apagou a conta).
   // A marca só é LIDA aqui e apagada no efeito, depois de a tela montar: o Login chega por import
-  // dinâmico e o React 19 renderiza-o duas vezes antes de fixar a tela (medido na cena rodada28) —
-  // apagada na 1ª renderização, a 2ª, que é a que fica, nascia sem o aviso.
+  // dinâmico e o React 19 renderiza-o duas vezes antes de fixar a tela (medido) — apagada na 1ª
+  // renderização, a 2ª, que é a que fica, nascia sem o aviso.
   const [aviso] = useState(() => {
     try {
       if (sessionStorage.getItem('futty_menor18') === '1') return { tipo: 'error', texto: MSG_MENOR };
@@ -57,7 +57,7 @@ export default function Login() {
     if (!sessaoCarregando && session) navigate('/home', { replace: true });
   }, [sessaoCarregando, session, navigate]);
 
-  // Rodada 29H (item 4): quem entra pelo Google/Apple numa conta nova cai no onboarding — o chunk e as 8 figurinhas dele já vêm.
+  // Quem entra pelo Google/Apple numa conta nova cai no onboarding — o chunk e as 8 figurinhas dele já vêm.
   useEffect(() => { preaquecerOnboarding({ convidado: temConvitePendente() }); }, []);
 
   async function handleSubmit(e) {

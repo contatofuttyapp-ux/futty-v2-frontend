@@ -1,11 +1,12 @@
-// Futty v2.0 — Rodada 29C: as boas-vindas do time — UMA página, as duas máquinas da prova aprovada pelo dono
-// (FUT/DESIGN/prova-boas-vindas-v2.html): a DEITADA (A), para time sem logo, com o nome como letreiro na janela; e a
-// QUADRADA (B), com dois anéis contínuos de lâmpadas, para time com logo. Quem vê é o `convidado` (1ª vez no time depois de
-// aceitar o convite ou de ter o pedido aceito). 29H (item 1): o convidado vê esta tela como a 1ª página do onboarding
-// (`comConvite`: "Você foi convidado para o <time>. …", `gravar={false}`: a pessoa ainda não é do time, então a escolha linha/gol
-// só volta no onClose e é gravada depois de entrar). A variante de quem só baixou o app saiu na 29D (o Onboarding ganhou o mini
-// sorteio); a do criador saiu na 29P (a festa passou para o fim do Criar time, que reaproveita `MaquinaDoTime`). Lâmpadas de CSS,
-// 0 KB de mídia, sem som (não há gesto); prefers-reduced-motion: tudo parado e sem "tchan". Quem mostra e marca "visto" é a Equipa.
+// Futty v2.0 — As boas-vindas do time — UMA página, as duas máquinas da prova aprovada pelo dono
+// (FUT/DESIGN/prova-boas-vindas-v2.html): a DEITADA (A), para time sem logo, com o nome como letreiro na
+// janela; e a QUADRADA (B), com dois anéis contínuos de lâmpadas, para time com logo. Quem vê é o
+// `convidado` (1ª vez no time depois de aceitar o convite ou de ter o pedido aceito).
+// O convidado vê esta tela como a 1ª página do onboarding (`comConvite`: "Você foi convidado para o
+// <time>. …", `gravar={false}`: a pessoa ainda não é do time, então a escolha linha/gol só volta no
+// onClose e é gravada depois de entrar).
+// Lâmpadas de CSS, 0 KB de mídia, sem som (não há gesto); prefers-reduced-motion: tudo parado e sem
+// "tchan". Quem mostra e marca "visto" é a Equipa.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';

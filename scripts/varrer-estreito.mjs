@@ -1,20 +1,23 @@
-// Futty v2.0 — Rodada 29Z (item 3e): a VARREDURA do celular estreito. Anda pelas telas principais com a conta de demonstração, numa janela
-// de 360 × 780 (Galaxy A, Moto G — a largura de muito Android comum; a régua da casa é 390), e mede, DENTRO do navegador, o que a pessoa
-// perderia:
+// Futty v2.0 — a VARREDURA do celular estreito. Anda pelas telas principais com a conta de demonstração,
+// numa janela de 360 × 780 (Galaxy A, Moto G — a largura de muito Android comum; a régua da casa é 390), e
+// mede, DENTRO do navegador, o que a pessoa perderia:
 //   · rolagem para o lado (a página inteira mais larga que a janela);
-//   · campo, botão ou nome CORTADO por um contêiner (o filho passa da borda do pai com overflow escondido) — o defeito do Novo jogo;
+//   · campo, botão ou nome CORTADO por um contêiner (o filho passa da borda do pai com overflow escondido)
+//     — o defeito do Novo jogo;
 //   · texto com reticências (text-overflow: ellipsis com o texto maior que a caixa) — o defeito do Radar;
 //   · elemento que passa da borda da janela sem estar numa faixa que rola de propósito;
-//   · número com PONTO decimal no texto da tela (o achado do Ranking, "77.9") — vale a lei da 29Z.
+//   · número com PONTO decimal no texto da tela (o do Ranking, "77.9") — vale a lei de números em PT-BR.
 //
-// Servidor LOCAL e nada gravado (as mesmas duas regras de scripts/loja/capturar-telas.mjs): a base tem de ser localhost, qualquer pedido a
-// produção é abortado e reprova, e toda escrita em /api é respondida aqui mesmo.
+// Servidor LOCAL e nada gravado (as mesmas duas regras de scripts/loja/capturar-telas.mjs): a base tem de
+// ser localhost, qualquer pedido a produção é abortado e reprova, e toda escrita em /api é respondida aqui
+// mesmo.
 //
 // Uso (a partir de frontend/, com o motor em :3001 e o Vite em :5173/:5174):
 //   node scripts/varrer-estreito.mjs --base=http://localhost:5174                 (360 × 780)
 //   node scripts/varrer-estreito.mjs --base=http://localhost:5174 --largura=390 --altura=844
 //   opções: --so=ranking,novo-jogo   --capturas=<pasta>  (grava um print de cada tela)
-// Sai com código 1 se achar qualquer defeito. A demo não é super-admin: Gabinete e Diagnóstico ficam de fora (a prova do navegador cobre o texto deles).
+// Sai com código 1 se achar qualquer defeito. A demo não é super-admin: Gabinete e Diagnóstico ficam de
+// fora (a prova do navegador cobre o texto deles).
 import { readFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -1,20 +1,20 @@
-// Futty v2.0 — Onboarding dia-1 (3 passos): boas-vindas → FOTO (quase-obrigatória)
-// → identidade. Só para REGISTOS NOVOS (o Register navega para cá; contas antigas
-// nunca passam aqui). Pede SÓ o que o dia-1 usa — equipa entra-se/cria-se no Início.
-// Foto: selfie (capture="user") OU galeria → CropModal da casa (2:3, ENQUADRAMENTO ÚNICO da 29H-B: o quadrado tracejado da
-// miniatura dentro do card) → POST /api/me/avatar → PUT /api/me/avatar/enquadro (lib/miniatura.js, best-effort). A foto nunca é
-// espelhada (item 54): aparece como foi tirada.
-// "Deixar para depois" só aparece aos ~2s (29H); quem salta leva o card persistente no Início.
-// RODADA 28/29G: quem chega sem data de nascimento (Google/Apple não a trazem) passa
-// por "Quando você nasceu?" ANTES da foto. Menor de 18: o motor apaga a conta e o login explica.
-// RODADA 29D (dono): o passo 1 ganhou o mini sorteio ao vivo (MiniSorteio.jsx) e o ícone do app no lugar do F solto;
-// RODADA 29E (dono): o ícone de volta a 110 px flutuando, figurinhas fictícias caindo em dois times no mini sorteio, textos da landing.
-// RODADA 29H (item 1): quem chega por um convite (bilhete no aparelho: lib/convitePendente.js) NÃO vê a página "Começar": a
-// 1ª página é a boas-vindas DO TIME (BoasVindas, variante convidado: "Você foi convidado para o <time>. …", linha/gol, "Vamos
-// lá") → foto → nome → o time (o convite é aceito aqui, no fim; sem passar de novo pelo Início nem pela página do convite).
-// A escolha linha/gol vale depois de entrar. Convite que morreu (apagado, vencido) vira cadastro comum.
-// 29H (item 3): "Quando você nasceu?" em rolinhos dia/mês/ano (RolinhosData). 29H (item 4): o Register/Login aquecem o chunk
-// e as 8 imagens desta página (lib/preaquecerOnboarding.js).
+// Futty v2.0 — Onboarding dia-1 (3 passos): boas-vindas → FOTO (quase-obrigatória) → identidade. Só
+// para REGISTOS NOVOS (o Register navega para cá; contas antigas nunca passam aqui). Pede SÓ o que o
+// dia-1 usa — equipa entra-se/cria-se no Início.
+// Foto: selfie (capture="user") OU galeria → CropModal da casa (2:3, ENQUADRAMENTO ÚNICO: o quadrado
+// tracejado da miniatura dentro do card) → POST /api/me/avatar → PUT /api/me/avatar/enquadro
+// (lib/miniatura.js, best-effort). A foto nunca é espelhada: aparece como foi tirada.
+// "Deixar para depois" só aparece aos ~2s; quem salta leva o card persistente no Início.
+// Quem chega sem data de nascimento (Google/Apple não a trazem) passa por "Quando você nasceu?" ANTES
+// da foto, em rolinhos dia/mês/ano (RolinhosData). Menor de 18: o motor apaga a conta e o login explica.
+// Passo 1: o mini sorteio ao vivo (MiniSorteio.jsx), o ícone do app a 110 px flutuando e figurinhas
+// fictícias caindo em dois times no mini sorteio; textos da landing.
+// Quem chega por um convite (bilhete no aparelho: lib/convitePendente.js) NÃO vê a página "Começar": a
+// 1ª página é a boas-vindas DO TIME (BoasVindas, variante convidado: "Você foi convidado para o
+// <time>. …", linha/gol, "Vamos lá") → foto → nome → o time (o convite é aceito aqui, no fim; sem
+// passar de novo pelo Início nem pela página do convite). A escolha linha/gol vale depois de entrar.
+// Convite que morreu (apagado, vencido) vira cadastro comum.
+// O Register/Login aquecem o chunk e as 8 imagens desta página (lib/preaquecerOnboarding.js).
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset, urlImagem } from '../utils/avatar';
@@ -73,9 +73,10 @@ function Cta({ children, cheio, sec, ...rest }) {
 // O card 2:3, com cantos a 45° em px (num retângulo, o OCTO em % cortaria cantos tortos).
 const OCTO_CARD = 'polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px)';
 
-// Moldura V1 grande — vazia (gancho) ou, com a foto subida, o CARD 2:3 como ele vai ficar (29H-B): o quadrado tracejado da
-// miniatura por cima (o mesmo do enquadramento único) e, ao lado, a miniatura na moldura real do app. O arquivo que subiu É o
-// recorte 2:3: a janela da miniatura é o quadrado do topo (recorteDaMolduraUnica), sem adivinhar posição nenhuma.
+// Moldura V1 grande — vazia (gancho) ou, com a foto subida, o CARD 2:3 como ele vai ficar: o quadrado
+// tracejado da miniatura por cima (o mesmo do enquadramento único) e, ao lado, a miniatura na moldura
+// real do app. O arquivo que subiu É o recorte 2:3: a janela da miniatura é o quadrado do topo
+// (recorteDaMolduraUnica), sem adivinhar posição nenhuma.
 function MolduraFoto({ src, size = 170 }) {
   if (src) {
     const largura = Math.round(size * 0.82);
@@ -135,7 +136,7 @@ export default function Onboarding() {
   const [enviando, setEnviando] = useState(false);
   const [uploadErro, setUploadErro] = useState(null); // P1-5 — { texto, podeRepetir }
   const ultimoBlob = useRef(null); // retém o blob p/ "tentar de novo" sem recortar
-  const ultimoRecorteMini = useRef(null); // 29H-B: o quadrado tracejado desse blob, gravado depois de a foto subir
+  const ultimoRecorteMini = useRef(null); // o quadrado tracejado desse blob, gravado depois de a foto subir
   const [nome, setNome] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [toast, setToast] = useState(null);
@@ -186,16 +187,13 @@ export default function Onboarding() {
     setCropFile(await normalizarFoto(f));
   }
 
-  // O CADASTRO NÃO GERA NADA (SPEC-FIGURINHA-3 §3, 22-set). A figurinha que
-  // nasce aqui é a COMUM: a foto da pessoa na moldura, custo zero, pronta no
-  // instante em que a foto sobe. A geração automática de IA de 12-set saiu —
-  // era o item mais caro do app a nascer de graça em cada cadastro (US$0,11),
-  // para quem talvez nunca pagasse. A Brilhante passa a ter dono: crédito
-  // comprado ou pacote do time (não há mais presente de quem cria time).
+  // O CADASTRO NÃO GERA NADA (SPEC-FIGURINHA-3 §3). A figurinha que nasce aqui é a COMUM: a foto da
+  // pessoa na moldura, custo zero, pronta no instante em que a foto sobe. Gerar IA no cadastro seria o
+  // item mais caro do app a nascer de graça (US$0,11), para quem talvez nunca pagasse. A Brilhante tem
+  // dono: crédito comprado ou pacote do time (não há presente de quem cria time).
   //
-  // O que ficou no lugar: nada. Não há o que esperar, por isso também não há
-  // marcador de "gerando" nem retry de FOTO_DESATUALIZADA — a trava de hash
-  // continua no motor, mas só a Brilhante passa por ela.
+  // Não há o que esperar, por isso também não há marcador de "gerando" nem retry de FOTO_DESATUALIZADA —
+  // a trava de hash continua no motor, mas só a Brilhante passa por ela.
 
   // Crop confirmado → sobe já (POST /api/me/avatar) e a foto CAI na moldura.
   // P1-5 — em vez de um toast cru e passageiro, o erro fica INLINE na moldura com
@@ -211,8 +209,8 @@ export default function Onboarding() {
       const file = new File([alvo], 'onboarding.jpg', { type: 'image/jpeg' });
       const res = await apiUpload('/api/me/avatar', file, 'avatar');
       setAvatarUrl(res.avatar_url || res.foto_url || null);
-      // 29H-B: o quadrado tracejado vira a miniatura de verdade (users.avatar_recorte). Best-effort e sem segurar a tela: a foto já
-      // subiu; se o motor ainda não tem a migração 070, a miniatura segue na regra de sempre.
+      // O quadrado tracejado vira a miniatura de verdade (users.avatar_recorte). Best-effort e sem segurar a
+      // tela: a foto já subiu; se o motor ainda não tem a migração 070, a miniatura segue na regra de sempre.
       const recorteMini = ultimoRecorteMini.current;
       if (recorteMini && !res.figurinha_ativa) gravarMiniatura(recorteMini).then((url) => { if (url) setAvatarUrl(url); });
       ultimoBlob.current = null;
@@ -223,9 +221,9 @@ export default function Onboarding() {
     }
   }
 
-  // RODADA 28/29G — "Quando você nasceu?". Quem decide é o motor (PATCH /api/me): 18 anos ou mais, a data
-  // fica e segue para a foto; menos de 18, ele apaga a conta (403 MENOR_DE_18) — aqui só se sai do
-  // aparelho, e o login diz "O Futty é para maiores de 18 anos."
+  // "Quando você nasceu?". Quem decide é o motor (PATCH /api/me): 18 anos ou mais, a data fica e segue
+  // para a foto; menos de 18, ele apaga a conta (403 MENOR_DE_18) — aqui só se sai do aparelho, e o login
+  // diz "O Futty é para maiores de 18 anos."
   async function confirmarNascimento() {
     const v = dataDeNascimentoValida(nascimento);
     if (!v) {
@@ -252,36 +250,33 @@ export default function Onboarding() {
     }
   }
 
-  // Fim: nome de jogador (PATCH /api/me). A pergunta "Você é goleiro?" saiu do
-  // cadastro (Rodada 8A, decisão do dono): o sorteio só usa game_players.goleiro,
-  // marcado na confirmação de presença (Jogo.jsx, "Sou goleiro (GR)") ou pelo admin.
+  // Fim: nome de jogador (PATCH /api/me). Sem a pergunta "Você é goleiro?" no cadastro: o sorteio só usa
+  // game_players.goleiro, marcado na confirmação de presença (Jogo.jsx, "Sou goleiro (GR)") ou pelo
+  // admin.
   async function concluir() {
     setSalvando(true);
     try {
       if (nome.trim()) await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ nome_jogador: nome.trim().slice(0, 18) }) });
       // P1-1 — sela o onboarding no servidor ANTES de entrar.
       await apiFetch('/api/me/onboarding-completo', { method: 'POST' });
-      // 14-set ("Velocidade 3"): recarrega o PerfilContext AQUI — busca o
-      // /api/me fresco e regrava o cache local — antes de navegar. Sem isto, a
-      // navegação dura remontava o Layout com o cache local AINDA velho e a
-      // gate mandava de volta para /onboarding num loop sem fim.
+      // Recarrega o PerfilContext AQUI — busca o /api/me fresco e regrava o cache local — antes de navegar.
+      // Sem isto, a navegação dura remonta o Layout com o cache local AINDA velho e a gate manda de volta
+      // para /onboarding num loop sem fim.
       const fresco = await recarregarPerfil();
-      // VELOCIDADE 5 (14-set) — CINTO E SUSPENSÓRIO. A causa raiz do loop era
-      // outra: o cache de SESSÃO do backend (middleware/auth.js, TTL 60s)
-      // continuava a devolver onboarding_completo:false ao /api/me de cima —
-      // corrigido lá (routes/auth.js chama invalidarSessaoDoPedido depois do
-      // updateUserById). Mas esta tela não pode voltar a depender de o /api/me
-      // vir certo para conseguir sair: aplica-se onboarding_completo:true por
-      // CIMA do que quer que o fresco tenha respondido, otimista, e hidratar()
-      // já regrava o cache local com ele. Se o backend um dia voltar a servir
-      // stale, é esta linha que impede o loop — não o inverso.
+      // CINTO E SUSPENSÓRIO. A causa raiz do loop era outra: o cache de SESSÃO do backend (middleware/auth.js,
+      // TTL 60s) continuava a devolver onboarding_completo:false ao /api/me de cima — corrigido lá
+      // (routes/auth.js chama invalidarSessaoDoPedido depois do updateUserById). Mas esta tela não pode
+      // voltar a depender de o /api/me vir certo para conseguir sair: aplica-se onboarding_completo:true por
+      // CIMA do que quer que o fresco tenha respondido, otimista, e hidratar() já regrava o cache local com
+      // ele. Se o backend um dia voltar a servir stale, é esta linha que impede o loop — não o inverso.
       const base = fresco || perfil;
       if (base) hidratar({ ...base, user: { ...base.user, onboarding_completo: true } });
-      // 29H (item 1): o convite do bilhete é aceito AQUI — a pessoa cai direto no time, que ela já viu nas boas-vindas. Se o
-      // convite falhar (venceu entre uma tela e outra), o bilhete fica e o Início a leva à página do convite, que explica.
+      // O convite do bilhete é aceito AQUI — a pessoa cai direto no time, que ela já viu nas boas-vindas. Se o
+      // convite falhar (venceu entre uma tela e outra), o bilhete fica e o Início a leva à página do convite,
+      // que explica.
       window.location.assign((deConvite && (await aceitarConvite())) || '/home');
     } catch (e) {
-      // Rodada 29G: data de menor de 18 que veio do cadastro por e-mail — o motor apagou a conta.
+      // Data de menor de 18 que veio do cadastro por e-mail — o motor apagou a conta.
       if (e.code === 'MENOR_DE_18') {
         try { sessionStorage.setItem('futty_menor18', '1'); } catch { /* sem o aviso */ }
         await signOut();
@@ -329,13 +324,14 @@ export default function Onboarding() {
               <FuttyLogo variant="icone" size={110} />
             </div></div>
             <Titulo>BEM-VINDO AO FUTTY</Titulo>
-            {/* Rodada 29E (dono): uma voz só — o mesmo subtítulo da landing (a pontuação final é o item 26 e vale para os dois). */}
+            {/* Uma voz só — o mesmo subtítulo da landing (a pontuação final vale para os dois). */}
             <div style={{ fontFamily: RAJ, fontSize: 15, fontWeight: 700, letterSpacing: '0.1em', color: '#c9c2d6', textTransform: 'uppercase', textAlign: 'center', marginTop: 6 }}>
               O seu time. <b style={{ color: '#f0c94a' }}>A sua figurinha.</b>
             </div>
             <MiniSorteio />
-            {/* Rodada 29E2 (dono): o CTA dourado da casa (o "Vamos lá" das boas-vindas) — 50 px, máx. 290, 24 px de respiro
-                acima e abaixo. O glow vive no wrapper porque o clip dos cantos cortaria o drop-shadow (ver .cta-gold no app.css). */}
+            {/* O CTA dourado da casa (o "Vamos lá" das boas-vindas) — 50 px, máx. 290, 24 px de respiro acima e
+                abaixo. O glow vive no wrapper porque o clip dos cantos cortaria o drop-shadow (ver .cta-gold no
+                app.css). */}
             <div className="cta-gold-glow" style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '24px 0' }}>
               <button
                 type="button"
@@ -358,7 +354,7 @@ export default function Onboarding() {
             </p>
             <div style={{ width: '100%', maxWidth: 290 }}>
               <span style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Data de nascimento</span>
-              {/* 29H (item 3): rolinhos dia · mês · ano, sem ano futuro, teto ano atual − 18. */}
+              {/* Rolinhos dia · mês · ano, sem ano futuro, teto ano atual − 18. */}
               <RolinhosData id="onb-nascimento" onChange={(v) => { setNascimento(v); setErroNascimento(''); }} />
               {erroNascimento ? (
                 <div role="alert" style={{ marginTop: 10, fontSize: 13, color: '#f8b4b4', textAlign: 'center', lineHeight: 1.45 }}>{erroNascimento}</div>
@@ -374,7 +370,7 @@ export default function Onboarding() {
           <>
             <MolduraFoto src={avatarUrl ? urlAsset(avatarUrl) : null} />
             <Titulo size={24}>SUA FIGURINHA<br />COMEÇA AQUI</Titulo>
-            {/* 31-jul (dono): metade do texto, sem "cara" (no BR é rude — usa-se rosto). */}
+            {/* Texto curto, sem "cara" (no BR é rude — usa-se rosto). */}
             <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.55, maxWidth: 290 }}>
               Sua foto vira seu card, no time inteiro.
             </p>
@@ -406,8 +402,8 @@ export default function Onboarding() {
                     Escolher da galeria
                   </Cta>
                 </div>
-                {/* "deixar para depois" — surge aos ~2s (29H, item 5; era ~4 s). Escondido até lá (visibility), para um toque
-                    antes da hora não valer; o convite do Início continua até haver foto. */}
+                {/* "deixar para depois" — surge aos ~2s. Escondido até lá (visibility), para um toque antes da hora não
+                    valer; o convite do Início continua até haver foto. */}
                 <button
                   type="button"
                   onClick={() => setPasso(3)}

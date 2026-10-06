@@ -1,11 +1,11 @@
-// Futty v2.0 — Rodada 29B (B): a grade de uniformes é a MESMA para todo mundo; o que muda é o estado de cada tile,
+// Futty v2.0 — a grade de uniformes é a MESMA para todo mundo; o que muda é o estado de cada tile,
 // e ele sai do DIREITO da pessoa. Puro (sem React, sem rede), para testar no Node.
 //
 //   direito  gratis — sem geração (card com a foto): todos com cadeado
 //            pacote — o pacote do time: só o uniforme do time abre (pintável); os outros, cadeado
 //            minha  — Minha Figurinha (créditos): todos abertos; os ainda não pintados dizem que custam 1 geração
 //   estado   vestido  — o card mostra este uniforme agora (✓)
-//            pintado  — já foi gerado: um toque veste, grátis (uniformes guardados, Rodada 21)
+//            pintado  — já foi gerado: um toque veste, grátis (uniformes guardados)
 //            geravel  — o direito pinta este; o toque confirma e gasta 1 geração
 //            trancado — cadeado: o toque leva aos Planos
 

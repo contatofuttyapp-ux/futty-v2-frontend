@@ -1,4 +1,4 @@
-// Futty v2.0 — A régua de idade do cadastro (Rodada 29G, 1-out: o Futty é 18+ de ponta a ponta). A MESMA
+// Futty v2.0 — A régua de idade do cadastro (o Futty é 18+ de ponta a ponta). A MESMA
 // do motor (backend/utils/idade.js): o app avisa antes, o motor confere de novo e é quem decide.
 // O número mora SÓ aqui (e no motor): telas e textos usam IDADE_MINIMA / MSG_MENOR.
 export const IDADE_MINIMA = 18;

@@ -25,8 +25,8 @@ export default function DeepLinkListener() {
     if (!Capacitor.isNativePlatform()) return undefined;
 
     const registo = CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
-      // Rodada 29B (C): link https do site (convite, time, jogo) — abre a mesma tela que o site abriria (lib/linkDoSite.js).
-      // Na abertura a frio o Capacitor guarda a URL até este ouvinte existir, e o roteador já está de pé.
+      // Link https do site (convite, time, jogo) — abre a mesma tela que o site abriria (lib/linkDoSite.js). Na
+      // abertura a frio o Capacitor guarda a URL até este ouvinte existir, e o roteador já está de pé.
       const doSite = caminhoDoLinkDoSite(url);
       if (doSite) {
         navigate(doSite);
@@ -45,8 +45,8 @@ export default function DeepLinkListener() {
         }
         const code = params.get('code');
         if (!code) return;
-        // Velocidade 8: este componente está montado na RAIZ, por isso um import
-        // estático do supabase-js aqui punha-o de volta no modulepreload. Ele só
+        // Este componente está montado na RAIZ, por isso um import
+        // estático do supabase-js aqui o poria de volta no modulepreload. Ele só
         // é preciso quando um link de retorno chega mesmo — e nessa altura o
         // AuthProvider já o pediu há muito.
         const supabase = await obterSupabase();

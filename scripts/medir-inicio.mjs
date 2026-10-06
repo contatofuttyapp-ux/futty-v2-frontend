@@ -1,5 +1,4 @@
-// Futty v2.0 — Mede a abertura do app num Chrome de verdade (VELOCIDADE 4;
-// contagem de imagens e bytes por aba na VELOCIDADE 6B, 15-set).
+// Futty v2.0 — Mede a abertura do app num Chrome de verdade (inclui a contagem de imagens e bytes por aba).
 //
 // A pergunta que este script responde com número: entre chegar ao Início e ver
 // a tela, quanto tempo passa — e quanto passaria com a regra ANTIGA, que só
@@ -11,7 +10,7 @@
 //   cromoMs    — quando a figurinha aparece (era exactamente o que a regra
 //                antiga esperava: `pageReady = cromoTentado`)
 //
-// VELOCIDADE 6B acrescenta, POR ABA e em volta FRIA e QUENTE: quantos pedidos
+// Também mede, POR ABA e em volta FRIA e QUENTE: quantos pedidos
 // /api, quantos /api/media (avatares), quantos bytes vieram DA REDE, e quanto
 // tempo até a ÚLTIMA imagem aparecer. Os números saem do PerformanceObserver da
 // própria página (`performance.getEntriesByType('resource')`) e não dos eventos
@@ -107,10 +106,9 @@ async function medir() {
     uploadThroughput: (1024 * 1024) / 8,
   });
 
-  // ─── FRIO: o app a abrir do zero, sem cromo guardado — como acontecia SEMPRE
-  // antes da Velocidade 4 (a regra antiga não tinha cache nenhum, redesenhava o
-  // canvas a cada abertura). Tem de ser um RELOAD: apagar o IndexedDB não chega,
-  // porque o cache em memória do módulo sobrevive à navegação dentro da SPA.
+  // ─── FRIO: o app a abrir do zero, sem cromo guardado (sem cache nenhum, o canvas é redesenhado a
+  // cada abertura). Tem de ser um RELOAD: apagar o IndexedDB não chega, porque o cache em memória do
+  // módulo sobrevive à navegação dentro da SPA.
   await pagina.evaluate(() => new Promise((r) => {
     const p = indexedDB.deleteDatabase('futty');
     p.onsuccess = r; p.onerror = r; p.onblocked = r;
@@ -149,7 +147,7 @@ async function medir() {
     resultados.push({ volta, conteudoMs, cromoMs, pedidos: contar() });
   }
 
-  // ─── VELOCIDADE 6B: pedidos, imagens e bytes POR ABA ───
+  // ─── Pedidos, imagens e bytes POR ABA ───
   // Duas passagens pelas mesmas 5 abas. A 1ª é FRIA (nunca lá esteve nesta
   // sessão); a 2ª é QUENTE (cache local + cache HTTP já cheios). O que tem de
   // cair para perto de zero na volta quente é a contagem e os bytes.

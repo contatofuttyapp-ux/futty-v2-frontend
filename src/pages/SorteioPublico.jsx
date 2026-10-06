@@ -18,17 +18,16 @@ const RAJ = "'Rajdhani', sans-serif";
 
 export default function SorteioPublico() {
   const { gameId } = useParams();
-  // Achado 120 (29J): `error` tem de sair distinto de "ainda não aconteceu" — mesma
-  // regra do SorteioShow (a página com login), para a vista pública não repetir o erro.
+  // `error` tem de sair distinto de "ainda não aconteceu" — mesma regra do SorteioShow (a página com
+  // login).
   const { data, loading, error, reload } = useApi(`/api/p/${gameId}`);
   const resultado = data?.times_resultado;
   const res = data?.resultado;
   const estado = estadoSorteio({ loading, error, resultado });
-  // Achado 112 (29K): a página mostrava o time, a cerimônia e os times — e mais nada. Quem recebe
-  // o link no grupo não descobria quando nem onde é o jogo, que é o que foi ali procurar.
+  // A página mostra quando e onde é o jogo: é o que quem recebe o link no grupo foi ali procurar.
   const quandoOnde = quandoOndeDoJogo(data?.jogo, data?.equipa);
-  // Achado 114 (29K): quem chega pelo link do grupo quer ver os times, não assistir a cerimônia
-  // inteira (+20s). Aqui o resultado já vem montado; "Ver sorteio" é a cerimônia, pra quem quiser.
+  // Quem chega pelo link do grupo quer ver os times, não assistir a cerimônia inteira (+20s). Aqui o
+  // resultado já vem montado; "Ver sorteio" é a cerimônia, pra quem quiser.
   const [verCerimonia, setVerCerimonia] = useState(false);
 
   return (

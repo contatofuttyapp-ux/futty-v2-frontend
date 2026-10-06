@@ -1,4 +1,4 @@
-// Futty v2.0 — O relatório da caixa-preta (Rodada 28).
+// Futty v2.0 — O relatório da caixa-preta.
 //
 // lib/diagnostico.js COLETA (chamadas, navegações, travadas...) e mora no arranque do app; este arquivo
 // MONTA o que a tela de Diagnóstico mostra e o relatório envia. Separados porque montar só interessa a
@@ -49,7 +49,7 @@ function lerPreaquecimento({ preaquecimento, preaquecimentoEspera, ultimoGesto }
 /**
  * Tudo o que a tela de Diagnóstico mostra e o relatório envia.
  *
- * Velocidade 9: a bancada do iPhone simulado (scripts/ver-iphone.mjs) lê os MESMOS números pelo
+ * A bancada do iPhone simulado (scripts/ver-iphone.mjs) lê os MESMOS números pelo
  * `window.__futtyDiagnostico` (lib/diagnostico.js), em vez de raspar texto da tela. Só leitura, só
  * medições — nada de sessão nem de dados de pessoa que já não estivesse no relatório.
  */
@@ -69,7 +69,7 @@ export function lerDiagnostico() {
       pinturasDoCache: navegacoes.filter((n) => n.doCache).length,
       navegacoes: navegacoes.length,
       falhas: falhas.length,
-      // Velocidade 6B: "imagens: n, média ms, % do cache".
+      // Resumo: "imagens: n, média ms, % do cache".
       imagens: imagens.length
         ? {
           n: imagens.length,
@@ -78,15 +78,15 @@ export function lerDiagnostico() {
           bytes: imagens.reduce((a, i) => a + i.bytes, 0),
         }
         : null,
-      // Velocidade 7B + Rodada 12A: { aparelho, maiorViewport, maiorRolavel,
+      // { aparelho, maiorViewport, maiorRolavel,
       // maiorTransbordo, rota, orientacao, em }. O que conta é o maiorTransbordo
       // (quanto passou da tela NA ORIENTAÇÃO da altura): acima de zero, alguma
       // coisa rebentou a largura em campo.
       largura: s.largura,
-      // Rodada 12A: quantas vezes o aparelho virou. Sem isto, uma largura de
+      // Quantas vezes o aparelho virou. Sem isto, uma largura de
       // paisagem no relatório não se distingue de um card que rebentou a tela.
       orientacao: { ...s.orientacao },
-      // Velocidade 8 + Rodada 12A: quantos quadros passaram do tempo, em que
+      // Quantos quadros passaram do tempo, em que
       // fase do app e com que TAREFA a correr (ver tarefaEmCurso).
       travadas: {
         leves: travadas.leves,
@@ -95,11 +95,11 @@ export function lerDiagnostico() {
         porFase: { ...travadas.porFase },
         piores: [...travadas.piores],
       },
-      // Rodada 12A: tempo com o app noutra coisa. NÃO entra nas travadas — o
+      // Tempo com o app noutra coisa. NÃO entra nas travadas — o
       // requestAnimationFrame para em segundo plano e o intervalo de volta
-      // aparecia como o pior engasgo de todos (96 s no build 21).
+      // apareceria como o pior engasgo de todos (já apareceu como 96 s).
       segundoPlano: { ...s.segundoPlano },
-      // Velocidade 8: compilação = HTML + download + execução de tudo o que está
+      // Compilação = HTML + download + execução de tudo o que está
       // no modulepreload; React = 1º commit da árvore; Início = 1ª pintura do /home.
       arranque: { ...s.arranque },
       // Fluidez 2: quanto cada fase do canvas custou, por cenário.

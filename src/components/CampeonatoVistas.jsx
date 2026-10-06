@@ -1,4 +1,4 @@
-// Futty v2.0 — Vistas do campeonato (Vaga 11B), partilhadas pela página do
+// Futty v2.0 — Vistas do campeonato, partilhadas pela página do
 // membro e pela vista pública: tabela (pontos), bracket (mata), lista de jogos
 // com lançamento de resultado (admin) e celebração do campeão.
 import { useState } from 'react';

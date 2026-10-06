@@ -1,5 +1,6 @@
-// Futty v2.0 — Rodada 29T (bloco B, achado 157): os bairros da cidade que a pessoa escolheu, para o Criar time e os Ajustes do time.
-// O campo Bairro só aparece quando a cidade TEM bairros na lista (IBGE no Brasil, freguesias em Portugal); este hook diz em que pé está:
+// Futty v2.0 — os bairros da cidade que a pessoa escolheu, para o Criar time e os Ajustes do time.
+// O campo Bairro só aparece quando a cidade TEM bairros na lista (IBGE no Brasil, freguesias em Portugal);
+// este hook diz em que pé está:
 //   'sem-cidade'  nenhuma cidade da lista (vazia, ou digitada à mão fora do Brasil e de Portugal): sem campo
 //   'carregando'  buscando a lista (alguns décimos de segundo): sem campo ainda
 //   'sem-lista'   a cidade não tem bairros na lista (ou a lista não veio): sem campo

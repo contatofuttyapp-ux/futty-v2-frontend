@@ -1,12 +1,11 @@
-// Futty v2.0 — Card de publicidade REAL: consome /api/ads?pagina=X (serving do Gabinete,
-// com filtro etário fail-closed + toggle por página no servidor). Conta impressão (ao
-// aparecer) e clique (ao tocar) via /api/ads/evento. Sem campanha elegível OU página OFF
-// → não renderiza nada. Variants: 'native' (Início/feed) e 'banner' (sorteio).
+// Futty v2.0 — Card de publicidade REAL: consome /api/ads?pagina=X (serving do Gabinete, com filtro etário
+// fail-closed + toggle por página no servidor). Conta impressão (ao aparecer) e clique (ao tocar) via
+// /api/ads/evento. Sem campanha elegível OU página OFF → não renderiza nada. Variants: 'native'
+// (Início/feed) e 'banner' (sorteio).
 //
-// Dentro do Início (pagina='inicio', InicioProvider montado — ver Layout.jsx),
-// o anúncio já veio dentro de GET /api/inicio (11-set, "1 pedido só") — lê de lá
-// em vez de disparar o seu próprio GET /api/ads. O POST /api/ads/evento de
-// impressão/clique mantém-se sempre, para qualquer origem do anúncio.
+// Dentro do Início (pagina='inicio', InicioProvider montado — ver Layout.jsx), o anúncio já vem dentro de
+// GET /api/inicio ("1 pedido só") — lê de lá em vez de disparar o seu próprio GET /api/ads. O POST
+// /api/ads/evento de impressão/clique é feito sempre, para qualquer origem do anúncio.
 import { useEffect, useRef } from 'react';
 import { useInicio } from '../context/InicioContext';
 import { useAd } from '../hooks/useAd';
@@ -20,10 +19,9 @@ const BASE = {
 };
 
 /**
- * `ad`/`prontoExterno` (Velocidade 6B, 15-set): quando a tela já pediu o anúncio
- * no seu topo — em paralelo com os dados dela, em vez de esperar por eles — passa-o
- * por prop e este componente não pede nada. Sem prop, mantém o comportamento
- * antigo (pede sozinho ao montar).
+ * `ad`/`prontoExterno`: quando a tela já pediu o anúncio no seu topo — em paralelo com os dados dela, em
+ * vez de esperar por eles — passa-o por prop e este componente não pede nada. Sem prop, pede sozinho ao
+ * montar.
  */
 export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adProp = undefined, prontoExterno = undefined }) {
   const inicio = useInicio(); // não-null só dentro do /home (ver Layout.jsx)
@@ -31,8 +29,8 @@ export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adPr
   const usaDoInicio = !vemDeFora && inicio !== null && pagina === 'inicio';
 
   const impRef = useRef(null);
-  // Velocidade 9: sem prop e fora do Início, lê-se a loja da sessão (lib/ads.js)
-  // em vez de pedir um anúncio só para esta tela.
+  // Sem prop e fora do Início, lê-se a loja da sessão (lib/ads.js) em vez de pedir um anúncio só para
+  // esta tela.
   const daLoja = useAd(pagina, { ativo: !usaDoInicio && !vemDeFora });
 
   const ad = vemDeFora ? adProp : usaDoInicio ? inicio.dados?.ad?.ad ?? null : daLoja.ad;
@@ -48,7 +46,7 @@ export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adPr
 
   if (!pronto || !ad) return null; // página OFF ou sem campanha → nada
 
-  // RODADA 12A — 'banner320x100' é a medida IAB padrão (a "large mobile
+  // 'banner320x100' é a medida IAB padrão (a "large mobile
   // banner"), para a página do sorteio. Uma campanha comprada em qualquer rede
   // vem nesta proporção e entra sem recorte. Vai por aspect-ratio e não por
   // altura fixa: a caixa reserva o lugar antes de a imagem chegar (nada salta) e

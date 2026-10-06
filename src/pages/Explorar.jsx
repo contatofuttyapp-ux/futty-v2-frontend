@@ -43,8 +43,9 @@ function distanciaKm(a, b) {
 
 const MEMBROS = (e) => `${e.membro_count} ${plural(e.membro_count, 'membro', 'membros')} · ${rotuloDoModo(e.modo_visibilidade)}`;
 
-// O que fica à direita do time, no card e no pop-up (29T, achado 157): o botão Entrar / Pedir entrada, o pedido enviado (com cancelar), o
-// "Você entrou!" (com "Ver o time", achado 159) ou o "Você já é membro". `larga`: no pop-up o botão ocupa a linha inteira.
+// O que fica à direita do time, no card e no pop-up: o botão Entrar / Pedir entrada, o pedido enviado (com
+// cancelar), o "Você entrou!" (com "Ver o time") ou o "Você já é membro". `larga`: no pop-up o botão ocupa
+// a linha inteira.
 function AcaoDoTime({ equipa, busy, aoPedir, aoCancelar, larga = false }) {
   const aberta = equipa.modo_visibilidade === 'publico_aberto';
   if (equipa.entrou_agora) {
@@ -83,8 +84,8 @@ function AcaoDoTime({ equipa, busy, aoPedir, aoCancelar, larga = false }) {
   );
 }
 
-// O card do time (29T, achado 157): embaixo do nome, "Bairro · Cidade" e o "Sobre o time" em até 2 linhas, cortado com "…". Tocar no card (fora do botão)
-// abre o pop-up com tudo; quem já é membro vai direto ao time, como sempre foi.
+// O card do time: embaixo do nome, "Bairro · Cidade" e o "Sobre o time" em até 2 linhas, cortado com "…".
+// Tocar no card (fora do botão) abre o pop-up com tudo; quem já é membro vai direto ao time.
 function CardDoTime({ equipa, busy, aoTocar, aoPedir, aoCancelar }) {
   const local = localDoTime(equipa);
   return (
@@ -95,7 +96,7 @@ function CardDoTime({ equipa, busy, aoTocar, aoPedir, aoCancelar }) {
     >
       <EscudoEquipa team={equipa} size={44} />
       <button type="button" data-abrir-time aria-label={`${equipa.nome}: ver sobre o time`} style={{ flex: 1, minWidth: 0, display: 'block', padding: 0, border: 'none', background: 'transparent', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
-        {/* Rodada 29Z (item 3e): o nome do time quebra em duas linhas em vez de ser cortado com "…" ("Racha da Asa Norte" saía "Racha da As…"
+        {/* O nome do time quebra em duas linhas em vez de ser cortado com "…" ("Racha da Asa Norte" saía "Racha da As…"
             em 360 px, com o botão "Pedir entrada" ao lado). */}
         <span data-nome-do-time style={{ display: 'block', fontFamily: RAJ, fontWeight: 800, fontSize: 15, lineHeight: 1.2, overflowWrap: 'anywhere' }}>{equipa.nome}</span>
         {local || equipa.dist != null ? (
@@ -116,8 +117,9 @@ function CardDoTime({ equipa, busy, aoTocar, aoPedir, aoCancelar }) {
   );
 }
 
-// O pop-up do time (29T, achado 157): escudo, nome, bairro e cidade, membros, aberto ou com aprovação, o "Sobre o time" inteiro e o mesmo botão.
-// Portal para o body (overlay fixo nunca dentro do [data-page], ver LoadingFutty.jsx). Esc, o X e o toque fora fecham.
+// O pop-up do time: escudo, nome, bairro e cidade, membros, aberto ou com aprovação, o "Sobre o time" inteiro
+// e o mesmo botão. Portal para o body (overlay fixo nunca dentro do [data-page], ver LoadingFutty.jsx).
+// Esc, o X e o toque fora fecham.
 function PopupDoTime({ equipa, busy, aoPedir, aoCancelar, aoFechar }) {
   useEffect(() => {
     const teclar = (e) => { if (e.key === 'Escape') aoFechar(); };
@@ -157,10 +159,11 @@ export default function Explorar() {
   const [loading, setLoading] = useState(true);
   const [pesquisa, setPesquisa] = useState('');
   const [geoPedida, setGeoPedida] = useState(false);
-  const [zona, setZona] = useState(''); // Rodada 29B (D): a cidade da pessoa, escolhida na lista (ou digitada)
+  const [zona, setZona] = useState(''); // a cidade da pessoa, escolhida na lista (ou digitada)
   const [zonaEscolhida, setZonaEscolhida] = useState(false);
   const [posUser, setPosUser] = useState(null); // {lat,lng} SÓ em memória — nunca enviada/guardada
-  // 29T (achado 161): de onde veio a posição decide o título da lista ("Perto de você" só com a localização; "Em <cidade>" com a cidade).
+  // De onde veio a posição decide o título da lista ("Perto de você" só com a localização; "Em <cidade>" com
+  // a cidade).
   const [origemPos, setOrigemPos] = useState(null); // 'localizacao' | 'cidade' | null
   const [cidadeDaPos, setCidadeDaPos] = useState(''); // a cidade como a pessoa a escolheu (não o que ela digita depois)
   const [raio, setRaio] = useState(null); // km (null = sem filtro de distância)
@@ -186,7 +189,7 @@ export default function Explorar() {
     };
   }, []);
 
-  // Rodada 29B (D): time SEM coordenada (a cidade dele nenhuma lista nem o Nominatim achou) aparece para quem escreve
+  // Time SEM coordenada (a cidade dele nenhuma lista nem o Nominatim achou) aparece para quem escreve
   // a cidade EXATAMENTE — sem acento, maiúscula nem espaço sobrando (mesma regra do motor).
   const filtradasTexto = equipas.filter(
     (e) =>
@@ -253,7 +256,8 @@ export default function Explorar() {
     try {
       const r = await apiFetch(`/api/teams/${equipa.slug}/pedir-entrada`, { method: 'POST', body: JSON.stringify({}) });
       const entrou = !!r?.entrou;
-      // 29T (achado 159): quem acabou de entrar não é "já era membro": o card comemora ("Você entrou!" + "Ver o time") e a contagem sobe 1.
+      // Quem acabou de entrar não é "já era membro": o card comemora ("Você entrou!" + "Ver o time") e a contagem
+      // sobe 1.
       setEquipas((cur) => depoisDePedirEntrada(cur, equipa.slug, entrou));
       setToast({ tipo: 'success', mensagem: entrou ? `Você entrou no time ${equipa.nome}!` : 'Pedido enviado. O admin decide e você vê o desfecho no Início.' });
     } catch (e) {
@@ -304,7 +308,7 @@ export default function Explorar() {
           </span>
         </button>
 
-        {/* Alternativa à permissão do browser: a MINHA cidade (Rodada 29B, D). Da lista (Brasil e Portugal) o ponto vem
+        {/* Alternativa à permissão do browser: a MINHA cidade. Da lista (Brasil e Portugal) o ponto vem
             da própria lista, na hora, sem chamada externa; fora dela o botão abaixo a geocodifica NO browser (nunca no
             nosso servidor). A posição resultante fica só em memória. */}
         <div style={{ marginTop: 12 }}>
@@ -348,7 +352,8 @@ export default function Explorar() {
         ) : null}
 
         <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 12, letterSpacing: '0.14em', color: '#9a8fc0', textTransform: 'uppercase', margin: '20px 2px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* 29I (achado 106): a lista traz times de entrada aberta E times com aprovação (com o botão PEDIR ENTRADA); o título antigo prometia só os abertos. */}
+          {/* A lista traz times de entrada aberta E times com aprovação (com o botão PEDIR ENTRADA); o título não pode
+              prometer só os abertos. */}
           {tituloDoRadar({ origem: origemPos, cidade: cidadeDaPos })} · {filtradas.length}
           <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(139,92,246,0.4), transparent)' }} />
         </div>

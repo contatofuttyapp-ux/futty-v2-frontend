@@ -1,4 +1,4 @@
-// Futty v2.0 — Telemetria ANÔNIMA de velocidade (Rodada 28, bloco E).
+// Futty v2.0 — Telemetria ANÔNIMA de velocidade.
 //
 // Substitui o botão de Diagnóstico para todo mundo: quando uma tela fecha (a pessoa foi para outra),
 // o app manda — uma vez por tela por sessão — quanto ela levou para ficar útil (a pintura sem F de
@@ -26,7 +26,7 @@ function destino() {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PALAVRA_DE_ROTA = /^[a-z]+(-[a-z]+)*$/;
-const ANTES_DO_SLUG = new Set(['teams', 'equipas', 'equipa', 'time', 'admin']); // 'equipa' = o endereço antigo (29I: /equipa → /time)
+const ANTES_DO_SLUG = new Set(['teams', 'equipas', 'equipa', 'time', 'admin']); // 'equipa' = o endereço antigo (/equipa → /time)
 const MAX_ROTAS = 20;
 
 /**
@@ -103,7 +103,7 @@ function contexto() {
 }
 
 // Uma vez por tela por SESSÃO — a aba do site ou a abertura do app. Guardada na sessionStorage para
-// valer também depois de recarregar a página (a cena rodada28 viu o /home ir duas vezes); sem ela
+// valer também depois de recarregar a página (numa cena de prova o /home foi duas vezes); sem ela
 // (modo privado), vale a memória desta abertura.
 const CHAVE_ENVIADAS = 'futty_telemetria_telas';
 const enviadas = new Set();

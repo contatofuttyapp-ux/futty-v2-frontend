@@ -4,11 +4,11 @@ import { useApiComCache } from './useApiComCache';
 import { useSessao } from '../context/SessaoContext';
 
 /**
- * Lista de equipas do utilizador autenticado. Lê do SessaoContext (12-set,
- * "Velocidade 2") — carregado 1x por sessão e partilhado por toda a app, em
+ * Lista de equipas do utilizador autenticado. Lê do SessaoContext —
+ * carregado 1x por sessão e partilhado por toda a app, em
  * vez de cada tela disparar o seu próprio /api/teams a cada navegação. Na
  * rota /home o SessaoContext é hidratado pelo InicioContext a partir do
- * payload agregado de /api/inicio (11-set, "1 pedido só") — este hook não
+ * payload agregado de /api/inicio (1 pedido só) — este hook não
  * precisa saber disso, só lê o resultado final.
  */
 export function useTeams() {
@@ -16,8 +16,10 @@ export function useTeams() {
   return { teams, loading: carregandoTeams, error: erroTeams };
 }
 
-/** Detalhes de uma equipa + membros. Cache local (13-set, "Velocidade 3"):
- * mostra a última visita na hora, atualiza por trás. */
+/**
+ * Detalhes de uma equipa + membros. Cache local:
+ * mostra a última visita na hora, atualiza por trás.
+ */
 export function useTeam(slug) {
   const { data, loading, error, reload } = useApiComCache(slug ? `/api/teams/${slug}` : null, slug ? `team:${slug}` : null);
   return {

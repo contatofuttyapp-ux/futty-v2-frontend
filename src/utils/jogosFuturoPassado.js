@@ -1,6 +1,6 @@
 // Futty v2.0 — separa os jogos do time em "futuros" e "passados" (aba Jogos do admin).
-// Achado 115 (Rodada 29J): a API (`GET /api/teams/:slug/games`) devolve `data` DECRESCENTE —
-// certo para "Passados" (o mais recente primeiro), errado para "Futuros" (mostrava o jogo mais
+// A API (`GET /api/teams/:slug/games`) devolve `data` DECRESCENTE —
+// certo para "Passados" (o mais recente primeiro), errado para "Futuros" (mostraria o jogo mais
 // DISTANTE no topo e o próximo por último). Aqui "Futuros" sai sempre crescente: o próximo jogo
 // primeiro. "Passados" mantém a ordem que chegou (decrescente, o mais recente primeiro).
 

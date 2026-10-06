@@ -1,4 +1,4 @@
-// Futty v2.0 — Campeonato (Vaga 11B): hub (lista + criar) e detalhe (tabela/
+// Futty v2.0 — Campeonato: hub (lista + criar) e detalhe (tabela/
 // bracket + lançar resultado + celebração). Modelo N times, Storage no backend.
 // A cerimónia do sorteio é REUTILIZADA para montar os times.
 import { useEffect, useState } from 'react';
@@ -16,7 +16,7 @@ import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO
 import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
 import '../styles/app.css';
 
-// O texto de ajuda do ComporTimes é de quem o usa (29S): o Campeonato mantém o de sempre.
+// O texto de ajuda do ComporTimes é de quem o usa: este é o do Campeonato.
 const AJUDA_DOS_TIMES = 'Toque em um jogador para colocá-lo no time selecionado. Quem sobra não joga (não é reserva). Você pode deixar tudo vazio e criar times só com nome (ex.: 5º A vs 5º B).';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -91,7 +91,7 @@ function Wizard({ slug, onCancel, onCriado }) {
   const [nomes, setNomes] = useState(['', '', '', '']);
   const [convidados, setConvidados] = useState([]);
   const [convInput, setConvInput] = useState('');
-  const [atrib, setAtrib] = useState([]); // Vaga 11C — plantel por time (chaves)
+  const [atrib, setAtrib] = useState([]); // plantel por time (chaves)
   const [criando, setCriando] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -183,7 +183,7 @@ function Wizard({ slug, onCancel, onCriado }) {
             ))}
             {nomes.length < 8 ? <button type="button" onClick={addTime} style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.06em', color: '#f0c94a', background: 'rgba(212,160,23,.08)', border: '1px dashed rgba(212,160,23,.5)', padding: '7px 12px', cursor: 'pointer', clipPath: 'polygon(8% 0,92% 0,100% 28%,100% 72%,92% 100%,8% 100%,0 72%,0 28%)' }}>＋ Time</button> : null}
 
-            {/* 29Q: os textos vêm de utils/convidadoSemApp.js, os mesmos do Jogo e do Novo jogo (aqui não há ranking, a linha é a do campeonato). */}
+            {/* Os textos vêm de utils/convidadoSemApp.js, os mesmos do Jogo e do Novo jogo (aqui não há ranking, a linha é a do campeonato). */}
             <div className="section-title" data-convidado-titulo>{CONVIDADO_TITULO}</div>
             <p className="texto-apoio" data-convidado-linha style={{ margin: '2px 0 8px' }}>{CONVIDADO_LINHA_CAMPEONATO}</p>
             <div className="row" style={{ marginBottom: 8 }}>

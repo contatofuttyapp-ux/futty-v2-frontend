@@ -19,10 +19,12 @@ function MiniAvatar({ p, size = 20 }) {
   return <span style={{ width: size, height: size, display: 'grid', placeItems: 'center', color: 'rgba(201,182,255,0.9)' }}><SilhuetaJogador size="92%" interrogacao={false} /></span>;
 }
 
-// Rodada 29S: o texto de ajuda vem de QUEM USA (`ajuda`) — o Campeonato tem o dele ("Quem sobra não joga…", "ex.: 5º A vs 5º B"), o Jogo e o Jogo
-// passado têm o seu. `opcional` (omissão: sim, como no Campeonato) escreve o "(opcional)" do título; no Jogo montar os times não é opcional.
-// `semJogadores` troca a frase de quando não há ninguém para pôr nos times (a de omissão manda "voltar atrás", que só existe nos passos).
-// Bloco B: `titulo` (omissão: "Monte os times") — o Jogo passado escreve o seu NO PASSADO, porque tudo ali já aconteceu; `titulo={null}` o esconde.
+// O texto de ajuda vem de QUEM USA (`ajuda`) — o Campeonato tem o dele ("Quem sobra não joga…", "ex.: 5º A
+// vs 5º B"), o Jogo e o Jogo passado têm o seu. `opcional` (omissão: sim, como no Campeonato) escreve o
+// "(opcional)" do título; no Jogo montar os times não é opcional. `semJogadores` troca a frase de quando
+// não há ninguém para pôr nos times (a de omissão manda "voltar atrás", que só existe nos passos).
+// `titulo` (omissão: "Monte os times") — o Jogo passado escreve o seu NO PASSADO, porque tudo ali já
+// aconteceu; `titulo={null}` o esconde.
 export default function ComporTimes({ nomes, pool, atrib, onChangeAtrib, cores, ajuda = null, opcional = true, titulo = 'Monte os times', semJogadores = 'Sem jogadores. Volte atrás para juntar convidados, ou crie só com os nomes.' }) {
   const CORES = cores || CORES_PADRAO;
   const [timeSelRaw, setTimeSel] = useState(0);

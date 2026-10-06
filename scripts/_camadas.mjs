@@ -1,9 +1,12 @@
-// Futty v2.0 — Rodada 29X: as camadas do "ouro vivo" no tamanho cheio, renderizadas pela receita da bancada de 23-set (backend/scripts/_bench/
-// testar-icone.js: o F real de futtyMonograma.js em ouro com degradê, reflexo e brilho, sobre a vinheta SEM aro).
+// Futty v2.0 — as camadas do "ouro vivo" no tamanho cheio, renderizadas pela receita da bancada
+// (backend/scripts/_bench/testar-icone.js: o F real de futtyMonograma.js em ouro com degradê, reflexo e
+// brilho, sobre a vinheta SEM aro).
 //
-// A receita vive no backend e o sharp do backend é OUTRA cópia do libvips (a do frontend é a 0.32, a do backend a 0.35): as duas no mesmo processo
-// derrubam o Node (segfault). Por isso a renderização roda num processo filho do backend (scripts/_bench/renderizar-camadas.js), que grava PNG numa
-// pasta temporária; aqui eles voltam como Buffer, para o gerar-icones.mjs e o gerar-splash.mjs comporem, redimensionarem e gravarem com o sharp do frontend.
+// A receita vive no backend e o sharp do backend é OUTRA cópia do libvips (a do frontend é a 0.32, a do
+// backend a 0.35): as duas no mesmo processo derrubam o Node (segfault). Por isso a renderização roda num
+// processo filho do backend (scripts/_bench/renderizar-camadas.js), que grava PNG numa pasta temporária;
+// aqui eles voltam como Buffer, para o gerar-icones.mjs e o gerar-splash.mjs comporem, redimensionarem e
+// gravarem com o sharp do frontend.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

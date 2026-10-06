@@ -1,7 +1,8 @@
-// Futty v2.0 — Rodada 29L (achado 130): a faixa que rola e AVISA que rola. A borda por onde ainda há conteúdo esmaece (CSS em app.css,
-// `[data-mais-dir]` / `[data-mais-esq]`) e uma seta, que também é botão, rola uma "página". Sem conteúdo escondido, não aparece nada.
-// `className` e o resto vão para o trilho (é nele que mora o `overflow-x`); `envoltorioClassName` é para o que o trilho fazia de caixa
-// (largura, margem) — a seta fica presa ao envoltório, não rola junto.
+// Futty v2.0 — A faixa que rola e AVISA que rola. A borda por onde ainda há conteúdo esmaece (CSS em
+// app.css, `[data-mais-dir]` / `[data-mais-esq]`) e uma seta, que também é botão, rola uma "página". Sem
+// conteúdo escondido, não aparece nada.
+// `className` e o resto vão para o trilho (é nele que mora o `overflow-x`); `envoltorioClassName` é para o
+// que o trilho fazia de caixa (largura, margem) — a seta fica presa ao envoltório, não rola junto.
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useIndicadorDeRolagem } from '../hooks/useIndicadorDeRolagem';
 import { passoDaSeta } from '../utils/faixaRolavel';

@@ -1,7 +1,10 @@
-// Futty v2.0 — Rodada 29S, bloco A (achados 151 e 152): os times no JOGO, onde a pessoa já sabe quem confirmou.
-//   · EscolhaDosTimes: "Como vão sair os times?" e dois cartões lado a lado — Sortear (dourado, a máquina) e Montar à mão (roxo, a pessoa escolhe).
-//   · MontarTimesAMao: a composição à mão com quem confirmou + os convidados sem app da tela; "Salvar times" só quando cada time tem 1 jogador.
-// Quem desenha só desenha: o Jogo.jsx guarda o estado, chama o sorteio e o POST /api/games/:id/times-manuais.
+// Futty v2.0 — os times no JOGO, onde a pessoa já sabe quem confirmou.
+//   · EscolhaDosTimes: "Como vão sair os times?" e dois cartões lado a lado — Sortear (dourado, a máquina)
+//     e Montar à mão (roxo, a pessoa escolhe).
+//   · MontarTimesAMao: a composição à mão com quem confirmou + os convidados sem app da tela; "Salvar times"
+//     só quando cada time tem 1 jogador.
+// Quem desenha só desenha: o Jogo.jsx guarda o estado, chama o sorteio e o
+// POST /api/games/:id/times-manuais.
 import { useState } from 'react';
 import { Hand, Shuffle } from 'lucide-react';
 import ComporTimes from './ComporTimes';

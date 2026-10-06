@@ -1,4 +1,4 @@
-// Futty v2.0 — Pré-aquecimento (VELOCIDADE 6B, 15-set). IDEIA DO DONO:
+// Futty v2.0 — Pré-aquecimento. IDEIA DO DONO:
 //
 //   "o app abre leve e, em segundo plano, baixa o resto — dados e imagens de
 //    todas as abas — para que o primeiro toque em qualquer aba seja instantâneo."
@@ -20,19 +20,16 @@ import { marcarPreaquecimento, registarPreaquecimento, marcarPreaquecimentoAgend
 import { esperarSeOcupado, quandoParado, respirar } from './ritmo';
 import { urlImagem } from '../utils/avatar';
 
-// VELOCIDADE 8 (16-set) — 4 → 2. Quatro imagens ao mesmo tempo não é só banda:
-// são quatro descodificações a disputar a thread com a tela que a pessoa está a
-// tocar. Duas adiantam quase tanto e não se sentem.
+// Duas imagens em paralelo, não quatro: quatro ao mesmo tempo não é só banda, são quatro descodificações a
+// disputar a thread com a tela que a pessoa está a tocar. Duas adiantam quase tanto e não se sentem.
 const IMAGENS_EM_PARALELO = 2;
-// Teto de imagens por aquecimento: um time grande tem 30+ avatares e não vale
-// a pena descer todos — as primeiras são as que aparecem nas listas. 24 → 12 na
-// Rodada 29B (conta pesada): a conta com a Resenha cheia de fotos disputava o
-// aparelho com 24 downloads logo depois de abrir; as 12 primeiras são o que cabe
-// em duas telas.
+// Teto de imagens por aquecimento: um time grande tem 30+ avatares e não vale a pena descer todos — as
+// primeiras são as que aparecem nas listas. 12 e não 24 (conta pesada): a conta com a Resenha cheia de fotos
+// disputava o aparelho com 24 downloads logo depois de abrir; as 12 primeiras são o que cabe em duas telas.
 const MAX_IMAGENS = 12;
-// Velocidade 7B: a mesma janela de frescor das telas (useApiComCache, Figurinha).
+// A mesma janela de frescor das telas (useApiComCache, Figurinha).
 // Se a pessoa abriu a Figurinha antes de o aquecimento chegar aos selos, a tela
-// já os buscou e gravou — pedir de novo por trás era o "selos em dobro".
+// já os buscou e gravou — pedir de novo por trás seria o "selos em dobro".
 const FRESCO_MS = 30000;
 
 let jaCorreu = false;
@@ -42,12 +39,10 @@ export function esquecerPreaquecimento() {
   jaCorreu = false;
 }
 
-// VELOCIDADE 8 — O emRepouso() de antes usava requestIdleCallback e caía num
-// setTimeout(1500) quando ele não existe. O Safari NÃO TEM requestIdleCallback:
-// no iPhone era SEMPRE o setTimeout, ou seja, isto arrancava 1,5 s depois do
-// Início — em cima do primeiro toque da pessoa. Agora quem decide é o
-// lib/ritmo.js: 1ª pintura feita + 3 s sem toque nenhum (mais 5 s na primeira
-// abertura de uma versão nova, que é a pior de todas).
+// Quem decide é o lib/ritmo.js: 1ª pintura feita + 3 s sem toque nenhum (mais 5 s
+// na primeira abertura de uma versão nova, que é a pior de todas). Sem
+// requestIdleCallback: o Safari NÃO TEM, e o setTimeout(1500) de reserva
+// arrancava isto 1,5 s depois do Início — em cima do primeiro toque da pessoa.
 
 // Ligação fraca ou "poupar dados" → não se gasta megabyte nenhum a adivinhar.
 function ligacaoPermite() {
@@ -146,10 +141,9 @@ export function preaquecer(userId, dadosInicio) {
       // JSON.stringify de um objeto grande — trabalho síncrono a valer).
       await esperarSeOcupado();
       await respirar();
-      // Rodada 12A: o passo fica anotado em qualquer travada que caia aqui. O
-      // caro não é esperar a rede, é o gravarCache logo abaixo (JSON.stringify
-      // de um payload grande é trabalho síncrono a valer) — e sem o nome do
-      // passo o relatório dizia só "pré-aquecimento".
+      // O passo fica anotado em qualquer travada que caia aqui. O caro não é esperar a rede, é o gravarCache logo
+      // abaixo (JSON.stringify de um payload grande é trabalho síncrono a valer) — e sem o nome do passo o
+      // relatório diria só "pré-aquecimento".
       const fimDaTarefa = tarefaEmCurso(`preaquecimento:${chave}`);
       try {
         const d = await apiFetch(rota, { segundoPlano: true });
@@ -196,7 +190,7 @@ export function preaquecer(userId, dadosInicio) {
     const imagens = await emLotes(tarefas, IMAGENS_EM_PARALELO);
     marcarPreaquecimento(false);
     registarPreaquecimento({ itens, imagens, ms: Date.now() - t0 });
-    // Velocidade 9: teto de 9 s. O relatório do build 28 mostrou este trabalho
+    // Teto de 9 s. Um relatório mostrou este trabalho
     // "adiado (toques)" a sessão inteira — e a Figurinha, logo a seguir, a
     // pagar 540 ms pelos selos que já estariam em casa. Os passos continuam a
     // ceder a vez entre si (esperarSeOcupado), por isso correr não atropela.

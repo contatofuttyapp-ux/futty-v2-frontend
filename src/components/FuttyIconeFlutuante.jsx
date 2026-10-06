@@ -1,6 +1,7 @@
-// Futty v2.0 — Rodada 29D: o ícone do app flutuando, para a landing e o Avise-me — a mesma física do FuttyLoader (sombra
-// no chão → bob → sway, classes em app.css). Substitui o FuttyLockup: o F solto como marca saiu (lei da casa, 29D), o F de
-// marca vai dentro do ícone da loja (FuttyLogo variant="icone"). Na landing a aura (.landing-glow) fica atrás, intacta.
+// Futty v2.0 — O ícone do app flutuando, para a landing e o Avise-me — a mesma física do FuttyLoader
+// (sombra no chão → bob → sway, classes em app.css). O F solto como marca não existe (lei da casa): o F de
+// marca vai dentro do ícone da loja (FuttyLogo variant="icone"). Na landing a aura (.landing-glow) fica
+// atrás, intacta.
 import FuttyLogo from './FuttyLogo';
 
 export default function FuttyIconeFlutuante({ size = 120 }) {

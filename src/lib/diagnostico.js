@@ -74,7 +74,7 @@ export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = nu
     em: new Date().toISOString(),
   });
 
-  // Rodada 28: as chamadas da TELA (não as do pré-aquecimento) seguem com ela para a telemetria.
+  // As chamadas da TELA (não as do pré-aquecimento) seguem com ela para a telemetria.
   const nav = navegacaoAberta;
   if (nav && !segundoPlano && nav.chamadas.length < 40) nav.chamadas.push({ rota, ms, motorMs });
   if (metodo === 'GET' && !segundoPlano) marcarDadosDaTela();
@@ -82,21 +82,20 @@ export function registarChamada({ rota, metodo = 'GET', status, ms, motorMs = nu
 
 /**
  * Chegaram dados PARA A TELA: contam para o "dados prontos" da navegação aberta
- * (a última a chegar é a que manda). Velocidade 7B: só leituras pedidas pela
- * própria tela — o pré-aquecimento e as escritas (impressão de anúncio, voto)
- * entravam aqui, e o Ranking aparecia com "dados em 436 ms" que nem eram dele.
+ * (a última a chegar é a que manda). Só leituras pedidas pela própria tela
+ * contam: o pré-aquecimento e as escritas (impressão de anúncio, voto) não são
+ * dados da tela — se entrassem, o Ranking apareceria com "dados em 436 ms" que
+ * nem eram dele.
  */
 export function marcarDadosDaTela() {
   if (!navegacaoAberta || performance.now() - navegacaoAberta.t0 >= JANELA_DA_NAVEGACAO_MS) return;
   const nav = navegacaoAberta;
   const ms = Math.round(performance.now() - nav.t0);
 
-  // VELOCIDADE 9 (23-set) — `msDados` era "a última leitura que chegou nesta
-  // rota", e ia sendo empurrada para a frente enquanto a pessoa MEXIA na tela.
-  // O relatório do build 28 trouxe "/figurinha dados 5260 ms" e não era espera
-  // nenhuma: a tela abriu em 1,1 s e os 4 s seguintes foram o dono a tocar em
-  // três fundos — cada toque manda um PATCH /api/me e uma releitura atrás. O
-  // número mandava consertar a coisa errada.
+  // `msDados` não é "a última leitura que chegou nesta rota": assim ela seria empurrada para a frente
+  // enquanto a pessoa MEXE na tela (cada toque manda um PATCH /api/me e uma releitura atrás). Já
+  // apareceu "/figurinha dados 5260 ms" sem espera nenhuma: a tela abriu em 1,1 s e os 4 s seguintes
+  // foram o dono a tocar em três fundos. Esse número mandaria consertar a coisa errada.
   //
   // A abertura acaba no primeiro toque DESTA navegação: daí para a frente o que
   // chega é consequência do que a pessoa fez, não custo de abrir. Fica guardado
@@ -106,10 +105,10 @@ export function marcarDadosDaTela() {
   if (depoisDoToque) nav.msDadosAposToque = ms;
   else nav.msDados = ms;
 
-  // Rodada 8A: dados que chegam DEPOIS da pintura também entram no registo já
-  // guardado. Antes ficava "dados —" e o doCache nunca podia ser verdade (o
-  // registo copiava o msDados no instante da pintura, quando ainda era null):
-  // "pintaram do cache: 0" em todos os relatórios.
+  // Dados que chegam DEPOIS da pintura também entram no registo já
+  // guardado. O registo copia o msDados no instante da pintura, quando ainda é null: sem isto
+  // ficaria "dados —" e o doCache nunca poderia ser verdade ("pintaram do cache: 0" em todos
+  // os relatórios).
   const registo = nav.registo;
   if (registo) {
     if (depoisDoToque) registo.msDadosAposToque = nav.msDadosAposToque;
@@ -120,22 +119,21 @@ export function marcarDadosDaTela() {
   }
 }
 
-// FLUIDEZ 2 (16-set) — a PRIMEIRA ida ao Início desta abertura.
+// A PRIMEIRA ida ao Início desta abertura.
 //
-// A Velocidade 8 protegia o `arranque.inicioMs` com uma janela de 10 s, para um
-// regresso ao Início lá mais à frente não ser contado como arranque. Só que a
-// janela apanhava o caso certo pelo motivo errado: quem abre o app em `/login`
+// Serve para um regresso ao Início lá mais à frente não ser contado como arranque
+// (`arranque.inicioMs`). Uma janela de 10 s não serve: quem abre o app em `/login`
 // (ou em `/`, com redireccionamento) leva mais de 10 s a chegar ao Início — o
-// tempo de escrever a senha conta — e o relatório vinha com "Início —", que é
-// justamente o número que se queria.
+// tempo de escrever a senha conta — e o relatório viria com "Início —", que é
+// justamente o número que se quer.
 //
 // O que distingue o arranque de um regresso não é o relógio, é a ORDEM: o
 // arranque é a primeira vez que se NAVEGA para o Início. Se essa primeira vez
-// não chegou a pintar (a pessoa saiu antes), não se marca nada — melhor sem
+// não chega a pintar (a pessoa saiu antes), não se marca nada — melhor sem
 // número do que com um número de outra coisa.
 let jaHouveInicio = false;
 
-// Rodada 28: quem quer saber quando uma tela FECHA (a telemetria anônima, lib/telemetria.js, que
+// Quem quer saber quando uma tela FECHA (a telemetria anônima, lib/telemetria.js, que
 // chega depois do arranque e se registra aqui). Fechar = começou outra navegação.
 let aoFecharTela = null;
 export function registrarFechoDeTela(fn) {
@@ -157,11 +155,11 @@ export function marcarNavegacao(rota) {
   }
 }
 
-// ─── Marcas finas da navegação (Rodada 8A, 15-set) ───────────────────────────
-// O build 18 mandou "Ranking: pintura 1866 ms, dados 809, esperou []" — nenhum
-// loader na frente e mesmo assim mais de um segundo e meio sem tela. Sem saber
-// ONDE esse tempo caiu, qualquer conserto é palpite. Cada navegação guarda agora
-// os instantes (ms desde a troca de rota):
+// ─── Marcas finas da navegação ───────────────────────────────────────────
+// Sem saber ONDE o tempo de uma navegação caiu, qualquer conserto é palpite (já houve
+// "Ranking: pintura 1866 ms, dados 809, esperou []": nenhum loader na frente e mesmo
+// assim mais de um segundo e meio sem tela). Cada navegação guarda os instantes
+// (ms desde a troca de rota):
 //   lista     — a tela commitou o conteúdo (quem chama: useLayoutEffect)
 //   listaNova — a resposta fresca substituiu o que veio do cache (idem)
 //   loaderSaiu — o último F de carregamento saiu
@@ -183,17 +181,14 @@ export function marcarInstante(nome) {
   nav.marcas[nome] = ms;
 }
 
-// ─── Medidor de travadas (VELOCIDADE 8, 16-set) ──────────────────────────────
-// O Pedro, build 19: "quando atualizo ou reinstalo, a primeira vez trava muito
-// até fluir; depois flui bem; mesmo assim às vezes engasga ao trocar de página".
-// "Trava" não é medida: isto transforma-o em número. UM laço de
-// requestAnimationFrame para o app inteiro (o de antes nascia e morria a cada
-// navegação) conta os quadros que demoraram mais do que deviam e — o que
-// interessa mesmo — diz em que FASE do app cada travada caiu. Sem a fase,
+// ─── Medidor de travadas ─────────────────────────────────────────────────
+// "Trava" não é medida: isto transforma-a em número. UM laço de
+// requestAnimationFrame para o app inteiro conta os quadros que demoraram mais do que deviam e — o que
+// interessa mesmo — diz em que fase do app cada travada caiu. Sem a fase,
 // "travou 900 ms" não aponta para nenhum conserto.
 //
-// O mesmo laço alimenta as marcas finas da navegação (quadro1/quadroMaior da
-// Rodada 8A): é a mesma leitura, não vale a pena fazê-la duas vezes.
+// O mesmo laço alimenta as marcas finas da navegação (quadro1/quadroMaior):
+// é a mesma leitura, não vale a pena fazê-la duas vezes.
 const QUADRO_LEVE_MS = 50;   // > 50 ms: a rolagem já se sente aos solavancos
 const QUADRO_GRAVE_MS = 100; // > 100 ms: a pessoa vê a tela parar
 const FASE_ARRANQUE_MS = 10000;
@@ -205,7 +200,7 @@ const MAX_TRAVADAS = 12;
 
 const travadas = { leves: 0, graves: 0, pior: null, porFase: {}, piores: [] };
 let ultimoGesto = -Infinity;
-// Velocidade 9: só DEDO/tecla — `ultimoGesto` inclui `scroll`, e o app rola
+// Só DEDO/tecla — `ultimoGesto` inclui `scroll`, e o app rola
 // sozinho ao trocar de tela (subir ao topo). Para atribuir travadas à rolagem
 // isso é o certo; para saber se a PESSOA já mexeu (ver marcarDadosDaTela) daria
 // falso positivo em toda navegação.
@@ -213,18 +208,17 @@ let ultimoToque = -Infinity;
 let preaquecendo = false;
 let lacoLigado = false;
 
-// RODADA 12A (16-set) — o app em segundo plano não é uma travada.
+// O app em segundo plano não é uma travada.
 //
-// O build 21 veio com "pior 96003 ms" no relatório. Não houve travada nenhuma: o
-// Pedro trocou de app e o requestAnimationFrame PAROU, como o WebKit manda. O
-// intervalo entre o último quadro antes de sair e o primeiro à volta é o tempo
-// com o telefone noutra coisa — e entrava na conta como o pior engasgo de todos,
-// afogando os números verdadeiros.
+// Quando o app vai para segundo plano o requestAnimationFrame PARA, como o WebKit manda (já houve "pior
+// 96003 ms" no relatório sem travada nenhuma: o Pedro tinha trocado de app). O intervalo entre o
+// último quadro antes de sair e o primeiro à volta é o tempo com o telefone noutra coisa — e entraria
+// na conta como o pior engasgo de todos, afogando os números verdadeiros.
 //
-// Agora esse tempo é medido à parte, e nenhum intervalo que atravesse uma ida ao
+// Por isso esse tempo é medido à parte, e nenhum intervalo que atravesse uma ida ao
 // segundo plano conta como travada.
 // Acima disto nenhum quadro é trabalho nosso: é o sistema a ter parado o app.
-// O pior engasgo verdadeiro medido em campo foi 6,4 s (build 20, o cromo a
+// O pior engasgo verdadeiro medido em campo foi 6,4 s (o cromo a
 // compor); 15 s dá folga de sobra sem deixar passar uma suspensão.
 const QUADRO_IMPOSSIVEL_MS = 15000;
 const segundoPlano = { vezes: 0, msTotal: 0, maiorMs: 0, semEvento: 0 };
@@ -251,9 +245,9 @@ function ouvirVisibilidade() {
   });
 }
 
-// ─── Tarefa em curso (RODADA 12A) ────────────────────────────────────────────
-// A fase diz QUANDO a travada caiu; isto diz o que estava a correr. No build 21
-// ficou uma travada de 5,7 s aos 9,9 s do arranque marcada só como "arranque" —
+// ─── Tarefa em curso ────────────────────────────────────────────
+// A fase diz QUANDO a travada caiu; isto diz o que estava a correr. Já ficou
+// uma travada de 5,7 s aos 9,9 s do arranque marcada só como "arranque" —
 // e "arranque" não aponta para conserto nenhum. Quem faz trabalho que pode
 // segurar a thread abre uma tarefa e fecha-a no fim; o que estiver aberto no
 // instante do quadro perdido fica anotado com ele.
@@ -312,7 +306,7 @@ function registarTravada(gap, fim) {
   //
   // O teto é a rede para quando o `visibilitychange` NÃO chega: o WKWebView
   // suspenso com o ecrã bloqueado é um caso conhecido no Capacitor, e sem isto o
-  // "pior 96003 ms" do build 21 voltava por outra porta. Nenhum trabalho nosso
+  // "pior 96003 ms" já medido voltava por outra porta. Nenhum trabalho nosso
   // segura a thread principal por mais de QUADRO_IMPOSSIVEL_MS — o pior medido
   // em campo foi 6,4 s.
   if (voltouEm > inicio || gap > QUADRO_IMPOSSIVEL_MS || (typeof document !== 'undefined' && document.hidden)) {
@@ -346,7 +340,7 @@ function ligarMedidorDeQuadros() {
     if (anterior != null) {
       const gap = agora - anterior;
       if (gap > QUADRO_LEVE_MS) registarTravada(gap, agora);
-      // Marcas finas da navegação em curso (Rodada 8A), enquanto ela não pinta.
+      // Marcas finas da navegação em curso, enquanto ela não pinta.
       const nav = navegacaoAberta;
       if (nav && nav.msPintura == null && agora - nav.t0 < JANELA_DA_NAVEGACAO_MS) {
         if (nav.quadroAnterior == null) nav.marcas.quadro1 = Math.max(0, Math.round(agora - nav.t0));
@@ -363,14 +357,14 @@ function ligarMedidorDeQuadros() {
   requestAnimationFrame(laco);
 }
 
-// ─── Marcas do arranque (VELOCIDADE 8) ───────────────────────────────────────
+// ─── Marcas do arranque ───────────────────────────────────────
 // `compilacaoMs` é o performance.now() lido na PRIMEIRA linha do corpo do
 // main.jsx. Por ser ESM, nessa altura todos os módulos importados já foram
 // buscados, lidos e executados — ou seja, o número é HTML + download + parse +
 // COMPILAÇÃO de tudo o que está no modulepreload. É o custo que o Pedro sente
 // na primeira abertura depois de instalar/atualizar, quando o WebKit ainda não
 // tem cache de bytecode nenhum.
-// `entrouPor` (Fluidez 2): a rota em que o app abriu. Sem ela o `inicioMs` é
+// `entrouPor`: a rota em que o app abriu. Sem ela o `inicioMs` é
 // ambíguo — 1200 ms a abrir direto no Início e 18000 ms a passar pelo login são
 // números de coisas diferentes, e o relatório tem de dizer qual é qual.
 const arranque = { compilacaoMs: null, reactMs: null, inicioMs: null, entrouPor: null };
@@ -468,7 +462,7 @@ function maiorIntervalo(nav) {
 // é o que a pessoa quer ver. Enquanto houver loader no ecrã, a tela real ainda
 // não está lá, e o relógio continua a correr.
 //
-// O motivo (Velocidade 7B) diz QUEM segurou a pintura: 'codigo' (o chunk da tela
+// O motivo diz QUEM segurou a pintura: 'codigo' (o chunk da tela
 // a carregar), 'sessao' (AuthGuard à espera da sessão/perfil) ou 'tela' (a
 // própria tela sem dados). Fica gravado em cada navegação.
 const loadersAtivos = new Map(); // motivo -> quantos
@@ -483,7 +477,7 @@ export function loaderSaiu(motivo = 'tela') {
   if (resto > 0) loadersAtivos.set(motivo, resto);
   else loadersAtivos.delete(motivo);
   if (loadersAtivos.size === 0) {
-    // O ÚLTIMO a sair antes da pintura é o que conta (Rodada 8A).
+    // O ÚLTIMO a sair antes da pintura é o que conta.
     if (navegacaoAberta && navegacaoAberta.msPintura == null) {
       navegacaoAberta.marcas.loaderSaiu = Math.round(performance.now() - navegacaoAberta.t0);
     }
@@ -517,47 +511,34 @@ export function marcarPintura() {
     msPintura: nav.msPintura,
     // Pode ficar null: telas que pintam sem pedir nada.
     msDados: nav.msDados,
-    // Velocidade 9: leituras que a PESSOA provocou depois de a tela abrir
+    // Leituras que a PESSOA provocou depois de a tela abrir
     // (tocar num fundo, votar). Não é custo de abertura — ver marcarDadosDaTela.
     msDadosAposToque: nav.msDadosAposToque,
-    // Que loaders a pintura esperou (vazio = nenhum) e, desde a Rodada 8A, o
+    // Que loaders a pintura esperou (vazio = nenhum) e o
     // maior intervalo entre instantes seguidos até a pintura.
     esperou: [...nav.esperou, ...(intervalo ? [intervalo] : [])],
-    // Rodada 8A: os instantes finos (ver marcarInstante). É o MESMO objeto das
+    // Os instantes finos (ver marcarInstante). É o MESMO objeto das
     // marcas da navegação: uma imagem que chega depois da pintura ainda entra.
     marcas: nav.marcas,
-    // Pintou ANTES de os dados chegarem = veio do cache local. É exactamente o
-    // que a "Velocidade 3/4" foi buscar, e aqui vê-se se está a acontecer.
+    // Pintou ANTES de os dados chegarem = veio do cache local; aqui vê-se se isso está a acontecer.
     doCache: nav.msDados != null && nav.msPintura < nav.msDados,
     em: new Date().toISOString(),
   };
   nav.registo = registo;
   guardar(navegacoes, registo);
   medirLargura();
-  // VELOCIDADE 8 — a 1ª tela a pintar é o sinal de partida do resto (ver
+  // A 1ª tela a pintar é o sinal de partida do resto (ver
   // aposPrimeiraPintura). E se essa tela for o Início, o instante fica no
   // arranque: é o "c ms" do resumo.
   //
-  // Fluidez 2: quem manda é a ORDEM, não o relógio (ver primeiraIdaAoInicio).
+  // Quem manda é a ORDEM, não o relógio (ver primeiraIdaAoInicio).
   if (arranque.inicioMs == null && nav.primeiraIdaAoInicio) {
     arranque.inicioMs = Math.round(performance.now());
   }
   anunciarPrimeiraPintura();
 }
 
-/**
- * Algo que devia ter aparecido e não apareceu (VELOCIDADE 5).
- *
- * Chamadas que falham já se veem pelo estado na lista de cima; isto é para o
- * que morre em silêncio — o cromo do Início que fica no placeholder para
- * sempre, por exemplo. Sem um registo destes, a única prova de que aconteceu é
- * a pessoa dizer "ficou desfocado", e isso não diz PORQUÊ.
- *
- * `area` diz onde ('cromo'), `causa` diz o quê ('timeout-indexeddb',
- * 'blob-nulo', 'erro'), `detalhe` é a mensagem do erro quando há uma. Nunca
- * leva dados do utilizador.
- */
-// ─── Velocidade 6B (15-set) ──────────────────────────────────────────────────
+/** Algo que devia ter aparecido e não apareceu. */
 
 let preaquecimento = null;
 let preaquecimentoEspera = null;
@@ -583,8 +564,8 @@ export function marcarPreaquecimentoAgendado(esperaMs) {
 
 // Imagens do proxy: quantas, quanto tempo, e quantas vieram do cache do browser.
 // `transferSize === 0` numa entrada de performance significa exatamente isso —
-// o pedido existiu, mas não gastou rede. É o número que diz se a Velocidade 6B
-// está a funcionar no aparelho de verdade.
+// o pedido existiu, mas não gastou rede. É o número que diz se o cache está a
+// funcionar no aparelho de verdade.
 const imagens = [];
 let observadorImagens = null;
 
@@ -592,10 +573,10 @@ let observadorImagens = null;
 const IMAGEM_DO_CACHE_MS = 40;
 
 function registarImagem(entrada) {
-  // Velocidade 7B: o Safari (e qualquer navegador numa imagem de outra origem sem
+  // O Safari (e qualquer navegador numa imagem de outra origem sem
   // Timing-Allow-Origin — o caso do app nativo) devolve TODOS os tamanhos a 0, e
-  // "transferSize === 0" marcava 100% do cache. Sem tamanho nenhum visível, quem
-  // decide é a duração.
+  // então "transferSize === 0" marcaria 100% como cache. Sem tamanho nenhum
+  // visível, quem decide é a duração.
   const temTamanhos = entrada.transferSize > 0 || entrada.encodedBodySize > 0 || entrada.decodedBodySize > 0;
   guardar(imagens, {
     ms: Math.round(entrada.duration),
@@ -604,20 +585,20 @@ function registarImagem(entrada) {
   });
 }
 
-// ─── Largura da tela (Velocidade 7B) ─────────────────────────────────────────
-// Para apanhar em campo o (b): se algo passar da largura da tela, o WebKit do
+// ─── Largura da tela ─────────────────────────────────────────
+// Para apanhar em campo: se algo passar da largura da tela, o WebKit do
 // iPhone alarga a viewport e encolhe a página inteira. Guarda a largura do
 // aparelho, a maior viewport e a maior largura rolável vistas, e em que tela.
 let largura = null;
 
-// RODADA 12A — o telefone virado não é um transbordo.
+// O telefone virado não é um transbordo.
 //
-// O build 21 trouxe "maior vista 932px" num aparelho de 430: era o iPhone
+// Já apareceu "maior vista 932px" num aparelho de 430: era o iPhone
 // deitado. Em paisagem os lados TROCAM, e a largura do aparelho passa a ser o
 // lado maior da tela — comparar sempre com o lado menor transformava cada
 // rotação num alarme, e um alarme que toca sozinho deixa de se ler.
 //
-// A orientação passa a ficar no relatório: sem ela, "932px em /feed" não se
+// A orientação fica no relatório: sem ela, "932px em /feed" não se
 // distingue de um card que rebentou a tela, que é o defeito que isto caça.
 const orientacao = { mudancas: 0, atual: null, jaEsteveDeitado: false };
 
@@ -711,10 +692,10 @@ export function registarFalha(area, causa, detalhe = null) {
   });
 }
 
-// ─── Fases do cromo (FLUIDEZ 2, 16-set) ──────────────────────────────────────
-// O build 20 mandou `/figurinha dados=8836 ms` e uma travada de 6402 ms na fase
-// "outro" — a composição do cromo do Início. "O canvas é lento" não aponta para
-// conserto nenhum: é preciso saber QUAL fase. Cada composição regista aqui o
+// ─── Fases do cromo ──────────────────────────────────────────────────────
+// "O canvas é lento" não aponta para conserto nenhum: é preciso saber QUAL fase (já houve
+// `/figurinha dados=8836 ms` e uma travada de 6402 ms na fase "outro" — a composição do cromo do
+// Início). Cada composição regista aqui o
 // tempo de cada passo (decodificar o avatar, encher o fundo, os glints, a
 // moldura, o texto, o toBlob) e a tela de Diagnóstico mostra a soma e a mais
 // cara. Guarda-se a PIOR composição de cada cenário, não a última: a que dói é
@@ -750,7 +731,7 @@ export function definirInfoApp(info) {
 }
 
 /**
- * RODADA 28 — o estado cru da caixa-preta, para quem monta o relatório fora do arranque
+ * O estado cru da caixa-preta, para quem monta o relatório fora do arranque
  * (lib/diagnosticoRelatorio.js). As listas e objetos são os PRÓPRIOS daqui: quem lê copia
  * antes de guardar. Nada de sessão nem de dados de pessoa — só medições.
  */
@@ -786,7 +767,7 @@ export function limparDiagnostico() {
 
 // A bancada do iPhone simulado lê daqui (ver scripts/ver-iphone.mjs, cena
 // `velocidade9`). Sem isto a prova antes/depois teria de raspar o texto da tela
-// de Diagnóstico — frágil, e sem as marcas finas por navegação. Rodada 28: devolve
+// de Diagnóstico — frágil, e sem as marcas finas por navegação. Devolve
 // uma PROMESSA (o montador do relatório chega sob demanda); o page.evaluate da
 // bancada espera por ela sozinho.
 if (typeof window !== 'undefined') window.__futtyDiagnostico = () => import('./diagnosticoRelatorio').then((m) => m.lerDiagnostico());

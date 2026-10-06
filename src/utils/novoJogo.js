@@ -1,7 +1,7 @@
-// Futty v2.0 — Rodada 29S, bloco A (achados 151 a 156): as contas do "Marcar jogo" (Novo jogo), puras, para testar no Node.
+// Futty v2.0 — as contas do "Marcar jogo" (Novo jogo), puras, para testar no Node.
 import { dataComDiaPorExtenso, diaDeCalendario, formatarHora, instanteNoCampo, rabichoDoFuso } from './dataHora';
 
-/** A hora de uma pelada: o jogo nasce às 20:00 (achado 155), não na hora do relógio de quem abriu a página. */
+/** A hora de uma pelada: o jogo nasce às 20:00, não na hora do relógio de quem abriu a página. */
 export const HORA_PADRAO = '20:00';
 
 /**

@@ -1,9 +1,9 @@
-// Futty v2.0 — Toast: o aviso de uma linha, no MEIO da tela (Rodada 29A, pedido do dono, 30-set).
+// Futty v2.0 — Toast: o aviso de uma linha, no MEIO da tela.
 // Um componente só, sem exceção por tela: todas as chamadas `showToast(...)` das páginas acabam aqui.
 //   · centrado, largura máx. 320, fundo escuro com desfoque, ícone por tipo (✓ sucesso · ! erro · i info);
 //   · some sozinho em 2 s (6 s quando leva ação); ERRO fica até a pessoa tocar nele;
 //   · entra e sai em 180 ms; com `prefers-reduced-motion` aparece e some sem animar (estilos: index.css).
-// Pagamentos P2: `acao` opcional ({ rotulo, aoTocar }) — um botão dentro do toast (ex.: "Tentar de
+// `acao` opcional ({ rotulo, aoTocar }) — um botão dentro do toast (ex.: "Tentar de
 // novo" depois de uma compra que falhou).
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -57,10 +57,11 @@ export default function Toast({ mensagem, tipo = 'info', onClose, acao = null })
   }
   const fechaAoTocar = eErro; // com ação também: o botão age, o resto do aviso fecha
 
-  // Portal para o body (15-set): position:fixed dentro do [data-page] animado
+  // Portal para o body: position:fixed dentro do [data-page] animado
   // (pageEntra em app.css) não centra/ancora ao viewport de forma confiável no
   // WebKit do iPhone — ver a nota em LoadingFutty.jsx.
-  // Sem ação e sem precisar de toque, o aviso não intercepta toques: a pessoa continua a mexer na tela por baixo.
+  // Sem ação e sem precisar de toque, o aviso não intercepta toques: a pessoa continua a mexer
+  // na tela por baixo.
   return createPortal(
     <div
       key={mensagem}

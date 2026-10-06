@@ -1,30 +1,25 @@
 // Futty v2.0 — Loader oficial da marca: o monograma F é PINTADO de um gesto.
 // Substitui os loadings genéricos (spinner do lucide, texto "Carregando…").
 //
-// FASE 3.46 — antes animava-se o CONTORNO do F (lia-se como linha dupla). Agora
-// anima-se o ESQUELETO: uma polyline que percorre a espinha do F, com um traço
-// grosso (110) RECORTADO pelo contorno real. À medida que o stroke-dash avança, a
-// escova pinta a letra; o clip garante que a forma é exactamente a do logo, por isso
+// Anima-se o ESQUELETO, não o contorno do F (o contorno lia-se como linha dupla): uma polyline que
+// percorre a espinha do F, com um traço grosso (110) RECORTADO pelo contorno real. À medida que o
+// stroke-dash avança, a escova pinta a letra; o clip garante que a forma é exactamente a do logo, por isso
 // o esqueleto só precisa de estar dentro do listel, não de ser um eixo medial exacto.
 //
-// GEOMETRIA (medida em public/favicon.svg, viewBox 1080): o F é um listel contínuo de
-// largura ~98 que faz DOIS ganchos — sobe a banda esquerda, sai na barra de topo,
-// inverte, volta, desce, sai na barra do meio, inverte, volta, desce a haste. Ou seja
-// o "gesto único" é literalmente a forma. Os pontos do esqueleto são os centros do
-// listel em cada canto (média das duas margens). Cada gancho precisa de DOIS pontos
-// (fim da ida + início da volta): com um só, o miter não fecha a cunha do canto
-// superior direito e ficavam 6% do F por pintar (medido: 94.07% vs 99.99%).
-// As duas pontas são prolongadas 70 para lá da borda — o clip corta-as rente, dando
-// remates rectos perfeitos sem depender do strokeLinecap.
+// GEOMETRIA (medida em public/favicon.svg, viewBox 1080): o F é um listel contínuo de largura ~98 que faz
+// DOIS ganchos — sobe a banda esquerda, sai na barra de topo, inverte, volta, desce, sai na barra do meio,
+// inverte, volta, desce a haste. Ou seja o "gesto único" é literalmente a forma. Os pontos do esqueleto
+// são os centros do listel em cada canto (média das duas margens). Cada gancho precisa de DOIS pontos (fim
+// da ida + início da volta): com um só, o miter não fecha a cunha do canto superior direito e ficavam 6%
+// do F por pintar (medido: 94.07% vs 99.99%). As duas pontas são prolongadas 70 para lá da borda — o clip
+// corta-as rente, dando remates rectos perfeitos sem depender do strokeLinecap.
 //
-// PELE — a FORMA é a de sempre (F_CONTORNO/F_ESQUELETO); só a pintura mudou: a escova
-// já não é ouro chapado, é a PELE METÁLICA v4 (gradiente ouro escuro→claro no stroke,
-// bisel specular, glow leve) aprovada no harness. À medida que o pincel percorre a
-// espinha, o metal biselado revela-se; no fim cobre o F inteiro.
+// PELE — a FORMA é F_CONTORNO/F_ESQUELETO; a escova não é ouro chapado, é a PELE METÁLICA v4 (gradiente
+// ouro escuro→claro no stroke, bisel specular, glow leve) aprovada no harness. À medida que o pincel
+// percorre a espinha, o metal biselado revela-se; no fim cobre o F inteiro.
 import { useId } from 'react';
 import { F_CONTORNO, F_ESQUELETO } from '../utils/futtyMonograma';
 
-// FASE 3.48 — +35% em todos os tamanhos (default 44 → 59; overlay 64 → 86; botão 16 → 22).
 export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
   // ids únicos por instância: podem coexistir dois loaders no mesmo ecrã.
   const uid = useId().replace(/:/g, '');
@@ -36,9 +31,9 @@ export default function FuttyLoader({ size = 59, label = 'Carregando…' }) {
 
   return (
     <div role="status" aria-live="polite" style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
-      {/* FASE B — flutuação. As camadas (sombra no chão → bob → sway → svg) e o porquê
-          de serem separadas estão explicados no app.css, em ".futty-f-bob". A mesma
-          estrutura vive no FuttyIconeFlutuante (landing): mesma física nas duas marcas. */}
+      {/* Flutuação. As camadas (sombra no chão → bob → sway → svg) e o porquê de serem separadas estão explicados
+          no app.css, em ".futty-f-bob". A mesma estrutura vive no FuttyIconeFlutuante (landing): mesma física nas
+          duas marcas. */}
       <div style={{ position: 'relative', width: size, height: size }}>
         <span
           className="futty-f-shadow"

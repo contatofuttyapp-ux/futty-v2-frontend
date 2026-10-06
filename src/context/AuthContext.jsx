@@ -9,7 +9,7 @@ import { criarTratador401, sairDesteAparelho } from '../lib/sessao';
 
 const AuthContext = createContext(null);
 
-// Celular compartilhado (13-set): ao sair, nada da conta fica no aparelho — o cache local, o
+// Celular compartilhado: ao sair, nada da conta fica no aparelho — o cache local, o
 // pré-aquecimento e o cromo do Início (IndexedDB), que é a cara da pessoa.
 function limparAparelho() {
   limparCacheLocal();
@@ -17,8 +17,8 @@ function limparAparelho() {
   limparCromos().catch(() => {});
 }
 
-// RODADA 28 — a sessão acabou SEM a pessoa pedir (outro aparelho saiu de todos, conta apagada,
-// refresh revogado). O aparelho é limpo e o login explica porquê (Login.jsx lê esta marca).
+// A sessão acabou SEM a pessoa pedir (outro aparelho saiu de todos, conta apagada,
+// refresh invalidado). O aparelho é limpo e o login explica porquê (Login.jsx lê esta marca).
 let saidaPedida = false;
 function sessaoTerminou() {
   if (saidaPedida) return;
@@ -30,13 +30,13 @@ function sessaoTerminou() {
 // A saída dispara o SIGNED_OUT abaixo, que limpa o aparelho e deixa o aviso para o login.
 registrarSessaoInvalida(criarTratador401(obterSupabase));
 
-// VELOCIDADE 5 (14-set) — SESSÃO OTIMISTA.
+// SESSÃO OTIMISTA.
 //
-// O app inteiro esperava por `supabase.auth.getSession()` antes de desenhar o que
-// quer que fosse. Parece barato e não é: quando o token já passou da hora (mais de
+// O app não espera por `supabase.auth.getSession()` antes de desenhar o que
+// quer que seja. Parece barato e não é: quando o token já passou da hora (mais de
 // 1 h desde a última abertura, que é o caso normal de quem abre o app uma vez por
 // dia), esse getSession faz um refresh PELA REDE até São Paulo — e só depois a
-// primeira tela começa a existir. Era o pedaço mais caro da primeira abertura no
+// primeira tela começaria a existir. Seria o pedaço mais caro da primeira abertura no
 // iPhone.
 //
 // Aqui lê-se a MESMA sessão que o Supabase guardou, do mesmo sítio e de forma
@@ -44,7 +44,7 @@ registrarSessaoInvalida(criarTratador401(obterSupabase));
 // getSession ia devolver, só que sem esperar pela ida e volta. A tela sai do cache
 // local na hora e o refresh continua a correr por trás — quando chega, o
 // onAuthStateChange substitui a sessão; se falhar de vez (refresh token inválido),
-// a sessão vai a null e o AuthGuard manda para /login como sempre mandou.
+// a sessão vai a null e o AuthGuard manda para /login.
 //
 // O token lido pode estar expirado, e tudo bem: quem fala com a API é o
 // lib/api.js, que chama getSession() e aí sim espera pelo token fresco. A troca é
@@ -73,9 +73,8 @@ export function AuthProvider({ children }) {
   // Com sessão guardada não há nada por saber: o arranque não mostra loading.
   const [loading, setLoading] = useState(!inicial);
 
-  // VELOCIDADE 8 (16-set) — o supabase-js chega por import dinâmico (ver
-  // lib/supabaseAsync.js). O download começa aqui, no mesmo instante em que
-  // começava antes; o que sai do caminho é a COMPILAÇÃO de 201 KB antes da 1ª
+  // O supabase-js chega por import dinâmico (ver lib/supabaseAsync.js). O download
+  // começa aqui; o que sai do caminho é a COMPILAÇÃO de 201 KB antes da 1ª
   // pintura. A sessão que desenha a 1ª tela já veio do localStorage, síncrona,
   // lá em cima (sessaoGuardada) — este efeito só confirma e passa a ouvir.
   useEffect(() => {
@@ -87,7 +86,7 @@ export function AuthProvider({ children }) {
       // Sessão inicial
       supabase.auth.getSession().then(({ data, error }) => {
         if (!vivo) return;
-        // Rodada 28: sem rede no arranque, a sessão guardada fica (as telas abrem do cache); só
+        // Sem rede no arranque, a sessão guardada fica (as telas abrem do cache); só
         // quando o Supabase RECUSOU a renovação é que ela acabou — e aí o login diz porquê.
         const semRede = error?.name === 'AuthRetryableFetchError';
         if (inicial && !data.session && !semRede) sessaoTerminou();
@@ -116,12 +115,12 @@ export function AuthProvider({ children }) {
     session,
     user: session?.user ?? null,
     loading,
-    // Celular compartilhado (13-set): limpa o cache local ANTES do signOut —
+    // Celular compartilhado: limpa o cache local ANTES do signOut —
     // a próxima conta que entrar neste aparelho não pode ver, nem por 1
     // render, o perfil/equipas de quem saiu.
-    // RODADA 28: "Sair" é SÓ deste aparelho (scope local). O padrão do Supabase
-    // é 'global', que derrubava a sessão da pessoa em TODOS os aparelhos — o
-    // Pedro trocou de conta no celular e o Gabinete da Freaky no Chrome morreu.
+    // "Sair" é SÓ deste aparelho (scope local). O padrão do Supabase
+    // é 'global', que derruba a sessão da pessoa em TODOS os aparelhos — já aconteceu: o Pedro
+    // trocou de conta no celular e o Gabinete da Freaky no Chrome morreu.
     signOut: async () => {
       saidaPedida = true;
       limparAparelho();

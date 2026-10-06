@@ -1,8 +1,7 @@
-// Futty v2.0 — Seletor do avatar genérico (31-jul, ordem do dono). Bottom sheet
-// com os 6 thumbnails (masc m1-m3, fem f1-f3); toque escolhe e fecha. Mesmo padrão
-// do sheet de idioma em MeuPerfil.jsx: .modal-overlay + .hud-corners-topo, PORTAL
-// para o <body> (o sheet nasce dentro de PageTransition, que cria um contexto de
-// empilhamento próprio — sem o portal a bottom nav pintava por cima).
+// Futty v2.0 — Seletor do avatar genérico. Bottom sheet com os 6 thumbnails (masc m1-m3, fem f1-f3); toque
+// escolhe e fecha. Mesmo padrão do sheet de idioma em MeuPerfil.jsx: .modal-overlay + .hud-corners-topo,
+// PORTAL para o <body> (o sheet nasce dentro de PageTransition, que cria um contexto de empilhamento
+// próprio — sem o portal a bottom nav pintaria por cima).
 import { createPortal } from 'react-dom';
 import { AVATARES_GENERICOS_TODOS } from '../utils/avatarGenerico';
 

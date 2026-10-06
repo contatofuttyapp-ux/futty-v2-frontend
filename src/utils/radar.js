@@ -1,11 +1,13 @@
-// Futty v2.0 — Rodada 29T (bloco A, achados 159 e 161): o que o Radar de peladas diz depois de entrar num time e o título da lista.
-// Título (161): "Perto de você" só com a localização ligada; com uma cidade escolhida, "Em <cidade>"; sem nenhuma das duas a lista é de TODOS os
-// times abertos, e o título conta isso. Antes dizia "Times perto de você" para quem não tinha dado posição nenhuma (e a lista trazia Lisboa).
+// Futty v2.0 — o que o Radar de peladas diz depois de entrar num time e o título da lista. Título: "Perto
+// de você" só com a localização ligada; com uma cidade escolhida, "Em <cidade>"; sem nenhuma das duas a
+// lista é de TODOS os times abertos, e o título conta isso. Não dizer "Times perto de você" para quem não
+// deu posição nenhuma (a lista trazia Lisboa).
 
 export const TITULO_SEM_LOCAL = 'Peladas abertas a novos jogadores';
 
-// Rodada 29T (bloco B, achado 157): o time se apresenta no Radar. Dentro do card, embaixo do nome: "Bairro · Cidade" e o "Sobre o time" em até 2 linhas;
-// tocar no card abre um pop-up com tudo (escudo, nome, local, membros, aberto ou com aprovação, o "Sobre o time" inteiro e o botão de entrar).
+// O time se apresenta no Radar. Dentro do card, embaixo do nome: "Bairro · Cidade" e o "Sobre o time" em
+// até 2 linhas; tocar no card abre um pop-up com tudo (escudo, nome, local, membros, aberto ou com
+// aprovação, o "Sobre o time" inteiro e o botão de entrar).
 
 /** "Guará · Brasília, DF": o bairro junto da cidade; só a cidade quando não há bairro (cidade sem bairros na lista, ou time antigo); sem cidade, a localização que o time escreveu. */
 export function localDoTime({ bairro, cidade, localizacao } = {}) {
@@ -34,9 +36,10 @@ export function tituloDoRadar({ origem = null, cidade = '' } = {}) {
 }
 
 /**
- * A lista do Radar depois de "Entrar" / "Pedir entrada" num time (achado 159). Entrou (time aberto): o card comemora — `entrou_agora`
- * troca o "Você já é membro" por "Você entrou!" + "Ver o time" — e a contagem sobe 1 (a lista foi lida antes de a pessoa entrar).
- * "Você já é membro" fica só para quem já era membro quando abriu a tela. Pediu (time com aprovação): fica o pedido pendente.
+ * A lista do Radar depois de "Entrar" / "Pedir entrada" num time. Entrou (time aberto): o card comemora —
+ * `entrou_agora` troca o "Você já é membro" por "Você entrou!" + "Ver o time" — e a contagem sobe 1 (a
+ * lista foi lida antes de a pessoa entrar). "Você já é membro" fica só para quem já era membro quando abriu
+ * a tela. Pediu (time com aprovação): fica o pedido pendente.
  */
 export function depoisDePedirEntrada(equipas, slug, entrou) {
   return equipas.map((t) => (t.slug === slug

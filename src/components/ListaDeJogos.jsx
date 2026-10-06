@@ -1,6 +1,7 @@
-// Futty v2.0 — A lista de jogos do time (cards com a data em destaque dourada + estado em badge 45°). Era o corpo da página /time/:slug/jogos;
-// Rodada 29I, bloco 3: é também a aba JOGOS da página do time para quem não é admin (o admin vê JogosDoAdmin, com o que se faz em cada
-// jogo). Data e hora no relógio do time, com o rabicho "· horário de <cidade>" para quem está noutro relógio.
+// Futty v2.0 — A lista de jogos do time (cards com a data em destaque dourada + estado em badge 45°). É o
+// corpo da página /time/:slug/jogos e também a aba JOGOS da página do time para quem não é admin (o admin
+// vê JogosDoAdmin, com o que se faz em cada jogo). Data e hora no relógio do time, com o rabicho "·
+// horário de <cidade>" para quem está noutro relógio.
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
 import { dayMonth, formatDateTime, STATUS_LABELS } from '../utils/format';
@@ -40,7 +41,7 @@ export default function ListaDeJogos({ slug, team, games, vazio = 'Espere um adm
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       {games.map((g) => {
-        const { day, month } = dayMonth(g.data, team?.fuso); // 29I: a data é a do time (fuso do time)
+        const { day, month } = dayMonth(g.data, team?.fuso); // a data é a do time (fuso do time)
         const apagado = g.status === 'encerrado' || g.status === 'cancelado';
         return (
           <Link key={g.id} to={`/time/${slug}/jogo/${g.id}`} style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 12, padding: 12, textDecoration: 'none', color: 'inherit', opacity: apagado ? 0.75 : 1 }}>

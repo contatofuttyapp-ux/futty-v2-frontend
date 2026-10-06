@@ -87,8 +87,9 @@ async function novoContexto(navegador, { estado = null, cookiesAceitos = true, p
     await contexto.addInitScript(() => { try { localStorage.setItem('futty_cookies', 'aceite'); } catch { /* sem storage */ } });
   }
   if (pushPendente) {
-    // 29T: o Chromium sem tela nasce com a permissão de notificações NEGADA e o aviso "Ativar notificações" nunca entra na fila do Início. Aqui
-    // ela fica como no navegador de quem ainda não decidiu ("default") — só leitura da permissão; nada é pedido nem gravado.
+    // O Chromium sem tela nasce com a permissão de notificações NEGADA e o aviso "Ativar notificações" nunca
+    // entra na fila do Início. Aqui ela fica como no navegador de quem ainda não decidiu ("default") — só
+    // leitura da permissão; nada é pedido nem gravado.
     await contexto.addInitScript(() => { try { Object.defineProperty(window.Notification, 'permission', { get: () => 'default', configurable: true }); } catch { /* sem Notification */ } });
   }
   await contexto.route('**/api/**', async (route) => {
@@ -100,9 +101,10 @@ async function novoContexto(navegador, { estado = null, cookiesAceitos = true, p
   await contexto.route((url) => PRODUCAO.test(url.hostname), async (route) => {
     const pedido = route.request();
     const u = new URL(pedido.url());
-    // As fotos de post criadas pelo app em produção ficam GRAVADAS no banco (compartilhado) com o endereço da produção
-    // (https://<cloud run>/api/media/<token>). O token vale no motor local (mesmo segredo): serve-se a foto por ele, e nada vai à produção.
-    // Sem isto a foto do post aparece quebrada na captura — e foi o que a varredura de 3-out leu como "buraco de 400 px" (achado 141).
+    // As fotos de post criadas pelo app em produção ficam GRAVADAS no banco (compartilhado) com o endereço da
+    // produção (https://<cloud run>/api/media/<token>). O token vale no motor local (mesmo segredo): serve-se a
+    // foto por ele, e nada vai à produção. Sem isto a foto do post aparece quebrada na captura (um "buraco de
+    // 400 px").
     if (pedido.method() === 'GET' && /^\/api\/media\//.test(u.pathname)) {
       try {
         const resposta = await fetch(`${apiLocal()}${u.pathname}${u.search}`);
@@ -126,10 +128,12 @@ async function abrir(contexto) {
   pagina.on('request', (r) => pagina.__pendentes.add(r));
   pagina.on('requestfinished', (r) => pagina.__pendentes.delete(r));
   pagina.on('requestfailed', (r) => pagina.__pendentes.delete(r));
-  // 29T: o /api/inicio que a página recebeu, para a captura conferir que o estado é o que ela promete (pedido pendente, 4 times…).
+  // O /api/inicio que a página recebeu, para a captura conferir que o estado é o que ela promete
+  // (pedido pendente, 4 times…).
   pagina.on('response', async (r) => {
     try { if (r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/inicio') pagina.__inicio = await r.json(); } catch { /* sem corpo */ }
-    // 29T-B: o /api/teams/explorar que o Radar recebeu, para a captura dizer se o motor mandou o bairro e o "Sobre o time" de cada time.
+    // O /api/teams/explorar que o Radar recebeu, para a captura dizer se o motor mandou o bairro e o
+    // "Sobre o time" de cada time.
     try { if (r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/teams/explorar') pagina.__explorar = await r.json(); } catch { /* sem corpo */ }
   });
   return pagina;
@@ -205,7 +209,8 @@ async function descobrir(navegador, estado) {
   const contexto = await novoContexto(navegador, { estado });
   const pagina = await abrir(contexto);
   const jogos = [];
-  // Rodada 29Q: a lista de times da conta e os jogos de cada um, para achar o Várzea FC (a captura 26 abre um jogo dele).
+  // A lista de times da conta e os jogos de cada um, para achar o Várzea FC (a captura 26 abre um jogo
+  // dele).
   const listaDeTimes = [];
   const jogosPorTime = new Map();
   pagina.on('response', async (r) => {
@@ -299,8 +304,9 @@ async function medirFaixaDeCookies(pagina) {
 
 const CAMPO_NOME_DO_TIME = 'input[placeholder="Ex.: Domingueira FC"]';
 
-// Rodada 29T (achado 168): a lei da primeira tela do Início. UM aviso por vez no topo; o próximo jogo que pede resposta (Vou / Não vou) aparece em
-// 390×844 sem rolar — no aviso do topo ou, sem aviso de jogo, no rótulo "Próximos jogos". Devolve a medida e reprova se a lei não vale.
+// A lei da primeira tela do Início. UM aviso por vez no topo; o próximo jogo que pede resposta (Vou / Não
+// vou) aparece em 390×844 sem rolar — no aviso do topo ou, sem aviso de jogo, no rótulo "Próximos jogos".
+// Devolve a medida e reprova se a lei não vale.
 async function exigirLeiDaPrimeiraTela(p) {
   const r = await p.evaluate(() => {
     const base = (el) => (el ? Math.round(el.getBoundingClientRect().bottom) : null);
@@ -332,16 +338,16 @@ const TELAS = [
   { arq: '02-criar-conta', sessao: false, rota: () => '/register', caminho: /^\/register$/, seletor: 'input[type="email"]', permite: ['senha'] },
   { arq: '03-entrar', sessao: false, rota: () => '/login', caminho: /^\/login$/, seletor: 'input[type="email"]', permite: ['senha'] },
   {
-    // Rodada 29T (achado 168): a LEI DA PRIMEIRA TELA mudou (troca a da 29L, achado 127). Em 390×844 o próximo jogo que pede resposta aparece sem rolar —
-    // no aviso do topo ou na lista. O aviso do jogo (um aviso por vez) sobe para o topo, e é ele que esta captura mostra. Os cartões "Radar de peladas"
-    // e "Criar time" continuam à vista (29Q). Se o jogo não couber a imagem NÃO sai.
+    // A LEI DA PRIMEIRA TELA: em 390×844 o próximo jogo que pede resposta aparece sem rolar — no aviso do topo
+    // ou na lista. O aviso do jogo (um aviso por vez) sobe para o topo, e é ele que esta captura mostra. Os
+    // cartões "Radar de peladas" e "Criar time" continuam à vista. Se o jogo não couber a imagem NÃO sai.
     arq: '04-inicio', sessao: true, rota: () => '/home', caminho: /^\/home$/, seletor: '.games-label, .home-empty',
     depois: async (p) => { await exigirLeiDaPrimeiraTela(p); },
   },
   {
-    // Rodada 29T (achado 168): o estado PESADO — pedido pendente + "Ativar notificações" na fila + 4 times em "Seus times". Antes (29Q) o rótulo
-    // "Próximos jogos" ia a 973 px numa tela de 844; agora o aviso do jogo sobe para o topo, o "Seus times" mostra 2 linhas e o jogo tem de aparecer
-    // na primeira tela. A permissão de notificações fica "default" (como em quem ainda não decidiu) para o aviso entrar na fila.
+    // O estado PESADO — pedido pendente + "Ativar notificações" na fila + 4 times em "Seus times". O aviso do
+    // jogo sobe para o topo, o "Seus times" mostra 2 linhas e o jogo tem de aparecer na primeira tela. A
+    // permissão de notificações fica "default" (como em quem ainda não decidiu) para o aviso entrar na fila.
     arq: '04b-inicio-pesado', sessao: true, pushPendente: true, rota: () => '/home', caminho: /^\/home$/, seletor: '.games-label, .home-empty',
     depois: async (p) => {
       const inicio = p.__inicio;
@@ -360,8 +366,8 @@ const TELAS = [
   { arq: '05-time-aba-jogos', ...aba('jogos') },
   { arq: '06-time-aba-elenco', ...aba('elenco') },
   {
-    // Rodada 29R (achado 150): o cartão "Nova temporada de notas" é o último dos Ajustes — fica abaixo da primeira tela, então a captura
-    // rola até ele (sem isso a imagem regenerada não mostraria o que mudou). Só olha: nenhum toque no botão.
+    // O cartão "Nova temporada de notas" é o último dos Ajustes — fica abaixo da primeira tela, então a captura
+    // rola até ele. Só olha: nenhum toque no botão.
     arq: '07-time-aba-ajustes', ...aba('ajustes'),
     depois: async (p) => {
       await p.locator('[data-pedir-votar-de-novo]').waitFor({ timeout: 20000 });
@@ -408,13 +414,14 @@ const TELAS = [
   },
   { arq: '17-perfil', sessao: true, rota: () => '/perfil', caminho: /^\/perfil$/ },
   {
-    // Rodada 29T (achado 161): sem localização nem cidade escolhida a lista não promete "perto de você". A captura só olha: não toca na localização.
+    // Sem localização nem cidade escolhida a lista não promete "perto de você". A captura só olha: não toca na
+    // localização.
     arq: '18-explorar', sessao: true, rota: () => '/explorar', caminho: /^\/explorar$/, extraMs: 1500,
     depois: async (p) => {
       const texto = (await p.locator('main').innerText()).replace(/\s+/g, ' ');
       if (!/Peladas abertas a novos jogadores · \d+/i.test(texto)) throw new Error('o título da lista do Radar não é "Peladas abertas a novos jogadores · N"');
       if (/Times perto de você/i.test(texto)) throw new Error('o Radar ainda diz "Times perto de você" sem localização');
-      // 29T-B (achado 157): o time se apresenta dentro do card — "Bairro · Cidade" e o "Sobre o time" em até 2 linhas.
+      // O time se apresenta dentro do card — "Bairro · Cidade" e o "Sobre o time" em até 2 linhas.
       const recebidos = p.__explorar?.teams || [];
       const comBio = await p.locator('[data-sobre-do-time]').count();
       if (!comBio) throw new Error('nenhum card do Radar mostra o "Sobre o time" (nenhum time público do motor local tem texto em "descricao"?)');
@@ -428,8 +435,9 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29T-B (achado 157): tocar no card (fora do botão) abre o pop-up com escudo, nome, bairro e cidade, membros, aberto ou com aprovação, o "Sobre o time"
-    // inteiro e o mesmo botão. A captura só ABRE o pop-up: nunca toca em "Entrar" / "Pedir entrada" (e o contexto já responde a qualquer escrita em /api sem chegar ao banco).
+    // Tocar no card (fora do botão) abre o pop-up com escudo, nome, bairro e cidade, membros, aberto ou com
+    // aprovação, o "Sobre o time" inteiro e o mesmo botão. A captura só ABRE o pop-up: nunca toca em "Entrar" /
+    // "Pedir entrada" (e o contexto já responde a qualquer escrita em /api sem chegar ao banco).
     arq: '18b-explorar-time', sessao: true, rota: () => '/explorar', caminho: /^\/explorar$/, seletor: '[data-card-do-time]', extraMs: 1500,
     depois: async (p) => {
       const alvo = p.locator('[data-card-do-time]:has([data-sobre-do-time]):not(:has-text("Você já é membro")):not(:has-text("Pedido enviado")) [data-abrir-time]').first();
@@ -460,7 +468,8 @@ const TELAS = [
     seletor: 'text=Página não encontrada',
   },
   {
-    // Rodada 29O: o passo 2 do Criar time, sem título nem subtítulo. Só avança com nome e cidade (29P); não grava nada (o time nasce no passo 3).
+    // O passo 2 do Criar time, sem título nem subtítulo. Só avança com nome e cidade; não grava nada (o time
+    // nasce no passo 3).
     arq: '22-criar-time-passo-2', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
       await preencherPasso1(p);
@@ -471,11 +480,11 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29P/29T: o passo 1 vazio — sem título, rótulos limpos, e o Continuar apagado enquanto não há nome e cidade.
+    // O passo 1 vazio — sem título, rótulos limpos, e o Continuar apagado enquanto não há nome e cidade.
     arq: '23-criar-time-passo-1', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
       await espera(500);
-      // 29T (achado 166): o Continuar existe desde o começo, apagado, e só acende com nome e cidade.
+      // O Continuar existe desde o começo, apagado, e só acende com nome e cidade.
       const continuar = p.getByRole('button', { name: 'Continuar' });
       if ((await continuar.count()) !== 1) throw new Error('o passo 1 vazio não mostra o "Continuar" (devia estar lá, apagado)');
       if (await continuar.isEnabled()) throw new Error('o "Continuar" do passo 1 vazio está aceso (devia estar apagado até haver nome e cidade)');
@@ -483,7 +492,7 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29P: o passo 1 com nome e cidade — o Continuar aparece e cabe na tela.
+    // O passo 1 com nome e cidade — o Continuar aparece e cabe na tela.
     arq: '23-criar-time-passo-1-preenchido', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
       await preencherPasso1(p);
@@ -492,8 +501,9 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29T-B (achado 157): o campo Bairro é de LISTA. Brasília, DF aparece com o campo e, digitando "gu", sugere as Regiões Administrativas do IBGE (Guará…).
-    // Só preenche e abre a lista na tela: nada é gravado (o time nasce no passo 3).
+    // O campo Bairro é de LISTA. Brasília, DF aparece com o campo e, digitando "gu", sugere as Regiões
+    // Administrativas do IBGE (Guará…). Só preenche e abre a lista na tela: nada é gravado (o time nasce no
+    // passo 3).
     arq: '23-criar-time-bairro', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
       await preencherPasso1(p);
@@ -511,8 +521,8 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29P: o passo 3 sem subtítulo, com os textos do "Radar de peladas". 29T-B (achado 157): em "Aberto" aparece o "Sobre o time" (obrigatório);
-    // a captura escolhe Aberto e escreve o exemplo do dono — só na tela, nada é gravado.
+    // O passo 3 sem subtítulo, com os textos do "Radar de peladas". Em "Aberto" aparece o "Sobre o time"
+    // (obrigatório); a captura escolhe Aberto e escreve o exemplo do dono — só na tela, nada é gravado.
     arq: '24-criar-time-passo-3', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
       await preencherPasso1(p);
@@ -531,8 +541,9 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29P: a FESTA (passo 4). O POST /api/teams é respondido AQUI, com um time de mentira: nada chega ao banco (o contexto
-    // já bloqueia toda escrita em /api; esta rota da página responde antes dele, com o corpo que a festa precisa).
+    // A FESTA (passo 4). O POST /api/teams é respondido AQUI, com um time de mentira: nada chega ao banco (o
+    // contexto já bloqueia toda escrita em /api; esta rota da página responde antes dele, com o corpo que a
+    // festa precisa).
     arq: '25-criar-time-pronto', sessao: true, rota: () => '/criar-time', caminho: /^\/criar-time$/, seletor: CAMPO_NOME_DO_TIME,
     depois: async (p) => {
       await p.route('**/api/teams', (route) => (route.request().method() === 'POST'
@@ -543,7 +554,8 @@ const TELAS = [
       await p.getByText('Você também joga?').first().waitFor({ timeout: 10000 });
       await p.getByRole('button', { name: 'Continuar' }).click();
       await p.getByText('Aceita novos membros?').first().waitFor({ timeout: 10000 });
-      // 29Q: o link do convite chega pronto. O POST do convite também é respondido AQUI, com um código de mentira (nada é gravado).
+      // O link do convite chega pronto. O POST do convite também é respondido AQUI, com um código de mentira
+      // (nada é gravado).
       await p.route('**/api/teams/*/convite', (route) => (route.request().method() === 'POST'
         ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 'captura', codigo: 'CAPTURA' }) })
         : route.fallback()));
@@ -556,7 +568,8 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29Q: a caixa do convidado sem app num jogo do Várzea FC, só abrindo a tela: nenhum toque, nada digitado, nada gravado.
+    // A caixa do convidado sem app num jogo do Várzea FC, só abrindo a tela: nenhum toque, nada digitado, nada
+    // gravado.
     arq: '26-jogo-convidado', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC com algum jogo (precisa ser admin dele)',
     rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/${d.jogoVarzea.id}`, caminho: /^\/time\/[^/]+\/jogo\/[^/?]+$/, seletor: '[data-convidado-titulo]',
     depois: async (p) => {
@@ -602,7 +615,8 @@ const TELAS = [
     depois: async (p) => { await preencherMarcarJogo(p); },
   },
   {
-    // Rodada 29S-A (achado 156): o mesmo, com "mudar só neste jogo" tocado — o selo, o seletor e o bloco em ROXO, e o 6 por time no ingresso.
+    // O mesmo, com "mudar só neste jogo" tocado — o selo, o seletor e o bloco em ROXO, e o 6 por time no
+    // ingresso.
     arq: '29-novo-jogo-so-neste', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC (precisa ser admin dele)',
     rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/novo`, caminho: /^\/time\/[^/]+\/jogo\/novo$/, seletor: '[data-ingresso]',
     depois: async (p) => {
@@ -616,8 +630,9 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29S-A (achados 151 e 152): a pergunta "Como vão sair os times?" e os dois cartões, num jogo do Várzea FC ainda sem times. Só olha: não toca em
-    // "Sortear" nem em "Montar à mão". Se o jogo achado já tem times, a captura sai com o estado COM times e o script diz isso.
+    // A pergunta "Como vão sair os times?" e os dois cartões, num jogo do Várzea FC ainda sem times. Só olha:
+    // não toca em "Sortear" nem em "Montar à mão". Se o jogo já tem times, a captura sai com o estado COM
+    // times e o script diz isso.
     arq: '30-jogo-como-saem-os-times', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC com algum jogo (precisa ser admin dele)',
     rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/${d.jogoVarzea.id}`, caminho: /^\/time\/[^/]+\/jogo\/[^/?]+$/, seletor: '[data-como-saem-os-times], [data-trocar-os-times]',
     depois: async (p) => {
@@ -649,7 +664,8 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29S-B: o passo 4 (Como terminou?) com 2 times, sem salvar. Passa pelos passos 1 a 3 só na tela (data, quem jogou, os times) e responde "Quem ganhou?".
+    // O passo 4 (Como terminou?) com 2 times, sem salvar. Passa pelos passos 1 a 3 só na tela (data, quem
+    // jogou, os times) e responde "Quem ganhou?".
     arq: '32-jogo-passado-como-terminou', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC (precisa ser admin dele)',
     rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/passado`, caminho: /^\/time\/[^/]+\/jogo\/passado$/, seletor: '[data-barra-de-passos]',
     depois: async (p) => {
@@ -676,9 +692,10 @@ const TELAS = [
   },
 ];
 
-// ── O Jogo passado nas capturas (29S-B) ──────────────────────────────────────────────────────────────────────────────────────────
-// O passo a passo só tem estado na tela: nada vai ao banco até o "Salvar jogo", que nenhuma captura toca (e o contexto ainda responde a qualquer
-// escrita em /api sem chegar a ele). Os dois passos que a captura precisa são: a data (3 dias atrás) e quem jogou.
+// ── O Jogo passado nas capturas ─────────────────────────────────────────────────────────────
+// O passo a passo só tem estado na tela: nada vai ao banco até o "Salvar jogo", que nenhuma captura toca
+// (e o contexto ainda responde a qualquer escrita em /api sem chegar a ele). Os dois passos que a captura
+// precisa são: a data (3 dias atrás) e quem jogou.
 async function irAoPasso2DoJogoPassado(p) {
   const dia = new Date(Date.now() - 3 * 86400000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
   await p.locator('#data').fill(dia);
@@ -700,9 +717,10 @@ async function exigirTextosDoJogoPassado(p, esperados) {
   if (/Monte os times|vai jogar|vão sair|Já aconteceu/i.test(texto)) throw new Error('o Jogo passado ainda tem texto no presente');
 }
 
-// ── O Marcar jogo nas capturas (29S-A) ───────────────────────────────────────────────────────────────────────────────────────────
-// Digita uma data (daqui a 10 dias, no relógio do time) e o local — só no formulário, nada vai ao banco — e confere que o ingresso acompanhou, que
-// a hora nasceu em 20:00 e que o time é o Várzea FC. "Criar jogo" tem de caber na primeira tela; se não couber, encolhe o ingresso, nunca a letra.
+// ── O Marcar jogo nas capturas ──────────────────────────────────────────────────────────────
+// Digita uma data (daqui a 10 dias, no relógio do time) e o local — só no formulário, nada vai ao banco —
+// e confere que o ingresso acompanhou, que a hora nasceu em 20:00 e que o time é o Várzea FC. "Criar jogo"
+// tem de caber na primeira tela; se não couber, encolhe o ingresso, nunca a letra.
 async function preencherMarcarJogo(p) {
   const nomeDoTime = (await p.locator('[data-ingresso-time]').innerText()).trim();
   if (!/v[áa]rzea fc/i.test(nomeDoTime)) throw new Error(`o Marcar jogo abriu no time "${nomeDoTime}" (as capturas de administração são SÓ no Várzea FC)`);
@@ -718,7 +736,7 @@ async function preencherMarcarJogo(p) {
   console.log(`      ingresso: ${ingresso.dia} · ${ingresso.hora} · ${ingresso.local}`);
 }
 
-// ── O Criar time nas capturas (29O/29P) ────────────────────────────────────────────────────────────────────────────────────────
+// ── O Criar time nas capturas ───────────────────────────────────────────────────────────────
 // Nome + cidade da lista ("Brasília, DF"): o passo 1 só libera o Continuar com os dois.
 async function preencherPasso1(p) {
   await p.locator(CAMPO_NOME_DO_TIME).fill('Time Teste');

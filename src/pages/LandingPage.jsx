@@ -1,7 +1,7 @@
 // Futty v2.0 — Boas-vindas (rota "/") para visitantes não autenticados.
-// Tela ÚNICA sem scroll (decisão 31-jul): o F oficial com a aura da casa, o slogan, a frase do que o app faz e as portas de
-// entrada. As secções antigas (figurinha/como-funciona/planos/CTA final) morreram — quem quer saber mais entra. O bloco
-// "Avise-me" (29B) saiu na 29P: a página inicial já é a de verdade; a lista de e-mails continua no Gabinete.
+// Tela ÚNICA sem scroll: o F oficial com a aura da casa, o slogan, a frase do que o app faz e as portas
+// de entrada. Sem as secções de figurinha/como-funciona/planos/CTA final: quem quer saber mais entra.
+// Sem o bloco "Avise-me": a página inicial já é a de verdade; a lista de e-mails continua no Gabinete.
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { entrarComGoogle } from '../lib/googleAuth';
@@ -14,7 +14,7 @@ import '../styles/app.css';
 
 export default function LandingPage() {
   const [erro, setErro] = useState('');
-  // O F ganha a tela (29P): em tela curta (iPhone SE) encolhe para tudo continuar numa tela só.
+  // O F ganha a tela: em tela curta (iPhone SE) encolhe para tudo continuar numa tela só.
   const [tamanhoF] = useState(() => (typeof window !== 'undefined' && window.innerHeight < 760 ? 150 : 220));
   // Toast de passagem (ex.: "Conta excluída..." depois de MeuPerfil.jsx
   // navegar para "/" com state) — location.state some numa próxima
@@ -55,7 +55,7 @@ export default function LandingPage() {
           position: 'relative',
         }}
       >
-      {/* O miolo fica centrado como sempre; o rodapé legal (29I, achado 76) desce para o pé da tela. */}
+      {/* O miolo fica centrado como sempre; o rodapé legal desce para o pé da tela. */}
       <div
         style={{
           flex: 1,
@@ -88,7 +88,7 @@ export default function LandingPage() {
           O seu time.<br />A sua figurinha.
         </h1>
 
-        {/* Rodada 29O: o nome e o que o app faz, para quem chega sem ler nada (é o que o Google pede para verificar a marca). */}
+        {/* O nome e o que o app faz, para quem chega sem ler nada (é o que o Google pede para verificar a marca). */}
         <p className="texto-apoio" style={{ margin: '-6px 0 0', maxWidth: 310, fontSize: 15 }}>
           Futty: sorteio justo, ranking e figurinha de colecionador para o futebol do seu time.
         </p>
@@ -160,9 +160,9 @@ export default function LandingPage() {
         </div>
       </div>
 
-        {/* Rodapé legal (Rodada 29I, achado 76): as lojas pedem a Privacidade acessível SEM precisar de conta, e o aviso dos 18 anos
-            tem de estar antes do cadastro, não só dentro dele. As duas páginas já existem (/termos, /privacidade). Discreto: letra
-            pequena, cor apagada, um link por palavra, sem ocupar o lugar dos botões. */}
+        {/* Rodapé legal: as lojas pedem a Privacidade acessível SEM precisar de conta, e o aviso dos 18 anos tem
+            de estar antes do cadastro, não só dentro dele. As duas páginas já existem (/termos, /privacidade).
+            Discreto: letra pequena, cor apagada, um link por palavra, sem ocupar o lugar dos botões. */}
         <footer data-rodape-legal style={{ width: '100%', maxWidth: 320, margin: '0 auto', padding: '18px 0 6px', textAlign: 'center', fontSize: 12, lineHeight: 1.7, color: 'rgba(255,255,255,0.45)' }}>
           <div>
             <Link to="/termos" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'underline', textUnderlineOffset: 3 }}>Termos de Uso</Link>

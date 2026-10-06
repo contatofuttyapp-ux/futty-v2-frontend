@@ -22,10 +22,9 @@ export default function ForgotPassword() {
     setSuccess('');
     setLoading(true);
 
-    // 14-set (Android): no nativo, o link do e-mail tem de voltar pelo esquema
-    // custom — components/DeepLinkListener.jsx troca o code e manda para
-    // /alterar-password sozinho. Na web, aponta direto pra lá (era /reset-password,
-    // rota que nunca existiu — bug corrigido de passagem).
+    // No nativo (Android), o link do e-mail tem de voltar pelo esquema custom —
+    // components/DeepLinkListener.jsx troca o code e manda para /alterar-password sozinho.
+    // Na web, aponta direto para lá.
     const redirectTo = Capacitor.isNativePlatform()
       ? CALLBACK_URL_NATIVO
       : `${window.location.origin}/alterar-password`;

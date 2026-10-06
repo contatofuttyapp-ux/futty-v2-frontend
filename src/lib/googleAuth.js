@@ -1,15 +1,13 @@
-// Futty v2.0 — Login com Google, partilhado entre LandingPage/Login/Register (14-set,
-// Android). Web mantém o redirect direto de sempre; nativo abre o OAuth do Google numa
-// Chrome Custom Tab (skipBrowserRedirect + Browser.open) porque um WebView não pode
-// completar o login do Google (a Google recusa OAuth dentro de WebView desde 2021).
-// O retorno chega pelo esquema com.futty.app://auth/callback, capturado globalmente
-// por components/DeepLinkListener.jsx — não pelo chamador desta função.
+// Futty v2.0 — Login com Google, partilhado entre LandingPage/Login/Register (Android). Web mantém o redirect
+// direto de sempre; nativo abre o OAuth do Google numa Chrome Custom Tab (skipBrowserRedirect + Browser.open)
+// porque um WebView não pode completar o login do Google (a Google recusa OAuth dentro de WebView desde 2021).
+// O retorno chega pelo esquema com.futty.app://auth/callback, capturado globalmente por
+// components/DeepLinkListener.jsx — não pelo chamador desta função.
 //
-// VELOCIDADE 8 (16-set): o cliente chega por obterSupabase(). Não é capricho —
-// o DeepLinkListener está montado na RAIZ e importa daqui a constante
-// CALLBACK_URL_NATIVO; com o `import { supabase }` estático, essa constante de
-// 40 caracteres arrastava os 200 KB do supabase-js para o modulepreload do
-// arranque. Um import estático não se paga por símbolo, paga-se por módulo.
+// O cliente chega por obterSupabase(). Não é capricho — o DeepLinkListener está montado na RAIZ e importa
+// daqui a constante CALLBACK_URL_NATIVO; com o `import { supabase }` estático, essa constante de 40 caracteres
+// arrastaria os 200 KB do supabase-js para o modulepreload do arranque. Um import estático não se paga por
+// símbolo, paga-se por módulo.
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { obterSupabase } from './supabaseAsync';

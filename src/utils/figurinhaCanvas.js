@@ -5,10 +5,9 @@ import { getFrameColor } from './frameColors';
 import { registarFasesCromo } from '../lib/diagnostico';
 import { respirar } from '../lib/ritmo';
 
-// ─── Cronómetro de fases (FLUIDEZ 2, 16-set) ─────────────────────────────────
+// ─── Cronómetro de fases ─────────────────────────────────────────────────
 // Cada composição diz quanto custou cada passo. Sem isto, "o canvas leva 8,8 s"
-// não aponta para conserto nenhum — com isto vê-se que o custo é o blur por
-// software, não o desenho. Os números vão para a caixa-preta (lib/diagnostico)
+// não aponta para conserto nenhum. Os números vão para a caixa-preta (lib/diagnostico)
 // e aparecem na tela de Diagnóstico como "cromo: fases".
 function cronometro() {
   let t = performance.now();
@@ -84,7 +83,7 @@ function adiantarFundo(fundo) {
   else carregarImagem('/stadium_bg.webp', false);
 }
 
-// VELOCIDADE 9 (23-set): quem manda a foto do cromo à frente é o
+// Quem manda a foto do cromo à frente é o
 // context/PerfilContext.jsx, mal o perfil aparece (inclusive vindo do cache
 // local, antes de qualquer rede) — com um `new Image()` na MESMA URL que o
 // `construirCard` pede aqui em baixo (urlImagem(…, 512)). O adiantamento tem de
@@ -115,10 +114,9 @@ function canvasParaBlob(canvas) {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
 }
 
-// FASE 3.51 — BASE ESCURA partilhada: fonte de verdade única do gradiente vertical.
-// O 'épico' constrói-se por cima dela; o 'neutro' é ela + vinheta, e nada mais. Antes
-// o neutro era preto puro (#000) e destoava — agora os dois fundos partem do mesmo
-// sítio e mudam só no que se lhes acrescenta.
+// BASE ESCURA partilhada: fonte de verdade única do gradiente vertical.
+// O 'épico' constrói-se por cima dela; o 'neutro' é ela + vinheta, e nada mais. O neutro em preto puro
+// (#000) destoava — os dois fundos partem do mesmo sítio e mudam só no que se lhes acrescenta.
 function desenharBaseEscura(ctx, W, H) {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#16161c');
@@ -128,7 +126,7 @@ function desenharBaseEscura(ctx, W, H) {
   ctx.fillRect(0, 0, W, H);
 }
 
-// FASE 3.51 — VINHETA partilhada (elíptica, só nas margens), pelo mesmo motivo.
+// VINHETA partilhada (elíptica, só nas margens), pelo mesmo motivo.
 function desenharVinheta(ctx, W, H) {
   ctx.save();
   ctx.translate(W / 2, H * 0.45);
@@ -152,7 +150,7 @@ export function desenharFundoNeutro(ctx, W, H) {
 // base escura da casa + aura dourada elíptica ATRÁS do jogador. Valores COPIADOS do palco
 // selado (330×470; glow box 300×344; ellipse 50%×48% @ 50%,45%; stops .55/.24/.07/0 @
 // 0/34/56/78%; blur 46) e só reescalados ao 2:3 do cromo. NÃO toca no palco selado.
-// FLUIDEZ 2 (16-set) — o glow desfocado é PRÉ-DESENHADO, uma vez por sessão.
+// O glow desfocado é PRÉ-DESENHADO, uma vez por sessão.
 //
 // Medido no WebKit: o `ctx.filter = blur(56px)` a transferir o glow para um card
 // de 600×600 custava 785 ms de thread principal, numa fatia só. Era a fase mais
@@ -169,9 +167,10 @@ export function desenharFundoNeutro(ctx, W, H) {
 // glow diferentes), não por tamanho: como tudo no desenho escala com W, a mesma
 // mancha serve qualquer resolução.
 //
-// RODADA 29H-B (dono, 2-out, item 56): a aura no DOBRO do tamanho e com 25% MENOS opacidade. A caixa do glow dobra
-// (AURA_ESCALA) e cada parada do degradê sai com 3/4 do alpha (AURA_OPACIDADE) — a elipse continua centrada no mesmo ponto,
-// só cresce e suaviza. O palco selado da vitrine (.perfil-glow) NÃO muda: é a aura do CARD que o dono pediu.
+// A aura do CARD sai no DOBRO do tamanho e com 25% MENOS opacidade. A caixa do glow dobra
+// (AURA_ESCALA) e cada parada do degradê sai com 3/4 do alpha (AURA_OPACIDADE) — a elipse continua centrada
+// no mesmo ponto, só cresce e suaviza. O palco selado da vitrine (.perfil-glow) NÃO muda: é a aura do CARD
+// que o dono pediu.
 export const AURA_ESCALA = 2;
 export const AURA_OPACIDADE = 0.75;
 const LARGURA_GLOW = 160;
@@ -193,9 +192,9 @@ function glowAura(razaoCaixa) {
   octx.save();
   octx.translate(folga + gw * 0.5, folga + gh * 0.45); // centro da elipse @ 50%,45% do box
   octx.scale(gw * 0.5, gh * 0.48);                      // raios 50%×48% do box
-  // DOSE glow ×2 (mesmo desenho, dobra opacity/spread): alphas dobrados (clamp) e
-  // stops empurrados para fora (mais alcance). Base seladas: .55/.24/.07 @ 0/34/56/78.
-  // 29H-B: os alphas de antes (0,95 / 0,48 / 0,16) vezes AURA_OPACIDADE (0,75) — o dobro do tamanho vem da caixa, em desenharFundoAura.
+  // Glow ×2 (mesmo desenho, dobra opacity/spread): alphas dobrados (clamp) e stops empurrados para fora (mais
+  // alcance). Base seladas: .55/.24/.07 @ 0/34/56/78. Os alphas (0,95 / 0,48 / 0,16) saem vezes
+  // AURA_OPACIDADE (0,75) — o dobro do tamanho vem da caixa, em desenharFundoAura.
   const g = octx.createRadialGradient(0, 0, 0, 0, 0, 1);
   g.addColorStop(0, `rgba(212,160,23,${(0.95 * AURA_OPACIDADE).toFixed(4)})`);
   g.addColorStop(0.40, `rgba(212,160,23,${(0.48 * AURA_OPACIDADE).toFixed(4)})`);
@@ -218,8 +217,8 @@ export function desenharFundoAura(ctx, W, H, ehQuadrado = false) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, W, H);
 
-  // b) glow do tamanho do "glow box" (300/330 × 344/470 do palco), já desfocado — e, desde a 29H-B, no DOBRO (AURA_ESCALA): a
-  // mancha passa a sangrar além do card, de propósito; o que sobra é cortado pelo próprio canvas.
+  // b) glow do tamanho do "glow box" (300/330 × 344/470 do palco), já desfocado — e no DOBRO (AURA_ESCALA): a
+  // mancha sangra além do card, de propósito; o que sobra é cortado pelo próprio canvas.
   const gw = Math.max(2, Math.round(W * (300 / 330) * AURA_ESCALA));
   const gh = Math.max(2, Math.round(H * (344 / 470) * AURA_ESCALA));
   const { canvas: pronto, folgaFrac } = glowAura(gh / gw);
@@ -244,8 +243,9 @@ const PREMIUM_GLINTS = [
   [0.14, 0.82, 3.2], [0.85, 0.85, 4.2], [0.50, 0.91, 3.2], [0.31, 0.19, 2.4], [0.70, 0.21, 3.2],
 ];
 const PREMIUM_GLINTS_DISCRETO = [PREMIUM_GLINTS[2], PREMIUM_GLINTS[7], PREMIUM_GLINTS[10]];
-// 29H-B (decisão do dono, 2-out, noite): o GOLDEN FICA O ATUAL, com as estrelas e os brilhos. As variantes A/B da prancha
-// (ouro fosco / ouro escuro, brilho só nas bordas) foram descartadas e saíram do app; o PNG em FUT/DESIGN fica só como registro.
+// O GOLDEN FICA O ATUAL, com as estrelas e os brilhos (dono). As variantes A/B da prancha (ouro fosco /
+// ouro escuro, brilho só nas bordas) foram descartadas e saíram do app; o PNG em FUT/DESIGN fica só como
+// registro.
 
 // Paletas dos fundos premium: chapa (asset em /public), base de fallback (caso a
 // chapa falhe a carregar — nunca fica buraco) e as 3 cores do glint (centro/halo/cauda).
@@ -357,14 +357,14 @@ export async function desenharFundoEstadio(ctx, W, H, { ehQuadrado = false, cron
 // `intensidade` multiplica SÓ o alpha das arestas do honeycomb. O card usa 1 (a
 // discrição desenhada); o tile de 120×120 usa 3.0, senão o padrão desaparece na
 // miniatura — a mesma geometria, legível à escala a que é vista.
-// FLUIDEZ 2 (16-set) — o padrão do Épico é construído UMA vez por tamanho.
+// O padrão do Épico é construído UMA vez por tamanho.
 //
 // Medido no WebKit: `epico:blur` custava 725 ms no card e 659 ms no cromo — a
 // fase mais cara depois do Aura. E era refeita a cada composição, apesar de o
 // desenho ser DETERMINÍSTICO (seed fixa 20240): o mesmo tamanho dá sempre
 // exactamente os mesmos pixéis.
 //
-// Duas mudanças: o desfoque passa a ser por faixas (ver desfocarPorFaixas — o
+// Duas peças: o desfoque é por faixas (ver desfocarPorFaixas — o
 // mesmo resultado, em fatias de poucos ms) e a camada pronta fica em cache. A
 // segunda figurinha com fundo Épico não desenha um hexágono sequer.
 //
@@ -445,10 +445,8 @@ async function padraoEpico(W, H, intensidade, cron) {
         else octx.lineTo(px, py);
       }
       octx.closePath();
-      // FASE 3.51 — as arestas passivas eram brancas (0.022); passaram a DOURADAS
-      // (o dourado sobre esta base tem menos contraste que o branco, daí o alpha
-      // subir). FASE 3.55 — mais dourado: 0.045 → 0.065 e 0.08 → 0.115. As "vivas"
-      // são 12% das células. `intensidade` só existe para o tile (ver assinatura).
+      // Arestas passivas DOURADAS (o dourado sobre esta base tem menos contraste que o branco, daí o alpha
+      // mais alto). As "vivas" são 12% das células. `intensidade` só existe para o tile (ver assinatura).
       const aPassiva = 0.065 * intensidade;
       const aViva = 0.115 * intensidade;
       octx.strokeStyle = rnd() < 0.12
@@ -480,9 +478,8 @@ async function padraoEpico(W, H, intensidade, cron) {
   const cctx = camada.getContext('2d');
   cctx.filter = `blur(${1.2 * k}px)`;
   cctx.translate(W / 2, H / 2);
-  // FASE C — pseudo-perspectiva mais assumida: skews b -0.06 → -0.085 e c 0.05 → 0.07
-  // (~+40%). A ROTAÇÃO do padrão fica nos 14.52° do futty-logo-flat.png (fase 3.33) —
-  // a fonte canónica. Medi fresco o F do kit fotografado e deu 15.52°, mas o Δ de 1° é
+  // Pseudo-perspectiva assumida: skews b = -0.085 e c = 0.07. A ROTAÇÃO do padrão fica nos 14.52° do
+  // futty-logo-flat.png — a fonte canónica. Medi fresco o F do kit fotografado e deu 15.52°, mas o Δ de 1° é
   // ruído: o logo no kit tem 51x61px, está impresso em tecido curvo e com sombra. Um
   // grau, num padrão com blur 1.2px e alpha 0.065, ninguém vê — e alinhar a marca pela
   // fotografia do produto em vez do vector seria ancorá-la no derivado.
@@ -519,7 +516,7 @@ export async function desenharFundoEpico(ctx, W, H, { intensidade = 1, cron = nu
 
 // Desenha o card 2:3 num canvas próprio (largura×altura). `k` escala os valores
 // fixos (fontes, badge, frame) para render nativo a qualquer resolução.
-// Selos de honra (Vaga 11C) — desenhados no cromo (top-right). Path do troféu da
+// Selos de honra — desenhados no cromo (top-right). Path do troféu da
 // casa (= icons/trofeu.svg) + tiers metálicos. Forma A (postal denteado).
 const SELO_TROFEU = ['M13 9 L35 9 L31 25 L17 25 Z', 'M13.5 11 L8 11 L8 17 L15 20', 'M34.5 11 L40 11 L40 17 L33 20', 'M24 25 L24 32', 'M17 40 L31 40 L28 32 L20 32 Z'];
 const SELO_TIERS = {
@@ -566,15 +563,14 @@ function desenharUmSelo(cx, x, y, w, tier, label) {
   cx.restore();
 }
 
-// FLUIDEZ 2 (16-set) — ONDE o avatar fica dentro do card. Extraído do desenho
+// ONDE o avatar fica dentro do card. Extraído do desenho
 // para poder ser usado também pela PRÉVIA em DOM do Início (ver CromoInicio):
 // os dois têm de pôr o jogador exactamente no mesmo sítio, senão a troca da
 // prévia pelo cromo desenhado salta à vista. Uma conta só, um sítio só.
 //
-// FASE 3.44 — Zoom ANCORADO AOS OLHOS. Antes fixava-se o topo (dy = H*0.12) e,
-// como dh cresce com avatarZoom, o olhar descia ao ampliar. Agora ancora-se o
-// ponto dos olhos: dy = EYE_Y - dh*EYE_FRAC. Como dh já inclui o zoom, os olhos
-// ficam sempre em EYE_Y e o corpo cresce à volta desse ponto.
+// Zoom ANCORADO AOS OLHOS: fixar o topo (dy = H*0.12) faria o olhar descer ao ampliar, porque
+// dh cresce com avatarZoom. Por isso ancora-se o ponto dos olhos: dy = EYE_Y - dh*EYE_FRAC. Como dh
+// já inclui o zoom, os olhos ficam sempre em EYE_Y e o corpo cresce à volta desse ponto.
 // EYE_FRAC medido no avatar gerado (445x680, já com trim+extend): pupila esquerda
 // a 20.9% e direita a 22.2% da altura do PNG (cabeça inclinada) → média 21.5%.
 const EYE_FRAC = 0.215;
@@ -592,8 +588,8 @@ export function enquadrarAvatar({ W, H, nw, nh, avatarZoom = 1, ehQuadrado = fal
   return { dx: (W - dw) / 2, dy: EYE_Y - dh * EYE_FRAC, dw, dh };
 }
 
-// RODADA 27 — onde a foto da figurinha COMUM fica dentro do card. Era uma conta solta dentro do
-// construirCard; agora é uma função, porque a prévia em DOM do Início (PreviaCromo) tem de pôr a foto
+// Onde a foto da figurinha COMUM fica dentro do card. É uma função (e não uma conta solta dentro do
+// construirCard) porque a prévia em DOM do Início (PreviaCromo) tem de pôr a foto
 // no MESMO sítio que o canvas põe, senão a troca da prévia pelo cromo desenhado salta à vista (medido:
 // 47,9 px de desvio numa caixa de 184 px, porque a prévia usava a conta da Brilhante).
 //
@@ -602,10 +598,10 @@ export function enquadrarAvatar({ W, H, nw, nh, avatarZoom = 1, ehQuadrado = fal
 // CropModal já é o enquadramento que a pessoa escolheu; num card 2:3 ele aparece inteiro, num quadrado
 // aparece o quadrado do topo dele.
 //
-// RODADA 28 — zoom (−/+) na Figurinha. O PISO é 1 = a foto cobre a moldura por completo (nunca faixa
+// Zoom (−/+) na Figurinha. O PISO é 1 = a foto cobre a moldura por completo (nunca faixa
 // vazia, nunca a borda da foto à mostra); acima disso aproxima em torno do rosto — o centro na
 // horizontal e o terço de cima na vertical, onde o CropModal pede o rosto — sem nunca descobrir a
-// borda. Com zoom 1 a conta é EXATAMENTE a de antes: o enquadramento salvo continua a ser o de todas
+// borda. Com zoom 1 a conta não muda: o enquadramento salvo continua a ser o de todas
 // as telas (o Início e a prévia dele usam sempre 1).
 const ANCORA_DO_ROSTO_Y = 1 / 3;
 export function enquadrarFotoComum({ W, H, nw, nh, zoom = 1 }) {
@@ -631,11 +627,11 @@ export function enquadrarFotoComum({ W, H, nw, nh, zoom = 1 }) {
 }
 
 /**
- * RODADA 28 — o card mostra AGORA uma figurinha (IA)? Quem diz é o motor (`figurinha_ativa`, pela regra
- * única do nome do arquivo — backend/utils/figurinhaRegra.js). As telas decidiam por foto_url ≠
- * avatar_url, e a foto do Google em avatar_url entrava no card como figurinha: seletor de fundos, zoom
- * abaixo da moldura, faixas vazias. A conta antiga só vale para uma resposta guardada de antes desta
- * rodada, sem o campo, até o /api/me fresco chegar.
+ * O card mostra AGORA uma figurinha (IA)? Quem diz é o motor (`figurinha_ativa`, pela regra
+ * única do nome do arquivo — backend/utils/figurinhaRegra.js). Decidir por foto_url ≠
+ * avatar_url é errado: a foto do Google em avatar_url entrava no card como figurinha (seletor de fundos, zoom
+ * abaixo da moldura, faixas vazias). A conta por foto_url ≠ avatar_url só vale para uma resposta guardada,
+ * sem o campo, até o /api/me fresco chegar.
  */
 export function mostraFigurinha(user) {
   if (typeof user?.figurinha_ativa === 'boolean') return user.figurinha_ativa;
@@ -658,12 +654,11 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // logo as diagonais ficam a 45° mesmo com H=W) — só muda o enquadramento do avatar
   // e o gradiente inferior. O 'card' 2:3 fica pixel-igual (nenhum ramo o toca).
   const ehQuadrado = formato === 'quadrado';
-  // 'comum' (SPEC-FIGURINHA-3 §3, 22-set) — a figurinha GRÁTIS: a foto da
+  // 'comum' (SPEC-FIGURINHA-3 §3) — a figurinha GRÁTIS: a foto da
   // pessoa COMO ELA É, com o fundo dela, a preencher o card inteiro (cover),
   // sem IA, sem recorte de fundo e sem os fundos da casa. Mesma moldura, mesma
   // placa, mesmo 2:3 da Brilhante — é o mesmo álbum, e essa é a razão de ser.
-  // 'brilhante' é tudo o que existia antes deste dia: avatar recortado a
-  // flutuar sobre o fundo escolhido, dentro do octógono.
+  // 'brilhante': avatar recortado a flutuar sobre o fundo escolhido, dentro do octógono.
   const ehComum = modo === 'comum';
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -694,7 +689,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.lineTo(m, m + cut);
     ctx.closePath();
   };
-  // FASE 3.45 — Variante com inset POR-LADO. O `cut` é o mesmo nos quatro cantos, por
+  // Variante com inset POR-LADO. O `cut` é o mesmo nos quatro cantos, por
   // isso as diagonais continuam a 45° mesmo com insets diferentes (dx = dy = cut).
   const octagonoLados = (t, r, b, l) => {
     ctx.beginPath();
@@ -730,7 +725,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // Geometria do NOME (fonte única): baseline + tamanho da fonte + topo da placa.
   // O corte do avatar deriva daqui, por isso descer o nome desce o palco inteiro.
   const nomeY = H - 42 * k; // baseline do nome
-  const nomeFonte = 46 * k; // tamanho base da fonte do nome (FASE 3.36: era 52*k)
+  const nomeFonte = 46 * k; // tamanho base da fonte do nome
   const placaTopo = nomeY - 42 * k; // topo da placa = linha de corte do avatar
 
   // Desenha o avatar real com enquadramento/zoom/posição fixos. Corte LIMPO (sem
@@ -743,7 +738,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // retrato de verdade). O clip octogonal do conteúdo já está ativo.
     if (ehComum) {
       // Alinhado ao TOPO quando a foto sobra em altura (enquadrarFotoComum, acima do construirCard);
-      // o zoom (Rodada 28) só aproxima — nunca abaixo de cobrir a moldura.
+      // o zoom só aproxima — nunca abaixo de cobrir a moldura.
       const { dx, dy, dw, dh } = enquadrarFotoComum({ W, H, nw: avatar.naturalWidth, nh: avatar.naturalHeight, zoom: fotoZoom });
       ctx.drawImage(avatar, dx, dy, dw, dh);
       return;
@@ -755,14 +750,14 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
       W, H, nw: avatar.naturalWidth, nh: avatar.naturalHeight, avatarZoom, ehQuadrado,
     });
 
-    // FASE 3.26/3.45 — Clip OCTOGONAL: o avatar nunca é desenhado sobre o CORPO
+    // Clip OCTOGONAL: o avatar nunca é desenhado sobre o CORPO
     // dourado grosso do frame, em nenhum lado. Geometria medida do próprio frame:
     //   corpo grosso : path a 3.5*k, lineWidth 7*k  → ocupa [0, 7*k] de cada borda
     //   linha fina   : path a 8.5*k, lineWidth 1.2*k → ocupa [7.9*k, 9.1*k]
-    // 3.45 — as LATERAIS deixam de parar na linha fina e vão até à borda interior do
-    // corpo grosso (7*k) + 1*k de respiro = 8*k. A linha fina deixa de ser fronteira
+    // As LATERAIS não param na linha fina e vão até à borda interior do
+    // corpo grosso (7*k) + 1*k de respiro = 8*k. A linha fina não é fronteira
     // lateral: o braço pode sobrepô-la na faixa [8, 9.1]*k (1.1*k). Topo e base ficam
-    // nos 11.1*k da 3.26 — irrelevantes na prática (a 130% a cabeça está a y=84, com
+    // nos 11.1*k — irrelevantes na prática (a 130% a cabeça está a y=84, com
     // 73px de folga, e a placa cobre a base).
     const insetTopo = 11.1 * k;
     const insetLado = 7 * k + 1 * k; // = 8*k
@@ -833,7 +828,7 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
       // letras largas em maiúsculas, tipo "MMMMMMMMMMMMMMMMMM").
       let nomeUpper = String(nome).toUpperCase();
       const larguraMax = placaW - 24 * k; // largura da placa menos padding
-      const fonteMin = 22 * k; // FASE 3.55: nome nunca corta (era 36*k)
+      const fonteMin = 22 * k; // nome nunca corta
       // Letter-spacing acompanha a fonte (nunca fixo), com piso de 0.5*k para o
       // texto não colar nos tamanhos mínimos. Divide por nomeFonte (não pelo
       // número cru 46) para o k não entrar em dobro — nomeFonte já é 46*k.
@@ -879,9 +874,8 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     }
   };
 
-  // FASE 3.46 — FRAME extraído para função. Antes vivia solto no fim (passo 6) e só
-  // o card completo e a moldura o desenhavam; agora a camada de topo do preview
-  // também o pede, para o preview ter a MESMA ordem de desenho do download
+  // FRAME extraído para função: a camada de topo do preview também o pede,
+  // para o preview ter a MESMA ordem de desenho do download
   // (frame por cima do avatar). Deve ser chamado SEMPRE depois do ctx.restore()
   // que remove o clip octogonal — o frame é inset e não quer recorte.
   const desenharFrame = () => {
@@ -988,15 +982,15 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // MODO CAMADA SÓ-AVATAR: canvas transparente, desenha só o avatar real.
   if (apenasAvatar) {
     if (avatar) desenharAvatar();
-    // RODADA 28 — na COMUM a foto cobre o card inteiro: o gradiente de baixo, que no PNG baixado vem
-    // POR CIMA da foto, tem de vir nesta camada. Na camada do fundo ele ficava escondido atrás da foto
-    // e a prévia da Figurinha saía mais clara que o card que a pessoa baixa e compartilha.
+    // Na COMUM a foto cobre o card inteiro: o gradiente de baixo, que no PNG baixado vem
+    // POR CIMA da foto, tem de vir nesta camada. Na camada do fundo ficaria escondido atrás da foto
+    // e a prévia da Figurinha sairia mais clara que o card que a pessoa baixa e compartilha.
     if (ehComum && avatar) desenharGradienteInferior();
     ctx.restore();
     return canvas;
   }
 
-  // SELOS DE HONRA (Vaga 11C) — máx 2, canto sup. direito, sobre o frame. Hoisted:
+  // SELOS DE HONRA — máx 2, canto sup. direito, sobre o frame. Hoisted:
   // desenha no card completo (download) E na camada apenasPlacaNome (topo do preview).
   function desenharSelos() {
     const lista = (selos || []).slice(0, 2);
@@ -1010,9 +1004,8 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     lista.forEach((s, i) => desenharUmSelo(ctx, W - mx - w / 2, topM + h / 2 + i * (h + h * 0.12), w, s.tier, s.label));
   }
 
-  // MODO CAMADA SÓ-PLACA+NOME+FRAME: camada de TOPO do preview. FASE 3.46 — passa a
-  // incluir o frame, para o braço (que agora chega ao corpo grosso) ficar por baixo
-  // da linha fina, tal como no card único do download.
+  // MODO CAMADA SÓ-PLACA+NOME+FRAME: camada de TOPO do preview. Inclui o frame, para o braço (que chega
+  // ao corpo grosso) ficar por baixo da linha fina, tal como no card único do download.
   if (apenasPlacaNome) {
     desenharPlacaNome();
     ctx.restore(); // sai do clip octogonal ANTES do frame, como no card completo
@@ -1029,8 +1022,8 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     ctx.fillRect(0, 0, W, H);
     cron?.marca('fundo:desenhar');
   } else if (fundo === 'preto') {
-    // FASE 3.51 — 'preto' (label "Neutro") era #000 puro e destoava do épico. Passa a
-    // partilhar a base escura: mesmo gradiente + vinheta, sem honeycomb/F/luz.
+    // 'preto' (label "Neutro") partilha a base escura (#000 puro destoava do épico):
+    // mesmo gradiente + vinheta, sem honeycomb/F/luz.
     desenharFundoNeutro(ctx, W, H);
     cron?.marca('fundo:desenhar');
   } else if (fundo === 'gradiente') {
@@ -1045,10 +1038,10 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
     // pipeline (desenharFundoPremium). No PREVIEW (apenasMoldura) do GOLDEN a chapa
     // entra SEM glints baked → a "mina" vive no overlay animado (z3); no card completo
     // (download) os glints saem NO PICO (frame mais rico).
-    // ROYAL (decisão do dono, 2-out, noite): o app renderiza EXATAMENTE como a prancha
+    // ROYAL (dono): o app renderiza EXATAMENTE como a prancha
     // golden-variantes.png — chapa roxa + os 14 brilhos no pico, também na prévia. O
     // overlay vivo nunca existiu para o Royal, e a prévia entrava com a chapa nua (0 de
-    // 14 brilhos, medido em scripts/prova-royal.mjs): a poeira passa a ser desenhada na
+    // 14 brilhos, medido em scripts/prova-royal.mjs): a poeira é desenhada na
     // própria camada de fundo, atrás do jogador, como no download.
     const desenhar = fundo === 'golden' ? desenharFundoGolden : desenharFundoRoyal;
     const glintsDaCamada = apenasMoldura ? (fundo === 'royal' ? 'pico' : false) : fundoGlints;
@@ -1111,9 +1104,8 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
   // faíscas ficam soltas por cima, sem recorte.
   ctx.restore();
 
-  // 6. FRAME — FASE 3.46: no card completo continua a desenhar-se aqui (depois do
-  // avatar). Na camada `apenasMoldura` deixa de o ser: passou para a camada de topo
-  // do preview (apenasPlacaNome), para o preview e o download ficarem idênticos.
+  // 6. FRAME — no card completo desenha-se aqui (depois do avatar). Na camada `apenasMoldura` não: ele vive
+  // na camada de topo do preview (apenasPlacaNome), para o preview e o download ficarem idênticos.
   if (!apenasMoldura) {
     desenharFrame();
     cron?.marca('moldura');
@@ -1126,9 +1118,8 @@ async function construirCard({ largura = 400, altura = 600, jogador = {}, fundo 
 
 // Figurinha normal: card 2:3 a 400×600 → PNG completo (com jogador). Usado no
 // Baixar/Compartilhar (uma imagem só). Com formato:'quadrado' devolve o RETRATO
-// quadrado 600×600 (sem placa/nome) que o Início mostra — mesma moldura e fundos.
-// FLUIDEZ 2 (16-set) — o retrato QUADRADO passa a ser gerado no tamanho a que
-// vai ser VISTO, não sempre a 600×600.
+// quadrado de até 600×600 (sem placa/nome) que o Início mostra — mesma moldura e fundos.
+// O retrato QUADRADO é gerado no tamanho a que vai ser VISTO, não sempre a 600×600.
 //
 // O cromo do Início é um elemento de tela, e a sua largura vem do CSS
 // (`.cromo-inicio`: 49% da largura da tela, teto de 236 px): num iPhone de 390 dá
@@ -1166,7 +1157,7 @@ export async function gerarFigurinhaCanvas(opts = {}) {
 //   jogadorBlob = só o avatar (transparente) — vai por cima das partículas
 //   placaBlob   = placa+nome+FRAME (transparente) — camada de topo, sempre visível
 // Partículas entram entre fundo e jogador; placa+frame ficam acima do jogador.
-// FASE 3.46 — o frame saiu do fundo para o topo: o braço encosta ao corpo dourado e
+// O frame sai do fundo e vai para o topo: o braço encosta ao corpo dourado e
 // a linha fina desenha-se POR CIMA dele, exactamente como no card único do download.
 // Ordem no preview: fundo (z2) → partículas (z3) → jogador (z4) → placa+frame (z5).
 export async function gerarCamadasFigurinha(opts = {}) {

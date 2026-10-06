@@ -21,12 +21,13 @@ export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, us
     ? urlAsset(avatarUrl)
     : (jogador && cor ? avatarParaCor(jogador, cor) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null));
 
-  // Velocidade 6B: pede ao motor o tamanho que a caixa realmente mostra. O dobro
+  // Pede ao motor o tamanho que a caixa realmente mostra. O dobro
   // do px CSS cobre as telas de 2x/3x sem ficar borrado; acima de 128 CSS já é
   // cartão grande, e aí vale o degrau de 512.
   const px = size || (lg ? PX.lg : md ? PX.md : sm ? PX.sm : PX.base);
-  // Rodada 29B (E): a caixa é SEMPRE quadrada (.pavatar), então o quadrado vem do motor (`sq=1`): é o do TOPO, o mesmo que o
-  // CSS (object-position: top) mostrava — e é nele que o motor aplica o recorte que a pessoa escolheu para a miniatura.
+  // A caixa é SEMPRE quadrada (.pavatar), então o quadrado vem do motor (`sq=1`): é o do TOPO, o mesmo que o
+  // CSS (object-position: top) mostrava — e é nele que o motor aplica o recorte que a pessoa escolheu para a
+  // miniatura.
   const src = bruto ? urlImagem(bruto, px <= 64 ? 128 : px <= 128 ? 256 : 512, { quadrado: true }) : null;
 
   const cls = [
@@ -47,7 +48,7 @@ export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, us
   return (
     <div className={cls} style={estilo}>
       {src && !falhou ? (
-        // Sem width/height nem loading="lazy" (Velocidade 7B): quem dá o tamanho
+        // Sem width/height nem loading="lazy": quem dá o tamanho
         // é a caixa (.pavatar img, 100%), e um avatar de 8 KB não ganha nada em
         // esperar a rolagem — só abria mais uma porta para o Safari errar.
         <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} />

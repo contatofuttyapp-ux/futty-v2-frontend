@@ -27,15 +27,13 @@ import {
   importarMeuPerfil,
 } from './lib/preaquecerAbas';
 
-// Páginas em lazy loading (cada uma no seu chunk), com retry (build 10 —
-// ver utils/lazyComRetry.js) para quando o chunk falha a carregar (deploy
-// novo publicado com a pessoa já de app aberto, ou resposta ruim transitória
-// da CDN).
+// Páginas em lazy loading (cada uma no seu chunk), com retry (ver utils/lazyComRetry.js) para quando
+// o chunk falha a carregar (deploy novo publicado com a pessoa já de app aberto, ou resposta ruim
+// transitória da CDN).
 //
-// As cinco abas da barra de baixo importam-se através de lib/preaquecerAbas.js:
-// são as MESMAS funções que a BottomNav usa para as pré-carregar em ócio
-// (VELOCIDADE 4). Partilhar a função é o que garante que pré-aquecer e navegar
-// falam do mesmo módulo — o registo do browser devolve a mesma promessa.
+// As cinco abas da barra de baixo importam-se através de lib/preaquecerAbas.js: são as MESMAS funções
+// que a BottomNav usa para as pré-carregar em ócio. Partilhar a função é o que garante que
+// pré-aquecer e navegar falam do mesmo módulo — o registo do browser devolve a mesma promessa.
 const Login = lazyComRetry(() => import('./pages/Login'));
 const Register = lazyComRetry(() => import('./pages/Register'));
 const ForgotPassword = lazyComRetry(() => import('./pages/ForgotPassword'));
@@ -71,11 +69,9 @@ const ExcluirConta = lazyComRetry(() => import('./pages/ExcluirConta'));
 const Diagnostico = lazyComRetry(() => import('./pages/Diagnostico'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
-//
-// VELOCIDADE 5 (14-set) — este `loading` é o do AuthProvider e agora só é verdade
-// quando NÃO há sessão guardada no aparelho: com sessão, o AuthProvider já nasce
-// com ela (leitura síncrona do localStorage) e nunca se passa por aqui. Quem chega
-// a ver este F é o visitante de primeira viagem, e só enquanto o Supabase responde.
+// O `loading` é o do AuthProvider e só é verdade quando NÃO há sessão guardada no aparelho: com sessão,
+// o AuthProvider já nasce com ela (leitura síncrona do localStorage) e nunca se passa por aqui. Quem
+// chega a ver este F é o visitante de primeira viagem, e só enquanto o Supabase responde.
 function IndexRedirect() {
   const { session, loading } = useAuth();
   if (loading) return <LoadingFutty motivo="sessao" />;
@@ -83,15 +79,15 @@ function IndexRedirect() {
   return <LandingPage />;
 }
 
-// Rodada 29L (achado 126): o 404 de quem não tem sessão leva à landing e ao cadastro; o de quem tem, ao Início e ao Explorar.
+// O 404 de quem não tem sessão leva à landing e ao cadastro; o de quem tem, ao Início e ao Explorar.
 function PaginaNaoEncontrada() {
   const { session } = useAuth();
   return <ErrorPage titulo="Página não encontrada" mensagem="Esta página não existe." semSessao={!session} />;
 }
 
-// Rodada 29I (achado 103): as rotas em português de Portugal (/equipa/…, /criar-equipa) viraram /time/… e /criar-time. As antigas
-// CONTINUAM valendo — link que já foi para o grupo do WhatsApp, favorito, notificação já enviada — e levam para as novas, com a
-// query (?entrou=1), o # e o state de quem chegou.
+// As rotas em português de Portugal (/equipa/…, /criar-equipa) viraram /time/… e /criar-time. As antigas
+// CONTINUAM valendo — link que já foi para o grupo do WhatsApp, favorito, notificação já enviada — e levam
+// para as novas, com a query (?entrou=1), o # e o state de quem chegou.
 function RedirecionaEquipa() {
   const { pathname, search, hash, state } = useLocation();
   return <Navigate to={`${caminhoNovoDeEquipa(pathname)}${search}${hash}`} replace state={state} />;
@@ -132,14 +128,14 @@ const ROTAS_PRIVADAS = [
   ['/time/:slug/campeonato/:id', Campeonato],
   ['/time/:slug/jogador/:userId', JogadorPerfil],
   ['/time/:slug/jogo/novo', NovoJogo],
-  ['/time/:slug/jogo/passado', JogoPassado], // 29S-B: o passo a passo (abre de "Jogo passado →" no Marcar jogo)
+  ['/time/:slug/jogo/passado', JogoPassado], // O passo a passo (abre de "Jogo passado →" no Marcar jogo)
   ['/time/:slug/jogo/:id/sorteio', SorteioShow],
   ['/time/:slug/jogo/:id', JogoRoute],
   ['/admin/:slug', AdminPanel],
   ['/feed', Feed],
   ['/figurinha', Figurinha],
-  // VELOCIDADE 4 — a caixa-preta do app. RODADA 28: só o super-admin, pelo Gabinete; o número
-  // de todo mundo vem da telemetria anônima (sem botão).
+  // A caixa-preta do app: só o super-admin, pelo Gabinete; o número de todo mundo vem da telemetria
+  // anônima (sem botão).
   ['/diagnostico', Diagnostico, true],
   ['/perfil', MeuPerfil],
   ['/planos', Planos],
@@ -152,11 +148,10 @@ const ROTAS_PRIVADAS = [
 // Rotas animadas: o PageTransition (keyed pelo pathname) faz o fade/deslize de
 // entrada em CSS. Trocar a key remonta o div e é isso que recomeça o keyframe.
 //
-// BUILD 11 — SAIU O <AnimatePresence mode="wait">. Servia para segurar a página
-// nova até a animação de SAÍDA da antiga acabar; ou seja, punha a visibilidade
-// do app atrás de uma animação JS ter de terminar — exatamente o que fez o app
-// abrir invisível (ver components/PageTransition.jsx). Uma saída de 0,18s não
-// paga esse risco, e sem ela o React troca a página na hora.
+// Sem <AnimatePresence mode="wait">: ele seguraria a página nova até a animação de SAÍDA da antiga
+// acabar, ou seja, poria a visibilidade do app atrás de uma animação JS ter de terminar — exatamente
+// o que fez o app abrir invisível (ver components/PageTransition.jsx). Uma saída de 0,18s não paga
+// esse risco, e sem ela o React troca a página na hora.
 function AnimatedRoutes() {
   const location = useLocation();
   return (
@@ -170,21 +165,21 @@ function AnimatedRoutes() {
           <Route path="/termos" element={<Termos />} />
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/excluir-conta" element={<ExcluirConta />} />
-          {/* Os endereços antigos (29I, achado 103): redirecionam para /time e /criar-time. */}
+          {/* Os endereços antigos: redirecionam para /time e /criar-time. */}
           <Route path="/equipa/*" element={<RedirecionaEquipa />} />
           <Route path="/equipa" element={<RedirecionaEquipa />} />
           <Route path="/criar-equipa" element={<Navigate to="/criar-time" replace />} />
-          {/* Rodada 29P: a página do Avise-me saiu (a inicial já é a de verdade); os links antigos das redes caem na inicial. */}
+          {/* A página do Avise-me saiu (a inicial já é a de verdade); os links antigos das redes caem na inicial. */}
           <Route path="/avise-me" element={<Navigate to="/" replace />} />
           <Route path="/convite/:token" element={<ConviteRoute />} />
-          {/* Rodada 29H (item 7): o link curto do convite, futtyapp.com.br/c/<código> — a mesma tela. */}
+          {/* O link curto do convite, futtyapp.com.br/c/<código> — a mesma tela. */}
           <Route path="/c/:token" element={<ConviteRoute />} />
           {/* Vista pública do sorteio (sem login) */}
           <Route path="/p/campeonato/:slug/:id" element={<CampeonatoPublico />} />
           <Route path="/p/:slug/:gameId" element={<SorteioPublico />} />
-          {/* 29I, bloco 3 (item 74): o link curto do sorteio, futtyapp.com.br/s/<código> — leva à vista pública de sempre. */}
+          {/* O link curto do sorteio, futtyapp.com.br/s/<código> — leva à vista pública de sempre. */}
           <Route path="/s/:codigo" element={<SorteioCurto />} />
-          {/* Rodada 29B (D.3): as rotas com login vêm da tabela ROTAS_PRIVADAS (um <Route> + AuthGuard
+          {/* As rotas com login vêm da tabela ROTAS_PRIVADAS (um <Route> + AuthGuard
               repetido 25 vezes custava ~1,4 KB do arranque). */}
           {ROTAS_PRIVADAS.map(([path, Tela, soSuper]) => (
             <Route
@@ -201,12 +196,9 @@ function AnimatedRoutes() {
   );
 }
 
-// VELOCIDADE 5 (14-set) — SEM TEMPO ARTIFICIAL no arranque. Havia aqui um overlay
-// que ficava 1200 ms fixos mais 400 ms de fade, em TODA abertura, olhasse ou não o
-// app para o que já estava pronto: um segundo e meio cobrado a quem já tinha tudo
-// em cache. O único loading de arranque passa a ser o LoadingFutty, e só enquanto
-// a sessão for mesmo desconhecida. No app da loja quem cobre o boot é a tela de
-// abertura do sistema, que sai quando a WebView pinta — o overlay duplicava-a.
+// Sem tempo artificial no arranque: o único loading é o LoadingFutty, e só enquanto a sessão for mesmo
+// desconhecida (um overlay fixo de 1200 ms + 400 ms de fade era cobrado de quem já tinha tudo em
+// cache). No app da loja quem cobre o boot é a tela de abertura do sistema, que sai quando a WebView pinta.
 export default function App() {
   return (
     <ErrorBoundary>

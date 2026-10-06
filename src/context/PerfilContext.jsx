@@ -1,8 +1,7 @@
 // Futty v2.0 — Contexto do perfil (/api/me), fonte única partilhada por toda a app.
-// Achado 3/23 (roteiro 10-set): cada página que precisava do utilizador chamava o
-// seu próprio useApi('/api/me') — Início, Equipa, Perfil (2x!), Planos, os guards —
-// cada navegação repetia o mesmo pedido. Agora carrega UMA vez por sessão (login) e
-// todos os consumidores partilham o mesmo estado.
+// Carrega UMA vez por sessão (login) e todos os consumidores partilham o mesmo estado: se cada
+// página que precisa do utilizador (Início, Equipa, Perfil, Planos, os guards) chamasse o seu
+// próprio useApi('/api/me'), cada navegação repetiria o mesmo pedido.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
@@ -11,17 +10,17 @@ import { urlAsset, urlImagem } from '../utils/avatar';
 
 const CACHE_CHAVE = 'me';
 // Quanto se espera pela hidratação vinda do /api/inicio antes de pedir /api/me
-// por conta própria (Velocidade 6B). De Lisboa o /api/inicio responde em ~900 ms;
+// por conta própria. De Lisboa o /api/inicio responde em ~900 ms;
 // 3 s é folga suficiente sem deixar a tela presa se ele nunca vier.
 const ESPERA_HIDRATACAO_MS = 3000;
 
 const PerfilContext = createContext(null);
 
-// RODADA 27 — quem alinha os caches guardados com um perfil confirmado (lib/cacheCard.js) só faz falta
-// QUANDO o card muda, então mora fora do arranque (o teto de 320 KiB do verificar-dist é de JS que o WebKit
-// compila antes da 1ª tela) e se REGISTRA aqui ao carregar — junto das telas em que o card muda (Figurinha,
-// Início, Perfil; ver lib/alinharCard.js). Import dinâmico custava ~1 KiB de cola de pré-carga no arranque.
-// Sem registro (nenhuma dessas telas abriu) não há o que alinhar: nada mudou.
+// Quem alinha os caches guardados com um perfil confirmado (lib/cacheCard.js) só faz falta QUANDO o
+// card muda, então mora fora do arranque (o teto de 320 KiB do verificar-dist é de JS que o WebKit
+// compila antes da 1ª tela) e se REGISTRA aqui ao carregar — junto das telas em que o card muda
+// (Figurinha, Início, Perfil; ver lib/alinharCard.js). Import dinâmico custava ~1 KiB de cola de
+// pré-carga no arranque. Sem registro (nenhuma dessas telas abriu) não há o que alinhar: nada mudou.
 let alinhador = null;
 // eslint-disable-next-line react-refresh/only-export-components
 export function registrarAlinhador(fn) {
@@ -41,12 +40,11 @@ export function registrarLoja(fn) {
 const deCacheSet = new WeakSet();
 
 /**
- * VELOCIDADE 9 (23-set) — põe a foto do cromo a caminho assim que se sabe qual
+ * Põe a foto do cromo a caminho assim que se sabe qual
  * é, sem esperar pela tela.
  *
- * O relatório do build 28 trouxe `cromo · avatar:decodificar 458 ms` como a
- * fase mais cara de compor o cromo do Início — e a maior parte disso é a ida a
- * São Paulo, não a descodificação: o pedido da imagem só partia quando a
+ * No cromo do Início, a fase mais cara era `cromo · avatar:decodificar` (458 ms medidos) — e a maior
+ * parte disso é a ida a São Paulo, não a descodificação: o pedido da imagem só partia quando a
  * composição chegava à linha do avatar, bem depois do arranque. Aqui ele parte
  * com o perfil (incluindo o do cache local, antes de qualquer rede).
  *
@@ -97,9 +95,9 @@ export function PerfilProvider({ children }) {
     loja?.(userId);
   }, [userId]);
 
-  // RODADA 27 — o perfil em exibição AGORA (não o que o último render viu). Duas coisas dependem disto:
-  // saber se o rosto mudou quando chega um perfil confirmado (lib/cacheCard.js) e a guarda de hidratar() —
-  // o cache nunca pisa um dado confirmado (deCacheSet diz se o que está em exibição veio do cache).
+  // O perfil em exibição AGORA (não o que o último render viu). Duas coisas dependem disto: saber se o
+  // rosto mudou quando chega um perfil confirmado (lib/cacheCard.js) e a guarda de hidratar() — o cache
+  // nunca pisa um dado confirmado (deCacheSet diz se o que está em exibição veio do cache).
   const perfilRef = useRef(null);
 
   // Um perfil CONFIRMADO pelo servidor (ou por uma ação da própria pessoa, que vale o mesmo) chegou:
@@ -142,16 +140,16 @@ export function PerfilProvider({ children }) {
         ativo = false;
       };
     }
-    // Cache local (13-set, "Velocidade 3", stale-while-revalidate): mostra o
-    // último /api/me bom na hora (sem LoadingFutty) enquanto o pedido de
+    // Cache local (stale-while-revalidate): mostra o último /api/me bom
+    // na hora (sem LoadingFutty) enquanto o pedido de
     // verdade corre por trás — motor em São Paulo, quem está longe sente
     // ~240ms mesmo já com tudo centralizado num pedido só por sessão.
     const doCache = lerCache(userId, CACHE_CHAVE);
     if (doCache) {
-      // VELOCIDADE 9: a foto do cromo começa a ser baixada AQUI — no arranque,
-      // a partir do cache, antes de qualquer resposta do motor. Era a fase mais
-      // cara de compor o cromo do Início (458 ms no relatório do build 28), e
-      // quase toda ela era a ida a São Paulo a começar tarde. Ver
+      // A foto do cromo começa a ser baixada AQUI — no arranque,
+      // a partir do cache, antes de qualquer resposta do motor. É a fase mais
+      // cara de compor o cromo do Início (458 ms num relatório), e
+      // quase toda ela é a ida a São Paulo a começar tarde. Ver
       // `adiantarFotoDoCromo`.
       adiantarFotoDoCromo(doCache?.user);
       Promise.resolve().then(() => {
@@ -162,9 +160,9 @@ export function PerfilProvider({ children }) {
       });
     }
 
-    // VELOCIDADE 6B (15-set): a abrir DIRETO no Início, o /api/inicio já traz o
+    // A abrir DIRETO no Início, o /api/inicio já traz o
     // `me` dentro do payload agregado e hidrata este contexto (hidratarPerfil).
-    // Pedir /api/me aqui era um segundo pedido para a mesma coisa, a competir
+    // Pedir /api/me aqui seria um segundo pedido para a mesma coisa, a competir
     // com o /api/inicio logo no arranque — o pior momento possível.
     //
     // Este provider vive ACIMA do BrowserRouter (ver App.jsx), por isso não há
@@ -268,7 +266,7 @@ export function PerfilProvider({ children }) {
   //   · `opts.doInicio`: o `me` veio dentro do /api/inicio, que o InicioContext grava sozinho.
   const hidratar = useCallback((data, opts = {}) => {
     if (!data || !userIdRef.current || (opts.deCache && perfilRef.current && !deCacheSet.has(perfilRef.current))) return;
-    adiantarFotoDoCromo(data?.user); // Velocidade 9 — ver a nota na carga inicial
+    adiantarFotoDoCromo(data?.user); // ver a nota na carga inicial
     if (opts.deCache) {
       perfilRef.current = data;
       deCacheSet.add(data);
@@ -287,7 +285,7 @@ export function PerfilProvider({ children }) {
     deCache,
     erro,
     // Conta suspensa (requireAuth do backend) — o AuthGuard usa isto para mostrar
-    // o ecrã próprio em vez do app. `&& !deCache` (14-set): decisão de gate
+    // o ecrã próprio em vez do app. `&& !deCache`: decisão de gate
     // nunca a partir de cache — erroCode só é preenchido pelo /api/me fresco
     // (a exibição do cache limpa erroCode), mas o guard fica explícito mesmo
     // assim, como invariante, não como dependência de como o resto do efeito
