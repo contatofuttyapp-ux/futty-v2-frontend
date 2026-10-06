@@ -134,6 +134,8 @@ const GOLDEN_GLINTS_UI = [
 // Recorte octogonal do card (cut/W = 32/400 = 8%; cut/H = 32/600 ≈ 5.3%). Usado
 // nos overlays de card inteiro para os cantos coincidirem com o PNG octogonal.
 const CLIP_OCTOGONO = 'polygon(8% 0, 92% 0, 100% 5.3%, 100% 94.7%, 92% 100%, 8% 100%, 0 94.7%, 0 5.3%)';
+// 6-out (dono): a cabeça cortou nas duas tentativas com esta foto → o recado leva a escolher OUTRA foto. Tentar de novo com ela daria o mesmo.
+const RECADO_FOTO_RECUSADA = 'Essa foto não deu certo. Escolha outra: de frente, com a cabeça inteira aparecendo e sem nada cortando o topo.';
 
 // Limites do zoom do avatar. ZOOM_MIN subiu de 0.88 (80% exibido) para 0.99 (90%):
 // o degrau de 80% deixou de existir. Qualquer valor abaixo é normalizado no arranque.
@@ -259,6 +261,7 @@ export default function Figurinha() {
   const [erroIA, setErroIA] = useState(false); // falha da geração (≠ 403) → estado de erro no overlay
   const [erroIAmsg, setErroIAmsg] = useState(''); // mensagem específica (ex.: foto inválida); vazio = texto genérico
   const [semGeracoes, setSemGeracoes] = useState(false); // o erro foi SEM_DIREITO (as gerações acabaram)
+  const [fotoRecusada, setFotoRecusada] = useState(false); // o erro foi FOTO_RECUSADA (cabeça cortada nas duas): o recado manda trocar de foto, não tentar de novo
   // Toast curto e genérico (build 9): { mensagem, tipo }. Dois usos — aviso
   // quando /avatar/ai reutiliza o slot (mesma foto de antes, sem isto o botão
   // "carregava e nada acontecia"), e erro do PATCH de fundo (ver escolherFundo).
@@ -797,6 +800,7 @@ export default function Figurinha() {
     setErro('');
     setLimiteIA(false);
     let emSegundoPlano = false;
+    let falhou = null; // a falha desta geração: a fase que volta (foto ou cromo) depende dela
     try {
       // RODADA 29B (bloco 2, A): o POST devolve `{ jobId }` na hora; quem conclui é acompanharPintura (aplicarPinturaPronta
       // / aplicarPinturaFalhou). Sem jobId (resposta imediata) o fluxo é o de sempre.
@@ -810,11 +814,12 @@ export default function Figurinha() {
       setFotoLocal(null);
       recarregarPerfilGlobal();
     } catch (err) {
+      falhou = err;
       tratarFalhaDaEstreia(err);
     } finally {
       if (!emSegundoPlano) {
         setGerandoIA(false);
-        setEstreiaFase('pronto'); // mostra o cromo (com Brilhante ou a foto)
+        setEstreiaFase(falhou ? faseAposFalhaDaEstreia(falhou) : 'pronto'); // mostra o cromo (com Brilhante ou a foto)
       }
     }
   }
@@ -827,8 +832,14 @@ export default function Figurinha() {
   // aqui na mesma, sem erro na tela. Serve ao POST e ao desfecho 'falhou' do job.
   function tratarFalhaDaEstreia(err) {
     if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(aplicarBrilhante);
+    else if (err?.code === 'FOTO_RECUSADA') setFotoRecusada(true); // o recado vai na fase 'foto' (ver faseAposFalhaDaEstreia)
     else if (err?.status === 403) setLimiteIA(true); // 403 sem código conhecido (defensivo)
     else setErro(err?.message || 'Não deu para gerar sua figurinha. Tente de novo.');
+  }
+
+  // 6-out: FOTO_RECUSADA na estreia volta a "Adicione uma foto" com o recado (a pessoa escolhe outra); as outras falhas seguem ao cromo, como sempre.
+  function faseAposFalhaDaEstreia(err) {
+    return err?.code === 'FOTO_RECUSADA' ? 'foto' : 'pronto';
   }
 
   // Trocar foto: upload para o servidor e, CONFIRMADO o 200, preview local imediato.
@@ -845,6 +856,7 @@ export default function Figurinha() {
   // só quando o card passa a mostrar a FOTO (com figurinha ativa, o arquivo do avatar continua sendo a figurinha; o recorte dela fica).
   async function subirFoto(file, emEstreia, original, recorteMini = null) {
     setFotoLocal(null); // some a confirmação de uma troca anterior enquanto esta corre
+    setFotoRecusada(false); // foto nova: some o recado da foto anterior
     if (emEstreia) setEstreiaFase('gerando');
     setUploadFoto(true);
     setErro('');
@@ -1098,6 +1110,7 @@ export default function Figurinha() {
     setErroIA(false);
     setErroIAmsg('');
     setSemGeracoes(false);
+    setFotoRecusada(false);
     setEmailNaoConfirmado(false);
     let emSegundoPlano = false;
     try {
@@ -1148,6 +1161,11 @@ export default function Figurinha() {
       // P2: com a loja ligada o overlay troca o "Tentar novamente" (que daria o mesmo 403) por
       // "Suas gerações acabaram. Comprar mais?" → Planos, com a Minha Figurinha em destaque.
       setSemGeracoes(true);
+      setErroIA(true);
+    } else if (err?.code === 'FOTO_RECUSADA') {
+      // FOTO_RECUSADA (6-out): a cabeça cortou nas duas tentativas com esta foto — o motor já não a pinta. O
+      // overlay mostra o recado e leva a escolher outra foto (sem "tentar de novo", que daria o mesmo).
+      setFotoRecusada(true);
       setErroIA(true);
     } else if (err?.status === 403) setLimiteIA(true); // gate antigo de plano (morto, fica de rede)
     else {
@@ -1209,7 +1227,7 @@ export default function Figurinha() {
     const err = { code: d.code || null, status: d.status || 500, message: d.erro || '', mostrar: !!d.mostrar };
     if (estreia) {
       tratarFalhaDaEstreia(err);
-      setEstreiaFase((f) => (f === 'gerando' || f === 'foto' ? 'pronto' : f));
+      setEstreiaFase((f) => (f === 'gerando' || f === 'foto' ? faseAposFalhaDaEstreia(err) : f));
     } else {
       tratarFalhaDaGeracao(err);
     }
@@ -1457,6 +1475,14 @@ export default function Figurinha() {
     }
   }
 
+  // 6-out: foto recusada → o botão do recado leva direto ao seletor de foto (o mesmo de "Trocar foto"). Nada gasta.
+  function escolherOutraFoto() {
+    setFotoRecusada(false);
+    setErroIA(false);
+    setErroIAmsg('');
+    fileRef.current?.click();
+  }
+
   // Overlay do card: "a gerar" OU, se a geração falhou (≠403), estado de ERRO com
   // retry. No erro o logo fica ESTÁTICO — sinal de que parou.
   //
@@ -1483,6 +1509,15 @@ export default function Figurinha() {
           </span>
           <button type="button" className="btn btn--ghost btn--sm" onClick={() => { setErroIA(false); setSemGeracoes(false); }}>
             Agora não
+          </button>
+        </div>
+      ) : erroIA && fotoRecusada ? (
+        // 6-out: a cabeça cortou nas duas tentativas com ESTA foto. Tentar de novo daria o mesmo: o recado leva a outra foto.
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
+          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{RECADO_FOTO_RECUSADA}</span>
+          <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={escolherOutraFoto}>
+            Escolher outra foto
           </button>
         </div>
       ) : erroIA ? (
@@ -1556,8 +1591,8 @@ export default function Figurinha() {
             {estreiaFase === 'foto' ? (
               <>
                 <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>Seu card está quase pronto <EstrelaIA size={14} color="#fff" /></h2>
-                <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: 0 }}>Adicione uma foto para personalizar seu cartão de jogador</p>
-                <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={() => fileRef.current?.click()}>Adicionar foto</button>
+                <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: 0 }}>{fotoRecusada ? RECADO_FOTO_RECUSADA : 'Adicione uma foto para personalizar seu cartão de jogador'}</p>
+                <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={escolherOutraFoto}>{fotoRecusada ? 'Escolher outra foto' : 'Adicionar foto'}</button>
                 <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Pular por agora →</button>
               </>
             ) : estreiaFase === 'gerando' ? (
