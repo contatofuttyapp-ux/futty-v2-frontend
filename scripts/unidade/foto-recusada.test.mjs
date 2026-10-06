@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(path.join(aqui, '..', '..', 'src', 'pages', 'Figurinha.jsx'), 'utf8');
-const RECADO = 'Essa foto não deu certo. Escolha outra: de frente, com a cabeça inteira aparecendo e sem nada cortando o topo.';
+const RECADO = 'Essa foto não deu certo. Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.';
 
 /** O corpo de uma função do componente: do `function nome(` até o fecho de nível 2 (`  }`). */
 function corpo(nome) {

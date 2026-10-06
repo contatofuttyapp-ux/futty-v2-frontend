@@ -135,7 +135,7 @@ const GOLDEN_GLINTS_UI = [
 // nos overlays de card inteiro para os cantos coincidirem com o PNG octogonal.
 const CLIP_OCTOGONO = 'polygon(8% 0, 92% 0, 100% 5.3%, 100% 94.7%, 92% 100%, 8% 100%, 0 94.7%, 0 5.3%)';
 // 6-out (dono): a cabeça cortou nas duas tentativas com esta foto → o recado leva a escolher OUTRA foto. Tentar de novo com ela daria o mesmo.
-const RECADO_FOTO_RECUSADA = 'Essa foto não deu certo. Escolha outra: de frente, com a cabeça inteira aparecendo e sem nada cortando o topo.';
+const RECADO_FOTO_RECUSADA = 'Essa foto não deu certo. Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.';
 
 // Limites do zoom do avatar. ZOOM_MIN subiu de 0.88 (80% exibido) para 0.99 (90%):
 // o degrau de 80% deixou de existir. Qualquer valor abaixo é normalizado no arranque.
