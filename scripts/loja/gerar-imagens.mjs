@@ -45,7 +45,7 @@ const OURO_TEXTO = '#f0c94a'; // o dourado de texto da marca (MARCA.md)
 
 // LOJA-PRINTS-OUT.md, tabela aprovada pelo dono: ordem, rótulo (dourado, pequeno) e frase.
 const PECAS = [
-  { arquivo: '01.png', tela: 'sorteio.png', kicker: 'Sorteio', titulo: 'Sorteio justo de times' },
+  { arquivo: '01.png', tela: 'sorteio.png', kicker: 'Sorteio', titulo: 'Sorteio de times' },
   { arquivo: '02.png', tela: 'figurinha.png', kicker: 'Figurinha', titulo: 'Vire figurinha de colecionador' },
   { arquivo: '03.png', tela: 'inicio.png', kicker: 'Presença', titulo: 'Confirme presença em um toque' },
   { arquivo: '04.png', tela: 'novo-jogo.png', kicker: 'Novo jogo', titulo: 'Marque o jogo em segundos' },
