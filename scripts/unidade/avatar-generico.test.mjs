@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {
   avatarGenericoUrl, AVATARES_GENERICOS_FEM, AVATARES_GENERICOS_MASC,
 } from '../../src/utils/avatarGenerico.js';
+import { carregarNomesFemininos } from '../../src/utils/nomesFemininos.js';
 
 const ehFem = (url) => AVATARES_GENERICOS_FEM.some((a) => a.url === url);
 const ehMasc = (url) => AVATARES_GENERICOS_MASC.some((a) => a.url === url);
@@ -55,4 +56,22 @@ test('convidado sem app (sem id): o hash cai no NOME — mesmo nome, mesmo bonec
 
 test('dois ids diferentes, mesma escolha, mesmo resultado (a escolha é a fonte única)', () => {
   assert.equal(avatarGenericoUrl('u1', 'f1', 'Qualquer'), avatarGenericoUrl('u2', 'f1', 'Outro Nome'));
+});
+
+// Rodada 30C: a lista grande (Brasil + Portugal, ~9 mil nomes) chega por import() dinâmico, depois
+// do palpite pequeno de sempre. O teste do ANTES/DEPOIS de carregar vive sozinho em
+// avatar-generico-lista-grande.test.mjs (processo próprio do `node --test`) — aqui em cima já
+// rodaram vários `avatarGenericoUrl(...)`, que disparam o carregamento como efeito colateral; testar
+// o estado "antes de carregar" neste mesmo arquivo seria uma corrida (o import pode já ter resolvido).
+test('depois de carregar a lista grande: nomes já certos pelo palpite pequeno (Mariana) continuam exatamente iguais (determinismo, sem regressão)', async () => {
+  const antes = avatarGenericoUrl('u-mariana', null, 'Mariana');
+  await carregarNomesFemininos();
+  const depois = avatarGenericoUrl('u-mariana', null, 'Mariana');
+  assert.equal(antes, depois);
+  assert.ok(ehFem(depois));
+});
+
+test('depois de carregar a lista grande: nome masculino (Zé) continua no masculino', async () => {
+  await carregarNomesFemininos();
+  assert.ok(ehMasc(avatarGenericoUrl('u-ze', null, 'Zé')));
 });

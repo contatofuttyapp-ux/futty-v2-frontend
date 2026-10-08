@@ -6,7 +6,7 @@
 // palpite pelo primeiro nome escolhe o GRUPO (fem/masc, nomesFemininos.js) e o hash do
 // id (ou do nome, sem id — convidado sem app) escolhe QUAL dos 3 dentro do grupo.
 import { primeiroNome } from './primeiroNome';
-import { NOMES_FEMININOS } from './nomesFemininos';
+import { carregarNomesFemininos, nomeEhFemininoConhecido } from './nomesFemininos';
 
 const BASE = 'https://ynzmjcvqdljffgbeqglh.supabase.co/storage/v1/object/public/kits';
 
@@ -39,11 +39,13 @@ function normalizarNome(s) {
     .trim();
 }
 
-// Palpite pelo primeiro nome: está na lista de femininos → grupo feminino; senão
-// (sem nome também) o masculino, o padrão de sempre.
+// Palpite pelo primeiro nome: está entre os femininos conhecidos → grupo feminino; senão (sem nome
+// também) o masculino, o padrão de sempre. Dispara o carregamento da lista grande (Rodada 30C) em
+// segundo plano — não espera por ela; o palpite de agora usa o que já estiver disponível.
 function poolPeloNome(nome) {
+  carregarNomesFemininos();
   const primeiro = normalizarNome(primeiroNome(nome));
-  return primeiro && NOMES_FEMININOS.has(primeiro) ? AVATARES_GENERICOS_FEM : AVATARES_GENERICOS_MASC;
+  return primeiro && nomeEhFemininoConhecido(primeiro) ? AVATARES_GENERICOS_FEM : AVATARES_GENERICOS_MASC;
 }
 
 // `escolha` = users.avatar_generico ('m1'..'f3'), se a pessoa já escolheu. Sem escolha

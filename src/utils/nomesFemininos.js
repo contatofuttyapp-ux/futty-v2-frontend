@@ -23,3 +23,27 @@ export const NOMES_FEMININOS = new Set([
   'telma', 'terezinha', 'valentina', 'valdirene', 'veronica', 'vilma', 'wanessa', 'yara', 'yolanda', 'zenaide',
   'zilda', 'zuleide',
 ]);
+
+// Rodada 30C: a lista grande (Brasil + Portugal, ~9 mil nomes — ver scripts/nomes/) chega depois,
+// por import() DINÂMICO (nunca estático: entraria no pacote de arranque). Enquanto não chega, o
+// palpite usa só o Set acima (instantâneo); quando chega, fica em cache em memória e os PRÓXIMOS
+// palpites (avatarGenerico.js) passam a consultar as duas listas juntas — nenhuma tela força
+// recarregar: a correção aparece na próxima vez que o palpite for pedido (próxima renderização).
+let listaGrande = null; // Set<string> | null — null até carregar
+let promessaCarregamento = null;
+
+/** Dispara (uma vez só; chamadas seguintes reaproveitam) o carregamento da lista grande. */
+export function carregarNomesFemininos() {
+  if (!promessaCarregamento) {
+    promessaCarregamento = import('./nomesFemininos.lista.js')
+      .then((modulo) => { listaGrande = new Set(modulo.default); return listaGrande; })
+      .catch(() => null); // sem rede/offline: fica no palpite pequeno, para sempre — não é erro fatal
+  }
+  return promessaCarregamento;
+}
+
+/** `nome` já normalizado (minúsculas, sem acento — ver normalizarNome em avatarGenerico.js). */
+export function nomeEhFemininoConhecido(nomeNormalizado) {
+  if (NOMES_FEMININOS.has(nomeNormalizado)) return true;
+  return !!listaGrande && listaGrande.has(nomeNormalizado);
+}
