@@ -33,7 +33,7 @@
 //   · sorteio — (ajuste 2 do dono, 5-out) os 4 lugares que sobravam com a silhueta ganham FIGURINHA, no enquadramento da do Bruninho:
 //               LOJA/demo-avatares/<arquivo>-avatar.png, servidos por esta captura em /__demo-avatares/ (tabela e nomes em
 //               figurinhas-do-sorteio.mjs). "Índio" e "Nego Di" saem da peça: viram o Paredão e o dono.
-//   · ranking — (ajuste 2) Paulinho Gaúcho em 3º e Dudu em 6º: a linha inteira troca entre os dois (pontos, nota e o resto da
+//   · ranking — (ajuste 2) Paulinho em 3º e Dudu em 6º: a linha inteira troca entre os dois (pontos, nota e o resto da
 //               linha), cada um com o seu nome e o seu rosto. Ver comPaulinhoEmTerceiro.
 //
 // Saída: LOJA/<--cruas>/<tela>.png — 8 arquivos, consumidos por scripts/loja/gerar-imagens.mjs.
@@ -42,6 +42,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { FIGURINHAS_DO_SORTEIO } from './figurinhas-do-sorteio.mjs';
+import { apelidoBanidoEm } from './apelidos-banidos.mjs';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const LOJA = resolve(AQUI, '..', '..', '..', '..', 'LOJA');
@@ -57,7 +58,10 @@ const fatal = (msg) => { console.error(`\nERRO: ${msg}`); process.exit(2); };
 if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(BASE).hostname)) {
   fatal(`--base=${BASE} não é local. As capturas das lojas rodam contra o servidor LOCAL (LIGAR-FUTTY.bat), nunca contra produção.`);
 }
-const PRODUCAO = /(^|\.)run\.app$|(^|\.)futtyapp\.com\.br$|(^|\.)futty\.pages\.dev$/i;
+// Só o SITE de produção (e o seu "www"), nunca um subdomínio: "api.futtyapp.com.br" é o domínio
+// próprio do Supabase (login/banco, partilhado por dev e produção — ver CLAUDE.md) e tem de passar,
+// senão nem o login da conta demo funciona. Achado nesta rodada: o regex genérico barrava o login inteiro.
+const PRODUCAO = /(^|\.)run\.app$|^(www\.)?futtyapp\.com\.br$|(^|\.)futty\.pages\.dev$/i;
 
 const UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
 const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7 Mobile/15E148 Safari/604.1';
@@ -228,18 +232,18 @@ const logoDoTime = (slug) => join(PASTA_LOGOS, `${String(slug).replace(/-demo$/,
 const ROTA_DOS_LOGOS = '/__demo-logos/';
 
 // Os rostos da demo: avatares que JÁ existem em public/onboarding/ (nada novo no repositório). O nome casa
-// → o mesmo rosto (Dudu → dudu, Tiãozinho → tiagao); o Cabeção fica com o goncalo (ordem do dono). Os
-// rostos que sobram (caio, nando, pedrao, rafa) vão, na ordem do Ranking, para quem aparece logo depois no
-// alto da lista. Os que não aparecem aqui ficam com a silhueta da casa (a mistura de foto e figurinha é de
-// propósito). O Bruninho não entra: continua com a figurinha dele. Nenhum rosto serve a dois jogadores — a
-// tabela é conferida abaixo, e por isso nenhum rosto repete numa mesma tela.
+// → o mesmo rosto (Dudu → dudu, Tiago → tiagao); o Gonçalo fica com o goncalo (ordem do dono; eram Tiãozinho
+// e Cabeção antes da Rodada 30D). Os rostos que sobram (caio, nando, pedrao, rafa) vão, na ordem do Ranking,
+// para quem aparece logo depois no alto da lista. Os que não aparecem aqui ficam com a silhueta da casa (a
+// mistura de foto e figurinha é de propósito). O Bruninho não entra: continua com a figurinha dele. Nenhum
+// rosto serve a dois jogadores — a tabela é conferida abaixo, e por isso nenhum rosto repete numa mesma tela.
 const PASTA_ROSTOS = join(AQUI, '..', '..', 'public', 'onboarding');
 const ROSTOS_DA_DEMO = {
   Dudu: 'dudu',
-  'Tiãozinho': 'tiagao',
-  'Cabeção': 'goncalo',
+  Tiago: 'tiagao',
+  Gonçalo: 'goncalo',
   Fabinho: 'caio',
-  'Paulinho Gaúcho': 'nando',
+  Paulinho: 'nando',
   Marquinhos: 'pedrao',
   Renatinho: 'rafa',
 };
@@ -271,7 +275,7 @@ const ROTA_DOS_AVATARES = '/__demo-avatares/';
 const avatarDaPeca = (arquivo) => join(PASTA_AVATARES, `${arquivo}-avatar.png`);
 const FIGURINHA_POR_NOME = Object.fromEntries(FIGURINHAS_DO_SORTEIO.map((f) => [f.noBanco, f]));
 
-/** Os 4 lugares do Sorteio: avatar novo e, para o Índio e o Nego Di, o nome novo — em qualquer lugar da resposta onde o jogador apareça. */
+/** Os 4 lugares do Sorteio: avatar novo e, para quem tem nome novo na tabela, o nome novo — em qualquer lugar da resposta onde o jogador apareça. */
 function comFigurinhasDoSorteio(corpo) {
   const andar = (no) => {
     if (Array.isArray(no)) return no.map(andar);
@@ -289,15 +293,15 @@ function comFigurinhasDoSorteio(corpo) {
   return andar(corpo);
 }
 
-// Ajuste 2 do dono: Paulinho Gaúcho em 3º e Dudu em 6º. Troca a LINHA INTEIRA entre os dois — pontos, nota, vitórias, gols, destaques,
+// Ajuste 2 do dono: Paulinho em 3º e Dudu em 6º. Troca a LINHA INTEIRA entre os dois — pontos, nota, vitórias, gols, destaques,
 // presença, a categoria (o selo) e o meu voto —, e cada um leva só o que é dele: nome, foto e rosto. Assim a ordem continua sendo a
 // dos pontos, como a própria tela diz ("A ordem é por eles").
 const QUEM_E = new Set(['user_id', 'sou_eu', 'nome', 'nome_jogador', 'foto_url', 'avatar_url', 'avatar_generico', 'cor_frame']);
 function comPaulinhoEmTerceiro(corpo) {
   const lista = [...(corpo?.ranking || [])];
-  const p = lista.findIndex((j) => j.nome_jogador === 'Paulinho Gaúcho');
+  const p = lista.findIndex((j) => j.nome_jogador === 'Paulinho');
   const d = lista.findIndex((j) => j.nome_jogador === 'Dudu');
-  if (p < 0 || d < 0) throw new Error('o Ranking da demo não tem o Paulinho Gaúcho e o Dudu');
+  if (p < 0 || d < 0) throw new Error('o Ranking da demo não tem o Paulinho e o Dudu');
   const trocar = (linha, pessoa) => Object.fromEntries(Object.keys(linha).map((c) => [c, QUEM_E.has(c) ? pessoa[c] : linha[c]]));
   [lista[d], lista[p]] = [trocar(lista[d], lista[p]), trocar(lista[p], lista[d])];
   return { ...corpo, ranking: lista };
@@ -349,9 +353,9 @@ if (quer('ranking')) {
   if (rostos.some((r) => !r.ok)) throw new Error(`rosto que não carregou no Ranking: ${rostos.filter((r) => !r.ok).map((r) => r.src).join(', ')}`);
   if (new Set(rostos.map((r) => r.src)).size !== rostos.length) throw new Error(`rosto repetido no Ranking: ${rostos.map((r) => r.src).join(', ')}`);
   console.log(`      Ranking: ${rostos.length} rosto(s), nenhum repetido — ${rostos.map((r) => r.src.replace('.webp', '')).join(', ')}`);
-  // Ajuste 2: o 3º é o Paulinho Gaúcho e o 6º é o Dudu, com os pontos em ordem.
+  // Ajuste 2: o 3º é o Paulinho e o 6º é o Dudu, com os pontos em ordem.
   const linhas = await page.locator('.rank-list .rank-row').evaluateAll((els) => els.map((el) => el.innerText.replace(/\s+/g, ' ')));
-  if (!linhas[2]?.includes('Paulinho Gaúcho') || !linhas[5]?.includes('Dudu')) throw new Error(`o Ranking não ficou com o Paulinho Gaúcho em 3º e o Dudu em 6º: ${linhas.slice(0, 6).map((l, i) => `${i + 1}. ${l.slice(0, 40)}`).join(' | ')}`);
+  if (!linhas[2]?.includes('Paulinho') || !linhas[5]?.includes('Dudu')) throw new Error(`o Ranking não ficou com o Paulinho em 3º e o Dudu em 6º: ${linhas.slice(0, 6).map((l, i) => `${i + 1}. ${l.slice(0, 40)}`).join(' | ')}`);
   const pontos = linhas.map((l) => Number((l.match(/(\d+,\d+)\s*pontos/) || [])[1]?.replace(',', '.'))).filter((n) => !Number.isNaN(n));
   if (pontos.some((n, i) => i && n > pontos[i - 1])) throw new Error(`os pontos do Ranking saíram fora de ordem: ${pontos.join(' · ')}`);
   console.log(`      Ranking: 3º ${linhas[2].slice(0, 36)} · 6º ${linhas[5].slice(0, 36)}`);
@@ -499,7 +503,7 @@ if (quer('sorteio')) {
   await p2.waitForFunction(() => { const s = document.querySelector('.smaq .saltar'); return !!s && !s.classList.contains('on'); }, null, { timeout: 30000 });
   await p2.getByText('Compartilhar os times', { exact: false }).first().waitFor({ timeout: 15000 });
   await assentar(p2, { minimo: 1500 });
-  // Ajuste 2: nenhuma silhueta sobra, as 4 figurinhas carregaram, nenhum rosto repete, e "Índio"/"Nego Di" não aparecem mais.
+  // Ajuste 2: nenhuma silhueta sobra, as 4 figurinhas carregaram, nenhum rosto repete, e nenhum apelido banido aparece mais.
   const molduras = await p2.locator('.smaq .grupo .mmold').evaluateAll((els) => els.map((el) => {
     const img = el.querySelector('img');
     const nm = el.querySelector('.nm');
@@ -519,7 +523,8 @@ if (quer('sorteio')) {
   }
   if (molduras.some((m) => !m.cabe)) throw new Error(`nome cortado no Sorteio: ${molduras.filter((m) => !m.cabe).map((m) => m.nome).join(', ')}`);
   const sorteioTexto = await p2.evaluate(() => document.body.innerText);
-  if (/Índio|Nego Di/.test(sorteioTexto)) throw new Error('o Sorteio ainda mostra "Índio" ou "Nego Di"');
+  const banido = apelidoBanidoEm(sorteioTexto);
+  if (banido) throw new Error(`o Sorteio ainda mostra um apelido banido ("${banido}")`);
   console.log(`      Sorteio: ${molduras.length} moldura(s), todas com rosto, nenhum repetido — ${FIGURINHAS_DO_SORTEIO.map((f) => f.nome).join(', ')} com a figurinha nova`);
   const emDuas = molduras.filter((m) => m.linhas > 1);
   if (emDuas.length) console.log(`      Sorteio: nome em ${emDuas.map((m) => `${m.linhas} linhas (${m.nome})`).join(', ')}`);
