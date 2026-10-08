@@ -6,6 +6,7 @@
 // na web baixa; no app abre a folha de compartilhar — o <a download> não faz nada
 // dentro do WebView.
 import { urlAsset, urlImagem } from './avatar';
+import { avatarGenericoUrl } from './avatarGenerico';
 import { salvarOuCompartilhar } from './salvarImagem';
 import { nomeDoTimeNaTela } from './nomeDoTime';
 
@@ -17,8 +18,10 @@ const KITS = [
 ];
 const RES_COR = { c: '#8a90a0', g: 'rgba(138,144,160,.45)' }; // cinza-aço apagado (à espera, sem dono)
 
-// silhueta-casa angulosa (MESMA geometria de SilhuetaJogador / CerimoniaSorteio) —
-// placeholder de pessoa sem foto; tinge com a cor do contexto (LEI DA SILHUETA).
+// silhueta-casa angulosa (MESMA geometria de SilhuetaJogador / CerimoniaSorteio) — era o
+// placeholder de pessoa sem foto; no cartaz (Rodada 30A, dono 8-out) o placeholder passou a
+// ser o AVATAR GENÉRICO da casa, com zoom 1,2 (ver carregarFotosDoTime/desenharCover) — esta
+// silhueta fica como fallback se o genérico não carregar. Tinge com a cor do contexto.
 const SIL_HEAD = '40,12 56,12 64,20 64,36 56,44 40,44 32,36 32,20';
 const SIL_BODY = 'M14 92 L14 70 L24 58 L40 52 L56 52 L72 58 L82 70 L82 92 Z';
 function silhuetaURI(cor) {
@@ -49,12 +52,20 @@ function carregarImagem(src) {
 // object-fit: cover dentro de (dx,dy,dw,dh); focoY = object-position vertical (0..1). 0 = do TOPO
 // do recorte, como o CSS da cerimônia (object-position 50% 0%) e o canvas do cromo — um 0,08 como
 // default deslocava a foto do que a pessoa enquadrou (e cada tela, um pouco diferente da outra).
-function desenharCover(cx, img, dx, dy, dw, dh, focoY = 0) {
+// zoom > 1 = SÓ o avatar genérico (Rodada 30A): mesmo recorte de sempre, mas o DESTINO cresce a
+// partir do topo-centro e recorta ao retângulo original — o mesmo efeito do `transform:scale()`
+// do CSS na cerimônia (cabeça no lugar, crescendo para os lados e para baixo).
+function desenharCover(cx, img, dx, dy, dw, dh, focoY = 0, zoom = 1) {
   const ir = img.width / img.height; const dr = dw / dh;
   let sw; let sh; let sx; let sy;
   if (ir > dr) { sh = img.height; sw = sh * dr; sx = (img.width - sw) / 2; sy = 0; }
   else { sw = img.width; sh = sw / dr; sx = 0; sy = (img.height - sh) * focoY; }
-  cx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+  if (zoom === 1) { cx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh); return; }
+  const dw2 = dw * zoom; const dh2 = dh * zoom; const dx2 = dx - (dw2 - dw) / 2;
+  cx.save();
+  cx.beginPath(); cx.rect(dx, dy, dw, dh); cx.clip();
+  cx.drawImage(img, sx, sy, sw, sh, dx2, dy, dw2, dh2);
+  cx.restore();
 }
 // caminho do chanfro (mesma proporção do .mcard .fr: x 8% / y 6%)
 function chanfro(cx, x, y, w, h) {
@@ -119,12 +130,13 @@ async function desenharLogoLockup(cx, W, H) {
   cx.fillText('· O seu time. A sua figurinha.', bx, by);
 }
 
-// Um cartão de jogador (foto/silhueta + placa de nome, chanfro + filete duplo na cor).
-function desenharCartaoJogador(cx, x, y, w, h, cor, nome, img) {
+// Um cartão de jogador (foto/genérico/silhueta + placa de nome, chanfro + filete duplo na cor).
+// `generico` = zoom 1,2 (Rodada 30A); foto real nunca o leva.
+function desenharCartaoJogador(cx, x, y, w, h, cor, nome, img, generico = false) {
   cx.save(); chanfro(cx, x, y, w, h); cx.clip();
   cx.fillStyle = '#0b0b11'; cx.fillRect(x, y, w, h);
   const fh = h * 0.78;
-  if (img) desenharCover(cx, img, x, y, w, fh, 0);
+  if (img) desenharCover(cx, img, x, y, w, fh, 0, generico ? 1.2 : 1);
   const py = y + fh; const ph = h - fh;
   const pg = cx.createLinearGradient(0, py, 0, py + ph);
   pg.addColorStop(0, '#15121d'); pg.addColorStop(1, '#0a0810');
@@ -145,13 +157,20 @@ function desenharCartaoJogador(cx, x, y, w, h, cor, nome, img) {
   cx.strokeStyle = comAlfa(cor.c, 0.55); cx.lineWidth = 1; cx.stroke();
 }
 
-// Carrega as imagens (foto real → urlAsset; sem foto → silhueta da cor) de uma lista
-// de jogadores, guardando em `j._img`.
+// Carrega as imagens (foto real → urlAsset; sem foto → avatar genérico; se nem esse
+// carregar, a silhueta da cor) de uma lista de jogadores, guardando em `j._img` e, para
+// o cartaz saber se aplica o zoom 1,2, em `j._generico`.
 async function carregarFotosDoTime(jogadores, cor) {
   await Promise.all(jogadores.map(async (j) => {
     let img = j.avatar_url ? await carregarImagem(urlImagem(urlAsset(j.avatar_url), 512)) : null;
+    let generico = false;
+    if (!img && !j.avatar_url) {
+      img = await carregarImagem(avatarGenericoUrl(j.user_id || null, j.avatar_generico || null, j.nome || ''));
+      generico = !!img;
+    }
     if (!img) img = await carregarImagem(silhuetaURI(cor));
     j._img = img;
+    j._generico = generico;
   }));
 }
 
@@ -211,7 +230,7 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
     for (let k = 0; k < count; k += 1) {
       const j = jogs[idx]; idx += 1;
       const marca = j.goleiro ? ' (GOL)' : j.cabeca_chave ? ' (C)' : '';
-      desenharCartaoJogador(cx, rx, ry, L.cw, cardH, kit, (j.convidado ? '· ' : '') + (j.nome || '?') + marca, j._img);
+      desenharCartaoJogador(cx, rx, ry, L.cw, cardH, kit, (j.convidado ? '· ' : '') + (j.nome || '?') + marca, j._img, j._generico);
       rx += L.cw + cardGap;
     }
     ry += cardH + rowGap;
@@ -308,7 +327,7 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
         let rx = boxX + (boxW - rowW) / 2;
         for (let k = 0; k < count; k += 1) {
           const j = s.jogs[idx]; idx += 1;
-          desenharCartaoJogador(cx, rx, ry, L.cw, cardH, s.cor, (j.convidado ? '· ' : '') + (j.nome || '?'), j._img);
+          desenharCartaoJogador(cx, rx, ry, L.cw, cardH, s.cor, (j.convidado ? '· ' : '') + (j.nome || '?'), j._img, j._generico);
           rx += L.cw + cardGap;
         }
         ry += cardH + rowGap;

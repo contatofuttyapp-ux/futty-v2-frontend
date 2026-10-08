@@ -739,7 +739,7 @@ export default function Inicio() {
       ? { ...user, avatar_url: urlImagem(user.avatar_url, 512) }
       : user?.foto_url
         ? { ...user, foto_url: urlImagem(user.foto_url, 512) }
-        : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha) };
+        : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha, nome) };
     const modoCromo = modoDoCromo;
     // fundoGlints:'discreto' — o cromo do Início é um OBJECTO estático (nunca em
     // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
@@ -864,7 +864,7 @@ export default function Inicio() {
     : user?.foto_url
       ? urlImagem(urlAsset(user.foto_url), 512) // figurinha comum: a prévia é a própria foto
       : user
-        ? avatarGenericoUrl(user.id, avatarGenericoEscolha)
+        ? avatarGenericoUrl(user.id, avatarGenericoEscolha, nome)
         : '';
 
   const loadingGames = games === null;
@@ -1324,9 +1324,10 @@ export default function Inicio() {
                 className="hud-corners-s"
                 aria-label="Trocar visual do card"
                 onClick={() => setSheetAvatarAberto(true)}
-                style={{ position: 'absolute', top: 6, right: 6, zIndex: 2, width: 30, height: 30, display: 'grid', placeItems: 'center', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.72)', color: '#d4a017', cursor: 'pointer' }}
+                style={{ position: 'absolute', top: 6, right: 6, zIndex: 2, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 9px 5px 7px', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.82)', color: '#d4a017', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 10.5, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
               >
-                <RefreshCw size={15} />
+                <RefreshCw size={13} />
+                Trocar avatar
               </button>
             ) : null}
           </div>

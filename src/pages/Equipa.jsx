@@ -45,8 +45,8 @@ const CLIP_S = 'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5p
 // Moldura V1 (a mesma família do Ranking).
 // Sem foto, mas com identidade (userId), mostra o avatar genérico da casa — nunca
 // a silhueta "?".
-function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 40 }) {
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
+function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, nome = null, size = 40 }) {
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico, nome) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
@@ -348,7 +348,7 @@ export default function Equipa() {
             {meuId && members.some((m) => m.id === meuId) ? (
               <div className="hud-corners" style={{ ...VIDRO, clipPath: CLIP, marginTop: 10, padding: '12px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <FrameAvatar avatarUrl={me?.user?.avatar_url} userId={meuId} avatarGenerico={me?.user?.avatar_generico} size={44} />
+                  <FrameAvatar nome={nomeExibicao(me.user)} avatarUrl={me?.user?.avatar_url} userId={meuId} avatarGenerico={me?.user?.avatar_generico} size={44} />
                   <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 6, justifyItems: 'start' }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, lineHeight: 1.1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeExibicao(me.user)}</div>
                     {team.joga === false ? (
@@ -466,7 +466,7 @@ export default function Equipa() {
             <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>
               {members.map((m, i) => (
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
-                  <FrameAvatar avatarUrl={m.avatar_url} userId={m.id} avatarGenerico={m.avatar_generico} />
+                  <FrameAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.id} avatarGenerico={m.avatar_generico} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.15 }}>{nomeExibicao(m)}</div>
                   </div>

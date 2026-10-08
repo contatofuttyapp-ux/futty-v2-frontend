@@ -39,8 +39,8 @@ const LINK_DISCRETO = { minHeight: 44, padding: '0 4px', border: 'none', backgro
 // Moldura V1 (família do Ranking/Equipa).
 // Sem foto, mas com identidade (userId), mostra o avatar genérico da casa — nunca
 // a silhueta "?".
-function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 36 }) {
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
+function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, nome = null, size = 36 }) {
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico, nome) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
@@ -391,7 +391,7 @@ export default function Jogo() {
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>
                 {confirmados.map((p, pi) => (
                   <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: pi === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
-                    <FrameAvatar avatarUrl={p.avatar_url} userId={p.user_id} avatarGenerico={p.avatar_generico} />
+                    <FrameAvatar nome={p.nome} avatarUrl={p.avatar_url} userId={p.user_id} avatarGenerico={p.avatar_generico} />
                     <div style={{ flex: 1, minWidth: 0, fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>{p.nome}</div>
                     {isAdmin ? (
                       <>

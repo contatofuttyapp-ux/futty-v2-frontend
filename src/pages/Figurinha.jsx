@@ -344,7 +344,7 @@ export default function Figurinha() {
   }
   const jogadorCard = avatarEhIA || temFoto
     ? jogador
-    : { ...jogador, avatar_url: avatarGenericoUrl(jogador.id, avatarGenericoEscolha) };
+    : { ...jogador, avatar_url: avatarGenericoUrl(jogador.id, avatarGenericoEscolha, nomeJogador(jogador)) };
   // A2 — kit vestido + kits já gerados (slots). Vindos do GET /api/me.
   const kitAtivo = me?.user?.kit_ativo || 'dark-gold';
   const slotsKits = me?.slots || [];
@@ -1705,9 +1705,10 @@ export default function Figurinha() {
                 className="hud-corners-s"
                 aria-label="Trocar visual do card"
                 onClick={() => setSheetAvatarAberto(true)}
-                style={{ position: 'absolute', top: 10, right: 10, zIndex: 8, width: 32, height: 32, display: 'grid', placeItems: 'center', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.72)', color: '#d4a017', cursor: 'pointer' }}
+                style={{ position: 'absolute', top: 10, right: 10, zIndex: 8, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 11px 6px 8px', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.82)', color: '#d4a017', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
               >
-                <RefreshCw size={16} />
+                <RefreshCw size={15} />
+                Trocar avatar
               </button>
             ) : null}
           </div>

@@ -34,8 +34,8 @@ const marcarImagem = () => marcarInstante('imagem');
 // da casa + véu. Moldura única da página — rows, pódio e modal partilham-na.
 // Sem foto nem figurinha, mas com identidade (userId), mostra o avatar genérico que a pessoa ESCOLHEU —
 // o mesmo da Presença, da Equipa e do Início — e nunca a silhueta "?".
-function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 48 }) {
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
+function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, nome = null, size = 48 }) {
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico, nome) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>

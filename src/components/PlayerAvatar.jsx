@@ -12,14 +12,14 @@ import { avatarGenericoUrl } from '../utils/avatarGenerico';
 // Tamanho da caixa em px CSS, por variante (ver .pavatar em styles/app.css).
 const PX = { lg: 128, md: 72, sm: 36, base: 52 };
 
-export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, userId = null, avatarGenerico = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null }) {
+export default function PlayerAvatar({ avatarUrl, jogador = null, cor = null, userId = null, avatarGenerico = null, nome = null, lg = false, md = false, sm = false, glow = false, gold = false, size = null }) {
   const [falhou, setFalhou] = useState(false);
 
   // Fonte da imagem: avatarUrl resolvido (frontend/backend/absoluto) OU por cor do
   // time OU (sem foto, mas com identidade) o genérico da casa.
   const bruto = avatarUrl
     ? urlAsset(avatarUrl)
-    : (jogador && cor ? avatarParaCor(jogador, cor) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null));
+    : (jogador && cor ? avatarParaCor(jogador, cor) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico, nome) : null));
 
   // Pede ao motor o tamanho que a caixa realmente mostra. O dobro
   // do px CSS cobre as telas de 2x/3x sem ficar borrado; acima de 128 CSS já é
