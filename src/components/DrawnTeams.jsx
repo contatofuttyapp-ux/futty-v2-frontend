@@ -12,6 +12,11 @@ export default function DrawnTeams({ resultado, teamCor }) {
   const c = colorOf(teamCor);
   // Como os times foram feitos (sorteado / ajustado / à mão) vem antes dos times: é a primeira coisa a saber deles.
   const visao = visaoDoSorteio(resultado);
+  // Montado à mão não tem nota nenhuma (o motor não grava rating para quem foi escolhido, não sorteado): a
+  // estrela do cabeçalho e o número de cada jogador somem, em vez de ficar um "★" e uma pastilha vazios — um
+  // número calculado depois convidaria a julgar a escolha do organizador. Sorteado e ajustado continuam iguais:
+  // lá a nota decidiu o sorteio.
+  const aMao = visao?.tipo === 'manual';
 
   // Não mostrar o aviso de "nenhum goleiro marcado" (mesmo em sorteios antigos)
   const avisos = (resultado.avisos || []).filter((a) => !/nenhum goleiro marcado/i.test(a));
@@ -35,7 +40,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
           <div className="sorteio-team" key={i}>
             <div className="sorteio-team__head" style={{ borderColor: c.hex }}>
               <span>{nomeDoTimeNaTela(time.nome, i)}</span>
-              <span className="sorteio-team__avg">★ {formatarAte(time.rating_medio, 2)}</span>
+              {!aMao && <span className="sorteio-team__avg">★ {formatarAte(time.rating_medio, 2)}</span>}
             </div>
             {/* Convidado sem app não tem user_id: com key null, dois convidados eram o mesmo para o React e, ao trocar o
                 resultado sem remontar a lista (salvar "Montar à mão" e recarregar), uma linha velha ficava na tela. */}
@@ -45,7 +50,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {j.cabeca_chave && <span className="sorteio-player__cap">C</span>}
                   {j.goleiro && <span className="sorteio-player__gk">GOL</span>}
-                  <span className="rating-pill">{formatarAte(j.rating, 1)}</span>
+                  {!aMao && <span className="rating-pill">{formatarAte(j.rating, 1)}</span>}
                 </span>
               </div>
             ))}
@@ -76,7 +81,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                       </span>
                     )}
                   </div>
-                  <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{formatarAte(r.rating, 1)}</span>
+                  {!aMao && <span data-reserva-nota style={{ color: 'var(--neon)', fontWeight: 800 }}>{formatarAte(r.rating, 1)}</span>}
                 </div>
               );
             })}

@@ -100,6 +100,15 @@ export async function rodar({ navegador, base, t }) {
     t('lista · sorteado: SORTEADO', (await texto('sorteado')) === 'SORTEADO', await texto('sorteado'));
     t('lista · ajustado: SORTEADO E AJUSTADO POR …, com as trocas', (await texto('ajustado')) === 'SORTEADO E AJUSTADO POR CHAVO, EL MATADOR' && (await page.locator('[data-lista="ajustado"] [data-trocas] li').count()) === 2, await texto('ajustado'));
     t('lista · à mão: MONTADO À MÃO POR CHAVO', (await texto('manual')) === 'MONTADO À MÃO POR CHAVO', await texto('manual'));
+    // Rodada 30G, item 1: à mão não tem nota nenhuma — nem a estrela do cabeçalho, nem a pastilha de cada
+    // jogador, nem a da reserva. Sorteado e ajustado continuam com a nota (lá ela decidiu o sorteio).
+    const semEstrela = (c) => page.locator(`[data-lista="${c}"] .sorteio-team__avg`).count();
+    t('lista · sorteado: a estrela do cabeçalho aparece', (await semEstrela('sorteado')) === 2);
+    t('lista · ajustado: a estrela do cabeçalho aparece', (await semEstrela('ajustado')) === 2);
+    t('lista · à mão: SEM a estrela do cabeçalho em nenhum time', (await semEstrela('manual')) === 0);
+    const semPastilha = (c) => page.locator(`[data-lista="${c}"] .rating-pill`).count();
+    t('lista · à mão: SEM pastilha de nota em nenhum jogador (sorteado e ajustado continuam com elas)', (await semPastilha('manual')) === 0 && (await semPastilha('sorteado')) > 0 && (await semPastilha('ajustado')) > 0);
+    t('lista · à mão: a reserva também sem nota (sorteado continua com ela)', (await page.locator('[data-lista="manual"] [data-reserva-nota]').count()) === 0 && (await page.locator('[data-lista="sorteado"] [data-reserva-nota]').count()) === 1);
     await foto(page, 'selo-lista.png');
     await page.context().close();
   }

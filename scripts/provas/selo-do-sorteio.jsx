@@ -34,7 +34,19 @@ const ajustado = {
   registro: { origem: 'sorteio', por: { nome: 'Chavo, el matador' }, sorteio_numero: 1, sorteios: 1, original: ORIGINAL, ajustes: [{ por: { nome: 'Chavo, el matador' } }] },
 };
 const sorteado = { seed: 77, num_times: 2, ...ORIGINAL, registro: { origem: 'sorteio', por: { nome: 'Chavo' }, sorteio_numero: 2, sorteios: 2, ajustes: [] } };
-const aMao = { manual: true, num_times: 2, ...ORIGINAL, registro: { origem: 'manual', por: { nome: 'Chavo' }, sorteios: 0, ajustes: [] } };
+// Montado à mão de verdade não tem nota nenhuma (o motor não grava rating para quem foi ESCOLHIDO): nem
+// rating_medio no time, nem rating em cada jogador — a mesma forma que POST /times-manuais grava.
+const jogSemNota = (id, nome) => ({ user_id: id, nome, avatar_url: null });
+const aMao = {
+  manual: true,
+  num_times: 2,
+  times: [
+    { nome: 'Time A', jogadores: [jogSemNota('a1', 'Magrão'), jogSemNota('a2', 'Gonçalo'), jogSemNota('a3', 'Tiago')] },
+    { nome: 'Time B', jogadores: [jogSemNota('b1', 'Canhotinha'), jogSemNota('b2', 'Zé'), jogSemNota('b3', 'Roberto')] },
+  ],
+  reservas: [jogSemNota('r1', 'Rafa')],
+  registro: { origem: 'manual', por: { nome: 'Chavo' }, sorteios: 0, ajustes: [] },
+};
 
 window.__terminou = 0;
 if ((new URLSearchParams(window.location.search).get('caso')) === 'cartao') {
