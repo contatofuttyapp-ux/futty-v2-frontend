@@ -37,8 +37,10 @@ export default function DrawnTeams({ resultado, teamCor }) {
               <span>{nomeDoTimeNaTela(time.nome, i)}</span>
               <span className="sorteio-team__avg">★ {formatarAte(time.rating_medio, 2)}</span>
             </div>
-            {time.jogadores.map((j) => (
-              <div className="sorteio-player" key={j.user_id}>
+            {/* Convidado sem app não tem user_id: com key null, dois convidados eram o mesmo para o React e, ao trocar o
+                resultado sem remontar a lista (salvar "Montar à mão" e recarregar), uma linha velha ficava na tela. */}
+            {time.jogadores.map((j, k) => (
+              <div className="sorteio-player" key={j.user_id || `convidado:${k}`}>
                 <span>{j.nome}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {j.cabeca_chave && <span className="sorteio-player__cap">C</span>}

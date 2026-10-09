@@ -156,8 +156,9 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
         <>
           {devolver ? <div className="section-title" style={TITULO_DA_PERGUNTA} data-gols-de-cada-um>{GOLS.titulo}</div> : null}
           <div style={{ display: 'grid', gap: 8, marginTop: devolver ? 0 : 12 }}>
-            {jogadores.map((j) => (
-              <div key={j.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* key única também para o convidado sem app (user_id null): a mesma linha fantasma do DrawnTeams. */}
+            {jogadores.map((j, k) => (
+              <div key={j.user_id || `convidado:${k}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <MiniAvatar nome={j.nome} avatarUrl={j.avatar_url} />
                 <span style={{ flex: 1, minWidth: 0, color: '#fff', fontSize: 14, overflowWrap: 'anywhere' }}>
                   {j.nome} <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>· {j.time}</span>
