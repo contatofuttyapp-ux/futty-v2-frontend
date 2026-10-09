@@ -12,6 +12,7 @@ import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import { chaveDoJogador } from '../utils/seloDoSorteio';
 import { atrasoCss } from '../utils/tempoDosCartoes';
+import { nomeComPonto, temConvidado, TEXTO_SEM_O_APP } from '../utils/marcaConvidado';
 
 const RAJ = "'Rajdhani', sans-serif";
 const CORES = ['#d4a017', '#8b5cf6', '#aab4c8', '#c2652e'];
@@ -45,7 +46,7 @@ function Cartao({ j, cor, destaque, atraso }) {
         <Rosto j={j} cor={cor} />
       </div>
       <div style={{ marginTop: 4, fontFamily: RAJ, fontWeight: 700, fontSize: 12, lineHeight: 1.15, textAlign: 'center', color: destaque ? '#f0c94a' : '#fff', overflowWrap: 'anywhere' }}>
-        {(j.convidado ? '· ' : '') + (j.nome || 'Jogador')}
+        {nomeComPonto(j, 'Jogador')}
       </div>
     </div>
   );
@@ -60,6 +61,12 @@ function Caixa({ titulo, cor, jogadores, destacar, atrasoDe, chaveBase }) {
           <Cartao key={`${chaveBase}-${chaveDoJogador(j)}-${k}`} j={j} cor={cor} destaque={destacar?.has(chaveDoJogador(j))} atraso={atrasoDe(k + 1)} />
         ))}
       </div>
+      {/* O ponto antes do nome (acima) só se explica uma vez, no fim da caixa que o tem. */}
+      {temConvidado(jogadores) && (
+        <div className="entra-em-sequencia" style={{ '--d': atrasoCss(atrasoDe(jogadores.length)), marginTop: 8, fontFamily: RAJ, fontWeight: 600, fontSize: 11, letterSpacing: '0.04em', color: 'rgba(255,255,255,0.4)' }}>
+          {TEXTO_SEM_O_APP}
+        </div>
+      )}
     </div>
   );
 }

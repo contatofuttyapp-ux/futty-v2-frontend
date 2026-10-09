@@ -19,6 +19,7 @@ import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import SomSorteio from './somSorteio';
 import FimDoSorteio from './FimDoSorteio';
 import { NOMES_DAS_CORES, nomeDoTimeNaTela } from '../utils/nomeDoTime';
+import { PONTO_CONVIDADO, TEXTO_SEM_O_APP, temConvidado } from '../utils/marcaConvidado';
 import '../styles/app.css';
 import '../styles/sorteio-maquina.css';
 
@@ -234,7 +235,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       const cor = ti < 0 ? RES_MARCA.c : marca(ti).c;
       const generico = !j.avatar_url;
       return {
-        nome: (j.convidado ? '· ' : '') + (j.nome || '?'),
+        nome: (j.convidado ? PONTO_CONVIDADO : '') + (j.nome || '?'),
         img: generico ? avatarGenericoUrl(j.user_id || null, j.avatar_generico || null, j.nome || '') : urlImagem(urlAsset(j.avatar_url), 128),
         generico,
         silhueta: silhuetaURI(cor),
@@ -279,10 +280,13 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         const k = marca(gi); const linhas = LINHAS[Math.min(t.jogadores.length, 11)] || [t.jogadores.length];
         let n = 0; let rows = '';
         for (const c of linhas) rows += `<div class="srow">${Array.from({ length: c }, () => `<div class="slot" data-g="${gi}" data-i="${n++}"></div>`).join('')}</div>`;
-        return `<div class="grupo" data-gi="${gi}" style="--tc:${k.c};--tg:${k.g}"><div class="ghead">${esc(nomeDoTimeNaTela(t.nome, gi))}</div>${rows}</div>`;
+        // O ponto do convidado (vis(), acima) só se explica uma vez, no fim do grupo que o tem.
+        const nota = temConvidado(t.jogadores) ? `<div class="conv-nota">${esc(TEXTO_SEM_O_APP)}</div>` : '';
+        return `<div class="grupo" data-gi="${gi}" style="--tc:${k.c};--tg:${k.g}"><div class="ghead">${esc(nomeDoTimeNaTela(t.nome, gi))}</div>${rows}${nota}</div>`;
       }).join('');
       q('.resv').classList.toggle('on', reservas.length > 0);
       q('.rrow').innerHTML = reservas.map((j, i) => `<div class="rslot" data-r="${i}"><span class="badge">${esc(j.posicao || i + 1)}</span><div class="slot" style="width:100%;height:100%"></div></div>`).join('');
+      q('.resv-nota').textContent = temConvidado(reservas) ? TEXTO_SEM_O_APP : '';
     }
 
     // — strip do baralho (seed → determinístico p/ replay)
@@ -613,7 +617,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
                 </div>
                 <div className="gruposWrap">
                   <div className="grupos" />
-                  <div className="resv"><div className="rhead">Reserva · ordem do banco</div><div className="rrow" /></div>
+                  <div className="resv"><div className="rhead">Reserva · ordem do banco</div><div className="rrow" /><div className="resv-nota" /></div>
                 </div>
               </div>
               {/* A luz do prêmio, por cima do bloco dos times e por baixo do título: 3 varreduras de brilho na diagonal e

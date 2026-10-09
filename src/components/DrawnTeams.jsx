@@ -4,6 +4,7 @@ import { colorOf } from '../utils/teamColors';
 import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import { formatarAte } from '../utils/numero';
 import { visaoDoSorteio } from '../utils/seloDoSorteio';
+import { nomeComPonto, temConvidado, TEXTO_SEM_O_APP } from '../utils/marcaConvidado';
 import PlayerAvatar from './PlayerAvatar';
 import SeloDoSorteio, { ListaDeTrocas } from './SeloDoSorteio';
 
@@ -46,7 +47,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                 resultado sem remontar a lista (salvar "Montar à mão" e recarregar), uma linha velha ficava na tela. */}
             {time.jogadores.map((j, k) => (
               <div className="sorteio-player" key={j.user_id || `convidado:${k}`}>
-                <span>{j.nome}</span>
+                <span>{nomeComPonto(j)}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {j.cabeca_chave && <span className="sorteio-player__cap">C</span>}
                   {j.goleiro && <span className="sorteio-player__gk">GOL</span>}
@@ -54,6 +55,8 @@ export default function DrawnTeams({ resultado, teamCor }) {
                 </span>
               </div>
             ))}
+            {/* O ponto antes do nome (aprovado na cerimônia) só se explica uma vez, no fim da lista que o usa. */}
+            {temConvidado(time.jogadores) && <div className="muted" style={{ fontSize: 11, padding: '6px 14px' }}>{TEXTO_SEM_O_APP}</div>}
           </div>
         ))}
       </div>
@@ -74,7 +77,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                   <span style={{ fontSize: 16, fontWeight: 900, color: '#d4a017', minWidth: 26 }}>{r.posicao ?? i + 1}º</span>
                   <PlayerAvatar nome={r.nome} avatarUrl={r.avatar_url} sm />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: '#fff', overflowWrap: 'anywhere' }}>{r.nome}</div>
+                    <div style={{ fontWeight: 700, color: '#fff', overflowWrap: 'anywhere' }}>{nomeComPonto(r)}</div>
                     {proximo && (
                       <span style={{ display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#8b5cf6', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 999, padding: '2px 8px' }}>
                         PRÓXIMO A ENTRAR
@@ -86,6 +89,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
               );
             })}
           </div>
+          {temConvidado(reservas) && <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>{TEXTO_SEM_O_APP}</div>}
         </>
       )}
     </>

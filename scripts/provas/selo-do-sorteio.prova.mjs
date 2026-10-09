@@ -118,14 +118,48 @@ export async function rodar({ navegador, base, t }) {
     const page = await abrir('cartao');
     await page.waitForFunction(() => window.__cartoes, null, { timeout: 30000 });
     const c = await page.evaluate(() => window.__cartoes);
-    t('os cartões foram gerados (cartaz do ajustado e 9:16 do montado à mão)', !c.erro && /^data:image\/png/.test(c.cartaz) && /^data:image\/png/.test(c.mao916), c.erro || '');
-    const medidas = await page.evaluate(async (urls) => Promise.all(urls.map((u) => new Promise((r) => { const i = new Image(); i.onload = () => r([i.width, i.height]); i.src = u; }))), [c.cartaz, c.mao916]);
-    t('os dois em 1080×1920', JSON.stringify(medidas) === JSON.stringify([[1080, 1920], [1080, 1920]]), JSON.stringify(medidas));
+    t('os cartões foram gerados (cartaz do ajustado, 9:16 do montado à mão e do time com convidado)', !c.erro && /^data:image\/png/.test(c.cartaz) && /^data:image\/png/.test(c.mao916) && /^data:image\/png/.test(c.convidado916), c.erro || '');
+    const medidas = await page.evaluate(async (urls) => Promise.all(urls.map((u) => new Promise((r) => { const i = new Image(); i.onload = () => r([i.width, i.height]); i.src = u; }))), [c.cartaz, c.mao916, c.convidado916]);
+    t('os três em 1080×1920', JSON.stringify(medidas) === JSON.stringify([[1080, 1920], [1080, 1920], [1080, 1920]]), JSON.stringify(medidas));
     if (fotos && !c.erro) {
       const fs = await import('node:fs');
       fs.writeFileSync(path.join(fotos, 'cartaz-ajustado.png'), Buffer.from(c.cartaz.split(',')[1], 'base64'));
       fs.writeFileSync(path.join(fotos, 'cartao916-a-mao.png'), Buffer.from(c.mao916.split(',')[1], 'base64'));
+      fs.writeFileSync(path.join(fotos, 'cartao916-convidado.png'), Buffer.from(c.convidado916.split(',')[1], 'base64'));
     }
+    await page.context().close();
+  }
+
+  // ── Rodada 30G, item 2: o ponto do convidado, igual em todo lugar ────────────────────────────────────────────────────────────────────
+  {
+    const page = await abrir('convidado', 1700);
+    await page.locator('[data-lista="convidado"] [data-selo-do-sorteio]').waitFor();
+
+    // lista (DrawnTeams, tela do jogo e link público)
+    const nomesDoTime0 = await page.locator('[data-lista="convidado"] .sorteio-team').nth(0).locator('.sorteio-player > span:first-child').allInnerTexts();
+    t('lista: o convidado DENTRO de um time leva o ponto na frente (quem tem conta, não)', JSON.stringify(nomesDoTime0) === JSON.stringify(['Magrão', '· Beto Visitante']), JSON.stringify(nomesDoTime0));
+    t('lista: o time com convidado ganha "· sem o app" no fim; o time sem convidado, não', (await page.locator('[data-lista="convidado"] .sorteio-team').nth(0).getByText('· sem o app', { exact: true }).count()) === 1 && (await page.locator('[data-lista="convidado"] .sorteio-team').nth(1).getByText('· sem o app', { exact: true }).count()) === 0);
+    const listaTexto = await page.locator('[data-lista="convidado"]').innerText();
+    t('lista: a reserva com convidado também leva o ponto', /· Convidado Reserva/.test(listaTexto), listaTexto);
+    t('lista: "· sem o app" aparece 2× no total (o time com convidado + a reserva) — nunca mais que listas com convidado', (listaTexto.match(/· sem o app/g) || []).length === 2, listaTexto);
+
+    // apresentação (ApresentacaoTimes / TimesEmCartoes)
+    await page.waitForTimeout(4500); // a sequência de cartões inteira entra
+    const cartoesTexto = await page.locator('[data-apresentacao] [data-times-em-cartoes]').innerText();
+    t('apresentação: o cartão do convidado tem o ponto na frente do nome', /· Beto Visitante/.test(cartoesTexto) && /· Convidado Reserva/.test(cartoesTexto));
+    t('apresentação: "· sem o app" aparece (times com convidado) e não aparece a mais vezes que convidados há listas', (cartoesTexto.match(/· sem o app/g) || []).length === 2, cartoesTexto);
+
+    // cerimônia (máquina): roda e conclui — o nome revelado nos rolos e o fim do grupo/reserva
+    const cer = page.locator('[data-cerimonia]');
+    await cer.locator('.smaq .lever').waitFor();
+    await cer.locator('.smaq .lever').click();
+    await page.waitForTimeout(300);
+    await cer.locator('.smaq .saltar button').click();
+    await page.waitForFunction(() => document.querySelector('[data-cerimonia] .smaq .compartilhar')?.classList.contains('on'), null, { timeout: 8000 });
+    const grupoComConvidado = cer.locator('.smaq .grupo').first();
+    t('cerimônia: o grupo com convidado ganha "· sem o app" no fim (o sem convidado, não)', (await grupoComConvidado.locator('.conv-nota').count()) === 1 && (await cer.locator('.smaq .grupo').nth(1).locator('.conv-nota').count()) === 0);
+    t('cerimônia: a reserva (com o convidado) também ganha a nota', (await cer.locator('.smaq .resv-nota').innerText()) === '· sem o app');
+    await foto(page, 'selo-convidado.png');
     await page.context().close();
   }
 

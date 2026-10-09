@@ -10,6 +10,7 @@ import { avatarGenericoUrl } from './avatarGenerico';
 import { salvarOuCompartilhar } from './salvarImagem';
 import { nomeDoTimeNaTela } from './nomeDoTime';
 import { CORES_DO_SELO } from './seloDoSorteio';
+import { PONTO_CONVIDADO, TEXTO_SEM_O_APP, temConvidado } from './marcaConvidado';
 
 const KITS = [
   { n: 'OURO', c: '#d4a017' },
@@ -169,6 +170,18 @@ function prepararSelo(cx, selo, W, { corpo = 30, minimo = 18, larguraMax = W - 1
   return { altura, desenhar };
 }
 
+// O ponto antes do nome do convidado (desenharCartaoJogador, acima) só se explica uma vez, no fim da seção que
+// o tem — nenhuma outra explicação, nada quando não há convidado. Centrada, discreta, uma linha.
+const ALTURA_NOTA_CONVIDADO = 26;
+function desenharNotaConvidado(cx, W, y) {
+  cx.save();
+  cx.fillStyle = 'rgba(255,255,255,0.4)';
+  cx.font = '600 18px Rajdhani, sans-serif';
+  cx.textAlign = 'center'; cx.textBaseline = 'alphabetic';
+  cx.fillText(TEXTO_SEM_O_APP, W / 2, y);
+  cx.restore();
+}
+
 // Marca FUTTY na base — logo REAL (não texto) + wordmark. MESMO lockup do ESCALAÇÃO.
 async function desenharLogoLockup(cx, W, H) {
   const logo = await carregarImagem('/futty-logo-flat.webp');
@@ -292,11 +305,15 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa, opts = {}
     for (let k = 0; k < count; k += 1) {
       const j = jogs[idx]; idx += 1;
       const marca = j.goleiro ? ' (GOL)' : j.cabeca_chave ? ' (C)' : '';
-      desenharCartaoJogador(cx, rx, ry, L.cw, cardH, kit, (j.convidado ? '· ' : '') + (j.nome || '?') + marca, j._img, j._generico);
+      desenharCartaoJogador(cx, rx, ry, L.cw, cardH, kit, (j.convidado ? PONTO_CONVIDADO : '') + (j.nome || '?') + marca, j._img, j._generico);
       rx += L.cw + cardGap;
     }
     ry += cardH + rowGap;
   });
+  if (temConvidado(jogs)) {
+    const yNota = ry - rowGap + 28;
+    if (yNota < boxBottom + 40) desenharNotaConvidado(cx, W, yNota);
+  }
 
   await desenharLogoLockup(cx, W, H);
 
@@ -343,7 +360,11 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
   const cardH = L.cw * (4 / 3);
   const maxPorLinha = Math.max(1, Math.floor((boxW + cardGap) / (L.cw + cardGap)));
 
-  secs.forEach((s) => { s.linhas = linhasDe(s.jogs.length, maxPorLinha); s.h = L.hs + 18 + s.linhas.length * cardH + (s.linhas.length - 1) * rowGap; });
+  secs.forEach((s) => {
+    s.linhas = linhasDe(s.jogs.length, maxPorLinha);
+    s.temConv = temConvidado(s.jogs);
+    s.h = L.hs + 18 + s.linhas.length * cardH + (s.linhas.length - 1) * rowGap + (s.temConv ? ALTURA_NOTA_CONVIDADO : 0);
+  });
 
   // título "ESCALAÇÃO" (3×) + meta = 1º item do bloco distribuído. Item 73: a meta (data · time) desce para baixo da cedilha do Ç.
   // O selo (opts.selo) vem logo abaixo da meta e entra na altura do título, para o space-evenly contar com ele. Medido
@@ -394,11 +415,12 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
         let rx = boxX + (boxW - rowW) / 2;
         for (let k = 0; k < count; k += 1) {
           const j = s.jogs[idx]; idx += 1;
-          desenharCartaoJogador(cx, rx, ry, L.cw, cardH, s.cor, (j.convidado ? '· ' : '') + (j.nome || '?'), j._img, j._generico);
+          desenharCartaoJogador(cx, rx, ry, L.cw, cardH, s.cor, (j.convidado ? PONTO_CONVIDADO : '') + (j.nome || '?'), j._img, j._generico);
           rx += L.cw + cardGap;
         }
         ry += cardH + rowGap;
       });
+      if (s.temConv) desenharNotaConvidado(cx, W, ry - rowGap + 24);
       cx.restore();
     }
     y += it.h + espaco;

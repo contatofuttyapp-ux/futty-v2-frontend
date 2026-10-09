@@ -18,7 +18,7 @@ const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
 
 test('30E-1 · os seis lugares achados na varredura não cortam mais o nome com ellipsis', () => {
   const drawn = ler('src/components/DrawnTeams.jsx');
-  assert.match(drawn, /overflowWrap: 'anywhere' \}\}>\{r\.nome\}/, 'reserva do banco: quebra em vez de cortar');
+  assert.match(drawn, /overflowWrap: 'anywhere' \}\}>\{nomeComPonto\(r\)\}/, 'reserva do banco: quebra em vez de cortar (30G: nomeComPonto por causa do ponto do convidado)');
   assert.doesNotMatch(drawn, /textOverflow: 'ellipsis'/);
 
   const resultadoEditor = ler('src/components/ResultadoEditor.jsx');

@@ -35,5 +35,5 @@ test('30G-1 · a prova de navegador cobre os três lugares (sorteado/ajustado co
   // O fixture "à mão" da bancada é realista: sem rating nenhum (a mesma forma que POST /times-manuais grava).
   const bancada = ler('scripts/provas/selo-do-sorteio.jsx');
   assert.match(bancada, /const jogSemNota = \(id, nome\) => \(\{ user_id: id, nome, avatar_url: null \}\);/);
-  assert.doesNotMatch(bancada.slice(bancada.indexOf('const aMao =')), /rating/);
+  assert.doesNotMatch(bancada.slice(bancada.indexOf('const aMao ='), bancada.indexOf('// Rodada 30G, item 2')), /rating/);
 });

@@ -1,10 +1,12 @@
 /* eslint-disable react-refresh/only-export-components -- página-bancada das provas no navegador, não faz parte do app */
 // Bancada da prova dos selos do sorteio (scripts/provas/selo-do-sorteio.prova.mjs). `?caso=`:
-//   ajustado  a CerimoniaSorteio de verdade girando o ORIGINAL, com o passo do ajuste no fim
-//   sorteado  a CerimoniaSorteio de um sorteio que ninguém mexeu (selo ouro, "2º sorteio deste jogo")
-//   mao       a ApresentacaoTimes dos times montados à mão (sem roleta)
-//   cartao    os cartões compartilháveis (cartaz do ajustado, 9:16 do montado à mão) em window.__cartoes
-//   lista     o DrawnTeams (tela do jogo e link público) nos três casos
+//   ajustado   a CerimoniaSorteio de verdade girando o ORIGINAL, com o passo do ajuste no fim
+//   sorteado   a CerimoniaSorteio de um sorteio que ninguém mexeu (selo ouro, "2º sorteio deste jogo")
+//   mao        a ApresentacaoTimes dos times montados à mão (sem roleta)
+//   cartao     os cartões compartilháveis (cartaz do ajustado, 9:16 do montado à mão e do time com convidado) em window.__cartoes
+//   lista      o DrawnTeams (tela do jogo e link público) nos três casos
+//   convidado  o ponto do convidado (Rodada 30G, item 2): cerimônia + apresentação + DrawnTeams, todos com 1 convidado
+//              num time e 1 na reserva — a mesma pessoa não tem conta nos dois fixtures (sorteado e à mão)
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import CerimoniaSorteio from '../../src/components/CerimoniaSorteio';
@@ -48,6 +50,31 @@ const aMao = {
   registro: { origem: 'manual', por: { nome: 'Chavo' }, sorteios: 0, ajustes: [] },
 };
 
+// Rodada 30G, item 2: o "· " antes do nome do convidado sem app, e a linha "· sem o app" no fim de toda lista
+// que tiver pelo menos um. Um convidado DENTRO de um time (Time Ouro) e um na reserva — as duas listas.
+const convidado = (nome) => ({ user_id: null, convidado: true, nome, avatar_url: null, rating: 3 });
+const comConvidado = {
+  seed: 909,
+  num_times: 2,
+  times: [
+    { nome: 'Time A', jogadores: [jog('a1', 'Magrão'), convidado('Beto Visitante')] },
+    { nome: 'Time B', jogadores: [jog('b1', 'Canhotinha'), jog('b2', 'Zé')] },
+  ],
+  reservas: [convidado('Convidado Reserva')],
+  registro: { origem: 'sorteio', por: { nome: 'Chavo' }, sorteio_numero: 1, sorteios: 1, ajustes: [] },
+};
+const convidadoSemNota = (nome) => ({ user_id: null, convidado: true, nome, avatar_url: null });
+const aMaoComConvidado = {
+  manual: true,
+  num_times: 2,
+  times: [
+    { nome: 'Time A', jogadores: [jogSemNota('a1', 'Magrão'), convidadoSemNota('Beto Visitante')] },
+    { nome: 'Time B', jogadores: [jogSemNota('b1', 'Canhotinha'), jogSemNota('b2', 'Zé')] },
+  ],
+  reservas: [convidadoSemNota('Convidado Reserva')],
+  registro: { origem: 'manual', por: { nome: 'Chavo' }, sorteios: 0, ajustes: [] },
+};
+
 window.__terminou = 0;
 if ((new URLSearchParams(window.location.search).get('caso')) === 'cartao') {
   const comoUrl = (blob) => new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); });
@@ -56,7 +83,9 @@ if ((new URLSearchParams(window.location.search).get('caso')) === 'cartao') {
     const cartaz = await gerarCartazEscalacao({ ...ajustado, ...va.final }, { equipa: 'Missa de Quinta', data: '8 out 2026', selo: va.selo, baixar: false });
     const vm = visaoDoSorteio(aMao);
     const { blob } = await gerarCartao916(aMao, 0, 'Missa de Quinta', { selo: vm.selo });
-    window.__cartoes = { cartaz: cartaz.url, mao916: await comoUrl(blob) };
+    const vc = visaoDoSorteio(comConvidado);
+    const { blob: blobConv } = await gerarCartao916(comConvidado, 0, 'Missa de Quinta', { selo: vc.selo });
+    window.__cartoes = { cartaz: cartaz.url, mao916: await comoUrl(blob), convidado916: await comoUrl(blobConv) };
   })().catch((e) => { window.__cartoes = { erro: String(e) }; });
 }
 const caso = new URLSearchParams(window.location.search).get('caso') || 'ajustado';
@@ -89,6 +118,12 @@ createRoot(document.getElementById('raiz')).render(
           <div data-lista="sorteado"><DrawnTeams resultado={sorteado} /></div>
           <div data-lista="ajustado"><DrawnTeams resultado={ajustado} /></div>
           <div data-lista="manual"><DrawnTeams resultado={aMao} /></div>
+        </div>
+      ) : caso === 'convidado' ? (
+        <div style={{ padding: 16, display: 'grid', gap: 28 }}>
+          <div data-lista="convidado"><DrawnTeams resultado={comConvidado} /></div>
+          <div data-apresentacao><ApresentacaoTimes resultado={aMaoComConvidado} selo={visaoDoSorteio(aMaoComConvidado).selo} equipa="Missa de Quinta" data="8 out 2026" /></div>
+          <div data-cerimonia><Cerimonia tr={comConvidado} /></div>
         </div>
       ) : <Cerimonia tr={caso === 'sorteado' ? sorteado : ajustado} />}
     </div>
