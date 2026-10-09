@@ -226,8 +226,11 @@ body {
  * card do jogo no Início), `.futty-lockup-f` (futtyLockupIn, `both` — o F da
  * LandingPage) e `.futty-toast` (components/Toast.jsx). Mesmo defeito (conteúdo preso em opacity 0),
  * mesma correção: um aviso que nasce com a aba escondida não pode ficar preso em opacity 0.
+ * E `.entra-em-sequencia` (entraEmSequencia, `both` — o fim da cerimônia do sorteio, a apresentação dos times
+ * montados à mão, o selo e os botões de compartilhar): a cerimônia que termina com a pessoa noutro app não
+ * pode deixar selo e botões invisíveis.
  */
-html[data-oculto] *:not(.page-transition):not(.inicio-reveal):not(.page-reveal):not(.fig-card-enter):not(.perfil-tile):not(.anim-slide-in):not(.futty-lockup-f):not(.futty-toast),
+html[data-oculto] *:not(.page-transition):not(.inicio-reveal):not(.page-reveal):not(.fig-card-enter):not(.perfil-tile):not(.anim-slide-in):not(.futty-lockup-f):not(.futty-toast):not(.entra-em-sequencia),
 html[data-oculto] *::before,
 html[data-oculto] *::after {
   animation-play-state: paused !important;
