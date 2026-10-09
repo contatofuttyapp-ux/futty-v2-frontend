@@ -37,7 +37,7 @@ test('29P · landing para valer: sem o Avise-me, com o F, o slogan, a frase e as
   assert.doesNotMatch(landing, /soAviseMe/);
   assert.match(landing, /<FuttyIconeFlutuante size=\{tamanhoF\} \/>/);
   assert.match(landing, /O seu time\.<br \/>A sua figurinha\./);
-  assert.match(landing, /Futty: sorteio justo, ranking e figurinha de colecionador para o futebol do seu time\./);
+  assert.match(landing, /Futty: sorteio de times, ranking e figurinha de colecionador para o seu futebol\./);
   assert.match(landing, /Entrar com Google/);
   assert.match(landing, /Criar conta/);
   assert.match(landing, /Já tenho conta → /);
@@ -123,7 +123,8 @@ test('29P · o Explorar virou "Radar de peladas" em tudo o que aparece na tela (
   assert.match(ler('src/components/RouteTitle.jsx'), /\['\/explorar', 'Radar de peladas'\]/);
   const inicio = ler('src/pages/Inicio.jsx');
   // 29Q: o chip da fila saiu; o Radar de peladas vive num cartão (components/AtalhosDoInicio.jsx), com o mesmo ícone e o mesmo nome.
-  assert.match(inicio, /import \{ RefreshCw, Trophy \} from 'lucide-react';/);
+  // 30B: + Users, o ícone do "Ver times" (times montados à mão). O Radar continua fora do Início.
+  assert.match(inicio, /import \{ RefreshCw, Trophy, Users \} from 'lucide-react';/);
   assert.doesNotMatch(inicio, /<Radar /, 'o ícone do Radar já não vive no Início: foi para o cartão');
   const cartoes = ler('src/components/AtalhosDoInicio.jsx');
   assert.match(cartoes, /import \{ CirclePlus, Radar \} from 'lucide-react';/);

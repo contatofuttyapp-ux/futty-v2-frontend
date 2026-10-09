@@ -19,6 +19,7 @@ import { useApi } from '../../hooks/useApi';
 import { urlImagem } from '../../utils/avatar';
 import { contar } from '../../utils/plural';
 import { CRITERIOS, colunaDoCriterio, sentidoDoCriterio, proximoCriterio, ordenarTimes, lerCriterioLembrado, guardarCriterio } from '../../utils/ordenarTimes';
+import { ordenarPessoas } from '../../utils/ordenarPessoas';
 import EstadoErroRede from '../../components/EstadoErroRede';
 
 const CARD = { background: '#111111', border: '1px solid #222222', borderRadius: 12 };
@@ -53,7 +54,7 @@ function fmtData(iso) {
 function TabUsers({ showMsg }) {
   const [page, setPage] = useState(1);
   const { data, loading, error, reload } = useApi(`/api/super/users?page=${page}&limit=${PAGE_SIZE}`);
-  const users = data?.users || [];
+  const users = useMemo(() => ordenarPessoas(data?.users), [data]);
   const total = data?.total || 0;
 
   async function definirSuspensao(u, suspenso) {

@@ -429,9 +429,27 @@ async function medirCardEscondidoAutenticado(browser, path, seletorCard, respost
 // rodar este teste pela 1ª vez: o card nem chegava a montar).
 const TEAMS_FALSO = { teams: [TIME_FALSO] };
 
+// Rodada 30F: a apresentação dos times montados à mão (e o fim da cerimônia: passo do ajuste, selo) entra com
+// `.entra-em-sequencia` (fill `both`). Pausada desde o arranque, ficava presa em opacity 0 — o selo e os botões sumiam.
+const JOGADOR_VIS = (n) => ({ user_id: `vis-${n}`, nome: `Jogador ${n}`, avatar_url: null, rating: 3 });
+const JOGO_A_MAO_FALSO = {
+  team: { ...TIME_FALSO, fuso: 'America/Sao_Paulo', cor: 'azul' },
+  game: {
+    id: 'jogo-vis', data: new Date(Date.now() + 86400000).toISOString(), local: 'Campo de teste', status: 'agendado', sorteio_realizado: true, num_times: 2,
+    times_resultado: {
+      manual: true, num_times: 2,
+      times: [{ nome: 'Time Ouro', jogadores: [1, 2, 3].map(JOGADOR_VIS) }, { nome: 'Time Roxo', jogadores: [4, 5, 6].map(JOGADOR_VIS) }],
+      reservas: [],
+      registro: { origem: 'manual', por: { nome: 'Jogador Teste' }, sorteios: 0, ajustes: [] },
+    },
+  },
+  players: [], gols: [], meuEstado: null,
+};
+
 const CENARIOS_AUTENTICADOS = [
   { etiqueta: '/feed · card da Resenha', path: '/feed', seletor: '.anim-slide-in', respostas: { '/api/me': ME_ENVELOPE, '/api/teams': TEAMS_FALSO, '/api/feed': FEED_FALSO } },
   { etiqueta: '/home · card do jogo', path: '/home', seletor: '.anim-slide-in', respostas: { '/api/me': ME_ENVELOPE, '/api/teams': TEAMS_FALSO, '/api/inicio': INICIO_FALSO } },
+  { etiqueta: '/time/…/jogo/…/sorteio · apresentação dos times à mão', path: '/time/time-teste-vis/jogo/jogo-vis/sorteio', seletor: '.entra-em-sequencia', respostas: { '/api/me': ME_ENVELOPE, '/api/teams': TEAMS_FALSO, '/api/games/jogo-vis': JOGO_A_MAO_FALSO, '/link-curto': { codigo: null } } },
 ];
 
 const servidor = await subirServidor();

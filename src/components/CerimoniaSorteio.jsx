@@ -11,12 +11,15 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Share2 } from 'lucide-react';
 import { urlAsset, urlImagem } from '../utils/avatar';
+import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { useAd } from '../hooks/useAd';
 import { registarEventoAd } from '../lib/ads';
 import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import SomSorteio from './somSorteio';
+import FimDoSorteio from './FimDoSorteio';
 import { NOMES_DAS_CORES, nomeDoTimeNaTela } from '../utils/nomeDoTime';
+import { PONTO_CONVIDADO, TEXTO_SEM_O_APP, temConvidado } from '../utils/marcaConvidado';
 import '../styles/app.css';
 import '../styles/sorteio-maquina.css';
 
@@ -84,9 +87,12 @@ function mulberry32(seed) {
 }
 // SILHUETA DA CASA (angular, 45°) — MESMA geometria do SilhuetaJogador (cabeça octógono +
 // ombros em rectas com cortes 45°), aqui inline como data-uri (os rolos usam innerHTML).
-// LEI: círculos genéricos BANIDOS; placeholder de pessoa = SÓ esta silhueta. Fundo escuro
-// com o gradiente subtil da casa + brilho discreto do traço (a pele metálica apagada), tinte
-// do time. Usada quando avatar_url é falsy (o /p/ despublica → privacidade automática).
+// LEI: círculos genéricos BANIDOS fora do sorteio — placeholder de pessoa = SÓ esta
+// silhueta. NO SORTEIO (Rodada 30A, dono 8-out) o placeholder passou a ser o AVATAR
+// GENÉRICO da casa, com zoom 1,2 (ver vis()); esta silhueta fica como fallback do
+// `<img onerror>` se o genérico não carregar. Fundo escuro com o gradiente subtil da
+// casa + brilho discreto do traço (a pele metálica apagada), tinte do time. Usada quando
+// avatar_url é falsy (o /p/ despublica → privacidade automática).
 const SIL_HEAD = '40,12 56,12 64,20 64,36 56,44 40,44 32,36 32,20';
 const SIL_BODY = 'M14 92 L14 70 L24 58 L40 52 L56 52 L72 58 L82 70 L82 92 Z';
 function silhuetaURI(cor) {
@@ -129,8 +135,12 @@ function BannerSorteio() {
  * `bannerInterno`: a página do sorteio tem o seu próprio slot IAB 320×100, servido pelo AdCard e só depois
  * da cerimónia acabar — dois anúncios na mesma tela seriam duas impressões pela mesma vista. Quem tem slot
  * próprio passa `false`; o /p/ e o Campeonato ficam com a faixa.
+ *
+ * `selo`, `ajuste`, `final` (utils/seloDoSorteio.js#visaoDoSorteio): a máquina gira `resultado` — num sorteio
+ * ajustado à mão, é o ORIGINAL, o que a roleta deu. No fim entram, embaixo dela, o passo do ajuste e os times
+ * `final` (FimDoSorteio), e é com eles que se compartilha. Sem essas props (Campeonato) nada muda.
  */
-export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data, bannerInterno = true, euSorteei = false }) {
+export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data, bannerInterno = true, euSorteei = false, selo = null, ajuste = null, final = null }) {
   const rootRef = useRef(null);
   // props estáveis para o efeito (que corre 1x); um re-sorteio remonta via key no consumidor.
   const cbRef = useRef(aoTerminar);
@@ -213,16 +223,33 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     const maq = q('.maq');
     let aCorrer = false; let saltarFlag = false;
 
-    // — visual de um jogador real: foto (urlAsset) ou silhueta da cor (privacidade).
-    //   ti < 0 → RESERVA (silhueta cinza-aço).
+    // — visual de um jogador real: foto (urlAsset) ou, sem foto, o avatar genérico da
+    //   casa (jogador com conta → escolha dele/rodízio; convidado sem app, sem user_id →
+    //   palpite pelo primeiro nome). `silhueta` vai pronta no `<img data-sil>`: se o
+    //   genérico não carregar, o onerror cai nela (ver imgHTML). ti < 0 → RESERVA.
     //   A foto vem no 2:3 do recorte (SEM quadrado): as molduras são 3:4 e o CSS as cobre do
     //   topo (object-position 50% 0%), então aparecem as laterais inteiras e o topo do recorte — o que a
     //   pessoa enquadrou. Com sq=1 o servidor mandaria o quadrado do topo e o cover cortaria 25% das
     //   laterais.
-    const vis = (j, ti) => ({
-      nome: (j.convidado ? '· ' : '') + (j.nome || '?'),
-      img: j.avatar_url ? urlImagem(urlAsset(j.avatar_url), 128) : silhuetaURI(ti < 0 ? RES_MARCA.c : marca(ti).c),
-    });
+    const vis = (j, ti) => {
+      const cor = ti < 0 ? RES_MARCA.c : marca(ti).c;
+      const generico = !j.avatar_url;
+      return {
+        nome: (j.convidado ? PONTO_CONVIDADO : '') + (j.nome || '?'),
+        img: generico ? avatarGenericoUrl(j.user_id || null, j.avatar_generico || null, j.nome || '') : urlImagem(urlAsset(j.avatar_url), 128),
+        generico,
+        silhueta: silhuetaURI(cor),
+      };
+    };
+
+    // — o `<img>` de um jogador: genérico ganha a classe (zoom 1,2, CSS) e o
+    //   fallback à silhueta via onerror (data-sil escapado, não dentro do atributo JS —
+    //   o data-uri da silhueta tem aspas simples cruas, que quebrariam um literal JS).
+    function imgHTML(v) {
+      return v.generico
+        ? `<img class="generico" src="${esc(v.img)}" data-sil="${esc(v.silhueta)}" onerror="this.onerror=null;this.src=this.dataset.sil;this.classList.remove('generico')">`
+        : `<img src="${esc(v.img)}">`;
+    }
 
     // — moldura de um jogador (innerHTML; corre dentro de .smaq → estilos aplicam).
     //   res=true → RESERVA: cinza-aço + micro-lâmpadas apagadas (LEI: nunca cor de time).
@@ -230,7 +257,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       const k = res ? RES_MARCA : marca(ti);
       const mbs = MBPOS.map(([x, y], i) => `<span class="mb" style="--i:${i};left:${x}%;top:${y}%"></span>`).join('');
       const v = vis(j, res ? -1 : ti);
-      return `<div class="mmold${res ? ' res' : ''}" style="--tc:${k.c};--tg:${k.g}"><div class="fr"><img src="${esc(v.img)}"></div>${mbs}<span class="nm">${esc(v.nome)}</span></div>`;
+      return `<div class="mmold${res ? ' res' : ''}" style="--tc:${k.c};--tg:${k.g}"><div class="fr">${imgHTML(v)}</div>${mbs}<span class="nm">${esc(v.nome)}</span></div>`;
     }
     function encher(slotEl, j, ti, res) { slotEl.classList.add('cheio'); slotEl.innerHTML = mmoldHTML(j, ti, res); }
     function voar(rolo, j, ti, slotEl) {
@@ -253,10 +280,13 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
         const k = marca(gi); const linhas = LINHAS[Math.min(t.jogadores.length, 11)] || [t.jogadores.length];
         let n = 0; let rows = '';
         for (const c of linhas) rows += `<div class="srow">${Array.from({ length: c }, () => `<div class="slot" data-g="${gi}" data-i="${n++}"></div>`).join('')}</div>`;
-        return `<div class="grupo" data-gi="${gi}" style="--tc:${k.c};--tg:${k.g}"><div class="ghead">${esc(nomeDoTimeNaTela(t.nome, gi))}</div>${rows}</div>`;
+        // O ponto do convidado (vis(), acima) só se explica uma vez, no fim do grupo que o tem.
+        const nota = temConvidado(t.jogadores) ? `<div class="conv-nota">${esc(TEXTO_SEM_O_APP)}</div>` : '';
+        return `<div class="grupo" data-gi="${gi}" style="--tc:${k.c};--tg:${k.g}"><div class="ghead">${esc(nomeDoTimeNaTela(t.nome, gi))}</div>${rows}${nota}</div>`;
       }).join('');
       q('.resv').classList.toggle('on', reservas.length > 0);
       q('.rrow').innerHTML = reservas.map((j, i) => `<div class="rslot" data-r="${i}"><span class="badge">${esc(j.posicao || i + 1)}</span><div class="slot" style="width:100%;height:100%"></div></div>`).join('');
+      q('.resv-nota').textContent = temConvidado(reservas) ? TEXTO_SEM_O_APP : '';
     }
 
     // — strip do baralho (seed → determinístico p/ replay)
@@ -292,7 +322,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
       for (let r = 0; r < n; r += 1) {
         const v = vis(jogs[r], ti); rolos[r].classList.add('stop');
         const rev = rolos[r].querySelector('.rev');
-        rev.innerHTML = `<img src="${esc(v.img)}"><span class="nm">${esc(v.nome)}</span>`;
+        rev.innerHTML = `${imgHTML(v)}<span class="nm">${esc(v.nome)}</span>`;
         rev.classList.add('on'); SomSorteio.revelar();
         if (!saltarFlag) await sleep(130);
       }
@@ -520,13 +550,16 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a cerimónia monta 1x; re-sorteio remonta via key
   }, []);
 
+  // O que se compartilha são os times que vão jogar: num sorteio ajustado, os FINAIS, não os que a roleta deu.
+  const paraCompartilhar = final ? { ...resultado, times: final.times, reservas: final.reservas } : resultado;
+
   // Na web baixa; no app abre a folha de compartilhar (o <a download> não faz nada no WebView). A folha já é
   // o retorno; fechada sem escolher nada, não se diz "salvo".
   async function compartilharTimes() {
     if (gerando) return;
     setGerando(true); setGerandoQual('todos'); setAvisoCartao('');
     try {
-      const { entrega } = await gerarCartazEscalacao(resultado, { equipa, data });
+      const { entrega } = await gerarCartazEscalacao(paraCompartilhar, { equipa, data, selo });
       if (entrega === 'baixou') { toastRef.current('Imagem dos times salva'); avisar('Imagem dos times salva no seu aparelho.'); }
       else if (entrega === 'compartilhou') avisar('Imagem dos times compartilhada.');
     } catch (e) {
@@ -539,7 +572,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     setGerando(true); setGerandoQual(ti); setAvisoCartao('');
     const nomeDoTime = nomeDoTimeNaTela(resultado?.times?.[ti]?.nome, ti);
     try {
-      const { blob, nome } = await gerarCartao916(resultado, ti, equipa);
+      const { blob, nome } = await gerarCartao916(paraCompartilhar, ti, equipa, { selo });
       const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
       if (entrega === 'baixou') { toastRef.current('Cartão 9:16 salvo'); avisar(`Cartão do ${nomeDoTime} salvo no seu aparelho.`); }
       else if (entrega === 'compartilhou') avisar(`Cartão do ${nomeDoTime} compartilhado.`);
@@ -553,7 +586,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
   if (!resultado?.times?.length) {
     return <div style={{ padding: 24, textAlign: 'center', color: '#8a8a98' }}>Sem resultado para mostrar.</div>;
   }
-  const times = resultado.times;
+  const times = paraCompartilhar.times;
 
   return (
     <div className="smaq" ref={rootRef}>
@@ -584,7 +617,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
                 </div>
                 <div className="gruposWrap">
                   <div className="grupos" />
-                  <div className="resv"><div className="rhead">Reserva · ordem do banco</div><div className="rrow" /></div>
+                  <div className="resv"><div className="rhead">Reserva · ordem do banco</div><div className="rrow" /><div className="resv-nota" /></div>
                 </div>
               </div>
               {/* A luz do prêmio, por cima do bloco dos times e por baixo do título: 3 varreduras de brilho na diagonal e
@@ -611,6 +644,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
           </div>
         </div></div>
       </div>
+      {/* Terminada a cerimônia: o selo — e, num sorteio ajustado, antes dele o passo do ajuste e os times finais.
+          Entra junto com o compartilhar e some quando a alavanca recomeça. */}
+      {compartilharOn ? <FimDoSorteio selo={selo} ajuste={ajuste} final={final} /> : null}
       {/* UM caminho para compartilhar, logo abaixo do retângulo dos
           times: a imagem dos dois times na receita do "Ver sorteio" (.cta-gold +
           glow + pulso), e por baixo uma linha discreta com o 9:16 de cada time. */}

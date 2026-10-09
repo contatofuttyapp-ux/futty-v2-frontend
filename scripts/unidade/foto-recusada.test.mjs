@@ -15,7 +15,9 @@ import { fileURLToPath } from 'node:url';
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(path.join(aqui, '..', '..', 'src', 'pages', 'Figurinha.jsx'), 'utf8');
-const RECADO = 'Essa foto não deu certo. Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.';
+const TITULO = 'Essa foto não deu certo';
+const CORPO = 'Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.';
+const RECADO = `${TITULO}. ${CORPO}`;
 
 /** O corpo de uma função do componente: do `function nome(` até o fecho de nível 2 (`  }`). */
 function corpo(nome) {
@@ -25,9 +27,11 @@ function corpo(nome) {
   return src.slice(i, fim);
 }
 
-test('o recado é o do dono e está escrito uma única vez', () => {
-  assert.ok(src.includes(`const RECADO_FOTO_RECUSADA = '${RECADO}';`), 'a constante tem o recado exato');
-  assert.equal(src.split(RECADO).length - 1, 1, 'o texto só aparece na constante; as telas usam a constante');
+test('o recado é o do dono (título + corpo, 30H) e está escrito uma única vez', () => {
+  assert.ok(src.includes(`titulo: '${TITULO}',`), 'a constante tem o título exato');
+  assert.ok(src.includes(`corpo: '${CORPO}',`), 'a constante tem o corpo exato');
+  assert.equal(src.split(TITULO).length - 1, 1, 'o título só aparece na constante; as telas usam a constante');
+  assert.equal(src.split(CORPO).length - 1, 1, 'o corpo só aparece na constante; as telas usam a constante');
 });
 
 test('FOTO_RECUSADA na geração liga a recusa e o estado de erro (sem gerar de novo)', () => {
@@ -41,7 +45,8 @@ test('no overlay, FOTO_RECUSADA mostra o recado e o botão de outra foto — ant
   const fim = src.indexOf('      ) : erroIA ? (', inicio);
   assert.ok(inicio > 0 && fim > inicio, 'o ramo da foto recusada vem antes do erro comum');
   const ramo = src.slice(inicio, fim);
-  assert.ok(ramo.includes('{RECADO_FOTO_RECUSADA}'), 'mostra o recado');
+  assert.ok(ramo.includes('{RECADO_FOTO_RECUSADA.titulo}'), 'mostra o título do recado');
+  assert.ok(ramo.includes('{RECADO_FOTO_RECUSADA.corpo}'), 'mostra o corpo do recado');
   assert.ok(ramo.includes('Escolher outra foto'), 'o botão diz para escolher outra foto');
   assert.ok(ramo.includes('onClick={escolherOutraFoto}'), 'o botão leva à troca de foto');
   assert.doesNotMatch(ramo, /Tentar novamente/, 'não oferece tentar de novo com a mesma foto');
@@ -62,7 +67,8 @@ test('na estreia, FOTO_RECUSADA volta à fase "foto" com o recado; as outras fal
   const fase = src.indexOf("estreiaFase === 'foto' ? (");
   assert.ok(fase > 0);
   const bloco = src.slice(fase, fase + 900);
-  assert.ok(bloco.includes('{fotoRecusada ? RECADO_FOTO_RECUSADA'), 'a fase "foto" mostra o recado quando a foto foi recusada');
+  assert.ok(bloco.includes('{fotoRecusada ? RECADO_FOTO_RECUSADA.titulo'), 'o título do h2 vira o do recado quando a foto foi recusada');
+  assert.ok(bloco.includes('{fotoRecusada ? RECADO_FOTO_RECUSADA.corpo'), 'o corpo mostra o recado quando a foto foi recusada');
   assert.ok(bloco.includes("onClick={escolherOutraFoto}"), 'e o botão leva à troca de foto');
 });
 

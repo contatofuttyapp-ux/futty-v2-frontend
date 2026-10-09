@@ -61,7 +61,7 @@ export function previaDoSorteio(dados) {
   if (!nome) return null;
   return {
     titulo: `${nome} · sorteio dos times`,
-    descricao: 'Sorteio justo, ranking e figurinha de colecionador.',
+    descricao: 'Sorteio de times, ranking e figurinha de colecionador.',
     imagem: dados.equipa.logo_url || null,
   };
 }

@@ -132,8 +132,12 @@ const GOLDEN_GLINTS_UI = [
 // nos overlays de card inteiro para os cantos coincidirem com o PNG octogonal.
 const CLIP_OCTOGONO = 'polygon(8% 0, 92% 0, 100% 5.3%, 100% 94.7%, 92% 100%, 8% 100%, 0 94.7%, 0 5.3%)';
 // Ordem do dono: a cabeça cortou nas duas tentativas com esta foto → o recado leva a escolher OUTRA
-// foto. Tentar de novo com ela daria o mesmo.
-const RECADO_FOTO_RECUSADA = 'Essa foto não deu certo. Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.';
+// foto. Tentar de novo com ela daria o mesmo. Título + corpo (30H): um erro não é a mesma frase que o
+// resto da tela, por isso quebra no dois-pontos em vez de correr solta.
+const RECADO_FOTO_RECUSADA = {
+  titulo: 'Essa foto não deu certo',
+  corpo: 'Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.',
+};
 
 // Limites do zoom do avatar. ZOOM_MIN subiu de 0.88 (80% exibido) para 0.99 (90%):
 // o degrau de 80% deixou de existir. Qualquer valor abaixo é normalizado no arranque.
@@ -344,7 +348,7 @@ export default function Figurinha() {
   }
   const jogadorCard = avatarEhIA || temFoto
     ? jogador
-    : { ...jogador, avatar_url: avatarGenericoUrl(jogador.id, avatarGenericoEscolha) };
+    : { ...jogador, avatar_url: avatarGenericoUrl(jogador.id, avatarGenericoEscolha, nomeJogador(jogador)) };
   // A2 — kit vestido + kits já gerados (slots). Vindos do GET /api/me.
   const kitAtivo = me?.user?.kit_ativo || 'dark-gold';
   const slotsKits = me?.slots || [];
@@ -1476,7 +1480,10 @@ export default function Figurinha() {
         // outra foto.
         <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
           <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{RECADO_FOTO_RECUSADA}</span>
+          <div style={{ display: 'grid', gap: 10, maxWidth: '30ch' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{RECADO_FOTO_RECUSADA.titulo}</span>
+            <span style={{ fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)' }}>{RECADO_FOTO_RECUSADA.corpo}</span>
+          </div>
           <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={escolherOutraFoto}>
             Escolher outra foto
           </button>
@@ -1545,8 +1552,10 @@ export default function Figurinha() {
           <div style={{ maxWidth: 420, margin: '0 auto', textAlign: 'center', display: 'grid', gap: 12 }}>
             {estreiaFase === 'foto' ? (
               <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>Seu card está quase pronto <EstrelaIA size={14} color="#fff" /></h2>
-                <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: 0 }}>{fotoRecusada ? RECADO_FOTO_RECUSADA : 'Adicione uma foto para personalizar seu cartão de jogador'}</p>
+                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>
+                  {fotoRecusada ? RECADO_FOTO_RECUSADA.titulo : <>Seu card está quase pronto <EstrelaIA size={14} color="#fff" /></>}
+                </h2>
+                <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: fotoRecusada ? '0 auto' : 0, maxWidth: fotoRecusada ? '30ch' : 'none' }}>{fotoRecusada ? RECADO_FOTO_RECUSADA.corpo : 'Adicione uma foto para personalizar seu cartão de jogador'}</p>
                 <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={escolherOutraFoto}>{fotoRecusada ? 'Escolher outra foto' : 'Adicionar foto'}</button>
                 <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Pular por agora →</button>
               </>
@@ -1705,9 +1714,10 @@ export default function Figurinha() {
                 className="hud-corners-s"
                 aria-label="Trocar visual do card"
                 onClick={() => setSheetAvatarAberto(true)}
-                style={{ position: 'absolute', top: 10, right: 10, zIndex: 8, width: 32, height: 32, display: 'grid', placeItems: 'center', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.72)', color: '#d4a017', cursor: 'pointer' }}
+                style={{ position: 'absolute', top: 10, right: 10, zIndex: 8, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 11px 6px 8px', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.82)', color: '#d4a017', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
               >
-                <RefreshCw size={16} />
+                <RefreshCw size={15} />
+                Trocar avatar
               </button>
             ) : null}
           </div>

@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { formatarAte } from '../utils/numero';
+import { comChaves, moverJogador, semChave } from '../utils/editorDeTimes';
 
 const EDITOR_CSS = `
 @keyframes teDropPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(139,92,246,0.5); } 50% { box-shadow: 0 0 0 4px rgba(139,92,246,0.15); } }
@@ -12,9 +13,10 @@ const EDITOR_CSS = `
 const media = (jogadores) => (jogadores.length ? Math.round((jogadores.reduce((s, j) => s + (j.rating || 0), 0) / jogadores.length) * 100) / 100 : 0);
 
 export default function TimesEditor({ gameId, resultadoInicial, confirmados = [], onSaved, onCancel, showToast }) {
-  // Clona o estado inicial (times + reservas).
-  const [times, setTimes] = useState(() => (resultadoInicial?.times || []).map((t) => ({ ...t, jogadores: [...(t.jogadores || [])] })));
-  const [reservas, setReservas] = useState(() => [...(resultadoInicial?.reservas || [])]);
+  // Times + reservas, cada jogador com a sua chave estável (utils/editorDeTimes.js): o convidado sem app não tem
+  // user_id, e com ele todo convidado era o mesmo jogador para o editor.
+  const [estado, setEstado] = useState(() => comChaves(resultadoInicial));
+  const { times, reservas } = estado;
   const [draggingId, setDraggingId] = useState(null);
   const [overZone, setOverZone] = useState(null); // índice do time ou 'reservas'
   const [addUser, setAddUser] = useState('');
@@ -23,31 +25,11 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
   const dragRef = useRef(null);
 
   // user_ids já colocados (para calcular atrasados).
-  const colocados = new Set([...times.flatMap((t) => t.jogadores), ...reservas].map((j) => j.user_id));
+  const colocados = new Set([...times.flatMap((t) => t.jogadores), ...reservas].map((j) => j.user_id).filter(Boolean));
   const atrasados = confirmados.filter((p) => !colocados.has(p.user_id));
 
-  function moverPara(userId, destino) {
-    let jogador = null;
-    const novosTimes = times.map((t) => {
-      const idx = t.jogadores.findIndex((j) => j.user_id === userId);
-      if (idx >= 0) {
-        jogador = t.jogadores[idx];
-        return { ...t, jogadores: t.jogadores.filter((_, k) => k !== idx) };
-      }
-      return { ...t, jogadores: [...t.jogadores] };
-    });
-    let novasReservas = reservas.filter((j) => {
-      if (j.user_id === userId) {
-        jogador = j;
-        return false;
-      }
-      return true;
-    });
-    if (!jogador) return;
-    if (destino === 'reservas') novasReservas = [...novasReservas, jogador];
-    else novosTimes[destino] = { ...novosTimes[destino], jogadores: [...novosTimes[destino].jogadores, jogador] };
-    setTimes(novosTimes);
-    setReservas(novasReservas);
+  function moverPara(chave, destino) {
+    setEstado((e) => moverJogador(e, chave, destino));
   }
 
   function onDrop(destino) {
@@ -61,9 +43,9 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
   function adicionarAtrasado() {
     const p = atrasados.find((x) => x.user_id === addUser);
     if (!p) return;
-    const jogador = { user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url || null, rating: p.rating ?? 0, goleiro: !!p.goleiro, cabeca_chave: !!p.cabeca_chave };
+    const jogador = { user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url || null, rating: p.rating ?? 0, goleiro: !!p.goleiro, cabeca_chave: !!p.cabeca_chave, _chave: `u:${p.user_id}` };
     const idx = Number(addTime) || 0;
-    setTimes((prev) => prev.map((t, i) => (i === idx ? { ...t, jogadores: [...t.jogadores, jogador] } : t)));
+    setEstado((e) => ({ ...e, times: e.times.map((t, i) => (i === idx ? { ...t, jogadores: [...t.jogadores, jogador] } : t)) }));
     setAddUser('');
   }
 
@@ -77,9 +59,10 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
     setSaving(true);
     const tr = {
       ...resultadoInicial,
-      times: times.map((t) => ({ ...t, rating_medio: media(t.jogadores) })),
+      times: times.map((t) => ({ ...t, jogadores: t.jogadores.map(semChave), rating_medio: media(t.jogadores) })),
       reservas: reservas.map((r, i) => {
-        const base = { posicao: i + 1, user_id: r.user_id, nome: r.nome, avatar_url: r.avatar_url || null, rating: r.rating ?? 0 };
+        // O convidado continua convidado na reserva (sem a marca ele virava "jogador sem conta" sem nome de convidado).
+        const base = { posicao: i + 1, user_id: r.user_id, convidado: r.convidado || undefined, nome: r.nome, avatar_url: r.avatar_url || null, rating: r.rating ?? 0 };
         if (i === 0) base.ordem_entrada = 'primeiro';
         return base;
       }),
@@ -102,13 +85,14 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
   function Jogador({ j }) {
     return (
       <div
-        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', opacity: draggingId === j.user_id ? 0.5 : 1 }}
+        data-jogador-editor={j._chave}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', opacity: draggingId === j._chave ? 0.5 : 1 }}
       >
         <span
           draggable
           onDragStart={() => {
-            dragRef.current = j.user_id;
-            setDraggingId(j.user_id);
+            dragRef.current = j._chave;
+            setDraggingId(j._chave);
           }}
           onDragEnd={() => {
             setDraggingId(null);
@@ -149,7 +133,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
               <span className="sorteio-team__avg">★ {formatarAte(media(t.jogadores), 2)}</span>
             </div>
             {t.jogadores.map((j) => (
-              <Jogador key={j.user_id} j={j} />
+              <Jogador key={j._chave} j={j} />
             ))}
             {t.jogadores.length === 0 ? <div style={{ fontSize: 12, color: 'var(--danger)', padding: 4 }}>Vazio</div> : null}
           </div>
@@ -173,7 +157,7 @@ export default function TimesEditor({ gameId, resultadoInicial, confirmados = []
         {reservas.length === 0 ? (
           <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Arraste jogadores para aqui</div>
         ) : (
-          reservas.map((j) => <Jogador key={j.user_id} j={j} />)
+          reservas.map((j) => <Jogador key={j._chave} j={j} />)
         )}
       </div>
 

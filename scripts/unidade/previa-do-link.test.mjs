@@ -47,7 +47,7 @@ test('segundoSegmento: o código de /s/<código> e o token de /c/<token> ou /con
 test('previaDoSorteio: "<time> · sorteio dos times", a descrição fixa da casa, e o logo do time como imagem quando existe', () => {
   assert.deepEqual(previaDoSorteio({ equipa: { nome: 'Várzea FC', logo_url: 'https://x/logo.png' } }), {
     titulo: 'Várzea FC · sorteio dos times',
-    descricao: 'Sorteio justo, ranking e figurinha de colecionador.',
+    descricao: 'Sorteio de times, ranking e figurinha de colecionador.',
     imagem: 'https://x/logo.png',
   });
   assert.equal(previaDoSorteio({ equipa: { nome: 'Várzea FC' } }).imagem, null, 'sem logo, sem imagem própria — fica o og:image padrão');

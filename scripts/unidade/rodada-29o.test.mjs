@@ -101,5 +101,5 @@ test('29O · os Ajustes usam as mesmas frases do passo 2 e a mesma regra do arti
 test('29O · a landing tem o nome e o que o app faz, logo abaixo do slogan', () => {
   const landing = ler('src/pages/LandingPage.jsx');
   assert.match(landing, /O seu time\.<br \/>A sua figurinha\./);
-  assert.match(landing, /Futty: sorteio justo, ranking e figurinha de colecionador para o futebol do seu time\./);
+  assert.match(landing, /Futty: sorteio de times, ranking e figurinha de colecionador para o seu futebol\./);
 });

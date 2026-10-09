@@ -1,7 +1,7 @@
 // Futty v2.0 — RSVPCard: o jogador confirma/recusa presença no próximo jogo.
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { responderComOtimismo } from '../lib/rsvp';
+import { responderComOtimismo, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
 import { formatarDataHora } from '../utils/dataHora';
 
 // "até qui., 8 de out. · 20:00" — o prazo, como o jogo, é lido no relógio do CAMPO (fuso do time). Com o
@@ -43,11 +43,26 @@ function botaoNao(sel) {
   };
 }
 
-export default function RSVPCard({ gameId, prazo, fuso, cidade = null, respostaActual, onResposta, cheio = false, minhaPosicaoEspera = null }) {
+export default function RSVPCard({ gameId, prazo, fuso, cidade = null, respostaActual, onResposta, cheio = false, minhaPosicaoEspera = null, encerrada = null }) {
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
   // Posição na fila: seed do servidor, atualizada localmente nas ações.
   const [posEspera, setPosEspera] = useState(() => minhaPosicaoEspera);
+
+  // O prazo venceu ou o admin fechou: nada a fazer aqui além de avisar — tocar não muda nada, então os
+  // botões nem chamam `responder`. gameId, prazo etc. continuam vindo (o título e o "até <prazo>" de
+  // sempre viram a frase do motivo), mas sem handler nenhum.
+  if (encerrada) {
+    return (
+      <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', borderRadius: 'var(--radius-md)', padding: 14, marginBottom: 12 }}>
+        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff' }}>{FRASE_RSVP_ENCERRADA[encerrada]}</div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <button type="button" disabled aria-disabled="true" style={{ ...botaoSim(respostaActual === 'confirmado'), opacity: 0.45, cursor: 'not-allowed' }}>Vou</button>
+          <button type="button" disabled aria-disabled="true" style={{ ...botaoNao(respostaActual === 'recusado'), opacity: 0.45, cursor: 'not-allowed' }}>Não vou</button>
+        </div>
+      </div>
+    );
+  }
 
   // Jogo cheio e ainda não confirmado → fluxo de lista de espera.
   const modoEspera = cheio && respostaActual !== 'confirmado';

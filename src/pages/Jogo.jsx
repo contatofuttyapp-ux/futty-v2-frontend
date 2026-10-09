@@ -1,6 +1,6 @@
 // Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
-import { useEffect, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Trophy, Users } from 'lucide-react';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
@@ -26,6 +26,8 @@ import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
+import { motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
+import { montadoAMao } from '../utils/seloDoSorteio';
 import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
 
@@ -39,8 +41,8 @@ const LINK_DISCRETO = { minHeight: 44, padding: '0 4px', border: 'none', backgro
 // Moldura V1 (família do Ranking/Equipa).
 // Sem foto, mas com identidade (userId), mostra o avatar genérico da casa — nunca
 // a silhueta "?".
-function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, size = 36 }) {
-  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico) : null);
+function FrameAvatar({ avatarUrl, userId = null, avatarGenerico = null, nome = null, size = 36 }) {
+  const src = avatarUrl ? urlImagem(urlAsset(avatarUrl), 128, { quadrado: true }) : (userId != null ? avatarGenericoUrl(userId, avatarGenerico, nome) : null);
   return (
     <span className="avatar-frame" style={{ width: size, height: size }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
@@ -74,8 +76,18 @@ export default function Jogo() {
   // posição na fila dentro do Jogo; NÃO toca na capacidade do /confirmar (vaga futura).
   const { data: rsvpEstado } = useApi(`/api/jogos/${id}/rsvp`);
   const posEspera = rsvpEstado?.minha_posicao_espera ?? null;
+  // Mesma leitura: se a presença formal foi aberta com prazo (ou o admin fechou), quem ainda não confirmou
+  // não pode mais dizer "Vou" por aqui — o botão avisa em vez de deixar tocar para descobrir com um erro.
+  const encerradaNoJogo = motivoRsvpEncerrada(rsvpEstado);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  // O erro do sorteio tem lugar próprio, junto dos botões de sortear: no topo da página (onde vai o actionError) quem
+  // tocou em "Sortear de novo", lá embaixo, não o via — parecia que o botão não tinha feito nada.
+  const [erroDoSorteio, setErroDoSorteio] = useState('');
+  const erroDoSorteioRef = useRef(null);
+  useEffect(() => {
+    if (erroDoSorteio) erroDoSorteioRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [erroDoSorteio]);
   const [editando, setEditando] = useState(false); // modo ajuste manual dos times
   const [jogadoresPorTime, setJogadoresPorTime] = useState(null); // selector do sorteio (null = usa o do jogo)
   const [convidados, setConvidados] = useState([]); // SPEC-SORTEIO §11: nomes sem app
@@ -150,7 +162,7 @@ export default function Jogo() {
     // temporizadores). No site (Safari) o áudio só toca destravado por um gesto; o app da loja não tem a
     // regra. Síncrono, antes do primeiro await.
     SomSorteio.prepararNoGesto();
-    setActionError('');
+    setErroDoSorteio('');
     setBusy(true);
     try {
       const body = { jogadoresPorTime: porTimeEfectivo };
@@ -164,7 +176,7 @@ export default function Jogo() {
       // na URL: o link partilhado nunca pode trazer isto colado.
       navigate(`/time/${slug}/jogo/${id}/sorteio`, { state: { euSorteei: true } });
     } catch (err) {
-      setActionError(err.message);
+      setErroDoSorteio(err.message);
     } finally {
       setBusy(false);
     }
@@ -206,6 +218,8 @@ export default function Jogo() {
   const golsResultado = data?.gols || [];
   // Times do sorteio (para nomes, jogadores do resultado e artilheiro).
   const timesSorteio = game?.times_resultado?.times || [];
+  // Times montados à mão não tiveram roleta: o botão é "Ver times" (a apresentação) e o cabeçalho não diz "sorteados".
+  const timesAMao = !!game?.times_resultado && montadoAMao(game.times_resultado);
   // O placar também chama os times pelo nome da cerimônia ("Time Ouro × Time Roxo"), não pelo "Time A" do
   // motor.
   const nomeTimeA = nomeDoTimeNaTela(timesSorteio[0]?.nome, 0);
@@ -263,7 +277,7 @@ export default function Jogo() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                 <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 9px', clipPath: CLIP_S, color: game.status === 'em_curso' ? '#7bd88f' : game.status === 'cancelado' ? '#fda4af' : '#8ab4ff', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.04)' }}>{STATUS_LABELS[game.status] || game.status}</span>
                 {game.sorteio_realizado && game.status === 'agendado' ? (
-                  <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', clipPath: CLIP_S, color: '#d4a017', border: '1px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>Times sorteados</span>
+                  <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', clipPath: CLIP_S, color: '#d4a017', border: '1px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>{timesAMao ? 'Times montados' : 'Times sorteados'}</span>
                 ) : null}
               </div>
             </div>
@@ -358,6 +372,8 @@ export default function Jogo() {
                     </button>
                   )}
                 </>
+              ) : encerradaNoJogo ? (
+                <span className="muted" data-rsvp-encerrada>{FRASE_RSVP_ENCERRADA[encerradaNoJogo]}</span>
               ) : (
                 <>
                   <span className="muted">Você ainda não confirmou presença.</span>
@@ -391,7 +407,7 @@ export default function Jogo() {
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>
                 {confirmados.map((p, pi) => (
                   <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: pi === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
-                    <FrameAvatar avatarUrl={p.avatar_url} userId={p.user_id} avatarGenerico={p.avatar_generico} />
+                    <FrameAvatar nome={p.nome} avatarUrl={p.avatar_url} userId={p.user_id} avatarGenerico={p.avatar_generico} />
                     <div style={{ flex: 1, minWidth: 0, fontFamily: RAJ, fontWeight: 700, fontSize: 14 }}>{p.nome}</div>
                     {isAdmin ? (
                       <>
@@ -535,6 +551,13 @@ export default function Jogo() {
                   </button>
                 </span>
               )}
+              {game.sorteio_realizado && timesAMao && (
+                <span className="cta-gold-glow" style={{ display: 'flex', width: '100%' }}>
+                  <button type="button" className="btn hud-corners cta-gold" data-ver-times style={{ flex: 1 }} onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
+                    <Users size={16} /> Ver times
+                  </button>
+                </span>
+              )}
               {isAdmin && game.sorteio_realizado && !editando && (
                 <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setEditando(true)}>
                   Ajustar times
@@ -557,6 +580,11 @@ export default function Jogo() {
                 <span aria-hidden="true">·</span>
                 <button type="button" data-trocar="a-mao" style={LINK_DISCRETO} onClick={() => setConfirmacao('refazer-a-mao')} disabled={busy}>Montar à mão</button>
               </div>
+            ) : null}
+
+            {/* O erro do sorteio, junto dos botões de sortear (o primeiro sorteio, acima, e o "Sortear de novo"). */}
+            {erroDoSorteio ? (
+              <div ref={erroDoSorteioRef} className="alert alert--error" role="alert" data-erro-do-sorteio style={{ marginTop: 10 }}>{erroDoSorteio}</div>
             ) : null}
 
             {/* Campeonato a partir do sorteio: só o formato — plantéis já vêm prontos. */}

@@ -2,12 +2,13 @@
 // ResultadoEditor (o do Jogo: PATCH /api/games/:id/resultado) e o ResultadoModal (o de Ajustes: PATCH
 // /api/feed/games/:id/resultado) — e para o passo a passo do Jogo passado, onde eles devolvem os dados em
 // vez de salvar. Um corpo só por pedido, montado aqui, seja qual for a tela que o manda.
+import { chaveDoJogador } from './seloDoSorteio';
 
-/** Soma dos gols de cada time (0 = A, 1 = B) a partir do mapa { user_id: gols } e dos jogadores `{ user_id, timeIndex }`. */
+/** Soma dos gols de cada time (0 = A, 1 = B) a partir do mapa { chave: gols } (chaveDoJogador) e dos jogadores `{ user_id, nome, timeIndex }`. */
 export function somaDeGolsPorTime(golsMap, jogadores) {
   const soma = [0, 0];
   for (const j of jogadores || []) {
-    if (j?.timeIndex === 0 || j?.timeIndex === 1) soma[j.timeIndex] += Math.max(0, Number(golsMap?.[j.user_id]) || 0);
+    if (j?.timeIndex === 0 || j?.timeIndex === 1) soma[j.timeIndex] += Math.max(0, Number(golsMap?.[chaveDoJogador(j)]) || 0);
   }
   return soma;
 }
@@ -43,9 +44,10 @@ export function nivelDoPassado(estado, jogadores) {
 }
 
 /**
- * O corpo do PATCH /api/games/:id/resultado.
+ * O corpo do PATCH /api/games/:id/resultado. Convidado sem app não tem user_id: o gol dele vai por
+ * `convidado_nome` (a mesma chave do motor identifica o jogador dos dois lados, sem misturar dois convidados).
  * @param {{ nivel: number, vencedor?: string|null, placarA?: any, placarB?: any, golsMap?: object }} estado
- * @param {Array<{ user_id: string }>} jogadores quem entra na lista de gols (nível 3)
+ * @param {Array<{ user_id: string, nome: string }>} jogadores quem entra na lista de gols (nível 3)
  */
 export function corpoDoResultadoDoJogo({ nivel, vencedor, placarA, placarB, golsMap }, jogadores) {
   const body = { nivel };
@@ -54,7 +56,13 @@ export function corpoDoResultadoDoJogo({ nivel, vencedor, placarA, placarB, gols
     body.placar_a = Math.max(0, Number(placarA) || 0);
     body.placar_b = Math.max(0, Number(placarB) || 0);
   }
-  if (nivel === 3) body.gols = (jogadores || []).map((j) => ({ user_id: j.user_id, gols: golsMap?.[j.user_id] || 0 }));
+  if (nivel === 3) {
+    body.gols = (jogadores || []).map((j) => ({
+      user_id: j.user_id || null,
+      convidado_nome: j.user_id ? null : String(j.nome || '').trim() || null,
+      gols: golsMap?.[chaveDoJogador(j)] || 0,
+    }));
+  }
   return body;
 }
 

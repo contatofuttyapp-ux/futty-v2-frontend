@@ -90,7 +90,7 @@ export default function LandingPage() {
 
         {/* O nome e o que o app faz, para quem chega sem ler nada (é o que o Google pede para verificar a marca). */}
         <p className="texto-apoio" style={{ margin: '-6px 0 0', maxWidth: 310, fontSize: 15 }}>
-          Futty: sorteio justo, ranking e figurinha de colecionador para o futebol do seu time.
+          Futty: sorteio de times, ranking e figurinha de colecionador para o seu futebol.
         </p>
 
         <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 320 }}>

@@ -132,6 +132,11 @@
 .smaq .rev.on{opacity:1;animation:revPop .38s cubic-bezier(.3,1.6,.5,1)}
 @keyframes revPop{0%{transform:scale(.8)}100%{transform:scale(1)}}
 .smaq .rev img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 0%}
+/* Zoom 1,2 só no AVATAR GENÉRICO (Rodada 30A, dono 8-out): a caixa cresce 20% a partir do
+   topo-centro — a cabeça fica no lugar, o crescimento vai para os lados e para baixo (o
+   overflow:hidden do .rolo/.fr corta o excesso). Foto real nunca leva esta classe. */
+.smaq .rev img.generico,
+.smaq .mmold img.generico{transform:scale(1.2);transform-origin:50% 0%}
 /* 29H-B (item 54, regra do dono): NUNCA espelhar — a regra .esp (espelho horizontal) saiu; ninguém a usava desde a 14B. */
 .smaq .rev .nm{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.92));
     font-family:'Rajdhani',sans-serif;font-weight:800;font-size:9px;color:#fff;text-align:center;padding:9px 2px 3px}
@@ -153,6 +158,9 @@
 .smaq .slot{width:56px;aspect-ratio:3/4;border:1.5px dashed rgba(255,255,255,.16);
     clip-path:polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%)}
 .smaq .slot.cheio{border:none}
+/* O ponto antes do nome do convidado (vis(), CerimoniaSorteio.jsx) só se explica uma vez, no fim do grupo
+   que o tem — nenhum outro texto, nada quando não há convidado. */
+.smaq .conv-nota{margin-top:4px;text-align:center;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.04em;color:rgba(255,255,255,.4)}
 @media (min-width:1280px){
   .smaq .maq{width:760px}
   .smaq .grupos{flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:flex-start}
@@ -184,6 +192,8 @@
 .smaq .rhead{font-family:'Rajdhani',sans-serif;font-weight:800;letter-spacing:.1em;font-size:10.5px;text-transform:uppercase;color:#d4a017;margin:4px 2px 6px;text-align:center}
 .smaq .rrow{display:flex;gap:8px;justify-content:center}
 .smaq .rslot{position:relative;width:50px;aspect-ratio:3/4}
+.smaq .resv-nota{margin-top:6px;text-align:center;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.04em;color:rgba(255,255,255,.4)}
+.smaq .resv-nota:empty{display:none}
 .smaq .rslot .badge{position:absolute;top:-5px;left:-5px;z-index:7;width:14px;height:14px;display:grid;place-items:center;
     font-family:'Rajdhani',sans-serif;font-weight:800;font-size:9px;color:#1a1408;background:linear-gradient(180deg,#f0c94a,#d4a017);
     clip-path:polygon(25% 0,75% 0,100% 25%,100% 75%,75% 100%,25% 100%,0 75%,0 25%)}

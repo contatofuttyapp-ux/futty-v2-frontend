@@ -10,6 +10,7 @@ import { urlAsset, urlImagem, iniciaisNome } from '../utils/avatar';
 import { avatarQuadrado, enquadroAvatar } from '../lib/enquadroAvatar';
 import { GOLS } from './golsEPremios';
 import { corpoDoResultadoDoJogo, placarEfetivo } from '../utils/resultadoDoJogo';
+import { chaveDoJogador } from '../utils/seloDoSorteio';
 
 const NIVEIS = [
   { n: 0, label: 'Sem resultado' },
@@ -62,7 +63,9 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
   const [estado, setEstado] = useState(() => {
     if (devolver) return { vencedor: inicial?.vencedor ?? null, placarA: inicial?.placarA ?? null, placarB: inicial?.placarB ?? null, golsMap: inicial?.golsMap || {} };
     const m = {};
-    (gols || []).forEach((g) => { m[g.user_id] = g.gols || 0; });
+    // Chave do motor (id de quem tem conta, nome de quem é convidado sem app): dois convidados não
+    // compartilham contador, mesmo os dois com user_id vazio.
+    (gols || []).forEach((g) => { m[chaveDoJogador(g)] = g.gols || 0; });
     return { vencedor: game.time_vencedor || null, placarA: game.placar_a ?? 0, placarB: game.placar_b ?? 0, golsMap: m };
   });
   const { vencedor, golsMap } = estado;
@@ -73,8 +76,8 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
     setEstado(novo);
     if (devolver) aoMudar?.(novo);
   }
-  function setGol(uid, delta) {
-    mudar({ golsMap: { ...golsMap, [uid]: Math.max(0, (golsMap[uid] || 0) + delta) } });
+  function setGol(chave, delta) {
+    mudar({ golsMap: { ...golsMap, [chave]: Math.max(0, (golsMap[chave] || 0) + delta) } });
   }
 
   async function guardar() {
@@ -156,17 +159,21 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
         <>
           {devolver ? <div className="section-title" style={TITULO_DA_PERGUNTA} data-gols-de-cada-um>{GOLS.titulo}</div> : null}
           <div style={{ display: 'grid', gap: 8, marginTop: devolver ? 0 : 12 }}>
-            {jogadores.map((j) => (
-              <div key={j.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <MiniAvatar nome={j.nome} avatarUrl={j.avatar_url} />
-                <span style={{ flex: 1, minWidth: 0, color: '#fff', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {j.nome} <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>· {j.time}</span>
-                </span>
-                <button type="button" style={stepBtn} onClick={() => setGol(j.user_id, -1)} aria-label="Menos">−</button>
-                <span style={{ minWidth: 20, textAlign: 'center', color: '#d4a017', fontWeight: 800 }}>{golsMap[j.user_id] || 0}</span>
-                <button type="button" style={stepBtn} onClick={() => setGol(j.user_id, 1)} aria-label="Mais">+</button>
-              </div>
-            ))}
+            {/* key única também para o convidado sem app (user_id null): a mesma linha fantasma do DrawnTeams. */}
+            {jogadores.map((j, k) => {
+              const chave = chaveDoJogador(j);
+              return (
+                <div key={j.user_id || `convidado:${k}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <MiniAvatar nome={j.nome} avatarUrl={j.avatar_url} />
+                  <span style={{ flex: 1, minWidth: 0, color: '#fff', fontSize: 14, overflowWrap: 'anywhere' }}>
+                    {j.nome} <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>· {j.time}</span>
+                  </span>
+                  <button type="button" style={stepBtn} onClick={() => setGol(chave, -1)} aria-label="Menos">−</button>
+                  <span style={{ minWidth: 20, textAlign: 'center', color: '#d4a017', fontWeight: 800 }}>{golsMap[chave] || 0}</span>
+                  <button type="button" style={stepBtn} onClick={() => setGol(chave, 1)} aria-label="Mais">+</button>
+                </div>
+              );
+            })}
           </div>
         </>
       ) : null}

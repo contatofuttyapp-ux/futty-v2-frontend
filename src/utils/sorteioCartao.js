@@ -6,8 +6,11 @@
 // na web baixa; no app abre a folha de compartilhar — o <a download> não faz nada
 // dentro do WebView.
 import { urlAsset, urlImagem } from './avatar';
+import { avatarGenericoUrl } from './avatarGenerico';
 import { salvarOuCompartilhar } from './salvarImagem';
 import { nomeDoTimeNaTela } from './nomeDoTime';
+import { CORES_DO_SELO } from './seloDoSorteio';
+import { PONTO_CONVIDADO, TEXTO_SEM_O_APP, temConvidado } from './marcaConvidado';
 
 const KITS = [
   { n: 'OURO', c: '#d4a017' },
@@ -17,8 +20,10 @@ const KITS = [
 ];
 const RES_COR = { c: '#8a90a0', g: 'rgba(138,144,160,.45)' }; // cinza-aço apagado (à espera, sem dono)
 
-// silhueta-casa angulosa (MESMA geometria de SilhuetaJogador / CerimoniaSorteio) —
-// placeholder de pessoa sem foto; tinge com a cor do contexto (LEI DA SILHUETA).
+// silhueta-casa angulosa (MESMA geometria de SilhuetaJogador / CerimoniaSorteio) — era o
+// placeholder de pessoa sem foto; no cartaz (Rodada 30A, dono 8-out) o placeholder passou a
+// ser o AVATAR GENÉRICO da casa, com zoom 1,2 (ver carregarFotosDoTime/desenharCover) — esta
+// silhueta fica como fallback se o genérico não carregar. Tinge com a cor do contexto.
 const SIL_HEAD = '40,12 56,12 64,20 64,36 56,44 40,44 32,36 32,20';
 const SIL_BODY = 'M14 92 L14 70 L24 58 L40 52 L56 52 L72 58 L82 70 L82 92 Z';
 function silhuetaURI(cor) {
@@ -49,12 +54,20 @@ function carregarImagem(src) {
 // object-fit: cover dentro de (dx,dy,dw,dh); focoY = object-position vertical (0..1). 0 = do TOPO
 // do recorte, como o CSS da cerimônia (object-position 50% 0%) e o canvas do cromo — um 0,08 como
 // default deslocava a foto do que a pessoa enquadrou (e cada tela, um pouco diferente da outra).
-function desenharCover(cx, img, dx, dy, dw, dh, focoY = 0) {
+// zoom > 1 = SÓ o avatar genérico (Rodada 30A): mesmo recorte de sempre, mas o DESTINO cresce a
+// partir do topo-centro e recorta ao retângulo original — o mesmo efeito do `transform:scale()`
+// do CSS na cerimônia (cabeça no lugar, crescendo para os lados e para baixo).
+function desenharCover(cx, img, dx, dy, dw, dh, focoY = 0, zoom = 1) {
   const ir = img.width / img.height; const dr = dw / dh;
   let sw; let sh; let sx; let sy;
   if (ir > dr) { sh = img.height; sw = sh * dr; sx = (img.width - sw) / 2; sy = 0; }
   else { sw = img.width; sh = sw / dr; sx = 0; sy = (img.height - sh) * focoY; }
-  cx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+  if (zoom === 1) { cx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh); return; }
+  const dw2 = dw * zoom; const dh2 = dh * zoom; const dx2 = dx - (dw2 - dw) / 2;
+  cx.save();
+  cx.beginPath(); cx.rect(dx, dy, dw, dh); cx.clip();
+  cx.drawImage(img, sx, sy, sw, sh, dx2, dy, dw2, dh2);
+  cx.restore();
 }
 // caminho do chanfro (mesma proporção do .mcard .fr: x 8% / y 6%)
 function chanfro(cx, x, y, w, h) {
@@ -101,6 +114,74 @@ function desenharTituloGradiente(cx, texto, W, y, tamanho = 120) {
   return y + tamanho * 0.83;
 }
 
+// O SELO do sorteio no cartão — a mesma chapa da tela (components/SeloDoSorteio.jsx): SORTEADO (ouro), SORTEADO E
+// AJUSTADO POR <nome> (roxo), MONTADO À MÃO POR <nome> (prata), canto a 45° em cima à esquerda e embaixo à direita. A
+// imagem vai para o grupo: é nela que o selo mais precisa estar. Mede ANTES (o cartaz distribui o bloco pela altura)
+// e desenha depois. A letra encolhe até caber; se nem no mínimo couber, quebra em duas linhas — o nome de quem fez o
+// ajuste nunca é cortado. `detalhe` ("2º sorteio deste jogo") numa linha discreta embaixo.
+function prepararSelo(cx, selo, W, { corpo = 30, minimo = 18, larguraMax = W - 160 } = {}) {
+  if (!selo?.texto) return { altura: 0, desenhar: () => {} };
+  const cor = CORES_DO_SELO[selo.tipo] || CORES_DO_SELO.sorteado;
+  const texto = selo.texto.toUpperCase();
+  const pad = 30;
+  const fonte = (px) => {
+    cx.font = `700 ${px}px Rajdhani, sans-serif`;
+    if ('letterSpacing' in cx) cx.letterSpacing = `${Math.round(px * 0.14)}px`;
+  };
+  const largura = (linhas, px) => { fonte(px); return Math.max(...linhas.map((l) => cx.measureText(l).width)); };
+  let linhas = [texto];
+  let px = corpo;
+  while (largura(linhas, px) + pad * 2 > larguraMax && px > minimo) px -= 1;
+  if (largura(linhas, px) + pad * 2 > larguraMax) {
+    // quebra no espaço mais perto do meio e recomeça do corpo cheio
+    let corte = -1;
+    for (let i = 0; i < texto.length; i += 1) if (texto[i] === ' ' && (corte < 0 || Math.abs(i - texto.length / 2) < Math.abs(corte - texto.length / 2))) corte = i;
+    if (corte > 0) linhas = [texto.slice(0, corte), texto.slice(corte + 1)];
+    px = corpo;
+    while (largura(linhas, px) + pad * 2 > larguraMax && px > 12) px -= 1;
+  }
+  const entre = px * 1.22;
+  const alturaChapa = Math.round(linhas.length * entre + px * 0.85);
+  const larguraChapa = Math.min(larguraMax, Math.round(largura(linhas, px) + pad * 2));
+  const pxDetalhe = Math.round(px * 0.72);
+  const altura = alturaChapa + (selo.detalhe ? Math.round(pxDetalhe * 1.9) : 0);
+  if ('letterSpacing' in cx) cx.letterSpacing = '0px';
+  const desenhar = (y) => {
+    const x = (W - larguraChapa) / 2;
+    const c = Math.round(alturaChapa * 0.3);
+    cx.save();
+    cx.beginPath();
+    cx.moveTo(x + c, y); cx.lineTo(x + larguraChapa, y); cx.lineTo(x + larguraChapa, y + alturaChapa - c);
+    cx.lineTo(x + larguraChapa - c, y + alturaChapa); cx.lineTo(x, y + alturaChapa); cx.lineTo(x, y + c); cx.closePath();
+    const g = cx.createLinearGradient(x, 0, x + larguraChapa, 0);
+    g.addColorStop(0, cor.de); g.addColorStop(1, cor.ate);
+    cx.fillStyle = g; cx.fill();
+    fonte(px);
+    cx.fillStyle = cor.texto; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    linhas.forEach((l, i) => cx.fillText(l, W / 2, y + px * 0.42 + entre * (i + 0.5)));
+    if (selo.detalhe) {
+      fonte(pxDetalhe);
+      cx.fillStyle = cor.detalhe;
+      cx.fillText(selo.detalhe.toUpperCase(), W / 2, y + alturaChapa + pxDetalhe * 1.05);
+    }
+    if ('letterSpacing' in cx) cx.letterSpacing = '0px';
+    cx.restore();
+  };
+  return { altura, desenhar };
+}
+
+// O ponto antes do nome do convidado (desenharCartaoJogador, acima) só se explica uma vez, no fim da seção que
+// o tem — nenhuma outra explicação, nada quando não há convidado. Centrada, discreta, uma linha.
+const ALTURA_NOTA_CONVIDADO = 26;
+function desenharNotaConvidado(cx, W, y) {
+  cx.save();
+  cx.fillStyle = 'rgba(255,255,255,0.4)';
+  cx.font = '600 18px Rajdhani, sans-serif';
+  cx.textAlign = 'center'; cx.textBaseline = 'alphabetic';
+  cx.fillText(TEXTO_SEM_O_APP, W / 2, y);
+  cx.restore();
+}
+
 // Marca FUTTY na base — logo REAL (não texto) + wordmark. MESMO lockup do ESCALAÇÃO.
 async function desenharLogoLockup(cx, W, H) {
   const logo = await carregarImagem('/futty-logo-flat.webp');
@@ -119,12 +200,13 @@ async function desenharLogoLockup(cx, W, H) {
   cx.fillText('· O seu time. A sua figurinha.', bx, by);
 }
 
-// Um cartão de jogador (foto/silhueta + placa de nome, chanfro + filete duplo na cor).
-function desenharCartaoJogador(cx, x, y, w, h, cor, nome, img) {
+// Um cartão de jogador (foto/genérico/silhueta + placa de nome, chanfro + filete duplo na cor).
+// `generico` = zoom 1,2 (Rodada 30A); foto real nunca o leva.
+function desenharCartaoJogador(cx, x, y, w, h, cor, nome, img, generico = false) {
   cx.save(); chanfro(cx, x, y, w, h); cx.clip();
   cx.fillStyle = '#0b0b11'; cx.fillRect(x, y, w, h);
   const fh = h * 0.78;
-  if (img) desenharCover(cx, img, x, y, w, fh, 0);
+  if (img) desenharCover(cx, img, x, y, w, fh, 0, generico ? 1.2 : 1);
   const py = y + fh; const ph = h - fh;
   const pg = cx.createLinearGradient(0, py, 0, py + ph);
   pg.addColorStop(0, '#15121d'); pg.addColorStop(1, '#0a0810');
@@ -145,13 +227,20 @@ function desenharCartaoJogador(cx, x, y, w, h, cor, nome, img) {
   cx.strokeStyle = comAlfa(cor.c, 0.55); cx.lineWidth = 1; cx.stroke();
 }
 
-// Carrega as imagens (foto real → urlAsset; sem foto → silhueta da cor) de uma lista
-// de jogadores, guardando em `j._img`.
+// Carrega as imagens (foto real → urlAsset; sem foto → avatar genérico; se nem esse
+// carregar, a silhueta da cor) de uma lista de jogadores, guardando em `j._img` e, para
+// o cartaz saber se aplica o zoom 1,2, em `j._generico`.
 async function carregarFotosDoTime(jogadores, cor) {
   await Promise.all(jogadores.map(async (j) => {
     let img = j.avatar_url ? await carregarImagem(urlImagem(urlAsset(j.avatar_url), 512)) : null;
+    let generico = false;
+    if (!img && !j.avatar_url) {
+      img = await carregarImagem(avatarGenericoUrl(j.user_id || null, j.avatar_generico || null, j.nome || ''));
+      generico = !!img;
+    }
     if (!img) img = await carregarImagem(silhuetaURI(cor));
     j._img = img;
+    j._generico = generico;
   }));
 }
 
@@ -169,7 +258,8 @@ function linhasDe(n, maxPorLinha) {
 // mesmos cartões de jogador (foto/silhueta + chanfro + glow), MESMA marca FUTTY (logo
 // real, não texto). Difere do ESCALAÇÃO só no recorte: 1 time, não todos.
 // ═══════════════════════════════════════════════════════════════════════════════
-export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
+// `opts.selo` (utils/seloDoSorteio.js): o selo de como os times foram feitos, logo abaixo da linha da equipe.
+export async function gerarCartao916(resultado, timeIndex, nomeEquipa, opts = {}) {
   const time = resultado?.times?.[timeIndex];
   if (!time) throw new Error('Time inexistente.');
   const kit = { c: KITS[timeIndex % 4].c, g: comAlfa(KITS[timeIndex % 4].c, 0.55) };
@@ -191,11 +281,15 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
   const baseline = desenharTituloGradiente(cx, nomeDoTime.toUpperCase(), W, y, 110);
   // A linha de baixo DESCE — colada no título, ela cobria a cedilha (Ç) e as descendentes do nome do time.
   // DESCE_META px abaixo da linha de base: livra a perna mais funda das letras do título (~0,22 do corpo).
+  // Times montados à mão não foram sorteados: a linha diz "times", não "sorteio".
+  const aMao = opts.selo?.tipo === 'manual';
   cx.fillStyle = '#a99fc0'; cx.textAlign = 'center'; cx.font = '600 30px Rajdhani, sans-serif';
-  cx.fillText([nomeEquipa, 'sorteio'].filter(Boolean).join(' · ').toUpperCase(), W / 2, baseline + DESCE_META_916);
+  cx.fillText([nomeEquipa, aMao ? 'times' : 'sorteio'].filter(Boolean).join(' · ').toUpperCase(), W / 2, baseline + DESCE_META_916);
+  const selo = prepararSelo(cx, opts.selo, W, { corpo: 30 });
+  selo.desenhar(baseline + DESCE_META_916 + 30);
 
   // grelha de cartões (mesma lógica adaptativa do ESCALAÇÃO, para 1 time só).
-  const boxX = 64; const boxTop = baseline + DESCE_META_916 + 66; const boxRight = W - 64; const boxBottom = H - 150;
+  const boxX = 64; const boxTop = baseline + DESCE_META_916 + 66 + (selo.altura ? selo.altura + 20 : 0); const boxRight = W - 64; const boxBottom = H - 150;
   const boxW = boxRight - boxX; const boxH = boxBottom - boxTop;
   const L = jogs.length <= 4 ? { cw: 240, hs: 44 } : jogs.length <= 8 ? { cw: 190, hs: 40 } : { cw: 150, hs: 34 };
   const cardGap = 20; const rowGap = 18;
@@ -211,11 +305,15 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
     for (let k = 0; k < count; k += 1) {
       const j = jogs[idx]; idx += 1;
       const marca = j.goleiro ? ' (GOL)' : j.cabeca_chave ? ' (C)' : '';
-      desenharCartaoJogador(cx, rx, ry, L.cw, cardH, kit, (j.convidado ? '· ' : '') + (j.nome || '?') + marca, j._img);
+      desenharCartaoJogador(cx, rx, ry, L.cw, cardH, kit, (j.convidado ? PONTO_CONVIDADO : '') + (j.nome || '?') + marca, j._img, j._generico);
       rx += L.cw + cardGap;
     }
     ry += cardH + rowGap;
   });
+  if (temConvidado(jogs)) {
+    const yNota = ry - rowGap + 28;
+    if (yNota < boxBottom + 40) desenharNotaConvidado(cx, W, yNota);
+  }
 
   await desenharLogoLockup(cx, W, H);
 
@@ -262,10 +360,18 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
   const cardH = L.cw * (4 / 3);
   const maxPorLinha = Math.max(1, Math.floor((boxW + cardGap) / (L.cw + cardGap)));
 
-  secs.forEach((s) => { s.linhas = linhasDe(s.jogs.length, maxPorLinha); s.h = L.hs + 18 + s.linhas.length * cardH + (s.linhas.length - 1) * rowGap; });
+  secs.forEach((s) => {
+    s.linhas = linhasDe(s.jogs.length, maxPorLinha);
+    s.temConv = temConvidado(s.jogs);
+    s.h = L.hs + 18 + s.linhas.length * cardH + (s.linhas.length - 1) * rowGap + (s.temConv ? ALTURA_NOTA_CONVIDADO : 0);
+  });
 
   // título "ESCALAÇÃO" (3×) + meta = 1º item do bloco distribuído. Item 73: a meta (data · time) desce para baixo da cedilha do Ç.
-  const tituloH = 120 + (DESCE_META_ESCALACAO - 26) + 32;
+  // O selo (opts.selo) vem logo abaixo da meta e entra na altura do título, para o space-evenly contar com ele. Medido
+  // com a Rajdhani já carregada (com a letra de reserva a chapa sairia com outra largura).
+  try { await document.fonts.ready; } catch { /* SSR/priv */ }
+  const selo = prepararSelo(cx, opts.selo, W, { corpo: 28 });
+  const tituloH = 120 + (DESCE_META_ESCALACAO - 26) + 32 + (selo.altura ? selo.altura + 22 : 0);
   const itens = [{ tipo: 'titulo', h: tituloH }, ...secs.map((s) => ({ tipo: 'sec', h: s.h, sec: s }))];
   const totalH = itens.reduce((a, it) => a + it.h, 0);
   const espaco = Math.max(18, (boxH - totalH) / (itens.length + 1)); // space-evenly (com piso p/ times grandes)
@@ -282,6 +388,7 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
     if (it.tipo === 'titulo') {
       const baseline = desenharTituloGradiente(cx, 'ESCALAÇÃO', W, y, 120);
       if (meta) { cx.fillStyle = '#a99fc0'; cx.font = '600 26px Rajdhani, sans-serif'; cx.fillText(meta, W / 2, baseline + DESCE_META_ESCALACAO); }
+      selo.desenhar(baseline + DESCE_META_ESCALACAO + 28);
     } else {
       const s = it.sec;
       cx.save();
@@ -308,11 +415,12 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
         let rx = boxX + (boxW - rowW) / 2;
         for (let k = 0; k < count; k += 1) {
           const j = s.jogs[idx]; idx += 1;
-          desenharCartaoJogador(cx, rx, ry, L.cw, cardH, s.cor, (j.convidado ? '· ' : '') + (j.nome || '?'), j._img);
+          desenharCartaoJogador(cx, rx, ry, L.cw, cardH, s.cor, (j.convidado ? PONTO_CONVIDADO : '') + (j.nome || '?'), j._img, j._generico);
           rx += L.cw + cardGap;
         }
         ry += cardH + rowGap;
       });
+      if (s.temConv) desenharNotaConvidado(cx, W, ry - rowGap + 24);
       cx.restore();
     }
     y += it.h + espaco;

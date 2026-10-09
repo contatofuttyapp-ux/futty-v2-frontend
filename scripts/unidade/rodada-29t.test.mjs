@@ -349,8 +349,9 @@ test('164 · o nome no Início nunca corta: a letra desce até caber (o piso de 
   const nome = inicio.slice(inicio.indexOf('function NomeCromo'), inicio.indexOf('// ----- Card de jogo'));
   assert.doesNotMatch(nome, /f > 28/, 'o piso de 28 px era o que cortava "Chavo, el matad…"');
   assert.match(inicio, /const PISO_NOME = 9;/, 'só uma defesa teórica');
-  assert.match(nome, /f = Math\.max\(PISO_NOME, Math\.floor\(\(f \* el\.clientWidth\) \/ el\.scrollWidth\)\);/, 'primeiro o palpite proporcional');
-  assert.match(nome, /while \(el\.scrollWidth > el\.clientWidth && f > PISO_NOME\)/, 'depois o ajuste fino até caber');
+  // 30F: a medida passou a ser a do texto em sub-pixel (Range) — scrollWidth não via o meio pixel que virava "…".
+  assert.match(nome, /f = Math\.max\(PISO_NOME, Math\.floor\(\(f \* cabe\) \/ largura\)\);/, 'primeiro o palpite proporcional');
+  assert.match(nome, /while \(larguraDoTexto\(\) > cabe && f > PISO_NOME\)/, 'depois o ajuste fino até caber');
   assert.match(nome, /new ResizeObserver\(ajustar\)/, 'em qualquer largura: reajusta quando a coluna muda');
   assert.match(nome, /document\.fonts\.ready\.then\(ajustar\)/, 'e quando a Rajdhani termina de carregar');
 });

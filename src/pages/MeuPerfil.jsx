@@ -299,7 +299,7 @@ export default function MeuPerfil() {
                   font-synthesis: none, era um peso a pedir o que não há.
                   Fica abaixo do hero de propósito: 18px branco contra 23px dourado
                   com moldura e glow. Diz quem tu és; não disputa o campo. */}
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeMostrar}</span>
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', lineHeight: 1.2, overflowWrap: 'anywhere' }}>{nomeMostrar}</span>
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email || ''}</div>
             <Link to="/planos" style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 700, color: 'var(--neon)' }}>

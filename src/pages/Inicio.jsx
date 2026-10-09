@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { RefreshCw, Trophy } from 'lucide-react';
+import { RefreshCw, Trophy, Users } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { tomarConvitePendente } from '../lib/convitePendente';
 import { usePerfil } from '../context/PerfilContext';
@@ -27,7 +27,7 @@ import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
 import AvisoDeJogo from '../components/AvisoDeJogo';
-import { MSG_FALHA_RSVP, responderComOtimismo } from '../lib/rsvp';
+import { MSG_FALHA_RSVP, FRASE_RSVP_ENCERRADA, motivoRsvpEncerrada, responderComOtimismo } from '../lib/rsvp';
 import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../utils/presenca';
 import { LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso } from '../utils/avisosDoInicio';
 import { esconderLembrete, lembretesEscondidos } from '../utils/lembretes';
@@ -243,29 +243,39 @@ function CromoInicio({ cromo, previa, modoPrevia, fundo, nome, refCromo, destino
 }
 
 // Nome por baixo do cromo, em texto livre grande (o quadrado não o traz baked). Base 44px; encolhe até
-// caber numa linha, como o nome da figurinha: a letra desce até o nome caber, em qualquer largura (um
-// piso de 28px cortava "Chavo, el matad…" no computador). Só como defesa teórica há um piso
-// (PISO_NOME) e, abaixo dele, a reticência.
-// A medição é impura (scrollWidth) → useLayoutEffect, antes do paint, para o utilizador não
-// ver um salto de tamanho. Reajusta em resize e quando as fontes carregam (a Rajdhani mede
-// diferente da fallback).
+// caber numa linha, como o nome da figurinha: a letra desce até o nome caber, em qualquer largura. Só
+// como defesa teórica há um piso (PISO_NOME) e, abaixo dele, a reticência.
+// A medida é a do TEXTO, em sub-pixel (Range), e não scrollWidth: scrollWidth é inteiro e, com
+// text-overflow: ellipsis, o Chrome o devolve igual ao clientWidth mesmo com o texto meio pixel mais largo
+// (360,45 numa caixa de 360) — o laço não entrava e a reticência aparecia por esse meio pixel. Texto e caixa
+// medidos pelo mesmo getBoundingClientRect, para uma transformação no caminho (a entrada da página) afetar os
+// dois igual; 1 px de folga para o arredondamento da pintura não virar "…".
+// A medição é impura → useLayoutEffect, antes do paint, para o utilizador não ver um salto de tamanho.
+// Reajusta em resize e quando as fontes carregam (a Rajdhani mede diferente da fallback).
 const PISO_NOME = 9;
 export function NomeCromo({ nome }) {
   const ref = useRef(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    const larguraDoTexto = () => {
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      return r.getBoundingClientRect().width;
+    };
     const ajustar = () => {
       let f = 44;
       el.style.fontSize = `${f}px`;
-      // scrollWidth = largura do texto (nowrap); clientWidth = largura disponível
-      // (o div é bloco → ocupa a coluna). Primeiro o palpite proporcional (a largura do texto
-      // cresce com a letra), depois o ajuste fino de 1 em 1 px até caber.
-      if (el.scrollWidth > el.clientWidth && el.clientWidth > 0) {
-        f = Math.max(PISO_NOME, Math.floor((f * el.clientWidth) / el.scrollWidth));
+      const cabe = el.getBoundingClientRect().width - 1;
+      if (cabe <= 0) return; // fora da tela (display: none): mede de novo quando aparecer
+      // Primeiro o palpite proporcional (a largura do texto cresce com a letra), depois o ajuste fino de 1 em
+      // 1 px até caber.
+      const largura = larguraDoTexto();
+      if (largura > cabe) {
+        f = Math.max(PISO_NOME, Math.floor((f * cabe) / largura));
         el.style.fontSize = `${f}px`;
       }
-      while (el.scrollWidth > el.clientWidth && f > PISO_NOME) {
+      while (larguraDoTexto() > cabe && f > PISO_NOME) {
         f -= 1;
         el.style.fontSize = `${f}px`;
       }
@@ -365,7 +375,8 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
           <>
             <div className="gcard__drawn">
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="badge badge--sorteado hud-corners-s">Sorteado</span>
+                {/* Times montados à mão (o motor manda `montado_a_mao`) não foram sorteados: o card não diz que foram. */}
+                <span className="badge badge--sorteado hud-corners-s">{game.montado_a_mao ? 'Montado' : 'Sorteado'}</span>
                 <span className="muted" style={{ fontSize: 13 }}>
                   {soOrganizo ? 'Você organiza' : going ? 'Vai jogar' : notGoing ? 'Não vai' : 'Sem resposta'}
                 </span>
@@ -381,13 +392,21 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
               {/* O botão responde NA HORA ("Abrindo…", apagado, sem tocar duas vezes) e a tela abre pelo roteador,
                   sem recarregar o app inteiro: tocar e não ver nada por vários segundos parecia botão quebrado. */}
               <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} disabled={abrindo} aria-busy={abrindo} onClick={() => onVerSorteio(game)}>
-                {abrindo ? 'Abrindo…' : <><Trophy size={16} /> Ver sorteio</>}
+                {abrindo ? 'Abrindo…' : game.montado_a_mao ? <><Users size={16} /> Ver times</> : <><Trophy size={16} /> Ver sorteio</>}
               </button>
             </span>
           </>
         ) : soOrganizo ? (
           <div className="gcard__presence">
             <span className="texto-apoio" data-so-organizo style={{ margin: 0 }}>Você só organiza este time.</span>
+          </div>
+        ) : game.rsvp_encerrada ? (
+          // A presença foi aberta com prazo (ou o admin fechou) e agora não aceita mais resposta: os
+          // botões ficam desligados com o motivo — tentar de novo não resolve nem o prazo nem o fechamento.
+          <div className="gcard__presence" style={{ flexWrap: 'wrap' }}>
+            <button type="button" className="pbtn pbtn--go hud-corners-s" disabled style={{ opacity: 0.45, cursor: 'not-allowed' }}>Vou</button>
+            <button type="button" className="pbtn pbtn--no hud-corners-s" disabled style={{ opacity: 0.45, cursor: 'not-allowed' }}>Não vou</button>
+            <span className="texto-apoio" data-rsvp-encerrada style={{ margin: 0, flexBasis: '100%' }}>{FRASE_RSVP_ENCERRADA[game.rsvp_encerrada]}</span>
           </div>
         ) : (
           <div className="gcard__presence">
@@ -739,7 +758,7 @@ export default function Inicio() {
       ? { ...user, avatar_url: urlImagem(user.avatar_url, 512) }
       : user?.foto_url
         ? { ...user, foto_url: urlImagem(user.foto_url, 512) }
-        : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha) };
+        : { ...user, avatar_url: avatarGenericoUrl(user.id, avatarGenericoEscolha, nome) };
     const modoCromo = modoDoCromo;
     // fundoGlints:'discreto' — o cromo do Início é um OBJECTO estático (nunca em
     // camadas/animado, ver nota acima); o GOLDEN não pode copiar nem o pico do
@@ -864,7 +883,7 @@ export default function Inicio() {
     : user?.foto_url
       ? urlImagem(urlAsset(user.foto_url), 512) // figurinha comum: a prévia é a própria foto
       : user
-        ? avatarGenericoUrl(user.id, avatarGenericoEscolha)
+        ? avatarGenericoUrl(user.id, avatarGenericoEscolha, nome)
         : '';
 
   const loadingGames = games === null;
@@ -912,7 +931,11 @@ export default function Inicio() {
   // O RSVPCard do próximo jogo está na tela (e com ele o Vou / Não vou).
   // Quem só organiza o time não responde presença — nem o cartão, nem o aviso de ausência.
   const proximoSoOrganizo = proximoJogo?.eu_jogo === false;
-  const rsvpAbertoNoProximo = !proximoSoOrganizo && !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado);
+  // "Aberto" para responder de verdade é aberto E dentro do prazo (ou sem prazo fechado pelo admin) — não só
+  // `rsvp_aberto`: essa flag nunca volta a false (abrir é permanente), então sem o prazo o card continuava
+  // ativo depois dele vencer (achado da Rodada 30E).
+  const encerradaNoProximo = !proximoSoOrganizo ? motivoRsvpEncerrada(rsvpInfo) : null;
+  const rsvpAbertoNoProximo = !proximoSoOrganizo && !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto) && !encerradaNoProximo;
   // Sincronizado DURANTE o render (mesmo padrão de MeuPerfil.jsx), não num
   // efeito: `minhaResposta` continua editável localmente pelo RSVPCard
   // (onResposta={setMinhaResposta}) depois desta sincronização inicial.
@@ -931,12 +954,17 @@ export default function Inicio() {
   const jogoDoRsvpId = (dadosInicio?.convites?.games || []).find((g) => g.status !== 'finished')?.id ?? null;
   const rsvpValeParaOProximo = rsvpAbertoNoProximo && nextId != null && nextId === jogoDoRsvpId;
   // O mesmo RSVP, visto do jogo dele — com ou sem chip de time escolhido. É por aqui que o aviso do topo responde (ele não segue o chip).
-  const rsvpAbertoNoJogoDoRsvp = !!(rsvpData && jogoDoRsvpId != null && rsvpData.rsvp_aberto && !rsvpData.rsvp_fechado);
+  const encerradaNoJogoDoRsvp = motivoRsvpEncerrada(rsvpData);
+  const rsvpAbertoNoJogoDoRsvp = !!(rsvpData && jogoDoRsvpId != null && rsvpData.rsvp_aberto) && !encerradaNoJogoDoRsvp;
   const rsvpValeParaOJogo = (id) => id != null && id === jogoDoRsvpId && rsvpAbertoNoJogoDoRsvp && (games || []).find((g) => g.id === id)?.eu_jogo !== false;
   const confirmadosNoRsvp = confirmadosComResposta(rsvpData, me?.user?.id, minhaResposta);
-  const comRsvp = (g) => (g.id === nextId && rsvpValeParaOProximo && confirmadosNoRsvp != null
-    ? { ...g, confirmed_count: confirmadosNoRsvp, user_status: statusDoJogoPelaResposta(minhaResposta) }
-    : g);
+  const comRsvp = (g) => {
+    const base = g.id === nextId && rsvpValeParaOProximo && confirmadosNoRsvp != null
+      ? { ...g, confirmed_count: confirmadosNoRsvp, user_status: statusDoJogoPelaResposta(minhaResposta) }
+      : g;
+    // Fora do jogo do RSVP isto nunca é setado: o card de sempre (sem prazo) continua como sempre foi.
+    return g.id === jogoDoRsvpId && encerradaNoJogoDoRsvp ? { ...base, rsvp_encerrada: encerradaNoJogoDoRsvp } : base;
+  };
 
   // Campeonato da equipa principal (card no Início) — mesmo campSlug que o
   // backend usou para calcular `campeonato` dentro de /api/inicio.
@@ -1000,9 +1028,14 @@ export default function Inicio() {
   // UM aviso por vez no topo, o mais importante primeiro (a fila inteira, montada logo abaixo, depois dos
   // estados de cada aviso). O aviso do jogo não segue o chip de time: quem tem jogo esperando resposta o
   // vê em qualquer filtro. Para o jogo do RSVP a resposta de agora é a do RSVP (a otimista inclusive).
-  const jogosParaAviso = (games || []).map((g) => (rsvpValeParaOJogo(g.id)
-    ? { ...g, user_status: statusDoJogoPelaResposta(minhaResposta) || (rsvpData?.minha_posicao_espera != null ? 'espera' : null) }
-    : g));
+  // O jogo do RSVP com o prazo vencido (ou fechado pelo admin) sai da fila de avisos: o aviso pede "Você
+  // vai?" para quem ainda pode responder, não para reabrir uma pergunta que o prazo já encerrou.
+  const jogosParaAviso = (games || []).map((g) => {
+    if (g.id === jogoDoRsvpId && encerradaNoJogoDoRsvp) return { ...g, user_status: g.user_status || 'rsvp_encerrado' };
+    return rsvpValeParaOJogo(g.id)
+      ? { ...g, user_status: statusDoJogoPelaResposta(minhaResposta) || (rsvpData?.minha_posicao_espera != null ? 'espera' : null) }
+      : g;
+  });
   const timeDoJogo = (teamId) => teams.find((t) => t.id === teamId) || null;
 
   // P1-3 — a votação era invisível fora do Ranking. Banner no Início quando há
@@ -1324,9 +1357,10 @@ export default function Inicio() {
                 className="hud-corners-s"
                 aria-label="Trocar visual do card"
                 onClick={() => setSheetAvatarAberto(true)}
-                style={{ position: 'absolute', top: 6, right: 6, zIndex: 2, width: 30, height: 30, display: 'grid', placeItems: 'center', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.72)', color: '#d4a017', cursor: 'pointer' }}
+                style={{ position: 'absolute', top: 6, right: 6, zIndex: 2, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 9px 5px 7px', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.82)', color: '#d4a017', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 10.5, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
               >
-                <RefreshCw size={15} />
+                <RefreshCw size={13} />
+                Trocar avatar
               </button>
             ) : null}
           </div>
@@ -1406,12 +1440,12 @@ export default function Inicio() {
             {/* Jogos */}
             <div>
               <div className="games-label">Próximos Jogos</div>
-            {rsvpAbertoNoProximo ? (
-              <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} cidade={timeDoJogo(proximoJogo?.team_id)?.cidade} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
+            {rsvpAbertoNoProximo || encerradaNoProximo ? (
+              <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} cidade={timeDoJogo(proximoJogo?.team_id)?.cidade} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} encerrada={encerradaNoProximo} />
             ) : null}
-            {/* Aviso de ausência. Com o RSVP aberto para ESTE jogo, some — o card acima já tem Vou / Não vou, e é a
-                resposta dele que vale. */}
-            {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo && !proximoSoOrganizo ? (
+            {/* Aviso de ausência. Com o RSVP aberto (ou encerrado) para ESTE jogo, some — o card acima já cobre a
+                resposta (ou diz por que não dá mais para responder). */}
+            {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo && !encerradaNoProximo && !proximoSoOrganizo ? (
               proximoJogo.ausente_proximo ? (
                 <div className="hud-corners-s" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 4px', padding: '8px 12px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
                   <Icon name="ausente" size={16} color="grey" />

@@ -115,7 +115,7 @@ export default function MiniSorteio() {
       </div>
       {/* Legenda (dono): o estilo do subtítulo. Os espaços dentro de cada frase são duros — em tela estreita a
           linha só quebra depois de um "·", em duas linhas parecidas, nunca uma palavra sozinha. */}
-      <p className="msq-legenda">SORTEIO&nbsp;JUSTO&nbsp;· RANKING&nbsp;· FIGURINHA&nbsp;DE&nbsp;COLECIONADOR</p>
+      <p className="msq-legenda">SORTEIO&nbsp;DE&nbsp;TIMES&nbsp;· RANKING&nbsp;· FIGURINHA&nbsp;DE&nbsp;COLECIONADOR</p>
     </div>
   );
 }
