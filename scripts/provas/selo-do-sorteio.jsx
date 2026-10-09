@@ -3,6 +3,7 @@
 //   ajustado  a CerimoniaSorteio de verdade girando o ORIGINAL, com o passo do ajuste no fim
 //   sorteado  a CerimoniaSorteio de um sorteio que ninguém mexeu (selo ouro, "2º sorteio deste jogo")
 //   mao       a ApresentacaoTimes dos times montados à mão (sem roleta)
+//   cartao    os cartões compartilháveis (cartaz do ajustado, 9:16 do montado à mão) em window.__cartoes
 //   lista     o DrawnTeams (tela do jogo e link público) nos três casos
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -10,6 +11,7 @@ import CerimoniaSorteio from '../../src/components/CerimoniaSorteio';
 import DrawnTeams from '../../src/components/DrawnTeams';
 import ApresentacaoTimes from '../../src/components/ApresentacaoTimes';
 import { visaoDoSorteio } from '../../src/utils/seloDoSorteio';
+import { gerarCartao916, gerarCartazEscalacao } from '../../src/utils/sorteioCartao';
 import '../../src/index.css';
 import '../../src/styles/app.css';
 
@@ -35,6 +37,16 @@ const sorteado = { seed: 77, num_times: 2, ...ORIGINAL, registro: { origem: 'sor
 const aMao = { manual: true, num_times: 2, ...ORIGINAL, registro: { origem: 'manual', por: { nome: 'Chavo' }, sorteios: 0, ajustes: [] } };
 
 window.__terminou = 0;
+if ((new URLSearchParams(window.location.search).get('caso')) === 'cartao') {
+  const comoUrl = (blob) => new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); });
+  (async () => {
+    const va = visaoDoSorteio(ajustado);
+    const cartaz = await gerarCartazEscalacao({ ...ajustado, ...va.final }, { equipa: 'Missa de Quinta', data: '8 out 2026', selo: va.selo, baixar: false });
+    const vm = visaoDoSorteio(aMao);
+    const { blob } = await gerarCartao916(aMao, 0, 'Missa de Quinta', { selo: vm.selo });
+    window.__cartoes = { cartaz: cartaz.url, mao916: await comoUrl(blob) };
+  })().catch((e) => { window.__cartoes = { erro: String(e) }; });
+}
 const caso = new URLSearchParams(window.location.search).get('caso') || 'ajustado';
 
 function Cerimonia({ tr }) {
@@ -56,7 +68,9 @@ function Cerimonia({ tr }) {
 createRoot(document.getElementById('raiz')).render(
   <BrowserRouter>
     <div style={{ maxWidth: 480, margin: '0 auto' }}>
-      {caso === 'mao' ? (
+      {caso === 'cartao' ? (
+        <div data-gerando-cartoes />
+      ) : caso === 'mao' ? (
         <div style={{ padding: 16 }}><ApresentacaoTimes resultado={aMao} selo={visaoDoSorteio(aMao).selo} equipa="Missa de Quinta" data="8 out 2026" aoSair={() => { window.__saiu = true; }} /></div>
       ) : caso === 'lista' ? (
         <div style={{ padding: 16, display: 'grid', gap: 28 }}>

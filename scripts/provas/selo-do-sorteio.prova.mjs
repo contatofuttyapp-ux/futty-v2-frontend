@@ -103,5 +103,21 @@ export async function rodar({ navegador, base, t }) {
     await page.context().close();
   }
 
+  // ── os cartões compartilháveis levam o selo ───────────────────────────────────────────────────────────────────────────────────────
+  {
+    const page = await abrir('cartao');
+    await page.waitForFunction(() => window.__cartoes, null, { timeout: 30000 });
+    const c = await page.evaluate(() => window.__cartoes);
+    t('os cartões foram gerados (cartaz do ajustado e 9:16 do montado à mão)', !c.erro && /^data:image\/png/.test(c.cartaz) && /^data:image\/png/.test(c.mao916), c.erro || '');
+    const medidas = await page.evaluate(async (urls) => Promise.all(urls.map((u) => new Promise((r) => { const i = new Image(); i.onload = () => r([i.width, i.height]); i.src = u; }))), [c.cartaz, c.mao916]);
+    t('os dois em 1080×1920', JSON.stringify(medidas) === JSON.stringify([[1080, 1920], [1080, 1920]]), JSON.stringify(medidas));
+    if (fotos && !c.erro) {
+      const fs = await import('node:fs');
+      fs.writeFileSync(path.join(fotos, 'cartaz-ajustado.png'), Buffer.from(c.cartaz.split(',')[1], 'base64'));
+      fs.writeFileSync(path.join(fotos, 'cartao916-a-mao.png'), Buffer.from(c.mao916.split(',')[1], 'base64'));
+    }
+    await page.context().close();
+  }
+
   t('console sem erros', erros.length === 0, erros.join(' | '));
 }

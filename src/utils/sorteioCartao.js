@@ -9,6 +9,7 @@ import { urlAsset, urlImagem } from './avatar';
 import { avatarGenericoUrl } from './avatarGenerico';
 import { salvarOuCompartilhar } from './salvarImagem';
 import { nomeDoTimeNaTela } from './nomeDoTime';
+import { CORES_DO_SELO } from './seloDoSorteio';
 
 const KITS = [
   { n: 'OURO', c: '#d4a017' },
@@ -112,6 +113,62 @@ function desenharTituloGradiente(cx, texto, W, y, tamanho = 120) {
   return y + tamanho * 0.83;
 }
 
+// O SELO do sorteio no cartão — a mesma chapa da tela (components/SeloDoSorteio.jsx): SORTEADO (ouro), SORTEADO E
+// AJUSTADO POR <nome> (roxo), MONTADO À MÃO POR <nome> (prata), canto a 45° em cima à esquerda e embaixo à direita. A
+// imagem vai para o grupo: é nela que o selo mais precisa estar. Mede ANTES (o cartaz distribui o bloco pela altura)
+// e desenha depois. A letra encolhe até caber; se nem no mínimo couber, quebra em duas linhas — o nome de quem fez o
+// ajuste nunca é cortado. `detalhe` ("2º sorteio deste jogo") numa linha discreta embaixo.
+function prepararSelo(cx, selo, W, { corpo = 30, minimo = 18, larguraMax = W - 160 } = {}) {
+  if (!selo?.texto) return { altura: 0, desenhar: () => {} };
+  const cor = CORES_DO_SELO[selo.tipo] || CORES_DO_SELO.sorteado;
+  const texto = selo.texto.toUpperCase();
+  const pad = 30;
+  const fonte = (px) => {
+    cx.font = `700 ${px}px Rajdhani, sans-serif`;
+    if ('letterSpacing' in cx) cx.letterSpacing = `${Math.round(px * 0.14)}px`;
+  };
+  const largura = (linhas, px) => { fonte(px); return Math.max(...linhas.map((l) => cx.measureText(l).width)); };
+  let linhas = [texto];
+  let px = corpo;
+  while (largura(linhas, px) + pad * 2 > larguraMax && px > minimo) px -= 1;
+  if (largura(linhas, px) + pad * 2 > larguraMax) {
+    // quebra no espaço mais perto do meio e recomeça do corpo cheio
+    let corte = -1;
+    for (let i = 0; i < texto.length; i += 1) if (texto[i] === ' ' && (corte < 0 || Math.abs(i - texto.length / 2) < Math.abs(corte - texto.length / 2))) corte = i;
+    if (corte > 0) linhas = [texto.slice(0, corte), texto.slice(corte + 1)];
+    px = corpo;
+    while (largura(linhas, px) + pad * 2 > larguraMax && px > 12) px -= 1;
+  }
+  const entre = px * 1.22;
+  const alturaChapa = Math.round(linhas.length * entre + px * 0.85);
+  const larguraChapa = Math.min(larguraMax, Math.round(largura(linhas, px) + pad * 2));
+  const pxDetalhe = Math.round(px * 0.72);
+  const altura = alturaChapa + (selo.detalhe ? Math.round(pxDetalhe * 1.9) : 0);
+  if ('letterSpacing' in cx) cx.letterSpacing = '0px';
+  const desenhar = (y) => {
+    const x = (W - larguraChapa) / 2;
+    const c = Math.round(alturaChapa * 0.3);
+    cx.save();
+    cx.beginPath();
+    cx.moveTo(x + c, y); cx.lineTo(x + larguraChapa, y); cx.lineTo(x + larguraChapa, y + alturaChapa - c);
+    cx.lineTo(x + larguraChapa - c, y + alturaChapa); cx.lineTo(x, y + alturaChapa); cx.lineTo(x, y + c); cx.closePath();
+    const g = cx.createLinearGradient(x, 0, x + larguraChapa, 0);
+    g.addColorStop(0, cor.de); g.addColorStop(1, cor.ate);
+    cx.fillStyle = g; cx.fill();
+    fonte(px);
+    cx.fillStyle = cor.texto; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    linhas.forEach((l, i) => cx.fillText(l, W / 2, y + px * 0.42 + entre * (i + 0.5)));
+    if (selo.detalhe) {
+      fonte(pxDetalhe);
+      cx.fillStyle = cor.detalhe;
+      cx.fillText(selo.detalhe.toUpperCase(), W / 2, y + alturaChapa + pxDetalhe * 1.05);
+    }
+    if ('letterSpacing' in cx) cx.letterSpacing = '0px';
+    cx.restore();
+  };
+  return { altura, desenhar };
+}
+
 // Marca FUTTY na base — logo REAL (não texto) + wordmark. MESMO lockup do ESCALAÇÃO.
 async function desenharLogoLockup(cx, W, H) {
   const logo = await carregarImagem('/futty-logo-flat.webp');
@@ -188,7 +245,8 @@ function linhasDe(n, maxPorLinha) {
 // mesmos cartões de jogador (foto/silhueta + chanfro + glow), MESMA marca FUTTY (logo
 // real, não texto). Difere do ESCALAÇÃO só no recorte: 1 time, não todos.
 // ═══════════════════════════════════════════════════════════════════════════════
-export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
+// `opts.selo` (utils/seloDoSorteio.js): o selo de como os times foram feitos, logo abaixo da linha da equipe.
+export async function gerarCartao916(resultado, timeIndex, nomeEquipa, opts = {}) {
   const time = resultado?.times?.[timeIndex];
   if (!time) throw new Error('Time inexistente.');
   const kit = { c: KITS[timeIndex % 4].c, g: comAlfa(KITS[timeIndex % 4].c, 0.55) };
@@ -210,11 +268,15 @@ export async function gerarCartao916(resultado, timeIndex, nomeEquipa) {
   const baseline = desenharTituloGradiente(cx, nomeDoTime.toUpperCase(), W, y, 110);
   // A linha de baixo DESCE — colada no título, ela cobria a cedilha (Ç) e as descendentes do nome do time.
   // DESCE_META px abaixo da linha de base: livra a perna mais funda das letras do título (~0,22 do corpo).
+  // Times montados à mão não foram sorteados: a linha diz "times", não "sorteio".
+  const aMao = opts.selo?.tipo === 'manual';
   cx.fillStyle = '#a99fc0'; cx.textAlign = 'center'; cx.font = '600 30px Rajdhani, sans-serif';
-  cx.fillText([nomeEquipa, 'sorteio'].filter(Boolean).join(' · ').toUpperCase(), W / 2, baseline + DESCE_META_916);
+  cx.fillText([nomeEquipa, aMao ? 'times' : 'sorteio'].filter(Boolean).join(' · ').toUpperCase(), W / 2, baseline + DESCE_META_916);
+  const selo = prepararSelo(cx, opts.selo, W, { corpo: 30 });
+  selo.desenhar(baseline + DESCE_META_916 + 30);
 
   // grelha de cartões (mesma lógica adaptativa do ESCALAÇÃO, para 1 time só).
-  const boxX = 64; const boxTop = baseline + DESCE_META_916 + 66; const boxRight = W - 64; const boxBottom = H - 150;
+  const boxX = 64; const boxTop = baseline + DESCE_META_916 + 66 + (selo.altura ? selo.altura + 20 : 0); const boxRight = W - 64; const boxBottom = H - 150;
   const boxW = boxRight - boxX; const boxH = boxBottom - boxTop;
   const L = jogs.length <= 4 ? { cw: 240, hs: 44 } : jogs.length <= 8 ? { cw: 190, hs: 40 } : { cw: 150, hs: 34 };
   const cardGap = 20; const rowGap = 18;
@@ -284,7 +346,11 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
   secs.forEach((s) => { s.linhas = linhasDe(s.jogs.length, maxPorLinha); s.h = L.hs + 18 + s.linhas.length * cardH + (s.linhas.length - 1) * rowGap; });
 
   // título "ESCALAÇÃO" (3×) + meta = 1º item do bloco distribuído. Item 73: a meta (data · time) desce para baixo da cedilha do Ç.
-  const tituloH = 120 + (DESCE_META_ESCALACAO - 26) + 32;
+  // O selo (opts.selo) vem logo abaixo da meta e entra na altura do título, para o space-evenly contar com ele. Medido
+  // com a Rajdhani já carregada (com a letra de reserva a chapa sairia com outra largura).
+  try { await document.fonts.ready; } catch { /* SSR/priv */ }
+  const selo = prepararSelo(cx, opts.selo, W, { corpo: 28 });
+  const tituloH = 120 + (DESCE_META_ESCALACAO - 26) + 32 + (selo.altura ? selo.altura + 22 : 0);
   const itens = [{ tipo: 'titulo', h: tituloH }, ...secs.map((s) => ({ tipo: 'sec', h: s.h, sec: s }))];
   const totalH = itens.reduce((a, it) => a + it.h, 0);
   const espaco = Math.max(18, (boxH - totalH) / (itens.length + 1)); // space-evenly (com piso p/ times grandes)
@@ -301,6 +367,7 @@ export async function gerarCartazEscalacao(resultado, opts = {}) {
     if (it.tipo === 'titulo') {
       const baseline = desenharTituloGradiente(cx, 'ESCALAÇÃO', W, y, 120);
       if (meta) { cx.fillStyle = '#a99fc0'; cx.font = '600 26px Rajdhani, sans-serif'; cx.fillText(meta, W / 2, baseline + DESCE_META_ESCALACAO); }
+      selo.desenhar(baseline + DESCE_META_ESCALACAO + 28);
     } else {
       const s = it.sec;
       cx.save();

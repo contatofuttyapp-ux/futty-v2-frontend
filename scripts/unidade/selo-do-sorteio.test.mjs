@@ -160,7 +160,7 @@ test('caso 2 · a cerimônia: o fim (FimDoSorteio) só entra quando ela termina,
   assert.match(cer, /\{compartilharOn \? <FimDoSorteio selo=\{selo\} ajuste=\{ajuste\} final=\{final\} \/> : null\}/);
   assert.match(cer, /const paraCompartilhar = final \? \{ \.\.\.resultado, times: final\.times, reservas: final\.reservas \} : resultado;/);
   assert.match(cer, /gerarCartazEscalacao\(paraCompartilhar,/);
-  assert.match(cer, /gerarCartao916\(paraCompartilhar, ti, equipa\)/);
+  assert.match(cer, /gerarCartao916\(paraCompartilhar, ti, equipa/);
   const fim = ler('src/components/FimDoSorteio.jsx');
   assert.match(fim, /data-passo-do-ajuste/);
   assert.match(fim, /<TimesEmCartoes \{\.\.\.cartoes\} destacar=\{ajuste\.movidos\} \/>/);
@@ -208,4 +208,27 @@ test('caso 3 · a apresentação não tem roleta e termina no selo prata; a entr
   assert.match(ap, /<TimesEmCartoes key=\{`times-\$\{vez\}`\} \{\.\.\.cartoes\} \/>/);
   assert.match(ap, /<SeloDoSorteio selo=\{selo\} largo \/>/);
   assert.match(ap, /ESCALAÇÃO/);
+});
+
+// ── o selo vai no cartão que se compartilha ──────────────────────────────────────────────────────────────────────────────────────
+test('cartão · o 9:16 e o cartaz desenham o selo (medido com a fonte carregada) e o 9:16 dos times à mão diz "times", não "sorteio"', () => {
+  const cartao = ler('src/utils/sorteioCartao.js');
+  assert.match(cartao, /function prepararSelo\(cx, selo, W,/);
+  assert.match(cartao, /export async function gerarCartao916\(resultado, timeIndex, nomeEquipa, opts = \{\}\)/);
+  assert.match(cartao, /const aMao = opts\.selo\?\.tipo === 'manual';/);
+  assert.match(cartao, /\[nomeEquipa, aMao \? 'times' : 'sorteio'\]/);
+  assert.match(cartao, /const selo = prepararSelo\(cx, opts\.selo, W, \{ corpo: 28 \}\);/, 'o cartaz');
+  assert.match(cartao, /try \{ await document\.fonts\.ready; \} catch \{ \/\* SSR\/priv \*\/ \}\s*const selo = prepararSelo/, 'o cartaz mede o selo com a Rajdhani já carregada');
+  assert.match(cartao, /selo\.desenhar\(baseline \+ DESCE_META_ESCALACAO \+ 28\);/);
+  // O nome nunca é cortado: encolhe e, se preciso, quebra em duas linhas (nada de reticências).
+  assert.doesNotMatch(cartao.slice(cartao.indexOf('function prepararSelo'), cartao.indexOf('// Marca FUTTY na base')), /…|\.\.\.'|ellipsis/);
+});
+
+test('cartão · quem compartilha passa o selo (a cerimônia e a apresentação)', () => {
+  const cer = ler('src/components/CerimoniaSorteio.jsx');
+  assert.match(cer, /gerarCartazEscalacao\(paraCompartilhar, \{ equipa, data, selo \}\)/);
+  assert.match(cer, /gerarCartao916\(paraCompartilhar, ti, equipa, \{ selo \}\)/);
+  const ap = ler('src/components/ApresentacaoTimes.jsx');
+  assert.match(ap, /gerarCartazEscalacao\(resultado, \{ equipa, data, selo \}\)/);
+  assert.match(ap, /gerarCartao916\(resultado, ti, equipa, \{ selo \}\)/);
 });

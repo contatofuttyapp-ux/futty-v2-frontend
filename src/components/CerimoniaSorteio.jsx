@@ -555,7 +555,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     if (gerando) return;
     setGerando(true); setGerandoQual('todos'); setAvisoCartao('');
     try {
-      const { entrega } = await gerarCartazEscalacao(paraCompartilhar, { equipa, data });
+      const { entrega } = await gerarCartazEscalacao(paraCompartilhar, { equipa, data, selo });
       if (entrega === 'baixou') { toastRef.current('Imagem dos times salva'); avisar('Imagem dos times salva no seu aparelho.'); }
       else if (entrega === 'compartilhou') avisar('Imagem dos times compartilhada.');
     } catch (e) {
@@ -568,7 +568,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     setGerando(true); setGerandoQual(ti); setAvisoCartao('');
     const nomeDoTime = nomeDoTimeNaTela(resultado?.times?.[ti]?.nome, ti);
     try {
-      const { blob, nome } = await gerarCartao916(paraCompartilhar, ti, equipa);
+      const { blob, nome } = await gerarCartao916(paraCompartilhar, ti, equipa, { selo });
       const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
       if (entrega === 'baixou') { toastRef.current('Cartão 9:16 salvo'); avisar(`Cartão do ${nomeDoTime} salvo no seu aparelho.`); }
       else if (entrega === 'compartilhou') avisar(`Cartão do ${nomeDoTime} compartilhado.`);
