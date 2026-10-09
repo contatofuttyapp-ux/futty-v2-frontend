@@ -1,5 +1,5 @@
 // Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Trophy, Users } from 'lucide-react';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -81,6 +81,13 @@ export default function Jogo() {
   const encerradaNoJogo = motivoRsvpEncerrada(rsvpEstado);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  // O erro do sorteio tem lugar próprio, junto dos botões de sortear: no topo da página (onde vai o actionError) quem
+  // tocou em "Sortear de novo", lá embaixo, não o via — parecia que o botão não tinha feito nada.
+  const [erroDoSorteio, setErroDoSorteio] = useState('');
+  const erroDoSorteioRef = useRef(null);
+  useEffect(() => {
+    if (erroDoSorteio) erroDoSorteioRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [erroDoSorteio]);
   const [editando, setEditando] = useState(false); // modo ajuste manual dos times
   const [jogadoresPorTime, setJogadoresPorTime] = useState(null); // selector do sorteio (null = usa o do jogo)
   const [convidados, setConvidados] = useState([]); // SPEC-SORTEIO §11: nomes sem app
@@ -155,7 +162,7 @@ export default function Jogo() {
     // temporizadores). No site (Safari) o áudio só toca destravado por um gesto; o app da loja não tem a
     // regra. Síncrono, antes do primeiro await.
     SomSorteio.prepararNoGesto();
-    setActionError('');
+    setErroDoSorteio('');
     setBusy(true);
     try {
       const body = { jogadoresPorTime: porTimeEfectivo };
@@ -169,7 +176,7 @@ export default function Jogo() {
       // na URL: o link partilhado nunca pode trazer isto colado.
       navigate(`/time/${slug}/jogo/${id}/sorteio`, { state: { euSorteei: true } });
     } catch (err) {
-      setActionError(err.message);
+      setErroDoSorteio(err.message);
     } finally {
       setBusy(false);
     }
@@ -573,6 +580,11 @@ export default function Jogo() {
                 <span aria-hidden="true">·</span>
                 <button type="button" data-trocar="a-mao" style={LINK_DISCRETO} onClick={() => setConfirmacao('refazer-a-mao')} disabled={busy}>Montar à mão</button>
               </div>
+            ) : null}
+
+            {/* O erro do sorteio, junto dos botões de sortear (o primeiro sorteio, acima, e o "Sortear de novo"). */}
+            {erroDoSorteio ? (
+              <div ref={erroDoSorteioRef} className="alert alert--error" role="alert" data-erro-do-sorteio style={{ marginTop: 10 }}>{erroDoSorteio}</div>
             ) : null}
 
             {/* Campeonato a partir do sorteio: só o formato — plantéis já vêm prontos. */}
