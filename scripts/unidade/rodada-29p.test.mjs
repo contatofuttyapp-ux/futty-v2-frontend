@@ -37,7 +37,7 @@ test('29P · landing para valer: sem o Avise-me, com o F, o slogan, a frase e as
   assert.doesNotMatch(landing, /soAviseMe/);
   assert.match(landing, /<FuttyIconeFlutuante size=\{tamanhoF\} \/>/);
   assert.match(landing, /O seu time\.<br \/>A sua figurinha\./);
-  assert.match(landing, /Futty: sorteio justo, ranking e figurinha de colecionador para o futebol do seu time\./);
+  assert.match(landing, /Futty: sorteio de times, ranking e figurinha de colecionador para o seu futebol\./);
   assert.match(landing, /Entrar com Google/);
   assert.match(landing, /Criar conta/);
   assert.match(landing, /Já tenho conta → /);

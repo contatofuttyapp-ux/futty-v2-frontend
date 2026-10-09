@@ -1,7 +1,7 @@
 {
   "name": "Futty",
   "short_name": "Futty",
-  "description": "Sorteio justo, ranking e figurinha de colecionador.",
+  "description": "Sorteio de times, ranking e figurinha de colecionador.",
   "start_url": "/home",
   "display": "standalone",
   "orientation": "portrait",
