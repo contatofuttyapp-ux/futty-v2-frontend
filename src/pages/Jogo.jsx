@@ -26,6 +26,7 @@ import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
+import { motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
 import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
 
@@ -74,6 +75,9 @@ export default function Jogo() {
   // posição na fila dentro do Jogo; NÃO toca na capacidade do /confirmar (vaga futura).
   const { data: rsvpEstado } = useApi(`/api/jogos/${id}/rsvp`);
   const posEspera = rsvpEstado?.minha_posicao_espera ?? null;
+  // Mesma leitura: se a presença formal foi aberta com prazo (ou o admin fechou), quem ainda não confirmou
+  // não pode mais dizer "Vou" por aqui — o botão avisa em vez de deixar tocar para descobrir com um erro.
+  const encerradaNoJogo = motivoRsvpEncerrada(rsvpEstado);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [editando, setEditando] = useState(false); // modo ajuste manual dos times
@@ -358,6 +362,8 @@ export default function Jogo() {
                     </button>
                   )}
                 </>
+              ) : encerradaNoJogo ? (
+                <span className="muted" data-rsvp-encerrada>{FRASE_RSVP_ENCERRADA[encerradaNoJogo]}</span>
               ) : (
                 <>
                   <span className="muted">Você ainda não confirmou presença.</span>

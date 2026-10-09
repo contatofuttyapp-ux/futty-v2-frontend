@@ -5,6 +5,21 @@
 
 export const MSG_FALHA_RSVP = 'Não deu para registrar sua resposta. Tente de novo.';
 
+/**
+ * Por que a janela de RSVP deste jogo (se já foi aberta ao menos uma vez) não aceita mais resposta — ou
+ * `null` se ainda aceita, ou se nunca foi aberta (aí vale o "Vou / Não vou" de sempre, sem prazo nenhum).
+ * 'fechado' quando o admin fechou (antes ou depois do prazo); 'prazo' quando só o prazo venceu, sozinho.
+ */
+export function motivoRsvpEncerrada(rsvp) {
+  if (!rsvp?.rsvp_aberto) return null;
+  if (rsvp.rsvp_fechado) return 'fechado';
+  if (rsvp.rsvp_prazo && new Date(rsvp.rsvp_prazo).getTime() <= Date.now()) return 'prazo';
+  return null;
+}
+
+// Nunca "tente de novo": tentar de novo não resolve nem o prazo vencido nem a presença fechada pelo admin.
+export const FRASE_RSVP_ENCERRADA = { fechado: 'Presença fechada.', prazo: 'Prazo encerrado.' };
+
 /** "Vou" / "Não vou" no RSVP do jogo: status = 'confirmado' | 'recusado'. Devolve a resposta do motor ({ ok, status } ou { espera, posicao }). */
 export async function enviarRsvp(gameId, status) {
   const { apiFetch } = await import('./api'); // só aqui, para o resto deste arquivo (e o teste) não puxar a rede
@@ -31,8 +46,12 @@ export async function responderComOtimismo({ gameId, status, anterior, aplicar, 
       return { ok: true, espera: r.posicao };
     }
     return { ok: true };
-  } catch {
+  } catch (err) {
     if (otimista) aplicar(anterior);
-    return { ok: false, erro: MSG_FALHA_RSVP };
+    // Erro de rede (apiFetch sem `status`: o fetch nem voltou) fica com a frase genérica — "tente de novo"
+    // ali é verdade. Erro do motor (400, 409…) tem mensagem própria ("O prazo para confirmar presença já
+    // passou.") e mentir com a genérica manda tentar de novo algo que tentar de novo não resolve.
+    const erro = err?.status != null && err?.message ? err.message : MSG_FALHA_RSVP;
+    return { ok: false, erro };
   }
 }

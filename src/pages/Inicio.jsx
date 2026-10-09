@@ -27,7 +27,7 @@ import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
 import AvisoDeJogo from '../components/AvisoDeJogo';
-import { MSG_FALHA_RSVP, responderComOtimismo } from '../lib/rsvp';
+import { MSG_FALHA_RSVP, FRASE_RSVP_ENCERRADA, motivoRsvpEncerrada, responderComOtimismo } from '../lib/rsvp';
 import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../utils/presenca';
 import { LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso } from '../utils/avisosDoInicio';
 import { esconderLembrete, lembretesEscondidos } from '../utils/lembretes';
@@ -388,6 +388,14 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
         ) : soOrganizo ? (
           <div className="gcard__presence">
             <span className="texto-apoio" data-so-organizo style={{ margin: 0 }}>Você só organiza este time.</span>
+          </div>
+        ) : game.rsvp_encerrada ? (
+          // A presença foi aberta com prazo (ou o admin fechou) e agora não aceita mais resposta: os
+          // botões ficam desligados com o motivo — tentar de novo não resolve nem o prazo nem o fechamento.
+          <div className="gcard__presence" style={{ flexWrap: 'wrap' }}>
+            <button type="button" className="pbtn pbtn--go hud-corners-s" disabled style={{ opacity: 0.45, cursor: 'not-allowed' }}>Vou</button>
+            <button type="button" className="pbtn pbtn--no hud-corners-s" disabled style={{ opacity: 0.45, cursor: 'not-allowed' }}>Não vou</button>
+            <span className="texto-apoio" data-rsvp-encerrada style={{ margin: 0, flexBasis: '100%' }}>{FRASE_RSVP_ENCERRADA[game.rsvp_encerrada]}</span>
           </div>
         ) : (
           <div className="gcard__presence">
@@ -912,7 +920,11 @@ export default function Inicio() {
   // O RSVPCard do próximo jogo está na tela (e com ele o Vou / Não vou).
   // Quem só organiza o time não responde presença — nem o cartão, nem o aviso de ausência.
   const proximoSoOrganizo = proximoJogo?.eu_jogo === false;
-  const rsvpAbertoNoProximo = !proximoSoOrganizo && !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto && !rsvpInfo.rsvp_fechado);
+  // "Aberto" para responder de verdade é aberto E dentro do prazo (ou sem prazo fechado pelo admin) — não só
+  // `rsvp_aberto`: essa flag nunca volta a false (abrir é permanente), então sem o prazo o card continuava
+  // ativo depois dele vencer (achado da Rodada 30E).
+  const encerradaNoProximo = !proximoSoOrganizo ? motivoRsvpEncerrada(rsvpInfo) : null;
+  const rsvpAbertoNoProximo = !proximoSoOrganizo && !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto) && !encerradaNoProximo;
   // Sincronizado DURANTE o render (mesmo padrão de MeuPerfil.jsx), não num
   // efeito: `minhaResposta` continua editável localmente pelo RSVPCard
   // (onResposta={setMinhaResposta}) depois desta sincronização inicial.
@@ -931,12 +943,17 @@ export default function Inicio() {
   const jogoDoRsvpId = (dadosInicio?.convites?.games || []).find((g) => g.status !== 'finished')?.id ?? null;
   const rsvpValeParaOProximo = rsvpAbertoNoProximo && nextId != null && nextId === jogoDoRsvpId;
   // O mesmo RSVP, visto do jogo dele — com ou sem chip de time escolhido. É por aqui que o aviso do topo responde (ele não segue o chip).
-  const rsvpAbertoNoJogoDoRsvp = !!(rsvpData && jogoDoRsvpId != null && rsvpData.rsvp_aberto && !rsvpData.rsvp_fechado);
+  const encerradaNoJogoDoRsvp = motivoRsvpEncerrada(rsvpData);
+  const rsvpAbertoNoJogoDoRsvp = !!(rsvpData && jogoDoRsvpId != null && rsvpData.rsvp_aberto) && !encerradaNoJogoDoRsvp;
   const rsvpValeParaOJogo = (id) => id != null && id === jogoDoRsvpId && rsvpAbertoNoJogoDoRsvp && (games || []).find((g) => g.id === id)?.eu_jogo !== false;
   const confirmadosNoRsvp = confirmadosComResposta(rsvpData, me?.user?.id, minhaResposta);
-  const comRsvp = (g) => (g.id === nextId && rsvpValeParaOProximo && confirmadosNoRsvp != null
-    ? { ...g, confirmed_count: confirmadosNoRsvp, user_status: statusDoJogoPelaResposta(minhaResposta) }
-    : g);
+  const comRsvp = (g) => {
+    const base = g.id === nextId && rsvpValeParaOProximo && confirmadosNoRsvp != null
+      ? { ...g, confirmed_count: confirmadosNoRsvp, user_status: statusDoJogoPelaResposta(minhaResposta) }
+      : g;
+    // Fora do jogo do RSVP isto nunca é setado: o card de sempre (sem prazo) continua como sempre foi.
+    return g.id === jogoDoRsvpId && encerradaNoJogoDoRsvp ? { ...base, rsvp_encerrada: encerradaNoJogoDoRsvp } : base;
+  };
 
   // Campeonato da equipa principal (card no Início) — mesmo campSlug que o
   // backend usou para calcular `campeonato` dentro de /api/inicio.
@@ -1000,9 +1017,14 @@ export default function Inicio() {
   // UM aviso por vez no topo, o mais importante primeiro (a fila inteira, montada logo abaixo, depois dos
   // estados de cada aviso). O aviso do jogo não segue o chip de time: quem tem jogo esperando resposta o
   // vê em qualquer filtro. Para o jogo do RSVP a resposta de agora é a do RSVP (a otimista inclusive).
-  const jogosParaAviso = (games || []).map((g) => (rsvpValeParaOJogo(g.id)
-    ? { ...g, user_status: statusDoJogoPelaResposta(minhaResposta) || (rsvpData?.minha_posicao_espera != null ? 'espera' : null) }
-    : g));
+  // O jogo do RSVP com o prazo vencido (ou fechado pelo admin) sai da fila de avisos: o aviso pede "Você
+  // vai?" para quem ainda pode responder, não para reabrir uma pergunta que o prazo já encerrou.
+  const jogosParaAviso = (games || []).map((g) => {
+    if (g.id === jogoDoRsvpId && encerradaNoJogoDoRsvp) return { ...g, user_status: g.user_status || 'rsvp_encerrado' };
+    return rsvpValeParaOJogo(g.id)
+      ? { ...g, user_status: statusDoJogoPelaResposta(minhaResposta) || (rsvpData?.minha_posicao_espera != null ? 'espera' : null) }
+      : g;
+  });
   const timeDoJogo = (teamId) => teams.find((t) => t.id === teamId) || null;
 
   // P1-3 — a votação era invisível fora do Ranking. Banner no Início quando há
@@ -1407,12 +1429,12 @@ export default function Inicio() {
             {/* Jogos */}
             <div>
               <div className="games-label">Próximos Jogos</div>
-            {rsvpAbertoNoProximo ? (
-              <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} cidade={timeDoJogo(proximoJogo?.team_id)?.cidade} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} />
+            {rsvpAbertoNoProximo || encerradaNoProximo ? (
+              <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} cidade={timeDoJogo(proximoJogo?.team_id)?.cidade} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} encerrada={encerradaNoProximo} />
             ) : null}
-            {/* Aviso de ausência. Com o RSVP aberto para ESTE jogo, some — o card acima já tem Vou / Não vou, e é a
-                resposta dele que vale. */}
-            {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo && !proximoSoOrganizo ? (
+            {/* Aviso de ausência. Com o RSVP aberto (ou encerrado) para ESTE jogo, some — o card acima já cobre a
+                resposta (ou diz por que não dá mais para responder). */}
+            {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo && !encerradaNoProximo && !proximoSoOrganizo ? (
               proximoJogo.ausente_proximo ? (
                 <div className="hud-corners-s" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 4px', padding: '8px 12px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
                   <Icon name="ausente" size={16} color="grey" />
