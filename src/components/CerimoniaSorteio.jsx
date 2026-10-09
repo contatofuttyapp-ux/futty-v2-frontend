@@ -17,6 +17,7 @@ import { registarEventoAd } from '../lib/ads';
 import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import SomSorteio from './somSorteio';
+import FimDoSorteio from './FimDoSorteio';
 import { NOMES_DAS_CORES, nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import '../styles/app.css';
 import '../styles/sorteio-maquina.css';
@@ -133,8 +134,12 @@ function BannerSorteio() {
  * `bannerInterno`: a página do sorteio tem o seu próprio slot IAB 320×100, servido pelo AdCard e só depois
  * da cerimónia acabar — dois anúncios na mesma tela seriam duas impressões pela mesma vista. Quem tem slot
  * próprio passa `false`; o /p/ e o Campeonato ficam com a faixa.
+ *
+ * `selo`, `ajuste`, `final` (utils/seloDoSorteio.js#visaoDoSorteio): a máquina gira `resultado` — num sorteio
+ * ajustado à mão, é o ORIGINAL, o que a roleta deu. No fim entram, embaixo dela, o passo do ajuste e os times
+ * `final` (FimDoSorteio), e é com eles que se compartilha. Sem essas props (Campeonato) nada muda.
  */
-export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data, bannerInterno = true, euSorteei = false }) {
+export default function CerimoniaSorteio({ resultado, autoStart = true, aoTerminar, equipa, data, bannerInterno = true, euSorteei = false, selo = null, ajuste = null, final = null }) {
   const rootRef = useRef(null);
   // props estáveis para o efeito (que corre 1x); um re-sorteio remonta via key no consumidor.
   const cbRef = useRef(aoTerminar);
@@ -541,13 +546,16 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a cerimónia monta 1x; re-sorteio remonta via key
   }, []);
 
+  // O que se compartilha são os times que vão jogar: num sorteio ajustado, os FINAIS, não os que a roleta deu.
+  const paraCompartilhar = final ? { ...resultado, times: final.times, reservas: final.reservas } : resultado;
+
   // Na web baixa; no app abre a folha de compartilhar (o <a download> não faz nada no WebView). A folha já é
   // o retorno; fechada sem escolher nada, não se diz "salvo".
   async function compartilharTimes() {
     if (gerando) return;
     setGerando(true); setGerandoQual('todos'); setAvisoCartao('');
     try {
-      const { entrega } = await gerarCartazEscalacao(resultado, { equipa, data });
+      const { entrega } = await gerarCartazEscalacao(paraCompartilhar, { equipa, data });
       if (entrega === 'baixou') { toastRef.current('Imagem dos times salva'); avisar('Imagem dos times salva no seu aparelho.'); }
       else if (entrega === 'compartilhou') avisar('Imagem dos times compartilhada.');
     } catch (e) {
@@ -560,7 +568,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
     setGerando(true); setGerandoQual(ti); setAvisoCartao('');
     const nomeDoTime = nomeDoTimeNaTela(resultado?.times?.[ti]?.nome, ti);
     try {
-      const { blob, nome } = await gerarCartao916(resultado, ti, equipa);
+      const { blob, nome } = await gerarCartao916(paraCompartilhar, ti, equipa);
       const entrega = await salvarOuCompartilhar(blob, nome, { titulo: 'Cartão do sorteio' });
       if (entrega === 'baixou') { toastRef.current('Cartão 9:16 salvo'); avisar(`Cartão do ${nomeDoTime} salvo no seu aparelho.`); }
       else if (entrega === 'compartilhou') avisar(`Cartão do ${nomeDoTime} compartilhado.`);
@@ -574,7 +582,7 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
   if (!resultado?.times?.length) {
     return <div style={{ padding: 24, textAlign: 'center', color: '#8a8a98' }}>Sem resultado para mostrar.</div>;
   }
-  const times = resultado.times;
+  const times = paraCompartilhar.times;
 
   return (
     <div className="smaq" ref={rootRef}>
@@ -632,6 +640,9 @@ export default function CerimoniaSorteio({ resultado, autoStart = true, aoTermin
           </div>
         </div></div>
       </div>
+      {/* Terminada a cerimônia: o selo — e, num sorteio ajustado, antes dele o passo do ajuste e os times finais.
+          Entra junto com o compartilhar e some quando a alavanca recomeça. */}
+      {compartilharOn ? <FimDoSorteio selo={selo} ajuste={ajuste} final={final} /> : null}
       {/* UM caminho para compartilhar, logo abaixo do retângulo dos
           times: a imagem dos dois times na receita do "Ver sorteio" (.cta-gold +
           glow + pulso), e por baixo uma linha discreta com o 9:16 de cada time. */}

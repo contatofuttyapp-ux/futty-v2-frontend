@@ -143,3 +143,31 @@ test('o selo nunca corta o nome de quem ajustou ou montou: quebra a linha (a reg
   assert.match(selo, /overflowWrap: 'anywhere'/);
   assert.doesNotMatch(selo, /ellipsis|nowrap/);
 });
+
+// ── caso 2 na cerimônia: a máquina gira o original, o fim conta o ajuste ─────────────────────────────────────────────────────────
+test('caso 2 · a página do sorteio e o link público mandam a máquina girar o ORIGINAL e passam o ajuste e os times finais', () => {
+  for (const arquivo of ['src/pages/SorteioShow.jsx', 'src/pages/SorteioPublico.jsx']) {
+    const tela = ler(arquivo);
+    assert.match(tela, /const visao = visaoDoSorteio\(resultado\);/, arquivo);
+    assert.match(tela, /resultado=\{visao\?\.daRoleta \|\| resultado\}/, arquivo);
+    assert.match(tela, /ajuste=\{visao\?\.ajuste\}/, arquivo);
+    assert.match(tela, /final=\{visao\?\.ajuste \? visao\.final : null\}/, arquivo);
+  }
+});
+
+test('caso 2 · a cerimônia: o fim (FimDoSorteio) só entra quando ela termina, e compartilha-se o que vai jogar (os times finais)', () => {
+  const cer = ler('src/components/CerimoniaSorteio.jsx');
+  assert.match(cer, /\{compartilharOn \? <FimDoSorteio selo=\{selo\} ajuste=\{ajuste\} final=\{final\} \/> : null\}/);
+  assert.match(cer, /const paraCompartilhar = final \? \{ \.\.\.resultado, times: final\.times, reservas: final\.reservas \} : resultado;/);
+  assert.match(cer, /gerarCartazEscalacao\(paraCompartilhar,/);
+  assert.match(cer, /gerarCartao916\(paraCompartilhar, ti, equipa\)/);
+  const fim = ler('src/components/FimDoSorteio.jsx');
+  assert.match(fim, /data-passo-do-ajuste/);
+  assert.match(fim, /<TimesEmCartoes \{\.\.\.cartoes\} destacar=\{ajuste\.movidos\} \/>/);
+});
+
+test('caso 2 · a entrada em sequência é só CSS e o estado natural é visível (lei dos builds 10-12)', () => {
+  const css = ler('src/styles/app.css');
+  assert.match(css, /\.entra-em-sequencia \{ animation: entraEmSequencia 0\.45s cubic-bezier\(0\.2, 0\.9, 0\.3, 1\) both; animation-delay: var\(--d, 0s\); \}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\r?\n {2}\.entra-em-sequencia \{ animation: none; \}/);
+});

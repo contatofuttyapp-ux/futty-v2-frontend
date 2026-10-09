@@ -20,7 +20,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
   return (
     <>
       {visao ? (
-        <div data-como-foram-feitos style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+        <div data-como-foram-feitos style={{ display: 'grid', justifyItems: 'start', gap: 10, marginBottom: 12 }}>
           <SeloDoSorteio selo={visao.selo} />
           {visao.ajuste ? <ListaDeTrocas trocas={visao.ajuste.trocas} /> : null}
         </div>

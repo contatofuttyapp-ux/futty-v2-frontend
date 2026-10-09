@@ -3343,3 +3343,13 @@
   color: rgba(255, 255, 255, 0.28);
   opacity: 1;
 }
+
+/*
+ * Entrada em sequência (passo do ajuste da cerimônia, apresentação dos times à mão): cada peça sobe e acende no
+ * seu --d. O estado natural é VISÍVEL (`both` só esconde durante o atraso): sem animação, tudo já está na tela.
+ */
+@keyframes entraEmSequencia { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.entra-em-sequencia { animation: entraEmSequencia 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) both; animation-delay: var(--d, 0s); }
+@media (prefers-reduced-motion: reduce) {
+  .entra-em-sequencia { animation: none; }
+}

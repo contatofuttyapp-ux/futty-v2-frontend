@@ -12,6 +12,7 @@ import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { formatarData } from '../utils/dataHora';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import { estadoSorteio } from '../utils/estadoSorteio';
+import { visaoDoSorteio } from '../utils/seloDoSorteio';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
 import AdCard from '../components/AdCard';
@@ -56,6 +57,8 @@ export default function SorteioShow() {
   const game = data?.game;
   const resultado = game?.times_resultado;
   const estado = estadoSorteio({ loading, error, resultado });
+  // Como os times foram feitos: a máquina gira o que a roleta deu (num ajuste, o ORIGINAL) e o fim conta o resto.
+  const visao = visaoDoSorteio(resultado);
   // A data do cartaz é a do CAMPO (fuso do time): "8 out 2026".
   const dataCartaz = game?.data
     ? formatarData(game.data, data?.team?.fuso, 'comAno').replace(/ de /g, ' ').replace(/\./g, '')
@@ -122,7 +125,10 @@ export default function SorteioShow() {
                 presa ao fundo (que cobria o retângulo) e sem os "Salvar" /
                 "Compartilhar" que a máquina tinha embaixo. */}
             <CerimoniaSorteio
-              resultado={resultado}
+              resultado={visao?.daRoleta || resultado}
+              selo={visao?.selo}
+              ajuste={visao?.ajuste}
+              final={visao?.ajuste ? visao.final : null}
               equipa={data?.team?.nome || ''}
               data={dataCartaz}
               aoTerminar={() => setJaTerminou(true)}

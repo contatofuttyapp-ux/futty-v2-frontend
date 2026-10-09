@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { estadoSorteio } from '../utils/estadoSorteio';
+import { visaoDoSorteio } from '../utils/seloDoSorteio';
 import { quandoOndeDoJogo } from '../utils/quandoOndeDoJogo';
 import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import FuttyLogo from '../components/FuttyLogo';
@@ -24,6 +25,7 @@ export default function SorteioPublico() {
   const resultado = data?.times_resultado;
   const res = data?.resultado;
   const estado = estadoSorteio({ loading, error, resultado });
+  const visao = visaoDoSorteio(resultado);
   // A página mostra quando e onde é o jogo: é o que quem recebe o link no grupo foi ali procurar.
   const quandoOnde = quandoOndeDoJogo(data?.jogo, data?.equipa);
   // Quem chega pelo link do grupo quer ver os times, não assistir a cerimônia inteira (+20s). Aqui o
@@ -59,7 +61,7 @@ export default function SorteioPublico() {
         ) : (
           <>
             {verCerimonia ? (
-              <CerimoniaSorteio resultado={resultado} />
+              <CerimoniaSorteio resultado={visao?.daRoleta || resultado} selo={visao?.selo} ajuste={visao?.ajuste} final={visao?.ajuste ? visao.final : null} />
             ) : (
               <>
                 <DrawnTeams resultado={resultado} teamCor={data?.equipa?.cor} />

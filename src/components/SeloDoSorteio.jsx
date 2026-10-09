@@ -4,6 +4,7 @@
 // fez o ajuste ou montou nunca é cortado: o selo quebra em duas linhas (a regra do nome inteiro vale aqui também).
 // `detalhe` ("2º sorteio deste jogo") vai numa linha discreta logo abaixo.
 import { CORES_DO_SELO } from '../utils/seloDoSorteio';
+import { atrasoCss } from '../utils/tempoDosCartoes';
 
 const RAJ = "'Rajdhani', sans-serif";
 const CORTE = 'polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px)';
@@ -42,13 +43,16 @@ export default function SeloDoSorteio({ selo, largo = false, style }) {
   );
 }
 
-/** As trocas do ajuste, uma por linha: TROCA · <nome> saiu do Ouro para o Roxo (a receita do slide do carrossel). */
-export function ListaDeTrocas({ trocas, style }) {
+/**
+ * As trocas do ajuste, uma por linha: TROCA · <nome> saiu do Ouro para o Roxo (a receita do slide do carrossel).
+ * Com `passo` (s) as linhas entram uma a uma a partir de `atraso0` (o passo do ajuste na cerimônia); sem, ficam paradas.
+ */
+export function ListaDeTrocas({ trocas, style, passo = null, atraso0 = 0 }) {
   if (!trocas?.length) return null;
   return (
     <ul data-trocas style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6, ...style }}>
-      {trocas.map((t) => (
-        <li key={t.chave} style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 14, color: '#d8d4e6', lineHeight: 1.35 }}>
+      {trocas.map((t, i) => (
+        <li key={t.chave} className={passo != null ? 'entra-em-sequencia' : undefined} style={{ '--d': passo != null ? atrasoCss(atraso0 + i * passo) : undefined, display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 14, color: '#d8d4e6', lineHeight: 1.35 }}>
           <span style={{ flexShrink: 0, fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '0.12em', color: '#1a1206', background: '#f0c94a', padding: '2px 7px', clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)' }}>TROCA</span>
           <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             <b style={{ color: '#fff' }}>{t.nome}</b> {t.resto}
