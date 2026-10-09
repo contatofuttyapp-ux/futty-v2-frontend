@@ -232,3 +232,26 @@ test('cartão · quem compartilha passa o selo (a cerimônia e a apresentação)
   assert.match(ap, /gerarCartazEscalacao\(resultado, \{ equipa, data, selo \}\)/);
   assert.match(ap, /gerarCartao916\(resultado, ti, equipa, \{ selo \}\)/);
 });
+
+// ── o contador de sorteios ("2º sorteio deste jogo") ──────────────────────────────────────────────────────────────────────────────
+test('contador · do 2º sorteio em diante o selo diz qual é; o 1º e o jogo antigo não dizem nada', () => {
+  const com = (n) => visaoDoSorteio({ seed: 1, ...ORIGINAL, registro: reg({ sorteio_numero: n }) }).selo.detalhe;
+  assert.equal(com(1), null);
+  assert.equal(com(2), '2º sorteio deste jogo');
+  assert.equal(com(3), '3º sorteio deste jogo');
+  assert.equal(visaoDoSorteio({ seed: 1, ...ORIGINAL }).selo.detalhe, null, 'antigo: sem conta, sem frase');
+});
+
+test('contador · vale também no sorteio ajustado (o número é do sorteio, o ajuste não muda) e nunca nos times à mão', () => {
+  const final = { times: [{ nome: 'Time A', jogadores: [j('a', 'Magrão')] }, { nome: 'Time B', jogadores: [j('c', 'Canhotinha'), j('z', 'Zé'), j('g', 'Gonçalo')] }], reservas: [j('r', 'Rafa')] };
+  const ajustado = visaoDoSorteio({ seed: 1, ...final, registro: reg({ sorteio_numero: 2, original: ORIGINAL, ajustes: [{ por: { nome: 'Chavo' } }] }) });
+  assert.equal(ajustado.tipo, 'ajustado');
+  assert.equal(ajustado.selo.detalhe, '2º sorteio deste jogo');
+  const mao = visaoDoSorteio({ ...ORIGINAL, registro: { origem: 'manual', por: { nome: 'Chavo' }, sorteios: 3, ajustes: [] } });
+  assert.equal(mao.selo.detalhe, null);
+});
+
+test('contador · o selo da tela e o do cartão mostram o detalhe numa linha discreta embaixo', () => {
+  assert.match(ler('src/components/SeloDoSorteio.jsx'), /\{selo\.detalhe \? \(\s*<div data-selo-detalhe/);
+  assert.match(ler('src/utils/sorteioCartao.js'), /cx\.fillText\(selo\.detalhe\.toUpperCase\(\), W \/ 2,/);
+});

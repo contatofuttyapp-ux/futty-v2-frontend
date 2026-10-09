@@ -97,7 +97,9 @@ export function visaoDoSorteio(tr) {
     return { tipo: 'manual', selo: { tipo: 'manual', texto, detalhe: null }, daRoleta: null, final, ajuste: null };
   }
 
-  const detalhe = null;
+  // "Sortear de novo" apagava o sorteio de antes sem rastro: do 2º em diante o selo diz qual é (o motor conta).
+  const numero = Number.isInteger(reg.sorteio_numero) ? reg.sorteio_numero : null;
+  const detalhe = numero && numero >= 2 ? `${numero}º sorteio deste jogo` : null;
   // Ajustado só se alguém de fato mudou de lugar desde a roleta (mexer e voltar ao que era continua "sorteado").
   const trocas = reg.original ? trocasDoAjuste(reg.original, final) : [];
   if (trocas.length) {

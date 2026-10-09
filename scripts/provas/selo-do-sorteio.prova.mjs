@@ -62,6 +62,7 @@ export async function rodar({ navegador, base, t }) {
     await page.waitForTimeout(600);
     t('sorteado: entra só o selo ouro, sem passo de ajuste', (await page.locator('[data-fim-do-sorteio="sorteado"] [data-selo-do-sorteio="sorteado"]').count()) === 1 && (await page.locator('[data-passo-do-ajuste]').count()) === 0);
     t('o selo diz SORTEADO', (await page.locator('[data-selo-do-sorteio="sorteado"] > div').first().innerText()).trim() === 'SORTEADO');
+    t('contador: o 2º sorteio do jogo diz que é o 2º, logo abaixo do selo', (await page.locator('[data-fim-do-sorteio] [data-selo-detalhe]').innerText()).trim() === '2º SORTEIO DESTE JOGO', await page.locator('[data-fim-do-sorteio] [data-selo-detalhe]').innerText());
     await foto(page, 'selo-sorteado.png');
     await page.context().close();
   }
