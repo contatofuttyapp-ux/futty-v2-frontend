@@ -961,6 +961,10 @@ export default function Feed() {
   const [feedAnterior, setFeedAnterior] = useState(undefined);
   const [proximo, setProximo] = useState(null); // cursor da página seguinte (null = não há mais antigos)
   const [carregandoMais, setCarregandoMais] = useState(false);
+  // Erro PRÓPRIO do carregamento automático (distinto do `erro` geral da página, que o composer e o apagar
+  // post também usam): é só ele que decide se o botão de reserva volta a aparecer.
+  const [erroCarregarMais, setErroCarregarMais] = useState(false);
+  const sentinelaRef = useRef(null);
   if (feedData !== feedAnterior) {
     setFeedAnterior(feedData);
     if (feedData) {
@@ -973,6 +977,7 @@ export default function Feed() {
     if (!proximo || carregandoMais) return;
     setCarregandoMais(true);
     setErro('');
+    setErroCarregarMais(false);
     try {
       const d = await apiFetch(`/api/feed?limite=${PAGINA_FEED}&antes=${encodeURIComponent(proximo)}`);
       setItems((cur) => {
@@ -982,10 +987,27 @@ export default function Feed() {
       setProximo(d.proximo || null);
     } catch (err) {
       setErro(err.message || 'Não deu para carregar mais. Tente de novo.');
+      setErroCarregarMais(true);
     } finally {
       setCarregandoMais(false);
     }
   }
+
+  // Resenha rolando: um sentinela no fim da lista chama o MESMO verMais() quando entra na tela — sem
+  // precisar do botão. Para enquanto não há mais páginas, enquanto o pedido anterior está no ar (o próprio
+  // verMais já se protege) e depois de uma falha, para não martelar o motor sozinho: aí só o botão de
+  // reserva (ao toque) tenta de novo. O efeito refaz a observação a cada `proximo` novo — se o sentinela já
+  // estiver visível (tela alta, página pequena), o navegador dispara na hora e a próxima página já vem.
+  useEffect(() => {
+    const el = sentinelaRef.current;
+    if (!el || !proximo || erroCarregarMais || typeof IntersectionObserver === 'undefined') return undefined;
+    const obs = new IntersectionObserver((entradas) => {
+      if (entradas[0]?.isIntersecting) verMais();
+    }, { rootMargin: '200px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- verMais lê `carregandoMais` fechado no momento certo (o efeito só reabre quando `proximo` muda, já depois do pedido anterior terminar)
+  }, [proximo, erroCarregarMais]);
 
   // Bloqueio entre jogadores (Apple UGC 1.2): remove localmente todo o conteúdo
   // dessa pessoa (o servidor já filtra desde já para pedidos futuros).
@@ -1137,9 +1159,18 @@ export default function Feed() {
               )}
             </div>
             {proximo && !loading ? (
-              <button type="button" className="btn btn--purple-outline hud-corners" style={{ width: '100%', marginTop: 14 }} disabled={carregandoMais} onClick={verMais}>
-                {carregandoMais ? 'Carregando…' : 'Ver mais antigos'}
-              </button>
+              <>
+                {/* Sentinela invisível: 1px no fim da lista, para o IntersectionObserver (acima) chamar
+                    verMais() sozinho. O botão abaixo é só a reserva — escondido enquanto isso funciona. */}
+                <div ref={sentinelaRef} aria-hidden="true" style={{ height: 1 }} />
+                {carregandoMais ? (
+                  <p role="status" aria-live="polite" className="muted" style={{ textAlign: 'center', marginTop: 14 }}>Carregando…</p>
+                ) : erroCarregarMais ? (
+                  <button type="button" className="btn btn--purple-outline hud-corners" style={{ width: '100%', marginTop: 14 }} onClick={verMais}>
+                    Ver mais antigos
+                  </button>
+                ) : null}
+              </>
             ) : null}
           </>
         )}
