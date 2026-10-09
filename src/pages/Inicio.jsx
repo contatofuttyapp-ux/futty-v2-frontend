@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { RefreshCw, Trophy } from 'lucide-react';
+import { RefreshCw, Trophy, Users } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { tomarConvitePendente } from '../lib/convitePendente';
 import { usePerfil } from '../context/PerfilContext';
@@ -365,7 +365,8 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
           <>
             <div className="gcard__drawn">
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="badge badge--sorteado hud-corners-s">Sorteado</span>
+                {/* Times montados à mão (o motor manda `montado_a_mao`) não foram sorteados: o card não diz que foram. */}
+                <span className="badge badge--sorteado hud-corners-s">{game.montado_a_mao ? 'Montado' : 'Sorteado'}</span>
                 <span className="muted" style={{ fontSize: 13 }}>
                   {soOrganizo ? 'Você organiza' : going ? 'Vai jogar' : notGoing ? 'Não vai' : 'Sem resposta'}
                 </span>
@@ -381,7 +382,7 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
               {/* O botão responde NA HORA ("Abrindo…", apagado, sem tocar duas vezes) e a tela abre pelo roteador,
                   sem recarregar o app inteiro: tocar e não ver nada por vários segundos parecia botão quebrado. */}
               <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} disabled={abrindo} aria-busy={abrindo} onClick={() => onVerSorteio(game)}>
-                {abrindo ? 'Abrindo…' : <><Trophy size={16} /> Ver sorteio</>}
+                {abrindo ? 'Abrindo…' : game.montado_a_mao ? <><Users size={16} /> Ver times</> : <><Trophy size={16} /> Ver sorteio</>}
               </button>
             </span>
           </>

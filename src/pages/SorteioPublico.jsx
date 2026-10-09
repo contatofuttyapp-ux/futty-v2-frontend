@@ -12,6 +12,7 @@ import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
+import ApresentacaoTimes from '../components/ApresentacaoTimes';
 import DrawnTeams from '../components/DrawnTeams';
 import '../styles/app.css';
 
@@ -26,6 +27,8 @@ export default function SorteioPublico() {
   const res = data?.resultado;
   const estado = estadoSorteio({ loading, error, resultado });
   const visao = visaoDoSorteio(resultado);
+  // Times montados à mão: não há sorteio para ver — "Ver times" abre a apresentação, e o cabeçalho não diz "sorteio".
+  const aMao = visao?.tipo === 'manual';
   // A página mostra quando e onde é o jogo: é o que quem recebe o link no grupo foi ali procurar.
   const quandoOnde = quandoOndeDoJogo(data?.jogo, data?.equipa);
   // Quem chega pelo link do grupo quer ver os times, não assistir a cerimônia inteira (+20s). Aqui o
@@ -41,7 +44,7 @@ export default function SorteioPublico() {
           <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 20, letterSpacing: '0.12em', color: '#f0c94a' }}>FUTTY</span>
         </div>
         <p style={{ fontFamily: RAJ, fontSize: 13, letterSpacing: '0.08em', color: 'var(--text-dim)', textAlign: 'center', margin: '0 0 14px', textTransform: 'uppercase' }}>
-          {data?.equipa?.nome || 'Sorteio'} · sorteio dos times
+          {data?.equipa?.nome || 'Sorteio'} · {aMao ? 'os times' : 'sorteio dos times'}
         </p>
         {quandoOnde ? (
           <p style={{ fontFamily: RAJ, fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: '-8px 0 14px' }}>{quandoOnde}</p>
@@ -60,13 +63,15 @@ export default function SorteioPublico() {
           <p className="muted" style={{ textAlign: 'center' }}>Este sorteio ainda não aconteceu.</p>
         ) : (
           <>
-            {verCerimonia ? (
+            {verCerimonia && aMao ? (
+              <ApresentacaoTimes resultado={resultado} selo={visao.selo} equipa={data?.equipa?.nome || ''} aoSair={() => setVerCerimonia(false)} />
+            ) : verCerimonia ? (
               <CerimoniaSorteio resultado={visao?.daRoleta || resultado} selo={visao?.selo} ajuste={visao?.ajuste} final={visao?.ajuste ? visao.final : null} />
             ) : (
               <>
                 <DrawnTeams resultado={resultado} teamCor={data?.equipa?.cor} />
                 <button type="button" className="btn btn--outline hud-corners-s" style={{ width: '100%', marginTop: 14 }} onClick={() => setVerCerimonia(true)}>
-                  Ver sorteio
+                  {aMao ? 'Ver times' : 'Ver sorteio'}
                 </button>
               </>
             )}

@@ -66,6 +66,31 @@ export async function rodar({ navegador, base, t }) {
     await page.context().close();
   }
 
+  // ── montado à mão: apresentação, sem roleta ───────────────────────────────────────────────────────────────────────────────────────
+  {
+    const page = await abrir('mao', 1100);
+    await page.locator('[data-apresentacao-dos-times]').waitFor();
+    t('à mão: não há máquina nem roleta', (await page.locator('.smaq').count()) === 0);
+    t('à mão: abre como anúncio de escalação', /ESCALAÇÃO/.test(await page.locator('[data-apresentacao-dos-times] header').innerText()));
+    const cedo = await page.evaluate(() => getComputedStyle(document.querySelectorAll('[data-apresentacao-dos-times] [data-cartao-jogador]')[5]).opacity);
+    t('os cartões entram um a um (o 6º ainda não entrou logo no começo)', Number(cedo) < 0.5, cedo);
+    await page.waitForTimeout(5200);
+    const nomes = await page.locator('[data-apresentacao-dos-times] [data-cartao-jogador]').allInnerTexts();
+    t('time a time, cartão a cartão: todos os jogadores, reserva no fim', JSON.stringify(nomes.map((n) => n.trim())) === JSON.stringify(['Magrão', 'Gonçalo', 'Tiago', 'Canhotinha', 'Zé', 'Roberto', 'Rafa']), JSON.stringify(nomes));
+    const tarde = await page.evaluate(() => [...document.querySelectorAll('[data-apresentacao-dos-times] [data-cartao-jogador]')].every((c) => getComputedStyle(c).opacity === '1'));
+    t('no fim, todos visíveis', tarde);
+    t('o selo prata: MONTADO À MÃO POR CHAVO', (await page.locator('[data-apresentacao-dos-times] [data-selo-do-sorteio="manual"] > div').first().innerText()).trim() === 'MONTADO À MÃO POR CHAVO');
+    t('dá para compartilhar (cartaz e 9:16 de cada time)', (await page.getByRole('button', { name: /Compartilhar os times/ }).count()) === 1 && (await page.getByRole('button', { name: /9:16 · Time/ }).count()) === 2);
+    await foto(page, 'selo-a-mao.png');
+    await page.getByRole('button', { name: 'Ver de novo' }).click();
+    await page.waitForTimeout(150);
+    const deNovo = await page.evaluate(() => getComputedStyle(document.querySelectorAll('[data-apresentacao-dos-times] [data-cartao-jogador]')[5]).opacity);
+    t('"Ver de novo" recomeça a apresentação', Number(deNovo) < 0.5, deNovo);
+    await page.getByRole('button', { name: 'Sair para a página do jogo' }).click();
+    t('o X sai da apresentação', await page.evaluate(() => window.__saiu === true));
+    await page.context().close();
+  }
+
   // ── a lista dos times (tela do jogo, link público) ────────────────────────────────────────────────────────────────────────────────
   {
     const page = await abrir('lista', 1400);

@@ -123,7 +123,8 @@ test('29P · o Explorar virou "Radar de peladas" em tudo o que aparece na tela (
   assert.match(ler('src/components/RouteTitle.jsx'), /\['\/explorar', 'Radar de peladas'\]/);
   const inicio = ler('src/pages/Inicio.jsx');
   // 29Q: o chip da fila saiu; o Radar de peladas vive num cartão (components/AtalhosDoInicio.jsx), com o mesmo ícone e o mesmo nome.
-  assert.match(inicio, /import \{ RefreshCw, Trophy \} from 'lucide-react';/);
+  // 30B: + Users, o ícone do "Ver times" (times montados à mão). O Radar continua fora do Início.
+  assert.match(inicio, /import \{ RefreshCw, Trophy, Users \} from 'lucide-react';/);
   assert.doesNotMatch(inicio, /<Radar /, 'o ícone do Radar já não vive no Início: foi para o cartão');
   const cartoes = ler('src/components/AtalhosDoInicio.jsx');
   assert.match(cartoes, /import \{ CirclePlus, Radar \} from 'lucide-react';/);

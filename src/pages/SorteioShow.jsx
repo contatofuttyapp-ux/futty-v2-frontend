@@ -15,6 +15,7 @@ import { estadoSorteio } from '../utils/estadoSorteio';
 import { visaoDoSorteio } from '../utils/seloDoSorteio';
 import LoadingFutty from '../components/LoadingFutty';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
+import ApresentacaoTimes from '../components/ApresentacaoTimes';
 import AdCard from '../components/AdCard';
 import Toast from '../components/Toast';
 import '../styles/app.css';
@@ -59,6 +60,8 @@ export default function SorteioShow() {
   const estado = estadoSorteio({ loading, error, resultado });
   // Como os times foram feitos: a máquina gira o que a roleta deu (num ajuste, o ORIGINAL) e o fim conta o resto.
   const visao = visaoDoSorteio(resultado);
+  // Times montados à mão não têm roleta: a página vira a apresentação dos times ("Ver times").
+  const aMao = visao?.tipo === 'manual';
   // A data do cartaz é a do CAMPO (fuso do time): "8 out 2026".
   const dataCartaz = game?.data
     ? formatarData(game.data, data?.team?.fuso, 'comAno').replace(/ de /g, ' ').replace(/\./g, '')
@@ -124,6 +127,15 @@ export default function SorteioShow() {
                 uma linha discreta com o 9:16 de cada um. É o único lugar: sem a barra
                 presa ao fundo (que cobria o retângulo) e sem os "Salvar" /
                 "Compartilhar" que a máquina tinha embaixo. */}
+            {aMao ? (
+              <ApresentacaoTimes
+                resultado={resultado}
+                selo={visao.selo}
+                equipa={data?.team?.nome || ''}
+                data={dataCartaz}
+                aoSair={() => { if (window.history.length > 1) window.history.back(); else navigate(`/time/${slug}/jogo/${id}`); }}
+              />
+            ) : (
             <CerimoniaSorteio
               resultado={visao?.daRoleta || resultado}
               selo={visao?.selo}
@@ -135,13 +147,14 @@ export default function SorteioShow() {
               bannerInterno={false}
               euSorteei={euSorteei}
             />
+            )}
 
             {/* O espaço de publicidade da página do sorteio: IAB
                 320×100, servido com pagina='sorteio' (toggle do dono no
                 Gabinete, filtro etário fail-closed no servidor). Só depois da
                 cerimónia: durante ela a tela é para olhar. Sem campanha o
                 AdCard devolve null e não fica buraco nem promessa na tela. */}
-            {jaTerminou ? (
+            {jaTerminou || aMao ? (
               <div style={{ marginTop: 18 }}>
                 <AdCard pagina="sorteio" variant="banner320x100" />
               </div>
@@ -152,12 +165,12 @@ export default function SorteioShow() {
                 o mesmo link sem declaração nenhuma; saiu na 14B). */}
             <div style={{ marginTop: 18, display: 'grid', gap: 8 }}>
               <button type="button" className="btn hud-corners-s cta-gold" style={{ width: '100%', fontFamily: RAJ, letterSpacing: '0.08em', textTransform: 'uppercase' }} onClick={pedirCopiar}>
-                Copiar link do sorteio
+                {aMao ? 'Copiar link dos times' : 'Copiar link do sorteio'}
               </button>
               <p className="muted" style={{ fontSize: 11, textAlign: 'center', margin: 0 }}>
                 {/* Sem a palavra "semente" (nosso nome técnico do número que torna o sorteio reproduzível): para quem joga
                     não quer dizer nada. O que vale é a ideia: quem abrir o link vê o mesmo sorteio, do mesmo jeito. */}
-                Quem abrir o link vê o mesmo sorteio, do mesmo jeito, sem precisar do app.
+                {aMao ? 'Quem abrir o link vê os mesmos times, sem precisar do app.' : 'Quem abrir o link vê o mesmo sorteio, do mesmo jeito, sem precisar do app.'}
               </p>
             </div>
           </>

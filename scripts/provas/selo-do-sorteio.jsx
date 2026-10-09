@@ -2,11 +2,13 @@
 // Bancada da prova dos selos do sorteio (scripts/provas/selo-do-sorteio.prova.mjs). `?caso=`:
 //   ajustado  a CerimoniaSorteio de verdade girando o ORIGINAL, com o passo do ajuste no fim
 //   sorteado  a CerimoniaSorteio de um sorteio que ninguém mexeu (selo ouro, "2º sorteio deste jogo")
+//   mao       a ApresentacaoTimes dos times montados à mão (sem roleta)
 //   lista     o DrawnTeams (tela do jogo e link público) nos três casos
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import CerimoniaSorteio from '../../src/components/CerimoniaSorteio';
 import DrawnTeams from '../../src/components/DrawnTeams';
+import ApresentacaoTimes from '../../src/components/ApresentacaoTimes';
 import { visaoDoSorteio } from '../../src/utils/seloDoSorteio';
 import '../../src/index.css';
 import '../../src/styles/app.css';
@@ -54,7 +56,9 @@ function Cerimonia({ tr }) {
 createRoot(document.getElementById('raiz')).render(
   <BrowserRouter>
     <div style={{ maxWidth: 480, margin: '0 auto' }}>
-      {caso === 'lista' ? (
+      {caso === 'mao' ? (
+        <div style={{ padding: 16 }}><ApresentacaoTimes resultado={aMao} selo={visaoDoSorteio(aMao).selo} equipa="Missa de Quinta" data="8 out 2026" aoSair={() => { window.__saiu = true; }} /></div>
+      ) : caso === 'lista' ? (
         <div style={{ padding: 16, display: 'grid', gap: 28 }}>
           <div data-lista="sorteado"><DrawnTeams resultado={sorteado} /></div>
           <div data-lista="ajustado"><DrawnTeams resultado={ajustado} /></div>

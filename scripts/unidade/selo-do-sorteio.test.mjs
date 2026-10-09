@@ -171,3 +171,41 @@ test('caso 2 · a entrada em sequência é só CSS e o estado natural é visíve
   assert.match(css, /\.entra-em-sequencia \{ animation: entraEmSequencia 0\.45s cubic-bezier\(0\.2, 0\.9, 0\.3, 1\) both; animation-delay: var\(--d, 0s\); \}/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\r?\n {2}\.entra-em-sequencia \{ animation: none; \}/);
 });
+
+// ── caso 3: montado à mão — apresentação, sem roleta, "Ver times" ────────────────────────────────────────────────────────────────
+test('caso 3 · a página do sorteio mostra a apresentação (não a máquina) quando os times foram montados à mão', () => {
+  const show = ler('src/pages/SorteioShow.jsx');
+  assert.match(show, /const aMao = visao\?\.tipo === 'manual';/);
+  assert.match(show, /\{aMao \? \(\s*<ApresentacaoTimes/);
+  assert.match(show, /\{aMao \? 'Copiar link dos times' : 'Copiar link do sorteio'\}/);
+  assert.match(show, /Quem abrir o link vê os mesmos times, sem precisar do app\./);
+});
+
+test('caso 3 · o link público: "Ver times" abre a apresentação e o cabeçalho não diz "sorteio"', () => {
+  const pub = ler('src/pages/SorteioPublico.jsx');
+  assert.match(pub, /\{verCerimonia && aMao \? \(\s*<ApresentacaoTimes/);
+  assert.match(pub, /\{aMao \? 'Ver times' : 'Ver sorteio'\}/);
+  assert.match(pub, /\{aMao \? 'os times' : 'sorteio dos times'\}/);
+});
+
+test('caso 3 · a tela do jogo: "Ver times" no lugar do "Ver sorteio" e "Times montados" no cabeçalho', () => {
+  const jogo = ler('src/pages/Jogo.jsx');
+  assert.match(jogo, /const timesAMao = !!game\?\.times_resultado && montadoAMao\(game\.times_resultado\);/);
+  assert.match(jogo, /\{game\.sorteio_realizado && timesAMao && \(/);
+  assert.match(jogo, /<Users size=\{16\} \/> Ver times/);
+  assert.match(jogo, /\{timesAMao \? 'Times montados' : 'Times sorteados'\}/);
+});
+
+test('caso 3 · o card do Início (motor manda montado_a_mao): "Montado" e "Ver times"', () => {
+  const inicio = ler('src/pages/Inicio.jsx');
+  assert.match(inicio, /\{game\.montado_a_mao \? 'Montado' : 'Sorteado'\}/);
+  assert.match(inicio, /game\.montado_a_mao \? <><Users size=\{16\} \/> Ver times<\/> : <><Trophy size=\{16\} \/> Ver sorteio<\/>/);
+});
+
+test('caso 3 · a apresentação não tem roleta e termina no selo prata; a entrada é a mesma sequência CSS', () => {
+  const ap = ler('src/components/ApresentacaoTimes.jsx');
+  assert.doesNotMatch(ap, /CerimoniaSorteio|mulberry32|seed/, 'sem máquina, sem semente');
+  assert.match(ap, /<TimesEmCartoes key=\{`times-\$\{vez\}`\} \{\.\.\.cartoes\} \/>/);
+  assert.match(ap, /<SeloDoSorteio selo=\{selo\} largo \/>/);
+  assert.match(ap, /ESCALAÇÃO/);
+});

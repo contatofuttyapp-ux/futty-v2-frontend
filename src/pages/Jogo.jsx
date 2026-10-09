@@ -1,6 +1,6 @@
 // Futty v2.0 — Detalhe do jogo: confirmados, marcação, sorteio e resultado
 import { useEffect, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, Users } from 'lucide-react';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
@@ -27,6 +27,7 @@ import { copiarTexto } from '../utils/clipboard';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import { motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
+import { montadoAMao } from '../utils/seloDoSorteio';
 import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
 
@@ -210,6 +211,8 @@ export default function Jogo() {
   const golsResultado = data?.gols || [];
   // Times do sorteio (para nomes, jogadores do resultado e artilheiro).
   const timesSorteio = game?.times_resultado?.times || [];
+  // Times montados à mão não tiveram roleta: o botão é "Ver times" (a apresentação) e o cabeçalho não diz "sorteados".
+  const timesAMao = !!game?.times_resultado && montadoAMao(game.times_resultado);
   // O placar também chama os times pelo nome da cerimônia ("Time Ouro × Time Roxo"), não pelo "Time A" do
   // motor.
   const nomeTimeA = nomeDoTimeNaTela(timesSorteio[0]?.nome, 0);
@@ -267,7 +270,7 @@ export default function Jogo() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                 <span style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 9px', clipPath: CLIP_S, color: game.status === 'em_curso' ? '#7bd88f' : game.status === 'cancelado' ? '#fda4af' : '#8ab4ff', border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.04)' }}>{STATUS_LABELS[game.status] || game.status}</span>
                 {game.sorteio_realizado && game.status === 'agendado' ? (
-                  <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', clipPath: CLIP_S, color: '#d4a017', border: '1px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>Times sorteados</span>
+                  <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', clipPath: CLIP_S, color: '#d4a017', border: '1px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>{timesAMao ? 'Times montados' : 'Times sorteados'}</span>
                 ) : null}
               </div>
             </div>
@@ -538,6 +541,13 @@ export default function Jogo() {
                 <span className="cta-gold-glow pulse-glow" style={{ display: 'flex', width: '100%' }}>
                   <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
                     <Trophy size={16} /> Ver sorteio
+                  </button>
+                </span>
+              )}
+              {game.sorteio_realizado && timesAMao && (
+                <span className="cta-gold-glow" style={{ display: 'flex', width: '100%' }}>
+                  <button type="button" className="btn hud-corners cta-gold" data-ver-times style={{ flex: 1 }} onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
+                    <Users size={16} /> Ver times
                   </button>
                 </span>
               )}
