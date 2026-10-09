@@ -350,7 +350,7 @@ export default function Equipa() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <FrameAvatar nome={nomeExibicao(me.user)} avatarUrl={me?.user?.avatar_url} userId={meuId} avatarGenerico={me?.user?.avatar_generico} size={44} />
                   <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 6, justifyItems: 'start' }}>
-                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, lineHeight: 1.1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeExibicao(me.user)}</div>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, lineHeight: 1.1, maxWidth: '100%', overflowWrap: 'anywhere' }}>{nomeExibicao(me.user)}</div>
                     {team.joga === false ? (
                       <span className="chip" data-so-organizo style={{ color: '#f0c94a', borderColor: 'rgba(212,160,23,0.5)', background: 'rgba(212,160,23,0.08)' }}>Você só organiza o time</span>
                     ) : (

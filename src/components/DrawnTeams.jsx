@@ -57,7 +57,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                   <span style={{ fontSize: 16, fontWeight: 900, color: '#d4a017', minWidth: 26 }}>{r.posicao ?? i + 1}º</span>
                   <PlayerAvatar nome={r.nome} avatarUrl={r.avatar_url} sm />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nome}</div>
+                    <div style={{ fontWeight: 700, color: '#fff', overflowWrap: 'anywhere' }}>{r.nome}</div>
                     {proximo && (
                       <span style={{ display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#8b5cf6', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 999, padding: '2px 8px' }}>
                         PRÓXIMO A ENTRAR

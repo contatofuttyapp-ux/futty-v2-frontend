@@ -258,7 +258,7 @@ export default function JogoPassado() {
                   <div key={m.id} className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: st.jogou ? 'rgba(212,160,23,0.06)' : 'rgba(255,255,255,0.02)', border: `1px solid ${st.jogou ? 'rgba(212,160,23,0.35)' : 'rgba(255,255,255,0.08)'}` }}>
                     <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', minWidth: 0, minHeight: 28 }}>
                       <input type="checkbox" checked={!!st.jogou} onChange={() => alternarJogou(m.id)} style={{ width: 18, height: 18, accentColor: '#d4a017' }} />
-                      <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: st.jogou ? '#fff' : 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nome || 'Jogador'}</span>
+                      <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: st.jogou ? '#fff' : 'var(--text-dim)', overflowWrap: 'anywhere' }}>{m.nome || 'Jogador'}</span>
                     </label>
                     {st.jogou ? (
                       <label className="check-inline" style={{ fontFamily: RAJ, fontSize: 12, flexShrink: 0 }}>

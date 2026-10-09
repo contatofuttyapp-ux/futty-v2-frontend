@@ -1210,7 +1210,7 @@ function ListaUsers({ users, titulo }) {
         {users.map((u) => (
           <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#fff' }}>
             <PlayerAvatar nome={nomeExibicao(u)} avatarUrl={u.avatar_url} userId={u.id} avatarGenerico={u.avatar_generico} sm />
-            <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nomeExibicao(u)}</span>
+            <span style={{ maxWidth: 120, overflowWrap: 'anywhere' }}>{nomeExibicao(u)}</span>
           </div>
         ))}
       </div>

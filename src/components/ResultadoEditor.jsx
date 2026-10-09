@@ -159,7 +159,7 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
             {jogadores.map((j) => (
               <div key={j.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <MiniAvatar nome={j.nome} avatarUrl={j.avatar_url} />
-                <span style={{ flex: 1, minWidth: 0, color: '#fff', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1, minWidth: 0, color: '#fff', fontSize: 14, overflowWrap: 'anywhere' }}>
                   {j.nome} <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>· {j.time}</span>
                 </span>
                 <button type="button" style={stepBtn} onClick={() => setGol(j.user_id, -1)} aria-label="Menos">−</button>
