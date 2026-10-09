@@ -3,11 +3,15 @@ import { TriangleAlert } from 'lucide-react';
 import { colorOf } from '../utils/teamColors';
 import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import { formatarAte } from '../utils/numero';
+import { visaoDoSorteio } from '../utils/seloDoSorteio';
 import PlayerAvatar from './PlayerAvatar';
+import SeloDoSorteio, { ListaDeTrocas } from './SeloDoSorteio';
 
 export default function DrawnTeams({ resultado, teamCor }) {
   if (!resultado?.times?.length) return null;
   const c = colorOf(teamCor);
+  // Como os times foram feitos (sorteado / ajustado / à mão) vem antes dos times: é a primeira coisa a saber deles.
+  const visao = visaoDoSorteio(resultado);
 
   // Não mostrar o aviso de "nenhum goleiro marcado" (mesmo em sorteios antigos)
   const avisos = (resultado.avisos || []).filter((a) => !/nenhum goleiro marcado/i.test(a));
@@ -15,6 +19,12 @@ export default function DrawnTeams({ resultado, teamCor }) {
 
   return (
     <>
+      {visao ? (
+        <div data-como-foram-feitos style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+          <SeloDoSorteio selo={visao.selo} />
+          {visao.ajuste ? <ListaDeTrocas trocas={visao.ajuste.trocas} /> : null}
+        </div>
+      ) : null}
       {avisos.map((aviso, i) => (
         <div className="aviso" key={i}>
           <TriangleAlert size={14} style={{ verticalAlign: '-2px' }} /> {aviso}
