@@ -19,9 +19,24 @@ export async function rodar({ navegador, base, t }) {
   await page.locator('[data-lista] .sorteio-team').first().waitFor();
   const nomesDaLista = () => page.evaluate(() => [...document.querySelectorAll('[data-lista] .sorteio-team')].map((tm) => [...tm.querySelectorAll('.sorteio-player > span:first-child')].map((s) => s.textContent)));
   const antes = await nomesDaLista();
-  t('antes: o sorteio com os 2 convidados no Time Roxo', antes[1].includes('Convidado Teste') && antes[1].includes('Convidado Dois'), JSON.stringify(antes));
+  // Desde a 30G (item 2) o nome do convidado na lista leva o ponto ("· Convidado Teste"): substring, não igualdade.
+  t('antes: o sorteio com os 2 convidados no Time Roxo', antes[1].some((n) => n.includes('Convidado Teste')) && antes[1].some((n) => n.includes('Convidado Dois')), JSON.stringify(antes));
   const golsAntes = await page.evaluate(() => document.querySelector('[data-gols]').textContent);
   t('antes: a lista de gols por jogador mostra os 2 convidados (a verificação de depois vale)', /Convidado Teste/.test(golsAntes) && /Convidado Dois/.test(golsAntes), golsAntes.slice(0, 200));
+
+  // Rodada 30G, item 3: dois convidados com contagens diferentes de gols não se misturam (achado da 30F — os dois
+  // caíam no mesmo contador por terem o mesmo user_id vazio). A linha de cada um é a mais funda com o nome dele.
+  const linhaDoConvidado = (nome) => page.locator('[data-gols] div').filter({ hasText: nome }).last();
+  const contador = (linha) => linha.locator('span').filter({ hasText: /^\d+$/ });
+  const maisDoConvidado = (nome) => linhaDoConvidado(nome).getByRole('button', { name: 'Mais' }).click();
+  await maisDoConvidado('Convidado Teste');
+  await maisDoConvidado('Convidado Teste');
+  await maisDoConvidado('Convidado Dois');
+  const depoisDosCliques = [await contador(linhaDoConvidado('Convidado Teste')).innerText(), await contador(linhaDoConvidado('Convidado Dois')).innerText()];
+  t('Convidado Teste está em 2 e Convidado Dois em 1 — cada um com o próprio contador', depoisDosCliques[0] === '2' && depoisDosCliques[1] === '1', JSON.stringify(depoisDosCliques));
+  await linhaDoConvidado('Convidado Dois').getByRole('button', { name: 'Menos' }).click();
+  const depoisDeZerar = [await contador(linhaDoConvidado('Convidado Teste')).innerText(), await contador(linhaDoConvidado('Convidado Dois')).innerText()];
+  t('zerar o Convidado Dois não encosta no Convidado Teste (contadores independentes, não um só por "sem id")', depoisDeZerar[0] === '2' && depoisDeZerar[1] === '0', JSON.stringify(depoisDeZerar));
 
   await page.locator('[data-salvar-a-mao]').click();
   await page.waitForTimeout(200);

@@ -20,7 +20,8 @@ const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
 
 test('30F-3 · as listas de jogadores do resultado têm key única também para o convidado sem app', () => {
   assert.match(ler('src/components/DrawnTeams.jsx'), /\{time\.jogadores\.map\(\(j, k\) => \(\s*<div className="sorteio-player" key=\{j\.user_id \|\| `convidado:\$\{k\}`\}>/);
-  assert.match(ler('src/components/ResultadoEditor.jsx'), /\{jogadores\.map\(\(j, k\) => \(\s*<div key=\{j\.user_id \|\| `convidado:\$\{k\}`\}/);
+  // 30G, item 3: o map ganhou um corpo em bloco (calcula a chaveDoJogador antes do key), mas o key do React continua o mesmo.
+  assert.match(ler('src/components/ResultadoEditor.jsx'), /\{jogadores\.map\(\(j, k\) => \{[\s\S]*?<div key=\{j\.user_id \|\| `convidado:\$\{k\}`\}/);
 });
 
 test('30F-3 · nenhuma lista de jogadores do RESULTADO volta a usar só o user_id como key', () => {

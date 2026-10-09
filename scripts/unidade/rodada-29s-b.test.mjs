@@ -181,7 +181,7 @@ test('"Pular" no passo 3 salva SEM times: só o jogo e as presenças (e o que o 
   const plano = planoCompleto({ comTimes: false });
   assert.deepEqual(plano.map((p) => p.id), ['jogo', 'presencas']);
   // Sem times, "quem ganhou" nem existe: mesmo que a pessoa tenha preenchido antes de voltar e pular, nada de resultado nem de campeão.
-  const comResto = planoCompleto({ comTimes: false, editor: { vencedor: 'A', placarA: '3', placarB: '1', golsMap: { U1: 2 } }, premios: { ...PREMIOS_VAZIOS, campeaoIdx: 1 } });
+  const comResto = planoCompleto({ comTimes: false, editor: { vencedor: 'A', placarA: '3', placarB: '1', golsMap: { 'u:U1': 2 } }, premios: { ...PREMIOS_VAZIOS, campeaoIdx: 1 } });
   assert.deepEqual(comResto.map((p) => p.id), ['jogo', 'presencas']);
   // Mas artilheiro e destaque continuam valendo sem times.
   const comPremio = planoCompleto({ comTimes: false, premios: { ...PREMIOS_VAZIOS, temArt: true, artId: 'U2', artGols: 3, temDest: true, destId: 'U1', destTitulo: ' Paredão ' } });
@@ -195,26 +195,26 @@ test('4 · o nível do resultado vem do que foi preenchido: sem vencedor 0 · s�
   const jogadores = jogadoresDoResultado(nomes, atrib, pool);
   assert.deepEqual(jogadores.map((j) => [j.user_id, j.time, j.timeIndex]), [['U1', 'Time Ouro', 0], ['U2', 'Time Roxo', 1], ['U3', 'Time Roxo', 1]], 'o convidado não tem conta, não tem gol');
   assert.equal(nivelDoPassado(RESULTADO_VAZIO, jogadores), 0);
-  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, golsMap: { U1: 2 } }, jogadores), 0, 'gols sem quem ganhou não gravam nada');
+  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, golsMap: { 'u:U1': 2 } }, jogadores), 0, 'gols sem quem ganhou não gravam nada');
   assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'empate' }, jogadores), 1);
   assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'A', placarA: '2', placarB: '1' }, jogadores), 2);
-  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'A', golsMap: { U1: 1 } }, jogadores), 3);
-  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'A', golsMap: { U1: 0 } }, jogadores), 1, 'gol zerado não conta');
+  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'A', golsMap: { 'u:U1': 1 } }, jogadores), 3);
+  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'A', golsMap: { 'u:U1': 0 } }, jogadores), 1, 'gol zerado não conta');
 });
 
 test('4 · o placar é opcional: enquanto a pessoa não mexe, mostra a soma dos gols que ela registrou (e vazio sem gols) — o mostrado é o enviado', () => {
   const { pool, nomes, atrib } = cenario();
   const jogadores = jogadoresDoResultado(nomes, atrib, pool);
-  assert.deepEqual(somaDeGolsPorTime({ U1: 2, U2: 1, U3: 3 }, jogadores), [2, 4]);
+  assert.deepEqual(somaDeGolsPorTime({ 'u:U1': 2, 'u:U2': 1, 'u:U3': 3 }, jogadores), [2, 4]);
   assert.equal(temGols({}), false);
   assert.deepEqual(placarEfetivo({ placarA: null, placarB: null, golsMap: {} }, jogadores), { a: '', b: '' });
-  assert.deepEqual(placarEfetivo({ placarA: null, placarB: null, golsMap: { U1: 2, U2: 1, U3: 3 } }, jogadores), { a: '2', b: '4' });
-  assert.deepEqual(placarEfetivo({ placarA: '5', placarB: null, golsMap: { U1: 2 } }, jogadores), { a: '5', b: '0' }, 'o que ela digitou ganha da soma');
-  const corpo = resultadoDoPassado({ nTimes: 2, usaTimes: true, editor: { vencedor: 'B', placarA: null, placarB: null, golsMap: { U1: 1, U2: 2, U3: 1 } }, premios: PREMIOS_VAZIOS, jogadores }).jogo;
+  assert.deepEqual(placarEfetivo({ placarA: null, placarB: null, golsMap: { 'u:U1': 2, 'u:U2': 1, 'u:U3': 3 } }, jogadores), { a: '2', b: '4' });
+  assert.deepEqual(placarEfetivo({ placarA: '5', placarB: null, golsMap: { 'u:U1': 2 } }, jogadores), { a: '5', b: '0' }, 'o que ela digitou ganha da soma');
+  const corpo = resultadoDoPassado({ nTimes: 2, usaTimes: true, editor: { vencedor: 'B', placarA: null, placarB: null, golsMap: { 'u:U1': 1, 'u:U2': 2, 'u:U3': 1 } }, premios: PREMIOS_VAZIOS, jogadores }).jogo;
   assert.equal(corpo.nivel, 3);
   assert.equal(corpo.placar_a, 1);
   assert.equal(corpo.placar_b, 3, 'o que a tela mostrou é o que foi gravado');
-  assert.deepEqual(corpo.gols, [{ user_id: 'U1', gols: 1 }, { user_id: 'U2', gols: 2 }, { user_id: 'U3', gols: 1 }]);
+  assert.deepEqual(corpo.gols, [{ user_id: 'U1', convidado_nome: null, gols: 1 }, { user_id: 'U2', convidado_nome: null, gols: 2 }, { user_id: 'U3', convidado_nome: null, gols: 1 }]);
 });
 
 test('4 · o vencedor vai para os DOIS campos que dizem isso: time_vencedor (resultado do jogo) e campeao_time_index (resultado do feed), para contar igual a qualquer outro jogo', () => {
@@ -294,9 +294,9 @@ test('o corpo do PATCH do feed é o MESMO que o modal de Ajustes sempre mandou (
   assert.equal(temPremio({ campeao_time_index: 0 }), true, 'campeão 0 (Time Ouro) é campeão');
   assert.equal(temPremio({ artilheiro_user_id: 'U2' }), true);
   // O corpo do resultado do Jogo: nível 3 manda placar e a lista de gols; níveis 1 e 2 não.
-  assert.deepEqual(corpoDoResultadoDoJogo({ nivel: 1, vencedor: 'A', placarA: 9, placarB: 9, golsMap: { U1: 4 } }, [{ user_id: 'U1' }]), { nivel: 1, time_vencedor: 'A' });
+  assert.deepEqual(corpoDoResultadoDoJogo({ nivel: 1, vencedor: 'A', placarA: 9, placarB: 9, golsMap: { 'u:U1': 4 } }, [{ user_id: 'U1' }]), { nivel: 1, time_vencedor: 'A' });
   assert.deepEqual(corpoDoResultadoDoJogo({ nivel: 2, vencedor: 'empate', placarA: '2', placarB: '2', golsMap: {} }, []), { nivel: 2, time_vencedor: 'empate', placar_a: 2, placar_b: 2 });
-  assert.deepEqual(corpoDoResultadoDoJogo({ nivel: 3, vencedor: 'B', placarA: '-1', placarB: 'x', golsMap: { U1: 2 } }, [{ user_id: 'U1' }, { user_id: 'U2' }]), { nivel: 3, time_vencedor: 'B', placar_a: 0, placar_b: 0, gols: [{ user_id: 'U1', gols: 2 }, { user_id: 'U2', gols: 0 }] });
+  assert.deepEqual(corpoDoResultadoDoJogo({ nivel: 3, vencedor: 'B', placarA: '-1', placarB: 'x', golsMap: { 'u:U1': 2 } }, [{ user_id: 'U1' }, { user_id: 'U2' }]), { nivel: 3, time_vencedor: 'B', placar_a: 0, placar_b: 0, gols: [{ user_id: 'U1', convidado_nome: null, gols: 2 }, { user_id: 'U2', convidado_nome: null, gols: 0 }] });
 });
 
 // ── 154 · o jogo só é gravado no fim ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -322,7 +322,7 @@ test('154 · NADA é gravado antes do "Salvar jogo": a página só chama o motor
 
 test('154 · "Salvar jogo" grava em sequência, COM times: jogo (histórico) → presenças → times à mão → resultado do jogo → resultado do feed', async () => {
   const { chamadas, chamar } = motorDeMentira();
-  const editor = { vencedor: 'B', placarA: '1', placarB: '3', golsMap: { U1: 1, U2: 2, U3: 1 } };
+  const editor = { vencedor: 'B', placarA: '1', placarB: '3', golsMap: { 'u:U1': 1, 'u:U2': 2, 'u:U3': 1 } };
   const premios = { ...PREMIOS_VAZIOS, temDest: true, destId: 'U2', destTitulo: 'Paredão' };
   const plano = planoCompleto({ editor, premios });
   const id = await executarPlano(plano, { gameId: null, feitos: [] }, chamar);
@@ -344,7 +344,7 @@ test('154 · "Salvar jogo" grava em sequência, COM times: jogo (histórico) →
     { nome: 'Time Roxo', jogadores: [{ user_id: 'U2', nome: 'Beto', avatar_url: 'https://x/b.png', convidado: false }, { user_id: 'U3', nome: 'Caio', avatar_url: null, convidado: false }] },
   ] });
   // 4) quem ganhou nos dois campos: time_vencedor aqui, campeao_time_index no feed
-  assert.deepEqual(chamadas[3].corpo, { nivel: 3, time_vencedor: 'B', placar_a: 1, placar_b: 3, gols: [{ user_id: 'U1', gols: 1 }, { user_id: 'U2', gols: 2 }, { user_id: 'U3', gols: 1 }] });
+  assert.deepEqual(chamadas[3].corpo, { nivel: 3, time_vencedor: 'B', placar_a: 1, placar_b: 3, gols: [{ user_id: 'U1', convidado_nome: null, gols: 1 }, { user_id: 'U2', convidado_nome: null, gols: 2 }, { user_id: 'U3', convidado_nome: null, gols: 1 }] });
   assert.deepEqual(chamadas[4].corpo, { campeao_time_index: 1, destaque_user_id: 'U2', destaque_titulo: 'Paredão' });
 });
 
