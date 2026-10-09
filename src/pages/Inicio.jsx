@@ -243,29 +243,39 @@ function CromoInicio({ cromo, previa, modoPrevia, fundo, nome, refCromo, destino
 }
 
 // Nome por baixo do cromo, em texto livre grande (o quadrado não o traz baked). Base 44px; encolhe até
-// caber numa linha, como o nome da figurinha: a letra desce até o nome caber, em qualquer largura (um
-// piso de 28px cortava "Chavo, el matad…" no computador). Só como defesa teórica há um piso
-// (PISO_NOME) e, abaixo dele, a reticência.
-// A medição é impura (scrollWidth) → useLayoutEffect, antes do paint, para o utilizador não
-// ver um salto de tamanho. Reajusta em resize e quando as fontes carregam (a Rajdhani mede
-// diferente da fallback).
+// caber numa linha, como o nome da figurinha: a letra desce até o nome caber, em qualquer largura. Só
+// como defesa teórica há um piso (PISO_NOME) e, abaixo dele, a reticência.
+// A medida é a do TEXTO, em sub-pixel (Range), e não scrollWidth: scrollWidth é inteiro e, com
+// text-overflow: ellipsis, o Chrome o devolve igual ao clientWidth mesmo com o texto meio pixel mais largo
+// (360,45 numa caixa de 360) — o laço não entrava e a reticência aparecia por esse meio pixel. Texto e caixa
+// medidos pelo mesmo getBoundingClientRect, para uma transformação no caminho (a entrada da página) afetar os
+// dois igual; 1 px de folga para o arredondamento da pintura não virar "…".
+// A medição é impura → useLayoutEffect, antes do paint, para o utilizador não ver um salto de tamanho.
+// Reajusta em resize e quando as fontes carregam (a Rajdhani mede diferente da fallback).
 const PISO_NOME = 9;
 export function NomeCromo({ nome }) {
   const ref = useRef(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    const larguraDoTexto = () => {
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      return r.getBoundingClientRect().width;
+    };
     const ajustar = () => {
       let f = 44;
       el.style.fontSize = `${f}px`;
-      // scrollWidth = largura do texto (nowrap); clientWidth = largura disponível
-      // (o div é bloco → ocupa a coluna). Primeiro o palpite proporcional (a largura do texto
-      // cresce com a letra), depois o ajuste fino de 1 em 1 px até caber.
-      if (el.scrollWidth > el.clientWidth && el.clientWidth > 0) {
-        f = Math.max(PISO_NOME, Math.floor((f * el.clientWidth) / el.scrollWidth));
+      const cabe = el.getBoundingClientRect().width - 1;
+      if (cabe <= 0) return; // fora da tela (display: none): mede de novo quando aparecer
+      // Primeiro o palpite proporcional (a largura do texto cresce com a letra), depois o ajuste fino de 1 em
+      // 1 px até caber.
+      const largura = larguraDoTexto();
+      if (largura > cabe) {
+        f = Math.max(PISO_NOME, Math.floor((f * cabe) / largura));
         el.style.fontSize = `${f}px`;
       }
-      while (el.scrollWidth > el.clientWidth && f > PISO_NOME) {
+      while (larguraDoTexto() > cabe && f > PISO_NOME) {
         f -= 1;
         el.style.fontSize = `${f}px`;
       }

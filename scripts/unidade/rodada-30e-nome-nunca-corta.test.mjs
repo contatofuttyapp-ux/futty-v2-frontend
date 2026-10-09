@@ -41,7 +41,7 @@ test('30E-1 · os seis lugares achados na varredura não cortam mais o nome com 
 test('30E-1 · o Início mantém a defesa de sempre: o NomeCromo encolhe a fonte, nunca ellipsis de verdade (achado 164 não regride)', () => {
   const inicio = ler('src/pages/Inicio.jsx');
   assert.match(inicio, /const PISO_NOME = 9;/);
-  assert.match(inicio, /while \(el\.scrollWidth > el\.clientWidth && f > PISO_NOME\)/);
+  assert.match(inicio, /while \(larguraDoTexto\(\) > cabe && f > PISO_NOME\)/); // 30F: medida sub-pixel
 });
 
 // Varredura de regressão: nenhum "ellipsis" (CSS ou inline) na mesma linha de um token que mostra o nome de
