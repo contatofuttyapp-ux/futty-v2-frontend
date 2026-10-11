@@ -81,17 +81,23 @@ function SelectJogador({ value, onChange, confirmados }) {
  * @param {Array<{ user_id: string, nome: string }>} [props.confirmados] quem pode ser artilheiro, destaque ou a rodada de cerveja (quem tem conta)
  * @param {{ gols: boolean, artilheiro: boolean, destaque: boolean }} [props.flags] o que o time conta (mostrar_gols, mostrar_artilheiro, mostrar_destaque)
  * @param {object} [props.inicial] só `devolver`: de onde retomar (a pessoa voltou a este passo)
+ * @param {{ campeaoIdx: number|null, empate: boolean }|null} [props.escolhaInicial] só `salvar`: o time (ou o empate) já escolhido na pergunta do Início
  * @param {(estado: object) => void} [props.aoMudar] só `devolver`
  * @param {string} [props.fuso] o fuso do time: a hora em que o resultado abre se lê no relógio do campo
  * @param {() => void} [props.onSaved] só `salvar`
  * @param {(mensagem: string, tipo?: string) => void} [props.showToast]
  */
-export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, gols = [], times = [], jogadores = [], confirmados = [], flags = { gols: true, artilheiro: true, destaque: true }, inicial = null, aoMudar = null, fuso, onSaved, showToast }) {
+export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, gols = [], times = [], jogadores = [], confirmados = [], flags = { gols: true, artilheiro: true, destaque: true }, inicial = null, escolhaInicial = null, aoMudar = null, fuso, onSaved, showToast }) {
   const devolver = modo === 'devolver';
   // O resultado abre 5 minutos depois do início do jogo (o Jogo passado, histórico, não tem trava).
   const podeSalvar = devolver || resultadoJaAbriu(game);
 
-  const [estado, setEstado] = useState(() => (devolver ? { ...RESULTADO_VAZIO, ...(inicial || {}) } : estadoDoJogo(game, gols)));
+  const [estado, setEstado] = useState(() => {
+    if (devolver) return { ...RESULTADO_VAZIO, ...(inicial || {}) };
+    const doJogo = estadoDoJogo(game, gols);
+    // A escolha feita na pergunta do Início ("Quem ganhou o jogo?") segue para cá — mas só num jogo que ainda não tem quem ganhou: o que o motor guardou manda.
+    return escolhaInicial && doJogo.campeaoIdx === null && !doJogo.empate ? { ...doJogo, campeaoIdx: escolhaInicial.campeaoIdx, empate: escolhaInicial.empate } : doJogo;
+  });
   const [busy, setBusy] = useState(false);
   const nTimes = times.length;
   const nomes = times.map((t) => t.nome);

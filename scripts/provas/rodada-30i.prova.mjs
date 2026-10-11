@@ -215,7 +215,7 @@ export async function rodar({ navegador, base, t }) {
       await page.waitForTimeout(500);
       const tipo = async () => ((await page.locator('[data-aviso]').count()) === 1 ? page.locator('[data-aviso]').first().getAttribute('data-aviso') : `${await page.locator('[data-aviso]').count()} avisos`);
       t(`${largura}px · Início: "Quem ganhou?" está acima de "colegas para avaliar" — e é o único aviso na tela`, (await tipo()) === 'quem-ganhou', await tipo());
-      t(`${largura}px · o card pergunta "Quem ganhou?", diz o time, o local e a hora do jogo`, /Quem ganhou\?/.test(await page.locator('[data-quem-ganhou-pergunta]').innerText()) && /Missa de Quinta · Quadra do Zé · /.test(await page.locator('[data-aviso="quem-ganhou"] [data-nome-do-time]').innerText()));
+      t(`${largura}px · o card pergunta "Quem ganhou o jogo?", diz o time, o local e a hora do jogo`, /Quem ganhou o jogo\?/.test(await page.locator('[data-quem-ganhou-pergunta]').innerText()) && /Missa de Quinta · Quadra do Zé · /.test(await page.locator('[data-aviso="quem-ganhou"] [data-nome-do-time]').innerText()));
       const cores = await page.locator('[data-quem-ganhou-time-cor]').evaluateAll((els) => els.map((el) => [el.textContent.trim(), getComputedStyle(el).borderTopColor, el.querySelector('svg')?.getAttribute('color') || el.querySelector('svg')?.style.color || '']));
       t(`${largura}px · os dois times com a cor e o escudo da cerimônia: Time Ouro (dourado) × Time Roxo (roxo)`, cores.length === 2 && cores[0][0] === 'Time Ouro' && cores[1][0] === 'Time Roxo' && cores[0][1] === 'rgb(212, 160, 23)' && cores[1][1] === 'rgb(139, 92, 246)' && (await page.locator('[data-quem-ganhou-time-cor] svg').count()) === 2, JSON.stringify(cores));
       const caixa = await page.locator('[data-aviso="quem-ganhou"]').boundingBox();
@@ -225,16 +225,17 @@ export async function rodar({ navegador, base, t }) {
       // um toque abre a pergunta
       await page.locator('[data-aviso="quem-ganhou"]').click();
       await page.locator('[data-quem-ganhou-titulo]').waitFor({ timeout: 8000 });
-      t(`${largura}px · um toque no card abre a pergunta, com um botão por time e "Empate"`, (await page.locator('[data-quem-ganhou-time]').count()) === 2 && (await page.locator('[data-quem-ganhou-empate]').count()) === 1 && (await page.locator('[data-quem-ganhou-titulo]').innerText()).trim() === 'Quem ganhou?');
+      t(`${largura}px · um toque no card abre a pergunta, com um botão por time e "Empate"`, (await page.locator('[data-quem-ganhou-time]').count()) === 2 && (await page.locator('[data-quem-ganhou-empate]').count()) === 1 && (await page.locator('[data-quem-ganhou-titulo]').innerText()).trim() === 'Quem ganhou o jogo?');
       t(`${largura}px · e o caminho para lançar gols e prêmios (o editor do jogo)`, (await page.locator('[data-quem-ganhou-detalhes]').getAttribute('href')) === '/time/missa/jogo/gq');
       if (largura === 390) await page.screenshot({ path: captura('30i-inicio-pergunta-390.png') });
       const dentro = await page.locator('.modal-card').evaluate((el) => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= window.innerWidth + 0.5; });
       t(`${largura}px · a janela da pergunta cabe na tela`, dentro);
 
-      // tocar no Time Roxo é o campeão: grava e o card some (entra o próximo da fila)
+      // tocar no Time Roxo escolhe; "Finalizar" grava o campeão e o card some (entra o próximo da fila)
       await page.locator('[data-quem-ganhou-time="1"]').click();
+      await page.locator('[data-quem-ganhou-finalizar]').click();
       await page.locator('[data-aviso="quem-ganhou"]').waitFor({ state: 'detached', timeout: 8000 });
-      t(`${largura}px · tocar no Time Roxo manda o campeão (índice 1) ao motor`, JSON.stringify(motor.chamadas) === JSON.stringify([{ caminho: '/api/games/gq/resultado', corpo: { campeao_time_index: 1, empate: false } }]), JSON.stringify(motor.chamadas));
+      t(`${largura}px · escolher o Time Roxo e finalizar manda o campeão (índice 1) ao motor`, JSON.stringify(motor.chamadas) === JSON.stringify([{ caminho: '/api/games/gq/resultado', corpo: { campeao_time_index: 1, empate: false } }]), JSON.stringify(motor.chamadas));
       await page.waitForTimeout(600);
       t(`${largura}px · o card some e entra o próximo aviso da fila ("colegas para avaliar")`, (await page.locator('[data-aviso="quem-ganhou"]').count()) === 0 && (await page.locator('[data-aviso="votacao"]').count()) === 1 && (await page.locator('[data-quem-ganhou-titulo]').count()) === 0);
       t(`${largura}px · Início: console sem erros`, semErrosReais(erros).length === 0, erros.slice(0, 2).join(' | '));
@@ -247,8 +248,9 @@ export async function rodar({ navegador, base, t }) {
       await page.locator('[data-aviso="quem-ganhou"]').waitFor({ timeout: 25000 });
       await page.locator('[data-aviso="quem-ganhou"]').click();
       await page.locator('[data-quem-ganhou-empate]').click();
+      await page.locator('[data-quem-ganhou-finalizar]').click();
       await page.locator('[data-aviso="quem-ganhou"]').waitFor({ state: 'detached', timeout: 8000 });
-      t(`${largura}px · "Empate" grava o empate explícito (sem campeão) e o card some`, JSON.stringify(motor.chamadas.map((c) => c.corpo)) === JSON.stringify([{ campeao_time_index: null, empate: true }]), JSON.stringify(motor.chamadas));
+      t(`${largura}px · "Empate" + Finalizar grava o empate explícito (sem campeão) e o card some`, JSON.stringify(motor.chamadas.map((c) => c.corpo)) === JSON.stringify([{ campeao_time_index: null, empate: true }]), JSON.stringify(motor.chamadas));
       await ctx.close();
     }
   }
@@ -259,10 +261,11 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('[data-aviso="quem-ganhou"]').waitFor({ timeout: 25000 });
     await page.locator('[data-aviso="quem-ganhou"]').click();
     await page.locator('[data-quem-ganhou-time="0"]').click();
+    await page.locator('[data-quem-ganhou-finalizar]').click();
     await page.locator('[data-quem-ganhou-erro]').waitFor({ timeout: 8000 });
     t('se o motor recusa, a pergunta continua aberta e mostra o motivo (nada some)', /abre 5 minutos/.test(await page.locator('[data-quem-ganhou-erro]').innerText()) && (await page.locator('[data-quem-ganhou-time="0"]').isEnabled()) && (await page.locator('[data-aviso="quem-ganhou"]').count()) === 1);
     await page.locator('[data-quem-ganhou-fechar]').click();
-    t('"Agora não" fecha a janela e o card continua lá', (await page.locator('[data-quem-ganhou-titulo]').count()) === 0 && (await page.locator('[data-aviso="quem-ganhou"]').count()) === 1);
+    t('o X fecha a janela e o card continua lá', (await page.locator('[data-quem-ganhou-titulo]').count()) === 0 && (await page.locator('[data-aviso="quem-ganhou"]').count()) === 1);
     await ctx.close();
   }
   {
@@ -274,8 +277,9 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('[data-aviso="quem-ganhou"]').click();
     t('3 times: um botão por time e nenhum "Empate"', (await page.locator('[data-quem-ganhou-time]').count()) === 3 && (await page.locator('[data-quem-ganhou-empate]').count()) === 0);
     await page.locator('[data-quem-ganhou-time="2"]').click();
+    await page.locator('[data-quem-ganhou-finalizar]').click();
     await page.locator('[data-aviso="quem-ganhou"]').waitFor({ state: 'detached', timeout: 8000 });
-    t('3 times: tocar no 3º manda o campeão (índice 2), sem empate', JSON.stringify(motor.chamadas.map((c) => c.corpo)) === JSON.stringify([{ campeao_time_index: 2, empate: false }]));
+    t('3 times: escolher o 3º e finalizar manda o campeão (índice 2), sem empate', JSON.stringify(motor.chamadas.map((c) => c.corpo)) === JSON.stringify([{ campeao_time_index: 2, empate: false }]));
     await ctx.close();
   }
   {

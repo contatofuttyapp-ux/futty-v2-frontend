@@ -265,7 +265,7 @@ test('4 · o passo 4 é o MESMO editor da tela do jogo, no modo "devolver": gols
 
 test('o editor é UM só, com o modo "devolver" (sem copiar código): o Jogo e Ajustes abrem o mesmo e salvam como sempre', () => {
   const editor = ler('src/components/ResultadoEditor.jsx');
-  assert.match(editor, /modo = 'salvar', gameId, game = \{\}, gols = \[\], times = \[\], jogadores = \[\], confirmados = \[\], flags = \{ gols: true, artilheiro: true, destaque: true \}, inicial = null, aoMudar = null, fuso, onSaved, showToast/);
+  assert.match(editor, /modo = 'salvar', gameId, game = \{\}, gols = \[\], times = \[\], jogadores = \[\], confirmados = \[\], flags = \{ gols: true, artilheiro: true, destaque: true \}, inicial = null, escolhaInicial = null, aoMudar = null, fuso, onSaved, showToast/);
   assert.match(editor, /if \(devolver\) aoMudar\?\.\(novo\);/);
   assert.match(editor, /import \{[^}]*corpoDoResultadoDoJogo[^}]*corpoDosPremios[^}]*\} from '\.\.\/utils\/resultadoDoJogo';/, 'os dois corpos dos pedidos são de funções só');
   assert.match(editor, /apiFetch\(`\/api\/games\/\$\{gameId\}\/resultado`, \{ method: 'PATCH'/, 'o modo salvar grava o resultado do jogo');

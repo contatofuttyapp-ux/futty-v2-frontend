@@ -22,6 +22,8 @@ function CenaInicio() {
     <Layout>
       <Routes>
         <Route path="/home" element={<Inicio />} />
+        {/* "Lançar gols e prêmios" da pergunta leva à tela do jogo (o editor), já com a escolha. */}
+        <Route path="/time/:slug/jogo/:id" element={<Jogo />} />
         <Route path="*" element={<div data-casa>BANCADA</div>} />
       </Routes>
     </Layout>

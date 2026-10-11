@@ -142,7 +142,7 @@ export async function rodar({ navegador, base, t }) {
       pendencia: document.querySelector('[data-um] [data-pendencia="presenca"]')?.innerText.trim(),
     }));
     t('com UM time o card é o de sempre: "Seu time", pendência e os 4 atalhos já à vista (nada de lista)',
-      um.card === 1 && um.lista === 0 && /^seu time$/i.test(um.rotulo) && um.atalhos.join(' · ') === 'Painel do time · Novo jogo · Sortear · Convidar' && /^Sexta, 9 de out\.: presença ainda não aberta$/.test(um.pendencia), JSON.stringify(um));
+      um.card === 1 && um.lista === 0 && /^seu time$/i.test(um.rotulo) && um.atalhos.join(' · ') === 'Painel · Novo jogo · Sortear · Convidar' && /^Sexta, 9 de out\.: presença ainda não aberta$/.test(um.pendencia), JSON.stringify(um));
 
     const dois = page.locator('[data-dois]');
     const estadoFechado = await page.evaluate(() => {
@@ -179,7 +179,7 @@ export async function rodar({ navegador, base, t }) {
       abrir: el.querySelector('[data-abrir-o-time]')?.getAttribute('href'),
     }));
     t('tocar na linha abre os quatro atalhos, na ordem de sempre, com os mesmos destinos',
-      aberto.atalhos.map((a) => a[0]).join(' · ') === 'Painel do time · Novo jogo · Sortear · Convidar'
+      aberto.atalhos.map((a) => a[0]).join(' · ') === 'Painel · Novo jogo · Sortear · Convidar'
       && aberto.atalhos[0][1] === '/time/missa?aba=ajustes' && aberto.atalhos[1][1] === '/time/missa/jogo/novo'
       && aberto.atalhos[2][1] === '/time/missa/jogo/g2' && aberto.atalhos[3][1] === '/time/missa?aba=elenco&convidar=1', JSON.stringify(aberto));
     // 29R (achado 147): a linha de presença deixou de levar só à aba Jogos; leva ao jogo (g2) e já abre o "Abrir presença" dele.
@@ -328,7 +328,7 @@ export async function rodar({ navegador, base, t }) {
       const dentro = r.abas.every((a) => a.dir <= r.linha[1] + 0.5 && a.esq >= r.linha[0] - 0.5);
       const semSobrepor = r.abas.every((a, i) => i === 0 || a.esq >= r.abas[i - 1].dir - 0.5);
       const semEstourar = r.abas.every((a) => !a.estoura);
-      t(`${largura} px: as quatro (Jogos · Elenco · Ajustes · Ranking) cabem na linha, sem sobrepor e sem o texto estourar`, r.abas.length === 4 && dentro && semSobrepor && semEstourar, JSON.stringify(r));
+      t(`${largura} px: as quatro (Jogos · Elenco · Painel · Ranking) cabem na linha, sem sobrepor e sem o texto estourar`, r.abas.length === 4 && dentro && semSobrepor && semEstourar, JSON.stringify(r));
       t(`${largura} px: nada vaza para o lado`, r.documento <= largura, `documento ${r.documento}px`);
       const seloEsperado = largura <= 380 ? r.selo <= 8 : r.selo >= 28;
       t(`${largura} px: o selo ADMIN é ${largura <= 380 ? 'um ponto dourado' : 'o selo de sempre'}`, seloEsperado, `${r.selo}px de largura`);

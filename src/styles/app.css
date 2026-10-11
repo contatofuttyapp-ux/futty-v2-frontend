@@ -3292,8 +3292,8 @@
 }
 
 /*
- * As abas do time (Jogos · Elenco · Ajustes[ADMIN] · Ranking). Cada uma tem a largura do próprio texto e
- * divide a sobra (flex: 1 1 auto), em vez de partes iguais, onde "Ajustes" + selo estourava a sua parte
+ * As abas do time (Jogos · Elenco · Painel[ADMIN] · Ranking). Cada uma tem a largura do próprio texto e
+ * divide a sobra (flex: 1 1 auto), em vez de partes iguais, onde "Painel" + selo estourava a sua parte
  * e empurrava o "Ranking" para a borda.
  */
 .aba-time {

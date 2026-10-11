@@ -3,7 +3,7 @@
 // O que se trava aqui (o gesto, a aba e o toque de verdade são provados no navegador: npm run provar:navegador, "Página do time"):
 //   · o card "Seu time" do Início: uma linha por pendência, com destino, e o "Tudo tranquilo" quando não há nenhuma; o "Sortear" vai
 //     ao próximo jogo do time;
-//   · a página do time tem as abas Jogos · Elenco · Ajustes (Ajustes só para o admin, com o selo ADMIN), "Voltar" pelo histórico;
+//   · a página do time tem as abas Jogos · Elenco · Painel (o Painel só para o admin, com o selo ADMIN), "Voltar" pelo histórico;
 //   · o Perfil não tem mais "Painel de administração"; tem "Meus times" (cada um leva ao time) e as Notificações por tipo;
 //   · os textos: "AÇÕES DEFINITIVAS" (nome do dono; na 29R a única ação dela virou o cartão "Nova temporada de notas" e a seção saiu),
 //     "Nova temporada de notas" (era "Pedir para votar de novo") zera as notas, item 69 (admin ≠ posição), e a hora do jogo nunca é
@@ -43,7 +43,7 @@ test('card "Seu time": uma linha por pendência, na ordem, cada uma levando ao l
 test('card "Seu time": sempre aparece para o admin; sem pendência, "Tudo tranquilo por aqui." e os 4 atalhos com nome', () => {
   const card = ler('src/components/CardSeuTime.jsx');
   assert.match(card, /Tudo tranquilo por aqui\./);
-  for (const atalho of ['Painel do time', 'Novo jogo', 'Sortear', 'Convidar']) assert.match(card, new RegExp(`rotulo="${atalho}"`), atalho);
+  for (const atalho of ['Painel', 'Novo jogo', 'Sortear', 'Convidar']) assert.match(card, new RegExp(`rotulo="${atalho}"`), atalho);
   assert.match(card, /\?aba=elenco&convidar=1/, 'o Convidar abre o convite na aba Elenco');
 });
 
@@ -59,9 +59,9 @@ test('"Sortear" vai ao próximo jogo do time (é lá que se sorteia); sem jogo m
   assert.equal(destinoDoSortear('missa', 'T1', []), '/time/missa/jogo/novo');
 });
 
-test('a página do time: abas Jogos · Elenco · Ajustes no estilo da Figurinha; Ajustes só para o admin, com o selo ADMIN', () => {
+test('a página do time: abas Jogos · Elenco · Painel no estilo da Figurinha; o Painel (chave ajustes) só para o admin, com o selo ADMIN', () => {
   const equipa = ler('src/pages/Equipa.jsx');
-  assert.match(equipa, /\[\['jogos', 'Jogos'\], \['elenco', 'Elenco'\], \.\.\.\(ehAdmin \? \[\['ajustes', 'Ajustes'\]\] : \[\]\)\]/);
+  assert.match(equipa, /\[\['jogos', 'Jogos'\], \['elenco', 'Elenco'\], \.\.\.\(ehAdmin \? \[\['ajustes', 'Painel'\]\] : \[\]\)\]/);
   assert.match(equipa, /data-selo-admin/);
   assert.match(equipa, /className="hud-corners-s aba-time"/);
   assert.match(equipa, /background: on \? 'rgba\(139,92,246,0\.2\)' : 'transparent'/, 'as mesmas medidas das abas da Figurinha');

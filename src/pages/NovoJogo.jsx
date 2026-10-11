@@ -130,7 +130,7 @@ export default function NovoJogo() {
                 <button type="button" className="btn btn--ghost btn--sm" data-voltar-ao-padrao style={{ justifySelf: 'start', marginTop: 6, color: ROXO_CLARO, borderColor: 'rgba(139,92,246,0.5)' }} onClick={() => setPorTime(null)}>voltar ao padrão ({padraoDoTime})</button>
               </>
             )}
-            <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>O número de times sai no sorteio, conforme os confirmados. O padrão muda em Ajustes do time.</span>
+            <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>O número de times sai no sorteio, conforme os confirmados. O padrão muda no Painel do time.</span>
           </div>
 
           <button type="submit" className="btn hud-corners-s cta-gold" style={{ width: '100%', marginTop: 8, fontFamily: RAJ, letterSpacing: '0.08em', textTransform: 'uppercase' }} disabled={loading}>

@@ -46,8 +46,8 @@ test('cardsQuemGanhou: com mais de um time, o jogo que espera há mais tempo vem
   assert.deepEqual(lista.map((c) => c.game_id), ['g1', 'g2']);
 });
 
-test('a pergunta: "Quem ganhou?" com 2 times (cabe empate); "Quem foi o campeão?" com 3 ou 4 (sem empate)', () => {
-  assert.deepEqual(perguntaDoJogo(2), { titulo: 'Quem ganhou?', temEmpate: true });
+test('a pergunta: "Quem ganhou o jogo?" com 2 times (cabe empate); "Quem foi o campeão?" com 3 ou 4 (sem empate)', () => {
+  assert.deepEqual(perguntaDoJogo(2), { titulo: 'Quem ganhou o jogo?', temEmpate: true });
   assert.deepEqual(perguntaDoJogo(3), { titulo: 'Quem foi o campeão?', temEmpate: false });
   assert.deepEqual(perguntaDoJogo(4), { titulo: 'Quem foi o campeão?', temEmpate: false });
 });
@@ -79,12 +79,12 @@ test('o Início desenha o card pela fila (só o primeiro), responde, some com o 
   assert.match(inicio, /async function quemGanhouRespondido\(card\) \{\s*setQuemGanhouRespondidos\(\(lista\) => \[\.\.\.lista, card\.game_id\]\);\s*await inicio\.reload\(\);\s*\}/);
 });
 
-test('o aviso: um toque no card abre a pergunta; tocar num time grava o campeão pelo MESMO pedido do editor; Empate só com 2 times; a hora leva a cidade', () => {
+test('o aviso: um toque no card abre a pergunta; "Finalizar" grava o campeão pelo MESMO pedido do editor; Empate só com 2 times; a hora leva a cidade', () => {
   const fonte = ler('src/components/AvisoQuemGanhou.jsx');
   const codigo = semComentarios(fonte);
   assert.match(codigo, /data-aviso="quem-ganhou"/);
   assert.match(codigo, /onClick=\{\(\) => setAberto\(true\)\}/, 'o card inteiro é o toque');
-  assert.match(codigo, /apiFetch\(`\/api\/games\/\$\{card\.game_id\}\/resultado`, \{ method: 'PATCH', body: JSON\.stringify\(corpoDaResposta\(resposta\)\) \}\)/);
+  assert.match(codigo, /apiFetch\(`\/api\/games\/\$\{card\.game_id\}\/resultado`, \{ method: 'PATCH', body: JSON\.stringify\(corpoDaResposta\(escolha\)\) \}\)/);
   assert.match(codigo, /\{temEmpate \? \(/, 'o botão Empate só existe quando a pergunta o aceita');
   assert.match(codigo, /Lançar gols e prêmios/, 'os gols e os prêmios continuam no editor do jogo');
   assert.match(codigo, /to=\{`\/time\/\$\{card\.slug\}\/jogo\/\$\{card\.game_id\}`\}/);

@@ -1,4 +1,4 @@
-// Futty v2.0 — O card "Quem ganhou?" do Início, puro (sem React, sem rede), para testar no Node. O motor entrega o card pronto (GET /api/inicio →
+// Futty v2.0 — O card "Quem ganhou o jogo?" do Início, puro (sem React, sem rede), para testar no Node. O motor entrega o card pronto (GET /api/inicio →
 // seu_time[].quem_ganhou, só para o admin, do jogo sorteado 5 minutos depois do início até alguém marcar o campeão ou o empate); aqui vira a lista
 // de avisos da fila do Início e o corpo do pedido que responde à pergunta.
 import { CORES_DAS_POSICOES, nomeDoTimeNaTela } from './nomeDoTime';
@@ -28,9 +28,20 @@ export function cardsQuemGanhou(seuTime, respondidos = [], teams = []) {
     .sort((a, b) => Date.parse(a.data) - Date.parse(b.data));
 }
 
-/** A pergunta: com 2 times "Quem ganhou?" (e cabe empate); com 3 ou 4 (rodízio) "Quem foi o campeão?" — sem empate. */
+/** A pergunta: com 2 times "Quem ganhou o jogo?" (e cabe empate); com 3 ou 4 (rodízio) "Quem foi o campeão?" — sem empate. */
 export function perguntaDoJogo(nTimes) {
-  return { titulo: nTimes >= 3 ? 'Quem foi o campeão?' : 'Quem ganhou?', temEmpate: nTimes === 2 };
+  return { titulo: nTimes >= 3 ? 'Quem foi o campeão?' : 'Quem ganhou o jogo?', temEmpate: nTimes === 2 };
+}
+
+/**
+ * A escolha da pergunta no formato do editor do jogo (`campeaoIdx`/`empate`), para ela não se perder quando a pessoa segue para "Lançar gols e
+ * prêmios". Sem escolha, nada vai.
+ * @param {number|'empate'|null} resposta o índice do time tocado, 'empate' ou null
+ * @returns {{ campeaoIdx: number|null, empate: boolean }|null}
+ */
+export function escolhaParaOEditor(resposta) {
+  if (resposta === 'empate') return { campeaoIdx: null, empate: true };
+  return Number.isInteger(resposta) && resposta >= 0 ? { campeaoIdx: resposta, empate: false } : null;
 }
 
 /**

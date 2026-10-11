@@ -1552,27 +1552,23 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
     const temResultado = jogoTemResultado(g);
     const semResultado = !cancelado && g.sorteio_realizado && !temResultado;
     return (
-      <div key={g.id} data-jogo={emAndamento ? g.id : undefined} data-jogo-em-andamento={emAndamento ? '' : undefined} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10, opacity: cancelado ? 0.55 : 1 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {emAndamento ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
-              <BadgeStatus status="em_curso" />
-            </div>
-          ) : (
-            <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
-          )}
+      <div key={g.id} data-jogo={emAndamento ? g.id : undefined} data-jogo-em-andamento={emAndamento ? '' : undefined} data-linha-de-jogo style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 10px', opacity: cancelado ? 0.55 : 1 }}>
+        {/* O título e a data nunca ficam mais estreitos que 150 px: quando o selo e os botões não cabem ao lado, descem juntos para uma segunda linha, abaixo do título. */}
+        <div style={{ flex: '1 1 150px', minWidth: 150 }}>
+          <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso, { cidade: team?.cidade })}</div>
         </div>
-        {semResultado ? (
-          <button type="button" className="btn btn--purple btn--sm" data-lancar-resultado onClick={() => setLancar(g)}>Lançar resultado</button>
-        ) : (
-          <>
-            {emAndamento ? null : <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>}
-            {temResultado ? <button type="button" className="btn btn--ghost btn--sm" onClick={() => setLancar(g)}>Editar resultado</button> : null}
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${g.id}`)}>Ver</button>
-          </>
-        )}
+        <div data-linha-de-jogo-acoes style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {emAndamento ? <BadgeStatus status="em_curso" /> : semResultado ? null : <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>}
+          {semResultado ? (
+            <button type="button" className="btn btn--purple btn--sm" data-lancar-resultado onClick={() => setLancar(g)}>Lançar resultado</button>
+          ) : (
+            <>
+              {temResultado ? <button type="button" className="btn btn--ghost btn--sm" onClick={() => setLancar(g)}>Editar resultado</button> : null}
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${g.id}`)}>Ver</button>
+            </>
+          )}
+        </div>
       </div>
     );
   }

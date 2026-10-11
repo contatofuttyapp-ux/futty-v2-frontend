@@ -662,6 +662,7 @@ export default function Jogo() {
                   confirmados={confirmadosTodos}
                   flags={flagsDoTime(timeCompleto)}
                   fuso={team?.fuso}
+                  escolhaInicial={location.state?.quemGanhou || null}
                   onSaved={reload}
                   showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })}
                 />

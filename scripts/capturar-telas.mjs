@@ -283,7 +283,7 @@ const aba = (k) => ({
   rota: (d) => `/time/${d.slug}?aba=${k}`,
   caminho: new RegExp(`^/time/[^/]+\\?aba=${k}$`),
   seletor: `[role="tab"][data-aba="${k}"][aria-selected="true"]`,
-  dica: k === 'ajustes' ? 'a aba Ajustes só existe para admin do time; use uma conta admin' : 'a aba não abriu',
+  dica: k === 'ajustes' ? 'a aba Painel só existe para admin do time; use uma conta admin' : 'a aba não abriu',
 });
 
 async function medirFaixaDeCookies(pagina) {

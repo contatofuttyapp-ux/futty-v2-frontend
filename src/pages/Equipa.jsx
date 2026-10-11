@@ -78,12 +78,12 @@ function Badge45({ children, gold }) {
   );
 }
 
-// As abas, no estilo das da Figurinha (as mesmas medidas). Ajustes só para o admin, com o selo ADMIN.
+// As abas, no estilo das da Figurinha (as mesmas medidas). O Painel só para o admin, com o selo ADMIN.
 // O Ranking é um item do MESMO tamanho das abas, na mesma linha — uma barra solta, de largura total,
 // parecia banner, não botão (mas é navegação para outra página, não uma aba: por isso fica fora do
 // role="tablist", sem role="tab").
 // Tudo o que decide a LARGURA da aba (fonte, espaçamento, selo) vive na classe .aba-time (app.css), que muda
-// por largura de tela, e não no estilo em linha. Com `flex: 1` (partes iguais) a aba "Ajustes" + selo ADMIN
+// por largura de tela, e não no estilo em linha. Com `flex: 1` (partes iguais) a aba "Painel" + selo ADMIN
 // não cabia na sua parte e empurrava o resto; por isso cada aba tem a largura do próprio texto e divide a
 // sobra. Em telas estreitas o selo vira um ponto dourado.
 const ESTILO_ABA = (on) => ({
@@ -100,7 +100,7 @@ const ESTILO_ABA = (on) => ({
 });
 
 function AbasDoTime({ aba, ehAdmin, aoTrocar, slug }) {
-  const abas = [['jogos', 'Jogos'], ['elenco', 'Elenco'], ...(ehAdmin ? [['ajustes', 'Ajustes']] : [])];
+  const abas = [['jogos', 'Jogos'], ['elenco', 'Elenco'], ...(ehAdmin ? [['ajustes', 'Painel']] : [])];
   return (
     <div style={{ display: 'flex', gap: 6, marginTop: 14 }}>
       <div role="tablist" aria-label="Seções do time" style={{ display: 'flex', gap: 6, flex: `${abas.length} 1 auto`, minWidth: 0 }}>

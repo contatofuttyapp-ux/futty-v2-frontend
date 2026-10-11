@@ -18,7 +18,7 @@ export const TEXTOS = {
   ajudaDosTimes: 'Toque num time e depois em quem jogou nele.',
   semJogadoresNosTimes: 'Ninguém jogou ainda. Volte ao passo anterior e marque quem jogou.',
   terminou: 'Como terminou?',
-  semResultado: 'O jogo fica salvo com quem jogou, sem resultado. Dá para lançar depois, em Ajustes → Jogos.',
+  semResultado: 'O jogo fica salvo com quem jogou, sem resultado. Dá para lançar depois, no Painel → Jogos.',
   naoAconteceu: 'Esse jogo ainda não aconteceu. Confira a data e a hora.',
   faltaQuando: 'Falta a data do jogo. Volte ao primeiro passo.',
   faltaQuemJogou: 'Ninguém foi marcado. Volte ao passo Quem jogou.',

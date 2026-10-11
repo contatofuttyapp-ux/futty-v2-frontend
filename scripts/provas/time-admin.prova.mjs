@@ -9,7 +9,7 @@ export const nome = 'Página do time (abas, Voltar pelo histórico, membro por t
 
 const DIA = 86400000;
 
-function motor(papel, { comLogo = false, doisFuturos = false } = {}) {
+export function motor(papel, { comLogo = false, doisFuturos = false } = {}) {
   const agora = Date.now();
   const team = {
     id: 'T1', slug: 'varzea-fc', nome: 'Várzea FC', cor: 'vinho', escudo_cor2: 'ouro', escudo_padrao: 'faixa', role: papel, joga: true,
@@ -50,7 +50,7 @@ function motor(papel, { comLogo = false, doisFuturos = false } = {}) {
 }
 
 // O motor de mentira em /api/**; o Vite da prova passa; qualquer outra coisa (Supabase, fontes) nem sai da máquina.
-function rotear(responder, base) {
+export function rotear(responder, base) {
   const origem = new URL(base).host;
   return (route) => {
     const u = new URL(route.request().url());
@@ -90,8 +90,8 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('[data-ir]').click();
     await page.locator('[role="tab"]').first().waitFor({ timeout: 15000 });
     const abas = (await page.locator('[role="tab"]').allInnerTexts()).map((s) => s.replace(/\s+/g, ' ').trim());
-    t('admin vê três abas: Jogos · Elenco · Ajustes', abas.length === 3 && /^jogos$/i.test(abas[0]) && /^elenco$/i.test(abas[1]) && /^ajustes/i.test(abas[2]), abas.join(' | '));
-    t('a aba Ajustes leva o selo ADMIN', (await page.locator('[data-aba="ajustes"] [data-selo-admin]').count()) === 1);
+    t('admin vê três abas: Jogos · Elenco · Painel', abas.length === 3 && /^jogos$/i.test(abas[0]) && /^elenco$/i.test(abas[1]) && /^painel/i.test(abas[2]), abas.join(' | '));
+    t('a aba Painel leva o selo ADMIN', (await page.locator('[data-aba="ajustes"] [data-selo-admin]').count()) === 1);
     t('Jogos é a aba de abertura', (await page.locator('[data-aba="jogos"]').getAttribute('aria-selected')) === 'true');
 
     await page.locator('[data-jogos-admin]').waitFor({ timeout: 15000 });
@@ -166,7 +166,7 @@ export async function rodar({ navegador, base, t }) {
     await irPara(page, '/time/varzea-fc?aba=ajustes');
     await page.locator('[role="tab"]').first().waitFor({ timeout: 15000 });
     const abas = (await page.locator('[role="tab"]').allInnerTexts()).map((s) => s.trim());
-    t('jogador vê duas abas (sem Ajustes)', abas.length === 2 && !abas.some((a) => /ajustes/i.test(a)), abas.join(' | '));
+    t('jogador vê duas abas (sem Painel)', abas.length === 2 && !abas.some((a) => /painel/i.test(a)), abas.join(' | '));
     t('jogador que abre ?aba=ajustes cai em Jogos', (await page.locator('[data-aba="jogos"]').getAttribute('aria-selected')) === 'true');
     t('nada do admin para o jogador (sem Nova temporada de notas, sem "Novo jogo")', !/Ações definitivas|Nova temporada de notas|Novo jogo/i.test(await page.locator('body').innerText()));
     t('a página do jogador roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
@@ -207,8 +207,8 @@ export async function rodar({ navegador, base, t }) {
     const linhas = await page.locator('[data-com-pendencias] [data-pendencia]').allInnerTexts();
     t('uma linha por pendência: pedido, presença, resultado, denúncia', linhas.length === 4 && /2 pedidos de entrada/.test(linhas[0]) && /presença ainda não aberta/.test(linhas[1]) && /por lançar/.test(linhas[2]) && /1 denúncia/.test(linhas[3]), linhas.join(' | '));
     const atalhos = await page.locator('[data-com-pendencias] [data-atalho]').evaluateAll((els) => els.map((e) => [e.getAttribute('data-atalho'), e.getAttribute('href')]));
-    t('os quatro atalhos com nome: Painel do time · Novo jogo · Sortear · Convidar', atalhos.map((a) => a[0]).join(' · ') === 'Painel do time · Novo jogo · Sortear · Convidar', JSON.stringify(atalhos));
-    t('"Painel do time" abre os Ajustes; "Sortear" vai ao próximo jogo do time; "Convidar" abre o convite no Elenco', atalhos[0][1] === '/time/varzea-fc?aba=ajustes' && atalhos[2][1] === '/time/varzea-fc/jogo/g2' && atalhos[3][1] === '/time/varzea-fc?aba=elenco&convidar=1', JSON.stringify(atalhos));
+    t('os quatro atalhos com nome: Painel · Novo jogo · Sortear · Convidar', atalhos.map((a) => a[0]).join(' · ') === 'Painel · Novo jogo · Sortear · Convidar', JSON.stringify(atalhos));
+    t('"Painel" abre a aba do time (?aba=ajustes); "Sortear" vai ao próximo jogo do time; "Convidar" abre o convite no Elenco', atalhos[0][1] === '/time/varzea-fc?aba=ajustes' && atalhos[2][1] === '/time/varzea-fc/jogo/g2' && atalhos[3][1] === '/time/varzea-fc?aba=elenco&convidar=1', JSON.stringify(atalhos));
     const semNada = await page.locator('[data-sem-pendencias]').innerText();
     t('sem pendência o card fica compacto: "Tudo tranquilo por aqui."', /Tudo tranquilo por aqui\./.test(semNada) && (await page.locator('[data-sem-pendencias] [data-pendencia]').count()) === 0);
     t('o card roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));

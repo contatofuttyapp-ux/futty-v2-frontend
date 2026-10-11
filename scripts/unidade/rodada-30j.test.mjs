@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 import { estadoDoJogo, jogoEmAndamento, jogoTerminado, listasDoInicio } from '../../src/utils/estadoDoJogo.js';
 import { destinoDoSortear } from '../../src/utils/seuTime.js';
 import { STATUS_LABELS } from '../../src/utils/format.js';
+import { escolhaParaOEditor, perguntaDoJogo } from '../../src/utils/quemGanhou.js';
+import { TEXTOS } from '../../src/utils/jogoPassado.js';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -124,11 +126,73 @@ test('Ajustes → Jogos: o jogo em andamento fica na lista de cima com o selo, e
   assert.match(semComentarios(ler('src/components/ListaDeJogos.jsx')), /export function BadgeStatus\(\{ status \}\)/);
 });
 
-test('card "Seu time": a ordem é Painel do time · Novo jogo · Sortear · Convidar, e o Painel continua levando à aba Ajustes', () => {
+test('card "Seu time": a ordem é Painel · Novo jogo · Sortear · Convidar, e o Painel continua levando à aba (?aba=ajustes)', () => {
   const card = semComentarios(ler('src/components/CardSeuTime.jsx'));
   const atalhos = [...card.matchAll(/rotulo="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(atalhos, ['Painel do time', 'Novo jogo', 'Sortear', 'Convidar']);
-  assert.match(card, /<Atalho para=\{`\$\{base\}\?aba=ajustes`\} Icone=\{Settings\} rotulo="Painel do time" \/>/);
-  // A própria aba, no topo da página do time, não foi renomeada.
-  assert.match(ler('src/pages/Equipa.jsx'), /\['ajustes', 'Ajustes'\]/);
+  assert.deepEqual(atalhos, ['Painel', 'Novo jogo', 'Sortear', 'Convidar']);
+  assert.match(card, /<Atalho para=\{`\$\{base\}\?aba=ajustes`\} Icone=\{Settings\} rotulo="Painel" \/>/);
+  assert.doesNotMatch(card, /textWrap|balance/, 'o rótulo cabe numa linha: nada de quebra equilibrada');
+});
+
+test('a aba do topo da página do time se chama "Painel" (com o selo ADMIN); a chave interna segue sendo ajustes', () => {
+  const equipa = semComentarios(ler('src/pages/Equipa.jsx'));
+  assert.match(equipa, /\['ajustes', 'Painel'\]/);
+  assert.match(equipa, /data-aba=\{k\}/, 'o data-aba continua sendo a chave (ajustes), não o texto');
+  assert.match(equipa, /\{k === 'ajustes' \? \(\s*<span data-selo-admin/, 'o selo ADMIN continua na aba do admin');
+  assert.doesNotMatch(equipa, /\['ajustes', 'Ajustes'\]/);
+  assert.match(ler('src/lib/rotasAntigas.js'), /ajustes/, 'o endereço ?aba=ajustes não mudou');
+});
+
+test('os textos que citam a aba dizem "Painel": Novo jogo e "Como terminou?" do Jogo passado; nenhuma tela escreve "Ajustes" para a pessoa', () => {
+  assert.match(ler('src/pages/NovoJogo.jsx'), /O padrão muda no Painel do time\./);
+  assert.equal(TEXTOS.semResultado, 'O jogo fica salvo com quem jogou, sem resultado. Dá para lançar depois, no Painel → Jogos.');
+  const visiveis = [];
+  const varrer = (dir) => {
+    for (const e of fs.readdirSync(path.join(RAIZ, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) varrer(rel);
+      else if (/\.(jsx?|css)$/.test(e.name) && /\bAjustes\b/.test(semComentarios(ler(rel)))) visiveis.push(rel);
+    }
+  };
+  varrer('src');
+  assert.deepEqual(visiveis, [], 'a palavra "Ajustes" só sobrou em comentário');
+});
+
+test('Painel → Jogos: título e data nunca ficam esmagados — selo e botões descem juntos para uma segunda linha', () => {
+  const painel = ler('src/pages/AdminPanel.jsx');
+  const linha = painel.slice(painel.indexOf('function linhaDoJogoQueComecou'), painel.indexOf('function linhaDoJogoQueComecou') + 3200);
+  assert.match(linha, /display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 10px'/, 'a linha quebra quando não cabe');
+  assert.match(linha, /flex: '1 1 150px', minWidth: 150/, 'o bloco do título e da data tem piso de 150 px');
+  assert.match(linha, /data-linha-de-jogo-acoes style=\{\{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' \}\}/, 'selo e botões andam juntos');
+  assert.match(linha, /\{emAndamento \? <BadgeStatus status="em_curso" \/> : semResultado \? null :/, 'o selo do "Em andamento" mora com os botões, não no título');
+});
+
+test('a pergunta do Início: título "Quem ganhou o jogo?", tocar só SELECIONA, "Finalizar" salva, o X fecha e "Agora não" saiu', () => {
+  assert.equal(perguntaDoJogo(2).titulo, 'Quem ganhou o jogo?');
+  assert.equal(perguntaDoJogo(3).titulo, 'Quem foi o campeão?');
+  assert.equal(perguntaDoJogo(4).temEmpate, false);
+  const aviso = semComentarios(ler('src/components/AvisoQuemGanhou.jsx'));
+  assert.doesNotMatch(aviso, /Agora não/);
+  assert.match(aviso, /onClick=\{\(\) => setEscolha\(i\)\}/, 'tocar no time só escolhe');
+  assert.match(aviso, /onClick=\{\(\) => setEscolha\('empate'\)\}/, 'Empate também só escolhe');
+  assert.match(aviso, /disabled=\{semEscolha \|\| busy\}/, '"Finalizar" fica apagado até haver escolha');
+  assert.match(aviso, /onClick=\{finalizar\}/);
+  assert.match(aviso, /aria-label="Fechar"/);
+  assert.match(aviso, /<X size=\{22\}/, 'o X do canto');
+  assert.match(aviso, /onClick=\{\(\) => !busy && onClose\(\)\}/, 'tocar fora também fecha');
+  // O pedido só sai dentro de finalizar(): nenhum toque de escolha chama o motor.
+  assert.equal((aviso.match(/apiFetch\(/g) || []).length, 1);
+  assert.match(aviso, /async function finalizar\(\) \{[\s\S]*?apiFetch\(/);
+  assert.match(ler('src/components/AvisoQuemGanhou.jsx'), /Toque para responder/, 'o card segue só abrindo a pergunta');
+});
+
+test('"Lançar gols e prêmios" leva a escolha junto para o editor do jogo (e ela não se perde)', () => {
+  assert.deepEqual(escolhaParaOEditor(1), { campeaoIdx: 1, empate: false });
+  assert.deepEqual(escolhaParaOEditor(0), { campeaoIdx: 0, empate: false }, 'o time 0 é um time');
+  assert.deepEqual(escolhaParaOEditor('empate'), { campeaoIdx: null, empate: true });
+  assert.equal(escolhaParaOEditor(null), null);
+  assert.match(semComentarios(ler('src/components/AvisoQuemGanhou.jsx')), /state=\{\{ quemGanhou: escolhaParaOEditor\(escolha\) \}\}/);
+  assert.match(semComentarios(ler('src/pages/Jogo.jsx')), /escolhaInicial=\{location\.state\?\.quemGanhou \|\| null\}/);
+  const editor = semComentarios(ler('src/components/ResultadoEditor.jsx'));
+  assert.match(editor, /escolhaInicial && doJogo\.campeaoIdx === null && !doJogo\.empate \? \{ \.\.\.doJogo, campeaoIdx: escolhaInicial\.campeaoIdx, empate: escolhaInicial\.empate \} : doJogo/, 'só vale em jogo ainda sem resultado: o que o motor guardou manda');
 });
