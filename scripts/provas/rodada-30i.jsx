@@ -11,6 +11,8 @@ import { I18nProvider } from '../../src/context/I18nContext';
 import { JogoCard } from '../../src/pages/Feed';
 import ResultadoEditor from '../../src/components/ResultadoEditor';
 import Jogo from '../../src/pages/Jogo';
+import Inicio from '../../src/pages/Inicio';
+import Layout from '../../src/components/Layout';
 import { jogadoresDosTimes, nomesDosTimes } from '../../src/utils/resultadoDoJogo';
 import '../../src/index.css';
 import '../../src/styles/app.css';
@@ -75,10 +77,22 @@ function CenaJogo() {
     </MemoryRouter>
   );
 }
+// O Início DE VERDADE (a página inteira, com o Layout e o contexto do Início): a prova navega para /home e responde /api/inicio com o motor de mentira.
+function CenaInicio() {
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/home" element={<Inicio />} />
+        <Route path="*" element={<div data-casa>BANCADA</div>} />
+      </Routes>
+    </Layout>
+  );
+}
 const CENAS_COM_ROTEADOR_PROPRIO = new Set(['jogo']);
 
 const CENAS = {
   jogo: CenaJogo,
+  inicio: CenaInicio,
   empate: CenaEmpate,
   'editor-2': () => <CenaEditor nTimes={2} />,
   'editor-3': () => <CenaEditor nTimes={3} />,

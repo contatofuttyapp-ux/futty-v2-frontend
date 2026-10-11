@@ -27,6 +27,8 @@ import { lerCromo, gravarCromo } from '../lib/cromoCache';
 import { registarFalha, aposPrimeiraPintura, tarefaEmCurso } from '../lib/diagnostico';
 import RSVPCard from '../components/RSVPCard';
 import AvisoDeJogo from '../components/AvisoDeJogo';
+import AvisoQuemGanhou from '../components/AvisoQuemGanhou';
+import { cardsQuemGanhou } from '../utils/quemGanhou';
 import { MSG_FALHA_RSVP, FRASE_RSVP_ENCERRADA, motivoRsvpEncerrada, responderComOtimismo } from '../lib/rsvp';
 import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../utils/presenca';
 import { LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso } from '../utils/avisosDoInicio';
@@ -1048,6 +1050,15 @@ export default function Inicio() {
     sessionStorage.setItem('futty_votacao_dismiss', '1');
   }
 
+  // "Quem ganhou?" — só o admin (o motor só manda `quem_ganhou` em seu_time): o jogo sorteado, 5 minutos depois do início, sem campeão nem empate.
+  // Respondido, o card some na hora (sem esperar a próxima leitura) e o Início recarrega para a pendência do "Seus times" sair junto.
+  const [quemGanhouRespondidos, setQuemGanhouRespondidos] = useState([]);
+  const cardsDoQuemGanhou = cardsQuemGanhou(dadosInicio?.seu_time, quemGanhouRespondidos, teams);
+  async function quemGanhouRespondido(card) {
+    setQuemGanhouRespondidos((lista) => [...lista, card.game_id]);
+    await inicio.reload();
+  }
+
   // Tijolo 3 — desfecho das MINHAS denúncias (nº, sem veredicto). Banner discreto.
   const denunciaDesfechos = dadosInicio?.denuncias_desfechos?.total || 0;
   const [desfechoFechado, setDesfechoFechado] = useState(() => sessionStorage.getItem('futty_denuncia_desfecho') === '1');
@@ -1067,6 +1078,7 @@ export default function Inicio() {
     jogos: jogosQuePedemResposta(jogosParaAviso),
     pedidos: pedidosPendentes,
     desfechos: desfechosResolvidos,
+    quemGanhou: cardsDoQuemGanhou,
     votacoes: votacaoTop ? [votacaoTop] : [],
     denuncia: denunciaDesfechos > 0 && !desfechoFechado,
     figurinhaNascendo: figurinhaGerando ? { estado: 'gerando' } : figurinhaFalhou && !escondido('figurinha-falhou') ? { estado: 'falhou' } : null,
@@ -1100,6 +1112,9 @@ export default function Inicio() {
         {aviso?.tipo === 'jogo' ? (
           <AvisoDeJogo game={aviso.item} team={timeDoJogo(aviso.item.team_id)} mais={aviso.mais} busy={busyId === aviso.item.id} onPresence={responderDoAviso} />
         ) : null}
+
+        {/* QUEM GANHOU? — só o admin: acima de "colegas para avaliar" na fila; um toque abre a pergunta. */}
+        {aviso?.tipo === 'quem-ganhou' ? <AvisoQuemGanhou card={aviso.item} mais={aviso.mais} onResolvido={quemGanhouRespondido} /> : null}
 
         {/* P1-4 — PEDIDO PENDENTE: enquanto o admin não decide, o candidato vê aqui "pedido pendente na {equipa} · cancelar" (antes só
             existia no "Radar de peladas"). Card discreto, roxo — é espera, não desfecho. Mais de um: o mais recente e um "+N". */}

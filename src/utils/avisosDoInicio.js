@@ -10,13 +10,14 @@
 //      para responder "vou ou não vou";
 //   2. pedido de entrada pendente;
 //   3. a resposta do pedido de entrada (aceito / recusado);
-//   4. votação (você tem colegas para avaliar / nova temporada de notas);
-//   5. o desfecho da denúncia;
-//   6. a figurinha nascendo (ou que não saiu);
+//   4. "Quem ganhou?" (só o admin: o jogo sorteado, 5 min depois do início, sem campeão nem empate) — acima de "colegas para avaliar";
+//   5. votação (você tem colegas para avaliar / nova temporada de notas);
+//   6. o desfecho da denúncia;
+//   7. a figurinha nascendo (ou que não saiu);
 //   — daqui para baixo, lembretes sem prazo —
-//   7. "Você tem uma figurinha para gerar" · 8. o recado do pedido de figurinha · 9. o uniforme por
-//      escolher · 10. "Complete seu card" · 11. a data de nascimento;
-//   12. ativar notificações, por último.
+//   8. "Você tem uma figurinha para gerar" · 9. o recado do pedido de figurinha · 10. o uniforme por
+//      escolher · 11. "Complete seu card" · 12. a data de nascimento;
+//   13. ativar notificações, por último.
 // Puro (sem React, sem rede): o Início só desenha o que esta fila devolve, e o teste roda no Node.
 
 /** A ordem em que um tipo de aviso passa à frente de outro. */
@@ -24,6 +25,7 @@ export const ORDEM_DOS_AVISOS = [
   'jogo',
   'pedido',
   'desfecho',
+  'quem-ganhou',
   'votacao',
   'denuncia',
   'figurinha-nascendo',
@@ -46,6 +48,8 @@ const FONTES = {
   votacao: { chave: 'votacoes', mais: false },
   'figurinha-pronta': { chave: 'figurinhaPronta', mais: false },
   desfecho: { chave: 'desfechos', mais: true },
+  // O admin com mais de um jogo esperando resposta vê o que esperou mais e um "+N".
+  'quem-ganhou': { chave: 'quemGanhou', mais: true },
   'figurinha-nascendo': { chave: 'figurinhaNascendo', mais: false },
   uniforme: { chave: 'uniforme', mais: false },
   'recado-figurinha': { chave: 'recadoFigurinha', mais: false },
@@ -95,7 +99,7 @@ function itensDe(valor) {
 
 /**
  * O aviso que vai ao topo agora, ou null quando a fila está vazia. Cada chave é o que há para mostrar daquele tipo (lista, item, ou `true`):
- *   jogos · pedidos · votacoes · figurinhaPronta · desfechos · figurinhaNascendo · uniforme · recadoFigurinha · nascimento · denuncia · card · notificacoes
+ *   jogos · pedidos · quemGanhou · votacoes · figurinhaPronta · desfechos · figurinhaNascendo · uniforme · recadoFigurinha · nascimento · denuncia · card · notificacoes
  * @returns {{ tipo: string, item: any, mais: number }|null} `item` = o aviso de agora (null quando o aviso não tem item); `mais` = quantos do mesmo tipo esperam na fila ("+N").
  */
 export function proximoAviso(candidatos = {}) {
