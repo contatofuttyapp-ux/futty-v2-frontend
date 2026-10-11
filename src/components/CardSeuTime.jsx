@@ -1,6 +1,6 @@
 // Futty v2.0 — O card "Seu time" do Início. Só para quem administra algum time, no topo, com a cara dos
 // outros cards do Início: as pendências, uma por linha (pedido de entrada, jogo sem presença aberta,
-// resultado por lançar, denúncia), e quatro atalhos com nome — Novo jogo · Sortear · Convidar · Ajustes.
+// resultado por lançar, denúncia), e quatro atalhos com nome — Painel do time · Novo jogo · Sortear · Convidar.
 // SEMPRE aparece para o admin (o dono decidiu); sem pendência fica compacto, com "Tudo tranquilo por
 // aqui.". As pendências vêm prontas do motor (GET /api/inicio → seu_time); o texto e o destino de cada
 // linha, em utils/seuTime.js.
@@ -31,7 +31,8 @@ function Atalho({ para, Icone, rotulo }) {
   return (
     <Link to={para} data-atalho={rotulo} className="hud-corners-s" style={{ display: 'grid', justifyItems: 'center', gap: 4, padding: '8px 2px', textDecoration: 'none', color: '#c9c2d6', border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.03)' }}>
       <Icone size={18} color="#b69cff" />
-      <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 12, letterSpacing: '0.04em' }}>{rotulo}</span>
+      {/* "Painel do time" não cabe numa linha em 360 px: quebra em duas, centrado e equilibrado ("Painel / do time"), e os quatro botões ficam da mesma altura. */}
+      <span style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textAlign: 'center', textWrap: 'balance' }}>{rotulo}</span>
     </Link>
   );
 }
@@ -57,14 +58,14 @@ function Pendencias({ linhas }) {
   );
 }
 
-/** Os quatro atalhos com nome: Novo jogo · Sortear · Convidar · Ajustes. */
+/** Os quatro atalhos com nome: Painel do time · Novo jogo · Sortear · Convidar. O Painel vai primeiro: é onde o admin resolve o resto (a aba continua se chamando Ajustes). */
 function Atalhos({ base, time, games }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
+      <Atalho para={`${base}?aba=ajustes`} Icone={Settings} rotulo="Painel do time" />
       <Atalho para={`${base}/jogo/novo`} Icone={CirclePlus} rotulo="Novo jogo" />
       <Atalho para={destinoDoSortear(time.slug, time.team_id, games)} Icone={Shuffle} rotulo="Sortear" />
       <Atalho para={`${base}?aba=elenco&convidar=1`} Icone={UserPlus} rotulo="Convidar" />
-      <Atalho para={`${base}?aba=ajustes`} Icone={Settings} rotulo="Ajustes" />
     </div>
   );
 }

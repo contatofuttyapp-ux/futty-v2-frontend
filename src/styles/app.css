@@ -2674,6 +2674,13 @@
   color: var(--text-dim);
 }
 
+/* "Em andamento": o verde dos selos de estado do jogo (lista de jogos e Página do Jogo). */
+.badge--em-andamento {
+  background: rgba(123, 216, 143, 0.08);
+  border: 1px solid rgba(123, 216, 143, 0.5);
+  color: #7bd88f;
+}
+
 /* Card de publicidade — 16:9, integrado no scroll */
 
 

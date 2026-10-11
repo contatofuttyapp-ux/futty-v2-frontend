@@ -19,7 +19,8 @@ const ST_COR = {
   cancelado: { c: '#fda4af', b: 'rgba(248,113,113,0.45)', bg: 'rgba(248,113,113,0.06)' },
 };
 
-function BadgeStatus({ status }) {
+/** O selo do estado do jogo (agendado · em_curso → "Em andamento" · terminado · cancelado): o mesmo em Ajustes → Jogos e na lista de jogos. */
+export function BadgeStatus({ status }) {
   const s = ST_COR[status] || ST_COR.encerrado;
   return (
     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 9px', clipPath: CLIP_S, flexShrink: 0, color: s.c, border: `1px solid ${s.b}`, background: s.bg }}>

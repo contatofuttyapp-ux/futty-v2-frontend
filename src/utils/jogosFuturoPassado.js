@@ -3,6 +3,8 @@
 // certo para "Passados" (o mais recente primeiro), errado para "Futuros" (mostraria o jogo mais
 // DISTANTE no topo e o próximo por último). Aqui "Futuros" sai sempre crescente: o próximo jogo
 // primeiro. "Passados" mantém a ordem que chegou (decrescente, o mais recente primeiro).
+// O jogo que já começou e ainda está "em andamento" (o motor diz) fica em "Futuros", com o selo, e só desce para "Passados" quando terminar.
+import { estadoDoJogo } from './estadoDoJogo';
 
 /**
  * @param {Array<{data: string, status?: string}>} games
@@ -13,8 +15,10 @@ export function separarFuturosPassados(games, agora) {
   const futuros = [];
   const passados = [];
   for (const g of games || []) {
-    // Cancelados futuros continuam em "Futuros" (a tela os mostra com visual distinto).
-    const fut = g.data && new Date(g.data).getTime() > agora && g.status !== 'terminado';
+    const quando = g.data ? new Date(g.data).getTime() : NaN;
+    const estado = estadoDoJogo(g);
+    // Cancelados futuros continuam em "Futuros" (a tela os mostra com visual distinto); o que já começou só fica lá enquanto está em andamento.
+    const fut = !Number.isNaN(quando) && (quando > agora ? estado !== 'terminado' : estado === 'em_curso');
     (fut ? futuros : passados).push(g);
   }
   futuros.sort((a, b) => new Date(a.data) - new Date(b.data));

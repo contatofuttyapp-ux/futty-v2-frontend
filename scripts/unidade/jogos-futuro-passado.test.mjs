@@ -30,6 +30,24 @@ test('cancelado no futuro continua em "futuros" (visual distinto, não sai da li
   assert.deepEqual(passados.map((g) => g.id), ['terminado-no-futuro']);
 });
 
+test('"Em andamento": o jogo que já começou fica em "futuros" (o mais antigo no topo) e só desce para "passados" quando terminar', () => {
+  const games = [
+    jogo('futuro', '2026-10-05T20:00:00Z'),
+    jogo('rolando', '2026-10-03T11:30:00Z', { status: 'em_curso' }), // começou há 30 min
+    jogo('terminou', '2026-10-03T08:00:00Z', { status: 'terminado' }), // passou das 2 horas
+    jogo('cancelado-que-ja-comecou', '2026-10-03T11:45:00Z', { status: 'cancelado' }),
+  ];
+  const { futuros, passados } = separarFuturosPassados(games, AGORA);
+  assert.deepEqual(futuros.map((g) => g.id), ['rolando', 'futuro'], 'o que está rolando vem antes do próximo');
+  assert.deepEqual(passados.map((g) => g.id), ['terminou', 'cancelado-que-ja-comecou']);
+});
+
+test('"Em andamento" lido do motor mais velho (sem estado novo): o jogo que começou vai para "passados", como sempre foi', () => {
+  const { futuros, passados } = separarFuturosPassados([jogo('velho', '2026-10-03T11:30:00Z', { status: 'agendado' })], AGORA);
+  assert.deepEqual(futuros, []);
+  assert.deepEqual(passados.map((g) => g.id), ['velho']);
+});
+
 test('sem jogos, ou sem `games` (null/undefined): as duas listas saem vazias, sem lançar', () => {
   assert.deepEqual(separarFuturosPassados([], AGORA), { futuros: [], passados: [] });
   assert.deepEqual(separarFuturosPassados(null, AGORA), { futuros: [], passados: [] });

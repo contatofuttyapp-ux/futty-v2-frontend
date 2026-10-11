@@ -16,9 +16,10 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useIndicadorDeRolagem } from '../hooks/useIndicadorDeRolagem';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
-import { SEM_NOTA_AINDA, formatDateTime, formatRating } from '../utils/format';
+import { SEM_NOTA_AINDA, STATUS_LABELS, formatDateTime, formatRating } from '../utils/format';
 import { ehHoje, formatarData } from '../utils/dataHora';
 import { plural } from '../utils/plural';
+import { jogoEmAndamento, listasDoInicio } from '../utils/estadoDoJogo';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import { IDADE_MINIMA } from '../utils/idade';
 import RolinhosData from '../components/RolinhosData';
@@ -315,7 +316,10 @@ export function NomeCromo({ nome }) {
 // ----- Card de jogo -----
 export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo = false, index = 0, cidade = null }) {
   const today = ehHoje(game.date, game.fuso); // "hoje" é o dia do campo (fuso do time), não o do aparelho
-  const isPast = game.status === 'finished';
+  // O motor diz o estado (utils/estadoDoJogo.js): o jogo que já começou e ainda não terminou está "em andamento" e não aceita mais presença,
+  // como o que terminou — por isso `status === 'finished'` vale para os dois e só o rótulo muda.
+  const emAndamento = jogoEmAndamento(game);
+  const isPast = game.status === 'finished' && !emAndamento;
   const isDrawn = game.status === 'drawn';
   const going = game.user_status === 'going';
   const notGoing = game.user_status === 'not_going';
@@ -368,9 +372,13 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
           {` · ${game.confirmed_count} ${plural(game.confirmed_count, 'confirmado', 'confirmados')}`}
         </div>
 
-        {isPast ? (
+        {emAndamento ? (
+          <div className="gcard__drawn" data-em-andamento>
+            <span className="badge badge--em-andamento hud-corners-s">{STATUS_LABELS.em_curso}</span>
+          </div>
+        ) : isPast ? (
           <div className="gcard__drawn">
-            <span className="badge badge--encerrado hud-corners-s">Encerrado</span>
+            <span className="badge badge--encerrado hud-corners-s">{STATUS_LABELS.terminado}</span>
             {going && <span className="muted" style={{ fontSize: 13 }}>Você esteve presente</span>}
           </div>
         ) : isDrawn ? (
@@ -890,12 +898,10 @@ export default function Inicio() {
 
   const loadingGames = games === null;
   const filtered = (games || []).filter((g) => selectedTeam === 'all' || g.team_id === selectedTeam);
-  // "Próximos Jogos" só mostra o que ainda vai acontecer (nem encerrado nem cancelado); o que já passou
-  // vai para "Últimos jogos" (máx. 3, mais recente primeiro — a lista vem ordenada por data ascendente).
-  const proximosJogos = filtered.filter((g) => g.status !== 'finished');
-  const ultimosJogos = filtered.filter((g) => g.status === 'finished' && !g.cancelado).slice(-3).reverse();
-  // Próximo jogo = o primeiro que não está encerrado (lista vem ordenada por data).
-  const proximoJogo = proximosJogos[0] || null;
+  // "Próximos Jogos" mostra o que ainda vai acontecer e o que está em andamento (com o selo); o jogo só desce para "Últimos jogos" quando
+  // terminar (máx. 3, mais recente primeiro — a lista vem ordenada por data ascendente). Cancelado não aparece em nenhuma. Próximo jogo = o
+  // primeiro que AINDA NÃO COMEÇOU: o em andamento não conta (utils/estadoDoJogo.js).
+  const { proximos: proximosJogos, ultimos: ultimosJogos, proximo: proximoJogo } = listasDoInicio(filtered);
   const nextId = proximoJogo?.id ?? null;
 
   // Aviso de ausência ao próximo jogo (declaração proactiva, sem RSVP). O botão diz o que faz ("Avisar

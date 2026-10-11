@@ -142,7 +142,7 @@ export async function rodar({ navegador, base, t }) {
       pendencia: document.querySelector('[data-um] [data-pendencia="presenca"]')?.innerText.trim(),
     }));
     t('com UM time o card é o de sempre: "Seu time", pendência e os 4 atalhos já à vista (nada de lista)',
-      um.card === 1 && um.lista === 0 && /^seu time$/i.test(um.rotulo) && um.atalhos.join(' · ') === 'Novo jogo · Sortear · Convidar · Ajustes' && /^Sexta, 9 de out\.: presença ainda não aberta$/.test(um.pendencia), JSON.stringify(um));
+      um.card === 1 && um.lista === 0 && /^seu time$/i.test(um.rotulo) && um.atalhos.join(' · ') === 'Painel do time · Novo jogo · Sortear · Convidar' && /^Sexta, 9 de out\.: presença ainda não aberta$/.test(um.pendencia), JSON.stringify(um));
 
     const dois = page.locator('[data-dois]');
     const estadoFechado = await page.evaluate(() => {
@@ -179,9 +179,9 @@ export async function rodar({ navegador, base, t }) {
       abrir: el.querySelector('[data-abrir-o-time]')?.getAttribute('href'),
     }));
     t('tocar na linha abre os quatro atalhos, na ordem de sempre, com os mesmos destinos',
-      aberto.atalhos.map((a) => a[0]).join(' · ') === 'Novo jogo · Sortear · Convidar · Ajustes'
-      && aberto.atalhos[0][1] === '/time/missa/jogo/novo' && aberto.atalhos[1][1] === '/time/missa/jogo/g2'
-      && aberto.atalhos[2][1] === '/time/missa?aba=elenco&convidar=1' && aberto.atalhos[3][1] === '/time/missa?aba=ajustes', JSON.stringify(aberto));
+      aberto.atalhos.map((a) => a[0]).join(' · ') === 'Painel do time · Novo jogo · Sortear · Convidar'
+      && aberto.atalhos[0][1] === '/time/missa?aba=ajustes' && aberto.atalhos[1][1] === '/time/missa/jogo/novo'
+      && aberto.atalhos[2][1] === '/time/missa/jogo/g2' && aberto.atalhos[3][1] === '/time/missa?aba=elenco&convidar=1', JSON.stringify(aberto));
     // 29R (achado 147): a linha de presença deixou de levar só à aba Jogos; leva ao jogo (g2) e já abre o "Abrir presença" dele.
     t('aberta, a linha mostra a pendência como link para o jogo (?abrir-presenca=g2) e um "Abrir o time" (o time continua a um toque)', aberto.pendencia === '/time/missa?aba=jogos&abrir-presenca=g2' && aberto.abrir === '/time/missa', JSON.stringify(aberto));
     t('aria-expanded vira true na linha aberta', (await linha1.getAttribute('aria-expanded')) === 'true');

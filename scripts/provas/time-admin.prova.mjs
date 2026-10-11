@@ -207,8 +207,8 @@ export async function rodar({ navegador, base, t }) {
     const linhas = await page.locator('[data-com-pendencias] [data-pendencia]').allInnerTexts();
     t('uma linha por pendência: pedido, presença, resultado, denúncia', linhas.length === 4 && /2 pedidos de entrada/.test(linhas[0]) && /presença ainda não aberta/.test(linhas[1]) && /por lançar/.test(linhas[2]) && /1 denúncia/.test(linhas[3]), linhas.join(' | '));
     const atalhos = await page.locator('[data-com-pendencias] [data-atalho]').evaluateAll((els) => els.map((e) => [e.getAttribute('data-atalho'), e.getAttribute('href')]));
-    t('os quatro atalhos com nome: Novo jogo · Sortear · Convidar · Ajustes', atalhos.map((a) => a[0]).join(' · ') === 'Novo jogo · Sortear · Convidar · Ajustes', JSON.stringify(atalhos));
-    t('"Sortear" vai ao próximo jogo do time; "Convidar" abre o convite no Elenco', atalhos[1][1] === '/time/varzea-fc/jogo/g2' && atalhos[2][1] === '/time/varzea-fc?aba=elenco&convidar=1', JSON.stringify(atalhos));
+    t('os quatro atalhos com nome: Painel do time · Novo jogo · Sortear · Convidar', atalhos.map((a) => a[0]).join(' · ') === 'Painel do time · Novo jogo · Sortear · Convidar', JSON.stringify(atalhos));
+    t('"Painel do time" abre os Ajustes; "Sortear" vai ao próximo jogo do time; "Convidar" abre o convite no Elenco', atalhos[0][1] === '/time/varzea-fc?aba=ajustes' && atalhos[2][1] === '/time/varzea-fc/jogo/g2' && atalhos[3][1] === '/time/varzea-fc?aba=elenco&convidar=1', JSON.stringify(atalhos));
     const semNada = await page.locator('[data-sem-pendencias]').innerText();
     t('sem pendência o card fica compacto: "Tudo tranquilo por aqui."', /Tudo tranquilo por aqui\./.test(semNada) && (await page.locator('[data-sem-pendencias] [data-pendencia]').count()) === 0);
     t('o card roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));

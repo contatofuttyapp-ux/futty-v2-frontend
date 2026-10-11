@@ -43,7 +43,7 @@ test('card "Seu time": uma linha por pendência, na ordem, cada uma levando ao l
 test('card "Seu time": sempre aparece para o admin; sem pendência, "Tudo tranquilo por aqui." e os 4 atalhos com nome', () => {
   const card = ler('src/components/CardSeuTime.jsx');
   assert.match(card, /Tudo tranquilo por aqui\./);
-  for (const atalho of ['Novo jogo', 'Sortear', 'Convidar', 'Ajustes']) assert.match(card, new RegExp(`rotulo="${atalho}"`), atalho);
+  for (const atalho of ['Painel do time', 'Novo jogo', 'Sortear', 'Convidar']) assert.match(card, new RegExp(`rotulo="${atalho}"`), atalho);
   assert.match(card, /\?aba=elenco&convidar=1/, 'o Convidar abre o convite na aba Elenco');
 });
 

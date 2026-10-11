@@ -43,6 +43,8 @@ import { EXEMPLO_SOBRE_O_TIME, FALTA_SOBRE_NOS_AJUSTES, MAX_SOBRE_O_TIME, faltaS
 import { linkDoConvite } from '../utils/convite';
 import { caminhoDoAdminAntigo } from '../lib/rotasAntigas';
 import { separarFuturosPassados } from '../utils/jogosFuturoPassado';
+import { estadoDoJogo } from '../utils/estadoDoJogo';
+import { BadgeStatus } from '../components/ListaDeJogos';
 import '../styles/app.css';
 
 // Opções de visibilidade. O escudo é UM controle (EditorEscudo): não há "cor de fundo do avatar".
@@ -1541,6 +1543,40 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
 
   if (games === null) return <LoadingFutty />;
 
+  // A linha de um jogo que já começou: "Lançar resultado" no que foi sorteado e ainda não tem resultado nenhum (era a aba Resultados), o selo do estado
+  // e "Editar resultado" / "Ver" nos outros. Fica em "Passados" quando terminou e em "Próximos", com o selo "Em andamento", enquanto rola.
+  function linhaDoJogoQueComecou(g) {
+    const emAndamento = estadoDoJogo(g) === 'em_curso';
+    const cancelado = g.cancelado || g.status === 'cancelado';
+    // "Resultado lançado" = campeão ou empate marcado (nível, placar e gols sozinhos não bastam).
+    const temResultado = jogoTemResultado(g);
+    const semResultado = !cancelado && g.sorteio_realizado && !temResultado;
+    return (
+      <div key={g.id} data-jogo={emAndamento ? g.id : undefined} data-jogo-em-andamento={emAndamento ? '' : undefined} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10, opacity: cancelado ? 0.55 : 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {emAndamento ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
+              <BadgeStatus status="em_curso" />
+            </div>
+          ) : (
+            <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
+          )}
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso, { cidade: team?.cidade })}</div>
+        </div>
+        {semResultado ? (
+          <button type="button" className="btn btn--purple btn--sm" data-lancar-resultado onClick={() => setLancar(g)}>Lançar resultado</button>
+        ) : (
+          <>
+            {emAndamento ? null : <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>}
+            {temResultado ? <button type="button" className="btn btn--ghost btn--sm" onClick={() => setLancar(g)}>Editar resultado</button> : null}
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${g.id}`)}>Ver</button>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <div>
@@ -1550,6 +1586,8 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {futuros.map((g) => {
+              // O jogo que já começou e ainda está em andamento fica aqui em cima, com o selo; o que se pode fazer nele é o de sempre num jogo que começou.
+              if (estadoDoJogo(g) === 'em_curso') return linhaDoJogoQueComecou(g);
               const cancelado = g.cancelado || g.status === 'cancelado';
               if (cancelado) {
                 return (
@@ -1614,30 +1652,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
           <p className="muted" style={{ fontSize: 13 }}>Sem jogos passados.</p>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            {passados.map((g) => {
-              // "Lançar resultado" só no jogo que aconteceu, foi sorteado e ainda não tem resultado nenhum (era a aba Resultados).
-              const cancelado = g.cancelado || g.status === 'cancelado';
-              // "Resultado lançado" = campeão ou empate marcado (nível, placar e gols sozinhos não bastam).
-              const temResultado = jogoTemResultado(g);
-              const semResultado = !cancelado && g.sorteio_realizado && !temResultado;
-              return (
-                <div key={g.id} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10, opacity: cancelado ? 0.55 : 1 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso, { cidade: team?.cidade })}</div>
-                  </div>
-                  {semResultado ? (
-                    <button type="button" className="btn btn--purple btn--sm" data-lancar-resultado onClick={() => setLancar(g)}>Lançar resultado</button>
-                  ) : (
-                    <>
-                      <span className={`badge badge--${g.status}`}>{STATUS_LABELS[g.status] || g.status}</span>
-                      {temResultado ? <button type="button" className="btn btn--ghost btn--sm" onClick={() => setLancar(g)}>Editar resultado</button> : null}
-                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => navigate(`/time/${slug}/jogo/${g.id}`)}>Ver</button>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+            {passados.map(linhaDoJogoQueComecou)}
           </div>
         )}
       </div>
