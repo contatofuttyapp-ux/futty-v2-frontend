@@ -37,6 +37,14 @@ export default function CardCampeonatoInicio({ campeonato, slug }) {
           ))}
         </div>
       ) : null}
+      {t.proximo ? (
+        <div className="inicio-camp__proximo" data-proximo-jogo>
+          <span className="inicio-camp__proximo-k">Próximo jogo:</span>
+          <span className="inicio-camp__time-do-jogo"><span className="camp-tab__dot" style={{ background: t.proximo.a.cor }} />{t.proximo.a.nome}</span>
+          <span className="inicio-camp__proximo-x">×</span>
+          <span className="inicio-camp__time-do-jogo"><span className="camp-tab__dot" style={{ background: t.proximo.b.cor }} />{t.proximo.b.nome}</span>
+        </div>
+      ) : null}
       <div className="inicio-camp__ver">Toque para ver</div>
     </Link>
   );

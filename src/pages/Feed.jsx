@@ -13,6 +13,7 @@ import { haQuantoTempo } from '../utils/haQuantoTempo';
 import { contar } from '../utils/plural';
 import { empateDaResenha } from '../utils/resultadoDoJogo';
 import { linhaDaFinalDoPost } from '../utils/campeonatoPlacar';
+import { tituloDoPostDoCampeao } from '../utils/campeonatoInicio';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -334,6 +335,7 @@ export function PostDoCampeao({ p, isAdmin, teamSlug, index = 0 }) {
   const campeao = c.campeao || { nome: '—', jogadores: [] };
   const jogadores = campeao.jogadores || [];
   const final = c.final ? linhaDaFinalDoPost(c.final) : '';
+  const titulo = tituloDoPostDoCampeao(campeao.nome, c.campeonato_nome);
   const corpo = (
     <>
       <div style={{ padding: 14 }}>
@@ -349,7 +351,7 @@ export function PostDoCampeao({ p, isAdmin, teamSlug, index = 0 }) {
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Trophy size={14} aria-hidden="true" />Campeão</span>
             </div>
             <div data-titulo-do-post-campeao style={{ marginTop: 8, fontSize: 16, fontWeight: 800, color: '#fff', lineHeight: 1.35 }}>
-              {campeao.nome} campeão do {c.campeonato_nome}
+              {titulo.time}<span style={{ color: '#c9b6ff', fontWeight: 700 }}> · {titulo.campeonato}</span>
             </div>
             {jogadores.length ? (
               <div style={{ marginTop: 12, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>

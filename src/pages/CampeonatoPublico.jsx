@@ -6,7 +6,7 @@ import { apiFetch } from '../lib/api';
 import { contar } from '../utils/plural';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
-import { CampeonatoTabela, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal } from '../components/CampeonatoVistas';
+import { CampeonatoTabela, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal, CampeonatoProximoJogo } from '../components/CampeonatoVistas';
 import { nomeDoFormato } from '../utils/formatoCampeonato';
 import { formatarData } from '../utils/dataHora';
 import '../styles/app.css';
@@ -48,6 +48,7 @@ export default function CampeonatoPublico() {
                     <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
                     <span className="camp-chip">{contar(camp.times.length, 'time', 'times')}</span>
                   </div>
+                  <CampeonatoProximoJogo proximo={camp.proximo_jogo} />
                   {terminado ? <CampeonatoCelebracao campeonato={camp} slug={slug} /> : null}
                   <div className="section-title">{camp.formato === 'mata' ? 'Chaveamento' : camp.formato === 'pontos_final' ? 'Fase de grupos' : terminado ? 'Classificação final' : 'Classificação'}</div>
                   {camp.formato === 'mata' ? <CampeonatoBracket campeonato={camp} admin={false} /> : <CampeonatoTabela campeonato={camp} />}

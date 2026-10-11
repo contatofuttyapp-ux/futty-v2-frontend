@@ -13,7 +13,7 @@ import { contar } from '../utils/plural';
 import CriarCampeonato from '../components/CriarCampeonato';
 import ComporTimes from '../components/ComporTimes';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
-import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal, CampeonatoDesempate } from '../components/CampeonatoVistas';
+import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal, CampeonatoDesempate, CampeonatoProximoJogo } from '../components/CampeonatoVistas';
 import SeletorDeFormato from '../components/SeletorDeFormato';
 import { formatarData } from '../utils/dataHora';
 import { MIN_TIMES_DO_FORMATO, nomeDoFormato } from '../utils/formatoCampeonato';
@@ -355,6 +355,8 @@ function Detalhe({ slug, id }) {
           <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
           <span className="camp-chip">{contar(camp.times.length, 'time', 'times')}</span>
         </div>
+
+        <CampeonatoProximoJogo proximo={camp.proximo_jogo} />
 
         {avisos.length ? (
           <div className="camp-aviso hud-corners" role="status" data-aviso-da-final>

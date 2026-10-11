@@ -175,7 +175,7 @@ export async function rodar({ navegador, base, t }) {
       const [x, y, gx, gy] = JOGOS[0];
       await lancarPelaTela(page, x, y, gx, gy);
       tabela = await lerTabela(page);
-      t(`${largura}px · depois do 1º jogo a tabela marca o líder (Ouro) e o 2º lugar que vai para a final`, tabela[0].nome === 'Time Ouro' && tabela[0].marcas.join() === 'lider' && tabela.filter((l) => l.marcas.includes('final')).length === 1, JSON.stringify(tabela));
+      t(`${largura}px · depois do 1º jogo o Ouro lidera (3 pontos), mas nada está garantido: a tabela continua sem marca (a prova da 30M cobre a regra inteira)`, tabela[0].nome === 'Time Ouro' && tabela[0].pts === 3 && tabela.every((l) => l.marcas.length === 0), JSON.stringify(tabela));
       t(`${largura}px · sem erro de script (do sorteio ao campeonato)`, semErrosReais(erros).length === 0, semErrosReais(erros).join(' | '));
       await ctx.close();
     }
@@ -390,7 +390,7 @@ export async function rodar({ navegador, base, t }) {
       const post = page.locator('[data-post-do-campeao]');
       await post.waitFor({ timeout: 25000 });
       await page.waitForTimeout(1200); // o post entra com um fade (anim-slide-in): o texto só conta depois dele
-      t(`${largura}px · Resenha: UM post do campeonato, com o título "Time Ouro campeão do Copa da Domingueira"`, (await post.count()) === 1 && (await page.locator('[data-titulo-do-post-campeao]').innerText()).trim() === 'Time Ouro campeão do Copa da Domingueira', await page.locator('[data-titulo-do-post-campeao]').innerText());
+      t(`${largura}px · Resenha: UM post do campeonato, com o título "Time Ouro é campeão · Copa da Domingueira"`, (await post.count()) === 1 && (await page.locator('[data-titulo-do-post-campeao]').innerText()).replace(/\s+/g, ' ').trim() === 'Time Ouro é campeão · Copa da Domingueira', await page.locator('[data-titulo-do-post-campeao]').innerText());
       const nomesDoOuro = camp.times.find((x) => x.nome === 'Time Ouro').jogadores.map((j) => j.nome);
       const textoDoPost = (await post.innerText()).replace(/\s+/g, ' ');
       t(`${largura}px · o post traz os jogadores do time campeão (${nomesDoOuro.join(', ')})`, nomesDoOuro.every((n) => textoDoPost.includes(n)), textoDoPost);

@@ -109,13 +109,14 @@ test('o nome que vem preenchido ao criar pelo sorteio: "Campeonato <time>", cabe
 
 // ─── Cada acabamento está ligado nas telas ───────────────────────────────────────────────────────────────────────────────────
 
-test('a tabela: colunas P J V E D GP:GC SG, e a marca de líder/final só depois do 1º jogo', () => {
+test('a tabela: colunas P J V E D GP:GC SG; a barra dourada da final vem do motor (`classificado`), a do líder só nos pontos corridos', () => {
   const vistas = semComentarios(ler('src/components/CampeonatoVistas.jsx'));
   assert.match(vistas, /<span>P<\/span><span>J<\/span><span>V<\/span><span>E<\/span><span>D<\/span><span>GP:GC<\/span><span>SG<\/span>/);
   const celulas = [...vistas.matchAll(/<span className="(p|c|gpgc)"[^>]*>/g)].map((m) => m[1]);
   assert.deepEqual(celulas.slice(0, 7), ['p', 'c', 'c', 'c', 'c', 'gpgc', 'c'], 'as células seguem a ordem do cabeçalho (P J V E D GP:GC SG)');
   assert.match(vistas, /const jogou = linhas\.some\(\(l\) => l\.J > 0\)/);
-  assert.match(vistas, /if \(jogou && pos === 1\) classes\.push\('camp-tab__r--lider'\)/);
+  assert.match(vistas, /if \(t\.classificado && !noEmpate\.has\(t\.id\)\) classes\.push\(pos === 1 \? 'camp-tab__r--lider' : 'camp-tab__r--final'\)/);
+  assert.match(vistas, /else if \(jogou && pos === 1\) classes\.push\('camp-tab__r--lider'\)/);
   assert.match(ler('src/styles/app.css'), /\.camp-tab__hd,\.camp-tab__r\{display:grid;grid-template-columns:16px 1fr 20px 18px 18px 18px 18px 40px 26px;/);
 });
 

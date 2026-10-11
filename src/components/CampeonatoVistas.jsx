@@ -70,15 +70,17 @@ function confetesDe(id) {
 
 // ---- Tabela (pontos) ----
 // Colunas: P J V E D GP:GC SG (a derrota logo depois do empate). Na tabela da fase de grupos (todos contra todos + final) cada linha
-// traz `pos`: times empatados dividem o número. Depois do 1º jogo lançado, a 1ª linha leva a marca de líder e as duas primeiras a da
-// final; com a tabela zerada ninguém é "primeiro" (só o primeiro da lista), então nada é marcado. Os times do empate que o admin
-// ainda precisa desfazer levam a marca do empate.
+// traz `pos`: times empatados dividem o número. A barra dourada marca quem já está na final (`classificado`): durante a fase só quem
+// os rivais já não alcançam, no fim os dois finalistas — antes disso o "1º" e o "2º" da lista são só ordem, não marcam nada. Os times
+// do empate que o admin ainda precisa desfazer levam a marca do empate.
 export function CampeonatoTabela({ campeonato }) {
   const linhas = campeonato.classificacao || [];
   const comFinal = campeonato.formato === 'pontos_final';
   const jogou = linhas.some((l) => l.J > 0);
   const noEmpate = new Set((campeonato.pendencia?.candidatos || []).map((c) => c.id));
+  const haClassificado = comFinal && linhas.some((l) => l.classificado);
   return (
+    <>
     <div className="camp-tab">
       <div className="camp-tab__hd">
         <span></span><span style={{ textAlign: 'left', paddingLeft: 2 }}>TIME</span>
@@ -87,11 +89,14 @@ export function CampeonatoTabela({ campeonato }) {
       {linhas.map((t, i) => {
         const pos = t.pos ?? i + 1;
         const classes = ['camp-tab__r'];
-        if (jogou && pos === 1) classes.push('camp-tab__r--lider');
-        else if (jogou && comFinal && pos === 2 && !noEmpate.has(t.id)) classes.push('camp-tab__r--final');
+        // Todos contra todos + final: a barra dourada é de quem JÁ está na final (o motor diz: `classificado`), nunca de quem só está
+        // na frente da lista. Nos pontos corridos ela continua sendo a do líder.
+        if (comFinal) {
+          if (t.classificado && !noEmpate.has(t.id)) classes.push(pos === 1 ? 'camp-tab__r--lider' : 'camp-tab__r--final');
+        } else if (jogou && pos === 1) classes.push('camp-tab__r--lider');
         if (noEmpate.has(t.id)) classes.push('camp-tab__r--empate');
         return (
-        <div key={t.id} className={classes.join(' ')} data-pos={pos}>
+        <div key={t.id} className={classes.join(' ')} data-pos={pos} data-classificado={comFinal && t.classificado ? 'sim' : undefined}>
           <span className="pos">{pos}</span>
           <span className="nm">
             <span className="camp-tab__dot" style={{ background: t.cor }} />
@@ -110,6 +115,24 @@ export function CampeonatoTabela({ campeonato }) {
         </div>
         );
       })}
+    </div>
+    {haClassificado ? <div className="camp-tab__legenda" data-legenda-classificado>Barra dourada: classificado para a final.</div> : null}
+    </>
+  );
+}
+
+// ---- Próximo jogo ----
+// O primeiro jogo ainda sem placar, na ordem da lista de jogos (o motor diz qual: `proximo_jogo`). Sem dia nem hora: o campeonato
+// não tem. Vai no topo da página do campeonato, para quem acompanha saber o que vem; some quando a final é lançada.
+export function CampeonatoProximoJogo({ proximo }) {
+  if (!proximo) return null;
+  const lado = (t) => <span className="camp-prox__t"><span className="camp-tab__dot" style={{ background: t.cor }} />{t.nome}</span>;
+  return (
+    <div className="camp-prox" data-proximo-jogo>
+      <span className="camp-prox__k">Próximo jogo:</span>
+      {lado(proximo.a)}
+      <span className="camp-prox__x">×</span>
+      {lado(proximo.b)}
     </div>
   );
 }
