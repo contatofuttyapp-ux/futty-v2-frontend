@@ -1,6 +1,7 @@
 // Prova no navegador da Rodada 30I ("Quem ganhou?"): o que só um Chromium de verdade confirma, com as MESMAS fontes e o MESMO CSS do app.
 //   · item 2: o empate vira post na Resenha — o bloco "Empate" com a frase "Ouro 2 × 2 Roxo", no lugar do time campeão, que não aparece;
 //   · item 5: a tela do jogo de verdade — a seção Resultado é o editor completo, e o resultado lançado aparece no card de cima;
+//   · item 6: a trava — com o jogo há 4 minutos o resultado ainda está fechado (e a tela diz a hora em que abre); há 6 minutos, abre;
 //   · itens 1, 3, 4 e 5: o editor ÚNICO do resultado — tocar no time é o campeão; os gols e o placar decidem sozinhos (o toque deixa de valer);
 //     com 3 ou 4 times só o campeão; "Salvar resultado" grava em dois pedidos (o resultado e os prêmios); cabe em 360 e 390 px.
 // O motor é de mentira (/api/** respondido por page.route, e os pedidos ficam guardados para a prova conferir): nada sai para a rede.
@@ -145,6 +146,22 @@ export async function rodar({ navegador, base, t }) {
     if (largura === 390) await page.screenshot({ path: captura('30i-jogo-390.png'), fullPage: true });
     t(`${largura}px · Jogo: console sem erros`, semErrosReais(erros).length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
+  }
+
+  // ─── item 6: a trava de 5 minutos ───────────────────────────────────────────────────────────────────────────────────────
+  {
+    const hora = (ms) => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo' }).format(new Date(ms));
+    const inicio = Date.now() - 4 * 60000;
+    const fechado = await abrirCena(navegador, base, 'jogo', { altura: 1800, motor: motorDoJogo({ data: new Date(inicio).toISOString() }) });
+    await fechado.page.locator('[data-resultado-fechado]').waitFor({ timeout: 20000 });
+    const frase = (await fechado.page.locator('[data-resultado-fechado]').innerText()).trim();
+    t('Jogo há 4 minutos: o resultado ainda está fechado — sem editor, e a tela diz a hora em que abre (início + 5 min, no relógio do time)', frase === `O resultado abre 5 minutos depois do início do jogo, às ${hora(inicio + 5 * 60000)}.` && (await fechado.page.locator('[data-resultado-editor]').count()) === 0, frase);
+    t('Jogo há 4 minutos: sem erro no console', semErrosReais(fechado.erros).length === 0, fechado.erros.slice(0, 2).join(' | '));
+    await fechado.ctx.close();
+    const aberto = await abrirCena(navegador, base, 'jogo', { altura: 1800, motor: motorDoJogo({ data: new Date(Date.now() - 6 * 60000).toISOString() }) });
+    await aberto.page.locator('[data-resultado-editor="salvar"]').waitFor({ timeout: 20000 });
+    t('Jogo há 6 minutos: o editor está aberto e a frase de espera não existe', (await aberto.page.locator('[data-resultado-fechado]').count()) === 0);
+    await aberto.ctx.close();
   }
 
   // ─── item 2: o empate na Resenha ───────────────────────────────────────────────────────────────────────────────────

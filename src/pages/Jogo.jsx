@@ -661,6 +661,7 @@ export default function Jogo() {
                   jogadores={jogadoresResultado}
                   confirmados={confirmadosTodos}
                   flags={flagsDoTime(timeCompleto)}
+                  fuso={team?.fuso}
                   onSaved={reload}
                   showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })}
                 />

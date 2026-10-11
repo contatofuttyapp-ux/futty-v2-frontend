@@ -16,7 +16,8 @@ import { urlAsset, urlImagem, iniciaisNome } from '../utils/avatar';
 import { avatarQuadrado, enquadroAvatar } from '../lib/enquadroAvatar';
 import { celebrarCerveja } from '../hooks/useConfetti';
 import { GOLS, ARTILHEIRO, DESTAQUE } from './golsEPremios';
-import { corpoDoResultadoDoJogo, corpoDosPremios, desfechoDoEstado, estadoDoJogo, RESULTADO_VAZIO, temGols } from '../utils/resultadoDoJogo';
+import { corpoDoResultadoDoJogo, corpoDosPremios, desfechoDoEstado, estadoDoJogo, RESULTADO_VAZIO, resultadoAbreEm, resultadoJaAbriu, temGols } from '../utils/resultadoDoJogo';
+import { formatarHora } from '../utils/dataHora';
 import { chaveDoJogador } from '../utils/seloDoSorteio';
 import { inputStyle, lbl, secLbl } from './camposDoAdmin';
 import UploadComCrop from './UploadComCrop';
@@ -30,12 +31,6 @@ const TITULO_DA_PERGUNTA = { margin: '18px 0 8px' };
 
 const FRASE_DOS_GOLS = 'Os gols de cada um decidem o placar e quem ganhou.';
 const FRASE_DO_PLACAR = 'O placar decide quem ganhou. Apague o placar para escolher no toque.';
-
-// Sem resultado antes do jogo acontecer — exceto jogo histórico (criado pelo "Jogo passado"), que não tem
-// essa trava.
-function jaComecouJogo(game) {
-  return !!game.data && new Date(game.data).getTime() <= Date.now();
-}
 
 function MiniAvatar({ nome, avatarUrl }) {
   const [falhou, setFalhou] = useState(false);
@@ -87,12 +82,14 @@ function SelectJogador({ value, onChange, confirmados }) {
  * @param {{ gols: boolean, artilheiro: boolean, destaque: boolean }} [props.flags] o que o time conta (mostrar_gols, mostrar_artilheiro, mostrar_destaque)
  * @param {object} [props.inicial] só `devolver`: de onde retomar (a pessoa voltou a este passo)
  * @param {(estado: object) => void} [props.aoMudar] só `devolver`
+ * @param {string} [props.fuso] o fuso do time: a hora em que o resultado abre se lê no relógio do campo
  * @param {() => void} [props.onSaved] só `salvar`
  * @param {(mensagem: string, tipo?: string) => void} [props.showToast]
  */
-export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, gols = [], times = [], jogadores = [], confirmados = [], flags = { gols: true, artilheiro: true, destaque: true }, inicial = null, aoMudar = null, onSaved, showToast }) {
+export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, gols = [], times = [], jogadores = [], confirmados = [], flags = { gols: true, artilheiro: true, destaque: true }, inicial = null, aoMudar = null, fuso, onSaved, showToast }) {
   const devolver = modo === 'devolver';
-  const podeSalvar = devolver || jaComecouJogo(game) || game.historico;
+  // O resultado abre 5 minutos depois do início do jogo (o Jogo passado, histórico, não tem trava).
+  const podeSalvar = devolver || resultadoJaAbriu(game);
 
   const [estado, setEstado] = useState(() => (devolver ? { ...RESULTADO_VAZIO, ...(inicial || {}) } : estadoDoJogo(game, gols)));
   const [busy, setBusy] = useState(false);
@@ -142,8 +139,8 @@ export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, go
 
   if (!podeSalvar) {
     return (
-      <p className="muted" style={{ marginTop: 8 }}>
-        O resultado só pode ser registrado depois do início do jogo.
+      <p className="muted" data-resultado-fechado style={{ marginTop: 8 }}>
+        O resultado abre 5 minutos depois do início do jogo{resultadoAbreEm(game) ? `, às ${formatarHora(new Date(resultadoAbreEm(game)).toISOString(), fuso)}` : ''}.
       </p>
     );
   }

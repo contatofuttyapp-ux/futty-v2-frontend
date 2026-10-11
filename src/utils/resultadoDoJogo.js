@@ -23,6 +23,23 @@ export function temGols(golsMap) {
   return Object.values(golsMap || {}).some((n) => Number(n) > 0);
 }
 
+// O resultado só abre depois que o jogo começou de verdade: 5 minutos depois do horário marcado (a mesma conta do motor — backend/utils/resultadoDoJogo.js —
+// e do card "Quem ganhou?" do Início). Jogo histórico ("Jogo passado") não tem trava.
+export const ESPERA_DO_RESULTADO_MS = 5 * 60 * 1000;
+
+/** O instante (ms) em que o resultado deste jogo abre, ou null para jogo sem data. */
+export function resultadoAbreEm(game) {
+  const ms = game?.data ? new Date(game.data).getTime() : NaN;
+  return Number.isNaN(ms) ? null : ms + ESPERA_DO_RESULTADO_MS;
+}
+
+/** O resultado já pode ser lançado? Jogo histórico sempre; os outros, 5 minutos depois do início. */
+export function resultadoJaAbriu(game, agora = Date.now()) {
+  if (game?.historico) return true;
+  const abre = resultadoAbreEm(game);
+  return abre !== null && abre <= agora;
+}
+
 /** Os nomes dos times como a tela os chama ("Time Ouro", "Time Roxo"…), na ordem do jogo. */
 export function nomesDosTimes(timesResultado) {
   return (Array.isArray(timesResultado?.times) ? timesResultado.times : []).map((t, i) => nomeDoTimeNaTela(t?.nome, i));

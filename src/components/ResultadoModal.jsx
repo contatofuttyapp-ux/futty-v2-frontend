@@ -51,6 +51,7 @@ export default function ResultadoModal({ jogo, fuso, cidade = null, premios = { 
               jogadores={jogadoresDosTimes(game.times_resultado)}
               confirmados={(detail.players || []).filter((p) => p.confirmado)}
               flags={premios}
+              fuso={fuso}
               // O AdminPanel avisa "Resultado salvo. Aparece na Resenha." ao fechar a janela: aqui só os erros.
               showToast={(mensagem, tipo) => { if (tipo === 'error') showToast(mensagem, 'error'); }}
               onSaved={() => onSaved(jogo.id)}
