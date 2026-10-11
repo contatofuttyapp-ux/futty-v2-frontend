@@ -8,6 +8,8 @@
 // O motor é de mentira (/api/** respondido por page.route) e a sessão também (chave do Supabase no localStorage): nada sai para a rede.
 import { readFileSync } from 'node:fs';
 
+const pressionado = (page, seletor) => page.locator(seletor).getAttribute('aria-pressed').then((v) => v === 'true');
+
 export const nome = 'Rodada 29S-B (Jogo passado: quatro passos no passado, gravado só no fim, retomada, Voltar do sistema)';
 
 const DIA = 86400000;
@@ -190,14 +192,14 @@ export async function rodar({ navegador, base, t }) {
     const corpo4 = await texto(page);
     t('"Como terminou?" com o resumo no passado (dia por extenso, hora, quantos jogaram, quantos times)', /Como terminou\?/.test(corpo4) && /^(Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo), \d{1,2} de [a-zç]{3}\. · 20:00 · 4 jogaram · 2 times$/.test((await page.locator('[data-resumo]').innerText()).trim()), await page.locator('[data-resumo]').innerText());
     t('UMA pergunta para quem ganhou: "Quem ganhou?" com Time Ouro · Empate · Time Roxo', /Quem ganhou\?/.test(corpo4) && (await page.locator('[data-vencedor]').allInnerTexts()).join('|').toLowerCase() === 'time ouro|empate|time roxo');
-    t('o placar e os gols de cada um só aparecem depois de responder', (await page.locator('[data-placar]').count()) === 0 && (await page.locator('[data-gols-de-cada-um]').count()) === 0);
+    t('o placar (opcional) e os gols de cada um já estão lá: os gols decidem o placar e quem ganhou (30I — um editor só)', (await page.locator('[data-placar]').count()) === 2 && (await page.locator('[data-gols-de-cada-um]').count()) === 1);
     t('o que o time conta: "Artilheiro do dia" e "Destaque do dia"; nada de foto nem de rodada de cerveja', /Artilheiro do dia/i.test(corpo4) && /Destaque do dia/i.test(corpo4) && !/Rodada de cerveja|Foto d/.test(corpo4));
     await page.locator('[data-vencedor="B"]').click();
-    t('responder abre o placar (opcional, vazio) e "Gols de cada um" só com quem tem conta (o convidado não)', (await page.locator('[data-placar]').count()) === 2 && (await page.locator('[data-placar="a"]').inputValue()) === '' && (await page.locator('[data-gols-de-cada-um]').innerText()).toLowerCase() === 'gols de cada um' && (await page.locator('[data-resultado-editor] [aria-label="Mais"]').count()) === 3);
+    t('tocar no Time Roxo é o campeão; o placar segue vazio (opcional) e "Gols de cada um" só tem quem tem conta (o convidado não)', (await pressionado(page, '[data-vencedor="B"]')) && (await page.locator('[data-placar="a"]').inputValue()) === '' && /^gols de cada um/i.test(await page.locator('[data-gols-de-cada-um]').innerText()) && (await page.locator('[data-resultado-editor] [aria-label="Mais"]').count()) === 3);
     // Beto +2, Caio +1: o placar mostra a soma enquanto a pessoa não mexe nele.
     const mais = page.locator('[data-resultado-editor] [aria-label="Mais"]');
     await mais.nth(1).click(); await mais.nth(1).click(); await mais.nth(2).click();
-    t('os gols do Beto (2) e do Caio (1) viram o placar 0 × 3 (do Time Roxo), que a pessoa ainda pode mudar', (await page.locator('[data-placar="a"]').inputValue()) === '0' && (await page.locator('[data-placar="b"]').inputValue()) === '3');
+    t('os gols do Beto (2) e do Caio (1) viram o placar 0 × 3 (do Time Roxo): a soma, mostrada e não digitada', (await page.locator('[data-placar="a"]').inputValue()) === '0' && (await page.locator('[data-placar="b"]').inputValue()) === '3' && (await page.locator('[data-placar="b"]').getAttribute('readonly')) !== null);
     await page.locator('label', { hasText: 'Destaque do dia' }).locator('input[type="checkbox"]').check();
     await page.locator('select').selectOption({ label: 'Beto' });
     await imagem(page, 'jogo-passado-como-terminou');
@@ -212,7 +214,7 @@ export async function rodar({ navegador, base, t }) {
     t('o jogo é histórico (não avisa ninguém), às 20:00 do relógio do time, com o local, e sem jogadores_por_time (vale o padrão do time)', jogo.historico === true && jogo.team_slug === 'varzea-fc' && jogo.local === 'Society Madalena' && horaNoCampo(jogo.data) === '20:00' && !('jogadores_por_time' in jogo), JSON.stringify(jogo));
     t('as presenças: só quem tem conta, com o selo GOL da Ana', JSON.stringify(presencas.jogadores) === JSON.stringify([{ user_id: 'U10', goleiro: true }, { user_id: 'U11', goleiro: false }, { user_id: 'U12', goleiro: false }]), JSON.stringify(presencas));
     t('os times à mão: Time Ouro (Ana + o convidado só com o nome) e Time Roxo (Beto e Caio)', times.times.length === 2 && times.times[0].nome === 'Time Ouro' && times.times[0].jogadores.map((j) => j.nome).join() === 'Ana,Zé da Esquina' && times.times[0].jogadores[1].user_id === null && times.times[0].jogadores[1].convidado === true && times.times[1].jogadores.map((j) => j.user_id).join() === 'U11,U12', JSON.stringify(times));
-    t('quem ganhou vai para os DOIS campos: time_vencedor "B" no resultado do jogo (com placar 0 × 3 e os gols) e campeao_time_index 1 no do feed', resultado.nivel === 3 && resultado.time_vencedor === 'B' && resultado.placar_a === 0 && resultado.placar_b === 3 && resultado.gols.find((g) => g.user_id === 'U11').gols === 2 && feed.campeao_time_index === 1 && feed.destaque_user_id === 'U11', JSON.stringify([resultado, feed]));
+    t('quem ganhou vai num campo só: o campeão (índice 1, Time Roxo) com os gols no pedido do jogo — o placar o motor soma —, e só o prêmio (destaque) no do feed', resultado.campeao_time_index === 1 && resultado.empate === false && !('placar_a' in resultado) && !('nivel' in resultado) && resultado.gols.find((g) => g.user_id === 'U11').gols === 2 && !('campeao_time_index' in feed) && feed.destaque_user_id === 'U11', JSON.stringify([resultado, feed]));
     t('depois de salvar, vai para o jogo (/time/varzea-fc/jogo/G9)', (await page.locator('[data-jogo-salvo]').getAttribute('data-caminho')) === '/time/varzea-fc/jogo/G9');
     t('o Jogo passado roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
@@ -265,13 +267,13 @@ export async function rodar({ navegador, base, t }) {
     await chip(page, /^Time Prata/).click(); await chip(page, /Caio/).click();
     await page.locator('[data-continuar]').click();
     await esperarPasso(page, 4);
-    t('com 3 times a pergunta é "Quem foi o campeão?" (tocar no time) — sem "Quem ganhou?", sem placar e sem lista de gols', /Quem foi o campeão\?/i.test(await texto(page)) && !/Quem ganhou\?/.test(await texto(page)) && (await page.locator('[data-campeao-time]').count()) === 3 && (await page.locator('[data-placar], [data-gols-de-cada-um]').count()) === 0);
+    t('com 3 times a pergunta é "Quem foi o campeão?" (tocar no time) — sem "Quem ganhou?", sem Empate e sem placar; os gols de cada um valem (artilheiro)', /Quem foi o campeão\?/i.test(await texto(page)) && !/Quem ganhou\?/.test(await texto(page)) && (await page.locator('[data-campeao-time]').count()) === 3 && (await page.locator('[data-placar], [data-vencedor]').count()) === 0 && (await page.locator('[data-gols-de-cada-um]').count()) === 1);
     await page.locator('[data-campeao-time="2"]').click();
     t('o campeão marcado fica marcado; tocar de novo desfaz', (await page.locator('[data-campeao-time="2"]').getAttribute('aria-pressed')) === 'true');
     await page.locator('[data-salvar-jogo]').click();
     await page.locator('[data-jogo-salvo]').waitFor({ timeout: 10000 });
     const seq = motor.chamadas.map((c) => `${c.metodo} ${c.caminho}`);
-    t('salvar com 3 times: jogo → presenças → times → resultado do feed (campeao_time_index 2); o resultado do jogo nem sai (só entende A, B ou empate)', seq.join(' > ') === 'POST /api/games > POST /api/games/G9/presencas > POST /api/games/G9/times-manuais > PATCH /api/feed/games/G9/resultado' && motor.chamadas[3].corpo.campeao_time_index === 2 && motor.chamadas[2].corpo.times.length === 3, seq.join(' > '));
+    t('salvar com 3 times: jogo → presenças → times → resultado do jogo (campeao_time_index 2, sem empate e sem placar); sem prêmio, nada no feed', seq.join(' > ') === 'POST /api/games > POST /api/games/G9/presencas > POST /api/games/G9/times-manuais > PATCH /api/games/G9/resultado' && motor.chamadas[3].corpo.campeao_time_index === 2 && motor.chamadas[3].corpo.empate === false && !('placar_a' in motor.chamadas[3].corpo) && motor.chamadas[2].corpo.times.length === 3, seq.join(' > '));
     await ctx.close();
   }
 

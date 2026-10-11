@@ -1,36 +1,36 @@
-// Futty v2.0 — Editor do resultado do jogo (admin): 4 níveis de detalhe.
-// Dois modos. `salvar` (o de sempre, no Jogo): escolhe o nível, salva em PATCH /api/games/:id/resultado.
-// `devolver` (o passo "Como terminou?" do Jogo passado): o jogo ainda não existe, então nada é salvo aqui
-// — a cada toque o editor devolve o que foi preenchido (`aoMudar`) e quem usa grava tudo no fim. Em
-// `devolver` não há seletor de nível: é UMA pergunta (quem ganhou); o placar é opcional e os gols de cada
-// um aparecem depois dela; o nível sai das contas de utils/resultadoDoJogo.js.
+// Futty v2.0 — O editor ÚNICO do resultado de um jogo. "Quem ganhou?" → (opcional) placar → gols de cada um → artilheiro e destaque do dia (se o
+// time conta) → foto do campeão. Um lugar só: a seção Resultado da tela do jogo, a janela de Ajustes → Jogos (ResultadoModal, que abre ESTE editor
+// para corrigir) e o passo "Como terminou?" do Jogo passado.
+//
+// Tocar no time é dizer quem foi o campeão — e o campeão é a verdade (utils/resultadoDoJogo.js). Os gols decidem sozinhos: lançou gols por
+// jogador, o placar é a soma por time (não se digita placar) e o placar define o vencedor ou o empate; sem gols, pode digitar só o placar (que
+// define o vencedor) ou só tocar no vencedor. Placar e vencedor nunca são escolhas separadas. Com 3 ou 4 times (rodízio) não há placar nem empate:
+// só "Quem foi o campeão?", e os gols por jogador seguem valendo (artilheiro).
+//
+// Dois modos. `salvar` (o de sempre): "Salvar resultado" grava em dois pedidos — o resultado (PATCH /api/games/:id/resultado) e os prêmios
+// (PATCH /api/feed/games/:id/resultado). `devolver` (o Jogo passado): o jogo ainda não existe, então nada é salvo aqui — a cada toque o editor
+// devolve o que foi preenchido (`aoMudar`) e quem usa grava tudo no fim; sem foto nem rodada de cerveja (ficam para Ajustes → Jogos).
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { urlAsset, urlImagem, iniciaisNome } from '../utils/avatar';
 import { avatarQuadrado, enquadroAvatar } from '../lib/enquadroAvatar';
-import { GOLS } from './golsEPremios';
-import { corpoDoResultadoDoJogo, placarEfetivo } from '../utils/resultadoDoJogo';
+import { celebrarCerveja } from '../hooks/useConfetti';
+import { GOLS, ARTILHEIRO, DESTAQUE } from './golsEPremios';
+import { corpoDoResultadoDoJogo, corpoDosPremios, desfechoDoEstado, estadoDoJogo, RESULTADO_VAZIO, resultadoAbreEm, resultadoJaAbriu, temGols } from '../utils/resultadoDoJogo';
+import { formatarHora } from '../utils/dataHora';
 import { chaveDoJogador } from '../utils/seloDoSorteio';
-
-const NIVEIS = [
-  { n: 0, label: 'Sem resultado' },
-  { n: 1, label: 'Quem ganhou' },
-  { n: 2, label: 'Placar' },
-  { n: 3, label: 'Stats' },
-];
+import { inputStyle, lbl, secLbl } from './camposDoAdmin';
+import UploadComCrop from './UploadComCrop';
 
 // A borda se vê sobre o #0c0c0c (com #222 eram duas caixas pretas, sem forma) e o "0" apagado mostra o que
 // se escreve ali (class placar-input, app.css).
 const inputPlacar = { width: 48, textAlign: 'center', padding: '8px 6px', borderRadius: 8, border: '1.5px solid rgba(255,255,255,0.32)', background: '#0c0c0c', color: '#fff', fontSize: 18, fontWeight: 800 };
 const stepBtn = { width: 28, height: 28, borderRadius: 8, border: '1px solid #333', background: 'transparent', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', lineHeight: 1 };
-// O título de cada pergunta do modo "devolver": o .section-title da casa (18 px, caixa normal: é pergunta, não letreiro — VOZ-FUTTY §5).
+// O título de cada pergunta: o .section-title da casa (18 px, caixa normal: é pergunta, não letreiro — VOZ-FUTTY §5).
 const TITULO_DA_PERGUNTA = { margin: '18px 0 8px' };
 
-// Sem resultado antes do jogo acontecer — exceto jogo histórico (criado pelo "Jogo passado"), que não tem
-// essa trava.
-function jaComecouJogo(game) {
-  return !!game.data && new Date(game.data).getTime() <= Date.now();
-}
+const FRASE_DOS_GOLS = 'Os gols de cada um decidem o placar e quem ganhou.';
+const FRASE_DO_PLACAR = 'O placar decide quem ganhou. Apague o placar para escolher no toque.';
 
 function MiniAvatar({ nome, avatarUrl }) {
   const [falhou, setFalhou] = useState(false);
@@ -47,29 +47,58 @@ function MiniAvatar({ nome, avatarUrl }) {
   );
 }
 
+function Seccao({ titulo, ligado, onToggle, children, ...rest }) {
+  return (
+    <div style={{ display: 'grid', gap: 8, borderTop: '1px solid #222', paddingTop: 12, marginTop: 16 }} {...rest}>
+      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+        <span style={secLbl}>{titulo}</span>
+        <input type="checkbox" checked={ligado} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#8b5cf6' }} />
+      </label>
+      {ligado ? children : null}
+    </div>
+  );
+}
+
+function SelectJogador({ value, onChange, confirmados }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
+      <option value="">Escolher jogador</option>
+      {confirmados.map((p) => (
+        <option key={p.user_id} value={p.user_id}>{p.nome}</option>
+      ))}
+    </select>
+  );
+}
+
 /**
  * @param {object} props
  * @param {'salvar'|'devolver'} [props.modo]
- * @param {Array<{ user_id: string, nome: string, avatar_url?: string|null, time?: string, timeIndex?: number }>} props.jogadores quem entra na lista de gols
- * @param {{ vencedor: string|null, placarA: string|null, placarB: string|null, golsMap: object }} [props.inicial] só `devolver`: de onde retomar (a pessoa voltou a este passo)
- * @param {(estado: { vencedor: string|null, placarA: string|null, placarB: string|null, golsMap: object }) => void} [props.aoMudar] só `devolver`
- * @param {boolean} [props.comGols] só `devolver`: o time conta "Gols de cada um" (mostrar_gols)
+ * @param {string} [props.gameId] só `salvar`
+ * @param {object} [props.game] só `salvar`: o jogo salvo (data, historico, campeão, placar, prêmios) — de onde o editor parte
+ * @param {Array<{ user_id: string|null, nome: string, gols: number }>} [props.gols] só `salvar`: os gols já gravados
+ * @param {Array<{ nome: string, jogadores?: Array<{ nome: string }> }>} props.times os times do jogo, com o nome que a tela usa ("Time Ouro")
+ * @param {Array<{ user_id: string|null, nome: string, avatar_url?: string|null, time?: string, timeIndex?: number }>} props.jogadores quem entra na lista de gols (todos os times)
+ * @param {Array<{ user_id: string, nome: string }>} [props.confirmados] quem pode ser artilheiro, destaque ou a rodada de cerveja (quem tem conta)
+ * @param {{ gols: boolean, artilheiro: boolean, destaque: boolean }} [props.flags] o que o time conta (mostrar_gols, mostrar_artilheiro, mostrar_destaque)
+ * @param {object} [props.inicial] só `devolver`: de onde retomar (a pessoa voltou a este passo)
+ * @param {(estado: object) => void} [props.aoMudar] só `devolver`
+ * @param {string} [props.fuso] o fuso do time: a hora em que o resultado abre se lê no relógio do campo
+ * @param {() => void} [props.onSaved] só `salvar`
+ * @param {(mensagem: string, tipo?: string) => void} [props.showToast]
  */
-export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, nomeB, onSaved, showToast, modo = 'salvar', inicial = null, aoMudar = null, comGols = true }) {
+export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, gols = [], times = [], jogadores = [], confirmados = [], flags = { gols: true, artilheiro: true, destaque: true }, inicial = null, aoMudar = null, fuso, onSaved, showToast }) {
   const devolver = modo === 'devolver';
-  const podeSalvar = devolver || jaComecouJogo(game) || game.historico;
+  // O resultado abre 5 minutos depois do início do jogo (o Jogo passado, histórico, não tem trava).
+  const podeSalvar = devolver || resultadoJaAbriu(game);
 
-  const [nivel, setNivel] = useState(game?.resultado_nivel || 0);
-  const [estado, setEstado] = useState(() => {
-    if (devolver) return { vencedor: inicial?.vencedor ?? null, placarA: inicial?.placarA ?? null, placarB: inicial?.placarB ?? null, golsMap: inicial?.golsMap || {} };
-    const m = {};
-    // Chave do motor (id de quem tem conta, nome de quem é convidado sem app): dois convidados não
-    // compartilham contador, mesmo os dois com user_id vazio.
-    (gols || []).forEach((g) => { m[chaveDoJogador(g)] = g.gols || 0; });
-    return { vencedor: game.time_vencedor || null, placarA: game.placar_a ?? 0, placarB: game.placar_b ?? 0, golsMap: m };
-  });
-  const { vencedor, golsMap } = estado;
+  const [estado, setEstado] = useState(() => (devolver ? { ...RESULTADO_VAZIO, ...(inicial || {}) } : estadoDoJogo(game, gols)));
   const [busy, setBusy] = useState(false);
+  const nTimes = times.length;
+  const nomes = times.map((t) => t.nome);
+  const d = desfechoDoEstado(estado, { nTimes, jogadores });
+  // Com gols (a soma é o placar) ou com placar digitado, o vencedor sai deles: os botões mostram quem ganhou mas não aceitam outro toque.
+  const decididoPorOutro = d.origem === 'gols' || d.origem === 'placar';
+  const temAlgo = d.origem !== null || temGols(estado.golsMap);
 
   function mudar(parcial) {
     const novo = { ...estado, ...parcial };
@@ -77,23 +106,32 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
     if (devolver) aoMudar?.(novo);
   }
   function setGol(chave, delta) {
-    mudar({ golsMap: { ...golsMap, [chave]: Math.max(0, (golsMap[chave] || 0) + delta) } });
+    mudar({ golsMap: { ...estado.golsMap, [chave]: Math.max(0, (estado.golsMap[chave] || 0) + delta) } });
+  }
+  /** Tocar no time é dizer o campeão; tocar de novo desfaz. 'A' | 'B' (2 times), 'empate' (2 times) ou o índice (3 ou 4). */
+  function tocar(quem) {
+    if (decididoPorOutro) return;
+    const idx = quem === 'A' ? 0 : quem === 'B' ? 1 : quem;
+    if (quem === 'empate') mudar({ campeaoIdx: null, empate: !estado.empate });
+    else mudar({ campeaoIdx: estado.campeaoIdx === idx ? null : idx, empate: false });
+  }
+  function limpar() {
+    mudar({ campeaoIdx: null, empate: false, placarA: null, placarB: null, golsMap: {} });
   }
 
   async function guardar() {
     if (busy) return;
-    if (nivel >= 1 && !vencedor) {
-      showToast('Indique quem venceu.', 'error');
-      return;
-    }
     setBusy(true);
     try {
-      const body = corpoDoResultadoDoJogo({ nivel, ...estado }, jogadores);
-      await apiFetch(`/api/games/${gameId}/resultado`, { method: 'PATCH', body: JSON.stringify(body) });
-      showToast('Resultado salvo.');
-      onSaved();
+      // 1) o resultado (quem ganhou, placar, gols); 2) o que a Resenha mostra além disso (artilheiro, destaque, rodada, foto). O motor avisa
+      // o time uma vez só, no primeiro pedido que dá resultado.
+      await apiFetch(`/api/games/${gameId}/resultado`, { method: 'PATCH', body: JSON.stringify(corpoDoResultadoDoJogo(estado, { nTimes, jogadores })) });
+      const res = await apiFetch(`/api/feed/games/${gameId}/resultado`, { method: 'PATCH', body: JSON.stringify(corpoDosPremios(estado)) });
+      if (res?.game?.rodada_user_id) celebrarCerveja();
+      showToast?.('Resultado salvo.');
+      onSaved?.();
     } catch (e) {
-      showToast(e.message, 'error');
+      showToast?.(e.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -101,64 +139,73 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
 
   if (!podeSalvar) {
     return (
-      <p className="muted" style={{ marginTop: 8 }}>
-        O resultado só pode ser registrado depois do início do jogo.
+      <p className="muted" data-resultado-fechado style={{ marginTop: 8 }}>
+        O resultado abre 5 minutos depois do início do jogo{resultadoAbreEm(game) ? `, às ${formatarHora(new Date(resultadoAbreEm(game)).toISOString(), fuso)}` : ''}.
       </p>
     );
   }
 
-  // O que cada bloco mostra: no `salvar`, pelo nível escolhido; no `devolver`, assim que alguém ganhou (o placar e os gols vêm depois da pergunta).
-  const mostraVencedor = devolver || nivel >= 1;
-  const mostraPlacar = devolver ? !!vencedor : nivel >= 2;
-  const mostraGols = devolver ? !!vencedor && comGols && jogadores.length > 0 : nivel === 3;
-  const placar = devolver ? placarEfetivo(estado, jogadores) : { a: estado.placarA, b: estado.placarB };
+  const mostraGols = flags.gols && jogadores.length > 0;
+  const mostraArtilheiro = flags.artilheiro || estado.temArt;
+  const mostraDestaque = flags.destaque || estado.temDest;
 
   return (
     <div style={{ marginTop: devolver ? 0 : 8 }} data-resultado-editor={modo}>
-      {/* Selector de nível (só `salvar`) */}
-      {!devolver ? (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {NIVEIS.map((x) => (
-            <button key={x.n} type="button" className={`btn btn--sm ${nivel === x.n ? 'btn--purple' : 'btn--ghost'}`} aria-pressed={nivel === x.n} onClick={() => setNivel(x.n)}>
-              {x.label}
+      {/* QUEM GANHOU — 2 times: o time, o empate, o outro time; 3 ou 4: "Quem foi o campeão?" */}
+      {nTimes >= 2 || !devolver ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, margin: '0 0 8px' }}>
+          <div className="section-title" style={{ margin: 0 }} data-quem-ganhou>{nTimes >= 3 ? 'Quem foi o campeão?' : 'Quem ganhou?'}</div>
+          {temAlgo ? <button type="button" className="btn btn--ghost btn--sm" data-limpar-resultado onClick={limpar}>Limpar</button> : null}
+        </div>
+      ) : null}
+      {nTimes === 2 ? (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[['A', nomes[0], d.campeaoIdx === 0], ['empate', 'Empate', d.empate], ['B', nomes[1], d.campeaoIdx === 1]].map(([v, label, marcado]) => (
+            <button key={v} type="button" data-vencedor={v} aria-pressed={marcado} aria-disabled={decididoPorOutro || undefined} className={`btn btn--sm ${marcado ? 'btn--primary' : 'btn--ghost'}`} style={{ flex: 1, minWidth: 0, ...(decididoPorOutro ? { cursor: 'default' } : null) }} onClick={() => tocar(v)}>
+              {label}
             </button>
           ))}
         </div>
-      ) : null}
+      ) : nTimes >= 3 ? (
+        <div style={{ display: 'grid', gap: 8 }} data-campeao>
+          {times.map((t, i) => (
+            <button
+              key={i}
+              type="button"
+              data-campeao-time={i}
+              aria-pressed={d.campeaoIdx === i}
+              onClick={() => tocar(i)}
+              style={{ textAlign: 'left', padding: 10, borderRadius: 10, cursor: 'pointer', border: `1px solid ${d.campeaoIdx === i ? 'var(--neon)' : '#222'}`, background: d.campeaoIdx === i ? 'rgba(139,92,246,0.1)' : 'transparent', color: '#fff' }}
+            >
+              <div style={{ fontWeight: 700 }}>{t.nome || `Time ${i + 1}`}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{(t.jogadores || []).map((p) => p.nome).join(' · ')}</div>
+            </button>
+          ))}
+        </div>
+      ) : devolver ? null : (
+        <p className="muted" style={{ fontSize: 12 }}>Este jogo não tem times.</p>
+      )}
+      {decididoPorOutro ? <p className="texto-apoio" data-decide={d.origem} style={{ margin: '8px 0 0' }}>{d.origem === 'gols' ? FRASE_DOS_GOLS : FRASE_DO_PLACAR}</p> : null}
 
-      {/* Quem venceu */}
-      {mostraVencedor ? (
+      {/* PLACAR — só com 2 times (o rodízio não tem). Com gols é a soma, mostrada e não digitada; sem gols, a pessoa pode digitar. */}
+      {nTimes === 2 ? (
         <>
-          {devolver ? <div className="section-title" style={{ ...TITULO_DA_PERGUNTA, marginTop: 0 }} data-quem-ganhou>Quem ganhou?</div> : null}
-          <div style={{ display: 'flex', gap: 8, marginTop: devolver ? 0 : 12 }}>
-            {[['A', devolver ? nomeA : `${nomeA} ganhou`], ['empate', 'Empate'], ['B', devolver ? nomeB : `${nomeB} ganhou`]].map(([v, label]) => (
-              <button key={v} type="button" data-vencedor={v} aria-pressed={vencedor === v} className={`btn btn--sm ${vencedor === v ? 'btn--primary' : 'btn--ghost'}`} style={{ flex: 1, minWidth: 0 }} onClick={() => mudar({ vencedor: v })}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      {/* Placar (níveis 2-3; no `devolver`, opcional) */}
-      {mostraPlacar ? (
-        <>
-          {devolver ? <div className="section-title" style={TITULO_DA_PERGUNTA}>Placar <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>(opcional)</span></div> : null}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: devolver ? 0 : 12, color: '#fff', fontWeight: 700 }}>
-            <span style={{ fontSize: 13 }}>{nomeA}</span>
-            <input type="number" min="0" inputMode="numeric" placeholder="0" className="placar-input" aria-label={`Gols do ${nomeA}`} data-placar="a" value={placar.a} onChange={(e) => mudar({ placarA: e.target.value })} style={inputPlacar} />
+          <div className="section-title" data-placar-titulo style={TITULO_DA_PERGUNTA}>Placar <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>{d.origem === 'gols' ? '(soma dos gols)' : '(opcional)'}</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#fff', fontWeight: 700 }}>
+            <span style={{ fontSize: 13 }}>{nomes[0]}</span>
+            <input type="number" min="0" inputMode="numeric" placeholder="0" className="placar-input" aria-label={`Gols do ${nomes[0]}`} data-placar="a" readOnly={d.origem === 'gols'} value={d.origem === 'gols' ? d.placar.a : (estado.placarA ?? '')} onChange={(e) => mudar({ placarA: e.target.value })} style={{ ...inputPlacar, ...(d.origem === 'gols' ? { opacity: 0.7 } : null) }} />
             <span style={{ color: 'var(--text-dim)' }}>×</span>
-            <input type="number" min="0" inputMode="numeric" placeholder="0" className="placar-input" aria-label={`Gols do ${nomeB}`} data-placar="b" value={placar.b} onChange={(e) => mudar({ placarB: e.target.value })} style={inputPlacar} />
-            <span style={{ fontSize: 13 }}>{nomeB}</span>
+            <input type="number" min="0" inputMode="numeric" placeholder="0" className="placar-input" aria-label={`Gols do ${nomes[1]}`} data-placar="b" readOnly={d.origem === 'gols'} value={d.origem === 'gols' ? d.placar.b : (estado.placarB ?? '')} onChange={(e) => mudar({ placarB: e.target.value })} style={{ ...inputPlacar, ...(d.origem === 'gols' ? { opacity: 0.7 } : null) }} />
+            <span style={{ fontSize: 13 }}>{nomes[1]}</span>
           </div>
         </>
       ) : null}
 
-      {/* Gols por jogador (nível 3; no `devolver`, só se o time conta gols) */}
+      {/* GOLS DE CADA UM — todos os times; no rodízio valem para o artilheiro, não decidem nada. */}
       {mostraGols ? (
         <>
-          {devolver ? <div className="section-title" style={TITULO_DA_PERGUNTA} data-gols-de-cada-um>{GOLS.titulo}</div> : null}
-          <div style={{ display: 'grid', gap: 8, marginTop: devolver ? 0 : 12 }}>
+          <div className="section-title" style={TITULO_DA_PERGUNTA} data-gols-de-cada-um>{GOLS.titulo} <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>(opcional)</span></div>
+          <div style={{ display: 'grid', gap: 8 }}>
             {/* key única também para o convidado sem app (user_id null): a mesma linha fantasma do DrawnTeams. */}
             {jogadores.map((j, k) => {
               const chave = chaveDoJogador(j);
@@ -169,7 +216,7 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
                     {j.nome} <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>· {j.time}</span>
                   </span>
                   <button type="button" style={stepBtn} onClick={() => setGol(chave, -1)} aria-label="Menos">−</button>
-                  <span style={{ minWidth: 20, textAlign: 'center', color: '#d4a017', fontWeight: 800 }}>{golsMap[chave] || 0}</span>
+                  <span style={{ minWidth: 20, textAlign: 'center', color: '#d4a017', fontWeight: 800 }}>{estado.golsMap[chave] || 0}</span>
                   <button type="button" style={stepBtn} onClick={() => setGol(chave, 1)} aria-label="Mais">+</button>
                 </div>
               );
@@ -178,8 +225,36 @@ export default function ResultadoEditor({ gameId, game, gols, jogadores, nomeA, 
         </>
       ) : null}
 
+      {/* ARTILHEIRO e DESTAQUE DO DIA — se o time os conta. */}
+      {mostraArtilheiro ? (
+        <Seccao titulo={ARTILHEIRO.titulo} ligado={estado.temArt} onToggle={(v) => mudar({ temArt: v })} data-artilheiro>
+          <SelectJogador value={estado.artId} onChange={(v) => mudar({ artId: v })} confirmados={confirmados} />
+          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Nº de gols</span><input type="number" min={1} value={estado.artGols} onChange={(e) => mudar({ artGols: e.target.value })} style={inputStyle} /></label>
+        </Seccao>
+      ) : null}
+      {mostraDestaque ? (
+        <Seccao titulo={DESTAQUE.titulo} ligado={estado.temDest} onToggle={(v) => mudar({ temDest: v })} data-destaque>
+          <SelectJogador value={estado.destId} onChange={(v) => mudar({ destId: v })} confirmados={confirmados} />
+          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Título</span><input value={estado.destTitulo} onChange={(e) => mudar({ destTitulo: e.target.value.slice(0, 60) })} placeholder="Ex.: Melhor em campo" style={inputStyle} /></label>
+        </Seccao>
+      ) : null}
+
+      {/* FOTO DO CAMPEÃO e RODADA DE CERVEJA (com foto) — só ao salvar: no Jogo passado ficam para Ajustes → Jogos. */}
+      {!devolver && d.campeaoIdx !== null ? (
+        <div style={{ display: 'grid', gap: 8, borderTop: '1px solid #222', paddingTop: 12, marginTop: 16 }} data-foto-do-campeao>
+          <span style={secLbl}>Foto do campeão</span>
+          <UploadComCrop onUpload={(url) => mudar({ campeaoFoto: url })} accept="image/*" aspect={4 / 3} label={estado.campeaoFoto ? '✓ Foto do campeão' : 'Foto do campeão'} />
+        </div>
+      ) : null}
       {!devolver ? (
-        <button type="button" className="btn btn--purple btn--sm" style={{ marginTop: 14 }} disabled={busy} onClick={guardar}>
+        <Seccao titulo="Rodada de cerveja" ligado={estado.temRodada} onToggle={(v) => mudar({ temRodada: v })} data-rodada>
+          <SelectJogador value={estado.rodadaId} onChange={(v) => mudar({ rodadaId: v })} confirmados={confirmados} />
+          <UploadComCrop onUpload={(url) => mudar({ rodadaFoto: url })} accept="image/*" aspect={1} label={estado.rodadaFoto ? '✓ Foto da rodada' : 'Foto da rodada'} />
+        </Seccao>
+      ) : null}
+
+      {!devolver ? (
+        <button type="button" className="btn btn--purple" data-salvar-resultado style={{ width: '100%', marginTop: 18 }} disabled={busy} onClick={guardar}>
           {busy ? 'Salvando…' : 'Salvar resultado'}
         </button>
       ) : null}

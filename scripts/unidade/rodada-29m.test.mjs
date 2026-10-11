@@ -50,7 +50,9 @@ test('143 · a cerimônia, os botões, o cartão 9:16, o cartaz, a lista do resu
   assert.match(ler('src/components/DrawnTeams.jsx'), /<span>\{nomeDoTimeNaTela\(time\.nome, i\)\}<\/span>/);
   const publico = ler('src/pages/SorteioPublico.jsx');
   assert.match(publico, /nomeDoTimeNaTela\(resultado\.times\?\.\[0\]\?\.nome, 0\)[\s\S]*nomeDoTimeNaTela\(resultado\.times\?\.\[1\]\?\.nome, 1\)/, 'o placar da página pública');
-  assert.match(ler('src/pages/Jogo.jsx'), /const nomeTimeA = nomeDoTimeNaTela\(timesSorteio\[0\]\?\.nome, 0\);\s*const nomeTimeB = nomeDoTimeNaTela\(timesSorteio\[1\]\?\.nome, 1\);/);
+  // O placar do Jogo chama os times pelos nomes da cerimônia: nomesDosTimes (utils/resultadoDoJogo.js) é a mesma função, por posição.
+  assert.match(ler('src/pages/Jogo.jsx'), /const nomesTimes = nomesDosTimes\(game\?\.times_resultado\);/);
+  assert.match(ler('src/utils/resultadoDoJogo.js'), /\.map\(\(t, i\) => nomeDoTimeNaTela\(t\?\.nome, i\)\)/);
 });
 
 test('144 · a janela dos rolos sai de cena no fim (CSS + os três pontos da cerimônia que a escondem e a devolvem)', () => {

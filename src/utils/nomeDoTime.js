@@ -8,6 +8,9 @@
 // nunca terem o mesmo nome.
 export const NOMES_DAS_CORES = ['Time Ouro', 'Time Roxo', 'Time Prata', 'Time Bronze'];
 
+// A cor de cada posição, na mesma ordem dos nomes (Ouro, Roxo, Prata, Bronze): a moldura dos cartões do sorteio e o card "Quem ganhou?" do Início.
+export const CORES_DAS_POSICOES = ['#d4a017', '#8b5cf6', '#aab4c8', '#c2652e'];
+
 const GENERICO = /^time\s+(?:[a-z]|\d{1,2})$/i;
 
 export function nomeDoTimeNaTela(nomeDoDado, indice = 0) {

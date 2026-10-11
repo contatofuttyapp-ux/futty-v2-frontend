@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import DrawnTeams from '../../src/components/DrawnTeams';
 import ResultadoEditor from '../../src/components/ResultadoEditor';
+import { jogadoresDosTimes, nomesDosTimes } from '../../src/utils/resultadoDoJogo';
 import '../../src/index.css';
 import '../../src/styles/app.css';
 
@@ -24,10 +25,6 @@ const A_MAO = {
   reservas: [],
   registro: { origem: 'manual', por: { nome: 'Chavo' }, sorteios: 2, ajustes: [] },
 };
-const jogadoresDoResultado = (tr) => [
-  ...(tr.times[0]?.jogadores || []).map((x) => ({ ...x, time: 'A' })),
-  ...(tr.times[1]?.jogadores || []).map((x) => ({ ...x, time: 'B' })),
-];
 
 function Tela() {
   const [tr, setTr] = useState(SORTEADO);
@@ -36,7 +33,7 @@ function Tela() {
       <button type="button" data-salvar-a-mao onClick={() => setTr(A_MAO)}>salvar à mão</button>
       <div data-lista><DrawnTeams resultado={tr} /></div>
       <div data-gols>
-        <ResultadoEditor gameId="g1" game={{ resultado_nivel: 3, data: '2026-10-01T23:00:00Z' }} gols={[]} jogadores={jogadoresDoResultado(tr)} nomeA="Time Ouro" nomeB="Time Roxo" onSaved={() => {}} showToast={() => {}} />
+        <ResultadoEditor gameId="g1" game={{ resultado_nivel: 3, data: '2026-10-01T23:00:00Z' }} gols={[]} times={tr.times.map((t, i) => ({ nome: nomesDosTimes(tr)[i], jogadores: t.jogadores }))} jogadores={jogadoresDosTimes(tr)} onSaved={() => {}} showToast={() => {}} />
       </div>
     </div>
   );

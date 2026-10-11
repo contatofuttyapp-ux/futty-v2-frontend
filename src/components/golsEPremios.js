@@ -13,3 +13,15 @@ export function alternarGols(artilheiro, ligar) {
 export function alternarArtilheiro(gols, ligar) {
   return { mostrarGols: ligar ? true : gols, mostrarArtilheiro: ligar };
 }
+
+/**
+ * O que o time conta, a partir das configurações dele: { gols, artilheiro, destaque }. O troféu do artilheiro faz parte dos gols (desligar os gols leva o
+ * artilheiro junto). É o que o editor do resultado usa para mostrar ou esconder "Gols de cada um", "Artilheiro do dia" e "Destaque do dia".
+ */
+export function flagsDoTime(team) {
+  return {
+    gols: team?.mostrar_gols !== false,
+    artilheiro: team?.mostrar_gols !== false && team?.mostrar_artilheiro !== false,
+    destaque: team?.mostrar_destaque !== false,
+  };
+}
