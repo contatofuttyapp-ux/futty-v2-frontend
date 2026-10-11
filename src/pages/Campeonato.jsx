@@ -15,6 +15,7 @@ import ComporTimes from '../components/ComporTimes';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal, CampeonatoDesempate } from '../components/CampeonatoVistas';
 import SeletorDeFormato from '../components/SeletorDeFormato';
+import { formatarData } from '../utils/dataHora';
 import { MIN_TIMES_DO_FORMATO, nomeDoFormato } from '../utils/formatoCampeonato';
 import '../styles/app.css';
 
@@ -267,13 +268,54 @@ function Detalhe({ slug, id }) {
     return () => { ativo = false; };
   }, [slug, id]);
 
-  // Devolve se o placar foi aceito: o editor de correção só fecha quando foi.
-  async function onResultado(cid, pa, pb) {
+  // A final acabou de nascer (o último jogo da fase de grupos foi salvo, ou o admin decidiu o empate da vaga): aviso "Final definida:
+  // 1º × 2º" (no topo da janela, onde a pessoa está olhando, e na página até ela dispensar) e a tela rola, devagar, até a final — a não
+  // ser que a pessoa já tenha tocado ou rolado por conta própria.
+  const [rolarParaFinal, setRolarParaFinal] = useState(0);
+  useEffect(() => {
+    if (!rolarParaFinal) return undefined;
+    let mexeu = false;
+    const marca = () => { mexeu = true; };
+    const eventos = ['pointerdown', 'touchstart', 'wheel', 'keydown'];
+    eventos.forEach((e) => window.addEventListener(e, marca, { passive: true }));
+    const espera = setTimeout(() => {
+      if (mexeu) return;
+      const reduz = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      document.querySelector('.camp-final')?.scrollIntoView({ behavior: reduz ? 'auto' : 'smooth', block: 'center' });
+    }, 700);
+    return () => { clearTimeout(espera); eventos.forEach((e) => window.removeEventListener(e, marca)); };
+  }, [rolarParaFinal]);
+
+  // O que a tela faz com o campeonato que o motor devolveu: guarda, mostra os avisos do motor e, se a final acabou de ser definida,
+  // diz qual é e rola até ela.
+  function receber(novo, avisosDoMotor = []) {
+    const finalDe = (c) => (c?.confrontos || []).find((x) => x.fase === 'final');
+    const antes = finalDe(camp);
+    const depois = finalDe(novo);
+    const definida = novo.formato === 'pontos_final' && antes && !antes.time_a_id && depois?.time_a_id;
+    setCamp(novo);
+    if (definida) {
+      const nome = (tid) => novo.times.find((t) => t.id === tid)?.nome || '—';
+      const frase = `Final definida: ${nome(depois.time_a_id)} × ${nome(depois.time_b_id)}`;
+      setAvisos([frase, ...avisosDoMotor]);
+      // O quadro da página fica lá no alto: quem está na lista de jogos, lá embaixo, só o veria rolando de volta. O aviso na janela é o que ele vê.
+      setToast({ tipo: 'success', mensagem: frase, posicao: 'topo' });
+      setRolarParaFinal((n) => n + 1);
+    } else {
+      setAvisos(avisosDoMotor);
+    }
+  }
+
+  // Devolve se o placar foi aceito: o editor de correção só fecha quando foi. `penaltisVencedorId`: o empate de uma decisão (final ou
+  // mata-mata) vai com o vencedor dos pênaltis; o placar segue como digitado.
+  async function onResultado(cid, pa, pb, penaltisVencedorId = null) {
     try {
-      const r = await apiFetch(`/api/equipas/${slug}/campeonatos/${id}/confrontos/${cid}/resultado`, { method: 'POST', body: JSON.stringify({ placar_a: pa, placar_b: pb }) });
-      setCamp(r.campeonato);
-      setAvisos(r.avisos || []);
-      if (r.campeonato.estado === 'terminado') setToast({ tipo: 'success', mensagem: 'Temos campeão!' });
+      const jaTinhaCampeao = camp.estado === 'terminado';
+      const corpo = { placar_a: pa, placar_b: pb, ...(penaltisVencedorId ? { penaltis_vencedor_id: penaltisVencedorId } : {}) };
+      const r = await apiFetch(`/api/equipas/${slug}/campeonatos/${id}/confrontos/${cid}/resultado`, { method: 'POST', body: JSON.stringify(corpo) });
+      receber(r.campeonato, r.avisos || []);
+      // O aviso do campeão sobe para o topo: no meio da tela ele cobria os botões de compartilhar.
+      if (r.campeonato.estado === 'terminado') setToast({ tipo: 'success', mensagem: jaTinhaCampeao ? 'Final corrigida.' : 'Temos campeão!', posicao: 'topo' });
       return true;
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
@@ -284,8 +326,7 @@ function Detalhe({ slug, id }) {
   async function onEscolherDoEmpate(timeId) {
     try {
       const r = await apiFetch(`/api/equipas/${slug}/campeonatos/${id}/desempate`, { method: 'POST', body: JSON.stringify({ time_id: timeId }) });
-      setCamp(r.campeonato);
-      setAvisos(r.avisos || []);
+      receber(r.campeonato, r.avisos || []);
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     }
@@ -308,6 +349,7 @@ function Detalhe({ slug, id }) {
       <Topbar hud="CAMPEONATO" back={`/time/${slug}/campeonato`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <div className="camp-title">{camp.nome}</div>
+        {camp.origem_data ? <div className="camp-sub" data-subtitulo-do-sorteio>Do sorteio de {formatarData(camp.origem_data, team?.fuso)}</div> : null}
         <div className="row camp-chips" style={{ margin: '4px 0 14px' }}>
           <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{nomeDoFormato(camp.formato)}</span>
           <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
@@ -332,7 +374,7 @@ function Detalhe({ slug, id }) {
             {isAdmin && terminado ? <p className="muted" data-grupos-travados style={{ fontSize: 11, margin: '0 0 8px' }}>A final já foi jogada: os jogos da fase de grupos não podem mais ser corrigidos.</p> : null}
             <CampeonatoJogos campeonato={camp} admin={isAdmin && !terminado} corrigivel onResultado={onResultado} />
             <div className="section-title">Final</div>
-            <CampeonatoFinal campeonato={camp} admin={isAdmin && !terminado} onResultado={onResultado} />
+            <CampeonatoFinal campeonato={camp} admin={isAdmin} onResultado={onResultado} />
           </>
         ) : camp.formato === 'pontos' ? (
           <>
@@ -347,13 +389,13 @@ function Detalhe({ slug, id }) {
         ) : (
           <>
             <div className="section-title">Chaveamento</div>
-            <CampeonatoBracket campeonato={camp} admin={isAdmin && !terminado} onResultado={onResultado} />
+            <CampeonatoBracket campeonato={camp} admin={isAdmin} terminado={terminado} onResultado={onResultado} />
           </>
         )}
 
         <PlanteisSection campeonato={camp} />
       </main>
-      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} posicao={toast.posicao} onClose={() => setToast(null)} /> : null}
     </div>
   );
 }

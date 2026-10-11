@@ -17,6 +17,11 @@ export const A_MAO = {
 
 export const ESCOLHA_O_JOGO = 'Escolha o jogo do sorteio:';
 
+export const MAX_NOME_DO_CAMPEONATO = 60;
+
+/** O nome que a tela já traz preenchido ao criar pelo sorteio: "Campeonato <time>" (a data do jogo vira subtítulo, não entra no nome). */
+export const nomePadraoDoCampeonato = (nomeDoTime) => `Campeonato ${nomeDoTime || ''}`.trim().slice(0, MAX_NOME_DO_CAMPEONATO);
+
 /** Sem nenhum jogo sorteado que ainda não virou campeonato: o caminho até o botão, em uma linha. */
 export const SEM_JOGO_SORTEADO = 'Marque um jogo, deixe o pessoal confirmar e sorteie. No resultado do sorteio aparece Criar campeonato.';
 

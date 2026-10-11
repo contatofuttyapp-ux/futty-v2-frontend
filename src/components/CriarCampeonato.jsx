@@ -98,7 +98,7 @@ export default function CriarCampeonato({ slug, team, aoCriado, aoMontarAMao, ao
             {[quandoOndeDoJogo({ data: jogo.data, local: jogo.local }, team), linhaDoSorteio(jogo)].filter(Boolean).join(' · ')}. Os times e os jogadores entram já preenchidos.
           </p>
           {erro ? <div className="alert alert--error" role="alert" style={{ marginBottom: 8 }}>{erro}</div> : null}
-          <CampeonatoDoSorteio slug={slug} gameId={jogo.id} nTimes={jogo.n_times} aoCriar={aoCriado} aoErrar={setErro} aoCancelar={abrirJogos} />
+          <CampeonatoDoSorteio slug={slug} gameId={jogo.id} nomeDoTime={team?.nome} nTimes={jogo.n_times} aoCriar={aoCriado} aoErrar={setErro} aoCancelar={abrirJogos} />
         </>
       ) : null}
     </div>

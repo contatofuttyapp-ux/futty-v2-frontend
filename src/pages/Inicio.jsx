@@ -16,6 +16,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useIndicadorDeRolagem } from '../hooks/useIndicadorDeRolagem';
 import { celebrarTop3 } from '../hooks/useConfetti';
 import { nomeCampeao } from '../utils/campeonato';
+import CardCampeonatoInicio from '../components/CardCampeonatoInicio';
 import { SEM_NOTA_AINDA, STATUS_LABELS, formatDateTime, formatRating } from '../utils/format';
 import { ehHoje, formatarData } from '../utils/dataHora';
 import { plural } from '../utils/plural';
@@ -978,6 +979,9 @@ export default function Inicio() {
   // backend usou para calcular `campeonato` dentro de /api/inicio.
   const campSlug = teams[0]?.slug || null;
   const campeonato = dadosInicio?.campeonato?.campeonato || null;
+  // O campeonato novo (N times) do time principal; o motor manda o slug junto.
+  const campeonatoNovo = dadosInicio?.campeonato_novo || null;
+  const campSlugDoNovo = campeonatoNovo?.team_slug || campSlug;
 
   // Confetti uma vez quando o campeonato está terminado.
   useEffect(() => {
@@ -1457,6 +1461,9 @@ export default function Inicio() {
               {/* A fila é só o filtro dos jogos por time. "Criar time" e "Radar de peladas" moram nos dois cartões
                   acima (<AtalhosDoInicio />). */}
             </div>
+
+            {/* O campeonato NOVO do time (em andamento, ou o campeão da última semana): todo membro vê, não só o admin. */}
+            {campeonatoNovo && campSlugDoNovo ? <CardCampeonatoInicio campeonato={campeonatoNovo} slug={campSlugDoNovo} /> : null}
 
             {/* Jogos */}
             <div>

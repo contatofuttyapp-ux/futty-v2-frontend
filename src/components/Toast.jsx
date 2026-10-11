@@ -5,6 +5,8 @@
 //   · entra e sai em 180 ms; com `prefers-reduced-motion` aparece e some sem animar (estilos: index.css).
 // `acao` opcional ({ rotulo, aoTocar }) — um botão dentro do toast (ex.: "Tentar de
 // novo" depois de uma compra que falhou).
+// `posicao` opcional: 'meio' (o padrão) ou 'topo' — para a tela em que o meio é onde estão os botões (o "Temos campeão!" não pode
+// cobrir os de compartilhar).
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -19,7 +21,7 @@ const SAIDA_MS = 180;
 const DURACAO_MS = 2000;
 const DURACAO_COM_ACAO_MS = 6000;
 
-export default function Toast({ mensagem, tipo = 'info', onClose, acao = null }) {
+export default function Toast({ mensagem, tipo = 'info', onClose, acao = null, posicao = 'meio' }) {
   const [saindo, setSaindo] = useState(false);
   const fechando = useRef(null);
 
@@ -67,7 +69,7 @@ export default function Toast({ mensagem, tipo = 'info', onClose, acao = null })
       key={mensagem}
       role={eErro ? 'alert' : 'status'}
       aria-live={eErro ? 'assertive' : 'polite'}
-      className={`futty-toast${saindo ? ' futty-toast--saindo' : ''}${fechaAoTocar ? ' futty-toast--toque' : ''}`}
+      className={`futty-toast${posicao === 'topo' ? ' futty-toast--topo' : ''}${saindo ? ' futty-toast--saindo' : ''}${fechaAoTocar ? ' futty-toast--toque' : ''}`}
       style={{ '--toast-cor': cor, pointerEvents: acao || fechaAoTocar ? 'auto' : 'none' }}
       onClick={fechaAoTocar ? fechar : undefined}
     >

@@ -358,6 +358,11 @@ select {
   animation: futtyToastEntra 180ms ease-out backwards;
   transition: opacity 180ms ease, scale 180ms ease;
 }
+/* No topo: logo abaixo da barra de cima, sem tocar no meio da tela. */
+.futty-toast--topo {
+  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  transform: translate(-50%, 0);
+}
 .futty-toast--saindo {
   opacity: 0;
   scale: 0.96;

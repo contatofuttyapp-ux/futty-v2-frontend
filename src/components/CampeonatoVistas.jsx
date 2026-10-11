@@ -69,23 +69,26 @@ function confetesDe(id) {
 }
 
 // ---- Tabela (pontos) ----
-// Na tabela da fase de grupos (todos contra todos + final) cada linha traz `pos`: times empatados dividem o número. As duas
-// primeiras linhas levam a marca da final; os times do empate que o admin ainda precisa desfazer levam a marca do empate.
+// Colunas: P J V E D GP:GC SG (a derrota logo depois do empate). Na tabela da fase de grupos (todos contra todos + final) cada linha
+// traz `pos`: times empatados dividem o número. Depois do 1º jogo lançado, a 1ª linha leva a marca de líder e as duas primeiras a da
+// final; com a tabela zerada ninguém é "primeiro" (só o primeiro da lista), então nada é marcado. Os times do empate que o admin
+// ainda precisa desfazer levam a marca do empate.
 export function CampeonatoTabela({ campeonato }) {
   const linhas = campeonato.classificacao || [];
   const comFinal = campeonato.formato === 'pontos_final';
+  const jogou = linhas.some((l) => l.J > 0);
   const noEmpate = new Set((campeonato.pendencia?.candidatos || []).map((c) => c.id));
   return (
     <div className="camp-tab">
       <div className="camp-tab__hd">
         <span></span><span style={{ textAlign: 'left', paddingLeft: 2 }}>TIME</span>
-        <span>P</span><span>J</span><span>V</span><span>E</span><span>GP:GC</span><span>SG</span><span>D</span>
+        <span>P</span><span>J</span><span>V</span><span>E</span><span>D</span><span>GP:GC</span><span>SG</span>
       </div>
       {linhas.map((t, i) => {
         const pos = t.pos ?? i + 1;
         const classes = ['camp-tab__r'];
-        if (pos === 1) classes.push('camp-tab__r--lider');
-        else if (comFinal && pos === 2 && !noEmpate.has(t.id)) classes.push('camp-tab__r--final');
+        if (jogou && pos === 1) classes.push('camp-tab__r--lider');
+        else if (jogou && comFinal && pos === 2 && !noEmpate.has(t.id)) classes.push('camp-tab__r--final');
         if (noEmpate.has(t.id)) classes.push('camp-tab__r--empate');
         return (
         <div key={t.id} className={classes.join(' ')} data-pos={pos}>
@@ -93,17 +96,17 @@ export function CampeonatoTabela({ campeonato }) {
           <span className="nm">
             <span className="camp-tab__dot" style={{ background: t.cor }} />
             <span>{t.nome}</span>
-            {/* A coroa é do campeão: nos pontos corridos é quem lidera a tabela; em todos contra todos + final o título sai da final,
-                então a tabela não coroa ninguém (o campeão tem a coroa na celebração, no pódio e na final). */}
-            {pos === 1 && !comFinal && !noEmpate.has(t.id) ? <span style={{ display: 'inline-flex' }}><Crown /></span> : null}
+            {/* A coroa é do campeão: nos pontos corridos é quem lidera a tabela (depois do 1º jogo); em todos contra todos + final o
+                título sai da final, então a tabela não coroa ninguém (o campeão tem a coroa na celebração, no pódio e na final). */}
+            {jogou && pos === 1 && !comFinal && !noEmpate.has(t.id) ? <span style={{ display: 'inline-flex' }}><Crown /></span> : null}
           </span>
           <span className="p">{t.PTS}</span>
           <span className="c">{t.J}</span>
           <span className="c">{t.V}</span>
           <span className="c">{t.E}</span>
+          <span className="c">{t.D}</span>
           <span className="gpgc">{t.GP}:{t.GC}</span>
           <span className="c" style={{ color: t.SG > 0 ? '#7bd88f' : t.SG < 0 ? '#f8a4a4' : '#c9c2d6' }}>{t.SG > 0 ? '+' : ''}{t.SG}</span>
-          <span className="c">{t.D}</span>
         </div>
         );
       })}
@@ -112,18 +115,42 @@ export function CampeonatoTabela({ campeonato }) {
 }
 
 // Editor de resultado (admin) — dois placares + guardar. Na correção de um jogo já lançado ele abre com o placar de antes e
-// ganha o "Cancelar".
-function ResultadoEditor({ confronto, onResultado, corrigir = false, onCancelar = null }) {
+// ganha o "Cancelar". Num jogo ELIMINATÓRIO (a final e o mata-mata) o empate não é recusado: a tela pergunta "Empatou. Quem venceu
+// nos pênaltis?" com um botão por time, e o placar segue como foi digitado (2 × 2) junto com o vencedor dos pênaltis.
+function ResultadoEditor({ confronto, onResultado, corrigir = false, onCancelar = null, eliminatoria = false, nomes = null }) {
   const [a, setA] = useState(corrigir ? String(confronto.placar_a ?? '') : '');
   const [b, setB] = useState(corrigir ? String(confronto.placar_b ?? '') : '');
   const [busy, setBusy] = useState(false);
-  async function salvar() {
-    if (a === '' || b === '') return;
+  const [perguntando, setPerguntando] = useState(false); // empatou numa decisão: quem venceu nos pênaltis?
+  async function enviar(penaltisVencedorId = null) {
     setBusy(true);
     try {
-      const ok = await onResultado(confronto.id, Number(a), Number(b));
+      const ok = await onResultado(confronto.id, Number(a), Number(b), penaltisVencedorId);
+      if (ok !== false) setPerguntando(false);
       if (corrigir && ok !== false && onCancelar) onCancelar();
     } finally { setBusy(false); }
+  }
+  function salvar() {
+    if (a === '' || b === '') return;
+    if (eliminatoria && Number(a) === Number(b)) { setPerguntando(true); return; }
+    enviar(null);
+  }
+  if (perguntando) {
+    return (
+      <div className="camp-pen" role="group" aria-label="Quem venceu nos pênaltis?" data-pergunta-penaltis>
+        <div className="camp-empate__t">Empatou. Quem venceu nos pênaltis?</div>
+        <div className="camp-empate__d">O placar fica {a} × {b}; o time escolhido leva a decisão.</div>
+        <div className="camp-empate__lista">
+          {[[confronto.time_a_id, nomes?.a, nomes?.corA], [confronto.time_b_id, nomes?.b, nomes?.corB]].map(([id, nome, cor]) => (
+            <button key={id} type="button" className="camp-empate__time" data-penaltis={id} disabled={busy} onClick={() => enviar(id)}>
+              {cor ? <span className="camp-tab__dot" style={{ background: cor }} /> : null}
+              <span>{nome || 'Time'}</span>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 8 }} disabled={busy} onClick={() => setPerguntando(false)}>Voltar</button>
+      </div>
+    );
   }
   return (
     <div className="camp-res" data-editor-de-resultado>
@@ -175,8 +202,10 @@ export function CampeonatoJogos({ campeonato, admin, onResultado, corrigivel = f
 }
 
 // ---- Final (todos contra todos + final) ----
-// Antes do último jogo da fase de grupos é só a vaga "1º × 2º", sem nomes; depois, os dois times; depois do jogo, o placar e o campeão.
+// Antes do último jogo da fase de grupos é só a vaga "1º × 2º", sem nomes; depois, os dois times; depois do jogo, o placar e o campeão
+// (com "(pên.: Time X)" se a decisão foi nos pênaltis). O admin pode corrigir o placar da final mesmo depois do campeão.
 export function CampeonatoFinal({ campeonato, admin, onResultado }) {
+  const [corrigindo, setCorrigindo] = useState(false);
   const tm = timesMap(campeonato);
   const final = (campeonato.confrontos || []).find((c) => c.fase === 'final');
   if (!final) return null;
@@ -186,7 +215,9 @@ export function CampeonatoFinal({ campeonato, admin, onResultado }) {
   const aguardaEmpate = vaga && !!campeonato.pendencia;
   const aVence = final.jogado && final.vencedor_id === final.time_a_id;
   const bVence = final.jogado && final.vencedor_id === final.time_b_id;
-  const lado = (t, vence, rotulo) => (
+  const nomeDe = (id) => tm[id]?.nome || '—';
+  const nomes = { a: A?.nome, b: B?.nome, corA: A?.cor, corB: B?.cor };
+  const lado =(t, vence, rotulo) => (
     <div className={`camp-final__t ${vence ? 'camp-final__t--vence' : ''}`}>
       {t ? <span className="camp-tab__dot" style={{ background: t.cor }} /> : <span className="camp-tab__dot" style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,.3)' }} />}
       <span className="camp-final__n">{t ? t.nome : rotulo}</span>
@@ -201,12 +232,21 @@ export function CampeonatoFinal({ campeonato, admin, onResultado }) {
         <span className="camp-final__x">{final.jogado ? <b>{final.placar_a} × {final.placar_b}</b> : vaga ? '×' : 'vs'}</span>
         {lado(B, bVence, '2º')}
       </div>
+      {final.jogado && final.penaltis_vencedor_id ? (
+        <div className="camp-final__pen" data-penaltis-da-final>(pên.: {nomeDe(final.penaltis_vencedor_id)})</div>
+      ) : null}
       {vaga ? (
         <div className="camp-final__nota">
           {aguardaEmpate ? 'Espera o empate da tabela ser decidido.' : 'O 1º e o 2º da fase de grupos. A final nasce sozinha quando o último jogo for lançado.'}
         </div>
       ) : null}
-      {admin && !vaga && !final.jogado ? <ResultadoEditor confronto={final} onResultado={onResultado} /> : null}
+      {admin && !vaga && !final.jogado ? <ResultadoEditor confronto={final} onResultado={onResultado} eliminatoria nomes={nomes} /> : null}
+      {admin && final.jogado && !corrigindo ? (
+        <button type="button" data-corrigir-final onClick={() => setCorrigindo(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', color: '#c9b6ff', fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.04em', cursor: 'pointer', padding: '8px 0 0' }}>
+          <Pencil size={11} aria-hidden="true" /> Corrigir
+        </button>
+      ) : null}
+      {admin && final.jogado && corrigindo ? <ResultadoEditor confronto={final} onResultado={onResultado} corrigir eliminatoria nomes={nomes} onCancelar={() => setCorrigindo(false)} /> : null}
     </div>
   );
 }
@@ -247,11 +287,15 @@ export function CampeonatoDesempate({ campeonato, admin, onEscolher }) {
 }
 
 // ---- Bracket (mata) ----
-export function CampeonatoBracket({ campeonato, admin, onResultado }) {
+// `admin` = quem lança resultados; `terminado` = o campeonato já tem campeão (aí só a FINAL se corrige). Empate decide-se nos pênaltis:
+// o placar fica como digitado e "pên.: Time X" aparece sob o jogo.
+export function CampeonatoBracket({ campeonato, admin, terminado = false, onResultado }) {
+  const [corrigindo, setCorrigindo] = useState(null);
   const tm = timesMap(campeonato);
   const rondas = {};
   (campeonato.confrontos || []).forEach((c) => { (rondas[c.ronda] = rondas[c.ronda] || []).push(c); });
   const nums = Object.keys(rondas).map(Number).sort((a, b) => a - b);
+  const ultima = nums[nums.length - 1];
   const nomeRonda = (size) => ({ 2: 'Final', 4: 'Semis', 8: 'Quartas', 16: 'Oitavas' }[size] || 'Fase');
   const linhaTime = (id, placar, isWin, isBye, isTbd) => {
     const t = tm[id];
@@ -276,14 +320,24 @@ export function CampeonatoBracket({ campeonato, admin, onResultado }) {
             {confs.map((c) => {
               const aWin = c.jogado && c.vencedor_id && c.vencedor_id === c.time_a_id;
               const bWin = c.jogado && c.vencedor_id && c.vencedor_id === c.time_b_id;
-              const jogavel = admin && !c.jogado && c.time_a_id && c.time_b_id;
+              const jogavel = admin && !terminado && !c.jogado && c.time_a_id && c.time_b_id;
+              const ehFinal = r === ultima;
+              const corrigivel = admin && ehFinal && c.jogado && !c.bye;
+              const nomes = { a: tm[c.time_a_id]?.nome, b: tm[c.time_b_id]?.nome, corA: tm[c.time_a_id]?.cor, corB: tm[c.time_b_id]?.cor };
               return (
                 <div key={c.id}>
-                  <div className="camp-conf">
+                  <div className="camp-conf" data-confronto={c.id}>
                     {linhaTime(c.time_a_id, c.placar_a, aWin, c.bye && !c.time_a_id, !c.time_a_id && !c.bye)}
                     {linhaTime(c.time_b_id, c.placar_b, bWin, c.bye && !c.time_b_id, !c.time_b_id && !c.bye)}
                   </div>
-                  {jogavel ? <ResultadoEditor confronto={c} onResultado={onResultado} /> : null}
+                  {c.jogado && c.penaltis_vencedor_id ? <div className="camp-conf__pen" data-penaltis-do-jogo>(pên.: {tm[c.penaltis_vencedor_id]?.nome || '—'})</div> : null}
+                  {jogavel ? <ResultadoEditor confronto={c} onResultado={onResultado} eliminatoria nomes={nomes} /> : null}
+                  {corrigivel && corrigindo !== c.id ? (
+                    <button type="button" data-corrigir-final={c.id} onClick={() => setCorrigindo(c.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', color: '#c9b6ff', fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.04em', cursor: 'pointer', padding: '4px 0 0' }}>
+                      <Pencil size={11} aria-hidden="true" /> Corrigir
+                    </button>
+                  ) : null}
+                  {corrigivel && corrigindo === c.id ? <ResultadoEditor confronto={c} onResultado={onResultado} corrigir eliminatoria nomes={nomes} onCancelar={() => setCorrigindo(null)} /> : null}
                 </div>
               );
             })}

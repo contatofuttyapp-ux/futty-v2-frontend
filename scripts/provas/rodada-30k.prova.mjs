@@ -176,14 +176,16 @@ export async function rodar({ navegador, base, t }) {
       t(`${largura}px · fim da fase de grupos não coroa ninguém (sem "Temos campeão!", sem celebração)`, (await page.locator('.camp-cel').count()) === 0);
       await foto(page, { path: captura(`30k-final-criada-${largura}.png`), fullPage: true });
 
-      // Final empatada: recusada, com a frase.
+      // Final empatada (30L): em vez de recusar, a tela pergunta quem venceu nos pênaltis — e não grava nada até a resposta.
       const editorFinal = page.locator('.camp-final [data-editor-de-resultado]');
       await editorFinal.locator('input').nth(0).fill('2');
       await editorFinal.locator('input').nth(1).fill('2');
       await editorFinal.getByRole('button', { name: 'Salvar' }).click();
-      await page.getByText(/Na final não há empate/).waitFor({ timeout: 10000 });
-      t(`${largura}px · final empatada: o placar é recusado com a frase da casa`, (await page.locator('.camp-final[data-final="aberta"]').count()) === 1 && motor.camps.get(camp.id).estado === 'em_curso');
+      await page.locator('[data-pergunta-penaltis]').waitFor({ timeout: 10000 });
+      t(`${largura}px · final empatada: a tela pergunta "Empatou. Quem venceu nos pênaltis?" e não grava nada`, (await page.locator('[data-pergunta-penaltis]').innerText()).includes('Empatou. Quem venceu nos pênaltis?') && (await page.locator('[data-penaltis]').count()) === 2 && motor.camps.get(camp.id).estado === 'em_curso' && !motor.pedidos.some((p) => p.pathname.endsWith('/resultado') && p.corpo?.placar_a === 2 && p.corpo?.placar_b === 2));
       await foto(page, { path: captura(`30k-final-empatada-${largura}.png`), fullPage: false });
+      await page.locator('[data-pergunta-penaltis]').getByRole('button', { name: 'Voltar' }).click();
+      await editorFinal.waitFor();
 
       // Final decidida: campeão e pódio.
       const ouroEhA = (await page.locator('.camp-final__t').first().innerText()).includes('Time Ouro');

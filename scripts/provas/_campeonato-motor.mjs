@@ -66,8 +66,9 @@ export function criarMotor({ store, papel = 'admin', slug = 'domingueira-fc', no
       const times = (g.times_resultado?.times || []).slice(0, 8);
       if (times.length < minimo) return erro(400, `Este jogo não tem times sorteados suficientes (mínimo ${minimo}).`);
       opts = {
-        nome: `Campeonato do sorteio · ${g.dataCurta || ''}`.replace(/ · $/, ''),
-        origem: { game_id: g.id, assinatura: store.assinaturaDosTimes(g.times_resultado.times) },
+        // O nome é do admin (a tela o traz preenchido); sem nome, "Campeonato <time>". A data do jogo vai para `origem_data` (subtítulo).
+        nome: String(corpo.nome || '').trim().slice(0, 60) || `Campeonato ${nomeDoTime}`.slice(0, 60),
+        origem: { game_id: g.id, assinatura: store.assinaturaDosTimes(g.times_resultado.times), data: g.data || null },
         formato,
         usar_sorteio: false,
         nomes: times.map((_, i) => NOMES_COR_SORTEIO[i % NOMES_COR_SORTEIO.length]),
@@ -85,17 +86,16 @@ export function criarMotor({ store, papel = 'admin', slug = 'domingueira-fc', no
 
   function resultado(camp, cid, corpo) {
     if (papel !== 'admin') return erro(403, 'Só o admin lança resultados.');
-    if (camp.estado === 'terminado') {
-      return camp.formato === 'pontos_final' ? erro(409, store.MSG_FINAL_JOGADA) : erro(400, 'Campeonato já terminou.');
-    }
     const pa = Math.max(0, Math.floor(Number(corpo?.placar_a)));
     const pb = Math.max(0, Math.floor(Number(corpo?.placar_b)));
     if (!Number.isFinite(pa) || !Number.isFinite(pb)) return erro(400, 'Placar inválido.');
+    const penaltis = corpo?.penaltis_vencedor_id ? String(corpo.penaltis_vencedor_id) : null;
     const avisos = [];
     try {
-      store.aplicarResultado(camp, cid, pa, pb, avisos);
+      // Com o campeão coroado só a FINAL pode ser corrigida; o motor barra o resto com a explicação.
+      store.aplicarResultado(camp, cid, pa, pb, avisos, penaltis);
     } catch (e) {
-      return erro(400, e.message);
+      return erro(e.message === store.MSG_FINAL_JOGADA ? 409 : 400, e.message);
     }
     return ok({ campeonato: enriquecer(camp), avisos });
   }

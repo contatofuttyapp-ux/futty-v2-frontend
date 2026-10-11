@@ -8,6 +8,7 @@ import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
 import { CampeonatoTabela, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal } from '../components/CampeonatoVistas';
 import { nomeDoFormato } from '../utils/formatoCampeonato';
+import { formatarData } from '../utils/dataHora';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -41,6 +42,7 @@ export default function CampeonatoPublico() {
               return (
                 <>
                   <div className="camp-title">{camp.nome}</div>
+                  {camp.origem_data ? <div className="camp-sub" data-subtitulo-do-sorteio>Do sorteio de {formatarData(camp.origem_data)}</div> : null}
                   <div className="row camp-chips" style={{ margin: '4px 0 14px' }}>
                     <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{nomeDoFormato(camp.formato)}</span>
                     <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>

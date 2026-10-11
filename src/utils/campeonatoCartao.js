@@ -136,6 +136,19 @@ function elipsa(cx, txt, max) {
 }
 
 // ===== CARTÃO DO CAMPEÃO =====
+// A linha da final, para o cartão do campeão. Pontos corridos não tem final (a linha some).
+export function linhaDaFinal(campeonato) {
+  const confrontos = campeonato?.confrontos || [];
+  const final = campeonato?.formato === 'pontos_final'
+    ? confrontos.find((c) => c.fase === 'final')
+    : campeonato?.formato === 'mata' ? confrontos.find((c) => c.ronda === Math.max(...confrontos.map((x) => x.ronda))) : null;
+  if (!final || !final.jogado) return '';
+  const nomeDe = (id) => campeonato.times.find((t) => t.id === id)?.nome || '—';
+  const jogo = `${nomeDe(final.time_a_id)} ${final.placar_a} × ${final.placar_b} ${nomeDe(final.time_b_id)}`;
+  const penaltis = final.penaltis_vencedor_id ? ` (pên.: ${nomeDe(final.penaltis_vencedor_id)})` : '';
+  return `Final · ${jogo}${penaltis}`;
+}
+
 export function canvasCartaoCampeao(campeonato) {
   const camp = campeonato?.campeao;
   if (!camp) throw new Error('Sem campeão.');
@@ -176,6 +189,14 @@ export function canvasCartaoCampeao(campeonato) {
   cx.fillStyle = 'rgba(255,255,255,0.72)';
   cx.font = '600 50px Rajdhani, sans-serif';
   cx.fillText(elipsa(cx, campeonato.nome, W - 200), W / 2, 1500);
+
+  // a decisão: "Final · Time Ouro 2 × 2 Time Roxo (pên.: Time Ouro)"
+  const decisao = linhaDaFinal(campeonato);
+  if (decisao) {
+    cx.fillStyle = 'rgba(255,255,255,0.58)';
+    cx.font = '600 44px Rajdhani, sans-serif';
+    cx.fillText(elipsa(cx, decisao, W - 160), W / 2, 1580);
+  }
 
   // rodapé
   cx.fillStyle = 'rgba(255,255,255,0.42)';

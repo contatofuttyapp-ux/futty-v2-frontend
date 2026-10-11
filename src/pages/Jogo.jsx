@@ -21,6 +21,7 @@ import TimesEditor from '../components/TimesEditor';
 import { EscolhaDosTimes, MontarTimesAMao } from '../components/TimesDoJogo';
 import CountdownSorteio from '../components/CountdownSorteio';
 import CampeonatoDoSorteio from '../components/CampeonatoDoSorteio';
+import { resumoDoSorteio } from '../utils/sorteioResumo';
 import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
@@ -446,7 +447,7 @@ export default function Jogo() {
                     <button
                       key={n}
                       type="button"
-                      className={`chip ${jogadoresPorTime === n ? 'chip--active' : ''}`}
+                      className={`chip ${porTimeEfectivo === n ? 'chip--active' : ''}`}
                       aria-pressed={porTimeEfectivo === n}
                       onClick={() => setJogadoresPorTime(n)}
                     >
@@ -456,6 +457,13 @@ export default function Jogo() {
                 </div>
               </div>
             )}
+            {/* A conta do sorteio em frase: a regra de verdade (utils/sorteioResumo.js). O número marcado é o do sorteio que vai sair (ou, num
+                jogo já sorteado, o que foi usado). */}
+            {isAdmin ? (
+              <p className="texto-apoio" data-resumo-do-sorteio style={{ margin: '0 0 10px', color: resumoDoSorteio(confirmados.length + convidados.length, porTimeEfectivo).ok ? undefined : '#fda4af' }}>
+                {resumoDoSorteio(confirmados.length + convidados.length, porTimeEfectivo).texto}
+              </p>
+            ) : null}
             {/* CONVIDADOS SEM APP (SPEC-SORTEIO §11): só nome; entram no sorteio,
                 nunca em users/ranking. */}
             {isAdmin ? (
@@ -586,6 +594,7 @@ export default function Jogo() {
                 <CampeonatoDoSorteio
                   slug={slug}
                   gameId={id}
+                  nomeDoTime={team?.nome}
                   nTimes={Math.min(timesSorteio.length, 8)}
                   aoCriar={(campeonato) => navigate(`/time/${slug}/campeonato/${campeonato.id}`)}
                   aoErrar={(mensagem) => { setToast({ tipo: 'error', mensagem }); setConfirmacao(null); }}

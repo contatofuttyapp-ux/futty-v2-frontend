@@ -2948,7 +2948,7 @@
 
 .camp-tab{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.10);padding:6px 2px;
   clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
-.camp-tab__hd,.camp-tab__r{display:grid;grid-template-columns:16px 1fr 20px 18px 18px 18px 40px 26px 26px;gap:2px;align-items:center;padding:0 8px}
+.camp-tab__hd,.camp-tab__r{display:grid;grid-template-columns:16px 1fr 20px 18px 18px 18px 18px 40px 26px;gap:2px;align-items:center;padding:0 8px}
 .camp-tab__hd{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:9px;letter-spacing:.04em;color:#8a8a98;text-transform:uppercase;height:22px;border-bottom:1px solid rgba(255,255,255,.08)}
 .camp-tab__hd span{text-align:center}
 .camp-tab__r{height:28px;font-size:11px;border-bottom:1px solid rgba(255,255,255,.05)}
@@ -3055,6 +3055,25 @@
   clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
 .camp-empate__time:disabled{opacity:.55;cursor:default}
 .camp-empate__time--lido{cursor:default;border-color:rgba(139,92,246,.4)}
+/* Os pênaltis: a pergunta que aparece quando a final (ou um jogo do mata-mata) termina empatada, e a linha "(pên.: Time X)" depois. */
+.camp-pen{margin-top:8px;padding:10px 12px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.55);
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-final__pen{margin-top:6px;text-align:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:.04em;color:#c9b6ff}
+.camp-conf__pen{margin:3px 0 0;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;letter-spacing:.04em;color:#c9b6ff}
+/* O subtítulo do campeonato criado pelo sorteio: de que jogo ele saiu. */
+.camp-sub{margin:-2px 0 8px;font-size:12px;color:#9a9aa8}
+/* O card do campeonato NOVO no Início (components/CardCampeonatoInicio.jsx). */
+.inicio-camp{display:block;margin-top:14px;padding:12px 14px;text-decoration:none;color:inherit;background:var(--surface-1);border:1px solid rgba(212,160,23,.4)}
+.inicio-camp--voce{background:linear-gradient(135deg,rgba(212,160,23,.18),rgba(139,92,246,.12));border-color:#d4a017;box-shadow:0 0 22px rgba(212,160,23,.25)}
+.inicio-camp__destaque{display:flex;align-items:center;gap:7px;margin-bottom:6px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px;letter-spacing:.06em;color:#f0c94a;text-transform:uppercase}
+.inicio-camp__nome{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px;color:#fff;overflow-wrap:anywhere}
+.inicio-camp__linha{margin-top:4px;font-size:13px;color:var(--text-dim);line-height:1.4}
+.inicio-camp__primeiros{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.inicio-camp__primeiro{display:inline-flex;align-items:center;gap:6px;min-width:0;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:#fff}
+.inicio-camp__pos{color:#8a8a98}
+.inicio-camp__time{min-width:0;overflow-wrap:anywhere}
+.inicio-camp__pts{color:#f0c94a}
+.inicio-camp__ver{margin-top:8px;font-size:11px;color:var(--text-dim)}
 .camp-aviso{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;margin:0 0 14px;background:rgba(240,201,74,.09);border:1px solid rgba(240,201,74,.5);font-size:12px;line-height:1.4;color:#f4e4a6}
 .camp-aviso button{flex:0 0 auto;border:none;background:transparent;color:#f0c94a;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12px;letter-spacing:.06em;cursor:pointer;padding:2px 0}
 
