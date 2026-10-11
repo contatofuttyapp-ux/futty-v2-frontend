@@ -35,6 +35,8 @@ const RES = {
   vitoria: { txt: 'V', cor: '#4ade80', bd: 'rgba(74,222,128,0.4)' },
   derrota: { txt: 'D', cor: '#f87171', bd: 'rgba(248,113,113,0.4)' },
   empate: { txt: 'E', cor: 'rgba(255,255,255,0.6)', bd: 'rgba(255,255,255,0.2)' },
+  // Jogo sem resultado lançado (ou em que ele não esteve nos times): nem vitória, nem empate, nem derrota.
+  sem: { txt: '—', cor: 'rgba(255,255,255,0.35)', bd: 'rgba(255,255,255,0.12)' },
 };
 const prefersReduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -414,7 +416,7 @@ export default function JogadorPerfil() {
               <p className="muted" style={{ fontSize: 13 }}>Ainda sem atividade.</p>
             ) : historico.length === 0 ? null : (
               historico.map((j) => {
-                const r = RES[j.resultado] || RES.empate;
+                const r = RES[j.resultado] || RES.sem;
                 return (
                   <div key={j.game_id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', marginBottom: 7, clipPath: CLIP, ...VIDRO }}>
                     <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, flex: 1, color: 'rgba(255,255,255,0.78)' }}>

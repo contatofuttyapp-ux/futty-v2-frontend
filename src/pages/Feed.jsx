@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Camera, ExternalLink, Eye, Link2, Music2, Play, Share2, Video } from 'lucide-react';
+import { Camera, ExternalLink, Eye, Handshake, Link2, Music2, Play, Share2, Video } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import { urlImagem } from '../utils/avatar';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -11,6 +11,7 @@ import { primeiroNome } from '../utils/primeiroNome';
 import { formatarData, formatarHora } from '../utils/dataHora';
 import { haQuantoTempo } from '../utils/haQuantoTempo';
 import { contar } from '../utils/plural';
+import { empateDaResenha } from '../utils/resultadoDoJogo';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -139,7 +140,8 @@ function ComentariosResumo({ recentes = [], total = 0, aberto, onToggle, childre
 }
 
 // ─── Card de JOGO ──────────────────────────────────────────────────────────────
-function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
+// Exportado para a bancada das provas no navegador (scripts/provas/rodada-30i.*): o card de verdade, sem a página em volta.
+export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
   const [detalhes, setDetalhes] = useState(true);
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
   const [contagem, setContagem] = useState(null);
@@ -147,12 +149,15 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
   const campeao = timeCampeao(j);
   const jogadoresCampeao = campeao?.jogadores || [];
   const nomesCampeao = jogadoresCampeao.map((p) => p.nome).filter(Boolean).join(' · ');
+  // Sem campeão, o jogo que terminou empatado ganha o próprio bloco: "Empate · Ouro 2 × 2 Roxo".
+  const empate = campeao ? null : empateDaResenha(j);
   const foto = j.campeao_foto_url ? assetUrl(j.campeao_foto_url) : null;
 
   async function partilhar() {
     const linhas = [
       `${dataExtensa(j.date, j.fuso)} · ${horaDe(j.date, j.fuso)}`,
       nomesCampeao ? `🏆 Time campeão: ${nomesCampeao}` : null,
+      empate ? `Empate · ${empate.frase}` : null,
       j.artilheiro_nome ? `⚽ Artilheiro: ${j.artilheiro_nome}${j.artilheiro_gols ? ` · ${contar(j.artilheiro_gols, 'gol', 'gols')}` : ''}` : null,
       j.destaque_nome ? `⭐ Destaque: ${j.destaque_nome}${j.destaque_titulo ? ` – ${j.destaque_titulo}` : ''}` : null,
     ].filter(Boolean);
@@ -228,6 +233,42 @@ function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* C2) EMPATE — no lugar do time campeão, com a mesma respiração: os dois times e, se houve, o placar. */}
+          {empate ? (
+            <div className="feed-cromo-bob">
+              <div className="feed-cromo-sway">
+                <div
+                  data-empate
+                  style={{
+                    padding: 14,
+                    borderTop: BORDA_VIDRO,
+                    background: foto ? 'transparent' : 'linear-gradient(135deg, rgba(139,92,246,0.08), rgba(124,58,237,0.08))',
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', color: 'var(--neon)', textTransform: 'uppercase' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Handshake size={14} aria-hidden="true" />
+                      Empate
+                    </span>
+                  </div>
+                  <div data-empate-frase style={{ marginTop: 8, fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.45 }}>{empate.frase}</div>
+                  {empate.times.map((t, i) => (
+                    <div key={i} style={{ marginTop: 10 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)' }}>{t.nome}</div>
+                      <div style={{ marginTop: 6, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                        {t.jogadores.map((p) => (
+                          <div key={p.user_id || p.nome} style={{ flexShrink: 0 }}>
+                            <FeedAvatar nome={p.nome} avatarUrl={p.avatar_url} size={40} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

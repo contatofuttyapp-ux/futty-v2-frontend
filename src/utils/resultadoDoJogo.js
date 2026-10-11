@@ -3,6 +3,7 @@
 // /api/feed/games/:id/resultado) — e para o passo a passo do Jogo passado, onde eles devolvem os dados em
 // vez de salvar. Um corpo só por pedido, montado aqui, seja qual for a tela que o manda.
 import { chaveDoJogador } from './seloDoSorteio';
+import { nomeDoTimeNaTela } from './nomeDoTime';
 
 /** Soma dos gols de cada time (0 = A, 1 = B) a partir do mapa { chave: gols } (chaveDoJogador) e dos jogadores `{ user_id, nome, timeIndex }`. */
 export function somaDeGolsPorTime(golsMap, jogadores) {
@@ -95,4 +96,28 @@ export function corpoDosPremios(v, { soPreenchidos = false } = {}) {
 /** Há campeão, artilheiro, destaque ou rodada para mandar ao PATCH do feed? (Sem isso o pedido nem sai — e ninguém é avisado.) */
 export function temPremio(corpo) {
   return corpo.campeao_time_index != null || !!corpo.artilheiro_user_id || !!corpo.destaque_user_id || !!corpo.rodada_user_id;
+}
+
+/** O nome do time dentro de uma frase de placar: "Ouro", não "Time Ouro". */
+export function nomeCurtoDoTime(nomeDoDado, indice = 0) {
+  return nomeDoTimeNaTela(nomeDoDado, indice).replace(/^Time\s+/i, '');
+}
+
+/**
+ * O empate de um jogo da Resenha, ou null quando o jogo não terminou empatado. Empate = sem campeão + time_vencedor 'empate'
+ * (o motor grava assim; "sem resultado" nem chega na Resenha). A frase não inventa número: sem placar é "Ouro × Roxo".
+ * @returns {{ frase: string, times: Array<{ nome: string, jogadores: object[] }> }|null}
+ */
+export function empateDaResenha(j) {
+  if (!j || j.time_vencedor !== 'empate' || (j.campeao_time_index !== null && j.campeao_time_index !== undefined)) return null;
+  const times = j.times_resultado?.times;
+  if (!Array.isArray(times) || times.length < 2) return null;
+  const [a, b] = times;
+  const nomeA = nomeCurtoDoTime(a?.nome, 0);
+  const nomeB = nomeCurtoDoTime(b?.nome, 1);
+  const temPlacar = Number.isInteger(j.placar_a) && Number.isInteger(j.placar_b);
+  return {
+    frase: temPlacar ? `${nomeA} ${j.placar_a} × ${j.placar_b} ${nomeB}` : `${nomeA} × ${nomeB}`,
+    times: [{ nome: nomeA, jogadores: a?.jogadores || [] }, { nome: nomeB, jogadores: b?.jogadores || [] }],
+  };
 }
