@@ -3,6 +3,23 @@
 // pontos: top-3 da tabela final. mata: campeão / vice (perdedor da final) /
 // semifinalistas eliminados (3º partilhado quando há 2 semis).
 export function podioDe(campeonato) {
+  if (campeonato.formato === 'pontos_final') {
+    // todos contra todos + final: 1º campeão, 2º quem perdeu a final, 3º o 3º da tabela (dois times, se dividem o 3º lugar).
+    const final = (campeonato.confrontos || []).find((c) => c.fase === 'final');
+    const champ = campeonato.campeao;
+    const porId = {};
+    (campeonato.times || []).forEach((t) => { porId[t.id] = t; });
+    const viceId = final && champ ? (final.time_a_id === champ.id ? final.time_b_id : final.time_a_id) : null;
+    const vice = viceId ? porId[viceId] : null;
+    const terceiros = final && final.jogado
+      ? (campeonato.classificacao || []).filter((l) => l.pos === 3 && l.id !== champ?.id && l.id !== viceId)
+      : [];
+    return [
+      { pos: 1, cor: '#d4a017', times: champ ? [champ] : [] },
+      { pos: 2, cor: '#aab4c8', times: vice ? [vice] : [] },
+      { pos: 3, cor: '#c2652e', times: terceiros },
+    ];
+  }
   if (campeonato.formato === 'pontos') {
     const cl = campeonato.classificacao || [];
     return [

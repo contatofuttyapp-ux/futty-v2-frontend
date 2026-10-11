@@ -70,7 +70,7 @@ export function previaDoCampeonato(dados) {
   const nomeTime = dados?.equipa?.nome;
   const camp = dados?.campeonato;
   if (!nomeTime || !camp) return null;
-  const formato = camp.formato === 'mata' ? 'mata-mata' : 'pontos corridos';
+  const formato = { mata: 'mata-mata', pontos_final: 'todos contra todos + final' }[camp.formato] || 'pontos corridos';
   const times = Array.isArray(camp.times) ? camp.times.length : 0;
   return {
     titulo: `${camp.nome ? `${camp.nome} · ` : ''}${nomeTime} · campeonato`,

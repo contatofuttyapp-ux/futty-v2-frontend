@@ -13,7 +13,9 @@ import { contar } from '../utils/plural';
 import CerimoniaSorteio from '../components/CerimoniaSorteio';
 import ComporTimes from '../components/ComporTimes';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
-import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
+import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal, CampeonatoDesempate } from '../components/CampeonatoVistas';
+import SeletorDeFormato from '../components/SeletorDeFormato';
+import { MIN_TIMES_DO_FORMATO, nomeDoFormato } from '../utils/formatoCampeonato';
 import '../styles/app.css';
 
 // O texto de ajuda do ComporTimes é de quem o usa: este é o do Campeonato.
@@ -55,14 +57,14 @@ function Hub({ slug }) {
         {lista === null ? <LoadingFutty /> : lista.length === 0 ? (
           <div className="camp-card" style={{ textAlign: 'center', padding: '26px 14px' }}>
             <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 16 }}>Ainda sem campeonatos</div>
-            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{isAdmin ? 'Crie o primeiro: pontos corridos ou mata-mata.' : 'O admin cria o primeiro torneio do time.'}</p>
+            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{isAdmin ? 'Crie o primeiro: pontos corridos, todos contra todos + final ou mata-mata.' : 'O admin cria o primeiro torneio do time.'}</p>
           </div>
         ) : (
           lista.map((c) => (
             <button key={c.id} type="button" className="camp-card" onClick={() => navigate(`/time/${slug}/campeonato/${c.id}`)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}>
               <div className="camp-card__n">{c.nome}</div>
-              <div className="row" style={{ marginTop: 6 }}>
-                <span className={`camp-chip ${c.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{c.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
+              <div className="row camp-chips" style={{ marginTop: 6 }}>
+                <span className={`camp-chip ${c.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{nomeDoFormato(c.formato, { curto: true })}</span>
                 <span className={`camp-chip ${c.estado === 'terminado' ? 'camp-chip--gold' : 'camp-chip--live'}`}>{c.estado === 'terminado' ? 'Terminado' : 'Em andamento'}</span>
                 <span className="camp-chip">{contar(c.n_times, 'time', 'times')}</span>
               </div>
@@ -106,9 +108,12 @@ function Wizard({ slug, onCancel, onCriado }) {
   const atribSafe = nomes.map((_, i) => atrib[i] || []);
   const totalAtrib = new Set(atribSafe.flat()).size;
 
+  // "Todos contra todos + final" não existe com 2 times: neste formato o ✕ para no terceiro.
+  const minTimes = MIN_TIMES_DO_FORMATO[formato] || 2;
+
   function setNomeT(i, v) { setNomes((cur) => cur.map((x, k) => (k === i ? v : x))); }
   function addTime() { if (nomes.length < 8) setNomes((c) => [...c, '']); }
-  function delTime(i) { if (nomes.length > 2) { setNomes((c) => c.filter((_, k) => k !== i)); setAtrib((c) => c.filter((_, k) => k !== i)); } }
+  function delTime(i) { if (nomes.length > minTimes) { setNomes((c) => c.filter((_, k) => k !== i)); setAtrib((c) => c.filter((_, k) => k !== i)); } }
   function addConv() { const v = convInput.trim(); if (v) { setConvidados((c) => [...c, v]); setConvInput(''); } }
 
   async function criar(modo) {
@@ -156,13 +161,7 @@ function Wizard({ slug, onCancel, onCriado }) {
         {passo === 2 && (
           <>
             <div className="section-title" style={{ marginTop: 2 }}>Escolha o formato</div>
-            <div className={`camp-fopt ${formato === 'pontos' ? 'on' : ''}`} onClick={() => setFormato('pontos')} role="button" tabIndex={0}>
-              <div><div className="camp-fopt__t">Pontos corridos</div><div className="camp-fopt__d">Todos contra todos. Vence quem somar mais pontos na tabela.</div></div>
-            </div>
-            <div className={`camp-fopt ${formato === 'mata' ? 'on' : ''}`} onClick={() => setFormato('mata')} role="button" tabIndex={0}>
-              <div><div className="camp-fopt__t">Mata-mata</div><div className="camp-fopt__d">Eliminatória direta. Quem perde sai; o vencedor avança até a final.</div></div>
-            </div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Por enquanto só pontos corridos e mata-mata.</div>
+            <SeletorDeFormato valor={formato} onChange={setFormato} nTimes={nomes.length} />
             <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
               <button type="button" className="btn hud-corners cta-gold" onClick={() => setPasso(3)}>Continuar</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(1)}>Voltar</button>
@@ -178,7 +177,7 @@ function Wizard({ slug, onCancel, onCriado }) {
                 <span className="camp-tab__dot" style={{ background: ['#d4a017', '#8b5cf6', '#aab4c8', '#c2652e', '#35b6a8', '#d1689e', '#6fae52', '#e08a2e'][i], borderRadius: 2, boxShadow: 'none' }} />
                 <input value={n} maxLength={40} onChange={(e) => setNomeT(i, e.target.value)} placeholder={`Time ${i + 1}`} />
                 <span className="camp-slot__c">{KITN[i]}</span>
-                {nomes.length > 2 ? <button type="button" aria-label="Remover" onClick={() => delTime(i)} style={{ border: 'none', background: 'transparent', color: '#6f6a80', cursor: 'pointer', fontSize: 15 }}>✕</button> : null}
+                {nomes.length > minTimes ? <button type="button" aria-label="Remover" onClick={() => delTime(i)} style={{ border: 'none', background: 'transparent', color: '#6f6a80', cursor: 'pointer', fontSize: 15 }}>✕</button> : null}
               </div>
             ))}
             {nomes.length < 8 ? <button type="button" onClick={addTime} style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 11, letterSpacing: '.06em', color: '#f0c94a', background: 'rgba(212,160,23,.08)', border: '1px dashed rgba(212,160,23,.5)', padding: '7px 12px', cursor: 'pointer', clipPath: 'polygon(8% 0,92% 0,100% 28%,100% 72%,92% 100%,8% 100%,0 72%,0 28%)' }}>＋ Time</button> : null}
@@ -211,8 +210,8 @@ function Wizard({ slug, onCancel, onCriado }) {
           <>
             <div className="hud-corners" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', padding: '10px 12px', marginBottom: 12 }}>
               <div style={{ fontFamily: RAJ, fontWeight: 800, fontSize: 16, color: '#f0c94a' }}>{nome.trim() || 'Campeonato'}</div>
-              <div className="row" style={{ marginTop: 6 }}>
-                <span className={`camp-chip ${formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
+              <div className="row camp-chips" style={{ marginTop: 6 }}>
+                <span className={`camp-chip ${formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{nomeDoFormato(formato)}</span>
                 <span className="camp-chip">{contar(nomes.length, 'time', 'times')}</span>
                 <span className="camp-chip">{totalAtrib > 0 ? contar(totalAtrib, 'jogador', 'jogadores') : 'só nomes'}</span>
               </div>
@@ -252,6 +251,8 @@ function Detalhe({ slug, id }) {
   const [camp, setCamp] = useState(null);
   const [erro, setErro] = useState('');
   const [toast, setToast] = useState(null);
+  // O que o admin precisa saber depois de um lançamento (a final que foi refeita): fica na página até ele dispensar, não some em 2 s.
+  const [avisos, setAvisos] = useState([]);
   const [revelar, setRevelar] = useState(() => !!location.state?.cerimonia);
 
   useEffect(() => {
@@ -262,11 +263,25 @@ function Detalhe({ slug, id }) {
     return () => { ativo = false; };
   }, [slug, id]);
 
+  // Devolve se o placar foi aceito: o editor de correção só fecha quando foi.
   async function onResultado(cid, pa, pb) {
     try {
       const r = await apiFetch(`/api/equipas/${slug}/campeonatos/${id}/confrontos/${cid}/resultado`, { method: 'POST', body: JSON.stringify({ placar_a: pa, placar_b: pb }) });
       setCamp(r.campeonato);
+      setAvisos(r.avisos || []);
       if (r.campeonato.estado === 'terminado') setToast({ tipo: 'success', mensagem: 'Temos campeão!' });
+      return true;
+    } catch (e) {
+      setToast({ tipo: 'error', mensagem: e.message });
+      return false;
+    }
+  }
+
+  async function onEscolherDoEmpate(timeId) {
+    try {
+      const r = await apiFetch(`/api/equipas/${slug}/campeonatos/${id}/desempate`, { method: 'POST', body: JSON.stringify({ time_id: timeId }) });
+      setCamp(r.campeonato);
+      setAvisos(r.avisos || []);
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     }
@@ -303,15 +318,33 @@ function Detalhe({ slug, id }) {
       <Topbar hud="CAMPEONATO" back={`/time/${slug}/campeonato`} />
       <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
         <div className="camp-title">{camp.nome}</div>
-        <div className="row" style={{ margin: '4px 0 14px' }}>
-          <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{camp.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
+        <div className="row camp-chips" style={{ margin: '4px 0 14px' }}>
+          <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{nomeDoFormato(camp.formato)}</span>
           <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
           <span className="camp-chip">{contar(camp.times.length, 'time', 'times')}</span>
         </div>
 
+        {avisos.length ? (
+          <div className="camp-aviso hud-corners" role="status" data-aviso-da-final>
+            <div style={{ flex: 1 }}>{avisos.map((a, i) => <div key={i}>{a}</div>)}</div>
+            <button type="button" onClick={() => setAvisos([])}>Entendi</button>
+          </div>
+        ) : null}
+
         {terminado ? <CampeonatoCelebracao campeonato={camp} slug={slug} /> : null}
 
-        {camp.formato === 'pontos' ? (
+        {camp.formato === 'pontos_final' ? (
+          <>
+            {!terminado ? <CampeonatoDesempate campeonato={camp} admin={isAdmin} onEscolher={onEscolherDoEmpate} /> : null}
+            <div className="section-title">Fase de grupos</div>
+            <CampeonatoTabela campeonato={camp} />
+            <div className="section-title">Jogos da fase de grupos</div>
+            {isAdmin && terminado ? <p className="muted" data-grupos-travados style={{ fontSize: 11, margin: '0 0 8px' }}>A final já foi jogada: os jogos da fase de grupos não podem mais ser corrigidos.</p> : null}
+            <CampeonatoJogos campeonato={camp} admin={isAdmin && !terminado} corrigivel onResultado={onResultado} />
+            <div className="section-title">Final</div>
+            <CampeonatoFinal campeonato={camp} admin={isAdmin && !terminado} onResultado={onResultado} />
+          </>
+        ) : camp.formato === 'pontos' ? (
           <>
             <div className="section-title">{terminado ? 'Classificação final' : 'Classificação'}</div>
             <CampeonatoTabela campeonato={camp} />

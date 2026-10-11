@@ -225,7 +225,8 @@ export function canvasCartaoPodio(campeonato) {
   cols.forEach(({ t, x, largura, altura, tier }) => {
     if (!t) return;
     const topo = chao - altura;
-    const time = t.times[0];
+    // Dois times podem dividir o 3º lugar (empate na tabela da fase de grupos): os dois escudos e os dois nomes.
+    const lugar = t.times.slice(0, 2);
     const p1 = t.pos === 1;
     // degrau
     cx.fillStyle = 'rgba(255,255,255,0.05)';
@@ -243,15 +244,16 @@ export function canvasCartaoPodio(campeonato) {
     cx.textBaseline = 'alphabetic';
     cx.fillText(`${t.pos}º`, x, topo + (p1 ? 172 : 132));
     // ordem vertical ACIMA do degrau: escudo (topo) → respiro → nome → respiro → degrau
-    const nomeFs = p1 ? 50 : 42;
+    const dividido = lugar.length > 1;
+    const nomeFs = p1 ? 50 : dividido ? 34 : 42;
     const nomeBaseline = topo - 34; // nome logo acima do degrau
     cx.fillStyle = '#fff';
     cx.textBaseline = 'alphabetic';
     cx.font = `800 ${nomeFs}px Rajdhani, sans-serif`;
-    cx.fillText(elipsa(cx, time.nome, largura + 40), x, nomeBaseline);
-    const er = p1 ? 78 : 60;
+    cx.fillText(elipsa(cx, lugar.map((l) => l.nome).join(' e '), largura + 40), x, nomeBaseline);
+    const er = p1 ? 78 : dividido ? 42 : 60;
     const escudoCy = nomeBaseline - nomeFs - 28 - er; // respiro entre nome e escudo
-    desenharEscudo(cx, x, escudoCy, er, time.cor, time.nome);
+    lugar.forEach((l, i) => desenharEscudo(cx, dividido ? x + (i === 0 ? -(er + 6) : er + 6) : x, escudoCy, er, l.cor, l.nome));
   });
 
   cx.fillStyle = 'rgba(255,255,255,0.42)';

@@ -20,6 +20,7 @@ import ResultadoEditor from '../components/ResultadoEditor';
 import TimesEditor from '../components/TimesEditor';
 import { EscolhaDosTimes, MontarTimesAMao } from '../components/TimesDoJogo';
 import CountdownSorteio from '../components/CountdownSorteio';
+import SeletorDeFormato from '../components/SeletorDeFormato';
 import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
@@ -102,6 +103,7 @@ export default function Jogo() {
   const [montando, setMontando] = useState(false);
   const [salvandoTimes, setSalvandoTimes] = useState(false);
   const [criandoCamp, setCriandoCamp] = useState(false);
+  const [formatoCamp, setFormatoCamp] = useState('pontos'); // o formato escolhido para o campeonato a partir do sorteio
   // Item 74: o código do link curto (/s/<código>) é pedido quando o sorteio existe — antes do toque em "copiar", para a cópia sair na
   // hora (o Safari só deixa copiar logo depois do toque). Sem código, o link longo.
   const [codigoCurto, setCodigoCurto] = useState(null);
@@ -600,12 +602,10 @@ export default function Jogo() {
                 <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>
                   Os {Math.min(timesSorteio.length, 8)} times e jogadores deste sorteio entram já preenchidos. Escolha o formato:
                 </div>
+                <SeletorDeFormato valor={formatoCamp} onChange={setFormatoCamp} nTimes={Math.min(timesSorteio.length, 8)} />
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button type="button" className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => criarCampeonatoDeSorteio('pontos')} disabled={criandoCamp}>
-                    {criandoCamp ? 'Criando…' : 'Pontos corridos'}
-                  </button>
-                  <button type="button" className="btn btn--sm hud-corners-s" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase', borderColor: 'rgba(139,92,246,0.5)', color: '#c9b6ff' }} onClick={() => criarCampeonatoDeSorteio('mata')} disabled={criandoCamp}>
-                    {criandoCamp ? 'Criando…' : 'Mata-mata'}
+                  <button type="button" data-criar-campeonato className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => criarCampeonatoDeSorteio(formatoCamp)} disabled={criandoCamp}>
+                    {criandoCamp ? 'Criando…' : 'Criar campeonato'}
                   </button>
                   <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setConfirmacao(null)} disabled={criandoCamp}>
                     Cancelar

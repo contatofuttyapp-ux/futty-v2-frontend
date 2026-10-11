@@ -3025,6 +3025,39 @@
   clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
 .camp-card__n{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px}
 
+/* TODOS CONTRA TODOS + FINAL — as duas primeiras linhas da tabela levam a marca da final; o empate que o admin ainda
+   precisa desfazer leva a marca roxa; a final é um cartão próprio (vaga tracejada até a fase de grupos acabar). */
+/* Os selos do topo (formato · estado · times) quebram de linha por SELO inteiro: a 360 px "Todos contra todos + final" já ocupa a
+   linha quase toda, e o selo em linha partia o último no meio ("4" numa linha, "times" cortado na outra). */
+.camp-chips{display:flex;flex-wrap:wrap;gap:4px 0}
+.camp-chip{white-space:nowrap}
+.camp-tab__r--final{background:linear-gradient(90deg,rgba(212,160,23,.08),transparent);box-shadow:inset 3px 0 0 rgba(212,160,23,.5)}
+.camp-tab__r--empate{background:linear-gradient(90deg,rgba(139,92,246,.16),transparent);box-shadow:inset 3px 0 0 #8b5cf6}
+.camp-final{position:relative;padding:12px 14px;background:rgba(212,160,23,.07);border:1px solid rgba(212,160,23,.45);box-shadow:0 0 18px rgba(212,160,23,.12)}
+.camp-final--vaga{background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,.28);box-shadow:none}
+.camp-final__k{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:10px;letter-spacing:.14em;color:#f0c94a;text-transform:uppercase;margin-bottom:8px}
+.camp-final--vaga .camp-final__k{color:#9a9aa8}
+.camp-final__jogo{display:flex;align-items:center;gap:8px}
+.camp-final__t{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px}
+.camp-final__t:last-child{justify-content:flex-end;text-align:right}
+.camp-final__n{min-width:0;overflow-wrap:anywhere;line-height:1.1}
+.camp-final--vaga .camp-final__t{color:#8a8a98}
+.camp-final__t--vence{color:#fff}
+.camp-final__x{flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px;color:#6f6a80}
+.camp-final__x b{color:#f0c94a;font-size:17px}
+.camp-final__nota{font-size:11px;color:#8a8a98;margin-top:8px;line-height:1.4}
+.camp-empate{padding:12px 14px;margin:0 0 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.55);box-shadow:0 0 18px rgba(139,92,246,.14)}
+.camp-empate__t{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px;color:#e4d9ff}
+.camp-empate__d{font-size:11px;color:#b9b0d2;margin:3px 0 10px;line-height:1.4}
+.camp-empate__lista{display:flex;flex-wrap:wrap;gap:8px}
+.camp-empate__time{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 14px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:14px;color:#fff;
+  background:rgba(255,255,255,.06);border:1.5px solid #8b5cf6;cursor:pointer;
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-empate__time:disabled{opacity:.55;cursor:default}
+.camp-empate__time--lido{cursor:default;border-color:rgba(139,92,246,.4)}
+.camp-aviso{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;margin:0 0 14px;background:rgba(240,201,74,.09);border:1px solid rgba(240,201,74,.5);font-size:12px;line-height:1.4;color:#f4e4a6}
+.camp-aviso button{flex:0 0 auto;border:none;background:transparent;color:#f0c94a;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12px;letter-spacing:.06em;cursor:pointer;padding:2px 0}
+
 /* PODIO — degraus 2 · 1 · 3, escudo por cima, 1o ouro maior+glow */
 .camp-podio{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin:4px 0 2px;position:relative;z-index:1}
 .camp-podio__col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:33%}

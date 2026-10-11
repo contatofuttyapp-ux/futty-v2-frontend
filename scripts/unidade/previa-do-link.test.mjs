@@ -63,6 +63,9 @@ test('previaDoCampeonato: nome do campeonato + nome do time, times e formato na 
   assert.equal(p.titulo, 'Copa de Outubro · Várzea FC · campeonato');
   assert.equal(p.descricao, '4 times · mata-mata.');
   assert.equal(p.imagem, null);
+  const dados = (formato) => ({ equipa: { nome: 'Várzea FC' }, campeonato: { nome: 'Copa', formato, times: [{}, {}, {}, {}] } });
+  assert.equal(previaDoCampeonato(dados('pontos_final')).descricao, '4 times · todos contra todos + final.');
+  assert.equal(previaDoCampeonato(dados('pontos')).descricao, '4 times · pontos corridos.');
   assert.equal(previaDoCampeonato(null), null);
   assert.equal(previaDoCampeonato({ equipa: { nome: 'x' } }), null, 'sem campeonato (404 do motor), sem prévia própria');
 });

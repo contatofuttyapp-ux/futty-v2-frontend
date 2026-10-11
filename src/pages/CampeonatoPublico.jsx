@@ -6,7 +6,8 @@ import { apiFetch } from '../lib/api';
 import { contar } from '../utils/plural';
 import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
-import { CampeonatoTabela, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis } from '../components/CampeonatoVistas';
+import { CampeonatoTabela, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal } from '../components/CampeonatoVistas';
+import { nomeDoFormato } from '../utils/formatoCampeonato';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -40,14 +41,20 @@ export default function CampeonatoPublico() {
               return (
                 <>
                   <div className="camp-title">{camp.nome}</div>
-                  <div className="row" style={{ margin: '4px 0 14px' }}>
-                    <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{camp.formato === 'mata' ? 'Mata-mata' : 'Pontos corridos'}</span>
+                  <div className="row camp-chips" style={{ margin: '4px 0 14px' }}>
+                    <span className={`camp-chip ${camp.formato === 'mata' ? 'camp-chip--roxo' : 'camp-chip--gold'}`}>{nomeDoFormato(camp.formato)}</span>
                     <span className={`camp-chip ${terminado ? 'camp-chip--gold' : 'camp-chip--live'}`}>{terminado ? 'Terminado' : 'Em andamento'}</span>
                     <span className="camp-chip">{contar(camp.times.length, 'time', 'times')}</span>
                   </div>
                   {terminado ? <CampeonatoCelebracao campeonato={camp} slug={slug} /> : null}
-                  <div className="section-title">{camp.formato === 'mata' ? 'Chaveamento' : terminado ? 'Classificação final' : 'Classificação'}</div>
+                  <div className="section-title">{camp.formato === 'mata' ? 'Chaveamento' : camp.formato === 'pontos_final' ? 'Fase de grupos' : terminado ? 'Classificação final' : 'Classificação'}</div>
                   {camp.formato === 'mata' ? <CampeonatoBracket campeonato={camp} admin={false} /> : <CampeonatoTabela campeonato={camp} />}
+                  {camp.formato === 'pontos_final' ? (
+                    <>
+                      <div className="section-title">Final</div>
+                      <CampeonatoFinal campeonato={camp} admin={false} />
+                    </>
+                  ) : null}
                   {(camp.times || []).some((t) => (t.jogadores || []).length) ? (
                     <>
                       <div className="section-title">Times e elencos</div>

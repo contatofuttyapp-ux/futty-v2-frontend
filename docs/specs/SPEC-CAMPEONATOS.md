@@ -16,7 +16,12 @@
    - formados por **sorteio pela máquina aprovada** (slot v8, mesma cerimónia) **OU manual**;
    - plantel = **membros da equipa + convidados sem app** (SPEC-SORTEIO §11/§12:
      só nome, cromo genérico/silhueta, zero impacto em `users`).
-3. **Formatos v1 = pontos corridos e mata-mata.** Grupos (fase de grupos → mata-mata) = v2.
+3. **Formatos = pontos corridos, mata-mata e "Todos contra todos + final"** (`pontos_final`, curto "Grupo + final").
+   Este terceiro: 3 a 8 times (com 2 não existe); fase de grupos como os pontos corridos (vitória 3, empate 1) e uma
+   **final 1º × 2º** criada sozinha no último jogo da fase; sem empate na final (a regra do mata-mata). Tabela: PTS → SG → GP →
+   confronto direto; se ainda empatar na briga pela vaga na final, **o admin decide** (nunca alfabeto). Empate abaixo da linha da
+   final fica empatado (dois times dividem o 3º). Pódio: campeão, vice (perdeu a final), 3º da tabela. Corrigir a fase de grupos
+   com a final criada e sem resultado a refaz (e avisa o admin); com a final jogada a correção é barrada. Grupos → mata-mata = v2.
 4. **Rodadas geram JOGOS** (reutiliza o rito do jogo: presença/resultado);
    **admin lança resultados**; **tabela (pontos corridos) / bracket (mata-mata)
    actualizam automaticamente**.
