@@ -3,10 +3,10 @@
 // pode ser retomada de onde parou sem criar outro jogo.
 import { formatarHora, instanteNoCampo, dataComDiaPorExtenso } from './dataHora';
 import { HORA_PADRAO } from './novoJogo';
-import { corpoDoResultadoDoJogo, corpoDosPremios, nivelDoPassado, placarEfetivo, temPremio } from './resultadoDoJogo';
+import { RESULTADO_VAZIO, corpoDoResultadoDoJogo, corpoDosPremios, temPremio, temResultadoNoEstado } from './resultadoDoJogo';
 
 export const PASSOS = ['Quando foi', 'Quem jogou', 'Times', 'Como terminou'];
-export { HORA_PADRAO };
+export { HORA_PADRAO, RESULTADO_VAZIO };
 
 /** Os textos do passo a passo. Tudo no passado: o jogo já rolou. (Os do convidado vêm de utils/convidadoSemApp.js, a mesma fonte do Jogo.) */
 export const TEXTOS = {
@@ -73,46 +73,37 @@ export function jaAconteceu(iso, agora = Date.now()) {
   return !Number.isNaN(ms) && ms <= agora;
 }
 
-/** Quem entra na lista de gols: os membros dos times A e B (convidado não tem conta, não tem gol), com o nome do time e o índice. */
+/** Quem entra na lista de gols: os membros de TODOS os times (2, 3 ou 4 — o rodízio também tem artilheiro), com o nome do time e o índice. Convidado sem app fica de fora. */
 export function jogadoresDoResultado(nomes, atrib, pool) {
   const porChave = Object.fromEntries(pool.map((p) => [p.key, p]));
-  return [0, 1].flatMap((i) => (atrib[i] || [])
+  return (atrib || []).map((_, i) => i).flatMap((i) => (atrib[i] || [])
     .map((k) => porChave[k])
     .filter((p) => p && p.user_id)
     .map((p) => ({ user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url, time: nomes[i], timeIndex: i })));
 }
 
-/** Estado vazio do passo "Como terminou?" (o que o ResultadoEditor e o ResultadoModal devolvem). */
-export const RESULTADO_VAZIO = { vencedor: null, placarA: null, placarB: null, golsMap: {} };
-
 /**
- * Os dois corpos do resultado, a partir do que a pessoa preencheu no passo 4.
- *   · com 2 times: quem ganhou vai para os DOIS campos que hoje dizem isso — `time_vencedor` ('A' | 'B' | 'empate', PATCH /api/games/:id/resultado)
- *     e, quando não é empate, `campeao_time_index` (0 | 1, PATCH /api/feed/games/:id/resultado) — para o jogo passado contar igual a qualquer outro;
- *   · com 3 ou 4 times: só o campeão (`campeao_time_index`): o motor só entende "A, B ou empate" em time_vencedor e nos gols;
+ * Os dois corpos do resultado, a partir do que a pessoa preencheu no passo 4 (o estado do ResultadoEditor):
+ *   · com 2, 3 ou 4 times: quem ganhou (campeão, ou empate com 2), o placar digitado e os gols de cada um vão num pedido só, o do jogo
+ *     (PATCH /api/games/:id/resultado) — o motor deduz o resto, e placar e vencedor nunca se contradizem;
+ *   · o artilheiro e o destaque vão no pedido do feed (PATCH /api/feed/games/:id/resultado); foto e rodada de cerveja ficam para Ajustes → Jogos;
  *   · sem times: nenhum resultado, só os prêmios (artilheiro, destaque) se houver.
+ * O campeão só vale se o time existe (a pessoa pode ter voltado e trocado 4 times por 3).
  * @returns {{ jogo: object|null, feed: object|null }} `null` = esse pedido nem sai
  */
-export function resultadoDoPassado({ nTimes, usaTimes, editor, premios, jogadores }) {
-  let jogo = null;
-  // O campeão só vale se o time existe (a pessoa pode ter voltado e trocado 4 times por 3) e só com 3 ou 4 times: com 2, quem ganhou decide.
-  const valorDosPremios = { ...premios, campeaoIdx: usaTimes && nTimes >= 3 && premios.campeaoIdx != null && premios.campeaoIdx < nTimes ? premios.campeaoIdx : null };
-  if (usaTimes && nTimes === 2) {
-    const nivel = nivelDoPassado(editor, jogadores);
-    if (nivel >= 1) {
-      const { a, b } = placarEfetivo(editor, jogadores);
-      jogo = corpoDoResultadoDoJogo({ nivel, vencedor: editor.vencedor, placarA: a, placarB: b, golsMap: editor.golsMap }, jogadores);
-      valorDosPremios.campeaoIdx = editor.vencedor === 'A' ? 0 : editor.vencedor === 'B' ? 1 : null;
-    }
-  }
-  const corpoFeed = corpoDosPremios(valorDosPremios, { soPreenchidos: true });
+export function resultadoDoPassado({ nTimes, usaTimes, estado, jogadores }) {
+  const jogo = usaTimes && nTimes >= 2 && temResultadoNoEstado(estado, { nTimes, jogadores })
+    ? corpoDoResultadoDoJogo(estado, { nTimes, jogadores })
+    : null;
+  // Foto do campeão e rodada de cerveja ficam de fora do passo a passo.
+  const corpoFeed = corpoDosPremios({ ...estado, campeaoFoto: null, temRodada: false, rodadaId: '', rodadaFoto: null }, { soPreenchidos: true });
   return { jogo, feed: temPremio(corpoFeed) ? corpoFeed : null };
 }
 
 /**
  * A sequência de pedidos que grava o jogo passado, na ordem. `caminho(id)` recebe o id do jogo (que só existe depois do primeiro pedido).
- * Presença e times não avisam ninguém; o último pedido (o do feed) avisa o time ("Resultado registrado!"), como hoje quando o admin lança
- * qualquer resultado.
+ * Presença e times não avisam ninguém; o primeiro pedido que dá resultado (ou prêmio) avisa o time ("Resultado registrado!"), uma vez só,
+ * como quando o admin lança qualquer resultado.
  */
 export function planoDoJogoPassado({ slug, iso, local, jogadores, times, resultado }) {
   const plano = [

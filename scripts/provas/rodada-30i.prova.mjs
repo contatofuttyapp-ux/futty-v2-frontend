@@ -1,6 +1,9 @@
 // Prova no navegador da Rodada 30I ("Quem ganhou?"): o que só um Chromium de verdade confirma, com as MESMAS fontes e o MESMO CSS do app.
-//   · item 2: o empate vira post na Resenha — o bloco "Empate" com a frase "Ouro 2 × 2 Roxo", no lugar do time campeão, que não aparece.
-// O motor é de mentira (/api/** respondido por page.route): nada sai para a rede.
+//   · item 2: o empate vira post na Resenha — o bloco "Empate" com a frase "Ouro 2 × 2 Roxo", no lugar do time campeão, que não aparece;
+//   · item 5: a tela do jogo de verdade — a seção Resultado é o editor completo, e o resultado lançado aparece no card de cima;
+//   · itens 1, 3, 4 e 5: o editor ÚNICO do resultado — tocar no time é o campeão; os gols e o placar decidem sozinhos (o toque deixa de valer);
+//     com 3 ou 4 times só o campeão; "Salvar resultado" grava em dois pedidos (o resultado e os prêmios); cabe em 360 e 390 px.
+// O motor é de mentira (/api/** respondido por page.route, e os pedidos ficam guardados para a prova conferir): nada sai para a rede.
 import { readFileSync } from 'node:fs';
 
 // A sessão também é de mentira: a chave do Supabase no localStorage (o mesmo truque da prova 29S-B).
@@ -10,27 +13,140 @@ const SESSAO = JSON.stringify({
   user: { id: 'U1', aud: 'authenticated', email: 'prova@futty.test', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' },
 });
 
-export const nome = 'Rodada 30I (Quem ganhou?: empate na Resenha)';
+export const nome = 'Rodada 30I (Quem ganhou?: empate na Resenha, editor único do resultado)';
 
-async function abrirCena(navegador, base, cena, { largura = 390, altura = 1400 } = {}) {
+const captura = (arquivo) => new URL(`../capturas/${arquivo}`, import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+
+async function abrirCena(navegador, base, cena, { largura = 390, altura = 1400, motor = null } = {}) {
   const ctx = await navegador.newContext({ viewport: { width: largura, height: altura }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
   await ctx.addInitScript(({ chave, sessao }) => {
     try { localStorage.setItem('futty_cookies', 'aceite'); localStorage.setItem(chave, sessao); } catch { /* sem storage */ }
   }, { chave: `sb-${REF}-auth-token`, sessao: SESSAO });
   const page = await ctx.newPage();
   const erros = [];
+  const chamadas = [];
   page.on('pageerror', (e) => erros.push(e.message));
   const origem = new URL(base).host;
   await page.route('**/*', (route) => {
-    const u = new URL(route.request().url());
+    const req = route.request();
+    const u = new URL(req.url());
     if (u.host === origem && !u.pathname.startsWith('/api/')) return route.continue();
+    if (motor && u.pathname.startsWith('/api/')) {
+      const bruto = req.postData();
+      const resposta = motor.resposta(u.pathname, req.method(), bruto ? JSON.parse(bruto) : null);
+      if (resposta) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(resposta) });
+    }
+    if (u.pathname.startsWith('/api/') && req.method() !== 'GET') {
+      const bruto = req.postData();
+      chamadas.push({ metodo: req.method(), caminho: u.pathname, corpo: bruto ? JSON.parse(bruto) : null });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, game: { id: 'g1', rodada_user_id: null } }) });
+    }
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
   await page.goto(`${base}/scripts/provas/rodada-30i.html#${cena}`, { waitUntil: 'domcontentloaded' });
-  return { page, ctx, erros };
+  return { page, ctx, erros, chamadas };
 }
 
+// O motor de mentira da tela do jogo: serve o jogo e GUARDA o que os dois PATCH gravam (com a mesma regra do motor, em miniatura — a de verdade
+// está em backend/tests), para a tela recarregar e mostrar o que foi salvo. `chamadas` guarda os pedidos, na ordem.
+function motorDoJogo({ data = new Date(Date.now() - 3 * 3600000).toISOString() } = {}) {
+  const timeDe = { u1: 'A', u2: 'A', u3: 'B', u4: 'B' };
+  const times = [
+    { nome: 'Time A', jogadores: [{ user_id: 'u1', nome: 'Magrão', avatar_url: null, rating: 3 }, { user_id: 'u2', nome: 'Zé', avatar_url: null, rating: 3 }] },
+    { nome: 'Time B', jogadores: [{ user_id: 'u3', nome: 'Cacá', avatar_url: null, rating: 3 }, { user_id: 'u4', nome: 'Duda', avatar_url: null, rating: 3 }] },
+  ];
+  const jogo = {
+    id: 'g1', data, local: 'Quadra do Zé', status: 'em_curso', num_times: 2, jogadores_por_time: 2, max_jogadores: null, sorteio_realizado: true,
+    times_resultado: { seed: 7, num_times: 2, times, reservas: [] }, historico: false, cancelado: false,
+    resultado_nivel: 0, time_vencedor: null, placar_a: null, placar_b: null, campeao_time_index: null, campeao_foto_url: null,
+    artilheiro_user_id: null, artilheiro_gols: null, destaque_user_id: null, destaque_titulo: null, rodada_user_id: null, rodada_foto_url: null,
+  };
+  let gols = [];
+  const chamadas = [];
+  function aplicarResultado(corpo) {
+    const linhas = (corpo.gols || []).map((g) => ({ user_id: g.user_id, nome: times.flatMap((t) => t.jogadores).find((j) => j.user_id === g.user_id)?.nome, gols: g.gols, time: timeDe[g.user_id] || null }));
+    const soma = [linhas.filter((l) => l.time === 'A').reduce((a, l) => a + l.gols, 0), linhas.filter((l) => l.time === 'B').reduce((a, l) => a + l.gols, 0)];
+    let placar = null;
+    if (soma[0] + soma[1] > 0) placar = soma;
+    else if (corpo.placar_a != null) placar = [corpo.placar_a, corpo.placar_b];
+    let idx = corpo.campeao_time_index ?? null;
+    let empate = !!corpo.empate;
+    if (placar) { idx = placar[0] > placar[1] ? 0 : placar[0] < placar[1] ? 1 : null; empate = placar[0] === placar[1]; }
+    const algo = idx !== null || empate;
+    Object.assign(jogo, {
+      campeao_time_index: idx, time_vencedor: idx === 0 ? 'A' : idx === 1 ? 'B' : empate ? 'empate' : null,
+      placar_a: placar ? placar[0] : null, placar_b: placar ? placar[1] : null,
+      resultado_nivel: linhas.some((l) => l.gols > 0) ? 3 : placar ? 2 : algo ? 1 : 0,
+    });
+    gols = linhas;
+  }
+  return {
+    chamadas,
+    resposta(pathname, metodo, corpo) {
+      if (metodo === 'GET' && pathname === '/api/games/g1') {
+        return {
+          team: { id: 't1', slug: 'missa', nome: 'Missa de Quinta', cor: 'verde', fuso: 'America/Sao_Paulo', cidade: null, role: 'admin' },
+          game: { ...jogo },
+          players: times.flatMap((t) => t.jogadores).map((j) => ({ ...j, confirmado: true, goleiro: false, cabeca_chave: false })),
+          gols, meuEstado: { confirmado: true, goleiro: false, cabeca_chave: false }, jaVotei: false,
+        };
+      }
+      if (metodo === 'GET' && pathname === '/api/teams/missa') return { team: { slug: 'missa', nome: 'Missa de Quinta', mostrar_gols: true, mostrar_artilheiro: true, mostrar_destaque: true }, members: [] };
+      if (metodo === 'PATCH' && pathname === '/api/games/g1/resultado') { chamadas.push({ caminho: pathname, corpo }); aplicarResultado(corpo); return { game: { ...jogo } }; }
+      if (metodo === 'PATCH' && pathname === '/api/feed/games/g1/resultado') { chamadas.push({ caminho: pathname, corpo }); Object.assign(jogo, corpo); return { game: { ...jogo } }; }
+      return undefined;
+    },
+  };
+}
+
+const pressionado = (page, seletor) => page.locator(seletor).getAttribute('aria-pressed').then((v) => v === 'true');
+const semErrosReais = (erros) => erros.filter((e) => !/favicon|Failed to load resource/.test(e));
+
 export async function rodar({ navegador, base, t }) {
+  // ─── item 5: a tela do jogo de verdade ──────────────────────────────────────────────────────────────────────────────────
+  for (const largura of [390, 360]) {
+    const motor = motorDoJogo();
+    const { page, ctx, erros } = await abrirCena(navegador, base, 'jogo', { largura, altura: 1800, motor });
+    await page.locator('[data-resultado-editor="salvar"]').waitFor({ timeout: 20000 });
+    await page.waitForTimeout(400);
+    const mais = (nome) => page.locator('[data-gols-de-cada-um] + div').locator('div', { hasText: nome }).first().locator('button[aria-label="Mais"]');
+    t(`${largura}px · Jogo: a seção Resultado é o editor completo (Quem ganhou?, placar, gols, artilheiro e destaque do dia, foto, rodada de cerveja)`,
+      (await page.getByText('Resultado', { exact: true }).count()) >= 1 && /Quem ganhou\?/.test(await page.locator('[data-quem-ganhou]').innerText()) && (await page.locator('[data-placar]').count()) === 2
+      && (await page.locator('[data-gols-de-cada-um]').count()) === 1 && (await page.locator('[data-artilheiro]').count()) === 1 && (await page.locator('[data-destaque]').count()) === 1 && (await page.locator('[data-rodada]').count()) === 1);
+    t(`${largura}px · Jogo: nenhum resultado ainda — o card de cima não existe`, (await page.locator('[data-frase-do-resultado]').count()) === 0);
+
+    // 1) só o vencedor tocado: o card de cima diz quem venceu
+    await page.locator('[data-vencedor="B"]').click();
+    await page.locator('[data-salvar-resultado]').click();
+    await page.locator('[data-frase-do-resultado]').waitFor({ timeout: 8000 });
+    t(`${largura}px · Jogo: salvou o Time Roxo — o card de cima diz "Time Roxo venceu"`, (await page.locator('[data-frase-do-resultado]').innerText()).trim() === 'Time Roxo venceu', await page.locator('[data-frase-do-resultado]').innerText());
+    t(`${largura}px · Jogo: salvar mandou dois pedidos, o do resultado primeiro`, JSON.stringify(motor.chamadas.map((c) => c.caminho)) === JSON.stringify(['/api/games/g1/resultado', '/api/feed/games/g1/resultado']), JSON.stringify(motor.chamadas.map((c) => c.caminho)));
+    await page.waitForTimeout(300);
+    t(`${largura}px · Jogo: o editor recarrega do que foi salvo — o Time Roxo continua marcado`, await pressionado(page, '[data-vencedor="B"]'));
+
+    // 2) gols: o placar é a soma e o vencedor sai deles
+    await mais('Magrão').click(); await mais('Magrão').click();
+    await page.locator('[data-salvar-resultado]').click();
+    await page.waitForFunction(() => /2 × 0/.test(document.querySelector('[data-frase-do-resultado]')?.textContent || ''), null, { timeout: 8000 });
+    t(`${largura}px · Jogo: gols do Magrão (2) — o card de cima vira "Time Ouro 2 × 0 Time Roxo", sem ninguém tocar em vencedor`, /Time Ouro\s*2 × 0\s*Time Roxo/.test((await page.locator('[data-frase-do-resultado]').innerText()).replace(/\s+/g, ' ')));
+    await page.waitForTimeout(300);
+    t(`${largura}px · Jogo: o editor volta com o Time Ouro marcado, o placar 2 × 0 mostrado (não digitável) e o gol do Magrão no lugar`, (await pressionado(page, '[data-vencedor="A"]')) && (await page.locator('[data-placar="a"]').inputValue()) === '2' && (await page.locator('[data-placar="a"]').getAttribute('readonly')) !== null && (await page.locator('[data-gols-de-cada-um] + div').innerText()).replace(/\s+/g, ' ').includes('Magrão · Time Ouro'));
+
+    // 3) o empate explícito
+    await page.locator('[data-limpar-resultado]').click();
+    await page.locator('[data-vencedor="empate"]').click();
+    await page.locator('[data-salvar-resultado]').click();
+    await page.waitForFunction(() => /^Empate$/.test((document.querySelector('[data-frase-do-resultado]')?.textContent || '').trim()), null, { timeout: 8000 });
+    t(`${largura}px · Jogo: "Limpar" + "Empate" + salvar — o card de cima diz "Empate"`, (await page.locator('[data-frase-do-resultado]').innerText()).trim() === 'Empate');
+    t(`${largura}px · Jogo: o motor guardou o empate explícito (campeão nulo, time_vencedor empate), sem gols`, motor.chamadas.at(-2)?.corpo?.empate === true && motor.chamadas.at(-2)?.corpo?.campeao_time_index === null && motor.chamadas.at(-2)?.corpo?.gols.length === 0, JSON.stringify(motor.chamadas.at(-2)));
+
+    const folga = await page.evaluate(() => ({ sobra: document.documentElement.scrollWidth - window.innerWidth }));
+    t(`${largura}px · Jogo: nada rola para o lado`, folga.sobra <= 0, JSON.stringify(folga));
+    if (largura === 390) await page.screenshot({ path: captura('30i-jogo-390.png'), fullPage: true });
+    t(`${largura}px · Jogo: console sem erros`, semErrosReais(erros).length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
   // ─── item 2: o empate na Resenha ───────────────────────────────────────────────────────────────────────────────────
   for (const largura of [390, 360]) {
     const { page, ctx, erros } = await abrirCena(navegador, base, 'empate', { largura });
@@ -47,8 +163,133 @@ export async function rodar({ navegador, base, t }) {
     t(`${largura}px · nada rola para o lado`, sobra <= 0, `sobra ${sobra}px`);
     const respira = await page.locator('[data-c="com-placar"] [data-empate]').evaluate((el) => !!el.closest('.feed-cromo-sway')?.parentElement?.classList.contains('feed-cromo-bob'));
     t(`${largura}px · o empate respira como o bloco do campeão (bob + sway)`, respira);
-    if (largura === 390) await page.screenshot({ path: new URL('../capturas/30i-empate-390.png', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'), fullPage: true });
-    t(`${largura}px · console sem erros`, erros.filter((e) => !/favicon|Failed to load resource/.test(e)).length === 0, erros.slice(0, 2).join(' | '));
+    if (largura === 390) await page.screenshot({ path: captura('30i-empate-390.png'), fullPage: true });
+    t(`${largura}px · console sem erros`, semErrosReais(erros).length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
+  // ─── itens 1, 3 e 5: o editor, com 2 times ─────────────────────────────────────────────────────────────────────────
+  for (const largura of [390, 360]) {
+    const { page, ctx, erros, chamadas } = await abrirCena(navegador, base, 'editor-2', { largura, altura: 1600 });
+    const ed = (s) => page.locator(`[data-resultado-editor] ${s}`);
+    await page.locator('[data-resultado-editor]').waitFor({ timeout: 20000 });
+    await page.waitForTimeout(300);
+    const textos = (await page.locator('[data-vencedor]').allInnerTexts()).map((x) => x.trim());
+    t(`${largura}px · 2 times: "Quem ganhou?" com Time Ouro · Empate · Time Roxo`, /Quem ganhou\?/.test(await ed('[data-quem-ganhou]').innerText()) && textos.join('|') === 'Time Ouro|Empate|Time Roxo', textos.join('|'));
+    t(`${largura}px · sem o seletor de 4 níveis (o motor deduz o nível)`, !/Stats|Sem resultado/.test(await page.locator('[data-resultado-editor]').innerText()));
+    t(`${largura}px · nada marcado: sem "Limpar" e sem foto do campeão`, (await page.locator('[data-limpar-resultado]').count()) === 0 && (await page.locator('[data-foto-do-campeao]').count()) === 0);
+
+    // tocar no time é o campeão; tocar de novo desfaz
+    await page.locator('[data-vencedor="A"]').click();
+    t(`${largura}px · tocar no Time Ouro: é o campeão (e aparece a foto do campeão)`, (await pressionado(page, '[data-vencedor="A"]')) && !(await pressionado(page, '[data-vencedor="B"]')) && (await page.locator('[data-foto-do-campeao]').count()) === 1);
+    await page.locator('[data-vencedor="A"]').click();
+    t(`${largura}px · tocar de novo desfaz`, !(await pressionado(page, '[data-vencedor="A"]')));
+    await page.locator('[data-vencedor="empate"]').click();
+    t(`${largura}px · "Empate" é uma resposta (sem foto de campeão)`, (await pressionado(page, '[data-vencedor="empate"]')) && (await page.locator('[data-foto-do-campeao]').count()) === 0);
+    await page.locator('[data-vencedor="B"]').click();
+    t(`${largura}px · tocar no Time Roxo troca a resposta (o empate sai)`, (await pressionado(page, '[data-vencedor="B"]')) && !(await pressionado(page, '[data-vencedor="empate"]')));
+
+    // o placar digitado decide o vencedor — e o toque deixa de valer
+    await page.locator('[data-placar="a"]').fill('2');
+    await page.locator('[data-placar="b"]').fill('1');
+    t(`${largura}px · placar 2 × 1 digitado: quem ganhou vira o Time Ouro`, (await pressionado(page, '[data-vencedor="A"]')) && !(await pressionado(page, '[data-vencedor="B"]')));
+    t(`${largura}px · e a tela diz que o placar decide`, /placar decide/i.test(await page.locator('[data-decide="placar"]').innerText()));
+    // força o toque: o botão está marcado como inativo (aria-disabled) e o Playwright esperaria ele habilitar; o dedo de verdade toca e nada acontece.
+    await page.locator('[data-vencedor="B"]').click({ force: true });
+    t(`${largura}px · tocar em outro time com o placar digitado não muda nada (vencedor e placar nunca são escolhas separadas)`, (await pressionado(page, '[data-vencedor="A"]')) && (await page.locator('[data-placar="a"]').inputValue()) === '2');
+    await page.locator('[data-placar="b"]').fill('2');
+    t(`${largura}px · placar 2 × 2 digitado: empate`, await pressionado(page, '[data-vencedor="empate"]'));
+    await page.locator('[data-placar="a"]').fill('');
+    await page.locator('[data-placar="b"]').fill('');
+    t(`${largura}px · apagando o placar o toque volta a valer`, (await page.locator('[data-decide]').count()) === 0);
+
+    // os gols decidem sozinhos: o placar é a soma por time e é mostrado, não digitado
+    const mais = (nome) => page.locator('[data-gols-de-cada-um]').locator('xpath=following-sibling::div[1]').locator('div', { hasText: nome }).first().locator('button[aria-label="Mais"]');
+    await mais('Magrão').click();
+    await mais('Magrão').click();
+    await mais('Zé').click();
+    t(`${largura}px · gols Magrão 2, Zé 1: o placar é a soma (2 × 1), mostrado e não digitável`, (await page.locator('[data-placar="a"]').inputValue()) === '2' && (await page.locator('[data-placar="b"]').inputValue()) === '1' && (await page.locator('[data-placar="a"]').getAttribute('readonly')) !== null);
+    t(`${largura}px · e o Time Ouro ganhou, sem toque nenhum`, (await pressionado(page, '[data-vencedor="A"]')) && /gols de cada um decidem/i.test(await page.locator('[data-decide="gols"]').innerText()));
+    await page.locator('[data-vencedor="B"]').click({ force: true });
+    t(`${largura}px · tocar em outro time com gols lançados não muda nada`, await pressionado(page, '[data-vencedor="A"]'));
+    await mais('Zé').click();
+    t(`${largura}px · mais um gol do Zé: 2 × 2, empate`, await pressionado(page, '[data-vencedor="empate"]'));
+    await mais('Zé').click();
+    t(`${largura}px · 2 × 3: o Time Roxo ganhou`, await pressionado(page, '[data-vencedor="B"]'));
+
+    // salvar: dois pedidos, o do resultado primeiro
+    await mais('Zé').click(); // 2 × 4: ainda o Roxo
+    await page.locator('[data-salvar-resultado]').click();
+    await page.waitForTimeout(400);
+    t(`${largura}px · "Salvar resultado" manda dois pedidos: o resultado e os prêmios, nesta ordem`, JSON.stringify(chamadas.map((c) => `${c.metodo} ${c.caminho}`)) === JSON.stringify(['PATCH /api/games/g1/resultado', 'PATCH /api/feed/games/g1/resultado']), JSON.stringify(chamadas.map((c) => c.caminho)));
+    t(`${largura}px · o corpo do resultado leva o campeão e os gols, e NÃO leva placar (o motor soma)`, JSON.stringify(chamadas[0]?.corpo) === JSON.stringify({ campeao_time_index: 1, empate: false, gols: [{ user_id: 'u1', convidado_nome: null, gols: 2 }, { user_id: 'u3', convidado_nome: null, gols: 4 }] }), JSON.stringify(chamadas[0]?.corpo));
+    t(`${largura}px · o corpo dos prêmios não leva nada de quem ganhou`, !('campeao_time_index' in (chamadas[1]?.corpo || {})) && chamadas[1]?.corpo?.artilheiro_user_id === null, JSON.stringify(chamadas[1]?.corpo));
+    t(`${largura}px · avisa "Resultado salvo." e recarrega`, JSON.stringify(await page.evaluate(() => window.__toasts)) === JSON.stringify([['Resultado salvo.', 'success']]) && (await page.evaluate(() => window.__salvou)) === 1);
+
+    // limpar
+    await page.locator('[data-limpar-resultado]').click();
+    t(`${largura}px · "Limpar" tira quem ganhou, o placar e os gols`, (await page.locator('[data-limpar-resultado]').count()) === 0 && !(await pressionado(page, '[data-vencedor="B"]')) && (await page.locator('[data-placar="a"]').inputValue()) === '');
+
+    // o contorno: nada rola para o lado e nada fica fora da tela
+    const folga = await page.evaluate(() => {
+      const larg = window.innerWidth;
+      const fora = [...document.querySelectorAll('[data-resultado-editor] button, [data-resultado-editor] input, [data-resultado-editor] select')].filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && (r.left < -0.5 || r.right > larg + 0.5); }).length;
+      return { sobra: document.documentElement.scrollWidth - larg, fora };
+    });
+    t(`${largura}px · o editor cabe: nada rola para o lado, nenhum campo fora da tela`, folga.sobra <= 0 && folga.fora === 0, JSON.stringify(folga));
+    if (largura === 390) {
+      await page.locator('[data-vencedor="A"]').click();
+      await mais('Magrão').click();
+      await page.screenshot({ path: captura('30i-editor-2-390.png'), fullPage: true });
+    }
+    t(`${largura}px · console sem erros`, semErrosReais(erros).length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
+  // ─── item 4: 3 e 4 times — só o campeão ────────────────────────────────────────────────────────────────────────────
+  for (const [cena, quantos] of [['editor-3', 3], ['editor-4', 4]]) {
+    const { page, ctx, erros, chamadas } = await abrirCena(navegador, base, cena, { largura: 390, altura: 1800 });
+    await page.locator('[data-resultado-editor]').waitFor({ timeout: 20000 });
+    await page.waitForTimeout(300);
+    t(`${quantos} times · a pergunta é "Quem foi o campeão?" (sem "Quem ganhou?")`, /Quem foi o campeão\?/.test(await page.locator('[data-quem-ganhou]').innerText()) && !/Quem ganhou\?/.test(await page.locator('[data-resultado-editor]').innerText()));
+    t(`${quantos} times · um botão por time, sem Empate e sem Placar`, (await page.locator('[data-campeao-time]').count()) === quantos && (await page.locator('[data-vencedor]').count()) === 0 && (await page.locator('[data-placar]').count()) === 0);
+    t(`${quantos} times · os gols por jogador valem para os ${quantos} times (artilheiro)`, (await page.locator('[data-gols-de-cada-um] + div').getByText('Duda').count()) === 1 && (await page.locator('[data-gols-de-cada-um]').innerText()).includes('Gols de cada um'));
+    await page.locator('[data-campeao-time="2"]').click();
+    t(`${quantos} times · tocar no time 3 é o campeão; tocar de novo desfaz`, (await pressionado(page, '[data-campeao-time="2"]')) && ((await page.locator('[data-campeao-time="2"]').click(), !(await pressionado(page, '[data-campeao-time="2"]')))));
+    await page.locator('[data-campeao-time="2"]').click();
+    // gol de quem está no 3º time: vale como gol, não decide o campeão
+    await page.locator('[data-gols-de-cada-um] + div').locator('div', { hasText: 'Duda' }).first().locator('button[aria-label="Mais"]').click();
+    t(`${quantos} times · um gol do Duda (3º time) não muda o campeão`, await pressionado(page, '[data-campeao-time="2"]'));
+    await page.locator('[data-salvar-resultado]').click();
+    await page.waitForTimeout(400);
+    t(`${quantos} times · salva o campeão (índice 2) e o gol, sem placar e sem empate`, JSON.stringify(chamadas[0]?.corpo) === JSON.stringify({ campeao_time_index: 2, empate: false, gols: [{ user_id: 'u5', convidado_nome: null, gols: 1 }] }), JSON.stringify(chamadas[0]?.corpo));
+    if (quantos === 4) await page.screenshot({ path: captura('30i-editor-4-390.png'), fullPage: true });
+    t(`${quantos} times · console sem erros`, semErrosReais(erros).length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
+  // ─── o que o time conta ────────────────────────────────────────────────────────────────────────────────────────────
+  {
+    const { page, ctx, erros } = await abrirCena(navegador, base, 'editor-sem-gols');
+    await page.locator('[data-resultado-editor]').waitFor({ timeout: 20000 });
+    t('time que não conta gols: sem "Gols de cada um" e sem "Artilheiro do dia"; o destaque continua', (await page.locator('[data-gols-de-cada-um]').count()) === 0 && (await page.locator('[data-artilheiro]').count()) === 0 && (await page.locator('[data-destaque]').count()) === 1);
+    await page.locator('[data-vencedor="A"]').click();
+    t('e o placar digitado segue valendo (sem gols por jogador)', await page.locator('[data-placar="a"]').isEditable());
+    t('sem erros no console', semErrosReais(erros).length === 0, erros.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+
+  // ─── corrigir um resultado gravado ─────────────────────────────────────────────────────────────────────────────────
+  {
+    const { page, ctx, erros, chamadas } = await abrirCena(navegador, base, 'editor-corrigir');
+    await page.locator('[data-resultado-editor]').waitFor({ timeout: 20000 });
+    t('corrigir parte do que está gravado: Roxo 1 × 2 pelos gols — o Time Roxo marcado e o placar mostrado, não digitado', (await pressionado(page, '[data-vencedor="B"]')) && (await page.locator('[data-placar="a"]').inputValue()) === '1' && (await page.locator('[data-placar="b"]').inputValue()) === '2' && (await page.locator('[data-placar="a"]').getAttribute('readonly')) !== null);
+    t('e o artilheiro gravado aparece ligado, com o Zé', (await page.locator('[data-artilheiro] select').inputValue()) === 'u3');
+    t('o Time Roxo campeão: a foto do campeão aparece', (await page.locator('[data-foto-do-campeao]').count()) === 1);
+    await page.locator('[data-salvar-resultado]').click();
+    await page.waitForTimeout(400);
+    t('salvar sem mexer repete o mesmo resultado e os mesmos prêmios', chamadas[0]?.corpo?.campeao_time_index === 1 && chamadas[1]?.corpo?.artilheiro_user_id === 'u3' && chamadas[1]?.corpo?.artilheiro_gols === 2, JSON.stringify(chamadas.map((c) => c.corpo)));
+    t('sem erros no console', semErrosReais(erros).length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }
 }

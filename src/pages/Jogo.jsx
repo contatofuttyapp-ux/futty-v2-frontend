@@ -5,11 +5,13 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { useApi } from '../hooks/useApi';
+import { useTeam } from '../hooks/useTeam';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
 import { diaDoMes, mesCurto } from '../utils/dataHora';
 import { formatarAte } from '../utils/numero';
 import { plural } from '../utils/plural';
-import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
+import { flagsDoTime } from '../components/golsEPremios';
+import { fraseDoResultado, jogadoresDosTimes, nomesDosTimes, resultadoGravado } from '../utils/resultadoDoJogo';
 import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -72,6 +74,8 @@ export default function Jogo() {
   // IDs dos confirmados via RSVP (passados pelo AdminPanel ao "Fazer sorteio").
   const rsvpConfirmados = location.state?.rsvpConfirmados || null;
   const { data, loading, error, reload } = useApi(`/api/games/${id}`);
+  // O que o time conta (gols, artilheiro, destaque) decide quais seções o editor do resultado mostra.
+  const { team: timeCompleto } = useTeam(slug);
   // P2-10: integração SÓ DE LEITURA com o sistema de espera (rsvp_espera). Mostra a
   // posição na fila dentro do Jogo; NÃO toca na capacidade do /confirmar (vaga futura).
   const { data: rsvpEstado } = useApi(`/api/jogos/${id}/rsvp`);
@@ -220,14 +224,13 @@ export default function Jogo() {
   const timesSorteio = game?.times_resultado?.times || [];
   // Times montados à mão não tiveram roleta: o botão é "Ver times" (a apresentação) e o cabeçalho não diz "sorteados".
   const timesAMao = !!game?.times_resultado && montadoAMao(game.times_resultado);
-  // O placar também chama os times pelo nome da cerimônia ("Time Ouro × Time Roxo"), não pelo "Time A" do
-  // motor.
-  const nomeTimeA = nomeDoTimeNaTela(timesSorteio[0]?.nome, 0);
-  const nomeTimeB = nomeDoTimeNaTela(timesSorteio[1]?.nome, 1);
-  const jogadoresResultado = [
-    ...(timesSorteio[0]?.jogadores || []).map((j) => ({ ...j, time: 'A' })),
-    ...(timesSorteio[1]?.jogadores || []).map((j) => ({ ...j, time: 'B' })),
-  ];
+  // O resultado também chama os times pelo nome da cerimônia ("Time Ouro × Time Roxo"), não pelo "Time A" do motor.
+  const nomesTimes = nomesDosTimes(game?.times_resultado);
+  const timesDoEditor = timesSorteio.map((t, i) => ({ nome: nomesTimes[i], jogadores: t.jogadores || [] }));
+  // A lista de gols vale para TODOS os times (com 3 ou 4 o rodízio também tem artilheiro).
+  const jogadoresResultado = jogadoresDosTimes(game?.times_resultado);
+  const resultadoDoJogo = resultadoGravado(game);
+  const temPlacar = Number.isInteger(game?.placar_a) && Number.isInteger(game?.placar_b);
   const artilheiro = golsResultado.reduce((max, g) => (g.gols > (max?.gols || 0) ? g : max), null);
   const confirmadosTodos = (players || []).filter((p) => p.confirmado);
   // Se vier do RSVP, mostra só os confirmados via RSVP (filtro de UI).
@@ -282,37 +285,40 @@ export default function Jogo() {
               </div>
             </div>
 
-            {/* Resultado (visível a todos) */}
-            {game.resultado_nivel > 0 ? (
+            {/* Resultado (visível a todos): quem ganhou — o campeão, ou o empate —, o placar quando houve e os prêmios do dia. */}
+            {resultadoDoJogo || game.artilheiro_user_id || game.destaque_user_id || game.resultado_nivel === 3 ? (
               <div style={{ marginTop: 12, padding: '12px 14px', clipPath: CLIP, background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.3)', textAlign: 'center' }}>
-                {game.resultado_nivel >= 2 ? (
-                  <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 800, color: '#fff' }}>
-                    {nomeTimeA} <span style={{ color: '#d4a017' }}>{game.placar_a} × {game.placar_b}</span> {nomeTimeB}
-                  </div>
-                ) : (
-                  <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff' }}>
-                    {game.time_vencedor === 'empate' ? 'Empate' : `${game.time_vencedor === 'A' ? nomeTimeA : nomeTimeB} venceu`}
-                  </div>
-                )}
-                {/* Artilheiro do dia (marcado pelo admin, senão o melhor marcador) + Destaque
-                    do dia (MVP marcado) — chips dignos. Os IDs vêm do game; nomes do resultado. */}
-                {game.resultado_nivel === 3 ? (() => {
+                {resultadoDoJogo ? (
+                  temPlacar ? (
+                    <div data-frase-do-resultado style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 800, color: '#fff' }}>
+                      {nomesTimes[0]} <span style={{ color: '#d4a017' }}>{game.placar_a} × {game.placar_b}</span> {nomesTimes[1]}
+                    </div>
+                  ) : (
+                    <div data-frase-do-resultado style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 800, color: '#fff' }}>
+                      {fraseDoResultado(game, nomesTimes)}
+                    </div>
+                  )
+                ) : null}
+                {/* Artilheiro do dia (marcado pelo admin, senão o melhor marcador) + Destaque do dia (MVP marcado) — chips dignos. Os IDs vêm do game;
+                    nomes do resultado. */}
+                {(() => {
                   const todosJ = timesSorteio.flatMap((t) => t.jogadores || []);
                   const nomeDe = (uid) => todosJ.find((j) => j.user_id === uid)?.nome || null;
-                  const artNome = game.artilheiro_user_id ? nomeDe(game.artilheiro_user_id) : (artilheiro && artilheiro.gols > 0 ? artilheiro.nome : null);
-                  const artGols = game.artilheiro_user_id ? game.artilheiro_gols : (artilheiro && artilheiro.gols);
+                  const melhor = game.resultado_nivel === 3 && artilheiro && artilheiro.gols > 0 ? artilheiro : null;
+                  const artNome = game.artilheiro_user_id ? nomeDe(game.artilheiro_user_id) : (melhor && melhor.nome);
+                  const artGols = game.artilheiro_user_id ? game.artilheiro_gols : (melhor && melhor.gols);
                   const destNome = game.destaque_user_id ? nomeDe(game.destaque_user_id) : null;
                   if (!artNome && !destNome) return null;
                   const chip = (ic, txt, cor) => (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: RAJ, fontWeight: 700, fontSize: 12, color: cor, border: `1px solid ${cor}55`, background: `${cor}14`, borderRadius: 20, padding: '4px 11px' }}>{ic} {txt}</span>
                   );
                   return (
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginTop: resultadoDoJogo ? 8 : 0 }}>
                       {artNome ? chip('🏆', `Artilheiro: ${artNome}${artGols ? ` (${artGols})` : ''}`, '#d4a017') : null}
                       {destNome ? chip('⭐', `Destaque: ${destNome}`, '#8b5cf6') : null}
                     </div>
                   );
-                })() : null}
+                })()}
               </div>
             ) : null}
 
@@ -645,13 +651,16 @@ export default function Jogo() {
             {isAdmin && game.times_resultado ? (
               <>
                 <SecLabel>Resultado</SecLabel>
+                {/* A chave refaz o editor quando o que está gravado muda (depois de salvar): ele parte sempre do que o motor guardou. */}
                 <ResultadoEditor
+                  key={`${game.campeao_time_index}|${game.time_vencedor}|${game.placar_a}|${game.placar_b}|${game.resultado_nivel}|${golsResultado.length}`}
                   gameId={id}
                   game={game}
                   gols={golsResultado}
+                  times={timesDoEditor}
                   jogadores={jogadoresResultado}
-                  nomeA={nomeTimeA}
-                  nomeB={nomeTimeB}
+                  confirmados={confirmadosTodos}
+                  flags={flagsDoTime(timeCompleto)}
                   onSaved={reload}
                   showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })}
                 />

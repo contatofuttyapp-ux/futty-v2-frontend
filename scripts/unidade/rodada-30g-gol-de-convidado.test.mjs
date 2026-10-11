@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chaveDoJogador } from '../../src/utils/seloDoSorteio.js';
-import { corpoDoResultadoDoJogo, somaDeGolsPorTime } from '../../src/utils/resultadoDoJogo.js';
+import { RESULTADO_VAZIO, corpoDoResultadoDoJogo, somaDeGolsPorTime } from '../../src/utils/resultadoDoJogo.js';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -27,7 +27,7 @@ test('chaveDoJogador: dois convidados diferentes têm chaves diferentes, mesmo o
 test('corpoDoResultadoDoJogo: o gol do convidado vai por convidado_nome; dois convidados não se misturam no golsMap', () => {
   const jogadores = [membro('a', 'Magrão'), convidado('Beto'), convidado('Caio')];
   const golsMap = { [chaveDoJogador(membro('a'))]: 1, [chaveDoJogador(convidado('Beto'))]: 2, [chaveDoJogador(convidado('Caio'))]: 5 };
-  const body = corpoDoResultadoDoJogo({ nivel: 3, vencedor: 'A', placarA: 1, placarB: 0, golsMap }, jogadores);
+  const body = corpoDoResultadoDoJogo({ ...RESULTADO_VAZIO, golsMap }, { nTimes: 2, jogadores });
   assert.deepEqual(body.gols, [
     { user_id: 'a', convidado_nome: null, gols: 1 },
     { user_id: null, convidado_nome: 'Beto', gols: 2 },
@@ -35,10 +35,10 @@ test('corpoDoResultadoDoJogo: o gol do convidado vai por convidado_nome; dois co
   ]);
 });
 
-test('corpoDoResultadoDoJogo: convidado sem gol marcado vai com 0, nunca herda a contagem de outro convidado', () => {
+test('corpoDoResultadoDoJogo: convidado sem gol marcado não vai na lista, e nunca herda a contagem de outro convidado', () => {
   const jogadores = [convidado('Beto'), convidado('Caio')];
-  const body = corpoDoResultadoDoJogo({ nivel: 3, vencedor: 'A', golsMap: { [chaveDoJogador(convidado('Caio'))]: 3 } }, jogadores);
-  assert.deepEqual(body.gols, [{ user_id: null, convidado_nome: 'Beto', gols: 0 }, { user_id: null, convidado_nome: 'Caio', gols: 3 }]);
+  const body = corpoDoResultadoDoJogo({ ...RESULTADO_VAZIO, golsMap: { [chaveDoJogador(convidado('Caio'))]: 3 } }, { nTimes: 2, jogadores });
+  assert.deepEqual(body.gols, [{ user_id: null, convidado_nome: 'Caio', gols: 3 }]);
 });
 
 test('somaDeGolsPorTime: soma pela chave (não pelo user_id cru) — continua certa com convidado na mistura', () => {
@@ -50,11 +50,12 @@ test('somaDeGolsPorTime: soma pela chave (não pelo user_id cru) — continua ce
 test('ResultadoEditor: o golsMap (estado, leitura e os dois botões) usa chaveDoJogador, não user_id cru', () => {
   const fonte = ler('src/components/ResultadoEditor.jsx');
   assert.match(fonte, /import \{ chaveDoJogador \} from '\.\.\/utils\/seloDoSorteio';/);
-  assert.match(fonte, /\(gols \|\| \[\]\)\.forEach\(\(g\) => \{ m\[chaveDoJogador\(g\)\] = g\.gols \|\| 0; \}\);/, 'o estado inicial (vindo do backend) agrupa por chave');
+  assert.match(ler('src/utils/resultadoDoJogo.js'), /\(gols \|\| \[\]\)\.forEach\(\(x\) => \{ golsMap\[chaveDoJogador\(x\)\] = x\.gols \|\| 0; \}\);/, 'o estado inicial (vindo do backend) agrupa por chave');
   assert.match(fonte, /function setGol\(chave, delta\) \{/);
+  assert.match(fonte, /mudar\(\{ golsMap: \{ \.\.\.estado\.golsMap, \[chave\]: Math\.max\(0, \(estado\.golsMap\[chave\] \|\| 0\) \+ delta\) \} \}\);/);
   assert.match(fonte, /const chave = chaveDoJogador\(j\);/, 'cada linha da lista calcula a própria chave');
   assert.match(fonte, /onClick=\{\(\) => setGol\(chave, -1\)\}/);
-  assert.match(fonte, /\{golsMap\[chave\] \|\| 0\}/);
+  assert.match(fonte, /\{estado\.golsMap\[chave\] \|\| 0\}/);
   assert.match(fonte, /onClick=\{\(\) => setGol\(chave, 1\)\}/);
   assert.doesNotMatch(fonte, /golsMap\[j\.user_id\]|setGol\(j\.user_id/, 'nenhum resto do esquema antigo, por user_id cru');
 });

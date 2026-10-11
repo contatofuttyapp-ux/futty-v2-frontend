@@ -13,7 +13,7 @@ import {
   membrosQueJogam, planoDoJogoPassado, poolDoJogoPassado, presencasParaGravar, resultadoDoPassado, resumoDoJogoPassado,
 } from '../../src/utils/jogoPassado.js';
 import {
-  PREMIOS_VAZIOS, corpoDosPremios, corpoDoResultadoDoJogo, nivelDoPassado, placarEfetivo, somaDeGolsPorTime, temGols, temPremio,
+  corpoDosPremios, corpoDoResultadoDoJogo, desfechoDoEstado, somaDeGolsPorTime, temGols, temPremio,
 } from '../../src/utils/resultadoDoJogo.js';
 import { corpoDosTimes, nomesDosTimes } from '../../src/utils/timesAMao.js';
 import { caminhoDoJogoPassado } from '../../src/utils/novoJogo.js';
@@ -57,7 +57,7 @@ function motorDeMentira({ falhaEm = null } = {}) {
   return { chamadas, chamar };
 }
 
-function planoCompleto({ comTimes = true, editor = RESULTADO_VAZIO, premios = PREMIOS_VAZIOS, nTimes = 2 } = {}) {
+function planoCompleto({ comTimes = true, estado = RESULTADO_VAZIO, nTimes = 2 } = {}) {
   const { pool, nomes, atrib } = cenario();
   const jogadores = jogadoresDoResultado(nomes, atrib, pool);
   return planoDoJogoPassado({
@@ -66,7 +66,7 @@ function planoCompleto({ comTimes = true, editor = RESULTADO_VAZIO, premios = PR
     local: ' Society Madalena ',
     jogadores: presencasParaGravar(membrosQueJogam(MEMBROS), PRESENTES),
     times: comTimes ? corpoDosTimes(nomes, atrib, pool) : null,
-    resultado: resultadoDoPassado({ nTimes, usaTimes: comTimes, editor, premios, jogadores }),
+    resultado: resultadoDoPassado({ nTimes, usaTimes: comTimes, estado, jogadores }),
   });
 }
 
@@ -181,122 +181,139 @@ test('"Pular" no passo 3 salva SEM times: só o jogo e as presenças (e o que o 
   const plano = planoCompleto({ comTimes: false });
   assert.deepEqual(plano.map((p) => p.id), ['jogo', 'presencas']);
   // Sem times, "quem ganhou" nem existe: mesmo que a pessoa tenha preenchido antes de voltar e pular, nada de resultado nem de campeão.
-  const comResto = planoCompleto({ comTimes: false, editor: { vencedor: 'A', placarA: '3', placarB: '1', golsMap: { 'u:U1': 2 } }, premios: { ...PREMIOS_VAZIOS, campeaoIdx: 1 } });
+  const comResto = planoCompleto({ comTimes: false, estado: { ...RESULTADO_VAZIO, campeaoIdx: 1, placarA: '3', placarB: '1', golsMap: { 'u:U1': 2 } } });
   assert.deepEqual(comResto.map((p) => p.id), ['jogo', 'presencas']);
   // Mas artilheiro e destaque continuam valendo sem times.
-  const comPremio = planoCompleto({ comTimes: false, premios: { ...PREMIOS_VAZIOS, temArt: true, artId: 'U2', artGols: 3, temDest: true, destId: 'U1', destTitulo: ' Paredão ' } });
+  const comPremio = planoCompleto({ comTimes: false, estado: { ...RESULTADO_VAZIO, temArt: true, artId: 'U2', artGols: 3, temDest: true, destId: 'U1', destTitulo: ' Paredão ' } });
   assert.deepEqual(comPremio.map((p) => p.id), ['jogo', 'presencas', 'premios']);
   assert.deepEqual(comPremio[2].corpo, { artilheiro_user_id: 'U2', artilheiro_gols: 3, destaque_user_id: 'U1', destaque_titulo: 'Paredão' });
 });
 
 // ── 4 · Como terminou ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-test('4 · o nível do resultado vem do que foi preenchido: sem vencedor 0 · só o vencedor 1 · com placar 2 · com gols 3', () => {
+test('4 · o desfecho vem do que foi preenchido, e os gols decidem: nada · só o toque · o placar digitado · os gols', () => {
   const { pool, nomes, atrib } = cenario();
   const jogadores = jogadoresDoResultado(nomes, atrib, pool);
   assert.deepEqual(jogadores.map((j) => [j.user_id, j.time, j.timeIndex]), [['U1', 'Time Ouro', 0], ['U2', 'Time Roxo', 1], ['U3', 'Time Roxo', 1]], 'o convidado não tem conta, não tem gol');
-  assert.equal(nivelDoPassado(RESULTADO_VAZIO, jogadores), 0);
-  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, golsMap: { 'u:U1': 2 } }, jogadores), 0, 'gols sem quem ganhou não gravam nada');
-  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'empate' }, jogadores), 1);
-  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'A', placarA: '2', placarB: '1' }, jogadores), 2);
-  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'A', golsMap: { 'u:U1': 1 } }, jogadores), 3);
-  assert.equal(nivelDoPassado({ ...RESULTADO_VAZIO, vencedor: 'A', golsMap: { 'u:U1': 0 } }, jogadores), 1, 'gol zerado não conta');
+  const d = (extra) => desfechoDoEstado({ ...RESULTADO_VAZIO, ...extra }, { nTimes: 2, jogadores });
+  assert.equal(d({}).origem, null, 'sem nada, sem resultado');
+  assert.deepEqual(d({ empate: true }), { origem: 'toque', placar: null, campeaoIdx: null, empate: true });
+  assert.deepEqual(d({ campeaoIdx: 1 }), { origem: 'toque', placar: null, campeaoIdx: 1, empate: false });
+  // O placar digitado define o vencedor — mesmo contra o que foi tocado antes.
+  assert.deepEqual(d({ campeaoIdx: 1, placarA: '2', placarB: '1' }), { origem: 'placar', placar: { a: 2, b: 1 }, campeaoIdx: 0, empate: false });
+  assert.deepEqual(d({ placarA: '2', placarB: '2' }), { origem: 'placar', placar: { a: 2, b: 2 }, campeaoIdx: null, empate: true });
+  assert.deepEqual(d({ placarA: '3' }), { origem: 'placar', placar: { a: 3, b: 0 }, campeaoIdx: 0, empate: false }, 'um campo vazio é 0');
+  // Os gols decidem sozinhos: a soma por time é o placar; o que foi tocado ou digitado não vale.
+  assert.deepEqual(d({ campeaoIdx: 0, placarA: '9', placarB: '0', golsMap: { 'u:U1': 1, 'u:U2': 2 } }), { origem: 'gols', placar: { a: 1, b: 2 }, campeaoIdx: 1, empate: false });
+  assert.equal(d({ golsMap: { 'u:U1': 0 } }).origem, null, 'gol zerado não conta');
+  // Um campeão que não existe mais (a pessoa voltou e trocou de 4 times para 2) não vale.
+  assert.equal(d({ campeaoIdx: 3 }).origem, null);
 });
 
-test('4 · o placar é opcional: enquanto a pessoa não mexe, mostra a soma dos gols que ela registrou (e vazio sem gols) — o mostrado é o enviado', () => {
+test('4 · o placar é a soma dos gols (mostrada, não digitada): o corpo do jogo só leva o placar quando ele foi DIGITADO', () => {
   const { pool, nomes, atrib } = cenario();
   const jogadores = jogadoresDoResultado(nomes, atrib, pool);
   assert.deepEqual(somaDeGolsPorTime({ 'u:U1': 2, 'u:U2': 1, 'u:U3': 3 }, jogadores), [2, 4]);
   assert.equal(temGols({}), false);
-  assert.deepEqual(placarEfetivo({ placarA: null, placarB: null, golsMap: {} }, jogadores), { a: '', b: '' });
-  assert.deepEqual(placarEfetivo({ placarA: null, placarB: null, golsMap: { 'u:U1': 2, 'u:U2': 1, 'u:U3': 3 } }, jogadores), { a: '2', b: '4' });
-  assert.deepEqual(placarEfetivo({ placarA: '5', placarB: null, golsMap: { 'u:U1': 2 } }, jogadores), { a: '5', b: '0' }, 'o que ela digitou ganha da soma');
-  const corpo = resultadoDoPassado({ nTimes: 2, usaTimes: true, editor: { vencedor: 'B', placarA: null, placarB: null, golsMap: { 'u:U1': 1, 'u:U2': 2, 'u:U3': 1 } }, premios: PREMIOS_VAZIOS, jogadores }).jogo;
-  assert.equal(corpo.nivel, 3);
-  assert.equal(corpo.placar_a, 1);
-  assert.equal(corpo.placar_b, 3, 'o que a tela mostrou é o que foi gravado');
-  assert.deepEqual(corpo.gols, [{ user_id: 'U1', convidado_nome: null, gols: 1 }, { user_id: 'U2', convidado_nome: null, gols: 2 }, { user_id: 'U3', convidado_nome: null, gols: 1 }]);
+  const gols = resultadoDoPassado({ nTimes: 2, usaTimes: true, estado: { ...RESULTADO_VAZIO, campeaoIdx: 0, golsMap: { 'u:U1': 1, 'u:U2': 2, 'u:U3': 1 } }, jogadores }).jogo;
+  assert.deepEqual(gols, { campeao_time_index: 1, empate: false, gols: [{ user_id: 'U1', convidado_nome: null, gols: 1 }, { user_id: 'U2', convidado_nome: null, gols: 2 }, { user_id: 'U3', convidado_nome: null, gols: 1 }] }, 'o vencedor tocado perde para os gols (1 × 3); o placar sai da soma no motor');
+  const digitado = resultadoDoPassado({ nTimes: 2, usaTimes: true, estado: { ...RESULTADO_VAZIO, placarA: '2', placarB: '1' }, jogadores }).jogo;
+  assert.deepEqual(digitado, { campeao_time_index: 0, empate: false, placar_a: 2, placar_b: 1, gols: [] });
 });
 
-test('4 · o vencedor vai para os DOIS campos que dizem isso: time_vencedor (resultado do jogo) e campeao_time_index (resultado do feed), para contar igual a qualquer outro jogo', () => {
+test('4 · quem ganhou vai num campo só — o campeão (ou o empate) no pedido do jogo; o pedido do feed só leva os prêmios', () => {
   const { pool, nomes, atrib } = cenario();
   const jogadores = jogadoresDoResultado(nomes, atrib, pool);
-  const de = (vencedor, extra = {}) => resultadoDoPassado({ nTimes: 2, usaTimes: true, editor: { ...RESULTADO_VAZIO, vencedor }, premios: { ...PREMIOS_VAZIOS, ...extra }, jogadores });
-  assert.deepEqual(de('A'), { jogo: { nivel: 1, time_vencedor: 'A' }, feed: { campeao_time_index: 0 } });
-  assert.deepEqual(de('B'), { jogo: { nivel: 1, time_vencedor: 'B' }, feed: { campeao_time_index: 1 } });
-  // Empate: não há campeão; sem prêmio, o pedido do feed nem sai (e ninguém é avisado).
-  assert.deepEqual(de('empate'), { jogo: { nivel: 1, time_vencedor: 'empate' }, feed: null });
-  assert.deepEqual(de('empate', { temArt: true, artId: 'U2', artGols: 2 }).feed, { artilheiro_user_id: 'U2', artilheiro_gols: 2 }, 'empate com artilheiro: sem campeão, com o prêmio');
+  const de = (extra) => resultadoDoPassado({ nTimes: 2, usaTimes: true, estado: { ...RESULTADO_VAZIO, ...extra }, jogadores });
+  assert.deepEqual(de({ campeaoIdx: 0 }), { jogo: { campeao_time_index: 0, empate: false, gols: [] }, feed: null });
+  assert.deepEqual(de({ campeaoIdx: 1 }), { jogo: { campeao_time_index: 1, empate: false, gols: [] }, feed: null });
+  // Empate: sem campeão, mas explícito (não é "sem resultado"); sem prêmio, o pedido do feed nem sai.
+  assert.deepEqual(de({ empate: true }), { jogo: { campeao_time_index: null, empate: true, gols: [] }, feed: null });
+  assert.deepEqual(de({ empate: true, temArt: true, artId: 'U2', artGols: 2 }).feed, { artilheiro_user_id: 'U2', artilheiro_gols: 2 }, 'empate com artilheiro: o prêmio vai no feed');
   // Sem resposta à pergunta: nada a gravar.
-  assert.deepEqual(resultadoDoPassado({ nTimes: 2, usaTimes: true, editor: RESULTADO_VAZIO, premios: PREMIOS_VAZIOS, jogadores }), { jogo: null, feed: null });
+  assert.deepEqual(de({}), { jogo: null, feed: null });
 });
 
-test('4 · com 3 ou 4 times: tocar no campeão (só campeao_time_index); sem resultado do jogo, porque o motor só entende A, B ou empate', () => {
-  const doCampeao = (nTimes, campeaoIdx) => resultadoDoPassado({ nTimes, usaTimes: true, editor: { ...RESULTADO_VAZIO, vencedor: 'A' }, premios: { ...PREMIOS_VAZIOS, campeaoIdx }, jogadores: [] });
-  assert.deepEqual(doCampeao(3, 2), { jogo: null, feed: { campeao_time_index: 2 } });
-  assert.deepEqual(doCampeao(4, 3), { jogo: null, feed: { campeao_time_index: 3 } });
+test('4 · com 3 ou 4 times: tocar no campeão, no mesmo pedido do jogo (sem placar, sem empate); os gols de todos os times valem', () => {
+  const doCampeao = (nTimes, campeaoIdx, extra = {}) => resultadoDoPassado({ nTimes, usaTimes: true, estado: { ...RESULTADO_VAZIO, campeaoIdx, ...extra }, jogadores: [] });
+  assert.deepEqual(doCampeao(3, 2), { jogo: { campeao_time_index: 2, empate: false, gols: [] }, feed: null });
+  assert.deepEqual(doCampeao(4, 3), { jogo: { campeao_time_index: 3, empate: false, gols: [] }, feed: null });
   assert.deepEqual(doCampeao(4, null), { jogo: null, feed: null }, 'sem toque no campeão, nada a gravar');
   // A pessoa voltou e trocou 4 times por 3: um campeão que não existe mais não vai.
   assert.deepEqual(doCampeao(3, 3), { jogo: null, feed: null });
-  // E com 2 times o campeão vem de "quem ganhou", não do toque que sobrou de antes.
-  assert.deepEqual(doCampeao(2, 3).feed, { campeao_time_index: 0 });
+  // Sobras de quando eram 2 times (empate, placar digitado) não vão para um rodízio.
+  assert.deepEqual(doCampeao(3, 1, { empate: true, placarA: '2', placarB: '2' }).jogo, { campeao_time_index: 1, empate: false, gols: [] });
+  assert.equal(doCampeao(3, null, { empate: true }).jogo, null);
+  // Os gols de quem está no 3º time também entram na lista (o rodízio tem artilheiro).
+  const { pool } = cenario();
+  const tres = jogadoresDoResultado(nomesDosTimes(3), [['u:U1'], ['u:U2'], ['u:U3']], pool);
+  assert.deepEqual(tres.map((j) => [j.user_id, j.timeIndex]), [['U1', 0], ['U2', 1], ['U3', 2]]);
+  const comGols = resultadoDoPassado({ nTimes: 3, usaTimes: true, estado: { ...RESULTADO_VAZIO, campeaoIdx: 2, golsMap: { 'u:U3': 2 } }, jogadores: tres }).jogo;
+  assert.deepEqual(comGols, { campeao_time_index: 2, empate: false, gols: [{ user_id: 'U3', convidado_nome: null, gols: 2 }] });
 });
 
-test('4 · "Gols de cada um" só com 2 times (o motor mapeia só A e B) e só se o time conta gols; artilheiro só se conta gols também', () => {
+test('4 · o passo 4 é o MESMO editor da tela do jogo, no modo "devolver": gols de todos os times, só se o time conta gols; artilheiro só se conta gols também', () => {
   const tela = semComentarios(ler('src/pages/JogoPassado.jsx'));
-  assert.match(tela, /const jogadoresDosGols = usaTimes && nTimes === 2 \? jogadoresDoResultado\(nomes, atribLimpa, pool\) : \[\];/);
-  assert.match(tela, /gols: team\?\.mostrar_gols !== false,/);
-  assert.match(tela, /artilheiro: team\?\.mostrar_gols !== false && team\?\.mostrar_artilheiro !== false,/);
-  assert.match(tela, /destaque: team\?\.mostrar_destaque !== false,/);
-  assert.match(tela, /<ResultadoEditor modo="devolver" nomeA=\{nomes\[0\]\} nomeB=\{nomes\[1\]\} jogadores=\{jogadoresDosGols\} comGols=\{flags\.gols\} inicial=\{editor\} aoMudar=\{setEditor\} \/>/);
-  assert.match(tela, /<ResultadoModal modo="devolver" times=\{timesDoJogo\} confirmados=\{quemJogouComConta\} comCampeao=\{comCampeao\} premios=\{\{ artilheiro: flags\.artilheiro, destaque: flags\.destaque \}\} valor=\{premios\} aoMudar=\{setPremios\} \/>/);
-  assert.match(tela, /usaTimes && nTimes === 2 \? \(/, 'com 2 times: "Quem ganhou?"; com 3 ou 4 a pergunta é o campeão (ResultadoModal)');
+  assert.match(tela, /const jogadoresDosGols = usaTimes \? jogadoresDoResultado\(nomes, atribLimpa, pool\) : \[\];/);
+  assert.match(tela, /const flags = flagsDoTime\(team\);/);
+  assert.match(tela, /<ResultadoEditor modo="devolver" times=\{usaTimes \? timesDoJogo : \[\]\} jogadores=\{jogadoresDosGols\} confirmados=\{quemJogouComConta\} flags=\{flags\} inicial=\{resultado\} aoMudar=\{setResultado\} \/>/);
+  assert.doesNotMatch(tela, /ResultadoModal/, 'um editor só: o passo 4 não usa mais o segundo componente');
+  const regras = ler('src/components/golsEPremios.js');
+  assert.match(regras, /gols: team\?\.mostrar_gols !== false,/);
+  assert.match(regras, /artilheiro: team\?\.mostrar_gols !== false && team\?\.mostrar_artilheiro !== false,/, 'o troféu faz parte dos gols');
+  assert.match(regras, /destaque: team\?\.mostrar_destaque !== false,/);
 });
 
-test('os dois editores têm o modo "devolver" (sem copiar código): o Jogo e Ajustes continuam salvando como sempre', () => {
+test('o editor é UM só, com o modo "devolver" (sem copiar código): o Jogo e Ajustes abrem o mesmo e salvam como sempre', () => {
   const editor = ler('src/components/ResultadoEditor.jsx');
-  assert.match(editor, /modo = 'salvar', inicial = null, aoMudar = null, comGols = true/);
+  assert.match(editor, /modo = 'salvar', gameId, game = \{\}, gols = \[\], times = \[\], jogadores = \[\], confirmados = \[\], flags = \{ gols: true, artilheiro: true, destaque: true \}, inicial = null, aoMudar = null, onSaved, showToast/);
   assert.match(editor, /if \(devolver\) aoMudar\?\.\(novo\);/);
-  assert.match(editor, /import \{ corpoDoResultadoDoJogo, placarEfetivo \} from '\.\.\/utils\/resultadoDoJogo';/, 'o corpo do PATCH é de uma função só');
-  assert.match(editor, /apiFetch\(`\/api\/games\/\$\{gameId\}\/resultado`, \{ method: 'PATCH'/, 'o modo salvar segue gravando no resultado do Jogo');
+  assert.match(editor, /import \{[^}]*corpoDoResultadoDoJogo[^}]*corpoDosPremios[^}]*\} from '\.\.\/utils\/resultadoDoJogo';/, 'os dois corpos dos pedidos são de funções só');
+  assert.match(editor, /apiFetch\(`\/api\/games\/\$\{gameId\}\/resultado`, \{ method: 'PATCH'/, 'o modo salvar grava o resultado do jogo');
+  assert.match(editor, /apiFetch\(`\/api\/feed\/games\/\$\{gameId\}\/resultado`, \{ method: 'PATCH', body: JSON\.stringify\(corpoDosPremios\(estado\)\) \}\)/, 'e os prêmios no pedido do feed');
+  // Em `devolver` não há pedido (o jogo ainda nem existe), nem foto do campeão, nem rodada de cerveja.
+  assert.match(editor, /\{!devolver && d\.campeaoIdx !== null \? \(/, 'sem foto do campeão');
+  assert.match(editor, /\{!devolver \? \(\s*<Seccao titulo="Rodada de cerveja"/, 'sem rodada de cerveja');
+  assert.match(editor, /titulo=\{ARTILHEIRO\.titulo\}/);
+  assert.match(editor, /titulo=\{DESTAQUE\.titulo\}/);
   // O Jogo usa o editor sem `modo`: o de sempre.
   assert.doesNotMatch(semComentarios(ler('src/pages/Jogo.jsx')), /modo="devolver"/);
+  // A janela de Ajustes só carrega o jogo e abre o MESMO editor.
   const modal = ler('src/components/ResultadoModal.jsx');
-  assert.match(modal, /modo = 'salvar'/);
-  assert.match(modal, /import \{ corpoDosPremios, PREMIOS_VAZIOS \} from '\.\.\/utils\/resultadoDoJogo';/);
-  assert.match(modal, /apiFetch\(`\/api\/feed\/games\/\$\{jogo\.id\}\/resultado`, \{ method: 'PATCH', body: JSON\.stringify\(corpoDosPremios\(valor\)\) \}\)/);
-  // Em `devolver` o modal não faz pedido nenhum (o jogo ainda nem existe), não tem foto nem rodada de cerveja.
-  assert.match(modal, /if \(devolver\) return undefined;/, 'nenhum GET do jogo no modo devolver');
-  assert.match(modal, /\{!devolver \? <UploadComCrop onUpload=\{\(url\) => set\(\{ campeaoFoto: url \}\)\}/, 'sem foto do campeão');
-  assert.match(modal, /\{!devolver \? \(\s*<Seccao titulo="Rodada de cerveja"/, 'sem rodada de cerveja');
-  assert.match(modal, /devolver \? ARTILHEIRO\.titulo : 'Artilheiro'/);
-  assert.match(modal, /devolver \? DESTAQUE\.titulo : 'Destaque'/);
+  assert.match(modal, /<ResultadoEditor/);
+  assert.doesNotMatch(modal, /function Seccao|function SelectJogador|modo="devolver"/, 'nada do editor mora aqui');
 });
 
-test('o ResultadoModal saiu do AdminPanel para components/ e o AdminPanel o usa como sempre (mesmas props)', () => {
+test('o ResultadoModal vive em components/ e o AdminPanel o usa como sempre (o que o time conta vem de flagsDoTime)', () => {
   const painel = ler('src/pages/AdminPanel.jsx');
   assert.match(painel, /import ResultadoModal from '\.\.\/components\/ResultadoModal';/);
   assert.doesNotMatch(painel, /function ResultadoModal|function Seccao|function SelectJogador/, 'a definição saiu do AdminPanel');
-  assert.match(painel, /<ResultadoModal jogo=\{lancar\} fuso=\{fuso\} cidade=\{team\?\.cidade\} premios=\{\{ artilheiro: team\?\.mostrar_artilheiro !== false, destaque: team\?\.mostrar_destaque !== false \}\} onClose=\{\(\) => setLancar\(null\)\} onSaved=\{onResultado\} showToast=\{showToast\} \/>/);
+  assert.match(painel, /<ResultadoModal jogo=\{lancar\} fuso=\{fuso\} cidade=\{team\?\.cidade\} premios=\{flagsDoTime\(team\)\} onClose=\{\(\) => setLancar\(null\)\} onSaved=\{onResultado\} showToast=\{showToast\} \/>/);
   assert.match(painel, /import \{ inputStyle, lbl, secLbl \} from '\.\.\/components\/camposDoAdmin';/);
 });
 
-test('o corpo do PATCH do feed é o MESMO que o modal de Ajustes sempre mandou (o que se desliga vai como null, para apagar o prêmio)', () => {
-  const v = { ...PREMIOS_VAZIOS, campeaoIdx: 1, campeaoFoto: 'https://x/c.webp', temArt: true, artId: 'U2', artGols: '0', temDest: true, destId: 'U3', destTitulo: '  ', temRodada: false, rodadaId: 'U1' };
+test('os corpos dos dois pedidos: o do jogo leva quem ganhou (o campeão), o placar só se foi digitado e os gols; o do feed, só os prêmios (o que se desliga vai como null)', () => {
+  const v = { ...RESULTADO_VAZIO, campeaoFoto: 'https://x/c.webp', temArt: true, artId: 'U2', artGols: '0', temDest: true, destId: 'U3', destTitulo: '  ', temRodada: false, rodadaId: 'U1' };
   assert.deepEqual(corpoDosPremios(v), {
-    campeao_time_index: 1, campeao_foto_url: 'https://x/c.webp',
+    campeao_foto_url: 'https://x/c.webp',
     artilheiro_user_id: 'U2', artilheiro_gols: 1, // gols < 1 sobe para 1
     destaque_user_id: 'U3', destaque_titulo: null, // só espaços: sem título
     rodada_user_id: null,
   });
   // Em jogo novo, só o que existe.
-  assert.deepEqual(corpoDosPremios(v, { soPreenchidos: true }), { campeao_time_index: 1, campeao_foto_url: 'https://x/c.webp', artilheiro_user_id: 'U2', artilheiro_gols: 1, destaque_user_id: 'U3' });
+  assert.deepEqual(corpoDosPremios(v, { soPreenchidos: true }), { campeao_foto_url: 'https://x/c.webp', artilheiro_user_id: 'U2', artilheiro_gols: 1, destaque_user_id: 'U3' });
   assert.equal(temPremio({}), false);
-  assert.equal(temPremio({ campeao_time_index: 0 }), true, 'campeão 0 (Time Ouro) é campeão');
+  assert.equal(temPremio({ campeao_time_index: 0 }), false, 'quem ganhou não é prêmio: vai no pedido do jogo');
+  assert.equal(temPremio({ campeao_foto_url: 'https://x/c.webp' }), true);
   assert.equal(temPremio({ artilheiro_user_id: 'U2' }), true);
-  // O corpo do resultado do Jogo: nível 3 manda placar e a lista de gols; níveis 1 e 2 não.
-  assert.deepEqual(corpoDoResultadoDoJogo({ nivel: 1, vencedor: 'A', placarA: 9, placarB: 9, golsMap: { 'u:U1': 4 } }, [{ user_id: 'U1' }]), { nivel: 1, time_vencedor: 'A' });
-  assert.deepEqual(corpoDoResultadoDoJogo({ nivel: 2, vencedor: 'empate', placarA: '2', placarB: '2', golsMap: {} }, []), { nivel: 2, time_vencedor: 'empate', placar_a: 2, placar_b: 2 });
-  assert.deepEqual(corpoDoResultadoDoJogo({ nivel: 3, vencedor: 'B', placarA: '-1', placarB: 'x', golsMap: { 'u:U1': 2 } }, [{ user_id: 'U1' }, { user_id: 'U2' }]), { nivel: 3, time_vencedor: 'B', placar_a: 0, placar_b: 0, gols: [{ user_id: 'U1', convidado_nome: null, gols: 2 }, { user_id: 'U2', convidado_nome: null, gols: 0 }] });
+  const jogo = { nTimes: 2, jogadores: [{ user_id: 'U1', timeIndex: 1 }, { user_id: 'U2', timeIndex: 0 }] };
+  // Só o toque: o campeão (0 é o Time Ouro, e é campeão).
+  assert.deepEqual(corpoDoResultadoDoJogo({ ...RESULTADO_VAZIO, campeaoIdx: 0 }, jogo), { campeao_time_index: 0, empate: false, gols: [] });
+  // Placar digitado: define o empate e vai no corpo.
+  assert.deepEqual(corpoDoResultadoDoJogo({ ...RESULTADO_VAZIO, placarA: '2', placarB: '2' }, jogo), { campeao_time_index: null, empate: true, placar_a: 2, placar_b: 2, gols: [] });
+  // Com gols, o placar e o vencedor saem deles (o digitado e o tocado não valem) e só quem marcou vai na lista.
+  assert.deepEqual(corpoDoResultadoDoJogo({ ...RESULTADO_VAZIO, campeaoIdx: 0, placarA: '-1', placarB: 'x', golsMap: { 'u:U1': 2 } }, jogo), { campeao_time_index: 1, empate: false, gols: [{ user_id: 'U1', convidado_nome: null, gols: 2 }] });
+  // Nada preenchido: corpo vazio — o motor entende "sem resultado".
+  assert.deepEqual(corpoDoResultadoDoJogo(RESULTADO_VAZIO, jogo), { campeao_time_index: null, empate: false, gols: [] });
 });
 
 // ── 154 · o jogo só é gravado no fim ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -320,11 +337,10 @@ test('154 · NADA é gravado antes do "Salvar jogo": a página só chama o motor
   assert.doesNotMatch(semComentarios(ler('src/pages/NovoJogo.jsx')), /Continuar → montar|passado=1/);
 });
 
-test('154 · "Salvar jogo" grava em sequência, COM times: jogo (histórico) → presenças → times à mão → resultado do jogo → resultado do feed', async () => {
+test('154 · "Salvar jogo" grava em sequência, COM times: jogo (histórico) → presenças → times à mão → resultado do jogo → prêmios (feed)', async () => {
   const { chamadas, chamar } = motorDeMentira();
-  const editor = { vencedor: 'B', placarA: '1', placarB: '3', golsMap: { 'u:U1': 1, 'u:U2': 2, 'u:U3': 1 } };
-  const premios = { ...PREMIOS_VAZIOS, temDest: true, destId: 'U2', destTitulo: 'Paredão' };
-  const plano = planoCompleto({ editor, premios });
+  const estado = { ...RESULTADO_VAZIO, golsMap: { 'u:U1': 1, 'u:U2': 2, 'u:U3': 1 }, temDest: true, destId: 'U2', destTitulo: 'Paredão' };
+  const plano = planoCompleto({ estado });
   const id = await executarPlano(plano, { gameId: null, feitos: [] }, chamar);
   assert.equal(id, 'G9');
   assert.deepEqual(chamadas.map((c) => `${c.metodo} ${c.caminho}`), [
@@ -343,9 +359,10 @@ test('154 · "Salvar jogo" grava em sequência, COM times: jogo (histórico) →
     { nome: 'Time Ouro', jogadores: [{ user_id: 'U1', nome: 'Ana', avatar_url: null, convidado: false }, { user_id: null, nome: 'Zé da Esquina', avatar_url: null, convidado: true }] },
     { nome: 'Time Roxo', jogadores: [{ user_id: 'U2', nome: 'Beto', avatar_url: 'https://x/b.png', convidado: false }, { user_id: 'U3', nome: 'Caio', avatar_url: null, convidado: false }] },
   ] });
-  // 4) quem ganhou nos dois campos: time_vencedor aqui, campeao_time_index no feed
-  assert.deepEqual(chamadas[3].corpo, { nivel: 3, time_vencedor: 'B', placar_a: 1, placar_b: 3, gols: [{ user_id: 'U1', convidado_nome: null, gols: 1 }, { user_id: 'U2', convidado_nome: null, gols: 2 }, { user_id: 'U3', convidado_nome: null, gols: 1 }] });
-  assert.deepEqual(chamadas[4].corpo, { campeao_time_index: 1, destaque_user_id: 'U2', destaque_titulo: 'Paredão' });
+  // 4) quem ganhou (os gols deram 1 × 3: Time Roxo, o índice 1) e os gols de cada um, num pedido só; o placar o motor soma
+  assert.deepEqual(chamadas[3].corpo, { campeao_time_index: 1, empate: false, gols: [{ user_id: 'U1', convidado_nome: null, gols: 1 }, { user_id: 'U2', convidado_nome: null, gols: 2 }, { user_id: 'U3', convidado_nome: null, gols: 1 }] });
+  // 5) só os prêmios no feed (o aviso "Resultado registrado!" já saiu no pedido do resultado)
+  assert.deepEqual(chamadas[4].corpo, { destaque_user_id: 'U2', destaque_titulo: 'Paredão' });
 });
 
 test('154 · SEM times: só o jogo e as presenças; sem resultado nenhum nem o pedido do feed (quem ganhou nem existe)', async () => {
@@ -355,16 +372,16 @@ test('154 · SEM times: só o jogo e as presenças; sem resultado nenhum nem o p
   assert.equal(chamadas[0].corpo.historico, true);
 });
 
-test('154 · sem resultado preenchido (2 times, ninguém escolheu quem ganhou): jogo, presenças e times — e nenhum aviso ao time', async () => {
+test('154 · sem resultado preenchido (2 times, ninguém escolheu quem ganhou): jogo, presenças e times — e nenhum pedido de resultado', async () => {
   const { chamadas, chamar } = motorDeMentira();
   await executarPlano(planoCompleto(), { gameId: null, feitos: [] }, chamar);
   assert.deepEqual(chamadas.map((c) => c.caminho), ['/api/games', '/api/games/G9/presencas', '/api/games/G9/times-manuais']);
-  assert.ok(!chamadas.some((c) => c.caminho.startsWith('/api/feed/')), 'o aviso "Resultado registrado!" só sai com campeão ou prêmio');
+  assert.ok(!chamadas.some((c) => c.caminho.startsWith('/api/feed/') || c.caminho.endsWith('/resultado')), 'o aviso "Resultado registrado!" só sai com resultado ou prêmio');
 });
 
 test('154 · se um pedido falha no meio, "Tentar de novo" continua de onde parou, sem criar OUTRO jogo e sem repetir o que já foi gravado', async () => {
-  const editor = { vencedor: 'A', placarA: null, placarB: null, golsMap: {} };
-  const plano = planoCompleto({ editor });
+  const estado = { ...RESULTADO_VAZIO, campeaoIdx: 0, temDest: true, destId: 'U2' };
+  const plano = planoCompleto({ estado });
   const motor = motorDeMentira({ falhaEm: '/times-manuais' });
   const progresso = { gameId: null, feitos: [] };
   await assert.rejects(() => executarPlano(plano, progresso, motor.chamar), /Tente de novo/);
@@ -386,7 +403,7 @@ test('154 · se um pedido falha no meio, "Tentar de novo" continua de onde parou
 });
 
 test('154 · a falha no PRIMEIRO pedido não cria jogo nenhum; a falha no último deixa tudo salvo e só o aviso por mandar', async () => {
-  const plano = planoCompleto({ editor: { vencedor: 'A', placarA: null, placarB: null, golsMap: {} } });
+  const plano = planoCompleto({ estado: { ...RESULTADO_VAZIO, campeaoIdx: 0, temDest: true, destId: 'U2' } });
   const primeiro = motorDeMentira({ falhaEm: '/api/games' });
   const p1 = { gameId: null, feitos: [] };
   await assert.rejects(() => executarPlano(plano, p1, primeiro.chamar));
@@ -450,7 +467,7 @@ test('o resumo do passo 4 e o resto das datas: dia por extenso e hora pela dataH
 });
 
 test('29S-B · tudo em português do Brasil: nenhuma palavra de Portugal nos textos novos', () => {
-  for (const arq of ['src/pages/JogoPassado.jsx', 'src/utils/jogoPassado.js', 'src/utils/resultadoDoJogo.js', 'src/components/ResultadoModal.jsx']) {
+  for (const arq of ['src/pages/JogoPassado.jsx', 'src/utils/jogoPassado.js', 'src/utils/resultadoDoJogo.js', 'src/components/ResultadoModal.jsx', 'src/components/ResultadoEditor.jsx']) {
     const texto = semComentarios(ler(arq));
     for (const l of texto.split('\n')) {
       assert.doesNotMatch(l, /((?<!=)>|')[^<>'{}]*\b(equipa|ecrã|ficheiro|telemóvel|perde-se|guarda-redes|golo)\b[^<>'{}]*(<|')/i, `${arq}: ${l.trim().slice(0, 90)}`);

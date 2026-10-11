@@ -9,10 +9,10 @@
 //
 // "Salvar jogo" grava em sequência (utils/jogoPassado.js#planoDoJogoPassado): POST /api/games
 // (historico: true) → presenças → (com times) times à mão → (com resultado) resultado do jogo → (com
-// campeão ou prêmio) resultado do feed. Se um pedido falha no meio, a pessoa fica no passo 4 com o aviso
+// prêmio) resultado do feed. Se um pedido falha no meio, a pessoa fica no passo 4 com o aviso
 // e "Tentar de novo" continua de onde parou, sem criar outro jogo (executarPlano guarda o progresso).
-// Avisos: presença e times não avisam ninguém. O último pedido avisa o time ("Resultado registrado!"),
-// como quando o admin lança qualquer resultado.
+// Avisos: presença e times não avisam ninguém. O primeiro pedido que dá resultado (ou prêmio) avisa o time
+// ("Resultado registrado!"), uma vez só, como quando o admin lança qualquer resultado.
 // Fotos e cerveja ficam de fora: dá para pôr depois, em Ajustes → Jogos.
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -25,12 +25,11 @@ import {
   HORA_PADRAO, PASSOS, RESULTADO_VAZIO, TEXTOS, atribuicaoLimpa, executarPlano, instanteDoJogoPassado, jaAconteceu, jogadoresDoResultado,
   membrosQueJogam, planoDoJogoPassado, poolDoJogoPassado, presencasParaGravar, resultadoDoPassado, resumoDoJogoPassado,
 } from '../utils/jogoPassado';
-import { PREMIOS_VAZIOS } from '../utils/resultadoDoJogo';
+import { flagsDoTime } from '../components/golsEPremios';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO_PASSADO, CONVIDADO_LINHA_PASSADO, CONVIDADO_TITULO_PASSADO } from '../utils/convidadoSemApp';
 import Topbar from '../components/Topbar';
 import ComporTimes from '../components/ComporTimes';
 import ResultadoEditor from '../components/ResultadoEditor';
-import ResultadoModal from '../components/ResultadoModal';
 import LoadingFutty from '../components/LoadingFutty';
 import '../styles/app.css';
 
@@ -111,8 +110,7 @@ export default function JogoPassado() {
   const [atrib, setAtrib] = useState([]);
   const [usaTimes, setUsaTimes] = useState(false); // "Pular" deixa o jogo sem times
   // 4 · Como terminou
-  const [editor, setEditor] = useState(RESULTADO_VAZIO);
-  const [premios, setPremios] = useState(PREMIOS_VAZIOS);
+  const [resultado, setResultado] = useState(RESULTADO_VAZIO);
   // Salvar: o que já foi gravado fica aqui entre as tentativas ("Tentar de novo" continua de onde parou).
   const progresso = useRef({ gameId: null, feitos: [] });
   const [salvando, setSalvando] = useState(false);
@@ -162,16 +160,11 @@ export default function JogoPassado() {
   }
 
   // O que o passo 4 vai gravar, a partir do que a pessoa preencheu.
-  const jogadoresDosGols = usaTimes && nTimes === 2 ? jogadoresDoResultado(nomes, atribLimpa, pool) : [];
-  const flags = {
-    gols: team?.mostrar_gols !== false,
-    artilheiro: team?.mostrar_gols !== false && team?.mostrar_artilheiro !== false, // o troféu faz parte dos gols (golsEPremios.js)
-    destaque: team?.mostrar_destaque !== false,
-  };
-  const comCampeao = usaTimes && nTimes >= 3;
+  const jogadoresDosGols = usaTimes ? jogadoresDoResultado(nomes, atribLimpa, pool) : [];
+  const flags = flagsDoTime(team);
   const timesDoJogo = nomes.map((nome, i) => ({ nome, jogadores: atribLimpa[i].map((k) => pool.find((p) => p.key === k)).filter(Boolean).map((p) => ({ nome: p.nome })) }));
   const quemJogouComConta = pool.filter((p) => p.user_id).map((p) => ({ user_id: p.user_id, nome: p.nome }));
-  const algoNoPasso4 = (usaTimes && nTimes === 2) || comCampeao || flags.artilheiro || flags.destaque;
+  const algoNoPasso4 = usaTimes || flags.artilheiro || flags.destaque;
 
   async function salvar() {
     if (salvando) return;
@@ -184,7 +177,7 @@ export default function JogoPassado() {
         local,
         jogadores: presencasParaGravar(membros, presentes),
         times: usaTimes ? corpoDosTimes(nomes, atribLimpa, pool) : null,
-        resultado: resultadoDoPassado({ nTimes, usaTimes, editor, premios, jogadores: jogadoresDosGols }),
+        resultado: resultadoDoPassado({ nTimes, usaTimes, estado: resultado, jogadores: jogadoresDosGols }),
       });
       const gameId = await executarPlano(plano, progresso.current, apiFetch);
       // replace: o "Voltar" do jogo não leva de volta ao passo 4 (o jogo já está salvo).
@@ -321,17 +314,11 @@ export default function JogoPassado() {
             <TituloDoPasso>{TEXTOS.terminou}</TituloDoPasso>
             <p className="texto-apoio" data-resumo style={{ margin: '0 0 14px' }}>{resumoDoJogoPassado({ iso, comHora: !!hora, fuso, jogaram, nTimes: usaTimes ? nTimes : 0 })}</p>
 
-            {/* Com 2 times: UMA pergunta (quem ganhou), o placar é opcional e os gols de cada um vêm depois — o ResultadoEditor do Jogo, no modo "devolver". */}
-            {usaTimes && nTimes === 2 ? (
+            {/* O MESMO editor da tela do jogo, no modo "devolver": com 2 times "Quem ganhou?" (placar opcional, gols de cada um), com 3 ou 4 "Quem foi o
+                campeão?"; depois o que o time conta (artilheiro, destaque). Sem times, só os prêmios. */}
+            {algoNoPasso4 ? (
               <div style={{ marginBottom: 16 }}>
-                <ResultadoEditor modo="devolver" nomeA={nomes[0]} nomeB={nomes[1]} jogadores={jogadoresDosGols} comGols={flags.gols} inicial={editor} aoMudar={setEditor} />
-              </div>
-            ) : null}
-
-            {/* Com 3 ou 4 times, tocar no campeão; depois, o que o time conta (artilheiro, destaque) — o ResultadoModal de Ajustes, no modo "devolver". */}
-            {comCampeao || flags.artilheiro || flags.destaque ? (
-              <div style={{ marginBottom: 16 }}>
-                <ResultadoModal modo="devolver" times={timesDoJogo} confirmados={quemJogouComConta} comCampeao={comCampeao} premios={{ artilheiro: flags.artilheiro, destaque: flags.destaque }} valor={premios} aoMudar={setPremios} />
+                <ResultadoEditor modo="devolver" times={usaTimes ? timesDoJogo : []} jogadores={jogadoresDosGols} confirmados={quemJogouComConta} flags={flags} inicial={resultado} aoMudar={setResultado} />
               </div>
             ) : null}
 

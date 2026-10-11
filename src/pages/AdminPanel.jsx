@@ -26,6 +26,8 @@ import EscudoEquipa from '../components/EscudoEquipa';
 import EditorEscudo from '../components/EditorEscudo';
 import ModeracaoFila from '../components/ModeracaoFila';
 import ResultadoModal from '../components/ResultadoModal';
+import { flagsDoTime } from '../components/golsEPremios';
+import { jogoTemResultado } from '../utils/resultadoDoJogo';
 import { inputStyle, lbl, secLbl } from '../components/camposDoAdmin';
 import NumberStepper from '../components/NumberStepper';
 import RegistarJornada from '../components/RegistarJornada';
@@ -1615,7 +1617,8 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
             {passados.map((g) => {
               // "Lançar resultado" só no jogo que aconteceu, foi sorteado e ainda não tem resultado nenhum (era a aba Resultados).
               const cancelado = g.cancelado || g.status === 'cancelado';
-              const temResultado = (g.campeao_time_index !== null && g.campeao_time_index !== undefined) || (g.resultado_nivel || 0) > 0;
+              // "Resultado lançado" = campeão ou empate marcado (nível, placar e gols sozinhos não bastam).
+              const temResultado = jogoTemResultado(g);
               const semResultado = !cancelado && g.sorteio_realizado && !temResultado;
               return (
                 <div key={g.id} style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', gap: 10, opacity: cancelado ? 0.55 : 1 }}>
@@ -1640,7 +1643,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
       </div>
 
       {editar ? <EditarJogoModal jogo={editar} fuso={fuso} cidade={team?.cidade} onClose={() => setEditar(null)} onSaved={onEditado} showToast={showToast} /> : null}
-      {lancar ? <ResultadoModal jogo={lancar} fuso={fuso} cidade={team?.cidade} premios={{ artilheiro: team?.mostrar_artilheiro !== false, destaque: team?.mostrar_destaque !== false }} onClose={() => setLancar(null)} onSaved={onResultado} showToast={showToast} /> : null}
+      {lancar ? <ResultadoModal jogo={lancar} fuso={fuso} cidade={team?.cidade} premios={flagsDoTime(team)} onClose={() => setLancar(null)} onSaved={onResultado} showToast={showToast} /> : null}
 
       {confirmacao ? (
         <ConfirmModal

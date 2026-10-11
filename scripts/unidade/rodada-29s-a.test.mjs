@@ -232,7 +232,7 @@ test('152 · o ajuste dos times depois do sorteio (PATCH /times, modo editando) 
   const jogo = semComentarios(ler('src/pages/Jogo.jsx'));
   assert.match(jogo, /<TimesEditor\s+gameId=\{id\}/);
   assert.match(jogo, /\{isAdmin && game\.sorteio_realizado && !editando && \(\s*<button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick=\{\(\) => setEditando\(true\)\}>\s*Ajustar times/);
-  assert.match(jogo, /<ResultadoEditor\s+gameId=\{id\}/);
+  assert.match(jogo, /<ResultadoEditor[\s\S]*?gameId=\{id\}/, 'o Resultado segue sendo o mesmo editor, agora completo (rodada 30I)');
   assert.match(jogo, /Criar campeonato com estes times/);
 });
 

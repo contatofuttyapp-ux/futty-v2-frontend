@@ -40,9 +40,9 @@ function motor(papel, { comLogo = false, doisFuturos = false } = {}) {
     '/api/feed/denuncias': { denuncias: [] },
     '/api/denuncias/fila': { fila: [] },
     '/api/teams/varzea-fc/logo': { ok: true },
-    // 29S-B: o ResultadoModal (Ajustes → Jogos → "Lançar resultado") saiu do AdminPanel para components/ e segue valendo: carrega o jogo passado e os confirmados.
+    // 30I: o ResultadoModal (Ajustes → Jogos → "Lançar resultado") só abre a janela e carrega o jogo passado e os confirmados — o conteúdo é o MESMO editor da tela do jogo.
     '/api/games/g-passado': {
-      game: { id: 'g-passado', times_resultado: { times: [{ nome: 'Time Ouro', jogadores: [{ user_id: 'U1', nome: 'Tonhão' }] }, { nome: 'Time Roxo', jogadores: [{ user_id: 'U2', nome: 'Zeca' }] }] }, campeao_time_index: null },
+      game: { id: 'g-passado', data: '2026-10-01T23:00:00Z', times_resultado: { times: [{ nome: 'Time Ouro', jogadores: [{ user_id: 'U1', nome: 'Tonhão' }] }, { nome: 'Time Roxo', jogadores: [{ user_id: 'U2', nome: 'Zeca' }] }] }, campeao_time_index: null },
       players: [{ user_id: 'U1', nome: 'Tonhão', confirmado: true }, { user_id: 'U2', nome: 'Zeca', confirmado: true }],
     },
   };
@@ -102,23 +102,25 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('[data-lancar-resultado]').waitFor({ timeout: 15000 });
     t('Jogos: o jogo passado sem resultado mostra "Lançar resultado"', (await page.locator('[data-lancar-resultado]').count()) === 1);
 
-    // 29S-B: o ResultadoModal (agora em components/) abre do mesmo botão, com as mesmas seções, e salva no resultado do feed como sempre.
+    // 30I: o ResultadoModal abre do mesmo botão e mostra o MESMO editor da tela do jogo; salvar manda dois pedidos (o resultado e os prêmios).
     const patches = [];
     page.on('request', (r) => { if (r.method() === 'PATCH') patches.push({ url: new URL(r.url()).pathname, corpo: JSON.parse(r.postData() || '{}') }); });
     await page.locator('[data-lancar-resultado]').click();
     await page.locator('.modal-card').waitFor({ timeout: 8000 });
-    await page.getByText('Time Roxo', { exact: true }).waitFor({ timeout: 8000 });
+    await page.locator('.modal-card [data-vencedor="B"]').waitFor({ timeout: 8000 });
     const modal = (await page.locator('.modal-card').innerText()).toLowerCase();
-    t('"Lançar resultado" abre o modal de sempre: Campeão (com os times do jogo), Artilheiro, Destaque e Rodada de cerveja, com as fotos', /^resultado:/.test(modal) && modal.includes('campeão') && modal.includes('time ouro') && modal.includes('artilheiro') && modal.includes('destaque') && modal.includes('rodada de cerveja') && modal.includes('foto do campeão') && !modal.includes('do dia'), modal.slice(0, 160).replace(/s+/g, ' '));
+    t('"Lançar resultado" abre o editor completo: Quem ganhou? (com os times do jogo), Artilheiro do dia, Destaque do dia e Rodada de cerveja', /^resultado:/.test(modal) && modal.includes('quem ganhou?') && modal.includes('time ouro') && modal.includes('time roxo') && modal.includes('artilheiro do dia') && modal.includes('destaque do dia') && modal.includes('rodada de cerveja'), modal.slice(0, 160).replace(/\s+/g, ' '));
     const salvar = page.locator('.modal-card').getByRole('button', { name: 'Salvar resultado' });
-    t('...com "Salvar resultado" apagado até escolher o campeão ("Escolha o time campeão para salvar.")', (await salvar.isDisabled()) && modal.includes('escolha o time campeão para salvar.'));
-    await page.getByText('Time Roxo', { exact: true }).click();
+    t('...com "Salvar resultado" sempre ativo (o campeão não é mais obrigatório: dá para lançar só os prêmios)', await salvar.isEnabled());
+    await page.locator('.modal-card [data-vencedor="B"]').click();
+    t('tocar no Time Roxo é o campeão (e a foto do campeão aparece)', (await page.locator('.modal-card [data-vencedor="B"]').getAttribute('aria-pressed')) === 'true' && (await page.locator('.modal-card [data-foto-do-campeao]').count()) === 1);
     await page.locator('.modal-card label', { hasText: 'Artilheiro' }).locator('input[type="checkbox"]').check();
     await page.locator('.modal-card select').first().selectOption({ label: 'Zeca' });
     await salvar.click();
     await page.locator('.modal-card').waitFor({ state: 'detached', timeout: 8000 });
+    const resultado = patches.find((x) => x.url === '/api/games/g-passado/resultado');
     const feed = patches.find((x) => x.url === '/api/feed/games/g-passado/resultado');
-    t('Salvar resultado manda o PATCH do feed com o campeão (Time Roxo = 1) e o artilheiro, no mesmo corpo de antes (o que está desligado vai como null)', !!feed && feed.corpo.campeao_time_index === 1 && feed.corpo.artilheiro_user_id === 'U2' && feed.corpo.artilheiro_gols === 1 && feed.corpo.destaque_user_id === null && feed.corpo.rodada_user_id === null, JSON.stringify(patches));
+    t('Salvar resultado manda o PATCH do jogo com o campeão (Time Roxo = 1) e, depois, o do feed só com os prêmios (o que está desligado vai como null)', !!resultado && resultado.corpo.campeao_time_index === 1 && resultado.corpo.empate === false && !!feed && !('campeao_time_index' in feed.corpo) && feed.corpo.artilheiro_user_id === 'U2' && feed.corpo.artilheiro_gols === 1 && feed.corpo.destaque_user_id === null && feed.corpo.rodada_user_id === null && patches.indexOf(resultado) < patches.indexOf(feed), JSON.stringify(patches));
 
     const historicoAntes = await page.evaluate(() => window.history.length);
     await page.locator('[data-aba="elenco"]').click();
