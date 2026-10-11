@@ -193,6 +193,7 @@ export async function rodar({ navegador, base, t }) {
       t(`${largura}px · o campeão aparece (Time Ouro) e o campeonato termina`, (await page.locator('.camp-cel__n').innerText()).trim() === 'Time Ouro' && motor.camps.get(camp.id).estado === 'terminado');
       const podio = await page.locator('.camp-podio__col').evaluateAll((cols) => cols.map((c) => c.querySelector('.camp-podio__crest').innerText.replace(/\s+/g, ' ').trim() + ' · ' + c.querySelector('.camp-podio__step').textContent.trim()));
       t(`${largura}px · pódio: 1º Ouro (campeão), 2º Prata (perdeu a final), 3º Roxo (3º da tabela)`, podio.join(' | ') === 'Time Prata · 2º | Time Ouro · 1º | Time Roxo · 3º', podio.join(' | '));
+      t(`${largura}px · terminado: a tabela não coroa o 1º da fase de grupos (o título é do campeão da final)`, (await page.locator('.camp-tab .nm svg').count()) === 0);
       t(`${largura}px · terminado: os jogos da fase de grupos ficam travados, com a explicação (sem "Corrigir")`, (await page.locator('[data-corrigir]').count()) === 0 && (await page.locator('[data-grupos-travados]').count()) === 1);
       t(`${largura}px · terminado: a página cabe, sem rolar para o lado`, (await defeitos(page, largura)).length === 0, resumo(await defeitos(page, largura)));
       await foto(page, { path: captura(`30k-campeao-${largura}.png`), fullPage: true });

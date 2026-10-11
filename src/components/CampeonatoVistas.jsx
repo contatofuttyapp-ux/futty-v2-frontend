@@ -93,7 +93,9 @@ export function CampeonatoTabela({ campeonato }) {
           <span className="nm">
             <span className="camp-tab__dot" style={{ background: t.cor }} />
             <span>{t.nome}</span>
-            {pos === 1 && !noEmpate.has(t.id) ? <span style={{ display: 'inline-flex' }}><Crown /></span> : null}
+            {/* A coroa é do campeão: nos pontos corridos é quem lidera a tabela; em todos contra todos + final o título sai da final,
+                então a tabela não coroa ninguém (o campeão tem a coroa na celebração, no pódio e na final). */}
+            {pos === 1 && !comFinal && !noEmpate.has(t.id) ? <span style={{ display: 'inline-flex' }}><Crown /></span> : null}
           </span>
           <span className="p">{t.PTS}</span>
           <span className="c">{t.J}</span>
