@@ -31,6 +31,7 @@ import { jogoTemResultado } from '../utils/resultadoDoJogo';
 import { inputStyle, lbl, secLbl } from '../components/camposDoAdmin';
 import NumberStepper from '../components/NumberStepper';
 import RegistarJornada from '../components/RegistarJornada';
+import CriarCampeonato from '../components/CriarCampeonato';
 import { nomeCampeao } from '../utils/campeonato';
 import CampoCidadeLazy from '../components/CampoCidadeLazy';
 import { EscolhaPapel, TEXTO_ADMIN_E_POSICAO } from '../components/EscolhaLinhaGol';
@@ -208,13 +209,8 @@ function AvisarOTime({ slug, showToast }) {
 }
 
 // ─── TAB: CAMPEONATO ─────────────────────────────────────────────────────────
-function TabCampeonato({ slug, navigate, showToast }) {
+function TabCampeonato({ slug, team, navigate, showToast }) {
   const [data, setData] = useState(undefined); // undefined = loading
-  const [criando, setCriando] = useState(false);
-  const [nome, setNome] = useState('');
-  const [numJornadas, setNumJornadas] = useState(8);
-  const [timeA, setTimeA] = useState('Time A');
-  const [timeB, setTimeB] = useState('Time B');
   const [busy, setBusy] = useState(false);
   const [confirmTerminar, setConfirmTerminar] = useState(false);
 
@@ -232,29 +228,6 @@ function TabCampeonato({ slug, navigate, showToast }) {
     return apiFetch(`/api/equipas/${slug}/campeonato`)
       .then((d) => setData(d))
       .catch((e) => showToast(e.message, 'error'));
-  }
-
-  async function criar() {
-    if (busy) return;
-    if (!nome.trim()) {
-      showToast('Informe o nome do campeonato.', 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      await apiFetch(`/api/equipas/${slug}/campeonato`, {
-        method: 'POST',
-        body: JSON.stringify({ nome: nome.trim(), num_jornadas: Number(numJornadas) || 8, time_a_nome: timeA.trim() || 'Time A', time_b_nome: timeB.trim() || 'Time B' }),
-      });
-      setCriando(false);
-      setNome('');
-      await recarregar();
-      showToast('Campeonato criado!');
-    } catch (e) {
-      showToast(e.message, 'error');
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function terminar() {
@@ -325,37 +298,16 @@ function TabCampeonato({ slug, navigate, showToast }) {
     );
   }
 
-  // A) SEM CAMPEONATO
+  // A) SEM CAMPEONATO ANTIGO (de 2 times): a escolha de onde vêm os times do campeonato novo. O formulário antigo (nome, nº de
+  // jornadas, Time A × Time B) saiu daqui; o painel dos já criados (B e C acima) continua.
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
-      {criando ? (
-        <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }}>
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={lbl}>Nome do campeonato</span>
-            <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 80))} placeholder="Ex.: Liga de Verão" style={inputStyle} />
-          </label>
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={lbl}>Nº de jornadas</span>
-            <input type="number" min="1" value={numJornadas} onChange={(e) => setNumJornadas(e.target.value)} style={inputStyle} />
-          </label>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <label style={{ display: 'grid', gap: 6, flex: 1 }}>
-              <span style={lbl}>Nome do Time A</span>
-              <input value={timeA} onChange={(e) => setTimeA(e.target.value.slice(0, 40))} style={inputStyle} />
-            </label>
-            <label style={{ display: 'grid', gap: 6, flex: 1 }}>
-              <span style={lbl}>Nome do Time B</span>
-              <input value={timeB} onChange={(e) => setTimeB(e.target.value.slice(0, 40))} style={inputStyle} />
-            </label>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={criar}>Criar</button>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setCriando(false)}>Cancelar</button>
-          </div>
-        </div>
-      ) : (
-        <button type="button" className="btn btn--purple btn--sm" onClick={() => setCriando(true)}>Criar Campeonato</button>
-      )}
+    <div style={{ ...CARD, padding: 14 }} data-painel-criar-campeonato>
+      <CriarCampeonato
+        slug={slug}
+        team={team}
+        aoCriado={(c) => navigate(`/time/${slug}/campeonato/${c.id}`)}
+        aoMontarAMao={() => navigate(`/time/${slug}/campeonato?novo=manual`)}
+      />
     </div>
   );
 }
@@ -1988,7 +1940,7 @@ export function JogosDoAdmin({ slug, team, showToast, navigate, abrirPresencaDe 
       {painel === 'recorrentes' ? (
         <FormRecorrentes slug={slug} fuso={team?.fuso} cidade={team?.cidade} showToast={showToast} onClose={() => setPainel(null)} onCriado={async () => setVersao((v) => v + 1)} />
       ) : null}
-      {painel === 'campeonato' ? <TabCampeonato slug={slug} navigate={navigate} showToast={showToast} /> : null}
+      {painel === 'campeonato' ? <TabCampeonato slug={slug} team={team} navigate={navigate} showToast={showToast} /> : null}
       <TabJogos key={versao} slug={slug} team={team} showToast={showToast} navigate={navigate} abrirPresencaDe={abrirPresencaDe} aoUsarAbrirPresenca={aoUsarAbrirPresenca} />
     </div>
   );

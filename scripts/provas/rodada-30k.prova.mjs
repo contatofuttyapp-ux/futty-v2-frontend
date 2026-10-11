@@ -83,6 +83,7 @@ export async function rodar({ navegador, base, t }) {
       await page.getByText('Ainda sem campeonatos').waitFor({ timeout: 25000 });
       t(`${largura}px · lista vazia: o admin é convidado a criar nos 3 formatos`, (await texto(page)).includes('pontos corridos, todos contra todos + final ou mata-mata'));
       await page.getByRole('button', { name: /Criar campeonato/ }).click();
+      await page.locator('[data-caminho="a-mao"]').click(); // 30L: "Criar campeonato" abre a escolha; o passo a passo é o "à mão"
       await page.locator('input.input--hud').fill('Copa da Resenha');
       await page.getByRole('button', { name: 'Continuar' }).click();
       await page.locator('[data-seletor-de-formato]').waitFor();
@@ -131,6 +132,7 @@ export async function rodar({ navegador, base, t }) {
       const motor = criarMotor({ store, membros: MEMBROS });
       const { page, ctx } = await abrirCena(navegador, base, motor, `/time/${SLUG}/campeonato`, { largura });
       await page.getByRole('button', { name: /Criar campeonato/ }).click();
+      await page.locator('[data-caminho="a-mao"]').click(); // 30L: "Criar campeonato" abre a escolha; o passo a passo é o "à mão"
       await page.locator('input.input--hud').fill('Duelo');
       await page.getByRole('button', { name: 'Continuar' }).click();
       await page.getByRole('button', { name: 'Continuar' }).click(); // formato padrão: pontos corridos

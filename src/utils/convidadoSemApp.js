@@ -4,7 +4,7 @@
 // dele não promete nem desmente nada sobre ele.
 export const CONVIDADO_TITULO = 'Alguém sem o app vai jogar?';
 export const CONVIDADO_LINHA = 'Escreva o nome: a pessoa entra no sorteio, mas não conta no ranking.';
-export const CONVIDADO_LINHA_CAMPEONATO = 'Escreva o nome: a pessoa entra no sorteio.';
+export const CONVIDADO_LINHA_CAMPEONATO = 'Escreva o nome: a pessoa entra na lista e você a coloca em um time.';
 export const CONVIDADO_CAMPO = 'Nome de quem vai jogar';
 export const CONVIDADO_BOTAO = 'Adicionar';
 // A versão no PASSADO, do Jogo passado (o jogo já rolou: "jogou", não "vai jogar"). O botão é o mesmo.

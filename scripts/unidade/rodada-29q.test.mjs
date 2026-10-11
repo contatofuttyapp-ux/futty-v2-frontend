@@ -74,7 +74,7 @@ test('29Q · a fila de chips é só o filtro dos jogos: Todas + os times; saíra
 test('29Q · os textos do convidado sem app, uma fonte só (utils/convidadoSemApp.js)', () => {
   assert.equal(CONVIDADO_TITULO, 'Alguém sem o app vai jogar?');
   assert.equal(CONVIDADO_LINHA, 'Escreva o nome: a pessoa entra no sorteio, mas não conta no ranking.');
-  assert.equal(CONVIDADO_LINHA_CAMPEONATO, 'Escreva o nome: a pessoa entra no sorteio.');
+  assert.equal(CONVIDADO_LINHA_CAMPEONATO, 'Escreva o nome: a pessoa entra na lista e você a coloca em um time.');
   assert.equal(CONVIDADO_CAMPO, 'Nome de quem vai jogar');
   assert.equal(CONVIDADO_BOTAO, 'Adicionar');
   // A VOZ: sem travessão no meio da frase, sem "por favor", sem "usuário"; o botão tem 1 palavra, sem ponto.

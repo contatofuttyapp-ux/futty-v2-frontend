@@ -13,7 +13,9 @@
 ## Decisões (produto)
 1. **Criado pelo admin, dentro da equipa** (team_id — alcance da casa; global nunca).
 2. **Times próprios do campeonato** — não são os times do ranking:
-   - formados por **sorteio pela máquina aprovada** (slot v8, mesma cerimónia) **OU manual**;
+   - vêm do **sorteio de um jogo** (só quem confirmou, equilibrado pelas notas; o botão "Criar campeonato" no resultado do
+     sorteio, ou "Pelo sorteio de um jogo" na escolha de quem cria o campeonato fora do jogo) **OU** são montados **à mão**.
+     O "sortear direto" do campeonato saiu: sorteava todos os membros do time, até quem não vai, sem olhar as notas;
    - plantel = **membros da equipa + convidados sem app** (SPEC-SORTEIO §11/§12:
      só nome, cromo genérico/silhueta, zero impacto em `users`).
 3. **Formatos = pontos corridos, mata-mata e "Todos contra todos + final"** (`pontos_final`, curto "Grupo + final").

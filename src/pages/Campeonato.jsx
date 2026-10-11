@@ -1,8 +1,8 @@
 // Futty v2.0 — Campeonato: hub (lista + criar) e detalhe (tabela/
 // bracket + lançar resultado + celebração). Modelo N times, Storage no backend.
-// A cerimónia do sorteio é REUTILIZADA para montar os times.
+// Os times de um campeonato vêm do sorteio de um jogo (CriarCampeonato) ou são montados à mão (Wizard): o "sortear direto" saiu.
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useTeam } from '../hooks/useTeam';
 import Topbar from '../components/Topbar';
@@ -10,7 +10,7 @@ import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 import Icon from '../components/Icon';
 import { contar } from '../utils/plural';
-import CerimoniaSorteio from '../components/CerimoniaSorteio';
+import CriarCampeonato from '../components/CriarCampeonato';
 import ComporTimes from '../components/ComporTimes';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import { CampeonatoTabela, CampeonatoJogos, CampeonatoBracket, CampeonatoCelebracao, CampeonatoPlanteis, CampeonatoFinal, CampeonatoDesempate } from '../components/CampeonatoVistas';
@@ -34,7 +34,9 @@ function Hub({ slug }) {
   const { team } = useTeam(slug);
   const isAdmin = team?.role === 'admin';
   const [lista, setLista] = useState(null);
-  const [criar, setCriar] = useState(false);
+  // false = a lista · 'escolha' = de onde vêm os times · 'manual' = o passo a passo à mão (o Painel abre direto nele com ?novo=manual)
+  const [params] = useSearchParams();
+  const [criar, setCriar] = useState(() => (params.get('novo') === 'manual' ? 'manual' : false));
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -45,7 +47,18 @@ function Hub({ slug }) {
     return () => { ativo = false; };
   }, [slug]);
 
-  if (criar) return <Wizard slug={slug} onCancel={() => setCriar(false)} onCriado={(c) => navigate(`/time/${slug}/campeonato/${c.id}`, { state: { cerimonia: !!c.seed } })} />;
+  const abrirCriado = (c) => navigate(`/time/${slug}/campeonato/${c.id}`);
+  if (criar === 'manual') return <Wizard slug={slug} onCancel={() => setCriar('escolha')} onCriado={abrirCriado} />;
+  if (criar === 'escolha') {
+    return (
+      <div className="app-shell">
+        <Topbar hud="CRIAR CAMPEONATO" back="voltar" backFallback={`/time/${slug}?aba=jogos`} />
+        <main className="app-main page-reveal" style={{ padding: '12px 14px' }}>
+          <CriarCampeonato slug={slug} team={team} aoCriado={abrirCriado} aoMontarAMao={() => setCriar('manual')} aoCancelar={() => setCriar(false)} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -75,7 +88,7 @@ function Hub({ slug }) {
 
         {isAdmin ? (
           <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 16 }}>
-            <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} onClick={() => setCriar(true)}>＋ Criar campeonato</button>
+            <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} onClick={() => setCriar('escolha')}>＋ Criar campeonato</button>
           </div>
         ) : null}
       </main>
@@ -116,18 +129,13 @@ function Wizard({ slug, onCancel, onCriado }) {
   function delTime(i) { if (nomes.length > minTimes) { setNomes((c) => c.filter((_, k) => k !== i)); setAtrib((c) => c.filter((_, k) => k !== i)); } }
   function addConv() { const v = convInput.trim(); if (v) { setConvidados((c) => [...c, v]); setConvInput(''); } }
 
-  async function criar(modo) {
+  async function criar() {
     setCriando(true);
     try {
       const nomesLimpos = nomes.map((x, i) => x.trim() || `Time ${i + 1}`);
-      let body;
-      if (modo === 'sorteio') {
-        body = { nome: nome.trim(), formato, modo: 'sorteio', num_times: nomes.length, nomes: nomesLimpos, convidados };
-      } else {
-        body = { nome: nome.trim(), formato, modo: 'manual', nomes: nomesLimpos };
-        if (totalAtrib > 0) {
-          body.plantel = atribSafe.map((arr) => arr.map((k) => poolByKey[k]).filter(Boolean).map((p) => ({ user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url, convidado: p.convidado })));
-        }
+      const body = { nome: nome.trim(), formato, modo: 'manual', nomes: nomesLimpos };
+      if (totalAtrib > 0) {
+        body.plantel = atribSafe.map((arr) => arr.map((k) => poolByKey[k]).filter(Boolean).map((p) => ({ user_id: p.user_id, nome: p.nome, avatar_url: p.avatar_url, convidado: p.convidado })));
       }
       const r = await apiFetch(`/api/equipas/${slug}/campeonatos`, { method: 'POST', body: JSON.stringify(body) });
       onCriado(r.campeonato);
@@ -196,11 +204,9 @@ function Wizard({ slug, onCancel, onCriado }) {
             </div>
 
             <div className="cta-gold-glow" style={{ display: 'flex', marginTop: 16 }}>
-              <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} disabled={criando} onClick={() => criar('sorteio')}>⚡ Sortear pela cerimônia</button>
+              <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} disabled={criando} onClick={() => setPasso(4)}>Montar à mão →</button>
             </div>
-            <div className="muted" style={{ fontSize: 11, margin: '8px 0 0' }}>…ou monte à mão (nomes acima) e crie direto.</div>
             <div style={{ marginTop: 12, display: 'grid', gap: 9 }}>
-              <button type="button" className="btn hud-corners" style={{ border: '1.5px solid rgba(255,255,255,.22)', color: '#c9c2d6', background: 'rgba(255,255,255,.03)' }} disabled={criando} onClick={() => setPasso(4)}>Montar à mão →</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(2)}>Voltar</button>
             </div>
           </>
@@ -220,7 +226,7 @@ function Wizard({ slug, onCancel, onCriado }) {
             <ComporTimes nomes={nomes} pool={pool} atrib={atrib} onChangeAtrib={setAtrib} ajuda={AJUDA_DOS_TIMES} />
 
             <div style={{ marginTop: 18, display: 'grid', gap: 9 }}>
-              <button type="button" className="btn hud-corners cta-gold" disabled={criando} onClick={() => criar('manual')}>{criando ? 'Criando…' : 'Criar campeonato'}</button>
+              <button type="button" className="btn hud-corners cta-gold" disabled={criando} onClick={criar}>{criando ? 'Criando…' : 'Criar campeonato'}</button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPasso(3)}>Voltar</button>
             </div>
           </>
@@ -245,7 +251,6 @@ function PlanteisSection({ campeonato }) {
 
 // ============ DETALHE ============
 function Detalhe({ slug, id }) {
-  const location = useLocation();
   const { team } = useTeam(slug);
   const isAdmin = team?.role === 'admin';
   const [camp, setCamp] = useState(null);
@@ -253,7 +258,6 @@ function Detalhe({ slug, id }) {
   const [toast, setToast] = useState(null);
   // O que o admin precisa saber depois de um lançamento (a final que foi refeita): fica na página até ele dispensar, não some em 2 s.
   const [avisos, setAvisos] = useState([]);
-  const [revelar, setRevelar] = useState(() => !!location.state?.cerimonia);
 
   useEffect(() => {
     let ativo = true;
@@ -297,20 +301,6 @@ function Detalhe({ slug, id }) {
 
   if (erro) return <div className="app-shell"><Topbar hud="CAMPEONATO" back={`/time/${slug}/campeonato`} /><main className="app-main"><div className="alert alert--error hud-corners">{erro}</div></main></div>;
   if (!camp) return <div className="app-shell"><Topbar hud="CAMPEONATO" back={`/time/${slug}/campeonato`} /><main className="app-main"><LoadingFutty /></main></div>;
-
-  // Reveal da cerimónia (times sorteados) antes de mostrar o campeonato.
-  if (revelar && camp.seed) {
-    const resultado = { numTimes: camp.times.length, times: camp.times.map((t) => ({ nome: t.nome, jogadores: t.jogadores })), reservas: [], seed: camp.seed };
-    return (
-      <div className="app-shell">
-        <Topbar hud="SORTEIO DOS TIMES" back={`/time/${slug}/campeonato`} />
-        <main className="app-main" style={{ padding: 0 }}>
-          <CerimoniaSorteio resultado={resultado} aoTerminar={() => setRevelar(false)} />
-          <div style={{ textAlign: 'center', padding: 12 }}><button type="button" className="btn btn--ghost btn--sm" onClick={() => setRevelar(false)}>Ver o campeonato →</button></div>
-        </main>
-      </div>
-    );
-  }
 
   const terminado = camp.estado === 'terminado';
   return (

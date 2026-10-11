@@ -96,8 +96,10 @@ test('as telas: lista, criar, escolha a partir do sorteio, página do time e pá
   const jogo = ler('src/pages/Jogo.jsx');
   const publico = ler('src/pages/CampeonatoPublico.jsx');
   assert.match(campeonato, /<SeletorDeFormato valor=\{formato\} onChange=\{setFormato\} nTimes=\{nomes\.length\} \/>/, 'o criar usa o seletor');
-  assert.match(jogo, /<SeletorDeFormato valor=\{formatoCamp\}/, 'a escolha a partir do sorteio usa o mesmo seletor');
-  assert.match(jogo, /criarCampeonatoDeSorteio\(formatoCamp\)/, 'e só cria depois do "Criar campeonato"');
+  const doSorteio = ler('src/components/CampeonatoDoSorteio.jsx');
+  assert.match(jogo, /<CampeonatoDoSorteio/, 'a escolha a partir do sorteio é a peça compartilhada (Jogo e "Pelo sorteio de um jogo")');
+  assert.match(doSorteio, /<SeletorDeFormato valor=\{formato\}/, 'e ela usa o mesmo seletor');
+  assert.match(doSorteio, /onClick=\{criar\}/, 'só cria depois do "Criar campeonato"');
   assert.doesNotMatch(campeonato, /Por enquanto só pontos corridos e mata-mata/, 'a frase velha saiu');
   for (const [nome, fonte] of [['Campeonato', campeonato], ['CampeonatoPublico', publico]]) {
     assert.doesNotMatch(fonte, /camp\.formato === 'mata' \? 'Mata-mata' : 'Pontos corridos'/, `${nome}: o chip diz o nome do formato, não "mata ou pontos"`);

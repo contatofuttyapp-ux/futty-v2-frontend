@@ -31,8 +31,9 @@ const NOMES_COR_SORTEIO = ['Time Ouro', 'Time Roxo', 'Time Prata', 'Time Bronze'
  * @param {string} [o.nomeDoTime]
  * @param {Array}  [o.membros]     [{ id, nome }] — os jogadores do time
  * @param {object} [o.jogo]        o jogo sorteado de onde o campeonato pode nascer: { id, data, times_resultado }
+ * @param {Array|Function} [o.jogos]  os jogos do time (linhas como as do banco: id, data, local, status, cancelado, sorteio_realizado, times_resultado), ou uma função que os devolve na hora do pedido
  */
-export function criarMotor({ store, papel = 'admin', slug = 'domingueira-fc', nomeDoTime = 'Domingueira FC', membros = [], jogo = null }) {
+export function criarMotor({ store, papel = 'admin', slug = 'domingueira-fc', nomeDoTime = 'Domingueira FC', membros = [], jogo = null, jogos = null }) {
   const camps = new Map();
   const pedidos = [];
   const team = {
@@ -44,27 +45,34 @@ export function criarMotor({ store, papel = 'admin', slug = 'domingueira-fc', no
   const erro = (status, mensagem) => ({ status, json: { error: mensagem } });
   const enriquecer = (c) => store.enriquecer(c);
 
+  // Os jogos do time, lidos na hora do pedido (o roteiro sorteia no meio da história).
+  const jogosDoTime = () => {
+    if (typeof jogos === 'function') return jogos();
+    if (Array.isArray(jogos)) return jogos;
+    if (!jogo) return [];
+    return [{ id: jogo.id, data: jogo.data || new Date().toISOString(), local: jogo.local || null, status: 'agendado', cancelado: false, sorteio_realizado: !!jogo.times_resultado, times_resultado: jogo.times_resultado, dataCurta: jogo.dataCurta }];
+  };
+
   function criar(corpo, deSorteio) {
     if (papel !== 'admin') return erro(403, 'Só o admin do time cria campeonatos.');
+    // O "sortear direto" saiu: o motor de verdade recusa o modo com esta frase.
+    if (corpo?.modo === 'sorteio') return erro(400, 'Para sortear, marque um jogo e sorteie por lá; no resultado do sorteio, toque em Criar campeonato.');
     const formato = store.lerFormato(corpo?.formato);
     const minimo = store.MIN_TIMES_DO_FORMATO[formato] || 2;
     let opts;
     if (deSorteio) {
-      const times = (jogo?.times_resultado?.times || []).slice(0, 8);
+      const g = jogosDoTime().find((x) => x.id === corpo.game_id);
+      if (!g) return erro(404, 'Jogo não encontrado neste time.');
+      const times = (g.times_resultado?.times || []).slice(0, 8);
       if (times.length < minimo) return erro(400, `Este jogo não tem times sorteados suficientes (mínimo ${minimo}).`);
       opts = {
-        nome: `Campeonato do sorteio · ${jogo.dataCurta || ''}`.replace(/ · $/, ''),
+        nome: `Campeonato do sorteio · ${g.dataCurta || ''}`.replace(/ · $/, ''),
+        origem: { game_id: g.id, assinatura: store.assinaturaDosTimes(g.times_resultado.times) },
         formato,
         usar_sorteio: false,
         nomes: times.map((_, i) => NOMES_COR_SORTEIO[i % NOMES_COR_SORTEIO.length]),
         plantel: times.map((t) => (t.jogadores || []).map((j) => ({ user_id: j.user_id || null, nome: j.nome, avatar_url: j.avatar_url || null, convidado: !!j.convidado }))),
       };
-    } else if (corpo.modo === 'sorteio') {
-      const n = Math.floor(Number(corpo.num_times) || 0);
-      if (n < minimo || n > 8) return erro(400, `Escolha entre ${minimo} e 8 times.`);
-      const participantes = membros.map((m) => ({ user_id: m.id, nome: m.nome, avatar_url: m.avatar_url || null, rating: 3, convidado: false }))
-        .concat((corpo.convidados || []).map((nome) => ({ user_id: null, nome, avatar_url: null, rating: 3, convidado: true })));
-      opts = { nome: corpo.nome, formato, usar_sorteio: true, num_times: n, participantes, seed: corpo.seed, nomes: corpo.nomes };
     } else {
       const nomes = (corpo.nomes || []).map((x) => String(x || '').trim()).filter(Boolean).slice(0, 8);
       if (nomes.length < minimo) return erro(400, formato === 'pontos_final' ? `Este formato precisa de pelo menos ${minimo} times.` : 'Um campeonato precisa de pelo menos 2 times.');
@@ -115,6 +123,13 @@ export function criarMotor({ store, papel = 'admin', slug = 'domingueira-fc', no
     }
     if (pathname === base && metodo === 'POST') return criar(corpo, false);
     if (pathname === `${base}/de-sorteio` && metodo === 'POST') return criar(corpo, true);
+    if (pathname === `${base}/jogos-sorteados` && metodo === 'GET') {
+      if (papel !== 'admin') return erro(403, 'Só o admin do time cria campeonatos.');
+      const elegiveis = store.jogosElegiveisParaCampeonato(jogosDoTime(), [...camps.values()]).slice(0, 10).map((g) => ({
+        id: g.id, data: g.data, local: g.local || null, n_times: Math.min(g.times_resultado.times.length, 8), por_time: Math.max(...g.times_resultado.times.map((x) => (x.jogadores || []).length)),
+      }));
+      return ok({ jogos: elegiveis });
+    }
     const m = pathname.startsWith(`${base}/`) ? pathname.slice(base.length + 1).split('/') : null;
     if (m) {
       const camp = camps.get(m[0]);

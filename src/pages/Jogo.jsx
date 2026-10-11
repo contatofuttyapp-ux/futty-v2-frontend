@@ -20,7 +20,7 @@ import ResultadoEditor from '../components/ResultadoEditor';
 import TimesEditor from '../components/TimesEditor';
 import { EscolhaDosTimes, MontarTimesAMao } from '../components/TimesDoJogo';
 import CountdownSorteio from '../components/CountdownSorteio';
-import SeletorDeFormato from '../components/SeletorDeFormato';
+import CampeonatoDoSorteio from '../components/CampeonatoDoSorteio';
 import Toast from '../components/Toast';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
@@ -102,8 +102,6 @@ export default function Jogo() {
   // A composição à mão aberta (quem confirmou + os convidados da tela) e o POST dos times em curso.
   const [montando, setMontando] = useState(false);
   const [salvandoTimes, setSalvandoTimes] = useState(false);
-  const [criandoCamp, setCriandoCamp] = useState(false);
-  const [formatoCamp, setFormatoCamp] = useState('pontos'); // o formato escolhido para o campeonato a partir do sorteio
   // Item 74: o código do link curto (/s/<código>) é pedido quando o sorteio existe — antes do toque em "copiar", para a cópia sair na
   // hora (o Safari só deixa copiar logo depois do toque). Sem código, o link longo.
   const [codigoCurto, setCodigoCurto] = useState(null);
@@ -116,23 +114,6 @@ export default function Jogo() {
       ativo = false;
     };
   }, [id, temSorteio]);
-
-  // Campeonato a partir dos times sorteados (SPEC-CAMPEONATOS): o admin só escolhe
-  // o formato — nomes/plantéis vêm do adaptador no servidor (times_resultado → campeonato).
-  async function criarCampeonatoDeSorteio(formato) {
-    setCriandoCamp(true);
-    try {
-      const data = await apiFetch(`/api/equipas/${slug}/campeonatos/de-sorteio`, {
-        method: 'POST',
-        body: JSON.stringify({ game_id: id, formato }),
-      });
-      navigate(`/time/${slug}/campeonato/${data.campeonato.id}`);
-    } catch (err) {
-      setToast({ tipo: 'error', mensagem: err.message });
-      setCriandoCamp(false);
-      setConfirmacao(null);
-    }
-  }
 
   // Executa uma ação (POST) e recarrega o jogo. Centraliza o tratamento de erro.
   async function runAction(path, body) {
@@ -571,7 +552,7 @@ export default function Jogo() {
                   Ajustar times
                 </button>
               )}
-              {isAdmin && timesSorteio.length >= 3 && confirmacao !== 'campeonato' && (
+              {isAdmin && timesSorteio.length >= 2 && confirmacao !== 'campeonato' && (
                 <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setConfirmacao('campeonato')}>
                   Criar campeonato com estes times
                 </button>
@@ -602,15 +583,14 @@ export default function Jogo() {
                 <div style={{ fontSize: 13, color: 'var(--text-dim)', margin: '4px 0 10px' }}>
                   Os {Math.min(timesSorteio.length, 8)} times e jogadores deste sorteio entram já preenchidos. Escolha o formato:
                 </div>
-                <SeletorDeFormato valor={formatoCamp} onChange={setFormatoCamp} nTimes={Math.min(timesSorteio.length, 8)} />
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button type="button" data-criar-campeonato className="btn btn--sm hud-corners-s cta-gold" style={{ fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }} onClick={() => criarCampeonatoDeSorteio(formatoCamp)} disabled={criandoCamp}>
-                    {criandoCamp ? 'Criando…' : 'Criar campeonato'}
-                  </button>
-                  <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setConfirmacao(null)} disabled={criandoCamp}>
-                    Cancelar
-                  </button>
-                </div>
+                <CampeonatoDoSorteio
+                  slug={slug}
+                  gameId={id}
+                  nTimes={Math.min(timesSorteio.length, 8)}
+                  aoCriar={(campeonato) => navigate(`/time/${slug}/campeonato/${campeonato.id}`)}
+                  aoErrar={(mensagem) => { setToast({ tipo: 'error', mensagem }); setConfirmacao(null); }}
+                  aoCancelar={() => setConfirmacao(null)}
+                />
               </div>
             )}
             {!isAdmin && !game.sorteio_realizado && <p className="muted">O sorteio ainda não foi realizado.</p>}
