@@ -68,3 +68,6 @@ npx @capgo/cli@latest bundle upload com.futty.app --channel production --path di
 - Passou de 2.000 usuários ativos/mês: o plano seguinte é o Maker, US$ 39/mês (10.000). Rever o plano antes de o app chegar perto desse teto.
 - Ordem de grandeza: o bundle tem no máximo ≈ 2,3 MB (o zip sai menor). 100 GiB de banda cobrem dezenas de atualizações completas para 2.000 pessoas.
 - O `BUILDS-35-17.md` pede uma linha do Capgo no `CONTAS.md` (conta contatofuttyapp, login Google, plano Solo quando o teste acabar).
+
+## `directUpdate: 'atInstall'` (Rodada 31B, 12-out) — não configurado
+O plugin 8.52.1 aceita `autoUpdate: 'atInstall'` (aplica na hora só depois de instalar ou atualizar pela loja), mas, como os outros modos instantâneos, exige `autoSplashscreen: true` e `@capacitor/splash-screen` com `launchAutoHide: false` — um plugin nativo novo, que segura a pessoa na tela de abertura enquanto baixa. Fica `autoUpdate: true` (= `atBackground`). Para ligar um dia: instalar o splash-screen, configurar os dois, `cap sync`, subir os bundles com `--delta` e testar num aparelho antes da loja.
