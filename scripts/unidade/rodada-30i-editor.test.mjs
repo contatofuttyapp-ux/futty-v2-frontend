@@ -111,7 +111,7 @@ test('a tela do jogo abre o editor completo (times, gols de todos os times, quem
   assert.match(jogo, /jogadores=\{jogadoresResultado\}/);
   assert.match(jogo, /confirmados=\{confirmadosTodos\}/);
   assert.match(jogo, /flags=\{flagsDoTime\(timeCompleto\)\}/);
-  assert.match(jogo, /key=\{`\$\{game\.campeao_time_index\}\|\$\{game\.time_vencedor\}\|\$\{game\.placar_a\}\|\$\{game\.placar_b\}\|\$\{game\.resultado_nivel\}\|\$\{golsResultado\.length\}`\}/);
+  assert.match(jogo, /key=\{`\$\{game\.campeao_time_index\}\|\$\{game\.time_vencedor\}\|\$\{game\.placar_a\}\|\$\{game\.placar_b\}\|\$\{game\.resultado_nivel\}\|\$\{golsResultado\.length\}\|\$\{jogadoresResultado\.map\(\(j\) => j\.user_id \|\| j\.nome\)\.join\(','\)\}`\}/); // o elenco entra na chave: convidado que ganhou conta refaz o editor
   assert.doesNotMatch(jogo, /nomeA=|nomeB=|nomeTimeA|nomeTimeB/, 'nada do editor antigo, de dois times fixos');
   // O resultado visível a todos lê o campeão (e o empate), não o nível.
   assert.match(jogo, /const resultadoDoJogo = resultadoGravado\(game\);/);

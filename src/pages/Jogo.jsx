@@ -16,6 +16,7 @@ import Topbar from '../components/Topbar';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import DrawnTeams from '../components/DrawnTeams';
+import AssociarJogador, { AssociacoesRecentes } from '../components/AssociarJogador';
 import ResultadoEditor from '../components/ResultadoEditor';
 import TimesEditor from '../components/TimesEditor';
 import { EscolhaDosTimes, MontarTimesAMao } from '../components/TimesDoJogo';
@@ -32,6 +33,7 @@ import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } f
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import { motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
 import { montadoAMao } from '../utils/seloDoSorteio';
+import { fraseDoFeito } from '../utils/associarJogador';
 import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
 
@@ -99,6 +101,7 @@ export default function Jogo() {
   const [convidados, setConvidados] = useState([]); // SPEC-SORTEIO §11: nomes sem app
   const [novoConvidado, setNovoConvidado] = useState('');
   const [toast, setToast] = useState(null);
+  const [associando, setAssociando] = useState(null); // o convidado sem app cuja vaga o admin está ligando a um membro (utils/associarJogador.js)
   const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'refazer-a-mao' | 'cancelar-presenca' | 'campeonato' | null
   // A composição à mão aberta (quem confirmou + os convidados da tela) e o POST dos times em curso.
   const [montando, setMontando] = useState(false);
@@ -630,7 +633,15 @@ export default function Jogo() {
                     {/* Vista oficial (a única) — o modo Campo era protótipo abortado de
                         cartaz alternativo; morreu aqui. Modelos alternativos futuros =
                         SPEC-SORTEIO, desenhados pelo Fable quando o dono pedir. */}
-                    <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} />
+                    <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} aoAssociar={isAdmin ? setAssociando : undefined} />
+                    {isAdmin ? (
+                      <AssociacoesRecentes
+                        gameId={id}
+                        timesResultado={game.times_resultado}
+                        onDesfeito={async () => { await reload(); setToast({ tipo: 'success', mensagem: 'Desfeito: o convidado voltou ao lugar dele.' }); }}
+                        onErro={(mensagem) => setToast({ tipo: 'error', mensagem })}
+                      />
+                    ) : null}
                   </>
                 )}
               </div>
@@ -642,7 +653,7 @@ export default function Jogo() {
                 <SecLabel>Resultado</SecLabel>
                 {/* A chave refaz o editor quando o que está gravado muda (depois de salvar): ele parte sempre do que o motor guardou. */}
                 <ResultadoEditor
-                  key={`${game.campeao_time_index}|${game.time_vencedor}|${game.placar_a}|${game.placar_b}|${game.resultado_nivel}|${golsResultado.length}`}
+                  key={`${game.campeao_time_index}|${game.time_vencedor}|${game.placar_a}|${game.placar_b}|${game.resultado_nivel}|${golsResultado.length}|${jogadoresResultado.map((j) => j.user_id || j.nome).join(',')}`}
                   gameId={id}
                   game={game}
                   gols={golsResultado}
@@ -684,6 +695,19 @@ export default function Jogo() {
         <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, zIndex: 50, padding: '0 16px 8px' }}>
           <AdCard variant="banner" />
         </div>
+      ) : null}
+
+      {associando ? (
+        <AssociarJogador
+          gameId={id}
+          convidado={associando}
+          onClose={() => setAssociando(null)}
+          onFeito={async ({ convidadoNome, apelido }) => {
+            setAssociando(null);
+            await reload();
+            setToast({ tipo: 'success', mensagem: fraseDoFeito(convidadoNome, apelido) });
+          }}
+        />
       ) : null}
 
       {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}

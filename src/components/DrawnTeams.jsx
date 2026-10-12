@@ -1,14 +1,37 @@
 // Futty v2.0 — Mostra os times resultantes do sorteio + avisos + banco de reservas.
-import { TriangleAlert } from 'lucide-react';
+import { Link2, TriangleAlert } from 'lucide-react';
 import { colorOf } from '../utils/teamColors';
 import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import { formatarAte } from '../utils/numero';
 import { visaoDoSorteio } from '../utils/seloDoSorteio';
 import { nomeComPonto, temConvidado, TEXTO_SEM_O_APP } from '../utils/marcaConvidado';
+import { TEXTO_BOTAO_ASSOCIAR } from '../utils/associarJogador';
 import PlayerAvatar from './PlayerAvatar';
 import SeloDoSorteio, { ListaDeTrocas } from './SeloDoSorteio';
 
-export default function DrawnTeams({ resultado, teamCor }) {
+// O nome do jogador e, só para o admin (aoAssociar), o botão que liga o convidado sem app à conta de um membro. Nome e botão dividem a linha quando
+// cabem e o botão desce para baixo do nome quando não cabem (360 px, nome comprido), sem empurrar a nota para fora.
+function NomeDaLinha({ jogador, aoAssociar }) {
+  const podeAssociar = !!aoAssociar && !!jogador?.convidado && !jogador?.user_id;
+  if (!podeAssociar) return <span>{nomeComPonto(jogador)}</span>;
+  return (
+    <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 10px', minWidth: 0 }}>
+      <span style={{ overflowWrap: 'anywhere' }}>{nomeComPonto(jogador)}</span>
+      <button type="button" data-associar-jogador className="btn btn--ghost btn--sm" onClick={() => aoAssociar(jogador)}>
+        <Link2 size={13} aria-hidden="true" style={{ marginRight: 5, verticalAlign: '-2px' }} />
+        {TEXTO_BOTAO_ASSOCIAR}
+      </button>
+    </span>
+  );
+}
+
+/**
+ * @param {object} props
+ * @param {object} props.resultado  o times_resultado do jogo
+ * @param {string} [props.teamCor]
+ * @param {(jogador: object) => void} [props.aoAssociar]  só o admin passa: aparece o botão "Associar jogador" ao lado de cada convidado sem app
+ */
+export default function DrawnTeams({ resultado, teamCor, aoAssociar }) {
   if (!resultado?.times?.length) return null;
   const c = colorOf(teamCor);
   // Como os times foram feitos (sorteado / ajustado / à mão) vem antes dos times: é a primeira coisa a saber deles.
@@ -47,7 +70,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                 resultado sem remontar a lista (salvar "Montar à mão" e recarregar), uma linha velha ficava na tela. */}
             {time.jogadores.map((j, k) => (
               <div className="sorteio-player" key={j.user_id || `convidado:${k}`}>
-                <span>{nomeComPonto(j)}</span>
+                <NomeDaLinha jogador={j} aoAssociar={aoAssociar} />
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {j.cabeca_chave && <span className="sorteio-player__cap">C</span>}
                   {j.goleiro && <span className="sorteio-player__gk">GOL</span>}
@@ -77,7 +100,7 @@ export default function DrawnTeams({ resultado, teamCor }) {
                   <span style={{ fontSize: 16, fontWeight: 900, color: '#d4a017', minWidth: 26 }}>{r.posicao ?? i + 1}º</span>
                   <PlayerAvatar nome={r.nome} avatarUrl={r.avatar_url} sm />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: '#fff', overflowWrap: 'anywhere' }}>{nomeComPonto(r)}</div>
+                    <div style={{ fontWeight: 700, color: '#fff', overflowWrap: 'anywhere' }}><NomeDaLinha jogador={r} aoAssociar={aoAssociar} /></div>
                     {proximo && (
                       <span style={{ display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#8b5cf6', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 999, padding: '2px 8px' }}>
                         PRÓXIMO A ENTRAR

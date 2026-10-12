@@ -46,9 +46,10 @@ test('30G-2 · a frase é sempre a mesma, em todo lugar (uma fonte só)', () => 
 test('30G-2 · DrawnTeams (tela do jogo e link público): o ponto nos times E na reserva, com a linha no fim de cada', () => {
   const drawn = ler('src/components/DrawnTeams.jsx');
   assert.match(drawn, /import \{ nomeComPonto, temConvidado, TEXTO_SEM_O_APP \} from '\.\.\/utils\/marcaConvidado';/);
-  assert.match(drawn, /<span>\{nomeComPonto\(j\)\}<\/span>/, 'o nome do jogador, dentro de um time');
+  assert.match(drawn, /<NomeDaLinha jogador=\{j\} aoAssociar=\{aoAssociar\} \/>/, 'o nome do jogador, dentro de um time (NomeDaLinha desenha o nome com o ponto)');
+  assert.match(drawn, /<span[^>]*>\{nomeComPonto\(jogador\)\}<\/span>/, 'o nome, com o ponto do convidado, num lugar só');
   assert.match(drawn, /\{temConvidado\(time\.jogadores\) && <div className="muted"[^>]*>\{TEXTO_SEM_O_APP\}<\/div>\}/, 'a linha no fim do time');
-  assert.match(drawn, /\{nomeComPonto\(r\)\}/, 'o nome da reserva');
+  assert.match(drawn, /<NomeDaLinha jogador=\{r\} aoAssociar=\{aoAssociar\} \/>/, 'o nome da reserva');
   assert.match(drawn, /\{temConvidado\(reservas\) && <div className="muted"[^>]*>\{TEXTO_SEM_O_APP\}<\/div>\}/, 'a linha no fim da reserva');
 });
 
