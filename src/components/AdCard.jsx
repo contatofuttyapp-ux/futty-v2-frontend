@@ -11,6 +11,7 @@ import { useInicio } from '../context/InicioContext';
 import { useAd } from '../hooks/useAd';
 import { registarEventoAd } from '../lib/ads';
 import { urlImagem } from '../utils/avatar';
+import { linkDoAnuncio } from '../utils/linkDoAnuncio';
 import Icon from './Icon';
 
 const BASE = {
@@ -60,7 +61,8 @@ export default function AdCard({ pagina = 'inicio', variant = 'native', ad: adPr
 
   const clicar = () => {
     registarEventoAd(ad.id, 'cli'); // clique sai já (costuma abrir outra app)
-    if (ad.link) window.open(ad.link, '_blank', 'noopener');
+    const destino = linkDoAnuncio(ad.link); // só http(s): a campanha é texto livre do Gabinete
+    if (destino) window.open(destino, '_blank', 'noopener');
   };
 
   const conteudo = ad.imagem_url ? (

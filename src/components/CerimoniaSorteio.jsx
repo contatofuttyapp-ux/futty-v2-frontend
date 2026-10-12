@@ -14,6 +14,7 @@ import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { useAd } from '../hooks/useAd';
 import { registarEventoAd } from '../lib/ads';
+import { linkDoAnuncio } from '../utils/linkDoAnuncio';
 import { gerarCartao916, gerarCartazEscalacao } from '../utils/sorteioCartao';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import SomSorteio from './somSorteio';
@@ -120,7 +121,7 @@ function BannerSorteio() {
     if (ad && ad.id && impRef.current !== ad.id) { impRef.current = ad.id; registarEventoAd(ad.id, 'imp'); }
   }, [ad]);
   if (!pronto || !ad) return null;
-  const clicar = () => { registarEventoAd(ad.id, 'cli'); if (ad.link) window.open(ad.link, '_blank', 'noopener'); };
+  const clicar = () => { registarEventoAd(ad.id, 'cli'); const destino = linkDoAnuncio(ad.link); if (destino) window.open(destino, '_blank', 'noopener'); };
   return (
     <div className="faixaAd" role="button" tabIndex={0} onClick={clicar} style={{ cursor: 'pointer' }}>
       <span className="publab">Pub.</span>
