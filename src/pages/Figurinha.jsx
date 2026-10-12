@@ -391,10 +391,11 @@ export default function Figurinha() {
     return () => { vivo = false; };
   }, [lojaLigada]);
   /** O texto do convite de um produto — o mesmo verbo do botão dos Planos. */
-  function textoDoConvite(produto) {
+  function textoDoConvite(produto, { presente = false } = {}) {
     if (!lojaLigada) return produtoDoPedido(produto)?.botaoBloco || 'Pedir ativação';
     const preco = precosDaLoja?.[produto]?.priceString;
-    const verbo = produto === 'pacote' ? 'Comprar para o meu time' : 'Comprar';
+    // Time que já tem o pacote: o convite vira "Comprar para o time" (mais gerações, de presente para todos).
+    const verbo = produto === 'pacote' ? (presente ? 'Comprar para o time' : 'Comprar para o meu time') : 'Comprar';
     return preco ? `${verbo} · ${preco}` : verbo;
   }
   // O recado do pedido SOBREVIVE a fechar o app: vem do estado gravado, não só do clique desta sessão.
@@ -1904,15 +1905,16 @@ export default function Figurinha() {
                 {/* Dono de time vê o pacote primeiro: é o que resolve o time
                     inteiro, e é a venda maior. P2: o botão leva aos Planos com o
                     pacote em destaque — lá se compra (loja ligada) ou se pede. */}
-                {meuTimeBrilhante && !meuTimeBrilhante.brilhante_ativo ? (
+                {meuTimeBrilhante && (!meuTimeBrilhante.brilhante_ativo || lojaLigada) ? (
                   <span className="cta-gold-glow" style={{ display: 'flex' }}>
                     <button
                       type="button"
+                      data-convite-pacote={meuTimeBrilhante.brilhante_ativo ? 'presente' : 'novo'}
                       className="btn hud-corners cta-gold"
                       style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
                       onClick={() => navigate('/planos?destaque=pacote')}
                     >
-                      {textoDoConvite('pacote')}
+                      {textoDoConvite('pacote', { presente: !!meuTimeBrilhante.brilhante_ativo })}
                     </button>
                   </span>
                 ) : null}

@@ -55,6 +55,14 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
     const linha = app.tabelas.teams.find((x) => x.id === T.id);
     Object.assign(linha, { brilhante_ativo: true, brilhante_kit: 'dark-gold', brilhante_limite: 25 });
   }
+  // LOJA_PACOTE_ESGOTADO=1: o Pedro já gastou as 2 gerações dele no pacote — sem direito, a Figurinha mostra o convite (e o botão de comprar mais).
+  if (process.env.LOJA_PACOTE_ESGOTADO === '1') {
+    app.tabelas.brilhantes_time = app.tabelas.brilhantes_time || [];
+    app.tabelas.brilhantes_time.push({ team_id: T.id, user_id: U.adm.id, geracoes: 2, kit_id: 'dark-gold', avatar_url: 'x', custo_cents: 0 });
+    // …e ele tem uma FOTO (o convite "Vire figurinha" só aparece para quem tem foto e nenhuma geração sobrando).
+    const foto = `https://projeto-falso.supabase.test/storage/v1/object/public/avatars/${U.adm.id}.webp`;
+    Object.assign(app.tabelas.users.find((x) => x.id === U.adm.id), { avatar_url: foto, foto_url: foto });
+  }
 
   process.stdout.write(`${JSON.stringify({
     pronto: true,

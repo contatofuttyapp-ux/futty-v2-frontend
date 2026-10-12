@@ -268,3 +268,33 @@ test('cartões: sem loja, o pedido (sem valor, sem manto); com loja, "Comprar ·
   assert.equal(euro[0].preco, '+14,99 €');
   assert.equal(euro[0].botao, 'Comprar · 14,99 €');
 });
+
+// ─── Rodada 31F: o Pacote do time está sempre à venda (presente para o time) ───────────────────────────────────────────────────────────────
+test('31F · pacote ainda não ativo: o cartão é o de sempre ("Pacote do time", "Comprar · preço")', () => {
+  const { produtosDaTela: cartoes } = { produtosDaTela };
+  const pacote = cartoes(true, { pacote: { priceString: 'US$ 12,99', preco: 12.99, moeda: 'USD' } }).find((p) => p.id === 'pacote');
+  assert.equal(pacote.nome, 'Pacote do time');
+  assert.equal(pacote.botao, 'Comprar · US$ 12,99');
+});
+
+test('31F · pacote já ativo: título "Mais figurinhas pro seu time", a linha do presente e o botão "Comprar para o time · preço" (nunca "Já é seu")', () => {
+  const lista = produtosDaTela(true, { pacote: { priceString: 'US$ 12,99', preco: 12.99, moeda: 'USD' }, minha: { priceString: 'US$ 2,99', preco: 2.99, moeda: 'USD' } }, { pacoteAtivo: true });
+  const pacote = lista.find((p) => p.id === 'pacote');
+  assert.equal(pacote.nome, 'Mais figurinhas pro seu time');
+  assert.equal(pacote.resumo, 'Presenteie o time: +2 gerações para cada jogador.');
+  assert.equal(pacote.botao, 'Comprar para o time · US$ 12,99');
+  assert.equal(pacote.preco, 'US$ 12,99');
+  assert.ok(pacote.features.every((f) => !/já é seu|não precisa comprar/i.test(f)));
+  // a Minha Figurinha não muda com o pacote do time
+  assert.equal(lista.find((p) => p.id === 'minha').botao, 'Comprar · US$ 2,99');
+});
+
+test('31F · o código de Planos e da Figurinha não tem mais o selo "Já é seu" do pacote nem a linha "Não precisa comprar de novo"', async () => {
+  const { readFileSync } = await import('node:fs');
+  const planos = readFileSync(new URL('../../src/pages/Planos.jsx', import.meta.url), 'utf8');
+  assert.ok(!/Não precisa comprar de novo/.test(planos));
+  assert.match(planos, /const jaAtivo = p\.id === 'manto' \? !!meuTime\?\.manto_proprio : false;/, 'só o manto é "já é seu"');
+  assert.match(planos, /O pacote é comprado pelo dono do time\./);
+  const figurinha = readFileSync(new URL('../../src/pages/Figurinha.jsx', import.meta.url), 'utf8');
+  assert.match(figurinha, /presente \? 'Comprar para o time' : 'Comprar para o meu time'/);
+});

@@ -117,23 +117,38 @@ function naMoeda(valor, moeda) {
   }
 }
 
+// O pacote nunca fica "Já é seu": o dono compra quantas vezes quiser, de presente para o time (+2 gerações para cada jogador por pacote, em cima do
+// que cada um ainda tem). Com o pacote já ativo o cartão muda de texto, e o botão segue o mesmo.
+export const PACOTE_DE_PRESENTE = {
+  nome: 'Mais figurinhas pro seu time',
+  resumo: `Presenteie o time: +${PACOTE_GERACOES_POR_JOGADOR} gerações para cada jogador.`,
+  features: [
+    `+${PACOTE_GERACOES_POR_JOGADOR} gerações para cada jogador, até ${PACOTE_JOGADORES}`,
+    'Soma ao que cada um ainda tem',
+    'Quem entrar depois também ganha',
+    'O uniforme continua o que você escolheu',
+  ],
+};
+
 /**
  * Os cartões da tela. Com a loja ligada: os da loja que ELA devolveu (um produto sem preço na
  * loja não aparece — nada de vender o que não está à venda), cada um com o preço dela e o botão
  * "Comprar · preço". Sem loja: a lista do pedido de ativação.
  * `produtosLoja` = o `produtos` de lib/loja.js#produtosDaLoja: { minha: { priceString, preco, moeda } }.
  */
-export function produtosDaTela(lojaLigada, produtosLoja) {
+export function produtosDaTela(lojaLigada, produtosLoja, { pacoteAtivo = false } = {}) {
   if (!lojaLigada) return PRODUTOS_APP;
   return PRODUTOS_LOJA.filter((p) => produtosLoja?.[p.id]?.priceString).map((p) => {
     const naLoja = produtosLoja[p.id];
     const porJogador = p.id === 'pacote' ? naMoeda(naLoja.preco / PACOTE_JOGADORES, naLoja.moeda) : null;
+    const dePresente = p.id === 'pacote' && pacoteAtivo;
     return {
       ...p,
+      ...(dePresente ? PACOTE_DE_PRESENTE : {}),
       preco: p.id === 'manto' ? `+${naLoja.priceString}` : naLoja.priceString,
       // Os DOIS números no pacote, como a spec pede: o total assusta, o por jogador explica.
       porJogador: porJogador ? `${porJogador} por jogador` : null,
-      botao: `Comprar · ${naLoja.priceString}`,
+      botao: dePresente ? `Comprar para o time · ${naLoja.priceString}` : `Comprar · ${naLoja.priceString}`,
     };
   });
 }

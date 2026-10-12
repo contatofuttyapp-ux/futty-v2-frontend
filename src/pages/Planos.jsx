@@ -264,7 +264,7 @@ export default function Planos() {
   }
 
   // Loja ligada: os cartões da LOJA (só os que ela devolveu, com o preço dela); sem loja, os do pedido.
-  const produtos = lojaLigada ? produtosDaTela(true, loja.produtos) : produtosDaTela(false);
+  const produtos = lojaLigada ? produtosDaTela(true, loja.produtos, { pacoteAtivo: !!meuTime?.brilhante_ativo }) : produtosDaTela(false);
   const lojaCarregando = lojaLigada && loja.produtos === null && !loja.erro;
 
   return (
@@ -339,11 +339,10 @@ export default function Planos() {
             </div>
           ) : null}
           {produtos.map((p) => {
-            // O pacote e o manto são DO TIME — só aparecem para quem é dono de um (para todo mundo apareceriam
-            // trancados com "Só para quem criou um time", sem explicar do que se tratava). A seção ganha título e
-            // uma linha de apoio.
-            if (p.soDono && !meusTimes.length) return null;
-            const abreSecaoDoTime = p.id === 'pacote' && meusTimes.length > 0;
+            // O pacote é do time e quem compra é o dono; os outros veem o cartão com uma linha que diz isso (sem botão morto), para saber que
+            // existe e a quem pedir. O manto só aparece para quem é dono de um time: sem o pacote, para os outros ele não diria nada.
+            if (p.soDono && !meusTimes.length && p.id !== 'pacote') return null;
+            const abreSecaoDoTime = p.id === 'pacote';
             // Pacote e manto são do dono do time; sem time próprio, o cartão
             // aparece na mesma (é o que faz a pessoa querer criar um) mas com o
             // botão a explicar o que falta, em vez de um botão morto.
@@ -353,11 +352,13 @@ export default function Planos() {
             const pendente = pedido?.estado === 'pendente';
             const recusado = pedido?.estado === 'recusado' ? pedido : null;
             const mantoPago = lojaLigada && p.id === 'manto' && pedidoDoProduto(estado?.pedidos, 'manto', meuTime?.id)?.estado === 'pendente';
-            const jaAtivo = p.id === 'pacote' ? !!meuTime?.brilhante_ativo : p.id === 'manto' ? !!meuTime?.manto_proprio : false;
+            // O manto é um só por time ("já é seu"); o PACOTE nunca: o dono compra quantas vezes quiser, de presente para o time.
+            const jaAtivo = p.id === 'manto' ? !!meuTime?.manto_proprio : false;
+            const pacoteDoTimeAtivo = p.id === 'pacote' && !!meuTime?.brilhante_ativo;
             const faltaTime = p.soDono && !meuTime;
             const faltaPacote = p.exigePacote && !meuTime?.brilhante_ativo;
             // O pacote ativo sem uniforme (comprado na loja): o cartão pede a escolha — sem ela ninguém gera.
-            const faltaUniforme = p.id === 'pacote' && jaAtivo && !meuTime?.brilhante_kit;
+            const faltaUniforme = pacoteDoTimeAtivo && !meuTime?.brilhante_kit;
             const atual = jaAtivo;
             const destacado = p.id === destaque && !atual;
             const heroi = p.id === 'pacote'; // herói da página → levitação subtil
@@ -459,16 +460,18 @@ export default function Planos() {
                     pedido que o dono resolve no Gabinete. Só fica sem ação quando falta um passo
                     anterior — e aí diz QUAL, em vez de "em breve". */}
                 {faltaUniforme ? (
+                  // O pacote já está ativo e o dono ainda não escolheu o uniforme: sem ele ninguém gera. O botão de comprar segue embaixo.
                   <span className="cta-gold-glow" style={{ display: 'flex' }}>
                     <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1, fontSize: 13 }} onClick={() => setUniformeDe(meuTime)}>
                       Escolher o uniforme do time
                     </button>
                   </span>
-                ) : atual ? (
-                  // Sem botão porque não há o que comprar: o time já tem. Diz isso em uma linha, em vez de um cartão mudo.
+                ) : null}
+                {atual ? (
+                  // O manto que o time já tem: sem botão porque não há o que comprar. Diz isso em uma linha, em vez de um cartão mudo.
                   <div className="hud-corners" data-ja-e-seu style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: 'rgba(255,255,255,0.7)', border: '1.2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
                     <Check size={14} color="#d4a017" style={{ flexShrink: 0 }} />
-                    {p.id === 'manto' ? 'O manto próprio já está ativo no seu time.' : 'O pacote já está ativo no seu time. Não precisa comprar de novo.'}
+                    O manto próprio já está ativo no seu time.
                   </div>
                 ) : pendente || mantoPago ? (
                   <div className="hud-corners" style={{ width: '100%', textAlign: 'center', padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, color: '#f0c94a', border: '1.2px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>
@@ -477,7 +480,7 @@ export default function Planos() {
                 ) : faltaTime || faltaPacote ? (
                   <div className="hud-corners" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, color: 'rgba(255,255,255,0.6)', border: '1.2px dashed rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.02)' }}>
                     <Lock size={14} style={{ flexShrink: 0 }} />
-                    {faltaTime ? 'Só para quem criou um time' : 'Precisa do pacote do time primeiro'}
+                    <span data-so-o-dono>{faltaTime ? (p.id === 'pacote' ? 'O pacote é comprado pelo dono do time.' : 'Só para quem criou um time') : 'Precisa do pacote do time primeiro'}</span>
                   </div>
                 ) : lojaLigada ? (
                   <span className="cta-gold-glow" style={{ display: 'flex' }}>
@@ -491,6 +494,11 @@ export default function Planos() {
                       {aComprar === p.id ? 'Abrindo a loja…' : p.botao}
                     </button>
                   </span>
+                ) : pacoteDoTimeAtivo ? (
+                  // Sem a loja não há como comprar mais um pacote, e pedir ativação de um time já ativo não faz nada.
+                  <div className="hud-corners" style={{ width: '100%', textAlign: 'center', padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, color: 'rgba(255,255,255,0.7)', border: '1.2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
+                    O time já tem o pacote.
+                  </div>
                 ) : (
                   <span className="cta-gold-glow" style={{ display: 'flex' }}>
                     <button
