@@ -12,9 +12,6 @@
 /** Para onde o cadeado leva — sempre a Minha Figurinha ("escolha o uniforme"), nos dois casos que têm cadeado. */
 export const DESTINO_DO_CADEADO = '/planos?destaque=minha';
 
-/** O selo dos uniformes que ainda custam uma geração pintar. */
-export const SELO_PINTAR = 'pintar · 1 geração · ~45 s';
-
 /**
  * Qual dos três direitos vale. Crédito manda: quem tem Minha Figurinha abre todos, mesmo sendo também de um pacote.
  * `fonteDireito` é o que o motor escolheu ('credito' | 'time' | null); `creditos` é o saldo.

@@ -21,8 +21,8 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
 (async () => {
   const app = await subirApp();
   const N = 32;
-  const PESSOAS = { adm: ['Pedro', 'Pedro Ferreira Borges'], ze: ['Zé', 'José Carlos Ribeiro'] };
-  const ids = { adm: uuid('a1', N), ze: uuid('a2', N) };
+  const PESSOAS = { adm: ['Pedro', 'Pedro Ferreira Borges'], ze: ['Zé', 'José Carlos Ribeiro'], ana: ['Ana', 'Ana Paula Souza'] };
+  const ids = { adm: uuid('a1', N), ze: uuid('a2', N), ana: uuid('a3', N) };
   const U = Object.fromEntries(Object.entries(PESSOAS).map(([k, [apelido, nome]]) => [k, { ...usuario(ids[k], apelido), nome, nome_jogador: apelido, birthdate: '1990-01-01' }]));
   app.reiniciar({ tabelas: {}, usuarios: Object.values(U) });
   app.criarBucketsDoProjeto();
@@ -49,6 +49,25 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
   const T = criado.json.team;
   const conv = await chamar('adm', 'POST', `/api/teams/${T.slug}/convite`, {});
   await chamar('ze', 'POST', `/api/convite/${conv.json?.token || conv.json?.convite?.token}/aceitar`, {});
+
+  // LOJA_RANKING=1 (a prova da 31D): a Ana entra no time e os três jogam 3 jogos já passados — o ranking só põe quem tem 3 jogos, e com três pessoas
+  // todas ficam no pódio (o Pedro entre elas).
+  if (process.env.LOJA_RANKING === '1') {
+    await chamar('ana', 'POST', `/api/convite/${conv.json?.token || conv.json?.convite?.token}/aceitar`, {});
+    for (let i = 0; i < 3; i += 1) {
+      const jogo = await chamar('adm', 'POST', '/api/games', { team_slug: T.slug, data: new Date(Date.now() + (72 + i) * 3600000).toISOString(), jogadores_por_time: 3, local: 'Quadra do Guará' });
+      const G = jogo.json.game || jogo.json;
+      for (const quem of ['adm', 'ze', 'ana']) await chamar(quem, 'POST', `/api/games/${G.id}/confirmar`, { confirmado: true });
+      app.tabelas.games.find((g) => g.id === G.id).data = new Date(Date.now() - (30 + i) * 3600000).toISOString();
+    }
+  }
+  // LOJA_CREDITOS=1: o Pedro (3) e o Zé (2) têm foto e gerações da Minha Figurinha — a grade de uniformes tem tiles para gerar.
+  if (process.env.LOJA_CREDITOS === '1') {
+    for (const [quem, n] of [['adm', 3], ['ze', 2]]) {
+      const foto = `https://projeto-falso.supabase.test/storage/v1/object/public/avatars/${U[quem].id}.webp`;
+      Object.assign(app.tabelas.users.find((x) => x.id === U[quem].id), { brilhante_creditos: n, avatar_url: foto, foto_url: foto });
+    }
+  }
 
   // LOJA_PACOTE_ATIVO=1: o time do Pedro já tem o pacote ativo e o uniforme escolhido (o que o Gabinete faz), para ver o cartão do Pacote sem botão.
   if (process.env.LOJA_PACOTE_ATIVO === '1') {

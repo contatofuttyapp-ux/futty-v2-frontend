@@ -28,7 +28,7 @@ import { estadoBrilhantes, pedidoDoProduto } from '../lib/brilhantes';
 import { produtoDoPedido } from '../lib/planos';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja } from '../lib/loja';
 import { KIT_IMG, KITS_FIGURINHA } from '../utils/kitsFigurinha';
-import { DESTINO_DO_CADEADO, SELO_PINTAR, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer } from '../utils/uniformesGrade';
+import { DESTINO_DO_CADEADO, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer } from '../utils/uniformesGrade';
 import {
   INTERVALO_CONSULTA_MS, TETO_ACOMPANHAMENTO_MS, situacaoDaPintura, lerPinturaGuardada, gravarPinturaGuardada, limparPinturaGuardada,
 } from '../utils/progressoPintura';
@@ -252,7 +252,7 @@ export default function Figurinha() {
   const [pintura, setPintura] = useState(() => lerPinturaGuardada(userId));
   const [agora, setAgora] = useState(() => Date.now());
   const [gerandoIA, setGerandoIA] = useState(() => !!lerPinturaGuardada(userId));
-  // Kit escolhido na grelha que ainda não foi pintado: abre o diálogo "Pintar no uniforme X?" em vez
+  // Kit escolhido na grelha que ainda não foi pintado: abre o diálogo "Gerar figurinha com este uniforme?" em vez
   // do window.confirm() (não tem como levar o "N gerações" nem o "~45s" no texto de um confirm nativo).
   const [kitParaPintar, setKitParaPintar] = useState(null);
   const [limiteIA, setLimiteIA] = useState(false);
@@ -406,7 +406,7 @@ export default function Figurinha() {
   // os três casos; o que muda é o estado de cada tile, que sai do DIREITO (utils/uniformesGrade.js):
   //   grátis — todos com cadeado; o toque leva à Minha Figurinha (Planos, sem preço no app da loja: ehNativo)
   //   pacote — o uniforme do time aberto (pintável) e os outros com cadeado → Minha Figurinha
-  //   minha  — todos abertos; os ainda não pintados com o selo "pintar · 1 geração · ~45 s"
+  //   minha  — todos abertos; os ainda não pintados só com a estrelinha de IA (o custo de 1 geração é dito ao tocar, na confirmação)
   // Estados de tile: vestido (✓) · pintado (um toque veste, grátis) · geravel (confirma e gasta 1) ·
   // trancado.
   // Nada de "em breve"; o pacote do time, para o dono, continua no convite "Vire figurinha" mais abaixo.
@@ -438,7 +438,7 @@ export default function Figurinha() {
               className="fig-seletor-tile"
               onClick={() => tocarUniforme(kit)}
               // P2: o tile trancado diz o que o toque faz, com o mesmo texto do convite (Comprar · preço / Pedir).
-              aria-label={trancado ? `${kit.nome} (bloqueado) · ${textoDoConvite('minha')}` : estado === 'geravel' ? `${kit.nome} · ${SELO_PINTAR}` : kit.nome}
+              aria-label={trancado ? `${kit.nome} (bloqueado) · ${textoDoConvite('minha')}` : estado === 'geravel' ? `${kit.nome} · gerar figurinha` : kit.nome}
               aria-pressed={estado === 'vestido'}
               data-estado={estado}
               disabled={gerandoIA}
@@ -460,12 +460,11 @@ export default function Figurinha() {
                     <Check size={10} strokeWidth={3} />
                   </span>
                 ) : null}
-                {/* Gerável (com direito, sem slot): avisa que custa 1 geração e quanto demora.
-                    O tile tem 76 px: o selo quebra em duas linhas ("pintar · 1 geração" / "~45 s"). */}
+                {/* Gerável (com direito, sem slot): só a estrelinha de IA, sem texto. O que custa (1 geração) e o saldo são ditos ao tocar, na
+                    confirmação; o tempo (~45 s) só na mensagem de "gerando". */}
                 {estado === 'geravel' ? (
-                  <span data-selo="pintar" style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', display: 'grid', justifyItems: 'center', gap: 0, padding: '2px 4px', borderRadius: 5, background: 'rgba(0,0,0,0.78)', color: '#d4a017', fontFamily: "'Rajdhani', sans-serif", fontSize: 8, lineHeight: 1.15, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><EstrelaIA size={7} color="#d4a017" /> pintar · 1 geração</span>
-                    <span>~45 s</span>
+                  <span data-ia-estrela aria-hidden="true" style={{ position: 'absolute', bottom: 3, right: 3, width: 14, height: 14, display: 'grid', placeItems: 'center', borderRadius: 4, background: 'rgba(0,0,0,0.7)' }}>
+                    <EstrelaIA size={9} color="#d4a017" />
                   </span>
                 ) : null}
                 {trancado ? (
@@ -1857,6 +1856,12 @@ export default function Figurinha() {
                 {kitDoTime ? '' : ' · uniforme à sua escolha'}
               </span>
             ) : null}
+            {/* Com a loja ligada, sempre à mão: comprar mais gerações (a Minha Figurinha). Sem loja, nada muda. */}
+            {lojaLigada ? (
+              <Link to="/planos?destaque=minha" data-comprar-mais style={{ fontSize: 11.5, color: 'var(--label-color)', textAlign: 'center', textDecoration: 'none', padding: '6px 0' }}>
+                Comprar mais gerações →
+              </Link>
+            ) : null}
             {/* Sem legenda de tempo própria sob o botão: a mensagem acima da linha já cobre gerandoIA, e duas
                 legendas de tempo diferentes ao mesmo tempo confundem mais do que ajudam. */}
           </div>
@@ -2412,7 +2417,7 @@ export default function Figurinha() {
         <CropModal file={cropFile} aspect={2 / 3} aspectos={[{ k: '2:3', v: 2 / 3 }]} miniatura onConfirm={aoConfirmarCrop} onCancel={aoCancelarCrop} />
       ) : null}
 
-      {/* "Pintar no uniforme X?" antes de qualquer geração nova
+      {/* "Gerar figurinha com este uniforme?" antes de qualquer geração nova
           (SPEC-FIGURINHA-3 §2). Mesmo padrão do DenunciaModal (modal-overlay/
           modal-card, portal no body); fecha ao tocar fora, igual aos outros. */}
       {kitParaPintar
@@ -2420,21 +2425,21 @@ export default function Figurinha() {
             <div className="modal-overlay" role="presentation" onClick={() => !gerandoIA && setKitParaPintar(null)}>
               <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
                 <div className="modal-card__inner" style={{ textAlign: 'center', display: 'grid', gap: 12, padding: '18px 16px 16px' }}>
-                  <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, margin: 0 }}>
-                    Pintar no uniforme {kitParaPintar.nome}?
+                  <h2 data-confirmar-geracao style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, margin: 0 }}>
+                    Gerar figurinha com este uniforme?
                   </h2>
                   <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
                     {(() => {
                       // Uniforme que não é o do pacote do time sai dos CRÉDITOS (o motor usa o crédito para ele) — o número
                       // é o dos créditos, não o do pacote.
                       const n = kitDoTime && kitParaPintar.id !== kitDoTime && temCredito ? (brilhante?.creditos ?? restantesDireito) : restantesDireito;
-                      return `Usa 1 das suas ${n === 1 ? '1 geração' : `${n} gerações`} · leva ~45 s`;
+                      return `Isso usa 1 geração. Você tem ${n === 1 ? '1 geração' : `${n} gerações`}.`;
                     })()}
                   </p>
                   <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
                     <span className="cta-gold-glow" style={{ display: 'flex' }}>
                       <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} onClick={confirmarPintura}>
-                        Pintar
+                        Gerar
                       </button>
                     </span>
                     <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%' }} onClick={() => setKitParaPintar(null)}>

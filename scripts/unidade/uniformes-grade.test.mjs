@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DESTINO_DO_CADEADO, SELO_PINTAR, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer,
+  DESTINO_DO_CADEADO, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer,
 } from '../../src/utils/uniformesGrade.js';
 
 const KITS = [
@@ -63,8 +63,18 @@ test('toque: vestido não faz nada, pintado veste, gerável pede confirmação, 
   assert.equal(DESTINO_DO_CADEADO, '/planos?destaque=minha');
 });
 
-test('selo dos uniformes que custam uma geração: "pintar · 1 geração · ~45 s"', () => {
-  assert.equal(SELO_PINTAR, 'pintar · 1 geração · ~45 s');
+test('31D · o tile do uniforme que custa uma geração não leva texto (só a estrelinha de IA); o aviso é só na confirmação', async () => {
+  const { readFileSync } = await import('node:fs');
+  const fonte = readFileSync(new URL('../../src/pages/Figurinha.jsx', import.meta.url), 'utf8');
+  assert.ok(!/SELO_PINTAR/.test(fonte) && !/data-selo="pintar"/.test(fonte), 'o selo "pintar · 1 geração · ~45 s" saiu do tile');
+  assert.match(fonte, /data-ia-estrela/, 'fica a estrelinha de IA, sem texto');
+  assert.ok(!/SELO_PINTAR/.test(readFileSync(new URL('../../src/utils/uniformesGrade.js', import.meta.url), 'utf8')));
+  // a confirmação: título, linha com o saldo (singular/plural certo) e os dois botões; o tempo só na mensagem de "gerando"
+  assert.match(fonte, /Gerar figurinha com este uniforme\?/);
+  assert.match(fonte, /Isso usa 1 geração\. Você tem/);
+  assert.match(fonte, />\s*Gerar\s*<\/button>/);
+  assert.ok(!/Pintar no uniforme|Usa 1 das suas|leva ~45 s/.test(fonte), 'nada do texto antigo da confirmação');
+  assert.match(fonte, /Leva uns \{pintura\?\.estimativaSegundos \|\| 45\} segundos/, 'o tempo aparece na mensagem de "gerando"');
 });
 
 test('Refazer: só com a figurinha no card, geração sobrando e direito que pinta ESTE uniforme', () => {

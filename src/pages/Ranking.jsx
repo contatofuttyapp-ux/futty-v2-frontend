@@ -11,6 +11,7 @@ import { useSessao } from '../context/SessaoContext';
 import { useRanking } from '../hooks/useRanking';
 import { useListaProgressiva } from '../hooks/useListaProgressiva';
 import { celebrarTop3 } from '../hooks/useConfetti';
+import { deveCelebrar, esquecerPosicaoCelebrada, guardarPosicaoCelebrada, lerPosicaoCelebrada } from '../utils/podioCelebrado';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -223,20 +224,28 @@ export default function Ranking() {
   const [bannerFechado, setBannerFechado] = useState(false);
   const [verEstatisticas, setVerEstatisticas] = useState(false);
   const celebrouTop3 = useRef(false);
-  const festaRef = useRef(null);
-  useEffect(() => () => clearTimeout(festaRef.current), []);
 
-  // Confetti uma vez se o utilizador estiver no pódio (top 3). Sai
-  // 400 ms depois de a lista estar na tela — criar o canvas de tela cheia e o
-  // worker do confetti no mesmo instante da primeira pintura disputava-a.
+  // Confetti quando a pessoa chega ao pódio (top 3) ou muda de posição nele — não a cada vez que abre o Ranking: a última posição celebrada fica
+  // guardada por time (utils/podioCelebrado.js). Sai 400 ms depois de a lista estar na tela — criar o canvas de tela cheia e o
+  // worker do confetti no mesmo instante da primeira pintura disputava-a. O temporizador é do PRÓPRIO efeito (a limpeza dele o cancela e o efeito
+  // seguinte o refaz): com o Ranking já em cache o efeito corre na montagem, e um temporizador guardado fora dele era cancelado pela
+  // remontagem do modo de desenvolvimento antes de disparar.
   useEffect(() => {
-    if (celebrouTop3.current) return;
-    const meu = ranking.find((p) => p.sou_eu && p.posicao <= 3);
-    if (meu) {
-      celebrouTop3.current = true;
-      festaRef.current = setTimeout(() => celebrarTop3(meu.posicao), 400);
+    if (celebrouTop3.current || !slug) return undefined;
+    const eu = ranking.find((p) => p.sou_eu);
+    if (!eu) return undefined;
+    if (eu.posicao > 3) {
+      esquecerPosicaoCelebrada(slug); // saiu do pódio: voltar a ele é uma chegada nova
+      return undefined;
     }
-  }, [ranking]);
+    if (!deveCelebrar(lerPosicaoCelebrada(slug), eu.posicao)) return undefined;
+    const festa = setTimeout(() => {
+      celebrouTop3.current = true; // uma festa por abertura da tela
+      guardarPosicaoCelebrada(slug, eu.posicao);
+      celebrarTop3(eu.posicao);
+    }, 400);
+    return () => clearTimeout(festa);
+  }, [ranking, slug]);
 
   function openVote(player) {
     setVoteModal(player);
