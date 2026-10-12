@@ -3,8 +3,10 @@
 //   · centrado, largura máx. 320, fundo escuro com desfoque, ícone por tipo (✓ sucesso · ! erro · i info);
 //   · some sozinho em 2 s (6 s quando leva ação); ERRO fica até a pessoa tocar nele;
 //   · entra e sai em 180 ms; com `prefers-reduced-motion` aparece e some sem animar (estilos: index.css).
-// `acao` opcional ({ rotulo, aoTocar }) — um botão dentro do toast (ex.: "Tentar de
-// novo" depois de uma compra que falhou).
+// `acao` opcional ({ rotulo, aoTocar, neutro }) — um botão dentro do toast (ex.: "Tentar de novo"). O botão fecha o aviso depois de agir.
+// Com `neutro` o botão é cinza (não pinta de vermelho num erro) e o aviso NÃO fecha ao toque no resto: só o botão fecha, e o texto
+// dá para selecionar. A compra que falhou usa assim: o único botão é "Fechar".
+// `detalhe` opcional: uma linha pequena embaixo da mensagem (o detalhe técnico que só o testador da loja vê).
 // `posicao` opcional: 'meio' (o padrão) ou 'topo' — para a tela em que o meio é onde estão os botões (o "Temos campeão!" não pode
 // cobrir os de compartilhar).
 import { useEffect, useRef, useState } from 'react';
@@ -21,7 +23,7 @@ const SAIDA_MS = 180;
 const DURACAO_MS = 2000;
 const DURACAO_COM_ACAO_MS = 6000;
 
-export default function Toast({ mensagem, tipo = 'info', onClose, acao = null, posicao = 'meio' }) {
+export default function Toast({ mensagem, tipo = 'info', onClose, acao = null, posicao = 'meio', detalhe = null }) {
   const [saindo, setSaindo] = useState(false);
   const fechando = useRef(null);
 
@@ -57,7 +59,7 @@ export default function Toast({ mensagem, tipo = 'info', onClose, acao = null, p
     clearTimeout(fechando.current);
     fechando.current = setTimeout(() => onClose?.(), SAIDA_MS);
   }
-  const fechaAoTocar = eErro; // com ação também: o botão age, o resto do aviso fecha
+  const fechaAoTocar = eErro && !acao?.neutro; // com ação também: o botão age, o resto do aviso fecha (menos com ação neutra: só ela fecha)
 
   // Portal para o body: position:fixed dentro do [data-page] animado
   // (pageEntra em app.css) não centra/ancora ao viewport de forma confiável no
@@ -75,12 +77,13 @@ export default function Toast({ mensagem, tipo = 'info', onClose, acao = null, p
     >
       <span className="futty-toast__icone" aria-hidden="true">{ICONES[tipo] || ICONES.info}</span>
       <span className="futty-toast__texto">{mensagem}</span>
+      {detalhe ? <span className="futty-toast__detalhe" data-toast-detalhe>{detalhe}</span> : null}
       {fechaAoTocar ? <span className="futty-toast__dica">Toque para fechar</span> : null}
       {acao ? (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); acao.aoTocar(); onClose?.(); }}
-          className="futty-toast__acao"
+          className={`futty-toast__acao${acao.neutro ? ' futty-toast__acao--neutra' : ''}`}
         >
           {acao.rotulo}
         </button>

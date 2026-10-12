@@ -32,7 +32,9 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
   }
 
   // A regra da 31B: só o e-mail do Pedro abre a loja; PAGAMENTOS_ATIVOS fica desligado. Lido a cada pedido pelo motor.
-  delete process.env.PAGAMENTOS_ATIVOS;
+  // LOJA_ABERTA=1 (a prova da 31E): a loja abre para TODOS (PAGAMENTOS_ATIVOS) — e só o Pedro segue sendo testador, para provar que o detalhe técnico
+  // de uma compra que falhou aparece só para ele.
+  if (process.env.LOJA_ABERTA === '1') process.env.PAGAMENTOS_ATIVOS = 'true'; else delete process.env.PAGAMENTOS_ATIVOS;
   process.env.PAGAMENTOS_TESTERS = U.adm.email;
 
   const chamar = async (quem, metodo, rota, corpo) => {
@@ -47,6 +49,12 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
   const T = criado.json.team;
   const conv = await chamar('adm', 'POST', `/api/teams/${T.slug}/convite`, {});
   await chamar('ze', 'POST', `/api/convite/${conv.json?.token || conv.json?.convite?.token}/aceitar`, {});
+
+  // LOJA_PACOTE_ATIVO=1: o time do Pedro já tem o pacote ativo e o uniforme escolhido (o que o Gabinete faz), para ver o cartão do Pacote sem botão.
+  if (process.env.LOJA_PACOTE_ATIVO === '1') {
+    const linha = app.tabelas.teams.find((x) => x.id === T.id);
+    Object.assign(linha, { brilhante_ativo: true, brilhante_kit: 'dark-gold', brilhante_limite: 25 });
+  }
 
   process.stdout.write(`${JSON.stringify({
     pronto: true,

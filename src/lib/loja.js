@@ -28,9 +28,43 @@ function produtoDoItem(item) {
   return PRODUTO_DO_ID[String(item?.identifier || '').split(':')[0]] || null;
 }
 
+// Na ponte do Capacitor o erro do RevenueCat chega com o `code` no erro e o resto (readableErrorCode, underlyingErrorMessage,
+// userCancelled) dentro de `data`; segundo a versão do plugin alguns vêm soltos no erro ou em `userInfo`. Lê dos três lugares.
+const lugaresDoErro = (e) => {
+  const d = e?.data && typeof e.data === 'object' ? e.data : {};
+  const info = (e?.userInfo && typeof e.userInfo === 'object' ? e.userInfo : null) || (d.userInfo && typeof d.userInfo === 'object' ? d.userInfo : {});
+  return { d, info };
+};
+
 /** A pessoa desistiu na folha da loja: não é erro, a tela volta calada. */
 function compraCancelada(e) {
-  return e?.userCancelled === true || String(e?.code) === '1';
+  const { d } = lugaresDoErro(e);
+  return e?.userCancelled === true || d.userCancelled === true || String(e?.code) === '1' || String(d.code) === '1';
+}
+
+/**
+ * O que a loja disse de uma compra que falhou, em três campos — para o testador ler na tela. Só texto curto: nada além destes três
+ * sai do erro, e cada um é cortado em 300 caracteres. Campo ausente vem null.
+ * @returns {{ code: string|null, readableErrorCode: string|null, underlyingErrorMessage: string|null }}
+ */
+export function detalheDoErro(e) {
+  const { d, info } = lugaresDoErro(e);
+  const primeiro = (...valores) => {
+    for (const v of valores) if (v !== undefined && v !== null && typeof v !== 'object' && String(v) !== '') return String(v).slice(0, 300);
+    return null;
+  };
+  return {
+    code: primeiro(e?.code, d.code),
+    readableErrorCode: primeiro(e?.readableErrorCode, d.readableErrorCode, d.readable_error_code, info.readableErrorCode, info.readable_error_code),
+    underlyingErrorMessage: primeiro(e?.underlyingErrorMessage, d.underlyingErrorMessage, d.underlying_error_message, info.underlyingErrorMessage, info.underlying_error_message),
+  };
+}
+
+/** A linha pequena do testador: "code: 2 · readableErrorCode: STORE_PROBLEM · underlyingErrorMessage: …" (— no que faltou). */
+export function linhaDoDetalhe(detalhe) {
+  if (!detalhe) return '';
+  const v = (x) => (x === null || x === undefined || x === '' ? '—' : x);
+  return `code: ${v(detalhe.code)} · readableErrorCode: ${v(detalhe.readableErrorCode)} · underlyingErrorMessage: ${v(detalhe.underlyingErrorMessage)}`;
 }
 
 // Os códigos são os PURCHASES_ERROR_CODE do SDK (strings numéricas).
@@ -43,7 +77,7 @@ const MENSAGENS = {
   20: 'Pagamento pendente: vale assim que a loja confirmar.',
 };
 function mensagemDoErro(e) {
-  return MENSAGENS[String(e?.code)] || 'Não deu para concluir a compra. Tente de novo.';
+  return MENSAGENS[String(e?.code ?? lugaresDoErro(e).d.code)] || 'Não deu para concluir a compra. Tente de novo.';
 }
 
 /**
@@ -54,7 +88,8 @@ export function criarLoja({ Purchases: sdk, plataforma, chaves, apiFetch: api })
   let configurado = false; // o SDK já recebeu o configure() neste processo
   let conta = null; // o users.id com que o SDK está identificado agora
   let falhou = false; // configure() recusou (chave inválida): loja fora até reabrir o app
-  let itens = null; // { minha, pacote, manto } → o produto da loja, para o purchaseStoreProduct
+  let itens = null; // { minha, pacote, manto } → o produto da loja (preço e, sem pacote da oferta, purchaseStoreProduct)
+  let pacotesDaOferta = null; // { minha, pacote } → o PACOTE que o getOfferings() devolveu, inteiro, como veio (purchasePackage)
   let fila = Promise.resolve();
 
   const chave = () => ({ ios: chaves?.ios, android: chaves?.android })[plataforma()] || null;
@@ -138,12 +173,16 @@ export function criarLoja({ Purchases: sdk, plataforma, chaves, apiFetch: api })
     if (!(await pronta())) return INDISPONIVEL;
     try {
       const achados = {};
+      const pacotes = {};
       try {
         const ofertas = await sdk.getOfferings();
         for (const oferta of [ofertas?.current, ...Object.values(ofertas?.all || {})]) {
           for (const pacote of oferta?.availablePackages || []) {
             const produto = produtoDoItem(pacote?.product);
-            if (produto && !achados[produto]) achados[produto] = pacote.product;
+            if (produto && !achados[produto]) {
+              achados[produto] = pacote.product;
+              pacotes[produto] = pacote; // o objeto inteiro, intocado: a ponte exige o identifier e o presentedOfferingContext que ele traz
+            }
           }
         }
       } catch (e) {
@@ -158,6 +197,7 @@ export function criarLoja({ Purchases: sdk, plataforma, chaves, apiFetch: api })
         }
       }
       itens = achados;
+      pacotesDaOferta = pacotes;
       const produtos = {};
       for (const [id, item] of Object.entries(achados)) {
         produtos[id] = { id, priceString: item.priceString, preco: item.price, moeda: item.currencyCode };
@@ -182,12 +222,17 @@ export function criarLoja({ Purchases: sdk, plataforma, chaves, apiFetch: api })
     if (!item) return { disponivel: true, ok: false, erro: MENSAGENS[5] };
     try {
       if (produtoId !== 'minha') await sdk.setAttributes({ team_id: String(teamId) });
-      const r = await sdk.purchaseStoreProduct({ product: item });
+      // O caminho que a doc do RevenueCat manda: comprar o PACOTE da oferta (purchasePackage). O pacote leva o contexto da oferta
+      // (analytics e atribuição do RevenueCat) e o produto que a loja já conhece. Só o que a oferta não trouxe (achado pelo id) cai
+      // no purchaseStoreProduct.
+      const pacote = pacotesDaOferta?.[produtoId];
+      const r = pacote ? await sdk.purchasePackage({ aPackage: pacote }) : await sdk.purchaseStoreProduct({ product: item });
       return { disponivel: true, ok: true, customerInfo: r?.customerInfo || null };
     } catch (e) {
       if (compraCancelada(e)) return { disponivel: true, cancelado: true };
-      console.warn('[loja] compra não concluída:', e?.code, e?.message);
-      return { disponivel: true, ok: false, erro: mensagemDoErro(e) };
+      const detalhe = detalheDoErro(e);
+      console.warn('[loja] compra não concluída:', detalhe.code, detalhe.readableErrorCode, detalhe.underlyingErrorMessage, e?.message);
+      return { disponivel: true, ok: false, erro: mensagemDoErro(e), detalhe };
     }
   }
 

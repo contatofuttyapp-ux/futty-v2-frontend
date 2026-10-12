@@ -388,6 +388,15 @@ select {
   font-weight: 600;
   color: var(--text-dim);
 }
+/* A linha técnica do testador da loja: pequena, apagada, e dá para selecionar e copiar. */
+.futty-toast__detalhe {
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.55);
+  user-select: text;
+  -webkit-user-select: text;
+}
 .futty-toast__acao {
   margin-top: 2px;
   padding: 7px 16px;
@@ -398,6 +407,12 @@ select {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+/* O botão neutro ("Fechar"): cinza, sem a cor do erro. */
+.futty-toast__acao--neutra {
+  color: #f2f2f6;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 /* `scale` (propriedade própria), não `transform`: o transform do aviso já leva o translate(-50%, -50%) do
    centro, e o WebKit errava a posição do 1º quadro quando a keyframe repetia o translate em percentagem. */

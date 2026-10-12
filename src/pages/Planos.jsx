@@ -20,7 +20,7 @@ import Toast from '../components/Toast';
 import EscolherUniformeTime from '../components/EscolherUniformeTime';
 import { PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES, produtosDaTela } from '../lib/planos';
 import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
-import { lojaLigada as calcularLojaLigada, produtosDaLoja, comprar, restaurar, sincronizarAposCompra } from '../lib/loja';
+import { lojaLigada as calcularLojaLigada, produtosDaLoja, comprar, restaurar, sincronizarAposCompra, linhaDoDetalhe } from '../lib/loja';
 import { ehNativo } from '../lib/plataforma';
 import { apiFetch } from '../lib/api';
 import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
@@ -110,6 +110,8 @@ export default function Planos() {
   const [uniformeJaAberto, setUniformeJaAberto] = useState(false);
 
   const lojaLigada = calcularLojaLigada(estado);
+  // O motor diz se esta conta é de testador da loja (PAGAMENTOS_TESTERS): só ela vê o detalhe técnico de uma compra que falhou.
+  const testadorLoja = !!estado?.testador_loja;
 
   /** Guarda o estado novo na tela e no Início guardado (a Figurinha nasce dele). */
   function aplicarEstado(novo) {
@@ -194,7 +196,14 @@ export default function Planos() {
       const r = await comprar(p.id, { teamId: time?.id || null });
       if (r.cancelado || r.disponivel === false) return; // desistiu na folha da loja: a tela volta calada
       if (!r.ok) {
-        setToast({ tipo: 'error', mensagem: r.erro, acao: { rotulo: 'Tentar de novo', aoTocar: () => comprarProduto(p) } });
+        // O aviso tem um botão só, neutro: "Fechar". Tentar de novo é tocar em Comprar outra vez — um "Tentar de novo" dentro do aviso
+        // repetia o mesmo erro sem a pessoa conseguir sair dele. O testador lê embaixo, em letra pequena, o que a loja respondeu.
+        setToast({
+          tipo: 'error',
+          mensagem: r.erro,
+          detalhe: testadorLoja && r.detalhe ? linhaDoDetalhe(r.detalhe) : null,
+          acao: { rotulo: 'Fechar', neutro: true, aoTocar: () => {} },
+        });
         return;
       }
       const antes = estado;
@@ -371,8 +380,10 @@ export default function Planos() {
                   // Destaque a DOURADO (era roxo) — mesma leitura do tile activo da
                   // figurinha. INTOCADO pela 3.63: a borda/glow do plano actual é
                   // hierarquia, não material. Só a borda NEUTRA adopta a do Perfil.
-                  border: atual ? '2px solid #d4a017' : destacado ? '2px solid rgba(212,160,23,0.6)' : '1.2px solid rgba(255, 255, 255, 0.06)',
-                  boxShadow: atual ? '0 0 14px rgba(212,160,23,0.45)' : destacado ? '0 0 14px rgba(212,160,23,0.3)' : 'none',
+                  // O que já é do time não leva borda grossa nem brilho: um cartão assim parece "selecionado", e tocar nele não faz nada.
+                  // O selo "Já é seu" e a linha embaixo dizem o estado.
+                  border: atual ? '1.2px solid rgba(212,160,23,0.3)' : destacado ? '2px solid rgba(212,160,23,0.6)' : '1.2px solid rgba(255, 255, 255, 0.06)',
+                  boxShadow: destacado && !atual ? '0 0 14px rgba(212,160,23,0.3)' : 'none',
                 }}
               >
                 {/* Realce de chegada (?destaque=): não é "já é seu", só "é este". */}
@@ -380,10 +391,6 @@ export default function Planos() {
                   <div className="hud-corners-s" role="status" style={{ padding: '7px 10px', fontSize: 11.5, lineHeight: 1.35, textAlign: 'center', color: '#f0c94a', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.4)' }}>
                     {REALCE[p.id]}
                   </div>
-                ) : null}
-                {/* Losango decorativo discreto no card destacado. */}
-                {atual ? (
-                  <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 9, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
                 ) : null}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
@@ -457,7 +464,13 @@ export default function Planos() {
                       Escolher o uniforme do time
                     </button>
                   </span>
-                ) : atual ? null : pendente || mantoPago ? (
+                ) : atual ? (
+                  // Sem botão porque não há o que comprar: o time já tem. Diz isso em uma linha, em vez de um cartão mudo.
+                  <div className="hud-corners" data-ja-e-seu style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: 'rgba(255,255,255,0.7)', border: '1.2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
+                    <Check size={14} color="#d4a017" style={{ flexShrink: 0 }} />
+                    {p.id === 'manto' ? 'O manto próprio já está ativo no seu time.' : 'O pacote já está ativo no seu time. Não precisa comprar de novo.'}
+                  </div>
+                ) : pendente || mantoPago ? (
                   <div className="hud-corners" style={{ width: '100%', textAlign: 'center', padding: '10px 12px', fontSize: 12.5, lineHeight: 1.4, color: '#f0c94a', border: '1.2px solid rgba(212,160,23,0.4)', background: 'rgba(212,160,23,0.08)' }}>
                     {mantoPago ? 'Manto pedido. A gente desenha e avisa' : 'Pedido enviado. A gente ativa e avisa'}
                   </div>
@@ -567,7 +580,7 @@ export default function Planos() {
         </div>
       </main>
       {uniformeDe ? <EscolherUniformeTime time={uniformeDe} aoFechar={() => setUniformeDe(null)} aoEscolher={uniformeEscolhido} /> : null}
-      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} acao={toast.acao} onClose={() => setToast(null)} /> : null}
+      {toast ? <Toast mensagem={toast.mensagem} tipo={toast.tipo} acao={toast.acao} detalhe={toast.detalhe} onClose={() => setToast(null)} /> : null}
     </div>
   );
 }
