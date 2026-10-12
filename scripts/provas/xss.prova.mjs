@@ -1,4 +1,4 @@
-// Prova de segurança no navegador (varredura antes da estreia): texto HOSTIL nas telas de verdade — nome de pessoa, de time, de campeonato, local do jogo,
+// Prova de segurança no navegador: texto HOSTIL nas telas de verdade — nome de pessoa, de time, de campeonato, local do jogo,
 // convidado, post da Resenha, comentário, anúncio, denúncia, diagnóstico — e NADA pode executar, virar elemento nem pedir endereço de fora.
 //
 // Como: o motor de VERDADE (todas as rotas) sobe num processo à parte por cima de banco, Storage e Auth de mentira, em memória
@@ -14,7 +14,9 @@
 //   · nenhum pedido foi feito ao evil.test.
 // E um CONTROLE: o mesmo canário injetado de propósito (insertAdjacentHTML) TEM de ser pego — senão "nada executou" não prova nada.
 //
-// Uso: npm run provar:navegador -- xss        (variável XSS_SO=texto roda só as telas cujo rótulo contém o texto)
+// Uso: npm run provar:navegador -- xss        (~3 min: o app inteiro, ~45 telas)
+//      XSS_SO=texto    roda só as telas cujo rótulo contém o texto
+//      XSS_FOTOS=pasta salva a foto e o texto de cada tela (para ver o que a prova viu)
 import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -290,15 +292,27 @@ export async function rodar({ navegador, base, t }) {
       { rotulo: 'Endereço hostil · planos e gabinete', quem: 'sup', caminho: `/planos?destaque=${refletidos.svg(922)}&uniforme=${refletidos.img(923)}`, campos: [] },
       { rotulo: 'Endereço hostil · aba do gabinete', quem: 'sup', caminho: `/gabinete?aba=${refletidos.img(924)}`, campos: [] },
     ];
+    // Um contexto por pessoa (e por opção, como a localização do aparelho), reaproveitado entre as telas: o navegador guarda os módulos do Vite e a prova
+    // anda várias vezes mais rápido. Cada tela abre a sua página (o canário e o contador de pedidos recomeçam) e a fecha no fim.
+    const contextos = new Map();
+    const contextoDe = async (quem, opcoes) => {
+      const chave = `${quem}|${JSON.stringify(opcoes || {})}`;
+      if (!contextos.has(chave)) contextos.set(chave, await abrirContexto(navegador, base, dados, quem, opcoes));
+      return contextos.get(chave);
+    };
     for (const tela of TELAS) {
       if (!querRodar(tela.rotulo)) continue;
-      const cena = await abrirContexto(navegador, base, dados, tela.quem, tela.opcoes);
+      const cena = await contextoDe(tela.quem, tela.opcoes);
+      cena.estado.externos.length = 0;
+      cena.estado.dialogos.length = 0;
+      cena.estado.erros.length = 0;
       const page = await novaPagina(cena);
       await page.goto(`${base}${tela.caminho}`, { waitUntil: 'domcontentloaded' });
       await conferirTela(t, tela.rotulo, page, cena.estado, { vistosEsperados: tela.campos, antes: tela.antes, depois: tela.depois, literais: tela.literais, esperaMs: tela.esperaMs });
       for (const e of cena.estado.externos) externosVistos.set(e, (externosVistos.get(e) || 0) + 1);
-      await cena.ctx.close();
+      await page.close();
     }
+    for (const cena of contextos.values()) await cena.ctx.close();
 
     // ─── Os cartões 9:16 (canvas): texto hostil entra no desenho como texto, sai 1080×1920 e nada executa ──────────────────────────────────────
     if (querRodar('cartões 9:16')) {

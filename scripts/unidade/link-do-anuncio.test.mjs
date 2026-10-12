@@ -1,4 +1,4 @@
-// Futty v2.0 — varredura de segurança antes da estreia: o toque num anúncio só abre http(s) (src/utils/linkDoAnuncio.js).
+// Futty v2.0 — segurança: o toque num anúncio só abre http(s) (src/utils/linkDoAnuncio.js).
 // A campanha é gravada no Gabinete com um "Link" de texto livre; `javascript:` e companhia nunca chegam ao window.open.
 // Puro: sem navegador, sem rede.
 //
