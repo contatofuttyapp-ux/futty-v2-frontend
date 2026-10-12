@@ -249,16 +249,22 @@ const BOMBA_CURTA = (k) => compor(k, 290); // descrição do time (300)
   registro['avise.origem'].aceito = aviseMe.status < 400 ? aviseMe.status : `recusado ${aviseMe.status}`;
   fala(`${aviseMe.status < 400 ? 'ok  ' : 'ERRO'} ${aviseMe.status} anon  POST   /api/avise-me`);
 
-  // ─── Uma campanha de anúncio com texto hostil e um link que NÃO é http(s) (só o super-admin grava campanha; o app abre o link ao tocar) ──────
-  await chamar('sup', 'PUT', '/api/super/gabinete/operacao', {
+  // ─── Uma campanha de anúncio com texto hostil (só o super-admin grava campanha; o app abre o link ao tocar) ─────────────────────────────────
+  // O motor RECUSA um link que não é http(s) (utils/gabineteStore.js#validarLinkDaCampanha): a campanha com `javascript:` é tentada primeiro e tem de levar
+  // 400; a que fica no ar leva um link https (que o app abre com window.open, aqui trocado pelo canário).
+  const campanhaXss = (link) => ({
     ads_ativo: true,
     toggles: { inicio: true, resenha: true, ranking: true, figurinha: true, sorteio: true, p: true },
     campanhas: [{
       id: 'campanha-xss', estado: 'ativa', cls: 'livre', paginas: ['inicio', 'resenha', 'ranking', 'figurinha', 'sorteio', 'p'], nome: 'Campanha de prova',
       anunciante: hostil('ad.anunciante', IMG), texto: hostil('ad.texto', (k) => `${IMG(k)}${SVG(k)}`), sub: hostil('ad.sub', SVG), cta: hostil('ad.cta', SVG),
-      link: 'javascript:P(950)', imagem_url: null,
+      link, imagem_url: null,
     }],
   });
+  const tentativaPerigosa = await app.pedir('PUT', '/api/super/gabinete/operacao', { token: app.token(U.sup.id), corpo: campanhaXss('javascript:P(950)') });
+  const linkPerigosoRecusado = tentativaPerigosa.status === 400;
+  fala(`${linkPerigosoRecusado ? 'ok  ' : 'ERRO'} ${tentativaPerigosa.status} sup   PUT    /api/super/gabinete/operacao (link javascript:, devia ser 400)`);
+  await chamar('sup', 'PUT', '/api/super/gabinete/operacao', campanhaXss('https://exemplo.test/oferta'));
 
   const saida = {
     pronto: true,
@@ -270,6 +276,7 @@ const BOMBA_CURTA = (k) => compor(k, 290); // descrição do time (300)
     post: { id: P1.id }, comentario: { id: C1.id },
     campeonato: CAMP ? { id: CAMP.id } : null,
     convite: { token: tokenDoConvite },
+    linkPerigosoRecusado,
     registro,
   };
   process.stdout.write(`${JSON.stringify(saida)}\n`);

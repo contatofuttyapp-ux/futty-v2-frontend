@@ -194,7 +194,7 @@ export default function Gabinete() {
             {aba === 'anuncios' && (
               <AbaAnuncios
                 op={op} pub={pub}
-                onSalvarOp={async (campo, valor) => { await salvarParcial(campo, valor); const p = await apiFetch('/api/super/gabinete/publicidade').catch(() => null); if (p) setPub(p); }}
+                onSalvarOp={async (campo, valor) => { const salvo = await salvarParcial(campo, valor); const p = await apiFetch('/api/super/gabinete/publicidade').catch(() => null); if (p) setPub(p); return salvo; }}
               />
             )}
             {aba === 'seguranca' && (
@@ -408,12 +408,14 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
   const [novaCamp, setNovaCamp] = useState({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { ...PAGINAS_NOVA_CAMPANHA } });
   const ativoGeral = op.ads_ativo !== false;
 
-  function addCampanha() {
+  async function addCampanha() {
     if (!novaCamp.nome.trim()) return;
     const paginas = Object.entries(novaCamp.paginas).filter(([, v2]) => v2).map(([k]) => k);
     const c = { id: uid(), nome: novaCamp.nome.trim(), anunciante: novaCamp.anunciante.trim(), texto: novaCamp.texto.trim() || novaCamp.nome.trim(), sub: novaCamp.anunciante.trim(), cta: 'Ver', link: novaCamp.link.trim(), cls: novaCamp.cls, inicio: '', fim: novaCamp.fim.trim(), paginas, estado: 'ativa' };
-    onSalvarOp('campanhas', [...(op.campanhas || []), c]);
-    setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { ...PAGINAS_NOVA_CAMPANHA } });
+    // O motor recusa um link que não é http(s) (ex.: "javascript:…"): nesse caso a campanha não entra, o aviso da recusa já saiu na tela
+    // e o formulário fica como está, para o dono corrigir o link em vez de digitar tudo de novo.
+    const salvo = await onSalvarOp('campanhas', [...(op.campanhas || []), c]);
+    if (salvo) setNovaCamp({ nome: '', anunciante: '', texto: '', link: '', cls: 'livre', fim: '', paginas: { ...PAGINAS_NOVA_CAMPANHA } });
   }
   const setEstadoCamp = (id, estado) => onSalvarOp('campanhas', op.campanhas.map((c) => (c.id === id ? { ...c, estado } : c)));
   const delCamp = (id) => onSalvarOp('campanhas', op.campanhas.filter((c) => c.id !== id));
@@ -478,7 +480,7 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
           <input placeholder="Nome da campanha" style={{ ...inp, flex: '1.3 1 110px' }} value={novaCamp.nome} onChange={(e) => setNovaCamp({ ...novaCamp, nome: e.target.value })} />
           <input placeholder="Anunciante" style={{ ...inp, flex: '1 1 90px' }} value={novaCamp.anunciante} onChange={(e) => setNovaCamp({ ...novaCamp, anunciante: e.target.value })} />
           <input placeholder="Texto do banner" style={{ ...inp, flex: '1.3 1 110px' }} value={novaCamp.texto} onChange={(e) => setNovaCamp({ ...novaCamp, texto: e.target.value })} />
-          <input placeholder="Link" style={{ ...inp, flex: '1 1 90px' }} value={novaCamp.link} onChange={(e) => setNovaCamp({ ...novaCamp, link: e.target.value })} />
+          <input placeholder="Link (https://…)" style={{ ...inp, flex: '1 1 90px' }} value={novaCamp.link} onChange={(e) => setNovaCamp({ ...novaCamp, link: e.target.value })} />
           <select style={{ ...inp, width: 90 }} value={novaCamp.cls} onChange={(e) => setNovaCamp({ ...novaCamp, cls: e.target.value })}><option value="livre">livre</option><option value="18+">18+</option></select>
           <input placeholder="fim (AAAA-MM-DD)" style={{ ...inp, width: 140 }} value={novaCamp.fim} onChange={(e) => setNovaCamp({ ...novaCamp, fim: e.target.value })} />
           {Object.keys(NOMES_PAGINA).map((pg) => (

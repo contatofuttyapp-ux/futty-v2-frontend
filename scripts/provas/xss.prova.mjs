@@ -230,6 +230,9 @@ export async function rodar({ navegador, base, t }) {
       await cena.ctx.close();
     }
 
+    // ─── A trava do motor: o link da campanha que não é http(s) nem chega a ser gravado ──────────────────────────────────────────────────────
+    t('controle do motor · a campanha com link javascript: é RECUSADA na gravação (400), e a de https é que fica no ar', dados.linkPerigosoRecusado === true, 'o motor gravou (ou não respondeu 400 a) um link javascript: de campanha');
+
     // ─── As telas, cada uma com a pessoa que a vê ──────────────────────────────────────────────────────────────────────────────────────
     const idDoCamp = dados.campeonato?.id;
     const refletidos = {
