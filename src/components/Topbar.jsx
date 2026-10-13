@@ -46,7 +46,7 @@ function BotaoVoltar({ back, backFallback, className, style, size }) {
 // O FUNDO PRETO é recortado com a MESMA geometria da linha → a linha é a fronteira
 // real entre o preto (acima) e o que está atrás (abaixo). Recalcula em resize e
 // quando as fontes carregam. Robusto a qualquer título (não só "FIGURINHA").
-function HudTopbar({ hud, back, backFallback }) {
+function HudTopbar({ hud, back, backFallback, direita }) {
   const svgRef = useRef(null);
   const textRef = useRef(null);
   const [stepX, setStepX] = useState(128); // unidades do viewBox (default até medir)
@@ -139,6 +139,9 @@ function HudTopbar({ hud, back, backFallback }) {
         >
           {hud}
         </span>
+        {/* `direita` opcional: uma ação sempre à vista no canto (o botão Loja da Figurinha). Fica acima da linha
+            dourada e longe do wordmark, então não mexe na medição do degrau. */}
+        {direita ? <span style={{ position: 'relative', zIndex: 1, marginLeft: 'auto', display: 'inline-flex', alignItems: 'center' }}>{direita}</span> : null}
         {/* Linha dourada sobre a aresta recortada (coincide com ela, não recortada). */}
         <svg
           ref={svgRef}
@@ -163,8 +166,8 @@ function HudTopbar({ hud, back, backFallback }) {
   );
 }
 
-export default function Topbar({ title = null, back = null, hud = null, backFallback = null }) {
-  if (hud) return <HudTopbar hud={hud} back={back} backFallback={backFallback} />;
+export default function Topbar({ title = null, back = null, hud = null, backFallback = null, direita = null }) {
+  if (hud) return <HudTopbar hud={hud} back={back} backFallback={backFallback} direita={direita} />;
 
   return (
     <div className="app-topbar-wrap">

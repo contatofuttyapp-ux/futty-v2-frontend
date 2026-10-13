@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw } from 'lucide-react';
+import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw, ShoppingBag } from 'lucide-react';
 import { apiFetch, apiUpload, apiUploadCampos } from '../lib/api';
 import CropModal from '../components/CropModal';
 import { supabase } from '../lib/supabase';
@@ -25,7 +25,7 @@ import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { estadoBrilhantes, pedidoDoProduto } from '../lib/brilhantes';
-import { produtoDoPedido } from '../lib/planos';
+import { MINHA_GERACOES, PACOTE_DE_PRESENTE, PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES, produtoDoPedido } from '../lib/planos';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja } from '../lib/loja';
 import { KIT_IMG, KITS_FIGURINHA } from '../utils/kitsFigurinha';
 import { DESTINO_DO_CADEADO, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer } from '../utils/uniformesGrade';
@@ -38,6 +38,7 @@ import { salvarOuCompartilhar } from '../utils/salvarImagem';
 import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import AdCard from '../components/AdCard';
 import Topbar from '../components/Topbar';
+import BotaoLoja from '../components/BotaoLoja';
 import FuttyLoader from '../components/FuttyLoader';
 import FaixaRolavel from '../components/FaixaRolavel';
 import RotuloGerar from '../components/RotuloGerar';
@@ -409,7 +410,7 @@ export default function Figurinha() {
   //   minha  — todos abertos; os ainda não pintados só com a estrelinha de IA (o custo de 1 geração é dito ao tocar, na confirmação)
   // Estados de tile: vestido (✓) · pintado (um toque veste, grátis) · geravel (confirma e gasta 1) ·
   // trancado.
-  // Nada de "em breve"; o pacote do time, para o dono, continua no convite "Vire figurinha" mais abaixo.
+  // Nada de "em breve"; o pacote do time, para o dono, está no cartão "Loja de figurinhas" mais abaixo.
   const temCredito = fonteDireito === 'credito' || (brilhante?.creditos || 0) > 0;
   const direitoDaGradeAgora = direitoDaGrade({ fonteDireito, creditos: brilhante?.creditos });
   function estadoDoKit(kit) {
@@ -489,6 +490,9 @@ export default function Figurinha() {
   const candidatos = [pedidoPacote, pedidoMinha].filter(Boolean);
   const pedidoVivo = candidatos.find((p) => p.estado === 'pendente') || candidatos[0] || null;
   // Com a loja ligada a tela vende, não fala de pedidos (P2: nunca as duas coisas juntas).
+  // O cartão "Loja de figurinhas" convida com o exemplo quem ainda não tem figurinha nem geração sobrando; os demais veem a linha curta.
+  const lojaConvida = !avatarEhIA && !temDireitoDeGerar;
+  const pacoteDoTimeAtivo = !!meuTimeBrilhante?.brilhante_ativo;
   const recadoPedido = lojaLigada ? null
     : (pedidoVivo?.estado === 'pendente' ? 'Pedido enviado. A gente ativa e avisa.' : null)
       || (pedidoVivo?.estado === 'recusado' ? (pedidoVivo.motivo || 'Este pedido não seguiu. Tente de novo.') : null);
@@ -1515,7 +1519,7 @@ export default function Figurinha() {
   if (estreiaFase === null) {
     return (
       <div className="app-shell">
-        <Topbar hud="FIGURINHA" />
+        <Topbar hud="FIGURINHA" direita={<BotaoLoja />} />
         <main className="app-main">
           <LoadingFutty />
         </main>
@@ -1527,7 +1531,7 @@ export default function Figurinha() {
   if (estreiaFase === 'foto' || estreiaFase === 'gerando' || estreiaFase === 'pronto') {
     return (
       <div className="app-shell">
-        <Topbar hud="FIGURINHA" />
+        <Topbar hud="FIGURINHA" direita={<BotaoLoja />} />
         <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
           {/* Card */}
           <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
@@ -1586,7 +1590,7 @@ export default function Figurinha() {
 
   return (
     <div className="app-shell">
-      <Topbar hud="FIGURINHA" />
+      <Topbar hud="FIGURINHA" direita={<BotaoLoja />} />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 24 }}>
         {/* 1. ZONA DO CARD (2:3, levitação Star Fox + entrada animada) */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 16px' }}>
@@ -1866,30 +1870,34 @@ export default function Figurinha() {
                 legendas de tempo diferentes ao mesmo tempo confundem mais do que ajudam. */}
           </div>
 
-          {/* VIRE BRILHANTE ✨ (SPEC-FIGURINHA-3 §3/§7) — o convite do card com a FOTO para quem ainda não tem
-              geração. Um exemplo FIXO (o modelo fictício da conta demo, nunca gerado na hora: gerar um exemplo
-              custaria US$0,11 por pessoa que abrisse a tela). `loading="lazy"` + WebP no dobro do tamanho de
-              exibição (lei do app leve). Não há "Pedir a minha" aqui: a escolha é a grade de uniformes logo
-              abaixo (cadeado → Planos). Fica o pacote para o dono do time: resolve o time inteiro. */}
-          {!avatarEhIA && temFoto && !temDireitoDeGerar && brilhante ? (
-            <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '16px', display: 'grid', gap: 12 }}>
+          {/* LOJA DE FIGURINHAS — o cartão que torna a compra óbvia: SEMPRE presente, em qualquer estado (com ou sem
+              figurinha, com ou sem gerações, dono de time ou não). Mostra a Minha Figurinha e, para o dono, o Pacote do
+              time. Com a loja ligada os botões compram ("Comprar · preço"); sem ela pedem a ativação. Os dois levam aos
+              Planos e nunca aparecem juntos. Quem ainda não tem figurinha nem geração vê o exemplo FIXO (o modelo
+              fictício da conta demo, nunca gerado na hora: gerar um exemplo custaria US$0,11 por pessoa que abrisse a
+              tela), com `loading="lazy"` + WebP no dobro do tamanho de exibição (lei do app leve). */}
+          <div data-cartao-loja className="hud-corners" style={{ position: 'relative', background: 'rgba(255, 255, 255, 0.03)', border: '1.2px solid rgba(212,160,23,0.5)', boxShadow: '0 0 14px rgba(212,160,23,0.18)', padding: '16px', display: 'grid', gap: 12 }}>
               <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <img
-                  src={urlAsset('/avatares/exemplo-brilhante.webp')}
-                  alt="Exemplo de figurinha"
-                  width={72}
-                  height={108}
-                  loading="lazy"
-                  decoding="async"
-                  style={{ width: 72, height: 108, objectFit: 'cover', flexShrink: 0, clipPath: CLIP_OCTOGONO, border: '1.5px solid rgba(212,160,23,0.55)' }}
-                />
+                {lojaConvida ? (
+                  <img
+                    src={urlAsset('/avatares/exemplo-brilhante.webp')}
+                    alt="Exemplo de figurinha"
+                    width={72}
+                    height={108}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ width: 72, height: 108, objectFit: 'cover', flexShrink: 0, clipPath: CLIP_OCTOGONO, border: '1.5px solid rgba(212,160,23,0.55)' }}
+                  />
+                ) : null}
                 <div style={{ display: 'grid', gap: 5, minWidth: 0 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 17, color: '#f0c94a' }}>
-                    <Lock size={14} /> Vire figurinha ✨
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, color: '#f0c94a' }}>
+                    <ShoppingBag size={16} aria-hidden="true" /> Loja de figurinhas
                   </span>
                   <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
-                    Sua foto vira uma figurinha de verdade, no uniforme do Futty, com os 6 fundos liberados.
+                    {lojaConvida
+                      ? 'Sua foto vira uma figurinha de verdade, no uniforme do Futty, com os 6 fundos liberados.'
+                      : 'Mais gerações para pintar uniformes novos e refazer a sua figurinha.'}
                   </span>
                 </div>
               </div>
@@ -1906,42 +1914,88 @@ export default function Figurinha() {
                   {recadoPedido}
                 </div>
               ) : null}
-              <div style={{ display: 'grid', gap: 8 }}>
-                {/* Dono de time vê o pacote primeiro: é o que resolve o time
-                    inteiro, e é a venda maior. P2: o botão leva aos Planos com o
-                    pacote em destaque — lá se compra (loja ligada) ou se pede. */}
-                {meuTimeBrilhante && (!meuTimeBrilhante.brilhante_ativo || lojaLigada) ? (
-                  <span className="cta-gold-glow" style={{ display: 'flex' }}>
-                    <button
-                      type="button"
-                      data-convite-pacote={meuTimeBrilhante.brilhante_ativo ? 'presente' : 'novo'}
-                      className="btn hud-corners cta-gold"
-                      style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
-                      onClick={() => navigate('/planos?destaque=pacote')}
-                    >
-                      {textoDoConvite('pacote', { presente: !!meuTimeBrilhante.brilhante_ativo })}
-                    </button>
-                  </span>
-                ) : null}
-                {/* P2: pacote ativo sem uniforme (comprado na loja) — ninguém gera até o dono escolher. */}
-                {meuTimeBrilhante?.brilhante_ativo && !meuTimeBrilhante.brilhante_kit ? (
-                  <span className="cta-gold-glow" style={{ display: 'flex' }}>
-                    <button
-                      type="button"
-                      className="btn hud-corners cta-gold"
-                      style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
-                      onClick={() => navigate(`/planos?uniforme=${meuTimeBrilhante.id}`)}
-                    >
-                      Escolher o uniforme do time
-                    </button>
-                  </span>
-                ) : null}
-                <Link to="/planos" style={{ fontSize: 11.5, color: 'var(--label-color)', textAlign: 'center', textDecoration: 'none' }}>
-                  Ver o que cada um dá →
-                </Link>
-              </div>
+              {brilhante ? (
+                <>
+                  {/* Minha Figurinha: para todo mundo. O botão leva aos Planos com ela em destaque — lá se compra
+                      (loja ligada) ou se pede. */}
+                  <div data-loja-produto="minha" style={{ display: 'grid', gap: 8 }}>
+                    <div style={{ display: 'grid', gap: 2 }}>
+                      <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff' }}>Minha Figurinha</span>
+                      <span style={{ fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.7)' }}>{MINHA_GERACOES} gerações, no uniforme que você escolher.</span>
+                    </div>
+                    <span className="cta-gold-glow" style={{ display: 'flex' }}>
+                      <button
+                        type="button"
+                        data-loja-comprar="minha"
+                        className="btn hud-corners cta-gold"
+                        style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
+                        onClick={() => navigate('/planos?destaque=minha')}
+                      >
+                        {textoDoConvite('minha')}
+                      </button>
+                    </span>
+                  </div>
+                  {/* Pacote do time: só o dono. É o que resolve o time inteiro, e a venda maior. Com o pacote já
+                      ativo o cartão vira presente (+2 gerações para cada jogador) e o botão segue o mesmo. */}
+                  {meuTimeBrilhante ? (
+                    <div data-loja-produto="pacote" style={{ display: 'grid', gap: 8, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
+                      <div style={{ display: 'grid', gap: 2 }}>
+                        <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff' }}>
+                          {pacoteDoTimeAtivo ? PACOTE_DE_PRESENTE.nome : 'Pacote do time'}
+                        </span>
+                        <span style={{ fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.7)' }}>
+                          {pacoteDoTimeAtivo ? PACOTE_DE_PRESENTE.resumo : `${PACOTE_GERACOES_POR_JOGADOR} gerações por jogador, até ${PACOTE_JOGADORES}.`}
+                        </span>
+                      </div>
+                      {!pacoteDoTimeAtivo || lojaLigada ? (
+                        <span className="cta-gold-glow" style={{ display: 'flex' }}>
+                          <button
+                            type="button"
+                            data-convite-pacote={pacoteDoTimeAtivo ? 'presente' : 'novo'}
+                            data-loja-comprar="pacote"
+                            className="btn hud-corners cta-gold"
+                            style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
+                            onClick={() => navigate('/planos?destaque=pacote')}
+                          >
+                            {textoDoConvite('pacote', { presente: pacoteDoTimeAtivo })}
+                          </button>
+                        </span>
+                      ) : (
+                        // Sem a loja não há como comprar mais um pacote, e pedir a ativação de um time já ativo não faz nada.
+                        <div className="hud-corners" style={{ textAlign: 'center', padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, color: 'rgba(255,255,255,0.7)', border: '1.2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
+                          O time já tem o pacote.
+                        </div>
+                      )}
+                      {/* Pacote ativo sem uniforme (comprado na loja): ninguém gera até o dono escolher. */}
+                      {pacoteDoTimeAtivo && !meuTimeBrilhante.brilhante_kit ? (
+                        <span className="cta-gold-glow" style={{ display: 'flex' }}>
+                          <button
+                            type="button"
+                            className="btn hud-corners cta-gold"
+                            style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
+                            onClick={() => navigate(`/planos?uniforme=${meuTimeBrilhante.id}`)}
+                          >
+                            Escolher o uniforme do time
+                          </button>
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                // O estado da loja ainda não chegou: um caminho honesto até ela, em vez de um botão que poderia dizer "Pedir"
+                // e virar "Comprar" um instante depois.
+                <span className="cta-gold-glow" style={{ display: 'flex' }}>
+                  <button type="button" data-loja-comprar="ver" className="btn hud-corners cta-gold" style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }} onClick={() => navigate('/planos')}>
+                    Ver a loja
+                  </button>
+                </span>
+              )}
+              <Link to="/planos" style={{ fontSize: 11.5, color: 'var(--label-color)', textAlign: 'center', textDecoration: 'none' }}>
+                Ver tudo na loja →
+              </Link>
             </div>
-          ) : null}
+
 
           {/* (l) 403 sem código conhecido — defensivo: hoje o motor só devolve EMAIL_NAO_CONFIRMADO ou
               SEM_DIREITO (cada um com seu próprio card), tratados ANTES deste no catch. Isto é o que sobra se um

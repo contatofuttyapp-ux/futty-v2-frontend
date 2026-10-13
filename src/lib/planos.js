@@ -86,7 +86,7 @@ const PRODUTOS_LOJA = [
 ];
 
 // Sem loja: sem valor, sem vitrine de itens e sem o manto próprio. Os botões criam o pedido de
-// ativação — é pedido, não venda. `botaoBloco` é o do bloco "Vire figurinha" da Figurinha.
+// ativação — é pedido, não venda. `botaoBloco` é o do cartão "Loja de figurinhas" da Figurinha.
 const PRODUTOS_APP = [
   {
     id: 'pacote',

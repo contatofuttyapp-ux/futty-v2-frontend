@@ -36,6 +36,9 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
   // de uma compra que falhou aparece só para ele.
   if (process.env.LOJA_ABERTA === '1') process.env.PAGAMENTOS_ATIVOS = 'true'; else delete process.env.PAGAMENTOS_ATIVOS;
   process.env.PAGAMENTOS_TESTERS = U.adm.email;
+  // LOJA_SEM_TESTER=1 (a prova da 31G): ninguém é testador e PAGAMENTOS_ATIVOS segue desligado — a loja está FECHADA para todos e as telas
+  // ficam no pedido de ativação.
+  if (process.env.LOJA_SEM_TESTER === '1') { delete process.env.PAGAMENTOS_TESTERS; delete process.env.PAGAMENTOS_ATIVOS; }
 
   const chamar = async (quem, metodo, rota, corpo) => {
     const r = await app.pedir(metodo, rota, { token: app.token(U[quem].id), corpo });
@@ -67,6 +70,12 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
       const foto = `https://projeto-falso.supabase.test/storage/v1/object/public/avatars/${U[quem].id}.webp`;
       Object.assign(app.tabelas.users.find((x) => x.id === U[quem].id), { brilhante_creditos: n, avatar_url: foto, foto_url: foto });
     }
+  }
+
+  // LOJA_FIGURINHA=1 (a prova da 31G): o avatar do Pedro é um arquivo NOSSO (`-ai-` no nome, no bucket avatars) — para o motor, ele TEM uma figurinha.
+  if (process.env.LOJA_FIGURINHA === '1') {
+    const base = 'https://projeto-falso.supabase.test/storage/v1/object/public/avatars/public';
+    Object.assign(app.tabelas.users.find((x) => x.id === U.adm.id), { foto_url: `${base}/${U.adm.id}-1.webp`, avatar_url: `${base}/${U.adm.id}-ai-dark-gold-1.png` });
   }
 
   // LOJA_PACOTE_ATIVO=1: o time do Pedro já tem o pacote ativo e o uniforme escolhido (o que o Gabinete faz), para ver o cartão do Pacote sem botão.

@@ -35,6 +35,8 @@ import { MSG_FALHA_RSVP, FRASE_RSVP_ENCERRADA, motivoRsvpEncerrada, responderCom
 import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../utils/presenca';
 import { LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso } from '../utils/avisosDoInicio';
 import { esconderLembrete, lembretesEscondidos } from '../utils/lembretes';
+import CartaoPacoteInicio from '../components/CartaoPacoteInicio';
+import { ID_PACOTE_NO_INICIO, timesDoDono as timesDoDonoDe } from '../utils/pacoteNoInicio';
 import TeamAvatar from '../components/TeamAvatar';
 import Icon from '../components/Icon';
 import Topbar from '../components/Topbar';
@@ -541,6 +543,14 @@ export default function Inicio() {
   function agoraNao(id) {
     esconderLembrete(id);
     setAgoraNaoDeles((cur) => new Set(cur).add(id));
+  }
+  // "Figurinhas pro time todo": só para quem é dono (admin) de algum time, nunca para o jogador comum. Fica fora da fila de avisos de
+  // propósito: é um convite discreto, não algo que pede resposta. O X o esconde por 7 dias neste aparelho (mesma conta do "Agora não").
+  const [pacoteFechado, setPacoteFechado] = useState(() => lembretesEscondidos([ID_PACOTE_NO_INICIO]).has(ID_PACOTE_NO_INICIO));
+  const timesDoDono = timesDoDonoDe(teams);
+  function fecharPacote() {
+    esconderLembrete(ID_PACOTE_NO_INICIO);
+    setPacoteFechado(true);
   }
   const precisaDob = !!me?.user && !me.user.birthdate && !dobFeito;
   async function guardarDob() {
@@ -1425,6 +1435,8 @@ export default function Inicio() {
             {/* O Radar de peladas e o Criar time à vista, logo embaixo do "Seus times" (ou do avatar, quem não
                 administra time): no fim da fila de chips ninguém chegava. */}
             <AtalhosDoInicio />
+
+            {timesDoDono.length > 0 && !pacoteFechado ? <CartaoPacoteInicio timesDoDono={timesDoDono} onFechar={fecharPacote} /> : null}
 
             {/* Chips de equipas. O 45° entra pelo USE SITE e não pela classe .chip:
                 ela é partilhada com o Feed e o AdminPanel, que ainda não passaram
