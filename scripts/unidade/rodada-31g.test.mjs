@@ -52,7 +52,7 @@ test('a fiação: o botão Loja está nas três telas da Figurinha, o cartão é
   assert.equal((figurinha.match(/<Topbar hud="FIGURINHA" direita=\{<BotaoLoja \/>\} \/>/g) || []).length, 3, 'estreia, carregando e estúdio');
   assert.equal((figurinha.match(/data-cartao-loja/g) || []).length, 1, 'um cartão só — nada duplicado');
   assert.doesNotMatch(figurinha, /Vire figurinha ✨/, 'o convite antigo virou o cartão');
-  assert.match(figurinha, /data-comprar-mais/, 'o link "Comprar mais gerações" continua');
+  assert.doesNotMatch(figurinha, /data-comprar-mais/, 'o link solto saiu: o cartão logo abaixo é o caminho');
   assert.match(ler('src/pages/MeuPerfil.jsx'), /Ver Figurinhas →/, 'o link do Perfil continua');
   const inicio = ler('src/pages/Inicio.jsx');
   assert.match(inicio, /timesDoDono\.length > 0 && !pacoteFechado \? <CartaoPacoteInicio/);

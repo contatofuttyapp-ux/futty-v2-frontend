@@ -4,7 +4,7 @@
 //     outra vez tenta de novo;
 //   · o testador (e só ele) vê embaixo, em letra pequena, o code, o readableErrorCode e o underlyingErrorMessage; quem não é testador nada vê,
 //     mesmo com a loja aberta para todos;
-//   · o cartão do Pacote do time que o time já tem não parece "selecionado" e diz o porquê, em uma linha, no lugar do botão.
+//   · o cartão do Pacote do time que o time já tem vira "Mais figurinhas pro seu time" (presente), com botão, e não parece "selecionado".
 // Como: a mesma bancada das capturas da loja (scripts/capturar-revisao-loja.mjs) — o app de verdade num Chromium que se declara iOS, o motor de VERDADE por
 // cima de banco e Auth de mentira (scripts/provas/_motor-loja.cjs), o SDK do RevenueCat trocado por uma mentira que RECUSA a compra com o erro que o
 // iPhone deu (STORE_PROBLEM) no formato da ponte do Capacitor. Nada sai da máquina: /api/** vai ao motor de mentira e qualquer outro endereço (o
@@ -200,24 +200,21 @@ export async function rodar({ navegador, base, t }) {
     await page.waitForTimeout(500);
     t('e fecha de novo', (await page.locator('.futty-toast').count()) === 0);
 
-    // ── O cartão do Pacote do time que o time já tem ──
+    // ── O cartão do Pacote do time que o time já tem: "Mais figurinhas pro seu time", com botão (o pacote nunca fica "Já é seu") ──
     await page.goto(`${base}/planos`, { waitUntil: 'domcontentloaded' });
-    await page.locator('[data-ja-e-seu]').first().waitFor({ timeout: 40000 });
+    await page.getByText('Mais figurinhas pro seu time').first().waitFor({ timeout: 40000 });
     await page.waitForTimeout(1200);
-    const linha = page.locator('[data-ja-e-seu]').first();
-    t('o cartão do Pacote do time (já ativo) diz o porquê, em uma linha, no lugar do botão', (await linha.innerText()).trim() === 'O pacote já está ativo no seu time. Não precisa comprar de novo.', await linha.innerText());
-    const cartao = linha.locator('xpath=ancestor::div[contains(@class,"hud-corners")][1]/parent::div[contains(@class,"hud-corners")][1]').first();
     const info = await page.evaluate(() => {
-      const l = document.querySelector('[data-ja-e-seu]');
-      const card = l.closest('.hud-corners').parentElement.closest('.hud-corners') || l.closest('.hud-corners');
+      const titulo = [...document.querySelectorAll('span')].find((e) => e.textContent.trim() === 'Mais figurinhas pro seu time');
+      const card = titulo.closest('.hud-corners');
       const c = getComputedStyle(card);
-      return { borda: c.borderTopWidth, sombra: c.boxShadow, botoes: [...card.querySelectorAll('button')].map((b) => b.innerText.trim()), selo: card.innerText.includes('Já é seu') };
+      return { borda: c.borderTopWidth, sombra: c.boxShadow, botoes: [...card.querySelectorAll('button')].map((b) => b.innerText.trim()), texto: card.innerText.replace(/\s+/g, ' ') };
     });
-    void cartao;
-    t('esse cartão não tem botão, tem o selo "Já é seu" e NÃO parece selecionado (borda fina, sem brilho)', info.botoes.length === 0 && info.selo && parseFloat(info.borda) < 2 && (info.sombra === 'none' || info.sombra === ''), JSON.stringify(info));
+    t('o cartão do pacote (já ativo) vira "Mais figurinhas pro seu time", com a linha de presente e UM botão "Comprar para o time · …"', info.botoes.length === 1 && /^Comprar para o time · /.test(info.botoes[0]) && info.texto.includes('Presenteie o time: +2 gerações para cada jogador.'), JSON.stringify(info));
+    t('esse cartão NÃO diz "Já é seu" nem "Não precisa comprar de novo" e não parece selecionado (borda fina, sem brilho)', !/Já é seu|Não precisa comprar de novo/.test(info.texto) && parseFloat(info.borda) < 2 && (info.sombra === 'none' || info.sombra === ''), JSON.stringify(info));
     t('o cartão da Minha Figurinha segue com o botão "Comprar · US$ 2,99"', await page.getByRole('button', { name: /Comprar · US\$ 2,99/ }).isVisible());
     t('a tela de Planos não rola para o lado', !(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)));
-    await page.locator('[data-ja-e-seu]').first().scrollIntoViewIfNeeded();
+    await page.getByText('Mais figurinhas pro seu time').first().scrollIntoViewIfNeeded();
     await foto(page, '2-pacote-ja-ativo-390');
     t('sem erro de página (testador) e nada saiu da máquina', pedro.estado.erros.length === 0, pedro.estado.erros.slice(0, 3).join(' | '));
     await pedro.ctx.close();

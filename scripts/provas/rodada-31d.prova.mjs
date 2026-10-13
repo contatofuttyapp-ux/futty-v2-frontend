@@ -1,7 +1,7 @@
 // Prova no navegador da Rodada 31D — ajustes de tela, a 390 e a 360 px:
 //   · a grade de uniformes da Figurinha sem o selo "pintar · 1 geração · ~45 s" (só a estrelinha de IA no tile);
 //   · a confirmação nova ao tocar no uniforme ("Gerar figurinha com este uniforme?" / "Isso usa 1 geração. Você tem N gerações." / Gerar · Agora não);
-//   · o link "Comprar mais gerações →" embaixo de "Restam N gerações" só com a loja ligada;
+//   · "Comprar mais gerações": o link solto saiu; o botão do cartão "Loja de figurinhas" embaixo de "Restam N gerações" é o caminho;
 //   · o Ranking: o confete do pódio sai na 1ª vez e NÃO na segunda entrada na mesma posição (só quando a posição muda).
 // Mesma bancada das provas da loja: o app de verdade num Chromium que se declara iOS, o motor de VERDADE por cima de banco falso
 // (scripts/provas/_motor-loja.cjs), o SDK do RevenueCat e o canvas-confetti trocados por mentiras. Nada sai da máquina.
@@ -189,17 +189,18 @@ export async function rodar({ navegador, base, t }) {
       await fig.locator('[data-confirmar-geracao]').waitFor({ state: 'detached', timeout: 5000 });
       t(`${r} · "Agora não" fecha a confirmação e nada é gerado`, true);
 
-      // ── O link "Comprar mais gerações →": com a loja ligada ──
+      // ── "Comprar mais gerações": o caminho é o botão do cartão "Loja de figurinhas" logo abaixo (o link solto saiu, para não repetir o botão) ──
       const link = fig.locator('[data-comprar-mais]');
-      t(`${r} · loja ligada (o Pedro é testador): o link "Comprar mais gerações →" aparece e leva a /planos?destaque=minha`, (await link.count()) === 1 && (await link.innerText()).trim() === 'Comprar mais gerações →' && (await link.getAttribute('href')) === '/planos?destaque=minha', (await link.count()) ? await link.innerText() : 'sem link');
+      t(`${r} · loja ligada (o Pedro é testador): NÃO há o link solto "Comprar mais gerações →"`, (await link.count()) === 0);
+      const botaoMinha = fig.locator('[data-cartao-loja] [data-loja-comprar="minha"]');
       const ordem = await fig.evaluate(() => {
         const restam = [...document.querySelectorAll('span')].find((e) => /^Restam \d+ gerações/.test(e.textContent.trim()));
-        const l = document.querySelector('[data-comprar-mais]');
-        return restam && l ? { restamTopo: restam.getBoundingClientRect().top, linkTopo: l.getBoundingClientRect().top, restam: restam.textContent.trim() } : null;
+        const b = document.querySelector('[data-cartao-loja] [data-loja-comprar="minha"]');
+        return restam && b ? { restamTopo: restam.getBoundingClientRect().top, botaoTopo: b.getBoundingClientRect().top, restam: restam.textContent.trim(), texto: b.textContent.trim(), href: null } : null;
       });
-      t(`${r} · o link fica embaixo de "Restam 3 gerações"`, !!ordem && ordem.linkTopo > ordem.restamTopo && ordem.restam.startsWith('Restam 3 gerações'), JSON.stringify(ordem));
-      await link.scrollIntoViewIfNeeded();
-      await foto(fig, `3-link-com-loja-${largura}`);
+      t(`${r} · o botão de comprar do cartão fica embaixo de "Restam 3 gerações" e diz "Comprar · …"`, !!ordem && ordem.botaoTopo > ordem.restamTopo && ordem.restam.startsWith('Restam 3 gerações') && /^Comprar · /.test(ordem.texto), JSON.stringify(ordem));
+      await botaoMinha.scrollIntoViewIfNeeded();
+      await foto(fig, `3-cartao-com-loja-${largura}`);
       t(`${r} · a Figurinha não rola para o lado`, !(await fig.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)));
 
       // ── O Ranking do Pedro: confete na 1ª vez, não na 2ª ──

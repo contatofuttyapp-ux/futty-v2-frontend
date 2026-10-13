@@ -584,7 +584,7 @@ export default function Jogo() {
 
             {/* O erro do sorteio, junto dos botões de sortear (o primeiro sorteio, acima, e o "Sortear de novo"). */}
             {erroDoSorteio ? (
-              <div ref={erroDoSorteioRef} className="alert alert--error" role="alert" data-erro-do-sorteio style={{ marginTop: 10 }}>{erroDoSorteio}</div>
+              <div ref={erroDoSorteioRef} className="alert alert--error" role="alert" data-erro-do-sorteio style={{ marginTop: 10, scrollMarginBottom: 24 }}>{erroDoSorteio}</div>
             ) : null}
 
             {/* Campeonato a partir do sorteio: só o formato — plantéis já vêm prontos. */}

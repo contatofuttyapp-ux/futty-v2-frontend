@@ -34,8 +34,8 @@ function motor({ comTimes }) {
   };
 }
 
-async function abrir(navegador, base, comTimes) {
-  const ctx = await navegador.newContext({ viewport: { width: 390, height: ALTURA }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: 'pt-BR', timezoneId: SP });
+async function abrir(navegador, base, comTimes, largura = 390) {
+  const ctx = await navegador.newContext({ viewport: { width: largura, height: ALTURA }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: 'pt-BR', timezoneId: SP });
   await ctx.addInitScript(({ chave, sessao }) => {
     try { localStorage.setItem('futty_cookies', 'aceite'); localStorage.setItem(chave, sessao); } catch { /* sem storage */ }
   }, { chave: `sb-${REF}-auth-token`, sessao: SESSAO });
@@ -55,40 +55,53 @@ async function abrir(navegador, base, comTimes) {
   return { ctx, page };
 }
 
+// O aviso rola para a tela com scroll SUAVE, em dois tempos (a página do jogo tem ~1700 px e o rolamento para ~0,8 s num patamar antes do último trecho):
+// medir num tempo fixo, ou ao primeiro patamar, pegava o aviso ainda fora da tela. Espera até 5 s o aviso ficar inteiro na tela e mede o que sobrou.
+const assentar = async (page) => {
+  for (let i = 0; i < 33; i += 1) {
+    const dentro = await page.evaluate(() => { const r = document.querySelector('[data-erro-do-sorteio]')?.getBoundingClientRect(); return !!r && r.top >= 0 && r.bottom <= window.innerHeight; });
+    if (dentro) { await page.waitForTimeout(400); return; }
+    await page.waitForTimeout(150);
+  }
+};
+
 const naTela = (page, sel) => page.evaluate((s) => {
   const el = document.querySelector(s);
   if (!el) return null;
   const r = el.getBoundingClientRect();
-  return { topo: Math.round(r.top), base: Math.round(r.bottom), altura: window.innerHeight, visivel: r.top >= 0 && r.bottom <= window.innerHeight };
+  return { topo: Math.round(r.top), base: Math.round(r.bottom), altura: window.innerHeight, visivel: r.top >= 0 && r.bottom <= window.innerHeight, folgaEmbaixo: Math.round(window.innerHeight - r.bottom) };
 }, sel);
 
 export async function rodar({ navegador, base, t }) {
+  for (const largura of [390, 360]) {
+  const r = `${largura} px · `;
   // ── "Sortear de novo", lá embaixo da página ─────────────────────────────────────────────────────────────────────────────────────────
   {
-    const { ctx, page } = await abrir(navegador, base, true);
+    const { ctx, page } = await abrir(navegador, base, true, largura);
     await page.locator('[data-trocar="sortear"]').waitFor({ timeout: 25000 });
     await page.locator('[data-trocar="sortear"]').click();
     await page.getByRole('button', { name: 'Sortear de novo' }).click();
     await page.locator('[data-erro-do-sorteio]').waitFor();
-    await page.waitForTimeout(700); // o scroll suave, se precisar
+    await assentar(page); // o scroll suave, se precisar
     const onde = await naTela(page, '[data-erro-do-sorteio]');
-    t('"Sortear de novo" com erro do motor: o aviso aparece na tela, sem a pessoa rolar', onde?.visivel, JSON.stringify(onde));
-    t('…com a frase do motor (o que fazer), não uma genérica', (await page.locator('[data-erro-do-sorteio]').innerText()).trim() === MSG);
+    t(r + '"Sortear de novo" com erro do motor: o aviso aparece inteiro na tela, com respiro embaixo, sem a pessoa rolar', onde?.visivel && onde.folgaEmbaixo >= 16, JSON.stringify(onde));
+    t(r + '…com a frase do motor (o que fazer), não uma genérica', (await page.locator('[data-erro-do-sorteio]').innerText()).trim() === MSG);
     const botoes = await naTela(page, '[data-trocar-os-times]');
-    t('…e logo abaixo de "Trocar os times" (junto da ação, não no topo)', botoes && onde && onde.topo >= botoes.base && onde.topo - botoes.base < 60, JSON.stringify({ botoes, onde }));
-    t('o topo da página não repete o erro do sorteio', !(await page.locator('main > .alert.alert--error:not([data-erro-do-sorteio])').count()));
+    t(r + '…e logo abaixo de "Trocar os times" (junto da ação, não no topo)', botoes && onde && onde.topo >= botoes.base && onde.topo - botoes.base < 60, JSON.stringify({ botoes, onde }));
+    t(r + 'o topo da página não repete o erro do sorteio', !(await page.locator('main > .alert.alert--error:not([data-erro-do-sorteio])').count()));
     await ctx.close();
   }
 
   // ── o primeiro "Sortear" (jogo sem times) ───────────────────────────────────────────────────────────────────────────────────────────
   {
-    const { ctx, page } = await abrir(navegador, base, false);
+    const { ctx, page } = await abrir(navegador, base, false, largura);
     await page.locator('[data-escolha="sortear"]').waitFor({ timeout: 25000 });
     await page.locator('[data-escolha="sortear"]').click();
     await page.locator('[data-erro-do-sorteio]').waitFor();
-    await page.waitForTimeout(700);
+    await assentar(page);
     const onde = await naTela(page, '[data-erro-do-sorteio]');
-    t('o primeiro "Sortear" com erro: o aviso também aparece na tela, junto dos botões', onde?.visivel, JSON.stringify(onde));
+    t(r + 'o primeiro "Sortear" com erro: o aviso também aparece inteiro na tela, com respiro embaixo, junto dos botões', onde?.visivel && onde.folgaEmbaixo >= 16, JSON.stringify(onde));
     await ctx.close();
+  }
   }
 }

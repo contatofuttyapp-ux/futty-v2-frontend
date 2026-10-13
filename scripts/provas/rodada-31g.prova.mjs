@@ -183,7 +183,7 @@ export async function rodar({ navegador, base, t }) {
 
   /**
    * Um caso da Figurinha: quem abre, o que o botão do topo e o cartão têm de mostrar.
-   * esperado = { produtos: ['minha', 'pacote'], botoes: [texto, …], contem: [texto…], naoContem: [regex…], restam, comprarMais }
+   * esperado = { produtos: ['minha', 'pacote'], botoes: [texto, …], contem: [texto…], naoContem: [regex…], restam }
    */
   async function casoFigurinha({ dados, quem, largura, rotulo, esperado }) {
     const r = `${largura} px · ${rotulo}`;
@@ -198,7 +198,7 @@ export async function rodar({ navegador, base, t }) {
     t(`${r} · os botões estão habilitados, inteiros (nada cortado) e dentro da tela`, f.botoes.every((b) => b.habilitado && !b.cortado && b.dentro), JSON.stringify(f.botoes));
     for (const trecho of esperado.contem || []) t(`${r} · o cartão diz "${trecho}"`, (f.cartao?.texto || '').includes(trecho), f.cartao?.texto);
     for (const proibido of esperado.naoContem || []) t(`${r} · o cartão NÃO diz ${proibido}`, !proibido.test(f.cartao?.texto || ''), f.cartao?.texto);
-    if (esperado.comprarMais !== undefined) t(`${r} · o link "Comprar mais gerações" ${esperado.comprarMais ? 'continua' : 'não aparece'}`, f.comprarMais === esperado.comprarMais);
+    t(`${r} · não há o link solto "Comprar mais gerações" (o cartão logo abaixo é o caminho)`, f.comprarMais === false);
     if (esperado.restam !== undefined) t(`${r} · o contador diz ${esperado.restam ? `"${esperado.restam}"` : 'nada (sem gerações)'}`, (f.restam || null) === esperado.restam, String(f.restam));
     if (esperado.exemplo !== undefined) t(`${r} · ${esperado.exemplo ? 'com' : 'sem'} a imagem de exemplo no cartão`, f.cartao?.exemplo === esperado.exemplo);
     t(`${r} · o cartão cabe na largura e a tela não rola para o lado`, !!f.cartao && f.cartao.esq >= 0 && f.cartao.dir <= f.larguraDaTela && !f.lateral, JSON.stringify({ cartao: f.cartao && [f.cartao.esq, f.cartao.dir], lateral: f.lateral }));
@@ -216,7 +216,7 @@ export async function rodar({ navegador, base, t }) {
       nome: 'loja ligada · sem figurinha',
       flags: { LOJA_ABERTA: '1' },
       casos: [
-        { quem: 'adm', rotulo: 'dono, sem figurinha, loja ligada', esperado: { produtos: ['minha', 'pacote'], botoes: ['Comprar · US$ 2,99', 'Comprar para o meu time · US$ 12,99'], contem: ['Minha Figurinha', 'Pacote do time', 'Sua foto vira uma figurinha de verdade'], exemplo: true, comprarMais: true } },
+        { quem: 'adm', rotulo: 'dono, sem figurinha, loja ligada', esperado: { produtos: ['minha', 'pacote'], botoes: ['Comprar · US$ 2,99', 'Comprar para o meu time · US$ 12,99'], contem: ['Minha Figurinha', 'Pacote do time', 'Sua foto vira uma figurinha de verdade'], exemplo: true } },
         { quem: 'ze', rotulo: 'não dono, sem figurinha, loja ligada', esperado: { produtos: ['minha'], botoes: ['Comprar · US$ 2,99'], contem: ['Minha Figurinha'], naoContem: [/Pacote do time/, /Comprar para o/], exemplo: true } },
       ],
     },
@@ -225,8 +225,8 @@ export async function rodar({ navegador, base, t }) {
       nome: 'loja ligada · com figurinha e gerações',
       flags: { LOJA_ABERTA: '1', LOJA_FIGURINHA: '1', LOJA_CREDITOS: '1' },
       casos: [
-        { quem: 'adm', rotulo: 'dono, com figurinha e 3 gerações', esperado: { produtos: ['minha', 'pacote'], botoes: ['Comprar · US$ 2,99', 'Comprar para o meu time · US$ 12,99'], contem: ['Mais gerações para pintar uniformes novos'], exemplo: false, comprarMais: true, restam: 'Restam 3 gerações' } },
-        { quem: 'ze', rotulo: 'não dono, com 2 gerações e sem figurinha', esperado: { produtos: ['minha'], botoes: ['Comprar · US$ 2,99'], naoContem: [/Pacote do time/], comprarMais: true, restam: 'Restam 2 gerações' } },
+        { quem: 'adm', rotulo: 'dono, com figurinha e 3 gerações', esperado: { produtos: ['minha', 'pacote'], botoes: ['Comprar · US$ 2,99', 'Comprar para o meu time · US$ 12,99'], contem: ['Mais gerações para pintar uniformes novos'], exemplo: false, restam: 'Restam 3 gerações' } },
+        { quem: 'ze', rotulo: 'não dono, com 2 gerações e sem figurinha', esperado: { produtos: ['minha'], botoes: ['Comprar · US$ 2,99'], naoContem: [/Pacote do time/], restam: 'Restam 2 gerações' } },
       ],
     },
     {
@@ -234,7 +234,7 @@ export async function rodar({ navegador, base, t }) {
       nome: 'loja ligada · com figurinha, sem gerações',
       flags: { LOJA_ABERTA: '1', LOJA_FIGURINHA: '1' },
       casos: [
-        { quem: 'adm', rotulo: 'dono, com figurinha e sem gerações', esperado: { produtos: ['minha', 'pacote'], botoes: ['Comprar · US$ 2,99', 'Comprar para o meu time · US$ 12,99'], exemplo: false, comprarMais: true, restam: null } },
+        { quem: 'adm', rotulo: 'dono, com figurinha e sem gerações', esperado: { produtos: ['minha', 'pacote'], botoes: ['Comprar · US$ 2,99', 'Comprar para o meu time · US$ 12,99'], exemplo: false, restam: null } },
       ],
     },
     {
@@ -251,8 +251,8 @@ export async function rodar({ navegador, base, t }) {
       nome: 'sem loja · pedido de ativação',
       flags: { LOJA_SEM_TESTER: '1' },
       casos: [
-        { quem: 'adm', rotulo: 'dono, sem loja', esperado: { produtos: ['minha', 'pacote'], botoes: ['Pedir a minha · 10 gerações', 'Pedir ativação para o meu time'], naoContem: [/Comprar/, /US\$/], comprarMais: false, sem: [/US\$/] } },
-        { quem: 'ze', rotulo: 'não dono, sem loja', esperado: { produtos: ['minha'], botoes: ['Pedir a minha · 10 gerações'], naoContem: [/Comprar/, /Pacote do time/], comprarMais: false } },
+        { quem: 'adm', rotulo: 'dono, sem loja', esperado: { produtos: ['minha', 'pacote'], botoes: ['Pedir a minha · 10 gerações', 'Pedir ativação para o meu time'], naoContem: [/Comprar/, /US\$/], sem: [/US\$/] } },
+        { quem: 'ze', rotulo: 'não dono, sem loja', esperado: { produtos: ['minha'], botoes: ['Pedir a minha · 10 gerações'], naoContem: [/Comprar/, /Pacote do time/] } },
       ],
     },
     {

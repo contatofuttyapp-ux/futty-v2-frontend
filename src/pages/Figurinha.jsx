@@ -1860,12 +1860,8 @@ export default function Figurinha() {
                 {kitDoTime ? '' : ' · uniforme à sua escolha'}
               </span>
             ) : null}
-            {/* Com a loja ligada, sempre à mão: comprar mais gerações (a Minha Figurinha). Sem loja, nada muda. */}
-            {lojaLigada ? (
-              <Link to="/planos?destaque=minha" data-comprar-mais style={{ fontSize: 11.5, color: 'var(--label-color)', textAlign: 'center', textDecoration: 'none', padding: '6px 0' }}>
-                Comprar mais gerações →
-              </Link>
-            ) : null}
+            {/* Sem link de "comprar mais gerações" aqui: o cartão "Loja de figurinhas" está logo abaixo, sempre, e o botão
+                dele já é esse caminho — repetir o botão duas vezes seguidas só confunde. */}
             {/* Sem legenda de tempo própria sob o botão: a mensagem acima da linha já cobre gerandoIA, e duas
                 legendas de tempo diferentes ao mesmo tempo confundem mais do que ajudam. */}
           </div>
