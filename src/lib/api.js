@@ -96,6 +96,9 @@ async function pedir(path, options, token, segundoPlano) {
     const headers = options.body instanceof FormData ? { ...(options.headers || {}) } : { 'Content-Type': 'application/json', ...(options.headers || {}) };
     if (token) {
       headers.Authorization = `Bearer ${token}`;
+      // Em que plataforma o app roda (ios | android | web). O motor só usa para decidir a vitrine da loja (PAGAMENTOS_PLATAFORMAS);
+      // quem credita a compra é o webhook do RevenueCat, não este cabeçalho.
+      headers['X-Futty-Plataforma'] = Capacitor.getPlatform();
     }
 
     // A caixa-preta mede AQUI, no único sítio por onde todas as
