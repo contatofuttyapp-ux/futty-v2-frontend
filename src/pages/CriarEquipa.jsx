@@ -294,7 +294,7 @@ export default function CriarEquipa() {
       setTeam(t);
       // O link do convite chega PRONTO. Gerado aqui, uma vez só: o passo 4 nasce com o time e não há outro caminho até ele (o time
       // criado trava o histórico, então voltar não repete a chamada). Sem await: a festa abre na hora e o link entra quando chegar.
-      pedirConvite(t.slug).catch((e) => {
+      pedirConvite(t.slug, t.nome).catch((e) => {
         setConviteFalhou(true);
         setToast({ tipo: 'error', mensagem: e.message });
       });
@@ -306,9 +306,9 @@ export default function CriarEquipa() {
   }
 
   // A chamada do convite é uma só — a da geração sozinha (logo que o time existe) e a do botão de reserva.
-  async function pedirConvite(slug) {
+  async function pedirConvite(slug, nomeTime) {
     const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
-    setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
+    setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo, nomeTime }));
   }
 
   // O botão de reserva: só aparece se a geração sozinha falhou.
@@ -316,7 +316,7 @@ export default function CriarEquipa() {
     if (busy || !team) return;
     setBusy(true);
     try {
-      await pedirConvite(team.slug);
+      await pedirConvite(team.slug, team.nome);
     } catch (e) {
       setToast({ tipo: 'error', mensagem: e.message });
     } finally {

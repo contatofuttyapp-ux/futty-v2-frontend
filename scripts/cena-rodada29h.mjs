@@ -470,7 +470,8 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     await pagina.locator('input[readonly]').waitFor({ timeout: 15000 });
     verificar('F · (29Q) o botão "Gerar link do convite" sumiu: o link chegou sozinho', (await pagina.getByRole('button', { name: 'Gerar link do convite' }).count()) === 0);
     const link = await pagina.locator('input[readonly]').inputValue();
-    verificar('F · o link do convite é o curto: <site>/c/<código>', link === `${BASE}/c/k7m2p9qx`, link);
+    // O link sai sempre com o endereço do site (ORIGEM_DO_SITE), nunca o do servidor local; desde a 31N leva o nome do time na frente.
+    verificar('F · o link do convite é o curto com o nome do time: https://futtyapp.com.br/c/<nome>-<código>', link === 'https://futtyapp.com.br/c/savassi-fc-k7m2p9qx', link);
     const wa = await pagina.locator('a[href^="https://wa.me/"]').getAttribute('href');
     const fraseWa = decodeURIComponent((wa || '').replace('https://wa.me/?text=', ''));
     verificar('F · a frase do WhatsApp aprovada: "Bora jogar? Você foi chamado para o Savassi FC no Futty. Entre pelo link: <link>"', fraseWa === `Bora jogar? Você foi chamado para o Savassi FC no Futty. Entre pelo link: ${link}`, fraseWa);

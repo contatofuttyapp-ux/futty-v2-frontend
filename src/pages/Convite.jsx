@@ -57,8 +57,10 @@ function Escudo({ team, vazio = false }) {
   );
 }
 
-export default function Convite() {
-  const { token } = useParams();
+// `token`: o link curto já vem com o código extraído (App.jsx#ConviteCurtoRoute); o longo usa o da rota.
+export default function Convite({ token: tokenDoLink = null }) {
+  const { token: tokenDaRota } = useParams();
+  const token = tokenDoLink || tokenDaRota;
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
   const { perfil, deCache, carregando: perfilCarregando } = usePerfil();

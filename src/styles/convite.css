@@ -1,7 +1,7 @@
 /*
  * Futty v2.0 — a página do convite. Centrada, sem cartão: a marca no alto, o logo do time grande no meio,
  * o nome em destaque, três fatos e UM botão. Só o Convite importa este arquivo (chunk lazy) — fora do
- * arranque.
+ * arranque. A página do download (/download) usa o mesmo palco: fundo, marca e botões.
  */
 
 .convite {
@@ -211,6 +211,22 @@
   margin: 22px 0 0;
   font-size: 14px;
   color: var(--text-dim);
+}
+
+/* /download: o slogan no desenho do Onboarding (Rajdhani em caixa alta, "A sua figurinha." em dourado). */
+.download__slogan {
+  margin: 0;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: #c9c2d6;
+  text-wrap: balance;
+}
+.download__slogan b {
+  color: #f0c94a;
 }
 
 @media (prefers-reduced-motion: reduce) {

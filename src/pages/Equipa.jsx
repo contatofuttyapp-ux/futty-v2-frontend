@@ -294,8 +294,8 @@ export default function Equipa() {
     setGenerating(true);
     try {
       const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
-      // O link curto (/c/<código>) quando há código; o longo continua valendo.
-      setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo }));
+      // O link curto com o nome do time (/c/<nome>-<código>) quando há código; o longo continua valendo.
+      setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo, nomeTime: team?.nome }));
       setVersaoConvites((v) => v + 1);
     } catch (err) {
       setActionError(err.message);
@@ -459,7 +459,7 @@ export default function Equipa() {
                 {/* Um toque no nome abre tudo o que o admin faz com aquele membro (o "⋯" saiu). */}
                 <p className="texto-apoio" style={{ marginTop: -4, marginBottom: 10 }}>Toque num nome para ver o que dá para fazer.</p>
                 <Suspense fallback={<LoadingFutty />}>
-                  <ElencoDoAdmin slug={slug} meId={meuId} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} versaoConvites={versaoConvites} />
+                  <ElencoDoAdmin slug={slug} nomeTime={team?.nome} meId={meuId} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} versaoConvites={versaoConvites} />
                 </Suspense>
               </>
             ) : (

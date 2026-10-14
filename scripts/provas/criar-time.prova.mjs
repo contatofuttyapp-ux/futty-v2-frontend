@@ -235,7 +235,7 @@ export async function rodar({ navegador, base, t }) {
     t('saíram "Chame o seu time", "Você pode pular este passo." e "Logo do time enviado"', !/Chame o seu time|Você pode pular este passo|Logo do time enviado/.test(t4));
     // 29Q: o link chega pronto — o campo já está preenchido, sem ninguém tocar em nada, e o botão de gerar não existe.
     await page.locator('input[readonly]').waitFor({ timeout: 5000 });
-    t('o link do convite chega PRONTO (o curto, /c/<código>), com "Copiar link" e "Compartilhar no WhatsApp"', /\/c\/ABC123$/.test(await page.locator('input[readonly]').inputValue()) && (await page.getByRole('button', { name: 'Copiar link' }).count()) === 1 && (await page.getByRole('button', { name: 'Compartilhar no WhatsApp' }).count()) === 1);
+    t('o link do convite chega PRONTO (o curto com o nome do time, /c/<nome>-<código>), com "Copiar link" e "Compartilhar no WhatsApp"', /\/c\/time-teste-ABC123$/.test(await page.locator('input[readonly]').inputValue()) && (await page.getByRole('button', { name: 'Copiar link' }).count()) === 1 && (await page.getByRole('button', { name: 'Compartilhar no WhatsApp' }).count()) === 1);
     t('o botão "Gerar link do convite" SUMIU (a geração deu certo)', (await page.getByRole('button', { name: 'Gerar link do convite' }).count()) === 0 && !/Preparando o link do convite/.test(await texto(page)));
     t('o convite foi pedido UMA vez só, sem ninguém tocar em nada', pedidosConvite.length === 1, String(pedidosConvite.length));
     t('ficam o link do convite e o "Ir para o time"', (await page.getByRole('button', { name: 'Ir para o time' }).count()) === 1);
@@ -276,7 +276,7 @@ export async function rodar({ navegador, base, t }) {
     t('a geração sozinha falhou: o botão "Gerar link do convite" volta como reserva, com o aviso de erro, e nenhum link', (await botao.count()) === 1 && /Não deu para gerar o link agora\./.test(await texto(page)) && (await page.locator('input[readonly]').count()) === 0);
     await botao.click();
     await page.locator('input[readonly]').waitFor({ timeout: 5000 });
-    t('o botão de reserva gera o link (o 2º pedido) e some', /\/c\/ABC123$/.test(await page.locator('input[readonly]').inputValue()) && (await page.getByRole('button', { name: 'Gerar link do convite' }).count()) === 0 && pedidosConvite.length === 2, String(pedidosConvite.length));
+    t('o botão de reserva gera o link (o 2º pedido) e some', /\/c\/time-teste-ABC123$/.test(await page.locator('input[readonly]').inputValue()) && (await page.getByRole('button', { name: 'Gerar link do convite' }).count()) === 0 && pedidosConvite.length === 2, String(pedidosConvite.length));
     await page.context().close();
   }
 

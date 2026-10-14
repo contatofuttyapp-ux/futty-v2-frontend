@@ -19,6 +19,7 @@ import ErrorPage from './components/ErrorPage';
 import PageTransition from './components/PageTransition';
 import { lazyComRetry } from './utils/lazyComRetry';
 import { caminhoNovoDeEquipa } from './lib/rotasAntigas';
+import { codigoDoLinkCurto } from './utils/linkCurtoDoConvite';
 import {
   importarInicio,
   importarFeed,
@@ -67,6 +68,7 @@ const Termos = lazyComRetry(() => import('./pages/Termos'));
 const Privacidade = lazyComRetry(() => import('./pages/Privacidade'));
 const ExcluirConta = lazyComRetry(() => import('./pages/ExcluirConta'));
 const Diagnostico = lazyComRetry(() => import('./pages/Diagnostico'));
+const Download = lazyComRetry(() => import('./pages/Download'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
 // O `loading` é o do AuthProvider e só é verdade quando NÃO há sessão guardada no aparelho: com sessão,
@@ -103,6 +105,13 @@ function EquipaRoute() {
 function ConviteRoute() {
   const { token } = useParams();
   return <Convite key={token} />;
+}
+
+// O link curto pode levar o nome do time na frente (/c/domingueira-fc-epbgx5b3): o nome é enfeite e vale o código do fim
+// (utils/linkCurtoDoConvite.js). /c/<código> sozinho é o mesmo caminho.
+function ConviteCurtoRoute() {
+  const codigo = codigoDoLinkCurto(useParams().token);
+  return <Convite key={codigo} token={codigo} />;
 }
 
 // Remonta a página do jogo quando o id muda
@@ -172,8 +181,12 @@ function AnimatedRoutes() {
           {/* A página do Avise-me saiu (a inicial já é a de verdade); os links antigos das redes caem na inicial. */}
           <Route path="/avise-me" element={<Navigate to="/" replace />} />
           <Route path="/convite/:token" element={<ConviteRoute />} />
-          {/* O link curto do convite, futtyapp.com.br/c/<código> — a mesma tela. */}
-          <Route path="/c/:token" element={<ConviteRoute />} />
+          {/* O link curto do convite, futtyapp.com.br/c/<nome-do-time>-<código> (ou /c/<código>) — a mesma tela. */}
+          <Route path="/c/:token" element={<ConviteCurtoRoute />} />
+          {/* O link único de download: no celular vai à loja do aparelho; no computador, a página com as duas lojas. */}
+          <Route path="/download" element={<Download />} />
+          <Route path="/baixar" element={<Navigate to="/download" replace />} />
+          <Route path="/app" element={<Navigate to="/download" replace />} />
           {/* Vista pública do sorteio (sem login) */}
           <Route path="/p/campeonato/:slug/:id" element={<CampeonatoPublico />} />
           <Route path="/p/:slug/:gameId" element={<SorteioPublico />} />

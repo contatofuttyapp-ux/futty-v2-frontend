@@ -134,11 +134,12 @@ test('29Q · passo 4 do Criar time: o link do convite é gerado sozinho, uma vez
   const criar = semComentarios(ler('src/pages/CriarEquipa.jsx'));
   // Uma chamada só ao motor, usada pela geração sozinha e pelo botão de reserva.
   assert.equal(criar.split('/convite`').length - 1, 1, 'a chamada de /convite existe uma vez só');
-  assert.match(criar, /async function pedirConvite\(slug\) \{\s*const \{ token, codigo \} = await apiFetch\(`\/api\/teams\/\$\{slug\}\/convite`, \{ method: 'POST' \}\);/);
+  // 31N: o nome do time vai junto (o link curto leva o nome do time na frente do código).
+  assert.match(criar, /async function pedirConvite\(slug, nomeTime\) \{\s*const \{ token, codigo \} = await apiFetch\(`\/api\/teams\/\$\{slug\}\/convite`, \{ method: 'POST' \}\);/);
   // Gerada na criação do time (não num efeito que roda de novo): logo depois de o time existir, sem esperar a resposta.
-  assert.match(criar, /setTeam\(t\);\s*pedirConvite\(t\.slug\)\.catch\(\(e\) => \{\s*setConviteFalhou\(true\);\s*setToast\(\{ tipo: 'error', mensagem: e\.message \}\);\s*\}\);/);
+  assert.match(criar, /setTeam\(t\);\s*pedirConvite\(t\.slug, t\.nome\)\.catch\(\(e\) => \{\s*setConviteFalhou\(true\);\s*setToast\(\{ tipo: 'error', mensagem: e\.message \}\);\s*\}\);/);
   assert.equal(criar.split('pedirConvite(').length - 1, 3, 'definida uma vez e chamada duas (a automática e a do botão de reserva)');
-  assert.match(criar, /await pedirConvite\(team\.slug\);/, 'o botão de reserva usa a MESMA chamada');
+  assert.match(criar, /await pedirConvite\(team\.slug, team\.nome\);/, 'o botão de reserva usa a MESMA chamada');
   // O botão "Gerar link do convite" só existe no ramo da falha; com o link pronto some, e enquanto espera há uma linha de status.
   const passo4 = criar.slice(criar.indexOf('{passo === 4 && team && ('), criar.indexOf('</main>'));
   assert.match(passo4, /\{inviteLink \? \(/);

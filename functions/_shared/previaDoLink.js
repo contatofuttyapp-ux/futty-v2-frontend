@@ -56,6 +56,18 @@ export function segundoSegmento(pathname) {
   return partes[1] || null;
 }
 
+/**
+ * O que /c/<…> e /convite/<token> pedem ao motor. O link curto pode levar o nome do time na frente (/c/domingueira-fc-epbgx5b3): vale o
+ * último pedaço depois do último hífen, se tem a cara de código — a MESMA leitura de src/utils/linkCurtoDoConvite.js#codigoDoLinkCurto
+ * (as funções não importam de src/; o teste de unidade confere que as duas concordam). O longo, /convite/<uuid>, vai como veio.
+ */
+export function parametroDoConvite(pathname) {
+  const segmento = segundoSegmento(pathname);
+  if (!segmento || !String(pathname).startsWith('/c/')) return segmento;
+  const ultimo = segmento.slice(segmento.lastIndexOf('-') + 1);
+  return /^[a-z0-9]{6,8}$/i.test(ultimo) ? ultimo.toLowerCase() : segmento;
+}
+
 export function previaDoSorteio(dados) {
   const nome = dados?.equipa?.nome;
   if (!nome) return null;
@@ -133,11 +145,11 @@ export async function manipularS({ request, env, next }) {
   return aplicarPrevia(resposta, previaDoSorteio(dados));
 }
 
-/** /c/<token> e /convite/<token> — o mesmo convite, dois formatos de link (teams.js aceita os dois). */
+/** /c/<nome>-<código>, /c/<código> e /convite/<token> — o mesmo convite, formatos de link diferentes (teams.js aceita todos). */
 export async function manipularConvite({ request, env, next }) {
   if (!ehRastreador(request.headers.get('User-Agent'))) return next();
   const url = new URL(request.url);
-  const token = segundoSegmento(url.pathname);
+  const token = parametroDoConvite(url.pathname);
   if (!token) return next();
   const dados = await motorJson(env.API_ORIGIN, `/api/convite/${encodeURIComponent(token)}`);
   const resposta = await next();

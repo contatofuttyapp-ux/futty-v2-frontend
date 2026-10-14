@@ -25,6 +25,7 @@ const TITULOS = [
   ['/privacidade', 'Privacidade'],
   ['/convite/:token', 'Convite'],
   ['/c/:token', 'Convite'],
+  ['/download', 'Baixar o Futty'],
   ['/p/campeonato/:slug/:id', 'Campeonato'],
   ['/p/:slug/:gameId', 'Sorteio'],
   ['/time/:slug/jogos', 'Jogos'],

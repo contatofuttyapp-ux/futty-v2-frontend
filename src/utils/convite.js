@@ -1,6 +1,7 @@
 // Futty v2.0 — o que a página do convite escreve. Puro (sem React, sem rede), para testar no Node.
 import { plural } from './plural';
 import { TZ_PADRAO } from './dataHora';
+import { caminhoCurtoDoConvite } from './linkCurtoDoConvite';
 
 const UM_DIA = 86400000;
 
@@ -45,12 +46,12 @@ export function fraseDoConvite({ convidadoPor, nomeTime }) {
 }
 
 /**
- * O link do convite que vai para o grupo: o curto, futtyapp.com.br/c/<código>, quando o motor deu um
- * código (migração 072); senão o longo, /convite/<uuid>, que continua valendo. `origem` é a do SITE
- * (ORIGEM_DO_SITE em lib/linkDoSite.js), nunca a de quem está olhando.
+ * O link do convite que vai para o grupo: o curto com o nome do time, futtyapp.com.br/c/<nome-do-time>-<código>
+ * (utils/linkCurtoDoConvite.js), quando o motor deu um código (migração 072); senão o longo, /convite/<uuid>, que continua
+ * valendo. `origem` é a do SITE (ORIGEM_DO_SITE em lib/linkDoSite.js), nunca a de quem está olhando.
  */
-export function linkDoConvite({ origem, token, codigo }) {
-  return codigo ? `${origem}/c/${codigo}` : `${origem}/convite/${token}`;
+export function linkDoConvite({ origem, token, codigo, nomeTime }) {
+  return codigo ? `${origem}${caminhoCurtoDoConvite({ nomeTime, codigo })}` : `${origem}/convite/${token}`;
 }
 
 /**

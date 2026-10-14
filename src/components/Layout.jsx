@@ -16,6 +16,7 @@ import AuroraBg from './AuroraBg';
 const ROTAS_SEM_ONBOARDING = [
   /^\/$/, /^\/login/, /^\/register/, /^\/forgot-password/,
   /^\/(convite|c)\//, /^\/p\//, /^\/termos/, /^\/privacidade/, /^\/excluir-conta/, /^\/onboarding/,
+  /^\/(download|baixar|app)\/?$/,
 ];
 
 // Gate do onboarding dia-1: se a conta ainda não o concluiu (flag no servidor),
@@ -55,6 +56,7 @@ const HIDE_NAV_PATTERNS = [
   /^\/criar-time/,
   /^\/time\/[^/]+\/jogo\//, // jogo/:id e jogo/novo
   /^\/time\/[^/]+\/jogador\//,
+  /^\/(download|baixar|app)\/?$/, // o link único de download (página pública)
 ];
 
 // Páginas que existem para quem ainda não tem conta (os Termos e a Privacidade abertos do cadastro ou do

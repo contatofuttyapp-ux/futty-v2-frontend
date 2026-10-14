@@ -4303,6 +4303,14 @@ A lista mestra de decisões continua em C:\Users\phfer\Desktop\FUT\LISTA-CURTA.m
   (migração 072); senão o longo, /convite/<uuid>, que continua valendo. `origem` é a do SITE (ORIGEM_DO_SITE em lib/linkDoSite.js),
   nunca a de quem está olhando (29I, achados 87 e 105).
 - (linha ~56, `export function textoDoConvite({ nomeTime, link }) {`) A frase do WhatsApp (dono, 2-out): "Bora jogar? Você foi chamado para o <time> no Futty. Entre pelo link: <link>".
+- (linha ~53, `export function linkDoConvite({ origem, token, codigo, nomeTime }) {`) Rodada 31N (14-out, pedido do dono): o link curto leva o nome do
+  time na frente do código — futtyapp.com.br/c/domingueira-fc-epbgx5b3 (src/utils/linkCurtoDoConvite.js: slug até 30 caracteres). Quem lê
+  é o código do fim: a tela (App.jsx#ConviteCurtoRoute, que passa o código ao Convite), a prévia do WhatsApp
+  (functions/_shared/previaDoLink.js#parametroDoConvite) e o motor (backend/utils/conviteCodigo.js#lerCodigo, para o app com o bundle
+  antigo). /c/<código> sozinho continua valendo. As três telas que geram o link (Equipa, CriarEquipa e o Admin) mandam o nome; no Admin a
+  linha do link passou a quebrar em vez de cortar com reticência (o código fica no fim). Na mesma rodada: /download (pages/Download.jsx),
+  o link único de baixar o app; /baixar e /app levam a ele; fora do AASA e do manifesto de propósito. Prova: provar:navegador -- rodada-31n
+  (com e sem o app, iPhone e Android; a prova monta o app com a ponte nativa de verdade do Capacitor); prints em FUT/PRINTS-31N.
 
 ## src/utils/dataHora.js
 

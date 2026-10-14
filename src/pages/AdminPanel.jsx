@@ -1029,7 +1029,7 @@ function TabMembros({ slug, meId, showToast }) {
 }
 
 // ─── TAB: CONVITES ───────────────────────────────────────────────────────────
-function TabConvites({ slug, showToast, semBotao = false }) {
+function TabConvites({ slug, nomeTime = null, showToast, semBotao = false }) {
   const [convites, setConvites] = useState(null);
   const [gerando, setGerando] = useState(false);
   const [novoLink, setNovoLink] = useState('');
@@ -1054,9 +1054,9 @@ function TabConvites({ slug, showToast, semBotao = false }) {
     };
   }, [slug, showToast]);
 
-  // O link curto (/c/<código>) quando o motor deu um código; senão o longo.
+  // O link curto com o nome do time (/c/<nome>-<código>) quando o motor deu um código; senão o longo.
   function linkDe(token, codigo) {
-    return linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo });
+    return linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo, nomeTime });
   }
 
   async function gerar() {
@@ -1125,7 +1125,8 @@ function TabConvites({ slug, showToast, semBotao = false }) {
             <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
               {c.usos > 0 ? `${c.usos} ${c.usos === 1 ? 'entrou' : 'entraram'} por este link` : 'ninguém entrou ainda'}
             </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {/* O link curto leva o nome do time na frente e o código no fim: quebra a linha em vez de cortar — o código é o que difere. */}
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', overflowWrap: 'anywhere' }}>
               {c.codigo ? linkDe(c.token, c.codigo).replace(/^https?:\/\//, '') : `${linkDe(c.token).slice(0, 20)}…`}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1947,7 +1948,7 @@ export function JogosDoAdmin({ slug, team, showToast, navigate, abrirPresencaDe 
 }
 
 /** Aba ELENCO do admin: 3 números do time no topo (o resto das estatísticas está no Ranking), os membros e os links de convite ativos. */
-export function ElencoDoAdmin({ slug, meId, showToast, versaoConvites = 0 }) {
+export function ElencoDoAdmin({ slug, nomeTime = null, meId, showToast, versaoConvites = 0 }) {
   const [stats, setStats] = useState(null);
   useEffect(() => {
     let ativo = true;
@@ -1967,7 +1968,7 @@ export function ElencoDoAdmin({ slug, meId, showToast, versaoConvites = 0 }) {
       </div>
       <TabMembros slug={slug} meId={meId} showToast={showToast} />
       <Secao titulo="Links de convite ativos">
-        <TabConvites key={versaoConvites} slug={slug} showToast={showToast} semBotao />
+        <TabConvites key={versaoConvites} slug={slug} nomeTime={nomeTime} showToast={showToast} semBotao />
       </Secao>
     </div>
   );
