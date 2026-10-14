@@ -6953,6 +6953,9 @@ async function cenaRodada29bConvite(navegador, sessao) {
     await pagina.locator('button', { hasText: /^Aceitar$/ }).click({ timeout: 3000 }).catch(() => {});
     await pagina.locator('[data-convite]').waitFor({ timeout: 30000 });
     await pagina.waitForFunction(() => !/Validando convite/.test(document.body.innerText), null, { timeout: 20000 });
+    // Com o user agent de iPhone e sem a ponte nativa, a página se vê no navegador do celular e abre em "Baixar o Futty" (31M); esta
+    // cena confere o fluxo do site, que fica a um toque. O "Baixar o Futty" é conferido na prova rodada-31m.
+    if (await pagina.locator('.convite__pelo-site').count()) await pagina.locator('.convite__pelo-site').click();
     await espera(900);
     return { contexto, pagina, escritas };
   };

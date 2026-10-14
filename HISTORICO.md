@@ -2311,6 +2311,12 @@ A lista mestra de decisões continua em C:\Users\phfer\Desktop\FUT\LISTA-CURTA.m
   `state` do roteador), mas o bilhete sobrevive. O Onboarding o lê e começa nas boas-vindas do time; ao final, aceita o convite.
   Para quem já tem conta pronta não há bilhete: "Entrar no time" resolve aqui mesmo.
 - (linha ~119, `` navigate(`/time/${team.slug}`, { replace: true, state: jaMembro ? undefined : {… ``) `primeiraEntrada`: a página do time abre as boas-vindas (Rodada 29B, C) — só para quem acabou de entrar.
+- (linha ~252, `) : lojaDoCelular && !peloSite ? (`) Rodada 31M (14-out, pedido do dono): o convite aberto no NAVEGADOR de um celular manda baixar o app —
+  "Baixar o Futty" (App Store no iPhone/iPad, Play Store no Android; src/utils/lojaDoApp.js), a linha "Depois de instalar, toque no link do
+  convite de novo: ele abre direto no app, já no time." e, menor, "Continuar pelo site", que devolve os botões de antes. Computador e app da
+  loja (ehNativo) sem mudança. Decisão do Claude Code (detalhe de tela): só o convite válido de quem ainda não é membro troca — já membro e
+  convite expirado/inválido ficam como eram (a frase "já no time" não vale para eles). Prova: provar:navegador -- rodada-31m; prints em
+  FUT/PRINTS-31M. scripts/ver-iphone.mjs (cena rodada29b-convite, UA de iPhone sem a ponte nativa) passou a tocar em "Continuar pelo site".
 
 ## src/pages/CriarEquipa.jsx
 

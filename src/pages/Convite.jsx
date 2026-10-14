@@ -4,6 +4,8 @@
 // O link é o longo (/convite/<uuid>) ou o curto (/c/<código>) — a mesma tela; quem chega sem conta (ou
 // com conta que ainda não terminou o onboarding) deixa o bilhete do convite no aparelho e segue para o cadastro / o onboarding,
 // que ABRE nas boas-vindas do time; time sem logo = só o nome em destaque, sem quadrado de iniciais.
+// No navegador de um celular (fora do app da loja) o primeiro botão é "Baixar o Futty", com a loja do aparelho: instalado o app, o
+// mesmo link do convite abre nele (lib/linkDoSite.js). "Continuar pelo site", menor, devolve os botões de sempre. Computador e app: como sempre.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MapPin, Users } from 'lucide-react';
@@ -15,6 +17,8 @@ import { urlImagem } from '../utils/avatar';
 import { fatosDoConvite, fraseDoConvite } from '../utils/convite';
 import { guardarConvitePendente, tomarConvitePendente } from '../lib/convitePendente';
 import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
+import { ehNativo } from '../lib/plataforma';
+import { lojaDoNavegador, linkDaLoja } from '../utils/lojaDoApp';
 import '../styles/app.css';
 import '../styles/convite.css';
 
@@ -69,6 +73,9 @@ export default function Convite() {
   // P1-2 — saída do beco: pedir entrada na equipa que o token identifica.
   const [pedindo, setPedindo] = useState(false);
   const [pedidoEnviado, setPedidoEnviado] = useState(false);
+  // Celular no navegador: de qual loja (null = computador, ou o próprio app). `peloSite`: a pessoa escolheu seguir no site.
+  const [lojaDoCelular] = useState(() => (ehNativo() ? null : lojaDoNavegador(globalThis.navigator)));
+  const [peloSite, setPeloSite] = useState(false);
 
   useEffect(() => {
     // Espera a sessão resolver para que o pedido vá autenticado (saber se já é membro)
@@ -241,6 +248,16 @@ export default function Convite() {
                   </Link>
                 </div>
               </>
+            ) : lojaDoCelular && !peloSite ? (
+              <div className="convite__acoes" data-baixar-app={lojaDoCelular}>
+                <a href={linkDaLoja(lojaDoCelular)} className="btn cta-gold convite__cta">
+                  Baixar o Futty
+                </a>
+                <p className="convite__depois">Depois de instalar, toque no link do convite de novo: ele abre direto no app, já no time.</p>
+                <button type="button" className="btn convite__pelo-site" onClick={() => setPeloSite(true)}>
+                  Continuar pelo site
+                </button>
+              </div>
             ) : (
               <div className="convite__acoes">
                 <button type="button" className="btn cta-gold convite__cta" onClick={aceitar} disabled={accepting}>
