@@ -270,9 +270,9 @@ test('o editor é UM só, com o modo "devolver" (sem copiar código): o Jogo e A
   assert.match(editor, /import \{[^}]*corpoDoResultadoDoJogo[^}]*corpoDosPremios[^}]*\} from '\.\.\/utils\/resultadoDoJogo';/, 'os dois corpos dos pedidos são de funções só');
   assert.match(editor, /apiFetch\(`\/api\/games\/\$\{gameId\}\/resultado`, \{ method: 'PATCH'/, 'o modo salvar grava o resultado do jogo');
   assert.match(editor, /apiFetch\(`\/api\/feed\/games\/\$\{gameId\}\/resultado`, \{ method: 'PATCH', body: JSON\.stringify\(corpoDosPremios\(estado\)\) \}\)/, 'e os prêmios no pedido do feed');
-  // Em `devolver` não há pedido (o jogo ainda nem existe), nem foto do campeão, nem rodada de cerveja.
+  // Em `devolver` não há pedido (o jogo ainda nem existe) nem foto do campeão. A rodada de cerveja saiu do app: em nenhum modo.
   assert.match(editor, /\{!devolver && d\.campeaoIdx !== null \? \(/, 'sem foto do campeão');
-  assert.match(editor, /\{!devolver \? \(\s*<Seccao titulo="Rodada de cerveja"/, 'sem rodada de cerveja');
+  assert.doesNotMatch(editor, /Rodada de cerveja|temRodada|rodadaId|rodadaFoto|celebrarCerveja/, 'sem rodada de cerveja');
   assert.match(editor, /titulo=\{ARTILHEIRO\.titulo\}/);
   assert.match(editor, /titulo=\{DESTAQUE\.titulo\}/);
   // O Jogo usa o editor sem `modo`: o de sempre.
@@ -292,12 +292,11 @@ test('o ResultadoModal vive em components/ e o AdminPanel o usa como sempre (o q
 });
 
 test('os corpos dos dois pedidos: o do jogo leva quem ganhou (o campeão), o placar só se foi digitado e os gols; o do feed, só os prêmios (o que se desliga vai como null)', () => {
-  const v = { ...RESULTADO_VAZIO, campeaoFoto: 'https://x/c.webp', temArt: true, artId: 'U2', artGols: '0', temDest: true, destId: 'U3', destTitulo: '  ', temRodada: false, rodadaId: 'U1' };
+  const v = { ...RESULTADO_VAZIO, campeaoFoto: 'https://x/c.webp', temArt: true, artId: 'U2', artGols: '0', temDest: true, destId: 'U3', destTitulo: '  ' };
   assert.deepEqual(corpoDosPremios(v), {
     campeao_foto_url: 'https://x/c.webp',
     artilheiro_user_id: 'U2', artilheiro_gols: 1, // gols < 1 sobe para 1
     destaque_user_id: 'U3', destaque_titulo: null, // só espaços: sem título
-    rodada_user_id: null,
   });
   // Em jogo novo, só o que existe.
   assert.deepEqual(corpoDosPremios(v, { soPreenchidos: true }), { campeao_foto_url: 'https://x/c.webp', artilheiro_user_id: 'U2', artilheiro_gols: 1, destaque_user_id: 'U3' });

@@ -86,7 +86,7 @@ export function jogadoresDoResultado(nomes, atrib, pool) {
  * Os dois corpos do resultado, a partir do que a pessoa preencheu no passo 4 (o estado do ResultadoEditor):
  *   · com 2, 3 ou 4 times: quem ganhou (campeão, ou empate com 2), o placar digitado e os gols de cada um vão num pedido só, o do jogo
  *     (PATCH /api/games/:id/resultado) — o motor deduz o resto, e placar e vencedor nunca se contradizem;
- *   · o artilheiro e o destaque vão no pedido do feed (PATCH /api/feed/games/:id/resultado); foto e rodada de cerveja ficam para Ajustes → Jogos;
+ *   · o artilheiro e o destaque vão no pedido do feed (PATCH /api/feed/games/:id/resultado); a foto do campeão fica para Ajustes → Jogos;
  *   · sem times: nenhum resultado, só os prêmios (artilheiro, destaque) se houver.
  * O campeão só vale se o time existe (a pessoa pode ter voltado e trocado 4 times por 3).
  * @returns {{ jogo: object|null, feed: object|null }} `null` = esse pedido nem sai
@@ -95,8 +95,8 @@ export function resultadoDoPassado({ nTimes, usaTimes, estado, jogadores }) {
   const jogo = usaTimes && nTimes >= 2 && temResultadoNoEstado(estado, { nTimes, jogadores })
     ? corpoDoResultadoDoJogo(estado, { nTimes, jogadores })
     : null;
-  // Foto do campeão e rodada de cerveja ficam de fora do passo a passo.
-  const corpoFeed = corpoDosPremios({ ...estado, campeaoFoto: null, temRodada: false, rodadaId: '', rodadaFoto: null }, { soPreenchidos: true });
+  // A foto do campeão fica de fora do passo a passo.
+  const corpoFeed = corpoDosPremios({ ...estado, campeaoFoto: null }, { soPreenchidos: true });
   return { jogo, feed: temPremio(corpoFeed) ? corpoFeed : null };
 }
 

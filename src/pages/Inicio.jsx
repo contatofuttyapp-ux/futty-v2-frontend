@@ -15,6 +15,7 @@ import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useIndicadorDeRolagem } from '../hooks/useIndicadorDeRolagem';
 import { celebrarTop3 } from '../hooks/useConfetti';
+import { deveCelebrarCampeonato, guardarCampeonatoCelebrado } from '../utils/campeonatoCelebrado';
 import { nomeCampeao } from '../utils/campeonato';
 import CardCampeonatoInicio from '../components/CardCampeonatoInicio';
 import { SEM_NOTA_AINDA, STATUS_LABELS, formatDateTime, formatRating } from '../utils/format';
@@ -527,7 +528,6 @@ export default function Inicio() {
   const [ausenciaBusy, setAusenciaBusy] = useState(false);
   const [confirmarAusencia, setConfirmarAusencia] = useState(false); // pergunta "Avisar o time…?" aberta
   const [toast, setToast] = useState(null); // { msg, tipo }
-  const celebrouCamp = useRef(false);
 
   // Pedido ÚNICO de data de nascimento: sem ela, o /p/ cai em silhueta e o anúncio 18+ nunca aparece (a
   // idade manda; o app é 18+). Banner não-bloqueante e dispensável.
@@ -993,13 +993,14 @@ export default function Inicio() {
   const campeonatoNovo = dadosInicio?.campeonato_novo || null;
   const campSlugDoNovo = campeonatoNovo?.team_slug || campSlug;
 
-  // Confetti uma vez quando o campeonato está terminado.
+  // Confete do campeonato terminado: uma vez por campeonato por pessoa. O id já celebrado fica no aparelho
+  // (utils/campeonatoCelebrado.js), então voltar ao Início não repete a festa. O campeonato novo não tem celebração aqui.
+  const userIdDoConfete = user?.id || null;
   useEffect(() => {
-    if (campeonato?.estado === 'terminado' && !celebrouCamp.current) {
-      celebrouCamp.current = true;
-      celebrarTop3(1);
-    }
-  }, [campeonato]);
+    if (!deveCelebrarCampeonato(campeonato, userIdDoConfete)) return;
+    guardarCampeonatoCelebrado(userIdDoConfete, campeonato.id);
+    celebrarTop3(1);
+  }, [campeonato, userIdDoConfete]);
 
   // Anúncio nativo: a seguir ao 2º jogo; se houver ≤1 jogo, no fim.
   const items = [];

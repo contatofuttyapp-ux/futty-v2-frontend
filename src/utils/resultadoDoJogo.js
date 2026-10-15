@@ -80,7 +80,7 @@ export function fraseDoResultado(game, nomes) {
   return (nomes?.length || 0) >= 3 ? `${nome(r.idx)} campeão` : `${nome(r.idx)} venceu`;
 }
 
-/** Tudo o que o editor guarda enquanto a pessoa preenche: quem ganhou, o placar digitado, os gols de cada um e os prêmios (artilheiro, destaque, rodada de cerveja, foto). */
+/** Tudo o que o editor guarda enquanto a pessoa preenche: quem ganhou, o placar digitado, os gols de cada um e os prêmios (artilheiro, destaque, foto). */
 export const RESULTADO_VAZIO = {
   campeaoIdx: null, empate: false,
   placarA: null, placarB: null, // o que a pessoa DIGITOU (texto); null = não digitou
@@ -88,7 +88,6 @@ export const RESULTADO_VAZIO = {
   campeaoFoto: null,
   temArt: false, artId: '', artGols: 1,
   temDest: false, destId: '', destTitulo: '',
-  temRodada: false, rodadaId: '', rodadaFoto: null,
 };
 
 /** O estado inicial do editor a partir de um jogo já salvo (e da lista de gols dele): corrigir parte do que está gravado. */
@@ -110,7 +109,6 @@ export function estadoDoJogo(game, gols) {
     campeaoFoto: g.campeao_foto_url || null,
     temArt: !!g.artilheiro_user_id, artId: g.artilheiro_user_id || '', artGols: g.artilheiro_gols || 1,
     temDest: !!g.destaque_user_id, destId: g.destaque_user_id || '', destTitulo: g.destaque_titulo || '',
-    temRodada: !!g.rodada_user_id, rodadaId: g.rodada_user_id || '', rodadaFoto: g.rodada_foto_url || null,
   };
 }
 
@@ -168,9 +166,10 @@ export function corpoDoResultadoDoJogo(estado, jogo) {
 }
 
 /**
- * O corpo do PATCH /api/feed/games/:id/resultado: só o que a Resenha mostra além de quem ganhou — artilheiro, destaque, rodada de cerveja e a foto do
- * campeão. Sem `soPreenchidos` (editar um jogo salvo), o que a pessoa desligou vai como `null` — é assim que um prêmio se apaga. Com `soPreenchidos`
- * (jogo novo, nada para apagar), só vai o que existe.
+ * O corpo do PATCH /api/feed/games/:id/resultado: só o que a Resenha mostra além de quem ganhou — artilheiro, destaque e a foto do campeão. Sem
+ * `soPreenchidos` (editar um jogo salvo), o que a pessoa desligou vai como `null` — é assim que um prêmio se apaga. Com `soPreenchidos` (jogo novo,
+ * nada para apagar), só vai o que existe. Quem pagou a rodada saiu do app: o corpo nunca leva `rodada_*` (o motor só mexe no que vem no pedido, então
+ * a rodada gravada num jogo antigo fica no banco, sem aparecer em lugar nenhum).
  */
 export function corpoDosPremios(v, { soPreenchidos = false } = {}) {
   const patch = {};
@@ -179,15 +178,13 @@ export function corpoDosPremios(v, { soPreenchidos = false } = {}) {
   patch.artilheiro_gols = v.temArt && v.artId ? Math.max(1, Number(v.artGols) || 1) : null;
   patch.destaque_user_id = v.temDest && v.destId ? v.destId : null;
   patch.destaque_titulo = v.temDest && v.destId ? (v.destTitulo || '').trim() || null : null;
-  patch.rodada_user_id = v.temRodada && v.rodadaId ? v.rodadaId : null;
-  if (v.temRodada && v.rodadaId && v.rodadaFoto) patch.rodada_foto_url = v.rodadaFoto;
   if (!soPreenchidos) return patch;
   return Object.fromEntries(Object.entries(patch).filter(([, valor]) => valor !== null));
 }
 
-/** Há foto do campeão, artilheiro, destaque ou rodada para mandar ao PATCH do feed? (Sem isso o pedido nem sai.) */
+/** Há foto do campeão, artilheiro ou destaque para mandar ao PATCH do feed? (Sem isso o pedido nem sai.) */
 export function temPremio(corpo) {
-  return !!corpo.campeao_foto_url || !!corpo.artilheiro_user_id || !!corpo.destaque_user_id || !!corpo.rodada_user_id;
+  return !!corpo.campeao_foto_url || !!corpo.artilheiro_user_id || !!corpo.destaque_user_id;
 }
 
 /** O nome do time dentro de uma frase de placar: "Ouro", não "Time Ouro". */

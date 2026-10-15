@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  RESULTADO_VAZIO, desfechoDoEstado, estadoDoJogo, fraseDoResultado, jogadoresDosTimes, jogoTemResultado, nomesDosTimes, placarFoiDigitado, resultadoGravado,
+  RESULTADO_VAZIO, corpoDosPremios, desfechoDoEstado, estadoDoJogo, fraseDoResultado, jogadoresDosTimes, jogoTemResultado, nomesDosTimes, placarFoiDigitado, resultadoGravado,
   temResultadoNoEstado,
 } from '../../src/utils/resultadoDoJogo.js';
 import { flagsDoTime } from '../../src/components/golsEPremios.js';
@@ -55,13 +55,16 @@ test('fraseDoResultado: o placar quando houve; "Empate"; "venceu" com 2 times e 
 });
 
 test('estadoDoJogo: parte do que está gravado — o campeão, o empate, os gols (o placar da soma não é "digitado") e os prêmios', () => {
-  const g = { campeao_time_index: 1, time_vencedor: 'B', placar_a: 1, placar_b: 2, campeao_foto_url: 'https://x/c.webp', artilheiro_user_id: 'b', artilheiro_gols: 2, destaque_user_id: 'a', destaque_titulo: 'Paredão', rodada_user_id: null };
+  const g = { campeao_time_index: 1, time_vencedor: 'B', placar_a: 1, placar_b: 2, campeao_foto_url: 'https://x/c.webp', artilheiro_user_id: 'b', artilheiro_gols: 2, destaque_user_id: 'a', destaque_titulo: 'Paredão', rodada_user_id: 'c', rodada_foto_url: 'https://x/r.webp' };
   const comGols = estadoDoJogo(g, [{ user_id: 'a', nome: 'Magrão', gols: 1 }, { user_id: 'b', nome: 'Zé', gols: 2 }]);
   assert.equal(comGols.campeaoIdx, 1);
   assert.equal(comGols.empate, false);
   assert.deepEqual([comGols.placarA, comGols.placarB], [null, null], 'com gols, o placar é a soma: nada digitado');
   assert.deepEqual(comGols.golsMap, { 'u:a': 1, 'u:b': 2 });
-  assert.deepEqual([comGols.temArt, comGols.artId, comGols.artGols, comGols.temDest, comGols.destId, comGols.destTitulo, comGols.temRodada], [true, 'b', 2, true, 'a', 'Paredão', false]);
+  assert.deepEqual([comGols.temArt, comGols.artId, comGols.artGols, comGols.temDest, comGols.destId, comGols.destTitulo], [true, 'b', 2, true, 'a', 'Paredão']);
+  // A rodada de cerveja saiu do app: a gravada num jogo antigo não entra no editor nem volta no pedido.
+  assert.ok(!('temRodada' in comGols) && !('rodadaId' in comGols) && !('rodadaFoto' in comGols));
+  assert.ok(!Object.keys(corpoDosPremios(comGols)).some((k) => k.startsWith('rodada_')));
   assert.equal(comGols.campeaoFoto, 'https://x/c.webp');
   // Sem gols, o placar gravado foi digitado.
   const semGols = estadoDoJogo({ campeao_time_index: 0, placar_a: 2, placar_b: 1 }, []);

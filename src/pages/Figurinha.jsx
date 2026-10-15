@@ -21,7 +21,6 @@ import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
 import { nomeJogador, urlAsset, urlImagem } from '../utils/avatar';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
-import { getFrameColor } from '../utils/frameColors';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { estadoBrilhantes, pedidoDoProduto } from '../lib/brilhantes';
@@ -35,7 +34,6 @@ import {
 import BarraPintura from '../components/BarraPintura';
 import { ehNativo } from '../lib/plataforma';
 import { salvarOuCompartilhar } from '../utils/salvarImagem';
-import { celebrarPartilha, celebrarCromoPronto } from '../hooks/useConfetti';
 import AdCard from '../components/AdCard';
 import Topbar from '../components/Topbar';
 import BotaoLoja from '../components/BotaoLoja';
@@ -317,7 +315,6 @@ export default function Figurinha() {
   const jogador = me?.user || {};
   const stats = me?.stats || {};
   // GRUPO B 6a — `equipa` existia só para alimentar o PlayerCard, que saiu daqui.
-  const frameHex = getFrameColor(corFrame).stroke;
   // Regra única: a foto CRUA nunca entra no card. Só entra o avatar quando é
   // um avatar IA confirmado (foto_url e avatar_url existem e são diferentes —
   // logo após o upload o backend grava a foto crua em ambos, então é igual).
@@ -654,11 +651,6 @@ export default function Figurinha() {
     if (!fotoLocal) return undefined;
     return () => URL.revokeObjectURL(fotoLocal);
   }, [fotoLocal]);
-
-  // Confetti ao chegar ao momento épico (estado C da estreia).
-  useEffect(() => {
-    if (estreiaFase === 'pronto') celebrarCromoPronto();
-  }, [estreiaFase]);
 
   // Uma geração do cromo só é jogada fora se já houver cromo NA TELA. Descartar a cada mudança a
   // meio — os selos a chegarem do cache ou da rede — jogava fora o desenho quase pronto e o card
@@ -1050,7 +1042,6 @@ export default function Figurinha() {
   // Partilha do cromo no momento da estreia (imagem do card + texto viral). No app vai direto à folha de
   // compartilhar do sistema: o navigator.share do WebView não é garantido, e o <a download> é ignorado.
   async function partilharCromo() {
-    celebrarPartilha(frameHex);
     try {
       const blob = await gerarFigurinhaCanvas(opts);
       const nome = ficheiroNome(nomeJogador(jogador));

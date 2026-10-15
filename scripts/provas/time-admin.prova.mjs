@@ -109,7 +109,7 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('.modal-card').waitFor({ timeout: 8000 });
     await page.locator('.modal-card [data-vencedor="B"]').waitFor({ timeout: 8000 });
     const modal = (await page.locator('.modal-card').innerText()).toLowerCase();
-    t('"Lançar resultado" abre o editor completo: Quem ganhou? (com os times do jogo), Artilheiro do dia, Destaque do dia e Rodada de cerveja', /^resultado:/.test(modal) && modal.includes('quem ganhou?') && modal.includes('time ouro') && modal.includes('time roxo') && modal.includes('artilheiro do dia') && modal.includes('destaque do dia') && modal.includes('rodada de cerveja'), modal.slice(0, 160).replace(/\s+/g, ' '));
+    t('"Lançar resultado" abre o editor completo: Quem ganhou? (com os times do jogo), Artilheiro do dia e Destaque do dia — sem Rodada de cerveja', /^resultado:/.test(modal) && modal.includes('quem ganhou?') && modal.includes('time ouro') && modal.includes('time roxo') && modal.includes('artilheiro do dia') && modal.includes('destaque do dia') && !modal.includes('cerveja'), modal.slice(0, 160).replace(/\s+/g, ' '));
     const salvar = page.locator('.modal-card').getByRole('button', { name: 'Salvar resultado' });
     t('...com "Salvar resultado" sempre ativo (o campeão não é mais obrigatório: dá para lançar só os prêmios)', await salvar.isEnabled());
     await page.locator('.modal-card [data-vencedor="B"]').click();
@@ -120,7 +120,7 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('.modal-card').waitFor({ state: 'detached', timeout: 8000 });
     const resultado = patches.find((x) => x.url === '/api/games/g-passado/resultado');
     const feed = patches.find((x) => x.url === '/api/feed/games/g-passado/resultado');
-    t('Salvar resultado manda o PATCH do jogo com o campeão (Time Roxo = 1) e, depois, o do feed só com os prêmios (o que está desligado vai como null)', !!resultado && resultado.corpo.campeao_time_index === 1 && resultado.corpo.empate === false && !!feed && !('campeao_time_index' in feed.corpo) && feed.corpo.artilheiro_user_id === 'U2' && feed.corpo.artilheiro_gols === 1 && feed.corpo.destaque_user_id === null && feed.corpo.rodada_user_id === null && patches.indexOf(resultado) < patches.indexOf(feed), JSON.stringify(patches));
+    t('Salvar resultado manda o PATCH do jogo com o campeão (Time Roxo = 1) e, depois, o do feed só com os prêmios (o que está desligado vai como null; nada de rodada de cerveja)', !!resultado && resultado.corpo.campeao_time_index === 1 && resultado.corpo.empate === false && !!feed && !('campeao_time_index' in feed.corpo) && feed.corpo.artilheiro_user_id === 'U2' && feed.corpo.artilheiro_gols === 1 && feed.corpo.destaque_user_id === null && !Object.keys(feed.corpo).some((k) => k.startsWith('rodada_')) && patches.indexOf(resultado) < patches.indexOf(feed), JSON.stringify(patches));
 
     const historicoAntes = await page.evaluate(() => window.history.length);
     await page.locator('[data-aba="elenco"]').click();

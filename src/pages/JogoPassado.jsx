@@ -13,7 +13,7 @@
 // e "Tentar de novo" continua de onde parou, sem criar outro jogo (executarPlano guarda o progresso).
 // Avisos: presença e times não avisam ninguém. O primeiro pedido que dá resultado (ou prêmio) avisa o time
 // ("Resultado registrado!"), uma vez só, como quando o admin lança qualquer resultado.
-// Fotos e cerveja ficam de fora: dá para pôr depois, em Ajustes → Jogos.
+// A foto do campeão fica de fora: dá para pôr depois, em Ajustes → Jogos.
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin } from 'lucide-react';

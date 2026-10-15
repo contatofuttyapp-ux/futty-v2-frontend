@@ -159,9 +159,9 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('[data-resultado-editor="salvar"]').waitFor({ timeout: 20000 });
     await page.waitForTimeout(400);
     const mais = (nome) => page.locator('[data-gols-de-cada-um] + div').locator('div', { hasText: nome }).first().locator('button[aria-label="Mais"]');
-    t(`${largura}px · Jogo: a seção Resultado é o editor completo (Quem ganhou?, placar, gols, artilheiro e destaque do dia, foto, rodada de cerveja)`,
+    t(`${largura}px · Jogo: a seção Resultado é o editor completo (Quem ganhou?, placar, gols, artilheiro e destaque do dia, foto; sem rodada de cerveja)`,
       (await page.getByText('Resultado', { exact: true }).count()) >= 1 && /Quem ganhou\?/.test(await page.locator('[data-quem-ganhou]').innerText()) && (await page.locator('[data-placar]').count()) === 2
-      && (await page.locator('[data-gols-de-cada-um]').count()) === 1 && (await page.locator('[data-artilheiro]').count()) === 1 && (await page.locator('[data-destaque]').count()) === 1 && (await page.locator('[data-rodada]').count()) === 1);
+      && (await page.locator('[data-gols-de-cada-um]').count()) === 1 && (await page.locator('[data-artilheiro]').count()) === 1 && (await page.locator('[data-destaque]').count()) === 1 && (await page.locator('[data-rodada]').count()) === 0 && !/cerveja/i.test(await page.locator('[data-resultado-editor]').innerText()));
     t(`${largura}px · Jogo: nenhum resultado ainda — o card de cima não existe`, (await page.locator('[data-frase-do-resultado]').count()) === 0);
 
     // 1) só o vencedor tocado: o card de cima diz quem venceu

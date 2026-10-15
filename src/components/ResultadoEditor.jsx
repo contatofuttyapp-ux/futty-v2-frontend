@@ -9,12 +9,11 @@
 //
 // Dois modos. `salvar` (o de sempre): "Salvar resultado" grava em dois pedidos — o resultado (PATCH /api/games/:id/resultado) e os prêmios
 // (PATCH /api/feed/games/:id/resultado). `devolver` (o Jogo passado): o jogo ainda não existe, então nada é salvo aqui — a cada toque o editor
-// devolve o que foi preenchido (`aoMudar`) e quem usa grava tudo no fim; sem foto nem rodada de cerveja (ficam para Ajustes → Jogos).
+// devolve o que foi preenchido (`aoMudar`) e quem usa grava tudo no fim; sem a foto do campeão (fica para Ajustes → Jogos).
 import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { urlAsset, urlImagem, iniciaisNome } from '../utils/avatar';
 import { avatarQuadrado, enquadroAvatar } from '../lib/enquadroAvatar';
-import { celebrarCerveja } from '../hooks/useConfetti';
 import { GOLS, ARTILHEIRO, DESTAQUE } from './golsEPremios';
 import { corpoDoResultadoDoJogo, corpoDosPremios, desfechoDoEstado, estadoDoJogo, RESULTADO_VAZIO, resultadoAbreEm, resultadoJaAbriu, temGols } from '../utils/resultadoDoJogo';
 import { formatarHora } from '../utils/dataHora';
@@ -78,7 +77,7 @@ function SelectJogador({ value, onChange, confirmados }) {
  * @param {Array<{ user_id: string|null, nome: string, gols: number }>} [props.gols] só `salvar`: os gols já gravados
  * @param {Array<{ nome: string, jogadores?: Array<{ nome: string }> }>} props.times os times do jogo, com o nome que a tela usa ("Time Ouro")
  * @param {Array<{ user_id: string|null, nome: string, avatar_url?: string|null, time?: string, timeIndex?: number }>} props.jogadores quem entra na lista de gols (todos os times)
- * @param {Array<{ user_id: string, nome: string }>} [props.confirmados] quem pode ser artilheiro, destaque ou a rodada de cerveja (quem tem conta)
+ * @param {Array<{ user_id: string, nome: string }>} [props.confirmados] quem pode ser artilheiro ou destaque (quem tem conta)
  * @param {{ gols: boolean, artilheiro: boolean, destaque: boolean }} [props.flags] o que o time conta (mostrar_gols, mostrar_artilheiro, mostrar_destaque)
  * @param {object} [props.inicial] só `devolver`: de onde retomar (a pessoa voltou a este passo)
  * @param {{ campeaoIdx: number|null, empate: boolean }|null} [props.escolhaInicial] só `salvar`: o time (ou o empate) já escolhido na pergunta do Início
@@ -129,11 +128,10 @@ export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, go
     if (busy) return;
     setBusy(true);
     try {
-      // 1) o resultado (quem ganhou, placar, gols); 2) o que a Resenha mostra além disso (artilheiro, destaque, rodada, foto). O motor avisa
+      // 1) o resultado (quem ganhou, placar, gols); 2) o que a Resenha mostra além disso (artilheiro, destaque, foto). O motor avisa
       // o time uma vez só, no primeiro pedido que dá resultado.
       await apiFetch(`/api/games/${gameId}/resultado`, { method: 'PATCH', body: JSON.stringify(corpoDoResultadoDoJogo(estado, { nTimes, jogadores })) });
-      const res = await apiFetch(`/api/feed/games/${gameId}/resultado`, { method: 'PATCH', body: JSON.stringify(corpoDosPremios(estado)) });
-      if (res?.game?.rodada_user_id) celebrarCerveja();
+      await apiFetch(`/api/feed/games/${gameId}/resultado`, { method: 'PATCH', body: JSON.stringify(corpoDosPremios(estado)) });
       showToast?.('Resultado salvo.');
       onSaved?.();
     } catch (e) {
@@ -245,20 +243,13 @@ export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, go
         </Seccao>
       ) : null}
 
-      {/* FOTO DO CAMPEÃO e RODADA DE CERVEJA (com foto) — só ao salvar: no Jogo passado ficam para Ajustes → Jogos. */}
+      {/* FOTO DO CAMPEÃO — só ao salvar: no Jogo passado fica para Ajustes → Jogos. */}
       {!devolver && d.campeaoIdx !== null ? (
         <div style={{ display: 'grid', gap: 8, borderTop: '1px solid #222', paddingTop: 12, marginTop: 16 }} data-foto-do-campeao>
           <span style={secLbl}>Foto do campeão</span>
           <UploadComCrop onUpload={(url) => mudar({ campeaoFoto: url })} accept="image/*" aspect={4 / 3} label={estado.campeaoFoto ? '✓ Foto do campeão' : 'Foto do campeão'} />
         </div>
       ) : null}
-      {!devolver ? (
-        <Seccao titulo="Rodada de cerveja" ligado={estado.temRodada} onToggle={(v) => mudar({ temRodada: v })} data-rodada>
-          <SelectJogador value={estado.rodadaId} onChange={(v) => mudar({ rodadaId: v })} confirmados={confirmados} />
-          <UploadComCrop onUpload={(url) => mudar({ rodadaFoto: url })} accept="image/*" aspect={1} label={estado.rodadaFoto ? '✓ Foto da rodada' : 'Foto da rodada'} />
-        </Seccao>
-      ) : null}
-
       {!devolver ? (
         <button type="button" className="btn btn--purple" data-salvar-resultado style={{ width: '100%', marginTop: 18 }} disabled={busy} onClick={guardar}>
           {busy ? 'Salvando…' : 'Salvar resultado'}
