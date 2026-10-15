@@ -146,11 +146,13 @@ export async function rodar({ navegador, base, t }) {
     for (const largura of [390, 360]) {
       const rotulo = `${largura} px`;
 
-      // Antes: o Betão tem 2 jogos (não chega aos 3 do ranking), nenhum selo e nenhum card de campeão.
+      // Antes: o Betão já está no ranking (todo membro que joga entra desde a entrada no time), com os 2 jogos dele e sem nada do domingo;
+      // nenhum selo e nenhum card de campeão.
       const antesRanking = (await lerDoMotor(dados, 'adm', `/api/teams/${slug}/ranking`)).json?.ranking || [];
       const antesSelos = (await lerDoMotor(dados, 'novo', '/api/me/selos')).json?.selos || [];
       const antesInicio = (await lerDoMotor(dados, 'novo', '/api/inicio')).json?.campeonato_novo;
-      t(`${rotulo} · antes: o Betão não está no ranking (2 jogos), não tem selo e o Início não o chama de campeão`, !antesRanking.some((r) => r.user_id === novoId) && !antesSelos.some((x) => x.label === 'CAMPEÃO') && antesInicio?.voce_e_campeao === false, JSON.stringify({ antesRanking: antesRanking.length, antesSelos, voce: antesInicio?.voce_e_campeao }));
+      const antesDele = antesRanking.find((r) => r.user_id === novoId);
+      t(`${rotulo} · antes: o Betão está no ranking com 2 jogos e sem os gols nem a vitória do domingo, não tem selo e o Início não o chama de campeão`, antesDele?.presenca === 2 && antesDele?.gols === 0 && antesDele?.vitorias === 0 && !antesSelos.some((x) => x.label === 'CAMPEÃO') && antesInicio?.voce_e_campeao === false, JSON.stringify({ antesDele, antesSelos, voce: antesInicio?.voce_e_campeao }));
 
       // ── O botão: só o admin ──
       const adm = await abrirContexto(navegador, base, dados, 'adm', largura);
@@ -262,7 +264,8 @@ export async function rodar({ navegador, base, t }) {
       await inicioDele.waitForTimeout(2500);
       t(`${rotulo} · desfeito: o Início do Betão não diz mais "Você é campeão!"`, !/você é campeão!/i.test(await texto(inicioDele)));
       const rankingDepois = (await lerDoMotor(dados, 'adm', `/api/teams/${slug}/ranking`)).json?.ranking || [];
-      t(`${rotulo} · desfeito: o Betão sai do ranking (volta a 2 jogos)`, !rankingDepois.some((r) => r.user_id === novoId));
+      const linhaDesfeita = rankingDepois.find((r) => r.user_id === novoId);
+      t(`${rotulo} · desfeito: o Betão volta a 2 jogos no ranking, sem os gols nem a vitória do domingo`, linhaDesfeita?.presenca === 2 && linhaDesfeita?.gols === 0 && linhaDesfeita?.vitorias === 0, JSON.stringify(linhaDesfeita));
 
       for (const [quem, c] of [['admin', adm], ['Betão', dele]]) {
         t(`${rotulo} · sem erro de página (${quem}) e nada saiu da máquina (${c.estado.externos.length ? [...new Set(c.estado.externos.map((x) => x.split(' ')[1].split('/')[0]))].join(', ') : 'nada'})`, c.estado.erros.length === 0, c.estado.erros.slice(0, 3).join(' | '));

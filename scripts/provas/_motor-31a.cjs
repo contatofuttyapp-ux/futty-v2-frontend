@@ -86,8 +86,7 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
   // Quem entra DEPOIS do jogo: o Betão (que era o Beto) e o Zeca.
   for (const quem of ['novo', 'zeca']) await chamar(quem, 'POST', `/api/convite/${token}/aceitar`, {});
 
-  // O ranking só põe quem tem 3 jogos: dois jogos a mais (depois do domingo, já passados) com o Betão presente. Ele fica com 2 — e entra no ranking só
-  // quando a associação lhe dá o jogo do domingo.
+  // Dois jogos a mais (depois do domingo, já passados) com o Betão presente: ele fica com 2, e a associação lhe dá o 3º (o do domingo).
   for (let i = 0; i < 2; i += 1) {
     const extra = await chamar('adm', 'POST', '/api/games', { team_slug: T.slug, data: iso((72 + i) * HORA), jogadores_por_time: 3, local: 'Quadra do Guará' });
     const E = extra.json.game || extra.json;

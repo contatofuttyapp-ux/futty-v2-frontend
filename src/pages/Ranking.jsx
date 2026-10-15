@@ -70,16 +70,19 @@ function corDoLugar(pos) {
 // mais alta, avatar/nome/nota maiores em degradé 1>2>3, com borda + glow + medalha na
 // cor do lugar. As linhas normais (#4+) levam o shimmer. O top-3 FLUTUA (assinatura de
 // herói da casa, dosada abaixo do cromo — rankRowFloat no wrapper, delays desfasados).
+// Todo membro que joga está no ranking desde que entrou no time; quem ainda não jogou vem no fim, com "—" nos pontos e sem pódio
+// (num time com menos de 3 jogadores com jogo ele cairia no 3º lugar só por existir). Linha antiga sem `presenca` conta como quem jogou.
 function RankRow({ p, idx, slug, onVote }) {
   const pos = p.posicao;
-  const top = pos <= 3;
+  const jogou = p.presenca !== 0;
+  const top = pos <= 3 && jogou;
   const cor = top ? corDoLugar(pos) : null;
   const delay = pos === 1 ? 0 : pos === 2 ? 0.6 : 1.2;
   const jaVotou = p.minha_nota != null;
   const nomeShow = nomeExibicao(p);
-  const avSize = pos === 1 ? 60 : pos <= 3 ? 56 : 48;
-  const nomeFs = pos === 1 ? 17 : pos === 2 ? 15 : pos === 3 ? 14 : undefined;
-  const notaFs = pos === 1 ? 20 : pos === 2 ? 18 : pos === 3 ? 17 : 16;
+  const avSize = !top ? 48 : pos === 1 ? 60 : 56;
+  const nomeFs = !top ? undefined : pos === 1 ? 17 : pos === 2 ? 15 : 14;
+  const notaFs = !top ? 16 : pos === 1 ? 20 : pos === 2 ? 18 : 17;
   return (
     <div className={`rank-row-lift ${top ? 'rank-row-lift--podio' : ''}`} style={top ? { '--podio-cor': cor, '--podio-delay': `${delay}s` } : undefined}>
       <div className={`rank-row ${top ? 'rank-row--top rank-row--hero' : ''}`} style={{ position: 'relative', overflow: 'hidden', ...(top ? { border: `1px solid ${cor}` } : {}) }}>
@@ -111,7 +114,7 @@ function RankRow({ p, idx, slug, onVote }) {
           <div className="rank-votes" style={{ marginTop: 4, fontSize: 12 }}>
             {p.score != null ? (
               <span className="rank-votes__grupo" data-grupo-pontos>
-                <span data-pontos style={{ fontFamily: "'Rajdhani', sans-serif", color: '#d4a017', fontWeight: 700, fontSize: notaFs }}>{formatScore(p.score)}</span>
+                <span data-pontos style={{ fontFamily: "'Rajdhani', sans-serif", color: jogou ? '#d4a017' : 'var(--text-dim)', fontWeight: 700, fontSize: notaFs }}>{jogou ? formatScore(p.score) : '—'}</span>
                 <span className="muted">{' '}pontos</span>
               </span>
             ) : null}
@@ -120,7 +123,7 @@ function RankRow({ p, idx, slug, onVote }) {
               {p.nota != null ? (
                 <span data-nota style={{ fontFamily: "'Rajdhani', sans-serif", color: '#fff', fontWeight: 700 }}>{formatarNota(p.nota)}</span>
               ) : (
-                <span style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">--</span>
+                <span data-nota-vazia style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">—</span>
               )}
             </span>
             {jaVotou ? (
@@ -234,8 +237,8 @@ export default function Ranking() {
     if (celebrouTop3.current || !slug) return undefined;
     const eu = ranking.find((p) => p.sou_eu);
     if (!eu) return undefined;
-    if (eu.posicao > 3) {
-      esquecerPosicaoCelebrada(slug); // saiu do pódio: voltar a ele é uma chegada nova
+    if (eu.posicao > 3 || eu.presenca === 0) {
+      esquecerPosicaoCelebrada(slug); // fora do pódio (ou ainda sem jogo, que nunca é pódio): voltar a ele é uma chegada nova
       return undefined;
     }
     if (!deveCelebrar(lerPosicaoCelebrada(slug), eu.posicao)) return undefined;
