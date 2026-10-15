@@ -53,7 +53,8 @@ test('29Q · o Início põe os cartões DEPOIS do "Seus times" e ANTES dos chips
   assert.match(vazio, /<Link to="\/explorar" className="btn btn--purple hud-corners">\s*Radar de peladas/);
   const ramo = inicio.slice(inicio.indexOf(') : noTeams ? ('), atalhos);
   // (o `{}` é o comentário JSX que `semComentarios` esvaziou)
-  assert.match(ramo, /<EmptyState \/>\s*\) : \(\s*<>\s*(\{\}\s*)?$/, 'os cartões abrem o ramo de quem tem time (depois do EmptyState)');
+  // (o `</>` fecha o estado sem time, que desde a Rodada 31R leva também o cartão "Recebeu um convite?")
+  assert.match(ramo, /<EmptyState \/>\s*(<\/>\s*)?\) : \(\s*<>\s*(\{\}\s*)?$/, 'os cartões abrem o ramo de quem tem time (depois do EmptyState)');
 });
 
 test('29Q · a fila de chips é só o filtro dos jogos: Todas + os times; saíram o "＋ Criar time" e o "Radar de peladas"', () => {

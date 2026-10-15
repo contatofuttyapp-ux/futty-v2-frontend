@@ -10,6 +10,7 @@ import { usePerfil } from '../context/PerfilContext';
 import '../lib/alinharCard';
 import { useInicio } from '../context/InicioContext';
 import CardSeuTime from '../components/CardSeuTime';
+import CartaoConviteColado from '../components/CartaoConviteColado';
 import AtalhosDoInicio from '../components/AtalhosDoInicio';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -1430,7 +1431,12 @@ export default function Inicio() {
         {semDadosPorErro ? (
           <EstadoErroRede compacto mensagem="Não deu para carregar o Início agora. Tente de novo." onRepetir={() => inicio.reload()} />
         ) : noTeams ? (
-          <EmptyState />
+          <>
+            {/* Quem instalou o app pela loja depois de tocar num convite chega aqui sem o convite (ele ficou no navegador): o link
+                copiado na página do convite volta por este cartão. */}
+            <CartaoConviteColado />
+            <EmptyState />
+          </>
         ) : (
           <>
             {/* O Radar de peladas e o Criar time à vista, logo embaixo do "Seus times" (ou do avatar, quem não

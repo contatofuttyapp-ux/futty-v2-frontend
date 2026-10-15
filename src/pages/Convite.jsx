@@ -7,7 +7,7 @@
 // No navegador de um celular (fora do app da loja) o primeiro botão é "Baixar o Futty", com a loja do aparelho: instalado o app, o
 // mesmo link do convite abre nele (lib/linkDoSite.js). "Continuar pelo site", menor, devolve os botões de sempre. Computador e app: como sempre.
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MapPin, Users } from 'lucide-react';
 import { apiFetch, assetUrl } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -18,6 +18,7 @@ import { fatosDoConvite, fraseDoConvite } from '../utils/convite';
 import { guardarConvitePendente, tomarConvitePendente } from '../lib/convitePendente';
 import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
 import { ehNativo } from '../lib/plataforma';
+import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { lojaDoNavegador, linkDaLoja } from '../utils/lojaDoApp';
 import '../styles/app.css';
 import '../styles/convite.css';
@@ -78,6 +79,19 @@ export default function Convite({ token: tokenDoLink = null }) {
   // Celular no navegador: de qual loja (null = computador, ou o próprio app). `peloSite`: a pessoa escolheu seguir no site.
   const [lojaDoCelular] = useState(() => (ehNativo() ? null : lojaDoNavegador(globalThis.navigator)));
   const [peloSite, setPeloSite] = useState(false);
+  // O convite que esta página guarda fica no NAVEGADOR; o app instalado pela loja tem o seu próprio armazenamento e abre sem ele. Por isso
+  // "Baixar o Futty" deixa o link copiado (o mesmo link que a pessoa tocou, no endereço do site): no app, o Início tem onde colar
+  // (components/CartaoConviteColado.jsx). A cópia sai no próprio toque (a área de transferência só aceita escrita num gesto da pessoa) e
+  // não segura a ida à loja.
+  const { pathname } = useLocation();
+  const [podeCopiar] = useState(() => typeof navigator !== 'undefined' && typeof navigator.clipboard?.writeText === 'function');
+  const [linkCopiado, setLinkCopiado] = useState(false);
+  function copiarLinkDoConvite() {
+    if (!podeCopiar) return;
+    try {
+      navigator.clipboard.writeText(`${ORIGEM_DO_SITE}${pathname}`).then(() => setLinkCopiado(true), () => {});
+    } catch { /* sem cópia: a frase de antes ("toque no link de novo") continua valendo */ }
+  }
 
   useEffect(() => {
     // Espera a sessão resolver para que o pedido vá autenticado (saber se já é membro)
@@ -252,10 +266,16 @@ export default function Convite({ token: tokenDoLink = null }) {
               </>
             ) : lojaDoCelular && !peloSite ? (
               <div className="convite__acoes" data-baixar-app={lojaDoCelular}>
-                <a href={linkDaLoja(lojaDoCelular)} className="btn cta-gold convite__cta">
+                <a href={linkDaLoja(lojaDoCelular)} className="btn cta-gold convite__cta" onClick={copiarLinkDoConvite}>
                   Baixar o Futty
                 </a>
-                <p className="convite__depois">Depois de instalar, toque no link do convite de novo: ele abre direto no app, já no time.</p>
+                {linkCopiado ? (
+                  <p className="convite__depois" data-link-copiado role="status">Link do convite copiado. No app, é só colar no Início.</p>
+                ) : (
+                  <p className="convite__depois">
+                    {podeCopiar ? 'Ao baixar, o link do convite fica copiado. No app, é só colar no Início.' : 'Depois de instalar, toque no link do convite de novo: ele abre direto no app, já no time.'}
+                  </p>
+                )}
                 <button type="button" className="btn convite__pelo-site" onClick={() => setPeloSite(true)}>
                   Continuar pelo site
                 </button>

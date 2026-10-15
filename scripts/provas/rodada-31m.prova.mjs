@@ -2,7 +2,7 @@
 //   O app de verdade (index.html) num Chromium que se declara iPhone (Safari) ou Android (Chrome), com o GET /api/convite/:token
 //   respondido aqui (nenhum convite real é tocado; nada sai da máquina — as lojas respondem uma página de mentira). Confere:
 //   · iPhone (390 px) e Android (360 px), link longo e curto: o primeiro e maior botão é "Baixar o Futty" e leva à loja do aparelho,
-//     com a linha "Depois de instalar…", e "Continuar pelo site" vem abaixo, menor;
+//     com a linha "Ao baixar, o link do convite fica copiado…", e "Continuar pelo site" vem abaixo, menor;
 //   · "Continuar pelo site" devolve o fluxo de sempre ("Criar conta e entrar" → cadastro, "já tenho conta" → login);
 //   · computador e o app da loja (a ponte nativa de mentira que o Capacitor lê): nada muda;
 //   · já membro e convite expirado no celular: como sempre (a frase "abre direto no app, já no time" só vale para quem vai entrar).
@@ -31,7 +31,8 @@ const APARELHOS = {
   android: { userAgent: UA_ANDROID, viewport: { width: 360, height: 780 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
   computador: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
 };
-const FRASE = 'Depois de instalar, toque no link do convite de novo: ele abre direto no app, já no time.';
+// Rodada 31R: com a área de transferência (o caso do celular), a linha diz que o link fica copiado; sem ela, a frase de antes.
+const FRASE = 'Ao baixar, o link do convite fica copiado. No app, é só colar no Início.';
 
 /** A ponte nativa de mentira: o Capacitor lê a plataforma de webkit.messageHandlers.bridge (iPhone) — é o app da loja. */
 function appDaLoja() {
