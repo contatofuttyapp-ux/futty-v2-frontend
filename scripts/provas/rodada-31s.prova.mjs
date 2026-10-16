@@ -488,11 +488,21 @@ export async function rodar({ navegador, base, t }) {
       await telaDeEspera(app.page, email);
       await app.page.waitForFunction(() => window.__ouvintesNativos?.('resume') > 0, null, { timeout: 15000 }).catch(() => {});
       t('fora · a tela de espera do app escuta o "voltar ao app" do sistema', (await app.page.evaluate(() => window.__ouvintesNativos('resume'))) > 0);
-      // Voltou ao app ANTES de confirmar: continua esperando.
-      await app.page.evaluate(() => window.__eventoNativo('resume', {}));
-      await app.page.waitForTimeout(1500);
+      // Voltou ao app ANTES de confirmar, várias vezes, e ficou parado na espera mais de 20 s: continua esperando — e NENHUM e-mail novo
+      // (um e-mail a mais trocaria o link que a pessoa vai tocar por um mais novo).
+      const hashDoCadastro = caixa[email].hash;
+      for (let i = 0; i < 3; i += 1) {
+        await app.page.evaluate(() => window.__eventoNativo('resume', {}));
+        await app.page.waitForTimeout(700);
+      }
+      await app.page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('focus')); });
+      await app.page.waitForTimeout(21500); // um ciclo da checagem de 20 s
+      const checagens = pedidos.filter((p) => p.tipo === 'password' && p.email === email);
       t('fora · voltar ao app antes de confirmar: continua na espera (o Supabase diz "falta confirmar")',
-        (await app.page.locator('[data-espera-do-email]').count()) === 1 && pedidos.some((p) => p.tipo === 'password' && p.email === email && !p.ok));
+        (await app.page.locator('[data-espera-do-email]').count()) === 1 && checagens.length > 0 && checagens.every((p) => !p.ok));
+      t(`fora · a checagem automática (${checagens.length} vezes: 3 voltas ao app, foco e o ciclo de 20 s) não mandou e-mail nenhum: o link do cadastro continua o que vale`,
+        checagens.length >= 4 && caixa[email].envios === 1 && caixa[email].hash === hashDoCadastro && !pedidos.some((p) => p.tipo === 'resend' && p.email === email),
+        JSON.stringify({ checagens: checagens.length, envios: caixa[email].envios, reenvios: pedidos.filter((p) => p.tipo === 'resend' && p.email === email).length }));
 
       const pc = await abrir({ aparelho: 'pc', conta });
       await pc.page.close();
@@ -599,9 +609,11 @@ export async function rodar({ navegador, base, t }) {
       const aviso = await site.page.getByText('Falta confirmar seu e-mail. Mandamos outro link.').count();
       t('Entrar · conta sem confirmar → link novo e a tela de espera ("Falta confirmar seu e-mail. Mandamos outro link."), sem o inglês do Supabase',
         tela.apareceu && tela.doEmail && aviso === 1 && caixa[email].hash !== antigo && (await site.page.getByText('Email not confirmed').count()) === 0, tela.texto);
+      const enviosDoEntrar = caixa[email].envios;
       await site.page.locator('[data-ja-confirmei]').click();
       const nota = await site.page.locator('[data-nota-da-espera]').innerText({ timeout: 10000 }).catch(() => '');
       t('Entrar · "Já confirmei" antes de confirmar: "Ainda não vimos a confirmação…" e continua na espera', /^Ainda não vimos a confirmação/.test(nota) && (await site.page.locator('[data-espera-do-email]').count()) === 1, nota);
+      t('Entrar · o "Já confirmei" não manda e-mail (só o Entrar com a senha digitada e o "Reenviar e-mail" mandam)', caixa[email].envios === enviosDoEntrar, `envios: ${enviosDoEntrar} → ${caixa[email].envios}`);
       await foto(site.page, '10-ja-confirmei-antes');
       const celular = await abrir({ aparelho: 'android', conta });
       await celular.page.close();
