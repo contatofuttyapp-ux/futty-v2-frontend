@@ -33,7 +33,7 @@ import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } f
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import { motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
 import { montadoAMao, soOsCampeoes } from '../utils/seloDoSorteio';
-import { fraseDoFeito } from '../utils/associarJogador';
+import { fraseDoFeito, fraseDoFeitoEmTodos } from '../utils/associarJogador';
 import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
 
@@ -705,10 +705,10 @@ export default function Jogo() {
           gameId={id}
           convidado={associando}
           onClose={() => setAssociando(null)}
-          onFeito={async ({ convidadoNome, apelido }) => {
+          onFeito={async ({ convidadoNome, apelido, emTodos }) => {
             setAssociando(null);
             await reload();
-            setToast({ tipo: 'success', mensagem: fraseDoFeito(convidadoNome, apelido) });
+            setToast({ tipo: 'success', mensagem: emTodos ? fraseDoFeitoEmTodos(convidadoNome, apelido, emTodos) : fraseDoFeito(convidadoNome, apelido) });
           }}
         />
       ) : null}

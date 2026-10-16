@@ -20,6 +20,33 @@ export function fraseDoFeito(convidadoNome, apelido) {
   return `Pronto: o ${convidadoNome} deste jogo agora é ${apelido}.`;
 }
 
+// ─── "Associar em todos": o mesmo nome em outros jogos do time ───────────────────────────────────────────────────────────────────────────
+// Nomes iguais pela mesma régua do motor (nomeNorm: sem espaço sobrando, sem diferença de maiúscula).
+export const nomeNorm = (n) => String(n ?? '').trim().toLowerCase();
+
+/** Em quantos OUTROS jogos do time o convidado aparece (o motor conta e manda em `convidados[].outros_jogos`). */
+export function outrosJogosDoConvidado(dados, nome) {
+  const c = (dados?.convidados || []).find((x) => nomeNorm(x.nome) === nomeNorm(nome));
+  return Math.max(0, Number(c?.outros_jogos) || 0);
+}
+
+/** A pergunta, depois de escolher o membro. */
+export function perguntaEmTodos(n) {
+  return `Este nome aparece em mais ${n} ${n === 1 ? 'jogo' : 'jogos'} deste time. Associar em todos?`;
+}
+export const textoBotaoEmTodos = (n) => `Associar nos ${n + 1} jogos`;
+export const TEXTO_SO_NESTE = 'Só neste jogo';
+
+/** O aviso depois de associar em todos: quantos jogos ficaram com a conta e quantos ficaram de fora (e por quê). */
+export function fraseDoFeitoEmTodos(convidadoNome, apelido, emTodos) {
+  const total = 1 + (Number(emTodos?.associados) || 0);
+  const pulados = Array.isArray(emTodos?.pulados) ? emTodos.pulados : [];
+  let frase = `Pronto: o ${convidadoNome} agora é ${apelido} em ${total} ${total === 1 ? 'jogo' : 'jogos'}.`;
+  if (pulados.length === 1) frase += ` 1 jogo ficou de fora: ${pulados[0].motivo}`;
+  else if (pulados.length > 1) frase += ` ${pulados.length} jogos ficaram de fora (${apelido} já estava neles ou já tinha gols lá).`;
+  return frase;
+}
+
 // O Desfazer vale por um dia (a mesma conta do motor): o admin que errou o toque corrige; não é uma máquina do tempo.
 export const JANELA_DESFAZER_MS = 24 * 3600 * 1000;
 

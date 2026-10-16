@@ -7,8 +7,8 @@ import { apiFetch } from '../lib/api';
 import FuttyLoader from './FuttyLoader';
 import PlayerAvatar from './PlayerAvatar';
 import {
-  LIMITE_DA_LISTA_MS, MSG_LISTA_DEMOROU, MSG_LISTA_FALHOU, SEM_MEMBROS, TEXTO_DESFAZER, TITULO_ASSOCIAR, associacoesDesfaziveis, fraseDaAssociacao,
-  fraseDaConfirmacao, fraseDoDesfazer,
+  LIMITE_DA_LISTA_MS, MSG_LISTA_DEMOROU, MSG_LISTA_FALHOU, SEM_MEMBROS, TEXTO_DESFAZER, TEXTO_SO_NESTE, TITULO_ASSOCIAR, associacoesDesfaziveis,
+  fraseDaAssociacao, fraseDaConfirmacao, fraseDoDesfazer, outrosJogosDoConvidado, perguntaEmTodos, textoBotaoEmTodos,
 } from '../utils/associarJogador';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -46,13 +46,17 @@ export default function AssociarJogador({ gameId, convidado, onClose, onFeito })
     return () => { ativo = false; clearTimeout(demorou); };
   }, [gameId, tentativa]);
 
-  async function confirmar() {
+  // `emTodos`: o mesmo nome em cada outro jogo do time (o motor associa um por um, cada um com o seu Desfazer).
+  async function confirmar(emTodos = false) {
     if (!escolhido || salvando) return;
     setErro('');
-    setSalvando(true);
+    setSalvando(emTodos ? 'todos' : 'um');
     try {
-      await apiFetch(`/api/games/${gameId}/associar-jogador`, { method: 'POST', body: JSON.stringify({ convidado_nome: convidado.nome, user_id: escolhido.user_id }) });
-      onFeito({ convidadoNome: convidado.nome, apelido: escolhido.nome });
+      const r = await apiFetch(`/api/games/${gameId}/associar-jogador`, {
+        method: 'POST',
+        body: JSON.stringify({ convidado_nome: convidado.nome, user_id: escolhido.user_id, ...(emTodos ? { em_todos: true } : {}) }),
+      });
+      onFeito({ convidadoNome: convidado.nome, apelido: escolhido.nome, emTodos: emTodos ? r?.em_todos || { associados: 0, pulados: [] } : null });
     } catch (e) {
       setErro(e.message);
       setSalvando(false);
@@ -61,6 +65,7 @@ export default function AssociarJogador({ gameId, convidado, onClose, onFeito })
 
   const fechar = () => { if (!salvando) onClose(); };
   const membros = dados?.membros || [];
+  const outros = outrosJogosDoConvidado(dados, convidado.nome);
 
   return createPortal(
     <div className="modal-overlay" role="presentation" onClick={fechar}>
@@ -82,9 +87,19 @@ export default function AssociarJogador({ gameId, convidado, onClose, onFeito })
                 <strong style={{ fontFamily: RAJ, fontSize: 18, overflowWrap: 'anywhere' }}>{escolhido.nome}</strong>
               </div>
               <p data-frase-da-confirmacao style={{ margin: 0, fontSize: 14, lineHeight: 1.45, overflowWrap: 'anywhere' }}>{fraseDaConfirmacao(convidado.nome, escolhido.nome)}</p>
+              {outros > 0 ? (
+                <p data-pergunta-em-todos style={{ margin: 0, fontSize: 14, lineHeight: 1.45, fontWeight: 700, overflowWrap: 'anywhere' }}>{perguntaEmTodos(outros)}</p>
+              ) : null}
               <div style={{ display: 'grid', gap: 9 }}>
-                <button type="button" data-confirmar className="btn hud-corners cta-gold" disabled={salvando} onClick={confirmar}>{salvando ? 'Associando…' : 'Associar'}</button>
-                <button type="button" data-voltar className="btn btn--ghost btn--sm" disabled={salvando} onClick={() => { setEscolhido(null); setErro(''); }}>Voltar</button>
+                {outros > 0 ? (
+                  <>
+                    <button type="button" data-em-todos className="btn hud-corners cta-gold" disabled={!!salvando} onClick={() => confirmar(true)}>{salvando === 'todos' ? 'Associando…' : textoBotaoEmTodos(outros)}</button>
+                    <button type="button" data-so-neste className="btn btn--outline btn--sm" disabled={!!salvando} onClick={() => confirmar(false)}>{salvando === 'um' ? 'Associando…' : TEXTO_SO_NESTE}</button>
+                  </>
+                ) : (
+                  <button type="button" data-confirmar className="btn hud-corners cta-gold" disabled={!!salvando} onClick={() => confirmar(false)}>{salvando ? 'Associando…' : 'Associar'}</button>
+                )}
+                <button type="button" data-voltar className="btn btn--ghost btn--sm" disabled={!!salvando} onClick={() => { setEscolhido(null); setErro(''); }}>Voltar</button>
               </div>
             </div>
           ) : !dados && !erro ? (

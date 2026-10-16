@@ -13,7 +13,7 @@
 // crédito ou ativar um pacote, a rota é a aba "Brilhantes" (routes/gabinete.js),
 // que também resolve o pedido pendente da pessoa — duplicar a escrita aqui
 // deixaria duas portas para a mesma coisa desalinharem.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
 import { urlImagem } from '../../utils/avatar';
@@ -50,12 +50,49 @@ function fmtData(iso) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+// Data e hora de SISTEMA (quando a ação do Gabinete aconteceu): o relógio de quem olha, como fmtData.
+function fmtDataHora(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+const VERBO_DA_ACAO = { excluir_conta: 'Excluiu', suspender_conta: 'Suspendeu', reativar_conta: 'Reativou' };
+
+/** O log de ações do Gabinete (GET /api/super/acoes): quem suspendeu, reativou ou excluiu qual conta. `versao` muda a cada ação feita aqui. */
+function UltimasAcoes({ versao }) {
+  const { data, error, reload } = useApi('/api/super/acoes');
+  useEffect(() => { if (versao) reload(); }, [versao, reload]);
+  const acoes = data?.acoes || [];
+  return (
+    <div data-ultimas-acoes style={{ ...CARD, padding: 14, marginTop: 16 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Últimas ações</div>
+      {error ? <div style={{ fontSize: 13, color: 'var(--danger)' }}>{error}</div> : null}
+      {!error && !acoes.length ? <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhuma ação ainda.</div> : null}
+      <div style={{ display: 'grid', gap: 6 }}>
+        {acoes.map((a, i) => (
+          <div key={`${a.em}-${i}`} data-acao={a.acao} style={{ fontSize: 13, overflowWrap: 'anywhere' }}>
+            <span style={{ color: 'var(--text-dim)' }}>{fmtDataHora(a.em)}</span>{' · '}
+            <strong style={{ color: a.acao === 'excluir_conta' ? 'var(--danger)' : '#fff' }}>{VERBO_DA_ACAO[a.acao] || a.acao}</strong>{' '}
+            {a.alvo?.apelido || 'conta'}{a.alvo?.email ? <span style={{ color: 'var(--text-dim)' }}> ({a.alvo.email})</span> : null}
+            {a.por?.nome ? <span style={{ color: 'var(--text-dim)' }}> · por {a.por.nome}</span> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── SUB-ABA: UTILIZADORES ───────────────────────────────────────────────────
+// Suspender e Excluir são do dono (a rota é de super-admin). Excluir é a MESMA exclusão de "Excluir minha conta"
+// (o motor chama utils/apagarUsuario.js); o botão só aparece para quem pode sair — as contas protegidas mostram o motivo.
 function TabUsers({ showMsg }) {
   const [page, setPage] = useState(1);
   const { data, loading, error, reload } = useApi(`/api/super/users?page=${page}&limit=${PAGE_SIZE}`);
   const users = useMemo(() => ordenarPessoas(data?.users), [data]);
   const total = data?.total || 0;
+  const [versaoDoLog, setVersaoDoLog] = useState(0);
+  const [excluindo, setExcluindo] = useState(null); // id da conta saindo
 
   async function definirSuspensao(u, suspenso) {
     const verbo = suspenso ? 'suspender' : 'reativar';
@@ -64,8 +101,37 @@ function TabUsers({ showMsg }) {
       await apiFetch(`/api/super/users/${u.id}/suspender`, { method: 'PATCH', body: JSON.stringify({ suspenso }) });
       showMsg(suspenso ? 'Conta suspensa.' : 'Conta reativada.');
       reload();
+      setVersaoDoLog((v) => v + 1);
     } catch (err) {
       showMsg(err.message, true);
+    }
+  }
+
+  async function excluir(u) {
+    const quem = u.nome_jogador || u.nome || 'sem nome';
+    const resp = window.prompt(
+      `Excluir a conta de ${quem} (${u.email})?\n\n`
+      + 'É a mesma exclusão de "Excluir minha conta": os times dela passam para outro membro (ou somem, se ela era a única), '
+      + 'as fotos saem e a conta deixa de existir. Não tem volta.\n\nEscreva EXCLUIR para confirmar:',
+    );
+    if (resp !== 'EXCLUIR') {
+      if (resp !== null) showMsg('Confirmação incorreta: nada foi excluído.', true);
+      return;
+    }
+    setExcluindo(u.id);
+    try {
+      const r = await apiFetch(`/api/super/users/${u.id}`, { method: 'DELETE', body: JSON.stringify({ confirmar: 'EXCLUIR' }) });
+      const partes = [`Conta de ${r?.apelido || quem} excluída.`];
+      if (r?.times_passados_adiante?.length) partes.push(`${contar(r.times_passados_adiante.length, 'time passou', 'times passaram')} para outro membro.`);
+      if (r?.times_apagados?.length) partes.push(`${contar(r.times_apagados.length, 'time saiu', 'times saíram')} (era a única pessoa).`);
+      if (r && r.no_log === false) partes.push('O log de ações não gravou desta vez.');
+      showMsg(partes.join(' '));
+      reload();
+      setVersaoDoLog((v) => v + 1);
+    } catch (err) {
+      showMsg(err.message, true);
+    } finally {
+      setExcluindo(null);
     }
   }
 
@@ -88,8 +154,11 @@ function TabUsers({ showMsg }) {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id} style={u.suspenso ? { opacity: 0.6 } : undefined}>
-                <td style={td}>{u.nome || '-'}{u.is_super_admin ? ' (super)' : ''}</td>
+              <tr key={u.id} data-pessoa={u.id} style={u.suspenso ? { opacity: 0.6 } : undefined}>
+                <td style={td}>
+                  {u.nome || '-'}{u.is_super_admin ? ' (super)' : ''}
+                  {u.nome_jogador && u.nome_jogador !== u.nome ? <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{u.nome_jogador}</div> : null}
+                </td>
                 <td style={td}>{u.email}</td>
                 <td style={td}>
                   {u.tem_brilhante ? <span style={{ color: '#d4a017', fontWeight: 700 }}>✨ tem</span> : <span style={{ color: 'var(--text-dim)' }}>—</span>}
@@ -101,9 +170,17 @@ function TabUsers({ showMsg }) {
                     : <span style={{ color: '#7bd88f', fontSize: 12 }}>Ativa</span>}
                 </td>
                 <td style={td}>
-                  {u.suspenso
-                    ? <button type="button" style={btn} onClick={() => definirSuspensao(u, false)}>Reativar</button>
-                    : <button type="button" style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => definirSuspensao(u, true)}>Suspender</button>}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {u.suspenso
+                      ? <button type="button" data-reativar style={btn} onClick={() => definirSuspensao(u, false)}>Reativar</button>
+                      : <button type="button" data-suspender style={{ ...btn, borderColor: '#f0a35a', color: '#f0a35a' }} onClick={() => definirSuspensao(u, true)}>Suspender</button>}
+                    {!u.protegida ? (
+                      <button type="button" data-excluir style={{ ...btn, borderColor: 'var(--danger)', color: 'var(--danger)' }} disabled={!!excluindo} onClick={() => excluir(u)}>
+                        {excluindo === u.id ? 'Excluindo…' : 'Excluir'}
+                      </button>
+                    ) : null}
+                  </div>
+                  {u.protegida ? <div data-protegida style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4, maxWidth: 260 }}>{u.protegida}</div> : null}
                 </td>
               </tr>
             ))}
@@ -123,6 +200,8 @@ function TabUsers({ showMsg }) {
           <button type="button" style={btn} disabled={page >= totalPaginas || loading} onClick={() => setPage((p) => p + 1)}>Próxima →</button>
         </div>
       </div>
+
+      <UltimasAcoes versao={versaoDoLog} />
     </div>
   );
 }
