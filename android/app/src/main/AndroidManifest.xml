@@ -71,4 +71,10 @@
          diálogo mostrar conforme o que o código realmente pede em runtime. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- O referrer da instalação (ConviteDaLojaPlugin.java) é lido de um serviço da Play Store: do Android 11 em diante o app só fala
+         com o pacote que declara. Hoje a consulta do Billing já o deixa visível; aqui fica dito, para não depender dela. -->
+    <queries>
+        <package android:name="com.android.vending" />
+    </queries>
 </manifest>

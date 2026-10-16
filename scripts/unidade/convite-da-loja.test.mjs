@@ -137,6 +137,7 @@ test('fiação nativa: plugin "ConviteDaLoja" registrado no MainActivity, biblio
     'registrado ANTES de a ponte subir');
   assert.match(ler('android/app/build.gradle'), /implementation "com\.android\.installreferrer:installreferrer:2\.2"/);
   assert.match(ler('android/app/proguard-rules.pro'), /-keep class com\.android\.installreferrer\.\*\* \{ \*; \}/);
+  assert.match(ler('android/app/src/main/AndroidManifest.xml'), /<queries>\s*<package android:name="com\.android\.vending" \/>\s*<\/queries>/, 'a Play Store visível no Android 11+');
   const pacote = JSON.parse(ler('package.json'));
   const deps = Object.keys({ ...pacote.dependencies, ...pacote.devDependencies });
   assert.deepEqual(deps.filter((d) => /referrer/i.test(d)), [], 'plugin nosso, fora do package.json: o Capgo não marca o bundle como incompatível');
