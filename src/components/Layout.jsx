@@ -101,7 +101,7 @@ export default function Layout({ children }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { teams } = useTeams();
-  // Conta com data menor de 18 anos vê a tela de exclusão (AuthGuard) — sem a barra por cima.
+  // Conta com data abaixo da idade mínima vê a tela de exclusão (AuthGuard) — sem a barra por cima.
   const { perfil: perfilDaConta } = usePerfil();
   const { session } = useAuth();
   const showNav = shouldShowNav(pathname, !!session) && !menorQueIdadeMinima(perfilDaConta?.user?.birthdate);

@@ -8,8 +8,8 @@
 // Compras no app: a loja (Apple / Google) processa o pagamento e o Futty nunca vê o cartão; guardamos
 // só transação, produto, valor, moeda e data. A CLAUSULA_PAGAMENTO_FUTURA (o item Apple / Google) fica
 // na seção 3.
-// O Futty é para maiores de 18 anos: a seção 5 é "Idade mínima" (o número vem de IDADE_MINIMA,
-// utils/idade.js) e a idade mínima é dita no cadastro.
+// O Futty é para quem tem 13 anos ou mais: a seção 5 é "Idade mínima e menores de 18" (o número vem de IDADE_MINIMA,
+// utils/idade.js), com as proteções de quem tem menos de 18 (rosto público e publicidade 18+).
 import { Link } from 'react-router-dom';
 import { IDADE_MINIMA } from '../utils/idade';
 import '../styles/app.css';
@@ -20,7 +20,7 @@ const p = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-dim)', margin: 0 }
 const ul = { ...p, margin: '4px 0 0', paddingLeft: 20, display: 'grid', gap: 4 };
 const strong = { color: '#f0c94a', fontWeight: 700 };
 
-const ULTIMA_ATUALIZACAO = '1 de outubro de 2026 (v6)';
+const ULTIMA_ATUALIZACAO = '16 de outubro de 2026 (v7)';
 const CONTATO = 'contato@futtyapp.com';
 
 export default function Privacidade() {
@@ -42,7 +42,7 @@ export default function Privacidade() {
         <h2 style={h2}>1. Dados que coletamos</h2>
         <ul style={ul}>
           <li>Nome, nome de jogador e e-mail (no cadastro)</li>
-          <li>Data de nascimento (para confirmar que você tem {IDADE_MINIMA} anos ou mais)</li>
+          <li>Data de nascimento (para confirmar que você tem {IDADE_MINIMA} anos ou mais e aplicar as proteções de quem tem menos de 18)</li>
           <li>Foto de perfil, usada para gerar seu card com inteligência artificial</li>
           <li>Dados de jogo: presenças confirmadas, votos recebidos, posição em campo, resultados</li>
           <li>Conteúdo que você publica na Resenha (posts, comentários, fotos)</li>
@@ -106,16 +106,18 @@ export default function Privacidade() {
           publicamente para facilitar a descoberta. Times privados nunca aparecem na busca.
         </p>
 
-        <h2 style={h2}>5. Idade mínima</h2>
+        <h2 style={h2}>5. Idade mínima e menores de 18</h2>
         <p style={p}>
           Para usar o Futty você precisa ter {IDADE_MINIMA} anos ou mais. Se descobrirmos uma
-          conta de menor de {IDADE_MINIMA}, ela é apagada. A data de nascimento é pedida no
+          conta de quem tem menos de {IDADE_MINIMA}, ela é apagada. A data de nascimento é pedida no
           cadastro (por e-mail, Google ou Apple) e, abaixo dessa idade, a conta não é criada:
-          nada fica guardado. A idade é calculada a partir dessa data e conferida também em
-          dois lugares: nas páginas públicas de sorteio (sem entrar na conta) o rosto só aparece
-          para quem confirmou a idade e deixou o rosto liberado no Perfil, e publicidade
-          classificada como 18+ só é mostrada a quem tem {IDADE_MINIMA} anos ou mais pela data
-          (sem data, nunca).
+          nada fica guardado. Os dados de quem tem de {IDADE_MINIMA} a 17 anos são tratados no
+          melhor interesse dessa pessoa, como pede a LGPD. Para proteger quem tem menos de 18: o
+          rosto <span style={strong}>nunca aparece</span> nas páginas públicas de sorteio (sem
+          entrar na conta), aparece sempre como silhueta, e publicidade classificada como 18+
+          nunca é mostrada. As duas regras falham para o lado seguro: o rosto só aparece para quem
+          confirmou 18 anos ou mais pela data e deixou o rosto liberado no Perfil, e a publicidade
+          18+ só para quem tem 18 anos ou mais pela data (sem data, nunca).
         </p>
 
         <h2 style={h2}>6. Onde os dados ficam</h2>

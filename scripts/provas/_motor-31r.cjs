@@ -48,6 +48,16 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
   };
   app.reiniciar({ tabelas: {}, usuarios: Object.values(U) });
   app.criarBucketsDoProjeto();
+  // Esta prova é a do PLANO B: o motor sem a tabela do convite pendente (migração 084 por aplicar, ou a rede que mudou entre abrir o link e
+  // cadastrar). Sem ela o convite volta pelo link copiado e pelo cartão "Recebeu um convite?". O caminho com o motor achando o convite é a
+  // prova rodada-31u.
+  const deVerdade = app.cliente.from.bind(app.cliente);
+  app.cliente.from = (tabela) => {
+    if (tabela !== 'convites_pendentes') return deVerdade(tabela);
+    const falha = { data: null, error: { code: '42P01', message: 'relation "public.convites_pendentes" does not exist' } };
+    const q = new Proxy({}, { get: (_o, k) => (k === 'then' ? (ok) => ok(falha) : () => q) });
+    return q;
+  };
   // O Auth de mentira só anota o updateUserById; o de verdade grava. Aqui ele grava o user_metadata na conta, para o "cadastro concluído"
   // (POST /api/me/onboarding-completo) valer no pedido seguinte — sem isso, recarregar o app devolveria a pessoa ao cadastro.
   const anotar = app.cliente.auth.admin.updateUserById.bind(app.cliente.auth.admin);

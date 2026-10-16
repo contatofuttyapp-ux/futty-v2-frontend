@@ -78,7 +78,7 @@ export default function Register() {
       setError('Data de nascimento inválida.');
       return;
     }
-    // Abaixo de 18 anos a conta não é criada — nem chega ao Supabase.
+    // Abaixo da idade mínima a conta não é criada — nem chega ao Supabase.
     if (menorQueIdadeMinima(birthdate)) {
       setError(MSG_MENOR);
       return;
@@ -238,7 +238,7 @@ export default function Register() {
 
             <div className="auth-field">
               <span id="birthdate-rotulo" className="auth-field__rotulo">Data de nascimento *</span>
-              {/* Rolinhos dia · mês · ano, sem ano futuro e com teto ano atual − 18 (RolinhosData.jsx).
+              {/* Rolinhos dia · mês · ano, sem ano futuro e com teto ano atual − IDADE_MINIMA (RolinhosData.jsx).
                   A data acima do teto (último ano, mês/dia depois de hoje) mostra a frase da casa no envio. */}
               <RolinhosData id="birthdate" onChange={setBirthdate} rotulo="Data de nascimento" />
               <span style={{ display: 'block', marginTop: 6, fontSize: 12, lineHeight: 1.4, color: 'var(--text-dim)' }}>{MSG_MENOR}</span>

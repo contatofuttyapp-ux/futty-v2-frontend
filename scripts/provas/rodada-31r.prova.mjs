@@ -7,6 +7,9 @@
 //     boas-vindas do time e termina dentro dele, sozinho;
 //   · no fim de cada caminho: a pessoa está nos membros do time (pelo motor) e no Ranking, com "—" nos pontos.
 // A causa (Rodada 31R): a página do convite guarda o convite no armazenamento do NAVEGADOR; o app instalado tem o seu próprio, vazio.
+// Desde a 31U o motor guarda o convite aberto no celular e o app o acha sozinho (prova rodada-31u). Esta passou a ser a prova do PLANO B:
+// o motor daqui está sem a tabela do convite pendente (migração 084 por aplicar, ou a rede mudou entre abrir o link e cadastrar) e o
+// convite volta pelo link copiado e pelo cartão "Recebeu um convite?".
 //
 // Como: o motor de VERDADE sobe num processo à parte sobre banco e Auth de mentira (scripts/provas/_motor-31r.cjs → backend/tests/_appFalsa.js).
 // O Supabase do navegador é respondido aqui (cadastro, o link do e-mail, a troca do código do Google, o token da Apple) com a sessão da conta

@@ -1,8 +1,14 @@
-// Futty v2.0 — A régua de idade do cadastro (o Futty é 18+ de ponta a ponta). A MESMA
-// do motor (backend/utils/idade.js): o app avisa antes, o motor confere de novo e é quem decide.
-// O número mora SÓ aqui (e no motor): telas e textos usam IDADE_MINIMA / MSG_MENOR.
-export const IDADE_MINIMA = 18;
-export const MSG_MENOR = 'O Futty é para maiores de 18 anos.';
+// Futty v2.0 — A régua de idade do cadastro: o Futty é para quem tem 13 anos ou mais. A MESMA do motor
+// (backend/utils/idade.js): o app avisa antes, o motor confere de novo e é quem decide. O número mora SÓ aqui (e no motor):
+// telas e textos usam IDADE_MINIMA / MSG_MENOR. A maioridade (18) é outra régua, a do rosto público e do anúncio 18+, e quem
+// decide é o motor (pela data).
+export const IDADE_MINIMA = 13;
+export const MSG_MENOR = 'O Futty é para quem tem 13 anos ou mais.';
+
+/** Os códigos com que o motor recusa o cadastro abaixo da idade mínima (o antigo, da régua de 18, ainda chega de motor velho). */
+export function ehRecusaPorIdade(codigo) {
+  return codigo === 'MENOR_DE_IDADE' || codigo === 'MENOR_DE_18';
+}
 
 /** "AAAA-MM-DD" válida, no passado e depois de 1900 → a própria string; qualquer outra coisa → null. */
 export function dataDeNascimentoValida(valor) {
@@ -33,7 +39,7 @@ export function menorQueIdadeMinima(nascimento, hoje = new Date()) {
  * Último dia de nascimento que ainda entra: hoje − IDADE_MINIMA anos ("AAAA-MM-DD", UTC como o motor).
  * É o `max` dos seletores de data — o ano mais alto que eles oferecem é ano atual − IDADE_MINIMA.
  * Quem faz aniversário em 29/02 e o ano de destino não é bissexto: o limite é 28/02 (nascer em 01/03
- * faz 18 só em 01/03).
+ * faz anos só em 01/03).
  */
 export function nascimentoMaximo(hoje = new Date()) {
   const ano = hoje.getUTCFullYear() - IDADE_MINIMA;

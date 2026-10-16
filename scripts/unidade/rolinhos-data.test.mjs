@@ -21,9 +21,9 @@ test('os 12 meses, em português, com o acento certo', () => {
   assert.equal(MESES[11], 'dezembro');
 });
 
-test('anoMaximo: ano atual − 18; nenhum ano futuro (o mesmo teto do nascimentoMaximo)', () => {
+test('anoMaximo: ano atual − 13; nenhum ano futuro (o mesmo teto do nascimentoMaximo)', () => {
   const hoje = new Date(Date.UTC(2026, 9, 2));
-  assert.equal(anoMaximo(hoje), 2008);
+  assert.equal(anoMaximo(hoje), 2013);
   assert.equal(anoMaximo(hoje), Number(nascimentoMaximo(hoje).slice(0, 4)));
   assert.ok(anoMaximo() < new Date().getUTCFullYear(), 'sempre antes do ano atual');
   assert.ok(ANO_MINIMO < anoMaximo());

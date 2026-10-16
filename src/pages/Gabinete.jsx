@@ -14,6 +14,7 @@ import { apiFetch } from '../lib/api';
 import LoadingFutty from '../components/LoadingFutty';
 import Toast from '../components/Toast';
 import PessoasTimes from './gabinete/PessoasTimes';
+import ContasSemTime from './gabinete/ContasSemTime';
 import Brilhantes from './gabinete/Brilhantes';
 import Velocidade from './gabinete/Velocidade';
 import AviseMeLista from './gabinete/AviseMe';
@@ -74,6 +75,7 @@ function Card6({ n, legenda, sub }) {
 const ABAS = [
   { k: 'visao', label: 'Visão geral' },
   { k: 'pessoas', label: 'Pessoas & times' },
+  { k: 'sem-time', label: 'Contas sem time' },
   { k: 'brilhantes', label: 'Figurinhas' },
   { k: 'velocidade', label: 'Velocidade' },
   { k: 'avise', label: 'Avise-me' },
@@ -179,6 +181,7 @@ export default function Gabinete() {
           <div className="gab2-content">
             {aba === 'visao' && <AbaVisaoGeral dados={dados} />}
             {aba === 'pessoas' && <PessoasTimes showMsg={showMsg} />}
+            {aba === 'sem-time' && <ContasSemTime showMsg={showMsg} />}
             {aba === 'brilhantes' && <Brilhantes showMsg={showMsg} />}
             {aba === 'velocidade' && <Velocidade />}
             {aba === 'avise' && <AviseMeLista showMsg={showMsg} />}

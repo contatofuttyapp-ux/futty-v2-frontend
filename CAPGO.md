@@ -24,11 +24,11 @@ Regra de bom senso: o bundle chega a todo celular, também aos que não abriram 
 ## Como está ligado no app
 
 - `@capgo/capacitor-updater` 8.x (a linha 8 é a do Capacitor 8).
-- `capacitor.config.json` → `plugins.CapacitorUpdater`: `autoUpdate: true` e `appId: "com.futty.app"`. O resto fica no padrão do plugin (`resetWhenUpdate: true` apaga os bundles baixados quando uma versão nativa nova é instalada; `appReadyTimeout` 10 s).
+- `capacitor.config.json` → `plugins.CapacitorUpdater`: `autoUpdate: "atInstall"` (desde o build de loja 1.0.4, ver abaixo), `autoSplashscreen`, `autoSplashscreenLoader`, `autoSplashscreenTimeout: 10000` e `appId: "com.futty.app"`; `plugins.SplashScreen.launchAutoHide: false` (`@capacitor/splash-screen`). O resto fica no padrão do plugin (`resetWhenUpdate: true` apaga os bundles baixados quando uma versão nativa nova é instalada; `appReadyTimeout` 10 s).
 - `src/main.jsx`: logo depois do render, só no nativo (`ehNativo()`), import dinâmico do plugin e `CapacitorUpdater.notifyAppReady()`. **Sem essa chamada o Capgo acha que o app travou e desfaz toda atualização.** O plugin fica em dois chunks fora do arranque (≈ 9 KB); a web nunca o baixa.
 - Prova: `npm run provar:navegador -- capgo` (nativo chama `notifyAppReady` uma vez, a web não pede o plugin).
 
-**Quando a pessoa recebe.** `autoUpdate: true` = `"atBackground"`: ao abrir o app (cada volta ao primeiro plano) ele pergunta ao Capgo e baixa em segundo plano; o bundle novo **entra quando o app vai para o segundo plano**, então ao reabrir já é a tela nova. Nunca recarrega no meio do uso. Os modos instantâneos (`always`, `onLaunch`, `atInstall`) **não** se usam: exigem `@capacitor/splash-screen` e seguram a pessoa na tela enquanto baixa.
+**Quando a pessoa recebe.** `autoUpdate: "atInstall"`: na **1ª abertura depois de instalar ou atualizar pela loja**, o app fica na tela de abertura (o F sobre o fundo da casa, com o indicador de carregando do sistema) enquanto baixa o bundle do canal e já abre nele — no máximo 10 s; passou disso, abre o da loja e o novo entra na próxima ida ao segundo plano. Em todas as outras aberturas vale o `atBackground` de sempre: baixa por trás e entra quando o app vai para o segundo plano. Nunca recarrega no meio do uso. Os modos que seguram a pessoa em TODA abertura (`always`, `onLaunch`) não se usam.
 
 ## Subir um bundle
 
@@ -37,7 +37,7 @@ O bundle é o `dist/` **depois do `preparar-nativo.js`** (sem avatares, sons, da
 ```
 cd C:\Users\phfer\Desktop\FUT\FUTTY-V2\frontend
 npm run build:native
-npx @capgo/cli@latest bundle upload com.futty.app --channel production --path dist --bundle 1.0.2 --comment "o que mudou"
+npx @capgo/cli@latest bundle upload com.futty.app --channel production --path dist --bundle 1.0.2 --delta --comment "o que mudou"
 ```
 
 - **`--bundle` é obrigatório.** Sem ele a CLI usa a versão do `package.json` (`0.0.0`), que ela recusa (a versão tem de ser > 0.0.0).
@@ -69,5 +69,11 @@ npx @capgo/cli@latest bundle upload com.futty.app --channel production --path di
 - Ordem de grandeza: o bundle tem no máximo ≈ 2,3 MB (o zip sai menor). 100 GiB de banda cobrem dezenas de atualizações completas para 2.000 pessoas.
 - O `BUILDS-35-17.md` pede uma linha do Capgo no `CONTAS.md` (conta contatofuttyapp, login Google, plano Solo quando o teste acabar).
 
-## `directUpdate: 'atInstall'` (Rodada 31B, 12-out) — não configurado
+## `atInstall` — ligado no build de loja 1.0.4 (Rodada 31U, 16-out)
+
+**Por quê:** a 1ª abertura depois da instalação rodava o pacote DA LOJA (31R): quem instalava pelo link do convite abria um app velho, sem o conserto do convite. Escolha: `atInstall` + `@capacitor/splash-screen`, e não a troca em JavaScript (`getLatest` → `download` → `set` no `main.jsx`). Com o `atInstall` quem segura a tela é o próprio plugin, ANTES de qualquer JavaScript do pacote velho rodar: a pessoa nunca vê a tela antiga piscar e trocar, e o teto de 10 s (`autoSplashscreenTimeout`) é dele, testado por ele. A troca em JS teria de abrir o pacote velho primeiro (que mostraria a tela velha), desenhar a nossa espera, cuidar do prazo e do erro — código nosso, sem como provar em aparelho antes da loja. Os dois só valem com build de loja novo (o plugin e o `capacitor.config.json` vão no binário).
+**Subir com `--delta`:** com `atInstall`, o download acontece com a pessoa esperando; o `bundle upload` passa a levar `--delta` (só os arquivos que mudaram).
+**Não provado em aparelho:** a prova é do Capgo/Capacitor; o primeiro aparelho de verdade é o do TestFlight / teste interno do Play.
+
+### Registro antigo (31B, 12-out) — não configurado naquela época
 O plugin 8.52.1 aceita `autoUpdate: 'atInstall'` (aplica na hora só depois de instalar ou atualizar pela loja), mas, como os outros modos instantâneos, exige `autoSplashscreen: true` e `@capacitor/splash-screen` com `launchAutoHide: false` — um plugin nativo novo, que segura a pessoa na tela de abertura enquanto baixa. Fica `autoUpdate: true` (= `atBackground`). Para ligar um dia: instalar o splash-screen, configurar os dois, `cap sync`, subir os bundles com `--delta` e testar num aparelho antes da loja.

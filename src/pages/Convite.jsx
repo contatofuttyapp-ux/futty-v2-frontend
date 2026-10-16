@@ -6,10 +6,12 @@
 // que ABRE nas boas-vindas do time; time sem logo = só o nome em destaque, sem quadrado de iniciais.
 // No navegador de um celular (fora do app da loja) o primeiro botão é "Baixar o Futty", com a loja do aparelho: instalado o app, o
 // mesmo link do convite abre nele (lib/linkDoSite.js). "Continuar pelo site", menor, devolve os botões de sempre. Computador e app: como sempre.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MapPin, Users } from 'lucide-react';
-import { apiFetch, assetUrl } from '../lib/api';
+import { apiFetch, apiFetchPublico, assetUrl } from '../lib/api';
+import { comPrazo, validarConvite } from '../utils/validarConvite';
+import { avisarConviteAberto } from '../lib/conviteNoMotor';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
 import FuttyLogo from '../components/FuttyLogo';
@@ -22,6 +24,9 @@ import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { lojaDoNavegador, linkDaLoja } from '../utils/lojaDoApp';
 import '../styles/app.css';
 import '../styles/convite.css';
+
+// Quanto a página espera a sessão e o perfil antes de seguir com o que tem.
+const ESPERA_MAX_SESSAO_MS = 6000;
 
 const MOTIVOS = {
   nao_encontrado: 'Este convite não existe.',
@@ -93,16 +98,30 @@ export default function Convite({ token: tokenDoLink = null }) {
     } catch { /* sem cópia: a frase de antes ("toque no link de novo") continua valendo */ }
   }
 
+  // A validação nunca fica presa em "Validando convite…" (utils/validarConvite.js): cada tentativa tem prazo, a 2ª sai sozinha e sem
+  // esperar a sessão, e se as duas falharem a tela mostra "Tentar de novo". Pelo mesmo motivo a espera pela sessão e pelo perfil tem teto:
+  // passado ele, a página segue com o que tem (o motor confere tudo de novo no "Entrar no time").
+  const [tentativa, setTentativa] = useState(0);
+  const [travado, setTravado] = useState('');
+  const [esperaAcabou, setEsperaAcabou] = useState(false);
   useEffect(() => {
-    // Espera a sessão resolver para que o pedido vá autenticado (saber se já é membro)
-    if (authLoading) return;
+    const t = setTimeout(() => setEsperaAcabou(true), ESPERA_MAX_SESSAO_MS);
+    return () => clearTimeout(t);
+  }, [tentativa]);
+  // Espera a sessão resolver para que o pedido vá autenticado (saber se já é membro) — mas não para sempre.
+  const podeValidar = !authLoading || esperaAcabou;
+  useEffect(() => {
+    if (!podeValidar) return undefined;
     let active = true;
-    apiFetch(`/api/convite/${token}`)
-      .then((data) => {
-        if (active) setInfo(data);
+    const caminho = `/api/convite/${encodeURIComponent(token)}`;
+    validarConvite({ comSessao: () => apiFetch(caminho), semSessao: () => apiFetchPublico(caminho) })
+      .then(({ dados }) => {
+        if (active) setInfo(dados);
       })
       .catch((err) => {
-        if (active) setError(err.message);
+        if (!active) return;
+        if (err.code === 'CONVITE_TRAVADO') setTravado(err.message);
+        else setError(err.message);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -110,7 +129,25 @@ export default function Convite({ token: tokenDoLink = null }) {
     return () => {
       active = false;
     };
-  }, [token, authLoading]);
+  }, [token, podeValidar, tentativa]);
+
+  function tentarDeNovo() {
+    setTravado('');
+    setError('');
+    setInfo(null);
+    setEsperaAcabou(false);
+    setLoading(true);
+    setTentativa((n) => n + 1);
+  }
+
+  // No navegador de um celular, o convite válido é guardado também no motor (lib/conviteNoMotor.js): se a pessoa baixar o app e se
+  // cadastrar nele, o app acha este convite mesmo sem o bilhete do navegador. Uma vez por convite aberto.
+  const avisou = useRef(false);
+  useEffect(() => {
+    if (avisou.current || !lojaDoCelular || !info?.valido || info.jaMembro) return;
+    avisou.current = true;
+    avisarConviteAberto(token, lojaDoCelular);
+  }, [info, lojaDoCelular, token]);
 
   // O bilhete do convite: sem conta, ou com conta que ainda não terminou o onboarding, o convite fica guardado
   // no aparelho DESDE QUE a página abre — o cadastro por e-mail, o Google e a Apple levam a pessoa para fora (e o OAuth perde o
@@ -140,7 +177,8 @@ export default function Convite({ token: tokenDoLink = null }) {
     setError('');
     setAccepting(true);
     try {
-      const { team, jaMembro } = await apiFetch(`/api/convite/${token}/aceitar`, { method: 'POST' });
+      // Com prazo: o botão nunca fica em "Entrando…" para sempre (o erro aparece e o botão volta).
+      const { team, jaMembro } = await comPrazo(apiFetch(`/api/convite/${token}/aceitar`, { method: 'POST' }), 15000);
       tomarConvitePendente(); // entrou: o bilhete cumpriu a função (se houvesse)
       // `primeiraEntrada`: a página do time abre as boas-vindas — só para quem acabou de entrar.
       navigate(`/time/${team.slug}`, { replace: true, state: jaMembro ? undefined : { primeiraEntrada: true } });
@@ -212,7 +250,17 @@ export default function Convite({ token: tokenDoLink = null }) {
           <span className="convite__marca-nome" aria-hidden="true">FUTTY</span>
         </div>
 
-        {loading || (!!session && perfilCarregando) || (contaSemOnboarding && info?.valido && !info.jaMembro) ? (
+        {travado ? (
+          <>
+            <h1 className="convite__titulo">Ops…</h1>
+            <div className="alert alert--error convite__erro" data-convite-travado>{travado}</div>
+            <div className="convite__acoes">
+              <button type="button" className="btn cta-gold convite__cta" data-tentar-de-novo onClick={tentarDeNovo}>
+                Tentar de novo
+              </button>
+            </div>
+          </>
+        ) : loading || (!!session && perfilCarregando && !esperaAcabou) || (contaSemOnboarding && info?.valido && !info.jaMembro) ? (
           <>
             <Escudo vazio />
             <p className="convite__espera">Validando convite…</p>

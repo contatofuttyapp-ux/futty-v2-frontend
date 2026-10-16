@@ -160,7 +160,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-        {/* Rodapé legal: as lojas pedem a Privacidade acessível SEM precisar de conta, e o aviso dos 18 anos tem
+        {/* Rodapé legal: as lojas pedem a Privacidade acessível SEM precisar de conta, e o aviso da idade mínima tem
             de estar antes do cadastro, não só dentro dele. As duas páginas já existem (/termos, /privacidade).
             Discreto: letra pequena, cor apagada, um link por palavra, sem ocupar o lugar dos botões. */}
         <footer data-rodape-legal style={{ width: '100%', maxWidth: 320, margin: '0 auto', padding: '18px 0 6px', textAlign: 'center', fontSize: 12, lineHeight: 1.7, color: 'rgba(255,255,255,0.45)' }}>
@@ -169,7 +169,7 @@ export default function LandingPage() {
             {' · '}
             <Link to="/privacidade" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'underline', textUnderlineOffset: 3 }}>Privacidade</Link>
           </div>
-          <div>Para maiores de 18 anos.</div>
+          <div>Para quem tem 13 anos ou mais.</div>
         </footer>
       </div>
 

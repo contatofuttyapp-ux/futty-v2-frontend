@@ -9,7 +9,7 @@ export function diasDoMes(mes, ano) {
   return new Date(Date.UTC(ano, mes, 0)).getUTCDate();
 }
 
-/** O último ano que o rolo oferece: ano atual − IDADE_MINIMA (nenhum ano futuro, nenhum menor de 18). */
+/** O último ano que o rolo oferece: ano atual − IDADE_MINIMA (nenhum ano futuro, ninguém abaixo da idade mínima). */
 export function anoMaximo(hoje = new Date()) {
   return Number(nascimentoMaximo(hoje).slice(0, 4));
 }

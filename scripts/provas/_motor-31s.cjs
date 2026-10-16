@@ -53,6 +53,15 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
   };
   app.reiniciar({ tabelas: {}, usuarios: Object.values(U) });
   app.criarBucketsDoProjeto();
+  // Esta prova é do link do e-mail, não do convite pendente: aqui todo aparelho está na MESMA rede (127.0.0.1) e o convite que um navegador
+  // abre numa seção seria achado pelo app da seção seguinte (o caminho da prova rodada-31u). Sem a tabela 084, cada seção vale por si.
+  const deVerdade = app.cliente.from.bind(app.cliente);
+  app.cliente.from = (tabela) => {
+    if (tabela !== 'convites_pendentes') return deVerdade(tabela);
+    const falha = { data: null, error: { code: '42P01', message: 'relation "public.convites_pendentes" does not exist' } };
+    const q = new Proxy({}, { get: (_o, k) => (k === 'then' ? (ok) => ok(falha) : () => q) });
+    return q;
+  };
   // O Auth de mentira só anota o updateUserById; o de verdade grava. Aqui ele grava o user_metadata na conta, para o "cadastro concluído"
   // (POST /api/me/onboarding-completo) valer no pedido seguinte — sem isso, recarregar o app devolveria a pessoa ao cadastro.
   const anotar = app.cliente.auth.admin.updateUserById.bind(app.cliente.auth.admin);

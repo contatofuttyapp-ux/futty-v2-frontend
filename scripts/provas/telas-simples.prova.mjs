@@ -30,7 +30,7 @@ export async function rodar({ navegador, base, t }) {
     const rodape = page.locator('[data-rodape-legal]');
     const texto = await rodape.innerText();
     t('o rodapé diz "Termos de Uso · Privacidade"', /Termos de Uso\s*·\s*Privacidade/.test(texto), texto);
-    t('e "Para maiores de 18 anos."', /Para maiores de 18 anos\./.test(texto), texto);
+    t('e "Para quem tem 13 anos ou mais."', /Para quem tem 13 anos ou mais\./.test(texto), texto);
     const termos = rodape.getByRole('link', { name: 'Termos de Uso' });
     const priv = rodape.getByRole('link', { name: 'Privacidade' });
     t('os dois são links de verdade (/termos e /privacidade)', (await termos.getAttribute('href')) === '/termos' && (await priv.getAttribute('href')) === '/privacidade');

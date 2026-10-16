@@ -6,7 +6,7 @@
 // (lib/miniatura.js, best-effort). A foto nunca é espelhada: aparece como foi tirada.
 // "Deixar para depois" só aparece aos ~2s; quem salta leva o card persistente no Início.
 // Quem chega sem data de nascimento (Google/Apple não a trazem) passa por "Quando você nasceu?" ANTES
-// da foto, em rolinhos dia/mês/ano (RolinhosData). Menor de 18: o motor apaga a conta e o login explica.
+// da foto, em rolinhos dia/mês/ano (RolinhosData). Abaixo de 13: o motor apaga a conta e o login explica.
 // Passo 1: o mini sorteio ao vivo (MiniSorteio.jsx), o ícone do app a 110 px flutuando e figurinhas
 // fictícias caindo em dois times no mini sorteio; textos da landing.
 // Quem chega por um convite (bilhete no aparelho: lib/convitePendente.js) NÃO vê a página "Começar": a
@@ -20,10 +20,12 @@ import { apiFetch, apiUpload } from '../lib/api';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { estiloDaJanela, recorteDaMolduraUnica, urlSemRecorte } from '../lib/enquadroAvatar';
 import { gravarMiniatura } from '../lib/miniatura';
-import { guardarPosicaoPendente, lerConvitePendente, tomarConvitePendente } from '../lib/convitePendente';
+import { guardarConvitePendente, guardarPosicaoPendente, lerConvitePendente, tomarConvitePendente } from '../lib/convitePendente';
+import { convitesNoMotor } from '../lib/conviteNoMotor';
+import EscolhaDoConvite from '../components/EscolhaDoConvite';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
-import { dataDeNascimentoValida, IDADE_MINIMA } from '../utils/idade';
+import { dataDeNascimentoValida, ehRecusaPorIdade, IDADE_MINIMA } from '../utils/idade';
 import { usePerfil } from '../context/PerfilContext';
 import { useAuth } from '../hooks/useAuth';
 import FuttyLogo from '../components/FuttyLogo';
@@ -118,8 +120,37 @@ export default function Onboarding() {
   const { perfil, hidratar, recarregar: recarregarPerfil } = usePerfil();
   const { signOut } = useAuth();
   // Quem vem do convite começa pelas boas-vindas do time (passo 1) em vez da página "Começar"; foto e nome seguem iguais.
-  const [convite] = useState(() => lerConvitePendente()); // { token, time, goleiro } | null
+  const [convite, setConvite] = useState(() => lerConvitePendente()); // { token, time, goleiro } | null
+  // Sem bilhete no aparelho, o convite pode ter ficado no NAVEGADOR (abriu o link, baixou o app, cadastrou aqui): o motor sabe dos
+  // convites abertos neste celular (lib/conviteNoMotor.js). Até ele responder (no máximo ~4 s) a 1ª tela espera, para não abrir o
+  // "Começar" e trocar pelas boas-vindas do time no meio. Um convite = vira o bilhete; mais de um = "Qual time te convidou?".
+  const [perguntandoAoMotor, setPerguntandoAoMotor] = useState(() => !convite);
+  const [opcoesDoMotor, setOpcoesDoMotor] = useState(null);
   const [timeDoConvite, setTimeDoConvite] = useState(() => convite?.time || null); // { nome, logo_url, cor_fundo }
+  function escolherDoMotor(c) {
+    guardarConvitePendente(c.token, undefined, c.team);
+    setOpcoesDoMotor(null);
+    setConvite(lerConvitePendente());
+    setTimeDoConvite({ nome: c.team.nome, logo_url: c.team.logo_url || null, cor_fundo: c.team.cor_fundo || null });
+  }
+  // Um pedido só (no dev o StrictMode monta duas vezes: o pedido não repete, e a resposta vale para a montagem que ficou).
+  const perguntou = useRef(false);
+  const montado = useRef(false);
+  useEffect(() => {
+    montado.current = true;
+    return () => { montado.current = false; };
+  }, []);
+  useEffect(() => {
+    if (convite || perguntou.current) return;
+    perguntou.current = true;
+    convitesNoMotor().then((lista) => {
+      if (!montado.current) return;
+      if (lista.length === 1) escolherDoMotor(lista[0]);
+      else if (lista.length > 1) setOpcoesDoMotor(lista);
+      setPerguntandoAoMotor(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [conviteMorto, setConviteMorto] = useState(false); // sumiu ou venceu: a pessoa segue como cadastro comum
   const [goleiro, setGoleiro] = useState(() => !!convite?.goleiro);
   const deConvite = !!convite && !conviteMorto;
@@ -221,9 +252,9 @@ export default function Onboarding() {
     }
   }
 
-  // "Quando você nasceu?". Quem decide é o motor (PATCH /api/me): 18 anos ou mais, a data fica e segue
-  // para a foto; menos de 18, ele apaga a conta (403 MENOR_DE_18) — aqui só se sai do aparelho, e o login
-  // diz "O Futty é para maiores de 18 anos."
+  // "Quando você nasceu?". Quem decide é o motor (PATCH /api/me): 13 anos ou mais, a data fica e segue
+  // para a foto; menos de 13, ele apaga a conta (403 MENOR_DE_IDADE) — aqui só se sai do aparelho, e o login
+  // diz "O Futty é para quem tem 13 anos ou mais."
   async function confirmarNascimento() {
     const v = dataDeNascimentoValida(nascimento);
     if (!v) {
@@ -239,8 +270,8 @@ export default function Onboarding() {
     } catch (e) {
       if (e.code === 'NASCIMENTO_JA_DEFINIDO') {
         setNascimentoOk(true); // a data já veio do cadastro por e-mail
-      } else if (e.code === 'MENOR_DE_18') {
-        try { sessionStorage.setItem('futty_menor18', '1'); } catch { /* sem o aviso */ }
+      } else if (ehRecusaPorIdade(e.code)) {
+        try { sessionStorage.setItem('futty_menor', '1'); } catch { /* sem o aviso */ }
         await signOut();
       } else {
         setErroNascimento(e.message || 'Não deu para salvar a data. Tente de novo.');
@@ -276,9 +307,9 @@ export default function Onboarding() {
       // que explica.
       window.location.assign((deConvite && (await aceitarConvite())) || '/home');
     } catch (e) {
-      // Data de menor de 18 que veio do cadastro por e-mail — o motor apagou a conta.
-      if (e.code === 'MENOR_DE_18') {
-        try { sessionStorage.setItem('futty_menor18', '1'); } catch { /* sem o aviso */ }
+      // Data abaixo da idade mínima que veio do cadastro por e-mail — o motor apagou a conta.
+      if (ehRecusaPorIdade(e.code)) {
+        try { sessionStorage.setItem('futty_menor', '1'); } catch { /* sem o aviso */ }
         await signOut();
         return;
       }
@@ -318,7 +349,13 @@ export default function Onboarding() {
           </Suspense>
         )}
 
-        {passo === 1 && !deConvite && (
+        {passo === 1 && !deConvite && perguntandoAoMotor && <LoadingFutty motivo="convite" />}
+
+        {passo === 1 && !deConvite && !perguntandoAoMotor && opcoesDoMotor && (
+          <EscolhaDoConvite convites={opcoesDoMotor} onEscolher={escolherDoMotor} onNenhum={() => setOpcoesDoMotor(null)} style={{ maxWidth: 360 }} />
+        )}
+
+        {passo === 1 && !deConvite && !perguntandoAoMotor && !opcoesDoMotor && (
           <>
             <div className="futty-f-bob"><div className="futty-f-sway">
               <FuttyLogo variant="icone" size={110} />
@@ -354,7 +391,7 @@ export default function Onboarding() {
             </p>
             <div style={{ width: '100%', maxWidth: 290 }}>
               <span style={{ fontFamily: RAJ, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', display: 'block', margin: '0 0 6px' }}>Data de nascimento</span>
-              {/* Rolinhos dia · mês · ano, sem ano futuro, teto ano atual − 18. */}
+              {/* Rolinhos dia · mês · ano, sem ano futuro, teto ano atual − IDADE_MINIMA. */}
               <RolinhosData id="onb-nascimento" onChange={(v) => { setNascimento(v); setErroNascimento(''); }} />
               {erroNascimento ? (
                 <div role="alert" style={{ marginTop: 10, fontSize: 13, color: '#f8b4b4', textAlign: 'center', lineHeight: 1.45 }}>{erroNascimento}</div>

@@ -11,6 +11,7 @@ import '../lib/alinharCard';
 import { useInicio } from '../context/InicioContext';
 import CardSeuTime from '../components/CardSeuTime';
 import CartaoConviteColado from '../components/CartaoConviteColado';
+import ConviteDoMotor from '../components/ConviteDoMotor';
 import AtalhosDoInicio from '../components/AtalhosDoInicio';
 import { useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -531,7 +532,7 @@ export default function Inicio() {
   const [toast, setToast] = useState(null); // { msg, tipo }
 
   // Pedido ÚNICO de data de nascimento: sem ela, o /p/ cai em silhueta e o anúncio 18+ nunca aparece (a
-  // idade manda; o app é 18+). Banner não-bloqueante e dispensável.
+  // idade manda: só 18 confirmados revelam o rosto e veem anúncio 18+). Banner não-bloqueante e dispensável.
   const [dobInput, setDobInput] = useState('');
   const [dobBusy, setDobBusy] = useState(false);
   const [dobFeito, setDobFeito] = useState(false);
@@ -1173,7 +1174,7 @@ export default function Inicio() {
           </div>
         ) : null}
 
-        {/* Pedido único de data de nascimento (Opção B) — para confirmar os 18 anos do app.
+        {/* Pedido único de data de nascimento (Opção B) — para confirmar a idade mínima do app.
             Não-bloqueante; dispensável. */}
         {aviso?.tipo === 'nascimento' ? (
           <div data-aviso="nascimento" className="hud-corners" style={{ display: 'grid', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(212,160,23,0.06)', border: '1px solid rgba(212,160,23,0.25)' }}>
@@ -1432,8 +1433,10 @@ export default function Inicio() {
           <EstadoErroRede compacto mensagem="Não deu para carregar o Início agora. Tente de novo." onRepetir={() => inicio.reload()} />
         ) : noTeams ? (
           <>
-            {/* Quem instalou o app pela loja depois de tocar num convite chega aqui sem o convite (ele ficou no navegador): o link
-                copiado na página do convite volta por este cartão. */}
+            {/* Quem instalou o app pela loja depois de tocar num convite chega aqui sem o convite (ele ficou no navegador). Primeiro o
+                motor: o convite aberto neste celular (mesma rede, nas últimas 2 h) põe a pessoa no time sozinho. Se não achar, o link
+                copiado na página do convite volta pelo cartão. */}
+            <ConviteDoMotor />
             <CartaoConviteColado />
             <EmptyState />
           </>

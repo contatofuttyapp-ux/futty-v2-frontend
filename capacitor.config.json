@@ -14,8 +14,18 @@
     "backgroundColor": "#080808"
   },
   "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "launchShowDuration": 0,
+      "backgroundColor": "#080808",
+      "showSpinner": false,
+      "launchFadeOutDuration": 200
+    },
     "CapacitorUpdater": {
-      "autoUpdate": true,
+      "autoUpdate": "atInstall",
+      "autoSplashscreen": true,
+      "autoSplashscreenLoader": true,
+      "autoSplashscreenTimeout": 10000,
       "appId": "com.futty.app"
     }
   }

@@ -183,7 +183,16 @@ export function PerfilProvider({ children }) {
               aceitarPerfilFresco(userId, data);
               mostrarPerfil(userId, data, false);
             })
-            .catch(() => {});
+            .catch((e) => {
+              // Sem isto, um /api/me que falha aqui deixava `carregando` verdadeiro para sempre: quem abriu o app por um link (a 1ª
+              // rota é "/" e o Início nunca monta) ficava em "Validando convite…". Com o cache na tela, ele fica (como no caminho de baixo).
+              if (!ativo || userIdRef.current !== userId || doCache) return;
+              setPerfil(null);
+              setErro(e.message || 'Não deu para carregar o perfil. Tente de novo.');
+              setErroCode(e.code || null);
+              setCarregadoParaId(userId);
+              setDeCache(false);
+            });
           return atual;
         });
       }, ESPERA_HIDRATACAO_MS);

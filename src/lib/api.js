@@ -140,6 +140,26 @@ async function pedir(path, options, token, segundoPlano) {
   }
 }
 
+// GET público SEM passar pela sessão do Supabase: é o plano B de quem não pode ficar esperando a sessão responder (a página do convite
+// travada em "Validando convite…" com o motor no ar). Sem token, sem carona, sem renovar; erro = a mesma frase da casa.
+export async function apiFetchPublico(path) {
+  let res;
+  try {
+    res = await fetch(`${API_URL}${path}`, { headers: { 'Content-Type': 'application/json' } });
+  } catch {
+    const falha = new Error(MSG_SEM_REDE);
+    falha.code = 'SEM_REDE';
+    throw falha;
+  }
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = new Error(body?.error || 'Não deu para completar agora. Tente de novo.');
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
 // Upload genérico (multipart) para qualquer endpoint.
 export async function apiUpload(path, file, field = 'file') {
   return apiUploadCampos(path, { [field]: file });

@@ -78,12 +78,12 @@ test('75 · a tela "Algo deu errado" não mostra a linha técnica — fica a fra
   assert.match(boundary, /gravarUltimoErro\(/, '...e no Diagnóstico');
 });
 
-test('76 · a landing tem o rodapé legal: Termos de Uso, Privacidade e o aviso de 18+', () => {
+test('76 · a landing tem o rodapé legal: Termos de Uso, Privacidade e o aviso da idade mínima', () => {
   const landing = ler('src/pages/LandingPage.jsx');
   assert.match(landing, /data-rodape-legal/);
   assert.match(landing, /<Link to="\/termos"[^>]*>Termos de Uso<\/Link>/);
   assert.match(landing, /<Link to="\/privacidade"[^>]*>Privacidade<\/Link>/);
-  assert.match(landing, /Para maiores de 18 anos\./);
+  assert.match(landing, /Para quem tem 13 anos ou mais\./);
 });
 
 test('77, 79, 81, 82 e 78 · a criação do time: "a cidade", 3/3, nome do botão, obrigatórios, e o artilheiro depende dos gols', () => {
