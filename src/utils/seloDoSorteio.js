@@ -6,6 +6,8 @@
 //   · sorteado e ajustado   — saiu da roleta e alguém trocou gente de lugar depois (selo roxo, com o nome); a
 //                             roleta mostra o ORIGINAL, depois vêm as trocas e os times finais
 //   · montado à mão         — sem roleta nenhuma (selo prata, com o nome); "Ver times" no lugar de "Ver sorteio"
+//   · campeões anotados     — jogo de antes do app: o organizador anotou depois só o time campeão (`registro.campeoes`), com os nomes
+//                             como convidados sem app; é montado à mão (sem roleta, sem nota), mas o selo diz o que aconteceu
 // Puro (sem React, sem rede): o selo, a cerimônia, a apresentação, os cartões e o link público leem daqui.
 import { nomeDoTimeNaTela } from './nomeDoTime';
 
@@ -93,7 +95,8 @@ export function visaoDoSorteio(tr) {
 
   if (reg.origem === 'manual') {
     const nomes = distintos([reg.por?.nome, ...ajustadores]);
-    const texto = nomes.length ? `Montado à mão por ${nomesJuntos(nomes)}` : 'Montado à mão';
+    const base = reg.campeoes ? 'Campeões anotados' : 'Montado à mão';
+    const texto = nomes.length ? `${base} por ${nomesJuntos(nomes)}` : base;
     return { tipo: 'manual', selo: { tipo: 'manual', texto, detalhe: null }, daRoleta: null, final, ajuste: null };
   }
 
@@ -118,4 +121,9 @@ export function visaoDoSorteio(tr) {
 /** Os times foram montados à mão (sem roleta)? É o "Ver times" no lugar do "Ver sorteio". */
 export function montadoAMao(tr) {
   return registroDe(tr).origem === 'manual';
+}
+
+/** É o jogo antigo em que só o time campeão foi anotado depois (os nomes como convidados sem app)? */
+export function soOsCampeoes(tr) {
+  return registroDe(tr).campeoes === true;
 }

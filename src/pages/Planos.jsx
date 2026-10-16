@@ -19,13 +19,13 @@ import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
 import EscolherUniformeTime from '../components/EscolherUniformeTime';
 import { PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES, produtosDaTela } from '../lib/planos';
-import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto } from '../lib/brilhantes';
+import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto, avisarBrilhantes, compraApareceu, acompanharCompra } from '../lib/brilhantes';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja, comprar, restaurar, sincronizarAposCompra, linhaDoDetalhe } from '../lib/loja';
 import { ehNativo } from '../lib/plataforma';
 import { apiFetch } from '../lib/api';
-import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
 import '../lib/ligarLoja';
 import { formatarDecimal } from '../utils/numero';
+import { totalDeGeracoes, geracoesPorExtenso } from '../utils/totalDeGeracoes';
 import { useAuth } from '../hooks/useAuth';
 import '../styles/app.css';
 
@@ -113,10 +113,10 @@ export default function Planos() {
   // O motor diz se esta conta é de testador da loja (PAGAMENTOS_TESTERS): só ela vê o detalhe técnico de uma compra que falhou.
   const testadorLoja = !!estado?.testador_loja;
 
-  /** Guarda o estado novo na tela e no Início guardado (a Figurinha nasce dele). */
+  /** Guarda o estado novo na tela e no Início guardado (a Figurinha nasce dele), e avisa a Figurinha se ela estiver aberta. */
   function aplicarEstado(novo) {
     setEstado(novo);
-    if (!novo.indisponivel) espelharBrilhantesNoInicio(userId, novo);
+    avisarBrilhantes(userId, novo);
   }
 
   useEffect(() => {
@@ -180,9 +180,7 @@ export default function Planos() {
       if (tentativa) await espera(1500);
       novo = await estadoBrilhantes();
       if (novo.indisponivel) continue;
-      const time = (novo.times || []).find((t) => t.id === teamId);
-      if (produto === 'minha' && (novo.creditos || 0) > (antes?.creditos || 0)) return { novo, chegou: true };
-      if (produto === 'pacote' && time?.brilhante_ativo) return { novo, chegou: true };
+      if (compraApareceu(produto, antes, novo, teamId)) return { novo, chegou: true };
       if (produto === 'manto' && pedidoDoProduto(novo.pedidos, 'manto', teamId)?.estado === 'pendente') return { novo, chegou: true };
     }
     return { novo, chegou: false };
@@ -210,10 +208,12 @@ export default function Planos() {
       await sincronizarAposCompra(r.customerInfo, { teamId: time?.id || null });
       const { novo, chegou } = await esperarOQueFoiComprado(p.id, antes, time?.id);
       if (novo && !novo.indisponivel) aplicarEstado(novo);
+      // Ainda não apareceu (o webhook da loja chega depois): segue conferindo em segundo plano; quando aparecer, a tela e a Figurinha atualizam.
+      if (!chegou && p.id !== 'manto') acompanharCompra({ userId, produto: p.id, antes, teamId: time?.id || null }).then((n) => { if (n) setEstado(n); });
       if (p.id === 'minha') {
-        const n = novo?.creditos || 0;
+        // O mesmo número da Figurinha: tudo o que a pessoa pode gerar agora (créditos + pacotes dos times).
         setToast(chegou
-          ? { tipo: 'success', mensagem: `Pronto! ${n === 1 ? '1 geração' : `${n} gerações`} na sua conta` }
+          ? { tipo: 'success', mensagem: `Pronto! Agora você tem ${geracoesPorExtenso(totalDeGeracoes(novo))}` }
           : { tipo: 'info', mensagem: 'Compra feita! Suas gerações aparecem em instantes.' });
       } else if (p.id === 'pacote') {
         setToast(chegou

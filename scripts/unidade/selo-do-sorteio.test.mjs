@@ -191,7 +191,8 @@ test('caso 3 · o link público: "Ver times" abre a apresentação e o cabeçalh
 test('caso 3 · a tela do jogo: "Ver times" no lugar do "Ver sorteio" e "Times montados" no cabeçalho', () => {
   const jogo = ler('src/pages/Jogo.jsx');
   assert.match(jogo, /const timesAMao = !!game\?\.times_resultado && montadoAMao\(game\.times_resultado\);/);
-  assert.match(jogo, /\{game\.sorteio_realizado && timesAMao && \(/);
+  // O jogo antigo em que só os campeões foram anotados não tem apresentação a abrir: o time já está na página.
+  assert.match(jogo, /\{game\.sorteio_realizado && timesAMao && !soCampeoes && \(/);
   assert.match(jogo, /<Users size=\{16\} \/> Ver times/);
   assert.match(jogo, /\{timesAMao \? 'Times montados' : 'Times sorteados'\}/);
 });

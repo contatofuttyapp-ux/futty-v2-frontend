@@ -32,7 +32,7 @@ import { copiarTexto } from '../utils/clipboard';
 import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import { motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
-import { montadoAMao } from '../utils/seloDoSorteio';
+import { montadoAMao, soOsCampeoes } from '../utils/seloDoSorteio';
 import { fraseDoFeito } from '../utils/associarJogador';
 import SomSorteio from '../components/somSorteio';
 import '../styles/app.css';
@@ -211,6 +211,9 @@ export default function Jogo() {
   const timesSorteio = game?.times_resultado?.times || [];
   // Times montados à mão não tiveram roleta: o botão é "Ver times" (a apresentação) e o cabeçalho não diz "sorteados".
   const timesAMao = !!game?.times_resultado && montadoAMao(game.times_resultado);
+  // Jogo de antes do app em que só o time campeão foi anotado (os nomes como convidados sem app): o time aparece aqui mesmo, com o
+  // "Associar jogador" ao lado de cada nome; não há apresentação a abrir nem outro time a escolher como vencedor.
+  const soCampeoes = !!game?.times_resultado && soOsCampeoes(game.times_resultado);
   // O resultado também chama os times pelo nome da cerimônia ("Time Ouro × Time Roxo"), não pelo "Time A" do motor.
   const nomesTimes = nomesDosTimes(game?.times_resultado);
   const timesDoEditor = timesSorteio.map((t, i) => ({ nome: nomesTimes[i], jogadores: t.jogadores || [] }));
@@ -261,7 +264,7 @@ export default function Jogo() {
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
                   {formatDateTime(game.data, team?.fuso, { cidade: team?.cidade })}
                   {game.jogadores_por_time ? ` · ${game.jogadores_por_time} por time` : ''}
-                  {game.sorteio_realizado && game.num_times ? ` · ${game.num_times} times` : ''}
+                  {game.sorteio_realizado && game.num_times > 1 ? ` · ${game.num_times} times` : ''}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
@@ -551,7 +554,7 @@ export default function Jogo() {
                   </button>
                 </span>
               )}
-              {game.sorteio_realizado && timesAMao && (
+              {game.sorteio_realizado && timesAMao && !soCampeoes && (
                 <span className="cta-gold-glow" style={{ display: 'flex', width: '100%' }}>
                   <button type="button" className="btn hud-corners cta-gold" data-ver-times style={{ flex: 1 }} onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
                     <Users size={16} /> Ver times
@@ -648,7 +651,7 @@ export default function Jogo() {
             )}
 
             {/* Resultado — edição (só admin, após sorteio) */}
-            {isAdmin && game.times_resultado ? (
+            {isAdmin && game.times_resultado && !soCampeoes ? (
               <>
                 <SecLabel>Resultado</SecLabel>
                 {/* A chave refaz o editor quando o que está gravado muda (depois de salvar): ele parte sempre do que o motor guardou. */}

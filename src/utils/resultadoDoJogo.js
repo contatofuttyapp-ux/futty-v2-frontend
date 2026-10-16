@@ -77,6 +77,8 @@ export function fraseDoResultado(game, nomes) {
   const nome = (i) => nomes?.[i] || `Time ${i + 1}`;
   if (Number.isInteger(game.placar_a) && Number.isInteger(game.placar_b)) return `${nome(0)} ${game.placar_a} × ${game.placar_b} ${nome(1)}`;
   if (r.tipo === 'empate') return 'Empate';
+  // Um time só é o jogo antigo em que só o campeão foi anotado: o nome dele já diz tudo ("venceu" pediria um adversário).
+  if ((nomes?.length || 0) === 1) return nome(r.idx);
   return (nomes?.length || 0) >= 3 ? `${nome(r.idx)} campeão` : `${nome(r.idx)} venceu`;
 }
 
@@ -140,6 +142,8 @@ export function desfechoDoEstado(estado, { nTimes, jogadores } = {}) {
     return { origem: null, placar: null, campeaoIdx: null, empate: false };
   }
   if (nTimes >= 3 && idx !== null) return { origem: 'toque', placar: null, campeaoIdx: idx, empate: false };
+  // Um time só (os campeões anotados de um jogo antigo): ele é o campeão — salvar o resultado nunca o apaga.
+  if (nTimes === 1 && idx === 0) return { origem: 'toque', placar: null, campeaoIdx: 0, empate: false };
   return { origem: null, placar: null, campeaoIdx: null, empate: false };
 }
 

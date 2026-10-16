@@ -23,7 +23,8 @@ import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
 import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
-import { estadoBrilhantes, pedidoDoProduto } from '../lib/brilhantes';
+import { estadoBrilhantes, pedidoDoProduto, EVENTO_BRILHANTES } from '../lib/brilhantes';
+import { totalDeGeracoes, geracoesPorExtenso } from '../utils/totalDeGeracoes';
 import { MINHA_GERACOES, PACOTE_DE_PRESENTE, PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES, produtoDoPedido } from '../lib/planos';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja } from '../lib/loja';
 import { KIT_IMG, KITS_FIGURINHA } from '../utils/kitsFigurinha';
@@ -217,7 +218,10 @@ function brilhanteDoInicio(userId) {
     manto_proprio: !!t.manto_proprio,
   }));
   return {
-    direito: { fonte: d.brilhante.fonte, team_id: d.brilhante.team_id, kit_id: d.brilhante.kit_id, restantes: d.brilhante.restantes || 0 },
+    direito: {
+      fonte: d.brilhante.fonte, team_id: d.brilhante.team_id, kit_id: d.brilhante.kit_id, restantes: d.brilhante.restantes || 0,
+      ...(d.brilhante.total != null ? { total: d.brilhante.total } : {}),
+    },
     creditos: d.brilhante.creditos || 0,
     times,
     pedidos: d.pedidos_brilhante || [],
@@ -375,6 +379,9 @@ export default function Figurinha() {
   // Gerações que sobram no direito ESCOLHIDO (créditos, ou o que
   // falta no pacote do time): é o "N" do contador e do diálogo de confirmação.
   const restantesDireito = brilhante?.direito?.restantes ?? 0;
+  // O que a pessoa VÊ: tudo o que ela ainda pode gerar (pacotes dos times + créditos), não só o direito gasto primeiro
+  // (utils/totalDeGeracoes.js). É o número do contador, do "Refazer" e da confirmação.
+  const totalGeracoes = totalDeGeracoes(brilhante);
   const meuTimeBrilhante = (brilhante?.times || []).find((t) => t.sou_dono) || null;
   // PAGAMENTOS P2 — com a loja ligada (o motor diz `loja_pronta`, é o app nativo e o SDK do RevenueCat
   // tem a chave: lib/loja.js#lojaLigada) os convites desta tela dizem "Comprar · preço", com o preço
@@ -408,7 +415,6 @@ export default function Figurinha() {
   // Estados de tile: vestido (✓) · pintado (um toque veste, grátis) · geravel (confirma e gasta 1) ·
   // trancado.
   // Nada de "em breve"; o pacote do time, para o dono, está no cartão "Loja de figurinhas" mais abaixo.
-  const temCredito = fonteDireito === 'credito' || (brilhante?.creditos || 0) > 0;
   const direitoDaGradeAgora = direitoDaGrade({ fonteDireito, creditos: brilhante?.creditos });
   function estadoDoKit(kit) {
     return estadoDoUniforme({ direito: direitoDaGradeAgora, kitId: kit.id, kitVestido: avatarEhIA ? kitAtivo : null, kitDoTime, slots: slotsKits });
@@ -507,6 +513,31 @@ export default function Figurinha() {
       if (!e.indisponivel) espelharBrilhantesNoInicio(userId, e); // ver aplicarBrilhante
     });
     return () => { vivo = false; };
+  }, [userId]);
+
+  // Quem compra tem de ver o número subir sem fechar o app. A compra é confirmada nos Planos, mas o crédito pode chegar depois (o webhook
+  // da loja, o "Restaurar compras"): lib/brilhantes.js avisa quando o motor já mostra a compra, e a volta da tela ao primeiro plano (a folha
+  // da loja fechou, o app voltou do fundo) relê o estado em segundo plano — no máximo uma vez a cada 15 s.
+  useEffect(() => {
+    let vivo = true;
+    let ultimaLeitura = Date.now();
+    const aoAviso = (ev) => { if (vivo && ev?.detail?.direito) setBrilhante(ev.detail); };
+    const aoVoltar = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - ultimaLeitura < 15000) return;
+      ultimaLeitura = Date.now();
+      estadoBrilhantes({ segundoPlano: true }).then((e) => {
+        if (!vivo || !e || e.indisponivel) return;
+        setBrilhante(e);
+        espelharBrilhantesNoInicio(userId, e);
+      });
+    };
+    window.addEventListener(EVENTO_BRILHANTES, aoAviso);
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => {
+      vivo = false;
+      window.removeEventListener(EVENTO_BRILHANTES, aoAviso);
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
   }, [userId]);
 
   // SELOS DE HONRA: busca os selos do utilizador; mostra no cromo os 2 de maior prioridade que NÃO
@@ -1843,12 +1874,11 @@ export default function Figurinha() {
                 )
               )}
             </div>
-            {/* Contador de gerações restantes (§7). O pacote do time também tem saldo (2 por jogador, não "uma por
-                time") — o contador vale para os dois direitos. */}
-            {restantesDireito > 0 ? (
-              <span style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
-                {restantesDireito === 1 ? 'Resta 1 geração' : `Restam ${restantesDireito} gerações`}
-                {kitDoTime ? '' : ' · uniforme à sua escolha'}
+            {/* Contador de gerações (§7): a SOMA de tudo o que a pessoa pode gerar — pacotes dos times e créditos, sem separar um do
+                outro. Qual direito gasta (o uniforme do time sai do pacote; os outros, do crédito) é decidido por baixo. */}
+            {totalGeracoes > 0 ? (
+              <span data-contador-geracoes={totalGeracoes} style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
+                {totalGeracoes === 1 ? 'Resta 1 geração' : `Restam ${totalGeracoes} gerações`}
               </span>
             ) : null}
             {/* Sem link de "comprar mais gerações" aqui: o cartão "Loja de figurinhas" está logo abaixo, sempre, e o botão
@@ -2123,7 +2153,7 @@ export default function Figurinha() {
                   disabled={gerandoIA}
                   onClick={() => setKitParaPintar(kitDoCard)}
                 >
-                  Refazer {kitDoCard.nome} · {restantesDireito === 1 ? '1 geração' : `${restantesDireito} gerações`}
+                  Refazer {kitDoCard.nome} · {geracoesPorExtenso(totalGeracoes)}
                 </button>
               ) : null}
             </>
@@ -2470,12 +2500,8 @@ export default function Figurinha() {
                     Gerar figurinha com este uniforme?
                   </h2>
                   <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                    {(() => {
-                      // Uniforme que não é o do pacote do time sai dos CRÉDITOS (o motor usa o crédito para ele) — o número
-                      // é o dos créditos, não o do pacote.
-                      const n = kitDoTime && kitParaPintar.id !== kitDoTime && temCredito ? (brilhante?.creditos ?? restantesDireito) : restantesDireito;
-                      return `Isso usa 1 geração. Você tem ${n === 1 ? '1 geração' : `${n} gerações`}.`;
-                    })()}
+                    {/* O mesmo número do contador: tudo o que a pessoa tem. De onde sai a geração (pacote ou crédito) o motor decide. */}
+                    <span data-confirmar-total={totalGeracoes}>{`Isso usa 1 geração. Você tem ${geracoesPorExtenso(totalGeracoes)}.`}</span>
                   </p>
                   <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
                     <span className="cta-gold-glow" style={{ display: 'flex' }}>

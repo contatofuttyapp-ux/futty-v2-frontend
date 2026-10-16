@@ -1,6 +1,41 @@
 // Futty v2.0 — O que as telas precisam saber sobre Figurinhas Brilhantes. Um sítio só, para Planos,
 // Figurinha e Início não escreverem três versões da mesma pergunta.
 import { apiFetch } from './api';
+import { espelharBrilhantesNoInicio } from './cacheCard';
+
+/** O aviso de "o estado das figurinhas mudou" (uma compra chegou): a Figurinha aberta escuta e troca o contador na hora. */
+export const EVENTO_BRILHANTES = 'futty:brilhantes';
+
+/** Guarda o estado novo no Início guardado (a Figurinha nasce dele) e avisa quem estiver com a tela aberta. */
+export function avisarBrilhantes(userId, estado) {
+  if (!estado || estado.indisponivel) return;
+  espelharBrilhantesNoInicio(userId, estado);
+  try { window.dispatchEvent(new CustomEvent(EVENTO_BRILHANTES, { detail: estado })); } catch { /* sem janela (teste) */ }
+}
+
+/** O que foi comprado já aparece no estado? (créditos a mais na Minha Figurinha; pacote ativo no time). */
+export function compraApareceu(produto, antes, novo, teamId = null) {
+  if (!novo || novo.indisponivel) return false;
+  if (produto === 'minha') return (novo.creditos || 0) > (antes?.creditos || 0);
+  if (produto === 'pacote') return !!(novo.times || []).find((t) => t.id === teamId)?.brilhante_ativo;
+  return false;
+}
+
+/**
+ * A loja confirmou a compra, mas o motor ainda não a mostra (o webhook chega segundos depois): segue conferindo em segundo plano, mesmo que a
+ * pessoa saia dos Planos, e avisa quando aparecer — o contador da Figurinha sobe sem fechar o app. Nunca lança; devolve o estado novo ou null.
+ */
+export async function acompanharCompra({ userId, produto, antes, teamId = null, tentativas = 10, intervaloMs = 3000, ler = estadoBrilhantes, esperar = (ms) => new Promise((r) => { setTimeout(r, ms); }) }) {
+  for (let i = 0; i < tentativas; i += 1) {
+    await esperar(intervaloMs);
+    const novo = await ler({ segundoPlano: true });
+    if (compraApareceu(produto, antes, novo, teamId)) {
+      avisarBrilhantes(userId, novo);
+      return novo;
+    }
+  }
+  return null;
+}
 
 /**
  * GET /api/brilhantes/estado — direito atual, créditos, times e pedidos

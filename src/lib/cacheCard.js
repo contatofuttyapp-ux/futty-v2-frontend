@@ -229,6 +229,8 @@ export function espelharBrilhantesNoInicio(userId, estado) {
         team_id: estado.direito.team_id ?? null,
         kit_id: estado.direito.kit_id ?? null,
         restantes: estado.direito.restantes ?? 0,
+        // A soma de tudo (pacotes + créditos): o "Restam N gerações" da Figurinha (utils/totalDeGeracoes.js).
+        total: estado.direito.total ?? undefined, // undefined some do JSON: um total velho guardado nunca sobrevive a um estado sem ele
         creditos: estado.creditos ?? 0,
         // Pagamentos P2: o motor diz se a loja está ligada — a Figurinha nasce deste cache.
         ...(estado.loja_pronta != null ? { loja_pronta: !!estado.loja_pronta } : {}),
