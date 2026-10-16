@@ -5,6 +5,10 @@ export const TEXTO_BOTAO_ASSOCIAR = 'Associar jogador';
 export const TITULO_ASSOCIAR = 'Associar jogador';
 export const SEM_MEMBROS = 'Ninguém do time para escolher.';
 export const TEXTO_DESFAZER = 'Desfazer';
+// A lista de membros chega em menos de 1 s; passados 15 s sem resposta, a janela avisa e oferece "Tentar de novo" em vez de esperar calada.
+export const LIMITE_DA_LISTA_MS = 15000;
+export const MSG_LISTA_DEMOROU = 'O servidor está demorando para mandar a lista do time.';
+export const MSG_LISTA_FALHOU = 'Não deu para carregar a lista do time.';
 
 /** O que a pessoa lê antes de confirmar: o que muda na conta do membro. */
 export function fraseDaConfirmacao(convidadoNome, apelido) {

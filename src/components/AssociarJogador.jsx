@@ -4,10 +4,11 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
-import LoadingFutty from './LoadingFutty';
+import FuttyLoader from './FuttyLoader';
 import PlayerAvatar from './PlayerAvatar';
 import {
-  SEM_MEMBROS, TEXTO_DESFAZER, TITULO_ASSOCIAR, associacoesDesfaziveis, fraseDaAssociacao, fraseDaConfirmacao, fraseDoDesfazer,
+  LIMITE_DA_LISTA_MS, MSG_LISTA_DEMOROU, MSG_LISTA_FALHOU, SEM_MEMBROS, TEXTO_DESFAZER, TITULO_ASSOCIAR, associacoesDesfaziveis, fraseDaAssociacao,
+  fraseDaConfirmacao, fraseDoDesfazer,
 } from '../utils/associarJogador';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -25,14 +26,25 @@ export default function AssociarJogador({ gameId, convidado, onClose, onFeito })
   const [erro, setErro] = useState('');
   const [escolhido, setEscolhido] = useState(null); // o membro tocado, à espera da confirmação
   const [salvando, setSalvando] = useState(false);
+  const [tentativa, setTentativa] = useState(0); // "Tentar de novo" pede a lista outra vez
 
+  // A janela fica por cima da tela inteira: o LoadingFutty de página (atrás dela) nunca aparece aqui dentro, por isso a espera tem o próprio F
+  // na lista. Sem resposta em LIMITE_DA_LISTA_MS, ou com resposta sem a lista, a janela diz o que houve e oferece "Tentar de novo" — nunca fica
+  // muda, com o título e nada para escolher.
   useEffect(() => {
     let ativo = true;
+    const demorou = setTimeout(() => { if (ativo) setErro(MSG_LISTA_DEMOROU); }, LIMITE_DA_LISTA_MS);
     apiFetch(`/api/games/${gameId}/associar-jogador`)
-      .then((d) => { if (ativo) setDados(d); })
-      .catch((e) => { if (ativo) setErro(e.message); });
-    return () => { ativo = false; };
-  }, [gameId]);
+      .then((d) => {
+        if (!ativo) return;
+        clearTimeout(demorou);
+        if (!Array.isArray(d?.membros)) { setErro(MSG_LISTA_FALHOU); return; }
+        setErro('');
+        setDados(d);
+      })
+      .catch((e) => { if (ativo) { clearTimeout(demorou); setErro(e.message || MSG_LISTA_FALHOU); } });
+    return () => { ativo = false; clearTimeout(demorou); };
+  }, [gameId, tentativa]);
 
   async function confirmar() {
     if (!escolhido || salvando) return;
@@ -76,7 +88,12 @@ export default function AssociarJogador({ gameId, convidado, onClose, onFeito })
               </div>
             </div>
           ) : !dados && !erro ? (
-            <LoadingFutty />
+            <div data-carregando-membros role="status" style={{ display: 'grid', justifyItems: 'center', gap: 8, padding: '14px 0' }}>
+              <FuttyLoader size={48} label={null} />
+              <span className="muted" style={{ fontSize: 13 }}>Carregando os membros do time…</span>
+            </div>
+          ) : !dados ? (
+            <button type="button" data-tentar-de-novo className="btn btn--outline btn--sm" onClick={() => { setErro(''); setTentativa((n) => n + 1); }}>Tentar de novo</button>
           ) : (
             <div data-lista-de-membros role="list" style={{ display: 'grid', gap: 6, maxHeight: '52dvh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
               {membros.length === 0 && dados ? <p className="muted" style={{ margin: 0 }}>{SEM_MEMBROS}</p> : null}

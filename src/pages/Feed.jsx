@@ -240,6 +240,17 @@ export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
             </div>
           ) : null}
 
+          {/* C1) SÓ A FOTO — jogo antigo, de antes do app, que tem a foto do campeão e nenhum resultado lançado: a legenda diz o que a foto
+              é, sem nomes (o app não sabe quem ganhou e não inventa). Parado: flutuar é do bloco com o time campeão. */}
+          {foto && !jogadoresCampeao.length && !empate ? (
+            <div data-so-foto style={{ padding: '10px 14px', borderTop: BORDA_VIDRO }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', color: 'var(--neon)', textTransform: 'uppercase' }}>
+                <Icon name="medalha" size={14} />
+                Time campeão
+              </span>
+            </div>
+          ) : null}
+
           {/* C2) EMPATE — no lugar do time campeão, com a mesma respiração: os dois times e, se houve, o placar. */}
           {empate ? (
             <div className="feed-cromo-bob">
