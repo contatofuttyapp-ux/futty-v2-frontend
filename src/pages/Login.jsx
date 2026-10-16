@@ -1,5 +1,5 @@
 // Futty v2.0 — Login (email/password + Google)
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -9,8 +9,11 @@ import { MSG_MENOR } from '../utils/idade';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
+import ConfirmarCodigo from '../components/ConfirmarCodigo';
 import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
 import { temConvitePendente } from '../lib/convitePendente';
+import { guardarCadastroPendente, lerCadastroPendente, limparCadastroPendente } from '../lib/cadastroPendente';
+import { contaSemConfirmar } from '../utils/codigoDoEmail';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
 import '../styles/app.css';
@@ -26,6 +29,11 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Conta criada que ainda espera o código do e-mail ({ email, em }): do aparelho (o app foi fechado no meio do cadastro) ou do
+  // Entrar com senha numa conta sem confirmar. `avisoDoCodigo` explica por que a tela do código apareceu.
+  const [pendente, setPendente] = useState(() => lerCadastroPendente());
+  const [avisoDoCodigo, setAvisoDoCodigo] = useState('');
+  const confirmouAgora = useRef(false);
   // Avisos curtos, uma vez só: a sessão acabou sem a pessoa pedir (AuthContext: 401 do motor, refresh
   // recusado) ou o cadastro parou nos 18 anos (Onboarding: o motor apagou a conta).
   // A marca só é LIDA aqui e apagada no efeito, depois de a tela montar: o Login chega por import
@@ -53,8 +61,11 @@ export default function Login() {
   // navega para `from` por conta própria — como isso acontece dentro do mesmo
   // ciclo de renderização em que a sessão muda, o React troca de rota antes deste
   // efeito rodar de novo, então não há disputa entre os dois destinos na prática.
+  // Quem acabou de digitar o código vai ao onboarding (a conta nasceu agora), sem passar pelo Início.
   useEffect(() => {
-    if (!sessaoCarregando && session) navigate('/home', { replace: true });
+    if (sessaoCarregando || !session) return;
+    limparCadastroPendente();
+    navigate(confirmouAgora.current ? '/onboarding' : '/home', { replace: true });
   }, [sessaoCarregando, session, navigate]);
 
   // Quem entra pelo Google/Apple numa conta nova cai no onboarding — o chunk e as 8 figurinhas dele já vêm.
@@ -67,12 +78,34 @@ export default function Login() {
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
+    if (error && contaSemConfirmar(error)) {
+      // A conta existe mas o código do e-mail nunca foi digitado: manda um código novo e abre a tela dele. Recusado (60 s entre
+      // e-mails), o código do e-mail anterior continua valendo.
+      const { error: erroDoReenvio } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/onboarding` },
+      });
+      setLoading(false);
+      setAvisoDoCodigo(erroDoReenvio
+        ? 'Falta confirmar seu e-mail. Use o código do último e-mail que mandamos.'
+        : 'Falta confirmar seu e-mail. Mandamos um código novo.');
+      setPendente(guardarCadastroPendente(email));
+      return;
+    }
     setLoading(false);
     if (error) {
       setError(error.message);
       return;
     }
     navigate(from, { replace: true });
+  }
+
+  function voltarAoFormulario(emailDoCodigo) {
+    setPendente(null);
+    setAvisoDoCodigo('');
+    setError('');
+    if (emailDoCodigo) setEmail(emailDoCodigo);
   }
 
   async function handleGoogle() {
@@ -92,6 +125,28 @@ export default function Login() {
       return;
     }
     navigate(from, { replace: true });
+  }
+
+  if (pendente) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <div className="auth-card__inner">
+            <ConfirmarCodigo
+              key={pendente.email}
+              email={pendente.email}
+              enviadoEm={pendente.em}
+              aviso={avisoDoCodigo}
+              redirecionarPara={`${window.location.origin}/onboarding`}
+              onConfirmando={() => { confirmouAgora.current = true; }}
+              onConfirmado={() => navigate('/onboarding', { replace: true })}
+              onTrocarEmail={() => voltarAoFormulario('')}
+              onEntrarComSenha={() => voltarAoFormulario(pendente.email)}
+            />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

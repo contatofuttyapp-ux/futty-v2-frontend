@@ -9,7 +9,7 @@
 // A causa (Rodada 31R): a página do convite guarda o convite no armazenamento do NAVEGADOR; o app instalado tem o seu próprio, vazio.
 //
 // Como: o motor de VERDADE sobe num processo à parte sobre banco e Auth de mentira (scripts/provas/_motor-31r.cjs → backend/tests/_appFalsa.js).
-// O Supabase do navegador é respondido aqui (cadastro, entrar com senha, a troca do código do Google, o token da Apple) com a sessão da conta
+// O Supabase do navegador é respondido aqui (cadastro, o código do e-mail, a troca do código do Google, o token da Apple) com a sessão da conta
 // da vez, que o motor de mentira aceita. O lado nativo é de mentira (a ponte de verdade do Capacitor por cima): o Browser do Google, a folha
 // da Apple e os links que o sistema entrega ao app (appUrlOpen). A área de transferência é a do "sistema": uma só, para o navegador e o app.
 // Nada sai da máquina.
@@ -122,7 +122,7 @@ function areaDeTransferencia(modo) {
 
 const usuarioDoAuth = (pessoa, provedor) => ({
   id: pessoa.id, aud: 'authenticated', role: 'authenticated', email: pessoa.email, app_metadata: { provider: provedor, providers: [provedor] },
-  user_metadata: {}, identities: [], created_at: '2026-10-15T12:00:00Z', confirmation_sent_at: '2026-10-15T12:00:00Z',
+  user_metadata: {}, identities: [{ id: pessoa.id, user_id: pessoa.id, provider: provedor }], created_at: '2026-10-15T12:00:00Z', confirmation_sent_at: '2026-10-15T12:00:00Z',
 });
 
 export async function rodar({ navegador, base, t }) {
@@ -159,8 +159,8 @@ export async function rodar({ navegador, base, t }) {
           if (!pessoa) return await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'sem conta da vez' }) });
           const user = usuarioDoAuth(pessoa, estado.provedor);
           if (url.pathname === '/auth/v1/signup') { estado.grants.push('signup'); return await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) }); }
-          if (url.pathname === '/auth/v1/token') {
-            estado.grants.push(url.searchParams.get('grant_type'));
+          if (url.pathname === '/auth/v1/token' || url.pathname === '/auth/v1/verify') {
+            estado.grants.push(url.pathname.endsWith('/verify') ? 'verify' : url.searchParams.get('grant_type'));
             const sessao = { access_token: dados.tokens[estado.conta], token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: `r-${estado.conta}`, user };
             return await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessao) });
           }
@@ -202,13 +202,10 @@ export async function rodar({ navegador, base, t }) {
       for (let i = 0; i < 8; i += 1) await page.keyboard.press('ArrowUp');
       await page.locator('input[type="checkbox"]').check();
       await page.locator('button[type="submit"]').click();
-      // A confirmação por e-mail está ligada: a conta nasce sem sessão. A pessoa confirma no e-mail (fora do app), volta e entra com a senha.
-      await page.getByText('Conta criada!').waitFor({ timeout: 20000 });
-      await page.evaluate(() => { window.history.pushState({}, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')); });
-      await page.getByText('Bem-vindo de volta', { exact: false }).waitFor({ timeout: 20000 }); // a tela de Entrar já montou (não a do cadastro)
-      await page.locator('input[placeholder="seu@email.com"]').fill(dados.pessoas[estado.conta].email);
-      await page.locator('input[placeholder="••••••••"]').fill(SENHA);
-      await page.locator('button[type="submit"]').click();
+      // A confirmação por e-mail está ligada: a conta nasce sem sessão e o e-mail traz um código de 6 números, digitado no próprio app
+      // (o caminho do código em si — errado, vencido, reenviar — é a prova rodada-31s).
+      await page.locator('[data-confirmar-codigo] input#codigo').waitFor({ timeout: 20000 });
+      await page.locator('[data-confirmar-codigo] input#codigo').fill('123456');
       return;
     }
     if (forma === 'google') {
@@ -336,7 +333,7 @@ export async function rodar({ navegador, base, t }) {
         const linha = await linhaNoRanking(app.page, c.apelidos[1]).catch((e) => ({ erro: e.message.split('\n')[0] }));
         t(`com app · ${rotulo} · e no Ranking, com "—" nos pontos`, linha?.pontos === '—', JSON.stringify(linha));
         t(`com app · ${rotulo} · a sessão nasceu pelo caminho da forma de entrar (${app.estado.grants.join(', ')})`,
-          c.forma === 'email' ? app.estado.grants.includes('signup') && app.estado.grants.includes('password') : c.forma === 'google' ? app.estado.grants.includes('pkce') : app.estado.grants.includes('id_token'));
+          c.forma === 'email' ? app.estado.grants.includes('signup') && app.estado.grants.includes('verify') : c.forma === 'google' ? app.estado.grants.includes('pkce') : app.estado.grants.includes('id_token'));
         t(`com app · ${rotulo} · sem erro de página`, app.estado.erros.length === 0, app.estado.erros.slice(0, 3).join(' | '));
         await app.ctx.close();
       }

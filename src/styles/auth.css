@@ -247,8 +247,11 @@
   cursor: not-allowed;
 }
 
-/* Botão Google — secundário: roxo recuado. Não compete com o dourado. */
-.auth-btn--google {
+/* Botão Google — secundário: roxo recuado. Não compete com o dourado.
+   O "Reenviar código" (.auth-btn--secundario) veste a mesma caixa: é a ação de
+   reserva da tela do código, abaixo do Confirmar dourado. */
+.auth-btn--google,
+.auth-btn--secundario {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -261,7 +264,8 @@
   letter-spacing: 0.06em;
 }
 
-.auth-btn--google:hover:not(:disabled) {
+.auth-btn--google:hover:not(:disabled),
+.auth-btn--secundario:hover:not(:disabled) {
   background: rgba(139, 92, 246, 0.13);
   border-color: rgba(139, 92, 246, 0.45);
 }
@@ -352,4 +356,39 @@
   background: rgba(139, 92, 246, 0.1);
   border: 1px solid rgba(139, 92, 246, 0.3);
   color: #c4b5fd;
+}
+
+/* O campo do código do e-mail: 6 números grandes, no centro, em Rajdhani (número
+   é estrutura). O espaçamento largo separa os algarismos sem precisar de 6 caixas:
+   um campo só aceita o código colado e o preenchimento do teclado do celular. */
+.auth-input--codigo {
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em; /* o espaçamento depois do último número desequilibraria o centro */
+  text-align: center;
+  padding: 10px 8px;
+}
+
+.auth-input--codigo::placeholder {
+  color: #2e2e36;
+}
+
+/* Depois de um código recusado o campo fica todo selecionado (o próximo número
+   já substitui): a seleção é dourada, nunca o azul do navegador. */
+.auth-input--codigo::selection {
+  background: rgba(212, 160, 23, 0.38);
+  color: var(--text);
+}
+
+/* Link de texto que é botão (Trocar e-mail, Entrar com a senha): mesma cor dos
+   links do rodapé, sem caixa. */
+.auth-link-botao {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #a78bfa;
+  cursor: pointer;
 }

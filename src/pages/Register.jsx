@@ -10,12 +10,18 @@ import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
 import RolinhosData from '../components/RolinhosData';
+import ConfirmarCodigo from '../components/ConfirmarCodigo';
 import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
 import { temConvitePendente } from '../lib/convitePendente';
+import { guardarCadastroPendente, lerCadastroPendente, limparCadastroPendente } from '../lib/cadastroPendente';
+import { emailJaTemConta } from '../utils/codigoDoEmail';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
 import '../styles/app.css';
 import '../styles/auth.css';
+
+// Para onde vai o link de confirmação que ainda pode vir no e-mail (ver o signUp).
+const destinoDoLink = () => `${window.location.origin}/onboarding`;
 
 export default function Register() {
   const navigate = useNavigate();
@@ -26,23 +32,13 @@ export default function Register() {
   const [birthdate, setBirthdate] = useState('');
   const [aceite, setAceite] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [reenviando, setReenviando] = useState(false);
-  const [reenviarMsg, setReenviarMsg] = useState('');
-  const [reenviarErro, setReenviarErro] = useState('');
-  const [cooldown, setCooldown] = useState(0);
+  // A conta criada que espera o código do e-mail ({ email, em }). Vem do aparelho: se o sistema fechou o app enquanto a pessoa
+  // lia o e-mail, o Cadastro reabre direto na tela do código.
+  const [pendente, setPendente] = useState(() => lerCadastroPendente());
 
   // A próxima parada é o onboarding: o chunk e as 8 figurinhas dele vêm a caminho enquanto a pessoa digita.
   useEffect(() => { preaquecerOnboarding({ convidado: temConvitePendente() }); }, []);
-
-  // Contagem regressiva do "Reenviar e-mail": 1 setTimeout por tick, dependency
-  // simples em `cooldown` — evita recriar um setInterval solto a limpar na mão.
-  useEffect(() => {
-    if (cooldown <= 0) return undefined;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooldown]);
 
   // Rede de segurança para "já está autenticado": cobre chegar aqui já logado
   // e o login nativo pela Apple/Google, cuja sessão nasce de um evento fora
@@ -53,15 +49,18 @@ export default function Register() {
   // de sessão chega depois do navigate('/onboarding') do envio (medido: 60 ms depois), e mandar para /home
   // carregaria o Início (chunk grande + /api/inicio) só para a trava do onboarding devolver a pessoa a
   // /onboarding quando a resposta chegasse.
+  // Quem digita o código também acabou de cadastrar (mesmo que o app tenha sido reaberto no meio): a tela do código marca isso
+  // antes de a sessão nascer. Com sessão, o bilhete do código não serve mais (ex.: confirmou pelo link neste mesmo navegador).
   const acabouDeCadastrar = useRef(false);
   useEffect(() => {
-    if (!sessaoCarregando && session) navigate(acabouDeCadastrar.current ? '/onboarding' : '/home', { replace: true });
+    if (sessaoCarregando || !session) return;
+    limparCadastroPendente();
+    navigate(acabouDeCadastrar.current ? '/onboarding' : '/home', { replace: true });
   }, [sessaoCarregando, session, navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    setSuccess('');
 
     if (password.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres.');
@@ -96,8 +95,9 @@ export default function Register() {
       password,
       options: {
         // Registos NOVOS aterram no onboarding dia-1 (boas-vindas → foto → identidade);
-        // contas antigas nunca passam por lá.
-        emailRedirectTo: `${window.location.origin}/onboarding`,
+        // contas antigas nunca passam por lá. O e-mail agora traz o CÓDIGO; este destino
+        // continua para o link (o de e-mails antigos e o de reserva do e-mail novo).
+        emailRedirectTo: destinoDoLink(),
         data: { birthdate }, // guardado em user_metadata; o backend persiste em users.birthdate
       },
     });
@@ -109,34 +109,26 @@ export default function Register() {
       return;
     }
 
-    // Se a confirmação por email estiver ativa, não há sessão imediata.
-    // O onboarding fica à espera no servidor (flag onboarding_completo): venhas
-    // pelo link do email ou por login, entras sempre por ele.
+    // Confirmação por e-mail ligada: não há sessão imediata. O e-mail traz um código de 6 números e a tela do código
+    // abre a sessão aqui mesmo; o onboarding fica à espera no servidor (flag onboarding_completo).
     if (data.user && !data.session) {
-      setSuccess(`Conta criada! Enviamos um e-mail de confirmação para ${email}. Olhe também no Spam.`);
+      if (emailJaTemConta(data.user)) {
+        acabouDeCadastrar.current = false;
+        setError('Esse e-mail já tem conta no Futty. Entre com a senha ou toque em "Esqueceu a senha?" na tela de entrar.');
+        return;
+      }
+      setPendente(guardarCadastroPendente(email));
     } else {
       // Sessão imediata → onboarding dia-1.
       navigate('/onboarding', { replace: true });
     }
   }
 
-  async function handleResend() {
-    setReenviarErro('');
-    setReenviarMsg('');
-    setReenviando(true);
-    const { error: resendError } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/onboarding` },
-    });
-    setReenviando(false);
-
-    if (resendError) {
-      setReenviarErro('Aguarde um minuto e tente de novo.');
-      return;
-    }
-    setReenviarMsg('Enviamos de novo. Olhe também na aba Promoções e no Spam.');
-    setCooldown(60);
+  // Código certo: a sessão já abriu. O caminho é o do cadastro com sessão imediata: onboarding (as boas-vindas do time, se a
+  // pessoa veio de um convite; senão o "Começar") e, no fim dele, o time ou o Início.
+  function aoConfirmar() {
+    acabouDeCadastrar.current = true;
+    navigate('/onboarding', { replace: true });
   }
 
   async function handleGoogle() {
@@ -159,6 +151,27 @@ export default function Register() {
     navigate('/home', { replace: true });
   }
 
+  if (pendente) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <div className="auth-card__inner">
+            <ConfirmarCodigo
+              key={pendente.email}
+              email={pendente.email}
+              enviadoEm={pendente.em}
+              redirecionarPara={destinoDoLink()}
+              onConfirmando={() => { acabouDeCadastrar.current = true; }}
+              onConfirmado={aoConfirmar}
+              onTrocarEmail={() => setPendente(null)}
+              onEntrarComSenha={() => navigate('/login', { state: { email: pendente.email } })}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-shell">
       <div className="auth-card">
@@ -177,32 +190,6 @@ export default function Register() {
           <form className="auth-form" onSubmit={handleSubmit}>
             {error && (
               <div className="auth-alert auth-alert--error hud-corners-s">{error}</div>
-            )}
-            {success && (
-              <>
-                <div className="auth-alert auth-alert--success hud-corners-s">{success}</div>
-                {reenviarMsg && (
-                  <div className="auth-alert auth-alert--success hud-corners-s">{reenviarMsg}</div>
-                )}
-                {reenviarErro && (
-                  <div className="auth-alert auth-alert--error hud-corners-s">{reenviarErro}</div>
-                )}
-                <button
-                  type="button"
-                  className="auth-btn hud-corners-s"
-                  onClick={handleResend}
-                  disabled={reenviando || cooldown > 0}
-                >
-                  {cooldown > 0 ? `Reenviar em ${cooldown}s…` : reenviando ? 'Enviando…' : 'Reenviar e-mail'}
-                </button>
-                <button
-                  type="button"
-                  className="auth-btn hud-corners-s"
-                  onClick={() => navigate('/login', { state: { email } })}
-                >
-                  Já confirmei, entrar
-                </button>
-              </>
             )}
 
             <div className="auth-field">

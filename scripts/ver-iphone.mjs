@@ -8118,7 +8118,7 @@ async function cenaRodada29g(navegador) {
       const agora = new Date().toISOString();
       return route.fulfill({
         status: 200, contentType: 'application/json', headers: cors,
-        body: JSON.stringify({ id: '00000000-0000-4000-8000-000000002907', aud: 'authenticated', role: '', email: corpo.email || 'x@futtymock.com', created_at: agora, updated_at: agora, app_metadata: {}, user_metadata: corpo.data || {}, identities: [] }),
+        body: JSON.stringify({ id: '00000000-0000-4000-8000-000000002907', aud: 'authenticated', role: '', email: corpo.email || 'x@futtymock.com', created_at: agora, updated_at: agora, app_metadata: {}, user_metadata: corpo.data || {}, identities: [{ provider: 'email' }] }),
       });
     });
     await pagina.goto(`${BASE}/register`, { waitUntil: 'domcontentloaded' });
@@ -8153,7 +8153,7 @@ async function cenaRodada29g(navegador) {
     await espera(800);
     const t = await texto(pagina);
     verificar('A · MAIOR (faz 18 hoje): o signUp sai, com a data de nascimento', signups.length === 1 && signups[0]?.data?.birthdate === aniversarioHoje(18), `signups: ${signups.length} · data: ${signups[0]?.data?.birthdate}`);
-    verificar('A · MAIOR: segue para "Conta criada!" (sem o aviso de idade)', /Conta criada!/.test(t) && (await aviso.count()) === 0, t.replace(/\s+/g, ' ').slice(0, 160));
+    verificar('A · MAIOR: segue para a tela do código (sem o aviso de idade)', /Digite o código que mandamos/.test(t) && (await aviso.count()) === 0, t.replace(/\s+/g, ' ').slice(0, 160));
     await capturar(pagina, 'A3-maior-faz-18-hoje');
   } catch (e) {
     erros.push(`A-register: ${e.message.split('\n')[0]}`);

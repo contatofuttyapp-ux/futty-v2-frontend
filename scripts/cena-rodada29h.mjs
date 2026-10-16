@@ -178,7 +178,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
           try { corpo = JSON.parse(pedido.postData() || '{}'); } catch { /* ilegível */ }
           signups.push(corpo);
           const agora = new Date().toISOString();
-          return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ id: '00000000-0000-4000-8000-000000002908', aud: 'authenticated', role: '', email: corpo.email || 'x@futtymock.com', created_at: agora, updated_at: agora, app_metadata: {}, user_metadata: corpo.data || {}, identities: [] }) });
+          return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ id: '00000000-0000-4000-8000-000000002908', aud: 'authenticated', role: '', email: corpo.email || 'x@futtymock.com', created_at: agora, updated_at: agora, app_metadata: {}, user_metadata: corpo.data || {}, identities: [{ provider: 'email' }] }) });
         });
       },
     });
@@ -222,7 +222,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     const limite = Date.now() + 10000;
     while (signups.length === 0 && Date.now() < limite) await espera(200);
     await espera(600);
-    verificar('B · cadastro com data de maior: o signUp sai com a data certa e segue para "Conta criada!"', signups.length === 1 && signups[0]?.data?.birthdate === '1990-03-15' && /Conta criada!/.test(await texto(pagina)), `signups: ${signups.length} · ${signups[0]?.data?.birthdate}`);
+    verificar('B · cadastro com data de maior: o signUp sai com a data certa e segue para a tela do código', signups.length === 1 && signups[0]?.data?.birthdate === '1990-03-15' && /Digite o código que mandamos/.test(await texto(pagina)), `signups: ${signups.length} · ${signups[0]?.data?.birthdate}`);
     await capturar(pagina, 'B3-maior');
     await contexto.close();
   });
