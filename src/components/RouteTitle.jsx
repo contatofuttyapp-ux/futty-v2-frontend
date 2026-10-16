@@ -23,6 +23,8 @@ const TITULOS = [
   ['/gabinete', 'Gabinete'],
   ['/termos', 'Termos'],
   ['/privacidade', 'Privacidade'],
+  ['/c/confirmar', 'Confirmar e-mail'],
+  ['/auth/confirmar', 'Confirmar e-mail'],
   ['/convite/:token', 'Convite'],
   ['/c/:token', 'Convite'],
   ['/download', 'Baixar o Futty'],

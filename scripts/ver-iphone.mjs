@@ -8153,7 +8153,7 @@ async function cenaRodada29g(navegador) {
     await espera(800);
     const t = await texto(pagina);
     verificar('A · MAIOR (faz 18 hoje): o signUp sai, com a data de nascimento', signups.length === 1 && signups[0]?.data?.birthdate === aniversarioHoje(18), `signups: ${signups.length} · data: ${signups[0]?.data?.birthdate}`);
-    verificar('A · MAIOR: segue para a tela do código (sem o aviso de idade)', /Digite o código que mandamos/.test(t) && (await aviso.count()) === 0, t.replace(/\s+/g, ' ').slice(0, 160));
+    verificar('A · MAIOR: segue para a tela de espera do e-mail (sem o aviso de idade)', /Mandamos um link para/.test(t) && (await aviso.count()) === 0, t.replace(/\s+/g, ' ').slice(0, 160));
     await capturar(pagina, 'A3-maior-faz-18-hoje');
   } catch (e) {
     erros.push(`A-register: ${e.message.split('\n')[0]}`);

@@ -222,7 +222,7 @@ export async function cenaRodada29h(navegador, { BASE, IPHONE, PASTA, RAIZ, novo
     const limite = Date.now() + 10000;
     while (signups.length === 0 && Date.now() < limite) await espera(200);
     await espera(600);
-    verificar('B · cadastro com data de maior: o signUp sai com a data certa e segue para a tela do código', signups.length === 1 && signups[0]?.data?.birthdate === '1990-03-15' && /Digite o código que mandamos/.test(await texto(pagina)), `signups: ${signups.length} · ${signups[0]?.data?.birthdate}`);
+    verificar('B · cadastro com data de maior: o signUp sai com a data certa e segue para a tela de espera do e-mail', signups.length === 1 && signups[0]?.data?.birthdate === '1990-03-15' && /Mandamos um link para/.test(await texto(pagina)), `signups: ${signups.length} · ${signups[0]?.data?.birthdate}`);
     await capturar(pagina, 'B3-maior');
     await contexto.close();
   });

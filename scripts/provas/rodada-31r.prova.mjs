@@ -9,7 +9,7 @@
 // A causa (Rodada 31R): a página do convite guarda o convite no armazenamento do NAVEGADOR; o app instalado tem o seu próprio, vazio.
 //
 // Como: o motor de VERDADE sobe num processo à parte sobre banco e Auth de mentira (scripts/provas/_motor-31r.cjs → backend/tests/_appFalsa.js).
-// O Supabase do navegador é respondido aqui (cadastro, o código do e-mail, a troca do código do Google, o token da Apple) com a sessão da conta
+// O Supabase do navegador é respondido aqui (cadastro, o link do e-mail, a troca do código do Google, o token da Apple) com a sessão da conta
 // da vez, que o motor de mentira aceita. O lado nativo é de mentira (a ponte de verdade do Capacitor por cima): o Browser do Google, a folha
 // da Apple e os links que o sistema entrega ao app (appUrlOpen). A área de transferência é a do "sistema": uma só, para o navegador e o app.
 // Nada sai da máquina.
@@ -202,10 +202,16 @@ export async function rodar({ navegador, base, t }) {
       for (let i = 0; i < 8; i += 1) await page.keyboard.press('ArrowUp');
       await page.locator('input[type="checkbox"]').check();
       await page.locator('button[type="submit"]').click();
-      // A confirmação por e-mail está ligada: a conta nasce sem sessão e o e-mail traz um código de 6 números, digitado no próprio app
-      // (o caminho do código em si — errado, vencido, reenviar — é a prova rodada-31s).
-      await page.locator('[data-confirmar-codigo] input#codigo').waitFor({ timeout: 20000 });
-      await page.locator('[data-confirmar-codigo] input#codigo').fill('123456');
+      // A confirmação por e-mail está ligada: a conta nasce sem sessão e o botão do e-mail abre o app (o sistema entrega o link pelo
+      // appUrlOpen) ou, no navegador, a página /c/confirmar (o caminho do link em si — vencido, já usado, outro aparelho — é a prova rodada-31s).
+      await page.locator('[data-espera-do-email]').waitFor({ timeout: 20000 });
+      const link = 'https://futtyapp.com.br/c/confirmar?token_hash=pkce_a3f9c1e07b5d42e98f61c0d3b7a2e5f4c9d8b1a0e6f3c2d5b4a7e8f9&type=signup';
+      await page.evaluate((url) => {
+        if (window.__eventoNativo) { window.__eventoNativo('appUrlOpen', { url }); return; }
+        const u = new URL(url);
+        window.history.pushState({}, '', u.pathname + u.search);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }, link);
       return;
     }
     if (forma === 'google') {

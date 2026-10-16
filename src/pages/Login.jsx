@@ -9,11 +9,11 @@ import { MSG_MENOR } from '../utils/idade';
 import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
-import ConfirmarCodigo from '../components/ConfirmarCodigo';
+import EsperaDoEmail from '../components/EsperaDoEmail';
 import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
 import { temConvitePendente } from '../lib/convitePendente';
 import { guardarCadastroPendente, lerCadastroPendente, limparCadastroPendente } from '../lib/cadastroPendente';
-import { contaSemConfirmar } from '../utils/codigoDoEmail';
+import { contaSemConfirmar } from '../utils/confirmacaoDoEmail';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
 import '../styles/app.css';
@@ -25,14 +25,17 @@ export default function Login() {
   const from = location.state?.from?.pathname || '/home';
   const { session, loading: sessaoCarregando } = useAuth();
 
-  const [email, setEmail] = useState(location.state?.email || '');
+  // O cadastro deste aparelho que ainda esperava a confirmação ({ email, em }): o app foi fechado no meio e a pessoa confirmou pelo
+  // e-mail em outro lugar ("Volte ao app e toque em Entrar"). O Entrar abre com o e-mail dela já no campo; falta só a senha.
+  const [bilhete] = useState(() => lerCadastroPendente());
+  const [email, setEmail] = useState(location.state?.email || bilhete?.email || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // Conta criada que ainda espera o código do e-mail ({ email, em }): do aparelho (o app foi fechado no meio do cadastro) ou do
-  // Entrar com senha numa conta sem confirmar. `avisoDoCodigo` explica por que a tela do código apareceu.
-  const [pendente, setPendente] = useState(() => lerCadastroPendente());
-  const [avisoDoCodigo, setAvisoDoCodigo] = useState('');
+  // A tela de espera do e-mail ({ email, em }), aberta pelo Entrar com senha numa conta sem confirmar ou pelo "Mandar o e-mail de
+  // novo". `avisoDoEmail` explica por que ela apareceu.
+  const [pendente, setPendente] = useState(null);
+  const [avisoDoEmail, setAvisoDoEmail] = useState('');
   const confirmouAgora = useRef(false);
   // Avisos curtos, uma vez só: a sessão acabou sem a pessoa pedir (AuthContext: 401 do motor, refresh
   // recusado) ou o cadastro parou nos 18 anos (Onboarding: o motor apagou a conta).
@@ -61,7 +64,7 @@ export default function Login() {
   // navega para `from` por conta própria — como isso acontece dentro do mesmo
   // ciclo de renderização em que a sessão muda, o React troca de rota antes deste
   // efeito rodar de novo, então não há disputa entre os dois destinos na prática.
-  // Quem acabou de digitar o código vai ao onboarding (a conta nasceu agora), sem passar pelo Início.
+  // Quem acabou de confirmar o cadastro deste aparelho vai ao onboarding (a conta nasceu agora), sem passar pelo Início.
   useEffect(() => {
     if (sessaoCarregando || !session) return;
     limparCadastroPendente();
@@ -75,37 +78,41 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    // A conta que este aparelho acabou de criar (o bilhete): entrar agora é o fim do cadastro, e o próximo passo é o onboarding.
+    const doCadastroDaqui = !!bilhete && bilhete.email.toLowerCase() === email.trim().toLowerCase();
+    if (doCadastroDaqui) confirmouAgora.current = true;
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error && contaSemConfirmar(error)) {
-      // A conta existe mas o código do e-mail nunca foi digitado: manda um código novo e abre a tela dele. Recusado (60 s entre
-      // e-mails), o código do e-mail anterior continua valendo.
+      // A conta existe mas ninguém tocou no botão do e-mail: manda outro e abre a tela de espera (com a senha na memória, ela entra
+      // sozinha quando a confirmação acontecer). Recusado (60 s entre e-mails), o link do e-mail anterior continua valendo.
       const { error: erroDoReenvio } = await supabase.auth.resend({
         type: 'signup',
         email,
         options: { emailRedirectTo: `${window.location.origin}/onboarding` },
       });
       setLoading(false);
-      setAvisoDoCodigo(erroDoReenvio
-        ? 'Falta confirmar seu e-mail. Use o código do último e-mail que mandamos.'
-        : 'Falta confirmar seu e-mail. Mandamos um código novo.');
+      setAvisoDoEmail(erroDoReenvio
+        ? 'Falta confirmar seu e-mail. Use o link do último e-mail que mandamos.'
+        : 'Falta confirmar seu e-mail. Mandamos outro link.');
       setPendente(guardarCadastroPendente(email));
       return;
     }
     setLoading(false);
     if (error) {
+      confirmouAgora.current = false;
       setError(error.message);
       return;
     }
-    navigate(from, { replace: true });
+    navigate(doCadastroDaqui ? '/onboarding' : from, { replace: true });
   }
 
-  function voltarAoFormulario(emailDoCodigo) {
+  function voltarAoFormulario(emailDaEspera) {
     setPendente(null);
-    setAvisoDoCodigo('');
+    setAvisoDoEmail('');
     setError('');
-    if (emailDoCodigo) setEmail(emailDoCodigo);
+    if (emailDaEspera) setEmail(emailDaEspera);
   }
 
   async function handleGoogle() {
@@ -132,16 +139,17 @@ export default function Login() {
       <div className="auth-shell">
         <div className="auth-card">
           <div className="auth-card__inner">
-            <ConfirmarCodigo
+            <EsperaDoEmail
               key={pendente.email}
               email={pendente.email}
               enviadoEm={pendente.em}
-              aviso={avisoDoCodigo}
+              senha={password || undefined}
+              aviso={avisoDoEmail}
               redirecionarPara={`${window.location.origin}/onboarding`}
               onConfirmando={() => { confirmouAgora.current = true; }}
               onConfirmado={() => navigate('/onboarding', { replace: true })}
               onTrocarEmail={() => voltarAoFormulario('')}
-              onEntrarComSenha={() => voltarAoFormulario(pendente.email)}
+              onEntrarComSenha={(e) => voltarAoFormulario(e)}
             />
           </div>
         </div>
@@ -168,6 +176,14 @@ export default function Login() {
             )}
             {error && (
               <div className="auth-alert auth-alert--error hud-corners-s">{error}</div>
+            )}
+            {bilhete && !error && !aviso && (
+              <div role="status" className="auth-alert auth-alert--success hud-corners-s" data-aviso-do-cadastro>
+                Confirmou o e-mail? Digite sua senha para entrar.{' '}
+                <button type="button" className="auth-link-botao" onClick={() => setPendente(bilhete)} data-ainda-nao-chegou>
+                  Ainda não chegou
+                </button>
+              </div>
             )}
 
             <div className="auth-field">

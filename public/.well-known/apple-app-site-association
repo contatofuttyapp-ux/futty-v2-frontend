@@ -5,9 +5,10 @@
         "appIDs": ["M4ZMC5ZX8T.com.futty.app"],
         "components": [
           { "/": "/convite/*", "comment": "Link de convite do time (WhatsApp)" },
-          { "/": "/c/*", "comment": "Link curto do convite (futtyapp.com.br/c/codigo)" },
+          { "/": "/c/*", "comment": "Link curto do convite (futtyapp.com.br/c/codigo) e o botão do e-mail de cadastro (/c/confirmar)" },
           { "/": "/time/*", "comment": "Página do time e dos jogos" },
-          { "/": "/equipa/*", "comment": "O endereço antigo do time (até a 29I era /equipa): link já enviado no WhatsApp continua abrindo o app" }
+          { "/": "/equipa/*", "comment": "O endereço antigo do time (até a 29I era /equipa): link já enviado no WhatsApp continua abrindo o app" },
+          { "/": "/auth/confirmar*", "comment": "O botão do e-mail de cadastro no caminho próprio (o Android só o abre depois de um build de loja)" }
         ]
       }
     ]

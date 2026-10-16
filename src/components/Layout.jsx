@@ -15,7 +15,7 @@ import AuroraBg from './AuroraBg';
 // onboarding — para não fazer loop).
 const ROTAS_SEM_ONBOARDING = [
   /^\/$/, /^\/login/, /^\/register/, /^\/forgot-password/,
-  /^\/(convite|c)\//, /^\/p\//, /^\/termos/, /^\/privacidade/, /^\/excluir-conta/, /^\/onboarding/,
+  /^\/(convite|c)\//, /^\/auth\//, /^\/p\//, /^\/termos/, /^\/privacidade/, /^\/excluir-conta/, /^\/onboarding/,
   /^\/(download|baixar|app)\/?$/,
 ];
 
@@ -50,7 +50,8 @@ const HIDE_NAV_PATTERNS = [
   /^\/login/,
   /^\/register/,
   /^\/forgot-password/,
-  /^\/(convite|c)\//, // o link longo e o curto do convite
+  /^\/(convite|c)\//, // o link longo e o curto do convite (e o /c/confirmar do e-mail de cadastro)
+  /^\/auth\//, // o /auth/confirmar do e-mail de cadastro
   /^\/onboarding/, // a pessoa ainda não entrou — sem barra nas 3 páginas
   /^\/p\//, // vista pública do sorteio (fullscreen)
   /^\/criar-time/,

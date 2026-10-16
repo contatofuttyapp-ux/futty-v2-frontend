@@ -1,28 +1,31 @@
-// Prova no navegador da Rodada 31S — a confirmação do cadastro por e-mail com um CÓDIGO de 6 números, sem sair do app. O caminho inteiro, com o app de
-// verdade num Chromium que se declara iPhone ou Android (o app da loja: a ponte de verdade do Capacitor por cima de um lado nativo de mentira) ou
-// navegador (celular e computador):
-//   · cadastro por e-mail → "Digite o código que mandamos para <e-mail>" → código certo → sessão aberta ali mesmo (sem senha de novo) → onboarding
-//     → Início (sem convite) ou o time, com a pessoa na tabela team_members (com convite); no app e no site;
-//   · código errado e código vencido, cada um com a sua frase; "Reenviar código" com espera e o código novo valendo;
-//   · o app fechado no meio (a pessoa foi ler o e-mail): ao voltar, a tela do código continua lá;
-//   · Entrar com senha numa conta sem confirmar → código novo e a tela do código;
-//   · cadastro com e-mail que já tem conta: frase clara, sem esperar um código que nunca chega;
-//   · o link antigo continua: o cadastro ainda manda o destino do link (PKCE + redirect_to); no site o link troca o `code` pela sessão como antes;
-//     no app, quem confirmou pelo link entra com a senha.
+// Prova no navegador da Rodada 31S — a confirmação do cadastro por e-mail pelo BOTÃO do e-mail: tocar em "Confirmar e entrar" abre o app (ou o
+// site) em futtyapp.com.br/c/confirmar?token_hash=…&type=signup, e a sessão abre ali mesmo, sem pedir a senha de novo. O caminho inteiro, com o app
+// de verdade num Chromium que se declara iPhone ou Android (o app da loja: a ponte de verdade do Capacitor por cima de um lado nativo de mentira,
+// que entrega o link pelo appUrlOpen como o sistema entrega) ou navegador (celular e computador):
+//   · app (iPhone e Android), com e sem convite: cadastro → "Confirme seu e-mail · Mandamos um link…" → o link chega ao app (aberto ou fechado no
+//     meio) → onboarding → Início, ou o time com a pessoa na tabela team_members; pelo /c/confirmar e pelo /auth/confirmar;
+//   · navegador, com e sem convite: o link no mesmo navegador do cadastro segue direto; em OUTRO navegador (o e-mail lido no computador) a conta
+//     entra lá e a tela diz "E-mail confirmado. Volte ao app e toque em Entrar"; o app aberto percebe sozinho ao voltar; o app fechado abre o
+//     Entrar com o e-mail preenchido;
+//   · link vencido (com "Mandar outro e-mail"), link trocado por um mais novo, link já usado (com a conta aberta e num navegador sem pista),
+//     link incompleto: cada um com a sua frase;
+//   · Entrar com senha numa conta sem confirmar → e-mail novo e a tela de espera; "Já confirmei" antes e depois de confirmar;
+//   · cadastro com e-mail que já tem conta; o link dos e-mails mandados antes (PKCE) continua.
 //
 // Como: o motor de VERDADE sobe num processo à parte sobre banco e Auth de mentira (scripts/provas/_motor-31s.cjs → backend/tests/_appFalsa.js). O
-// Supabase do navegador é respondido aqui, imitando o de verdade: o cadastro "manda o e-mail" (o código fica guardado aqui, como numa caixa de
-// entrada), o /verify confere código e validade (1 h), o reenvio respeita os 60 s entre e-mails, o Entrar com senha recusa conta sem confirmar.
-// Nada sai da máquina.
+// Supabase do navegador é respondido aqui, imitando o de verdade: o cadastro "manda o e-mail" (o token_hash fica guardado aqui, como numa caixa de
+// entrada), o /verify confere o token_hash, a validade (1 h) e se já foi usado, o reenvio troca o link e respeita os 60 s entre e-mails, o Entrar
+// com senha recusa conta sem confirmar. Nada sai da máquina.
 //
-// Uso: npm run provar:navegador -- rodada-31s      (~3 min)
+// Uso: npm run provar:navegador -- rodada-31s      (~4 min)
 //      R31S_FOTOS=pasta  salva as fotos dos passos principais
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { readFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const nome = 'Rodada 31S · cadastro por e-mail com código de 6 números, sem sair do app (app e site, com e sem convite; motor de verdade, banco falso)';
+export const nome = 'Rodada 31S · cadastro por e-mail confirmado pelo botão do e-mail, que abre o app (iPhone, Android e site, com e sem convite; motor de verdade, banco falso)';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const MOTOR = path.join(RAIZ, 'scripts', 'provas', '_motor-31s.cjs');
@@ -34,6 +37,7 @@ const SENHA = 'segredo123';
 const VALIDADE_MS = 3600000; // "Email OTP Expiration" do Supabase de mentira (o mesmo número que o app usa para a frase)
 const ESPERA_MS = 60000; // 60 s entre e-mails para o mesmo endereço
 const JA_TEM_CONTA = 'jogador.antigo@futtymock.com';
+const SITE = 'https://futtyapp.com.br';
 
 const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7 Mobile/15E148 Safari/604.1';
 const UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; SM-A146B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
@@ -43,9 +47,6 @@ const APARELHOS = {
   android: { userAgent: UA_ANDROID, viewport: { width: 360, height: 780 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   pc: { userAgent: UA_PC, viewport: { width: 1280, height: 800 } },
 };
-
-const FRASE_ERRADO = 'Código errado. Confira os 6 números do e-mail mais recente.';
-const FRASE_VENCEU = 'Esse código venceu. Toque em "Reenviar código" para receber um novo.';
 
 function subirMotor() {
   return new Promise((resolve, reject) => {
@@ -82,7 +83,7 @@ async function encerrarMotor(filho) {
   return rede;
 }
 
-/** O lado nativo do app da loja (como na prova 31R): App (os links que o sistema entrega) e Browser. */
+/** O lado nativo do app da loja (como na prova 31R): App (os links que o sistema entrega, o voltar ao primeiro plano) e Browser. */
 function ladoNativo(plataforma) {
   const ouvintes = {};
   window.__chamadasNativas = [];
@@ -114,23 +115,25 @@ export async function rodar({ navegador, base, t }) {
   try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
   const { filho, dados } = await subirMotor();
   const { slug } = dados.time;
-  const linkDoConvite = `https://futtyapp.com.br/c/${slug}-${dados.convite.codigo}`;
+  const linkDoConvite = `${SITE}/c/${slug}-${dados.convite.codigo}`;
   if (FOTOS) mkdirSync(FOTOS, { recursive: true });
   const foto = async (page, rotulo) => { if (FOTOS) { await page.waitForTimeout(400); await page.screenshot({ path: path.join(FOTOS, `${rotulo}.png`) }); } };
   const hostDoVite = new URL(base).host;
   const externos = [];
 
-  // ── O Supabase de mentira (um só, como o de verdade): a "caixa de entrada" com o código de cada e-mail ─────────────────────────────────────
-  const caixa = {}; // email → { codigo, enviadoEm, ultimoPedido, confirmado, envios }
+  // ── O Supabase de mentira (um só, como o de verdade): a "caixa de entrada" com o link de cada e-mail ─────────────────────────────────────────
+  const caixa = {}; // email → { hash, enviadoEm, ultimoPedido, confirmado, envios }
   const pedidos = []; // { tipo, email, ... } — o que o app pediu ao Supabase
-  const novoCodigo = () => String(100000 + Math.floor(Math.random() * 900000));
   const contaDoEmail = (email) => Object.keys(dados.pessoas).find((k) => dados.pessoas[k].email === email);
   const contaDoToken = (token) => Object.keys(dados.tokens).find((k) => dados.tokens[k] === token);
+  // O cadastro do app é PKCE: o TokenHash do e-mail de verdade vem com o prefixo "pkce_" (o /verify com token_hash aceita igual).
   const mandarEmail = (email, agora = Date.now()) => {
     const a = caixa[email] || (caixa[email] = { confirmado: false, envios: 0 });
-    Object.assign(a, { codigo: novoCodigo(), enviadoEm: agora, ultimoPedido: agora, envios: a.envios + 1 });
+    Object.assign(a, { hash: `pkce_${randomBytes(28).toString('hex')}`, enviadoEm: agora, ultimoPedido: agora, envios: a.envios + 1 });
     return a;
   };
+  /** O botão do e-mail mais recente desta pessoa (o href do "Confirmar e entrar"). */
+  const linkDoEmail = (email, caminho = '/c/confirmar', hash = caixa[email].hash) => `${SITE}${caminho}?token_hash=${hash}&type=signup`;
   const usuarioDoAuth = (conta, identidades = true) => {
     const p = dados.pessoas[conta] || { id: '00000000-0000-4000-8000-0000000000ff', email: JA_TEM_CONTA };
     return {
@@ -165,29 +168,33 @@ export async function rodar({ navegador, base, t }) {
         const faltam = Math.ceil((ESPERA_MS - (agora - a.ultimoPedido)) / 1000);
         return responder(429, { code: 'over_email_send_rate_limit', message: `For security purposes, you can only request this after ${faltam} seconds.` });
       }
-      mandarEmail(corpo.email, agora);
+      mandarEmail(corpo.email, agora); // o link novo troca o antigo: o antigo deixa de valer
       return responder(200, {});
     }
     if (caminho === '/verify') {
-      const a = caixa[corpo.email];
-      pedidos.push({ tipo: 'verify', email: corpo.email, token: corpo.token, type: corpo.type });
-      const vale = a && !a.confirmado && corpo.type === 'signup' && corpo.token === a.codigo && agora - a.enviadoEm < VALIDADE_MS;
-      if (!vale) return responder(403, { code: 'otp_expired', message: 'Token has expired or is invalid' });
+      // O botão do e-mail: só o token_hash (o Supabase acha a conta por ele). Já usado, vencido ou trocado por um mais novo = a mesma recusa.
+      const email = Object.keys(caixa).find((e) => caixa[e].hash && caixa[e].hash === corpo.token_hash);
+      const a = email && caixa[email];
+      pedidos.push({ tipo: 'verify', email: email || null, tokenHash: corpo.token_hash || null, token: corpo.token || null, type: corpo.type, ok: false });
+      const vale = a && !a.confirmado && corpo.type === 'signup' && agora - a.enviadoEm < VALIDADE_MS;
+      if (!vale) return responder(403, { code: 'otp_expired', message: 'Email link is invalid or has expired' });
       a.confirmado = true;
-      a.codigo = null;
-      return responder(200, sessaoDe(contaDoEmail(corpo.email)));
+      pedidos.at(-1).ok = true;
+      return responder(200, sessaoDe(contaDoEmail(email)));
     }
     if (caminho === '/token') {
       const grant = url.searchParams.get('grant_type');
       if (grant === 'password') {
-        pedidos.push({ tipo: 'password', email: corpo.email });
         const a = caixa[corpo.email];
+        const ok = !(a && !a.confirmado) && corpo.password === SENHA;
+        pedidos.push({ tipo: 'password', email: corpo.email, ok });
         if (a && !a.confirmado) return responder(400, { code: 'email_not_confirmed', message: 'Email not confirmed' });
+        if (corpo.password !== SENHA) return responder(400, { code: 'invalid_credentials', message: 'Invalid login credentials' });
         return responder(200, sessaoDe(contaDoEmail(corpo.email)));
       }
       if (grant === 'pkce') {
-        // O link do e-mail (o antigo): o Supabase já confirmou a conta e devolve o `code`, que o navegador troca pela sessão com o code_verifier
-        // que o cadastro guardou NESTE navegador.
+        // O link dos e-mails mandados antes: o Supabase já confirmou a conta e devolve o `code`, que o navegador troca pela sessão com o
+        // code_verifier que o cadastro guardou NESTE navegador.
         pedidos.push({ tipo: 'pkce', verificador: !!corpo.code_verifier });
         if (!corpo.code_verifier) return responder(400, { code: 'bad_code_verifier', message: 'code verifier missing' });
         return responder(200, sessaoDe(estado.conta));
@@ -222,14 +229,43 @@ export async function rodar({ navegador, base, t }) {
       } catch { return route.abort().catch(() => {}); }
     });
     await ctx.routeWebSocket((url) => url.host !== hostDoVite, (ws) => ws.close());
-    const page = await ctx.newPage();
-    page.on('pageerror', (e) => { if (!/not implemented|plugin/i.test(e.message)) estado.erros.push(e.message); });
-    return { ctx, page, estado };
+    const nova = async () => {
+      const page = await ctx.newPage();
+      page.on('pageerror', (e) => { if (!/not implemented|plugin/i.test(e.message)) estado.erros.push(e.message); });
+      return page;
+    };
+    return { ctx, page: await nova(), nova, estado };
   }
 
   const membros = async () => (await perguntarAoMotor(filho, 'membros', 'membros')) || [];
   const naTabelaDoTime = async (conta) => (await membros()).includes(dados.pessoas[conta].id);
-  const irPara = (page, caminho) => page.evaluate((c) => { window.history.pushState({}, '', c); window.dispatchEvent(new PopStateEvent('popstate')); }, caminho);
+  const textoDe = (page) => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ').slice(0, 300)).catch(() => '');
+  const semRolarDeLado = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+
+  /** O sistema entrega o link ao app (universal link / app link): o mesmo evento que o iPhone e o Android mandam. */
+  async function linkNoApp(page, url) {
+    await page.waitForFunction(() => window.__ouvintesNativos?.('appUrlOpen') > 0, null, { timeout: 30000 });
+    return page.evaluate((u) => window.__eventoNativo('appUrlOpen', { url: u }), url);
+  }
+  /** O link aberto no navegador (o e-mail lido nele): a página do site, de fora, numa aba nova do mesmo navegador. */
+  async function linkNoNavegador(aparelho, url) {
+    const page = await aparelho.nova();
+    await page.goto(`${base}${new URL(url).pathname}${new URL(url).search}`, { waitUntil: 'domcontentloaded' });
+    return page;
+  }
+  /** A tela que o link mostrou (fora o onboarding): o data-confirmar-email e as frases. */
+  async function telaDoLink(page) {
+    const tela = page.locator('[data-confirmar-email]');
+    const veio = await tela.waitFor({ timeout: 20000 }).then(() => true, () => false);
+    if (!veio) return { veio, texto: await textoDe(page) };
+    return {
+      veio,
+      estado: await tela.getAttribute('data-confirmar-email'),
+      titulo: (await page.locator('.auth-title').innerText()).replace(/\s+/g, ' '),
+      frase: (await page.locator('[data-frase-do-link]').innerText()).replace(/\s+/g, ' '),
+      busca: await page.evaluate(() => window.location.search),
+    };
+  }
 
   /** Preenche e envia o cadastro por e-mail (a tela já está em /register). */
   async function cadastrar(page, email) {
@@ -245,24 +281,19 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('button[type="submit"]').click();
   }
 
-  /** A tela do código está de pé, para este e-mail? */
-  async function telaDoCodigo(page, email) {
-    const tela = page.locator('[data-confirmar-codigo]');
+  /** A tela de espera está de pé, para este e-mail? */
+  async function telaDeEspera(page, email) {
+    const tela = page.locator('[data-espera-do-email]');
     const apareceu = await tela.waitFor({ timeout: 20000 }).then(() => true, () => false);
-    if (!apareceu) return { apareceu, texto: await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ').slice(0, 240)) };
-    const texto = (await tela.innerText()).replace(/\s+/g, ' ');
-    const largura = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, janela: window.innerWidth }));
-    return { apareceu, texto, doEmail: texto.includes(`Digite o código que mandamos para ${email}.`), semRolarDeLado: largura.doc <= largura.janela, largura };
+    if (!apareceu) return { apareceu, texto: await textoDe(page) };
+    const texto = (await page.locator('[data-texto-da-espera]').innerText()).replace(/\s+/g, ' ');
+    return { apareceu, texto, doEmail: texto.startsWith(`Mandamos um link para ${email}. Toque em Confirmar no e-mail.`), semRolarDeLado: await semRolarDeLado(page) };
   }
-
-  const digitar = (page, codigo) => page.locator('input#codigo').fill(codigo);
-  const erroNaTela = async (page) => page.locator('[data-erro-do-codigo]').waitFor({ timeout: 10000 }).then(() => page.locator('[data-erro-do-codigo]').innerText(), () => null);
 
   /** O cadastro do Futty (onboarding) até o fim: boas-vindas (do time, se veio de convite), foto depois, o nome, Entrar. */
   async function terminarCadastro(page, apelido) {
     await page.waitForURL(/\/onboarding/, { timeout: 30000 }).catch(async (e) => {
-      const tela = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ').slice(0, 300)).catch(() => '');
-      throw new Error(`não chegou ao cadastro (${page.url()}): ${tela} — ${e.message.split('\n')[0]}`);
+      throw new Error(`não chegou ao cadastro (${page.url()}): ${await textoDe(page)} — ${e.message.split('\n')[0]}`);
     });
     const vamos = page.getByRole('button', { name: 'Vamos lá' });
     const comecar = page.getByRole('button', { name: 'Começar' });
@@ -278,141 +309,152 @@ export async function rodar({ navegador, base, t }) {
     return doTime;
   }
 
-  const semSenhaDeNovo = (email) => !pedidos.some((p) => p.tipo === 'password' && p.email === email);
+  // A sessão nasceu do link (um /verify com o token_hash que deu certo) e não da senha.
+  const peloLink = (email) => pedidos.some((p) => p.tipo === 'verify' && p.ok && p.email === email && p.tokenHash && !p.token)
+    && !pedidos.some((p) => p.tipo === 'password' && p.ok && p.email === email);
+  const bilhete = (page) => page.evaluate(() => localStorage.getItem('futty_cadastro_pendente'));
+  const caminho = (page) => new URL(page.url()).pathname;
 
   try {
-    // ── 1. APP (iPhone), SEM convite — e o app fechado no meio, enquanto a pessoa lia o e-mail ───────────────────────────────────────────────
+    // ── 1. APP (iPhone), SEM convite — o app fechado no meio; o link abre o app de novo ────────────────────────────────────────────────────────
     {
       const conta = 'appSem';
       const email = dados.pessoas[conta].email;
       const app = await abrir({ aparelho: 'iphone', nativo: 'ios', conta });
       await app.page.goto(`${base}/register`, { waitUntil: 'domcontentloaded' });
       await cadastrar(app.page, email);
-      const tela = await telaDoCodigo(app.page, email);
-      t('app · sem convite · depois do cadastro, a tela "Digite o código que mandamos para <e-mail>" (no lugar do "Conta criada!")', tela.apareceu && tela.doEmail && (await app.page.getByText('Conta criada!').count()) === 0, tela.texto);
-      t('app · sem convite · nada rola para o lado (390 px)', tela.semRolarDeLado, JSON.stringify(tela.largura));
-      const reenviar = app.page.locator('[data-reenviar-codigo]');
-      t('app · sem convite · "Reenviar código" começa esperando (60 s entre e-mails)', /Reenviar código em \d+s/.test(await reenviar.innerText()) && await reenviar.isDisabled(), await reenviar.innerText());
-      const campo = app.page.locator('input#codigo');
-      t('app · sem convite · o campo pede só números e aceita o preenchimento do teclado (one-time-code)', (await campo.getAttribute('inputmode')) === 'numeric' && (await campo.getAttribute('autocomplete')) === 'one-time-code');
+      const tela = await telaDeEspera(app.page, email);
+      t('app iPhone · sem convite · depois do cadastro: "Confirme seu e-mail · Mandamos um link para <e-mail>. Toque em Confirmar no e-mail."',
+        tela.apareceu && tela.doEmail && (await app.page.locator('.auth-title').innerText()).replace(/\s+/g, ' ').toLowerCase() === 'confirme seu e-mail', tela.texto);
+      t('app iPhone · sem convite · sem campo de código nenhum', (await app.page.locator('input#codigo, [autocomplete="one-time-code"]').count()) === 0);
+      t('app iPhone · sem convite · nada rola para o lado (390 px)', tela.semRolarDeLado);
+      const reenviar = app.page.locator('[data-reenviar-email]');
+      t('app iPhone · sem convite · "Reenviar e-mail" começa esperando (60 s entre e-mails)', /^Reenviar e-mail em \d+s$/.test(await reenviar.innerText()) && await reenviar.isDisabled(), await reenviar.innerText());
+      const abrirEmail = app.page.locator('[data-abrir-email]');
+      t('app iPhone · sem convite · "Abrir o e-mail" abre o Mail do iPhone (domínio sem app próprio)', (await abrirEmail.innerText()) === 'Abrir o e-mail' && (await abrirEmail.getAttribute('data-caixa')) === 'message://');
+      t('app iPhone · sem convite · e "Já confirmei"', (await app.page.locator('[data-ja-confirmei]').innerText()) === 'Já confirmei');
       const signup = pedidos.find((p) => p.tipo === 'signup' && p.email === email);
-      t('app · sem convite · o cadastro ainda leva o destino do link (o link antigo continua valendo) e a data de nascimento', !!signup?.redirect?.endsWith('/onboarding') && signup.pkce && signup.nascimento, JSON.stringify(signup));
-      await foto(app.page, '1-app-iphone-tela-do-codigo');
+      t('app iPhone · sem convite · o cadastro leva a data de nascimento e o destino dos e-mails antigos', !!signup?.redirect?.endsWith('/onboarding') && signup.pkce && signup.nascimento, JSON.stringify(signup));
+      await foto(app.page, '1-app-iphone-confirme-seu-email');
 
-      // O sistema fechou o app (a pessoa foi ao Mail). Abre de novo e toca em Entrar: a tela do código está lá.
+      // O sistema fechou o app (a pessoa foi ao Mail). Ela toca em "Confirmar e entrar": o iPhone abre o app pelo link (abertura a frio).
       await app.page.close();
-      const page = await app.ctx.newPage();
-      page.on('pageerror', (e) => { if (!/not implemented|plugin/i.test(e.message)) app.estado.erros.push(e.message); });
-      await page.goto(`${base}/login`, { waitUntil: 'domcontentloaded' });
-      const devolta = await telaDoCodigo(page, email);
-      t('app · sem convite · o app fechado no meio: ao voltar (Entrar), a tela do código continua, com o mesmo e-mail', devolta.apareceu && devolta.doEmail, devolta.texto);
-      await digitar(page, caixa[email].codigo);
+      const page = await app.nova();
+      await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+      await linkNoApp(page, linkDoEmail(email));
       const doTime = await terminarCadastro(page, 'Lucas');
-      t('app · sem convite · código certo → sessão aberta e onboarding no "Começar" de sempre, sem pedir a senha de novo', doTime === false && semSenhaDeNovo(email));
+      t('app iPhone · sem convite · o link abre a sessão no app e segue para o "Começar" de sempre, sem pedir a senha', doTime === false && peloLink(email));
       await page.waitForURL(/\/home/, { timeout: 30000 }).catch(() => {});
-      t('app · sem convite · termina no Início', new URL(page.url()).pathname === '/home', page.url());
-      t('app · sem convite · e fora do time (não veio de convite)', !(await naTabelaDoTime(conta)));
-      t('app · sem convite · o bilhete do código some depois de confirmar', (await page.evaluate(() => localStorage.getItem('futty_cadastro_pendente'))) === null);
-      t('app · sem convite · sem erro de página', app.estado.erros.length === 0, app.estado.erros.slice(0, 3).join(' | '));
+      t('app iPhone · sem convite · termina no Início', caminho(page) === '/home', page.url());
+      t('app iPhone · sem convite · e fora do time (não veio de convite)', !(await naTabelaDoTime(conta)));
+      t('app iPhone · sem convite · o bilhete da espera some depois de confirmar', (await bilhete(page)) === null);
+      t('app iPhone · sem convite · sem erro de página', app.estado.erros.length === 0, app.estado.erros.slice(0, 3).join(' | '));
       await app.ctx.close();
     }
 
-    // ── 2. APP (iPhone), COM convite: o link abre no app → Criar conta e entrar → código → boas-vindas do time → team_members ─────────────────
+    // ── 2. APP (iPhone), COM convite: o convite abre no app → Criar conta e entrar → o link chega com o app aberto → time ──────────────────────
     {
       const conta = 'appCom';
       const email = dados.pessoas[conta].email;
       const app = await abrir({ aparelho: 'iphone', nativo: 'ios', conta });
       await app.page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
-      await app.page.waitForFunction(() => window.__ouvintesNativos?.('appUrlOpen') > 0, null, { timeout: 30000 });
-      await app.page.evaluate((url) => window.__eventoNativo('appUrlOpen', { url }), linkDoConvite);
+      await linkNoApp(app.page, linkDoConvite);
       const criar = app.page.getByRole('button', { name: 'Criar conta e entrar' });
       await criar.waitFor({ timeout: 30000 });
       await criar.click();
       await cadastrar(app.page, email);
-      const tela = await telaDoCodigo(app.page, email);
-      t('app · com convite · depois do cadastro, a tela do código', tela.apareceu && tela.doEmail, tela.texto);
-      await digitar(app.page, caixa[email].codigo);
+      const tela = await telaDeEspera(app.page, email);
+      t('app iPhone · com convite · a tela de espera', tela.apareceu && tela.doEmail, tela.texto);
+      await linkNoApp(app.page, linkDoEmail(email));
       const doTime = await terminarCadastro(app.page, 'Diego');
-      t('app · com convite · código certo → o onboarding abre nas boas-vindas DO TIME', doTime === true);
+      t('app iPhone · com convite · o link abre o onboarding nas boas-vindas DO TIME, sem senha', doTime === true && peloLink(email));
       await app.page.waitForURL(new RegExp(`/time/${slug}`), { timeout: 30000 }).catch(() => {});
-      t('app · com convite · termina dentro do time', new RegExp(`/time/${slug}$`).test(new URL(app.page.url()).pathname), app.page.url());
-      t('app · com convite · a pessoa está na tabela team_members do time', await naTabelaDoTime(conta));
-      t('app · com convite · sem pedir a senha de novo', semSenhaDeNovo(email));
+      t('app iPhone · com convite · termina dentro do time', new RegExp(`/time/${slug}$`).test(caminho(app.page)), app.page.url());
+      t('app iPhone · com convite · a pessoa está na tabela team_members do time', await naTabelaDoTime(conta));
       await foto(app.page, '2-app-iphone-com-convite-no-time');
-      t('app · com convite · sem erro de página', app.estado.erros.length === 0, app.estado.erros.slice(0, 3).join(' | '));
+      t('app iPhone · com convite · sem erro de página', app.estado.erros.length === 0, app.estado.erros.slice(0, 3).join(' | '));
       await app.ctx.close();
     }
 
-    // ── 3. APP (Android, 360 px): código ERRADO, código VENCIDO, Reenviar, código novo ───────────────────────────────────────────────────────
+    // ── 3. APP (Android, 360 px), COM convite, pelo /c/confirmar ─────────────────────────────────────────────────────────────────────────────
     {
-      const conta = 'erros';
+      const conta = 'androidCom';
+      const email = dados.pessoas[conta].email;
+      const app = await abrir({ aparelho: 'android', nativo: 'android', conta });
+      await app.page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+      await linkNoApp(app.page, linkDoConvite);
+      await app.page.getByRole('button', { name: 'Criar conta e entrar' }).click({ timeout: 30000 });
+      await cadastrar(app.page, email);
+      const tela = await telaDeEspera(app.page, email);
+      t('app Android · com convite · a tela de espera em 360 px, sem rolar para o lado', tela.apareceu && tela.doEmail && tela.semRolarDeLado, tela.texto);
+      t('app Android · "Abrir o e-mail" some quando não se sabe qual é o app de e-mail (domínio próprio)', (await app.page.locator('[data-abrir-email]').count()) === 0);
+      await foto(app.page, '3-app-android-confirme-seu-email');
+      await linkNoApp(app.page, linkDoEmail(email));
+      const doTime = await terminarCadastro(app.page, 'Bruno');
+      await app.page.waitForURL(new RegExp(`/time/${slug}`), { timeout: 30000 }).catch(() => {});
+      t('app Android · com convite · boas-vindas do time e termina dentro dele, sem senha', doTime === true && new RegExp(`/time/${slug}$`).test(caminho(app.page)) && peloLink(email), app.page.url());
+      t('app Android · com convite · a pessoa está na tabela team_members do time', await naTabelaDoTime(conta));
+      t('app Android · com convite · sem erro de página', app.estado.erros.length === 0, app.estado.erros.slice(0, 3).join(' | '));
+      await app.ctx.close();
+    }
+
+    // ── 4. APP (Android), SEM convite, pelo /auth/confirmar; depois o MESMO link de novo (já usado, com a conta aberta) ──────────────────────
+    {
+      const conta = 'androidSem';
       const email = dados.pessoas[conta].email;
       const app = await abrir({ aparelho: 'android', nativo: 'android', conta });
       await app.page.goto(`${base}/register`, { waitUntil: 'domcontentloaded' });
       await cadastrar(app.page, email);
-      const tela = await telaDoCodigo(app.page, email);
-      t('app Android · a tela do código em 360 px, sem rolar para o lado', tela.apareceu && tela.semRolarDeLado, JSON.stringify(tela.largura));
-      const certo = caixa[email].codigo;
-      const errado = certo === '111111' ? '222222' : '111111';
-      await digitar(app.page, errado);
-      const frase1 = await erroNaTela(app.page);
-      t('app Android · código errado → "Código errado. Confira os 6 números do e-mail mais recente."', frase1 === FRASE_ERRADO, String(frase1));
-      t('app Android · código errado → continua na tela do código, sem sessão', /\/register$/.test(new URL(app.page.url()).pathname) && !(await app.page.evaluate(() => Object.keys(localStorage).some((k) => k.endsWith('-auth-token')))));
-      await foto(app.page, '3-app-android-codigo-errado');
-
-      // Duas horas depois (o código vale 1 h): a pessoa volta ao app (reabre) e digita o código que tinha.
-      caixa[email].enviadoEm -= 2 * VALIDADE_MS;
-      caixa[email].ultimoPedido -= 2 * VALIDADE_MS;
-      await app.page.evaluate((ms) => {
-        const b = JSON.parse(localStorage.getItem('futty_cadastro_pendente'));
-        localStorage.setItem('futty_cadastro_pendente', JSON.stringify({ ...b, em: b.em - ms }));
-      }, 2 * VALIDADE_MS);
-      await app.page.reload({ waitUntil: 'domcontentloaded' });
-      await telaDoCodigo(app.page, email);
-      await digitar(app.page, certo);
-      const frase2 = await erroNaTela(app.page);
-      t('app Android · código vencido → "Esse código venceu. Toque em "Reenviar código" para receber um novo."', frase2 === FRASE_VENCEU, String(frase2));
-      await foto(app.page, '4-app-android-codigo-vencido');
-
-      const reenviar = app.page.locator('[data-reenviar-codigo]');
-      t('app Android · passado o minuto, "Reenviar código" está livre', (await reenviar.innerText()) === 'Reenviar código' && !(await reenviar.isDisabled()), await reenviar.innerText());
-      const enviosAntes = caixa[email].envios;
-      await reenviar.click();
-      await app.page.getByText('Mandamos um código novo. Use o do e-mail mais recente.').waitFor({ timeout: 10000 }).catch(() => {});
-      t('app Android · "Reenviar código" manda outro e-mail (com o destino do link) e avisa', caixa[email].envios === enviosAntes + 1 && (await app.page.getByText('Mandamos um código novo.', { exact: false }).count()) === 1
-        && !!pedidos.filter((p) => p.tipo === 'resend' && p.email === email).at(-1)?.redirect?.endsWith('/onboarding'));
-      t('app Android · e volta a esperar 60 s', /Reenviar código em \d+s/.test(await reenviar.innerText()) && await reenviar.isDisabled(), await reenviar.innerText());
-      await foto(app.page, '5-app-android-codigo-reenviado');
-      t('app Android · o código antigo não vale mais', certo !== caixa[email].codigo);
-      await digitar(app.page, caixa[email].codigo);
-      await terminarCadastro(app.page, 'Renato');
+      await telaDeEspera(app.page, email);
+      const link = linkDoEmail(email, '/auth/confirmar');
+      await linkNoApp(app.page, link);
+      const doTime = await terminarCadastro(app.page, 'Rafael');
       await app.page.waitForURL(/\/home/, { timeout: 30000 }).catch(() => {});
-      t('app Android · com o código novo, dentro do app (Início)', new URL(app.page.url()).pathname === '/home', app.page.url());
-      t('app Android · sem erro de página', app.estado.erros.length === 0, app.estado.erros.slice(0, 3).join(' | '));
+      t('app Android · sem convite · /auth/confirmar faz o mesmo: sessão pelo link, "Começar", Início', doTime === false && caminho(app.page) === '/home' && peloLink(email), app.page.url());
+      t('app Android · sem convite · fora do time', !(await naTabelaDoTime(conta)));
+
+      // Tocou de novo no mesmo botão do e-mail, já com a conta aberta no app.
+      await linkNoApp(app.page, link);
+      const usado = await telaDoLink(app.page);
+      t('link já usado · com a conta aberta: "Link já usado · Esse link já foi usado: seu e-mail já está confirmado."',
+        usado.estado === 'usado' && usado.titulo.toLowerCase() === 'link já usado' && usado.frase === 'Esse link já foi usado: seu e-mail já está confirmado.', JSON.stringify(usado));
+      await foto(app.page, '4-link-ja-usado-no-app');
+      await app.page.getByRole('button', { name: 'Continuar' }).click();
+      await app.page.waitForURL(/\/home/, { timeout: 20000 }).catch(() => {});
+      t('link já usado · "Continuar" volta ao Início', caminho(app.page) === '/home', app.page.url());
+
+      // O mesmo link usado, aberto num computador que não tem nada desta conta.
+      const pc = await abrir({ aparelho: 'pc', conta });
+      await pc.page.close();
+      const page = await linkNoNavegador(pc, link);
+      const semPista = await telaDoLink(page);
+      t('link já usado · num navegador sem pista: "Esse link não vale mais · já foi usado ou passou de 1 hora…" e o botão Entrar',
+        semPista.estado === 'usado-ou-vencido' && /já foi usado ou passou de 1 hora/.test(semPista.frase) && (await page.locator('[data-entrar]').count()) === 1, JSON.stringify(semPista));
+      await foto(page, '5-link-ja-usado-sem-pista');
+      t('app Android · sem convite · sem erro de página', app.estado.erros.length === 0 && pc.estado.erros.length === 0, [...app.estado.erros, ...pc.estado.erros].slice(0, 3).join(' | '));
       await app.ctx.close();
+      await pc.ctx.close();
     }
 
-    // ── 4. SITE (computador), SEM convite: o mesmo fluxo; o código colado com espaço ─────────────────────────────────────────────────────────
+    // ── 5. SITE (computador), SEM convite: o link aberto no mesmo navegador do cadastro segue direto ──────────────────────────────────────────
     {
       const conta = 'siteSem';
       const email = dados.pessoas[conta].email;
       const site = await abrir({ aparelho: 'pc', conta });
       await site.page.goto(`${base}/register`, { waitUntil: 'domcontentloaded' });
       await cadastrar(site.page, email);
-      const tela = await telaDoCodigo(site.page, email);
-      t('site · sem convite · a mesma tela do código no navegador do computador', tela.apareceu && tela.doEmail, tela.texto);
-      await foto(site.page, '6-site-pc-tela-do-codigo');
-      const c = caixa[email].codigo;
-      await digitar(site.page, `${c.slice(0, 3)} ${c.slice(3)}`);
-      t('site · sem convite · o código colado com espaço ("123 456") vale', await site.page.waitForURL(/\/onboarding/, { timeout: 20000 }).then(() => true, () => false), site.page.url());
-      const doTime = await terminarCadastro(site.page, 'Felipe');
-      await site.page.waitForURL(/\/home/, { timeout: 30000 }).catch(() => {});
-      t('site · sem convite · onboarding comum e Início, sem senha de novo', doTime === false && new URL(site.page.url()).pathname === '/home' && semSenhaDeNovo(email), site.page.url());
+      const tela = await telaDeEspera(site.page, email);
+      t('site · sem convite · a mesma tela de espera no computador', tela.apareceu && tela.doEmail, tela.texto);
+      await foto(site.page, '6-site-pc-confirme-seu-email');
+      const aba = await linkNoNavegador(site, linkDoEmail(email));
+      const doTime = await terminarCadastro(aba, 'Felipe');
+      await aba.waitForURL(/\/home/, { timeout: 30000 }).catch(() => {});
+      t('site · sem convite · o link no navegador do cadastro abre a sessão e segue: onboarding comum e Início, sem senha', doTime === false && caminho(aba) === '/home' && peloLink(email), aba.url());
       t('site · sem convite · sem erro de página', site.estado.erros.length === 0, site.estado.erros.slice(0, 3).join(' | '));
       await site.ctx.close();
     }
 
-    // ── 5. SITE (celular Android), COM convite: "Continuar pelo site" → Criar conta e entrar → código → team_members ──────────────────────────
+    // ── 6. SITE (celular Android, sem o app), COM convite: "Continuar pelo site" → cadastro → o link no mesmo navegador → team_members ─────────
     {
       const conta = 'siteCom';
       const email = dados.pessoas[conta].email;
@@ -423,86 +465,194 @@ export async function rodar({ navegador, base, t }) {
       await peloSite.first().click();
       await site.page.getByRole('button', { name: 'Criar conta e entrar' }).click();
       await cadastrar(site.page, email);
-      const tela = await telaDoCodigo(site.page, email);
-      t('site · com convite · a tela do código no navegador do celular (360 px, sem rolar para o lado)', tela.apareceu && tela.doEmail && tela.semRolarDeLado, tela.texto);
-      await digitar(site.page, caixa[email].codigo);
-      const doTime = await terminarCadastro(site.page, 'Caio');
-      await site.page.waitForURL(new RegExp(`/time/${slug}`), { timeout: 30000 }).catch(() => {});
-      t('site · com convite · boas-vindas do time e termina dentro dele', doTime === true && new RegExp(`/time/${slug}$`).test(new URL(site.page.url()).pathname), site.page.url());
+      const tela = await telaDeEspera(site.page, email);
+      t('site · com convite · a tela de espera no navegador do celular (360 px, sem rolar para o lado)', tela.apareceu && tela.doEmail && tela.semRolarDeLado, tela.texto);
+      const aba = await linkNoNavegador(site, linkDoEmail(email));
+      const doTime = await terminarCadastro(aba, 'Caio');
+      await aba.waitForURL(new RegExp(`/time/${slug}`), { timeout: 30000 }).catch(() => {});
+      t('site · com convite · boas-vindas do time e termina dentro dele', doTime === true && new RegExp(`/time/${slug}$`).test(caminho(aba)) && peloLink(email), aba.url());
       t('site · com convite · a pessoa está na tabela team_members do time', await naTabelaDoTime(conta));
       t('site · com convite · sem erro de página', site.estado.erros.length === 0, site.estado.erros.slice(0, 3).join(' | '));
       await site.ctx.close();
     }
 
-    // ── 6. Entrar com senha numa conta que nunca digitou o código (aparelho novo, sem bilhete) ──────────────────────────────────────────────
+    // ── 7. Cadastro no APP (iPhone, com convite), e-mail lido no COMPUTADOR; o app continua aberto e percebe sozinho ao voltar ─────────────────
+    {
+      const conta = 'foraAberto';
+      const email = dados.pessoas[conta].email;
+      const app = await abrir({ aparelho: 'iphone', nativo: 'ios', conta });
+      await app.page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+      await linkNoApp(app.page, linkDoConvite);
+      await app.page.getByRole('button', { name: 'Criar conta e entrar' }).click({ timeout: 30000 });
+      await cadastrar(app.page, email);
+      await telaDeEspera(app.page, email);
+      await app.page.waitForFunction(() => window.__ouvintesNativos?.('resume') > 0, null, { timeout: 15000 }).catch(() => {});
+      t('fora · a tela de espera do app escuta o "voltar ao app" do sistema', (await app.page.evaluate(() => window.__ouvintesNativos('resume'))) > 0);
+      // Voltou ao app ANTES de confirmar: continua esperando.
+      await app.page.evaluate(() => window.__eventoNativo('resume', {}));
+      await app.page.waitForTimeout(1500);
+      t('fora · voltar ao app antes de confirmar: continua na espera (o Supabase diz "falta confirmar")',
+        (await app.page.locator('[data-espera-do-email]').count()) === 1 && pedidos.some((p) => p.tipo === 'password' && p.email === email && !p.ok));
+
+      const pc = await abrir({ aparelho: 'pc', conta });
+      await pc.page.close();
+      const aba = await linkNoNavegador(pc, linkDoEmail(email));
+      const tela = await telaDoLink(aba);
+      t('fora · no computador: "E-mail confirmado · Volte ao app e toque em Entrar."', tela.estado === 'confirmado-fora' && tela.titulo.toLowerCase() === 'e-mail confirmado' && tela.frase === 'Volte ao app e toque em Entrar.', JSON.stringify(tela));
+      t('fora · no computador a conta também entrou (sessão aberta lá) e o token saiu da barra de endereço',
+        tela.busca === '' && (await aba.evaluate(() => Object.keys(localStorage).some((k) => k.endsWith('-auth-token')))), JSON.stringify({ busca: tela.busca }));
+      t('fora · no computador, "Continuar no site" para quem não tem o app', (await aba.locator('[data-continuar-no-site]').count()) === 1);
+      await foto(aba, '7-pc-email-confirmado-volte-ao-app');
+
+      // Voltou ao app: ele percebe sozinho e segue para as boas-vindas do time.
+      await app.page.evaluate(() => window.__eventoNativo('resume', {}));
+      const doTime = await terminarCadastro(app.page, 'Thiago');
+      await app.page.waitForURL(new RegExp(`/time/${slug}`), { timeout: 30000 }).catch(() => {});
+      t('fora · de volta ao app, ele segue sozinho: boas-vindas do time e dentro dele, sem digitar nada', doTime === true && new RegExp(`/time/${slug}$`).test(caminho(app.page)), app.page.url());
+      t('fora · a pessoa está na tabela team_members do time', await naTabelaDoTime(conta));
+      t('fora · sem erro de página', app.estado.erros.length === 0 && pc.estado.erros.length === 0, [...app.estado.erros, ...pc.estado.erros].slice(0, 3).join(' | '));
+      await app.ctx.close();
+      await pc.ctx.close();
+    }
+
+    // ── 8. Cadastro no APP (Android), o app FECHADO, e-mail lido no computador; reabre o app → Entrar com o e-mail preenchido ─────────────────
+    {
+      const conta = 'foraFechado';
+      const email = dados.pessoas[conta].email;
+      const app = await abrir({ aparelho: 'android', nativo: 'android', conta });
+      await app.page.goto(`${base}/register`, { waitUntil: 'domcontentloaded' });
+      await cadastrar(app.page, email);
+      await telaDeEspera(app.page, email);
+      await app.page.close();
+      const pc = await abrir({ aparelho: 'pc', conta });
+      await pc.page.close();
+      const tela = await telaDoLink(await linkNoNavegador(pc, linkDoEmail(email)));
+      t('fechado · no computador: "E-mail confirmado · Volte ao app e toque em Entrar."', tela.estado === 'confirmado-fora', JSON.stringify(tela));
+      const page = await app.nova();
+      await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+      await page.getByRole('link', { name: /Já tenho conta/ }).click({ timeout: 30000 });
+      await page.getByText('Bem-vindo de volta', { exact: false }).waitFor({ timeout: 20000 });
+      const noCampo = await page.locator('input[placeholder="seu@email.com"]').inputValue();
+      const aviso = await page.locator('[data-aviso-do-cadastro]').innerText().catch(() => '');
+      t('fechado · o app reaberto, "Entrar": o e-mail já está no campo e o aviso "Confirmou o e-mail? Digite sua senha para entrar."',
+        noCampo === email && aviso.startsWith('Confirmou o e-mail? Digite sua senha para entrar.'), JSON.stringify({ noCampo, aviso }));
+      await foto(page, '8-app-android-entrar-com-email-preenchido');
+      await page.locator('input[placeholder="••••••••"]').fill(SENHA);
+      await page.locator('button[type="submit"]').click();
+      const doTime = await terminarCadastro(page, 'Gustavo');
+      await page.waitForURL(/\/home/, { timeout: 30000 }).catch(() => {});
+      t('fechado · a senha entra direto no onboarding (a conta nasceu agora) e termina no Início', doTime === false && caminho(page) === '/home', page.url());
+      t('fechado · sem erro de página', app.estado.erros.length === 0 && pc.estado.erros.length === 0, [...app.estado.erros, ...pc.estado.erros].slice(0, 3).join(' | '));
+      await app.ctx.close();
+      await pc.ctx.close();
+    }
+
+    // ── 9. Link VENCIDO (no app): a frase, "Mandar outro e-mail", o link antigo trocado, o link novo valendo ────────────────────────────────────
+    {
+      const conta = 'vencido';
+      const email = dados.pessoas[conta].email;
+      const app = await abrir({ aparelho: 'iphone', nativo: 'ios', conta });
+      await app.page.goto(`${base}/register`, { waitUntil: 'domcontentloaded' });
+      await cadastrar(app.page, email);
+      await telaDeEspera(app.page, email);
+      // Duas horas depois (o link vale 1 h) a pessoa toca no botão do e-mail.
+      caixa[email].enviadoEm -= 2 * VALIDADE_MS;
+      caixa[email].ultimoPedido -= 2 * VALIDADE_MS;
+      await app.page.evaluate((ms) => {
+        const b = JSON.parse(localStorage.getItem('futty_cadastro_pendente'));
+        localStorage.setItem('futty_cadastro_pendente', JSON.stringify({ ...b, em: b.em - ms }));
+      }, 2 * VALIDADE_MS);
+      const antigo = linkDoEmail(email);
+      await linkNoApp(app.page, antigo);
+      const tela = await telaDoLink(app.page);
+      t('link vencido · "Link vencido · Esse link valia por 1 hora. Peça outro e toque em "Confirmar e entrar" no e-mail novo."',
+        tela.estado === 'vencido' && tela.titulo.toLowerCase() === 'link vencido' && tela.frase === 'Esse link valia por 1 hora. Peça outro e toque em "Confirmar e entrar" no e-mail novo.', JSON.stringify(tela));
+      await foto(app.page, '9-link-vencido');
+      const enviosAntes = caixa[email].envios;
+      await app.page.locator('[data-mandar-outro]').click();
+      const frase = await app.page.locator('[data-frase-do-reenvio]').innerText({ timeout: 10000 }).catch(() => '');
+      t('link vencido · "Mandar outro e-mail" manda e avisa para onde', caixa[email].envios === enviosAntes + 1 && frase === `Mandamos outro e-mail para ${email}. Toque em "Confirmar e entrar" nele.`, frase);
+      // O link antigo, de novo: agora ele foi trocado pelo novo (e o bilhete diz que o último e-mail é de agora).
+      await linkNoApp(app.page, antigo);
+      const trocado = await telaDoLink(app.page);
+      t('link trocado · o do e-mail antigo depois do reenvio: "Link já usado · …foi trocado por um mais novo…"', trocado.estado === 'usado-ou-trocado' && /trocado por um mais novo/.test(trocado.frase), JSON.stringify(trocado));
+      await linkNoApp(app.page, linkDoEmail(email));
+      await terminarCadastro(app.page, 'Renato');
+      await app.page.waitForURL(/\/home/, { timeout: 30000 }).catch(() => {});
+      t('link vencido · o link do e-mail novo vale: dentro do app (Início)', caminho(app.page) === '/home' && peloLink(email), app.page.url());
+      t('link vencido · sem erro de página', app.estado.erros.length === 0, app.estado.erros.slice(0, 3).join(' | '));
+      await app.ctx.close();
+    }
+
+    // ── 10. Entrar com senha numa conta que nunca confirmou; "Já confirmei" antes e depois ─────────────────────────────────────────────────────
     {
       const conta = 'semConfirmar';
       const email = dados.pessoas[conta].email;
       mandarEmail(email, Date.now() - 10 * 60000); // cadastrou há 10 min em outro aparelho e não confirmou
-      const antigo = caixa[email].codigo;
+      const antigo = caixa[email].hash;
       const site = await abrir({ aparelho: 'pc', conta });
       await site.page.goto(`${base}/login`, { waitUntil: 'domcontentloaded' });
       await site.page.locator('input[placeholder="seu@email.com"]').fill(email);
       await site.page.locator('input[placeholder="••••••••"]').fill(SENHA);
       await site.page.locator('button[type="submit"]').click();
-      const tela = await telaDoCodigo(site.page, email);
-      const aviso = await site.page.getByText('Falta confirmar seu e-mail. Mandamos um código novo.').count();
-      t('Entrar · conta sem confirmar → código novo e a tela do código (com "Falta confirmar seu e-mail"), sem o "Email not confirmed" em inglês',
-        tela.apareceu && tela.doEmail && aviso === 1 && caixa[email].codigo !== antigo && (await site.page.getByText('Email not confirmed').count()) === 0, tela.texto);
-      await foto(site.page, '7-entrar-conta-sem-confirmar');
-      await digitar(site.page, caixa[email].codigo);
-      t('Entrar · código certo → onboarding (a conta nasceu agora)', await site.page.waitForURL(/\/onboarding/, { timeout: 20000 }).then(() => true, () => false), site.page.url());
+      const tela = await telaDeEspera(site.page, email);
+      const aviso = await site.page.getByText('Falta confirmar seu e-mail. Mandamos outro link.').count();
+      t('Entrar · conta sem confirmar → link novo e a tela de espera ("Falta confirmar seu e-mail. Mandamos outro link."), sem o inglês do Supabase',
+        tela.apareceu && tela.doEmail && aviso === 1 && caixa[email].hash !== antigo && (await site.page.getByText('Email not confirmed').count()) === 0, tela.texto);
+      await site.page.locator('[data-ja-confirmei]').click();
+      const nota = await site.page.locator('[data-nota-da-espera]').innerText({ timeout: 10000 }).catch(() => '');
+      t('Entrar · "Já confirmei" antes de confirmar: "Ainda não vimos a confirmação…" e continua na espera', /^Ainda não vimos a confirmação/.test(nota) && (await site.page.locator('[data-espera-do-email]').count()) === 1, nota);
+      await foto(site.page, '10-ja-confirmei-antes');
+      const celular = await abrir({ aparelho: 'android', conta });
+      await celular.page.close();
+      const confirmou = await telaDoLink(await linkNoNavegador(celular, linkDoEmail(email)));
+      t('Entrar · confirmou pelo celular (navegador): "E-mail confirmado"', confirmou.estado === 'confirmado-fora', JSON.stringify(confirmou));
+      await site.page.locator('[data-ja-confirmei]').click();
+      t('Entrar · "Já confirmei" depois: entra com a senha da memória e vai ao onboarding', await site.page.waitForURL(/\/onboarding/, { timeout: 20000 }).then(() => true, () => false), site.page.url());
       await site.ctx.close();
+      await celular.ctx.close();
     }
 
-    // ── 7. Cadastro com e-mail que já tem conta: frase clara, sem tela de código ─────────────────────────────────────────────────────────────
+    // ── 11. Cadastro com e-mail que já tem conta: frase clara, sem tela de espera ─────────────────────────────────────────────────────────────
     {
       const site = await abrir({ aparelho: 'pc', conta: null });
       await site.page.goto(`${base}/register`, { waitUntil: 'domcontentloaded' });
       await cadastrar(site.page, JA_TEM_CONTA);
       const frase = site.page.getByText('Esse e-mail já tem conta no Futty.', { exact: false });
       const viu = await frase.waitFor({ timeout: 15000 }).then(() => true, () => false);
-      t('cadastro com e-mail que já tem conta → "Esse e-mail já tem conta no Futty…", sem esperar código', viu && (await site.page.locator('[data-confirmar-codigo]').count()) === 0);
+      t('cadastro com e-mail que já tem conta → "Esse e-mail já tem conta no Futty…", sem esperar e-mail nenhum', viu && (await site.page.locator('[data-espera-do-email]').count()) === 0);
       await site.ctx.close();
     }
 
-    // ── 8. O link antigo continua: no site (mesmo navegador) e, no app, entrar com a senha depois do link ──────────────────────────────────
+    // ── 12. Link incompleto (sem o token) ─────────────────────────────────────────────────────────────────────────────────────────────────────
+    {
+      const site = await abrir({ aparelho: 'android', conta: null });
+      await site.page.goto(`${base}/c/confirmar`, { waitUntil: 'domcontentloaded' });
+      const tela = await telaDoLink(site.page);
+      t('link incompleto · "Link incompleto · …Abra de novo pelo botão…" (sem ir ao Supabase), sem rolar para o lado em 360 px',
+        tela.estado === 'incompleto' && /Abra de novo pelo botão/.test(tela.frase) && await semRolarDeLado(site.page), JSON.stringify(tela));
+      await site.ctx.close();
+    }
+
+    // ── 13. O link dos e-mails mandados antes (o do Supabase, PKCE) continua no site ──────────────────────────────────────────────────────────
     {
       const conta = 'linkAntigo';
       const email = dados.pessoas[conta].email;
       const site = await abrir({ aparelho: 'pc', conta });
       await site.page.goto(`${base}/register`, { waitUntil: 'domcontentloaded' });
       await cadastrar(site.page, email);
-      await telaDoCodigo(site.page, email);
-      // A pessoa tocou no link de um e-mail antigo: o Supabase confirma e devolve o navegador para /onboarding?code=…
+      await telaDeEspera(site.page, email);
       caixa[email].confirmado = true;
       await site.page.goto(`${base}/onboarding?code=codigo-do-link`, { waitUntil: 'domcontentloaded' });
       const comecar = await site.page.getByRole('button', { name: 'Começar' }).waitFor({ timeout: 30000 }).then(() => true, () => false);
       const troca = pedidos.find((p) => p.tipo === 'pkce');
-      t('link antigo · no site: o link troca o code pela sessão (com o verificador guardado no cadastro) e abre o onboarding', comecar && troca?.verificador === true, JSON.stringify({ url: site.page.url(), troca }));
+      t('e-mail antigo · no site o link do Supabase troca o code pela sessão (com o verificador do cadastro) e abre o onboarding', comecar && troca?.verificador === true, JSON.stringify({ url: site.page.url(), troca }));
       await site.ctx.close();
-    }
-    {
-      const conta = 'linkNoApp';
-      const email = dados.pessoas[conta].email;
-      const app = await abrir({ aparelho: 'iphone', nativo: 'ios', conta });
-      await app.page.goto(`${base}/register`, { waitUntil: 'domcontentloaded' });
-      await cadastrar(app.page, email);
-      await telaDoCodigo(app.page, email);
-      caixa[email].confirmado = true; // confirmou pelo link de um e-mail antigo, no navegador
-      await app.page.getByRole('button', { name: 'Entrar com a senha' }).click();
-      await app.page.getByText('Bem-vindo de volta', { exact: false }).waitFor({ timeout: 20000 });
-      const emailNoCampo = await app.page.locator('input[placeholder="seu@email.com"]').inputValue();
-      await app.page.locator('input[placeholder="••••••••"]').fill(SENHA);
-      await app.page.locator('button[type="submit"]').click();
-      const chegou = await app.page.waitForURL(/\/onboarding/, { timeout: 30000 }).then(() => true, () => false);
-      t('link antigo · no app: "Confirmou pelo link do e-mail? Entrar com a senha" leva ao Entrar com o e-mail preenchido, e a senha entra no onboarding',
-        emailNoCampo === email && chegou, JSON.stringify({ emailNoCampo, url: app.page.url() }));
-      await app.ctx.close();
     }
 
     const verificacoes = pedidos.filter((p) => p.tipo === 'verify');
-    t(`todo código foi conferido como tipo 'signup' (${verificacoes.length} conferências)`, verificacoes.length > 0 && verificacoes.every((p) => p.type === 'signup'));
+    t(`todo /verify foi pelo token_hash do link, tipo 'signup', nunca por código (${verificacoes.length} conferências)`,
+      verificacoes.length > 0 && verificacoes.every((p) => p.type === 'signup' && p.tokenHash && !p.token));
     t(`o resto foi respondido aqui, sem sair da máquina (${externos.length ? [...new Set(externos.map((x) => x.split(' ')[1].split('/')[0]))].join(', ') : 'nada'})`, true);
   } finally {
     const rede = await encerrarMotor(filho);

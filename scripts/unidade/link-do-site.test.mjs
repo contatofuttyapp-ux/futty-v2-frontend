@@ -30,6 +30,15 @@ test('links do site que o app abre: convite (longo e curto) e time (e o que mora
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/k7m2p9qx?origem=zap'), '/c/k7m2p9qx?origem=zap');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/convite/abc123#topo'), '/convite/abc123');
   assert.equal(caminhoDoLinkDoSite('https://FUTTYAPP.com.br/convite/abc123'), '/convite/abc123', 'o domínio não diferencia maiúsculas');
+  // O botão do e-mail de cadastro: o caminho de hoje (/c/, que o app da loja já abre) e o próprio, com a query inteira (o token_hash).
+  assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/confirmar?token_hash=abc123def&type=signup'), '/c/confirmar?token_hash=abc123def&type=signup');
+  assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/auth/confirmar?token_hash=abc123def&type=signup'), '/auth/confirmar?token_hash=abc123def&type=signup');
+});
+
+test('do /auth/ só o confirmar abre o app', () => {
+  for (const url of ['https://futtyapp.com.br/auth/', 'https://futtyapp.com.br/auth/callback?code=abc', 'https://futtyapp.com.br/auth']) {
+    assert.equal(caminhoDoLinkDoSite(url), null, url);
+  }
 });
 
 test('o que NÃO é do app vira null: outro domínio, esquema, caminho ou truque de URL', () => {
@@ -101,8 +110,9 @@ test('coerência: o Android — assetlinks.json do pacote certo e intent-filter 
   const dados = [...filtro[0].matchAll(/<data android:scheme="([^"]+)" android:host="([^"]+)" android:pathPrefix="([^"]+)" \/>/g)];
   assert.deepEqual(dados.map((d) => d[1]), PREFIXOS_DE_LINK.map(() => 'https'));
   assert.deepEqual(dados.map((d) => d[2]), PREFIXOS_DE_LINK.map(() => HOST_DO_SITE));
-  // O Android escreve "/convite" e "/equipa" sem a barra; o do link curto TEM de levar a barra ("/c" casaria "/criar-equipa").
-  assert.deepEqual(dados.map((d) => (d[3].endsWith('/') ? d[3] : `${d[3]}/`)), PREFIXOS_DE_LINK, 'os pathPrefix são os prefixos do parser');
+  // O Android escreve "/convite" e "/equipa" sem a barra; o do link curto TEM de levar a barra ("/c" casaria "/criar-equipa"). O
+  // "/auth/confirmar" é exato nos dois lados (o parser também não leva barra nele).
+  assert.deepEqual(dados.map((d) => (d[3].endsWith('/') || PREFIXOS_DE_LINK.includes(d[3]) ? d[3] : `${d[3]}/`)), PREFIXOS_DE_LINK, 'os pathPrefix são os prefixos do parser');
 });
 
 test('o site serve o AASA como JSON e o pacote nativo não o leva', () => {

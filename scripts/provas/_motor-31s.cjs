@@ -3,9 +3,10 @@
 // nunca é lido, a rede de fora está fechada e o servidor só escuta em 127.0.0.1.
 //
 // O mundo, montado pelas rotas de verdade: o time Missa de Quinta (o Pedro, admin, e o Magrão) e o link do convite (/c/missa-de-quinta-<código>). E as
-// contas NOVAS da prova, sem time e sem onboarding, uma por caminho (app e site, com e sem convite, os erros do código, o Entrar numa conta sem confirmar).
+// contas NOVAS da prova, sem time e sem onboarding, uma por caminho (o link no app do iPhone e do Android e no navegador, com e sem convite; o link
+// aberto em outro aparelho; o link vencido; o Entrar numa conta sem confirmar).
 // As contas já existem no Auth de mentira porque o cadastro de verdade acontece no Supabase, fora do motor: a prova responde o Supabase no navegador
-// (cadastro, código, reenvio) e entrega a sessão delas, que este motor aceita.
+// (cadastro, o link do e-mail, reenvio) e entrega a sessão delas, que este motor aceita.
 //
 // Protocolo com a prova: uma linha de JSON no stdout quando está pronto ({ pronto, base, ... }); "membros\n" no stdin devolve { membros: [user_id] }
 // (a tabela team_members do time); "fim\n" devolve a última linha (o que o motor tentou fazer na rede) e encerra. O resto vai para o stderr.
@@ -32,12 +33,15 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
   const NOVOS = {
     appSem: ['Lucas Andrade Pires', 'lucas@futtymock.com'],
     appCom: ['Diego Martins Rocha', 'diego@futtymock.com'],
+    androidCom: ['Bruno Teixeira Gomes', 'bruno@futtymock.com'],
+    androidSem: ['Rafael Costa Lima', 'rafael@futtymock.com'],
     siteSem: ['Felipe Nunes Barros', 'felipe@futtymock.com'],
     siteCom: ['Caio Henrique Lopes', 'caio@futtymock.com'],
-    erros: ['Renato Alves Cunha', 'renato@futtymock.com'],
+    foraAberto: ['Thiago Moura Dias', 'thiago@futtymock.com'],
+    foraFechado: ['Gustavo Ramos Leite', 'gustavo@futtymock.com'],
+    vencido: ['Renato Alves Cunha', 'renato@futtymock.com'],
     semConfirmar: ['Vitor Hugo Prado', 'vitor@futtymock.com'],
     linkAntigo: ['Igor Batista Melo', 'igor@futtymock.com'],
-    linkNoApp: ['Otávio Reis Campos', 'otavio@futtymock.com'],
   };
   const chaves = [...Object.keys(VETERANOS), ...Object.keys(NOVOS)];
   // Dois algarismos no prefixo: com dez contas, "s1"+"00319" e "s10"+"0319" dariam o mesmo id.

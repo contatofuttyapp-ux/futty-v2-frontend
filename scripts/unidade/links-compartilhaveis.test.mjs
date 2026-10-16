@@ -24,7 +24,7 @@ const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
 
 // Onde a origem de quem olha é CERTA, de propósito (autenticação) ou não é link (base de imagens).
 const PERMITIDOS = new Set([
-  'src/pages/Login.jsx', 'src/pages/Register.jsx', 'src/pages/ForgotPassword.jsx', 'src/pages/LandingPage.jsx', // o retorno do Google/e-mail volta para onde a pessoa está
+  'src/pages/Login.jsx', 'src/pages/Register.jsx', 'src/pages/ForgotPassword.jsx', 'src/pages/LandingPage.jsx', 'src/pages/ConfirmarEmail.jsx', // o retorno do Google/e-mail volta para onde a pessoa está
   'src/utils/avatar.js', // base de URL de IMAGEM (asset), não link que se compartilha
 ]);
 

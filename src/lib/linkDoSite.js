@@ -25,7 +25,10 @@ export const ORIGEM_DO_SITE = `https://${HOST_DO_SITE}`;
 // lista: link já enviado no WhatsApp abre o app e a rota antiga redireciona para a nova (App.jsx). Android: o
 // intent-filter novo (/time) só vale depois de um build novo do app; até lá o link /time abre no navegador,
 // que funciona.
-export const PREFIXOS_DE_LINK = ['/convite/', '/c/', '/time/', '/equipa/'];
+// /auth/confirmar é o botão do e-mail de cadastro (pages/ConfirmarEmail.jsx), exato e sem a barra: nenhum outro /auth/… do site abre o app.
+// O e-mail usa hoje /c/confirmar, que o app da loja já abre nas duas plataformas; /auth/confirmar só abre no iPhone quando o AASA novo chegar
+// (vem do site, sem build) e no Android depois de um build de loja com o intent-filter novo.
+export const PREFIXOS_DE_LINK = ['/convite/', '/c/', '/time/', '/equipa/', '/auth/confirmar'];
 
 /** O caminho (com a query) do roteador para uma URL do site que o app abre, ou null. Nunca lança. */
 export function caminhoDoLinkDoSite(url) {

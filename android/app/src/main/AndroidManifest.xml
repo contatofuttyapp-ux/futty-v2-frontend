@@ -46,6 +46,9 @@
                 <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/c/" />
                 <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/time" />
                 <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/equipa" />
+                <!-- O botão do e-mail de cadastro no caminho próprio. Só vale no build de loja que levar esta linha; até lá o e-mail usa
+                     /c/confirmar, que o "/c/" de cima já abre. -->
+                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/auth/confirmar" />
             </intent-filter>
         </activity>
 

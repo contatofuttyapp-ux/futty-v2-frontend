@@ -10,11 +10,11 @@ import GoogleIcon from '../components/GoogleIcon';
 import AppleIcon from '../components/AppleIcon';
 import FuttyLogo from '../components/FuttyLogo';
 import RolinhosData from '../components/RolinhosData';
-import ConfirmarCodigo from '../components/ConfirmarCodigo';
+import EsperaDoEmail from '../components/EsperaDoEmail';
 import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
 import { temConvitePendente } from '../lib/convitePendente';
 import { guardarCadastroPendente, lerCadastroPendente, limparCadastroPendente } from '../lib/cadastroPendente';
-import { emailJaTemConta } from '../utils/codigoDoEmail';
+import { emailJaTemConta } from '../utils/confirmacaoDoEmail';
 // O app.css tem de vir ANTES do auth.css: traz o vocabulário da casa
 // (.hud-corners-s, .cta-gold) e o auth.css é a camada por cima.
 import '../styles/app.css';
@@ -33,8 +33,8 @@ export default function Register() {
   const [aceite, setAceite] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // A conta criada que espera o código do e-mail ({ email, em }). Vem do aparelho: se o sistema fechou o app enquanto a pessoa
-  // lia o e-mail, o Cadastro reabre direto na tela do código.
+  // A conta criada que espera a confirmação do e-mail ({ email, em }). Vem do aparelho: se o sistema fechou o app enquanto a pessoa
+  // lia o e-mail, o Cadastro reabre direto na tela de espera.
   const [pendente, setPendente] = useState(() => lerCadastroPendente());
 
   // A próxima parada é o onboarding: o chunk e as 8 figurinhas dele vêm a caminho enquanto a pessoa digita.
@@ -49,8 +49,8 @@ export default function Register() {
   // de sessão chega depois do navigate('/onboarding') do envio (medido: 60 ms depois), e mandar para /home
   // carregaria o Início (chunk grande + /api/inicio) só para a trava do onboarding devolver a pessoa a
   // /onboarding quando a resposta chegasse.
-  // Quem digita o código também acabou de cadastrar (mesmo que o app tenha sido reaberto no meio): a tela do código marca isso
-  // antes de a sessão nascer. Com sessão, o bilhete do código não serve mais (ex.: confirmou pelo link neste mesmo navegador).
+  // Quem entra pela tela de espera também acabou de cadastrar: ela marca isso antes de a sessão nascer. Com sessão, o bilhete da
+  // espera não serve mais.
   const acabouDeCadastrar = useRef(false);
   useEffect(() => {
     if (sessaoCarregando || !session) return;
@@ -95,8 +95,8 @@ export default function Register() {
       password,
       options: {
         // Registos NOVOS aterram no onboarding dia-1 (boas-vindas → foto → identidade);
-        // contas antigas nunca passam por lá. O e-mail agora traz o CÓDIGO; este destino
-        // continua para o link (o de e-mails antigos e o de reserva do e-mail novo).
+        // contas antigas nunca passam por lá. O botão do e-mail novo não usa este destino (vai
+        // direto a /c/confirmar); ele continua para o link dos e-mails mandados antes.
         emailRedirectTo: destinoDoLink(),
         data: { birthdate }, // guardado em user_metadata; o backend persiste em users.birthdate
       },
@@ -109,8 +109,8 @@ export default function Register() {
       return;
     }
 
-    // Confirmação por e-mail ligada: não há sessão imediata. O e-mail traz um código de 6 números e a tela do código
-    // abre a sessão aqui mesmo; o onboarding fica à espera no servidor (flag onboarding_completo).
+    // Confirmação por e-mail ligada: não há sessão imediata. O botão do e-mail abre o app (ou o site) em /c/confirmar, que abre
+    // a sessão sozinho (pages/ConfirmarEmail.jsx); aqui fica a tela de espera. O onboarding espera no servidor (flag onboarding_completo).
     if (data.user && !data.session) {
       if (emailJaTemConta(data.user)) {
         acabouDeCadastrar.current = false;
@@ -124,8 +124,8 @@ export default function Register() {
     }
   }
 
-  // Código certo: a sessão já abriu. O caminho é o do cadastro com sessão imediata: onboarding (as boas-vindas do time, se a
-  // pessoa veio de um convite; senão o "Começar") e, no fim dele, o time ou o Início.
+  // Confirmou em outro lugar e a tela de espera entrou com a senha da memória: o caminho é o do cadastro com sessão imediata —
+  // onboarding (as boas-vindas do time, se a pessoa veio de um convite; senão o "Começar") e, no fim dele, o time ou o Início.
   function aoConfirmar() {
     acabouDeCadastrar.current = true;
     navigate('/onboarding', { replace: true });
@@ -156,15 +156,17 @@ export default function Register() {
       <div className="auth-shell">
         <div className="auth-card">
           <div className="auth-card__inner">
-            <ConfirmarCodigo
+            <EsperaDoEmail
               key={pendente.email}
               email={pendente.email}
               enviadoEm={pendente.em}
+              // A senha deste cadastro, só da memória: reaberto pelo bilhete, o campo está vazio e a tela não tem como entrar sozinha.
+              senha={password || undefined}
               redirecionarPara={destinoDoLink()}
               onConfirmando={() => { acabouDeCadastrar.current = true; }}
               onConfirmado={aoConfirmar}
               onTrocarEmail={() => setPendente(null)}
-              onEntrarComSenha={() => navigate('/login', { state: { email: pendente.email } })}
+              onEntrarComSenha={(e) => navigate('/login', { state: { email: e } })}
             />
           </div>
         </div>

@@ -69,6 +69,7 @@ const Privacidade = lazyComRetry(() => import('./pages/Privacidade'));
 const ExcluirConta = lazyComRetry(() => import('./pages/ExcluirConta'));
 const Diagnostico = lazyComRetry(() => import('./pages/Diagnostico'));
 const Download = lazyComRetry(() => import('./pages/Download'));
+const ConfirmarEmail = lazyComRetry(() => import('./pages/ConfirmarEmail'));
 
 // "/" → /home se autenticado; senão a landing page (visitante).
 // O `loading` é o do AuthProvider e só é verdade quando NÃO há sessão guardada no aparelho: com sessão,
@@ -112,6 +113,14 @@ function ConviteRoute() {
 function ConviteCurtoRoute() {
   const codigo = codigoDoLinkCurto(useParams().token);
   return <Convite key={codigo} token={codigo} />;
+}
+
+// Remonta a confirmação do e-mail a cada link que chega: com a tela de um link recusado aberta, o link seguinte vem pelo mesmo caminho
+// (/c/confirmar), às vezes até o mesmo endereço (tocou de novo no e-mail antigo) — sem a chave a tela ficaria parada no link anterior.
+// A chave é a da navegação, não a do endereço.
+function ConfirmarEmailRoute() {
+  const { key } = useLocation();
+  return <ConfirmarEmail key={key} />;
 }
 
 // Remonta a página do jogo quando o id muda
@@ -183,6 +192,10 @@ function AnimatedRoutes() {
           <Route path="/convite/:token" element={<ConviteRoute />} />
           {/* O link curto do convite, futtyapp.com.br/c/<nome-do-time>-<código> (ou /c/<código>) — a mesma tela. */}
           <Route path="/c/:token" element={<ConviteCurtoRoute />} />
+          {/* O botão do e-mail de cadastro (pages/ConfirmarEmail.jsx). Mora em /c/ porque esse caminho já abre o app no iPhone e no Android
+              da loja; /auth/confirmar é o mesmo, para quando o app da loja também o reclamar. O caminho fixo ganha do /c/:token. */}
+          <Route path="/c/confirmar" element={<ConfirmarEmailRoute />} />
+          <Route path="/auth/confirmar" element={<ConfirmarEmailRoute />} />
           {/* O link único de download: no celular vai à loja do aparelho; no computador, a página com as duas lojas. */}
           <Route path="/download" element={<Download />} />
           <Route path="/baixar" element={<Navigate to="/download" replace />} />
