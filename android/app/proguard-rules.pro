@@ -18,6 +18,10 @@
 # Plugins desta app (@capacitor/app e @capacitor/browser).
 -keep class com.capacitorjs.plugins.** { *; }
 
+# O Play Install Referrer fala com a Play Store por AIDL (ConviteDaLojaPlugin.java): sem os nomes, a ligação falha calada.
+-keep class com.android.installreferrer.** { *; }
+-keep class com.google.android.finsky.externalreferrer.** { *; }
+
 # Plugins Cordova, que o Capacitor também carrega por reflexão.
 -keep class org.apache.cordova.** { *; }
 

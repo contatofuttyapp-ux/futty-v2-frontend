@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { RefreshCw, Trophy, Users } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { tomarConvitePendente } from '../lib/convitePendente';
+import { tomarConviteDaLoja } from '../lib/conviteDaLoja';
 import { usePerfil } from '../context/PerfilContext';
 // Liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
@@ -504,6 +505,13 @@ export default function Inicio() {
     if (token) navigate(`/convite/${token}`, { replace: true });
   }, [navigate, onboardingCompleto]);
   const { teams, loading: teamsLoading, error: teamsErro } = useTeams();
+  // Quem já tem time e instalou o app pelo convite de OUTRO time (Android: o código veio no referrer da Play Store, lib/conviteDaLoja.js)
+  // vai à página desse convite, como o bilhete acima. Sem time, quem cuida é o ConviteDoMotor, que entra sozinho.
+  const temTimes = !teamsLoading && (teams?.length || 0) > 0;
+  useEffect(() => {
+    if (onboardingCompleto !== true || !temTimes) return;
+    tomarConviteDaLoja().then((token) => { if (token) navigate(`/convite/${token}`, { replace: true }); });
+  }, [navigate, onboardingCompleto, temTimes]);
   // Início: 1 pedido só (GET /api/inicio, via Layout.jsx que monta o InicioProvider só nesta rota)
   // alimenta jogos, RSVP, campeonato, pedidos, votações pendentes, desfechos de denúncia e o anúncio —
   // em vez de ~9 pedidos em paralelo. As AÇÕES (confirmar presença, ausência, etc.) continuam a ir
@@ -1435,8 +1443,9 @@ export default function Inicio() {
           <>
             {/* Quem instalou o app pela loja depois de tocar num convite chega aqui sem o convite (ele ficou no navegador). Primeiro o
                 motor: o convite aberto neste celular (mesma rede, nas últimas 2 h) põe a pessoa no time sozinho. Se não achar, o link
-                copiado na página do convite volta pelo cartão. */}
-            <ConviteDoMotor />
+                copiado na página do convite volta pelo cartão. No Android, antes do motor, o convite que a Play Store trouxe. Só com o
+                cadastro concluído: a conta nova passa por aqui um instante a caminho do cadastro, que abre nas boas-vindas do time. */}
+            {onboardingCompleto === true && <ConviteDoMotor />}
             <CartaoConviteColado />
             <EmptyState />
           </>

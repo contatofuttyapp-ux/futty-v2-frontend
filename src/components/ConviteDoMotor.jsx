@@ -2,10 +2,16 @@
 // "link → loja → instalar → cadastrar": o bilhete ficou no navegador, ver lib/conviteNoMotor.js). Um convite só = entra no time sozinho e
 // abre a página do time com as boas-vindas; dois ou mais = "Qual time te convidou?". Nada achado = não desenha nada (o cartão
 // "Recebeu um convite?" e o "Criar meu time" seguem embaixo). "Nenhum desses" vale para a sessão.
+// Antes do motor, a Play Store (só Android): o convite que veio no referrer da instalação (lib/conviteDaLoja.js) é certeza — entra sem
+// perguntar. Se não der para entrar por ele (convite vencido, rede), segue a pergunta ao motor; sem resposta do motor (rede), o convite
+// fica no bilhete e o próximo Início leva a pessoa à página dele.
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { convitesNoMotor } from '../lib/conviteNoMotor';
+import { tomarConviteDaLoja } from '../lib/conviteDaLoja';
+import { guardarConvitePendente } from '../lib/convitePendente';
+import { valeTentarDeNovo } from '../utils/validarConvite';
 import EscolhaDoConvite from './EscolhaDoConvite';
 
 const CHAVE_RECUSA = 'futty_convite_motor_recusado';
@@ -43,14 +49,29 @@ export default function ConviteDoMotor() {
     }
   }
 
+  /** O convite da Play Store: true se entrou (e já navegou). */
+  async function entrarPelaLoja(token) {
+    try {
+      const { team, jaMembro } = await apiFetch(`/api/convite/${encodeURIComponent(token)}/aceitar`, { method: 'POST' });
+      if (montado.current) navigate(`/time/${team.slug}`, { replace: true, state: jaMembro ? undefined : { primeiraEntrada: true } });
+      return true;
+    } catch (e) {
+      if (valeTentarDeNovo(e)) guardarConvitePendente(token);
+      return false;
+    }
+  }
+
   useEffect(() => {
     if (fechado || perguntou.current) return;
     perguntou.current = true;
-    convitesNoMotor().then((lista) => {
+    (async () => {
+      const daLoja = await tomarConviteDaLoja();
+      if (daLoja && (await entrarPelaLoja(daLoja))) return;
+      const lista = await convitesNoMotor();
       if (!montado.current || !lista.length) return;
       if (lista.length === 1) entrar(lista[0]);
       else setConvites(lista);
-    });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fechado]);
 

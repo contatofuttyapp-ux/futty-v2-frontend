@@ -28,3 +28,34 @@ export function linkDaLoja(loja) {
   if (loja === 'android') return LINK_PLAY_STORE;
   return null;
 }
+
+/**
+ * O endereço da loja para quem abriu um convite. No Android o código do convite viaja no `referrer` da Play Store: o app instalado o lê
+ * na 1ª abertura (lib/conviteDaLoja.js) e entra no time sem depender da rede — é o caminho oficial do Google e o único 100% certo. A App
+ * Store não tem nada parecido: no iPhone o endereço é o de sempre.
+ */
+export function linkDaLojaComConvite(loja, convite) {
+  const base = linkDaLoja(loja);
+  if (loja !== 'android' || !base || !convite) return base;
+  return `${base}&referrer=${encodeURIComponent(`convite=${convite}`)}`;
+}
+
+// O código curto (6 a 8 letras ou números) ou o token longo (uuid): as duas formas que o motor aceita em /api/convite/:token.
+const FORMA_DO_CONVITE = /^(?:[a-z0-9]{6,8}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+/**
+ * O convite que veio no referrer da Play Store ("convite=<código>"), ou null. Referrer sem convite (o "utm_source=google-play&
+ * utm_medium=organic" de quem instalou pela busca), vazio ou com cara estranha = null, em silêncio. Aceita também o referrer que chega
+ * ainda codificado ("convite%3D<código>").
+ */
+export function conviteDoReferrer(referrer) {
+  if (typeof referrer !== 'string' || !referrer.trim()) return null;
+  const ler = (texto) => {
+    try { return (new URLSearchParams(texto).get('convite') || '').trim(); } catch { return ''; }
+  };
+  let convite = ler(referrer.trim());
+  if (!convite && /%3d/i.test(referrer)) {
+    try { convite = ler(decodeURIComponent(referrer.trim())); } catch { convite = ''; }
+  }
+  return FORMA_DO_CONVITE.test(convite) ? convite.toLowerCase() : null;
+}

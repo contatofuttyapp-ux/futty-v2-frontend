@@ -12,7 +12,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LINK_APP_STORE, LINK_PLAY_STORE } from '../../src/utils/lojaDoApp.js';
+import { LINK_APP_STORE, linkDaLojaComConvite } from '../../src/utils/lojaDoApp.js';
 
 export const nome = 'Rodada 31M · convite no navegador do celular: "Baixar o Futty" na loja do aparelho, o site a um toque; computador e app sem mudança';
 
@@ -119,12 +119,12 @@ export async function rodar({ navegador, base, t }) {
     };
   });
 
-  // ─── Celular no navegador: iPhone (App Store) e Android (Play Store), link longo e curto ─────────────────────────────────────
+  // ─── Celular no navegador: iPhone (App Store) e Android (Play Store, com o convite no referrer), link longo e curto ─────────────────────────────────────
   const CELULARES = [
     { aparelho: 'iphone', rotulo: 'iPhone 390', loja: 'ios', link: LINK_APP_STORE, rota: '/convite/token-de-prova' },
-    { aparelho: 'android', rotulo: 'Android 360', loja: 'android', link: LINK_PLAY_STORE, rota: '/c/k7m2p9qx' },
+    { aparelho: 'android', rotulo: 'Android 360', loja: 'android', link: linkDaLojaComConvite('android', 'k7m2p9qx'), rota: '/c/k7m2p9qx' },
     { aparelho: 'iphone', rotulo: 'iPhone 390 (link curto)', loja: 'ios', link: LINK_APP_STORE, rota: '/c/k7m2p9qx', semFoto: true },
-    { aparelho: 'android', rotulo: 'Android 360 (link longo)', loja: 'android', link: LINK_PLAY_STORE, rota: '/convite/token-de-prova', semFoto: true },
+    { aparelho: 'android', rotulo: 'Android 360 (link longo)', loja: 'android', link: linkDaLojaComConvite('android', 'token-de-prova'), rota: '/convite/token-de-prova', semFoto: true },
   ];
   for (const c of CELULARES) {
     const r0 = `${c.rotulo} ${c.rota}`;

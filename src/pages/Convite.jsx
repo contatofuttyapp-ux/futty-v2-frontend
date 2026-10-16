@@ -5,7 +5,8 @@
 // com conta que ainda não terminou o onboarding) deixa o bilhete do convite no aparelho e segue para o cadastro / o onboarding,
 // que ABRE nas boas-vindas do time; time sem logo = só o nome em destaque, sem quadrado de iniciais.
 // No navegador de um celular (fora do app da loja) o primeiro botão é "Baixar o Futty", com a loja do aparelho: instalado o app, o
-// mesmo link do convite abre nele (lib/linkDoSite.js). "Continuar pelo site", menor, devolve os botões de sempre. Computador e app: como sempre.
+// mesmo link do convite abre nele (lib/linkDoSite.js). No Android a Play Store leva o código do convite (referrer) até o app recém-instalado,
+// que entra no time sozinho (lib/conviteDaLoja.js). "Continuar pelo site", menor, devolve os botões de sempre. Computador e app: como sempre.
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MapPin, Users } from 'lucide-react';
@@ -21,7 +22,7 @@ import { guardarConvitePendente, tomarConvitePendente } from '../lib/convitePend
 import { preaquecerOnboarding } from '../lib/preaquecerOnboarding';
 import { ehNativo } from '../lib/plataforma';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
-import { lojaDoNavegador, linkDaLoja } from '../utils/lojaDoApp';
+import { lojaDoNavegador, linkDaLojaComConvite } from '../utils/lojaDoApp';
 import '../styles/app.css';
 import '../styles/convite.css';
 
@@ -314,7 +315,7 @@ export default function Convite({ token: tokenDoLink = null }) {
               </>
             ) : lojaDoCelular && !peloSite ? (
               <div className="convite__acoes" data-baixar-app={lojaDoCelular}>
-                <a href={linkDaLoja(lojaDoCelular)} className="btn cta-gold convite__cta" onClick={copiarLinkDoConvite}>
+                <a href={linkDaLojaComConvite(lojaDoCelular, token)} className="btn cta-gold convite__cta" onClick={copiarLinkDoConvite}>
                   Baixar o Futty
                 </a>
                 {linkCopiado ? (

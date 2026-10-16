@@ -15,7 +15,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LINK_APP_STORE, LINK_PLAY_STORE } from '../../src/utils/lojaDoApp.js';
+import { LINK_APP_STORE, LINK_PLAY_STORE, linkDaLojaComConvite } from '../../src/utils/lojaDoApp.js';
 
 export const nome = 'Rodada 31N · /c/<nome-do-time>-<código> com e sem o app (iPhone e Android) e o link único /download';
 
@@ -137,7 +137,7 @@ export async function rodar({ navegador, base, t }) {
   }));
 
   // ─── O link novo SEM o app: o navegador do celular abre o site ──────────────────────────────────────────────────────────────
-  for (const [aparelho, loja, link] of [['iphone', 'ios', LINK_APP_STORE], ['android', 'android', LINK_PLAY_STORE]]) {
+  for (const [aparelho, loja, link] of [['iphone', 'ios', LINK_APP_STORE], ['android', 'android', linkDaLojaComConvite('android', CODIGO)]]) {
     const r0 = `${aparelho === 'iphone' ? 'iPhone' : 'Android'} sem o app · ${LINK_NOVO}`;
     const { ctx, page, pedidosDoConvite } = await abrir({ aparelho });
     await page.goto(`${base}${LINK_NOVO}`, { waitUntil: 'domcontentloaded' });

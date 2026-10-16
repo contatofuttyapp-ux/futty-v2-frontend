@@ -39,7 +39,7 @@ test('o que não é convite do Futty não vira convite (o campo não se preenche
 
 test('Convite.jsx: "Baixar o Futty" copia o link do convite no próprio toque (endereço do site, não a origem do app) e diz isso', () => {
   const tela = ler('src/pages/Convite.jsx');
-  assert.match(tela, /<a href=\{linkDaLoja\(lojaDoCelular\)\} className="btn cta-gold convite__cta" onClick=\{copiarLinkDoConvite\}>/);
+  assert.match(tela, /<a href=\{linkDaLojaComConvite\(lojaDoCelular, token\)\} className="btn cta-gold convite__cta" onClick=\{copiarLinkDoConvite\}>/);
   assert.match(tela, /navigator\.clipboard\.writeText\(`\$\{ORIGEM_DO_SITE\}\$\{pathname\}`\)/);
   assert.match(tela, /Link do convite copiado\. No app, é só colar no Início\./);
 });

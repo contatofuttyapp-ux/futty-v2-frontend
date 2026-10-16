@@ -22,6 +22,7 @@ import { estiloDaJanela, recorteDaMolduraUnica, urlSemRecorte } from '../lib/enq
 import { gravarMiniatura } from '../lib/miniatura';
 import { guardarConvitePendente, guardarPosicaoPendente, lerConvitePendente, tomarConvitePendente } from '../lib/convitePendente';
 import { convitesNoMotor } from '../lib/conviteNoMotor';
+import { tomarConviteDaLoja } from '../lib/conviteDaLoja';
 import EscolhaDoConvite from '../components/EscolhaDoConvite';
 import { mensagemUploadFoto } from '../utils/uploadErro';
 import { normalizarFoto } from '../utils/normalizarFoto';
@@ -140,15 +141,26 @@ export default function Onboarding() {
     montado.current = true;
     return () => { montado.current = false; };
   }, []);
+  // Antes do motor, a Play Store (só no Android): o convite que veio no referrer da instalação é certeza — vira o bilhete, sem time
+  // ainda (a validação logo abaixo traz nome e logo; até lá, o carregando).
   useEffect(() => {
     if (convite || perguntou.current) return;
     perguntou.current = true;
-    convitesNoMotor().then((lista) => {
+    (async () => {
+      const daLoja = await tomarConviteDaLoja();
+      if (daLoja) {
+        guardarConvitePendente(daLoja); // mesmo se a tela já saiu: o bilhete fica para o Início
+        if (!montado.current) return;
+        setConvite(lerConvitePendente());
+        setPerguntandoAoMotor(false);
+        return;
+      }
+      const lista = await convitesNoMotor();
       if (!montado.current) return;
       if (lista.length === 1) escolherDoMotor(lista[0]);
       else if (lista.length > 1) setOpcoesDoMotor(lista);
       setPerguntandoAoMotor(false);
-    });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [conviteMorto, setConviteMorto] = useState(false); // sumiu ou venceu: a pessoa segue como cadastro comum
