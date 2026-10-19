@@ -105,21 +105,15 @@ export function quandoParado(fn, {
     if (cancelado) return;
     largarGestos = aoGesto(armar); // cada gesto rearma a contagem do zero
     armar();
-    // VELOCIDADE 9 (23-set) — o TETO.
+    // O TETO. "Cada gesto rearma do zero" sozinho tem um buraco: quem está mesmo
+    // a usar o app nunca fica 3 s quieto, e então isto NUNCA correria — as abas
+    // pagariam o chunk no toque (~300 ms cada) e os dados viriam todos do zero.
     //
-    // "Cada gesto rearma do zero" tinha um buraco que só um relatório de uso
-    // real mostrava: quem está mesmo a usar o app nunca fica 3 s quieto, e
-    // então isto NUNCA corria. O relatório do build 28 apanhou-o em flagrante —
-    // `preaquecimento: "adiado (toques)"`, previsto para os 28,7 s de sessão,
-    // com a pessoa a trocar de tela nove vezes em vinte segundos. Resultado: as
-    // quatro abas pagavam o chunk no toque ("esperou: código", ~300 ms cada) e
-    // os dados vinham todos do zero.
-    //
-    // Agora há um prazo: passado `esperaMaximaMs` desde a primeira pintura,
+    // Por isso há um prazo: passado `esperaMaximaMs` desde a primeira pintura,
     // corre à mesma. O trabalho em si continua a ceder a vez entre passos
-    // (`esperarSeOcupado`), por isso não volta o problema que a Velocidade 8
-    // arrumou — cinco chunks em cima do primeiro toque. É a diferença entre
-    // "só quando estiver parado" e "assim que der, sem atropelar".
+    // (`esperarSeOcupado`), para não pôr cinco chunks em cima do primeiro
+    // toque. É a diferença entre "só quando estiver parado" e "assim que der,
+    // sem atropelar".
     if (esperaMaximaMs != null) prazoMaximo = window.setTimeout(correr, esperaMaximaMs);
   });
 

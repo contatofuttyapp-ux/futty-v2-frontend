@@ -504,8 +504,8 @@ function AbaAnuncios({ op, pub, onSalvarOp }) {
 }
 
 // ─── ABA 4: SEGURANÇA ────────────────────────────────────────────────────────
-// Relatórios que os testadores enviaram do próprio aparelho
-// (Perfil → Diagnóstico). Cada linha já traz as médias; o JSON inteiro só é
+// Relatórios enviados do próprio aparelho pela tela de Diagnóstico
+// (/diagnostico, só super-admin). Cada linha já traz as médias; o JSON inteiro só é
 // buscado quando se abre um, porque é o que tem as 50 chamadas.
 //
 // A leitura que interessa: MOTOR alto é problema nosso, no servidor; REDE alta é

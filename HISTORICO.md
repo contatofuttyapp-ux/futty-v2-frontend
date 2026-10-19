@@ -5856,3 +5856,20 @@ A lista mestra de decisões continua em C:\Users\phfer\Desktop\FUT\LISTA-CURTA.m
   @returns {boolean} false se algo faltar (o chamador falha a build).
 - (linha ~163, `const tetoBytes = TETO_ARRANQUE_KIB * 1024;`) Em bytes exatos: o arredondado em KiB esconde os últimos ~100 B, e é a folga
   em bytes que as rodadas negociam (Rodada 29B). Formato fixo, fácil de grepar.
+
+# Arrumação grande (Rodada 31X, 19-out-2026)
+
+## src/lib/ritmo.js
+- (linha ~112, o TETO) VELOCIDADE 9 (23-set). O relatório do build 28 apanhou o buraco em flagrante — `preaquecimento: "adiado (toques)"`, previsto para os 28,7 s de sessão, com a pessoa a trocar de tela nove vezes em vinte segundos; as quatro abas pagavam o chunk no toque ("esperou: código", ~300 ms cada). O ceder a vez entre passos é o que a Velocidade 8 arrumou (cinco chunks em cima do primeiro toque).
+
+## src/lib/planos.js
+- (linha ~21) "PAGAMENTOS P2 (26-set)". (linha ~29) preços de referência: regra de 11-ago (poder de compra, não câmbio). Na 31X o "SEM LOJA" passou a citar PAGAMENTOS_PLATAFORMAS (a loja liga por plataforma).
+
+## scripts/capturar-telas.mjs
+- (linha ~611, `28-novo-jogo`) Rodada 29S-A (achados 151, 155, 156).
+
+## src/pages/Gabinete.jsx
+- (linha ~506, aba Segurança) Antes: "Relatórios que os testadores enviaram do próprio aparelho (Perfil → Diagnóstico)". O Perfil não tem mais o Diagnóstico: a tela é /diagnostico, só do super-admin.
+
+## scripts/ver-iphone.mjs
+- (linhas ~9045 e ~9263) Antes: "A migração 067 NÃO está aplicada no banco compartilhado" e "a migração 068 não está aplicada". As duas foram aplicadas no publica da Rodada 29 (MIGRACOES-064-073.sql); as cenas continuam simulando o caso sem elas.

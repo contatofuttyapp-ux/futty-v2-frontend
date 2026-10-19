@@ -9042,9 +9042,9 @@ async function cenaRodada29bCidades(navegador) {
 }
 
 // ─── Cena "rodada29b-organiza": "Só organizo" — o papel de quem administra o time ──
-// A migração 067 (team_members.joga) NÃO está aplicada no banco compartilhado, então esta cena lê as
+// A cena não depende do banco ter a migração 067 (team_members.joga) nem de quem joga no time: lê as
 // respostas REAIS do motor local e troca `joga` / `eu_jogo` por cima (route.fetch + alteração do JSON) — o
-// app é o mesmo, só o dado muda. Toda escrita à /api é interceptada (o PATCH do papel e o POST da criação
+// app é o mesmo, só o dado muda. Os casos "sem a 067" simulam um motor antigo. Toda escrita à /api é interceptada (o PATCH do papel e o POST da criação
 // são respondidos aqui). Só servidor LOCAL.
 async function cenaRodada29bOrganiza(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
@@ -9260,8 +9260,8 @@ async function cenaRodada29bOrganiza(navegador) {
 }
 
 // ─── Cena "rodada29b-avise": A lista "Avise-me" — bloco na página inicial, página /avise-me e aba do Gabinete ──
-// O POST /api/avise-me é respondido AQUI (nenhum e-mail entra na lista de verdade: a migração 068 não está
-// aplicada) e o Gabinete lê uma lista fabricada. Só servidor LOCAL.
+// O POST /api/avise-me é respondido AQUI (nenhum e-mail entra na lista de verdade) e o Gabinete lê uma lista
+// fabricada; o caso "sem a 068" simula um banco sem a migração. Só servidor LOCAL.
 async function cenaRodada29bAvise(navegador) {
   if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) {
     throw new Error(`rodada29b-avise só roda contra servidor LOCAL (CLAUDE.md, 25-set), e o --url é ${BASE}`);

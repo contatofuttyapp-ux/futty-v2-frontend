@@ -18,16 +18,16 @@
 //                    entre os 5 — dá para pintar os 5 uniformes e ainda
 //                    refazer 5 vezes.
 //
-// PAGAMENTOS P2 (26-set) — duas listas, e NUNCA misturadas numa tela:
+// Duas listas, e NUNCA misturadas numa tela:
 //   · LOJA LIGADA (lib/loja.js#lojaLigada: o motor diz `loja_pronta`, é o app nativo e o SDK do
 //     RevenueCat tem a chave): PRODUTOS_LOJA, com o preço que a LOJA formata (`priceString` — é
 //     ela que sabe a moeda da conta da pessoa). O botão diz "Comprar · R$9,90".
-//   · SEM LOJA (a web, ou o motor com PAGAMENTOS_ATIVOS desligado): PRODUTOS_APP, sem valor
+//   · SEM LOJA (a web, ou uma plataforma que o motor não liga — PAGAMENTOS_PLATAFORMAS/ATIVOS): PRODUTOS_APP, sem valor
 //     nenhum. O botão cria o pedido de ativação que o Gabinete resolve à mão — é pedido, não venda.
 // O interruptor local `PAGAMENTOS_ATIVOS` saiu daqui: a loja liga no motor, sem build novo.
 
 /**
- * Os preços de REFERÊNCIA (regra de 11-ago: poder de compra, não câmbio — o euro não é a conversão
+ * Os preços de REFERÊNCIA (poder de compra, não câmbio — o euro não é a conversão
  * do real). É a tabela para configurar os produtos nas lojas; a tela NUNCA mostra estes números.
  */
 export const PRECOS_DE_REFERENCIA = {

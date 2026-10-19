@@ -608,7 +608,7 @@ const TELAS = [
     },
   },
   {
-    // Rodada 29S-A (achados 151, 155, 156): o Marcar jogo no Várzea FC (NUNCA no Missa de Quinta, que é time de verdade). O "ingresso" se preenche com o
+    // O Marcar jogo no Várzea FC (NUNCA no Missa de Quinta, que é time de verdade). O "ingresso" se preenche com o
     // que a captura digita; NADA é gravado (o "Criar jogo" nem é tocado — e o contexto já responde a qualquer escrita em /api sem chegar ao banco).
     arq: '28-novo-jogo', sessao: true, precisa: 'jogoVarzea', dica: 'a conta não tem o Várzea FC (precisa ser admin dele)',
     rota: (d) => `/time/${d.jogoVarzea.slug}/jogo/novo`, caminho: /^\/time\/[^/]+\/jogo\/novo$/, seletor: '[data-ingresso]',
