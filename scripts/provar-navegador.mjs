@@ -51,7 +51,10 @@ for (const arquivo of readdirSync(PASTA).filter((f) => f.endsWith('.prova.mjs'))
   }
 }
 
-await navegador.close();
-await servidor.close();
+// O resumo sai ANTES de fechar o Chromium e o Vite, e o código de saída é o das verificações: já aconteceu de o fechamento morrer
+// no fim da bateria (código 127, depois da última prova) e levar o resumo junto. Fechar tem prazo e nunca muda o resultado.
 console.log(`\n${total - falhas}/${total} verificações ok${falhas ? ` · ${falhas} FALHARAM` : ''}`);
+const comPrazo = (promessa, ms) => Promise.race([promessa, new Promise((resolve) => { setTimeout(resolve, ms).unref(); })]);
+await comPrazo(navegador.close().catch(() => {}), 15000);
+await comPrazo(servidor.close().catch(() => {}), 15000);
 process.exit(falhas ? 1 : 0);
