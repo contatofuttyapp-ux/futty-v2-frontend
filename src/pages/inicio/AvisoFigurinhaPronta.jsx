@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { urlAsset, urlImagem } from '../../utils/avatar';
 import { AgoraNao } from './AgoraNao';
+import { fotoQueCobre, subDoAviso, textoDoAviso } from './estilos';
 
 export default function AvisoFigurinhaPronta({ agoraNao, aviso, brilhanteDireito, user }) {
   return (
@@ -11,12 +12,12 @@ export default function AvisoFigurinhaPronta({ agoraNao, aviso, brilhanteDireito
             <Link to="/figurinha" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px 4px', textDecoration: 'none', color: 'inherit' }}>
               <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, clipPath: 'polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)', border: '1.5px solid rgba(212,160,23,0.6)', background: '#101012' }}>
                 {user?.foto_url ? (
-                  <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={urlImagem(urlAsset(user.foto_url), 128, { quadrado: true })} alt="" width={52} height={52} decoding="async" style={fotoQueCobre} />
                 ) : null}
               </span>
-              <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={textoDoAviso}>
                 <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, color: '#f0c94a' }}>Você tem uma figurinha para gerar ✨</span>
-                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                <span style={subDoAviso}>
                   {brilhanteDireito?.fonte === 'time' ? 'Cortesia do pacote do seu time' : 'Leva uns 45 segundos'}
                 </span>
               </span>

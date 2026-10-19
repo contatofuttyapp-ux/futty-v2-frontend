@@ -1,6 +1,7 @@
 // Futty v2.0 — Início: o aviso de pedido de entrada na fila.
 import { plural } from '../../utils/plural';
 import Icon from '../../components/Icon';
+import { subDoAviso, textoDoAviso } from './estilos';
 
 export default function AvisoPedido({ aviso, cancelarPedidoPendente }) {
   return (
@@ -10,11 +11,11 @@ export default function AvisoPedido({ aviso, cancelarPedidoPendente }) {
             <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
               <Icon name="espera" size={18} color="#b69cff" />
             </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={textoDoAviso}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#c9c2d6' }}>
                 Pedido pendente na {aviso.item.team?.nome}
               </span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+              <span style={subDoAviso}>
                 Esperando a aprovação do admin. Avisamos você aqui quando decidir.
               </span>
             </span>

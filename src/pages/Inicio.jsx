@@ -46,6 +46,7 @@ import AvisoFigurinhaNascendo from './inicio/AvisoFigurinhaNascendo';
 import AvisoVotacao from './inicio/AvisoVotacao';
 import AvisoDesfecho from './inicio/AvisoDesfecho';
 import AvisoPedido from './inicio/AvisoPedido';
+import { fraseDoAviso } from './inicio/estilos';
 
 export default function Inicio() {
   // Quem tocou em "Criar conta e entrar" no convite passou pelo cadastro e chegou aqui — o bilhete que a
@@ -462,7 +463,7 @@ export default function Inicio() {
         {/* Banner discreto para ativar notificações push (o último da fila) */}
         {aviso?.tipo === 'notificacoes' ? (
           <div data-aviso="notificacoes" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
-            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Ativar notificações para não perder nenhum jogo</span>
+            <span style={fraseDoAviso}>Ativar notificações para não perder nenhum jogo</span>
             {/* Secundário: o cânone tira o verde daqui — activar notificações não é
                 a acção principal da página (o Início não tem uma; ver EmptyState). */}
             <button type="button" className="btn btn--purple btn--sm hud-corners-s" onClick={() => pushSubscrever()}>Ativar</button>
@@ -492,7 +493,7 @@ export default function Inicio() {
             denunciante). Uma linha no Início, dispensável. */}
         {aviso?.tipo === 'denuncia' ? (
           <div data-aviso="denuncia" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: 'rgba(123,216,143,0.05)', border: '1px solid rgba(123,216,143,0.25)' }}>
-            <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>Sua denúncia foi analisada. <b style={{ color: '#9fd8a8' }}>Obrigado por cuidar da casa.</b></span>
+            <span style={fraseDoAviso}>Sua denúncia foi analisada. <b style={{ color: '#9fd8a8' }}>Obrigado por cuidar da casa.</b></span>
             <button type="button" aria-label="Fechar" onClick={fecharDesfecho} style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
         ) : null}

@@ -1,17 +1,18 @@
 // Futty v2.0 — Início: o desfecho de um pedido de entrada (aceito ou recusado).
 import { Link } from 'react-router-dom';
 import { plural } from '../../utils/plural';
+import { subDoAviso, textoDoAviso } from './estilos';
 
 export default function AvisoDesfecho({ aviso, dispensarDesfecho }) {
   return (
     <>
         {(aviso?.tipo === 'desfecho' ? [aviso.item] : []).map((p) => (
           <div key={p.id} data-aviso="desfecho" className="hud-corners" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 12, background: p.status === 'approved' ? 'rgba(123,216,143,0.08)' : 'rgba(255,255,255,0.03)', border: p.status === 'approved' ? '1px solid rgba(123,216,143,0.5)' : '1px solid rgba(255,255,255,0.14)' }}>
-            <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={textoDoAviso}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: p.status === 'approved' ? '#7bd88f' : '#c9c2d6' }}>
                 {p.status === 'approved' ? `Você entrou no time ${p.team?.nome}!` : `O pedido para ${p.team?.nome} não seguiu`}
               </span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+              <span style={subDoAviso}>
                 {p.status === 'approved' ? 'O admin aceitou seu pedido, bem-vindo.' : 'Sem drama: há mais times no "Radar de peladas".'}
               </span>
             </span>

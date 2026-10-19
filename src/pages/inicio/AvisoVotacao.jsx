@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { plural } from '../../utils/plural';
 import Icon from '../../components/Icon';
+import { subDoAviso, textoDoAviso } from './estilos';
 
 export default function AvisoVotacao({ aviso, fecharVotacao, votacaoTop }) {
   return (
@@ -11,11 +12,11 @@ export default function AvisoVotacao({ aviso, fecharVotacao, votacaoTop }) {
             <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
               <Icon name="estrela" size={20} color="#f0c94a" />
             </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={textoDoAviso}>
               <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 14, color: '#f0c94a' }}>
                 {votacaoTop.pedido_revotacao ? `Nova temporada de notas no ${votacaoTop.nome}` : 'Você tem colegas para avaliar'}
               </span>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+              <span style={subDoAviso}>
                 {votacaoTop.pedido_revotacao
                   ? 'Dê sua nota aos companheiros.'
                   : `${plural(votacaoTop.faltam, 'Falta', 'Faltam')} ${votacaoTop.faltam} na ${votacaoTop.nome}: sua nota conta para o ranking.`}
