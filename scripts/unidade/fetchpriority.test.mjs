@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
+import { lerArquivoOuPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -64,6 +65,6 @@ test('nenhum `fetchpriority` em minúsculas no JSX do app — sempre `fetchPrior
 
 test('as quatro imagens da varredura usam fetchPriority', () => {
   for (const arquivo of ['src/pages/Inicio.jsx', 'src/pages/JogadorPerfil.jsx', 'src/pages/Onboarding.jsx', 'src/components/Comentarios.jsx']) {
-    assert.match(fs.readFileSync(path.join(RAIZ, arquivo), 'utf8'), /fetchPriority="high"/, arquivo);
+    assert.match(lerArquivoOuPagina(RAIZ, arquivo), /fetchPriority="high"/, arquivo);
   }
 });

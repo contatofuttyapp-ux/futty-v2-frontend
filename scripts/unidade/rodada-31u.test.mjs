@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { comPrazo, validarConvite, valeTentarDeNovo } from '../../src/utils/validarConvite.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const nunca = () => new Promise(() => {});
 const dormir = () => Promise.resolve();
@@ -50,7 +51,7 @@ test('as peças estão ligadas: o convite avisa o motor e tem "Tentar de novo"; 
   assert.match(convite, /validarConvite\(\{ comSessao: \(\) => apiFetch\(caminho\), semSessao: \(\) => apiFetchPublico\(caminho\) \}\)/);
   assert.match(convite, /data-tentar-de-novo/);
   assert.match(ler('src/pages/Onboarding.jsx'), /convitesNoMotor\(\)/);
-  assert.match(ler('src/pages/Inicio.jsx'), /\{onboardingCompleto === true && <ConviteDoMotor \/>\}\s*\n\s*<CartaoConviteColado \/>/);
+  assert.match(lerPagina('Inicio'), /\{onboardingCompleto === true && <ConviteDoMotor \/>\}\s*\n\s*<CartaoConviteColado \/>/);
   const gabinete = ler('src/pages/Gabinete.jsx');
   assert.match(gabinete, /\{ k: 'sem-time', label: 'Contas sem time' \}/);
   assert.match(gabinete, /aba === 'sem-time' && <ContasSemTime/);

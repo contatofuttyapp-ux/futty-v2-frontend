@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { conviteDoTextoColado, pareceConvite } from '../../src/utils/linkColado.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (p) => fs.readFileSync(`${RAIZ}${p}`, 'utf8');
@@ -45,7 +46,7 @@ test('Convite.jsx: "Baixar o Futty" copia o link do convite no próprio toque (e
 });
 
 test('Início: o cartão "Recebeu um convite?" só no estado sem time, antes do Bem-vindo', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.match(inicio, /\) : noTeams \? \(\s*<>[\s\S]*?<CartaoConviteColado \/>\s*<EmptyState \/>\s*<\/>/);
   assert.equal(inicio.match(/<CartaoConviteColado/g).length, 1);
   const cartao = ler('src/components/CartaoConviteColado.jsx');

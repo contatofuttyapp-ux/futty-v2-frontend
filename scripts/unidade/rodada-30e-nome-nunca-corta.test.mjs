@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -39,7 +40,7 @@ test('30E-1 · os seis lugares achados na varredura não cortam mais o nome com 
 });
 
 test('30E-1 · o Início mantém a defesa de sempre: o NomeCromo encolhe a fonte, nunca ellipsis de verdade (achado 164 não regride)', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.match(inicio, /const PISO_NOME = 9;/);
   assert.match(inicio, /while \(larguraDoTexto\(\) > cabe && f > PISO_NOME\)/); // 30F: medida sub-pixel
 });

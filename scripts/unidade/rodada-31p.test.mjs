@@ -33,7 +33,7 @@ test('useConfetti só guarda o que ainda tem uso: o top 3 (Ranking e o campeonat
 });
 
 test('o Início celebra o campeonato terminado pela régua do aparelho, não por um ref que morre a cada montagem', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.doesNotMatch(inicio, /celebrouCamp/);
   assert.match(inicio, /if \(!deveCelebrarCampeonato\(campeonato, userIdDoConfete\)\) return;\s*guardarCampeonatoCelebrado\(userIdDoConfete, campeonato\.id\);\s*celebrarTop3\(1\);/);
 });

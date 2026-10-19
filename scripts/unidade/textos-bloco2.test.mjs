@@ -150,7 +150,7 @@ test('93 · a Resenha tem esqueleto de carregamento e estado vazio de verdade', 
 });
 
 test('88, 89 e 90 · sorteio: "Ver sorteio" abre pelo roteador com "Abrindo…"; "concluir já" acorda as esperas; o 9:16 diz o que aconteceu', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.doesNotMatch(inicio, /window\.location\.assign/, 'recarregar o app inteiro era a demora do "Ver sorteio"');
   assert.match(inicio, /navigate\(`\/time\/\$\{game\.team_slug\}\/jogo\/\$\{game\.id\}\/sorteio`\)/);
   assert.match(inicio, /abrindo \? 'Abrindo…'/);
@@ -162,7 +162,7 @@ test('88, 89 e 90 · sorteio: "Ver sorteio" abre pelo roteador com "Abrindo…";
 });
 
 test('84 · o card de jogo do Início tem um link de verdade para a tela do jogo (stretched link, sem botão dentro de <a>)', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.match(inicio, /<Link className="gcard__link" to=\{`\/time\/\$\{game\.team_slug\}\/jogo\/\$\{game\.id\}`\}/);
   const css = lerAppCss();
   assert.match(css, /\.gcard__link::after \{ content: ''; position: absolute; inset: 0; z-index: 1; \}/);

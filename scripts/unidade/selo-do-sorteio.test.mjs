@@ -15,6 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { visaoDoSorteio, trocasDoAjuste, nomesJuntos, chaveDoJogador, montadoAMao, CORES_DO_SELO } from '../../src/utils/seloDoSorteio.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -199,7 +200,7 @@ test('caso 3 · a tela do jogo: "Ver times" no lugar do "Ver sorteio" e "Times m
 });
 
 test('caso 3 · o card do Início (motor manda montado_a_mao): "Montado" e "Ver times"', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.match(inicio, /\{game\.montado_a_mao \? 'Montado' : 'Sorteado'\}/);
   assert.match(inicio, /game\.montado_a_mao \? <><Users size=\{16\} \/> Ver times<\/> : <><Trophy size=\{16\} \/> Ver sorteio<\/>/);
 });

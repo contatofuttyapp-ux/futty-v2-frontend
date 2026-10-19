@@ -58,7 +58,7 @@ test('130/138 · os quatro trilhos usam o aviso: fundos e uniformes da Figurinha
   assert.match(fig, /<FaixaRolavel className="fig-seletor-grade"[^>]*data-grade="uniformes"/);
   assert.match(ler('src/components/EscolherUniformeTime.jsx'), /<FaixaRolavel className="fig-seletor-grade"/);
   assert.match(ler('src/pages/Gabinete.jsx'), /<nav className="gab2-side" ref=\{montarFaixaDeAbas\}/);
-  assert.match(ler('src/pages/Inicio.jsx'), /<div className="chips-row" ref=\{montarFaixaDeChips\}/);
+  assert.match(lerPagina('Inicio'), /<div className="chips-row" ref=\{montarFaixaDeChips\}/);
 });
 
 // ── A1 · achado 127: um time, o card de sempre; dois ou mais, "Seus times" ──────────────────────────────────────────────────────────
@@ -152,11 +152,11 @@ test('136 · nenhum contador do app fica sem concordar: sem "(s)" e sem o rótul
   assert.match(admin, /label=\{plural\(stats\?\.total_jogos, 'jogo', 'jogos'\)\}/);
   assert.match(admin, /label=\{plural\(stats\?\.total_membros, 'membro', 'membros'\)\}/);
   assert.doesNotMatch(admin, /label="(jogos|membros)"/, 'a aba Elenco não mostra mais "1 JOGOS" nem "1 MEMBROS"');
-  assert.match(ler('src/pages/Inicio.jsx'), /\{plural\(stats\?\.jogos \?\? 0, 'jogo', 'jogos'\)\}/);
-  assert.match(ler('src/pages/Inicio.jsx'), /\{plural\(stats\?\.gols \?\? 0, 'gol', 'gols'\)\}/);
+  assert.match(lerPagina('Inicio'), /\{plural\(stats\?\.jogos \?\? 0, 'jogo', 'jogos'\)\}/);
+  assert.match(lerPagina('Inicio'), /\{plural\(stats\?\.gols \?\? 0, 'gol', 'gols'\)\}/);
   assert.match(ler('src/pages/MeuPerfil.jsx'), /plural\(stats\.gols \?\? 0, 'gol', 'gols'\)/);
   assert.match(ler('src/pages/JogadorPerfil.jsx'), /plural\(conquistas\.jogos_total \?\? 0, 'Jogo', 'Jogos'\)/);
-  assert.match(ler('src/pages/Inicio.jsx'), /plural\(votacaoTop\.faltam, 'Falta', 'Faltam'\)/, '"Falta 1", não "Faltam 1"');
+  assert.match(lerPagina('Inicio'), /plural\(votacaoTop\.faltam, 'Falta', 'Faltam'\)/, '"Falta 1", não "Faltam 1"');
 });
 
 // ── A4 · achado 139: "Excluir" só depois de cancelar ───────────────────────────────────────────────────────────────────────────────

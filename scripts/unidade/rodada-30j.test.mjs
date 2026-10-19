@@ -15,6 +15,7 @@ import { destinoDoSortear } from '../../src/utils/seuTime.js';
 import { STATUS_LABELS } from '../../src/utils/format.js';
 import { escolhaParaOEditor, perguntaDoJogo } from '../../src/utils/quemGanhou.js';
 import { TEXTOS } from '../../src/utils/jogoPassado.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -104,7 +105,7 @@ test('"Sortear" continua levando ao próximo jogo que AINDA NÃO COMEÇOU: um jo
 });
 
 test('a tela do Início usa as listas da regra (nada de conta própria), o GameCard mostra o selo e o NÃO MEXER fica: ranking, presença e o card "Quem ganhou?"', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /const \{ proximos: proximosJogos, ultimos: ultimosJogos, proximo: proximoJogo \} = listasDoInicio\(filtered\);/);
   assert.match(inicio, /const emAndamento = jogoEmAndamento\(game\);/);
   assert.match(inicio, /const isPast = game\.status === 'finished' && !emAndamento;/);

@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { cardsQuemGanhou, corpoDaResposta, perguntaDoJogo } from '../../src/utils/quemGanhou.js';
 import { ORDEM_DOS_AVISOS, LEMBRETES_SEM_PRAZO, proximoAviso } from '../../src/utils/avisosDoInicio.js';
 import { CORES_DAS_POSICOES } from '../../src/utils/nomeDoTime.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -72,7 +73,7 @@ test('na fila de avisos "Quem ganhou?" fica acima de "colegas para avaliar" e ab
 });
 
 test('o Início desenha o card pela fila (só o primeiro), responde, some com o card e recarrega', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /const cardsDoQuemGanhou = cardsQuemGanhou\(dadosInicio\?\.seu_time, quemGanhouRespondidos, teams\);/);
   assert.match(inicio, /quemGanhou: cardsDoQuemGanhou,/);
   assert.match(inicio, /\{aviso\?\.tipo === 'quem-ganhou' \? <AvisoQuemGanhou card=\{aviso\.item\} mais=\{aviso\.mais\} onResolvido=\{quemGanhouRespondido\} \/> : null\}/);

@@ -14,6 +14,7 @@ import {
   CONVIDADO_CAMPO_PASSADO, CONVIDADO_LINHA_PASSADO, CONVIDADO_TITULO_PASSADO,
 } from '../../src/utils/convidadoSemApp.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina, importaDe } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -32,13 +33,13 @@ test('29Q · os dois cartões do Início: o Radar leva a /explorar, o Criar time
 });
 
 test('29Q · o Início põe os cartões DEPOIS do "Seus times" e ANTES dos chips (uma vez só); o estado sem time não muda', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   const em = (trecho) => {
     const i = inicio.indexOf(trecho);
     assert.ok(i >= 0, `Inicio.jsx não tem ${trecho}`);
     return i;
   };
-  assert.match(inicio, /import AtalhosDoInicio from '\.\.\/components\/AtalhosDoInicio';/);
+  assert.ok(importaDe(inicio, ['AtalhosDoInicio'], 'components/AtalhosDoInicio'), 'o Início importa o AtalhosDoInicio');
   assert.equal(inicio.split('<AtalhosDoInicio />').length - 1, 1, 'um par de cartões só na página');
   const stats = em('className="inicio-stats"');
   const seus = em('<CardSeuTime ');
@@ -48,7 +49,9 @@ test('29Q · o Início põe os cartões DEPOIS do "Seus times" e ANTES dos chips
   assert.ok(stats < seus && seus < atalhos, 'avatar → nome → nota → Seus times → cartões (quem não administra: logo embaixo da nota)');
   assert.ok(atalhos < chips && chips < proximos, 'os cartões vêm antes dos chips, e os Próximos Jogos seguem depois');
   // Só aparecem para quem tem time: o Início vazio (EmptyState) continua com os seus três botões, sem os cartões.
-  const vazio = inicio.slice(inicio.indexOf('function EmptyState'), inicio.indexOf('export default function Inicio'));
+  // O EmptyState mora em src/pages/inicio/GameCard.jsx (a Início foi dividida): é o fim daquele arquivo.
+  const cards = semComentarios(ler('src/pages/inicio/GameCard.jsx'));
+  const vazio = cards.slice(cards.indexOf('function EmptyState'));
   assert.doesNotMatch(vazio, /AtalhosDoInicio/, 'o estado sem time não muda');
   assert.match(vazio, /＋ Criar meu time/);
   assert.match(vazio, /<Link to="\/explorar" className="btn btn--purple hud-corners">\s*Radar de peladas/);
@@ -59,7 +62,7 @@ test('29Q · o Início põe os cartões DEPOIS do "Seus times" e ANTES dos chips
 });
 
 test('29Q · a fila de chips é só o filtro dos jogos: Todas + os times; saíram o "＋ Criar time" e o "Radar de peladas"', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   const fila = inicio.slice(inicio.indexOf('className="chips-row"'), inicio.indexOf('className="games-label">Próximos Jogos'));
   assert.ok(fila.length > 200, 'achou a fila');
   assert.match(fila, /setSelectedTeam\('all'\)/);

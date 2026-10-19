@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { responderComOtimismo, motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA, MSG_FALHA_RSVP } from '../../src/lib/rsvp.js';
+import { lerPagina, importaDe } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -87,8 +88,8 @@ test('30E-3 · a frase de cada motivo nunca manda "tentar de novo"', () => {
 
 // ── as telas: o card do jogo e o cartão "Confirme presença" do Início, e o botão do Jogo ──────────────
 test('30E-3 · o Início usa motivoRsvpEncerrada para o jogo do RSVP e para o próximo, e nunca deixa "aberto" valer só pelo rsvp_aberto', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
-  assert.match(inicio, /import \{ MSG_FALHA_RSVP, FRASE_RSVP_ENCERRADA, motivoRsvpEncerrada, responderComOtimismo \} from '\.\.\/lib\/rsvp';/);
+  const inicio = lerPagina('Inicio');
+  assert.ok(importaDe(inicio, ['MSG_FALHA_RSVP', 'FRASE_RSVP_ENCERRADA', 'motivoRsvpEncerrada', 'responderComOtimismo'], 'lib/rsvp'), 'o Início importa o que precisa de lib/rsvp');
   assert.match(inicio, /const encerradaNoProximo = !proximoSoOrganizo \? motivoRsvpEncerrada\(rsvpInfo\) : null;/);
   assert.match(inicio, /const encerradaNoJogoDoRsvp = motivoRsvpEncerrada\(rsvpData\);/);
   // "aberto" de verdade exige NÃO estar encerrado — rsvp_aberto sozinho nunca mais basta.
@@ -97,7 +98,7 @@ test('30E-3 · o Início usa motivoRsvpEncerrada para o jogo do RSVP e para o pr
 });
 
 test('30E-3 · o GameCard do Início desliga Vou / Não vou e mostra o motivo quando o jogo do RSVP está encerrado', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.match(inicio, /\) : game\.rsvp_encerrada \? \(/);
   assert.match(inicio, /<button type="button" className="pbtn pbtn--go hud-corners-s" disabled style=\{\{ opacity: 0\.45, cursor: 'not-allowed' \}\}>Vou<\/button>/);
   assert.match(inicio, /<button type="button" className="pbtn pbtn--no hud-corners-s" disabled style=\{\{ opacity: 0\.45, cursor: 'not-allowed' \}\}>Não vou<\/button>/);

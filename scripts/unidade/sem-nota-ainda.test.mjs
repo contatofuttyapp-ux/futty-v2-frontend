@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { SEM_NOTA, formatRating } from '../../src/utils/format.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 test('formatRating: ninguém votou (null, undefined, vazio, negativo) devolve SEM_NOTA; o 0 é nota; com voto, vírgula e casa só se precisar', () => {
   assert.equal(SEM_NOTA, 'sem nota');
@@ -19,7 +20,7 @@ test('achado 119: nenhum "--" nem "★ -" nem "—" solto para nota, nas quatro 
   const raiz = fileURLToPath(new URL('../../', import.meta.url));
   const ler = (p) => fs.readFileSync(`${raiz}${p}`, 'utf8');
 
-  assert.doesNotMatch(ler('src/pages/Inicio.jsx'), /formatRating\(stats\.nota\) : '--'/);
+  assert.doesNotMatch(lerPagina('Inicio'), /formatRating\(stats\.nota\) : '--'/);
   assert.doesNotMatch(ler('src/pages/MeuPerfil.jsx'), /formatRating\(stats\.nota\) : '--'/);
   assert.doesNotMatch(ler('src/pages/AdminPanel.jsx'), /★ \{m\.nota_media == null \? '-'/);
 

@@ -17,6 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { linhasDePendencia, destinoDoSortear } from '../../src/utils/seuTime.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -124,7 +125,7 @@ test('150 · a temporada de notas: o botão é o dourado da casa (cta-gold, íco
 });
 
 test('150 · o Início: o cartão de votação diz "Nova temporada de notas no <time>" e "Dê sua nota aos companheiros." (o resto não muda)', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /`Nova temporada de notas no \$\{votacaoTop\.nome\}`/);
   assert.match(inicio, /'Dê sua nota aos companheiros\.'/);
   assert.doesNotMatch(inicio, /pediu nova avaliação|companheiros do último jogo/);

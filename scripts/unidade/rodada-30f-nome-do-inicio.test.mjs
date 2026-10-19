@@ -13,13 +13,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
 const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
 
-const inicio = ler('src/pages/Inicio.jsx');
-const nomeCromo = semComentarios(inicio.slice(inicio.indexOf('export function NomeCromo'), inicio.indexOf('// ----- Card de jogo')));
+const inicio = lerPagina('Inicio');
+// O NomeCromo mora em src/pages/inicio/NomeCromo.jsx (a Início foi dividida).
+const nomeCromo = semComentarios(ler('src/pages/inicio/NomeCromo.jsx'));
 
 test('30F-1 · o NomeCromo mede o texto em sub-pixel (Range), não com scrollWidth', () => {
   assert.match(nomeCromo, /const r = document\.createRange\(\);\s*r\.selectNodeContents\(el\);\s*return r\.getBoundingClientRect\(\)\.width;/);

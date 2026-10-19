@@ -15,6 +15,7 @@ import { resumoDoSorteio } from '../../src/utils/sorteioResumo.js';
 import { MAX_NOME_DO_CAMPEONATO, nomePadraoDoCampeonato } from '../../src/utils/campeonatoDoSorteio.js';
 import { linhaDaFinal } from '../../src/utils/campeonatoCartao.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -167,7 +168,7 @@ test('criar pelo sorteio pede o nome (preenchido, editável) e a data do jogo vi
 });
 
 test('o Início mostra o campeonato novo para todo o time, e a Resenha tem o post do campeão', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /dadosInicio\?\.campeonato_novo/);
   assert.match(inicio, /<CardCampeonatoInicio campeonato=\{campeonatoNovo\} slug=\{campSlugDoNovo\} \/>/);
   const feed = semComentarios(ler('src/pages/Feed.jsx'));

@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -18,7 +19,7 @@ const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
 const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
 
 test('29N · o card "Seus times" vem DEPOIS das stats do avatar e ANTES dos chips (e uma vez só)', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   const em = (trecho) => {
     const i = inicio.indexOf(trecho);
     assert.ok(i >= 0, `Inicio.jsx não tem ${trecho}`);
@@ -36,7 +37,7 @@ test('29N · o card "Seus times" vem DEPOIS das stats do avatar e ANTES dos chip
 });
 
 test('29N · os avisos (jogo sem resposta, pedido, notificações, nascimento, figurinha) continuam ACIMA do avatar; o card não é mais a primeira coisa da página', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   const main = inicio.indexOf('<main className="app-main"');
   assert.ok(main >= 0);
   const card = inicio.indexOf('<CardSeuTime ');
@@ -50,7 +51,7 @@ test('29N · os avisos (jogo sem resposta, pedido, notificações, nascimento, f
 });
 
 test('29N · a linha "● nome do time" sob o nome só aparece quando NÃO há card (o card já diz o time)', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /\{teams\[0\] && !\(dadosInicio\?\.seu_time \|\| \[\]\)\.length \? \(/);
   assert.doesNotMatch(inicio, /\{teams\[0\] \? \(\s*<div style=\{\{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13/, 'a condição antiga (sempre que há time) saiu');
   // O texto continua sendo o nome do primeiro time, para quem não administra e não tem card.

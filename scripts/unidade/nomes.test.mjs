@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { primeiroNome } from '../../src/utils/primeiroNome.js';
 import { nomeExibicao } from '../../src/utils/nomeExibicao.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 // CRLF → LF: no Windows o checkout vem com \r\n (autocrlf) e a regex do NomeCromo abaixo termina em "\n}\n".
@@ -54,8 +55,9 @@ test('a Resenha usa primeiroNome (não o corte no primeiro espaço) — "Solte a
 });
 
 test('uma forma só: o nome como a pessoa escreveu — nenhuma tela força maiúsculas no nome do jogador (o achado 94)', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
-  const m = inicio.match(/function NomeCromo[\s\S]*?\n}\n/);
+  const inicio = lerPagina('Inicio');
+  // O NomeCromo mora em src/pages/inicio/NomeCromo.jsx (a Início foi dividida).
+  const m = ler('src/pages/inicio/NomeCromo.jsx').replace(/\r\n/g, '\n').match(/function NomeCromo[\s\S]*?\n}\n/);
   assert.ok(m, 'achou o NomeCromo (o nome do Início, sob o cromo)');
   assert.doesNotMatch(m[0], /textTransform/, 'o nome do Início saía "CHAVO, EL MATADOR" por CSS, e na Resenha "Chavo, el matador"');
   // Início e Resenha leem o nome pela mesma regra única

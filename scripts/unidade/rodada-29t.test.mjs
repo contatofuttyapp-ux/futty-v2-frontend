@@ -12,6 +12,7 @@ import { jogosQuePedemResposta, proximoAviso } from '../../src/utils/avisosDoIni
 import { initials } from '../../src/utils/teamColors.js';
 import { TITULO_SEM_LOCAL, depoisDePedirEntrada, tituloDoRadar } from '../../src/utils/radar.js';
 import { cidadeDoRabicho, formatarDataHora, rabichoDoFuso } from '../../src/utils/dataHora.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -95,7 +96,7 @@ test('168 · respondeu → entra o próximo da fila (jogo → outro jogo → ped
 });
 
 test('168 · o Início usa a fila: um slot só no topo, o aviso do jogo chama a MESMA função dos cards e o pedido segue com "Cancelar"', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /import \{ LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso \} from '\.\.\/utils\/avisosDoInicio';/); // 29T-C: + a lista dos lembretes sem prazo
   // 29T-B: a mesma fila, agora com todos os avisos do topo (a ordem em si é travada em rodada-29t-b.test.mjs).
   assert.match(inicio, /const aviso = proximoAviso\(\{\s*jogos: jogosQuePedemResposta\(jogosParaAviso\),\s*pedidos: pedidosPendentes,[\s\S]*?notificacoes: pushEstado === 'suportado' && !pushBannerFechado,\s*\}\);/);
@@ -249,7 +250,7 @@ test('161 · o Radar liga o título à origem da posição: o botão da localiza
 });
 
 test('162 · "Esperando a aprovação do admin" — e nenhum "À espera" de aprovação em lugar nenhum do app', () => {
-  assert.match(ler('src/pages/Inicio.jsx'), /Esperando a aprovação do admin\. Avisamos você aqui quando decidir\./);
+  assert.match(lerPagina('Inicio'), /Esperando a aprovação do admin\. Avisamos você aqui quando decidir\./);
   const achados = [];
   const varrer = (dir) => {
     for (const nome of fs.readdirSync(path.join(RAIZ, dir))) {
@@ -263,7 +264,7 @@ test('162 · "Esperando a aprovação do admin" — e nenhum "À espera" de apro
 });
 
 test('163 · a frase "Você só organiza este time, então não entra na lista de presença…" sai de cima dos Próximos jogos; fica a linha do card', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.doesNotMatch(inicio, /então não entra na lista de presença/);
   assert.match(inicio, /Você só organiza este time\./, 'a linha de dentro do card do jogo');
   assert.equal((inicio.match(/Você só organiza este time\./g) || []).length, 1, 'uma vez só');
@@ -295,7 +296,7 @@ test('165 · em todo lugar que mostra o rabicho a cidade do time vai junto (nenh
   varrer('src');
   assert.deepEqual(sem, [], 'chamadas que mostram a hora do jogo sem a cidade do time');
   // Os três que faltavam: o card do jogo do Início, o prazo do RSVPCard e o painel do time (jogos, cancelar, resultado, prazo da presença).
-  assert.match(ler('src/pages/Inicio.jsx'), /formatDateTime\(game\.date, game\.fuso, \{ cidade \}\)/);
+  assert.match(lerPagina('Inicio'), /formatDateTime\(game\.date, game\.fuso, \{ cidade \}\)/);
   assert.match(ler('src/components/RSVPCard.jsx'), /formatarDataHora\(iso, fuso, \{ cidade \}\)/);
   assert.match(ler('src/pages/AdminPanel.jsx'), /fmtPrazoAdmin = \(iso, fuso, cidade\) => formatarDataHora\(iso, fuso, \{ cidade \}\)/);
   assert.match(ler('src/pages/AdminPanel.jsx'), /<RSVPAdmin gameId=\{g\.id\} slug=\{slug\} cidade=\{team\?\.cidade\}/);
@@ -345,7 +346,7 @@ test('167 · os exemplos dos campos têm um formato só: "Ex.: …" (nunca "Ex: 
 });
 
 test('164 · o nome no Início nunca corta: a letra desce até caber (o piso de 28 px saiu), como o nome da figurinha', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   const nome = inicio.slice(inicio.indexOf('function NomeCromo'), inicio.indexOf('// ----- Card de jogo'));
   assert.doesNotMatch(nome, /f > 28/, 'o piso de 28 px era o que cortava "Chavo, el matad…"');
   assert.match(inicio, /const PISO_NOME = 9;/, 'só uma defesa teórica');

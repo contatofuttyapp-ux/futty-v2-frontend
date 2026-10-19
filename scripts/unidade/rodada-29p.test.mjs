@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { avisoNaoAchou, cidadePreenchida } from '../../src/utils/cidades.js';
+import { lerPagina, importaDe } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -121,10 +122,10 @@ test('29P · "Ir para o time" não reabre a festa: sem criouAgora no app; a vari
 test('29P · o Explorar virou "Radar de peladas" em tudo o que aparece na tela (a rota continua /explorar)', () => {
   assert.match(ler('src/pages/Explorar.jsx'), /<Topbar hud="RADAR DE PELADAS" back="\/home" \/>/);
   assert.match(ler('src/components/RouteTitle.jsx'), /\['\/explorar', 'Radar de peladas'\]/);
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   // 29Q: o chip da fila saiu; o Radar de peladas vive num cartão (components/AtalhosDoInicio.jsx), com o mesmo ícone e o mesmo nome.
   // 30B: + Users, o ícone do "Ver times" (times montados à mão). O Radar continua fora do Início.
-  assert.match(inicio, /import \{ RefreshCw, Trophy, Users \} from 'lucide-react';/);
+  assert.ok(importaDe(inicio, ['RefreshCw', 'Trophy', 'Users'], 'lucide-react'), 'o Início importa RefreshCw, Trophy e Users do lucide-react');
   assert.doesNotMatch(inicio, /<Radar /, 'o ícone do Radar já não vive no Início: foi para o cartão');
   const cartoes = ler('src/components/AtalhosDoInicio.jsx');
   assert.match(cartoes, /import \{ CirclePlus, Radar \} from 'lucide-react';/);

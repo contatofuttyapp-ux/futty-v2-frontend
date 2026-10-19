@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { responderComOtimismo, MSG_FALHA_RSVP } from '../../src/lib/rsvp.js';
 import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../../src/utils/presenca.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const EU = 'eu-1';
 const rsvp = (confirmados, recusados = []) => ({
@@ -111,7 +112,7 @@ test('os botões Vou / Não vou têm aria-pressed — no cartão "Confirme prese
   const card = fs.readFileSync(`${raiz}src/components/RSVPCard.jsx`, 'utf8');
   assert.match(card, /aria-pressed=\{respostaActual === 'confirmado'\}/);
   assert.match(card, /aria-pressed=\{respostaActual === 'recusado'\}/);
-  const inicio = fs.readFileSync(`${raiz}src/pages/Inicio.jsx`, 'utf8');
+  const inicio = lerPagina('Inicio');
   assert.match(inicio, /aria-pressed=\{going\}/);
   assert.match(inicio, /aria-pressed=\{notGoing\}/);
   // o card e o jogo respondem pelo mesmo caminho: o do RSVP, com estado otimista

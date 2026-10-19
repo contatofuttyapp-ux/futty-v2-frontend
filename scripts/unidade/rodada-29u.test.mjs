@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -32,7 +33,7 @@ test('29U · o Ranking: o aviso diz "Nova temporada de notas" e "Dê sua nota ao
 });
 
 test('29U · o Ranking e o cartão do Início usam o mesmo texto da 29R', () => {
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.match(inicio, /`Nova temporada de notas no \$\{votacaoTop\.nome\}`/);
   assert.match(inicio, /'Dê sua nota aos companheiros\.'/);
   assert.match(ler('src/pages/Ranking.jsx'), />Dê sua nota aos companheiros\.</);

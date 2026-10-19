@@ -16,6 +16,7 @@ import { SEM_SOBRE_NO_POPUP, localDoTime, rotuloDoModo } from '../../src/utils/r
 import { EXEMPLO_SOBRE_O_TIME, FALTA_SOBRE_NA_CRIACAO, FALTA_SOBRE_NOS_AJUSTES, MAX_SOBRE_O_TIME, faltaSobre, precisaDeSobre } from '../../src/utils/sobreOTime.js';
 import { alvoDeBairros, bairrosDoMunicipio, buscarBairros, indexarBairrosDoEstado, linhaDaLista } from '../../src/utils/bairros.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -111,7 +112,7 @@ test('29T-C · "Agora não": sem localStorage (janela privada, dados bloqueados)
 });
 
 test('29T-C · o Início: todo lembrete sem prazo tem o "Agora não" ligado à fila, guardado pelo utilitário (try/catch), e não sobra o dispensar antigo', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /import \{ esconderLembrete, lembretesEscondidos \} from '\.\.\/utils\/lembretes';/);
   assert.match(inicio, /useState\(\(\) => lembretesEscondidos\(\[\.\.\.LEMBRETES_SEM_PRAZO, 'figurinha-falhou'\]\)\)/);
   assert.match(inicio, /function agoraNao\(id\) \{\s*esconderLembrete\(id\);\s*setAgoraNaoDeles\(\(cur\) => new Set\(cur\)\.add\(id\)\);\s*\}/);
@@ -155,7 +156,7 @@ test('ajuste 0 · UM aviso por vez: o resultado é um só; jogo, pedido e desfec
 });
 
 test('ajuste 0 · o Início desenha TODOS os avisos pela fila: nenhum bloco empilhado com a condição própria, e cada um leva data-aviso', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   for (const [tipo, chave] of Object.entries(CHAVE_DO_TIPO)) {
     assert.match(inicio, new RegExp(`aviso\\?\\.tipo === '${tipo}'`), `${tipo}: sai da fila`);
     assert.match(inicio, new RegExp(`${chave}:`), `${tipo}: entra na fila (${chave})`);
@@ -181,7 +182,7 @@ test('ajuste 0 · o Início desenha TODOS os avisos pela fila: nenhum bloco empi
 });
 
 test('ajuste 0 · o desfecho do pedido de entrada: um por vez, com "+N" e o mesmo "Você entrou no time!"', () => {
-  const inicio = semComentarios(ler('src/pages/Inicio.jsx'));
+  const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /\(aviso\?\.tipo === 'desfecho' \? \[aviso\.item\] : \[\]\)\.map\(\(p\) => \(/);
   assert.match(inicio, /Você entrou no time \$\{p\.team\?\.nome\}!/);
   assert.match(inicio, /aria-label=\{`Mais \$\{aviso\.mais\} /);

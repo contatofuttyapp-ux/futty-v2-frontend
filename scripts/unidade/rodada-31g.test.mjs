@@ -55,7 +55,7 @@ test('a fiação: o botão Loja está nas três telas da Figurinha, o cartão é
   assert.doesNotMatch(figurinha, /Vire figurinha ✨/, 'o convite antigo virou o cartão');
   assert.doesNotMatch(figurinha, /data-comprar-mais/, 'o link solto saiu: o cartão logo abaixo é o caminho');
   assert.match(ler('src/pages/MeuPerfil.jsx'), /Ver Figurinhas →/, 'o link do Perfil continua');
-  const inicio = ler('src/pages/Inicio.jsx');
+  const inicio = lerPagina('Inicio');
   assert.match(inicio, /timesDoDono\.length > 0 && !pacoteFechado \? <CartaoPacoteInicio/);
   assert.match(ler('src/components/BotaoLoja.jsx'), /to="\/planos"/);
   assert.match(ler('src/components/CartaoPacoteInicio.jsx'), /to="\/planos\?destaque=pacote"/);
