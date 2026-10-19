@@ -1,7 +1,7 @@
 // Futty v2.0 — A aba Dinheiro do Gabinete.
 
 import { contar } from '../../utils/plural';
-import { CARD, CORES, bigNum, btn, btnGold, fmtEUR, fmtUSD, hojeISO, inp, muted, sectionH2, td, th, uid } from './estilos';
+import { bigNum, botoesDaTabela, btn, btnGold, CARD, CORES, fmtEUR, fmtUSD, hojeISO, inp, muted, sectionH2, td, th, uid, xDeApagar } from './estilos';
 import { Semaforo } from './pecas';
 
 // Normaliza um custo fixo a um valor mensal (para o Burn & margem): anual
@@ -61,13 +61,13 @@ function AbaDinheiro({ dados, custos, setCustos, onSalvarCustos, cambio, setCamb
                   <td style={{ ...td, width: 140 }}><input style={inp} type="date" value={c.proxima_data || ''} onChange={(e) => editarCusto(i, 'proxima_data', e.target.value)} /></td>
                   <td style={{ ...td, width: 60, textAlign: 'center' }}><input type="checkbox" checked={!!c.pago} onChange={(e) => editarCusto(i, 'pago', e.target.checked)} style={{ width: 18, height: 18 }} /></td>
                   <td style={td}><input style={inp} value={c.nota || ''} onChange={(e) => editarCusto(i, 'nota', e.target.value)} /></td>
-                  <td style={{ ...td, width: 30 }}><span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => delCusto(i)}>✕</span></td>
+                  <td style={{ ...td, width: 30 }}><span style={xDeApagar} onClick={() => delCusto(i)}>✕</span></td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <div style={botoesDaTabela}>
           <button type="button" style={btn} onClick={addCusto}>+ Adicionar custo</button>
           <button type="button" style={btnGold} onClick={onSalvarCustos}>Salvar</button>
         </div>

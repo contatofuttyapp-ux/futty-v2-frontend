@@ -1,6 +1,6 @@
 // Futty v2.0 — A aba Registros do Gabinete (com os acessos).
 
-import { CARD, btn, btnGold, diasAte, inp, muted, sectionH2, td, th, uid } from './estilos';
+import { botoesDaTabela, btn, btnGold, CARD, diasAte, inp, muted, sectionH2, td, th, uid, xDeApagar } from './estilos';
 
 // ─── ABA 5: REGISTROS & PRAZOS ───────────────────────────────────────────────
 function AbaRegistros({ registros, setRegistros, onSalvarRegistros, acessos, setAcessos, onSalvarAcessos, showMsg }) {
@@ -28,13 +28,13 @@ function AbaRegistros({ registros, setRegistros, onSalvarRegistros, acessos, set
                     {proximo ? <div style={{ fontSize: 10.5, color: '#f0c94a', marginTop: 2 }}>{dias < 0 ? `${-dias}d atrás` : `em ${dias}d`} ⚠</div> : null}
                   </td>
                   <td style={td}><input style={inp} value={r.nota || ''} onChange={(e) => editar(i, 'nota', e.target.value)} /></td>
-                  <td style={{ ...td, width: 30 }}><span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => del(i)}>✕</span></td>
+                  <td style={{ ...td, width: 30 }}><span style={xDeApagar} onClick={() => del(i)}>✕</span></td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <div style={botoesDaTabela}>
           <button type="button" style={btn} onClick={add}>+ Adicionar registro</button>
           <button type="button" style={btnGold} onClick={onSalvarRegistros}>Salvar</button>
         </div>
@@ -103,12 +103,12 @@ function BlocoAcessos({ acessos, setAcessos, onSalvar, showMsg }) {
                 <td style={{ ...td, width: 170 }}><input style={inp} value={a.entra_com || ''} onChange={(e) => editar(i, 'entra_com', e.target.value)} /></td>
                 <td style={{ ...td, width: 130 }}><input style={inp} value={a.custo_eur || ''} onChange={(e) => editar(i, 'custo_eur', e.target.value)} placeholder="vazio = sem custo" /></td>
                 <td style={td}><input style={inp} value={a.obs || ''} onChange={(e) => editar(i, 'obs', e.target.value)} /></td>
-                <td style={{ ...td, width: 30 }}><span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => del(i)}>✕</span></td>
+                <td style={{ ...td, width: 30 }}><span style={xDeApagar} onClick={() => del(i)}>✕</span></td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <div style={botoesDaTabela}>
           <button type="button" style={btn} onClick={add}>+ Adicionar acesso</button>
           <button type="button" style={btnGold} onClick={onSalvar}>Salvar</button>
         </div>

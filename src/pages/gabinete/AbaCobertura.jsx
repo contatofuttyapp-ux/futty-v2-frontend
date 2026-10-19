@@ -1,7 +1,7 @@
 // Futty v2.0 — A aba Cobertura de venda do Gabinete.
 
 import { useState } from 'react';
-import { CARD, btn, btnGold, chip, inp, muted, sectionH2 } from './estilos';
+import { btn, btnGold, CARD, chip, inp, muted, sectionH2, xDeApagar } from './estilos';
 
 // ─── ABA "COBERTURA" ──────────────────────────────────────────────────────────
 // Onde vendemos e onde não. Fonte é manual (gabineteStore.cobertura) — não há
@@ -21,7 +21,7 @@ function ColunaCobertura({ titulo, lista, cor, borda, onAdd, onDel }) {
         {lista.map((x, i) => (
           <span key={i} style={{ ...chip, color: cor, borderColor: borda, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {x}
-            <span style={{ cursor: 'pointer', color: '#6a6a76' }} onClick={() => onDel(i)}>✕</span>
+            <span style={xDeApagar} onClick={() => onDel(i)}>✕</span>
           </span>
         ))}
         {!lista.length ? <span style={muted}>Vazio.</span> : null}

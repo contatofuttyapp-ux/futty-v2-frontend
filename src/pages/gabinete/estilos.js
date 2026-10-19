@@ -39,4 +39,10 @@ const bigNum = { fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize:
 const muted = { fontSize: 11.5, color: 'var(--text-dim)' };
 const chip = { fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: '.04em', padding: '2px 8px', borderRadius: 20, border: '1px solid', whiteSpace: 'nowrap' };
 
-export { CARD, CORES, bigNum, btn, btnGold, chip, diasAte, fmtEUR, fmtUSD, fmtUptime, hojeISO, inp, muted, sectionH2, td, th, uid };
+// Os estilos que se repetem iguais em mais de uma aba.
+// O ✕ que apaga uma linha das tabelas editáveis.
+const xDeApagar = { cursor: 'pointer', color: '#6a6a76' };
+// Os botões embaixo de uma tabela editável (Adicionar, Salvar).
+const botoesDaTabela = { display: 'flex', gap: 8, marginTop: 10 };
+
+export { bigNum, botoesDaTabela, btn, btnGold, CARD, chip, CORES, diasAte, fmtEUR, fmtUptime, fmtUSD, hojeISO, inp, muted, sectionH2, td, th, uid, xDeApagar };
