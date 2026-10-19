@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RESULTADO_VAZIO, corpoDosPremios, estadoDoJogo, temPremio } from '../../src/utils/resultadoDoJogo.js';
 import { resultadoDoPassado } from '../../src/utils/jogoPassado.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -20,7 +21,7 @@ function arquivosDe(pasta) {
 }
 
 test('a Figurinha não solta confete (nem na figurinha pronta, nem no compartilhar/baixar)', () => {
-  const fig = ler('src/pages/Figurinha.jsx');
+  const fig = lerPagina('Figurinha');
   assert.doesNotMatch(fig, /useConfetti|celebrar[A-Z]/);
 });
 

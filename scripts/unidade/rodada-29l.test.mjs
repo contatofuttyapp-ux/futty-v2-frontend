@@ -15,6 +15,7 @@ import { comTentativa } from '../../src/utils/comTentativa.js';
 import { dataComDiaPorExtenso } from '../../src/utils/dataHora.js';
 import { linhasDePendencia, resumoDoTime } from '../../src/utils/seuTime.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -52,7 +53,7 @@ test('130/138 · o CSS esmaece a borda por onde ainda há conteúdo (máscara) e
 });
 
 test('130/138 · os quatro trilhos usam o aviso: fundos e uniformes da Figurinha, uniforme do time, abas do Gabinete, chips do Início', () => {
-  const fig = ler('src/pages/Figurinha.jsx');
+  const fig = lerPagina('Figurinha');
   assert.match(fig, /<FaixaRolavel className="fig-seletor-grade"[^>]*data-grade="fundos"/, 'a faixa dos fundos (onde ficam os 3 da figurinha paga)');
   assert.match(fig, /<FaixaRolavel className="fig-seletor-grade"[^>]*data-grade="uniformes"/);
   assert.match(ler('src/components/EscolherUniformeTime.jsx'), /<FaixaRolavel className="fig-seletor-grade"/);
@@ -185,14 +186,14 @@ test('129 · as abas do time têm a largura do próprio texto, e o selo ADMIN vi
 test('131 · os botões − e + da Figurinha têm 44 px de toque, sem mexer na altura que a linha ocupa na página', () => {
   const css = lerAppCss();
   assert.match(css, /\.fig-zoom-btn \{[^}]*width: 44px;\s*height: 44px;/);
-  const fig = ler('src/pages/Figurinha.jsx');
+  const fig = lerPagina('Figurinha');
   // A linha cresceu de 26 para 44 e as margens negativas acompanham: 44 − 13 − 15 = 26 − 4 − 6 = 16 px.
   assert.match(fig, /height: 44, marginTop: -13, marginBottom: -15/);
   assert.equal(44 - 13 - 15, 26 - 4 - 6);
 });
 
 test('132 · "Gerar minha figurinha" numa linha só; nas telas estreitas o rótulo curto (VOZ §4) em vez de quebrar', () => {
-  const fig = ler('src/pages/Figurinha.jsx');
+  const fig = lerPagina('Figurinha');
   assert.equal([...fig.matchAll(/<RotuloGerar \/>/g)].length, 2, 'os dois botões de gerar (dourado e roxo)');
   assert.equal([...fig.matchAll(/fig-io-btn fig-gerar/g)].length, 2, 'os dois levam a classe da linha só');
   assert.match(ler('src/components/RotuloGerar.jsx'), /<span className="rotulo-gerar-longo">Gerar minha figurinha<\/span>\s*<span className="rotulo-gerar-curto">Gerar figurinha<\/span>/);
@@ -202,7 +203,7 @@ test('132 · "Gerar minha figurinha" numa linha só; nas telas estreitas o rótu
 });
 
 test('134 · "Baixar" volta ao lado de "Compartilhar" também no celular (decisão do dono, 3-out)', () => {
-  const fig = semComentarios(ler('src/pages/Figurinha.jsx'));
+  const fig = semComentarios(lerPagina('Figurinha'));
   assert.doesNotMatch(fig, /soCompartilhar|telaDeToque/, 'a trava da 29H (item 58) saiu');
   assert.match(fig, /data-acao="baixar"[\s\S]*?onClick=\{baixar\}[\s\S]*?Baixar/);
   assert.match(fig, /onClick=\{partilhar\}[\s\S]*?Compartilhar/);

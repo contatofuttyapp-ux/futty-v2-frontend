@@ -15,6 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { KITS_FIGURINHA } from '../../src/utils/kitsFigurinha.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -36,7 +37,7 @@ test('91 · os uniformes têm nome em português, com a cara de marca (os ids in
 // pelo dono em 15-set — não texto de interface. A tradução para "Dourado"/"Real" (91, bloco 2)
 // era por conta própria e foi revertida; a regra do PT-BR vale para o que o app DIZ, não BATIZA.
 test('item 8 (29J) · os fundos Golden e Royal ficam em inglês — são nome de produto, não texto de interface', () => {
-  const figurinha = ler('src/pages/Figurinha.jsx');
+  const figurinha = lerPagina('Figurinha');
   assert.match(figurinha, /\{ k: 'golden', label: 'Golden', premium: true \}/);
   assert.match(figurinha, /\{ k: 'royal', label: 'Royal', premium: true \}/);
   const lista = figurinha.slice(figurinha.indexOf('const FUNDOS = ['), figurinha.indexOf('];', figurinha.indexOf('const FUNDOS = [')));

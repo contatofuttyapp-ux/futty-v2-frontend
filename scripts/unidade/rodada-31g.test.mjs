@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ID_PACOTE_NO_INICIO, linhaDoPacote, timesDoDono } from '../../src/utils/pacoteNoInicio.js';
 import { DIAS_DO_AGORA_NAO, esconderLembrete, lembreteEscondido } from '../../src/utils/lembretes.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -48,7 +49,7 @@ test('o aparelho que recusa guardar não quebra o X: devolve false e a tela esco
 });
 
 test('a fiação: o botão Loja está nas três telas da Figurinha, o cartão é um só e o do Início só aparece para o dono', () => {
-  const figurinha = ler('src/pages/Figurinha.jsx');
+  const figurinha = lerPagina('Figurinha');
   assert.equal((figurinha.match(/<Topbar hud="FIGURINHA" direita=\{<BotaoLoja \/>\} \/>/g) || []).length, 3, 'estreia, carregando e estúdio');
   assert.equal((figurinha.match(/data-cartao-loja/g) || []).length, 1, 'um cartão só — nada duplicado');
   assert.doesNotMatch(figurinha, /Vire figurinha ✨/, 'o convite antigo virou o cartão');

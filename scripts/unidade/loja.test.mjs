@@ -18,6 +18,7 @@
 // Uso: npm test  (ou: node --import ./scripts/unidade/registrar.mjs --test scripts/unidade/loja.test.mjs)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 globalThis.__FUTTY_ENV__ = {};
 
@@ -295,6 +296,6 @@ test('31F · o código de Planos e da Figurinha não tem mais o selo "Já é seu
   assert.ok(!/Não precisa comprar de novo/.test(planos));
   assert.match(planos, /const jaAtivo = p\.id === 'manto' \? !!meuTime\?\.manto_proprio : false;/, 'só o manto é "já é seu"');
   assert.match(planos, /O pacote é comprado pelo dono do time\./);
-  const figurinha = readFileSync(new URL('../../src/pages/Figurinha.jsx', import.meta.url), 'utf8');
+  const figurinha = lerPagina('Figurinha');
   assert.match(figurinha, /presente \? 'Comprar para o time' : 'Comprar para o meu time'/);
 });

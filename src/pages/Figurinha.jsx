@@ -3,232 +3,57 @@
 // Selos de honra no cromo + olhinho. Trocar foto é preview local (sem backend).
 // Tudo no cliente (canvas).
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, Download, Share2, X, Lock, Check, Plus, Minus, RefreshCw, ShoppingBag } from 'lucide-react';
-import { apiFetch, apiUpload, apiUploadCampos } from '../lib/api';
+import { apiFetch } from '../lib/api';
 import CropModal from '../components/CropModal';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useAd } from '../hooks/useAd';
 import { usePerfil } from '../context/PerfilContext';
-import { lerCacheComIdade, gravarCache } from '../lib/cacheLocal';
 // Liga o alinhamento dos caches ao perfil (foto/genérico novo chega ao Início, Ranking, Feed).
 import '../lib/alinharCard';
 // Pagamentos P2: liga a loja (SDK do RevenueCat) à conta — esta aba é pré-carregada em ócio.
 import '../lib/ligarLoja';
 import { espelharBrilhantesNoInicio } from '../lib/cacheCard';
-import { nomeJogador, urlAsset, urlImagem } from '../utils/avatar';
-import { mensagemUploadFoto } from '../utils/uploadErro';
-import { normalizarFoto } from '../utils/normalizarFoto';
-import { gerarFigurinhaCanvas, gerarCamadasFigurinha, desenharFundoEpico, desenharFundoGolden, desenharFundoRoyal, mostraFigurinha } from '../utils/figurinhaCanvas';
+import { nomeJogador } from '../utils/avatar';
+import { gerarFigurinhaCanvas, gerarCamadasFigurinha, mostraFigurinha } from '../utils/figurinhaCanvas';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { estadoBrilhantes, pedidoDoProduto, EVENTO_BRILHANTES } from '../lib/brilhantes';
-import { totalDeGeracoes, geracoesPorExtenso } from '../utils/totalDeGeracoes';
-import { MINHA_GERACOES, PACOTE_DE_PRESENTE, PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES, produtoDoPedido } from '../lib/planos';
+import { totalDeGeracoes } from '../utils/totalDeGeracoes';
+import { produtoDoPedido } from '../lib/planos';
 import { lojaLigada as calcularLojaLigada, produtosDaLoja } from '../lib/loja';
-import { KIT_IMG, KITS_FIGURINHA } from '../utils/kitsFigurinha';
+import { KITS_FIGURINHA } from '../utils/kitsFigurinha';
 import { DESTINO_DO_CADEADO, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer } from '../utils/uniformesGrade';
-import {
-  INTERVALO_CONSULTA_MS, TETO_ACOMPANHAMENTO_MS, situacaoDaPintura, lerPinturaGuardada, gravarPinturaGuardada, limparPinturaGuardada,
-} from '../utils/progressoPintura';
-import BarraPintura from '../components/BarraPintura';
-import { ehNativo } from '../lib/plataforma';
-import { salvarOuCompartilhar } from '../utils/salvarImagem';
+import { INTERVALO_CONSULTA_MS, TETO_ACOMPANHAMENTO_MS, situacaoDaPintura, lerPinturaGuardada } from '../utils/progressoPintura';
 import AdCard from '../components/AdCard';
 import Topbar from '../components/Topbar';
 import BotaoLoja from '../components/BotaoLoja';
-import FuttyLoader from '../components/FuttyLoader';
-import FaixaRolavel from '../components/FaixaRolavel';
-import RotuloGerar from '../components/RotuloGerar';
-import FuttyLogo from '../components/FuttyLogo';
 import LoadingFutty from '../components/LoadingFutty';
-import SeloHonra from '../components/SeloHonra';
 import AvatarGenericoSheet from '../components/AvatarGenericoSheet';
-import { gravarMiniatura } from '../lib/miniatura';
 import Toast from '../components/Toast';
 import '../styles/app.css';
-
-// Chaves nomeadas (iguais às guardadas em users.cor_frame / fundo_figurinha).
-// GATES (ordem do dono): Aura, Golden e Royal são PREMIUM (verdade no servidor, ver FUNDOS_PREMIUM em
-// backend/routes/auth.js; o `premium: true` aqui é só o cadeado do desejo). Épico é GRÁTIS (ordem do
-// dono) — não tem `premium`. LEI DA REGRA JUSTA: quem já tinha Aura equipado mantém — o gate só corre
-// ao TROCAR (ver escolherFundo).
-const FUNDOS = [
-  // ORDEM (ordem do dono): Neutro, Épico, Estádio, Aura, Golden, Royal — os GRÁTIS primeiro (Neutro,
-  // Épico, Estádio), os pagos depois (Aura, Golden, Royal). Só o SELETOR tem esta ordem: o fundo de
-  // quem não escolheu continua a ser 'estadio' (useState abaixo e cromoFundo no Início).
-  { k: 'preto', label: 'Neutro' },
-  { k: 'gradiente', label: 'Épico' }, // chave interna 'gradiente' (estado), label Épico — GRÁTIS
-  { k: 'estadio', label: 'Estádio' },
-  { k: 'aura', label: 'Aura', premium: true }, // glow SELADO da vitrine como fundo do cromo
-  // "Golden" e "Royal" são nomes de PRODUTO batizados pelo dono, não texto de interface — ficam em
-  // inglês, como "Golden" fica no cadeado GOLDEN. A regra do PT-BR vale para o que o app DIZ, não para
-  // o que o app BATIZA. Não reabrir sem o dono pedir.
-  { k: 'golden', label: 'Golden', premium: true }, // 1º fundo PREMIUM (gated) — DEPOIS dos livres
-  { k: 'royal', label: 'Royal', premium: true }, // par de luxo do Golden — chapa roxa da casa
-];
-// Background real de cada fundo (igual ao do PlayerCard) para os tiles.
-const FUNDO_BG = {
-  estadio: "url('/stadium_bg.webp') center / cover no-repeat, #1b2433",
-  // 'gradiente' = Carta Épica. Chave interna mantida para não refactorizar estado.
-  // Este valor é só o FALLBACK (base escura) até o render real do fundo ficar pronto
-  // — o tile passa a mostrar o fundo verdadeiro em miniatura (ver `epicoTile`).
-  gradiente: 'linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
-  // 'preto' (label "Neutro"): mesma base escura do épico, sem padrão. O tile é o gradiente liso,
-  // condizente com o card real.
-  preto: 'linear-gradient(180deg, #16161c 0%, #1d1d24 50%, #101014 100%)',
-  // 'aura' — tile fiel ao glow do card: elipse dourada (mesmos stops) sobre o escuro da casa. O card real
-  // desenha o glow com blur no canvas; aqui a elipse já é suave. Tamanho 140%×112% e alphas a 3/4, como
-  // no canvas.
-  aura: 'radial-gradient(ellipse 140% 112% at 50% 44%, rgba(212,160,23,0.7125) 0%, rgba(212,160,23,0.36) 40%, rgba(212,160,23,0.12) 64%, transparent 92%), linear-gradient(180deg, #0a0a12 0%, #070812 55%, #050609 100%)',
-  // 'golden' — FALLBACK (foil dourado) até o render real da chapa ficar pronto (ver `goldenTile`).
-  golden: 'linear-gradient(160deg, #b8860b 0%, #e6bd52 28%, #a9760f 54%, #dcab3a 76%, #855a0b 100%)',
-  // 'royal' — FALLBACK (foil roxo) até o render real da chapa ficar pronto (ver `royalTile`).
-  royal: 'linear-gradient(160deg, #4a2f8a 0%, #6f47c9 28%, #3d2670 54%, #5c3aa8 76%, #2a1a4d 100%)',
-};
-const TABS = [
-  { k: 'fundo', label: 'Fundo' },
-  { k: 'uniforme', label: 'Uniforme' },
-];
-
-// Os 5 uniformes (KIT_IMG + KITS_FIGURINHA) moram em utils/kitsFigurinha.js desde o P2: a escolha
-// do uniforme do pacote do time (components/EscolherUniformeTime.jsx) usa o mesmo catálogo.
-
-// Partículas de luz do fundo "estádio" (valores fixos por partícula → o
-// movimento nunca sincroniza). left/size fixos, cores alternadas, dur/delay variados.
-const FUTTY_PARTICULAS = [
-  { left: 8, size: 3, cor: '#f5e070', dur: 7.5, delay: 0 },
-  { left: 15, size: 2, cor: '#d4a017', dur: 9.2, delay: 2.4 },
-  { left: 23, size: 4, cor: '#ffffff', dur: 6.3, delay: 5.1 },
-  { left: 31, size: 2, cor: '#f5e070', dur: 10.4, delay: 1.2 },
-  { left: 38, size: 3, cor: '#d4a017', dur: 8.1, delay: 6.7 },
-  { left: 45, size: 2, cor: '#ffffff', dur: 6.9, delay: 3.3 },
-  { left: 52, size: 4, cor: '#f5e070', dur: 9.8, delay: 0.6 },
-  { left: 59, size: 3, cor: '#d4a017', dur: 7.2, delay: 4.5 },
-  { left: 66, size: 2, cor: '#ffffff', dur: 11, delay: 7.8 },
-  { left: 72, size: 3, cor: '#f5e070', dur: 6.6, delay: 2 },
-  { left: 79, size: 4, cor: '#d4a017', dur: 8.7, delay: 5.9 },
-  { left: 85, size: 2, cor: '#ffffff', dur: 10.1, delay: 1.7 },
-  { left: 90, size: 3, cor: '#f5e070', dur: 7.9, delay: 4 },
-  { left: 92, size: 2, cor: '#d4a017', dur: 9.5, delay: 6.2 },
-];
-
-// Glints do fundo GOLDEN no PREVIEW (a "mina encantada" viva). Mesmas posições do
-// canvas (desenharFundoGolden) — [x%, y%, d(px), delay(s), dur(s)]. Densos fora do
-// centro (o avatar tapa o meio). z3: entram ATRÁS do jogador (lei do brilho do cromo).
-// No PNG de download o brilho é estático no pico (canvas); aqui vive.
-const GOLDEN_GLINTS_UI = [
-  { x: 10, y: 12, d: 3, dl: 0.0, dur: 7.6 }, { x: 23, y: 8, d: 2, dl: 4.1, dur: 8.3 },
-  { x: 50, y: 6, d: 3, dl: 1.7, dur: 7.1 }, { x: 72, y: 9, d: 2, dl: 5.6, dur: 8.7 },
-  { x: 89, y: 14, d: 4, dl: 2.6, dur: 7.9 }, { x: 7, y: 32, d: 3, dl: 6.3, dur: 9.0 },
-  { x: 93, y: 37, d: 2, dl: 0.9, dur: 8.4 }, { x: 11, y: 55, d: 2, dl: 3.4, dur: 7.5 },
-  { x: 91, y: 60, d: 3, dl: 5.1, dur: 8.9 }, { x: 14, y: 82, d: 3, dl: 1.2, dur: 7.4 },
-  { x: 85, y: 85, d: 4, dl: 4.6, dur: 8.1 }, { x: 50, y: 91, d: 3, dl: 2.9, dur: 8.6 },
-  { x: 31, y: 19, d: 2, dl: 6.9, dur: 7.8 }, { x: 70, y: 21, d: 3, dl: 3.8, dur: 8.2 },
-];
-
-// Recorte octogonal do card (cut/W = 32/400 = 8%; cut/H = 32/600 ≈ 5.3%). Usado
-// nos overlays de card inteiro para os cantos coincidirem com o PNG octogonal.
-const CLIP_OCTOGONO = 'polygon(8% 0, 92% 0, 100% 5.3%, 100% 94.7%, 92% 100%, 8% 100%, 0 94.7%, 0 5.3%)';
-// Ordem do dono: a cabeça cortou nas duas tentativas com esta foto → o recado leva a escolher OUTRA
-// foto. Tentar de novo com ela daria o mesmo. Título + corpo (30H): um erro não é a mesma frase que o
-// resto da tela, por isso quebra no dois-pontos em vez de correr solta.
-const RECADO_FOTO_RECUSADA = {
-  titulo: 'Essa foto não deu certo',
-  corpo: 'Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.',
-};
-
-// Limites do zoom do avatar. ZOOM_MIN subiu de 0.88 (80% exibido) para 0.99 (90%):
-// o degrau de 80% deixou de existir. Qualquer valor abaixo é normalizado no arranque.
-const ZOOM_MIN = 0.99;
-const ZOOM_MAX = 1.43;
-// Zoom do card com a FOTO: 1 = a foto cobre a moldura por completo (o piso — nunca faixa
-// vazia nem borda à mostra, ver enquadrarFotoComum); cada toque aproxima 10%, até 40%.
-const FOTO_ZOOM_MAX = 1.4;
-
-// Nome de ficheiro seguro a partir do nome do jogador.
-function ficheiroNome(nome, sufixo = '') {
-  const base = String(nome || 'jogador')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/gi, '-')
-    .toLowerCase()
-    .replace(/(^-|-$)/g, '');
-  return `futty-${base || 'jogador'}${sufixo}.png`;
-}
-
-// Estrela de 4 pontas custom (celebracao.svg) tingida por CSS mask. O padrão do
-// app tinge SVGs pretos por filtro (components/Icon.jsx), mas esse só cobre 3
-// cores fixas; a máscara permite QUALQUER cor exacta (branco/roxo/dourado).
-function EstrelaIA({ size = 16, color = '#d4a017', style }) {
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        display: 'inline-block',
-        width: size,
-        height: size,
-        flex: 'none',
-        backgroundColor: color,
-        WebkitMaskImage: 'url(/icons/celebracao.svg)',
-        maskImage: 'url(/icons/celebracao.svg)',
-        WebkitMaskRepeat: 'no-repeat',
-        maskRepeat: 'no-repeat',
-        WebkitMaskPosition: 'center',
-        maskPosition: 'center',
-        WebkitMaskSize: 'contain',
-        maskSize: 'contain',
-        verticalAlign: 'middle',
-        ...style,
-      }}
-    />
-  );
-}
-
-// ─── O que a Figurinha aproveita do Início ──────────────────────────────────────────────
-//
-// Três pedidos que a tela abriria sozinha — o anúncio, os selos e /api/brilhantes/estado (539 + 540 +
-// 606 ms, de Lisboa: tudo distância) — não trazem novidade nenhuma para quem chegou pelo Início: o
-// /api/inicio já traz o direito, os créditos, os pedidos vivos e as colunas do pacote em cada time.
-// Fica tudo no cache de sessão, com a mesma chave que o InicioContext usa; daqui só se lê.
-const FRESCOR_DO_INICIO_MS = 60000;
-
-/** Idade (ms) do payload de /api/inicio guardado, ou null se não houver. */
-function idadeDoInicio(userId) {
-  return lerCacheComIdade(userId, 'inicio')?.idadeMs ?? null;
-}
-
-/**
- * O mesmo formato que `estadoBrilhantes()` devolve, montado a partir do
- * /api/inicio guardado. Sem payload (ou sem o direito lá dentro) devolve null e
- * a tela pede como antes.
- */
-function brilhanteDoInicio(userId) {
-  const d = lerCacheComIdade(userId, 'inicio')?.dados;
-  if (!d?.brilhante) return null;
-  const times = (d.teams?.teams || []).map((t) => ({
-    id: t.id,
-    nome: t.nome,
-    slug: t.slug,
-    sou_dono: t.role === 'admin',
-    brilhante_ativo: !!t.brilhante_ativo,
-    brilhante_kit: t.brilhante_kit || null,
-    brilhante_limite: Number(t.brilhante_limite) || 25,
-    manto_proprio: !!t.manto_proprio,
-  }));
-  return {
-    direito: {
-      fonte: d.brilhante.fonte, team_id: d.brilhante.team_id, kit_id: d.brilhante.kit_id, restantes: d.brilhante.restantes || 0,
-      ...(d.brilhante.total != null ? { total: d.brilhante.total } : {}),
-    },
-    creditos: d.brilhante.creditos || 0,
-    times,
-    pedidos: d.pedidos_brilhante || [],
-    // Pagamentos P2: o motor diz se a loja está ligada (PAGAMENTOS_ATIVOS) — vem no mesmo /api/inicio.
-    loja_pronta: !!d.brilhante.loja_pronta,
-  };
-}
+import { useAcoesDaPintura } from './figurinha/acoesDaPintura';
+import { useAcoesDaFoto } from './figurinha/acoesDaFoto';
+import { carregarHistorico, useAcoesDoHistorico } from './figurinha/acoesDoHistorico';
+import { useAcoesDoCromo } from './figurinha/acoesDoCromo';
+import { useAcoesDoStudio } from './figurinha/acoesDoStudio';
+import { FOTO_ZOOM_MAX, ZOOM_MAX, ZOOM_MIN } from './figurinha/constantes';
+import { FRESCOR_DO_INICIO_MS, brilhanteDoInicio, idadeDoInicio } from './figurinha/doInicio';
+import ConfirmarPintura from './figurinha/ConfirmarPintura';
+import ModalDaFoto from './figurinha/ModalDaFoto';
+import SelosDaFigurinha from './figurinha/SelosDaFigurinha';
+import BotoesDoCromo from './figurinha/BotoesDoCromo';
+import SeletoresDoCard from './figurinha/SeletoresDoCard';
+import AvisoEmailNaoConfirmado from './figurinha/AvisoEmailNaoConfirmado';
+import CartaoDaLoja from './figurinha/CartaoDaLoja';
+import BotoesDaFoto from './figurinha/BotoesDaFoto';
+import ControleDeZoom from './figurinha/ControleDeZoom';
+import AvisoDaPintura from './figurinha/AvisoDaPintura';
+import ZonaDoCard from './figurinha/ZonaDoCard';
+import EstreiaDaFigurinha from './figurinha/EstreiaDaFigurinha';
+import OverlayGerando from './figurinha/OverlayGerando';
+import GradeDeUniformes from './figurinha/GradeDeUniformes';
+import { useTilesDosFundos } from './figurinha/useTilesDosFundos';
+import { useSelosDaFigurinha } from './figurinha/useSelosDaFigurinha';
 
 export default function Figurinha() {
   const navigate = useNavigate();
@@ -298,10 +123,6 @@ export default function Figurinha() {
   const [fundoUrl, setFundoUrl] = useState(null); // camada de fundo (studio, sem jogador)
   const [jogadorUrl, setJogadorUrl] = useState(null); // camada do jogador (studio)
   const [placaUrl, setPlacaUrl] = useState(null); // camada placa+nome (studio, topo)
-  // Tile do Épico = render REAL do fundo em miniatura (não uma imitação CSS/SVG).
-  const [epicoTile, setEpicoTile] = useState(null);
-  const [goldenTile, setGoldenTile] = useState(null); // render real do fundo Golden p/ o tile
-  const [royalTile, setRoyalTile] = useState(null); // render real do fundo Royal p/ o tile
   const fileRef = useRef(null);
   // Enquadrar dentro de "Trocar foto". cropFile alimenta o
   // CropModal nos dois fluxos ("Escolher outra foto" e "Ajustar
@@ -431,60 +252,7 @@ export default function Figurinha() {
   const refazerAtual = !!kitDoCard && podeRefazer({ direito: direitoDaGradeAgora, kitVestido: kitAtivo, kitDoTime, restantes: restantesDireito, avatarEhIA });
   function gradeDeUniformes() {
     return (
-      <FaixaRolavel className="fig-seletor-grade" envoltorioClassName="faixa-rolavel--grade" data-grade="uniformes" rotuloMais="Ver mais uniformes" rotuloAnteriores="Ver uniformes anteriores">
-        {kitsDaGrade.map((kit) => {
-          const estado = estadoDoKit(kit);
-          const trancado = estado === 'trancado';
-          return (
-            <button
-              key={kit.id}
-              type="button"
-              className="fig-seletor-tile"
-              onClick={() => tocarUniforme(kit)}
-              // P2: o tile trancado diz o que o toque faz, com o mesmo texto do convite (Comprar · preço / Pedir).
-              aria-label={trancado ? `${kit.nome} (bloqueado) · ${textoDoConvite('minha')}` : estado === 'geravel' ? `${kit.nome} · gerar figurinha` : kit.nome}
-              aria-pressed={estado === 'vestido'}
-              data-estado={estado}
-              disabled={gerandoIA}
-            >
-              {/* Thumbnail quadrado */}
-              <div className="hud-corners-s" style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: KIT_IMG[kit.id] ? '#0d0d12' : `linear-gradient(135deg, ${kit.base} 55%, ${kit.acento} 55%)`, border: estado === 'vestido' ? '2px solid #d4a017' : estado === 'geravel' ? '1px solid rgba(212,160,23,0.55)' : '1px solid var(--border-subtle)', filter: estado === 'vestido' ? 'none' : 'saturate(0.7) brightness(0.85)' }}>
-                {KIT_IMG[kit.id] ? (
-                  // Enquadramento (reparo do look): o cover cortava a camisa a meio.
-                  // Ancora ao topo + desce + reduz a escala → vê-se o corte da gola e
-                  // o padrão da manga de relance, com a maior parte da camisa visível.
-                  <img
-                    src={KIT_IMG[kit.id]}
-                    alt=""
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 10%', transform: 'scale(0.82) translateY(7%)', transformOrigin: '50% 0%' }}
-                  />
-                ) : null}
-                {estado === 'vestido' ? (
-                  <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: '#d4a017', color: '#0d0d12', display: 'grid', placeItems: 'center' }}>
-                    <Check size={10} strokeWidth={3} />
-                  </span>
-                ) : null}
-                {/* Gerável (com direito, sem slot): só a estrelinha de IA, sem texto. O que custa (1 geração) e o saldo são ditos ao tocar, na
-                    confirmação; o tempo (~45 s) só na mensagem de "gerando". */}
-                {estado === 'geravel' ? (
-                  <span data-ia-estrela aria-hidden="true" style={{ position: 'absolute', bottom: 3, right: 3, width: 14, height: 14, display: 'grid', placeItems: 'center', borderRadius: 4, background: 'rgba(0,0,0,0.7)' }}>
-                    <EstrelaIA size={9} color="#d4a017" />
-                  </span>
-                ) : null}
-                {trancado ? (
-                  <span aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(5,8,16,0.55)', color: '#f0c94a' }}>
-                    <Lock size={16} />
-                  </span>
-                ) : null}
-              </div>
-              {/* Nome */}
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: trancado ? 'var(--label-color)' : '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {kit.nome}
-              </span>
-            </button>
-          );
-        })}
-      </FaixaRolavel>
+      <GradeDeUniformes estadoDoKit={estadoDoKit} gerandoIA={gerandoIA} kitsDaGrade={kitsDaGrade} textoDoConvite={textoDoConvite} tocarUniforme={tocarUniforme} />
     );
   }
 
@@ -548,50 +316,7 @@ export default function Figurinha() {
   // Anúncio pedido no topo da tela, em paralelo com o resto (mesmo motivo da Resenha e do Ranking — ver
   // useAd).
   const { ad: adFigurinha, pronto: adPronto } = useAd('figurinha');
-  const [selos, setSelos] = useState(() => lerCacheComIdade(userId, 'selos')?.dados ?? []);
-  const [selosDoUsuario, setSelosDoUsuario] = useState(userId);
-  if (selosDoUsuario !== userId) {
-    setSelosDoUsuario(userId);
-    setSelos(lerCacheComIdade(userId, 'selos')?.dados ?? []);
-  }
-  const [selosOcultos, setSelosOcultos] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('futty_selos_ocultos') || '[]')); } catch { return new Set(); }
-  });
-  useEffect(() => {
-    let ativo = true;
-    const comIdade = lerCacheComIdade(userId, 'selos');
-    const doCache = comIdade?.dados ?? null;
-    // Janela de frescor de 5 minutos NESTA tela (a do useApiComCache é de 30 s). Se o
-    // pré-aquecimento acabou de trazer os selos, não se pedem outra vez.
-    //
-    // Um selo é uma conquista (campeonato, 1º do ranking) — não muda enquanto a pessoa
-    // escolhe um fundo. Com 30 s, abrir a Figurinha um minuto depois do Início
-    // pagava 540 ms por dois emblemas que já estavam em casa. Fora da janela,
-    // revalida por trás: o cromo desenha com os selos do cache e redesenha uma
-    // vez se algum tiver mudado.
-    const frescos = comIdade && comIdade.idadeMs < 5 * 60 * 1000;
-    if (frescos) return () => { ativo = false; };
-    apiFetch('/api/me/selos', { segundoPlano: !!doCache })
-      .then((d) => {
-        if (!ativo) return;
-        setSelos(d.selos || []);
-        gravarCache(userId, 'selos', d.selos || []);
-      })
-      .catch((e) => {
-        if (doCache) console.warn('[Figurinha] /api/me/selos falhou, mantendo cache:', e.message);
-      });
-    return () => { ativo = false; };
-  }, [userId]);
-  function toggleSelo(id) {
-    setSelosOcultos((cur) => {
-      const n = new Set(cur);
-      if (n.has(id)) n.delete(id); else n.add(id);
-      localStorage.setItem('futty_selos_ocultos', JSON.stringify([...n]));
-      return n;
-    });
-  }
-  const selosVisiveis = selos.filter((s) => !selosOcultos.has(s.id)).slice(0, 2);
-  const selosKey = selosVisiveis.map((s) => `${s.id}:${s.tier}`).join('|');
+  const { selos, selosOcultos, toggleSelo, selosVisiveis, selosKey } = useSelosDaFigurinha({ userId });
   // `fotoOverride` = o preview LOCAL da foto que o servidor acabou de confirmar (200):
   // o card comum a pinta na hora, sem esperar a imagem nova voltar pelo proxy. Só na
   // comum (a base é a foto); o card com figurinha continua vindo do avatar_url. Não
@@ -736,55 +461,7 @@ export default function Figurinha() {
   useEffect(() => () => { if (jogadorUrl) URL.revokeObjectURL(jogadorUrl); }, [jogadorUrl]);
   useEffect(() => () => { if (placaUrl) URL.revokeObjectURL(placaUrl); }, [placaUrl]);
 
-  // Render ÚNICO do tile do Épico (deps [] → uma vez por montagem). 120px = ~2× o
-  // tamanho do tile, para ficar nítido em retina. dataURL → usado como background.
-  useEffect(() => {
-    let vivo = true;
-    (async () => {
-      try {
-        const cv = document.createElement('canvas');
-        cv.width = 120;
-        cv.height = 120;
-        // Intensidade 3.0: a 120×120 as arestas a alpha do card (0.065) desapareciam. Mesma geometria, alpha
-        // subido só para a miniatura se ler.
-        await desenharFundoEpico(cv.getContext('2d'), 120, 120, { intensidade: 3.0 });
-        if (vivo) setEpicoTile(cv.toDataURL('image/png'));
-      } catch { /* fallback: fica o gradiente base do FUNDO_BG */ }
-    })();
-    return () => { vivo = false; };
-  }, []);
-
-  // Render ÚNICO do tile do Golden (chapa foil + glints no pico), como o Épico.
-  useEffect(() => {
-    let vivo = true;
-    (async () => {
-      try {
-        const cv = document.createElement('canvas');
-        cv.width = 120;
-        cv.height = 120;
-        // 'vitrine': montra a propósito (ordem do dono) — mais rica que o card real.
-        await desenharFundoGolden(cv.getContext('2d'), 120, 120, { glints: 'vitrine' });
-        if (vivo) setGoldenTile(cv.toDataURL('image/png'));
-      } catch { /* fallback: fica o gradiente foil do FUNDO_BG */ }
-    })();
-    return () => { vivo = false; };
-  }, []);
-
-  // Render ÚNICO do tile do Royal (chapa roxa + glints no pico), MESMO pipeline do Golden.
-  useEffect(() => {
-    let vivo = true;
-    (async () => {
-      try {
-        const cv = document.createElement('canvas');
-        cv.width = 120;
-        cv.height = 120;
-        // 'vitrine': montra a propósito (ordem do dono) — mais rica que o card real.
-        await desenharFundoRoyal(cv.getContext('2d'), 120, 120, { glints: 'vitrine' });
-        if (vivo) setRoyalTile(cv.toDataURL('image/png'));
-      } catch { /* fallback: fica o gradiente foil do FUNDO_BG */ }
-    })();
-    return () => { vivo = false; };
-  }, []);
+  const { epicoTile, goldenTile, royalTile } = useTilesDosFundos();
 
   // Marca a estreia como concluída e passa ao studio normal.
   function concluirEstreia() {
@@ -792,263 +469,17 @@ export default function Figurinha() {
     setEstreiaFase('fim');
   }
 
-  // Geração IA durante a estreia: ao concluir (ou falhar), revela o cromo.
-  // Declarada antes de subirFoto porque este chama-a no auto-trigger da estreia.
-  async function gerarAvatarIAEstreia() {
-    // Mesmo marcador do Onboarding (dispararFigurinhaIA): o Início
-    // lê isto no PRÓPRIO useState inicial (uma vez, ao montar), por isso tem
-    // de estar gravado ANTES do POST — se a pessoa for para lá enquanto isto
-    // ainda corre, o Início já nasce sabendo que há uma geração em voo, em vez
-    // de mostrar o CTA normal por um instante até o status 'gerando' chegar.
-    try {
-      sessionStorage.setItem('futty_figurinha_gerando', '1');
-    } catch {
-      /* priv */
-    }
-    setGerandoIA(true);
-    setErro('');
-    setLimiteIA(false);
-    let emSegundoPlano = false;
-    let falhou = null; // a falha desta geração: a fase que volta (foto ou cromo) depende dela
-    try {
-      // O POST devolve `{ jobId }` na hora; quem conclui é acompanharPintura (aplicarPinturaPronta /
-      // aplicarPinturaFalhou). Sem jobId (resposta imediata) o fluxo é o de sempre.
-      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit: 'dark-gold', assincrono: true }) });
-      if (data.jobId) {
-        iniciarPintura(data, { kit: 'dark-gold', estreia: true });
-        emSegundoPlano = true;
-        return;
-      }
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa } } : m));
-      setFotoLocal(null);
-      recarregarPerfilGlobal();
-    } catch (err) {
-      falhou = err;
-      tratarFalhaDaEstreia(err);
-    } finally {
-      if (!emSegundoPlano) {
-        setGerandoIA(false);
-        setEstreiaFase(falhou ? faseAposFalhaDaEstreia(falhou) : 'pronto'); // mostra o cromo (com Brilhante ou a foto)
-      }
-    }
-  }
+  const { gerarAvatarIAEstreia, gerarAvatarIA, aplicarPinturaPronta, aplicarPinturaFalhou } = useAcoesDaPintura({ aplicarBrilhante, gerandoIA, kitAtivo, recarregarPerfilGlobal, setAgora, setEmailNaoConfirmado, setErro, setErroIA, setErroIAmsg, setEstreiaFase, setFotoLocal, setFotoRecusada, setFotoTrocadaSemGerar, setGerandoIA, setLimiteIA, setMe, setPintura, setSemGeracoes, setToast, userId });
 
-  // SEM_DIREITO não é o "limite" morto — mostrar o card de quota (que mandaria "Ver Brilhantes" para um
-  // 403 que já significa isso) seria só ruído; o card comum já está pronto, é só revelar. `subirFoto` só
-  // chama a geração da estreia quando já há direito confirmado, mas o direito pode ter acabado entre a
-  // checagem e a resposta (corrida rara) — cai aqui na mesma, sem erro na tela. Serve ao POST e ao
-  // desfecho 'falhou' do job.
-  function tratarFalhaDaEstreia(err) {
-    if (err?.code === 'SEM_DIREITO') estadoBrilhantes().then(aplicarBrilhante);
-    else if (err?.code === 'FOTO_RECUSADA') setFotoRecusada(true); // o recado vai na fase 'foto' (ver faseAposFalhaDaEstreia)
-    else if (err?.status === 403) setLimiteIA(true); // 403 sem código conhecido (defensivo)
-    else setErro(err?.message || 'Não deu para gerar sua figurinha. Tente de novo.');
-  }
+  const { onPickFile, abrirAjustarEnquadramento, aoConfirmarCrop, aoCancelarCrop, repetirUpload } = useAcoesDaFoto({ aplicarNoPerfilGlobal, cropModo, estreiaFase, fotoOriginal, gerarAvatarIAEstreia, jogador, me, origParaEnviar, setAjustandoEnquadramento, setCropFile, setCropModo, setErro, setEstreiaFase, setFotoLocal, setFotoRecusada, setFotoTrocadaSemGerar, setFotoZoom, setMe, setModalFoto, setToast, setUploadErro, setUploadFoto, temDireitoDeGerar, ultimoFicheiro, ultimoRecorte, ultimoRecorteMini });
 
-  // FOTO_RECUSADA na estreia volta a "Adicione uma foto" com o recado (a pessoa escolhe outra); as
-  // outras falhas seguem ao cromo.
-  function faseAposFalhaDaEstreia(err) {
-    return err?.code === 'FOTO_RECUSADA' ? 'foto' : 'pronto';
-  }
-
-  // Trocar foto: upload para o servidor e, CONFIRMADO o 200, preview local imediato. O preview (e a
-  // linha "Foto trocada") só nascem depois do 200: com o upload falhando a tela não pode dizer que a
-  // foto já mudou; com erro, só o erro.
-  // Na estreia, dispara automaticamente a geração da Brilhante — só quando já há direito (crédito ou
-  // pacote do time); sem ele, a comum já está pronta.
-  // Núcleo do upload, reutilizado pelo "tentar de novo". `emEstreia` decide se dispara a geração IA
-  // automática a seguir. `file` já é o RECORTE (saído do CropModal); `original` (opcional) é a foto de
-  // antes do recorte, mandada junto para "Ajustar enquadramento" mais tarde.
-  // `recorteMini` é o quadrado tracejado da miniatura (enquadramento único), gravado em
-  // users.avatar_recorte depois do 200 — só quando o card passa a mostrar a FOTO (com figurinha ativa,
-  // o arquivo do avatar continua sendo a figurinha; o recorte dela fica).
-  async function subirFoto(file, emEstreia, original, recorteMini = null) {
-    setFotoLocal(null); // some a confirmação de uma troca anterior enquanto esta corre
-    setFotoRecusada(false); // foto nova: some o recado da foto anterior
-    if (emEstreia) setEstreiaFase('gerando');
-    setUploadFoto(true);
-    setErro('');
-    setUploadErro(null);
-    try {
-      const data = original
-        ? await apiUploadCampos('/api/me/avatar', { avatar: file, original })
-        : await apiUpload('/api/me/avatar', file, 'avatar');
-      // foto_url = a nova foto (fonte da próxima geração). avatar_url = o que o card
-      // mostra: o backend PRESERVA a figurinha se houver uma (arquivo -ai- nosso) e
-      // senão espelha a foto nova, por isso o card comum muda na hora e o com figurinha
-      // mantém a figurinha até a pessoa gerar de novo.
-      setMe((m) => (m ? {
-        ...m,
-        user: {
-          ...m.user,
-          foto_url: data.foto_url ?? data.avatar_url,
-          avatar_url: data.avatar_url,
-          foto_original_url: data.foto_original_url ?? m.user.foto_original_url ?? null,
-          figurinha_ativa: data.figurinha_ativa,
-        },
-      } : m));
-      // O contexto do perfil também aprende a foto nova, sem rede: sem isto, sair da
-      // tela e voltar (ou abrir o Início) semeava o card com o perfil de ANTES da troca.
-      aplicarNoPerfilGlobal({
-        foto_url: data.foto_url ?? data.avatar_url,
-        avatar_url: data.avatar_url,
-        foto_original_url: data.foto_original_url ?? me?.user?.foto_original_url ?? null,
-        figurinha_ativa: data.figurinha_ativa,
-      });
-      setFotoZoom(1); // foto nova: o zoom volta a "cobre a moldura"
-      setFotoLocal(URL.createObjectURL(file)); // 200 confirmado: agora sim o preview e a linha "Foto trocada"
-      setUploadFoto(false);
-      ultimoFicheiro.current = null;
-      origParaEnviar.current = null;
-      if (recorteMini && !data.figurinha_ativa) gravarMiniaturaDaFoto(recorteMini);
-      if (emEstreia) {
-        // SPEC-FIGURINHA-3: a estreia só tenta gerar a Brilhante com direito confirmado (crédito ou pacote do
-        // time) — sem isso o POST dava 403 SEM_DIREITO e a tela mostrava o card de "limite" (que nem existe
-        // mais). Sem direito, a comum já está pronta (o upload acima gravou foto_url): só falta revelar o
-        // cromo, sem tentar nem errar.
-        if (temDireitoDeGerar) await gerarAvatarIAEstreia();
-        else setEstreiaFase('pronto');
-      } else setFotoTrocadaSemGerar(true); // fora da estreia, quem decide gerar é o próprio usuário
-    } catch (err) {
-      // P1-5 — mensagem accionável (rede/tamanho/formato) + retry inline, não um erro cru.
-      setUploadErro(mensagemUploadFoto(err));
-      setUploadFoto(false);
-      if (emEstreia) setEstreiaFase('foto'); // volta ao estado A
-    }
-  }
-
-  // Grava o quadrado tracejado como a miniatura de verdade (best-effort, sem segurar a tela); com o 200,
-  // o avatar_url novo já traz o `?rc=` e as miniaturas de todo lado passam a cortar nele.
-  function gravarMiniaturaDaFoto(recorteMini) {
-    gravarMiniatura(recorteMini).then((url) => {
-      if (!url) return;
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: url } } : m));
-      aplicarNoPerfilGlobal({ avatar_url: url });
-    });
-  }
-
-  // "Ajustar enquadramento": regrava só o recorte (PUT), sem
-  // mandar original nenhuma (a que já está guardada não muda).
-  async function enviarRecorte(blob, recorteMini = null) {
-    const file = new File([blob], 'recorte.jpg', { type: 'image/jpeg' });
-    ultimoRecorte.current = blob; // o "Tentar de novo" de um erro aqui repete ESTE recorte
-    setFotoLocal(null);
-    setUploadFoto(true);
-    setErro('');
-    setUploadErro(null);
-    try {
-      const data = await apiUploadCampos('/api/me/avatar/recorte', { recorte: file }, { method: 'PUT' });
-      setMe((m) => (m ? { ...m, user: { ...m.user, foto_url: data.foto_url, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa } } : m));
-      aplicarNoPerfilGlobal({ foto_url: data.foto_url, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa });
-      setFotoZoom(1); // enquadramento novo: é ele que manda, o zoom volta ao piso
-      setFotoLocal(URL.createObjectURL(file)); // só depois do 200, como em subirFoto
-      setUploadFoto(false);
-      ultimoRecorte.current = null;
-      if (recorteMini && !data.figurinha_ativa) gravarMiniaturaDaFoto(recorteMini);
-      setToast({ tipo: 'success', mensagem: 'Enquadramento atualizado.' });
-    } catch (err) {
-      setUploadErro(mensagemUploadFoto(err));
-      setUploadFoto(false);
-    }
-  }
-
-  // Escolhe o ficheiro (galeria/câmera) e abre o CropModal 2:3 — igual ao
-  // Onboarding. A normalizada segue guardada em origParaEnviar: se o recorte
-  // for confirmado, ela vai junto como a "original" (foto_original_url).
-  async function onPickFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // permite re-seleccionar o mesmo ficheiro
-    if (!file) return;
-    setModalFoto(false); // fecha o modal "Sua foto" ao escolher — revela o CropModal
-    const normalizada = await normalizarFoto(file);
-    origParaEnviar.current = normalizada;
-    setCropModo('nova');
-    setCropFile(normalizada);
-  }
-
-  // "Ajustar enquadramento": reabre o CropModal sobre a foto ORIGINAL guardada (foto_original_url).
-  // Fail-safe (fotos de antes de a original ser guardada, ou sem a migração 057): sem original, reabre
-  // sobre o RECORTE atual — dá para aproximar, não para recuperar área perdida no primeiro recorte.
-  async function abrirAjustarEnquadramento() {
-    const fonte = jogador.foto_original_url || fotoOriginal;
-    if (!fonte) return;
-    setAjustandoEnquadramento(true);
-    setErro('');
-    try {
-      const resp = await fetch(urlImagem(urlAsset(fonte), 1600));
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const blob = await resp.blob();
-      origParaEnviar.current = null; // não é upload de foto nova — não manda "original"
-      setCropModo('ajustar');
-      setModalFoto(false);
-      setCropFile(new File([blob], 'ajustar.jpg', { type: blob.type || 'image/jpeg' }));
-    } catch (e) {
-      console.error('[figurinha] abrir ajustar enquadramento falhou:', e.message);
-      setErro('Não foi possível abrir sua foto para ajustar. Tente de novo.');
-    } finally {
-      setAjustandoEnquadramento(false);
-    }
-  }
-
-  // Confirmar do CropModal — um só ponto, os dois fluxos ("Escolher outra
-  // foto" e "Ajustar enquadramento") só diferem no que fazem com o recorte.
-  async function aoConfirmarCrop(blob, extra) {
-    setCropFile(null);
-    const recorteMini = extra?.recorte || null; // o quadrado tracejado da miniatura
-    ultimoRecorteMini.current = recorteMini;
-    if (cropModo === 'ajustar') {
-      await enviarRecorte(blob, recorteMini);
-      return;
-    }
-    const original = origParaEnviar.current;
-    ultimoFicheiro.current = blob;
-    ultimoRecorte.current = null;
-    await subirFoto(blob, estreiaFase === 'foto', original, recorteMini);
-  }
-  function aoCancelarCrop() {
-    setCropFile(null);
-    origParaEnviar.current = null;
-  }
-
-  // "Tentar de novo" (P1-5): repete o upload com o MESMO recorte (+ original,
-  // se havia), sem passar pelo CropModal de novo. Um erro do "Ajustar
-  // enquadramento" repete o PUT do recorte (antes o botão não fazia nada: só
-  // olhava para o arquivo do upload de foto nova).
-  function repetirUpload() {
-    if (ultimoRecorte.current) enviarRecorte(ultimoRecorte.current, ultimoRecorteMini.current);
-    else if (ultimoFicheiro.current) subirFoto(ultimoFicheiro.current, estreiaFase === 'foto', origParaEnviar.current, ultimoRecorteMini.current);
-  }
-
-  // "Minhas figurinhas": até 6, mais recente primeiro. Recarrega
-  // toda vez que o modal "Sua foto" abre (pode ter mudado desde a última).
-  function carregarHistorico() {
-    return apiFetch('/api/me/avatar/historico')
-      .then((data) => data?.items || [])
-      .catch(() => []); // galeria some sozinha — não é motivo pra tela de erro
-  }
+  const { usarDoHistorico } = useAcoesDoHistorico({ recarregarPerfilGlobal, setErro, setFotoLocal, setMe, setToast, setUsandoHistoricoId, usandoHistoricoId });
   useEffect(() => {
     if (!modalFoto) return undefined;
     let vivo = true;
     carregarHistorico().then((items) => { if (vivo) setHistorico(items); });
     return () => { vivo = false; };
   }, [modalFoto]);
-
-  async function usarDoHistorico(item) {
-    if (usandoHistoricoId) return;
-    setUsandoHistoricoId(item.id);
-    setErro('');
-    try {
-      const data = await apiFetch(`/api/me/avatar/historico/${item.id}`, { method: 'PUT' });
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa } } : m));
-      setFotoLocal(null); // mostra o avatar_url novo (não o preview local de upload)
-      recarregarPerfilGlobal();
-      setToast({ tipo: 'success', mensagem: 'Figurinha aplicada.' });
-    } catch (err) {
-      setErro(err?.message || 'Não deu para usar essa figurinha. Tente de novo.');
-    } finally {
-      setUsandoHistoricoId(null);
-    }
-  }
 
   // Aviso de erro partilhado: erro de upload com mensagem accionável +
   // "tentar de novo" inline; senão, o erro genérico da página. No studio o erro do
@@ -1070,170 +501,7 @@ export default function Figurinha() {
   ) : null;
   const avisoErro = avisoUploadErro || avisoErroGenerico;
 
-  // Partilha do cromo no momento da estreia (imagem do card + texto viral). No app vai direto à folha de
-  // compartilhar do sistema: o navigator.share do WebView não é garantido, e o <a download> é ignorado.
-  async function partilharCromo() {
-    try {
-      const blob = await gerarFigurinhaCanvas(opts);
-      const nome = ficheiroNome(nomeJogador(jogador));
-      const file = blob ? new File([blob], nome, { type: 'image/png' }) : null;
-      const payload = { title: 'Meu card Futty', text: 'Veja meu cartão de jogador no Futty ⚽' };
-      if (ehNativo()) {
-        await salvarOuCompartilhar(blob, nome, { titulo: payload.title });
-      } else if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ ...payload, files: [file] });
-      } else if (navigator.share) {
-        await navigator.share(payload);
-      } else if (blob) {
-        await salvarOuCompartilhar(blob, nome);
-      }
-    } catch (e) {
-      if (e?.name !== 'AbortError') setErro(e?.message || 'Não deu para compartilhar. Tente de novo.');
-    } finally {
-      concluirEstreia();
-    }
-  }
-
-  // Gerar avatar com IA a partir da foto atual (endpoint usa users.avatar_url).
-  // `kitId` opcional: quando vem de um onClick recebe o evento → cai no kit vestido.
-  async function gerarAvatarIA(kitId) {
-    if (gerandoIA) return;
-    const kit = typeof kitId === 'string' ? kitId : kitAtivo;
-    // Mesmo marcador de gerarAvatarIAEstreia/dispararFigurinhaIA
-    // (Onboarding): cobre a TROCA de foto/uniforme, não só o cadastro. Antes
-    // do POST — é o que o Início lê ao montar, se a pessoa sair desta tela
-    // enquanto a geração ainda corre.
-    try {
-      sessionStorage.setItem('futty_figurinha_gerando', '1');
-    } catch {
-      /* priv */
-    }
-    setGerandoIA(true);
-    setErro('');
-    setLimiteIA(false);
-    setErroIA(false);
-    setErroIAmsg('');
-    setSemGeracoes(false);
-    setFotoRecusada(false);
-    setEmailNaoConfirmado(false);
-    let emSegundoPlano = false;
-    try {
-      // O POST devolve `{ jobId }` na hora e a pintura segue em segundo plano (ver acompanharPintura).
-      // Uniforme já pintado da mesma foto responde na hora com a figurinha, sem job.
-      const data = await apiFetch('/api/me/avatar/ai', { method: 'POST', body: JSON.stringify({ kit, assincrono: true }) });
-      if (data.jobId) {
-        iniciarPintura(data, { kit });
-        emSegundoPlano = true;
-        return;
-      }
-      // Guarda o avatar, o kit vestido e regista o slot novo (sem duplicar).
-      setMe((m) => (m ? {
-        ...m,
-        user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa },
-        slots: [...new Set([...(m.slots || []), data.kit])],
-      } : m));
-      setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
-      recarregarPerfilGlobal();
-      // O direito acabou de ser gasto (crédito a menos, ou a linha do pacote):
-      // relê, para o contador e o botão dourado contarem a verdade.
-      estadoBrilhantes().then(aplicarBrilhante);
-      setFotoTrocadaSemGerar(false); // gerou (ou reutilizou de propósito) — some o pulso
-      // reutilizado:true (motor) — o slot deste kit já valia para a
-      // foto atual e não gerou de novo. Sem aviso, parecia que o toque no
-      // botão não fez nada.
-      if (data.reutilizado) setToast({ tipo: 'info', mensagem: 'Sua figurinha já estava pronta' });
-    } catch (err) {
-      tratarFalhaDaGeracao(err);
-    } finally {
-      if (!emSegundoPlano) setGerandoIA(false);
-    }
-  }
-
-  // O que a tela faz com cada falha da geração — serve ao POST (as validações seguem síncronas no motor) e ao
-  // desfecho 'falhou' da pintura em segundo plano: os códigos e as mensagens são os mesmos de antes do job.
-  function tratarFalhaDaGeracao(err) {
-    // EMAIL_NAO_CONFIRMADO: gate anti-abuso — mesmo status 403 do limite de quota, por isso tem de ser
-    // verificado PRIMEIRO (código distingue os dois).
-    if (err?.code === 'EMAIL_NAO_CONFIRMADO') setEmailNaoConfirmado(true);
-    // SEM_DIREITO (SPEC-FIGURINHA-3) — também 403, mas não é limite nenhum: é o direito que acabou (ou o
-    // pacote do time que não existe). Recarrega o estado para o bloco "Vire Brilhante" aparecer sozinho; o
-    // card de quota do plano NÃO serve aqui, e mostrá-lo seria mentir.
-    else if (err?.code === 'SEM_DIREITO') {
-      estadoBrilhantes().then(aplicarBrilhante);
-      setErroIAmsg(err.message);
-      // P2: com a loja ligada o overlay troca o "Tentar novamente" (que daria o mesmo 403) por
-      // "Suas gerações acabaram. Comprar mais?" → Planos, com a Minha Figurinha em destaque.
-      setSemGeracoes(true);
-      setErroIA(true);
-    } else if (err?.code === 'FOTO_RECUSADA') {
-      // FOTO_RECUSADA: a cabeça cortou nas duas tentativas com esta foto — o motor já não a pinta. O overlay
-      // mostra o recado e leva a escolher outra foto (sem "tentar de novo", que daria o mesmo).
-      setFotoRecusada(true);
-      setErroIA(true);
-    } else if (err?.status === 403) setLimiteIA(true); // gate antigo de plano (morto, fica de rede)
-    else {
-      // FOTO_INVALIDA / TETO_DIARIO_ATINGIDO / IA_INDISPONIVEL / FOTO_DESATUALIZADA / FIGURINHA_DEFEITUOSA:
-      // causas acionáveis com mensagem digna própria, em vez do genérico "não deu desta vez".
-      // IA_INDISPONIVEL (fal recusou por chave/crédito, falha do MOTOR) usa a mensagem que já vem do
-      // backend — nunca sugere "tente outra foto", porque o problema não é a foto. FOTO_DESATUALIZADA é a
-      // trava de hash do motor: a foto que ele baixou ainda não era a que acabou de subir, e ele recusou
-      // gerar em vez de fazer a figurinha da foto errada. Nada a corrigir do lado de cá — é esperar uns
-      // segundos e tocar de novo, e o botão de repetir do overlay já está lá. Resto (fal fora do ar, etc.)
-      // mantém o genérico com retry, que já cobre bem o transitório.
-      if (['FOTO_INVALIDA', 'TETO_DIARIO_ATINGIDO', 'IA_INDISPONIVEL', 'FOTO_DESATUALIZADA', 'SEM_DIREITO', 'FIGURINHA_DEFEITUOSA', 'GERACAO_INTERROMPIDA'].includes(err?.code) || err?.mostrar) setErroIAmsg(err.message);
-      setErroIA(true); // qualquer falha → estado de erro com retry no overlay
-    }
-  }
-
-  // ── A PINTURA EM SEGUNDO PLANO ──────────────────────────────────────────────────────────────────
-  // O POST respondeu `{ jobId, estimativaSegundos }`: a barra começa e o app passa a consultar o motor.
-  function iniciarPintura(data, { kit, estreia = false }) {
-    const nova = {
-      jobId: data.jobId,
-      kit,
-      estreia,
-      estimativaSegundos: data.estimativaSegundos || 45,
-      etapa: 'preparando',
-      decorridoMs: 0,
-      baseEm: Date.now(),
-    };
-    gravarPinturaGuardada(userId, nova);
-    setAgora(Date.now());
-    setPintura(nova);
-  }
-
-  // A figurinha existe: o card troca (a animação de sempre), o direito já foi debitado pelo motor — relê.
-  function aplicarPinturaPronta(d, estreia) {
-    limparPinturaGuardada();
-    setMe((m) => (m ? {
-      ...m,
-      user: { ...m.user, avatar_url: d.avatar_url, kit_ativo: d.kit, figurinha_ativa: d.figurinha_ativa },
-      slots: [...new Set([...(m.slots || []), d.kit])],
-    } : m));
-    setFotoLocal(null); // limpa o preview local → mostra o avatar IA (avatar_url)
-    recarregarPerfilGlobal();
-    estadoBrilhantes().then(aplicarBrilhante);
-    setFotoTrocadaSemGerar(false);
-    setPintura(null);
-    setGerandoIA(false);
-    if (estreia) setEstreiaFase((f) => (f === 'gerando' || f === 'foto' ? 'pronto' : f)); // mostra o cromo
-  }
-
-  // A pintura falhou (o motor não cobrou nada): os mesmos erros de sempre — cabeça cortada pede outra foto.
-  function aplicarPinturaFalhou(d, estreia) {
-    limparPinturaGuardada();
-    setPintura(null);
-    setGerandoIA(false);
-    const err = { code: d.code || null, status: d.status || 500, message: d.erro || '', mostrar: !!d.mostrar };
-    if (estreia) {
-      tratarFalhaDaEstreia(err);
-      setEstreiaFase((f) => (f === 'gerando' || f === 'foto' ? faseAposFalhaDaEstreia(err) : f));
-    } else {
-      tratarFalhaDaGeracao(err);
-    }
-    // A pintura pode ter gastado um 'gerando' que o motor já marcou 'falhou': relê o perfil para o Início acompanhar.
-    recarregarPerfilGlobal();
-  }
+  const { partilharCromo, baixar, partilhar } = useAcoesDoCromo({ busy, concluirEstreia, jogador, opts, setBusy, setErro });
 
   // Segue a pintura: pergunta ao motor a cada 3 s enquanto a aba está visível e, ao voltar para ela, na hora.
   // Sair da tela só pára as perguntas — a pintura continua no motor (e o push avisa se a pessoa saiu do app).
@@ -1302,57 +570,7 @@ export default function Figurinha() {
     })
     : null;
 
-  // Reenvia o e-mail de confirmação (gate anti-abuso) — supabase.auth.resend usa a MESMA sessão activa,
-  // não precisa senha nem novo login.
-  async function reenviarEmailConfirmacao() {
-    if (reenviarBusy || !me?.user?.email) return;
-    setReenviarBusy(true);
-    try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: me.user.email });
-      if (error) throw error;
-      setReenviarFeito(true);
-    } catch (e) {
-      setErro(e?.message || 'Não deu para reenviar o e-mail. Tente de novo.');
-    } finally {
-      setReenviarBusy(false);
-    }
-  }
-
-  // A2 — toque num kit da grelha. Três caminhos: já gerado (slot) → VESTE via
-  // PUT (não gasta direito); sem slot e sem direito → /planos; sem slot e com
-  // direito → confirma e gera.
-  async function escolherKit(kit) {
-    // "Já vestido" só vale com a figurinha no card — no card com a FOTO nenhum uniforme está vestido
-    // (kit_ativo nasce 'dark-gold' pelo default da coluna), e tocar nele tem de pintar/vestir.
-    if (kit.estado === 'breve' || (avatarEhIA && kit.id === kitAtivo) || gerandoIA) return;
-    // O cadeado é por DIREITO (§5), não por PLANO. Vestir um uniforme que já se gerou é sempre livre (slot,
-    // custo zero); gerar um novo precisa de crédito ou do pacote do time — e é isso que /planos resolve.
-    // Por plano, um membro do pacote veria o PRÓPRIO uniforme do time trancado.
-    if (slotsKits.includes(kit.id)) {
-      try {
-        const data = await apiFetch('/api/me/kit', { method: 'PUT', body: JSON.stringify({ kit: kit.id }) });
-        setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa } } : m));
-        aplicarNoPerfilGlobal({ avatar_url: data.avatar_url, kit_ativo: data.kit, figurinha_ativa: data.figurinha_ativa });
-      } catch {
-        setErroIA(true);
-      }
-      return;
-    }
-    // Sem slot: só dá para gerar com direito. Sem ele, a resposta é /planos —
-    // nunca um diálogo que ia terminar em 403 SEM_DIREITO. "Minha Brilhante"
-    // é o destaque certo: é o único produto que deixa escolher o uniforme (o
-    // pacote do time fixa um só, do dono).
-    if (!temDireitoDeGerar) return navigate('/planos?destaque=minha');
-    // Gastar 1 geração é irreversível: pede confirmação no diálogo próprio
-    // (ver kitParaPintar, perto do fim do componente) — nunca sem avisar.
-    setKitParaPintar(kit);
-  }
-
-  async function confirmarPintura() {
-    const kit = kitParaPintar;
-    setKitParaPintar(null);
-    if (kit) await gerarAvatarIA(kit.id);
-  }
+  const { reenviarEmailConfirmacao, escolherKit, confirmarPintura, trocarModo, escolherFundo, escolherAvatarGenerico, escolherOutraFoto } = useAcoesDoStudio({ aplicarNoPerfilGlobal, avatarEhIA, fileRef, fundo, gerandoIA, gerarAvatarIA, kitAtivo, kitParaPintar, me, navigate, reenviarBusy, setAvatarGenericoEscolha, setErro, setErroIA, setErroIAmsg, setFotoRecusada, setFundo, setKitParaPintar, setMe, setReenviarBusy, setReenviarFeito, setToast, setTrocandoModo, slotsKits, temDireitoDeGerar, trocandoModo });
 
   // Escrever no perfil SEM o reler a seguir.
   //
@@ -1368,112 +586,6 @@ export default function Figurinha() {
     hidratarPerfilGlobal({ ...perfil, user: { ...perfil.user, ...campos } });
   }
 
-  // Interruptor "Mostrar minha foto" / "Mostrar minha figurinha" (modal "Sua foto"): troca o que o card
-  // mostra sem apagar nada — a figurinha continua no slot, sempre. avatarEhIA já diz qual dos dois está
-  // ativo agora, então um toque no modo já ativo não faz nada.
-  async function trocarModo(modo) {
-    if (trocandoModo || (modo === 'figurinha') === avatarEhIA) return;
-    setTrocandoModo(true);
-    try {
-      const data = await apiFetch('/api/me/avatar/modo', { method: 'PUT', body: JSON.stringify({ modo }) });
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa } } : m));
-      aplicarNoPerfilGlobal({ avatar_url: data.avatar_url, figurinha_ativa: data.figurinha_ativa });
-    } catch (e) {
-      setErro(e?.message || 'Não deu para trocar o card. Tente de novo.');
-    } finally {
-      setTrocandoModo(false);
-    }
-  }
-
-  // O fundo é uma PREFERÊNCIA PERSISTIDA, e faltava-lhe metade do laço: a coluna
-  // users.fundo_figurinha existe (migração 018), o GET /api/me devolve-a e esta
-  // página já a LIA no arranque — mas ninguém a escrevia, por isso a escolha
-  // morria ao sair. Agora o Início mostra este mesmo cromo e precisa de saber qual
-  // é o fundo, o que torna a escrita obrigatória: é a fonte de verdade dos dois.
-  // Optimista — o studio responde já e o PATCH segue atrás; se falhar, a escolha
-  // vale para esta sessão e não se estraga o ecrã por causa de uma preferência.
-  async function escolherFundo(k) {
-    if (k === fundo) return;
-    // SPEC-FIGURINHA-3 §4/§9: os 6 fundos vêm COM a Brilhante — são composição do card, custo zero. Não há
-    // gate por plano (Pro/Elite; os planos saíram das telas): um membro do pacote do time veria o Aura
-    // trancado no card que o time acabou de pagar, com "Os 6 fundos liberados" escrito na compra. Sem
-    // Brilhante não há seletor nenhum, portanto chegar aqui já significa ter direito ao fundo.
-    // Guarda o anterior para reverter se o PATCH falhar (caso real: constraint do Royal sem a migração
-    // aplicada dava 500 — o tile ficava marcado no fundo novo com o banco silenciosamente no antigo).
-    const anterior = fundo;
-    setFundo(k);
-    try {
-      await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ fundo_figurinha: k }) });
-      setMe((m) => (m ? { ...m, user: { ...m.user, fundo_figurinha: k } } : m));
-      aplicarNoPerfilGlobal({ fundo_figurinha: k });
-    } catch (e) {
-      setFundo(anterior); // nunca fica com o tile marcado e o banco diferente
-      setToast({ tipo: 'error', mensagem: e?.message || 'Não deu para trocar o fundo agora. Tente de novo.' });
-    }
-  }
-
-  // Escolha do avatar genérico — mesmo padrão optimista do fundo.
-  async function escolherAvatarGenerico(k) {
-    setAvatarGenericoEscolha(k);
-    try {
-      await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify({ avatar_generico: k }) });
-      setMe((m) => (m ? { ...m, user: { ...m.user, avatar_generico: k } } : m));
-      aplicarNoPerfilGlobal({ avatar_generico: k });
-    } catch { /* preferência: não vale um erro no ecrã */ }
-  }
-
-  async function baixar() {
-    if (busy) return;
-    setBusy(true);
-    setErro('');
-    try {
-      const blob = await gerarFigurinhaCanvas(opts);
-      if (!blob) {
-        setErro('Não deu para gerar a imagem. Tente de novo.');
-        return;
-      }
-      // Web: baixa. App: folha de compartilhar (tem "Salvar imagem"); fechar a
-      // folha sem escolher nada não é erro.
-      await salvarOuCompartilhar(blob, ficheiroNome(nomeJogador(jogador)), { titulo: 'Minha figurinha Futty' });
-    } catch (e) {
-      setErro(e?.message || 'Não deu para gerar agora. Tente de novo.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function partilhar() {
-    if (busy) return;
-    setBusy(true);
-    setErro('');
-    try {
-      const blob = await gerarFigurinhaCanvas(opts);
-      if (!blob) {
-        setErro('Não deu para gerar a imagem. Tente de novo.');
-        return;
-      }
-      const file = new File([blob], ficheiroNome(nomeJogador(jogador)), { type: 'image/png' });
-      if (!ehNativo() && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Minha figurinha Futty' });
-      } else {
-        await salvarOuCompartilhar(blob, file.name, { titulo: 'Minha figurinha Futty' });
-      }
-    } catch (e) {
-      if (e?.name !== 'AbortError') setErro(e?.message || 'Não deu para compartilhar. Tente de novo.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Foto recusada → o botão do recado leva direto ao seletor de foto (o mesmo de "Trocar foto"). Nada
-  // gasta.
-  function escolherOutraFoto() {
-    setFotoRecusada(false);
-    setErroIA(false);
-    setErroIAmsg('');
-    fileRef.current?.click();
-  }
-
   // Overlay do card: "a gerar" OU, se a geração falhou (≠403), estado de ERRO com retry. No erro o logo
   // fica ESTÁTICO — sinal de que parou.
   //
@@ -1485,56 +597,7 @@ export default function Figurinha() {
     // ENQUANTO o F de carregamento se pinta — ou seja, o compositor teria de
     // refazer o desfoque a cada quadro da animação, e o que está por baixo é a
     // figurinha parada. 0,75 + blur ≈ 0,92 chapado no mesmo tom.
-    <div style={{ position: 'absolute', inset: 0, zIndex: 8, clipPath: CLIP_OCTOGONO, background: 'rgba(5,8,16,0.92)', display: 'grid', placeItems: 'center' }}>
-      {erroIA && semGeracoes && lojaLigada ? (
-        // P2 — as gerações acabaram e a loja está ligada: tentar de novo daria o mesmo 403, então o
-        // caminho é comprar mais (Planos, Minha Figurinha em destaque). "Agora não" só fecha.
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
-          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Suas gerações acabaram. Comprar mais?</span>
-          <span className="cta-gold-glow" style={{ display: 'flex' }}>
-            <button type="button" className="btn hud-corners cta-gold" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={() => navigate('/planos?destaque=minha')}>
-              Comprar mais
-            </button>
-          </span>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => { setErroIA(false); setSemGeracoes(false); }}>
-            Agora não
-          </button>
-        </div>
-      ) : erroIA && fotoRecusada ? (
-        // A cabeça cortou nas duas tentativas com ESTA foto. Tentar de novo daria o mesmo: o recado leva a
-        // outra foto.
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
-          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
-          <div style={{ display: 'grid', gap: 10, maxWidth: '30ch' }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{RECADO_FOTO_RECUSADA.titulo}</span>
-            <span style={{ fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)' }}>{RECADO_FOTO_RECUSADA.corpo}</span>
-          </div>
-          <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={escolherOutraFoto}>
-            Escolher outra foto
-          </button>
-        </div>
-      ) : erroIA ? (
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
-          {/* LEI DO F: logo oficial transparente (FuttyLogo SVG), estático no erro.
-              O antigo /futty-logo-metallic.png (fundo preto sólido) está BANIDO. */}
-          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{erroIAmsg || 'Não deu desta vez. Tente de novo.'}</span>
-          <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={gerarAvatarIA}>
-            Tentar novamente
-          </button>
-        </div>
-      ) : situacaoPintura ? (
-        // A barra HONESTA: avança pelo tempo típico até 90%, segura em "finalizando…" e nunca marca 100% antes
-        // de a imagem existir. O F continua pintando em cima.
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 14, padding: 12 }}>
-          <FuttyLoader size={96} label={null} />
-          <BarraPintura situacao={situacaoPintura} estimativaSegundos={pintura.estimativaSegundos} />
-        </div>
-      ) : (
-        <FuttyLoader size={129} label={null} />
-      )}
-    </div>
+    <OverlayGerando erroIA={erroIA} erroIAmsg={erroIAmsg} escolherOutraFoto={escolherOutraFoto} fotoRecusada={fotoRecusada} gerarAvatarIA={gerarAvatarIA} lojaLigada={lojaLigada} navigate={navigate} pintura={pintura} semGeracoes={semGeracoes} setErroIA={setErroIA} setSemGeracoes={setSemGeracoes} situacaoPintura={situacaoPintura} />
   );
 
   // Enquanto a fase de estreia não está decidida (perfil a carregar), espera.
@@ -1552,61 +615,7 @@ export default function Figurinha() {
   // ── ECRÃ DE ESTREIA (1ª visita): substitui o studio até partilhar/saltar ──
   if (estreiaFase === 'foto' || estreiaFase === 'gerando' || estreiaFase === 'pronto') {
     return (
-      <div className="app-shell">
-        <Topbar hud="FIGURINHA" direita={<BotaoLoja />} />
-        <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16 }}>
-          {/* Card */}
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
-            <div className="fig-card-enter" style={{ position: 'relative', width: 'min(74vw, 300px)', aspectRatio: '2 / 3' }}>
-              {previewUrl
-                ? <img
-                    src={previewUrl}
-                    alt="figurinha"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
-                : /* O F a carregar, não o PlayerCard (geração anterior do cromo): seria um salto, não um carregamento. */
-                  <div style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%' }}>
-                    <FuttyLoader size={96} label={null} />
-                  </div>
-              }
-              {estreiaFase === 'gerando' ? overlayGerando : null}
-            </div>
-          </div>
-
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
-
-          <div style={{ maxWidth: 420, margin: '0 auto', textAlign: 'center', display: 'grid', gap: 12 }}>
-            {estreiaFase === 'foto' ? (
-              <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', margin: 0 }}>
-                  {fotoRecusada ? RECADO_FOTO_RECUSADA.titulo : <>Seu card está quase pronto <EstrelaIA size={14} color="#fff" /></>}
-                </h2>
-                <p style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)', margin: fotoRecusada ? '0 auto' : 0, maxWidth: fotoRecusada ? '30ch' : 'none' }}>{fotoRecusada ? RECADO_FOTO_RECUSADA.corpo : 'Adicione uma foto para personalizar seu cartão de jogador'}</p>
-                <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15 }} onClick={escolherOutraFoto}>{fotoRecusada ? 'Escolher outra foto' : 'Adicionar foto'}</button>
-                <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Pular por agora →</button>
-              </>
-            ) : estreiaFase === 'gerando' ? (
-              <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 20, color: '#fff', margin: 0 }}>Gerando sua figurinha… <EstrelaIA size={14} color="#fff" /></h2>
-                <p className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Leva uns {pintura?.estimativaSegundos || 45} segundos · pode sair da tela, a gente avisa</p>
-              </>
-            ) : (
-              <>
-                <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: '#fff', margin: 0 }}>Seu card está pronto!</h2>
-                {limiteIA ? (
-                  <p style={{ fontSize: 12, color: 'var(--label-color)', margin: 0 }}>Não deu para gerar agora: mostramos o card com sua foto.</p>
-                ) : null}
-                <button type="button" className="btn btn--purple" style={{ width: '100%', height: 48, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={partilharCromo}>
-                  <Share2 size={18} /> Compartilhar agora
-                </button>
-                <button type="button" className="btn btn--purple-outline" style={{ width: '100%', height: 44 }} onClick={concluirEstreia}>Personalizar</button>
-                <button type="button" onClick={concluirEstreia} style={{ border: 'none', background: 'transparent', color: 'var(--label-color)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Pular →</button>
-              </>
-            )}
-            {avisoErro}
-          </div>
-        </main>
-      </div>
+      <EstreiaDaFigurinha avisoErro={avisoErro} concluirEstreia={concluirEstreia} escolherOutraFoto={escolherOutraFoto} estreiaFase={estreiaFase} fileRef={fileRef} fotoRecusada={fotoRecusada} limiteIA={limiteIA} onPickFile={onPickFile} overlayGerando={overlayGerando} partilharCromo={partilharCromo} pintura={pintura} previewUrl={previewUrl} />
     );
   }
 
@@ -1615,139 +624,7 @@ export default function Figurinha() {
       <Topbar hud="FIGURINHA" direita={<BotaoLoja />} />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 24 }}>
         {/* 1. ZONA DO CARD (2:3, levitação Star Fox + entrada animada) */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 16px' }}>
-          <div className="fig-card-enter fig-studio-card" style={{ position: 'relative' }}>
-            {/* Sombra viva no chão (contra-fase com a levitação) */}
-            <div
-              className="fig-shadow"
-              style={{ position: 'absolute', left: '15%', bottom: -18, width: '70%', height: 14, background: 'radial-gradient(ellipse, rgba(212,160,23,0.35), rgba(0,0,0,0.5) 60%, transparent)', filter: 'blur(8px)', pointerEvents: 'none', zIndex: 0 }}
-            />
-            {/* Bob (translateY) exterior → Sway (rotate 3D) interior */}
-            <div className="fig-bob" style={{ position: 'relative', width: '100%', height: '100%', zIndex: 1 }}>
-              <div className="fig-sway" style={{ position: 'relative', width: '100%', height: '100%' }}>
-                {fundoUrl ? (
-                  <>
-                    {/* Camada de fundo — card completo SEM jogador */}
-                    <img
-                      src={fundoUrl}
-                      alt="figurinha"
-                      className="fig-aura"
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }}
-                    />
-
-                    {/* Fundo vivo — partículas ENTRE o fundo e o jogador (caem atrás dele).
-                        Estádio E Gradiente (chuva dourada sobre a carta gold). */}
-                    {avatarEhIA && (fundo === 'estadio' || fundo === 'gradiente') ? (
-                      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 3, containerType: 'size', mixBlendMode: 'screen', clipPath: CLIP_OCTOGONO }}>
-                        {FUTTY_PARTICULAS.map((p, i) => {
-                          // Sobre o facetado escuro: brancas → branco-quente; douradas
-                          // mantêm-se (a chuva é o "premium discreto").
-                          const cor = fundo === 'gradiente' && p.cor === '#ffffff' ? '#fff8dc' : p.cor;
-                          return (
-                            <span
-                              key={i}
-                              className="fig-particle"
-                              style={{ position: 'absolute', left: `${p.left}%`, top: '-5%', width: p.size, height: p.size, borderRadius: '50%', background: cor, boxShadow: `0 0 6px ${cor}`, animationDuration: `${p.dur * 1.25}s`, animationDelay: `${p.delay}s` }}
-                            />
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                    {/* Sem névoa no fundo Épico: o facetado é gráfico, não atmosférico; a bruma por cima embaçaria o
-                        lapidado. As partículas (chuva) ficam — dão o "premium discreto" sem embaçar. */}
-
-                    {/* GOLDEN — mina encantada VIVA no preview: poeira de diamante a z3,
-                        ATRÁS do jogador (lei do brilho do cromo). O download leva o pico
-                        estático (canvas). reduced-motion → pontos ténues sem flash. */}
-                    {fundo === 'golden' ? (
-                      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 3, clipPath: CLIP_OCTOGONO }}>
-                        {GOLDEN_GLINTS_UI.map((g, i) => (
-                          <span key={i} className="fig-glint" style={{ left: `${g.x}%`, top: `${g.y}%`, '--gd': `${g.d}px`, '--gdl': `${g.dl}s`, '--gdur': `${g.dur}s` }}>
-                            <span className="fig-glint__dot" />
-                            <span className="fig-glint__cross" />
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {/* Camada do jogador — só o avatar, por cima das partículas */}
-                    {jogadorUrl ? (
-                      <img
-                        src={jogadorUrl}
-                        alt=""
-                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', zIndex: 4 }}
-                      />
-                    ) : null}
-
-                    {/* Camada placa+nome — POR CIMA do jogador (nunca tapada por ele) */}
-                    {placaUrl ? (
-                      <img
-                        src={placaUrl}
-                        alt=""
-                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', zIndex: 5 }}
-                      />
-                    ) : null}
-
-                    {/* Glow pulsante fixo sobre a zona do nome (nada a atravessá-lo) */}
-                    <div className="fig-name-glow" style={{ position: 'absolute', left: 0, bottom: '8%', width: '100%', height: '20%', pointerEvents: 'none', zIndex: 5, background: 'radial-gradient(ellipse 55% 70% at 50% 55%, rgba(245,224,112,0.20), transparent 70%)', mixBlendMode: 'screen', WebkitMaskImage: 'linear-gradient(to top, black 0%, black 55%, transparent 100%)', maskImage: 'linear-gradient(to top, black 0%, black 55%, transparent 100%)' }} />
-
-                    {/* Luz direccional sincronizada com o sway (desloca-se → volume 3D).
-                        Wrapper estático recorta o octógono; o interior desliza. */}
-                    <div style={{ position: 'absolute', inset: 0, zIndex: 6, pointerEvents: 'none', overflow: 'hidden', clipPath: CLIP_OCTOGONO }}>
-                      <div className="fig-light" style={{ position: 'absolute', inset: '-5%', background: 'linear-gradient(105deg, rgba(255,245,200,0.08) 0%, transparent 35%, transparent 65%, rgba(0,0,0,0.12) 100%)', mixBlendMode: 'soft-light', WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 45%, transparent 75%)', maskImage: 'linear-gradient(to bottom, black 0%, black 45%, transparent 75%)' }} />
-                    </div>
-
-                    {/* Linha de brilho a percorrer o frame (cromo a apanhar luz) */}
-                    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 7, clipPath: CLIP_OCTOGONO }}>
-                      <div className="fig-frame-shine" style={{ position: 'absolute', top: 0, left: 0, width: '250%', height: '100%', background: 'linear-gradient(115deg, transparent 44%, rgba(255,240,180,0.35) 50%, transparent 56%)', mixBlendMode: 'screen' }} />
-                    </div>
-
-                    {/* Dots dos cantos a cintilar intercalados (sobre os dots do canvas:
-                        19*k → 4.75% na horizontal, 3.17% na vertical num card 2:3) */}
-                    {[
-                      { pos: { top: '3.17%', left: '4.75%', marginTop: -5, marginLeft: -5 }, delay: 0 },
-                      { pos: { top: '3.17%', right: '4.75%', marginTop: -5, marginRight: -5 }, delay: 2.1 },
-                      { pos: { bottom: '3.17%', left: '4.75%', marginBottom: -5, marginLeft: -5 }, delay: 4.3 },
-                      { pos: { bottom: '3.17%', right: '4.75%', marginBottom: -5, marginRight: -5 }, delay: 6.2 },
-                    ].map((d, i) => (
-                      <span
-                        key={i}
-                        className="fig-dot-twinkle"
-                        style={{ position: 'absolute', ...d.pos, width: 10, height: 10, borderRadius: 1, background: 'linear-gradient(135deg, #f5e070, #d4a017)', mixBlendMode: 'screen', pointerEvents: 'none', zIndex: 7, animationDelay: `${d.delay}s` }}
-                      />
-                    ))}
-                  </>
-                ) : (
-                  // GRUPO B 6a — ver nota no fallback da estreia: o F a carregar em vez
-                  // do PlayerCard (a geração anterior do cromo).
-                  <div style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%' }}>
-                    <FuttyLoader size={96} label={null} />
-                  </div>
-                )}
-
-              </div>
-            </div>
-            {/* Estado "a gerar" — cobre a zona do card */}
-            {/* Sem avatar IA o card já veste o genérico da casa (ver `jogadorCard`
-                acima) — não há mais empty state de silhueta a desenhar aqui. */}
-            {gerandoIA || erroIA ? overlayGerando : null}
-            {/* Trocar visual — só quando o card veste o genérico da casa: sem Brilhante E SEM FOTO. Com foto o card
-                mostra a foto e o genérico não aparece em lugar nenhum: o botão não mudaria nada. Sem foto, a
-                escolha vale para todas as telas (Início, Ranking, Presença). */}
-            {!avatarEhIA && !temFoto && !fotoLocal && !uploadFoto && !gerandoIA && !erroIA ? (
-              <button
-                type="button"
-                className="hud-corners-s"
-                aria-label="Trocar visual do card"
-                onClick={() => setSheetAvatarAberto(true)}
-                style={{ position: 'absolute', top: 10, right: 10, zIndex: 8, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 11px 6px 8px', border: '1px solid rgba(212,160,23,0.5)', background: 'rgba(13,13,18,0.82)', color: '#d4a017', cursor: 'pointer', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
-              >
-                <RefreshCw size={15} />
-                Trocar avatar
-              </button>
-            ) : null}
-          </div>
-        </div>
+        <ZonaDoCard avatarEhIA={avatarEhIA} erroIA={erroIA} fotoLocal={fotoLocal} fundo={fundo} fundoUrl={fundoUrl} gerandoIA={gerandoIA} jogadorUrl={jogadorUrl} overlayGerando={overlayGerando} placaUrl={placaUrl} setSheetAvatarAberto={setSheetAvatarAberto} temFoto={temFoto} uploadFoto={uploadFoto} />
 
         {/* Foto subida mas ainda sem avatar IA gerado (a foto não entra no card).
             gerandoIA vem PRIMEIRO: fotoLocal só é limpo no sucesso/falha de gerarAvatarIA (não no início),
@@ -1755,29 +632,7 @@ export default function Figurinha() {
             do botão já dizendo "Gerando…" — duas mensagens discordando.
             Depois vêm o envio e o erro do upload, ANTES de "Foto trocada": essa linha só existe depois do
             200 (fotoLocal nasce lá), e com o upload falhando a pessoa vê o erro aqui, sob o card. */}
-        {gerandoIA ? (
-          // Título numa linha, com o F, e a explicação embaixo no texto de apoio da casa (≤ 34 em, 2 linhas,
-          // centrada); as duas frases coladas numa linha só de 11 px quebrariam no meio, sem alinhamento.
-          <div role="status" data-pintando-aviso style={{ display: 'grid', justifyItems: 'center', gap: 2, padding: '4px 0', marginBottom: 10 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.02em', color: '#d4a017' }}>
-              <FuttyLoader size={16} label={null} /> Sua figurinha está sendo pintada…
-            </span>
-            <span className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Pode sair da tela. A gente avisa quando ficar pronta.</span>
-          </div>
-        ) : uploadFoto ? (
-          <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <FuttyLoader size={14} label={null} /> Enviando sua foto…
-          </div>
-        ) : avisoUploadErro ? (
-          <div style={{ maxWidth: 460, margin: '0 auto 12px' }}>{avisoUploadErro}</div>
-        ) : fotoLocal ? (
-          // SPEC-FIGURINHA-3: trocar a foto já MUDA a figurinha comum na hora —
-          // não há nada a gerar. A linha só convida a gerar a Brilhante quando
-          // há direito; senão diz o que aconteceu de facto.
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '4px 0', marginBottom: 10, fontSize: 11, color: '#d4a017' }}>
-            <Check size={14} /> {temDireitoDeGerar ? 'Foto trocada, gere sua figurinha' : 'Foto trocada. Seu card já mostra a nova foto.'}
-          </div>
-        ) : null}
+        <AvisoDaPintura avisoUploadErro={avisoUploadErro} fotoLocal={fotoLocal} gerandoIA={gerandoIA} temDireitoDeGerar={temDireitoDeGerar} uploadFoto={uploadFoto} />
 
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
 
@@ -1785,107 +640,11 @@ export default function Figurinha() {
         <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
           {/* Zoom: linha discreta ABAIXO do card, à direita. Mesma família visual das tabs. Vale também no card
               com a FOTO (ver zoomDaFoto). */}
-          {(avatarEhIA || temFoto) && !fotoLocal ? (
-            // Os botões − e + precisam de 44 px (o mínimo para o dedo): a linha tem 44 de altura e as margens
-            // negativas (−13 e −15) compensam, para a altura que ela ocupa na página ser 16 (44 − 13 − 15) — o
-            // card e os botões de baixo não se mexem e a figurinha continua cabendo na primeira tela.
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0, height: 44, marginTop: -13, marginBottom: -15 }}>
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)', marginRight: 2 }}>{zoomDaFoto ? 'Zoom' : 'Tamanho'}</span>
-              <button
-                type="button"
-                aria-label={zoomDaFoto ? 'Afastar a foto' : 'Reduzir tamanho do avatar'}
-                className="fig-zoom-btn"
-                onClick={() => mudarZoom(-1)}
-                disabled={zoomNoMinimo}
-              >
-                <Minus size={14} />
-              </button>
-              <button
-                type="button"
-                aria-label={zoomDaFoto ? 'Aproximar a foto' : 'Aumentar tamanho do avatar'}
-                className="fig-zoom-btn"
-                onClick={() => mudarZoom(1)}
-                disabled={zoomNoMaximo}
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-          ) : null}
+          <ControleDeZoom avatarEhIA={avatarEhIA} fotoLocal={fotoLocal} mudarZoom={mudarZoom} temFoto={temFoto} zoomDaFoto={zoomDaFoto} zoomNoMaximo={zoomNoMaximo} zoomNoMinimo={zoomNoMinimo} />
           {/* Trocar foto + Gerar Avatar IA (na mesma linha). Em telas estreitas demais para os dois lado a lado
               (320 px), o "Gerar" desce inteiro para a linha de baixo, em vez de estourar a tela ou partir o
               rótulo em duas linhas. */}
-          <div style={{ display: 'grid', gap: 4 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              <button
-                type="button"
-                className="btn btn--purple-outline fig-io-btn hud-corners"
-                style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, paddingLeft: 12, paddingRight: 12 }}
-                disabled={uploadFoto || gerandoIA}
-                onClick={() => setModalFoto(true)}
-              >
-                <Camera size={16} /> {jogador.avatar_url ? 'Trocar foto' : 'Adicionar foto'}
-              </button>
-              {/* SPEC-FIGURINHA-3 §7: "Trocar foto" SEMPRE (à esquerda); o botão
-                  de gerar só existe para quem tem DIREITO. Sem direito, o que
-                  aparece por baixo é o bloco "Vire Brilhante" — não um botão
-                  que só serve para levar um 403 na cara. */}
-              {!temFoto ? (
-                <div style={{ flex: 1, fontSize: 12, color: 'var(--label-color)', textAlign: 'center', alignSelf: 'center' }}>
-                  Adicione uma foto para começar
-                </div>
-              ) : !temDireitoDeGerar && !gerandoIA ? null : (
-                brilharGerar || (temDireitoDeGerar && !avatarEhIA) ? (
-                  // EXACTAMENTE a receita do "Ver sorteio" (Inicio.jsx): o glow fica no WRAPPER, em
-                  // drop-shadow (filter não é cortado pelo clip-path); o pulso de BORDA fica no botão
-                  // (essa metade sobrevive ao recorte a 45° do hud-corners). fig-io-btn
-                  // continua nas duas classes só para a ALTURA: .cta-gold sozinho
-                  // vale 46px e quebraria a linha com "Trocar foto" (40px, 34px em
-                  // ecrãs curtos) — o par .fig-io-btn.cta-gold no app.css resolve
-                  // esse empate de especificidade a favor da grade existente.
-                  <span className="cta-gold-glow pulse-glow" style={{ flex: 1, display: 'flex' }}>
-                    <button
-                      type="button"
-                      className="btn hud-corners fig-io-btn fig-gerar cta-gold pulse-active"
-                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                      disabled={gerandoIA || uploadFoto}
-                      onClick={gerarAvatarIA}
-                    >
-                      <EstrelaIA size={16} color="#f0c94a" /> <RotuloGerar />
-                    </button>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn--purple fig-io-btn fig-gerar hud-corners"
-                    style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                    disabled={gerandoIA || uploadFoto}
-                    onClick={gerarAvatarIA}
-                  >
-                    {gerandoIA ? (
-                      <>
-                        <FuttyLoader size={22} label={null} /> Gerando…
-                      </>
-                    ) : (
-                      <>
-                        <EstrelaIA size={16} color="#ffffff" /> <RotuloGerar />
-                      </>
-                    )}
-                  </button>
-                )
-              )}
-            </div>
-            {/* Contador de gerações (§7): a SOMA de tudo o que a pessoa pode gerar — pacotes dos times e créditos, sem separar um do
-                outro. Qual direito gasta (o uniforme do time sai do pacote; os outros, do crédito) é decidido por baixo. */}
-            {totalGeracoes > 0 ? (
-              <span data-contador-geracoes={totalGeracoes} style={{ fontSize: 11, color: 'var(--label-color)', textAlign: 'center' }}>
-                {totalGeracoes === 1 ? 'Resta 1 geração' : `Restam ${totalGeracoes} gerações`}
-              </span>
-            ) : null}
-            {/* Sem link de "comprar mais gerações" aqui: o cartão "Loja de figurinhas" está logo abaixo, sempre, e o botão
-                dele já é esse caminho — repetir o botão duas vezes seguidas só confunde. */}
-            {/* Sem legenda de tempo própria sob o botão: a mensagem acima da linha já cobre gerandoIA, e duas
-                legendas de tempo diferentes ao mesmo tempo confundem mais do que ajudam. */}
-          </div>
+          <BotoesDaFoto avatarEhIA={avatarEhIA} brilharGerar={brilharGerar} gerandoIA={gerandoIA} gerarAvatarIA={gerarAvatarIA} jogador={jogador} setModalFoto={setModalFoto} temDireitoDeGerar={temDireitoDeGerar} temFoto={temFoto} totalGeracoes={totalGeracoes} uploadFoto={uploadFoto} />
 
           {/* LOJA DE FIGURINHAS — o cartão que torna a compra óbvia: SEMPRE presente, em qualquer estado (com ou sem
               figurinha, com ou sem gerações, dono de time ou não). Mostra a Minha Figurinha e, para o dono, o Pacote do
@@ -1893,126 +652,7 @@ export default function Figurinha() {
               Planos e nunca aparecem juntos. Quem ainda não tem figurinha nem geração vê o exemplo FIXO (o modelo
               fictício da conta demo, nunca gerado na hora: gerar um exemplo custaria US$0,11 por pessoa que abrisse a
               tela), com `loading="lazy"` + WebP no dobro do tamanho de exibição (lei do app leve). */}
-          <div data-cartao-loja className="hud-corners" style={{ position: 'relative', background: 'rgba(255, 255, 255, 0.03)', border: '1.2px solid rgba(212,160,23,0.5)', boxShadow: '0 0 14px rgba(212,160,23,0.18)', padding: '16px', display: 'grid', gap: 12 }}>
-              <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {lojaConvida ? (
-                  <img
-                    src={urlAsset('/avatares/exemplo-brilhante.webp')}
-                    alt="Exemplo de figurinha"
-                    width={72}
-                    height={108}
-                    loading="lazy"
-                    decoding="async"
-                    style={{ width: 72, height: 108, objectFit: 'cover', flexShrink: 0, clipPath: CLIP_OCTOGONO, border: '1.5px solid rgba(212,160,23,0.55)' }}
-                  />
-                ) : null}
-                <div style={{ display: 'grid', gap: 5, minWidth: 0 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, color: '#f0c94a' }}>
-                    <ShoppingBag size={16} aria-hidden="true" /> Loja de figurinhas
-                  </span>
-                  <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,255,255,0.78)' }}>
-                    {lojaConvida
-                      ? 'Sua foto vira uma figurinha de verdade, no uniforme do Futty, com os 6 fundos liberados.'
-                      : 'Mais gerações para pintar uniformes novos e refazer a sua figurinha.'}
-                  </span>
-                </div>
-              </div>
-              {recadoPedido ? (
-                // Recusa fala em branco, não em dourado: o dourado desta tela é
-                // convite ("dá para ter"), e um não pintado de convite mente.
-                <div
-                  className="hud-corners-s"
-                  role="status"
-                  style={pedidoVivo?.estado === 'recusado'
-                    ? { padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.14)' }
-                    : { padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, textAlign: 'center', color: '#f0c94a', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.45)' }}
-                >
-                  {recadoPedido}
-                </div>
-              ) : null}
-              {brilhante ? (
-                <>
-                  {/* Minha Figurinha: para todo mundo. O botão leva aos Planos com ela em destaque — lá se compra
-                      (loja ligada) ou se pede. */}
-                  <div data-loja-produto="minha" style={{ display: 'grid', gap: 8 }}>
-                    <div style={{ display: 'grid', gap: 2 }}>
-                      <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff' }}>Minha Figurinha</span>
-                      <span style={{ fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.7)' }}>{MINHA_GERACOES} gerações, no uniforme que você escolher.</span>
-                    </div>
-                    <span className="cta-gold-glow" style={{ display: 'flex' }}>
-                      <button
-                        type="button"
-                        data-loja-comprar="minha"
-                        className="btn hud-corners cta-gold"
-                        style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
-                        onClick={() => navigate('/planos?destaque=minha')}
-                      >
-                        {textoDoConvite('minha')}
-                      </button>
-                    </span>
-                  </div>
-                  {/* Pacote do time: só o dono. É o que resolve o time inteiro, e a venda maior. Com o pacote já
-                      ativo o cartão vira presente (+2 gerações para cada jogador) e o botão segue o mesmo. */}
-                  {meuTimeBrilhante ? (
-                    <div data-loja-produto="pacote" style={{ display: 'grid', gap: 8, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
-                      <div style={{ display: 'grid', gap: 2 }}>
-                        <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff' }}>
-                          {pacoteDoTimeAtivo ? PACOTE_DE_PRESENTE.nome : 'Pacote do time'}
-                        </span>
-                        <span style={{ fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.7)' }}>
-                          {pacoteDoTimeAtivo ? PACOTE_DE_PRESENTE.resumo : `${PACOTE_GERACOES_POR_JOGADOR} gerações por jogador, até ${PACOTE_JOGADORES}.`}
-                        </span>
-                      </div>
-                      {!pacoteDoTimeAtivo || lojaLigada ? (
-                        <span className="cta-gold-glow" style={{ display: 'flex' }}>
-                          <button
-                            type="button"
-                            data-convite-pacote={pacoteDoTimeAtivo ? 'presente' : 'novo'}
-                            data-loja-comprar="pacote"
-                            className="btn hud-corners cta-gold"
-                            style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
-                            onClick={() => navigate('/planos?destaque=pacote')}
-                          >
-                            {textoDoConvite('pacote', { presente: pacoteDoTimeAtivo })}
-                          </button>
-                        </span>
-                      ) : (
-                        // Sem a loja não há como comprar mais um pacote, e pedir a ativação de um time já ativo não faz nada.
-                        <div className="hud-corners" style={{ textAlign: 'center', padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4, color: 'rgba(255,255,255,0.7)', border: '1.2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
-                          O time já tem o pacote.
-                        </div>
-                      )}
-                      {/* Pacote ativo sem uniforme (comprado na loja): ninguém gera até o dono escolher. */}
-                      {pacoteDoTimeAtivo && !meuTimeBrilhante.brilhante_kit ? (
-                        <span className="cta-gold-glow" style={{ display: 'flex' }}>
-                          <button
-                            type="button"
-                            className="btn hud-corners cta-gold"
-                            style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
-                            onClick={() => navigate(`/planos?uniforme=${meuTimeBrilhante.id}`)}
-                          >
-                            Escolher o uniforme do time
-                          </button>
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                // O estado da loja ainda não chegou: um caminho honesto até ela, em vez de um botão que poderia dizer "Pedir"
-                // e virar "Comprar" um instante depois.
-                <span className="cta-gold-glow" style={{ display: 'flex' }}>
-                  <button type="button" data-loja-comprar="ver" className="btn hud-corners cta-gold" style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }} onClick={() => navigate('/planos')}>
-                    Ver a loja
-                  </button>
-                </span>
-              )}
-              <Link to="/planos" style={{ fontSize: 11.5, color: 'var(--label-color)', textAlign: 'center', textDecoration: 'none' }}>
-                Ver tudo na loja →
-              </Link>
-            </div>
-
+          <CartaoDaLoja brilhante={brilhante} lojaConvida={lojaConvida} lojaLigada={lojaLigada} meuTimeBrilhante={meuTimeBrilhante} navigate={navigate} pacoteDoTimeAtivo={pacoteDoTimeAtivo} pedidoVivo={pedidoVivo} recadoPedido={recadoPedido} textoDoConvite={textoDoConvite} />
 
           {/* (l) 403 sem código conhecido — defensivo: hoje o motor só devolve EMAIL_NAO_CONFIRMADO ou
               SEM_DIREITO (cada um com seu próprio card), tratados ANTES deste no catch. Isto é o que sobra se um
@@ -2028,147 +668,14 @@ export default function Figurinha() {
           ) : null}
 
           {/* (m) E-MAIL NÃO CONFIRMADO — gate anti-abuso, mesma família HUD. */}
-          {emailNaoConfirmado ? (
-            <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
-              <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Confirme seu e-mail para gerar</span>
-              <span className="texto-apoio texto-apoio--centro" style={{ marginTop: 0 }}>Enviamos um link de confirmação quando você criou a conta.</span>
-              {reenviarFeito ? (
-                <span style={{ fontSize: 12, color: '#7bd88f' }}>E-mail reenviado, confira sua caixa de entrada.</span>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn--purple hud-corners"
-                  style={{ marginTop: 4, height: 38, paddingLeft: 18, paddingRight: 18, fontSize: 13 }}
-                  disabled={reenviarBusy}
-                  onClick={reenviarEmailConfirmacao}
-                >
-                  {reenviarBusy ? 'Reenviando…' : 'Reenviar e-mail'}
-                </button>
-              )}
-            </div>
-          ) : null}
+          <AvisoEmailNaoConfirmado emailNaoConfirmado={emailNaoConfirmado} reenviarBusy={reenviarBusy} reenviarEmailConfirmacao={reenviarEmailConfirmacao} reenviarFeito={reenviarFeito} />
 
           {/* Tab strip — SÓ com a figurinha (SPEC-FIGURINHA-3 §3). Os fundos são composição no card, custo zero,
               mas são um prêmio de quem pagou — e a foto já tem o fundo dela. Só as abas ficam exclusivas daqui;
               o card com a FOTO tem a grade de uniformes (logo abaixo, no outro ramo), e as ações, o anúncio e os
               selos valem para os dois (se este bloco os embrulhasse, o card com a foto não teria como ser baixado
               nem compartilhado). */}
-          {avatarEhIA ? (
-          <>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {TABS.map((t) => {
-              const on = activeTab === t.k;
-              return (
-                <button
-                  key={t.k}
-                  type="button"
-                  className="hud-corners-s"
-                  onClick={() => setActiveTab(t.k)}
-                  aria-pressed={on}
-                  style={{
-                    flex: 1,
-                    height: 36,
-                    border: on ? '1px solid var(--border-accent)' : '1px solid transparent',
-                    background: on ? 'rgba(139,92,246,0.2)' : 'transparent',
-                    color: on ? '#8b5cf6' : 'var(--label-color)',
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    letterSpacing: '0.5px',
-                    textTransform: 'uppercase',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Painel da tab activa */}
-          {activeTab === 'fundo' ? (
-            // UMA linha só, scroll horizontal (nunca 2 linhas — ordem do dono). Tiles com largura FIXA (não fração
-            // do container) para não encolher/quebrar; scroll-snap para o gesto de arrastar assentar num tile de
-            // cada vez. Grade partilhada com a tab Uniforme (.fig-seletor-grade / .fig-seletor-tile em app.css) —
-            // ver a nota ali.
-            <FaixaRolavel className="fig-seletor-grade" envoltorioClassName="faixa-rolavel--grade" data-grade="fundos" rotuloMais="Ver mais fundos" rotuloAnteriores="Ver fundos anteriores">
-              {FUNDOS.map((f) => {
-                const sel = fundo === f.k;
-                // Nenhum cadeado aqui: os 6 fundos são de quem tem Brilhante (§4), e este seletor só existe com
-                // Brilhante.
-                return (
-                  <button
-                    key={f.k}
-                    type="button"
-                    className="fig-seletor-tile"
-                    onClick={() => escolherFundo(f.k)}
-                    aria-pressed={sel}
-                    style={{
-                      opacity: sel ? 1 : 0.55, // não-seleccionado mais discreto
-                      // glow da selecção no PAI (drop-shadow segue o recorte a 45°;
-                      // um box-shadow no thumb seria cortado pelo clip-path).
-                      filter: sel ? 'drop-shadow(0 0 7px rgba(212,160,23,0.55))' : 'none',
-                    }}
-                  >
-                    {/* Thumbnail quadrado (cantos 45° — identidade HUD) */}
-                    <div className="hud-corners-s" style={{
-                      position: 'relative',
-                      width: '100%',
-                      aspectRatio: '1 / 1',
-                      // Épico, Golden e Royal mostram o FUNDO REAL renderizado (fallback = gradiente base).
-                      background: f.k === 'golden' && goldenTile
-                        ? `url(${goldenTile})`
-                        : f.k === 'royal' && royalTile
-                          ? `url(${royalTile})`
-                          : f.k === 'gradiente' && epicoTile ? `url(${epicoTile})` : FUNDO_BG[f.k],
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      border: sel ? '2px solid #d4a017' : '1px solid var(--border-subtle)',
-                      filter: sel ? 'none' : 'saturate(0.7) brightness(0.85)',
-                    }}>
-                    </div>
-                    {/* Nome */}
-                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, color: sel ? '#fff' : 'var(--label-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {f.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </FaixaRolavel>
-          ) : (
-            // Grade partilhada com a tab Fundo (.fig-seletor-grade / .fig-seletor-tile em app.css). A MESMA grade
-            // nos três casos (grátis, pacote do time, Minha Figurinha) — o que não se pode pintar aparece com
-            // cadeado (leva à Minha Figurinha) em vez de sumir. No pacote não há cartão de texto à parte: o
-            // uniforme do time é o tile aberto, e o "Refazer" é uma ação pequena embaixo da grade.
-            <>
-              {gradeDeUniformes()}
-              {refazerAtual ? (
-                <button
-                  type="button"
-                  data-acao="refazer"
-                  className="btn btn--ghost btn--sm"
-                  style={{ justifySelf: 'center', fontSize: 12, padding: '4px 12px', opacity: 0.85 }}
-                  disabled={gerandoIA}
-                  onClick={() => setKitParaPintar(kitDoCard)}
-                >
-                  Refazer {kitDoCard.nome} · {geracoesPorExtenso(totalGeracoes)}
-                </button>
-              ) : null}
-            </>
-          )}
-          </>
-          ) : temFoto ? (
-            // Card com a FOTO: sem seletor de fundos (o fundo é o da própria foto) e, no lugar
-            // do "Pedir a minha", os uniformes — o 1º liberado, os outros com cadeado (ver gradeDeUniformes).
-            <div style={{ display: 'grid', gap: 8 }}>
-              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--label-color)' }}>
-                Uniforme da figurinha
-              </span>
-              {gradeDeUniformes()}
-            </div>
-          ) : null}
+          <SeletoresDoCard activeTab={activeTab} avatarEhIA={avatarEhIA} epicoTile={epicoTile} escolherFundo={escolherFundo} fundo={fundo} gerandoIA={gerandoIA} goldenTile={goldenTile} gradeDeUniformes={gradeDeUniformes} kitDoCard={kitDoCard} refazerAtual={refazerAtual} royalTile={royalTile} setActiveTab={setActiveTab} setKitParaPintar={setKitParaPintar} temFoto={temFoto} totalGeracoes={totalGeracoes} />
 
           {avisoErroGenerico}
 
@@ -2181,33 +688,7 @@ export default function Figurinha() {
               a folha do sistema (WhatsApp, Instagram), baixar guarda a figurinha para a pessoa (no navegador, o
               arquivo; no app da loja, a folha do sistema, que tem "Salvar imagem" — gravar direto no rolo da
               câmera pede um plugin nativo, que não está instalado). */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            {/* Baixar RECUA: borda roxa mais fraca + texto a 85% → secundário mas presente. */}
-            <button
-              type="button"
-              className="btn btn--purple-outline hud-corners"
-              data-acao="baixar"
-              style={{ flex: 1, height: 46, borderWidth: '1.5px', borderColor: 'rgba(139,92,246,0.5)', color: 'rgba(255,255,255,0.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              disabled={busy}
-              onClick={baixar}
-            >
-              <Download size={16} /> {busy ? 'Gerando…' : 'Baixar'}
-            </button>
-            {/* CTA dourado partilhado com o "Assinar Pro" dos Planos: gradiente, texto, altura, glow e shine vivem
-                em .cta-gold/.cta-gold-glow (app.css). O glow fica no wrapper SEM clip porque o clip-path do botão
-                cortaria a sombra. */}
-            <div className="cta-gold-glow" style={{ flex: 1, display: 'flex' }}>
-              <button
-                type="button"
-                className="btn hud-corners cta-gold"
-                style={{ flex: 1 }}
-                disabled={busy}
-                onClick={partilhar}
-              >
-                <Share2 size={16} /> {busy ? 'Gerando…' : 'Compartilhar'}
-              </button>
-            </div>
-          </div>
+          <BotoesDoCromo baixar={baixar} busy={busy} partilhar={partilhar} />
 
           {/* O anúncio entra DEPOIS da linha de ações, nunca antes
               da figurinha: esta tela é a figurinha, e uma faixa por cima dela
@@ -2220,33 +701,7 @@ export default function Figurinha() {
           {/* SELOS DE HONRA — SECÇÃO PRÓPRIA full-width, ABAIXO da linha
               Baixar/Compartilhar; alcançável só por scroll (nunca empurra a 1ª dobra).
               Olhinho: mostra/oculta cada selo do cromo (máx 2; a honra fica na vitrine). */}
-          {selos.length ? (
-              <div style={{ marginTop: 22 }}>
-                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: '.06em', color: '#f0c94a', textTransform: 'uppercase', marginBottom: 4 }}>Selos de honra</div>
-                <p className="texto-apoio" style={{ marginTop: 0, marginBottom: 12 }}>Toque no olho para mostrar ou ocultar no card (máx. 2). A honra fica sempre na sua vitrine.</p>
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {selos.map((s) => {
-                    const oculto = selosOcultos.has(s.id);
-                    const visivel = selosVisiveis.some((v) => v.id === s.id);
-                    return (
-                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', opacity: oculto ? 0.5 : 1, clipPath: 'polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)' }}>
-                        <SeloHonra tier={s.tier} label={s.label} size={54} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, color: '#fff' }}>{s.label}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{s.sub}{s.fonte === 'ranking' ? ' · vivo' : s.historico ? ' · histórico' : s.ativa ? ` · ${s.dias_restantes}d no card` : ''}</div>
-                        </div>
-                        {!visivel && !oculto ? <span style={{ fontSize: 10, color: '#6f6a80' }}>só vitrine</span> : null}
-                        <button type="button" aria-label={oculto ? 'Mostrar' : 'Ocultar'} onClick={() => toggleSelo(s.id)} style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: oculto ? '#6f6a80' : '#f0c94a', cursor: 'pointer', borderRadius: 6, padding: '6px 8px', display: 'grid', placeItems: 'center' }}>
-                          {oculto
-                            ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.526 13.526 0 0 0 2 12s3 8 10 8a9.74 9.74 0 0 0 5.39-1.61M2 2l20 20M9.88 9.88a3 3 0 1 0 4.24 4.24" /></svg>
-                            : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8Z" /><circle cx="12" cy="12" r="3" /></svg>}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-          ) : null}
+          <SelosDaFigurinha selos={selos} selosOcultos={selosOcultos} selosVisiveis={selosVisiveis} toggleSelo={toggleSelo} />
         </div>
       </main>
 
@@ -2262,224 +717,7 @@ export default function Figurinha() {
       {/* Modal "A tua foto" — foto actual + estado do avatar IA + carregar nova. Portal para o body: fixed
           dentro do [data-page] animado não confia no viewport no WebKit do iPhone — ver nota em
           LoadingFutty.jsx. */}
-      {modalFoto
-        ? createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Sua foto"
-          onClick={() => setModalFoto(false)}
-          /* Velocidade 8: a 0,85 de preto por cima, o blur de 4px não se via —
-             pagava-se uma camada de composição de ecrã inteiro para nada.
-             Achado 124 (29K): overflow hidden + overscroll-behavior contain — sem isso, um arrasto no véu encadeia
-             a rolagem para o body por trás (WebKit), e ao fechar a página fica numa posição que não bate. */
-          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflow: 'hidden', overscrollBehavior: 'contain' }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="hud-corners"
-            style={{ position: 'relative', width: '100%', maxWidth: 360, background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '22px 20px 20px' }}
-          >
-            <button
-              type="button"
-              aria-label="Fechar"
-              onClick={() => setModalFoto(false)}
-              style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: 10, border: '1px solid #333', background: 'rgba(255,255,255,0.06)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer', zIndex: 1 }}
-            >
-              <X size={16} />
-            </button>
-
-            {/* (i) Losango decorativo no canto sup. direito, com o twinkle existente. */}
-            <span
-              className="fig-dot-twinkle"
-              aria-hidden="true"
-              style={{ position: 'absolute', top: 18, right: 52, width: 8, height: 8, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)', pointerEvents: 'none' }}
-            />
-            <h3 style={{ margin: '0 0 6px', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '0.04em', color: '#fff', textAlign: 'center' }}>Sua foto</h3>
-            {/* (h) Linha HUD dourada com degrau — mesma linguagem do header, escala menor. */}
-            <svg width="100%" height="6" viewBox="0 0 200 6" preserveAspectRatio="none" aria-hidden="true" style={{ display: 'block', marginBottom: 14 }}>
-              <defs>
-                <linearGradient id="modalhudline" x1="0" x2="1">
-                  <stop offset="0" stopColor="#d4a017" stopOpacity="0.9" />
-                  <stop offset="0.6" stopColor="#d4a017" stopOpacity="0.4" />
-                  <stop offset="1" stopColor="#d4a017" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path d="M0 5 H70 L75 1 H200" stroke="url(#modalhudline)" strokeWidth="1" fill="none" />
-            </svg>
-
-            {/* Interruptor "Mostrar minha foto" / "Mostrar minha figurinha": só aparece pra quem já tem uma
-                figurinha gerada (mesmo que o card esteja mostrando a foto agora). Um toque troca avatar_url na hora
-                — a prévia abaixo segue junto. */}
-            {temFigurinhaAlguma ? (
-              <div role="radiogroup" aria-label="O que o card mostra" style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={!avatarEhIA}
-                  disabled={trocandoModo}
-                  onClick={() => trocarModo('foto')}
-                  className="hud-corners-s"
-                  style={{
-                    flex: 1, padding: '9px 6px', fontSize: 12, fontWeight: 700, cursor: trocandoModo ? 'default' : 'pointer',
-                    background: !avatarEhIA ? 'rgba(212,160,23,0.14)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${!avatarEhIA ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.14)'}`,
-                    color: !avatarEhIA ? '#f0c94a' : 'rgba(255,255,255,0.75)',
-                    opacity: trocandoModo ? 0.6 : 1,
-                  }}
-                >
-                  Mostrar minha foto
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={avatarEhIA}
-                  disabled={trocandoModo}
-                  onClick={() => trocarModo('figurinha')}
-                  className="hud-corners-s"
-                  style={{
-                    flex: 1, padding: '9px 6px', fontSize: 12, fontWeight: 700, cursor: trocandoModo ? 'default' : 'pointer',
-                    background: avatarEhIA ? 'rgba(212,160,23,0.14)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${avatarEhIA ? 'rgba(212,160,23,0.6)' : 'rgba(255,255,255,0.14)'}`,
-                    color: avatarEhIA ? '#f0c94a' : 'rgba(255,255,255,0.75)',
-                    opacity: trocandoModo ? 0.6 : 1,
-                  }}
-                >
-                  Mostrar minha figurinha
-                </button>
-              </div>
-            ) : null}
-
-            {/* Preview da foto actual (cantos 45° coerentes com o sistema visual) */}
-            {fotoOriginal ? (
-              // contain + fundo escuro sólido → mostra a pessoa INTEIRA, sem cortar topo/base.
-              /*
-               * Moldura ADAPTATIVA: sem height fixa, o container cresce com a foto (o maxHeight trava as muito
-               * altas). As barras que sobrem em #0d0d12 lêem como moldura intencional, não como corte.
-               */
-              <div className="hud-corners" style={{ width: '100%', background: '#0d0d12' }}>
-                <img
-                  // Logo depois de trocar a foto/o enquadramento o preview é o LOCAL (o recorte que o servidor acabou de
-                  // confirmar). Trocar só o src deixava a foto ANTIGA na tela até o derivado novo chegar pelo proxy.
-                  src={fotoLocal || urlImagem(urlAsset(fotoOriginal), 512)}
-                  alt="Sua foto"
-                  style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '46vh', objectFit: 'contain', display: 'block', margin: '0 auto' }}
-                />
-              </div>
-            ) : (
-              <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--label-color)', fontSize: 13 }}>Você ainda não tem foto.</div>
-            )}
-
-            {/* Estado do card — prévia ao vivo do que os outros veem (muda na hora com o interruptor acima, sem
-                esperar reload). */}
-            <div style={{ marginTop: 14 }}>
-              {avatarEhIA ? (
-                /* (j) Badge com glow dourado suave — mesma família dos dots. */
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'linear-gradient(90deg, rgba(139,92,246,0.18), rgba(212,160,23,0.12))', border: '1px solid rgba(139,92,246,0.4)', boxShadow: '0 0 12px rgba(212,160,23,0.22)' }}>
-                  <img
-                    src={urlImagem(urlAsset(me?.user?.avatar_url), 128, { quadrado: true })}
-                    alt="Figurinha"
-                    width={48}
-                    height={48}
-                    decoding="async"
-                    loading="lazy"
-                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid rgba(212,160,23,0.5)', flex: 'none', background: '#0d0d12' }}
-                  />
-                  <div style={{ display: 'grid', gap: 3 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#d4a017' }}>
-                      <EstrelaIA size={14} color="#d4a017" /> Figurinha ativa
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--label-color)' }}>Gerado a partir desta foto</span>
-                  </div>
-                </div>
-              ) : temFigurinhaAlguma ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.14)' }}>
-                  <img
-                    src={urlImagem(urlAsset(me?.user?.avatar_url), 128, { quadrado: true })}
-                    alt="Sua foto"
-                    width={48}
-                    height={48}
-                    decoding="async"
-                    loading="lazy"
-                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid rgba(255,255,255,0.2)', flex: 'none', background: '#0d0d12' }}
-                  />
-                  <div style={{ display: 'grid', gap: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Mostrando sua foto</span>
-                    <span style={{ fontSize: 11, color: 'var(--label-color)' }}>Sua figurinha continua guardada</span>
-                  </div>
-                </div>
-              ) : (
-                <p style={{ margin: 0, textAlign: 'center', fontSize: 12, color: 'var(--label-color)' }}>Você ainda não gerou sua figurinha.</p>
-              )}
-            </div>
-
-            {/* "Minhas figurinhas": até 6, miniaturas + "Usar esta"
-                (sem custo — troca avatar_url/kit_ativo, respeita card_modo).
-                Some sozinha sem histórico (conta nova, ou 057 por aplicar). */}
-            {historico.length ? (
-              <div style={{ marginTop: 16 }}>
-                <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--label-color)' }}>
-                  Minhas figurinhas
-                </p>
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
-                  {historico.map((item) => {
-                    const emUso = item.avatar_url === me?.user?.avatar_url;
-                    const carregando = usandoHistoricoId === item.id;
-                    return (
-                      <div key={item.id} style={{ flex: '0 0 auto', width: 72, display: 'grid', gap: 4, justifyItems: 'center' }}>
-                        <img
-                          src={urlImagem(urlAsset(item.avatar_url), 128, { quadrado: true })}
-                          alt="Figurinha antiga"
-                          width={64}
-                          height={64}
-                          style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: `1px solid ${emUso ? 'rgba(212,160,23,0.7)' : 'rgba(255,255,255,0.16)'}`, background: '#0d0d12' }}
-                        />
-                        <button
-                          type="button"
-                          className="btn btn--sm hud-corners-s"
-                          style={{ width: '100%', fontSize: 10, padding: '4px 2px', opacity: emUso ? 0.6 : 1 }}
-                          disabled={emUso || carregando || !!usandoHistoricoId}
-                          onClick={() => usarDoHistorico(item)}
-                        >
-                          {emUso ? 'Em uso' : carregando ? '…' : 'Usar esta'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
-            {/* Duas ações (ordem do dono): "Escolher outra foto" leva ao CropModal 2:3; "Ajustar enquadramento"
-                reabre o MESMO CropModal sobre a foto original guardada, sem upload novo. A 2ª só existe havendo
-                foto (nada para ajustar sem ela). */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button
-                type="button"
-                className="btn btn--purple"
-                style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13 }}
-                disabled={uploadFoto || gerandoIA}
-                onClick={() => fileRef.current?.click()}
-              >
-                <Camera size={16} /> Escolher outra foto
-              </button>
-              {temFoto ? (
-                <button
-                  type="button"
-                  className="btn btn--purple-outline"
-                  style={{ flex: 1, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13 }}
-                  disabled={uploadFoto || gerandoIA || ajustandoEnquadramento}
-                  onClick={abrirAjustarEnquadramento}
-                >
-                  <RefreshCw size={16} /> {ajustandoEnquadramento ? 'Abrindo…' : 'Ajustar enquadramento'}
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </div>,
-        document.body
-          )
-        : null}
+      <ModalDaFoto abrirAjustarEnquadramento={abrirAjustarEnquadramento} ajustandoEnquadramento={ajustandoEnquadramento} avatarEhIA={avatarEhIA} fileRef={fileRef} fotoLocal={fotoLocal} fotoOriginal={fotoOriginal} gerandoIA={gerandoIA} historico={historico} me={me} modalFoto={modalFoto} setModalFoto={setModalFoto} temFigurinhaAlguma={temFigurinhaAlguma} temFoto={temFoto} trocandoModo={trocandoModo} trocarModo={trocarModo} uploadFoto={uploadFoto} usandoHistoricoId={usandoHistoricoId} usarDoHistorico={usarDoHistorico} />
 
       {/* O mesmo CropModal do Onboarding, para "Escolher outra
           foto" (cropModo='nova') e "Ajustar enquadramento" (cropModo='ajustar');
@@ -2491,34 +729,7 @@ export default function Figurinha() {
       {/* "Gerar figurinha com este uniforme?" antes de qualquer geração nova
           (SPEC-FIGURINHA-3 §2). Mesmo padrão do DenunciaModal (modal-overlay/
           modal-card, portal no body); fecha ao tocar fora, igual aos outros. */}
-      {kitParaPintar
-        ? createPortal(
-            <div className="modal-overlay" role="presentation" onClick={() => !gerandoIA && setKitParaPintar(null)}>
-              <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
-                <div className="modal-card__inner" style={{ textAlign: 'center', display: 'grid', gap: 12, padding: '18px 16px 16px' }}>
-                  <h2 data-confirmar-geracao style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 18, margin: 0 }}>
-                    Gerar figurinha com este uniforme?
-                  </h2>
-                  <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                    {/* O mesmo número do contador: tudo o que a pessoa tem. De onde sai a geração (pacote ou crédito) o motor decide. */}
-                    <span data-confirmar-total={totalGeracoes}>{`Isso usa 1 geração. Você tem ${geracoesPorExtenso(totalGeracoes)}.`}</span>
-                  </p>
-                  <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
-                    <span className="cta-gold-glow" style={{ display: 'flex' }}>
-                      <button type="button" className="btn hud-corners cta-gold" style={{ flex: 1 }} onClick={confirmarPintura}>
-                        Gerar
-                      </button>
-                    </span>
-                    <button type="button" className="btn btn--ghost btn--sm" style={{ width: '100%' }} onClick={() => setKitParaPintar(null)}>
-                      Agora não
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
+      <ConfirmarPintura confirmarPintura={confirmarPintura} gerandoIA={gerandoIA} kitParaPintar={kitParaPintar} setKitParaPintar={setKitParaPintar} totalGeracoes={totalGeracoes} />
     </div>
   );
 }

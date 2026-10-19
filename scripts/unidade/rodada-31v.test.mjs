@@ -11,6 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 class ArmazemFalso {
   constructor() { this.m = new Map(); }
@@ -56,7 +57,7 @@ test('"1 geração" e "58 gerações"', () => {
 });
 
 test('a Figurinha mostra o total no contador, no "Refazer" e na confirmação; o "uniforme à sua escolha" saiu', () => {
-  const fonte = readFileSync(new URL('../../src/pages/Figurinha.jsx', import.meta.url), 'utf8');
+  const fonte = lerPagina('Figurinha');
   assert.match(fonte, /Restam \$\{totalGeracoes\} gerações/);
   assert.match(fonte, /Refazer \{kitDoCard\.nome\} · \{geracoesPorExtenso\(totalGeracoes\)\}/);
   assert.match(fonte, /Você tem \$\{geracoesPorExtenso\(totalGeracoes\)\}/);

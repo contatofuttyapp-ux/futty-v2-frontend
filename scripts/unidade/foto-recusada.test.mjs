@@ -12,9 +12,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(path.join(aqui, '..', '..', 'src', 'pages', 'Figurinha.jsx'), 'utf8');
+const src = lerPagina('Figurinha');
 const TITULO = 'Essa foto não deu certo';
 const CORPO = 'Escolha outra: de frente, com a cabeça e os ombros inteiros aparecendo, sem nada cortado nas bordas.';
 const RECADO = `${TITULO}. ${CORPO}`;

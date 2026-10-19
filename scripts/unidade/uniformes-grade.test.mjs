@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {
   DESTINO_DO_CADEADO, acaoDoToque, direitoDaGrade, estadoDoUniforme, ordemDaGrade, podeRefazer,
 } from '../../src/utils/uniformesGrade.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const KITS = [
   { id: 'dark-gold' }, { id: 'dark-purple' }, { id: 'white-gold' }, { id: 'elite-gold' }, { id: 'royal-purple' },
@@ -65,7 +66,7 @@ test('toque: vestido não faz nada, pintado veste, gerável pede confirmação, 
 
 test('31D · o tile do uniforme que custa uma geração não leva texto (só a estrelinha de IA); o aviso é só na confirmação', async () => {
   const { readFileSync } = await import('node:fs');
-  const fonte = readFileSync(new URL('../../src/pages/Figurinha.jsx', import.meta.url), 'utf8');
+  const fonte = lerPagina('Figurinha');
   assert.ok(!/SELO_PINTAR/.test(fonte) && !/data-selo="pintar"/.test(fonte), 'o selo "pintar · 1 geração · ~45 s" saiu do tile');
   assert.match(fonte, /data-ia-estrela/, 'fica a estrelinha de IA, sem texto');
   assert.ok(!/SELO_PINTAR/.test(readFileSync(new URL('../../src/utils/uniformesGrade.js', import.meta.url), 'utf8')));
