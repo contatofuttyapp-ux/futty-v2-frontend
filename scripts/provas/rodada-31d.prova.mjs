@@ -97,13 +97,18 @@ const sessaoDe = (dados, quem) => JSON.stringify({
 const NAO_VOLTAM = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'keep-alive']);
 const NAO_VAO = ['host', 'origin', 'referer', 'if-none-match', 'if-modified-since', 'content-length', 'accept-encoding', 'connection'];
 
-async function aoMotor(route, base) {
+// O Pedro está no iPhone (a plataforma ligada no motor das provas); os outros, no Android (fora da lista).
+const plataformaDe = (quem) => (quem === 'adm' ? 'ios' : 'android');
+
+/** `plataforma`: o cabeçalho X-Futty-Plataforma que o motor recebe (a loja abre por plataforma). */
+async function aoMotor(route, base, plataforma = null) {
   const req = route.request();
   const url = new URL(req.url());
   const cors = { 'access-control-allow-origin': req.headers().origin || '*', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
   if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
   const cabecalhos = { ...req.headers() };
   for (const h of NAO_VAO) delete cabecalhos[h];
+  if (plataforma) cabecalhos['x-futty-plataforma'] = plataforma;
   const corpo = req.postDataBuffer();
   const r = await fetch(`${base}${url.pathname}${url.search}`, { method: req.method(), headers: cabecalhos, body: corpo && !['GET', 'HEAD'].includes(req.method()) ? corpo : undefined, redirect: 'manual' });
   const saida = { ...cors };
@@ -125,7 +130,7 @@ async function abrirContexto(navegador, baseDoVite, dados, quem, largura = 390) 
   await ctx.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     try {
-      if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base);
+      if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base, plataformaDe(quem));
       if (url.host === origemDoVite) {
         if (/purchases-capacitor/.test(url.pathname) && /\.js$/.test(url.pathname)) return await route.fulfill({ status: 200, contentType: 'text/javascript', body: SDK_DE_MENTIRA });
         if (/canvas-confetti/.test(url.pathname) && /\.js$/.test(url.pathname)) return await route.fulfill({ status: 200, contentType: 'text/javascript', body: CONFETE_DE_MENTIRA });
@@ -160,7 +165,7 @@ export async function rodar({ navegador, base, t }) {
     for (const largura of [390, 360]) {
       const r = `${largura} px`;
 
-      // ── Figurinha do Pedro: a loja está ligada para ele (testador) ──
+      // ── Figurinha do Pedro: a loja está ligada para ele (iPhone) ──
       const pedro = await abrirContexto(navegador, base, dados, 'adm', largura);
       const fig = await pagina(pedro, '/figurinha', (p) => p.locator('.fig-seletor-tile').first().waitFor({ timeout: 40000 }));
       await fig.locator('[data-grade="uniformes"]').scrollIntoViewIfNeeded();
@@ -191,7 +196,7 @@ export async function rodar({ navegador, base, t }) {
 
       // ── "Comprar mais gerações": o caminho é o botão do cartão "Loja de figurinhas" logo abaixo (o link solto saiu, para não repetir o botão) ──
       const link = fig.locator('[data-comprar-mais]');
-      t(`${r} · loja ligada (o Pedro é testador): NÃO há o link solto "Comprar mais gerações →"`, (await link.count()) === 0);
+      t(`${r} · loja ligada (o Pedro está no iPhone): NÃO há o link solto "Comprar mais gerações →"`, (await link.count()) === 0);
       const botaoMinha = fig.locator('[data-cartao-loja] [data-loja-comprar="minha"]');
       const ordem = await fig.evaluate(() => {
         const restam = [...document.querySelectorAll('span')].find((e) => /^Restam \d+ gerações/.test(e.textContent.trim()));

@@ -6,7 +6,7 @@
 // `acao` opcional ({ rotulo, aoTocar, neutro }) — um botão dentro do toast (ex.: "Tentar de novo"). O botão fecha o aviso depois de agir.
 // Com `neutro` o botão é cinza (não pinta de vermelho num erro) e o aviso NÃO fecha ao toque no resto: só o botão fecha, e o texto
 // dá para selecionar. A compra que falhou usa assim: o único botão é "Fechar".
-// `detalhe` opcional: uma linha pequena embaixo da mensagem (o detalhe técnico que só o testador da loja vê).
+// `detalhe` opcional: uma linha pequena embaixo da mensagem (um detalhe técnico; lib/loja.js sabe montar o da compra que falhou).
 // `posicao` opcional: 'meio' (o padrão) ou 'topo' — para a tela em que o meio é onde estão os botões (o "Temos campeão!" não pode
 // cobrir os de compartilhar).
 import { useEffect, useRef, useState } from 'react';

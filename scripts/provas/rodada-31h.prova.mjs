@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const nome = 'Rodada 31H · a loja ligada por plataforma: android compra, iPhone e web não, testador sempre (motor de verdade, nada sai da máquina)';
+export const nome = 'Rodada 31H · a loja ligada por plataforma: a lista manda, sem a variável android e iPhone, vazia nenhuma, web nunca (motor de verdade, nada sai da máquina)';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const MOTOR = path.join(RAIZ, 'scripts', 'provas', '_motor-loja.cjs');
@@ -163,13 +163,13 @@ export async function rodar({ navegador, base, t }) {
     return { visto, botoes, tela };
   }
 
-  // Nenhum dos mundos tem PAGAMENTOS_ATIVOS. O mundo "plataforma" tem PAGAMENTOS_PLATAFORMAS=android e ninguém é testador;
-  // o mundo "testador" tem a mesma lista e o Pedro (adm) é testador; o mundo "sem a variável" não liga plataforma nenhuma.
+  // Nenhum dos mundos tem PAGAMENTOS_ATIVOS. O mundo "plataforma" tem PAGAMENTOS_PLATAFORMAS=android; o mundo "sem a variável" vale android e ios
+  // (o padrão do motor); o mundo "lista vazia" não liga plataforma nenhuma. A conta não muda nada: o Pedro e o Zé valem o mesmo na mesma plataforma.
   const MUNDOS = [
     {
       id: 'plataforma-android',
-      nome: 'PAGAMENTOS_PLATAFORMAS=android, ninguém testador',
-      flags: { LOJA_SEM_TESTER: '1', PAGAMENTOS_PLATAFORMAS: 'android' },
+      nome: 'PAGAMENTOS_PLATAFORMAS=android',
+      flags: { LOJA_PLATAFORMAS: 'android' },
       casos: [
         { quem: 'adm', plataforma: 'android', cabecalho: 'android', loja: true, botao: 'Comprar · US$ 2,99' },
         { quem: 'ze', plataforma: 'android', cabecalho: 'android', loja: true, botao: 'Comprar · US$ 2,99' },
@@ -178,20 +178,19 @@ export async function rodar({ navegador, base, t }) {
       ],
     },
     {
-      id: 'testador',
-      nome: 'PAGAMENTOS_PLATAFORMAS=android + o Pedro é testador',
-      flags: { PAGAMENTOS_PLATAFORMAS: 'android' },
+      id: 'sem-a-variavel',
+      nome: 'sem PAGAMENTOS_PLATAFORMAS: android e ios',
+      flags: { LOJA_SEM_A_VARIAVEL: '1' },
       casos: [
         { quem: 'adm', plataforma: 'ios', cabecalho: 'ios', loja: true, botao: 'Comprar · US$ 2,99' },
-        { quem: 'adm', plataforma: 'android', cabecalho: 'android', loja: true, botao: 'Comprar · US$ 2,99' },
-        { quem: 'ze', plataforma: 'ios', cabecalho: 'ios', loja: false, botao: 'Pedir a minha · 10 gerações' },
         { quem: 'ze', plataforma: 'android', cabecalho: 'android', loja: true, botao: 'Comprar · US$ 2,99' },
+        { quem: 'ze', plataforma: 'web', cabecalho: 'web', loja: false, botao: 'Pedir a minha · 10 gerações' },
       ],
     },
     {
-      id: 'sem-a-variavel',
-      nome: 'sem PAGAMENTOS_PLATAFORMAS, ninguém testador',
-      flags: { LOJA_SEM_TESTER: '1', PAGAMENTOS_PLATAFORMAS: '' },
+      id: 'lista-vazia',
+      nome: 'PAGAMENTOS_PLATAFORMAS vazia: nenhuma',
+      flags: { LOJA_PLATAFORMAS: '' },
       casos: [
         { quem: 'adm', plataforma: 'android', cabecalho: 'android', loja: false, botao: 'Pedir a minha · 10 gerações' },
         { quem: 'adm', plataforma: 'ios', cabecalho: 'ios', loja: false, botao: 'Pedir a minha · 10 gerações' },

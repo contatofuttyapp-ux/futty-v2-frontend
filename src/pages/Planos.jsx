@@ -20,7 +20,7 @@ import Toast from '../components/Toast';
 import EscolherUniformeTime from '../components/EscolherUniformeTime';
 import { PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES, produtosDaTela } from '../lib/planos';
 import { estadoBrilhantes, pedirAtivacao, pedidoDoProduto, avisarBrilhantes, compraApareceu, acompanharCompra } from '../lib/brilhantes';
-import { lojaLigada as calcularLojaLigada, produtosDaLoja, comprar, restaurar, sincronizarAposCompra, linhaDoDetalhe } from '../lib/loja';
+import { lojaLigada as calcularLojaLigada, produtosDaLoja, comprar, restaurar, sincronizarAposCompra } from '../lib/loja';
 import { ehNativo } from '../lib/plataforma';
 import { apiFetch } from '../lib/api';
 import '../lib/ligarLoja';
@@ -110,8 +110,6 @@ export default function Planos() {
   const [uniformeJaAberto, setUniformeJaAberto] = useState(false);
 
   const lojaLigada = calcularLojaLigada(estado);
-  // O motor diz se esta conta é de testador da loja (PAGAMENTOS_TESTERS): só ela vê o detalhe técnico de uma compra que falhou.
-  const testadorLoja = !!estado?.testador_loja;
 
   /** Guarda o estado novo na tela e no Início guardado (a Figurinha nasce dele), e avisa a Figurinha se ela estiver aberta. */
   function aplicarEstado(novo) {
@@ -195,11 +193,10 @@ export default function Planos() {
       if (r.cancelado || r.disponivel === false) return; // desistiu na folha da loja: a tela volta calada
       if (!r.ok) {
         // O aviso tem um botão só, neutro: "Fechar". Tentar de novo é tocar em Comprar outra vez — um "Tentar de novo" dentro do aviso
-        // repetia o mesmo erro sem a pessoa conseguir sair dele. O testador lê embaixo, em letra pequena, o que a loja respondeu.
+        // repetia o mesmo erro sem a pessoa conseguir sair dele.
         setToast({
           tipo: 'error',
           mensagem: r.erro,
-          detalhe: testadorLoja && r.detalhe ? linhaDoDetalhe(r.detalhe) : null,
           acao: { rotulo: 'Fechar', neutro: true, aoTocar: () => {} },
         });
         return;

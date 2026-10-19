@@ -89,13 +89,18 @@ const sessaoDe = (dados, quem) => JSON.stringify({
 const NAO_VOLTAM = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'keep-alive']);
 const NAO_VAO = ['host', 'origin', 'referer', 'if-none-match', 'if-modified-since', 'content-length', 'accept-encoding', 'connection'];
 
-async function aoMotor(route, base) {
+// O Pedro está no iPhone (a plataforma ligada no motor das provas); os outros, no Android (fora da lista).
+const plataformaDe = (quem) => (quem === 'adm' ? 'ios' : 'android');
+
+/** `plataforma`: o cabeçalho X-Futty-Plataforma que o motor recebe (a loja abre por plataforma). */
+async function aoMotor(route, base, plataforma = null) {
   const req = route.request();
   const url = new URL(req.url());
   const cors = { 'access-control-allow-origin': req.headers().origin || '*', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
   if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
   const cabecalhos = { ...req.headers() };
   for (const h of NAO_VAO) delete cabecalhos[h];
+  if (plataforma) cabecalhos['x-futty-plataforma'] = plataforma;
   const corpo = req.postDataBuffer();
   const r = await fetch(`${base}${url.pathname}${url.search}`, { method: req.method(), headers: cabecalhos, body: corpo && !['GET', 'HEAD'].includes(req.method()) ? corpo : undefined, redirect: 'manual' });
   const saida = { ...cors };
@@ -120,7 +125,7 @@ async function abrirContexto(navegador, baseDoVite, dados, quem, largura, extras
   await ctx.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     try {
-      if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base);
+      if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base, plataformaDe(quem));
       if (url.host === origemDoVite) {
         if (/purchases-capacitor/.test(url.pathname) && /\.js$/.test(url.pathname)) return await route.fulfill({ status: 200, contentType: 'text/javascript', body: SDK_DE_MENTIRA });
         return await route.continue();
@@ -249,7 +254,7 @@ export async function rodar({ navegador, base, t }) {
     {
       id: 'sem-loja',
       nome: 'sem loja · pedido de ativação',
-      flags: { LOJA_SEM_TESTER: '1' },
+      flags: { LOJA_FECHADA: '1' },
       casos: [
         { quem: 'adm', rotulo: 'dono, sem loja', esperado: { produtos: ['minha', 'pacote'], botoes: ['Pedir a minha · 10 gerações', 'Pedir ativação para o meu time'], naoContem: [/Comprar/, /US\$/], sem: [/US\$/] } },
         { quem: 'ze', rotulo: 'não dono, sem loja', esperado: { produtos: ['minha'], botoes: ['Pedir a minha · 10 gerações'], naoContem: [/Comprar/, /Pacote do time/] } },
@@ -258,7 +263,7 @@ export async function rodar({ navegador, base, t }) {
     {
       id: 'sem-loja-pacote-ativo',
       nome: 'sem loja · time com o pacote',
-      flags: { LOJA_SEM_TESTER: '1', LOJA_PACOTE_ATIVO: '1', LOJA_PACOTE_ESGOTADO: '1' },
+      flags: { LOJA_FECHADA: '1', LOJA_PACOTE_ATIVO: '1', LOJA_PACOTE_ESGOTADO: '1' },
       casos: [
         { quem: 'adm', rotulo: 'dono, sem loja, pacote ativo', esperado: { produtos: ['minha', 'pacote'], botoes: ['Pedir a minha · 10 gerações'], contem: ['O time já tem o pacote.'], naoContem: [/Comprar/, /Pedir ativação/] } },
       ],
@@ -288,7 +293,7 @@ export async function rodar({ navegador, base, t }) {
         await nova.route('**/*', async (route) => {
           const url = new URL(route.request().url());
           try {
-            if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base);
+            if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base, plataformaDe('ze'));
             if (url.host === origemDoVite) return await route.continue();
             return await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
           } catch { return route.abort().catch(() => {}); }

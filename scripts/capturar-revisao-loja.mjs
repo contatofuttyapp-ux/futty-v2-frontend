@@ -4,7 +4,7 @@
 //
 // Tudo LOCAL, nada de produção: o app é o de verdade (Vite em 127.0.0.1) num Chromium que se declara iOS (`window.webkit.messageHandlers.bridge`, o que o
 // Capacitor usa para saber a plataforma); o motor é o de verdade por cima de banco e Auth de mentira (scripts/provas/_motor-loja.cjs), com a loja aberta pela
-// regra nova — o e-mail do Pedro está em PAGAMENTOS_TESTERS e PAGAMENTOS_ATIVOS fica desligado. O SDK do RevenueCat é trocado por uma mentira que devolve as
+// regra por plataforma — o Pedro pede como iPhone (a plataforma ligada) e PAGAMENTOS_ATIVOS fica desligado. O SDK do RevenueCat é trocado por uma mentira que devolve as
 // ofertas (os mesmos dois produtos, com preço de real): a folha de compra da Apple não existe no navegador, e o que a Apple pede é a tela do app que leva à compra.
 // Todo pedido do navegador passa por aqui: /api/** vai ao motor de mentira, o Vite das telas passa, e QUALQUER outro endereço (inclusive o Supabase de produção)
 // é respondido vazio sem sair da máquina — e anotado.
@@ -86,13 +86,18 @@ const sessaoDe = (dados, quem) => JSON.stringify({
 const NAO_VOLTAM = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'keep-alive']);
 const NAO_VAO = ['host', 'origin', 'referer', 'if-none-match', 'if-modified-since', 'content-length', 'accept-encoding', 'connection'];
 
-async function aoMotor(route, base) {
+// O Pedro está no iPhone (a plataforma ligada no motor das provas); os outros, no Android (fora da lista).
+const plataformaDe = (quem) => (quem === 'adm' ? 'ios' : 'android');
+
+/** `plataforma`: o cabeçalho X-Futty-Plataforma que o motor recebe (a loja abre por plataforma). */
+async function aoMotor(route, base, plataforma = null) {
   const req = route.request();
   const url = new URL(req.url());
   const cors = { 'access-control-allow-origin': req.headers().origin || '*', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
   if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
   const cabecalhos = { ...req.headers() };
   for (const h of NAO_VAO) delete cabecalhos[h];
+  if (plataforma) cabecalhos['x-futty-plataforma'] = plataforma;
   const corpo = req.postDataBuffer();
   const r = await fetch(`${base}${url.pathname}${url.search}`, { method: req.method(), headers: cabecalhos, body: corpo && !['GET', 'HEAD'].includes(req.method()) ? corpo : undefined, redirect: 'manual' });
   const saida = { ...cors };
@@ -114,7 +119,7 @@ async function abrirContexto(navegador, baseDoVite, dados, quem) {
   await ctx.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     try {
-      if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base);
+      if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base, plataformaDe(quem));
       if (url.host === origemDoVite) {
         if (/purchases-capacitor/.test(url.pathname) && /\.js$/.test(url.pathname)) return await route.fulfill({ status: 200, contentType: 'text/javascript', body: SDK_DE_MENTIRA });
         return await route.continue();
@@ -139,16 +144,16 @@ let falhas = 0;
 const confere = (ok, msg, detalhe = '') => { if (!ok) falhas += 1; console.log(`${ok ? '✔' : '✖'} ${msg}${ok ? '' : ` — ${detalhe}`}`); };
 
 try {
-  // 1) O Pedro (testador): a loja abre e cada produto mostra "Comprar" com o preço da loja.
+  // 1) O Pedro (no iPhone): a loja abre e cada produto mostra "Comprar" com o preço da loja.
   const { ctx, estado } = await abrirContexto(navegador, base, dados, 'adm');
   const page = await ctx.newPage();
   const erros = [];
   // O nativo é de mentira: um plugin que o app pede ao iOS (App, Capgo…) e que a ponte falsa não implementa é esperado, não é defeito da tela.
   page.on('pageerror', (e) => { if (!/plugin is not implemented/.test(e.message)) erros.push(e.message); });
-  const estadoDoMotor = await (await fetch(`${dados.base}/api/brilhantes/estado`, { headers: { authorization: `Bearer ${dados.tokens.adm}` } })).json();
-  confere(estadoDoMotor.loja_pronta === true, 'o motor abre a loja para o testador (PAGAMENTOS_ATIVOS desligado)');
-  const doZe = await (await fetch(`${dados.base}/api/brilhantes/estado`, { headers: { authorization: `Bearer ${dados.tokens.ze}` } })).json();
-  confere(doZe.loja_pronta === false, 'e a mantém fechada para quem não é testador');
+  const estadoDoMotor = await (await fetch(`${dados.base}/api/brilhantes/estado`, { headers: { authorization: `Bearer ${dados.tokens.adm}`, 'x-futty-plataforma': plataformaDe('adm') } })).json();
+  confere(estadoDoMotor.loja_pronta === true, 'o motor abre a loja para o iPhone (PAGAMENTOS_ATIVOS desligado)');
+  const doZe = await (await fetch(`${dados.base}/api/brilhantes/estado`, { headers: { authorization: `Bearer ${dados.tokens.ze}`, 'x-futty-plataforma': plataformaDe('ze') } })).json();
+  confere(doZe.loja_pronta === false, 'e a mantém fechada no Android');
 
   for (const [produto, destaque, rotulo, preco] of [['futty_minha', 'minha', 'Minha Figurinha', 'R$ 9,90'], ['futty_pacote', 'pacote', 'Pacote do time', 'R$ 49,90']]) {
     await page.goto(`${base}/planos?destaque=${destaque}`, { waitUntil: 'domcontentloaded' });
@@ -165,13 +170,13 @@ try {
   console.log(`  (endereços de fora respondidos vazios, sem sair da máquina: ${hosts.length ? hosts.join(', ') : 'nenhum'})`);
   await ctx.close();
 
-  // 2) O Zé (não testador): a loja fica fechada — a tela cai no pedido de ativação, nunca no preço.
+  // 2) O Zé (no Android): a loja fica fechada — a tela cai no pedido de ativação, nunca no preço.
   const outro = await abrirContexto(navegador, base, dados, 'ze');
   const paginaDele = await outro.ctx.newPage();
   await paginaDele.goto(`${base}/planos`, { waitUntil: 'domcontentloaded' });
   await paginaDele.getByText(/Pedir a minha|Pedir ativação/i).first().waitFor({ timeout: 40000 }).catch(() => {});
   const corpoDele = await texto(paginaDele);
-  confere(/Pedir a minha|Pedir ativação/i.test(corpoDele) && !/Comprar · R\$/.test(corpoDele), 'não testador: a tela mostra o pedido de ativação ("Pedir a minha") e nenhum preço de compra', corpoDele.slice(0, 300));
+  confere(/Pedir a minha|Pedir ativação/i.test(corpoDele) && !/Comprar · R\$/.test(corpoDele), 'Zé no Android: a tela mostra o pedido de ativação ("Pedir a minha") e nenhum preço de compra', corpoDele.slice(0, 300));
   await outro.ctx.close();
 } finally {
   const rede = await encerrarMotor(filho);

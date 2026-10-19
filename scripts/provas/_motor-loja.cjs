@@ -2,8 +2,8 @@
 // de um banco, um Storage e um Auth de MENTIRA, em memória (backend/tests/_appFalsa.js). O .env do backend nunca é lido, a rede de fora está fechada e o
 // servidor só escuta em 127.0.0.1 — nada daqui toca a produção.
 //
-// O mundo: o Pedro (admin do time Domingueira FC) é TESTADOR — o e-mail dele está em PAGAMENTOS_TESTERS, então para ele o motor diz `loja_pronta: true` sem
-// PAGAMENTOS_ATIVOS —; o Zé é do mesmo time e NÃO é testador (a loja fica fechada para ele). É a regra da Rodada 31B vista pela tela.
+// O mundo: a loja abre por plataforma e só o iOS está ligado (PAGAMENTOS_PLATAFORMAS=ios, PAGAMENTOS_ATIVOS desligado). O Pedro (admin do time
+// Domingueira FC) pede como iPhone e vê a loja; o Zé, do mesmo time, pede como Android e a loja fica fechada para ele.
 //
 // Protocolo com o script: uma linha de JSON no stdout quando está pronto ({ pronto, base, ... }); "fim\n" no stdin devolve a última linha (o que o motor
 // tentou fazer na rede) e encerra.
@@ -31,14 +31,16 @@ const fala = (...a) => process.stderr.write(`${a.join(' ')}\n`);
     data.user.user_metadata.onboarding_completo = true;
   }
 
-  // A regra da 31B: só o e-mail do Pedro abre a loja; PAGAMENTOS_ATIVOS fica desligado. Lido a cada pedido pelo motor.
-  // LOJA_ABERTA=1 (a prova da 31E): a loja abre para TODOS (PAGAMENTOS_ATIVOS) — e só o Pedro segue sendo testador, para provar que o detalhe técnico
-  // de uma compra que falhou aparece só para ele.
+  // A loja abre por plataforma: só o iOS está ligado (PAGAMENTOS_PLATAFORMAS=ios) e PAGAMENTOS_ATIVOS fica desligado. Lido a cada pedido pelo
+  // motor. As provas fazem o Pedro pedir como iPhone e os outros como Android (cabeçalho X-Futty-Plataforma): a loja abre para ele e não para o Zé.
+  // LOJA_ABERTA=1 (a prova da 31E): a loja abre para TODOS (PAGAMENTOS_ATIVOS). A prova pode mandar a própria lista em LOJA_PLATAFORMAS (a da 31H) ou
+  // LOJA_SEM_A_VARIAVEL=1 (o motor sem PAGAMENTOS_PLATAFORMAS: android e ios).
   if (process.env.LOJA_ABERTA === '1') process.env.PAGAMENTOS_ATIVOS = 'true'; else delete process.env.PAGAMENTOS_ATIVOS;
-  process.env.PAGAMENTOS_TESTERS = U.adm.email;
-  // LOJA_SEM_TESTER=1 (a prova da 31G): ninguém é testador e PAGAMENTOS_ATIVOS segue desligado — a loja está FECHADA para todos e as telas
-  // ficam no pedido de ativação.
-  if (process.env.LOJA_SEM_TESTER === '1') { delete process.env.PAGAMENTOS_TESTERS; delete process.env.PAGAMENTOS_ATIVOS; }
+  process.env.PAGAMENTOS_PLATAFORMAS = process.env.LOJA_PLATAFORMAS ?? 'ios';
+  if (process.env.LOJA_SEM_A_VARIAVEL === '1') delete process.env.PAGAMENTOS_PLATAFORMAS;
+  // LOJA_FECHADA=1 (a prova da 31G): nenhuma plataforma e PAGAMENTOS_ATIVOS desligado — a loja está FECHADA para todos e as telas ficam no
+  // pedido de ativação.
+  if (process.env.LOJA_FECHADA === '1') { process.env.PAGAMENTOS_PLATAFORMAS = ''; delete process.env.PAGAMENTOS_ATIVOS; }
 
   const chamar = async (quem, metodo, rota, corpo) => {
     const r = await app.pedir(metodo, rota, { token: app.token(U[quem].id), corpo });

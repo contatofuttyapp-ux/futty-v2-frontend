@@ -2,8 +2,7 @@
 //   · a compra vai pelo PACOTE da oferta (purchasePackage, com o pacote como o getOfferings() o devolveu), nunca pelo produto solto;
 //   · o aviso do erro tem UM botão, neutro, "Fechar" — nada de "Tentar de novo" dentro do aviso —, e ele fecha de verdade; tocar em Comprar
 //     outra vez tenta de novo;
-//   · o testador (e só ele) vê embaixo, em letra pequena, o code, o readableErrorCode e o underlyingErrorMessage; quem não é testador nada vê,
-//     mesmo com a loja aberta para todos;
+//   · ninguém vê embaixo a linha técnica da loja (code, readableErrorCode, underlyingErrorMessage): não existe mais conta de testador;
 //   · o cartão do Pacote do time que o time já tem vira "Mais figurinhas pro seu time" (presente), com botão, e não parece "selecionado".
 // Como: a mesma bancada das capturas da loja (scripts/capturar-revisao-loja.mjs) — o app de verdade num Chromium que se declara iOS, o motor de VERDADE por
 // cima de banco e Auth de mentira (scripts/provas/_motor-loja.cjs), o SDK do RevenueCat trocado por uma mentira que RECUSA a compra com o erro que o
@@ -17,7 +16,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const nome = 'Rodada 31E · compra que falha: Fechar neutro, detalhe só para o testador, cartão do pacote que o time já tem (motor de verdade, nada sai da máquina)';
+export const nome = 'Rodada 31E · compra que falha: Fechar neutro, sem linha técnica, cartão do pacote que o time já tem (motor de verdade, nada sai da máquina)';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const MOTOR = path.join(RAIZ, 'scripts', 'provas', '_motor-loja.cjs');
@@ -96,13 +95,18 @@ const sessaoDe = (dados, quem) => JSON.stringify({
 const NAO_VOLTAM = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'keep-alive']);
 const NAO_VAO = ['host', 'origin', 'referer', 'if-none-match', 'if-modified-since', 'content-length', 'accept-encoding', 'connection'];
 
-async function aoMotor(route, base) {
+// O Pedro está no iPhone (a plataforma ligada no motor das provas); os outros, no Android (fora da lista).
+const plataformaDe = (quem) => (quem === 'adm' ? 'ios' : 'android');
+
+/** `plataforma`: o cabeçalho X-Futty-Plataforma que o motor recebe (a loja abre por plataforma). */
+async function aoMotor(route, base, plataforma = null) {
   const req = route.request();
   const url = new URL(req.url());
   const cors = { 'access-control-allow-origin': req.headers().origin || '*', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
   if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
   const cabecalhos = { ...req.headers() };
   for (const h of NAO_VAO) delete cabecalhos[h];
+  if (plataforma) cabecalhos['x-futty-plataforma'] = plataforma;
   const corpo = req.postDataBuffer();
   const r = await fetch(`${base}${url.pathname}${url.search}`, { method: req.method(), headers: cabecalhos, body: corpo && !['GET', 'HEAD'].includes(req.method()) ? corpo : undefined, redirect: 'manual' });
   const saida = { ...cors };
@@ -124,7 +128,7 @@ async function abrirContexto(navegador, baseDoVite, dados, quem) {
   await ctx.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     try {
-      if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base);
+      if (url.pathname.startsWith('/api/')) return await aoMotor(route, dados.base, plataformaDe(quem));
       if (url.host === origemDoVite) {
         if (/purchases-capacitor/.test(url.pathname) && /\.js$/.test(url.pathname)) return await route.fulfill({ status: 200, contentType: 'text/javascript', body: SDK_DE_MENTIRA });
         return await route.continue();
@@ -147,13 +151,13 @@ export async function rodar({ navegador, base, t }) {
   const comprasFeitas = (page) => page.evaluate(() => window.__loja || []);
 
   try {
-    // O motor: o Pedro é testador, o Zé não; a loja está aberta para todos.
+    // O motor: a loja está aberta para todos, e ninguém é "testador".
     const lerEstado = async (quem) => (await fetch(`${dados.base}/api/brilhantes/estado`, { headers: { authorization: `Bearer ${dados.tokens[quem]}` } })).json();
     const doPedro = await lerEstado('adm');
     const doZe = await lerEstado('ze');
-    t('o motor diz: loja aberta para os dois; testador_loja só para o Pedro', doPedro.loja_pronta === true && doZe.loja_pronta === true && doPedro.testador_loja === true && doZe.testador_loja === false, JSON.stringify({ p: [doPedro.loja_pronta, doPedro.testador_loja], z: [doZe.loja_pronta, doZe.testador_loja] }));
+    t('o motor diz: loja aberta para os dois; o /estado não fala de testador', doPedro.loja_pronta === true && doZe.loja_pronta === true && !('testador_loja' in doPedro) && !('testador_loja' in doZe), JSON.stringify({ p: doPedro.loja_pronta, z: doZe.loja_pronta }));
 
-    // ── O testador: a compra falha ──
+    // ── O Pedro: a compra falha ──
     const pedro = await abrirContexto(navegador, base, dados, 'adm');
     const page = await pedro.ctx.newPage();
     page.on('pageerror', (e) => { if (!/plugin is not implemented/.test(e.message)) pedro.estado.erros.push(e.message); });
@@ -170,10 +174,7 @@ export async function rodar({ navegador, base, t }) {
     t('a compra foi pelo PACOTE da oferta (purchasePackage) e não pelo produto solto', compras.length === 1 && compras[0].metodo === 'purchasePackage', JSON.stringify(compras.map((c) => c.metodo)));
     t('o pacote vai inteiro: identifier "minha", presentedOfferingContext da oferta default e o produto futty_minha', compras[0]?.arg?.aPackage?.identifier === 'minha' && compras[0]?.arg?.aPackage?.presentedOfferingContext?.offeringIdentifier === 'default' && compras[0]?.arg?.aPackage?.product?.identifier === 'futty_minha', JSON.stringify(compras[0]?.arg));
 
-    const detalhe = page.locator('[data-toast-detalhe]');
-    t('o testador lê a linha pequena: code 2 · readableErrorCode STORE_PROBLEM · underlyingErrorMessage …', (await detalhe.count()) === 1 && /^code: 2 · readableErrorCode: STORE_PROBLEM · underlyingErrorMessage: The operation couldn’t be completed\. \(SKErrorDomain error 0\.\)$/.test((await detalhe.innerText()).trim()), await detalhe.count() ? await detalhe.innerText() : 'sem linha');
-    const tamanho = await detalhe.evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
-    t('a linha é pequena (≤ 11 px) e fica abaixo da mensagem', tamanho <= 11 && await page.evaluate(() => { const a = document.querySelector('.futty-toast__texto').getBoundingClientRect(); const d = document.querySelector('[data-toast-detalhe]').getBoundingClientRect(); return d.top >= a.bottom - 1; }), `fonte ${tamanho}px`);
+    t('nenhuma linha técnica embaixo do recado (nem o STORE_PROBLEM)', (await page.locator('[data-toast-detalhe]').count()) === 0 && !(await aviso.innerText()).includes('STORE_PROBLEM'), await aviso.innerText());
 
     const botoes = aviso.locator('button');
     t('o aviso tem UM botão só, "Fechar" — nenhum "Tentar de novo"', (await botoes.count()) === 1 && (await botoes.first().innerText()).trim() === 'Fechar' && !(await aviso.innerText()).includes('Tentar de novo'), await botoes.allInnerTexts().then((x) => x.join('|')));
@@ -181,12 +182,12 @@ export async function rodar({ navegador, base, t }) {
     t('o botão é neutro (cinza translúcido, texto claro), não vermelho', /futty-toast__acao--neutra/.test(estiloBotao.classe) && estiloBotao.fundo === 'rgba(255, 255, 255, 0.1)', JSON.stringify(estiloBotao));
     const caixa = await aviso.evaluate((e) => { const b = e.getBoundingClientRect(); return { esq: b.left, dir: b.right, topo: b.top, base: b.bottom, largura: window.innerWidth, altura: window.innerHeight, lateral: document.documentElement.scrollWidth > window.innerWidth }; });
     t('o aviso cabe na tela e a página não rola para o lado', caixa.esq >= 0 && caixa.dir <= caixa.largura && caixa.topo >= 0 && caixa.base <= caixa.altura && !caixa.lateral, JSON.stringify(caixa));
-    await foto(page, '1-erro-testador-390');
+    await foto(page, '1-erro-390');
 
     // Tocar no texto não fecha (dá para selecionar e copiar); só o botão fecha.
     await aviso.locator('.futty-toast__texto').click();
     await page.waitForTimeout(400);
-    t('tocar no texto do aviso não o fecha (o testador pode copiar a linha)', (await aviso.count()) === 1);
+    t('tocar no texto do aviso não o fecha (dá para copiar o recado)', (await aviso.count()) === 1);
     await botoes.first().click();
     await page.waitForTimeout(500);
     t('"Fechar" fecha de verdade: o aviso some', (await page.locator('.futty-toast').count()) === 0);
@@ -216,10 +217,10 @@ export async function rodar({ navegador, base, t }) {
     t('a tela de Planos não rola para o lado', !(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)));
     await page.getByText('Mais figurinhas pro seu time').first().scrollIntoViewIfNeeded();
     await foto(page, '2-pacote-ja-ativo-390');
-    t('sem erro de página (testador) e nada saiu da máquina', pedro.estado.erros.length === 0, pedro.estado.erros.slice(0, 3).join(' | '));
+    t('sem erro de página (Pedro) e nada saiu da máquina', pedro.estado.erros.length === 0, pedro.estado.erros.slice(0, 3).join(' | '));
     await pedro.ctx.close();
 
-    // ── Quem NÃO é testador, com a loja aberta para todos: o mesmo aviso, sem a linha técnica ──
+    // ── O Zé, com a loja aberta para todos: o mesmo aviso ──
     const ze = await abrirContexto(navegador, base, dados, 'ze');
     const paginaDele = await ze.ctx.newPage();
     paginaDele.on('pageerror', (e) => { if (!/plugin is not implemented/.test(e.message)) ze.estado.erros.push(e.message); });
@@ -230,12 +231,12 @@ export async function rodar({ navegador, base, t }) {
     await botaoDele.click();
     const avisoDele = paginaDele.locator('.futty-toast[role="alert"]');
     await avisoDele.waitFor({ timeout: 15000 });
-    t('quem não é testador vê o mesmo recado e "Fechar", e NENHUMA linha técnica', (await avisoDele.innerText()).includes('A loja não respondeu. Tente de novo.') && (await paginaDele.locator('[data-toast-detalhe]').count()) === 0 && !(await avisoDele.innerText()).includes('STORE_PROBLEM') && (await avisoDele.locator('button').first().innerText()).trim() === 'Fechar');
-    await foto(paginaDele, '3-erro-nao-testador-390');
+    t('o Zé vê o mesmo recado e "Fechar", e NENHUMA linha técnica', (await avisoDele.innerText()).includes('A loja não respondeu. Tente de novo.') && (await paginaDele.locator('[data-toast-detalhe]').count()) === 0 && !(await avisoDele.innerText()).includes('STORE_PROBLEM') && (await avisoDele.locator('button').first().innerText()).trim() === 'Fechar');
+    await foto(paginaDele, '3-erro-ze-390');
     await avisoDele.locator('button').first().click();
     await paginaDele.waitForTimeout(500);
     t('e o "Fechar" dele também fecha', (await paginaDele.locator('.futty-toast').count()) === 0);
-    t('sem erro de página (não testador)', ze.estado.erros.length === 0, ze.estado.erros.slice(0, 3).join(' | '));
+    t('sem erro de página (Zé)', ze.estado.erros.length === 0, ze.estado.erros.slice(0, 3).join(' | '));
     await ze.ctx.close();
   } finally {
     const rede = await encerrarMotor(filho);
