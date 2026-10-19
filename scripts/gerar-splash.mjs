@@ -91,7 +91,7 @@ const mestre = await sharp(sobre, { raw: { width: LADO, height: LADO, channels: 
 const paleta = await sharp(mestre).png({ palette: true, quality: 100, colours: 256, dither: 1.0, compressionLevel: 9 }).toBuffer();
 {
   const meta = await sharp(paleta).metadata();
-  if (!meta.paletteBitDepth) throw new Error('o splash do iPhone não saiu em paleta');
+  if (!meta.isPalette) throw new Error('o splash do iPhone não saiu em paleta');
   const { data } = await sharp(paleta).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   for (const i of [0, (LADO * LADO - 1) * 3, (LADO * (LADO / 2)) * 3]) if (data[i] !== FUNDO || data[i + 1] !== FUNDO || data[i + 2] !== FUNDO) throw new Error('a paleta mexeu na cor do fundo (#080808)');
 }

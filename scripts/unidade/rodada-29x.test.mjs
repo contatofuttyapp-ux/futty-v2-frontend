@@ -68,7 +68,7 @@ test('29X · splash do iPhone: as 6 imagens do Splash.imageset são o F ouro viv
     const arquivo = `${IOS_SPLASH}/${nome}`;
     const meta = await sharp(path.join(RAIZ, arquivo)).metadata();
     assert.equal(`${meta.width}x${meta.height}`, '2732x2732', `${nome} mede 2732×2732 (1366 pt @2x, como o storyboard)`);
-    assert.ok(meta.paletteBitDepth, `${nome} está em paleta, como antes`);
+    assert.ok(meta.isPalette, `${nome} está em paleta, como antes`);
     assert.equal(meta.hasAlpha, false, `${nome} não tem canal alfa`);
   }
   const img = await rgba(path.join(RAIZ, `${IOS_SPLASH}/${nomes[0]}`));
@@ -95,7 +95,7 @@ test('29X · splash do Android abaixo do 12: o splash_logo.png de cada densidade
     assert.ok(Math.abs(f.altura - 117 * escala) <= 2, `${arquivo}: o F mede ${f.altura} px de altura (117 dp × ${escala}: o mesmo tamanho físico de antes)`);
     assert.ok(Math.abs(f.cx - img.w / 2) <= 1.5 && Math.abs(f.cy - img.h / 2) <= 1.5, `${arquivo}: o F está no centro (gravity="center" do splash.xml)`);
     assert.ok(f.faixa > 50, `${arquivo}: o F é o ouro vivo, com degradê (faixa de luz ${f.faixa.toFixed(0)})`);
-    assert.ok((await sharp(path.join(RAIZ, arquivo)).metadata()).paletteBitDepth, `${arquivo} está em paleta (app leve)`);
+    assert.ok((await sharp(path.join(RAIZ, arquivo)).metadata()).isPalette, `${arquivo} está em paleta (app leve)`);
   }
   assert.equal(sha256(`${RES}/drawable/splash_logo.png`), sha256(`${RES}/drawable-xhdpi/splash_logo.png`), 'o drawable/ sem sufixo é o xhdpi, como era');
   // o desenho do splash não mudou: a cor sólida da casa e o logo centrado sem escalar
