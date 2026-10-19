@@ -3,6 +3,7 @@ import BarraPintura from '../../components/BarraPintura';
 import FuttyLoader from '../../components/FuttyLoader';
 import FuttyLogo from '../../components/FuttyLogo';
 import { CLIP_OCTOGONO, RECADO_FOTO_RECUSADA } from './constantes';
+import { avisoCentrado, botaoDoAviso, logoApagado } from './estilos';
 
 export default function OverlayGerando({ erroIA, erroIAmsg, escolherOutraFoto, fotoRecusada, gerarAvatarIA, lojaLigada, navigate, pintura, semGeracoes, setErroIA, setSemGeracoes, situacaoPintura }) {
   return (
@@ -10,11 +11,11 @@ export default function OverlayGerando({ erroIA, erroIAmsg, escolherOutraFoto, f
       {erroIA && semGeracoes && lojaLigada ? (
         // P2 — as gerações acabaram e a loja está ligada: tentar de novo daria o mesmo 403, então o
         // caminho é comprar mais (Planos, Minha Figurinha em destaque). "Agora não" só fecha.
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
-          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
+        <div style={avisoCentrado}>
+          <span style={logoApagado}><FuttyLogo variant="metallic" size={64} /></span>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Suas gerações acabaram. Comprar mais?</span>
           <span className="cta-gold-glow" style={{ display: 'flex' }}>
-            <button type="button" className="btn hud-corners cta-gold" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={() => navigate('/planos?destaque=minha')}>
+            <button type="button" className="btn hud-corners cta-gold" style={botaoDoAviso} onClick={() => navigate('/planos?destaque=minha')}>
               Comprar mais
             </button>
           </span>
@@ -25,23 +26,23 @@ export default function OverlayGerando({ erroIA, erroIAmsg, escolherOutraFoto, f
       ) : erroIA && fotoRecusada ? (
         // A cabeça cortou nas duas tentativas com ESTA foto. Tentar de novo daria o mesmo: o recado leva a
         // outra foto.
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
-          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
+        <div style={avisoCentrado}>
+          <span style={logoApagado}><FuttyLogo variant="metallic" size={64} /></span>
           <div style={{ display: 'grid', gap: 10, maxWidth: '30ch' }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{RECADO_FOTO_RECUSADA.titulo}</span>
             <span style={{ fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)' }}>{RECADO_FOTO_RECUSADA.corpo}</span>
           </div>
-          <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={escolherOutraFoto}>
+          <button type="button" className="btn btn--purple hud-corners" style={botaoDoAviso} onClick={escolherOutraFoto}>
             Escolher outra foto
           </button>
         </div>
       ) : erroIA ? (
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 12, padding: 16, textAlign: 'center' }}>
+        <div style={avisoCentrado}>
           {/* LEI DO F: logo oficial transparente (FuttyLogo SVG), estático no erro.
               O antigo /futty-logo-metallic.png (fundo preto sólido) está BANIDO. */}
-          <span style={{ opacity: 0.55, lineHeight: 0 }}><FuttyLogo variant="metallic" size={64} /></span>
+          <span style={logoApagado}><FuttyLogo variant="metallic" size={64} /></span>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{erroIAmsg || 'Não deu desta vez. Tente de novo.'}</span>
-          <button type="button" className="btn btn--purple hud-corners" style={{ height: 38, paddingLeft: 16, paddingRight: 16, fontSize: 13 }} onClick={gerarAvatarIA}>
+          <button type="button" className="btn btn--purple hud-corners" style={botaoDoAviso} onClick={gerarAvatarIA}>
             Tentar novamente
           </button>
         </div>

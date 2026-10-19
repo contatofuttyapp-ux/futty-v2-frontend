@@ -54,6 +54,7 @@ import OverlayGerando from './figurinha/OverlayGerando';
 import GradeDeUniformes from './figurinha/GradeDeUniformes';
 import { useTilesDosFundos } from './figurinha/useTilesDosFundos';
 import { useSelosDaFigurinha } from './figurinha/useSelosDaFigurinha';
+import { losangoDoCanto } from './figurinha/estilos';
 
 export default function Figurinha() {
   const navigate = useNavigate();
@@ -659,7 +660,7 @@ export default function Figurinha() {
               dia aparecer um terceiro — mensagem digna, nunca "limite do mês" (não há limite mensal). */}
           {limiteIA ? (
             <div className="hud-corners" style={{ position: 'relative', background: 'linear-gradient(180deg, #14121c, #0b0a12)', border: '1px solid rgba(212,160,23,0.35)', padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center' }}>
-              <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
+              <span aria-hidden="true" style={losangoDoCanto} />
               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.04em', color: '#fff' }}>Não deu para gerar agora</span>
               <Link to="/planos" className="btn btn--purple hud-corners" style={{ marginTop: 4, height: 38, paddingLeft: 18, paddingRight: 18, fontSize: 13, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
                 Ver Figurinhas

@@ -4,11 +4,12 @@ import { ShoppingBag } from 'lucide-react';
 import { urlAsset } from '../../utils/avatar';
 import { MINHA_GERACOES, PACOTE_DE_PRESENTE, PACOTE_GERACOES_POR_JOGADOR, PACOTE_JOGADORES } from '../../lib/planos';
 import { CLIP_OCTOGONO } from './constantes';
+import { botaoDaLoja, losangoDoCanto } from './estilos';
 
 export default function CartaoDaLoja({ brilhante, lojaConvida, lojaLigada, meuTimeBrilhante, navigate, pacoteDoTimeAtivo, pedidoVivo, recadoPedido, textoDoConvite }) {
   return (
           <div data-cartao-loja className="hud-corners" style={{ position: 'relative', background: 'rgba(255, 255, 255, 0.03)', border: '1.2px solid rgba(212,160,23,0.5)', boxShadow: '0 0 14px rgba(212,160,23,0.18)', padding: '16px', display: 'grid', gap: 12 }}>
-              <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 1, transform: 'rotate(45deg)', background: 'linear-gradient(135deg, #f5e070, #d4a017)' }} />
+              <span aria-hidden="true" style={losangoDoCanto} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 {lojaConvida ? (
                   <img
@@ -59,7 +60,7 @@ export default function CartaoDaLoja({ brilhante, lojaConvida, lojaLigada, meuTi
                         type="button"
                         data-loja-comprar="minha"
                         className="btn hud-corners cta-gold"
-                        style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
+                        style={botaoDaLoja}
                         onClick={() => navigate('/planos?destaque=minha')}
                       >
                         {textoDoConvite('minha')}
@@ -85,7 +86,7 @@ export default function CartaoDaLoja({ brilhante, lojaConvida, lojaLigada, meuTi
                             data-convite-pacote={pacoteDoTimeAtivo ? 'presente' : 'novo'}
                             data-loja-comprar="pacote"
                             className="btn hud-corners cta-gold"
-                            style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
+                            style={botaoDaLoja}
                             onClick={() => navigate('/planos?destaque=pacote')}
                           >
                             {textoDoConvite('pacote', { presente: pacoteDoTimeAtivo })}
@@ -103,7 +104,7 @@ export default function CartaoDaLoja({ brilhante, lojaConvida, lojaLigada, meuTi
                           <button
                             type="button"
                             className="btn hud-corners cta-gold"
-                            style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }}
+                            style={botaoDaLoja}
                             onClick={() => navigate(`/planos?uniforme=${meuTimeBrilhante.id}`)}
                           >
                             Escolher o uniforme do time
@@ -117,7 +118,7 @@ export default function CartaoDaLoja({ brilhante, lojaConvida, lojaLigada, meuTi
                 // O estado da loja ainda não chegou: um caminho honesto até ela, em vez de um botão que poderia dizer "Pedir"
                 // e virar "Comprar" um instante depois.
                 <span className="cta-gold-glow" style={{ display: 'flex' }}>
-                  <button type="button" data-loja-comprar="ver" className="btn hud-corners cta-gold" style={{ flex: 1, fontSize: 12.5, lineHeight: 1.3 }} onClick={() => navigate('/planos')}>
+                  <button type="button" data-loja-comprar="ver" className="btn hud-corners cta-gold" style={botaoDaLoja} onClick={() => navigate('/planos')}>
                     Ver a loja
                   </button>
                 </span>
