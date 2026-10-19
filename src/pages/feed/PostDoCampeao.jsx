@@ -8,7 +8,7 @@ import { linhaDaFinalDoPost } from '../../utils/campeonatoPlacar';
 import { tituloDoPostDoCampeao } from '../../utils/campeonatoInicio';
 import Reacoes from '../../components/Reacoes';
 import Comentarios from '../../components/Comentarios';
-import { BORDA_VIDRO, CARD } from './comum';
+import { apoioForte, BORDA_VIDRO, CARD, rodapeDoCartao, rotuloComIcone } from './comum';
 import { ComentariosResumo, FeedAvatar } from './pecas';
 
 // ─── Card do CAMPEÃO DO CAMPEONATO ─────────────────────────────────────────────────
@@ -27,7 +27,7 @@ export function PostDoCampeao({ p, isAdmin, teamSlug, index = 0 }) {
     <>
       <div style={{ padding: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--neon)', letterSpacing: '0.04em' }}>
-          <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>{haQuantoTempo(p.created_at)}</span>
+          <span style={apoioForte}>{haQuantoTempo(p.created_at)}</span>
         </div>
         <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>{p.team_name || 'Time'}</div>
       </div>
@@ -35,7 +35,7 @@ export function PostDoCampeao({ p, isAdmin, teamSlug, index = 0 }) {
         <div className="feed-cromo-sway">
           <div data-campeao-do-campeonato style={{ padding: 14, borderTop: BORDA_VIDRO, background: 'linear-gradient(135deg, rgba(212,160,23,0.12), rgba(139,92,246,0.08))' }}>
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', color: '#f0c94a', textTransform: 'uppercase' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Trophy size={14} aria-hidden="true" />Campeão</span>
+              <span style={rotuloComIcone}><Trophy size={14} aria-hidden="true" />Campeão</span>
             </div>
             <div data-titulo-do-post-campeao style={{ marginTop: 8, fontSize: 16, fontWeight: 800, color: '#fff', lineHeight: 1.35 }}>
               {titulo.time}<span style={{ color: '#c9b6ff', fontWeight: 700 }}> · {titulo.campeonato}</span>
@@ -72,7 +72,7 @@ export function PostDoCampeao({ p, isAdmin, teamSlug, index = 0 }) {
   return (
     <div className="anim-slide-in feed-card" data-post-do-campeao style={{ ...CARD, animationDelay: `${index * 0.06}s` }}>
       {teamSlug && c.campeonato_id ? <Link to={`/time/${teamSlug}/campeonato/${c.campeonato_id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>{corpo}</Link> : corpo}
-      <div style={{ padding: '12px 14px', borderTop: BORDA_VIDRO }}>
+      <div style={rodapeDoCartao}>
         <Reacoes targetType="post" targetId={p.id} contagemInicial={p.contagem_reacoes} minhaReacaoInicial={p.minha_reacao} compacto />
       </div>
       <ComentariosResumo

@@ -11,7 +11,7 @@ import ImagemDoPost from '../../components/ImagemDoPost';
 import DenunciaModal from '../../components/DenunciaModal';
 import Toast from '../../components/Toast';
 import { detectarVideoLink } from './videoLink';
-import { BORDA_VIDRO, CARD, iconBtn } from './comum';
+import { BORDA_VIDRO, CARD, iconBtn, rodapeDoCartao } from './comum';
 import { ComentariosResumo, FeedAvatar, LinkVitrine } from './pecas';
 import { VideoLinkCard } from './VideoLinkCard';
 
@@ -168,7 +168,7 @@ function PostCard({ p, podeApagar, isAdmin, teamSlug, meId, onDelete, onOpenImag
       ) : null}
 
       {/* C) REAÇÕES */}
-      <div style={{ padding: '12px 14px', borderTop: BORDA_VIDRO }}>
+      <div style={rodapeDoCartao}>
         <Reacoes targetType="post" targetId={p.id} contagemInicial={p.contagem_reacoes} minhaReacaoInicial={p.minha_reacao} compacto />
       </div>
 

@@ -11,7 +11,7 @@ import Icon from '../../components/Icon';
 import Reacoes from '../../components/Reacoes';
 import Comentarios from '../../components/Comentarios';
 import ImagemDoPost from '../../components/ImagemDoPost';
-import { BORDA_VIDRO, CARD, COR_ARTILHEIRO, COR_DESTAQUE, dataExtensa, horaDe, timeCampeao } from './comum';
+import { apoioForte, BORDA_VIDRO, CARD, COR_ARTILHEIRO, COR_DESTAQUE, dataExtensa, horaDe, rodapeDoCartao, rotuloComIcone, timeCampeao } from './comum';
 import { ComentariosResumo, FeedAvatar, PremioRow } from './pecas';
 
 // ─── Card de JOGO ──────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
         <div style={{ paddingRight: 80 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--neon)', letterSpacing: '0.04em' }}>
             {dataExtensa(j.date, j.fuso)} · {horaDe(j.date, j.fuso)} ·{' '}
-            <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>{haQuantoTempo(j.date)}</span>
+            <span style={apoioForte}>{haQuantoTempo(j.date)}</span>
           </div>
           <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>
             {[j.team_name, j.location].filter(Boolean).join(' · ') || 'Jogo'}
@@ -95,7 +95,7 @@ export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', color: 'var(--neon)', textTransform: 'uppercase' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={rotuloComIcone}>
                       <Icon name="medalha" size={14} />
                       Time campeão
                     </span>
@@ -137,7 +137,7 @@ export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', color: 'var(--neon)', textTransform: 'uppercase' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={rotuloComIcone}>
                       <Handshake size={14} aria-hidden="true" />
                       Empate
                     </span>
@@ -191,7 +191,7 @@ export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
       ) : null}
 
       {/* G) REAÇÕES */}
-      <div style={{ padding: '12px 14px', borderTop: BORDA_VIDRO }}>
+      <div style={rodapeDoCartao}>
         <Reacoes targetType="game" targetId={j.id} contagemInicial={j.contagem_reacoes} minhaReacaoInicial={j.minha_reacao} compacto />
       </div>
 

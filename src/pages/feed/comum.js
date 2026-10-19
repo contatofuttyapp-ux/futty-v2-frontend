@@ -57,4 +57,12 @@ const linkBtn = {
   cursor: 'pointer',
 };
 
-export { BORDA_VIDRO, CARD, CLIP_CARD, COR_ARTILHEIRO, COR_DESTAQUE, dataExtensa, horaDe, iconBtn, linkBtn, timeCampeao };
+// Os estilos que se repetem iguais em mais de um cartão.
+// O rodapé do cartão (reações e comentários), separado pelo vidro.
+const rodapeDoCartao = { padding: '12px 14px', borderTop: BORDA_VIDRO };
+// Um rótulo com o ícone colado à esquerda.
+const rotuloComIcone = { display: 'flex', alignItems: 'center', gap: 6 };
+// O "há 5 h" e os gols, apagados mas em negrito.
+const apoioForte = { color: 'var(--text-dim)', fontWeight: 700 };
+
+export { apoioForte, BORDA_VIDRO, CARD, CLIP_CARD, COR_ARTILHEIRO, COR_DESTAQUE, dataExtensa, horaDe, iconBtn, linkBtn, rodapeDoCartao, rotuloComIcone, timeCampeao };

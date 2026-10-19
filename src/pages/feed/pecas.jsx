@@ -6,7 +6,7 @@ import { assetUrl } from '../../lib/api';
 import { urlImagem } from '../../utils/avatar';
 import { contar } from '../../utils/plural';
 import SilhuetaJogador from '../../components/SilhuetaJogador';
-import { linkBtn } from './comum';
+import { apoioForte, linkBtn } from './comum';
 
 // Envolve o que estiver dentro num link para a vitrine do jogador.
 // Sem `teamSlug` ou sem `userId` não há rota possível: devolve o conteúdo cru,
@@ -49,7 +49,7 @@ function PremioRow({ label, labelColor, nome, sub }) {
         </div>
         <div style={{ marginTop: 4, fontFamily: "'Rajdhani', sans-serif", fontSize: 17, fontWeight: 700, color: '#fff' }}>
           {nome}
-          {sub?.gols ? <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}> · {contar(sub.gols, 'gol', 'gols')}</span> : null}
+          {sub?.gols ? <span style={apoioForte}> · {contar(sub.gols, 'gol', 'gols')}</span> : null}
         </div>
         {sub?.titulo ? (
           <div style={{ marginTop: 2, fontSize: 13, color: 'var(--text-dim)', fontStyle: 'italic' }}>{sub.titulo}</div>
