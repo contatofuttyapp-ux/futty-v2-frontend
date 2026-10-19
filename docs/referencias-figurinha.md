@@ -1,5 +1,8 @@
 # Referências da Figurinha — few-shot do Olheiro (v3)
 
+> **O Olheiro não existe mais no motor** (era código que ninguém chamava; saiu do backend em 19-out-2026 — está no histórico do git,
+> `utils/olheiroFigurinha.js` e `utils/figurinhaPromptV3.js`). Este arquivo fica só como registro dos exemplos pensados para ele.
+
 Este ficheiro guarda os prompts/exemplos canônicos que o Olheiro (`backend/utils/olheiroFigurinha.js`)
 deveria usar como few-shot dentro das próprias instruções — exemplos concretos de como
 descrever `preserve`/`pose`/`vibe_words` para um sujeito real, para calibrar o "olho" do
