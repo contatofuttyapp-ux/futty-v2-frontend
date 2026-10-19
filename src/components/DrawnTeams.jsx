@@ -31,8 +31,9 @@ function NomeDaLinha({ jogador, aoAssociar }) {
  * @param {object} props.resultado  o times_resultado do jogo (o número de cada jogador aparece na régua de 0 a 10, mesmo no sorteio antigo)
  * @param {string} [props.teamCor]
  * @param {(jogador: object) => void} [props.aoAssociar]  só o admin passa: aparece o botão "Associar jogador" ao lado de cada convidado sem app
+ * @param {boolean} [props.semReservas]  o jogo já aconteceu: "Banco de reservas" e "Próximo a entrar" não dizem mais nada
  */
-export default function DrawnTeams({ resultado: guardado, teamCor, aoAssociar }) {
+export default function DrawnTeams({ resultado: guardado, teamCor, aoAssociar, semReservas = false }) {
   const resultado = sorteioNaReguaDe10(guardado);
   if (!resultado?.times?.length) return null;
   const c = colorOf(teamCor);
@@ -46,7 +47,7 @@ export default function DrawnTeams({ resultado: guardado, teamCor, aoAssociar })
 
   // Não mostrar o aviso de "nenhum goleiro marcado" (mesmo em sorteios antigos)
   const avisos = (resultado.avisos || []).filter((a) => !/nenhum goleiro marcado/i.test(a));
-  const reservas = resultado.reservas || [];
+  const reservas = semReservas ? [] : resultado.reservas || [];
 
   return (
     <>

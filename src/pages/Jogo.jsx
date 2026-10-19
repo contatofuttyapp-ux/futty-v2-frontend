@@ -663,7 +663,7 @@ export default function Jogo() {
                     {/* Vista oficial (a única) — o modo Campo era protótipo abortado de
                         cartaz alternativo; morreu aqui. Modelos alternativos futuros =
                         SPEC-SORTEIO, desenhados pelo Fable quando o dono pedir. */}
-                    <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} aoAssociar={isAdmin ? setAssociando : undefined} />
+                    <DrawnTeams resultado={game.times_resultado} teamCor={team?.cor} aoAssociar={isAdmin ? setAssociando : undefined} semReservas={terminado} />
                     {isAdmin ? (
                       <AssociacoesRecentes
                         gameId={id}

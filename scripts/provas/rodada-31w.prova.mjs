@@ -134,6 +134,7 @@ const FORA_DO_TERMINADO = [
   ['Jogadores por time', /Jogadores por time/i], ['"faltam … jogadores"', /faltam \d+ jogador/i], ['Alguém sem o app vai jogar?', /sem o app vai jogar/i],
   ['Ajustar times', /Ajustar times/i], ['Sortear de novo', /Sortear de novo/i], ['Montar à mão', /Montar à mão/i], ['Criar campeonato', /Criar campeonato/i],
   ['Trocar os times', /Trocar os times/i], ['O sorteio ainda não foi realizado', /sorteio ainda não foi realizado/i],
+  ['Banco de reservas', /Banco de reservas/i], ['Próximo a entrar', /Próximo a entrar/i],
 ];
 
 export async function rodar({ navegador, base, t }) {
@@ -305,6 +306,7 @@ export async function rodar({ navegador, base, t }) {
       const ea = await abrir(adm, base, `/time/${missa}/jogo/${dados.jogos.emAndamento}`, '.sorteio-team');
       const eaTexto = await textoDe(ea);
       t(`${r} · jogo em andamento (começou há 40 min): continua com presença, confirmados e "Trocar os times"`, /Em andamento/i.test(eaTexto) && /Sua presença/i.test(eaTexto) && /Confirmados · 8/i.test(eaTexto) && /Trocar os times/i.test(eaTexto), eaTexto.slice(0, 300));
+      t(`${r} · jogo em andamento: o "Banco de reservas" continua, com o Jefim "Próximo a entrar"`, /Banco de reservas/i.test(eaTexto) && /Jefim/.test(eaTexto) && /Próximo a entrar/i.test(eaTexto), eaTexto.slice(-300));
       t(`${r} · sem erro de página (admin)`, adm.estado.erros.length === 0, adm.estado.erros.slice(0, 3).join(' | '));
       await adm.ctx.close();
 

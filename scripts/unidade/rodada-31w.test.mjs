@@ -69,8 +69,9 @@ test('jogo terminado: presença, confirmados e o sorteio ficam de fora; resultad
   assert.match(jogo, /!editando && !terminado && \(/, 'Ajustar times');
   assert.match(jogo, /confirmacao !== 'campeonato' && !terminado && \(/, 'Criar campeonato');
   assert.match(jogo, /!montando && !terminado && confirmacao !== 're-sorteio'/, 'Trocar os times: Sortear de novo · Montar à mão');
-  // Ficam: os times (com o Associar do admin), o editor do resultado por um link discreto e o Avaliar.
-  assert.match(jogo, /<DrawnTeams resultado=\{game\.times_resultado\} teamCor=\{team\?\.cor\} aoAssociar=\{isAdmin \? setAssociando : undefined\} \/>/);
+  // Ficam: os times (com o Associar do admin, sem o banco de reservas), o editor do resultado por um link discreto e o Avaliar.
+  assert.match(jogo, /<DrawnTeams resultado=\{game\.times_resultado\} teamCor=\{team\?\.cor\} aoAssociar=\{isAdmin \? setAssociando : undefined\} semReservas=\{terminado\} \/>/);
+  assert.match(ler('src/components/DrawnTeams.jsx'), /const reservas = semReservas \? \[\] : resultado\.reservas \|\| \[\];/, 'jogo terminado: sem "Banco de reservas" nem "Próximo a entrar"');
   assert.match(jogo, /data-corrigir-resultado/);
   assert.match(jogo, /\{resultadoDoJogo \? 'Corrigir o resultado' : 'Lançar o resultado'\}/);
   assert.match(jogo, /\(!terminado \|\| editandoResultado\)/);
