@@ -62,12 +62,12 @@ const RADAR = [
   { id: 'E4', slug: 'fut-park-way', nome: 'Fut de Domingo Park Way', cidade: 'Brasília, DF', bairro: 'Park Way', membro_count: 9, modo_visibilidade: 'publico_aberto', ja_membro: false, pedido_pendente: false },
 ];
 
-// O Ranking: pontos e nota CHEIOS de casa decimal, o top-3 (letras maiores, o pior caso), o goleiro, quem já votei (4.5 estrelas) e quem não.
+// O Ranking: pontos e nota CHEIOS de casa decimal, o top-3 (letras maiores, o pior caso), o goleiro, quem já votei (9 e 10, na régua de 0 a 10) e quem não.
 const RANKING = [
   { posicao: 1, user_id: 'U1', nome: 'Bruninho', nome_jogador: 'Bruninho', avatar_url: null, categoria: 'JG', score: 77.9, nota: 9.1, minha_nota: null, sou_eu: true },
-  { posicao: 2, user_id: 'U2', nome: 'Cabeção', nome_jogador: 'Cabeção', avatar_url: null, categoria: 'GR', score: 71.84, nota: 7.8, minha_nota: 4.5, sou_eu: false },
-  { posicao: 3, user_id: 'U3', nome: 'Dudu', nome_jogador: 'Dudu', avatar_url: null, categoria: 'JG', score: 70.65, nota: 10, minha_nota: 5, sou_eu: false },
-  { posicao: 4, user_id: 'U4', nome: 'Tiãozinho', nome_jogador: 'Tiãozinho', avatar_url: null, categoria: 'JG', score: 63.6, nota: 9.4, minha_nota: 4.5, sou_eu: false },
+  { posicao: 2, user_id: 'U2', nome: 'Cabeção', nome_jogador: 'Cabeção', avatar_url: null, categoria: 'GR', score: 71.84, nota: 7.8, minha_nota: 9, sou_eu: false },
+  { posicao: 3, user_id: 'U3', nome: 'Dudu', nome_jogador: 'Dudu', avatar_url: null, categoria: 'JG', score: 70.65, nota: 10, minha_nota: 10, sou_eu: false },
+  { posicao: 4, user_id: 'U4', nome: 'Tiãozinho', nome_jogador: 'Tiãozinho', avatar_url: null, categoria: 'JG', score: 63.6, nota: 9.4, minha_nota: 9, sou_eu: false },
   { posicao: 5, user_id: 'U5', nome: 'Fabinho', nome_jogador: 'Fabinho', avatar_url: null, categoria: 'JG', score: 61.4, nota: null, minha_nota: null, sou_eu: false },
   { posicao: 6, user_id: 'U6', nome: 'Paulinho Gaúcho', nome_jogador: 'Paulinho Gaúcho', avatar_url: null, categoria: 'JG', score: 100, nota: 6.5, minha_nota: null, sou_eu: false },
 ];
@@ -168,20 +168,20 @@ export async function rodar({ navegador, base, t }) {
     await assentar(page);
     const corpo = await page.locator('.rank-list').innerText();
     t('Ranking: "77,9 pontos" e "nota 9,1" (era "77.9" e "9.1")', /77,9\s*pontos/.test(corpo) && /nota\s*9,1/.test(corpo), corpo.slice(0, 200));
-    t('Ranking: os pontos têm uma casa e vírgula em todas as linhas (71,8 · 70,7 · 63,6 · 100,0), a nota 10 sai "10,0"', /71,8\s*pontos/.test(corpo) && /70,7\s*pontos/.test(corpo) && /63,6\s*pontos/.test(corpo) && /100,0\s*pontos/.test(corpo) && /nota\s*10,0/.test(corpo), corpo);
+    t('Ranking: os pontos têm uma casa e vírgula em todas as linhas (71,8 · 70,7 · 63,6 · 100,0), a nota 10 sai "10" (sem casa quando é inteira)', /71,8\s*pontos/.test(corpo) && /70,7\s*pontos/.test(corpo) && /63,6\s*pontos/.test(corpo) && /100,0\s*pontos/.test(corpo) && /nota\s*10(?![,\d])/.test(corpo), corpo);
     t('Ranking: nenhum número com ponto decimal no texto da tela', defeitos(await page.evaluate(medir, 360), ['numero-com-ponto']).length === 0, defeitos(await page.evaluate(medir, 360), ['numero-com-ponto']).join(' | '));
     await imagem(page, 'ranking-360');
     t('Ranking: sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }
   {
-    // Largo (tablet, janela do navegador): o "você deu / por votar" aparece, e com vírgula (4,5, não 4.5).
+    // Largo (tablet, janela do navegador): o "você deu / falta seu voto" aparece, com a nota de 0 a 10.
     const { ctx, page } = await abrir(navegador, base, '/time/missa/ranking', { largura: 700, altura: 900 });
     await page.locator('.rank-list .rank-row').first().waitFor({ timeout: 25000 });
     await assentar(page);
     const corpo = await page.locator('.rank-list').innerText();
-    t('Ranking largo: "★ você deu 4,5" com vírgula (e "você deu 5" sem casa quando fecha redondo)', /você deu 4,5/.test(corpo) && /você deu 5(?![,\d])/.test(corpo) && !/você deu 4\.5/.test(corpo), corpo);
-    t('Ranking largo: o aria-label da meia-estrela diz "4,5 estrelas" quando o voto abre', await (async () => { await page.getByRole('button', { name: 'Alterar' }).first().click(); return page.getByRole('button', { name: '0,5 estrelas' }).first().waitFor({ timeout: 5000 }).then(() => true, () => false); })());
+    t('Ranking largo: "você deu 9" e "você deu 10" (a nota de 0 a 10, sem casa quando é inteira), sem estrela', /você deu 9(?![,\d])/.test(corpo) && /você deu 10(?![,\d])/.test(corpo) && !/[★☆]/.test(corpo), corpo);
+    t('Ranking largo: o voto abre com a nota dada marcada ("Nota 9", aria-checked)', await (async () => { await page.getByRole('button', { name: 'Alterar' }).first().click(); return page.getByRole('radio', { name: 'Nota 9', exact: true }).first().waitFor({ timeout: 5000 }).then(async () => (await page.getByRole('radio', { name: 'Nota 9', exact: true }).first().getAttribute('aria-checked')) === 'true', () => false); })());
     await ctx.close();
   }
   {
@@ -219,7 +219,7 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('[data-membro]').first().waitFor({ timeout: 15000 });
     await assentar(page);
     const corpo = await page.locator('body').innerText();
-    t('Elenco do admin: a média de confirmados sai "13,1" e a nota do membro "★ 8,4" / "★ 9,1"', /13,1/.test(corpo) && /★ 8,4/.test(corpo) && /★ 9,1/.test(corpo), corpo.slice(0, 400));
+    t('Elenco do admin: a média de confirmados sai "13,1" e a nota do membro "nota 8,4" / "nota 9,1"', /13,1/.test(corpo) && /nota 8,4/.test(corpo) && /nota 9,1/.test(corpo), corpo.slice(0, 400));
     t('Elenco do admin: nenhum número com ponto decimal no texto', defeitos(await page.evaluate(medir, 360), ['numero-com-ponto']).length === 0, defeitos(await page.evaluate(medir, 360), ['numero-com-ponto']).join(' | '));
     await ctx.close();
   }

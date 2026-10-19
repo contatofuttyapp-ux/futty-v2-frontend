@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { formatarAte } from '../utils/numero';
+import { sorteioNaReguaDe10 } from '../utils/notaDoSorteio';
 import { comChaves, moverJogador, semChave } from '../utils/editorDeTimes';
 
 const EDITOR_CSS = `
@@ -12,7 +13,9 @@ const EDITOR_CSS = `
 
 const media = (jogadores) => (jogadores.length ? Math.round((jogadores.reduce((s, j) => s + (j.rating || 0), 0) / jogadores.length) * 100) / 100 : 0);
 
-export default function TimesEditor({ gameId, resultadoInicial, confirmados = [], onSaved, onCancel, showToast }) {
+export default function TimesEditor({ gameId, resultadoInicial: guardado, confirmados = [], onSaved, onCancel, showToast }) {
+  // Tudo na régua de 0 a 10: o sorteio antigo (em estrelas) é lido × 2, e o que o editor salva já sai na régua nova (o motor marca o resultado).
+  const resultadoInicial = sorteioNaReguaDe10(guardado);
   // Times + reservas, cada jogador com a sua chave estável (utils/editorDeTimes.js): o convidado sem app não tem
   // user_id, e com ele todo convidado era o mesmo jogador para o editor.
   const [estado, setEstado] = useState(() => comChaves(resultadoInicial));

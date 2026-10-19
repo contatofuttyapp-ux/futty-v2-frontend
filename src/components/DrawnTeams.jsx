@@ -3,6 +3,7 @@ import { Link2, TriangleAlert } from 'lucide-react';
 import { colorOf } from '../utils/teamColors';
 import { nomeDoTimeNaTela } from '../utils/nomeDoTime';
 import { formatarAte } from '../utils/numero';
+import { sorteioNaReguaDe10 } from '../utils/notaDoSorteio';
 import { visaoDoSorteio } from '../utils/seloDoSorteio';
 import { nomeComPonto, temConvidado, TEXTO_SEM_O_APP } from '../utils/marcaConvidado';
 import { TEXTO_BOTAO_ASSOCIAR } from '../utils/associarJogador';
@@ -27,11 +28,12 @@ function NomeDaLinha({ jogador, aoAssociar }) {
 
 /**
  * @param {object} props
- * @param {object} props.resultado  o times_resultado do jogo
+ * @param {object} props.resultado  o times_resultado do jogo (o número de cada jogador aparece na régua de 0 a 10, mesmo no sorteio antigo)
  * @param {string} [props.teamCor]
  * @param {(jogador: object) => void} [props.aoAssociar]  só o admin passa: aparece o botão "Associar jogador" ao lado de cada convidado sem app
  */
-export default function DrawnTeams({ resultado, teamCor, aoAssociar }) {
+export default function DrawnTeams({ resultado: guardado, teamCor, aoAssociar }) {
+  const resultado = sorteioNaReguaDe10(guardado);
   if (!resultado?.times?.length) return null;
   const c = colorOf(teamCor);
   // Como os times foram feitos (sorteado / ajustado / à mão) vem antes dos times: é a primeira coisa a saber deles.

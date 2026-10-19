@@ -1189,8 +1189,7 @@
   );
 }
 /* Nunca mais largo que a tela menos as margens (e as áreas seguras), e nunca mais
-   alto: o que não couber (iPhone deitado) rola por dentro do cartão. As estrelas do
-   voto somam 204 px — cabem até numa tela de 320. */
+   alto: o que não couber (iPhone deitado) rola por dentro do cartão. */
 .modal-card--hud {
   max-width: min(360px, calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
 }
@@ -1199,6 +1198,39 @@
   max-height: calc(100dvh - 36px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* O voto de 0 a 10: onze botões em duas linhas (0 a 5 em cima, 6 a 10 embaixo, centrados), 44 px de altura — cabem
+   até numa tela de 320. O escolhido veste o dourado da casa (como o .chip--active), nunca amarelo chapado. */
+.nota-grade {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.nota-botao {
+  flex: 0 0 calc((100% - 30px) / 6);
+  min-height: 44px;
+  padding: 0;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 19px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nota-botao[aria-checked='true'] {
+  color: #f0c94a;
+  background: rgba(212, 160, 23, 0.16);
+  border-color: #d4a017;
+}
+.nota-botao:focus-visible {
+  outline: none;
+  border-color: var(--neon);
+  background: rgba(139, 92, 246, 0.14);
 }
 
 /* Perfil do jogador */

@@ -95,13 +95,13 @@ test('Ajustes: "Nova temporada de notas" (nunca "Zona de perigo") zera as notas,
   // 29R (achado 150): a única ação de "Ações definitivas" saiu para o cartão próprio; a seção, vazia, saiu junto.
   assert.doesNotMatch(semComentarios(painel), /Ações definitivas|Zona de perigo/);
   assert.match(painel, /pedir-revotacao`, \{ method: 'POST', body: JSON\.stringify\(\{ zerar: true \}\) \}/, 'a chamada ao motor não mudou');
-  assert.match(painel, /<ConfirmModal\s+texto="Começar uma nova temporada\? As notas de todo mundo voltam a zero\. Não dá para desfazer\."/);
+  assert.match(painel, /<ConfirmModal\s+texto="Começar uma nova temporada\? As notas de todo mundo são apagadas\. Não dá para desfazer\."/);
   assert.match(painel, /confirmarLabel="Zerar e começar"/);
   assert.match(painel, /showToast\('Nova temporada aberta\. O time foi avisado para dar as notas\.'\)/);
   for (const secao of ['O time', 'Notificações do admin', 'Avisar o time', 'Denúncias', 'Notas do time']) assert.match(painel, new RegExp(`titulo="${secao}"`), secao);
   // O cartão vem DEPOIS das Denúncias (é o último dos Ajustes), com o texto de apoio da decisão do dono.
   assert.ok(painel.indexOf('titulo="Denúncias"') < painel.indexOf('titulo="Notas do time"'), 'o cartão fica no fim dos Ajustes');
-  assert.match(painel, /Zera as notas e o time avalia todo mundo de novo, do zero\./);
+  assert.match(painel, /Apaga as notas e o time avalia todo mundo de novo\./);
 });
 
 test('150 · a temporada de notas: o botão é o dourado da casa (cta-gold, ícone Star), nunca vermelho; só a confirmação é vermelha', () => {

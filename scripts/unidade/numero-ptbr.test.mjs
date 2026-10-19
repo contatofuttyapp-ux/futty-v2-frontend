@@ -45,12 +45,17 @@ test('formatarAte: até N casas, sem zero à direita (estrelas, média, rating d
   assert.equal(formatarAte(0.5), '0,5');
 });
 
-test('formatarNota e formatarPontos: UMA casa sempre', () => {
+test('formatarNota: a nota de 0 a 10 com uma casa só quando não é inteira ("7,5", "8"); formatarPontos: UMA casa sempre', () => {
   assert.equal(formatarNota(9.1), '9,1');
   assert.equal(formatarNota(9.10), '9,1', 'era "9.10" no Início');
-  assert.equal(formatarNota(10), '10,0');
-  assert.equal(formatarNota(null, 'sem nota ainda'), 'sem nota ainda');
+  assert.equal(formatarNota(7.5), '7,5');
+  assert.equal(formatarNota(8), '8');
+  assert.equal(formatarNota(10), '10');
+  assert.equal(formatarNota(0), '0', 'o 0 é nota');
+  assert.equal(formatarNota(6.75), '6,8');
+  assert.equal(formatarNota(null, 'sem nota'), 'sem nota');
   assert.equal(formatarPontos(77.9), '77,9');
+  assert.equal(formatarPontos(80), '80,0');
 });
 
 test('formatarUSD e formatarEUR: dinheiro do Gabinete com vírgula', () => {
@@ -134,7 +139,7 @@ test('o helper único existe e usa Intl com pt-BR explícito', () => {
 
 test('as telas que o achado citou usam o helper (Ranking, Início, perfil, Admin, Gabinete, Diagnóstico)', () => {
   const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
-  assert.match(ler('src/utils/format.js'), /formatarNota\(value\)/, 'formatRating (Início e Meu perfil)');
+  assert.match(ler('src/utils/format.js'), /formatarNota\(n\)/, 'formatRating (Início e Meu perfil)');
   assert.match(ler('src/utils/format.js'), /formatarPontos\(value \|\| 0\)/, 'formatScore (Ranking)');
   assert.match(ler('src/pages/Ranking.jsx'), /formatarNota\(p\.nota\)/);
   assert.match(ler('src/pages/JogadorPerfil.jsx'), /formatarNota\(notaShow\)/);

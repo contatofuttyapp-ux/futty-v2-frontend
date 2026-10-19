@@ -37,15 +37,15 @@ export function formatarDecimal(valor, casas = 1, ou = '') {
 
 /**
  * ATÉ `casas` casas decimais, sem zero à direita: formatarAte(4) → "4"; (4.5) → "4,5"; (3.45, 2) → "3,45". Para o que pode fechar
- * redondo — as estrelas do voto (4 ou 4,5), a média de confirmados por jogo, o rating do jogador no sorteio.
+ * redondo — a nota (8 ou 7,5), a média de confirmados por jogo, o rating do jogador no sorteio.
  */
 export function formatarAte(valor, casas = 1, ou = '') {
   const n = numeroOuNulo(valor);
   return n == null ? ou : formatador(0, casas).format(n);
 }
 
-/** A nota do jogador como a tela a mostra: UMA casa, sempre ("9,1", "10,0"). A nota exibida vai de 6 a 10. */
-export const formatarNota = (valor, ou = '') => formatarDecimal(valor, 1, ou);
+/** A nota como a tela a mostra, de 0 a 10: uma casa quando não é inteira ("7,5"), sem casa quando é ("8", "10"). */
+export const formatarNota = (valor, ou = '') => formatarAte(valor, 1, ou);
 
 /** Os pontos do ranking (o `score` 0–100 do motor): uma casa, sempre ("77,9"). */
 export const formatarPontos = (valor, ou = '') => formatarDecimal(valor, 1, ou);

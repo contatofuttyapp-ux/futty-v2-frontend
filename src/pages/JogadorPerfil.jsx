@@ -158,10 +158,10 @@ export default function JogadorPerfil() {
   const ehRecorte = mostraFigurinha(jogador);
   const imgSrc = jogador?.avatar_url ? urlAsset(jogador.avatar_url) : null;
 
-  // Anel: fracção = nota/10 (nota exibida 6-10). Sem nota → anel vazio.
+  // Anel: fracção = nota/10 (a nota vai de 0 a 10). Sem nota → anel vazio.
   const ringOff = notaAlvo != null ? Math.round(326 * (1 - notaAlvo / 10)) : 326;
 
-  // Sparkline a partir da evolução (nota 6-10 → y invertido).
+  // Sparkline a partir da evolução (nota 0 a 10 → y invertido; o eixo vai pelo menos de 6 a 10, para a curva não virar um degrau).
   const sparkPts = (() => {
     if (evolucao.length < 2) return null;
     const W = 320, H = 76, pad = 8;
@@ -272,7 +272,7 @@ export default function JogadorPerfil() {
                 </div>
               </div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, fontFamily: "'Rajdhani', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
-                {jogador.posicao != null ? <span>{jogador.posicao}º de {jogador.total_com_nota}</span> : <span>Sem nota ainda</span>}
+                {jogador.posicao != null ? <span>{jogador.posicao}º de {jogador.total_com_nota}</span> : <span>Sem nota</span>}
                 {jogador.categoria === 'GR' ? <><span style={{ opacity: 0.4 }}>·</span><span style={{ fontSize: 10, fontWeight: 700, color: '#b69cff', border: '1px solid var(--purple)', padding: '1px 6px' }}>GOL</span></> : null}
               </div>
               {equipas.length ? (
@@ -338,9 +338,9 @@ export default function JogadorPerfil() {
                       <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Nota</div>
                     </div>
                   ) : (
-                    // Uma mensagem só para o "sem nota ainda" já dito no cabeçalho desta página (nada de "--" ou "—" aqui e
+                    // Uma mensagem só para o "sem nota" já dito no cabeçalho desta página (nada de "--" ou "—" aqui e
                     // nos tiles ao lado).
-                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--text-dim)', textTransform: 'uppercase', padding: '0 12px', lineHeight: 1.3 }}>Sem nota ainda</div>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--text-dim)', textTransform: 'uppercase', padding: '0 12px', lineHeight: 1.3 }}>Sem nota</div>
                   )}
                 </div>
               </div>

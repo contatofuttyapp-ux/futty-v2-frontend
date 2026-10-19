@@ -99,6 +99,8 @@ async function pedir(path, options, token, segundoPlano) {
       // Em que plataforma o app roda (ios | android | web). O motor só usa para decidir a vitrine da loja (PAGAMENTOS_PLATAFORMAS);
       // quem credita a compra é o webhook do RevenueCat, não este cabeçalho.
       headers['X-Futty-Plataforma'] = Capacitor.getPlatform();
+      // Estas telas votam e leem a nota de 0 a 10. Sem este aviso o motor trata o pedido como o do app antigo (estrelas, 0,5 a 5).
+      headers['X-Futty-Nota'] = '10';
     }
 
     // A caixa-preta mede AQUI, no único sítio por onde todas as

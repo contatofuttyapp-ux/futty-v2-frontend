@@ -105,7 +105,7 @@ async function abrirContexto(navegador, baseDoVite, dados, quem, largura) {
 }
 
 async function lerDoMotor(dados, quem, rota) {
-  const r = await fetch(`${dados.base}${rota}`, { headers: { authorization: `Bearer ${dados.tokens[quem]}` } });
+  const r = await fetch(`${dados.base}${rota}`, { headers: { authorization: `Bearer ${dados.tokens[quem]}`, 'x-futty-nota': '10' } }); // como as telas de hoje (nota de 0 a 10)
   return { status: r.status, json: await r.json().catch(() => null) };
 }
 
@@ -169,11 +169,11 @@ export async function rodar({ navegador, base, t }) {
         await c.page.locator('.rank-row', { hasText: 'Zeca' }).locator('.rank-actions button').click();
         const janela = c.page.locator('.modal-card');
         await janela.waitFor({ timeout: 10000 });
-        await janela.getByRole('button', { name: '4 estrelas', exact: true }).click();
+        await janela.locator('[data-nota-botao="8"]').click();
         await janela.getByRole('button', { name: 'Salvar voto' }).click();
         await janela.waitFor({ state: 'detached', timeout: 10000 });
         const depois = (await lerDoMotor(dados, 'm1', `/api/teams/${slug}/ranking`)).json?.ranking || [];
-        t(`${rotulo} · o Magrão deu nota ao Zeca pelo Ranking e o motor gravou (4 estrelas)`, depois.find((r) => r.user_id === zecaId)?.minha_nota === 4, JSON.stringify(depois.find((r) => r.user_id === zecaId)));
+        t(`${rotulo} · o Magrão deu nota ao Zeca pelo Ranking e o motor gravou (8)`, depois.find((r) => r.user_id === zecaId)?.minha_nota === 8, JSON.stringify(depois.find((r) => r.user_id === zecaId)));
         await c.page.waitForTimeout(600);
         const zecaDepois = (await linhas(c.page)).find((l) => l.nome === 'Zeca');
         t(`${rotulo} · a linha do Zeca passa a dizer que o Magrão já votou ("Alterar")`, (await c.page.locator('.rank-row', { hasText: 'Zeca' }).locator('.rank-actions button').innerText()).trim() === 'Alterar' && zecaDepois?.votar, await c.page.locator('.rank-row', { hasText: 'Zeca' }).innerText());

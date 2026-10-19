@@ -14,7 +14,7 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { MessageSquare, UserX, UserCheck, Lock, LockOpen, Globe, ChevronRight, ShieldCheck, ShieldOff, RotateCcw, UserMinus, Star } from 'lucide-react';
 import { apiFetch, apiUpload } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
-import { SEM_NOTA_AINDA, formatDateTime, STATUS_LABELS } from '../utils/format';
+import { SEM_NOTA, formatDateTime, STATUS_LABELS } from '../utils/format';
 import { camposNoCampo, formatarData, formatarDataHora, instanteNoCampo, rabichoDoFuso } from '../utils/dataHora';
 import { LABEL_LINHA } from '../utils/posicoes';
 import { formatarNota } from '../utils/numero';
@@ -928,7 +928,7 @@ function TabMembros({ slug, meId, showToast }) {
                 {inativo ? <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-dim)', border: '1px solid #444', borderRadius: 999, padding: '2px 6px' }}>Inativo</span> : null}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-dim)' }}>
-                <span style={{ fontWeight: 800, color: m.nota_media == null ? 'var(--text-dim)' : m.nota_media >= 7 ? '#d4a017' : '#fff' }}>{m.nota_media == null ? SEM_NOTA_AINDA : `★ ${formatarNota(m.nota_media)}`}</span>
+                <span style={{ fontWeight: 800, color: m.nota_media == null ? 'var(--text-dim)' : m.nota_media >= 7 ? '#d4a017' : '#fff' }}>{m.nota_media == null ? SEM_NOTA : `nota ${formatarNota(m.nota_media)}`}</span>
                 <span style={{ display: 'inline-flex', gap: 4 }} aria-hidden>
                   {Array.from({ length: 5 }).map((_, idx) => {
                     const p = (m.presencas_recentes || [])[idx];
@@ -989,7 +989,7 @@ function TabMembros({ slug, meId, showToast }) {
                     <button type="button" style={acao()} onClick={() => setConfirmacao({ tipo: aberto.role === 'member' ? 'promover' : 'despromover', membro: aberto })}>
                       {aberto.role === 'member' ? <><ShieldCheck size={16} /> Tornar admin</> : <><ShieldOff size={16} /> Tirar de admin</>}
                     </button>
-                    <button type="button" style={acao(true)} onClick={() => setConfirmacao({ tipo: 'zerar-votos', membro: aberto })}><RotateCcw size={16} /> Zerar as notas dele</button>
+                    <button type="button" style={acao(true)} onClick={() => setConfirmacao({ tipo: 'zerar-votos', membro: aberto })}><RotateCcw size={16} /> Apagar as notas dele</button>
                     <button type="button" style={acao(true)} onClick={() => setConfirmacao({ tipo: 'remover', membro: aberto })}><UserMinus size={16} /> Remover do time</button>
                   </div>
                 ) : null}
@@ -1007,13 +1007,13 @@ function TabMembros({ slug, meId, showToast }) {
               : confirmacao.tipo === 'promover'
                 ? `Tornar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} admin? Admin organiza o time; a posição em campo não muda.`
                 : confirmacao.tipo === 'zerar-votos'
-                  ? `Zerar as notas que ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} recebeu?`
+                  ? `Apagar as notas que ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} recebeu? Fica sem nota até receber votos de novo.`
                   : confirmacao.tipo === 'inativar'
                     ? `Marcar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} como inativo? Sai do sorteio e do ranking, mas o histórico fica.`
                     : `Tirar ${confirmacao.membro.nome_jogador || confirmacao.membro.nome} de admin?`
           }
           perigo={confirmacao.tipo === 'remover' || confirmacao.tipo === 'zerar-votos'}
-          confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : confirmacao.tipo === 'zerar-votos' ? 'Zerar' : confirmacao.tipo === 'inativar' ? 'Marcar inativo' : 'Confirmar'}
+          confirmarLabel={confirmacao.tipo === 'remover' ? 'Remover' : confirmacao.tipo === 'zerar-votos' ? 'Apagar' : confirmacao.tipo === 'inativar' ? 'Marcar inativo' : 'Confirmar'}
           onConfirm={() => {
             const { tipo, membro } = confirmacao;
             setConfirmacao(null);
@@ -1905,10 +1905,10 @@ function PedirVotarDeNovo({ slug, showToast }) {
         <Star size={18} aria-hidden="true" />
         {busy ? 'Abrindo…' : 'Nova temporada de notas'}
       </button>
-      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Zera as notas e o time avalia todo mundo de novo, do zero.</span>
+      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Apaga as notas e o time avalia todo mundo de novo.</span>
       {confirmar ? (
         <ConfirmModal
-          texto="Começar uma nova temporada? As notas de todo mundo voltam a zero. Não dá para desfazer."
+          texto="Começar uma nova temporada? As notas de todo mundo são apagadas. Não dá para desfazer."
           perigo
           confirmarLabel="Zerar e começar"
           onConfirm={pedir}

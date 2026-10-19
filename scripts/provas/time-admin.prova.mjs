@@ -266,13 +266,13 @@ export async function rodar({ navegador, base, t }) {
     const estilo = await botao.evaluate((el) => { const cs = getComputedStyle(el); return { classe: el.className, borda: cs.borderTopColor, letra: cs.color, fundo: cs.backgroundColor, estrela: !!el.querySelector('svg'), texto: el.textContent.trim() }; });
     t('150 · o botão "Nova temporada de notas" é o dourado da casa (cta-gold), com estrela, e nada nele é vermelho',
       /cta-gold/.test(estilo.classe) && estilo.estrela && estilo.texto === 'Nova temporada de notas' && ![estilo.borda, estilo.letra, estilo.fundo].some(vermelho), JSON.stringify(estilo));
-    t('150 · o apoio diz "Zera as notas e o time avalia todo mundo de novo, do zero."', (await page.locator('[data-ajustes-do-time]').innerText()).includes('Zera as notas e o time avalia todo mundo de novo, do zero.'));
+    t('150 · o apoio diz "Apaga as notas e o time avalia todo mundo de novo."', (await page.locator('[data-ajustes-do-time]').innerText()).includes('Apaga as notas e o time avalia todo mundo de novo.'));
 
     await botao.click();
     const modal = page.locator('.modal-card');
     await modal.waitFor({ timeout: 5000 });
-    t('150 · a confirmação diz o perigo: "Começar uma nova temporada? As notas de todo mundo voltam a zero. Não dá para desfazer."',
-      (await modal.innerText()).includes('Começar uma nova temporada? As notas de todo mundo voltam a zero. Não dá para desfazer.'));
+    t('150 · a confirmação diz o perigo: "Começar uma nova temporada? As notas de todo mundo são apagadas. Não dá para desfazer."',
+      (await modal.innerText()).includes('Começar uma nova temporada? As notas de todo mundo são apagadas. Não dá para desfazer.'));
     const fundoConfirmar = await modal.getByRole('button', { name: 'Zerar e começar' }).evaluate((el) => getComputedStyle(el).backgroundColor);
     t('150 · o botão da confirmação ("Zerar e começar") é vermelho de perigo', vermelho(fundoConfirmar), fundoConfirmar);
     await modal.getByRole('button', { name: 'Cancelar' }).click();

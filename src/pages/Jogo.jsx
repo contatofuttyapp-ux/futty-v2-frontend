@@ -7,6 +7,7 @@ import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { useApi } from '../hooks/useApi';
 import { useTeam } from '../hooks/useTeam';
 import { formatDateTime, STATUS_LABELS } from '../utils/format';
+import { jogoTerminado } from '../utils/estadoDoJogo';
 import { diaDoMes, mesCurto } from '../utils/dataHora';
 import { formatarAte } from '../utils/numero';
 import { plural } from '../utils/plural';
@@ -106,6 +107,8 @@ export default function Jogo() {
   // A composição à mão aberta (quem confirmou + os convidados da tela) e o POST dos times em curso.
   const [montando, setMontando] = useState(false);
   const [salvandoTimes, setSalvandoTimes] = useState(false);
+  // Jogo terminado: o editor do resultado fica atrás de um link discreto. Quem chega pelo "Lançar gols e prêmios" do Início já vem com ele aberto.
+  const [editandoResultado, setEditandoResultado] = useState(!!location.state?.quemGanhou);
   // Item 74: o código do link curto (/s/<código>) é pedido quando o sorteio existe — antes do toque em "copiar", para a cópia sair na
   // hora (o Safari só deixa copiar logo depois do toque). Sem código, o link longo.
   const [codigoCurto, setCodigoCurto] = useState(null);
@@ -204,6 +207,10 @@ export default function Jogo() {
 
   const { team, game, players, meuEstado } = data || {};
   const isAdmin = team?.role === 'admin';
+  // Depois do jogo (resultado lançado, ou 2 horas depois do início — a regra é do motor) a página é a lembrança do jogo: cabeçalho,
+  // resultado, times com os nomes, Avaliar e Ranking. Presença, confirmados e tudo do sorteio saem: nada disso se faz mais. Em andamento
+  // (as 2 primeiras horas) fica tudo, porque o sorteio às vezes é feito no campo, já na hora do jogo.
+  const terminado = jogoTerminado(game);
   // O motor diz (rsvp.eu_jogo) se a pessoa só organiza o time — aí não há presença a confirmar.
   const soOrganizo = rsvpEstado?.eu_jogo === false;
   const golsResultado = data?.gols || [];
@@ -249,7 +256,7 @@ export default function Jogo() {
           !error && <p className="muted">Jogo não encontrado.</p>
         ) : (
           <>
-            {rsvpConfirmados ? (
+            {rsvpConfirmados && !terminado ? (
               <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-accent)', background: 'rgba(139,92,246,0.08)', color: '#8b5cf6', fontSize: 13, fontWeight: 700 }}>
                 Sorteio com {confirmados.length} {plural(confirmados.length, 'confirmado', 'confirmados')} na lista de presença
               </div>
@@ -319,6 +326,8 @@ export default function Jogo() {
               </Link>
             </div>
 
+            {terminado ? null : (
+            <>
             {/* Confirmação de presença */}
             <SecLabel>Sua presença</SecLabel>
             {soOrganizo ? (
@@ -437,9 +446,13 @@ export default function Jogo() {
                 ))}
               </div>
             )}
+            </>
+            )}
 
             {/* Sorteio */}
             <SecLabel>Times</SecLabel>
+            {terminado ? null : (
+            <>
             {!game.sorteio_realizado && (
               <div style={{ marginBottom: 12 }}>
                 <CountdownSorteio jogo={game} />
@@ -541,32 +554,45 @@ export default function Jogo() {
             ) : isAdmin && !game.sorteio_realizado ? (
               <EscolhaDosTimes pulsaSortear={podeSortear} busy={busy} onSortear={() => sortear()} onMontar={() => setMontando(true)} />
             ) : null}
+            </>
+            )}
 
             {/* COM TIMES: o "Ver sorteio" continua o destaque (quando há sorteio); o resto é consulta. */}
             {game.sorteio_realizado ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: montando ? 14 : 0 }}>
               {/* LEI: jogo manual/histórico (times à mão → sem seed) NÃO abre cerimónia.
                   Só o sorteio (com seed) tem replay/"Ver sorteio". */}
-              {game.sorteio_realizado && game.times_resultado?.seed != null && (
+              {/* Depois do jogo o destaque é o "Avaliar os jogadores", lá embaixo: o replay continua, mas discreto. */}
+              {game.sorteio_realizado && game.times_resultado?.seed != null && terminado && (
+                <button type="button" className="btn btn--sm btn--outline hud-corners-s" data-ver-sorteio onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
+                  <Trophy size={14} /> Ver sorteio
+                </button>
+              )}
+              {game.sorteio_realizado && game.times_resultado?.seed != null && !terminado && (
                 <span className="cta-gold-glow pulse-glow" style={{ display: 'flex', width: '100%' }}>
-                  <button type="button" className="btn hud-corners cta-gold pulse-active" style={{ flex: 1 }} onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
+                  <button type="button" className="btn hud-corners cta-gold pulse-active" data-ver-sorteio style={{ flex: 1 }} onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
                     <Trophy size={16} /> Ver sorteio
                   </button>
                 </span>
               )}
-              {game.sorteio_realizado && timesAMao && !soCampeoes && (
+              {game.sorteio_realizado && timesAMao && !soCampeoes && terminado && (
+                <button type="button" className="btn btn--sm btn--outline hud-corners-s" data-ver-times onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
+                  <Users size={14} /> Ver times
+                </button>
+              )}
+              {game.sorteio_realizado && timesAMao && !soCampeoes && !terminado && (
                 <span className="cta-gold-glow" style={{ display: 'flex', width: '100%' }}>
                   <button type="button" className="btn hud-corners cta-gold" data-ver-times style={{ flex: 1 }} onClick={() => navigate(`/time/${slug}/jogo/${id}/sorteio`)}>
                     <Users size={16} /> Ver times
                   </button>
                 </span>
               )}
-              {isAdmin && game.sorteio_realizado && !editando && (
+              {isAdmin && game.sorteio_realizado && !editando && !terminado && (
                 <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setEditando(true)}>
                   Ajustar times
                 </button>
               )}
-              {isAdmin && timesSorteio.length >= 2 && confirmacao !== 'campeonato' && (
+              {isAdmin && timesSorteio.length >= 2 && confirmacao !== 'campeonato' && !terminado && (
                 <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={() => setConfirmacao('campeonato')}>
                   Criar campeonato com estes times
                 </button>
@@ -576,7 +602,7 @@ export default function Jogo() {
 
             {/* Trocar os times: discreto, embaixo. Sortear de novo ou Montar à mão — os dois pedem confirmação antes
                 (acima). */}
-            {isAdmin && game.sorteio_realizado && !montando && confirmacao !== 're-sorteio' && confirmacao !== 'refazer-a-mao' ? (
+            {isAdmin && game.sorteio_realizado && !montando && !terminado && confirmacao !== 're-sorteio' && confirmacao !== 'refazer-a-mao' ? (
               <div data-trocar-os-times style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0 4px', marginTop: 8, fontSize: 13, color: 'var(--text-dim)' }}>
                 <span>Trocar os times:</span>
                 <button type="button" data-trocar="sortear" style={LINK_DISCRETO} onClick={() => setConfirmacao('re-sorteio')} disabled={busy}>Sortear de novo</button>
@@ -608,7 +634,8 @@ export default function Jogo() {
                 />
               </div>
             )}
-            {!isAdmin && !game.sorteio_realizado && <p className="muted">O sorteio ainda não foi realizado.</p>}
+            {!isAdmin && !game.sorteio_realizado && !terminado && <p className="muted">O sorteio ainda não foi realizado.</p>}
+            {terminado && !game.times_resultado ? <p className="muted" data-sem-times>Os times deste jogo não foram registrados.</p> : null}
 
             {game.times_resultado && (
               <div style={{ marginTop: 16 }}>
@@ -651,7 +678,15 @@ export default function Jogo() {
             )}
 
             {/* Resultado — edição (só admin, após sorteio) */}
-            {isAdmin && game.times_resultado && !soCampeoes ? (
+            {/* Depois do jogo, o editor só abre por um link discreto: corrigir (ou lançar, se ficou sem) o resultado, sem o resto da página de antes. */}
+            {isAdmin && game.times_resultado && !soCampeoes && terminado && !editandoResultado ? (
+              <div style={{ marginTop: 10, fontSize: 13 }}>
+                <button type="button" data-corrigir-resultado style={LINK_DISCRETO} onClick={() => setEditandoResultado(true)}>
+                  {resultadoDoJogo ? 'Corrigir o resultado' : 'Lançar o resultado'}
+                </button>
+              </div>
+            ) : null}
+            {isAdmin && game.times_resultado && !soCampeoes && (!terminado || editandoResultado) ? (
               <>
                 <SecLabel>Resultado</SecLabel>
                 {/* A chave refaz o editor quando o que está gravado muda (depois de salvar): ele parte sempre do que o motor guardou. */}

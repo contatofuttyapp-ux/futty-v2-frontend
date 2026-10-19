@@ -207,7 +207,7 @@ test('152 · "Montar à mão" salva em POST /api/games/:id/times-manuais com que
 
 test('152 · COM times: o "Ver sorteio" segue o destaque e embaixo, discreto, "Trocar os times: Sortear de novo · Montar à mão" — os dois pedem confirmação', () => {
   const jogo = semComentarios(ler('src/pages/Jogo.jsx'));
-  assert.match(jogo, /game\.sorteio_realizado && game\.times_resultado\?\.seed != null && \(\s*<span className="cta-gold-glow pulse-glow"/, 'o Ver sorteio continua o destaque (só quando há sorteio com seed)');
+  assert.match(jogo, /game\.sorteio_realizado && game\.times_resultado\?\.seed != null && !terminado && \(\s*<span className="cta-gold-glow pulse-glow"/, 'o Ver sorteio continua o destaque (só quando há sorteio com seed e o jogo não terminou)');
   assert.match(jogo, /<span>Trocar os times:<\/span>/);
   assert.match(jogo, /data-trocar="sortear" style=\{LINK_DISCRETO\} onClick=\{\(\) => setConfirmacao\('re-sorteio'\)\}[^>]*>Sortear de novo<\/button>/);
   assert.match(jogo, /data-trocar="a-mao" style=\{LINK_DISCRETO\} onClick=\{\(\) => setConfirmacao\('refazer-a-mao'\)\}[^>]*>Montar à mão<\/button>/);
@@ -231,7 +231,7 @@ test('152 · o texto antigo da confirmação (português de Portugal) saiu: "Ist
 test('152 · o ajuste dos times depois do sorteio (PATCH /times, modo editando) e o Resultado não mudaram', () => {
   const jogo = semComentarios(ler('src/pages/Jogo.jsx'));
   assert.match(jogo, /<TimesEditor\s+gameId=\{id\}/);
-  assert.match(jogo, /\{isAdmin && game\.sorteio_realizado && !editando && \(\s*<button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick=\{\(\) => setEditando\(true\)\}>\s*Ajustar times/);
+  assert.match(jogo, /\{isAdmin && game\.sorteio_realizado && !editando && !terminado && \(\s*<button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick=\{\(\) => setEditando\(true\)\}>\s*Ajustar times/);
   assert.match(jogo, /<ResultadoEditor[\s\S]*?gameId=\{id\}/, 'o Resultado segue sendo o mesmo editor, agora completo (rodada 30I)');
   assert.match(jogo, /Criar campeonato com estes times/);
 });

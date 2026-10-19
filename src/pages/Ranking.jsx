@@ -1,5 +1,5 @@
-// Futty v2.0 — Ranking (modelo definitivo): voto por jogador (meias estrelas),
-// nota exibida 6-10, score por categoria. Sem jogo de votação nem períodos.
+// Futty v2.0 — Ranking (modelo definitivo): voto por jogador, de 0 a 10 (a mesma régua da nota em todo o app),
+// score por categoria. Sem jogo de votação nem períodos.
 import { Fragment, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
@@ -15,8 +15,8 @@ import { deveCelebrar, esquecerPosicaoCelebrada, guardarPosicaoCelebrada, lerPos
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { nomeExibicao } from '../utils/nomeExibicao';
-import { formatScore } from '../utils/format';
-import { formatarAte, formatarNota } from '../utils/numero';
+import { SEM_NOTA, formatScore } from '../utils/format';
+import { formatarNota } from '../utils/numero';
 import AdCard from '../components/AdCard';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
@@ -119,17 +119,17 @@ function RankRow({ p, idx, slug, onVote }) {
               </span>
             ) : null}
             <span className="rank-votes__grupo" data-grupo-nota>
-              <span className="muted">nota </span>
+              {p.nota != null ? <span className="muted">nota </span> : null}
               {p.nota != null ? (
                 <span data-nota style={{ fontFamily: "'Rajdhani', sans-serif", color: '#fff', fontWeight: 700 }}>{formatarNota(p.nota)}</span>
               ) : (
-                <span data-nota-vazia style={{ color: 'var(--text-dim)' }} title="Precisa de 3 votos para mostrar nota">—</span>
+                <span data-nota-vazia style={{ color: 'var(--text-dim)' }} title="A nota aparece com 3 votos">{SEM_NOTA}</span>
               )}
             </span>
             {jaVotou ? (
-              <span className="rank-votes__voto muted">★ você deu {formatarAte(p.minha_nota, 1)}</span>
+              <span className="rank-votes__voto muted" data-meu-voto>você deu {formatarNota(p.minha_nota)}</span>
             ) : (
-              <span className="rank-votes__voto muted">☆ por votar</span>
+              <span className="rank-votes__voto muted" data-meu-voto>falta seu voto</span>
             )}
           </div>
         </div>
@@ -167,27 +167,17 @@ function ListaRanking({ ranking, children }) {
   return <div className="rank-list">{children}</div>;
 }
 
-// Converte a média interna (1-5) para a nota exibida (6-10).
-function notaParaExibir(n) {
-  if (n == null) return null;
-  return Math.round((6 + ((n - 1) / 4) * 4) * 10) / 10;
-}
-
-// Input de 5 estrelas com meia-estrela (clique na metade esquerda = X.5).
-function MeiaEstrelas({ value = 0, onChange }) {
+// O voto: um número de 0 a 10, inteiro — a mesma régua da nota que aparece em todo o app. Onze botões em duas linhas (0 a 5 e 6 a 10),
+// com 44 px de altura; o número escolhido aparece grande em cima. Nada de estrelas: o número é o voto.
+const NOTAS = Array.from({ length: 11 }, (_, i) => i);
+function EscolhaDaNota({ value, onChange }) {
   return (
-    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-      {[1, 2, 3, 4, 5].map((i) => {
-        const fill = value >= i ? 100 : value >= i - 0.5 ? 50 : 0;
-        return (
-          <div key={i} style={{ position: 'relative', width: 36, height: 36, fontSize: 36, lineHeight: '36px' }}>
-            <span style={{ color: '#333' }}>★</span>
-            <span style={{ position: 'absolute', left: 0, top: 0, width: `${fill}%`, overflow: 'hidden', color: '#d4a017' }}>★</span>
-            <button type="button" aria-label={`${formatarAte(i - 0.5, 1)} estrelas`} onClick={() => onChange(i - 0.5)} style={{ position: 'absolute', left: 0, top: 0, width: '50%', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer' }} />
-            <button type="button" aria-label={`${i} estrelas`} onClick={() => onChange(i)} style={{ position: 'absolute', right: 0, top: 0, width: '50%', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer' }} />
-          </div>
-        );
-      })}
+    <div className="nota-grade" role="radiogroup" aria-label="Sua nota, de 0 a 10" data-escolha-da-nota>
+      {NOTAS.map((n) => (
+        <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`Nota ${n}`} className="nota-botao" data-nota-botao={n} onClick={() => onChange(n)}>
+          {n}
+        </button>
+      ))}
     </div>
   );
 }
@@ -221,7 +211,7 @@ export default function Ranking() {
   const equipaAtual = teams.find((t) => t.slug === slug) || null;
 
   const [voteModal, setVoteModal] = useState(null); // jogador a votar
-  const [modalNota, setModalNota] = useState(0);
+  const [modalNota, setModalNota] = useState(null); // null = ainda não escolheu (0 é uma nota)
   const [voteBusy, setVoteBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const [bannerFechado, setBannerFechado] = useState(false);
@@ -252,11 +242,11 @@ export default function Ranking() {
 
   function openVote(player) {
     setVoteModal(player);
-    setModalNota(player.minha_nota ?? 0);
+    setModalNota(player.minha_nota ?? null);
   }
 
   async function confirmVote() {
-    if (!voteModal || !(modalNota >= 0.5)) return;
+    if (!voteModal || modalNota == null) return;
     setVoteBusy(true);
     try {
       await apiFetch(`/api/teams/${slug}/votar`, {
@@ -390,7 +380,7 @@ export default function Ranking() {
         )}
       </main>
 
-      {/* Modal de votação (meias estrelas). PORTAL para o body: dentro do [data-page], o transform da animação
+      {/* Modal de votação (0 a 10). PORTAL para o body: dentro do [data-page], o transform da animação
           de entrada vira o "chão" do position:fixed e o modal centrava-se na PÁGINA inteira, não na tela — com
           a lista rolada ficava fora de quadro e a barra de baixo por cima do véu. */}
       {voteModal && createPortal(
@@ -401,15 +391,18 @@ export default function Ranking() {
                 <FrameAvatar nome={nomeExibicao(voteModal)} avatarUrl={voteModal.avatar_url} userId={voteModal.user_id} avatarGenerico={voteModal.avatar_generico} size={64} />
               </div>
               <h2 style={{ fontSize: 18, marginBottom: 14 }}>{nomeExibicao(voteModal)}</h2>
-              <MeiaEstrelas value={modalNota} onChange={setModalNota} />
-              <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)' }}>
-                {modalNota >= 0.5 ? (
-                  <>Sua nota: <b style={{ fontFamily: "'Rajdhani', sans-serif", color: 'var(--neon)', fontSize: 16 }}>{formatarNota(notaParaExibir(modalNota))}</b></>
+              <div data-nota-escolhida style={{ minHeight: 64, display: 'grid', placeItems: 'center', marginBottom: 10 }}>
+                {modalNota != null ? (
+                  <div>
+                    <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 44, lineHeight: 1, color: '#f0c94a' }}>{modalNota}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>sua nota</div>
+                  </div>
                 ) : (
-                  'Escolha de 0,5 a 5 estrelas'
+                  <div style={{ fontSize: 14, color: 'var(--text-dim)' }}>Escolha de 0 a 10</div>
                 )}
               </div>
-              <button type="button" className="btn btn--primary btn--hud hud-corners-s" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || !(modalNota >= 0.5)} onClick={confirmVote}>
+              <EscolhaDaNota value={modalNota} onChange={setModalNota} />
+              <button type="button" className="btn btn--primary btn--hud hud-corners-s" style={{ width: '100%', marginTop: 16 }} disabled={voteBusy || modalNota == null} onClick={confirmVote}>
                 {voteBusy ? 'Salvando…' : 'Salvar voto'}
               </button>
               <button type="button" className="btn btn--ghost btn--sm btn--hud hud-corners-s" style={{ width: '100%', marginTop: 10 }} disabled={voteBusy} onClick={() => setVoteModal(null)}>

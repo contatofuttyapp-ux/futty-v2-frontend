@@ -26,12 +26,16 @@ export function dayMonth(iso, fuso) {
 }
 
 // "★ -" no Elenco, "--" no Início e no Perfil, "—" na vitrine: quatro formas
-// para a mesma coisa. Uma só, que diga o que é (a vitrine já dizia certo: "Sem nota ainda").
-export const SEM_NOTA_AINDA = 'sem nota ainda';
+// para a mesma coisa. Uma só, que diga o que é.
+export const SEM_NOTA = 'sem nota';
 
-/** Nota formatada em PT-BR com UMA casa ("9,1") ou SEM_NOTA_AINDA se não houver votos. */
+/**
+ * Nota de 0 a 10 em PT-BR ("7,5", "8") ou SEM_NOTA quando ninguém votou (o motor manda null). O 0 é nota: quem recebeu só zeros tem
+ * nota 0, não "sem nota".
+ */
 export function formatRating(value) {
-  return Number(value) > 0 ? formatarNota(value) : SEM_NOTA_AINDA;
+  const n = typeof value === 'number' ? value : value == null || value === '' ? Number.NaN : Number(value);
+  return Number.isFinite(n) && n >= 0 ? formatarNota(n) : SEM_NOTA;
 }
 
 /** Score do ranking em PT-BR, uma casa ("77,9"). */

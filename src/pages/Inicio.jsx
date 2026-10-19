@@ -21,7 +21,7 @@ import { celebrarTop3 } from '../hooks/useConfetti';
 import { deveCelebrarCampeonato, guardarCampeonatoCelebrado } from '../utils/campeonatoCelebrado';
 import { nomeCampeao } from '../utils/campeonato';
 import CardCampeonatoInicio from '../components/CardCampeonatoInicio';
-import { SEM_NOTA_AINDA, STATUS_LABELS, formatDateTime, formatRating } from '../utils/format';
+import { SEM_NOTA, STATUS_LABELS, formatDateTime, formatRating } from '../utils/format';
 import { ehHoje, formatarData } from '../utils/dataHora';
 import { plural } from '../utils/plural';
 import { jogoEmAndamento, listasDoInicio } from '../utils/estadoDoJogo';
@@ -1419,7 +1419,7 @@ export default function Inicio() {
             </div>
           ) : null}
           <div className="inicio-stats">
-            <span className="nota">{stats ? formatRating(stats.nota) : SEM_NOTA_AINDA}</span>
+            <span className="nota">{stats ? formatRating(stats.nota) : SEM_NOTA}</span>
             <span>·</span>
             <span>
               <b>{stats?.jogos ?? 0}</b> {plural(stats?.jogos ?? 0, 'jogo', 'jogos')}

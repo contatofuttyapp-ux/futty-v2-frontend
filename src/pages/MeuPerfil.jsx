@@ -15,7 +15,7 @@ import { usePerfil } from '../context/PerfilContext';
 import '../lib/alinharCard';
 import { useTeam, useTeams } from '../hooks/useTeam';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { SEM_NOTA_AINDA, formatRating } from '../utils/format';
+import { SEM_NOTA, formatRating } from '../utils/format';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import { plural } from '../utils/plural';
 import { CONFIRMACAO_EXCLUIR, confirmacaoExcluirValida } from '../utils/confirmarExclusao';
@@ -310,7 +310,7 @@ export default function MeuPerfil() {
 
         {/* Stats por baixo do header */}
         <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 13, color: 'var(--text-dim)' }}>
-          <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{stats.nota != null ? formatRating(stats.nota) : SEM_NOTA_AINDA}</span>
+          <span style={{ color: 'var(--neon)', fontWeight: 800 }}>{stats.nota != null ? formatRating(stats.nota) : SEM_NOTA}</span>
           <span>·</span>
           <span><b style={{ color: '#fff' }}>{stats.jogos ?? 0}</b> {plural(stats.jogos ?? 0, 'jogo', 'jogos')}</span>
           <span>·</span>
