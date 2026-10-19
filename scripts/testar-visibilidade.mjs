@@ -44,7 +44,11 @@ import { chromium } from 'playwright';
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORTA = 4178; // fora do 4173 de omissão, para não chocar com um preview aberto à mão
 const BASE = `http://localhost:${PORTA}`;
-const ESPERA_MS = 1500;
+// Quanto se espera, depois do 'load', a página ficar visível de verdade. O teste prova "não fica preta", não velocidade: espera
+// ATÉ ficar visível e imprime quanto levou. O /login importa o cliente do Supabase (~200 KB) antes de [data-page] existir — medido
+// 30 vezes: 0,6–0,8 s com a máquina livre e 0,6–1,4 s (mediana 1,0) com três abas abrindo juntas, como dentro da bateria. A espera
+// fixa de 1,5 s ficava colada nesse pior caso e oscilava; o teto é o dobro dele. Passar do teto é defeito e se investiga.
+const TETO_VISIVEL_MS = 3000;
 const TOLERANCIA_CENTRO_PX = 8;
 
 // Só rotas públicas: o teste não faz login (Gabinete e Início exigem sessão, e
@@ -97,7 +101,23 @@ async function medir(browser, rota, tamanho) {
   const erros = [];
   pagina.on('pageerror', (e) => erros.push(e.message));
   await pagina.goto(BASE + rota.path, { waitUntil: 'load' });
-  await pagina.waitForTimeout(ESPERA_MS);
+  // Espera até [data-page] estar inteiro (opacidade efetiva ≥ 0,99, nenhum ancestral com transform) ou o teto; o resto confere abaixo.
+  const t0 = Date.now();
+  while (Date.now() - t0 < TETO_VISIVEL_MS) {
+    const pronto = await pagina.evaluate(() => {
+      const el = document.querySelector('[data-page]');
+      if (!el) return false;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || !(el.innerText || '').trim()) return false;
+      let e = 1;
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) e *= Number(getComputedStyle(n).opacity);
+      for (let n = el.parentElement; n && n !== document.documentElement; n = n.parentElement) { const t = getComputedStyle(n).transform; if (t && t !== 'none') return false; }
+      return e >= 0.99;
+    });
+    if (pronto) break;
+    await pagina.waitForTimeout(25);
+  }
+  const ms = Date.now() - t0;
 
   const r = await pagina.evaluate(() => {
     const el = document.querySelector('[data-page]');
@@ -134,7 +154,7 @@ async function medir(browser, rota, tamanho) {
     };
   });
   await ctx.close();
-  return { ...r, erros };
+  return { ...r, erros, ms };
 }
 
 // BUILD 14 — atrasa o chunk lazy da rota (route interception) para segurar o
@@ -484,11 +504,11 @@ try {
               `visibility=${r.visibility}, display=${r.display}, ${r.texto} caracteres de texto.`
           );
         } else {
-          console.log(`[visibilidade] ok  ${etiqueta} — opacity ${r.opacity}, ${r.texto} caracteres.`);
+          console.log(`[visibilidade] ok  ${etiqueta} — visível em ${r.ms} ms (teto ${TETO_VISIVEL_MS}), opacity ${r.opacity}, ${r.texto} caracteres.`);
         }
         if (r.transformados.length) {
           falhas.push(
-            `${etiqueta}: ancestral de [data-page] com transform ≠ none depois de ${ESPERA_MS}ms — ` +
+            `${etiqueta}: ancestral de [data-page] com transform ≠ none depois de ${r.ms} ms — ` +
               `${r.transformados.join(', ')} (containing block indevido para position:fixed).`
           );
         }
