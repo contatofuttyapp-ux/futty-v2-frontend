@@ -7,7 +7,7 @@ import { contar } from '../../utils/plural';
 import LoadingFutty from '../../components/LoadingFutty';
 import { inputStyle } from '../../components/camposDoAdmin';
 import { linkDoConvite } from '../../utils/convite';
-import { CARD, diasAte, haQuantoTempo } from './comum';
+import { CARD, diasAte, haQuantoTempo, textoDeApoio } from './comum';
 import { ConfirmModal } from './pecas';
 
 // ─── TAB: CONVITES ───────────────────────────────────────────────────────────
@@ -100,11 +100,11 @@ function TabConvites({ slug, nomeTime = null, showToast, semBotao = false }) {
       ) : (
         convites.map((c) => (
           <div key={c.id} style={{ ...CARD, padding: 12, display: 'grid', gap: 8 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+            <div style={textoDeApoio}>
               Criado por <b style={{ color: '#fff' }}>{c.criado_por_nome || 'alguém'}</b> · {haQuantoTempo(c.created_at)}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Expira em {contar(diasAte(c.expires_at), 'dia', 'dias')}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+            <div style={textoDeApoio}>Expira em {contar(diasAte(c.expires_at), 'dia', 'dias')}</div>
+            <div style={textoDeApoio}>
               {c.usos > 0 ? `${c.usos} ${c.usos === 1 ? 'entrou' : 'entraram'} por este link` : 'ninguém entrou ainda'}
             </div>
             {/* O link curto leva o nome do time na frente e o código no fim: quebra a linha em vez de cortar — o código é o que difere. */}

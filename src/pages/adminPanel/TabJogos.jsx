@@ -18,7 +18,7 @@ import { separarFuturosPassados } from '../../utils/jogosFuturoPassado';
 import { estadoDoJogo } from '../../utils/estadoDoJogo';
 import { BadgeStatus } from '../../components/ListaDeJogos';
 import { ConfirmModal, RabichoDaHora } from './pecas';
-import { CARD } from './comum';
+import { CARD, nomeForte, rotuloECampo, textoDeApoio } from './comum';
 
 // ─── TAB: JOGOS ──────────────────────────────────────────────────────────────
 // "sex., 20 de jun. · 22:00" para o prazo do RSVP — no relógio do campo (fuso do time).
@@ -191,7 +191,7 @@ function RSVPAdmin({ gameId, slug, cidade = null, navigate, showToast, abrirInic
     <div style={linha}>
       {abrirModal ? (
         <div style={{ display: 'grid', gap: 8 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-dim)' }}>Prazo de confirmação</label>
+          <label style={textoDeApoio}>Prazo de confirmação</label>
           <input
             type="datetime-local"
             value={prazoInput}
@@ -259,12 +259,12 @@ function FormRecorrentes({ slug, fuso, cidade, showToast, onClose, onCriado }) {
           ))}
         </div>
       </div>
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Hora do jogo</span>
         <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} style={inputStyle} />
         <RabichoDaHora fuso={fuso} cidade={cidade} />
       </label>
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Local (opcional)</span>
         <input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Ex.: Campo da Vila" style={inputStyle} />
       </label>
@@ -378,7 +378,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
       <div key={g.id} data-jogo={emAndamento ? g.id : undefined} data-jogo-em-andamento={emAndamento ? '' : undefined} data-linha-de-jogo style={{ ...CARD, padding: 12, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 10px', opacity: cancelado ? 0.55 : 1 }}>
         {/* O título e a data nunca ficam mais estreitos que 150 px: quando o selo e os botões não cabem ao lado, descem juntos para uma segunda linha, abaixo do título. */}
         <div style={{ flex: '1 1 150px', minWidth: 150 }}>
-          <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
+          <div style={nomeForte}>{g.local || 'Jogo'}</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso, { cidade: team?.cidade })}</div>
         </div>
         <div data-linha-de-jogo-acoes style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -413,7 +413,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
                   <div key={g.id} data-jogo={g.id} data-jogo-cancelado style={{ ...CARD, padding: 12 }}>
                     <div style={{ opacity: 0.55 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</span>
+                        <span style={nomeForte}>{g.local || 'Jogo'}</span>
                         <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--danger)', border: '1px solid var(--danger)', background: 'rgba(248,113,113,0.12)', borderRadius: 999, padding: '2px 8px' }}>Cancelado</span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{formatDateTime(g.data, fuso, { cidade: team?.cidade })}</div>
@@ -435,7 +435,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
               }
               return (
                 <div key={g.id} data-jogo={g.id} className={destaque === g.id ? 'jogo-destaque' : undefined} style={{ ...CARD, padding: 12 }}>
-                  <div style={{ fontWeight: 700, color: '#fff' }}>{g.local || 'Jogo'}</div>
+                  <div style={nomeForte}>{g.local || 'Jogo'}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
                     {formatDateTime(g.data, fuso, { cidade: team?.cidade })} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
                   </div>
@@ -549,11 +549,11 @@ function EditarJogoModal({ jogo, fuso, cidade, onClose, onSaved, showToast }) {
       <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
         <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 12 }}>
           <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Editar jogo</h2>
-          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Data</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} /></label>
-          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Hora do jogo</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inputStyle} /><RabichoDaHora fuso={fuso} cidade={cidade} /></label>
-          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Local</span><input value={local} onChange={(e) => setLocal(e.target.value)} style={inputStyle} /></label>
-          <label style={{ display: 'grid', gap: 6 }}><span style={lbl}>Jogadores por time</span><NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} /></label>
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={rotuloECampo}><span style={lbl}>Data</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} /></label>
+          <label style={rotuloECampo}><span style={lbl}>Hora do jogo</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inputStyle} /><RabichoDaHora fuso={fuso} cidade={cidade} /></label>
+          <label style={rotuloECampo}><span style={lbl}>Local</span><input value={local} onChange={(e) => setLocal(e.target.value)} style={inputStyle} /></label>
+          <label style={rotuloECampo}><span style={lbl}>Jogadores por time</span><NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} /></label>
+          <label style={rotuloECampo}>
             <span style={lbl}>Máximo de jogadores</span>
             <input type="number" min="1" inputMode="numeric" value={maxJog} onChange={(e) => setMaxJog(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Sem limite" style={inputStyle} />
           </label>

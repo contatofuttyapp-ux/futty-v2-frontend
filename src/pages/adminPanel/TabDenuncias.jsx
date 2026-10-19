@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import LoadingFutty from '../../components/LoadingFutty';
-import { CARD, haQuantoTempo } from './comum';
+import { CARD, haQuantoTempo, textoDeApoio } from './comum';
 import { ConfirmModal } from './pecas';
 
 // ─── TAB: DENÚNCIAS ──────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ function TabDenuncias({ showToast }) {
     <div style={{ display: 'grid', gap: 10 }}>
       {denuncias.map((d) => (
         <div key={d.id} style={{ ...CARD, padding: 12, display: 'grid', gap: 8 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+          <div style={textoDeApoio}>
             {d.target_type === 'post' ? 'Post' : 'Comentário'} · <span style={{ color: '#fda4af', fontWeight: 700 }}>{MOTIVO_LABEL[d.motivo] || d.motivo}</span>
           </div>
           {d.conteudo ? (

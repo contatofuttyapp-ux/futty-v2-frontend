@@ -19,7 +19,7 @@ import ModeracaoFila from '../components/ModeracaoFila';
 import { TEXTO_ADMIN_E_POSICAO } from '../components/EscolhaLinhaGol';
 import { caminhoDoAdminAntigo } from '../lib/rotasAntigas';
 import '../styles/app.css';
-import { CARD } from './adminPanel/comum';
+import { CARD, nomeForte, textoDeApoio } from './adminPanel/comum';
 import { AvisarOTime, ConfirmModal, Interruptor, MetricCard, Secao } from './adminPanel/pecas';
 import { FormRecorrentes, TabJogos } from './adminPanel/TabJogos';
 import { TabCampeonato } from './adminPanel/TabCampeonato';
@@ -57,7 +57,7 @@ function NotificacoesDoAdmin({ showToast }) {
   return (
     <div style={{ ...CARD, padding: 14, display: 'grid', gap: 8 }}>
       <Interruptor ligado={prefs.preferencias?.pedidos !== false} aoTrocar={trocarPedidos} rotulo="Pedidos de entrada" apoio="Um aviso no celular quando alguém pede para entrar no time." />
-      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>As outras notificações ficam em Perfil → Notificações.</span>
+      <span style={textoDeApoio}>As outras notificações ficam em Perfil → Notificações.</span>
     </div>
   );
 }
@@ -88,7 +88,7 @@ function PedirVotarDeNovo({ slug, showToast }) {
         <Star size={18} aria-hidden="true" />
         {busy ? 'Abrindo…' : 'Nova temporada de notas'}
       </button>
-      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Apaga as notas e o time avalia todo mundo de novo.</span>
+      <span style={textoDeApoio}>Apaga as notas e o time avalia todo mundo de novo.</span>
       {confirmar ? (
         <ConfirmModal
           texto="Começar uma nova temporada? As notas de todo mundo são apagadas. Não dá para desfazer."
@@ -170,11 +170,11 @@ export function AjustesDoTime({ slug, team, members = [], showToast, onMudou }) 
           {admins.map((m, i) => (
             <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
               <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.id} avatarGenerico={m.avatar_generico} sm />
-              <span style={{ fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</span>
+              <span style={nomeForte}>{nomeExibicao(m)}</span>
             </div>
           ))}
         </div>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Para tornar alguém admin, toque no nome dele no Elenco. {TEXTO_ADMIN_E_POSICAO}</span>
+        <span style={textoDeApoio}>Para tornar alguém admin, toque no nome dele no Elenco. {TEXTO_ADMIN_E_POSICAO}</span>
       </Secao>
       <Secao titulo="Notificações do admin">
         <NotificacoesDoAdmin showToast={showToast} />

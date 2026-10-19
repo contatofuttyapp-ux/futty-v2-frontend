@@ -7,7 +7,7 @@ import { nomeExibicao } from '../../utils/nomeExibicao';
 import LoadingFutty from '../../components/LoadingFutty';
 import PlayerAvatar from '../../components/PlayerAvatar';
 import { lbl } from '../../components/camposDoAdmin';
-import { CARD } from './comum';
+import { CARD, nomeForte } from './comum';
 
 // ─── TAB: ESTATÍSTICAS ───────────────────────────────────────────────────────
 function BarraProgresso({ valor, max }) {
@@ -54,7 +54,7 @@ function TabEstatisticas({ slug, membrosBasicos, showToast }) {
             <div key={m.user_id} style={{ ...CARD, padding: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
               <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, color: '#fff' }}>{nomeExibicao(m)}</div>
+                <div style={nomeForte}>{nomeExibicao(m)}</div>
                 <BarraProgresso valor={m.gols || 0} max={maxGols} />
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
                   <b style={{ color: 'var(--neon)' }}>{m.gols || 0}</b> {plural(m.gols || 0, 'gol', 'gols')} · {contar(m.vitorias || 0, 'vitória', 'vitórias')} · {m.artilharia || 0} artilharia

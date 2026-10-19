@@ -32,4 +32,12 @@ function diasAte(iso) {
   return Math.max(0, Math.ceil(ms / 86400000));
 }
 
-export { CARD, VIS_DESC, VIS_OPCOES, diasAte, haQuantoTempo };
+// Os estilos que se repetem iguais em mais de uma aba.
+// Um campo de formulário: o rótulo em cima, o controle embaixo.
+const rotuloECampo = { display: 'grid', gap: 6 };
+// A frase pequena que explica um controle.
+const textoDeApoio = { fontSize: 12, color: 'var(--text-dim)' };
+// O nome de uma pessoa ou de um jogo numa lista.
+const nomeForte = { fontWeight: 700, color: '#fff' };
+
+export { CARD, diasAte, haQuantoTempo, nomeForte, rotuloECampo, textoDeApoio, VIS_DESC, VIS_OPCOES };

@@ -7,7 +7,7 @@ import { apiFetch } from '../../lib/api';
 import { rabichoDoFuso } from '../../utils/dataHora';
 import { plural } from '../../utils/plural';
 import { inputStyle, lbl } from '../../components/camposDoAdmin';
-import { CARD } from './comum';
+import { CARD, rotuloECampo, textoDeApoio } from './comum';
 
 // O rabicho embaixo de um campo de hora: "horário de São Paulo" só para quem está noutro relógio que o do time; vazio
 // para quem está no mesmo (quase todo mundo). O rótulo do campo é sempre "Hora do jogo" ou "Hora" — nunca "fuso".
@@ -121,17 +121,17 @@ function AvisarOTime({ slug, showToast }) {
 
   return (
     <div style={{ ...CARD, padding: 14, display: 'grid', gap: 12 }} data-avisar-o-time>
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/{maxTitulo})</span></span>
         <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, maxTitulo))} placeholder="Ex.: Jogo confirmado" style={inputStyle} />
       </label>
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/{maxMensagem})</span></span>
         <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, maxMensagem))} rows={3} placeholder="Escreva o aviso para o time…" style={{ ...inputStyle, resize: 'vertical' }} />
       </label>
       <Interruptor ligado={noCelular} aoTrocar={setNoCelular} rotulo="Notificar no celular" />
       <Interruptor ligado={naResenha} aoTrocar={setNaResenha} rotulo="Publicar na Resenha" />
-      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Na Resenha o aviso fica fixado como post oficial do time.</span>
+      <span style={textoDeApoio}>Na Resenha o aviso fica fixado como post oficial do time.</span>
       <button type="button" className="btn btn--purple btn--sm" disabled={busy || !titulo.trim() || !mensagem.trim() || (!noCelular && !naResenha)} onClick={enviar}>
         {busy ? 'Enviando…' : 'Avisar o time'}
       </button>

@@ -11,7 +11,7 @@ import { nomeExibicao } from '../../utils/nomeExibicao';
 import LoadingFutty from '../../components/LoadingFutty';
 import PlayerAvatar from '../../components/PlayerAvatar';
 import { inputStyle, lbl } from '../../components/camposDoAdmin';
-import { CARD } from './comum';
+import { CARD, rotuloECampo } from './comum';
 import { ConfirmModal } from './pecas';
 
 // ─── TAB: MEMBROS ────────────────────────────────────────────────────────────
@@ -48,11 +48,11 @@ function FormMensagem({ slug, membro, showToast, onClose }) {
       <div style={{ fontSize: 12, fontWeight: 800, color: '#fff' }}>
         Enviar mensagem a <span style={{ color: 'var(--neon)' }}>{nome}</span>
       </div>
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Título <span style={{ color: 'var(--text-dim)' }}>({titulo.length}/60)</span></span>
         <input value={titulo} onChange={(e) => setTitulo(e.target.value.slice(0, 60))} placeholder="Ex.: Confirme sua presença" style={inputStyle} />
       </label>
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Mensagem <span style={{ color: 'var(--text-dim)' }}>({mensagem.length}/200)</span></span>
         <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value.slice(0, 200))} rows={3} placeholder="Escreva a mensagem…" style={{ ...inputStyle, resize: 'vertical' }} />
       </label>

@@ -567,7 +567,7 @@ test('157 · cidade sem bairros na lista → o campo Bairro não aparece (Criar 
   assert.match(criar, /if \(texto !== cidade\) \{ setBairro\(''\); setBairroEscolha\(null\); \}/, 'o bairro é da cidade: outra cidade, campo limpo');
   const ajustes = lerPagina('AdminPanel');
   assert.match(ajustes, /const bairros = useBairrosDaCidade\(cidade, cidadeEscolha\);/);
-  assert.match(ajustes, /\{bairros\.estado === 'lista' \? \(\s*<div style=\{\{ display: 'grid', gap: 6 \}\}>\s*<span style=\{lbl\}>Bairro/);
+  assert.match(ajustes, /\{bairros\.estado === 'lista' \? \(\s*<div style=\{rotuloECampo\}>\s*<span style=\{lbl\}>Bairro/);
   assert.match(ajustes, /if \(texto !== cidade\) \{ setBairro\(''\); setBairroEscolha\(null\); \}/);
   // o bairro antigo escrito à mão fica salvo: só é enviado (ou apagado) quando a pessoa mexe
   assert.match(ajustes, /const mandaBairro = textoDoBairro === '' \? bairroGuardado\.trim\(\) !== '' : !!bairroDaLista && textoDoBairro !== bairroGuardado\.trim\(\);/);

@@ -14,7 +14,7 @@ import { avisoDaCidade } from '../../utils/cidades';
 import { useBairrosDaCidade } from '../../hooks/useBairrosDaCidade';
 import { TEXTO_APOIO_BAIRRO, avisoDoBairro } from '../../utils/freguesias';
 import { EXEMPLO_SOBRE_O_TIME, FALTA_SOBRE_NOS_AJUSTES, MAX_SOBRE_O_TIME, faltaSobre, precisaDeSobre } from '../../utils/sobreOTime';
-import { CARD, VIS_DESC, VIS_OPCOES } from './comum';
+import { CARD, rotuloECampo, textoDeApoio, VIS_DESC, VIS_OPCOES } from './comum';
 import { ConfirmModal, Interruptor } from './pecas';
 
 // ─── TAB: EQUIPA ─────────────────────────────────────────────────────────────
@@ -250,26 +250,26 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
     <div style={{ ...CARD, padding: 14, display: 'grid', gap: 14 }}>
-      <div style={{ display: 'grid', gap: 6 }}>
+      <div style={rotuloECampo}>
         <span style={lbl}>Você também joga?</span>
         <EscolhaPapel joga={joga} ocupado={jogaOcupado} aoTrocar={guardarJoga} />
         {/* "admin" e "posição em campo" são coisas separadas. */}
         <p className="texto-apoio" data-texto-admin-posicao style={{ marginTop: 0 }}>{TEXTO_ADMIN_E_POSICAO}</p>
       </div>
 
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Nome do time</span>
         <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 60))} style={inputStyle} />
       </label>
 
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Localização</span>
         <input value={localizacao} onChange={(e) => setLocalizacao(e.target.value.slice(0, 100))} placeholder="Ex.: São Paulo · Campo do Zé" style={inputStyle} />
       </label>
 
       {/* GEO — opt-in implícito (preencher = consentir). Texto obrigatório junto ao campo.
           O nome da cidade é guardado + mostrado; do ponto guarda-se só o arredondado. */}
-      <div style={{ display: 'grid', gap: 6 }}>
+      <div style={rotuloECampo}>
         <span style={lbl}>Cidade <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· busca por proximidade</span></span>
         <CampoCidadeLazy valor={cidade} aoMudar={(texto, escolha) => { if (texto !== cidade) { setBairro(''); setBairroEscolha(null); } setCidade(texto); setCidadeEscolha(escolha); setAvisoCidade(null); }} placeholder="Ex.: Brasília" className="" style={inputStyle} />
         {avisoCidade ? (
@@ -283,7 +283,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
       {/* O bairro, opcional, é de LISTA — os do IBGE no Brasil, as freguesias em Portugal — e põe o time no ponto do
           bairro (e não no centro da cidade). Cidade sem bairros na lista: o campo não aparece; o bairro antigo escrito à mão fica salvo até alguém editar. */}
       {bairros.estado === 'lista' ? (
-        <div style={{ display: 'grid', gap: 6 }}>
+        <div style={rotuloECampo}>
           <span style={lbl}>Bairro <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>· opcional</span></span>
           <CampoBairro
             key={bairros.chave}
@@ -301,7 +301,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
       ) : null}
 
       {/* "Sobre o time" é o que o time diz de si no Radar de peladas; obrigatório no time aberto ao público. */}
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={rotuloECampo}>
         <span style={lbl}>Sobre o time</span>
         <textarea data-sobre-o-time value={descricao} onChange={(e) => setDescricao(e.target.value.slice(0, MAX_SOBRE_O_TIME))} rows={3} maxLength={MAX_SOBRE_O_TIME} placeholder={EXEMPLO_SOBRE_O_TIME} style={{ ...inputStyle, resize: 'vertical' }} />
         <span style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>{descricao.length}/{MAX_SOBRE_O_TIME}</span>
@@ -312,7 +312,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         <span style={lbl}>Logo</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <EscudoEquipa team={{ ...team, nome, logo_url: previewLogo || logoUrl }} size={64} />
-          <div style={{ display: 'grid', gap: 6 }}>
+          <div style={rotuloECampo}>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 type="button"
@@ -341,13 +341,13 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
 
       {/* ESCUDO DO TIME: só para o time sem logo — com logo, é o logo que aparece. */}
       {previewLogo || logoUrl ? (
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Com logo, o escudo não aparece: o app mostra o logo em todo lugar.</span>
+        <span style={textoDeApoio}>Com logo, o escudo não aparece: o app mostra o logo em todo lugar.</span>
       ) : (
         <EditorEscudo slug={slug} team={{ ...team, nome }} showToast={showToast} onMudou={() => onMudou?.()} />
       )}
 
       {/* VISIBILIDADE */}
-      <div style={{ display: 'grid', gap: 6 }}>
+      <div style={rotuloECampo}>
         <span style={lbl}>Visibilidade</span>
         <div style={{ display: 'flex', gap: 8 }}>
           {VIS_OPCOES.map((o) => {
@@ -378,7 +378,7 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
             );
           })}
         </div>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{VIS_DESC[modo]}</span>
+        <span style={textoDeApoio}>{VIS_DESC[modo]}</span>
       </div>
 
       {/* GOLS: os mesmos títulos e frases do passo 2 do Criar time (golsEPremios.js). */}
@@ -389,14 +389,14 @@ function TabEquipa({ slug, team, showToast, onMudou }) {
         <span style={lbl}>Prêmios do dia</span>
         <Interruptor ligado={mostrarArtilheiro} aoTrocar={guardarArtilheiro} rotulo={ARTILHEIRO.titulo} apoio={ARTILHEIRO.apoio} />
         <Interruptor ligado={mostrarDestaque} aoTrocar={guardarDestaque} rotulo={DESTAQUE.titulo} apoio={DESTAQUE.apoio} />
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Desligado: o editor de resultado não oferece o troféu nem o destaque. O que já foi premiado continua no histórico.</span>
+        <span style={textoDeApoio}>Desligado: o editor de resultado não oferece o troféu nem o destaque. O que já foi premiado continua no histórico.</span>
       </div>
 
       {/* JOGADORES POR TIME (item 68): o padrão do time; cada jogo ainda pode mudar só para ele, no "Novo jogo". */}
-      <div style={{ display: 'grid', gap: 6 }} data-padrao-por-time>
+      <div style={rotuloECampo} data-padrao-por-time>
         <span style={lbl}>Jogadores por time</span>
         <NumberStepper value={porTime} onChange={mudarPorTime} min={2} max={11} />
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>O padrão do time: todo jogo novo já nasce com ele. Dá para mudar só num jogo, na hora de criar.</span>
+        <span style={textoDeApoio}>O padrão do time: todo jogo novo já nasce com ele. Dá para mudar só num jogo, na hora de criar.</span>
       </div>
 
       <button type="button" className="btn btn--primary" style={{ width: '100%' }} disabled={saving} onClick={guardar}>
