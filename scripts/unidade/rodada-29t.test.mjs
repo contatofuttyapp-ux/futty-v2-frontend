@@ -330,7 +330,7 @@ test('167 · os exemplos dos campos têm um formato só: "Ex.: …" (nunca "Ex: 
     for (const nome of fs.readdirSync(path.join(RAIZ, dir))) {
       const rel = `${dir}/${nome}`;
       if (fs.statSync(path.join(RAIZ, rel)).isDirectory()) { varrer(rel); continue; }
-      if (!/\.jsx?$/.test(nome) || rel.includes('Gabinete')) continue; // o Gabinete é só da equipe
+      if (!/\.jsx?$/.test(nome) || /gabinete/i.test(rel)) continue; // o Gabinete (a página e a pasta dela) é só da equipe
       ler(rel).split('\n').forEach((linha, i) => {
         for (const m of linha.matchAll(/placeholder(?:Texto)?\s*=\s*(?:\{\s*)?(["'`])((?:(?!\1).)*)\1/g)) {
           if (/\bex\.?\s*:/i.test(m[2]) && !/^Ex\.: /.test(m[2])) ruins.push(`${rel}:${i + 1} "${m[2]}"`);

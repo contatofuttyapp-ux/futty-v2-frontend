@@ -145,7 +145,7 @@ test('as telas que o achado citou usam o helper (Ranking, Início, perfil, Admin
   assert.match(ler('src/pages/Ranking.jsx'), /formatarNota\(p\.nota\)/);
   assert.match(ler('src/pages/JogadorPerfil.jsx'), /formatarNota\(notaShow\)/);
   assert.match(lerPagina('AdminPanel'), /formatarNota\(m\.nota_media\)/);
-  assert.match(ler('src/pages/Gabinete.jsx'), /fmtUSD = formatarUSD/);
-  assert.match(ler('src/pages/Gabinete.jsx'), /fmtEUR = formatarEUR/);
+  assert.match(lerPagina('Gabinete'), /fmtUSD = formatarUSD/);
+  assert.match(lerPagina('Gabinete'), /fmtEUR = formatarEUR/);
   assert.match(ler('src/pages/Diagnostico.jsx'), /formatarSegundos\(/);
 });

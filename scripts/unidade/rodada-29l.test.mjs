@@ -57,7 +57,7 @@ test('130/138 · os quatro trilhos usam o aviso: fundos e uniformes da Figurinha
   assert.match(fig, /<FaixaRolavel className="fig-seletor-grade"[^>]*data-grade="fundos"/, 'a faixa dos fundos (onde ficam os 3 da figurinha paga)');
   assert.match(fig, /<FaixaRolavel className="fig-seletor-grade"[^>]*data-grade="uniformes"/);
   assert.match(ler('src/components/EscolherUniformeTime.jsx'), /<FaixaRolavel className="fig-seletor-grade"/);
-  assert.match(ler('src/pages/Gabinete.jsx'), /<nav className="gab2-side" ref=\{montarFaixaDeAbas\}/);
+  assert.match(lerPagina('Gabinete'), /<nav className="gab2-side" ref=\{montarFaixaDeAbas\}/);
   assert.match(lerPagina('Inicio'), /<div className="chips-row" ref=\{montarFaixaDeChips\}/);
 });
 
@@ -145,7 +145,7 @@ test('136 · nenhum contador do app fica sem concordar: sem "(s)" e sem o rótul
   const alvos = ['src/pages/Gabinete.jsx', 'src/pages/gabinete/Brilhantes.jsx', 'src/pages/gabinete/PessoasTimes.jsx', 'src/pages/gabinete/Velocidade.jsx'];
   const improvisos = ['custo(s)', 'tabela(s)', 'policy(ies)', 'regra(s)', 'configurada(s)', 'crédito(s)', 'membro(s)'];
   for (const arquivo of alvos) {
-    const fonte = semComentarios(ler(arquivo));
+    const fonte = semComentarios(lerArquivoOuPagina(RAIZ, arquivo));
     for (const palavra of improvisos) assert.ok(!fonte.includes(palavra), `${arquivo}: "${palavra}" é fugir da concordância`);
   }
   const admin = lerPagina('AdminPanel');
@@ -217,7 +217,7 @@ test('140 · "Criar jogos recorrentes" e "Criar campeonato": cada um numa linha,
 });
 
 test('133 · cabeçalho do Gabinete: título e links não quebram ao meio; sem largura, os links descem juntos', () => {
-  const gab = ler('src/pages/Gabinete.jsx');
+  const gab = lerPagina('Gabinete');
   assert.match(gab, /flexWrap: 'wrap', justifyContent: 'space-between'/);
   assert.match(gab, /<h1 style=\{\{[^}]*whiteSpace: 'nowrap' \}\}>Gabinete/);
   assert.match(gab, /<span data-links-do-gabinete style=\{\{[^}]*whiteSpace: 'nowrap' \}\}>/);
