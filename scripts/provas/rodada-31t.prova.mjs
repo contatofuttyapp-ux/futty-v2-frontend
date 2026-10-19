@@ -96,6 +96,9 @@ async function abrirContexto(navegador, baseDoVite, dados, quem, largura, { mexe
     serviceWorkers: 'block', reducedMotion: 'reduce',
   });
   const estado = { externos: [], erros: [] };
+  // O navegador vive no mesmo dia que o motor (o relógio do mundo, não o de hoje), e o tempo corre normal a partir dali.
+  await ctx.clock.install({ time: new Date(dados.relogio) });
+  await ctx.clock.resume();
   await ctx.addInitScript(({ chave, sessao }) => {
     try { localStorage.setItem('futty_cookies', 'aceite'); if (sessao) localStorage.setItem(chave, sessao); } catch { /* sem armazenamento */ }
   }, { chave: `sb-${REF}-auth-token`, sessao: sessaoDe(dados, quem) });
@@ -130,6 +133,7 @@ const esperar = (ms) => new Promise((r) => { setTimeout(r, ms); });
 export async function rodar({ navegador, base, t }) {
   try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
   const { filho, dados } = await subirMotor();
+  dados.relogio = dados.agora;
   const slug = dados.time.slug;
   const jogo15 = dados.jogo15.id;
   const id = (quem) => dados.pessoas[quem].id;
@@ -264,7 +268,9 @@ export async function rodar({ navegador, base, t }) {
     // ── Daqui a um mês: o relógio do motor anda 31 dias e o Daqui-a-um-mês entra no time ──
     filho.stdin.write('avancar\n');
     const avancou = await filho.esperarLinha('{"avancou"', 30000);
-    t('um mês depois · o relógio do motor está em 16-nov e o Daqui-a-um-mês entrou com um convite novo', avancou.avancou === true && avancou.agora.startsWith('2026-11-16'), JSON.stringify(avancou));
+    const umMesDepois = new Date(Date.parse(dados.agora) + 31 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    t(`um mês depois · o relógio do motor andou 31 dias (${umMesDepois}) e o Daqui-a-um-mês entrou com um convite novo`, avancou.avancou === true && avancou.agora.startsWith(umMesDepois), JSON.stringify(avancou));
+    dados.relogio = avancou.agora;
     const v = Object.fromEntries(await Promise.all(['mes', 'novato', 'gabriel', 'motta'].map(async (q) => [q, await jogosNaVitrine(q)])));
     t(`um mês depois · quem entrou agora ganha os mesmos ${JOGOS_ATE_O_CORTE} jogos de fundador; o Gabriel tem +2 (confirmou 22/10 e 29/10); 05/11 e 12/11 sem confirmação não contam para ninguém`,
       v.mes === JOGOS_ATE_O_CORTE && v.novato === JOGOS_ATE_O_CORTE && v.motta === JOGOS_ATE_O_CORTE && v.gabriel === JOGOS_ATE_O_CORTE + 2, JSON.stringify(v));

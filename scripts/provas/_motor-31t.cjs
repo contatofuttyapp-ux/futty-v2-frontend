@@ -14,9 +14,12 @@
 
 const path = require('node:path');
 
-// O relógio do motor: a prova adianta 31 dias para "daqui a um mês". Trocado ANTES de qualquer módulo do motor carregar.
+// O relógio do motor: o mundo é o de 16-out-2026 (o corte de fundador em 18-out, o jogo de 15-out, os jogos de 22/10 a 12/11 ainda por vir), então o
+// relógio COMEÇA nesse dia em qualquer data em que a prova rode, e a prova adianta 31 dias para "daqui a um mês". Trocado ANTES de qualquer módulo
+// do motor carregar.
 const DataReal = Date;
-let desvioMs = 0;
+const HOJE_NO_MUNDO = DataReal.parse('2026-10-16T14:00:00.000Z');
+let desvioMs = HOJE_NO_MUNDO - DataReal.now();
 class DataDoMotor extends DataReal {
   constructor(...a) { if (a.length) super(...a); else super(DataReal.now() + desvioMs); }
   static now() { return DataReal.now() + desvioMs; }
