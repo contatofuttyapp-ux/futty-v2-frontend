@@ -1,0 +1,274 @@
+/* Futty v2.0 — O Ranking. (parte de styles/app.css) */
+
+/* ===== Ranking completo (v1) ===== */
+
+/* Tabs de período */
+
+/* Inativos: roxo com borda. Ativo: verde (estado ativo). */
+
+
+/* Avatar com glow neon */
+.pavatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg-elev);
+  border: 2px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/*
+ * min-width/min-height 0: a caixa é um grid
+ * e a <img> um item dele. Com o mínimo automático, o WebKit do iPhone estica a linha do grid até
+ * a altura que a foto teria pela proporção dela — num avatar retrato (a
+ * silhueta genérica é 368×680) a linha fica quase o dobro da caixa, e o
+ * place-items:center empurra a imagem 20–27 px para baixo: cabeça no fundo,
+ * resto cortado. Foto quadrada não mexe, por isso "só alguns" saíam errados.
+ * O Chrome não faz isto.
+ */
+.pavatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: cover;
+  object-position: top center; /* mostra a cabeça em vez do tronco */
+}
+
+/* Glow verde — apenas top 3 do ranking e avatar de perfil */
+.pavatar--glow {
+  color: var(--neon);
+  background: radial-gradient(circle at 50% 35%, rgba(139, 92, 246, 0.18), rgba(8, 8, 8, 0.9));
+  border-color: rgba(139, 92, 246, 0.55);
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.35), inset 0 0 10px rgba(139, 92, 246, 0.15);
+}
+
+.pavatar--lg {
+  width: 128px;
+  height: 128px;
+  font-size: 40px;
+  border-width: 3px;
+}
+
+.pavatar--lg.pavatar--glow {
+  box-shadow: 0 0 32px rgba(139, 92, 246, 0.5), inset 0 0 18px rgba(139, 92, 246, 0.18);
+}
+
+/* Moldura de avatar do CÂNONE (V1, escolhida pelo utilizador): quadrado + cantos-L
+   dourados (linguagem .hud-corners à escala do avatar) + interior no material da casa
+   (véu branco 3% sobre --bg-elev, não #15151a sólido) + borda dourada subtil (0.25) +
+   véu translúcido por cima. Primitiva partilhável (.avatar-frame), estreada no Ranking
+   (rows/pódio/modal). As outras molduras (.pavatar, AvatarFrame) migram uma a uma na
+   vaga transversal — Feed guarda o glow roxo, Perfil selado a decidir. Tamanho via
+   width/height no use site; o L escala a 30% do lado. */
+.avatar-frame {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.avatar-frame__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)), var(--bg-elev);
+  border: 1px solid rgba(212, 160, 23, 0.25);
+  color: #fff;
+  font-weight: 800;
+}
+/* min-width/min-height 0: mesmo motivo do .pavatar img acima (grid + foto
+   retrato no WebKit do iPhone = avatar deslocado para baixo). */
+.avatar-frame__fill img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: cover;
+  object-position: top center;
+}
+.avatar-frame__veil {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.28));
+}
+.avatar-frame__lc {
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  pointer-events: none;
+  z-index: 2;
+}
+.avatar-frame__lc--tl { top: -1px; left: -1px; border-top: 2px solid #d4a017; border-left: 2px solid #d4a017; border-radius: 2px 0 0 0; }
+.avatar-frame__lc--tr { top: -1px; right: -1px; border-top: 2px solid #d4a017; border-right: 2px solid #d4a017; border-radius: 0 2px 0 0; }
+.avatar-frame__lc--br { bottom: -1px; right: -1px; border-bottom: 2px solid #d4a017; border-right: 2px solid #d4a017; border-radius: 0 0 2px 0; }
+.avatar-frame__lc--bl { bottom: -1px; left: -1px; border-bottom: 2px solid #d4a017; border-left: 2px solid #d4a017; border-radius: 0 0 0 2px; }
+
+/*
+ * Cards da Resenha: nunca mais largos que a coluna, e nenhuma
+ * imagem dentro deles mais larga que o card.
+ */
+.feed-card {
+  min-width: 0;
+  max-width: 100%;
+}
+.feed-card img {
+  max-width: 100%;
+}
+
+/* Etiquetas roxas (cabeça de chave / goleiro) */
+
+/* Botões de ação por linha (Votar / Ver perfil) */
+.rank-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rank-actions .btn {
+  white-space: nowrap;
+}
+
+/* Estrelas grandes (modal) */
+.stars--lg {
+  gap: 6px;
+}
+
+.stars--lg .star {
+  font-size: 34px;
+}
+
+.star--ro {
+  cursor: default;
+}
+
+.star--ro:hover {
+  transform: none;
+}
+
+/* Modal genérico */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /*
+   * Sem overflow/overscroll-behavior próprios, um arrasto no véu (fora do card, onde não há nada para
+   * rolar) ENCADEIA para o body por baixo — no WebKit do iPhone, isso rola a página por trás do modal; ao
+   * fechar, o body fica numa posição que não bate com o conteúdo novo ("dois terços do topo em preto"), e
+   * só um reload acerta. `overflow: hidden` + `overscroll-behavior: contain` fazem o véu ABSORVER o
+   * arrasto, em vez de deixá-lo passar para trás.
+   */
+  overflow: hidden;
+  overscroll-behavior: contain;
+  /*
+   * max(): nunca menos que os 16px de sempre, mais o que o notch/gesto exigir — um modal alto não pode
+   * nascer com o card colado ao relógio ou à barra de gesto. Sheets de fundo (AvatarGenericoSheet, o de
+   * idioma em MeuPerfil.jsx) sobrepõem `padding: 0` inline e resolvem o próprio inset de baixo à parte —
+   * não são afetados por isto.
+   * Laterais: o mesmo max() — com o iPhone deitado, o recorte da câmera fica de lado.
+   */
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+/*
+ * O modal é filho do BODY, por portal (Ranking, Resenha, comentários, denúncia, admin, onboarding do
+ * time). Dentro do [data-page] o transform da animação de entrada vira o "chão" do position:fixed: o
+ * modal se centra na página inteira e, com a lista rolada, sai de quadro.
+ */
+
+.modal-card {
+  width: 100%;
+  max-width: 360px;
+  padding: 2px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--neon), var(--purple));
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+}
+
+.modal-card__inner {
+  background: var(--bg-elev);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 24px 20px;
+  text-align: center;
+  /*
+   * Quando o conteúdo é alto e leva overflow-y: auto próprio (ex.: o modal de resultado), rolar até à
+   * borda não pode encadear para o body por baixo do véu.
+   */
+  overscroll-behavior: contain;
+}
+
+/* Modal em modo HUD: corte cheio 8px (escala de card). Opt-in — só a instância que leva
+   a classe; o .modal-card base (radius) fica INTACTO, que outras páginas ainda o usam.
+   O clip corta tanto a moldura-gradiente como o miolo, o radius fica inerte por baixo.
+   ATENÇÃO: propagar aos modais das outras páginas na vaga transversal (ver .btn--hud). */
+.modal-card--hud,
+.modal-card--hud .modal-card__inner {
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+  );
+}
+/* Nunca mais largo que a tela menos as margens (e as áreas seguras), e nunca mais
+   alto: o que não couber (iPhone deitado) rola por dentro do cartão. */
+.modal-card--hud {
+  max-width: min(360px, calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+}
+.modal-card--hud .modal-card__inner {
+  max-height: calc(100vh - 36px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - 36px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* O voto de 0 a 10: onze botões em duas linhas (0 a 5 em cima, 6 a 10 embaixo, centrados), 44 px de altura — cabem
+   até numa tela de 320. O escolhido veste o dourado da casa (como o .chip--active), nunca amarelo chapado. */
+.nota-grade {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.nota-botao {
+  flex: 0 0 calc((100% - 30px) / 6);
+  min-height: 44px;
+  padding: 0;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 19px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nota-botao[aria-checked='true'] {
+  color: #f0c94a;
+  background: rgba(212, 160, 23, 0.16);
+  border-color: #d4a017;
+}
+.nota-botao:focus-visible {
+  outline: none;
+  border-color: var(--neon);
+  background: rgba(139, 92, 246, 0.14);
+}
+
+/* Perfil do jogador */
+
+
+/* Aproxima o gráfico radar do título (remove o espaço em branco do SVG) */

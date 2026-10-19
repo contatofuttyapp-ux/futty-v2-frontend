@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { visaoDoSorteio, trocasDoAjuste, nomesJuntos, chaveDoJogador, montadoAMao, CORES_DO_SELO } from '../../src/utils/seloDoSorteio.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -167,7 +168,7 @@ test('caso 2 · a cerimônia: o fim (FimDoSorteio) só entra quando ela termina,
 });
 
 test('caso 2 · a entrada em sequência é só CSS e o estado natural é visível (lei dos builds 10-12)', () => {
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   assert.match(css, /\.entra-em-sequencia \{ animation: entraEmSequencia 0\.45s cubic-bezier\(0\.2, 0\.9, 0\.3, 1\) both; animation-delay: var\(--d, 0s\); \}/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\r?\n {2}\.entra-em-sequencia \{ animation: none; \}/);
 });

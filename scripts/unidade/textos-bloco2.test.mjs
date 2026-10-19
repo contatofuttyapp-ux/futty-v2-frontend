@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { KITS_FIGURINHA } from '../../src/utils/kitsFigurinha.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -142,7 +143,7 @@ test('93 · a Resenha tem esqueleto de carregamento e estado vazio de verdade', 
   assert.match(feed, /Ainda não tem resenha por aqui\./);
   assert.match(feed, /Seja o primeiro: o campo de cima é para isso\./);
   assert.match(feed, /Quando alguém postar ou um jogo for fechado, aparece aqui\./);
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   assert.match(css, /\.feed-esqueleto \{/);
   assert.match(css, /prefers-reduced-motion: reduce\) \{\s*\.feed-esqueleto::after \{ animation: none; \}/);
 });
@@ -162,7 +163,7 @@ test('88, 89 e 90 · sorteio: "Ver sorteio" abre pelo roteador com "Abrindo…";
 test('84 · o card de jogo do Início tem um link de verdade para a tela do jogo (stretched link, sem botão dentro de <a>)', () => {
   const inicio = ler('src/pages/Inicio.jsx');
   assert.match(inicio, /<Link className="gcard__link" to=\{`\/time\/\$\{game\.team_slug\}\/jogo\/\$\{game\.id\}`\}/);
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   assert.match(css, /\.gcard__link::after \{ content: ''; position: absolute; inset: 0; z-index: 1; \}/);
   assert.match(css, /\.gcard button \{ position: relative; z-index: 2; \}/, 'os botões ficam por cima da camada do link');
 });

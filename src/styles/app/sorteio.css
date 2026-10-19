@@ -1,0 +1,717 @@
+/* Futty v2.0 — A slot machine e a cerimônia do sorteio. (parte de styles/app.css) */
+
+/* ===== Slot machine do sorteio ===== */
+
+
+/* Reels de ruído */
+
+
+/* Resultado final */
+
+
+/* Carta final do jogador (proporção 2:3, cor do time) */
+
+
+
+/*
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * VITRINE DO JOGADOR (/time/:slug/jogador/:id)
+ * Herói = recorte puro com aura + respiração; stats-espectáculo (anel/radar/
+ * sparkline/tiles em cascata). Namespace .perfil-*, aditivo. reduced-motion estático.
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+/* HERÓI — TRANSPLANTE DIRETO do harness glow-organico.html, VARIANTE A (byte a byte).
+   NADA reescalado: o harness É a resposta. Palco 330×470; glow 300×344 (blur 46, a
+   respiração respiraA vai no PRÓPRIO glow — o cutout fica estático); cutout 250×284 com
+   máscara 86% e ZERO drop-shadow; nome absoluto a bottom:34px. */
+.perfil-palco { position:relative; width:330px; height:470px; max-width:100%; margin:14px auto 0; overflow:visible; }
+
+.perfil-glow { position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
+  z-index:0; pointer-events:none;
+  width:300px; height:344px;
+  /* DOSE +25% (isolado: só este glow muda; ref oficial atualiza após o look). */
+  background: radial-gradient(ellipse 50% 48% at 50% 45%,
+    rgba(212,160,23,.69) 0%, rgba(212,160,23,.30) 34%,
+    rgba(212,160,23,.09) 56%, transparent 78%);
+  filter: blur(46px);
+  animation: respiraA 7s ease-in-out infinite; }
+@keyframes respiraA { 0%,100% { transform:translate(-50%,-50%) scale(1);    opacity:.92; }
+                      50%      { transform:translate(-50%,-50%) scale(1.06); opacity:1; } }
+
+.perfil-cutout { position:absolute; left:50%; bottom:108px; transform:translateX(-50%);
+  width:250px; height:284px; object-fit:cover; object-position:50% 6%; z-index:1;
+  -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  filter: none; }        /* <-- zero drop-shadow no avatar (lei do harness) */
+/* Fallback foto (não-recorte): mesma caixa do harness, foco um nada mais baixo. */
+.perfil-faded { position:absolute; left:50%; bottom:96px; transform:translateX(-50%);
+  width:250px; height:284px; object-fit:cover; object-position:50% 12%; z-index:1;
+  -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  filter: none; }
+
+.perfil-nome-wrap { position:absolute; left:0; right:0; bottom:34px; text-align:center; z-index:2; }
+
+/* Anel da nota (count-up acompanha por JS). Cor via --vitrine (A/B). */
+.perfil-ringval { fill:none; stroke: var(--vitrine, #d4a017); stroke-width:9; stroke-linecap:round; stroke-dasharray:326; stroke-dashoffset:326;
+  filter: drop-shadow(0 0 5px var(--vitrine, #d4a017)); animation: perfilRing 1.4s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes perfilRing { to { stroke-dashoffset: var(--ring-off, 326); } }
+
+/* Radar FIFA — DOSE v2 (nota-se em 3s à distância de braço). O crescer (transform) fica
+   no polígono; a RESPIRAÇÃO DE ESCALA vai num WRAPPER <g> (perfil-radarbreath) para não
+   conflitar com o transform do crescer; o glow ondula no polígono (filter). */
+.perfil-radarshape { transform-origin:center; transform:scale(0); fill-opacity:.18; filter: drop-shadow(0 0 5px var(--vitrine, #d4a017));
+  animation: perfilRadar 1s cubic-bezier(.2,.8,.3,1) forwards, perfilRadarLife 4s ease-in-out 1s infinite; }
+@keyframes perfilRadar { to { transform: scale(1); } }
+/* VIDA = o brilho a PREENCHER e o fill a respirar (não um traço a viajar). */
+@keyframes perfilRadarLife {
+  0%,100% { fill-opacity:.15; filter: drop-shadow(0 0 4px var(--vitrine, #d4a017)); }
+  50%     { fill-opacity:.34; filter: drop-shadow(0 0 14px var(--vitrine, #d4a017)); }
+}
+/* Respiração de ESCALA de verdade (1 ↔ 1.06) no wrapper — a linha pulsa. */
+.perfil-radarbreath { transform-box: view-box; transform-origin: 100px 100px;
+  animation: perfilRadarPulse 4.5s ease-in-out 1s infinite; }
+@keyframes perfilRadarPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+/* Vértices — pulsam opacity 0.5↔1 E raio 2.5↔4 (CSS anima `r` no Chrome). */
+.perfil-radardot { animation: perfilDotTwinkle 3s ease-in-out infinite; }
+@keyframes perfilDotTwinkle {
+  0%,100% { opacity: .5; r: 2.5; }
+  50%     { opacity: 1; r: 4; filter: drop-shadow(0 0 5px var(--vitrine, #d4a017)); }
+}
+
+/* Ponto de luz a ORBITAR o anel da nota, contínuo (após o fill). */
+.perfil-ringorbit { transform-box: view-box; transform-origin: 59px 59px; animation: perfilRingOrbit 3s linear 1.4s infinite; }
+@keyframes perfilRingOrbit { to { transform: rotate(360deg); } }
+
+/* Números vivos — shimmer a cada 4s, highlight mais largo/brilhante. */
+.perfil-num {
+  background: linear-gradient(100deg, currentColor 32%, #fff8dc 50%, currentColor 68%);
+  background-size: 250% 100%; background-position: 150% 0;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: perfilNumShimmer 4s ease-in-out infinite;
+}
+@keyframes perfilNumShimmer { 0%,72%,100% { background-position: 150% 0; } 88% { background-position: -70% 0; } }
+
+/* Sparkline self-draw + glow a pulsar (mesma vida do radar: brilho, não traço). */
+.perfil-spark { fill:none; stroke: var(--vitrine, #d4a017); stroke-width:2; stroke-dasharray:600; stroke-dashoffset:600;
+  animation: perfilSpark 1.6s ease-out .3s forwards, perfilSparkGlow 4s ease-in-out 2s infinite; }
+@keyframes perfilSpark { to { stroke-dashoffset:0; } }
+@keyframes perfilSparkGlow {
+  0%,100% { filter: drop-shadow(0 0 2px var(--vitrine, #d4a017)); }
+  50%     { filter: drop-shadow(0 0 8px var(--vitrine, #d4a017)); }
+}
+
+/* Tiles em cascata */
+.perfil-tile { opacity:0; transform:translateY(10px); animation: perfilTile .5s ease forwards; }
+@keyframes perfilTile { to { opacity:1; transform:translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .perfil-glow { animation: none; }
+  .perfil-ringval { stroke-dashoffset: var(--ring-off, 326); animation: none; }
+  .perfil-radarshape { transform: scale(1); fill-opacity: .22; filter: drop-shadow(0 0 5px var(--vitrine, #d4a017)); animation: none; }
+  .perfil-radarbreath { animation: none; transform: none; }
+  .perfil-radardot { animation: none; opacity: 1; }
+  .perfil-ringorbit { animation: none; display: none; }
+  .perfil-spark { stroke-dashoffset: 0; animation: none; }
+  .perfil-tile { opacity:1; transform:none; animation: none; }
+  .perfil-num { animation: none; background: none; -webkit-text-fill-color: currentColor; }
+}
+
+/* Onboarding dia-1 — "deixar para depois" só aparece aos ~4s (quase-obrigatória). */
+@keyframes onbAparece { to { opacity: 1; visibility: visible; } }
+
+/* Silhueta-jogador v4 — respiração do traço (como o radar da vitrine). */
+.sil-corpo { stroke-opacity: 0.55; fill-opacity: 0.12; animation: silRespira 5.5s ease-in-out infinite; }
+.sil-halo { stroke-opacity: 0; animation: silHalo 5.5s ease-in-out infinite; }
+@keyframes silRespira {
+  0%, 100% { stroke-opacity: 0.55; fill-opacity: 0.12; }
+  50%      { stroke-opacity: 1;    fill-opacity: 0.2; }
+}
+@keyframes silHalo {
+  0%, 100% { stroke-opacity: 0; }
+  50%      { stroke-opacity: 0.3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sil-corpo, .sil-halo { animation: none; }
+  .sil-corpo { stroke-opacity: 0.7; fill-opacity: 0.14; }
+}
+
+/* ===== Cerimónia do Sorteio (slot v8 real) ===== */
+.cer-maq { position: relative; margin: 0 0 12px; background: #07060c; border: 1px solid rgba(212,160,23,0.4);
+  box-shadow: inset 0 8px 24px rgba(0,0,0,0.8), inset 0 -8px 24px rgba(0,0,0,0.8), 0 0 24px rgba(212,160,23,0.15);
+  padding: 10px 8px; clip-path: polygon(4% 0,96% 0,100% 6%,100% 94%,96% 100%,4% 100%,0 94%,0 6%); }
+.cer-luzes { display: flex; justify-content: center; gap: 8px; margin: 2px 0 8px; }
+.cer-luz { width: 6px; height: 6px; border-radius: 50%; background: #f0c94a; opacity: .16;
+  box-shadow: 0 0 8px rgba(240,201,74,0.9); animation: cerLuz 1.3s linear infinite; }
+@keyframes cerLuz { 0%, 18% { opacity: 1; } 30%, 100% { opacity: .16; } }
+.cer-janela { position: relative; background: #07060c; padding: 4px 2px; }
+.cer-rolos { display: grid; gap: 5px; }
+.cer-rolo { position: relative; overflow: hidden; background: #0a0812; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; height: 100px; }
+.cer-rolo.won { border-color: var(--tc); box-shadow: 0 0 12px var(--tcg60); }
+.cer-strip { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; }
+.cer-cel { position: relative; width: 100%; height: 100px; overflow: hidden; background: #0d0b14; }
+.cer-cel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.cer-cel--simb img { object-fit: contain; padding: 14%; background: radial-gradient(circle at 50% 40%, #17141f, #0a0812); }
+.cer-sil { position: absolute; inset: 0; display: grid; place-items: center; }
+.cer-n { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.88));
+  padding: 9px 2px 3px; text-align: center; font-family: 'Rajdhani', sans-serif; font-weight: 800; font-size: 9px; color: #fff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cer-rolo.gira .cer-strip { filter: blur(2px) brightness(.8); }
+.cer-masc { position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: linear-gradient(180deg, rgba(5,6,10,0.7), transparent 30%, transparent 70%, rgba(5,6,10,0.7)); }
+.cer-payline { position: absolute; left: 6px; right: 6px; top: 50%; border-top: 1px dashed rgba(212,160,23,0.4); z-index: 3; pointer-events: none; }
+.cer-rolo.clunk { animation: cerClunk .26s cubic-bezier(.2,2.4,.4,1); }
+@keyframes cerClunk { 0% { transform: translateY(-5px); } 60% { transform: translateY(2px); } 100% { transform: translateY(0); } }
+.cer-flash { position: absolute; inset: 0; background: #fff6d0; opacity: 0; z-index: 4; pointer-events: none; }
+.cer-rolo.clunk .cer-flash { animation: cerFlash .3s ease-out; }
+@keyframes cerFlash { 0% { opacity: .85; } 100% { opacity: 0; } }
+/* frame B: chase SÓ no aro (máscara-anel) + anel metálico do F */
+.cer-chasebox { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 2;
+  clip-path: polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);
+  -webkit-mask-image: linear-gradient(#000,#000), linear-gradient(#000,#000);
+  -webkit-mask-size: 100% 100%, calc(100% - 14px) calc(100% - 14px);
+  -webkit-mask-position: 0 0, 7px 7px; -webkit-mask-repeat: no-repeat; -webkit-mask-composite: xor;
+  mask-image: linear-gradient(#000,#000), linear-gradient(#000,#000);
+  mask-size: 100% 100%, calc(100% - 14px) calc(100% - 14px);
+  mask-position: 0 0, 7px 7px; mask-repeat: no-repeat; mask-composite: exclude; }
+.cer-chase { position: absolute; left: 50%; top: 50%; width: 220%; aspect-ratio: 1; margin: -110% 0 0 -110%;
+  will-change: transform; animation: cerChase 3.2s linear infinite;
+  background: conic-gradient(transparent 0deg 288deg, rgba(255,233,168,0.15) 306deg, #ffe9a8 330deg, #fff6d0 342deg, transparent 360deg); }
+@keyframes cerChase { to { transform: rotate(360deg); } }
+.cer-metal { position: absolute; inset: 3px; z-index: 1;
+  clip-path: polygon(9% 0,91% 0,100% 6.5%,100% 93.5%,91% 100%,9% 100%,0 93.5%,0 6.5%);
+  background: linear-gradient(160deg,#d69512 0%,#a86808 30%,#8a5304 55%,#5a3703 80%,#341a02 100%);
+  -webkit-mask-image: linear-gradient(#000,#000), linear-gradient(#000,#000);
+  -webkit-mask-size: 100% 100%, calc(100% - 6px) calc(100% - 6px);
+  -webkit-mask-position: 0 0, 3px 3px; -webkit-mask-repeat: no-repeat; -webkit-mask-composite: xor;
+  mask-image: linear-gradient(#000,#000), linear-gradient(#000,#000);
+  mask-size: 100% 100%, calc(100% - 6px) calc(100% - 6px);
+  mask-position: 0 0, 3px 3px; mask-repeat: no-repeat; mask-composite: exclude; }
+.cer-float { animation: cerBob 4.8s ease-in-out infinite; will-change: transform; }
+@keyframes cerBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+/* jackpot roxo em cinema */
+/*
+ * O estado PARADO não declara backdrop-filter. Um
+ * `blur(0)` não desfoca nada — mas declarar backdrop-filter num elemento fixo de
+ * ecrã inteiro obriga o WebKit a manter uma raiz de composição para ele durante
+ * a cerimónia inteira, que é o momento mais animado do app. O `.on` o declara:
+ * é o palco selado do sorteio.
+ */
+.cer-jack { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; pointer-events: none;
+  opacity: 0; transition: opacity .4s; }
+.cer-jack.on { opacity: 1; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65);
+  background: rgba(10,8,18,0.35); }
+.cer-jack__t { font-family: 'Rajdhani', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: .18em; text-align: center;
+  transform: scale(.75); transition: transform .5s cubic-bezier(.2,2,.4,1); }
+.cer-jack.on .cer-jack__t { transform: scale(1); }
+.cer-seg { color: #3a2f55; opacity: .35; }
+.cer-jack.on .cer-seg { animation: cerSeg .18s steps(1) forwards; animation-delay: var(--sd); }
+@keyframes cerSeg { to { opacity: 1; color: #e4d9ff;
+  text-shadow: 0 0 10px rgba(139,92,246,1), 0 0 30px rgba(124,58,237,0.85), 0 0 60px rgba(139,92,246,0.5), 0 0 4px rgba(240,201,74,0.55); } }
+.cer-coin { position: absolute; left: 50%; bottom: 14%; width: var(--cs,14px); height: var(--cs,14px); border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle at 34% 30%, #fff2c4 0%, #f0c94a 34%, #d4a017 62%, #8a5304 100%);
+  box-shadow: inset 0 0 0 2px rgba(138,83,4,.65), 0 0 8px rgba(240,201,74,.8); will-change: transform; }
+.cer-coin--roxa { background: radial-gradient(circle at 34% 30%, #e4d9ff 0%, #b69cff 34%, #8b5cf6 62%, #4c2a8f 100%);
+  box-shadow: inset 0 0 0 2px rgba(76,42,143,.65), 0 0 8px rgba(139,92,246,.8); }
+.cer-jack.on .cer-coin { animation: cerCoin var(--cd) cubic-bezier(.22,.9,.4,1) var(--cdl) forwards; }
+@keyframes cerCoin {
+  0% { opacity: 0; transform: translate(0,0) rotate(0) scale(.6); }
+  8% { opacity: 1; }
+  45% { transform: translate(var(--cx),var(--cyu)) rotate(var(--cr)) scale(1); }
+  100% { opacity: 0; transform: translate(calc(var(--cx)*1.5),120px) rotate(calc(var(--cr)*2)) scale(.9); } }
+@media (prefers-reduced-motion: reduce) {
+  .cer-luz, .cer-chase, .cer-float { animation: none; }
+  .cer-rolo.gira .cer-strip { filter: none; }
+  .cer-jack.on { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10,8,18,0.7); }
+  .cer-jack.on .cer-coin { animation: none; opacity: 0; }
+  .cer-jack.on .cer-seg { animation: none; opacity: 1; color: #e4d9ff; }
+}
+
+/*
+ * ===================================================================
+ * CAMPEONATO — tabela, bracket, celebracao e wizard.
+ * Canone: vidro 45, lider dourado, campeao familia jackpot ouro/roxo.
+ * ===================================================================
+ */
+.camp-title{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:24px;letter-spacing:.02em;margin:2px 0 6px;
+  background:linear-gradient(90deg,#fff2cc,#f0c94a 40%,#d4a017 55%,#f0c94a 70%,#fff2cc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.camp-chip{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 10px;color:#c9c2d6;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.14);
+  clip-path:polygon(8% 0,92% 0,100% 28%,100% 72%,92% 100%,8% 100%,0 72%,0 28%)}
+.camp-chip--gold{color:#f0c94a;border-color:rgba(212,160,23,.5);background:rgba(212,160,23,.09)}
+.camp-chip--roxo{color:#c9b6ff;border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.1)}
+.camp-chip--live{color:#7bd88f;border-color:rgba(123,216,143,.45);background:rgba(123,216,143,.08)}
+
+.camp-tab{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.10);padding:6px 2px;
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-tab__hd,.camp-tab__r{display:grid;grid-template-columns:16px 1fr 20px 18px 18px 18px 18px 40px 26px;gap:2px;align-items:center;padding:0 8px}
+.camp-tab__hd{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:9px;letter-spacing:.04em;color:#8a8a98;text-transform:uppercase;height:22px;border-bottom:1px solid rgba(255,255,255,.08)}
+.camp-tab__hd span{text-align:center}
+.camp-tab__r{height:28px;font-size:11px;border-bottom:1px solid rgba(255,255,255,.05)}
+.camp-tab__r:last-child{border-bottom:none}
+.camp-tab__r .nm{display:flex;align-items:center;gap:7px;min-width:0}
+.camp-tab__r .nm span{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.camp-tab__r .pos{font-family:'Rajdhani',sans-serif;font-weight:800;color:#8a8a98}
+.camp-tab__r .p{font-family:'Rajdhani',sans-serif;font-weight:800;color:#f0c94a;text-align:center}
+.camp-tab__r .c{text-align:center;color:#c9c2d6}
+.camp-tab__r .gpgc{text-align:center;color:#8a8a98;font-size:10px}
+.camp-tab__dot{width:10px;height:10px;flex:0 0 auto;border-radius:2px}
+.camp-tab__r--lider{background:linear-gradient(90deg,rgba(212,160,23,.16),transparent);box-shadow:inset 3px 0 0 #d4a017}
+.camp-tab__r--lider .pos{color:#f0c94a}
+
+.camp-bkt{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 8px}
+.camp-br{display:flex;flex-direction:column;justify-content:space-around;gap:12px;flex:0 0 auto;min-width:120px}
+.camp-br__t{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:10px;letter-spacing:.1em;color:#8a8a98;text-transform:uppercase;text-align:center;margin-bottom:2px}
+.camp-conf{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,.14);overflow:hidden;
+  clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px)}
+.camp-bt{display:flex;align-items:center;gap:6px;padding:6px 8px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px}
+.camp-bt+.camp-bt{border-top:1px solid rgba(255,255,255,.08)}
+.camp-bt .bn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9a9aa8}
+.camp-bt .bg{font-weight:800;color:#c9c2d6;font-size:12px;min-width:14px;text-align:right}
+.camp-bt.win .bn{color:#fff}
+.camp-bt.win .bg{color:#f0c94a}
+.camp-bt .bdot{width:9px;height:9px;flex:0 0 auto;border-radius:2px}
+.camp-bt.bye .bn{color:#5a5a68;font-style:italic}
+.camp-bt.tbd .bn{color:#5a5a68}
+.camp-champcol{align-self:center;text-align:center}
+.camp-champbox{position:relative;padding:12px 14px;background:rgba(212,160,23,.1);border:1px solid #d4a017;box-shadow:0 0 22px rgba(212,160,23,.35);
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-champbox .nm{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px;color:#fff;display:flex;align-items:center;gap:8px;justify-content:center}
+
+.camp-res{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.camp-res input{width:44px;text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);color:#fff;
+  font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px;padding:6px 0;
+  clip-path:polygon(12% 0,88% 0,100% 26%,100% 74%,88% 100%,12% 100%,0 74%,0 26%)}
+.camp-res .x{color:#6f6a80;font-weight:700}
+
+.camp-cel{position:relative;padding:24px 16px 18px;overflow:hidden;text-align:center;
+  background:radial-gradient(120% 90% at 50% 0%,rgba(139,92,246,.35),rgba(10,8,20,.6) 60%),#0a0812;border:1px solid rgba(212,160,23,.5);
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
+.camp-cel__k{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12px;letter-spacing:.3em;color:#c9b6ff;text-transform:uppercase}
+.camp-cel__heroi{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:2px;margin:8px 0 4px;
+  animation:campHeroiBob 4.6s ease-in-out infinite;will-change:transform}
+/* v6: flutuação a METADE (-4px) + RESPIRAÇÃO de escala (1↔1.03) sincronizada —
+   vivo e imponente, não saltitante. */
+@keyframes campHeroiBob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-4px) scale(1.03)}}
+/* NOME DO CAMPEAO = HEROI: gradiente dourado da casa + glow + escala grande. */
+.camp-cel__n{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:48px;letter-spacing:.02em;margin:4px 0 2px;line-height:1.02;
+  background:linear-gradient(90deg,#fff2cc,#f0c94a 36%,#d4a017 52%,#f0c94a 66%,#fff2cc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 20px rgba(212,160,23,.6))}
+@media (prefers-reduced-motion: reduce){.camp-cel__heroi{animation:none}}
+.camp-cel__s{font-size:12px;color:#c9c2d6;margin-bottom:14px}
+.camp-cel__coins{position:absolute;inset:0;pointer-events:none;z-index:0}
+.camp-cel__coins b{position:absolute;width:7px;height:7px;border-radius:50%;opacity:.85;animation:campCoin 2.6s ease-in-out infinite}
+@keyframes campCoin{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-6px);opacity:1}}
+.camp-cel__row{position:relative;z-index:1;display:flex;gap:8px;margin-top:4px}
+
+.camp-steps{display:flex;justify-content:center;gap:8px;margin:2px 0 12px}
+.camp-steps i{width:26px;height:3px;background:rgba(255,255,255,.12)}
+.camp-steps i.on{background:linear-gradient(90deg,#d4a017,#f0c94a);box-shadow:0 0 8px rgba(212,160,23,.5)}
+.camp-fopt{cursor:pointer;display:flex;gap:12px;align-items:flex-start;padding:13px 14px;margin-bottom:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,.14);
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-fopt.on{border-color:#d4a017;background:rgba(212,160,23,.08);box-shadow:0 0 16px rgba(212,160,23,.15)}
+.camp-fopt__t{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px}
+.camp-fopt__d{font-size:11px;color:#9a9aa8;margin-top:2px;line-height:1.4}
+.camp-slot{display:flex;align-items:center;gap:10px;padding:9px 11px;margin-bottom:7px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,.12);
+  clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px)}
+.camp-slot input{flex:1;min-width:0;background:transparent;border:none;color:#fff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;outline:none}
+.camp-slot__c{font-size:10px;color:#8a8a98;font-family:'Rajdhani',sans-serif;letter-spacing:.04em}
+
+.camp-card{display:block;text-decoration:none;color:inherit;padding:12px 14px;margin-bottom:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.10);
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-card__n{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px}
+
+/* TODOS CONTRA TODOS + FINAL — as duas primeiras linhas da tabela levam a marca da final; o empate que o admin ainda
+   precisa desfazer leva a marca roxa; a final é um cartão próprio (vaga tracejada até a fase de grupos acabar). */
+/* Os selos do topo (formato · estado · times) quebram de linha por SELO inteiro: a 360 px "Todos contra todos + final" já ocupa a
+   linha quase toda, e o selo em linha partia o último no meio ("4" numa linha, "times" cortado na outra). */
+.camp-chips{display:flex;flex-wrap:wrap;gap:4px 0}
+.camp-chip{white-space:nowrap}
+.camp-tab__r--final{background:linear-gradient(90deg,rgba(212,160,23,.08),transparent);box-shadow:inset 3px 0 0 rgba(212,160,23,.5)}
+.camp-tab__r--empate{background:linear-gradient(90deg,rgba(139,92,246,.16),transparent);box-shadow:inset 3px 0 0 #8b5cf6}
+.camp-final{position:relative;padding:12px 14px;background:rgba(212,160,23,.07);border:1px solid rgba(212,160,23,.45);box-shadow:0 0 18px rgba(212,160,23,.12)}
+.camp-final--vaga{background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,.28);box-shadow:none}
+.camp-final__k{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:10px;letter-spacing:.14em;color:#f0c94a;text-transform:uppercase;margin-bottom:8px}
+.camp-final--vaga .camp-final__k{color:#9a9aa8}
+.camp-final__jogo{display:flex;align-items:center;gap:8px}
+.camp-final__t{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px}
+.camp-final__t:last-child{justify-content:flex-end;text-align:right}
+.camp-final__n{min-width:0;overflow-wrap:anywhere;line-height:1.1}
+.camp-final--vaga .camp-final__t{color:#8a8a98}
+.camp-final__t--vence{color:#fff}
+.camp-final__x{flex:0 0 auto;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px;color:#6f6a80}
+.camp-final__x b{color:#f0c94a;font-size:17px}
+.camp-final__nota{font-size:11px;color:#8a8a98;margin-top:8px;line-height:1.4}
+.camp-empate{padding:12px 14px;margin:0 0 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.55);box-shadow:0 0 18px rgba(139,92,246,.14)}
+.camp-empate__t{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px;color:#e4d9ff}
+.camp-empate__d{font-size:11px;color:#b9b0d2;margin:3px 0 10px;line-height:1.4}
+.camp-empate__lista{display:flex;flex-wrap:wrap;gap:8px}
+.camp-empate__time{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 14px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:14px;color:#fff;
+  background:rgba(255,255,255,.06);border:1.5px solid #8b5cf6;cursor:pointer;
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-empate__time:disabled{opacity:.55;cursor:default}
+.camp-empate__time--lido{cursor:default;border-color:rgba(139,92,246,.4)}
+/* Os pênaltis: a pergunta que aparece quando a final (ou um jogo do mata-mata) termina empatada, e a linha "(pên.: Time X)" depois. */
+.camp-pen{margin-top:8px;padding:10px 12px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.55);
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.camp-final__pen{margin-top:6px;text-align:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:.04em;color:#c9b6ff}
+.camp-conf__pen{margin:3px 0 0;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;letter-spacing:.04em;color:#c9b6ff}
+/* O subtítulo do campeonato criado pelo sorteio: de que jogo ele saiu. */
+.camp-sub{margin:-2px 0 8px;font-size:12px;color:#9a9aa8}
+.camp-tab__legenda{margin:6px 2px 0;font-size:11px;color:#8a8a98}
+.camp-prox{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0 0 14px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:#fff}
+.camp-prox__k,.camp-prox__x{color:#8a8a98}
+.camp-prox__t{display:inline-flex;align-items:center;gap:6px;min-width:0;overflow-wrap:anywhere}
+/* O card do campeonato NOVO no Início (components/CardCampeonatoInicio.jsx). */
+.inicio-camp{display:block;margin-top:14px;padding:12px 14px;text-decoration:none;color:inherit;background:var(--surface-1);border:1px solid rgba(212,160,23,.4)}
+.inicio-camp--voce{background:linear-gradient(135deg,rgba(212,160,23,.18),rgba(139,92,246,.12));border-color:#d4a017;box-shadow:0 0 22px rgba(212,160,23,.25)}
+.inicio-camp__destaque{display:flex;align-items:center;gap:7px;margin-bottom:6px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:15px;letter-spacing:.06em;color:#f0c94a;text-transform:uppercase}
+.inicio-camp__nome{font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px;color:#fff;overflow-wrap:anywhere}
+.inicio-camp__linha{margin-top:4px;font-size:13px;color:var(--text-dim);line-height:1.4}
+.inicio-camp__primeiros{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.inicio-camp__primeiro{display:inline-flex;align-items:center;gap:6px;min-width:0;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:#fff}
+.inicio-camp__pos{color:#8a8a98}
+.inicio-camp__time{min-width:0;overflow-wrap:anywhere}
+.inicio-camp__pts{color:#f0c94a}
+.inicio-camp__proximo{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;margin-top:8px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:#fff}
+.inicio-camp__proximo-k,.inicio-camp__proximo-x{color:#8a8a98}
+.inicio-camp__time-do-jogo{display:inline-flex;align-items:center;gap:6px;min-width:0;overflow-wrap:anywhere}
+.inicio-camp__ver{margin-top:8px;font-size:11px;color:var(--text-dim)}
+.camp-aviso{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;margin:0 0 14px;background:rgba(240,201,74,.09);border:1px solid rgba(240,201,74,.5);font-size:12px;line-height:1.4;color:#f4e4a6}
+.camp-aviso button{flex:0 0 auto;border:none;background:transparent;color:#f0c94a;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:12px;letter-spacing:.06em;cursor:pointer;padding:2px 0}
+
+/* PODIO — degraus 2 · 1 · 3, escudo por cima, 1o ouro maior+glow */
+.camp-podio{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin:4px 0 22px;border-bottom:2px solid rgba(255,255,255,0.18);position:relative;z-index:1}
+.camp-podio__col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:33%}
+.camp-podio__crest{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:'Rajdhani',sans-serif;font-weight:700;color:#fff;text-align:center;padding:5px 6px;border:1px solid;border-radius:6px;background:rgba(255,255,255,0.04);min-height:38px;justify-content:center;width:100%}
+.camp-podio__step{width:100%;display:grid;place-items:center;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:18px;color:var(--pc);border:1px solid var(--pc);border-bottom:none;background:rgba(255,255,255,0.04)}
+.camp-podio__step--1{height:76px;box-shadow:0 -6px 26px -6px var(--pc);font-size:22px}
+.camp-podio__step--2{height:54px}
+.camp-podio__step--3{height:40px}
+
+/*
+ * CHUVA DE CONFETE (celebracao) — ambiente, nao protagonista.
+ * Duas camadas (tras desfocada .3 / frente nitida .5), TODAS nascem acima do
+ * ecra (top:-8%) e caem para baixo de 100%; loop recomeca sempre no topo, nada
+ * aparece/some no meio. Atras do escudo/nome (z-index). reduced-motion = estatico.
+ * (O jackpot do SORTEIO mantem as moedas — .cer-* nao se toca.)
+ */
+.camp-cel__confete{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.camp-cel__confete i{position:absolute;top:-8%;border-radius:1px;will-change:transform;
+  animation-name:campConfete;animation-timing-function:linear;animation-iteration-count:infinite}
+.camp-cel__confete i.camp-conf--tras{filter:blur(1.8px);opacity:.3}
+.camp-cel__confete i.camp-conf--frente{opacity:.5}
+@keyframes campConfete{
+  0%{transform:translate(0,0) rotate(0deg)}
+  25%{transform:translate(10px,190px) rotate(210deg)}
+  50%{transform:translate(-8px,380px) rotate(430deg)}
+  75%{transform:translate(9px,545px) rotate(650deg)}
+  100%{transform:translate(-5px,730px) rotate(880deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  .camp-cel__confete i{top:var(--st);animation:none;transform:none}
+}
+
+/* SELO DE HONRA — forma A postal denteado + varrimento de vidro. */
+.seloh{position:relative;aspect-ratio:5/6;flex:0 0 auto;
+  clip-path:polygon(22% 0,78% 0,100% 22%,100% 78%,78% 100%,22% 100%,0 78%,0 22%);
+  display:grid;grid-template-rows:1fr auto;place-items:center;overflow:hidden;
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.5)) drop-shadow(0 0 6px var(--sg))}
+.seloh__m{position:absolute;inset:0;background:linear-gradient(135deg,var(--m1),var(--m2) 30%,var(--m3) 55%,var(--m2) 70%,var(--m4))}
+.seloh__rim{position:absolute;inset:9%;clip-path:inherit;border:1px solid var(--m1);opacity:.55}
+.seloh__t{position:relative;z-index:2;color:var(--sink);margin-top:14%;filter:drop-shadow(0 1px 0 var(--m1))}
+.seloh__f{position:relative;z-index:2;width:88%;margin-bottom:12%;background:linear-gradient(180deg,rgba(20,14,4,.92),rgba(8,6,2,.95));
+  border-top:1px solid var(--m2);border-bottom:1px solid var(--m4);padding:2px 1px;text-align:center;
+  clip-path:polygon(6% 0,94% 0,100% 32%,100% 68%,94% 100%,6% 100%,0 68%,0 32%)}
+.seloh__f span{font-family:'Rajdhani',sans-serif;font-weight:800;letter-spacing:.06em;color:var(--m1);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.seloh__sw{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;clip-path:inherit}
+.seloh__sw::before{content:'';position:absolute;top:-25%;bottom:-25%;width:34%;left:-45%;transform:skewX(-12deg);
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.72),transparent);animation:selohSweep 6s ease-in-out infinite}
+@keyframes selohSweep{0%,58%{left:-45%}100%{left:125%}}
+@media (prefers-reduced-motion: reduce){.seloh__sw::before{animation:none;opacity:0}}
+.seloh--ouro{--m1:#fff2cc;--m2:#f0c94a;--m3:#d4a017;--m4:#8a6a10;--sg:rgba(212,160,23,.6);--sink:#3a2c08}
+.seloh--prata{--m1:#f4f8fd;--m2:#cbd5e2;--m3:#aab4c8;--m4:#69717e;--sg:rgba(180,190,210,.5);--sink:#333a45}
+.seloh--bronze{--m1:#f3d0b0;--m2:#d98a52;--m3:#c2652e;--m4:#763a18;--sg:rgba(210,120,60,.5);--sink:#3d1e0c}
+
+/* P2-11 — post recém-publicado: brilho dourado que se apaga em 2s (não mexe no layout,
+   só box-shadow em anel). Respeita reduce-motion. */
+/*
+ * Cada cartão da Resenha é uma ilha.
+ * `contain: layout paint` diz ao motor que nada dentro do cartão afecta o que
+ * está fora dele, nem transborda: um cartão que muda (uma reação, uma imagem a
+ * chegar) deixa de obrigar a recalcular a lista inteira.
+ * `content-visibility: auto` salta layout e desenho dos cartões fora da tela, e
+ * o `contain-intrinsic-size` guarda a altura que eles tinham, para a barra de
+ * rolagem não saltar. 420px é a altura típica de um post com foto.
+ */
+.feed-item{contain:layout paint;content-visibility:auto;contain-intrinsic-size:auto 420px}
+
+.post-recem{border-radius:12px;animation:postRecem 2s ease-out 1}
+@keyframes postRecem{
+  0%{box-shadow:0 0 0 2px rgba(212,160,23,.85), 0 0 26px 4px rgba(212,160,23,.45)}
+  70%{box-shadow:0 0 0 2px rgba(212,160,23,.5), 0 0 18px 2px rgba(212,160,23,.22)}
+  100%{box-shadow:0 0 0 0 rgba(212,160,23,0), 0 0 0 0 rgba(212,160,23,0)}
+}
+@media (prefers-reduced-motion: reduce){.post-recem{animation:none}}
+
+/* P2-6 — badge de pedidos pendentes no chip da equipa (Início, admin). */
+.chip-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+  padding:0 5px;border-radius:9px;font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11px;line-height:1;
+  color:#1a1408;background:#f0c94a;border:1px solid #d4a017;box-shadow:0 0 8px rgba(212,160,23,.5)}
+
+/* BOAS-VINDAS — tela única. Namespace .landing-*, aditivo. */
+/* Aura atrás do F: a receita do glow selado da vitrine REPLICADA (valores copiados
+   de .perfil-glow, padrão Aura — copiar, nunca reescalar o selado). Reusa respiraA. */
+.landing-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  pointer-events: none;
+  width: 300px;
+  height: 344px;
+  background: radial-gradient(ellipse 50% 48% at 50% 45%,
+    rgba(212, 160, 23, 0.69) 0%, rgba(212, 160, 23, 0.30) 34%,
+    rgba(212, 160, 23, 0.09) 56%, transparent 78%);
+  filter: blur(46px);
+  animation: respiraA 7s ease-in-out infinite;
+}
+/* Deriva de fundo: um véu de gradientes (ouro + roxo da casa, alpha baixo) que
+   desliza devagar. Só transform — barato, é a primeira tela que carrega. */
+.landing-drift {
+  position: fixed;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 22% 28%, rgba(212, 160, 23, 0.05), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 78% 72%, rgba(139, 92, 246, 0.07), transparent 70%);
+  animation: landingDrift 26s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes landingDrift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to   { transform: translate3d(2%, 1.5%, 0) scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-glow { animation: none; }
+  .landing-drift { animation: none; }
+}
+
+/*
+ * Compartilhar vive dentro da cerimónia — ver .compartilhar em sorteio-maquina.css. Uma barra de
+ * compartilhar presa ao fundo cobria parte do retângulo dos times.
+ */
+
+/*
+ * O ENQUADRAMENTO ÚNICO. Dentro da moldura 2:3 do card (a área de recorte do react-easy-crop, ou a moldura
+ * do onboarding depois de a foto subir), o quadrado tracejado dourado marca o que vira a foto da
+ * miniatura (Início, ranking, sorteio): o quadrado do TOPO, da largura do card — a conta de
+ * lib/enquadroAvatar.js#recorteDaMolduraUnica. Só desenho: o pointer-events: none deixa o arrasto passar
+ * para o cropper.
+ */
+.reactEasyCrop_CropArea.crop-area--miniatura::after,
+.moldura-unica::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  border: 2px dashed #d4a017;
+  box-shadow: inset 0 0 12px rgba(212, 160, 23, 0.35);
+  pointer-events: none;
+}
+
+/*
+ * A data de nascimento em rolinhos (components/RolinhosData.jsx). Três rolos com scroll-snap; o item no
+ * centro é o escolhido, a faixa dourada o marca. 5 linhas de 40 px = 200 px; as pontas somem num
+ * degradê. Antes de a pessoa mexer nos três, o item do centro fica apagado (é só o ponto de partida,
+ * não uma resposta).
+ */
+.rolinhos {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1.3fr;
+  gap: 6px;
+  width: 100%;
+  height: 200px;
+}
+.rolinhos__faixa {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 80px;
+  height: 40px;
+  pointer-events: none;
+  border-top: 1px solid rgba(212, 160, 23, 0.55);
+  border-bottom: 1px solid rgba(212, 160, 23, 0.55);
+  background: rgba(212, 160, 23, 0.07);
+}
+.rolo {
+  height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 28%, #000 72%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 28%, #000 72%, transparent);
+  outline: none;
+}
+.rolo::-webkit-scrollbar { display: none; }
+.rolo:focus-visible { box-shadow: inset 0 0 0 1px rgba(212, 160, 23, 0.6); }
+.rolo__esp { display: block; height: 80px; flex: none; }
+.rolo__item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.rolo__item--atual { color: rgba(255, 255, 255, 0.55); }
+.rolinhos--completo .rolo__item--atual,
+.rolo[data-escolhido]:not([data-escolhido=""]) .rolo__item--atual { color: #f0c94a; }
+
+/*
+ * O card do jogo inteiro abre a tela do jogo, com um link de verdade. O <a> é o título (.gcard__link); a
+ * camada que cobre o card é o ::after dele. Os controles de dentro (Vou / Não vou, Ver sorteio) sobem de
+ * nível (z-index) e seguem funcionando sem abrir o jogo. Nada de botão dentro de <a>. O clip-path de 45°
+ * do .gcard também recorta a camada: o toque nos cantos cortados não pega.
+ */
+.gcard { position: relative; }
+.gcard__link { color: inherit; text-decoration: none; }
+.gcard__link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.gcard__link:focus-visible { outline: none; }
+.gcard__link:focus-visible::after { outline: 2px solid var(--neon, #8b5cf6); outline-offset: -3px; }
+.gcard__presence,
+.gcard .cta-gold-glow,
+.gcard button { position: relative; z-index: 2; }
+
+/*
+ * O esqueleto da Resenha: enquanto os posts não chegam, três cartões com a forma dos de verdade (avatar,
+ * linhas, foto) em vez de uma tela que parece vazia. Mesmo brilho que passa devagar do
+ * .rank-row-esqueleto/Explorar; sem movimento para quem pede menos.
+ */
+.feed-esqueleto {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+}
+.feed-esqueleto__topo { display: flex; align-items: center; gap: 10px; }
+.feed-esqueleto__avatar { width: 36px; height: 36px; flex-shrink: 0; background: rgba(255, 255, 255, 0.07); }
+.feed-esqueleto__linha { height: 10px; background: rgba(255, 255, 255, 0.07); }
+.feed-esqueleto__foto { height: 120px; background: rgba(255, 255, 255, 0.05); }
+.feed-esqueleto::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: rankShimmer 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-esqueleto::after { animation: none; }
+}
+
+/*
+ * A ALTURA DA BARRA DE NAVEGAÇÃO, num lugar só. A faixa de cookies tem de ficar acima dela: a barra tem 75
+ * (8 de respiro + 54 do toque + 1 da linha + 12 de base, ou a barra de gesto do iPhone se for maior); a
+ * 58 px do fundo, 17 px da faixa ficariam por baixo e o "Aceitar" perderia 9, encostando no "PERFIL".
+ * Esta conta tem de bater com .bottom-nav (padding 8 + .bottom-nav__tab 54 + borda 1 + max(12,
+ * safe-area)); o teste de unidade e a prova de navegador travam isso.
+ */
+:root {
+  --altura-barra-nav: calc(63px + max(12px, env(safe-area-inset-bottom, 0px)));
+}
+
+/*
+ * As abas do time (Jogos · Elenco · Painel[ADMIN] · Ranking). Cada uma tem a largura do próprio texto e
+ * divide a sobra (flex: 1 1 auto), em vez de partes iguais, onde "Painel" + selo estourava a sua parte
+ * e empurrava o "Ranking" para a borda.
+ */
+.aba-time {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.aba-time__selo {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f0c94a;
+  border: 1px solid rgba(212, 160, 23, 0.6);
+  background: rgba(212, 160, 23, 0.1);
+  padding: 1px 5px;
+}
+/* iPhone de 375 px e menores: o selo vira um ponto dourado (o texto fica na árvore de acessibilidade, só não ocupa lugar) e o texto
+   das abas aperta um pouco. Nos 390 px de hoje nada muda. */
+@media (max-width: 380px) {
+  .aba-time { gap: 4px; padding: 0 6px; letter-spacing: 0.2px; }
+  .aba-time__selo { font-size: 0; width: 7px; height: 7px; padding: 0; border: none; border-radius: 50%; background: #f0c94a; clip-path: none !important; }
+}
+@media (max-width: 340px) {
+  .aba-time { font-size: 12px; padding: 0 4px; letter-spacing: 0; }
+}
+
+/*
+ * O jogo que a linha "presença ainda não aberta" do Início apontou (aba Jogos do admin). Um anel dourado
+ * que acende e some em 2,4 s; a classe sai do cartão aos 2,6 s (AdminPanel, TabJogos). Estado natural =
+ * cartão normal, nada fica escondido. Movimento reduzido: sem animação, só a borda dourada fixa enquanto
+ * a classe estiver lá (o !important vence o estilo em linha do cartão).
+ */
+.jogo-destaque { animation: jogoDestaque 2.4s ease-out 1; }
+@keyframes jogoDestaque {
+  0%, 40% { border-color: rgba(212, 160, 23, 0.95); box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.55), 0 0 18px rgba(212, 160, 23, 0.32); }
+  100% { border-color: rgba(255, 255, 255, 0.10); box-shadow: 0 0 0 0 rgba(212, 160, 23, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jogo-destaque { animation: none; border-color: rgba(212, 160, 23, 0.95) !important; }
+}
+
+/*
+ * As caixas do placar (ResultadoEditor) mostram um "0" apagado enquanto vazias — a pessoa vê o que se
+ * escreve ali.
+ */
+.placar-input::placeholder {
+  color: rgba(255, 255, 255, 0.28);
+  opacity: 1;
+}
+
+/*
+ * Entrada em sequência (passo do ajuste da cerimônia, apresentação dos times à mão): cada peça sobe e acende no
+ * seu --d. O estado natural é VISÍVEL (`both` só esconde durante o atraso): sem animação, tudo já está na tela.
+ */
+@keyframes entraEmSequencia { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.entra-em-sequencia { animation: entraEmSequencia 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) both; animation-delay: var(--d, 0s); }
+@media (prefers-reduced-motion: reduce) {
+  .entra-em-sequencia { animation: none; }
+}

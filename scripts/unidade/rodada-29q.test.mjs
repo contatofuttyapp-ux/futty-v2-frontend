@@ -13,6 +13,7 @@ import {
   CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_LINHA_CAMPEONATO, CONVIDADO_TITULO,
   CONVIDADO_CAMPO_PASSADO, CONVIDADO_LINHA_PASSADO, CONVIDADO_TITULO_PASSADO,
 } from '../../src/utils/convidadoSemApp.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -66,7 +67,7 @@ test('29Q · a fila de chips é só o filtro dos jogos: Todas + os times; saíra
   for (const velho of ['/criar-time', '/explorar', 'data-criar-time', 'chip--explore', '＋ Criar time', 'Radar de peladas', '<Radar']) {
     assert.ok(!fila.includes(velho), `a fila já não tem ${velho}`);
   }
-  assert.doesNotMatch(semComentarios(ler('src/styles/app.css').replace(/\/\*[\s\S]*?\*\//g, '')), /\.chip--explore/, 'o estilo do chip que sobrou sem uso saiu');
+  assert.doesNotMatch(semComentarios(lerAppCss().replace(/\/\*[\s\S]*?\*\//g, '')), /\.chip--explore/, 'o estilo do chip que sobrou sem uso saiu');
   // O "Criar time" do Perfil fica (é outra tela).
   assert.match(ler('src/pages/MeuPerfil.jsx'), /data-criar-time/);
 });

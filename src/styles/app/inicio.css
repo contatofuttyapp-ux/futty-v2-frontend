@@ -1,0 +1,649 @@
+/* Futty v2.0 — A página Início (e o nome do jogador no Perfil). (parte de styles/app.css) */
+
+/* ===== Página Início ===== */
+.pavatar--md {
+  width: 72px;
+  height: 72px;
+  font-size: 24px;
+}
+
+.pavatar--sm {
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+  border-width: 1px;
+}
+
+/* Botões +/- do NumberStepper */
+.stepper-btn:active {
+  transform: scale(0.95);
+}
+
+
+/* Números: estruturais, logo Rajdhani (é a fonte da nota no cromo e no ranking). */
+.inicio-stats {
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 15px;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  margin-top: 5px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.inicio-stats b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.inicio-stats .nota {
+  color: var(--neon);
+  font-weight: 800;
+}
+
+/* Chips de equipas (scroll horizontal) */
+.chips-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 14px 0 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* A FONTE vai na classe (Rajdhani é lei tipográfica do app e um chip é uma etiqueta
+   HUD, família das tabs da Figurinha); os CANTOS a 45° vão no use site do Início.
+   A distinção não é capricho: .chip é partilhada com o Feed, o AdminPanel e o
+   Layout, e trocar-lhes a fonte de uma etiqueta é adopção antecipada do cânone —
+   recortar-lhes a forma sem os rever seria mudar-lhes o desenho às escondidas.
+   O border-radius FICA, por isso mesmo: ainda é ele que serve esses três. */
+.chip {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.chip--active {
+  position: relative;
+  border: 1px solid rgba(212, 160, 23, 0.15);
+  background: rgba(212, 160, 23, 0.06);
+  color: #d4a017;
+  overflow: hidden;
+}
+
+/* Borda "serpente" dourada a percorrer o contorno do chip activo. */
+.chip--active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(90deg, transparent 0%, #f5e070 20%, #d4a017 40%, transparent 60%);
+  background-size: 200% 100%;
+  animation: chipSnake 2.6s linear infinite;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes chipSnake {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Lista de jogos */
+.games-label {
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+  margin: 18px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Linha decorativa dourada muito subtil a seguir ao título. */
+.games-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  opacity: 0.2;
+  background: linear-gradient(to right, #d4a017, transparent);
+}
+
+/*
+ * O card do jogo leva cantos a 45° (.hud-corners, no use site).
+ * Como clip-path corta TUDO o que o elemento pinta para fora da caixa, a elevação
+ * mora no wrapper .gcard-lift e aqui fica só o que o recorte respeita:
+ * fundo, bordas, padding e o inset (pintado DENTRO da caixa — esse sobrevive).
+ */
+.gcard {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, #0d0d12 8%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 2px solid rgba(139, 92, 246, 0.4);
+  padding: 14px 16px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+/* O wrapper leva a elevação, o tilt e a entrada. Tem de ser drop-shadow e não
+   box-shadow: o drop-shadow lê a silhueta JÁ recortada do filho e ganha os 45°,
+   enquanto um box-shadow desenharia o rectângulo e deixaria quatro bicos a
+   espreitar por trás dos cantos cortados. Blur ≈ metade do que substitui
+   (16px → 8px, 24px → 12px), pela mesma medição da .perfil-nome-glow. */
+.gcard-lift {
+  margin-bottom: 10px;
+  transform: translateY(0);
+  transform-style: preserve-3d;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+.gcard-lift:hover,
+.gcard-lift:active {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+}
+
+/* O glow do próximo jogo emigrou do .gcard--next para cá pela mesma razão. */
+.gcard-lift--next {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 6px rgba(139, 92, 246, 0.18));
+}
+
+.gcard-lift--next:hover,
+.gcard-lift--next:active {
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(139, 92, 246, 0.24));
+}
+
+/* Picker de reacções (estilo Instagram) */
+@keyframes reacPickerPop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+.reac-picker {
+  animation: reacPickerPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: bottom left;
+}
+.reac-emoji {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.2s ease;
+}
+.reac-emoji:hover,
+.reac-emoji:active {
+  transform: scale(1.4);
+}
+
+/* Entrada do troféu no header da Resenha */
+@keyframes trophyEntrance {
+  0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* ─── NOME DE JOGADOR (Perfil): o hero. Vivo, não gordo. ─────────────────────
+   Estas regras vivem em CSS e não inline por um motivo mecânico: o :focus-within
+   tem de poder mexer na borda e no glow, e estilo inline ganha a qualquer selector
+   (foi o que matou, em silêncio, o focus roxo que aqui esteve anos — ver abaixo).
+
+   Em repouso quase dorme: borda a 0.35, glow nenhum. O olho vai lá pelo SHINE que
+   passa de 7 em 7 segundos, não por ser o elemento mais pesado da página. */
+.perfil-nome-glow {
+  transition: filter 0.3s ease;
+}
+.perfil-nome-campo {
+  background: rgba(212, 160, 23, 0.06);
+  border: 1.5px solid rgba(212, 160, 23, 0.35);
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+/* Acende ao editar. O glow vai no WRAPPER porque o campo leva .hud-corners-s e
+   clip-path corta box-shadow exterior (testado). drop-shadow(7px) ≈ box-shadow(14px):
+   o blur do filtro é ~metade. O :focus-within sobe do input até aqui sozinho. */
+.perfil-nome-glow:focus-within {
+  filter: drop-shadow(0 0 7px rgba(212, 160, 23, 0.25));
+}
+.perfil-nome-glow:focus-within .perfil-nome-campo {
+  border-color: rgba(212, 160, 23, 0.65);
+  background: rgba(212, 160, 23, 0.09);
+}
+
+/* O SHINE. Não pode ser um ::after do input — <input> é elemento substituído e não
+   tem pseudo-elementos fiáveis. Logo: irmão sobreposto, pointer-events none, com o
+   mesmo clip do campo. Varre a CAIXA, não os glifos: recortar às letras exigia
+   background-clip:text sobre o texto do input, que um overlay não consegue ler.
+   Ciclo 7s, varrimento 0.9s (12.9% do ciclo) — passa raro e sai depressa. */
+.perfil-nome-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 34%, rgba(255, 250, 225, 0.22) 50%, transparent 66%);
+  transform: translateX(-100%);
+  animation: nomeShine 7s ease-in-out infinite;
+}
+@keyframes nomeShine {
+  0%           { transform: translateX(-100%); }
+  12.9%, 100%  { transform: translateX(200%); }
+}
+/* Editar é concentração, não espectáculo: com o campo focado o shine sai de cena e
+   fica só o glow. Os dois ao mesmo tempo davam duas coisas a acontecer no mesmo
+   sítio, e o glow é o que informa (estás a editar) — o shine é só encanto. */
+.perfil-nome-glow:focus-within .perfil-nome-shine {
+  animation-play-state: paused;
+  opacity: 0;
+}
+/* Movimento reduzido: o shine desliga (é decoração); o glow do focus FICA, porque
+   é feedback funcional e não enfeite. */
+@media (prefers-reduced-motion: reduce) {
+  .perfil-nome-shine { animation: none; opacity: 0; }
+}
+
+/* Foco dos inputs do perfil — dourado (lei da Vaga 1: nada de azul do browser,
+   nada de roxo a fazer de selecção; o dourado é que marca o foco).
+   O !important não é preguiça, é a única saída: os inputs desta página levam o
+   `border` e o `background` em estilo INLINE (é o idioma do MeuPerfil), e inline
+   ganha a qualquer selector. Sem isto a regra não pinta nada — e era exactamente
+   esse o estado anterior: o roxo daqui NUNCA chegou ao ecrã, era código morto a
+   fingir-se vivo. Alternativa era migrar os inputs todos para CSS; fica para quem
+   reescrever a página. Âmbito: só o .perfil-form, que só o MeuPerfil usa. */
+.perfil-form input:focus {
+  outline: none;
+  border-color: #d4a017 !important;
+  background: rgba(212, 160, 23, 0.06) !important;
+}
+
+/* Cantos em L dourados (AvatarFrame) — luz a percorrer os 4 cantos em sequência */
+
+/* Cantos em L (AvatarFrame) — respiração lenta e elegante (só opacity). */
+@keyframes cornerBreath {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-corner { animation: none !important; opacity: 0.55 !important; }
+}
+
+/* Pulso dourado "heróico" — blocos de prémio (artilheiro, destaque) e pódio. */
+@keyframes heroicPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(212, 160, 23, 0.2); border-color: rgba(212, 160, 23, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(212, 160, 23, 0.5), 0 0 40px rgba(212, 160, 23, 0.2); border-color: rgba(212, 160, 23, 0.7); }
+}
+
+/* Classe reutilizável: chama a atenção para uma ação disponível (Votar, Vou…). */
+.pulse-active {
+  animation: heroicPulse 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-active { animation: none; }
+}
+
+/* Brilho elegante que varre uma vez e pausa (tabs/filtros activos, CTAs). */
+.tab-shine {
+  position: relative;
+  overflow: hidden;
+}
+.tab-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.14) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: tab-sweep 3.2s ease-in-out infinite;
+}
+@keyframes tab-sweep {
+  0% { transform: translateX(-100%); }
+  18% { transform: translateX(200%); }
+  100% { transform: translateX(200%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-shine::after { animation: none; }
+}
+
+/* Início — linha vertical roxa decorativa com um brilho a subir devagar. */
+.inicio-vline {
+  position: absolute;
+  left: -12px;
+  top: 0;
+  width: 2px;
+  height: 60vh;
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 999px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.inicio-vline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 30%;
+  background: linear-gradient(to top, transparent, rgba(139, 92, 246, 0.8), transparent);
+  animation: lineUp 4.5s ease-in-out infinite;
+}
+@keyframes lineUp {
+  0% { transform: translateY(110%); opacity: 0; }
+  15% { opacity: 0.85; }
+  85% { opacity: 0.85; }
+  100% { transform: translateY(-110%); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inicio-vline::after { animation: none; }
+}
+
+/* Figurinha studio — entrada suave do card ao montar. */
+@keyframes figCardIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fig-card-enter {
+  animation: figCardIn 0.45s ease-out 0.1s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fig-card-enter { animation: none; }
+}
+
+/*
+ * Conjunto completo (card + botões + tabs + tiles + Baixar/Compartilhar) cabe em 100dvh SEM rolagem:
+ * Baixar/Compartilhar têm de estar sempre visíveis, e uma "rolagem ligeira" em ecrãs curtos não é
+ * aceitável. RESERVA = tudo o que não é o card, remedido linha a linha: Topbar HUD 44 + app-main padTop
+ * 10 + zona do card (padding 4+16) 20 + grelha de controlos (gap 14 × 4) 56 + linha de zoom 26 +
+ * Trocar-foto/Gerar 40 + tabs 36 + painel de tiles ~105 + Baixar/Compartilhar 46 + app-main padBottom
+ * 24 + reserva da bottom nav (fixed, Layout.jsx) 70 = 477px. A área segura do iPhone (relógio/ilha em
+ * cima, barra de gesto embaixo) empurra tudo com env(safe-area-inset-top/bottom): os dois entram no
+ * cálculo, senão a reserva fica pequena demais em qualquer aparelho com notch, e o card nasce grande
+ * demais para caber. Sem tiers por breakpoint (a divergência entre 3 números copiados à mão deixa este
+ * cálculo sair de sincronia) — UMA fórmula, o card encolhe sozinho em qualquer altura de ecrã. Tecto
+ * 78vw (card não cresce demais em ecrãs largos).
+ */
+.fig-studio-card {
+  width: min(78vw, calc((100dvh - 477px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 2 / 3));
+  aspect-ratio: 2 / 3;
+}
+.fig-io-btn { height: 40px; }
+/*
+ * Quando o "Gerar Avatar IA" vira o CTA dourado (.cta-gold, que
+ * sozinho vale 46px de altura própria), .fig-io-btn TEM de ganhar o empate:
+ * a linha ao lado do "Trocar foto" não pode saltar de altura só porque o
+ * botão pulsou dourado. Duas classes no seletor (especificidade 0,0,2,0)
+ * ganham de .cta-gold sozinho (0,0,1,0) INDEPENDENTE da ordem no ficheiro —
+ * sem isto, dependeria de qual das duas regras vem depois aqui embaixo.
+ */
+.fig-io-btn.cta-gold { height: 40px; }
+
+/*
+ * CROMO DO INÍCIO. O retrato QUADRADO da /figurinha (600×600, sem placa), reduzido e clicável.
+ *
+ * A MEDIDA: pela LARGURA da tela, min(49vw, 236px) — 191 px num iPhone de 390, teto de 236 px no
+ * computador. Igual em qualquer navegador. Não pela fórmula do .fig-studio-card (acima), que leva a
+ * altura da tela dentro: a Figurinha precisa disso, porque tem de caber sem rolar. O Início rola, e uma
+ * ancoragem em 100dvh muda com as barras do navegador: no Safari do iPhone com as barras (100dvh = 664)
+ * o avatar sai com 97 px, no app da tela de início (844) com 191 px, e mudaria de tamanho quando as
+ * barras sumissem ao rolar. O avatar segue a largura, não a altura. Não voltar a ligar esta regra ao
+ * .fig-studio-card.
+ *
+ * SEM .hud-corners: o octógono a 45° já vem desenhado no PNG do canvas — recortar
+ * por cima só arriscava desalinhar dois octógonos.
+ *
+ * O feedback (press/hover/focus) vive AQUI e não no .fig-bob/.fig-sway: aqueles
+ * dois têm transform animado, e um transform de :active no mesmo elemento
+ * substituiria o keyframe em vez de se somar a ele. Em camadas separadas, compõem.
+ */
+/* Revelação do Início: a página só aparece com o cromo já desenhado (ver pageReady),
+   e entra com um fade suave. Antes disto, o LoadingFutty segura o ecrã sozinho — um só
+   F, nunca o do loader + o placeholder do cromo sobrepostos. */
+@keyframes inicioReveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.inicio-reveal {
+  animation: inicioReveal 0.3s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inicio-reveal { animation: none; }
+}
+
+/* Fade de entrada da casa, agora numa 2ª página (Ranking) além do Início. Alias sobre
+   o MESMO keyframe (inicioReveal) — não se toca no .inicio-reveal, que está selado.
+   3ª página a adoptar → generalizar para .page-reveal na vaga transversal. */
+.page-reveal {
+  animation: inicioReveal 0.3s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-reveal { animation: none; }
+}
+
+/*
+ * Transição de entrada de TODA página (components/PageTransition.jsx).
+ * Não é framer-motion: ele deixava o app invisível quando a rota suspendia depois de
+ * já ter montado — ver o comentário no PageTransition.jsx. Aqui quem toca é o
+ * motor do browser: o estado natural do elemento é VISÍVEL (opacity 1), a
+ * animação só encena a entrada, e se ela não correr por qualquer motivo a página
+ * aparece na mesma. É a diferença que importa — nenhum JS precisa de terminar
+ * para o conteúdo ser visto.
+ */
+/*
+ * SÓ OPACIDADE. Um deslize de 8 px custaria, a cada troca de tela, promover a página inteira a camada
+ * própria e recompô-la a cada quadro — e a tela inteira, no iPhone 15 Pro Max, é 430×932 a 3x, ou seja
+ * 3,6 milhões de pixéis por quadro. Oito pixéis de deslize não pagam isso.
+ * De lambuja resolve de vez o `position: fixed` com chão falso: sem transform no keyframe, a
+ * .page-transition nunca pode ser containing block de ninguém. Um `transform: none` animado e congelado
+ * resolve-se em `matrix(1, 0, 0, 1, 0, 0)`, que não move nada mas faz da página o "chão" de todo
+ * `position: fixed` lá dentro (atirava o banner do Jogo para 3051 px, punha o toast do sorteio abaixo da
+ * dobra e fazia o fundo dos Planos rolar com a página).
+ */
+@keyframes pageEntra {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/*
+ * Fill-mode `none`, não `backwards`: com `backwards` o estado "antes de começar" é `from { opacity: 0 }`,
+ * e uma animação que nasce PAUSADA em currentTime 0 FICA nele para sempre, porque nunca chega a haver um
+ * quadro rodado que a tire de lá. Foi o que deixou a tela preta após o login com Google no Chrome: o
+ * conteúdo estava no DOM, mas `.page-transition` tinha opacity 0 — a página montou com document.hidden=true
+ * (aba em 2º plano durante o redirect do OAuth) e a regra de index.css (`html[data-oculto] *`) pausou
+ * `pageEntra` antes de ela correr um só quadro.
+ * `none` é a correção: o "antes de começar" deixa de ter estado próprio — o elemento mostra o seu estilo
+ * normal (opacity 1, nenhuma outra regra define `.page-transition { opacity: ... }`), e a animação só
+ * ACRESCENTA o fade de 180 ms enquanto de facto corre. Junto com a exclusão em index.css (que impede este
+ * congelamento de acontecer) e a rede de segurança em lib/ritmo.js (`pararAnimacoesForaDeVista`, que
+ * termina qualquer entrada pendurada ao voltar a ficar visível): o estado natural é VISÍVEL, também no
+ * caso "nasceu escondida".
+ */
+.page-transition {
+  animation: pageEntra 0.18s ease-out none;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Só o fade, sem deslize — e mais curto. `none`, não `both`, igual à regra acima. */
+  .page-transition { animation: inicioReveal 0.12s ease-out none; }
+}
+
+.cromo-inicio {
+  position: relative;
+  display: block;
+  width: min(49vw, 236px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  transition: transform 0.18s ease, filter 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cromo-inicio:active {
+  transform: scale(0.97);
+}
+
+/*
+ * A prévia que segura o lugar do cromo enquanto o canvas desenha. Quando o cromo
+ * real entra, a troca é entre duas imagens do mesmo tamanho, no mesmo sítio —
+ * sem salto. A respiração morre com prefers-reduced-motion.
+ *
+ * NÍTIDA: nada de blur 2px nem opacity 0.4. O desfoque lê-se como "ainda a compor", e a ideia só se
+ * aguenta enquanto o cromo chega logo a seguir. No iPhone da loja não chegava: a pessoa ficava a olhar
+ * para a própria cara borrada, sem nunca perceber que aquilo era uma espera. Uma espera que não acaba não
+ * é um estado de transição, é um defeito — e entre mostrar o rosto nítido ou desfocado, quando pode ser
+ * o último quadro, mostra-se nítido. O pulso (discreto) é o que continua a dizer "vem aí mais".
+ */
+/*
+ * A prévia é O CROMO INTEIRO, composto em DOM: fundo escolhido + avatar no mesmo enquadramento + moldura
+ * dourada. Assim a pessoa vê um cromo desde a primeira pintura, e o que o canvas traz depois é o
+ * acabamento, não a forma (um retrato solto no meio da página, com a moldura só quando o canvas
+ * acabasse, faria o frame do cromo do Início aparecer depois do avatar).
+ *
+ * O enquadramento do avatar NÃO está aqui: vem do enquadrarAvatar() do
+ * figurinhaCanvas, a mesma conta que o canvas usa, aplicada em percentagens.
+ * Duas contas divergiriam e a troca saltaria à vista.
+ *
+ * O dourado fica POR BAIXO e o conteúdo por cima, encolhido: o anel que sobra é
+ * a moldura. É mais barato que recortar um buraco e dá o mesmo desenho.
+ */
+.cromo-previa {
+  position: absolute;
+  inset: 0;
+  /* Corpo dourado do frame: 7*k a partir da borda, com k = lado/400 → 1.75%.
+     O gradiente é o mesmo do desenharFrame() do canvas. */
+  background: linear-gradient(135deg, #f7e08a 0%, #c8940f 30%, #f5d060 55%, #8a6508 80%, #e8c04a 100%);
+  /* cut = 32*k = 8% do lado, nos quatro cantos (o octógono do cromo). */
+  clip-path: polygon(8% 0, 92% 0, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0 92%, 0 8%);
+  animation: cromo-previa-pulso 1.6s ease-in-out infinite;
+}
+
+/* Linha interna fina do frame (1.2*k a 8.5*k de inset → 0.3% a 2.125%). */
+.cromo-previa__dentro {
+  position: absolute;
+  inset: 1.75%;
+  clip-path: polygon(8% 0, 92% 0, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0 92%, 0 8%);
+  background: #0d0d12;
+  box-shadow: inset 0 0 0 0.35% rgba(245, 224, 112, 0.9);
+}
+
+.cromo-previa__fundo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: 50% 22%;
+}
+
+/* O avatar é posicionado por estilo em linha (percentagens vindas do
+   enquadrarAvatar). Aqui só a sombra, a mesma do canvas (24*k = 6% do lado). */
+.cromo-previa__avatar {
+  position: absolute;
+  filter: drop-shadow(0 1% 6% rgba(0, 0, 0, 0.9));
+}
+
+/*
+ * A figurinha COMUM: a foto é o fundo (cover), sem sombra — o canvas também não a
+ * desenha (não há nada a flutuar). A posição vem do enquadrarFotoComum, a mesma conta do canvas.
+ */
+.cromo-previa__avatar--comum {
+  filter: none;
+}
+
+/*
+ * O lugar do cromo enquanto o avatar ainda não decodificou. Só a silhueta octogonal e o fundo escolhido:
+ * SEM a moldura dourada, porque uma moldura sozinha lê-se como cromo partido. Mesma área e mesmo recorte
+ * da .cromo-previa, para a composição não saltar quando entrar.
+ */
+.cromo-previa__reserva {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(8% 0, 92% 0, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0 92%, 0 8%);
+  background-size: cover;
+  background-position: 50% 22%;
+}
+
+/* A silhueta da casa quando a foto passou do prazo (ver PRAZO_AVATAR_MS). Ocupa
+   o lugar do avatar, centrada; a foto substitui-a quando chegar. */
+.cromo-previa__silhueta {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Gradiente inferior do retrato quadrado (0.84→1, alpha 0.55), como no canvas. */
+.cromo-previa__pe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 84%;
+  bottom: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55));
+}
+
+@keyframes cromo-previa-pulso {
+  0%, 100% { opacity: 0.88; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cromo-previa {
+    animation: none;
+  }
+}
+
+.cromo-inicio:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 8px;
+}
+
+@media (hover: hover) {
+  .cromo-inicio:hover {
+    filter: drop-shadow(0 0 16px rgba(212, 160, 23, 0.45));
+  }
+}
+
+/*
+ * Cantos a 45° (identidade HUD), partilhados pelos controlos.
+ * O clip-path MANDA: qualquer border-radius existente deixa de ter efeito.
+ * ATENÇÃO: clip-path corta box-shadows → para glow, pôr o shadow num wrapper
+ * SEM clip e o clip só no elemento interior (ver botão Compartilhar).
+ */
+.hud-corners {
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+  );
+}
+.hud-corners-s {
+  clip-path: polygon(
+    5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px),
+    calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px
+  );
+}
+/* Variante para painéis colados a um bordo: corta SÓ os dois cantos de cima. Um
+   bottom sheet nasce fora do ecrã e encosta em baixo — cortar-lhe os cantos
+   inferiores abria duas fatias de overlay por baixo dele, e o 45° passava a
+   defeito em vez de identidade. Mesma aresta de 8px do .hud-corners. */
+.hud-corners-topo {
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
+}

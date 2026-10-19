@@ -14,6 +14,7 @@ import { VOCE_E_CAMPEAO, textosDoCardDoCampeonato } from '../../src/utils/campeo
 import { resumoDoSorteio } from '../../src/utils/sorteioResumo.js';
 import { MAX_NOME_DO_CAMPEONATO, nomePadraoDoCampeonato } from '../../src/utils/campeonatoDoSorteio.js';
 import { linhaDaFinal } from '../../src/utils/campeonatoCartao.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -117,7 +118,7 @@ test('a tabela: colunas P J V E D GP:GC SG; a barra dourada da final vem do moto
   assert.match(vistas, /const jogou = linhas\.some\(\(l\) => l\.J > 0\)/);
   assert.match(vistas, /if \(t\.classificado && !noEmpate\.has\(t\.id\)\) classes\.push\(pos === 1 \? 'camp-tab__r--lider' : 'camp-tab__r--final'\)/);
   assert.match(vistas, /else if \(jogou && pos === 1\) classes\.push\('camp-tab__r--lider'\)/);
-  assert.match(ler('src/styles/app.css'), /\.camp-tab__hd,\.camp-tab__r\{display:grid;grid-template-columns:16px 1fr 20px 18px 18px 18px 18px 40px 26px;/);
+  assert.match(lerAppCss(), /\.camp-tab__hd,\.camp-tab__r\{display:grid;grid-template-columns:16px 1fr 20px 18px 18px 18px 18px 40px 26px;/);
 });
 
 test('o empate de uma decisão não é recusado: a tela pergunta "Empatou. Quem venceu nos pênaltis?" (final e mata-mata)', () => {

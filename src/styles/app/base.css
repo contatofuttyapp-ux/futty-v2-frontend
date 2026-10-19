@@ -1,0 +1,452 @@
+/* Futty v2.0 — A casca das páginas internas: topbar, cartões, botões, formulários e o que todas as telas usam. (parte de styles/app.css) */
+
+.app-shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 52px;
+  position: sticky;
+  /*
+   * env(), não 0: o padding-top da casca (Layout.jsx) só acerta a posição INICIAL, antes de rolar — ao
+   * colar (sticky), este "top" é que decide onde ela para, e um valor fixo em 0 cola-a no y=0 REAL do
+   * ecrã, debaixo do relógio/ilha, assim que a página rola.
+   */
+  top: env(safe-area-inset-top, 0px);
+  z-index: 100;
+  background: rgba(5, 8, 15, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Variante HUD (Figurinha): wordmark dourado + linha com degrau na base. O fundo
+   preto + blur + sombra vivem num filho recortado (clip-path); o header em si é
+   transparente para o degrau não ser tapado por um fundo rectangular. */
+.app-topbar--hud {
+  height: 44px;
+  padding: 0 12px;
+  justify-content: flex-start;
+  gap: 10px;
+  border-bottom: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* Marca "FUT" (logótipo) */
+
+
+/* Micro-glow dourado nos avatares (top 3 do ranking, perfil) */
+.pavatar--gold {
+  border: 1.5px solid #d4a017;
+  box-shadow: 0 0 6px rgba(212, 160, 23, 0.4);
+}
+
+
+/* Botão voltar (ícone ChevronLeft) */
+.topbar-back {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Título da página — centrado e em maiúsculas */
+.topbar-title {
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Linha gradiente por baixo da topbar */
+.app-topbar__line {
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(to right, #8b5cf6, #7c3aed);
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.app-page-title {
+  font-size: 30px;
+  margin-bottom: 4px;
+}
+
+.app-page-sub {
+  color: var(--text-dim);
+  margin-bottom: 28px;
+}
+
+/* Botões genéricos */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.08s, box-shadow 0.15s, background 0.15s, opacity 0.15s;
+  text-decoration: none;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--neon);
+  color: #04140d;
+  box-shadow: 0 8px 24px -8px rgba(139, 92, 246, 0.6);
+}
+
+.btn--primary:hover:not(:disabled) {
+  box-shadow: 0 10px 30px -8px rgba(139, 92, 246, 0.8);
+  text-decoration: none;
+}
+
+.btn--purple {
+  background: rgba(124, 58, 237, 0.18);
+  border-color: var(--purple);
+  color: var(--text);
+}
+
+.btn--purple:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.3);
+  text-decoration: none;
+}
+
+.btn--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+}
+
+.btn--sm {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+/* Botão em modo HUD: rótulo em Rajdhani (os cantos a 45° entram via .hud-corners-s no
+   mesmo elemento). Estreado no Ranking. ATENÇÃO: os botões das outras páginas ainda são
+   Inter de cantos 10px — propagar .btn--hud + .hud-corners-s na vaga transversal dos
+   controlos, para não ficar o Ranking sozinho no novo desenho. */
+.btn--hud {
+  font-family: 'Rajdhani', var(--sans);
+  letter-spacing: 0.02em;
+}
+
+/* Estado do voto (Ranking). Votar = CTA dourado vivo (a receita escura da .cta-gold,
+   mais pulse + tab-shine no use site). Alterar = discreto, outline roxo (o padrão do
+   "Salvar dados" do Perfil). Propagar aos outros CTAs de linha na vaga transversal. */
+.btn--gold {
+  background: rgba(30, 24, 8, 0.9);
+  border: 1.5px solid #d4a017;
+  color: #f0c94a;
+}
+.btn--outline {
+  background: transparent;
+  border: 1.5px solid rgba(167, 139, 250, 0.45);
+  color: #a78bfa;
+}
+
+/* Estado vazio (sem equipas) */
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+}
+
+.empty-state__emoji {
+  font-size: 44px;
+  margin-bottom: 12px;
+}
+
+.empty-state__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+/* Grelha de equipas */
+
+.team-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s, transform 0.08s;
+}
+
+.team-card:hover {
+  border-color: var(--purple);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+.team-avatar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.team-avatar--lg {
+  width: 64px;
+  height: 64px;
+  font-size: 24px;
+  border-radius: 16px;
+}
+
+.team-card__name {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.team-card__role {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: capitalize;
+}
+
+/* Formulário de criação */
+.form-card {
+  max-width: 480px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+}
+
+/* (Régua: no feed, a FAMÍLIA da celebração respira como o cromo da Figurinha —
+   campeão, artilheiro e destaque com bob+sway aninhados (.feed-cromo-bob/-sway),
+   delays desfasados; posts comuns NUNCA flutuam. O antigo .feed-campeao-lift de
+   ~3px foi substituído por esta respiração mais viva.) */
+
+/* Input em modo HUD: focus DOURADO (com .hud-corners-s no mesmo elemento para o 45°).
+   Opt-in, como o .btn--hud — estreado na Resenha; propagar aos inputs das outras
+   páginas na vaga transversal. */
+.input--hud:focus {
+  border-color: #d4a017;
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.18);
+}
+
+/* Seletor de cor */
+.color-picker {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.color-swatch {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.08s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.05);
+}
+
+.color-swatch[aria-pressed='true'] {
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+}
+
+/* Membros */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+}
+
+.member-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: rgba(124, 58, 237, 0.25);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-email {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Fonte na classe, cantos no use site — ver a nota do .chip. O border-radius fica
+   a servir quem ainda não passou pelo cânone. */
+.badge {
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge--admin {
+  background: rgba(124, 58, 237, 0.2);
+  color: #b69cff;
+}
+
+.badge--member {
+  background: rgba(124, 58, 237, 0.2);
+  color: #b69cff;
+}
+
+/* Caixa de convite */
+.invite-box {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.invite-link {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.invite-link input {
+  flex: 1;
+  font-size: 16px; /* piso dos campos — abaixo disso o iPhone dá zoom (index.css) */
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+/* Alertas / estados */
+.alert {
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.alert--error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+.muted {
+  color: var(--text-dim);
+}
+
+.section-title {
+  font-size: 18px;
+  margin: 28px 0 4px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-size: 14px;
+}

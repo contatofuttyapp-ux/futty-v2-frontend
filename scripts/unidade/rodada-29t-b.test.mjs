@@ -15,6 +15,7 @@ import { quantosTimesMostrar, timesComPendenciaPrimeiro } from '../../src/utils/
 import { SEM_SOBRE_NO_POPUP, localDoTime, rotuloDoModo } from '../../src/utils/radar.js';
 import { EXEMPLO_SOBRE_O_TIME, FALTA_SOBRE_NA_CRIACAO, FALTA_SOBRE_NOS_AJUSTES, MAX_SOBRE_O_TIME, faltaSobre, precisaDeSobre } from '../../src/utils/sobreOTime.js';
 import { alvoDeBairros, bairrosDoMunicipio, buscarBairros, indexarBairrosDoEstado, linhaDaLista } from '../../src/utils/bairros.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -234,7 +235,7 @@ test('ajuste 0 · as duas caixas do placar têm borda e um "0" apagado de exempl
   assert.match(caixa, /border: '1\.5px solid rgba\(255,255,255,0\.32\)'/, 'a borda se vê (era #222 sobre #0c0c0c)');
   assert.doesNotMatch(caixa, /border: '1px solid #222'/);
   assert.equal((editor.match(/placeholder="0" className="placar-input"/g) || []).length, 2, 'as duas caixas');
-  assert.match(ler('src/styles/app.css'), /\.placar-input::placeholder \{\s*color: rgba\(255, 255, 255, 0\.28\);\s*opacity: 1;\s*\}/, 'o 0 é apagado, não preto');
+  assert.match(lerAppCss(), /\.placar-input::placeholder \{\s*color: rgba\(255, 255, 255, 0\.28\);\s*opacity: 1;\s*\}/, 'o 0 é apagado, não preto');
 });
 
 // ── 1 · o Radar apresenta o time ─────────────────────────────────────────────────────────────────────────────────────────────────────────

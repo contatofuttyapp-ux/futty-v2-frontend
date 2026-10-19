@@ -1,0 +1,514 @@
+/* Futty v2.0 — Jogos e sorteio (a lista, o jogo, os times). (parte de styles/app.css) */
+
+/* ===== Fase 5 — Jogos e sorteio ===== */
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0 8px;
+}
+
+/* Lista de jogos */
+.game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s, transform 0.08s;
+}
+
+.game-card:hover {
+  border-color: var(--purple);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+.game-card__date {
+  flex-shrink: 0;
+  width: 56px;
+  text-align: center;
+}
+
+.game-card__day {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.game-card__month {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+.game-card__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-card__title {
+  font-weight: 700;
+}
+
+.game-card__sub {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.badge--agendado {
+  background: rgba(124, 58, 237, 0.2);
+  color: #b69cff;
+}
+.badge--em_curso {
+  background: rgba(124, 58, 237, 0.2);
+  color: #b69cff;
+}
+.badge--terminado {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+}
+.badge--cancelado {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* Confirmação de presença */
+.confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  margin-top: 12px;
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.rating-pill {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--neon);
+}
+
+/* Grelha de times sorteados */
+.sorteio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.sorteio-team {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+
+.sorteio-team__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  font-weight: 800;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.2));
+  border-bottom: 1px solid var(--border);
+}
+
+.sorteio-team__avg {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--neon);
+}
+
+.sorteio-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sorteio-player:last-child {
+  border-bottom: none;
+}
+
+.sorteio-player__gk {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--purple);
+  background: rgba(124, 58, 237, 0.2);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.sorteio-player__cap {
+  font-size: 11px;
+  font-weight: 700;
+  color: #b69cff;
+  background: rgba(124, 58, 237, 0.2);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* Avisos do sorteio */
+.aviso {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-top: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--warning);
+}
+
+/* Botões toggle do admin (marcar goleiro / cabeça de chave) */
+.mark-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.mark-toggle:hover {
+  border-color: var(--text-dim);
+}
+
+.mark-toggle[aria-pressed='true'] {
+  border-color: var(--neon);
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--neon);
+}
+
+.mark-toggle--gk[aria-pressed='true'] {
+  border-color: var(--purple);
+  background: rgba(124, 58, 237, 0.2);
+  color: #b69cff;
+}
+
+/* Votação — estrelas */
+
+
+.stars {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  padding: 0 1px;
+  color: #3a3a44;
+  transition: color 0.1s, transform 0.08s;
+}
+
+.star:hover {
+  transform: scale(1.15);
+}
+
+.star--on {
+  color: var(--neon);
+}
+
+/* Ranking */
+/* Linha de herói: o top-3 destaca-se DENTRO da lista por ESCALA — a linha cresce. O
+   avatar/nome/nota sobem em degradé (1>2>3) via inline no use site; aqui fica só a
+   altura extra. A borda + glow (.rank-row-lift--podio) + medalha (.rank-medal) na cor
+   do lugar mantêm-se. FLUTUAÇÃO = assinatura de herói da casa: o top-3 do Ranking são
+   LINHAS DE HERÓI por decisão do utilizador — flutuam (rankRowFloat no wrapper), dosadas
+   ABAIXO do cromo. (Substituiu o pódio-bloco, descartado pelo utilizador.) */
+.rank-row--hero {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* RODADA 12A — o lugar de uma linha do ranking que ainda não montou.
+
+   A altura é a da .rank-row MEDIDA no WebKit do iPhone pela bancada
+   (scripts/ver-iphone.mjs --cenas rodada12a), não calculada: quem manda na
+   altura não é o avatar de 48px, é o .rank-info com as suas duas linhas de texto
+   (nome em Rajdhani + a nota). A cena compara as duas alturas a cada passagem e
+   falha se divergirem — mexer na tipografia da linha pede re-medir aqui.
+
+   Mesmo material e mesmo recorte a 45° das linhas de verdade, só sem conteúdo:
+   um cinza estranho à paleta leria como erro, não como espera. */
+.rank-row-esqueleto {
+  height: 79px;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02)), var(--bg-elev);
+  border: 1px solid var(--border);
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+  );
+  opacity: 0.55;
+}
+
+/*
+ * A respiração fica só nos primeiros (ver Ranking.jsx): num time de 60, animar 50 camadas recortadas
+ * para sempre é carga contínua na tela — e ninguém vê piscar o que está muito abaixo da dobra.
+ */
+.rank-row-esqueleto--respira {
+  animation: rankEsqueletoRespira 1.4s ease-in-out infinite;
+}
+
+@keyframes rankEsqueletoRespira {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-row-esqueleto--respira { animation: none; }
+}
+
+/* Aviso de revotação: material do cânone (véu branco 3% sobre o tom roxo, como a
+   .rank-row põe sobre --bg-elev) + etiqueta HUD (Rajdhani). Cantos a 45° via
+   .hud-corners no use site, a mesma aresta de 8px das linhas por baixo. */
+.rank-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-family: 'Rajdhani', var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #b69cff;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)), rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.rank-banner__close {
+  border: none;
+  background: transparent;
+  color: #b69cff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Cartão da linha do ranking. Cantos a 45° (identidade HUD) + o véu do cânone (branco
+   3% sobre a superfície elevada). O border-radius saiu — o clip-path manda. Classe
+   exclusiva do Ranking, por isso a varredura é ao nível da classe. */
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)), var(--bg-elev);
+  border: 1px solid var(--border);
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+  );
+}
+
+/* Wrapper de cada linha: leva o glow do pódio. clip-path (na linha) corta box-shadow,
+   por isso o glow do heroicPulse migrou para cá em drop-shadow, tingido pela cor do
+   lugar (--podio-cor) e desfasado por lugar (--podio-delay). Só as linhas do pódio o
+   recebem (.rank-row-lift--podio). Mesmo par que o .gcard-lift do Início. */
+.rank-row-lift--podio {
+  animation: rankPodioGlow 3.9s ease-in-out var(--podio-delay, 0s) infinite,
+             rankRowFloat 5.5s ease-in-out var(--podio-delay, 0s) infinite;
+  will-change: transform;
+}
+@keyframes rankPodioGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--podio-cor)); }
+  50%      { filter: drop-shadow(0 0 12px var(--podio-cor)); }
+}
+/* Flutuação da LINHA DE HERÓI (assinatura de herói da casa, dosada ABAIXO do cromo:
+   translateY 2.5px vs 4px do cromo, período 5.5s, só vertical — um row não roda). Usa o
+   mesmo --podio-delay do glow para desfasar por lugar → os três nunca sincronizam. O glow
+   (drop-shadow neste mesmo wrapper) viaja com o movimento; o gap de 10px da .rank-list é
+   >> amplitude, as linhas vizinhas não se tocam. */
+@keyframes rankRowFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2.5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rank-row-lift--podio { animation: none; }
+}
+
+/* Reflexo que varre cada linha e pulso das medalhas do pódio. Migrados de um <style>
+   inline no Ranking.jsx — o cânone não tem CSS solto dentro da página, e em classe o
+   reduced-motion consegue silenciá-los. Atraso/cor por linha via custom property. */
+.rank-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: rankShimmer 5.2s ease-in-out var(--shimmer-delay, 0s) infinite;
+}
+@keyframes rankShimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(300%) skewX(-15deg); }
+}
+/* Medalha própria: os emojis 🥇🥈🥉 morreram (impadronizáveis — cada OS desenha o seu).
+   Placa a 45° (corte à escala, 5px) na cor do lugar, número 1-2-3 em Rajdhani. Glow
+   ESTÁTICO (drop-shadow fixo): com a linha a flutuar + o glow do wrapper a pulsar, um
+   terceiro pulso na medalha somava ruído — aquietou-se. drop-shadow é filtro (após o
+   clip-path), por isso o brilho não é cortado pela própria placa. */
+.rank-medal {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto;
+  font-family: 'Rajdhani', var(--sans);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--medal-cor);
+  background: var(--bg-elev);
+  border: 1px solid var(--medal-cor);
+  filter: drop-shadow(0 0 4px var(--medal-cor));
+  clip-path: polygon(
+    5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px),
+    calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .rank-shimmer { animation: none; }
+}
+/*
+ * Figurinha automática do cadastro: brilho dourado passando na moldura enquanto a IA gera em fundo —
+ * mesmo padrão do .rank-shimmer acima, cor dourada em vez de branca.
+ */
+.figurinha-gerando-moldura {
+  position: relative;
+  overflow: hidden;
+}
+.figurinha-gerando-moldura::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(240, 201, 74, 0.55), transparent);
+  animation: figurinhaShimmer 1.8s ease-in-out infinite;
+}
+@keyframes figurinhaShimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(300%) skewX(-15deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .figurinha-gerando-moldura::after { animation: none; }
+}
+
+.rank-pos {
+  width: 30px;
+  text-align: center;
+  font-family: 'Rajdhani', var(--sans);
+  font-weight: 700;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.rank-row--top .rank-pos {
+  color: var(--neon);
+  font-size: 20px;
+}
+
+.rank-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rank-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Rajdhani', var(--sans);
+  font-weight: 700;
+}
+
+/*
+ * "77,9 pontos · nota 9,1" nunca leva reticências. Os pontos e a nota são dois grupos que não se partem
+ * por dentro; se os dois não cabem na mesma linha (360 px com o botão "Alterar" ao lado), a nota desce
+ * para a segunda. O "·" que os separa é desenhado no vão entre os grupos (::before do segundo, 10 px à
+ * esquerda): se o segundo desce, o "·" cai fora da caixa e o overflow o apara — nunca sobra um ponto
+ * solto no fim da primeira linha. O "você deu / por votar" só aparece onde há folga (acima de 480 px).
+ */
+.rank-votes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 1px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.rank-votes__grupo {
+  position: relative;
+  white-space: nowrap;
+}
+
+.rank-votes__grupo + .rank-votes__grupo::before {
+  content: '·';
+  position: absolute;
+  left: -10px;
+  width: 10px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.rank-votes__voto {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .rank-votes__voto { display: none; }
+}

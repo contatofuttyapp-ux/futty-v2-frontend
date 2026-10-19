@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -58,7 +59,7 @@ test('29N · a linha "● nome do time" sob o nome só aparece quando NÃO há c
 
 // ── 29N-B · o avatar segue a LARGURA da tela, não a altura ──────────────────────────────────────────────────────────────────────
 test('29N-B · .cromo-inicio mede min(49vw, 236px) — nenhuma altura (dvh/vh) dentro, e nenhum outro seletor sobrescreve a largura', () => {
-  const css = ler('src/styles/app.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = lerAppCss().replace(/\/\*[\s\S]*?\*\//g, '');
   const regra = css.match(/\.cromo-inicio\s*\{([^}]*)\}/);
   assert.ok(regra, 'achou a regra .cromo-inicio');
   assert.match(regra[1], /width:\s*min\(49vw,\s*236px\);/);

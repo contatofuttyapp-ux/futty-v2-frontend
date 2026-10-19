@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { formatScore } from '../../src/utils/format.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(`${RAIZ}${rel}`, 'utf8');
@@ -48,7 +49,7 @@ test('Ranking: pontos e nota nunca levam reticências — dois grupos que quebra
   assert.match(tela, /className="rank-votes" style=\{\{ marginTop: 4, fontSize: 12 \}\}/, 'o contêiner não força nowrap nem ellipsis no estilo');
   assert.match(tela, /className="rank-votes__grupo" data-grupo-pontos/);
   assert.match(tela, /className="rank-votes__grupo" data-grupo-nota/);
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   const regra = css.match(/\.rank-votes \{([^}]*)\}/);
   assert.ok(regra, 'a regra .rank-votes existe');
   assert.match(regra[1], /flex-wrap:\s*wrap/, 'os grupos quebram de linha');

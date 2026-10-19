@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { linhasDePendencia, destinoDoSortear } from '../../src/utils/seuTime.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -154,7 +155,7 @@ test('147 · a página do time lê ?abrir-presenca, entrega ao jogo e apaga do e
   assert.match(painel, /useState\(abrirInicial\)/, 'o "Abrir presença" do jogo certo já nasce aberto (o mesmo estado do botão)');
   assert.match(painel, /abrirInicial=\{!!abrirPresencaDe && String\(g\.id\) === String\(abrirPresencaDe\)\}/, 'só o jogo do parâmetro');
   assert.match(painel, /className=\{destaque === g\.id \? 'jogo-destaque' : undefined\}/, 'destaque curto no cartão');
-  assert.match(ler('src/styles/app.css'), /\.jogo-destaque \{ animation: jogoDestaque 2\.4s/);
+  assert.match(lerAppCss(), /\.jogo-destaque \{ animation: jogoDestaque 2\.4s/);
 });
 
 test('item 69: a tela diz que "admin" e "posição em campo" são coisas separadas', () => {

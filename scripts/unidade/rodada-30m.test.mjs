@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { textosDoCardDoCampeonato, tituloDoPostDoCampeao } from '../../src/utils/campeonatoInicio.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -67,7 +68,7 @@ test('a tabela explica a barra dourada (legenda) quando há classificado, e só 
 });
 
 test('o pódio tem chão e respiro: os degraus apoiam numa linha e a margem de baixo os separa dos botões', () => {
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   const podio = css.match(/\.camp-podio\{[^}]*\}/)[0];
   assert.match(podio, /margin:4px 0 22px/);
   assert.match(podio, /border-bottom:2px solid rgba\(255,255,255,0\.18\)/);

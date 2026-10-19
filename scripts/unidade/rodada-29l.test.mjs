@@ -14,6 +14,7 @@ import { haQuantoTempo } from '../../src/utils/haQuantoTempo.js';
 import { comTentativa } from '../../src/utils/comTentativa.js';
 import { dataComDiaPorExtenso } from '../../src/utils/dataHora.js';
 import { linhasDePendencia, resumoDoTime } from '../../src/utils/seuTime.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -43,7 +44,7 @@ test('130 · a seta rola quase uma página e nunca passa das pontas', () => {
 });
 
 test('130/138 · o CSS esmaece a borda por onde ainda há conteúdo (máscara) e a seta tem área de toque de 44 px', () => {
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   assert.match(css, /\[data-mais-dir="1"\]\s*\{[^}]*mask-image: linear-gradient\(to right, #000 calc\(100% - 40px\), transparent 100%\)/);
   assert.match(css, /\[data-mais-esq="1"\]\s*\{[^}]*mask-image: linear-gradient\(to right, transparent 0, #000 40px\)/);
   assert.match(css, /\[data-mais-esq="1"\]\[data-mais-dir="1"\]\s*\{[^}]*transparent 0, #000 40px, #000 calc\(100% - 40px\), transparent 100%/);
@@ -176,13 +177,13 @@ test('129 · as abas do time têm a largura do próprio texto, e o selo ADMIN vi
   const equipa = semComentarios(ler('src/pages/Equipa.jsx'));
   assert.doesNotMatch(equipa.slice(equipa.indexOf('const ESTILO_ABA'), equipa.indexOf('function AbasDoTime')), /flex: 1|fontSize|letterSpacing/, 'largura e fonte moram na classe, não no estilo em linha');
   assert.match(equipa, /flex: `\$\{abas\.length\} 1 auto`/);
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   assert.match(css, /\.aba-time \{\s*flex: 1 1 auto;\s*min-width: 0;/);
   assert.match(css, /@media \(max-width: 380px\) \{\s*\.aba-time \{[^}]*\}\s*\.aba-time__selo \{ font-size: 0; width: 7px; height: 7px;/);
 });
 
 test('131 · os botões − e + da Figurinha têm 44 px de toque, sem mexer na altura que a linha ocupa na página', () => {
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   assert.match(css, /\.fig-zoom-btn \{[^}]*width: 44px;\s*height: 44px;/);
   const fig = ler('src/pages/Figurinha.jsx');
   // A linha cresceu de 26 para 44 e as margens negativas acompanham: 44 − 13 − 15 = 26 − 4 − 6 = 16 px.
@@ -195,7 +196,7 @@ test('132 · "Gerar minha figurinha" numa linha só; nas telas estreitas o rótu
   assert.equal([...fig.matchAll(/<RotuloGerar \/>/g)].length, 2, 'os dois botões de gerar (dourado e roxo)');
   assert.equal([...fig.matchAll(/fig-io-btn fig-gerar/g)].length, 2, 'os dois levam a classe da linha só');
   assert.match(ler('src/components/RotuloGerar.jsx'), /<span className="rotulo-gerar-longo">Gerar minha figurinha<\/span>\s*<span className="rotulo-gerar-curto">Gerar figurinha<\/span>/);
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   assert.match(css, /\.fig-gerar \{ white-space: nowrap; min-width: 0; padding-left: 12px; padding-right: 12px; \}/);
   assert.match(css, /@media \(max-width: 410px\) \{\s*\.rotulo-gerar-longo \{ display: none; \}\s*\.rotulo-gerar-curto \{ display: inline; \}/);
 });
@@ -227,7 +228,7 @@ test('142 · na tela do jogo o atalho diz o que é: "Ranking do time", com o tro
 });
 
 test('125 · a faixa de cookies fica na altura EXATA da barra de navegação (uma variável só, conferida contra o CSS da barra)', () => {
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   const barra = css.match(/\.bottom-nav \{[^}]*\}/)[0];
   const aba = css.match(/\.bottom-nav__tab \{[^}]*\}/)[0];
   const respiroTopo = Number(barra.match(/padding: (\d+)px 0;/)[1]);
@@ -285,7 +286,7 @@ test('137 · o texto secundário do Início passa de 4,5:1 (WCAG AA) sobre o car
   assert.ok(contraste(dim, fundoDoCard) >= 4.5, `--text-dim ${dim} sobre ${fundoDoCard}: ${contraste(dim, fundoDoCard).toFixed(2)}:1`);
   assert.ok(contraste('#333333', fundoDoCard) < 2, 'o cinza antigo (#333) estava em ~1,6:1: a régua pega o defeito');
 
-  const css = ler('src/styles/app.css');
+  const css = lerAppCss();
   assert.match(css.match(/\.gcard__meta \{[^}]*\}/)[0], /color: var\(--text-dim\);/, '"12 confirmados" usa o cinza claro');
   const rsvp = semComentarios(ler('src/components/RSVPCard.jsx'));
   assert.doesNotMatch(rsvp, /color: 'var\(--label-color\)'/, '"até …", "Mudar resposta" e "Sair da lista" não usam mais o branco a 40% (~3,7:1)');

@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { notaNoSorteio, sorteioNaReguaDe10 } from '../../src/utils/notaDoSorteio.js';
+import { lerAppCss } from './_appCss.mjs';
 
 const raiz = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (p) => fs.readFileSync(`${raiz}${p}`, 'utf8');
@@ -46,7 +47,7 @@ test('Ranking: o voto é um número de 0 a 10 — onze botões, nada de estrelas
   assert.match(tela, /falta seu voto/);
   assert.match(tela, /\{SEM_NOTA\}/, 'quem ainda não tem 3 votos: "sem nota", não "—"');
   assert.match(tela, /modalNota == null/, 'o 0 é voto: só "nada escolhido" trava o Salvar');
-  assert.match(ler('src/styles/app.css'), /\.nota-botao\[aria-checked='true'\]/);
+  assert.match(lerAppCss(), /\.nota-botao\[aria-checked='true'\]/);
 });
 
 test('as telas avisam o motor que estão na régua de 10 (sem o aviso, ele trata como o app antigo, em estrelas)', () => {
