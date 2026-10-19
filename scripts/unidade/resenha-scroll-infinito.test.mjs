@@ -10,12 +10,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
 
 test('30E-4 · o sentinela observa e chama o MESMO verMais() de sempre, sem recriar a busca', () => {
-  const feed = ler('src/pages/Feed.jsx');
+  const feed = lerPagina('Feed');
   assert.match(feed, /const sentinelaRef = useRef\(null\);/);
   assert.match(feed, /new IntersectionObserver\(\(entradas\) => \{\s*if \(entradas\[0\]\?\.isIntersecting\) verMais\(\);/);
   assert.match(feed, /<div ref=\{sentinelaRef\} aria-hidden="true" style=\{\{ height: 1 \}\} \/>/);
@@ -25,7 +26,7 @@ test('30E-4 · o sentinela observa e chama o MESMO verMais() de sempre, sem recr
 });
 
 test('30E-4 · o botão "Ver mais antigos" é reserva: só aparece se o automático falhar', () => {
-  const feed = ler('src/pages/Feed.jsx');
+  const feed = lerPagina('Feed');
   assert.match(feed, /const \[erroCarregarMais, setErroCarregarMais\] = useState\(false\);/);
   // A falha do carregamento automático liga a reserva — e só ela, não o `erro` geral da página.
   assert.match(feed, /setErro\(err\.message \|\| 'Não deu para carregar mais\. Tente de novo\.'\);\s*setErroCarregarMais\(true\);/);
@@ -35,12 +36,12 @@ test('30E-4 · o botão "Ver mais antigos" é reserva: só aparece se o automát
 });
 
 test('30E-4 · enquanto carrega (automático ou pela reserva) mostra "Carregando…", com aria-live', () => {
-  const feed = ler('src/pages/Feed.jsx');
+  const feed = lerPagina('Feed');
   assert.match(feed, /\{carregandoMais \? \(\s*<p role="status" aria-live="polite" className="muted"[\s\S]{0,60}>Carregando…<\/p>/);
 });
 
 test('30E-4 · o efeito só observa enquanto há mais páginas e nenhuma falha pendente (para de martelar o motor sozinho depois de errar)', () => {
-  const feed = ler('src/pages/Feed.jsx');
+  const feed = lerPagina('Feed');
   assert.match(feed, /if \(!el \|\| !proximo \|\| erroCarregarMais \|\| typeof IntersectionObserver === 'undefined'\) return undefined;/);
   assert.match(feed, /\}, \[proximo, erroCarregarMais\]\);/);
 });

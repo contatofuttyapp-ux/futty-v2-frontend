@@ -171,7 +171,7 @@ test('o Início mostra o campeonato novo para todo o time, e a Resenha tem o pos
   const inicio = semComentarios(lerPagina('Inicio'));
   assert.match(inicio, /dadosInicio\?\.campeonato_novo/);
   assert.match(inicio, /<CardCampeonatoInicio campeonato=\{campeonatoNovo\} slug=\{campSlugDoNovo\} \/>/);
-  const feed = semComentarios(ler('src/pages/Feed.jsx'));
+  const feed = semComentarios(lerPagina('Feed'));
   assert.match(feed, /item\.conteudo\?\.tipo === 'campeao_campeonato'/);
   assert.match(feed, /<Reacoes targetType="post" targetId=\{p\.id\}/, 'reações como os outros posts');
   assert.match(feed, /<Comentarios parentType="post" parentId=\{p\.id\}/, 'comentários como os outros posts');

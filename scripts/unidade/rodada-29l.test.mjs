@@ -15,7 +15,7 @@ import { comTentativa } from '../../src/utils/comTentativa.js';
 import { dataComDiaPorExtenso } from '../../src/utils/dataHora.js';
 import { linhasDePendencia, resumoDoTime } from '../../src/utils/seuTime.js';
 import { lerAppCss } from './_appCss.mjs';
-import { lerPagina } from './_fonteDaPagina.mjs';
+import { importaDe, lerArquivoOuPagina, lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -135,8 +135,8 @@ test('136 · "há N meses": entre 56 e 59 dias é "há 1 mês" (era "há 1 meses
   assert.equal(haQuantoTempo(new Date(agora - 5 * 60000).toISOString(), agora), 'há 5 min');
   assert.equal(haQuantoTempo('lixo', agora), '');
   for (const arquivo of ['src/pages/Feed.jsx', 'src/components/Comentarios.jsx']) {
-    const fonte = ler(arquivo);
-    assert.match(fonte, /import \{ haQuantoTempo \} from '\.\.\/utils\/haQuantoTempo'|import \{ haQuantoTempo \} from '\.\.\/utils\/haQuantoTempo';/, arquivo);
+    const fonte = lerArquivoOuPagina(RAIZ, arquivo);
+    assert.ok(importaDe(fonte, ['haQuantoTempo'], 'utils/haQuantoTempo'), arquivo);
     assert.doesNotMatch(fonte, /function haQuantoTempo/, `${arquivo}: sem cópia própria`);
   }
 });
@@ -264,7 +264,7 @@ test('141 · foto que falha: o endereço da nova tentativa ganha ?r=N (ou &r=N),
 });
 
 test('141 · as três fotos de post da Resenha passam pelo ImagemDoPost; a linha de erro fala na voz da casa', () => {
-  const feed = semComentarios(ler('src/pages/Feed.jsx'));
+  const feed = semComentarios(lerPagina('Feed'));
   assert.equal([...feed.matchAll(/<ImagemDoPost\b/g)].length, 3, 'foto do jogo, mídia única e carrossel');
   assert.doesNotMatch(feed, /<img src=\{urlImagem\((foto|assetUrl\(media\[0\]\.url\)|url), 512\)\}/, 'nenhuma foto de post fora do componente');
   const comp = ler('src/components/ImagemDoPost.jsx');

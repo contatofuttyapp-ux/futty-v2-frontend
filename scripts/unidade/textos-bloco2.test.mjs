@@ -137,7 +137,7 @@ test('96 · o Ranking diz o nome do time UMA vez: título quando há um time só
 });
 
 test('93 · a Resenha tem esqueleto de carregamento e estado vazio de verdade', () => {
-  const feed = ler('src/pages/Feed.jsx');
+  const feed = lerPagina('Feed');
   assert.match(feed, /function ResenhaEsqueleto\(\)/);
   assert.match(feed, /\{loading \? \(\s*<ResenhaEsqueleto \/>/);
   assert.match(feed, /data-resenha-vazia/);

@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { empateDaResenha, nomeCurtoDoTime } from '../../src/utils/resultadoDoJogo.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -46,7 +47,7 @@ test('empateDaResenha: só o jogo empatado — campeão, sem resultado ou sem ti
 });
 
 test('Resenha: o card do jogo tem o bloco do empate (ícone lucide, não emoji), no lugar do time campeão, e o partilhar diz o empate', () => {
-  const feed = ler('src/pages/Feed.jsx');
+  const feed = lerPagina('Feed');
   assert.match(feed, /import \{[^}]*Handshake[^}]*\} from 'lucide-react';/);
   assert.match(feed, /const empate = campeao \? null : empateDaResenha\(j\);/);
   assert.match(feed, /data-empate-frase/);

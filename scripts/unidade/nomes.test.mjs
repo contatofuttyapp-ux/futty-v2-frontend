@@ -47,7 +47,7 @@ test('primeiroNome: sem nome ou só pontuação não quebra', () => {
 });
 
 test('a Resenha usa primeiroNome (não o corte no primeiro espaço) — "Solte a resenha, CHAVO…"', () => {
-  const feed = ler('src/pages/Feed.jsx');
+  const feed = lerPagina('Feed');
   assert.match(feed, /primeiroNome\(nomeExibicao\(user\)\)/);
   assert.doesNotMatch(feed, /split\(' '\)\[0\]/, 'o corte cru no espaço não pode voltar');
   const frase = `Solte a resenha, ${primeiroNome('CHAVO, EL MATADOR')}…`;
@@ -62,7 +62,7 @@ test('uma forma só: o nome como a pessoa escreveu — nenhuma tela força maiú
   assert.doesNotMatch(m[0], /textTransform/, 'o nome do Início saía "CHAVO, EL MATADOR" por CSS, e na Resenha "Chavo, el matador"');
   // Início e Resenha leem o nome pela mesma regra única
   assert.match(inicio, /nomeExibicao\(user\)/);
-  assert.match(ler('src/pages/Feed.jsx'), /nomeExibicao\(user\)/);
+  assert.match(lerPagina('Feed'), /nomeExibicao\(user\)/);
   assert.equal(nomeExibicao({ nome_jogador: 'Chavo, el matador', nome: 'CHAVO' }), 'Chavo, el matador');
   assert.equal(nomeExibicao({ nome: 'Tonhão' }), 'Tonhão');
   assert.equal(nomeExibicao({}), 'Jogador');

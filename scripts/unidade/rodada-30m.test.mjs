@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { textosDoCardDoCampeonato, tituloDoPostDoCampeao } from '../../src/utils/campeonatoInicio.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerArquivoOuPagina, lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -50,11 +51,11 @@ test('título do post: "<Time> é campeão" · <campeonato> — sem preposição
 });
 
 test('a Resenha usa o título novo e a construção antiga ("campeão do <nome>") não existe mais nas telas', () => {
-  const feed = semComentarios(ler('src/pages/Feed.jsx'));
+  const feed = semComentarios(lerPagina('Feed'));
   assert.match(feed, /tituloDoPostDoCampeao\(campeao\.nome, c\.campeonato_nome\)/);
   assert.match(feed, /\{titulo\.time\}/);
   for (const arquivo of ['src/pages/Feed.jsx', 'src/pages/Inicio.jsx', 'src/components/CardCampeonatoInicio.jsx', 'src/components/CampeonatoVistas.jsx', 'src/utils/campeonatoInicio.js', 'src/utils/campeonatoCartao.js']) {
-    assert.doesNotMatch(semComentarios(ler(arquivo)), /campeão d[oa] /, `${arquivo} ainda tem "campeão do/da"`);
+    assert.doesNotMatch(semComentarios(lerArquivoOuPagina(RAIZ, arquivo)), /campeão d[oa] /, `${arquivo} ainda tem "campeão do/da"`);
   }
 });
 
