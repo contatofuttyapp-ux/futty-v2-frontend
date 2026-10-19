@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { caminhoNovoDeEquipa, abaDoAdmin, caminhoDoAdminAntigo, abaDoTime } from '../../src/lib/rotasAntigas.js';
-import { lerPagina } from './_fonteDaPagina.mjs';
+import { lerArquivoOuPagina, lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -116,7 +116,7 @@ test('o link universal: /time/ abre o app (iOS AASA, Android intent-filter, pars
 
 test('as telas navegam para /time (nenhum link interno com o endereço antigo)', () => {
   for (const arquivo of ['src/pages/Inicio.jsx', 'src/pages/Jogo.jsx', 'src/pages/Ranking.jsx', 'src/pages/Equipa.jsx', 'src/pages/Explorar.jsx', 'src/pages/MeuPerfil.jsx', 'src/components/BottomNav.jsx', 'src/components/Layout.jsx', 'src/components/RouteTitle.jsx']) {
-    const texto = ler(arquivo);
+    const texto = lerArquivoOuPagina(RAIZ, arquivo);
     assert.doesNotMatch(texto, /['"`]\/equipa\//, `${arquivo} ainda manda para /equipa/`);
     assert.doesNotMatch(texto, /criar-equipa/, `${arquivo} ainda manda para /criar-equipa`);
   }

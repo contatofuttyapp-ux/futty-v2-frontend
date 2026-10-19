@@ -21,7 +21,7 @@ test('achado 119: nenhum "--" nem "★ -" nem "—" solto para nota, nas quatro 
   const ler = (p) => fs.readFileSync(`${raiz}${p}`, 'utf8');
 
   assert.doesNotMatch(lerPagina('Inicio'), /formatRating\(stats\.nota\) : '--'/);
-  assert.doesNotMatch(ler('src/pages/MeuPerfil.jsx'), /formatRating\(stats\.nota\) : '--'/);
+  assert.doesNotMatch(lerPagina('MeuPerfil'), /formatRating\(stats\.nota\) : '--'/);
   assert.doesNotMatch(lerPagina('AdminPanel'), /★ \{m\.nota_media == null \? '-'/);
 
   const vitrine = ler('src/pages/JogadorPerfil.jsx');

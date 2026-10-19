@@ -35,7 +35,7 @@ test('30E-1 · os seis lugares achados na varredura não cortam mais o nome com 
   const jogoPassado = ler('src/pages/JogoPassado.jsx');
   assert.match(jogoPassado, /overflowWrap: 'anywhere' \}\}>\{m\.nome \|\| 'Jogador'\}/, 'quem jogou do Jogo Passado: quebra em vez de cortar');
 
-  const meuPerfil = ler('src/pages/MeuPerfil.jsx');
+  const meuPerfil = lerPagina('MeuPerfil');
   assert.match(meuPerfil, /overflowWrap: 'anywhere' \}\}>\{nomeMostrar\}/, 'cabeçalho do Meu Perfil: quebra em vez de cortar');
 });
 

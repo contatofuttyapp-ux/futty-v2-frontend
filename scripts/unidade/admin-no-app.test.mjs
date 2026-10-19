@@ -81,7 +81,7 @@ test('"Voltar" nas telas do time volta pelo histórico (nunca para o time por pa
 });
 
 test('Perfil: sai "Painel de administração"; fica "Meus times" (cada um leva ao time) e entra Notificações por tipo', () => {
-  const perfil = ler('src/pages/MeuPerfil.jsx');
+  const perfil = lerPagina('MeuPerfil');
   assert.doesNotMatch(semComentarios(perfil), /Painel de administração|\/admin\//);
   assert.match(perfil, /<SecLabel>Meus times<\/SecLabel>/);
   assert.match(perfil, /<SecLabel>Notificações<\/SecLabel>/);

@@ -28,7 +28,7 @@ test('30E-5 · a landing, o mini sorteio, as meta tags e o manifesto dizem "sort
 test('30E-5 · varredura: "justo" não aparece mais em src/, index.html nem public/, salvo em comentário histórico', () => {
   const achados = [];
   const EXCECOES = new Set([
-    'src/pages/MeuPerfil.jsx', // "um elemento justo ao texto" — encaixe de CSS, não sorteio
+    'src/pages/meuPerfil/estilos.js', // "um elemento justo ao texto" — encaixe de CSS, não sorteio
     'src/utils/figurinhaCanvas.js', // "encaixe mais justo" — passo do canvas, não sorteio
   ]);
   const varrer = (dir) => {

@@ -72,7 +72,7 @@ test('29Q · a fila de chips é só o filtro dos jogos: Todas + os times; saíra
   }
   assert.doesNotMatch(semComentarios(lerAppCss().replace(/\/\*[\s\S]*?\*\//g, '')), /\.chip--explore/, 'o estilo do chip que sobrou sem uso saiu');
   // O "Criar time" do Perfil fica (é outra tela).
-  assert.match(ler('src/pages/MeuPerfil.jsx'), /data-criar-time/);
+  assert.match(lerPagina('MeuPerfil'), /data-criar-time/);
 });
 
 // ── 2 · Convidado sem app ─────────────────────────────────────────────────────────────────────────────────────────────────────────

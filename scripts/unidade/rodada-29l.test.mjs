@@ -154,7 +154,7 @@ test('136 · nenhum contador do app fica sem concordar: sem "(s)" e sem o rótul
   assert.doesNotMatch(admin, /label="(jogos|membros)"/, 'a aba Elenco não mostra mais "1 JOGOS" nem "1 MEMBROS"');
   assert.match(lerPagina('Inicio'), /\{plural\(stats\?\.jogos \?\? 0, 'jogo', 'jogos'\)\}/);
   assert.match(lerPagina('Inicio'), /\{plural\(stats\?\.gols \?\? 0, 'gol', 'gols'\)\}/);
-  assert.match(ler('src/pages/MeuPerfil.jsx'), /plural\(stats\.gols \?\? 0, 'gol', 'gols'\)/);
+  assert.match(lerPagina('MeuPerfil'), /plural\(stats\.gols \?\? 0, 'gol', 'gols'\)/);
   assert.match(ler('src/pages/JogadorPerfil.jsx'), /plural\(conquistas\.jogos_total \?\? 0, 'Jogo', 'Jogos'\)/);
   assert.match(lerPagina('Inicio'), /plural\(votacaoTop\.faltam, 'Falta', 'Faltam'\)/, '"Falta 1", não "Faltam 1"');
 });
