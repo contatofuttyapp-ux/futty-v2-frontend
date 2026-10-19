@@ -14,6 +14,7 @@ import {
 } from '../../src/utils/resultadoDoJogo.js';
 import { flagsDoTime } from '../../src/components/golsEPremios.js';
 import { chaveDoJogador } from '../../src/utils/seloDoSorteio.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -123,7 +124,7 @@ test('a tela do jogo abre o editor completo (times, gols de todos os times, quem
 });
 
 test('Ajustes → Jogos: "Lançar resultado" só no jogo sem campeão nem empate; "Editar resultado" nos que têm', () => {
-  const painel = semComentarios(ler('src/pages/AdminPanel.jsx'));
+  const painel = semComentarios(lerPagina('AdminPanel'));
   assert.match(painel, /const temResultado = jogoTemResultado\(g\);/);
   assert.doesNotMatch(painel, /\(g\.resultado_nivel \|\| 0\) > 0/, 'o nível sozinho não é mais o critério');
 });

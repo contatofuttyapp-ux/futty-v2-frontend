@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { formatScore } from '../../src/utils/format.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(`${RAIZ}${rel}`, 'utf8');
@@ -73,7 +74,7 @@ test('Explorar: o título da lista leva o "· N" e não promete "perto de você"
 });
 
 test('Estatísticas do admin: "Presença" lista presenças (jogos em que a pessoa esteve), não vitórias', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   assert.match(painel, /topPresenca = \[\.\.\.membros\]\.sort\(\(a, b\) => \(b\.presencas \|\| 0\) - \(a\.presencas \|\| 0\)\)/);
   assert.match(painel, /plural\(m\.presencas \|\| 0, 'presença', 'presenças'\)/);
   assert.doesNotMatch(painel, /topVitorias/, 'a lista de vitórias que estava sob o título "Presença" saiu');

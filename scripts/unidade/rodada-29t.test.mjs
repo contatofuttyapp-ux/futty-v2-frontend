@@ -298,8 +298,8 @@ test('165 · em todo lugar que mostra o rabicho a cidade do time vai junto (nenh
   // Os três que faltavam: o card do jogo do Início, o prazo do RSVPCard e o painel do time (jogos, cancelar, resultado, prazo da presença).
   assert.match(lerPagina('Inicio'), /formatDateTime\(game\.date, game\.fuso, \{ cidade \}\)/);
   assert.match(ler('src/components/RSVPCard.jsx'), /formatarDataHora\(iso, fuso, \{ cidade \}\)/);
-  assert.match(ler('src/pages/AdminPanel.jsx'), /fmtPrazoAdmin = \(iso, fuso, cidade\) => formatarDataHora\(iso, fuso, \{ cidade \}\)/);
-  assert.match(ler('src/pages/AdminPanel.jsx'), /<RSVPAdmin gameId=\{g\.id\} slug=\{slug\} cidade=\{team\?\.cidade\}/);
+  assert.match(lerPagina('AdminPanel'), /fmtPrazoAdmin = \(iso, fuso, cidade\) => formatarDataHora\(iso, fuso, \{ cidade \}\)/);
+  assert.match(lerPagina('AdminPanel'), /<RSVPAdmin gameId=\{g\.id\} slug=\{slug\} cidade=\{team\?\.cidade\}/);
 });
 
 test('166 · Criar time, passo 1: o Continuar está lá desde o começo, apagado (não-permitido), e acende com nome e cidade', () => {

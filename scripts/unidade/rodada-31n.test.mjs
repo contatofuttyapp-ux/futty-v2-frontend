@@ -18,6 +18,7 @@ import { slugDoNome, caminhoCurtoDoConvite, codigoDoLinkCurto } from '../../src/
 import { linkDoConvite } from '../../src/utils/convite.js';
 import { ORIGEM_DO_SITE, PREFIXOS_DE_LINK, caminhoDoLinkDoSite } from '../../src/lib/linkDoSite.js';
 import { parametroDoConvite } from '../../functions/_shared/previaDoLink.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(`${RAIZ}${rel}`, 'utf8');
@@ -82,7 +83,7 @@ test('as três telas que geram o link do convite mandam o nome do time', () => {
   assert.match(ler('src/pages/Equipa.jsx'), /linkDoConvite\(\{ origem: ORIGEM_DO_SITE, token, codigo, nomeTime: team\?\.nome \}\)/);
   assert.match(ler('src/pages/Equipa.jsx'), /<ElencoDoAdmin slug=\{slug\} nomeTime=\{team\?\.nome\}/);
   assert.match(ler('src/pages/CriarEquipa.jsx'), /linkDoConvite\(\{ origem: ORIGEM_DO_SITE, token, codigo, nomeTime \}\)/);
-  const admin = ler('src/pages/AdminPanel.jsx');
+  const admin = lerPagina('AdminPanel');
   assert.match(admin, /linkDoConvite\(\{ origem: ORIGEM_DO_SITE, token, codigo, nomeTime \}\)/);
   assert.match(admin, /<TabConvites key=\{versaoConvites\} slug=\{slug\} nomeTime=\{nomeTime\}/);
 });

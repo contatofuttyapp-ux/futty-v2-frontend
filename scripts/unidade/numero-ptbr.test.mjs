@@ -16,6 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatarAte, formatarDecimal, formatarEUR, formatarNota, formatarPontos, formatarSegundos, formatarUSD } from '../../src/utils/numero.js';
 import { formatarMedia } from '../../src/utils/plural.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -143,7 +144,7 @@ test('as telas que o achado citou usam o helper (Ranking, Início, perfil, Admin
   assert.match(ler('src/utils/format.js'), /formatarPontos\(value \|\| 0\)/, 'formatScore (Ranking)');
   assert.match(ler('src/pages/Ranking.jsx'), /formatarNota\(p\.nota\)/);
   assert.match(ler('src/pages/JogadorPerfil.jsx'), /formatarNota\(notaShow\)/);
-  assert.match(ler('src/pages/AdminPanel.jsx'), /formatarNota\(m\.nota_media\)/);
+  assert.match(lerPagina('AdminPanel'), /formatarNota\(m\.nota_media\)/);
   assert.match(ler('src/pages/Gabinete.jsx'), /fmtUSD = formatarUSD/);
   assert.match(ler('src/pages/Gabinete.jsx'), /fmtEUR = formatarEUR/);
   assert.match(ler('src/pages/Diagnostico.jsx'), /formatarSegundos\(/);

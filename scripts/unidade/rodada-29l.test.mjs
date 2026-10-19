@@ -148,7 +148,7 @@ test('136 · nenhum contador do app fica sem concordar: sem "(s)" e sem o rótul
     const fonte = semComentarios(ler(arquivo));
     for (const palavra of improvisos) assert.ok(!fonte.includes(palavra), `${arquivo}: "${palavra}" é fugir da concordância`);
   }
-  const admin = ler('src/pages/AdminPanel.jsx');
+  const admin = lerPagina('AdminPanel');
   assert.match(admin, /label=\{plural\(stats\?\.total_jogos, 'jogo', 'jogos'\)\}/);
   assert.match(admin, /label=\{plural\(stats\?\.total_membros, 'membro', 'membros'\)\}/);
   assert.doesNotMatch(admin, /label="(jogos|membros)"/, 'a aba Elenco não mostra mais "1 JOGOS" nem "1 MEMBROS"');
@@ -161,7 +161,7 @@ test('136 · nenhum contador do app fica sem concordar: sem "(s)" e sem o rótul
 
 // ── A4 · achado 139: "Excluir" só depois de cancelar ───────────────────────────────────────────────────────────────────────────────
 test('139 · o jogo ativo tem Editar e Cancelar jogo; "Excluir" só aparece no jogo JÁ cancelado', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   const abre = painel.indexOf('data-jogo-cancelado');
   assert.ok(abre > 0, 'o cartão do jogo cancelado existe');
   const apagar = [...painel.matchAll(/setConfirmacao\(\{ tipo: 'apagar', jogo: g \}\)/g)].map((m) => m.index);
@@ -210,7 +210,7 @@ test('134 · "Baixar" volta ao lado de "Compartilhar" também no celular (decis�
 });
 
 test('140 · "Criar jogos recorrentes" e "Criar campeonato": cada um numa linha, na largura do texto', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   const par = painel.slice(painel.indexOf("aria-pressed={painel === 'recorrentes'}") - 140, painel.indexOf('Criar campeonato</button>') + 30);
   assert.match(par, /display: 'flex', flexWrap: 'wrap', gap: 8/);
   assert.equal([...par.matchAll(/flex: '1 1 auto', whiteSpace: 'nowrap'/g)].length, 2);

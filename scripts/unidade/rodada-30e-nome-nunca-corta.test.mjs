@@ -26,7 +26,7 @@ test('30E-1 · os seis lugares achados na varredura não cortam mais o nome com 
   assert.match(resultadoEditor, /overflowWrap: 'anywhere' \}\}>\s*\{j\.nome\}/, 'gols por jogador: quebra em vez de cortar');
   assert.doesNotMatch(resultadoEditor, /textOverflow: 'ellipsis'/);
 
-  const adminPanel = ler('src/pages/AdminPanel.jsx');
+  const adminPanel = lerPagina('AdminPanel');
   assert.match(adminPanel, /maxWidth: 120, overflowWrap: 'anywhere' \}\}>\{nomeExibicao\(u\)\}/, 'lista de jogadores do admin: quebra em vez de cortar');
 
   const equipa = ler('src/pages/Equipa.jsx');

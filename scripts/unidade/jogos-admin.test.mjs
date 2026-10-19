@@ -13,7 +13,7 @@ import { lerPagina } from './_fonteDaPagina.mjs';
 
 test('29I, bloco 3: o Dashboard do painel virou o card "Seu time" do Início — as pendências vêm do motor, não de contas na tela', () => {
   const raiz = fileURLToPath(new URL('../../', import.meta.url));
-  const painel = fs.readFileSync(`${raiz}src/pages/AdminPanel.jsx`, 'utf8');
+  const painel = lerPagina('AdminPanel');
   assert.doesNotMatch(painel, /function TabDashboard|cardDashLbl|PRÓXIMO JOGO/, 'o Dashboard saiu do painel');
   const inicio = lerPagina('Inicio');
   assert.match(inicio, /<CardSeuTime seuTime=\{dadosInicio\?\.seu_time \|\| \[\]\}/);

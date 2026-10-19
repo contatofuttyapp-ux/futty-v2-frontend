@@ -116,7 +116,7 @@ test('77, 79, 81, 82 e 78 · a criação do time: "a cidade", 3/3, nome do botã
 });
 
 test('78 · o painel do admin (Ajustes) segue a mesma regra: gols off desliga o artilheiro junto, no mesmo pedido', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   assert.match(painel, /desligaArtilheiroJunto/);
   assert.match(painel, /mostrar_gols: v, \.\.\.\(desligaArtilheiroJunto \? \{ mostrar_artilheiro: false \} : \{\}\)/);
   assert.doesNotMatch(painel, /Precisa dos gols ligados/);
@@ -124,7 +124,7 @@ test('78 · o painel do admin (Ajustes) segue a mesma regra: gols off desliga o 
 });
 
 test('101 · o número "por jogo" do painel diz do quê: confirmados por jogo', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   // Rodada 29L (achado 136): o rótulo concorda com o número ("1 confirmado por jogo"), mas continua dizendo DO QUÊ é a média.
   assert.match(painel, /'confirmado por jogo', 'confirmados por jogo'/);
   assert.doesNotMatch(painel, /label="por jogo"/);

@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { caminhoNovoDeEquipa, abaDoAdmin, caminhoDoAdminAntigo, abaDoTime } from '../../src/lib/rotasAntigas.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -90,7 +91,7 @@ test('29I, bloco 3: o painel /admin/<slug>?tab=… virou abas da página do time
   for (const tab of ['jogos', 'resultados', 'campeonato']) assert.equal(caminhoDoAdminAntigo('missa', tab), '/time/missa?aba=jogos', tab);
   assert.equal(caminhoDoAdminAntigo('missa', 'estatisticas'), '/time/missa/ranking');
   assert.equal(caminhoDoAdminAntigo('missa', 'inventada'), '/time/missa');
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   assert.match(painel, /<Navigate to=\{caminhoDoAdminAntigo\(slug, searchParams\.get\('tab'\)\)\} replace \/>/);
   assert.doesNotMatch(painel, /admin-sidebar|MenuItems|☰/, 'a barra lateral e o menu do painel saíram');
 });

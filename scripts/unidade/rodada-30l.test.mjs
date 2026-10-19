@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { A_MAO, ESCOLHA_O_JOGO, linhaDoSorteio, PELO_SORTEIO, SEM_JOGO_SORTEADO, TITULO_DA_ESCOLHA } from '../../src/utils/campeonatoDoSorteio.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -53,7 +54,7 @@ test('"Criar campeonato" (a página dos campeonatos) abre a escolha, e o manual 
 });
 
 test('Painel → Jogos: "Criar campeonato" abre a mesma escolha (sem o formulário antigo de 2 times)', () => {
-  const painel = semComentarios(ler('src/pages/AdminPanel.jsx'));
+  const painel = semComentarios(lerPagina('AdminPanel'));
   assert.match(painel, /<CriarCampeonato\n\s+slug=\{slug\}/);
   assert.match(painel, /aoMontarAMao=\{\(\) => navigate\(`\/time\/\$\{slug\}\/campeonato\?novo=manual`\)\}/);
   assert.doesNotMatch(painel, /Nº de jornadas/, 'o formulário antigo (nome, jornadas, Time A × Time B) saiu daqui');

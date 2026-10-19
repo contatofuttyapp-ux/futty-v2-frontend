@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { HOST_DO_SITE, ORIGEM_DO_SITE } from '../../src/lib/linkDoSite.js';
 import { linkDoConvite } from '../../src/utils/convite.js';
 import { linkDoSorteio } from '../../src/utils/linkDoSorteio.js';
+import { importaDe, lerArquivoOuPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -55,9 +56,9 @@ test('a origem dos links é o site de verdade: https + futtyapp.com.br', () => {
 
 for (const [arquivo, padrao, nome] of SEIS_LUGARES) {
   test(`${nome} (${arquivo}) usa ORIGEM_DO_SITE e importa de lib/linkDoSite`, () => {
-    const texto = ler(arquivo);
+    const texto = lerArquivoOuPagina(RAIZ, arquivo);
     assert.match(texto, padrao, `${arquivo}: o link não usa ORIGEM_DO_SITE`);
-    assert.match(texto, /import \{ ORIGEM_DO_SITE \} from '\.\.\/lib\/linkDoSite'/, `${arquivo}: falta o import`);
+    assert.ok(importaDe(texto, ['ORIGEM_DO_SITE'], 'lib/linkDoSite'), `${arquivo}: falta o import`);
   });
 }
 

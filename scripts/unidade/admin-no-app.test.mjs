@@ -17,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { linhasDePendencia, destinoDoSortear } from '../../src/utils/seuTime.js';
 import { lerAppCss } from './_appCss.mjs';
-import { lerPagina } from './_fonteDaPagina.mjs';
+import { lerPagina, lerArquivoOuPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -93,7 +93,7 @@ test('Perfil: sai "Painel de administração"; fica "Meus times" (cada um leva a
 });
 
 test('Ajustes: "Nova temporada de notas" (nunca "Zona de perigo") zera as notas, com confirmação; "Ações definitivas" não existe mais', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   // 29R (achado 150): a única ação de "Ações definitivas" saiu para o cartão próprio; a seção, vazia, saiu junto.
   assert.doesNotMatch(semComentarios(painel), /Ações definitivas|Zona de perigo/);
   assert.match(painel, /pedir-revotacao`, \{ method: 'POST', body: JSON\.stringify\(\{ zerar: true \}\) \}/, 'a chamada ao motor não mudou');
@@ -107,7 +107,7 @@ test('Ajustes: "Nova temporada de notas" (nunca "Zona de perigo") zera as notas,
 });
 
 test('150 · a temporada de notas: o botão é o dourado da casa (cta-gold, ícone Star), nunca vermelho; só a confirmação é vermelha', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   const componente = painel.match(/function PedirVotarDeNovo\([\s\S]*?\r?\n\}\r?\n/)?.[0] || '';
   const botao = componente.split(/\r?\n/).find((l) => l.includes('data-pedir-votar-de-novo')) || ''; // a tag de abertura do botão, numa linha só
   assert.match(botao, /className="btn hud-corners-s cta-gold"/, 'o dourado da casa');
@@ -152,7 +152,7 @@ test('147 · a página do time lê ?abrir-presenca, entrega ao jogo e apaga do e
   assert.match(equipa, /searchParams\.get\('abrir-presenca'\)/);
   assert.match(equipa, /<JogosDoAdmin [\s\S]*?abrirPresencaDe=\{abrirPresencaDe\} aoUsarAbrirPresenca=\{usouAbrirPresenca\}/);
   assert.match(equipa, /p\.delete\('abrir-presenca'\);\s*return p;\s*\}, \{ replace: true \}\)/, 'sai do endereço trocando a entrada do histórico: "Voltar" não reabre');
-  const painel = semComentarios(ler('src/pages/AdminPanel.jsx'));
+  const painel = semComentarios(lerPagina('AdminPanel'));
   assert.match(painel, /useState\(abrirInicial\)/, 'o "Abrir presença" do jogo certo já nasce aberto (o mesmo estado do botão)');
   assert.match(painel, /abrirInicial=\{!!abrirPresencaDe && String\(g\.id\) === String\(abrirPresencaDe\)\}/, 'só o jogo do parâmetro');
   assert.match(painel, /className=\{destaque === g\.id \? 'jogo-destaque' : undefined\}/, 'destaque curto no cartão');
@@ -162,13 +162,13 @@ test('147 · a página do time lê ?abrir-presenca, entrega ao jogo e apaga do e
 test('item 69: a tela diz que "admin" e "posição em campo" são coisas separadas', () => {
   const texto = ler('src/components/EscolhaLinhaGol.jsx');
   assert.match(texto, /TEXTO_ADMIN_E_POSICAO = 'Admin é quem organiza o time\. Não tem nada a ver com a posição em campo/);
-  assert.match(ler('src/pages/AdminPanel.jsx'), /\{TEXTO_ADMIN_E_POSICAO\}/);
+  assert.match(lerPagina('AdminPanel'), /\{TEXTO_ADMIN_E_POSICAO\}/);
 });
 
 test('4b: a hora do jogo na tela é "Hora do jogo" ou "Hora" — nunca "fuso", "hora do campo" nem "horário de Brasília" como rótulo', () => {
   for (const arquivo of ['src/pages/NovoJogo.jsx', 'src/pages/AdminPanel.jsx', 'src/pages/Jogo.jsx', 'src/components/RSVPCard.jsx', 'src/utils/sorteioCartao.js']) {
     // Só o que a pessoa LÊ: texto de JSX (>…<) e textos entre aspas — não nomes de variável como team?.fuso.
-    for (const l of semComentarios(ler(arquivo)).split('\n')) {
+    for (const l of semComentarios(lerArquivoOuPagina(RAIZ, arquivo)).split('\n')) {
       assert.doesNotMatch(l, /((?<!=)>|')[^<>'{}]*(?<![.\w])(fuso|hora do campo|horário de Brasília)\b[^<>'{}]*(<|')/i, `${arquivo}: ${l.trim().slice(0, 90)}`);
     }
   }

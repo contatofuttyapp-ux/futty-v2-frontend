@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { PALETA, PADROES, chaveDaCor, hexDaCor, camadasDoEscudo, letraDoEscudo, segundaCorSugerida } from '../../src/utils/escudo.js';
 import { colorOf } from '../../src/utils/teamColors.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(`${RAIZ}${rel}`, 'utf8');
@@ -66,7 +67,7 @@ test('a segunda cor sugerida nunca é a principal', () => {
 });
 
 test('achado 102: UM controle de cor no painel — "Escudo do time"; "Cor" e "Cor de fundo do avatar" saíram', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   assert.doesNotMatch(painel, /Cor de fundo do avatar|CORES_FUNDO|COLOR_OPTIONS/);
   assert.doesNotMatch(painel, /<span style=\{lbl\}>Cor<\/span>/);
   assert.match(painel, /<EditorEscudo /);

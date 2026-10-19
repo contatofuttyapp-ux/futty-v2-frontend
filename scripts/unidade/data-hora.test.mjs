@@ -17,6 +17,7 @@ import {
   instanteNoCampo, camposNoCampo, rabichoDoFuso, cidadeDoRabicho,
 } from '../../src/utils/dataHora.js';
 import { dataCurta } from '../../src/utils/convite.js';
+import { lerArquivoOuPagina } from './_fonteDaPagina.mjs';
 
 const SP = 'America/Sao_Paulo';
 const JOGO = '2026-10-08T23:00:00Z'; // quinta, 20:00 em São Paulo; sexta, 00:00 em Lisboa
@@ -158,7 +159,7 @@ test('as telas de jogo, presença, sorteio, resultado e Resenha não formatam da
     'src/pages/Jogos.jsx', 'src/pages/SorteioShow.jsx', 'src/pages/AdminPanel.jsx', 'src/utils/format.js', 'src/utils/convite.js',
   ];
   for (const arquivo of telas) {
-    const texto = ler(arquivo);
+    const texto = lerArquivoOuPagina(RAIZ, arquivo);
     assert.doesNotMatch(texto, /toLocale(Date|Time)?String\(/, `${arquivo} formata data com o relógio do aparelho (toLocale…)`);
     const intl = [...texto.matchAll(/Intl\.DateTimeFormat\([^)]*\)/g)].map((m) => m[0]);
     for (const uso of intl) assert.match(uso, /timeZone/, `${arquivo}: ${uso} sem timeZone`);

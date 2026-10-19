@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ARTILHEIRO, DESTAQUE, GOLS, alternarArtilheiro, alternarGols } from '../../src/components/golsEPremios.js';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -81,13 +82,13 @@ test('29O · o papel: "Sim, eu jogo" / "Não, só organizo" nos dois lugares; o 
   assert.doesNotMatch(escolha, />\s*Eu jogo\s*</);
   assert.doesNotMatch(escolha, />\s*Só organizo o time\s*</);
   assert.match(escolha, /\{semTexto \? null : <p className="texto-apoio"/, 'o texto de apoio some só quando pedido');
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   assert.match(painel, /<span style=\{lbl\}>Você também joga\?<\/span>/);
   assert.match(painel, /<EscolhaPapel joga=\{joga\} ocupado=\{jogaOcupado\} aoTrocar=\{guardarJoga\} \/>/, 'o texto de apoio continua nos Ajustes');
 });
 
 test('29O · os Ajustes usam as mesmas frases do passo 2 e a mesma regra do artilheiro; sai o jargão antigo', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   for (const velho of ['Gols visíveis', 'Gols escondidos', '>Meu papel<', 'Precisa dos gols ligados', 'painel de admin']) {
     assert.ok(!painel.includes(velho), `saiu dos Ajustes: ${velho}`);
   }

@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { notaNoSorteio, sorteioNaReguaDe10 } from '../../src/utils/notaDoSorteio.js';
 import { lerAppCss } from './_appCss.mjs';
+import { lerPagina } from './_fonteDaPagina.mjs';
 
 const raiz = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (p) => fs.readFileSync(`${raiz}${p}`, 'utf8');
@@ -55,7 +56,7 @@ test('as telas avisam o motor que estão na régua de 10 (sem o aviso, ele trata
 });
 
 test('Painel: "nota 7" e "sem nota", nada de estrela; apagar notas diz apagar (o 0 agora é nota)', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   assert.match(painel, /m\.nota_media == null \? SEM_NOTA : `nota \$\{formatarNota\(m\.nota_media\)\}`/);
   assert.doesNotMatch(painel, /Zerar as notas|voltam a zero/);
 });

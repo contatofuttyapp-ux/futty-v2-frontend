@@ -22,7 +22,7 @@ test('achado 119: nenhum "--" nem "★ -" nem "—" solto para nota, nas quatro 
 
   assert.doesNotMatch(lerPagina('Inicio'), /formatRating\(stats\.nota\) : '--'/);
   assert.doesNotMatch(ler('src/pages/MeuPerfil.jsx'), /formatRating\(stats\.nota\) : '--'/);
-  assert.doesNotMatch(ler('src/pages/AdminPanel.jsx'), /★ \{m\.nota_media == null \? '-'/);
+  assert.doesNotMatch(lerPagina('AdminPanel'), /★ \{m\.nota_media == null \? '-'/);
 
   const vitrine = ler('src/pages/JogadorPerfil.jsx');
   assert.doesNotMatch(vitrine, /notaShow\.toFixed\(1\) : '--'/);

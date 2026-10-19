@@ -119,7 +119,7 @@ test('a tela do Início usa as listas da regra (nada de conta própria), o GameC
 });
 
 test('Ajustes → Jogos: o jogo em andamento fica na lista de cima com o selo, e a linha é a do jogo que começou (com "Lançar resultado")', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   assert.match(painel, /if \(estadoDoJogo\(g\) === 'em_curso'\) return linhaDoJogoQueComecou\(g\);/);
   assert.match(painel, /\{passados\.map\(linhaDoJogoQueComecou\)\}/);
   assert.match(painel, /<BadgeStatus status="em_curso" \/>/);
@@ -160,7 +160,7 @@ test('os textos que citam a aba dizem "Painel": Novo jogo e "Como terminou?" do 
 });
 
 test('Painel → Jogos: título e data nunca ficam esmagados — selo e botões descem juntos para uma segunda linha', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   const linha = painel.slice(painel.indexOf('function linhaDoJogoQueComecou'), painel.indexOf('function linhaDoJogoQueComecou') + 3200);
   assert.match(linha, /display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 10px'/, 'a linha quebra quando não cabe');
   assert.match(linha, /flex: '1 1 150px', minWidth: 150/, 'o bloco do título e da data tem piso de 150 px');

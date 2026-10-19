@@ -134,7 +134,7 @@ test('29P · o Explorar virou "Radar de peladas" em tudo o que aparece na tela (
   assert.match(inicio, /<Link to="\/explorar" className="btn btn--purple hud-corners">\s*Radar de peladas/);
   assert.match(ler('src/components/EstadoSemTime.jsx'), /Radar de peladas/);
   assert.match(ler('src/pages/Convite.jsx'), /Procurar times no Radar de peladas/);
-  const painel = ler('src/pages/AdminPanel.jsx');
+  const painel = lerPagina('AdminPanel');
   assert.match(painel, /privado: 'Só entra quem receber o seu link de convite\. Não aparece no "Radar de peladas"\.'/);
   assert.match(painel, /publico_aprovacao: 'Quem achar o time no "Radar de peladas" pede para entrar\. Você aceita ou não\.'/);
   assert.match(painel, /publico_aberto: 'Qualquer um que achar o time no "Radar de peladas" entra na hora\.'/);

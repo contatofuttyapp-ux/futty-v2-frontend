@@ -325,7 +325,7 @@ test('157 · Criar time, passo 3: "Aberto" e "Só com a sua aprovação" mostram
 });
 
 test('157 · Ajustes: "Descrição" vira "Sobre o time" (com o exemplo); abrir o time sem o texto pede o texto antes de salvar', () => {
-  const ajustes = ler('src/pages/AdminPanel.jsx');
+  const ajustes = lerPagina('AdminPanel');
   assert.doesNotMatch(ajustes, /<span style=\{lbl\}>Descrição<\/span>/, 'o rótulo antigo saiu');
   assert.match(ajustes, /<span style=\{lbl\}>Sobre o time<\/span>/);
   assert.match(ajustes, /placeholder=\{EXEMPLO_SOBRE_O_TIME\}/);
@@ -554,7 +554,7 @@ test('157 · o CampoBairro só aceita da lista (Brasil e Portugal): texto sem es
   const criar = ler('src/pages/CriarEquipa.jsx');
   assert.match(criar, /if \(cidade\.trim\(\) && bairros\.estado === 'lista' && bairroEscolha && bairroEscolha\.bairro === bairro\.trim\(\)\) Object\.assign\(bodyCriar, bairroEscolha\);/);
   assert.doesNotMatch(criar, /\{ bairro: bairro\.trim\(\) \}/, 'texto digitado não vai ao motor');
-  const ajustes = ler('src/pages/AdminPanel.jsx');
+  const ajustes = lerPagina('AdminPanel');
   assert.match(ajustes, /const bairroDaLista = textoDoBairro && bairroEscolha && bairroEscolha\.bairro === textoDoBairro \? bairroEscolha : null;/);
   assert.match(ajustes, /if \(mandaBairro\) Object\.assign\(corpo, bairroDaLista \|\| \{ bairro: '' \}\);/);
   assert.doesNotMatch(ajustes, /\{ bairro: bairro\.trim\(\) \}/);
@@ -565,7 +565,7 @@ test('157 · cidade sem bairros na lista → o campo Bairro não aparece (Criar 
   assert.match(criar, /const bairros = useBairrosDaCidade\(cidade, cidadeEscolha\);/);
   assert.match(criar, /\{bairros\.estado === 'lista' \? \(\s*<>\s*<Lbl grande>Bairro \(opcional\)<\/Lbl>\s*<CampoBairro\s*key=\{bairros\.chave\}/);
   assert.match(criar, /if \(texto !== cidade\) \{ setBairro\(''\); setBairroEscolha\(null\); \}/, 'o bairro é da cidade: outra cidade, campo limpo');
-  const ajustes = ler('src/pages/AdminPanel.jsx');
+  const ajustes = lerPagina('AdminPanel');
   assert.match(ajustes, /const bairros = useBairrosDaCidade\(cidade, cidadeEscolha\);/);
   assert.match(ajustes, /\{bairros\.estado === 'lista' \? \(\s*<div style=\{\{ display: 'grid', gap: 6 \}\}>\s*<span style=\{lbl\}>Bairro/);
   assert.match(ajustes, /if \(texto !== cidade\) \{ setBairro\(''\); setBairroEscolha\(null\); \}/);

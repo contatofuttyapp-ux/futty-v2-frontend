@@ -20,6 +20,7 @@ import { caminhoDoJogoPassado } from '../../src/utils/novoJogo.js';
 import {
   CONVIDADO_BOTAO, CONVIDADO_CAMPO_PASSADO, CONVIDADO_LINHA_PASSADO, CONVIDADO_TITULO_PASSADO,
 } from '../../src/utils/convidadoSemApp.js';
+import { importaDe, lerPagina } from './_fonteDaPagina.mjs';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const ler = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -284,11 +285,11 @@ test('o editor é UM só, com o modo "devolver" (sem copiar código): o Jogo e A
 });
 
 test('o ResultadoModal vive em components/ e o AdminPanel o usa como sempre (o que o time conta vem de flagsDoTime)', () => {
-  const painel = ler('src/pages/AdminPanel.jsx');
-  assert.match(painel, /import ResultadoModal from '\.\.\/components\/ResultadoModal';/);
+  const painel = lerPagina('AdminPanel');
+  assert.ok(importaDe(painel, ['ResultadoModal'], 'components/ResultadoModal'), 'o AdminPanel importa o ResultadoModal de components/');
   assert.doesNotMatch(painel, /function ResultadoModal|function Seccao|function SelectJogador/, 'a definição saiu do AdminPanel');
   assert.match(painel, /<ResultadoModal jogo=\{lancar\} fuso=\{fuso\} cidade=\{team\?\.cidade\} premios=\{flagsDoTime\(team\)\} onClose=\{\(\) => setLancar\(null\)\} onSaved=\{onResultado\} showToast=\{showToast\} \/>/);
-  assert.match(painel, /import \{ inputStyle, lbl, secLbl \} from '\.\.\/components\/camposDoAdmin';/);
+  assert.ok(importaDe(painel, ['inputStyle', 'lbl', 'secLbl'], 'components/camposDoAdmin'), 'o AdminPanel importa os campos de components/camposDoAdmin');
 });
 
 test('os corpos dos dois pedidos: o do jogo leva quem ganhou (o campeão), o placar só se foi digitado e os gols; o do feed, só os prêmios (o que se desliga vai como null)', () => {

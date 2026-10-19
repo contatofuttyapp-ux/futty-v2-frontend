@@ -49,5 +49,6 @@ export function lerPagina(nome) {
   // No fim, os módulos que não viraram JSX montado (as ações, os hooks, as constantes) — os montados já estão no lugar deles.
   // Dos montados, só os imports (o JSX já está no lugar): é por eles que se sabe o que a página importa.
   const importsDosMontados = modulos.filter((f) => montados.has(f)).flatMap((f) => textos[f].match(/^import [^;]+;$/gm) || []);
-  return [principal, ...modulos.filter((f) => !montados.has(f)).map((f) => textos[f]), ...importsDosMontados].join('\n');
+  // Sempre em \n: no Windows o checkout vem com \r\n (autocrlf), e os testes que liam o arquivo inteiro já trocavam.
+  return [principal, ...modulos.filter((f) => !montados.has(f)).map((f) => textos[f]), ...importsDosMontados].join('\n').replace(/\r\n/g, '\n');
 }
