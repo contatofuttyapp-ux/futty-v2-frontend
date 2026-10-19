@@ -87,7 +87,7 @@ const TOFIXED_QUE_NAO_E_TEXTO = {
   'src/components/CerimoniaSorteio.jsx': [9, 'atrasos e duração de animação, translateY (CSS)'],
   'src/pages/Figurinha.jsx': [2, 'zoom da foto: arredonda o NÚMERO do estado, não vira texto'],
   'src/pages/JogadorPerfil.jsx': [2, 'pontos do polyline SVG da evolução'],
-  'src/utils/figurinhaCanvas.js': [4, 'chave de cache e opacidade de gradiente do canvas'],
+  'src/utils/figurinhaFundos.js': [4, 'chave de cache e opacidade de gradiente do canvas'],
   'src/components/Topbar.jsx': [4, 'clip-path e path SVG da barra'],
 };
 
