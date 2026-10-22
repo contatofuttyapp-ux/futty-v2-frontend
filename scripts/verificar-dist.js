@@ -98,7 +98,28 @@ function main() {
   console.log('[verificar-dist] ✅ grafo de chunks íntegro — nenhuma referência quebrada.');
 
   if (!preloadDoOnboarding(html)) process.exit(1);
+  if (!semVariaveisEmbutidas()) process.exit(1);
   if (!pesoDoArranque(html)) process.exit(1);
+}
+
+/**
+ * Ler `import.meta.env` inteiro (em vez de `import.meta.env.VITE_X`) faz o Vite gravar o objeto com TODAS
+ * as VITE_* do ambiente num chunk — inclusive chaves que o app não usa mais e que não deviam viajar com ele
+ * (foi assim que a anon antiga do Supabase seguia no bundle mesmo com a publishable mandando). Acesso
+ * estático vira só o valor, sem o nome; achar `VITE_ALGO: "…"` num .js é sinal do objeto embutido.
+ *
+ * @returns {boolean} false se algum chunk tiver o objeto (o chamador falha a build).
+ */
+function semVariaveisEmbutidas() {
+  const reObjeto = /\bVITE_[A-Z0-9_]+\s*:\s*["'`]/;
+  const culpados = fs.readdirSync(ASSETS).filter((nome) => nome.endsWith('.js') && reObjeto.test(fs.readFileSync(path.join(ASSETS, nome), 'utf8')));
+  if (culpados.length) {
+    console.error(`\n[verificar-dist] ❌ objeto import.meta.env embutido em: ${culpados.join(', ')}`);
+    console.error('Troque `import.meta.env` (o objeto) por `import.meta.env.VITE_X` (cada chave) — ver lib/telemetria.js.');
+    return false;
+  }
+  console.log('[verificar-dist] ✅ nenhum chunk com o objeto import.meta.env embutido.');
+  return true;
 }
 
 /**

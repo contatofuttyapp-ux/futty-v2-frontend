@@ -18,10 +18,16 @@ import { registrarFechoDeTela, estadoDaCaixaPreta } from './diagnostico';
 
 // Mesmo destino do lib/api.js: relativo no site (a função da Cloudflare leva ao motor), absoluto no
 // app da loja e no dev. Calculado na hora de mandar (o teste de unidade roda sem o import.meta.env).
+// Só acesso estático (import.meta.env.X): ler o objeto inteiro faz o Vite embutir TODAS as VITE_* no
+// bundle, inclusive chaves que o app não usa mais.
 function destino() {
-  const env = import.meta.env || {};
-  const motor = String(env.VITE_API_URL || '').trim().replace(/\/+$/, '');
-  return `${!Capacitor.isNativePlatform() && env.PROD ? '' : motor}/api/telemetria`;
+  let motor = '';
+  let producao = false;
+  try {
+    motor = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+    producao = import.meta.env.PROD;
+  } catch { /* teste de unidade: o Node não tem import.meta.env */ }
+  return `${!Capacitor.isNativePlatform() && producao ? '' : motor}/api/telemetria`;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
