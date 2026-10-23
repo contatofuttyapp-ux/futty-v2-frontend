@@ -67,7 +67,7 @@ test('jogo terminado: presença, confirmados e o sorteio ficam de fora; resultad
   // Sua presença + Confirmados: um bloco só, fora quando terminou.
   assert.match(jogo, /\{terminado \? null : \(\s*<>\s*<SecLabel>Sua presença<\/SecLabel>[\s\S]*?<SecLabel>Confirmados · \{confirmados\.length\}<\/SecLabel>[\s\S]*?<\/>\s*\)\}\s*<SecLabel>Times<\/SecLabel>/);
   // Contagem do sorteio, jogadores por time, convidados, escolha dos times: o bloco seguinte, também fora.
-  assert.match(jogo, /<SecLabel>Times<\/SecLabel>\s*\{terminado \? null : \(\s*<>[\s\S]*?Jogadores por time:[\s\S]*?CONVIDADO_TITULO[\s\S]*?<EscolhaDosTimes[\s\S]*?<\/>\s*\)\}/);
+  assert.match(jogo, /<SecLabel>Times<\/SecLabel>\s*\{terminado \? null : \(\s*<>[\s\S]*?Jogadores por time:[\s\S]*?<ConvidadosDoJogo[\s\S]*?<EscolhaDosTimes[\s\S]*?<\/>\s*\)\}/);
   assert.match(jogo, /!editando && !terminado && \(/, 'Ajustar times');
   assert.match(jogo, /confirmacao !== 'campeonato' && !terminado && \(/, 'Criar campeonato');
   assert.match(jogo, /!montando && !terminado && confirmacao !== 're-sorteio'/, 'Trocar os times: Sortear de novo · Montar à mão');

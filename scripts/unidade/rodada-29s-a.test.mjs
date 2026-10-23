@@ -183,7 +183,8 @@ test('152 · o Jogo mostra os dois cartões quando o admin não tem times ainda;
   const jogo = semComentarios(ler('src/pages/Jogo.jsx'));
   assert.match(jogo, /import \{ EscolhaDosTimes, MontarTimesAMao \} from '\.\.\/components\/TimesDoJogo';/);
   assert.match(jogo, /isAdmin && montando \? \(\s*<MontarTimesAMao[\s\S]*?\) : isAdmin && !game\.sorteio_realizado \? \(\s*<EscolhaDosTimes pulsaSortear=\{podeSortear\} busy=\{busy\} onSortear=\{\(\) => sortear\(\)\} onMontar=\{\(\) => setMontando\(true\)\} \/>/);
-  assert.match(jogo, /const podeSortear = !game\?\.sorteio_realizado && confirmados\.length >= porTimeEfectivo \* 2;/, 'a regra do pulso não mudou');
+  // 32A: os convidados sem app contam no pulso, como já contavam na frase do sorteio.
+  assert.match(jogo, /const podeSortear = !game\?\.sorteio_realizado && confirmados\.length \+ convidados\.length >= porTimeEfectivo \* 2;/, 'a regra do pulso');
   // O sortear() é o de sempre: mesmo POST, mesmo corpo, mesma cerimônia.
   assert.match(jogo, /apiFetch\(`\/api\/games\/\$\{id\}\/sortear`, \{ method: 'POST', body: JSON\.stringify\(body\) \}\)/);
   assert.match(jogo, /navigate\(`\/time\/\$\{slug\}\/jogo\/\$\{id\}\/sorteio`, \{ state: \{ euSorteei: true \} \}\)/);
@@ -195,7 +196,7 @@ test('152 · "Montar à mão" salva em POST /api/games/:id/times-manuais com que
   const jogo = semComentarios(ler('src/pages/Jogo.jsx'));
   assert.match(jogo, /async function salvarTimes\(corpo\) \{[\s\S]*?apiFetch\(`\/api\/games\/\$\{id\}\/times-manuais`, \{ method: 'POST', body: JSON\.stringify\(corpo\) \}\);\s*await reload\(\);/);
   assert.match(jogo, /\.\.\.confirmados\.map\(\(p\) => \(\{ key: `u:\$\{p\.user_id\}`, user_id: p\.user_id,/, 'o pool: quem confirmou');
-  assert.match(jogo, /\.\.\.convidados\.map\(\(c, i\) => \(\{ key: `g:\$\{i\}:\$\{c\}`, user_id: null, nome: c, avatar_url: null, convidado: true \}\)\)/, '+ os convidados sem app desta tela');
+  assert.match(jogo, /\.\.\.convidados\.map\(\(c, i\) => \(\{ key: `g:\$\{i\}:\$\{c\.nome\}`, user_id: null, nome: c\.nome, avatar_url: null, convidado: true \}\)\)/, '+ os convidados sem app desta tela');
   const montar = semComentarios(ler('src/components/TimesDoJogo.jsx'));
   assert.match(montar, /\[2, 3, 4\]\.map/, '2, 3 ou 4 times');
   assert.match(montar, /const nomes = nomesDosTimes\(nTimes\);/, 'com os nomes da casa');

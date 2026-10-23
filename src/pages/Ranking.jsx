@@ -21,6 +21,8 @@ import AdCard from '../components/AdCard';
 import LoadingFutty from '../components/LoadingFutty';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import EstadoErroRede from '../components/EstadoErroRede';
+import ForaDoTime from '../components/ForaDoTime';
+import { ehForaDoTime } from '../utils/foraDoTime';
 import EstadoSemTime from '../components/EstadoSemTime';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
@@ -192,7 +194,8 @@ export default function Ranking() {
   // tem time — ver o fallback de `rankingTo` em BottomNav.jsx. useRanking(undefined)
   // e useApi(null) já não disparam pedido nenhum com slug ausente.
   const semTime = !slug;
-  const { ranking, loading, error, reload } = useRanking(slug);
+  const { ranking, loading, error, errorStatus, errorCode, reload } = useRanking(slug);
+  const foraDoTime = ehForaDoTime({ status: errorStatus, code: errorCode, mensagem: error });
   // Listas grandes pintam em duas levas. As 10 primeiras são as que cabem na tela (e são as caras: o
   // pódio leva moldura, glow e flutuação); o resto entra dois quadros depois. Relatórios do iPhone deram
   // 1389, 1866 e 2121 ms para pintar esta tela com 23 linhas.
@@ -308,9 +311,10 @@ export default function Ranking() {
               </div>
             ) : null}
 
-            {error && ranking.length === 0 ? <EstadoErroRede onRepetir={reload} /> : null}
+            {/* Quem não é do time vê o aviso verdadeiro; o de rede só quando o erro foi mesmo outro, e com a frase que veio. */}
+            {foraDoTime ? <ForaDoTime compacto /> : error && ranking.length === 0 ? <EstadoErroRede onRepetir={reload} mensagem={error} /> : null}
 
-            {loading && ranking.length === 0 ? (
+            {error && ranking.length === 0 ? null : loading && ranking.length === 0 ? (
               <LoadingFutty />
             ) : ranking.length === 0 ? (
               /* P3-18 — vazio DIGNO com próximo passo (antes: só "Ainda não há jogadores"). */

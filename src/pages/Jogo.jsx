@@ -30,7 +30,10 @@ import Icon from '../components/Icon';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
-import { CONVIDADO_BOTAO, CONVIDADO_CAMPO, CONVIDADO_LINHA, CONVIDADO_TITULO } from '../utils/convidadoSemApp';
+import ConvidadosDoJogo from '../components/ConvidadosDoJogo';
+import ForaDoTime from '../components/ForaDoTime';
+import { confirmadosDoSorteio } from '../utils/convidadosDoJogo';
+import { ehForaDoTime } from '../utils/foraDoTime';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
 import { motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
 import { montadoAMao, soOsCampeoes } from '../utils/seloDoSorteio';
@@ -78,7 +81,8 @@ export default function Jogo() {
   const location = useLocation();
   // IDs dos confirmados via RSVP (passados pelo AdminPanel ao "Fazer sorteio").
   const rsvpConfirmados = location.state?.rsvpConfirmados || null;
-  const { data, loading, error, reload } = useApi(`/api/games/${id}`);
+  const { data, loading, error, errorStatus, errorCode, reload } = useApi(`/api/games/${id}`);
+  const foraDoTime = ehForaDoTime({ status: errorStatus, code: errorCode, mensagem: error });
   // O que o time conta (gols, artilheiro, destaque) decide quais seções o editor do resultado mostra.
   const { team: timeCompleto } = useTeam(slug);
   // P2-10: integração SÓ DE LEITURA com o sistema de espera (rsvp_espera). Mostra a
@@ -99,8 +103,12 @@ export default function Jogo() {
   }, [erroDoSorteio]);
   const [editando, setEditando] = useState(false); // modo ajuste manual dos times
   const [jogadoresPorTime, setJogadoresPorTime] = useState(null); // selector do sorteio (null = usa o do jogo)
-  const [convidados, setConvidados] = useState([]); // SPEC-SORTEIO §11: nomes sem app
-  const [novoConvidado, setNovoConvidado] = useState('');
+  // SPEC-SORTEIO §11: os convidados sem app vivem no jogo (o motor guarda, com GOL e C). `convidadosLocal` é a lista que a pessoa
+  // acabou de mexer, enquanto a gravação não volta; null = vale a do motor.
+  const [convidadosLocal, setConvidadosLocal] = useState(null);
+  const convidados = convidadosLocal ?? data?.convidados ?? [];
+  const gravandoConvidados = useRef(false);
+  const proximaListaDeConvidados = useRef(null);
   const [toast, setToast] = useState(null);
   const [associando, setAssociando] = useState(null); // o convidado sem app cuja vaga o admin está ligando a um membro (utils/associarJogador.js)
   const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'refazer-a-mao' | 'cancelar-presenca' | 'campeonato' | null
@@ -150,6 +158,37 @@ export default function Jogo() {
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
   const marcar = (userId, patch) => runAction(`/api/games/${id}/jogador`, { user_id: userId, ...patch });
 
+  // Grava a lista de convidados (a inteira, como está na tela). Uma gravação de cada vez e a última vale: dois toques seguidos não
+  // chegam ao motor fora de ordem. Se o motor não grava, a lista fica na tela e vai no pedido do sorteio, então nada se perde agora.
+  async function salvarConvidados(lista) {
+    setConvidadosLocal(lista);
+    if (gravandoConvidados.current) {
+      proximaListaDeConvidados.current = lista;
+      return;
+    }
+    gravandoConvidados.current = true;
+    let falhou = false;
+    try {
+      let atual = lista;
+      while (atual) {
+        proximaListaDeConvidados.current = null;
+        await apiFetch(`/api/games/${id}/convidados`, { method: 'PUT', body: JSON.stringify({ convidados: atual }) });
+        atual = proximaListaDeConvidados.current;
+      }
+      await reload();
+    } catch (err) {
+      falhou = true;
+      proximaListaDeConvidados.current = null;
+      setToast({ tipo: 'error', mensagem: err.message });
+    } finally {
+      gravandoConvidados.current = false;
+    }
+    if (falhou) return;
+    const chegouOutra = proximaListaDeConvidados.current;
+    if (chegouOutra) salvarConvidados(chegouOutra);
+    else setConvidadosLocal(null);
+  }
+
   // Sorteio: faz o POST, abre o overlay com o resultado e recarrega o jogo.
   async function sortear() {
     // Este toque é o único gesto de quem sorteia antes de a cerimônia tocar os efeitos (segundos depois, de
@@ -159,9 +198,10 @@ export default function Jogo() {
     setErroDoSorteio('');
     setBusy(true);
     try {
-      const body = { jogadoresPorTime: porTimeEfectivo };
-      if (rsvpConfirmados) body.jogadoresIds = rsvpConfirmados;
-      if (convidados.length) body.convidados = convidados;
+      // A lista vai sempre, com as marcas: sorteia-se o que está na tela. Pelo atalho da presença formal, os ids são os confirmados
+      // daqui (os da presença + quem o Associar ligou a uma vaga), não só os da lista de presença.
+      const body = { jogadoresPorTime: porTimeEfectivo, convidados };
+      if (rsvpConfirmados) body.jogadoresIds = confirmados.map((p) => p.user_id);
       await apiFetch(`/api/games/${id}/sortear`, { method: 'POST', body: JSON.stringify(body) });
       // Junta os dados do jogo (local/data) ao resultado fresco (times_resultado).
       await reload();
@@ -230,19 +270,20 @@ export default function Jogo() {
   const temPlacar = Number.isInteger(game?.placar_a) && Number.isInteger(game?.placar_b);
   const artilheiro = golsResultado.reduce((max, g) => (g.gols > (max?.gols || 0) ? g : max), null);
   const confirmadosTodos = (players || []).filter((p) => p.confirmado);
-  // Se vier do RSVP, mostra só os confirmados via RSVP (filtro de UI).
-  const confirmados = rsvpConfirmados
-    ? confirmadosTodos.filter((p) => rsvpConfirmados.includes(p.user_id))
-    : confirmadosTodos;
+  // Se vier do RSVP, mostra só os confirmados via RSVP (filtro de UI) — mais quem o Associar ligou a uma vaga deste jogo
+  // (utils/convidadosDoJogo.js): sem isso as contas associadas sumiam da conta e do "Sortear de novo".
+  const confirmados = confirmadosDoSorteio(players, rsvpConfirmados, game?.times_resultado);
   const porTimeEfectivo = jogadoresPorTime ?? game?.jogadores_por_time ?? 5;
-  // "Confirmados suficientes" = dá para encher dois times. Abaixo disso o botão
-  // continua lá (o admin pode sortear com menos), só não chama o toque.
-  const podeSortear = !game?.sorteio_realizado && confirmados.length >= porTimeEfectivo * 2;
+  // "Gente suficiente" = dá para encher dois times, com os convidados sem app (a mesma conta da frase do sorteio). Abaixo disso o
+  // botão continua lá (o admin pode sortear com menos), só não chama o toque.
+  const podeSortear = !game?.sorteio_realizado && confirmados.length + convidados.length >= porTimeEfectivo * 2;
   // Quem pode entrar nos times montados à mão: quem confirmou + os convidados sem app escritos nesta tela (user_id null, só o nome).
   const poolMao = [
     ...confirmados.map((p) => ({ key: `u:${p.user_id}`, user_id: p.user_id, nome: p.nome || 'Jogador', avatar_url: p.avatar_url || null, convidado: false })),
-    ...convidados.map((c, i) => ({ key: `g:${i}:${c}`, user_id: null, nome: c, avatar_url: null, convidado: true })),
+    ...convidados.map((c, i) => ({ key: `g:${i}:${c.nome}`, user_id: null, nome: c.nome, avatar_url: null, convidado: true })),
   ];
+  // Quem não é do time vê o aviso próprio (abaixo), não a frase do motor num alerta vermelho.
+  const erroNaTela = foraDoTime ? actionError : error || actionError;
   const estouConfirmado = !!meuEstado?.confirmado;
   const souGoleiro = !!meuEstado?.goleiro;
 
@@ -250,10 +291,10 @@ export default function Jogo() {
     <div className="app-shell">
       <Topbar hud="JOGO" back="voltar" backFallback={`/time/${slug}?aba=jogos`} />
       <main className="app-main page-reveal" style={game?.times_resultado ? { paddingBottom: 140 } : undefined}>
-        {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
+        {erroNaTela && <div className="alert alert--error">{erroNaTela}</div>}
 
         {!game ? (
-          !error && <p className="muted">Jogo não encontrado.</p>
+          foraDoTime ? <ForaDoTime /> : !error && <p className="muted">Jogo não encontrado.</p>
         ) : (
           <>
             {rsvpConfirmados && !terminado ? (
@@ -483,40 +524,8 @@ export default function Jogo() {
                 {resumoDoSorteio(confirmados.length + convidados.length, porTimeEfectivo).texto}
               </p>
             ) : null}
-            {/* CONVIDADOS SEM APP (SPEC-SORTEIO §11): só nome; entram no sorteio,
-                nunca em users/ranking. */}
-            {isAdmin ? (
-              <div style={{ ...VIDRO, clipPath: CLIP, padding: '10px 12px', marginBottom: 10 }}>
-                {/* Os textos vêm de utils/convidadoSemApp.js, os mesmos do Novo jogo e do Campeonato. */}
-                <div data-convidado-titulo style={{ fontFamily: RAJ, fontSize: 15, fontWeight: 700, color: '#fff' }}>{CONVIDADO_TITULO}</div>
-                <p className="texto-apoio" data-convidado-linha style={{ margin: '2px 0 8px' }}>{CONVIDADO_LINHA}</p>
-                {convidados.length ? (
-                  <div className="chips-row" style={{ marginBottom: 8 }}>
-                    {convidados.map((n, i) => (
-                      <span key={i} className="chip" style={{ gap: 6 }}>
-                        {n}
-                        <button type="button" aria-label={`Remover ${n}`} onClick={() => setConvidados((c) => c.filter((_, x) => x !== i))} style={{ border: 'none', background: 'none', color: 'inherit', cursor: 'pointer', padding: 0, fontSize: 12, lineHeight: 1 }}>✕</button>
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    className="input input--hud"
-                    value={novoConvidado}
-                    maxLength={24}
-                    placeholder={CONVIDADO_CAMPO}
-                    aria-label={CONVIDADO_CAMPO}
-                    onChange={(e) => setNovoConvidado(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && novoConvidado.trim()) { setConvidados((c) => [...c, novoConvidado.trim()]); setNovoConvidado(''); } }}
-                    style={{ flex: 1, minWidth: 0, fontFamily: RAJ }}
-                  />
-                  <button type="button" className="btn btn--sm btn--outline hud-corners-s" disabled={!novoConvidado.trim()} onClick={() => { setConvidados((c) => [...c, novoConvidado.trim()]); setNovoConvidado(''); }}>
-                    {CONVIDADO_BOTAO}
-                  </button>
-                </div>
-              </div>
-            ) : null}
+            {/* CONVIDADOS SEM APP (SPEC-SORTEIO §11): guardados no jogo, com GOL e C; entram no sorteio, nunca em users/ranking. */}
+            {isAdmin ? <ConvidadosDoJogo convidados={convidados} busy={busy} onMudar={salvarConvidados} /> : null}
 
             {/* Trocar os times de um jogo que JÁ tem times: os dois caminhos pedem confirmação antes, no padrão
                 inline de sempre ("sair da equipa"). Texto em PT-BR: o replay só entra na frase quando havia sorteio

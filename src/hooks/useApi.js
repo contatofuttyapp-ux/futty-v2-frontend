@@ -13,19 +13,24 @@ import { apiFetch } from '../lib/api';
  *   mantém o `path` vivo para o `reload()` (o cache está fresco,
  *   não vale a pena pedir — mas se a pessoa puxar para atualizar, pede).
  */
+// O erro guarda também o status e o código do motor: a tela distingue "sem internet" (SEM_REDE) de "você não faz parte deste time"
+// (403 FORA_DO_TIME) em vez de mostrar o mesmo aviso de rede para tudo.
+const comErro = (path, err) => ({ data: null, error: err.message, errorStatus: err.status ?? null, errorCode: err.code ?? null, loadedPath: path });
+const comDados = (path, data) => ({ data, error: '', errorStatus: null, errorCode: null, loadedPath: path });
+
 export function useApi(path, opts = {}) {
   const { pausado = false } = opts;
-  const [state, setState] = useState({ data: null, error: '', loadedPath: null });
+  const [state, setState] = useState({ data: null, error: '', errorStatus: null, errorCode: null, loadedPath: null });
 
   // Recarrega o mesmo path (ex.: após uma ação). Devolve os dados ou null.
   const reload = useCallback(async () => {
     if (!path) return null;
     try {
       const data = await apiFetch(path);
-      setState({ data, error: '', loadedPath: path });
+      setState(comDados(path, data));
       return data;
     } catch (err) {
-      setState({ data: null, error: err.message, loadedPath: path });
+      setState(comErro(path, err));
       return null;
     }
   }, [path]);
@@ -34,8 +39,8 @@ export function useApi(path, opts = {}) {
     if (!path || pausado) return undefined;
     let active = true;
     apiFetch(path)
-      .then((data) => active && setState({ data, error: '', loadedPath: path }))
-      .catch((err) => active && setState({ data: null, error: err.message, loadedPath: path }));
+      .then((data) => active && setState(comDados(path, data)))
+      .catch((err) => active && setState(comErro(path, err)));
     return () => {
       active = false;
     };
@@ -44,5 +49,5 @@ export function useApi(path, opts = {}) {
   // loading enquanto os dados carregados não corresponderem ao path atual.
   // Pausado nunca está a carregar: quem chama já tem o que mostrar.
   const loading = !!path && !pausado && state.loadedPath !== path;
-  return { data: state.data, error: state.error, loading, reload };
+  return { data: state.data, error: state.error, errorStatus: state.errorStatus, errorCode: state.errorCode, loading, reload };
 }

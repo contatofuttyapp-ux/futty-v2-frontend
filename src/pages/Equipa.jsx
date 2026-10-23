@@ -28,6 +28,8 @@ import Toast from '../components/Toast';
 import Icon from '../components/Icon';
 import ListaDeJogos from '../components/ListaDeJogos';
 import EscolhaLinhaGol, { TEXTO_APOIO_LINHA_GOL } from '../components/EscolhaLinhaGol';
+import ForaDoTime from '../components/ForaDoTime';
+import { ehForaDoTime } from '../utils/foraDoTime';
 import '../styles/app.css';
 
 // Em lazy: as boas-vindas só aparecem uma vez por time (convidado na 1ª entrada, criador ao
@@ -135,8 +137,9 @@ function AbasDoTime({ aba, ehAdmin, aoTrocar, slug }) {
 
 // A aba Jogos de quem não é admin: a lista do time (os próximos e os que já foram), cada um levando ao jogo.
 function JogosDoTime({ slug }) {
-  const { team, games, loading, error } = useTeamGames(slug);
+  const { team, games, loading, error, errorStatus, errorCode } = useTeamGames(slug);
   if (loading) return <LoadingFutty />;
+  if (ehForaDoTime({ status: errorStatus, code: errorCode, mensagem: error })) return <ForaDoTime compacto />;
   if (error) return <div className="alert alert--error">{error}</div>;
   return <ListaDeJogos slug={slug} team={team} games={games} />;
 }
@@ -146,7 +149,8 @@ export default function Equipa() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { team, members, loading, error, reload } = useTeam(slug);
+  const { team, members, loading, error, errorStatus, errorCode, reload } = useTeam(slug);
+  const foraDoTime = ehForaDoTime({ status: errorStatus, code: errorCode, mensagem: error });
   const ehAdmin = team?.role === 'admin';
   const aba = abaDoTime(searchParams.get('aba'), ehAdmin);
   // Trocar de aba troca o endereço SEM empilhar histórico: "Voltar" continua indo para onde a pessoa estava antes da página do time.
@@ -318,16 +322,19 @@ export default function Equipa() {
     if (!ok) setActionError('Não deu para copiar. Copie o link à mão.');
   }
 
+  // Quem não é do time vê o aviso próprio (abaixo), não a frase do motor num alerta vermelho.
+  const erroNaTela = foraDoTime ? actionError : error || actionError;
+
   return (
     <div className="app-shell">
       <Topbar hud="TIME" back="voltar" backFallback="/home" />
       <main className="app-main page-reveal">
-        {(error || actionError) && <div className="alert alert--error">{error || actionError}</div>}
+        {erroNaTela && <div className="alert alert--error">{erroNaTela}</div>}
 
         {loading ? (
           <LoadingFutty />
         ) : !team ? (
-          !error && <p className="muted">Time não encontrado.</p>
+          foraDoTime ? <ForaDoTime /> : !error && <p className="muted">Time não encontrado.</p>
         ) : (
           <>
             {/* Identidade — escudo + nome + meta + papel */}

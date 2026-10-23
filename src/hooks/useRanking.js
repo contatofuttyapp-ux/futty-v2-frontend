@@ -13,12 +13,14 @@ export function useRanking(slug) {
   const path = slug ? `/api/teams/${slug}/ranking` : null;
   // revalidarDepoisDaPintura: com cache velho, a lista pinta antes de
   // o pedido sair — ver a nota em useApiComCache.js.
-  const { data, loading, error, reload } = useApiComCache(path, slug ? `ranking:${slug}` : null, { revalidarDepoisDaPintura: true });
+  const { data, loading, error, errorStatus, errorCode, reload } = useApiComCache(path, slug ? `ranking:${slug}` : null, { revalidarDepoisDaPintura: true });
   return {
     team: data?.team || null,
     ranking: data?.ranking || VAZIO,
     loading,
     error,
+    errorStatus,
+    errorCode,
     reload,
   };
 }

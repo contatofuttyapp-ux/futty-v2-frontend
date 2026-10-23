@@ -94,8 +94,11 @@ test('29Q · os textos do convidado sem app, uma fonte só (utils/convidadoSemAp
 // 29S-B: o Novo jogo não tem mais a caixa do convidado (o modo "Times à mão" foi para o Jogo e o "Já aconteceu" virou o passo a passo do Jogo
 // passado, que tem a sua, no passado — conferida logo abaixo).
 test('29Q · Jogo e Campeonato usam o MESMO texto do convidado (e nenhum escreve o seu)', () => {
+  // A caixa do Jogo virou componente (32A: a lista guardada no jogo, com GOL e C); o Jogo só a monta.
+  assert.match(semComentarios(ler('src/pages/Jogo.jsx')), /<ConvidadosDoJogo convidados=\{convidados\}/);
+  assert.doesNotMatch(semComentarios(ler('src/pages/Jogo.jsx')), /CONVIDADO_/, 'o Jogo não escreve os textos do convidado');
   const lugares = [
-    { arq: 'src/pages/Jogo.jsx', linha: 'CONVIDADO_LINHA' },
+    { arq: 'src/components/ConvidadosDoJogo.jsx', linha: 'CONVIDADO_LINHA' },
     { arq: 'src/pages/Campeonato.jsx', linha: 'CONVIDADO_LINHA_CAMPEONATO' },
   ];
   for (const { arq, linha } of lugares) {
@@ -112,8 +115,8 @@ test('29Q · Jogo e Campeonato usam o MESMO texto do convidado (e nenhum escreve
     }
   }
   assert.doesNotMatch(semComentarios(ler('src/pages/Campeonato.jsx')), /CONVIDADO_LINHA\}/, 'o Campeonato usa a linha SEM ranking');
-  // A regra não muda: só o nome, entra no sorteio. Nenhuma das três telas manda convidado para users.
-  assert.match(semComentarios(ler('src/pages/Jogo.jsx')), /setConvidados\(\(c\) => \[\.\.\.c, novoConvidado\.trim\(\)\]\)/);
+  // A regra não muda: só o nome (mais as marcas do sorteio, 32A), entra no sorteio. Nenhuma das três telas manda convidado para users.
+  assert.match(semComentarios(ler('src/components/ConvidadosDoJogo.jsx')), /onMudar\(\[\.\.\.convidados, novoConvidado\(nome\)\]\)/);
 });
 
 test('29S-B · o Jogo passado usa o texto do convidado NO PASSADO, da mesma fonte (utils/convidadoSemApp.js); o Novo jogo não tem mais a caixa', () => {

@@ -21,24 +21,28 @@ export function useTeams() {
  * mostra a última visita na hora, atualiza por trás.
  */
 export function useTeam(slug) {
-  const { data, loading, error, reload } = useApiComCache(slug ? `/api/teams/${slug}` : null, slug ? `team:${slug}` : null);
+  const { data, loading, error, errorStatus, errorCode, reload } = useApiComCache(slug ? `/api/teams/${slug}` : null, slug ? `team:${slug}` : null);
   return {
     team: data?.team || null,
     members: data?.members || [],
     loading,
     error,
+    errorStatus,
+    errorCode,
     reload,
   };
 }
 
 /** Lista de jogos de uma equipa. */
 export function useTeamGames(slug) {
-  const { data, loading, error, reload } = useApi(slug ? `/api/teams/${slug}/games` : null);
+  const { data, loading, error, errorStatus, errorCode, reload } = useApi(slug ? `/api/teams/${slug}/games` : null);
   return {
     team: data?.team || null,
     games: data?.games || [],
     loading,
     error,
+    errorStatus,
+    errorCode,
     reload,
   };
 }

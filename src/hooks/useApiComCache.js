@@ -87,7 +87,7 @@ export function useApiComCache(path, cacheKey, opts = {}) {
 
   // `pausado` (e não path=null): o path continua vivo para o reload() manual —
   // puxar para atualizar tem de pedir mesmo com o cache fresco.
-  const { data, loading, error, reload: reloadBase } = useApi(path, { pausado: fresco || esperandoPintura });
+  const { data, loading, error, errorStatus, errorCode, reload: reloadBase } = useApi(path, { pausado: fresco || esperandoPintura });
 
   // Resposta fresca chegou — regrava o cache. Não é preciso largar o valor "de
   // cache": quem manda no retorno é o `data`, logo abaixo.
@@ -131,6 +131,8 @@ export function useApiComCache(path, cacheKey, opts = {}) {
     data: data ?? doCache?.dados ?? null,
     loading: loading && !doCache,
     error: doCache ? '' : error,
+    errorStatus: doCache ? null : errorStatus,
+    errorCode: doCache ? null : errorCode,
     reload,
   };
 }

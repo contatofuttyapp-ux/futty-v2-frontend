@@ -37,6 +37,7 @@ test('30F-3 · o corpo do "Montar à mão" é só o que foi escolhido na tela (s
   ];
   const corpo = corpoDosTimes(['Time Ouro', 'Time Roxo'], [['u:1'], ['u:2']], pool);
   assert.deepEqual(corpo, { times: [{ nome: 'Time Ouro', jogadores: [{ user_id: '1', nome: 'Magrão', avatar_url: null, convidado: false }] }, { nome: 'Time Roxo', jogadores: [{ user_id: '2', nome: 'Zé', avatar_url: null, convidado: false }] }] });
-  // Os convidados da tela do jogo nascem vazios (não vêm do resultado anterior): o pool do Montar à mão é quem confirmou.
-  assert.match(ler('src/pages/Jogo.jsx'), /const \[convidados, setConvidados\] = useState\(\[\]\);/);
+  // O pool do Montar à mão é quem confirmou + a lista de convidados da tela. Desde a 32A essa lista é a guardada no jogo (o motor a
+  // devolve, e o admin tira quem não vai); o corpo continua sendo só quem a pessoa pôs nos times (acima).
+  assert.match(ler('src/pages/Jogo.jsx'), /const convidados = convidadosLocal \?\? data\?\.convidados \?\? \[\];/);
 });
