@@ -19,6 +19,7 @@ import EscudoEquipa from '../components/EscudoEquipa';
 import SilhuetaJogador from '../components/SilhuetaJogador';
 import Icon from '../components/Icon';
 import { formatarDecimal, formatarNota } from '../utils/numero';
+import { ehForaDoTime } from '../utils/foraDoTime';
 import '../styles/app.css';
 
 const GOLD = '#d4a017';
@@ -115,7 +116,7 @@ export default function JogadorPerfil() {
   // esta tela, ela é um destino frequente — e sem cache cada abertura pagava a ida
   // inteira a São Paulo antes de mostrar o que já se sabia. Chave por time+jogador:
   // a vitrine do João não pode pintar com os dados da Maria enquanto a resposta dela não chega.
-  const { data, loading, error } = useApiComCache(`/api/teams/${slug}/jogador/${userId}`, `jogador:${slug}:${userId}`);
+  const { data, loading, error, errorStatus, errorCode } = useApiComCache(`/api/teams/${slug}/jogador/${userId}`, `jogador:${slug}:${userId}`);
   const { data: selosData } = useApiComCache(`/api/equipas/${slug}/jogador/${userId}/selos`, `jogador-selos:${slug}:${userId}`);
   const selos = selosData?.selos || [];
   // Nome dourado — 2 variantes p/ o look (?nome=b). A: ouro-heavy c/ bordas quentes;
@@ -229,7 +230,7 @@ export default function JogadorPerfil() {
             {/* "só entre companheiros" é a resposta ao 403 do motor (quem não é do time) — não a de qualquer erro.
                 A própria pessoa nunca cai aqui por falta de time; e um tropeço de rede não pode dizer que o perfil
                 "não está acessível". */}
-            {/não é membro/i.test(error) ? (
+            {ehForaDoTime({ status: errorStatus, code: errorCode, mensagem: error }) ? (
               <>
                 <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, color: '#fff' }}>Perfil só entre companheiros</div>
                 Não compartilham nenhum time: este perfil não está acessível.

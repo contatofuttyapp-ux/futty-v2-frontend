@@ -67,6 +67,10 @@ test('as telas do jogo, do time e do ranking escolhem o aviso pelo erro (nada de
     assert.match(fonte, /ehForaDoTime\(/, arquivo);
     assert.match(fonte, /<ForaDoTime/, arquivo);
   }
+  // o perfil de jogador de time alheio reconhece o 403 pelo código, não pela frase antiga ("não é membro"), que o motor não manda mais
+  const perfil = readFileSync(new URL('../../src/pages/JogadorPerfil.jsx', import.meta.url), 'utf8');
+  assert.match(perfil, /ehForaDoTime\(\{ status: errorStatus, code: errorCode, mensagem: error \}\) \? \(/);
+  assert.doesNotMatch(perfil, /\/não é membro\/i\.test/);
   const ranking = readFileSync(new URL('../../src/pages/Ranking.jsx', import.meta.url), 'utf8');
   assert.ok(!/<EstadoErroRede onRepetir=\{reload\} \/>/.test(ranking), 'o Ranking não mostra mais o aviso de rede sem a frase do erro');
 });

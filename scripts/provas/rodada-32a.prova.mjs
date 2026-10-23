@@ -289,6 +289,15 @@ export async function rodar({ navegador, base, t }) {
         await foto(p, `6-fora-${onde.split(' ')[0].toLowerCase()}-${largura}`, { fullPage: false });
         await p.close();
       }
+      // o perfil de um jogador do time alheio: o aviso de sempre ("Perfil só entre companheiros"), agora reconhecido pelo código do motor
+      const perfil = await fora.ctx.newPage();
+      perfil.on('pageerror', (e) => fora.estado.erros.push(e.message));
+      await perfil.goto(`${base}/time/${slug}/jogador/${dados.pessoas.m1.id}`, { waitUntil: 'domcontentloaded' });
+      await perfil.getByText('Perfil só entre companheiros').first().waitFor({ timeout: 40000 }).catch(() => {});
+      const txPerfil = await texto(perfil);
+      t(`${rotulo} · perfil de jogador de time alheio: "Perfil só entre companheiros" (não "Não deu para abrir o perfil agora")`, txPerfil.includes('Perfil só entre companheiros') && !txPerfil.includes('Não deu para abrir o perfil agora'), txPerfil.slice(0, 300));
+      await foto(perfil, `6-fora-perfil-${largura}`, { fullPage: false });
+      await perfil.close();
       t(`${rotulo} · sem erro de página (visitante) e nada saiu da máquina`, fora.estado.erros.length === 0, fora.estado.erros.slice(0, 3).join(' | '));
       await fora.ctx.close();
     }
