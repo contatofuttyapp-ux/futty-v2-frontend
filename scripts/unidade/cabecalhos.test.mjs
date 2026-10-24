@@ -1,8 +1,9 @@
-// Futty v2.0 — Rodada 29B (G): a CSP em Report-Only e os cabeçalhos do site (public/_headers), travados por teste.
+// Futty v2.0 — a CSP e os cabeçalhos do site (public/_headers), travados por teste.
 //
 // A cena rodada29a-csp só enxerga a violação que o rig local produz, e o rig local serve a mídia pelo próprio servidor:
 // a violação real da 29A (13 imagens de /api/media/… do Cloud Run no img-src) só aparece no ar (dev.futty.pages.dev).
-// Por isso a regra fica escrita aqui: o que o site fala de fora, a política TEM de listar — e continua só Report-Only.
+// Por isso a regra fica escrita aqui: o que o site fala de fora, a política TEM de listar. Ela BLOQUEIA (Content-Security-Policy, depois
+// de uma semana em Report-Only sem nenhum aviso) e cada bloqueio continua indo para o motor (POST /api/csp), que o escreve no log.
 //
 // Uso: npm test
 import { test } from 'node:test';
@@ -35,12 +36,19 @@ function diretivas(csp) {
   }));
 }
 
-const CSP = blocoGeral()['Content-Security-Policy-Report-Only'];
+const CSP = blocoGeral()['Content-Security-Policy'];
 const D = diretivas(CSP || '');
 
-test('a CSP existe e continua SÓ em Report-Only (ninguém bloqueia nada antes de uma semana sem relatório)', () => {
-  assert.ok(CSP, 'bloco /* sem Content-Security-Policy-Report-Only');
-  assert.equal(blocoGeral()['Content-Security-Policy'], undefined, 'a CSP de verdade só entra depois de uma semana limpa');
+test('a CSP é de BLOQUEIO (Content-Security-Policy) e não há mais a cópia só-aviso (Report-Only)', () => {
+  assert.ok(CSP, 'bloco /* sem Content-Security-Policy');
+  assert.equal(blocoGeral()['Content-Security-Policy-Report-Only'], undefined, 'duas políticas ao mesmo tempo: a só-aviso sobrou');
+  assert.ok(!/Content-Security-Policy-Report-Only:/.test(TEXTO), 'Report-Only em outro bloco do _headers');
+});
+
+test('o relatório continua: report-uri e report-to mandam cada bloqueio para POST /api/csp do motor', () => {
+  assert.deepEqual(D['report-uri'], [`${MOTOR}/api/csp`]);
+  assert.deepEqual(D['report-to'], ['csp']);
+  assert.equal(blocoGeral()['Reporting-Endpoints'], `csp="${MOTOR}/api/csp"`);
 });
 
 test('img-src lista o motor (as fotos vêm de /api/media/ no Cloud Run), o Supabase e o próprio site', () => {

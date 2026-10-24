@@ -13,13 +13,13 @@
 #   · X-Frame-Options: ninguém põe o Futty dentro de um iframe alheio (clickjacking).
 #   · Permissions-Policy: só a câmera (foto) e a localização (Explorar) do próprio site.
 #   · Referrer-Policy: já era o padrão da Cloudflare; aqui fica escrito.
-#   · CSP SÓ EM REPORT-ONLY: não bloqueia nada, só aparece no console como violação.
-#     Fica uma semana sem relatório e só então vira Content-Security-Policy de verdade.
-#     Se a lista mudar, os endereços (Supabase, motor, futtyapp.com.br) vêm de .env.production.
+#   · CSP DE VERDADE (Content-Security-Policy): o navegador BLOQUEIA o que não está na lista. Ela passou primeiro uma semana em
+#     Report-Only (só avisava): publicada assim na 31X (19-out), uma semana sem nenhuma linha [csp] no log, e só então virou bloqueio
+#     (Rodada 32D), com a MESMA lista. Se a lista mudar, os endereços (Supabase, motor, futtyapp.com.br) vêm de .env.production.
 #   · Este bloco vem PRIMEIRO de propósito: as regras de baixo só acrescentam cabeçalhos.
-#   · Os avisos da CSP vão para o motor (POST /api/csp: report-uri para os navegadores antigos, report-to + Reporting-Endpoints para os
-#     novos), que escreve uma linha "[csp] <diretiva> bloquearia <endereço> em <página>" no log do Cloud Run. É por esse log que se decide
-#     virar a política em bloqueio, com o OK do Pedro, depois de uma semana limpa.
+#   · O relatório continua: todo bloqueio vira aviso para o motor (POST /api/csp: report-uri para os navegadores antigos, report-to +
+#     Reporting-Endpoints para os novos), que escreve uma linha "[csp] <diretiva> bloqueou <endereço> em <página>" no log do Cloud Run.
+#     É por esse log que se descobre se a política barrou algo que o site usa — linha nova lá = olhar a origem antes de mexer na lista.
 #   · O que a política conta e por quê: script-src só 'self' (o site não tem script inline nem de fora); o vídeo do YouTube da Resenha
 #     (a miniatura em img.youtube.com, o player em frame do www.youtube.com); o Radar de peladas pergunta a cidade ao nominatim; vídeo e
 #     som (media-src) vêm do motor, do Storage e do site; o confete desenha num worker criado de um blob; object-src, base-uri e
@@ -28,7 +28,9 @@
 #   · Rodada 29B (G): o motor entrou no img-src (a cena da 29A viu 13 violações em /api/media/…: as fotos vêm do Cloud Run, não do
 #     site); o Sentry entrou no connect-src — ele ESTÁ no build (chunk vendor-sentry, aceso 3 s depois da 1ª pintura quando o DSN
 #     existe) e manda os erros para o ingest dele. O DSN mora no ambiente da Cloudflare (VITE_SENTRY_DSN) e não sabemos a região
-#     daqui, então os três hosts de ingest (padrão, us e de). Continua Report-Only: só aparece no console, não bloqueia nada.
+#     daqui, então os três hosts de ingest (padrão, us e de).
+#   · O app da loja NÃO recebe estes cabeçalhos: ele abre as telas de dentro do pacote (capacitor://localhost, https://localhost),
+#     não do site. A CSP vale para quem usa pelo navegador (futtyapp.com.br e as pré-visualizações do Pages).
 # CORS `*` na raiz: NÃO vem de regra nossa (não há Access-Control-Allow-Origin em `/*` aqui) —
 # é o que a própria Cloudflare Pages põe em todo arquivo estático (conferido com curl -I em 30-set).
 # As regras de mídia abaixo continuam dizendo `*` de forma explícita, que é o que o app nativo precisa.
@@ -37,7 +39,7 @@
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: camera=(self), microphone=(), geolocation=(self), payment=(), usb=()
   Referrer-Policy: strict-origin-when-cross-origin
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; connect-src 'self' https://ynzmjcvqdljffgbeqglh.supabase.co https://api.futtyapp.com.br wss://api.futtyapp.com.br https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://nominatim.openstreetmap.org; img-src 'self' data: blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://api.futtyapp.com.br https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br https://img.youtube.com; media-src 'self' blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://www.youtube.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri https://futty-api-685039278359.southamerica-east1.run.app/api/csp; report-to csp
+  Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self' https://ynzmjcvqdljffgbeqglh.supabase.co https://api.futtyapp.com.br wss://api.futtyapp.com.br https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://nominatim.openstreetmap.org; img-src 'self' data: blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://api.futtyapp.com.br https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br https://img.youtube.com; media-src 'self' blob: https://ynzmjcvqdljffgbeqglh.supabase.co https://futty-api-685039278359.southamerica-east1.run.app https://futtyapp.com.br; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src https://www.youtube.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri https://futty-api-685039278359.southamerica-east1.run.app/api/csp; report-to csp
   Reporting-Endpoints: csp="https://futty-api-685039278359.southamerica-east1.run.app/api/csp"
 
 # Saída do bundler — nome com hash, conteúdo nunca muda.

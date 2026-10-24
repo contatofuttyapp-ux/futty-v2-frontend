@@ -6432,8 +6432,9 @@ async function cenaRodada29aExcluir(navegador, sessao) {
 
 // ─── Cena "rodada29a-csp": Violações da CSP em Report-Only ──────────────────
 // O `_headers` da Cloudflare só vale no ar; aqui ele é emulado: o cabeçalho
-// Content-Security-Policy-Report-Only é lido do próprio public/_headers (bloco `/*`) e posto na resposta
-// de cada DOCUMENTO pelo Playwright. O servidor tem de ser o BUILD (`vite preview`), não o `vite dev` (o dev
+// a política (Content-Security-Policy) é lida do próprio public/_headers (bloco `/*`) e posta na resposta
+// de cada DOCUMENTO pelo Playwright — aqui em Report-Only DE PROPÓSITO, para listar TUDO o que ela barraria sem que um
+// bloqueio esconda os seguintes, e sem os destinos do relatório (report-uri/report-to), que iriam ao motor de produção. O servidor tem de ser o BUILD (`vite preview`), não o `vite dev` (o dev
 // usa scripts inline e WebSocket do HMR, que sujariam a lista). Cada `securitypolicyviolation` da página
 // entra na lista; nada é bloqueado — é só relatório.
 // Só leitura: toda escrita à /api é interceptada.
@@ -6450,8 +6451,9 @@ async function cenaRodada29aCsp(navegador, sessao) {
     const i = linha.indexOf(':');
     geral[linha.slice(0, i).trim()] = linha.slice(i + 1).trim();
   }
-  const csp = geral['Content-Security-Policy-Report-Only'];
-  if (!csp) throw new Error('bloco /* sem Content-Security-Policy-Report-Only');
+  const politica = geral['Content-Security-Policy'] || geral['Content-Security-Policy-Report-Only'];
+  if (!politica) throw new Error('bloco /* sem Content-Security-Policy');
+  const csp = politica.split(';').map((d) => d.trim()).filter((d) => d && !/^report-(uri|to)\b/.test(d)).join('; ');
 
   const pasta = path.join(PASTA, 'rodada-29a');
   mkdirSync(pasta, { recursive: true });
