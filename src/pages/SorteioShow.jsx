@@ -3,7 +3,7 @@
 // (jogo → countdown → Ver sorteio). Cada visita reproduz a cerimónia completa,
 // replay ilimitado e EXACTO (a seed vive em times_resultado).
 // Partilha (§9): LINK público (/p/:slug/:gameId) + IMAGEM 9:16 por equipa.
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
@@ -32,6 +32,12 @@ export default function SorteioShow() {
   // WebView recarregasse a rota ao retomar o app — som ligado sem ninguém ter
   // tocado em "Sortear", que é o oposto do que a regra diz.
   const [euSorteei] = useState(() => !!location.state?.euSorteei);
+  // A cerimônia abre SEMPRE no topo. O app não volta ao topo na troca de rota, e quem tocou em "Sortear" (ou "Sortear de
+  // novo", lá embaixo) com o Jogo rolado chegava aqui com a janela rolada — via o meio da máquina, não o começo. Antes da primeira
+  // pintura (layout effect), para não piscar a cerimônia rolada; uma vez, na montagem (o replace do state abaixo não remonta).
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   useEffect(() => {
     if (euSorteei) navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corre uma vez, na montagem

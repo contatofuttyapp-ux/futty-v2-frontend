@@ -112,6 +112,12 @@ export default function Jogo() {
   const [toast, setToast] = useState(null);
   const [associando, setAssociando] = useState(null); // o convidado sem app cuja vaga o admin está ligando a um membro (utils/associarJogador.js)
   const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'refazer-a-mao' | 'cancelar-presenca' | 'campeonato' | null
+  // A confirmação de trocar os times aparece ACIMA dos times, e o link que a abre ("Sortear de novo" · "Montar à mão") fica lá embaixo: sem rolar até
+  // ela, quem tocou no link via o link sumir e nada mais — parecia que o toque não tinha feito nada (o mesmo caso do erro do sorteio).
+  const confirmarTrocaRef = useRef(null);
+  useEffect(() => {
+    if (confirmacao === 're-sorteio' || confirmacao === 'refazer-a-mao') confirmarTrocaRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [confirmacao]);
   // A composição à mão aberta (quem confirmou + os convidados da tela) e o POST dos times em curso.
   const [montando, setMontando] = useState(false);
   const [salvandoTimes, setSalvandoTimes] = useState(false);
@@ -531,7 +537,7 @@ export default function Jogo() {
                 inline de sempre ("sair da equipa"). Texto em PT-BR: o replay só entra na frase quando havia sorteio
                 (tem seed); os times à mão não têm replay. */}
             {isAdmin && game.sorteio_realizado && (confirmacao === 're-sorteio' || confirmacao === 'refazer-a-mao') && (
-              <div data-confirmar-trocar-times={confirmacao} style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginBottom: 10, borderColor: confirmacao === 're-sorteio' ? 'rgba(240,201,74,0.4)' : 'rgba(139,92,246,0.5)' }}>
+              <div ref={confirmarTrocaRef} data-confirmar-trocar-times={confirmacao} style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginBottom: 10, scrollMarginTop: 16, borderColor: confirmacao === 're-sorteio' ? 'rgba(240,201,74,0.4)' : 'rgba(139,92,246,0.5)' }}>
                 <div style={{ fontFamily: RAJ, fontWeight: 700, fontSize: 14, color: confirmacao === 're-sorteio' ? '#f0c94a' : '#c9b6ff' }}>
                   {confirmacao === 're-sorteio' ? 'Sortear de novo?' : 'Montar os times à mão?'}
                 </div>
