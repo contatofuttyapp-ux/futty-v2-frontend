@@ -55,8 +55,9 @@ const espera = (ms) => new Promise((ok) => { setTimeout(ok, ms); });
 /**
  * Um iPhone novo (contexto limpo), com a sessão do Bruninho, o relógio da página sob controle e a rede inteira respondida aqui.
  * `atrasos`: { 'GET /api/inicio': ms } — a resposta espera esse tempo NO RELÓGIO DO VÍDEO (só durante a filmagem).
+ * `segurar`: ['GET /api/inicio'] — a resposta só sai depois de `iphone.segurados.delete(chave)` (a tela segue carregando até lá).
  */
-async function abrirIphone({ mundo, armazenado = {}, atrasos = {} } = {}) {
+async function abrirIphone({ mundo, armazenado = {}, atrasos = {}, segurar = [] } = {}) {
   const ctx = await navegador.newContext({
     viewport: { width: L, height: A }, deviceScaleFactor: ESCALA, isMobile: true, hasTouch: true, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo',
     reducedMotion: 'no-preference', colorScheme: 'dark',
@@ -72,7 +73,7 @@ async function abrirIphone({ mundo, armazenado = {}, atrasos = {} } = {}) {
   }, { chave: `sb-${REF}-auth-token`, sessao, armazenado });
   const page = await ctx.newPage();
   await page.clock.install();
-  const iphone = { ctx, page, erros: [], filmagem: null };
+  const iphone = { ctx, page, erros: [], filmagem: null, segurados: new Set(segurar) };
   page.on('pageerror', (e) => iphone.erros.push(e.message));
   const origem = new URL(base).host;
   await page.route('**/*', async (route) => {
@@ -82,9 +83,11 @@ async function abrirIphone({ mundo, armazenado = {}, atrasos = {} } = {}) {
       const bruto = req.postData();
       let corpo = null;
       try { corpo = bruto ? JSON.parse(bruto) : null; } catch { corpo = { multipart: true }; }
-      const atraso = atrasos[`${req.method()} ${u.pathname}`];
+      const chave = `${req.method()} ${u.pathname}`;
+      const atraso = atrasos[chave];
       const f = iphone.filmagem;
       if (atraso && f) { const alvo = f.virtual + atraso; while (iphone.filmagem === f && f.virtual < alvo) await espera(15); }
+      while (iphone.segurados.has(chave)) await espera(15);
       const r = mundo.responder(u.pathname, req.method(), corpo);
       return route.fulfill({ status: r.status, contentType: 'application/json', body: JSON.stringify(r.json), headers: { 'access-control-allow-origin': '*' } });
     }
@@ -129,11 +132,20 @@ async function assentar(page, minimo = 1000) {
 
 // ── a filmagem quadro a quadro ───────────────────────────────────────────────────────────────────────────────────────────
 
-/** Pausa toda animação que está rodando e avança as que a filmagem pausou. Roda na página, uma vez por quadro. */
+/**
+ * Pausa toda animação que está rodando e avança as que a filmagem pausou. Roda na página, uma vez por quadro.
+ * `window.__v32bGelo = { nomes, ms }` segura as animações CSS com esses nomes paradas em `ms` (inclusive as de um elemento que
+ * nasça depois): é como a abertura deixa o F do carregamento pintado por inteiro enquanto o nome aparece embaixo dele.
+ */
 function andarAnimacoes({ dt, primeira }) {
   const nossas = window.__v32b || (window.__v32b = new WeakSet());
+  const gelo = window.__v32bGelo;
   for (const a of document.getAnimations()) {
-    if (a.playState === 'running') {
+    if (gelo && gelo.nomes.includes(a.animationName)) {
+      a.pause();
+      a.currentTime = gelo.ms;
+      nossas.delete(a);
+    } else if (a.playState === 'running') {
       // Nova desde o último quadro: o tempo de verdade que ela correu durante a foto anterior não conta.
       a.pause();
       if (!primeira && a.currentTime != null && a.currentTime > dt) a.currentTime = dt;
@@ -269,7 +281,9 @@ async function tocar(f, loc) {
 async function abertura() {
   const mundo = criarMundo({ base });
   // A Início espera o /api/inicio: 250 ms, uma rede boa de celular (mais que isso a tela fica um instante só com o fundo).
-  const iphone = await abrirIphone({ mundo, atrasos: { 'GET /api/inicio': 250, 'GET /api/me': 250 } });
+  // A Início fica segura até o cartão do nome acabar (o perfil a libera, os dados do Início tiram o F da frente): o F do
+  // carregamento tem tempo de pintar inteiro e nada da Início aparece por baixo do nome.
+  const iphone = await abrirIphone({ mundo, atrasos: { 'GET /api/inicio': 250, 'GET /api/me': 250 }, segurar: ['GET /api/inicio', 'GET /api/me'] });
   const { page } = iphone;
   await page.setContent('<html style="background:#080808"><body style="margin:0;background:#080808"></body></html>');
   const f = await filmar(iphone, '01-abertura');
@@ -282,11 +296,60 @@ async function abertura() {
     await f.imagem(await sharp(splash).composite([{ input: veu }]).jpeg({ quality: 94 }).toBuffer());
   }
   await page.goto(`${base}/`, { waitUntil: 'commit' });
+  await cartaoDoNome(f, iphone);
   await f.ate(() => !!document.querySelector('.bottom-nav') && [...document.querySelectorAll('img')].filter((i) => i.offsetParent).every((i) => i.complete) && /Domingueira FC/.test(document.body.innerText), null, { max: 15000, rotulo: 'a Início' });
   await f.passar(3500);
   await fechar(iphone, '01-abertura');
   await iphone.ctx.close();
   return mundo;
+}
+
+/**
+ * O cartão de apresentação: composição do vídeo, não tela do app. O F do carregamento pinta inteiro (o ciclo do FuttyLoader:
+ * escova até 59,3 % de 2,7 s, brilho até 77,8 %), fica parado pintado, e o nome entra embaixo dele na assinatura empilhada da
+ * marca (MARCA.md: FUTTY em Rajdhani Bold, dourado #d4a017, espaçado ~0,42 em, respiro de 1/4 do F). O lettering
+ * futty-wordmark.svg está aposentado na marca e não entra. Depois o nome sai e a Início chega como sempre chegou.
+ */
+async function cartaoDoNome(f, iphone) {
+  const { page } = iphone;
+  const CICLO = 2700;
+  const ciclo = (ms) => document.getAnimations().some((a) => a.animationName === 'futtyLoaderDraw' && (a.currentTime || 0) % 2700 >= ms);
+  await f.ate(ciclo, CICLO * 0.593, { max: 8000, rotulo: 'o F do carregamento pintado' });
+  await page.evaluate(async () => {
+    await document.fonts.load("700 48px 'Rajdhani'");
+    const estilo = document.createElement('style');
+    // A legenda "Bola parada…" é do servidor lento (4 s); aqui a tela espera de propósito, então ela não entra.
+    estilo.textContent = '[data-loading-futty] > span { visibility: hidden !important; }';
+    document.head.appendChild(estilo);
+    const nome = document.createElement('div');
+    nome.id = 'v32c-nome';
+    nome.textContent = 'FUTTY';
+    // O F do LoadingFutty tem 129 px e fica no centro da tela; o nome começa a 1/4 do F abaixo dele. O text-indent devolve o
+    // espaço que o letter-spacing deixa depois da última letra, para o nome ficar centrado de verdade.
+    Object.assign(nome.style, {
+      position: 'fixed', left: '0', right: '0', top: 'calc(50% + 94px)', zIndex: '45', textAlign: 'center', pointerEvents: 'none',
+      font: "700 48px/1 'Rajdhani', sans-serif", letterSpacing: '0.42em', textIndent: '0.42em', color: '#d4a017',
+      textShadow: '0 0 18px rgba(212, 160, 23, 0.28)',
+    });
+    document.body.appendChild(nome);
+    nome.animate([{ opacity: 0, transform: 'translateY(10px) scale(0.94)' }, { opacity: 1, transform: 'none' }], { duration: 500, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'both' });
+  });
+  await f.ate(ciclo, CICLO * 0.778, { max: 2000, rotulo: 'o brilho do F' });
+  await page.evaluate((ms) => { window.__v32bGelo = { nomes: ['futtyLoaderDraw', 'futtyLoaderShine'], ms }; }, Math.round(CICLO * 0.778));
+  await f.passar(1600);
+  // A saída: o F volta ao próprio ciclo e some como sempre some (77,8 → 100 %, 0,6 s), o nome some junto, e só então a Início
+  // chega — sem o F nem o nome por cima dela enquanto ela entra.
+  await page.evaluate(() => {
+    delete window.__v32bGelo;
+    for (const a of document.getAnimations()) if (['futtyLoaderDraw', 'futtyLoaderShine'].includes(a.animationName)) window.__v32b.add(a);
+    document.getElementById('v32c-nome').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 560, easing: 'ease-in-out', fill: 'forwards' });
+  });
+  // A Início leva dois pedidos (perfil, depois os dados) para chegar: eles saem antes de o F terminar de apagar, para ela
+  // entrar junto com o fim do apagar. Se ainda não chegou, o F apagado fica apagado (o ciclo não recomeça a pintar).
+  await f.ate(ciclo, CICLO * 0.9, { max: 2000, rotulo: 'a saída do F' });
+  iphone.segurados.clear();
+  await f.ate((ms) => !document.querySelector('[data-loading-futty]') || document.getAnimations().some((a) => a.animationName === 'futtyLoaderDraw' && (a.currentTime || 0) % 2700 >= ms), CICLO * 0.95, { max: 2000, rotulo: 'o fim do apagar' });
+  await page.evaluate((ms) => { window.__v32bGelo = { nomes: ['futtyLoaderDraw', 'futtyLoaderShine'], ms }; }, Math.round(CICLO * 0.963));
 }
 
 async function splashNativo() {
