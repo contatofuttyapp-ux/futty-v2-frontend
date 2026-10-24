@@ -18,7 +18,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { ROTA_DOS_ROSTOS, SLUG, ID_DO_JOGO, EU, criarMundo } from './_mundo-32b.mjs';
+import { ROTA_DOS_ROSTOS, SLUG, ID_DO_JOGO, ELENCO, EU, criarMundo } from './_mundo-32b.mjs';
 
 const FRONTEND = fileURLToPath(new URL('../../', import.meta.url));
 const FUT = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -40,9 +40,9 @@ const sharp = exigir('sharp');
 const { createServer } = await import(pathToFileURL(join(FRONTEND, 'node_modules/vite/dist/node/index.js')).href);
 
 const REF = new URL((readFileSync(join(FRONTEND, '.env'), 'utf8').match(/^VITE_SUPABASE_URL=(.+)$/m)?.[1] || 'https://prova.supabase.co').trim()).hostname.split('.')[0];
-const sessao = JSON.stringify({
+const sessaoDe = (eu) => JSON.stringify({
   access_token: 'videos-32b', refresh_token: 'videos-32b', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 86400 * 30,
-  user: { id: EU.id, aud: 'authenticated', email: 'bruninho@futty.test', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' },
+  user: { id: eu.id, aud: 'authenticated', email: `${eu.rosto}@futty.test`, app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' },
 });
 
 const servidor = await createServer({ root: FRONTEND, logLevel: 'silent', server: { host: '127.0.0.1', port: 0 } });
@@ -53,11 +53,11 @@ const externos = new Map();
 const espera = (ms) => new Promise((ok) => { setTimeout(ok, ms); });
 
 /**
- * Um iPhone novo (contexto limpo), com a sessão do Bruninho, o relógio da página sob controle e a rede inteira respondida aqui.
+ * Um iPhone novo (contexto limpo), com a sessão de quem olha (, por padrão o Bruninho), o relógio da página sob controle e a rede inteira respondida aqui.
  * `atrasos`: { 'GET /api/inicio': ms } — a resposta espera esse tempo NO RELÓGIO DO VÍDEO (só durante a filmagem).
  * `segurar`: ['GET /api/inicio'] — a resposta só sai depois de `iphone.segurados.delete(chave)` (a tela segue carregando até lá).
  */
-async function abrirIphone({ mundo, armazenado = {}, atrasos = {}, segurar = [] } = {}) {
+async function abrirIphone({ mundo, eu = EU, armazenado = {}, atrasos = {}, segurar = [] } = {}) {
   const ctx = await navegador.newContext({
     viewport: { width: L, height: A }, deviceScaleFactor: ESCALA, isMobile: true, hasTouch: true, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo',
     reducedMotion: 'no-preference', colorScheme: 'dark',
@@ -70,7 +70,7 @@ async function abrirIphone({ mundo, armazenado = {}, atrasos = {}, segurar = [] 
       localStorage.setItem(chave, s);
       for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, v);
     } catch { /* about:blank não tem storage */ }
-  }, { chave: `sb-${REF}-auth-token`, sessao, armazenado });
+  }, { chave: `sb-${REF}-auth-token`, sessao: sessaoDe(eu), armazenado });
   const page = await ctx.newPage();
   await page.clock.install();
   const iphone = { ctx, page, erros: [], filmagem: null, segurados: new Set(segurar) };
@@ -412,13 +412,18 @@ async function sorteio() {
 }
 
 // ── 4 · Figurinha ────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Quem faz a figurinha é o Diguinho: "antes" = _rostos/diguinho-foto.png (a foto comum aprovada pelo dono), "depois" =
+// _rostos/diguinho-ai.png (a figurinha dele, a mesma do Ranking e do Sorteio).
+const MODELO_DA_FIGURINHA = ELENCO.find((j) => j.nome === 'Diguinho');
+
 async function figurinha() {
-  const mundo = criarMundo({ base });
+  const eu = MODELO_DA_FIGURINHA;
+  const mundo = criarMundo({ base, eu });
   const { perfil } = mundo;
-  // O Bruninho ainda sem foto nem figurinha, com direito a gerar (Minha Figurinha: 10 gerações).
+  // Ainda sem foto nem figurinha, com direito a gerar (Minha Figurinha: 10 gerações).
   Object.assign(perfil, { foto_url: null, avatar_url: null, figurinha_ativa: false, tem_figurinha: false, slots: [] });
-  const foto = mundo.rostoDe(EU).replace('-ai-dark-gold.png', '-foto-1.jpg');
-  const figura = mundo.rostoDe(EU);
+  const foto = mundo.rostoDe(eu).replace('-ai-dark-gold.png', '-foto-1.jpg');
+  const figura = mundo.rostoDe(eu);
   let restantes = 10;
   let consultas = 0;
   // A pintura de verdade leva ~45 s (a estimativa que o app mostra é a do motor sem histórico). Aqui o app pergunta de 3 em 3 s
@@ -446,19 +451,19 @@ async function figurinha() {
     }
     return undefined;
   });
-  const iphone = await abrirIphone({ mundo, armazenado: { futty_figurinha_estreia: '1' } });
+  const iphone = await abrirIphone({ mundo, eu, armazenado: { futty_figurinha_estreia: '1' } });
   const { page } = iphone;
   await page.goto(`${base}/figurinha`);
   await page.locator('.fig-studio-card img.fig-aura').waitFor({ timeout: 30000 });
   await assentar(page, 2000);
   const f = await filmar(iphone, '04-figurinha');
   await f.passar(1200);
-  // Adicionar foto → "Sua foto" → Escolher outra foto → a galeria (a foto comum do Bruninho) → recorte → Confirmar.
+  // Adicionar foto → "Sua foto" → Escolher outra foto → a galeria (a foto comum) → recorte → Confirmar.
   await tocar(f, page.getByRole('button', { name: /Adicionar foto/i }).first());
   await f.passar(900);
   const escolha = page.waitForEvent('filechooser');
   await tocar(f, page.getByRole('button', { name: /Escolher outra foto/i }).first());
-  await (await escolha).setFiles(join(ROSTOS, 'bruninho-foto.png'));
+  await (await escolha).setFiles(join(ROSTOS, `${eu.rosto}-foto.png`));
   await f.ate(() => !!document.querySelector('[data-crop-modal]'), null, { rotulo: 'o recorte' });
   await f.passar(1500);
   await tocar(f, page.getByRole('button', { name: 'Confirmar' }));

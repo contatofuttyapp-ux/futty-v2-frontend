@@ -19,14 +19,14 @@ export const ROTA_DOS_ROSTOS = '/storage/v1/object/public/avatars/public/';
 // Os números do ranking são de um time com 8 jogos na temporada: pontos (0–100) decrescentes, nota 0–10.
 export const ELENCO = [
   { nome: 'Tiago', rosto: 'tiago', score: 86.4, nota: 8.9, jogos: 8, cabeca: true },
-  { nome: 'Bruninho', rosto: 'bruninho', score: 81.7, nota: 8.6, jogos: 8, cabeca: true },
+  { nome: 'Bruninho', rosto: 'bruninho', score: 81.7, nota: 8.6, jogos: 8, cabeca: true, nomeCompleto: 'Bruno Henrique', nascimento: '1994-03-12' },
   { nome: 'Paredão', rosto: 'paredao', score: 77.2, nota: 8.8, jogos: 7, goleiro: true },
   { nome: 'Marquinhos', rosto: 'marquinhos', score: 71.5, nota: 8.1, jogos: 8 },
   { nome: 'Carlos', rosto: 'carlos', score: 68.9, nota: 7.9, jogos: 7, cabeca: true },
   { nome: 'Paulinho', rosto: 'paulinho', score: 64.3, nota: 7.6, jogos: 8 },
   { nome: 'Dudu', rosto: 'dudu', score: 61.8, nota: 7.7, jogos: 6 },
   { nome: 'Gonçalo', rosto: 'goncalo', score: 58.4, nota: 7.4, jogos: 7, goleiro: true },
-  { nome: 'Diguinho', rosto: 'diguinho', score: 55.0, nota: 7.2, jogos: 6 },
+  { nome: 'Diguinho', rosto: 'diguinho', score: 55.0, nota: 7.2, jogos: 6, nomeCompleto: 'Rodrigo Alves', nascimento: '1996-07-21' },
   { nome: 'Roberto', rosto: 'roberto', score: 51.6, nota: 7.1, jogos: 8 },
   { nome: 'Léo', rosto: 'leo', score: 47.9, nota: 6.8, jogos: 5 },
   { nome: 'Fabinho', rosto: 'fabinho', score: 44.2, nota: 6.9, jogos: 6 },
@@ -45,8 +45,9 @@ const NOMES_DOS_TIMES = ['Time A', 'Time B', 'Time C', 'Time D']; // o motor nom
 /**
  * @param {object} o
  * @param {string} o.base   a origem do servidor das telas (escudo e rostos saem dela)
+ * @param {object} [o.eu]   quem está olhando (um do ELENCO, com nomeCompleto e nascimento); por padrão o Bruninho
  */
-export function criarMundo({ base }) {
+export function criarMundo({ base, eu = EU }) {
   const { executarSorteio } = requireBackend('./utils/sorteio.js');
   const rostoDe = (j) => `${base}${ROTA_DOS_ROSTOS}v32b-${j.rosto}-ai-dark-gold.png`;
 
@@ -66,16 +67,16 @@ export function criarMundo({ base }) {
     user_id: j.id, nome: j.nome, nome_jogador: j.nome, avatar_url: rostoDe(j), rating: 3, confirmado: true, goleiro: !!j.goleiro, cabeca_chave: !!j.cabeca,
   }));
 
-  // O perfil do Bruninho. A Figurinha troca estes campos (foto enviada, figurinha pronta) pelo `perfil`.
-  const perfil = { foto_url: rostoDe(EU), avatar_url: rostoDe(EU), figurinha_ativa: true, tem_figurinha: true, kit_ativo: 'dark-gold', slots: ['dark-gold'], fundo_figurinha: 'estadio' };
+  // O perfil de quem olha (o Bruninho, ou o Diguinho na Figurinha). A Figurinha troca estes campos (foto enviada, figurinha pronta) pelo `perfil`.
+  const perfil = { foto_url: rostoDe(eu), avatar_url: rostoDe(eu), figurinha_ativa: true, tem_figurinha: true, kit_ativo: 'dark-gold', slots: ['dark-gold'], fundo_figurinha: 'estadio' };
   const meuPayload = () => ({
     user: {
-      id: EU.id, nome: 'Bruno Henrique', nome_jogador: EU.nome, onboarding_completo: true, birthdate: '1994-03-12', plano: 'free', avatar_generico: 'm1',
+      id: eu.id, nome: eu.nomeCompleto, nome_jogador: eu.nome, onboarding_completo: true, birthdate: eu.nascimento, plano: 'free', avatar_generico: 'm1',
       foto_original_url: perfil.foto_url, foto_url: perfil.foto_url, avatar_url: perfil.avatar_url, figurinha_ativa: perfil.figurinha_ativa,
       tem_figurinha: perfil.tem_figurinha, figurinha_status: perfil.figurinha_ativa ? 'pronta' : null, kit_ativo: perfil.kit_ativo, fundo_figurinha: perfil.fundo_figurinha,
     },
     slots: perfil.slots,
-    stats: { nota: EU.nota, jogos: EU.jogos, gols: 11 },
+    stats: { nota: eu.nota, jogos: eu.jogos, gols: 11 },
   });
 
   const jogoDoInicio = () => ({
@@ -99,8 +100,8 @@ export function criarMundo({ base }) {
   });
 
   const ranking = () => ELENCO.map((j, i) => ({
-    user_id: j.id, sou_eu: j.id === EU.id, nome: j.nome, nome_jogador: j.nome, avatar_url: rostoDe(j), foto_url: null, avatar_generico: null, cor_frame: 'dourado',
-    categoria: j.goleiro ? 'GR' : 'linha', nota: j.nota, nota_interna: j.nota, total_votos: 9 + ((i * 3) % 5), minha_nota: j.id === EU.id ? null : (MEUS_VOTOS[j.nome] ?? null),
+    user_id: j.id, sou_eu: j.id === eu.id, nome: j.nome, nome_jogador: j.nome, avatar_url: rostoDe(j), foto_url: null, avatar_generico: null, cor_frame: 'dourado',
+    categoria: j.goleiro ? 'GR' : 'linha', nota: j.nota, nota_interna: j.nota, total_votos: 9 + ((i * 3) % 5), minha_nota: j.id === eu.id ? null : (MEUS_VOTOS[j.nome] ?? null),
     vitorias: Math.round(j.jogos * 0.6), empates: 1, derrotas: Math.max(0, j.jogos - Math.round(j.jogos * 0.6) - 1), gols: j.goleiro ? 0 : Math.round(j.score / 8),
     artilharia: 0, destaques: Math.round(j.score / 30), presenca: j.jogos, score: j.score, posicao: i + 1,
   }));
@@ -113,7 +114,7 @@ export function criarMundo({ base }) {
     jogo.times_resultado = {
       num_times: s.numTimes, total_jogadores: confirmados.length, convidados_total: 0, seed: s.seed, avisos: [],
       times: s.times.map((jogadores, i) => ({ nome: NOMES_DOS_TIMES[i], rating_medio: 3, jogadores })),
-      reservas: s.reservas, registro: { origem: 'sorteio', por: EU.id, ajustes: [], sorteio_numero: 1 },
+      reservas: s.reservas, registro: { origem: 'sorteio', por: eu.id, ajustes: [], sorteio_numero: 1 },
     };
     return { game: { id: jogo.id, fuso: SP, num_times: s.numTimes, sorteio_realizado: true, times_resultado: jogo.times_resultado, status: jogo.status } };
   }
@@ -134,7 +135,7 @@ export function criarMundo({ base }) {
     if (metodo === 'GET' && pathname === '/api/feed') return ok({ items: [], proximo: null });
     if (metodo === 'GET' && pathname.startsWith('/api/ads')) return ok({});
     if (metodo === 'GET' && pathname === `/api/teams/${SLUG}`) {
-      return ok({ team: { ...time }, members: ELENCO.map((j) => ({ id: j.id, nome: j.nome, nome_jogador: j.nome, role: j.id === EU.id ? 'admin' : 'member', joga: true, goleiro: !!j.goleiro, avatar_url: rostoDe(j) })) });
+      return ok({ team: { ...time }, members: ELENCO.map((j) => ({ id: j.id, nome: j.nome, nome_jogador: j.nome, role: j.id === eu.id ? 'admin' : 'member', joga: true, goleiro: !!j.goleiro, avatar_url: rostoDe(j) })) });
     }
     if (metodo === 'GET' && pathname === `/api/teams/${SLUG}/ranking`) return ok({ team: { ...time }, ranking: ranking() });
     if (metodo === 'GET' && pathname === `/api/teams/${SLUG}/votacao-status`) return ok({ aberta: false, temporada: null });
