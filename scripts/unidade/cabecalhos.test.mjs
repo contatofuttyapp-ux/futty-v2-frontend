@@ -51,6 +51,20 @@ test('o relatório continua: report-uri e report-to mandam cada bloqueio para PO
   assert.equal(blocoGeral()['Reporting-Endpoints'], `csp="${MOTOR}/api/csp"`);
 });
 
+test('os scripts que outros injetam passam (o beacon da Cloudflare e o pcm.js do navegador do Instagram), e só eles', () => {
+  // Quem injeta e por quê está no comentário do _headers. O script-src é EXATAMENTE este: qualquer origem nova é decisão, não acidente.
+  assert.deepEqual(D['script-src'], ['self', 'https://static.cloudflareinsights.com', 'https://connect.facebook.net']);
+  for (const origem of ['https://cloudflareinsights.com', 'https://www.facebook.com']) assert.ok(D['connect-src'].includes(origem), `connect-src sem ${origem}`);
+  assert.ok(D['img-src'].includes('https://www.facebook.com'), 'img-src sem https://www.facebook.com (o pixel 1×1 da Meta)');
+});
+
+test('o script-src continua negando o resto: nada de curinga, de "https:" inteiro, de inline/eval nem de uma origem qualquer', () => {
+  for (const proibido of ['*', 'https:', 'http:', 'unsafe-inline', 'unsafe-eval', 'https://exemplo.invalid']) {
+    assert.ok(!D['script-src'].includes(proibido), `script-src deixa passar ${proibido}`);
+  }
+  assert.ok(D['script-src'].every((v) => v === 'self' || /^https:\/\/[a-z0-9.-]+$/.test(v)), `script-src com origem larga demais: ${D['script-src'].join(' ')}`);
+});
+
 test('img-src lista o motor (as fotos vêm de /api/media/ no Cloud Run), o Supabase e o próprio site', () => {
   for (const origem of [MOTOR, SUPABASE, 'https://futtyapp.com.br', 'self', 'data:', 'blob:']) assert.ok(D['img-src'].includes(origem), `img-src sem ${origem}`);
 });

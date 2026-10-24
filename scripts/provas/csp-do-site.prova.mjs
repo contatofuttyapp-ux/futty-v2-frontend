@@ -217,7 +217,11 @@ export async function rodar({ navegador, t }) {
         if (tela.gesto) await tela.gesto(page, deFora);
         await page.waitForLoadState('networkidle').catch(() => {});
         await page.waitForTimeout(800);
-        t(`${tela.rotulo}: nenhuma violação da CSP de bloqueio`, violacoes.length === 0, [...new Set(violacoes)].slice(0, 4).join(' | '));
+        // `esperadas`: as violações que a tela PROVOCA de propósito (o que a política tem de continuar barrando) — cada uma tem de aparecer.
+        const esperadas = tela.esperadas || [];
+        const inesperadas = violacoes.filter((v) => !esperadas.some((re) => re.test(v)));
+        t(`${tela.rotulo}: nenhuma violação da CSP de bloqueio${esperadas.length ? ' além das provocadas' : ''}`, inesperadas.length === 0, [...new Set(inesperadas)].slice(0, 4).join(' | '));
+        for (const re of esperadas) t(`${tela.rotulo}: a política barrou o que tinha de barrar (${re.source})`, violacoes.some((v) => re.test(v)), violacoes.join(' | ') || 'nenhuma violação');
         t(`${tela.rotulo}: abre sem erro de página`, erros.length === 0, erros.slice(0, 2).join(' | '));
         if (tela.depois) await tela.depois(page, deFora);
         if (deFora.length) console.log(`    ℹ ${tela.rotulo}: ${deFora.length} pedido(s) de fora respondidos aqui (nada saiu): ${[...new Set(deFora)].slice(0, 3).join(' | ')}`);
@@ -280,6 +284,44 @@ export async function rodar({ navegador, t }) {
           },
         },
         { rotulo: 'planos', quem: 'chavo', rota: '/planos', esperar: 'main' },
+        // Os scripts que OUTROS injetam (só acontece em produção: a Cloudflare põe o beacon no HTML; o navegador do Instagram põe o pcm.js).
+        // Aqui a prova faz o papel deles na /download — a página do anúncio — e um terceiro script de uma origem qualquer, que a política
+        // tem de continuar barrando. As respostas vêm daqui (nada sai da máquina).
+        {
+          rotulo: '/download com o beacon da Cloudflare e o pcm.js da Meta injetados (e um script estranho)', quem: null, rota: '/download', esperar: 'body',
+          esperadas: [/^script-src-elem https:\/\/exemplo\.invalid\/intruso\.js .*\[enforce\]$/],
+          mexer: async (url, route) => {
+            const cors = { 'access-control-allow-origin': '*' };
+            if (url.hostname === 'static.cloudflareinsights.com' || url.hostname === 'connect.facebook.net' || url.hostname === 'exemplo.invalid') {
+              await route.fulfill({ status: 200, contentType: 'text/javascript', headers: cors, body: `(window.__rodou = window.__rodou || []).push(${JSON.stringify(url.hostname)});` });
+              return true;
+            }
+            if (url.hostname === 'cloudflareinsights.com' || url.hostname === 'www.facebook.com') {
+              await route.fulfill(/\/tr\b/.test(url.pathname) ? { status: 200, contentType: 'image/gif', headers: cors, body: PNG_1X1 } : { status: 204, headers: cors, body: '' });
+              return true;
+            }
+            return false;
+          },
+          gesto: async (p) => {
+            const r = await p.evaluate(async () => {
+              const script = (src) => new Promise((ok) => { const s = document.createElement('script'); s.src = src; s.onload = () => ok('carregou'); s.onerror = () => ok('barrado'); document.head.appendChild(s); });
+              const envio = (u) => fetch(u, { method: 'POST', mode: 'no-cors', body: '{}' }).then(() => 'foi', () => 'barrado');
+              const pixel = (u) => new Promise((ok) => { const i = new Image(); i.onload = () => ok('carregou'); i.onerror = () => ok('barrado'); i.src = u; });
+              return {
+                beacon: await script('https://static.cloudflareinsights.com/beacon.min.js'),
+                rum: await envio('https://cloudflareinsights.com/cdn-cgi/rum'),
+                pcm: await script('https://connect.facebook.net/en_US/pcm.js'),
+                metaEnvio: await envio('https://www.facebook.com/privacy_sandbox/pixel/register/trigger/'),
+                metaPixel: await pixel('https://www.facebook.com/tr/?id=prova&ev=PageView'),
+                intruso: await script('https://exemplo.invalid/intruso.js'),
+                rodou: window.__rodou || [],
+              };
+            });
+            t('…o beacon.min.js da Cloudflare roda e manda para cloudflareinsights.com/cdn-cgi/rum', r.beacon === 'carregou' && r.rum === 'foi' && r.rodou.includes('static.cloudflareinsights.com'), JSON.stringify(r));
+            t('…o pcm.js da Meta roda e fala com www.facebook.com (envio e pixel)', r.pcm === 'carregou' && r.metaEnvio === 'foi' && r.metaPixel === 'carregou' && r.rodou.includes('connect.facebook.net'), JSON.stringify(r));
+            t('…o script de uma origem qualquer (exemplo.invalid) continua barrado e não roda', r.intruso === 'barrado' && !r.rodou.includes('exemplo.invalid'), JSON.stringify(r));
+          },
+        },
       ];
       for (const tela of TELAS) await provarTela(dados, tela);
       encerrarMotor(motor.filho);
