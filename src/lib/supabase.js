@@ -2,13 +2,13 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-// A chave publishable nova (sb_publishable_…) manda; a anon antiga (JWT) só vale enquanto a
-// nova não estiver no ambiente do build. As duas convivem até as antigas serem desligadas no painel.
-const supabaseChave = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Só a chave publishable (sb_publishable_…): as chaves JWT antigas estão desligadas no
+// painel do Supabase, e um JWT no bundle é reprovado pelo scripts/verificar-dist.js.
+const supabaseChave = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabaseChave) {
   throw new Error(
-    '[Futty] Faltam variáveis de ambiente VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY (ou a antiga VITE_SUPABASE_ANON_KEY). Verifique o arquivo .env do frontend.'
+    '[Futty] Faltam variáveis de ambiente VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY. Verifique o arquivo .env do frontend.'
   );
 }
 

@@ -16,7 +16,7 @@ const CAMINHO_DO_STORE = fileURLToPath(new URL('../../../backend/utils/campeonat
 export function carregarStore() {
   if (!existsSync(CAMINHO_DO_STORE)) return null;
   process.env.SUPABASE_URL ||= 'http://127.0.0.1:9';
-  process.env.SUPABASE_SERVICE_KEY ||= 'prova-sem-rede';
+  process.env.SUPABASE_SECRET_KEY ||= 'prova-sem-rede';
   return createRequire(import.meta.url)(CAMINHO_DO_STORE);
 }
 

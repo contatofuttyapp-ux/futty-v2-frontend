@@ -99,6 +99,7 @@ function main() {
 
   if (!preloadDoOnboarding(html)) process.exit(1);
   if (!semVariaveisEmbutidas()) process.exit(1);
+  if (!semJwt()) process.exit(1);
   if (!pesoDoArranque(html)) process.exit(1);
 }
 
@@ -119,6 +120,26 @@ function semVariaveisEmbutidas() {
     return false;
   }
   console.log('[verificar-dist] ✅ nenhum chunk com o objeto import.meta.env embutido.');
+  return true;
+}
+
+/**
+ * O app só fala com o Supabase pela chave publishable (sb_publishable_…); nenhum JWT tem motivo para viajar
+ * no bundle. Um JWT é cabeçalho.conteúdo, os dois objetos JSON em base64 — e `{"` em base64 é `eyJ` —, então
+ * achar `eyJ….eyJ….` num .js é chave velha (ou pior, uma service_role) embutida por algum caminho que o teste
+ * acima não pega.
+ *
+ * @returns {boolean} false se algum chunk tiver um JWT (o chamador falha a build).
+ */
+function semJwt() {
+  const reJwt = /eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\./;
+  const culpados = fs.readdirSync(ASSETS).filter((nome) => nome.endsWith('.js') && reJwt.test(fs.readFileSync(path.join(ASSETS, nome), 'utf8')));
+  if (culpados.length) {
+    console.error(`\n[verificar-dist] ❌ JWT embutido em: ${culpados.join(', ')}`);
+    console.error('O app usa só VITE_SUPABASE_PUBLISHABLE_KEY; procure de onde veio o JWT (env, constante, import.meta.env inteiro).');
+    return false;
+  }
+  console.log('[verificar-dist] ✅ nenhum JWT nos chunks.');
   return true;
 }
 

@@ -5873,3 +5873,14 @@ A lista mestra de decisões continua em C:\Users\phfer\Desktop\FUT\LISTA-CURTA.m
 
 ## scripts/ver-iphone.mjs
 - (linhas ~9045 e ~9263) Antes: "A migração 067 NÃO está aplicada no banco compartilhado" e "a migração 068 não está aplicada". As duas foram aplicadas no publica da Rodada 29 (MIGRACOES-064-073.sql); as cenas continuam simulando o caso sem elas.
+
+## src/lib/supabase.js · .github/workflows/ios.yml · .env.example (Rodada 32E, 26-out)
+- (src/lib/supabase.js, linha ~5) Antes: "a anon antiga (JWT) só vale enquanto a nova não estiver no ambiente do build. As duas convivem até as antigas serem desligadas no painel." As chaves JWT foram desligadas em 26-out; o app lê só VITE_SUPABASE_PUBLISHABLE_KEY.
+- (ios.yml, "Conferir os segredos") Antes: "Rodada 28: a chave pública do Supabase pode vir no formato novo (publishable, preferida) ou no antigo (anon) enquanto as antigas não forem desligadas — basta uma das duas." O secret VITE_SUPABASE_ANON_KEY foi apagado do GitHub; a guarda exige só a PUBLISHABLE.
+- (.env.example) Saiu a linha VITE_SUPABASE_ANON_KEY ("só é lida se a publishable faltar"). Na mesma rodada, o scripts/verificar-dist.js ganhou a guarda semJwt (nenhum JWT `eyJ….eyJ….` nos chunks), ao lado da do objeto import.meta.env (31Y).
+
+## docs/specs/SPEC-INFRA.md (Rodada 32E)
+- (item 5, Envs) Antes: "a antiga era `SUPABASE_SERVICE_KEY`, Rodada 28".
+
+## scripts/provas/rodada-29s-a.prova.mjs (Rodada 32E)
+- O motor de mentira passou a guardar os convidados (PUT /api/games/G1/convidados) e a devolvê-los no GET do admin, como o motor de verdade desde a 32A (games.convidados). Sem isso o "Zé da Esquina" sumia na releitura do jogo e a prova reprovava 2 itens desde a 32A.

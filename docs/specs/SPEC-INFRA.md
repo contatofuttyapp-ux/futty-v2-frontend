@@ -51,7 +51,7 @@ a uma origem e a um plano (grátis).
 5. **Envs** — mover `SUPABASE_*`, `FAL_KEY`, `STRIPE_*`, `VAPID_*`, `FRONTEND_URL`,
    `CORS_ORIGINS` do Railway para as **Environment Variables da Vercel** (por
    ambiente: Production/Preview). A chave secreta do Supabase (`SUPABASE_SECRET_KEY`,
-   `sb_secret_…`; a antiga era `SUPABASE_SERVICE_KEY`, Rodada 28) é só server-side.
+   `sb_secret_…`) é só server-side.
 
 6. **CORS** — hoje `server.js:52-70` permite localhost + `.app.github.dev` +
    `CORS_ORIGINS`. Com frontend e backend na **mesma origem Vercel**, o grosso dos
