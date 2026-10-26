@@ -37,14 +37,20 @@ function criarMotor({ papel = 'admin', confirmados = 3, comTimes = false, comSee
     rsvp_aberto: false, rsvp_fechado: false, cancelado: false,
   };
   const members = NOMES.map((n, i) => ({ id: `U${i + 10}`, nome: n, role: 'member', joga: true, goleiro: false, avatar_url: null }));
+  // Os convidados sem app moram no jogo, como no motor de verdade: o PUT grava a lista inteira e o GET do admin a devolve no topo.
+  let convidados = [];
   function responder(pathname, metodo, corpo) {
     if (metodo === 'GET') {
       if (pathname === '/api/teams/varzea-fc') return { team, members };
-      if (pathname === '/api/games/G1' || pathname === '/api/games/G9') return { team, game: jogo, players, meuEstado: { confirmado: true, goleiro: false }, gols: [] };
+      if (pathname === '/api/games/G1' || pathname === '/api/games/G9') return { team, game: jogo, players, meuEstado: { confirmado: true, goleiro: false }, gols: [], ...(papel === 'admin' ? { convidados } : {}) };
       if (pathname.startsWith('/api/jogos/') && pathname.endsWith('/rsvp')) return { rsvp_aberto: false, rsvp_fechado: false, confirmados: [], recusados: [], pendentes: [], espera: [], eu_jogo: true, fuso: SP };
       return {};
     }
     if (metodo === 'POST' && pathname === '/api/games') return { game: { id: 'G9' } };
+    if (metodo === 'PUT' && pathname === '/api/games/G1/convidados') {
+      convidados = corpo.convidados.map((c) => ({ nome: c.nome, goleiro: c.goleiro === true, cabeca_chave: c.cabeca_chave === true }));
+      return { convidados };
+    }
     if (metodo === 'POST' && pathname === '/api/games/G1/times-manuais') {
       const n = corpo.times.length;
       Object.assign(jogo, { sorteio_realizado: true, num_times: n, times_resultado: { num_times: n, manual: true, times: corpo.times } });
