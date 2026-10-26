@@ -1,8 +1,9 @@
 // Prova no navegador da Rodada 31V-2 — o Gabinete (Suspender que fica, "Excluir conta" de verdade, o log de ações) e o "Associar em todos os jogos do
 // time". O que só um Chromium de verdade confirma, com as MESMAS fontes e o MESMO CSS do app, no computador e a 390 e 360 px:
 //   · Gabinete → Pessoas: suspender 3 contas seguidas e as 3 seguirem "Suspensa" (também depois de recarregar a página e em outro aparelho);
-//   · "Excluir" só aparece para quem pode sair; as protegidas (a do dono, a pessoal, a demo das lojas, o John Apple, o Wesley da Missa) mostram o
-//     motivo no lugar; a palavra errada não apaga nada; EXCLUIR apaga (time sozinho some com a foto; time com gente passa adiante) e entra no log;
+//   · "Excluir" só aparece para quem pode sair; as protegidas (a do dono, a pessoal, a do revisor das lojas, o John Apple, o Wesley da Missa) mostram
+//     o motivo no lugar; a palavra errada não apaga nada; EXCLUIR apaga (time sozinho some com a foto; time com gente passa adiante) e entra no log;
+//     uma conta de teste @futtymock.com que não é a do revisor das lojas sai como qualquer outra;
 //   · Associar: depois de escolher o membro, a janela pergunta "Este nome aparece em mais 3 jogos deste time. Associar em todos?"; "Associar nos 4
 //     jogos" associa nos jogos com o mesmo nome e avisa o que ficou de fora (o jogo em que o Eric já jogava).
 // Como: o motor de VERDADE (todas as rotas) sobe num processo à parte por cima de banco, Storage e Auth de mentira, em memória
@@ -203,14 +204,14 @@ export async function rodar({ navegador, base, t }) {
       // As protegidas: sem "Excluir", com o motivo. As outras: com "Excluir".
       const motivos = {};
       for (const k of ['adm', 'pessoal', 'demo', 'apple', 'wesley']) motivos[k] = (await linha(k).locator('[data-protegida]').count()) ? (await linha(k).locator('[data-protegida]').innerText()).trim() : null;
-      t(`${rotulo} · protegidas sem "Excluir", com o motivo: a sua, a pessoal, a demo das lojas, o John Apple, o Wesley da Missa`,
+      t(`${rotulo} · protegidas sem "Excluir", com o motivo: a sua, a pessoal, a do revisor das lojas, o John Apple, o Wesley da Missa`,
         motivos.adm === 'Esta é a sua conta: não sai pelo Gabinete.' && motivos.pessoal === 'Conta do dono: não sai pelo Gabinete.'
-        && motivos.demo === 'Conta da demo das lojas: fica até a revisão do 1.0.4 passar.' && motivos.apple === 'Conta de revisor da Apple: fica até a revisão do 1.0.4 passar.'
+        && motivos.demo === 'Conta do revisor das lojas: fica enquanto houver envio em revisão.' && motivos.apple === 'Conta de revisor da Apple: fica para as próximas revisões.'
         && motivos.wesley === 'Membro do Missa de Quinta: o time está protegido.'
         && (await page.locator(`[data-pessoa="${P.adm.id}"] [data-excluir], [data-pessoa="${P.demo.id}"] [data-excluir], [data-pessoa="${P.wesley.id}"] [data-excluir]`).count()) === 0, JSON.stringify(motivos));
       const comExcluir = [];
-      for (const k of ['ana', 'bia', 'caio', 'eric', EXCLUIR_EM[aparelho]]) if (await linha(k).locator('[data-excluir]').count()) comExcluir.push(k);
-      t(`${rotulo} · as contas comuns e as de teste têm "Excluir"`, comExcluir.length === 5, comExcluir.join(','));
+      for (const k of ['ana', 'bia', 'caio', 'eric', EXCLUIR_EM[aparelho], 'testeX']) if (await linha(k).locator('[data-excluir]').count()) comExcluir.push(k);
+      t(`${rotulo} · as contas comuns e as de teste (também a teste-x@futtymock.com) têm "Excluir"`, comExcluir.length === 6, comExcluir.join(','));
 
       if (aparelho === 'computador') {
         // ── Suspender 3 seguidas ──
@@ -269,8 +270,15 @@ export async function rodar({ navegador, base, t }) {
       await foto(page, `gabinete-2-excluiu-${aparelho}`);
     }
 
-    const recusa = await fetch(`${dados.base}/api/super/users/${P.wesley.id}`, { method: 'DELETE', headers: { authorization: `Bearer ${dados.tokens.adm}`, 'content-type': 'application/json' }, body: JSON.stringify({ confirmar: 'EXCLUIR' }) });
-    t('pelo motor direto: excluir o Wesley (Missa) é recusado com 403', recusa.status === 403);
+    const excluirPeloMotor = (k) => fetch(`${dados.base}/api/super/users/${P[k].id}`, { method: 'DELETE', headers: { authorization: `Bearer ${dados.tokens.adm}`, 'content-type': 'application/json' }, body: JSON.stringify({ confirmar: 'EXCLUIR' }) });
+    for (const [k, quem] of [['wesley', 'o Wesley (Missa)'], ['demo', 'a do revisor das lojas (demo-loja@futtymock.com)'], ['apple', 'o John Apple'], ['pessoal', 'a pessoal do dono'], ['adm', 'a própria (o dono, super-admin)']]) {
+      const r = await excluirPeloMotor(k);
+      const corpo = await r.json().catch(() => ({}));
+      t(`pelo motor direto: excluir ${quem} é recusado com 403 CONTA_PROTEGIDA`, r.status === 403 && corpo.code === 'CONTA_PROTEGIDA', `${r.status} ${JSON.stringify(corpo)}`);
+    }
+    const saiuX = await excluirPeloMotor('testeX');
+    const estX = await estadoDoMotor(filho);
+    t('pelo motor direto: a teste-x@futtymock.com sai (200) e some do Auth', saiuX.status === 200 && estX.auth_apagados.includes(P.testeX.id), String(saiuX.status));
     const naoDono = await fetch(`${dados.base}/api/super/users/${P.ana.id}`, { method: 'DELETE', headers: { authorization: `Bearer ${dados.tokens.eric}`, 'content-type': 'application/json' }, body: JSON.stringify({ confirmar: 'EXCLUIR' }) });
     t('quem não é super-admin recebe 403', naoDono.status === 403);
 

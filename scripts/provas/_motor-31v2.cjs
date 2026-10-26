@@ -7,8 +7,9 @@
 //   · dois times iguais para o "Associar em todos" (um para cada largura, 390 e 360): o Chavo admin, o Eric (que entrou depois) e 4 jogos que já
 //     aconteceram com o convidado "Eric Lopes" — o jogo 1 (onde o admin toca), o 2 e o 3 (mesmo nome, " eric lopes " no 3), o 4 em que o Eric já
 //     jogou com a conta (fica de fora) e o 5, com outro nome ("Eric"), que não conta;
-//   · as contas do Gabinete: a pessoal do dono, a demo das lojas (@futtymock), o John Apple, as de teste do dono (+teste1, +teste4 sozinho no
-//     "Time do Teste 4", +teste5 admin da "Pelada do Teste 5" com a Bia) e a Ana, a Bia e o Caio (para suspender as três).
+//   · as contas do Gabinete: a pessoal do dono, a do revisor das lojas (demo-loja@futtymock.com), o John Apple, as de teste do dono (+teste1,
+//     +teste4 sozinho no "Time do Teste 4", +teste5 admin da "Pelada do Teste 5" com a Bia), uma de teste @futtymock.com que pode sair
+//     (teste-x@) e a Ana, a Bia e o Caio (para suspender as três).
 //
 // Protocolo com a prova: uma linha de JSON no stdout quando está pronto ({ pronto, base, ... }); "fim\n" no stdin devolve a última linha (o que o
 // motor tentou fazer na rede) e encerra. O resto vai para o stderr.
@@ -42,6 +43,7 @@ const BANCO = 'https://projeto-falso.supabase.test/storage/v1/object/public';
     ana: ['Ana', 'Ana Souza', 'ana.souza@gmail.com'],
     bia: ['Bia', 'Beatriz Lima', 'bia.lima@gmail.com'],
     caio: ['Caio', 'Caio Mendes', 'caio.mendes@gmail.com'],
+    testeX: ['TX', 'Teste X', 'teste-x@futtymock.com'],
   };
   const ids = Object.fromEntries(Object.keys(PESSOAS).map((k, i) => [k, uuid(`c${String(i + 1).padStart(2, '0')}`, N)]));
   const U = Object.fromEntries(Object.entries(PESSOAS).map(([k, [apelido, nome, email]]) => [k, { ...usuario(ids[k], apelido || nome), nome, nome_jogador: apelido, email, birthdate: '1990-01-01' }]));
