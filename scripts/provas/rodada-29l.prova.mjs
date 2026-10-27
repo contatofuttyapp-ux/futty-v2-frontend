@@ -139,10 +139,10 @@ export async function rodar({ navegador, base, t }) {
       rotulo: [...document.querySelectorAll('[data-um] [data-seu-time] span')].map((s) => s.innerText.trim()).find((s) => /^seu time$/i.test(s)) || null,
       atalhos: [...document.querySelectorAll('[data-um] [data-atalho]')].map((a) => a.getAttribute('data-atalho')),
       lista: document.querySelectorAll('[data-um] [data-seus-times]').length,
-      pendencia: document.querySelector('[data-um] [data-pendencia="presenca"]')?.innerText.trim(),
+      pendencia: document.querySelector('[data-um] [data-pendencia="resultado"]')?.innerText.trim(),
     }));
     t('com UM time o card é o de sempre: "Seu time", pendência e os 4 atalhos já à vista (nada de lista)',
-      um.card === 1 && um.lista === 0 && /^seu time$/i.test(um.rotulo) && um.atalhos.join(' · ') === 'Painel · Novo jogo · Sortear · Convidar' && /^Sexta, 9 de out\.: presença ainda não aberta$/.test(um.pendencia), JSON.stringify(um));
+      um.card === 1 && um.lista === 0 && /^seu time$/i.test(um.rotulo) && um.atalhos.join(' · ') === 'Painel · Novo jogo · Sortear · Convidar' && /^Resultado de qui\., 1 de out\. por lançar$/.test(um.pendencia), JSON.stringify(um));
 
     const dois = page.locator('[data-dois]');
     const estadoFechado = await page.evaluate(() => {
@@ -161,8 +161,8 @@ export async function rodar({ navegador, base, t }) {
     });
     t('com DOIS times é UM card só, "Seus times", uma linha por time (escudo · nome · pendência)',
       estadoFechado.cards === 1 && estadoFechado.cardsDeUm === 0 && /^seus times$/i.test(estadoFechado.rotulo) && estadoFechado.linhas.join(',') === 'missa,varzea-fc', JSON.stringify(estadoFechado));
-    t('na linha: a pendência de quem tem ("Sexta, 9 de out.: presença ainda não aberta") e nada para quem não tem',
-      estadoFechado.resumos[0] === 'Sexta, 9 de out.: presença ainda não aberta' && estadoFechado.resumos[1] === null, JSON.stringify(estadoFechado.resumos));
+    t('na linha: a pendência de quem tem ("Resultado de qui., 1 de out. por lançar") e nada para quem não tem',
+      estadoFechado.resumos[0] === 'Resultado de qui., 1 de out. por lançar' && estadoFechado.resumos[1] === null, JSON.stringify(estadoFechado.resumos));
     t('fechado, nenhum atalho aparece e o card cabe em menos de 190 px (dois cards de um time passavam de 330)', estadoFechado.atalhos === 0 && estadoFechado.altura < 190, `${estadoFechado.altura}px; um time só: ${estadoFechado.alturaDeUm}px`);
 
     const linha1 = dois.locator('[data-time-linha="missa"] > button');
@@ -175,15 +175,14 @@ export async function rodar({ navegador, base, t }) {
     await painel1.waitFor({ timeout: 5000 });
     const aberto = await painel1.evaluate((el) => ({
       atalhos: [...el.querySelectorAll('[data-atalho]')].map((a) => [a.getAttribute('data-atalho'), a.getAttribute('href')]),
-      pendencia: el.querySelector('[data-pendencia="presenca"]')?.getAttribute('href'),
+      pendencia: el.querySelector('[data-pendencia="resultado"]')?.getAttribute('href'),
       abrir: el.querySelector('[data-abrir-o-time]')?.getAttribute('href'),
     }));
     t('tocar na linha abre os quatro atalhos, na ordem de sempre, com os mesmos destinos',
       aberto.atalhos.map((a) => a[0]).join(' · ') === 'Painel · Novo jogo · Sortear · Convidar'
       && aberto.atalhos[0][1] === '/time/missa?aba=ajustes' && aberto.atalhos[1][1] === '/time/missa/jogo/novo'
       && aberto.atalhos[2][1] === '/time/missa/jogo/g2' && aberto.atalhos[3][1] === '/time/missa?aba=elenco&convidar=1', JSON.stringify(aberto));
-    // 29R (achado 147): a linha de presença deixou de levar só à aba Jogos; leva ao jogo (g2) e já abre o "Abrir presença" dele.
-    t('aberta, a linha mostra a pendência como link para o jogo (?abrir-presenca=g2) e um "Abrir o time" (o time continua a um toque)', aberto.pendencia === '/time/missa?aba=jogos&abrir-presenca=g2' && aberto.abrir === '/time/missa', JSON.stringify(aberto));
+    t('aberta, a linha mostra a pendência como link (o resultado por lançar, na aba Jogos) e um "Abrir o time" (o time continua a um toque)', aberto.pendencia === '/time/missa?aba=jogos' && aberto.abrir === '/time/missa', JSON.stringify(aberto));
     t('aria-expanded vira true na linha aberta', (await linha1.getAttribute('aria-expanded')) === 'true');
 
     await linha2.click();
@@ -246,16 +245,16 @@ export async function rodar({ navegador, base, t }) {
     const confirmados = achar(/confirmados/, 'agendado');
     const confirmados2 = achar(/confirmados/, 'sorteado');
     const semResposta = achar(/^Sem resposta$/);
-    const mudar = achar(/^Mudar resposta$/);
-    const ate = achar(/^até/);
+    const mudar = achar(/^Trocar resposta$/);
+    const ate = achar(/^Sorteio às/);
     const doNome = (x) => (x ? `${x.texto}: ${x.ratio}:1 (${x.cor})` : 'não achei');
     t('"12 confirmados" passa de 4,5:1', !!confirmados && confirmados.ratio >= 4.5, doNome(confirmados));
     t('"17 confirmados" (jogo sorteado) passa de 4,5:1', !!confirmados2 && confirmados2.ratio >= 4.5, doNome(confirmados2));
     t('"Sem resposta" passa de 4,5:1', !!semResposta && semResposta.ratio >= 4.5, doNome(semResposta));
-    t('"Mudar resposta" passa de 4,5:1', !!mudar && mudar.ratio >= 4.5, doNome(mudar));
-    t('"até qui., …" do cartão de presença passa de 4,5:1', !!ate && ate.ratio >= 4.5, doNome(ate));
+    t('"Trocar resposta" (o Vou travado) passa de 4,5:1', !!mudar && mudar.ratio >= 4.5, doNome(mudar));
+    t('"Sorteio às …" do cartão do jogo passa de 4,5:1', !!ate && ate.ratio >= 4.5, doNome(ate));
     const fracos = textos.filter((x) => x.ratio < 4.5);
-    t('nenhum texto desses três cartões (jogo agendado, jogo sorteado, presença) fica abaixo de 4,5:1', fracos.length === 0, fracos.map((x) => `${x.texto} ${x.ratio}:1 ${x.bloco}`).join(' | '));
+    t('nenhum texto desses três cartões (jogo agendado, jogo sorteado, jogo com a resposta travada) fica abaixo de 4,5:1', fracos.length === 0, fracos.map((x) => `${x.texto} ${x.ratio}:1 ${x.bloco}`).join(' | '));
     t('o contraste roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }

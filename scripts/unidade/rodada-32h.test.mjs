@@ -90,10 +90,11 @@ test('A/B · a palavra "prazo" não aparece em tela nenhuma; "Abrir presença" e
   assert.deepEqual(achados, []);
 });
 
-test('B · Novo jogo: o sorteio nasce "1 hora antes do jogo" (o admin muda) e quem é chamado nasce "Todo o elenco"', () => {
+test('B · Novo jogo: "Sorteio às 20:00 · todo o elenco · mudar" numa linha só (o "Criar jogo" fica na primeira tela); "mudar" abre os dois', () => {
   const novo = semComentarios(ler('src/pages/NovoJogo.jsx'));
-  assert.match(novo, /· 1 hora antes do jogo/);
-  assert.match(novo, /data-mudar-sorteio/);
+  assert.match(novo, /· todo o elenco`/);
+  assert.match(novo, /'Sorteio 1 hora antes do jogo'/, 'antes de escolher o dia e a hora');
+  assert.match(novo, /data-mudar-chamada onClick=\{\(\) => setOpcoesDaChamada\(true\)\}/);
   assert.match(novo, /\.\.\.\(sorteioIso \? \{ sorteio_em: sorteioIso \} : \{\}\)/, 'sem mexer, vai sem a hora (o motor põe 1 h antes)');
   assert.match(novo, />Todo o elenco</);
   assert.match(novo, /\.\.\.\(escolhidos && elenco \? \{ chamados: \[\.\.\.escolhidos\] \} : \{\}\)/, 'sem escolher, o elenco inteiro (também quem entrar depois)');

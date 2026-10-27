@@ -325,10 +325,11 @@ export async function rodar({ navegador, base, t }) {
   }
   {
     const { ctx, page } = await abrir(navegador, base, '/home');
-    await page.locator('[data-aviso="jogo"]').waitFor({ timeout: 25000 });
+    // Desde a 32H o jogo não é aviso no topo: ele aparece no próprio cartão (com o selo do time), e o nome também está em "Seus times".
+    await page.locator('.gcard .gcard__team').first().waitFor({ timeout: 25000 });
     await assentar(page);
-    const nomes = await page.evaluate(() => [...document.querySelectorAll('[data-nome-do-time]')].map((el) => ({ texto: el.innerText.trim(), cortado: el.scrollWidth > el.clientWidth + 1, reticencias: getComputedStyle(el).textOverflow === 'ellipsis' })));
-    t('Início 360 px: o nome do time de 48 letras (no aviso do jogo e em "Seus times") quebra, nunca vira "…"', nomes.length >= 2 && nomes.every((n) => !n.cortado && !n.reticencias), JSON.stringify(nomes));
+    const nomes = await page.evaluate(() => [...document.querySelectorAll('[data-nome-do-time], .gcard .gcard__team')].map((el) => ({ texto: el.innerText.trim(), cortado: el.scrollWidth > el.clientWidth + 1, reticencias: getComputedStyle(el).textOverflow === 'ellipsis' })));
+    t('Início 360 px: o nome do time de 48 letras (no cartão do jogo e em "Seus times") quebra, nunca vira "…"', nomes.length >= 2 && nomes.some((n) => n.texto.length >= 40) && nomes.every((n) => !n.cortado && !n.reticencias), JSON.stringify(nomes));
     const achados = await page.evaluate(medir, 360);
     t('Início 360 px: sem rolagem para o lado e sem nome, campo ou botão cortado', defeitos(achados, SEM_ROLAGEM_NEM_CORTE).length === 0, defeitos(achados, SEM_ROLAGEM_NEM_CORTE).join(' | '));
     await imagem(page, 'inicio-360');

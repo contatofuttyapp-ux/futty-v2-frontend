@@ -7,7 +7,8 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 
-const TROCAR = { border: 'none', background: 'transparent', color: 'var(--neon)', fontWeight: 700, fontSize: 12, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', padding: '4px 0', flexShrink: 0 };
+// Pequeno no olho (o dono pediu "botão pequeno"), mas com 44 px de altura de toque.
+const TROCAR = { border: 'none', background: 'transparent', color: 'var(--neon)', fontWeight: 700, fontSize: 12, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', padding: '4px 0', minHeight: 44, flexShrink: 0 };
 
 export default function RespostaDoJogo({ resposta = null, aberta = true, espera = null, ocupado = false, onResponder, onSairEspera = null, pulsar = true }) {
   const [trocando, setTrocando] = useState(false);

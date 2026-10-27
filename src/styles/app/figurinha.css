@@ -612,6 +612,8 @@
    labels, badges e números, não para o texto que se carrega. */
 .pbtn {
   flex: 1;
+  /* 44 px de toque: o cartão do jogo é o único lugar onde se responde Vou / Não vou. */
+  min-height: 44px;
   padding: 9px;
   font-weight: 700;
   font-size: 14px;

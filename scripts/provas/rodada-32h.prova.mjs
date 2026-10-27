@@ -171,6 +171,7 @@ export async function rodar({ navegador, base, t }) {
     await page.locator('#hora').fill(hora);
     await page.locator('#local').fill(local);
     if (escolher) {
+      await page.locator('[data-mudar-chamada]').click();
       await page.locator('[data-escolher-quem]').click();
       await page.locator('[data-chamar-membro]').first().waitFor({ timeout: 15000 });
       for (const linha of await page.locator('[data-chamar-membro]').all()) {
@@ -190,9 +191,13 @@ export async function rodar({ navegador, base, t }) {
     // ════ A · Criar o jogo já chama todo mundo ═══════════════════════════════════════════════════════════════════════════════════
     const { page: adm } = await nova('adm');
     const criarJ1 = await criarPelaTela(adm, { data: '2026-10-29', hora: '21:00', local: 'Arena da Quinta' });
-    t('Novo jogo · o sorteio nasce 1 hora antes: "Sorteio às 20:00 · 1 hora antes do jogo"', (await texto(adm, '[data-sorteio-padrao]')) === 'Sorteio às 20:00 · 1 hora antes do jogo', await texto(adm, '[data-sorteio-padrao]'));
-    t('Novo jogo · quem é chamado nasce "Todo o elenco"; nada de "prazo" na tela; nada rola para o lado', (await texto(adm, '[data-elenco-inteiro]')) === 'Todo o elenco' && await semPrazo(adm) && await semRolagemLateral(adm));
+    t('Novo jogo · uma linha só: "Sorteio às 20:00 · todo o elenco" e "mudar"', (await texto(adm, '[data-sorteio-padrao]')) === 'Sorteio às 20:00 · todo o elenco' && (await adm.locator('[data-mudar-chamada]').count()) === 1, await texto(adm, '[data-sorteio-padrao]'));
+    const criar = await adm.getByRole('button', { name: 'Criar jogo', exact: true }).boundingBox();
+    t(`Novo jogo · "Criar jogo" na primeira tela de 390×844 (termina em ${Math.round(criar.y + criar.height)} px); nada de "prazo"; nada rola para o lado`, criar.y + criar.height <= 844 && await semPrazo(adm) && await semRolagemLateral(adm));
     await foto(adm, '01-novo-jogo-390');
+    await adm.locator('[data-mudar-chamada]').click();
+    t('Novo jogo · "mudar" abre os dois: o dia e a hora do sorteio (20:00, acompanhando o jogo) e "Quem é chamado: Todo o elenco"', (await adm.locator('[data-sorteio-hora]').inputValue()) === '20:00' && (await texto(adm, '[data-elenco-inteiro]')) === 'Todo o elenco');
+    await foto(adm, '01c-novo-jogo-aberto-390');
     {
       const { page: p360 } = await nova('adm', { aparelho: 360 });
       await criarPelaTela(p360, { data: '2026-10-29', hora: '21:00', local: 'Arena da Quinta' });

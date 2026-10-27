@@ -1,7 +1,7 @@
 // Prova no navegador da Rodada 30I ("Quem ganhou?"): o que só um Chromium de verdade confirma, com as MESMAS fontes e o MESMO CSS do app.
 //   · item 2: o empate vira post na Resenha — o bloco "Empate" com a frase "Ouro 2 × 2 Roxo", no lugar do time campeão, que não aparece;
 //   · item 5: a tela do jogo de verdade — a seção Resultado é o editor completo, e o resultado lançado aparece no card de cima;
-//   · item 7: o card "Quem ganhou?" no Início inteiro — acima de "colegas para avaliar", abaixo do jogo sem resposta; um toque abre a pergunta; tocar no
+//   · item 7: o card "Quem ganhou?" no Início inteiro — acima de "colegas para avaliar" (o jogo sem resposta não entra na fila desde a 32H); um toque abre a pergunta; tocar no
 //     time (ou em Empate) grava e o card some; 3 times: "Quem foi o campeão?" sem Empate; quem não administra não vê;
 //   · item 6: a trava — com o jogo há 4 minutos o resultado ainda está fechado (e a tela diz a hora em que abre); há 6 minutos, abre;
 //   · itens 1, 3, 4 e 5: o editor ÚNICO do resultado — tocar no time é o campeão; os gols e o placar decidem sozinhos (o toque deixa de valer);
@@ -198,14 +198,14 @@ export async function rodar({ navegador, base, t }) {
 
   // ─── item 7: o card "Quem ganhou?" no Início ─────────────────────────────────────────────────────────────────────────────
   for (const largura of [390, 360]) {
-    // a fila: jogo sem resposta > Quem ganhou? > colegas para avaliar
+    // a fila: Quem ganhou? > colegas para avaliar — o jogo sem resposta pergunta no próprio cartão, nunca no topo (32H: um cartão por jogo)
     {
       const motor = motorDoInicio({ quemGanhou: cardDoMotor(), votacao: true, jogoSemResposta: true });
       const { page, ctx } = await abrirCena(navegador, base, 'inicio', { largura, altura: 844, motor, caminho: '/home' });
       await page.locator('[data-aviso]').first().waitFor({ timeout: 25000 });
       await page.waitForTimeout(500);
       const tipo = async () => ((await page.locator('[data-aviso]').count()) === 1 ? page.locator('[data-aviso]').first().getAttribute('data-aviso') : `${await page.locator('[data-aviso]').count()} avisos`);
-      t(`${largura}px · Início: o jogo sem resposta ainda passa à frente de "Quem ganhou?" (um aviso por vez)`, (await tipo()) === 'jogo', await tipo());
+      t(`${largura}px · Início: com um jogo sem resposta, o aviso do topo continua sendo o "Quem ganhou?" (o jogo não entra na fila; um aviso por vez)`, (await tipo()) === 'quem-ganhou', await tipo());
       await ctx.close();
     }
     {

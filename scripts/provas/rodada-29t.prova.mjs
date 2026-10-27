@@ -1,7 +1,6 @@
 // Prova no navegador da Rodada 29T, bloco A (o Início que mostra o jogo): o que só um Chromium de verdade confirma, com as MESMAS fontes e o MESMO CSS do app.
-//   · a fila de avisos do topo no Início INTEIRO (168): um aviso por vez, a ordem jogo → pedido → notificações, o "+N", responder chama a mesma API dos
-//     cards (e o RSVP, quando a presença está aberta), respondeu → entra o próximo, e o jogo que pede resposta cabe na primeira tela de 390×844,
-//     também no estado pesado (pedido pendente + notificações + 4 times);
+//   · a fila de avisos do topo no Início INTEIRO (168): um aviso por vez, pedido → notificações, o "+N"; desde a 32H o jogo NÃO entra na fila:
+//     ele pergunta no próprio cartão (um cartão por jogo), o Vou / Não vou chama a porta única da presença e o cartão trava;
 //   · "Seus times": até 2 linhas, "Ver todos (N)" abre o resto no lugar e "Ver menos" fecha (168);
 //   · o rabicho com a cidade do time, medido para quem está noutro relógio (165);
 //   · o nome do Início que nunca corta, em qualquer largura (164);
@@ -59,11 +58,6 @@ function payloadInicio({ jogos = [], pedidos = [], times = TIMES, admin = 0, rsv
   };
 }
 
-const rsvpAberto = (jogoDoRsvp) => ({
-  rsvp_aberto: true, rsvp_fechado: false, rsvp_prazo: new Date(Date.now() + DIA).toISOString(), fuso: SP, max_jogadores: null, lugares_disponiveis: null, cheio: false,
-  confirmados: [], recusados: [], pendentes: [{ id: 'U1' }], espera: [], minha_posicao_espera: null, eu_jogo: true, gameId: jogoDoRsvp,
-});
-
 // O motor de mentira: anota cada pedido (método, caminho, corpo) e responde o que o teste pediu.
 function criarRoteador(base, { inicio, chamadas, explorar = null }) {
   const origem = new URL(base).host;
@@ -73,6 +67,11 @@ function criarRoteador(base, { inicio, chamadas, explorar = null }) {
     if (u.pathname.startsWith('/api/')) {
       const corpo = req.postData();
       if (req.method() !== 'GET') chamadas.push({ metodo: req.method(), caminho: u.pathname, corpo: corpo ? JSON.parse(corpo) : null });
+      const respondeu = req.method() === 'POST' ? u.pathname.match(/^\/api\/jogos\/([^/]+)\/rsvp\/responder$/) : null;
+      if (respondeu) {
+        const g = (inicio.convites?.games || []).find((x) => x.id === respondeu[1]);
+        if (g) g.user_status = JSON.parse(corpo).status === 'confirmado' ? 'going' : 'not_going';
+      }
       let resposta = {};
       if (u.pathname === '/api/inicio') resposta = inicio;
       else if (u.pathname === '/api/teams/explorar') resposta = { teams: explorar || [] };
@@ -124,10 +123,12 @@ async function esperarChamada(chamadas, procura, ms = 4000) {
   }
   return false;
 }
+// O cartão do jogo no Início (um por jogo): o .gcard com o link para o jogo.
+const cartaoDoJogo = (page, id) => page.locator('.gcard', { has: page.locator(`a.gcard__link[href$="/jogo/${id}"]`) });
 const tipoDoAviso = async (page) => ((await avisos(page).count()) === 1 ? avisos(page).first().getAttribute('data-aviso') : `${await avisos(page).count()} avisos`);
 
 export async function rodar({ navegador, base, t }) {
-  // ── 168 · a fila no Início inteiro: jogo → outro jogo → pedido → notificações ───────────────────────────────────────────────────────────
+  // ── 32H · o Início: UM cartão por jogo (o "Você vai?" saiu da fila do topo); a fila segue pedido → notificações ─────────────────────────
   {
     const inicio = payloadInicio({
       jogos: [jogo('g1', TIMES[0], 2), jogo('g2', TIMES[1], 3), jogo('g3', TIMES[0], 9, { user_status: 'going' })],
@@ -136,33 +137,30 @@ export async function rodar({ navegador, base, t }) {
     });
     const { ctx, page, erros, chamadas } = await abrir(navegador, base, { inicio });
     await page.locator('[data-aviso]').first().waitFor({ timeout: 25000 });
+    await cartaoDoJogo(page, 'g1').waitFor({ timeout: 25000 });
     await fontesProntas(page);
     await page.waitForTimeout(500);
 
-    t('UM aviso por vez: com jogo sem resposta, pedido pendente e notificações disponíveis, só o do jogo está na tela', (await avisos(page).count()) === 1 && (await tipoDoAviso(page)) === 'jogo', await tipoDoAviso(page));
+    t('a fila do topo não tem aviso de jogo: com jogo sem resposta, pedido pendente e notificações, o do topo é o pedido', (await avisos(page).count()) === 1 && (await tipoDoAviso(page)) === 'pedido', await tipoDoAviso(page));
     const corpo = await texto(page);
-    t('o aviso do jogo traz a pergunta "Você vai?", o time e os botões Vou / Não vou', /Você vai\?/.test(corpo) && (await page.locator('[data-aviso="jogo"]').innerText()).includes('Missa de Quinta') && (await page.locator('[data-aviso-vou]').count()) === 1 && (await page.locator('[data-aviso-nao-vou]').count()) === 1);
-    t('é o jogo mais próximo (g1, o do Missa de Quinta) — o g3 já respondido e o g2 mais longe ficam de fora', (await page.locator('[data-aviso-jogo]').getAttribute('data-aviso-jogo')) === 'g1');
-    t('"+1" discreto: o g2 também espera resposta', (await page.locator('[data-aviso="jogo"] [data-aviso-mais]').innerText()).trim() === '+1');
-    t('o pedido pendente e o "Ativar notificações" esperam a vez (não estão na tela)', !/Pedido pendente na/.test(corpo) && !/Ativar notificações/.test(corpo));
-    const caixa = await page.locator('[data-aviso="jogo"]').boundingBox();
-    t('o aviso cabe na largura de 390 px e fica na primeira tela', caixa.x >= 0 && caixa.x + caixa.width <= 390 && caixa.y + caixa.height <= ALTURA, JSON.stringify(caixa));
-    const alvo = await page.locator('[data-aviso-vou]').boundingBox();
-    t('o botão Vou tem 44 px de toque', alvo.height >= 44 && alvo.width >= 44, JSON.stringify(alvo));
+    t('nenhum "Você vai?" no topo: o jogo pergunta no PRÓPRIO cartão (Vou / Não vou), um cartão por jogo', !/Você vai\?/.test(corpo) && (await cartaoDoJogo(page, 'g1').locator('[data-vou]').count()) === 1 && (await cartaoDoJogo(page, 'g1').locator('[data-nao-vou]').count()) === 1 && (await cartaoDoJogo(page, 'g1').count()) === 1);
+    t('o g3, já respondido, aparece travado: "Você está confirmado" e "Trocar resposta"', (await cartaoDoJogo(page, 'g3').locator('[data-resposta="confirmado"]').count()) === 1 && (await cartaoDoJogo(page, 'g3').locator('[data-trocar-resposta]').count()) === 1);
+    t('o "Ativar notificações" espera a vez (não está na tela)', !/Ativar notificações/.test(corpo));
+    const alvo = await cartaoDoJogo(page, 'g1').locator('[data-vou]').boundingBox();
+    t('o botão Vou do cartão tem 44 px de toque', alvo.height >= 44 && alvo.width >= 44, JSON.stringify(alvo));
 
-    // Vou no g1 → a MESMA chamada do card (sem RSVP aberto: /api/games/:id/confirmar), o aviso passa para o g2 e o "+1" some.
-    await page.locator('[data-aviso-vou]').click();
-    await page.locator('[data-aviso-jogo="g2"]').waitFor({ timeout: 8000 });
-    t('Vou no aviso chama /api/games/g1/confirmar com confirmado:true — a mesma chamada do botão do card', await esperarChamada(chamadas, (c) => c.metodo === 'POST' && c.caminho === '/api/games/g1/confirmar' && c.corpo?.confirmado === true), JSON.stringify(chamadas));
-    t('respondeu → entra o próximo da fila: o aviso agora é o g2, e sem "+N"', (await tipoDoAviso(page)) === 'jogo' && (await page.locator('[data-aviso="jogo"] [data-aviso-mais]').count()) === 0);
-    t('a confirmação aparece (toast "Presença confirmada.")', await page.getByText('Presença confirmada.').waitFor({ timeout: 5000 }).then(() => true, () => false));
-    t('o card do g1 na lista já está com o Vou aceso (mesmo estado do aviso)', (await page.locator('.gcard:has-text("Campo g1") .pbtn--go.active').count()) === 1);
+    // Vou no g1 → a porta única da presença (/api/jogos/:id/rsvp/responder) e o cartão trava.
+    await cartaoDoJogo(page, 'g1').locator('[data-vou]').click();
+    await cartaoDoJogo(page, 'g1').locator('[data-resposta="confirmado"]').waitFor({ timeout: 8000 });
+    t('Vou no cartão chama /api/jogos/g1/rsvp/responder com status "confirmado"', await esperarChamada(chamadas, (c) => c.metodo === 'POST' && c.caminho === '/api/jogos/g1/rsvp/responder' && c.corpo?.status === 'confirmado'), JSON.stringify(chamadas));
+    t('o cartão trava: "Você está confirmado", os botões somem e fica só "Trocar resposta"', (await cartaoDoJogo(page, 'g1').locator('[data-vou], [data-nao-vou]').count()) === 0 && (await cartaoDoJogo(page, 'g1').locator('[data-trocar-resposta]').count()) === 1);
 
-    // Não vou no g2 → o próximo da fila é o pedido pendente (o mais recente), com "+1" e "Cancelar".
-    await page.locator('[data-aviso-nao-vou]').click();
-    await page.locator('[data-aviso="pedido"]').waitFor({ timeout: 8000 });
-    t('Não vou chama /api/games/g2/confirmar com confirmado:false', await esperarChamada(chamadas, (c) => c.metodo === 'POST' && c.caminho === '/api/games/g2/confirmar' && c.corpo?.confirmado === false));
-    t('sem jogo esperando, entra o pedido pendente: "Pedido pendente na Pelada do Bandeirante" + "+1"', /Pedido pendente na Pelada do Bandeirante/.test(await texto(page)) && (await page.locator('[data-aviso="pedido"] [data-aviso-mais]').innerText()).trim() === '+1');
+    // Não vou no g2 → trava em "Você não vai nesse jogo".
+    await cartaoDoJogo(page, 'g2').locator('[data-nao-vou]').click();
+    await cartaoDoJogo(page, 'g2').locator('[data-resposta="recusado"]').waitFor({ timeout: 8000 });
+    t('Não vou chama /api/jogos/g2/rsvp/responder com status "recusado" e trava em "Você não vai nesse jogo"', (await esperarChamada(chamadas, (c) => c.metodo === 'POST' && c.caminho === '/api/jogos/g2/rsvp/responder' && c.corpo?.status === 'recusado')) && (await cartaoDoJogo(page, 'g2').locator('[data-resposta-texto]').innerText()).trim() === 'Você não vai nesse jogo');
+
+    t('o pedido pendente no topo: "Pedido pendente na Pelada do Bandeirante" + "+1"', /Pedido pendente na Pelada do Bandeirante/.test(await texto(page)) && (await page.locator('[data-aviso="pedido"] [data-aviso-mais]').innerText()).trim() === '+1');
     t('o texto do pedido diz "Esperando a aprovação do admin" (nunca "À espera")', /Esperando a aprovação do admin/.test(await texto(page)) && !/À espera/.test(await texto(page)));
 
     await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
@@ -178,31 +176,7 @@ export async function rodar({ navegador, base, t }) {
     await ctx.close();
   }
 
-  // ── 168 · com o RSVP aberto, o Vou do aviso é o RSVP (a mesma chamada do cartão "Confirme presença") ──────────────────────────────────────
-  {
-    const inicio = payloadInicio({ jogos: [jogo('g1', TIMES[0], 2), jogo('g2', TIMES[1], 3)], rsvp: rsvpAberto('g1') });
-    const { ctx, page, chamadas } = await abrir(navegador, base, { inicio });
-    await page.locator('[data-aviso="jogo"]').waitFor({ timeout: 25000 });
-    await page.getByText('Confirme presença').waitFor({ timeout: 10000 });
-    await page.locator('[data-aviso-vou]').click();
-    await page.locator('[data-aviso-jogo="g2"]').waitFor({ timeout: 8000 });
-    t('presença aberta: Vou no aviso chama /api/jogos/g1/rsvp/responder com status "confirmado" (e NÃO /api/games/…/confirmar)', (await esperarChamada(chamadas, (c) => c.metodo === 'POST' && c.caminho === '/api/jogos/g1/rsvp/responder' && c.corpo?.status === 'confirmado')) && !chamadas.some((c) => c.caminho === '/api/games/g1/confirmar'), JSON.stringify(chamadas));
-    t('e o cartão "Confirme presença" acende o Vou junto (um destino só)', (await page.getByText('Confirme presença').locator('..').getByRole('button', { name: 'Vou', exact: true }).getAttribute('aria-pressed')) === 'true');
-    await ctx.close();
-  }
-
-  // ── 168 · o chip de time escolhido não esconde o aviso (ele não segue o filtro) ────────────────────────────────────────────────────────
-  {
-    const inicio = payloadInicio({ jogos: [jogo('g1', TIMES[0], 2), jogo('g2', TIMES[1], 3, { user_status: 'going' })], admin: 2 });
-    const { ctx, page } = await abrir(navegador, base, { inicio });
-    await page.locator('[data-aviso="jogo"]').waitFor({ timeout: 25000 });
-    await page.locator('.chips-row .chip', { hasText: 'Várzea FC' }).click();
-    await page.waitForTimeout(300);
-    t('com o chip do Várzea FC escolhido, o aviso do jogo do Missa de Quinta continua no topo', (await page.locator('[data-aviso-jogo]').getAttribute('data-aviso-jogo')) === 'g1');
-    await ctx.close();
-  }
-
-  // ── 168 · a lei da primeira tela: o jogo que pede resposta aparece em 390×844, no estado pesado também ──────────────────────────────────
+  // ── o estado pesado (pedido pendente + notificações + 4 times): "Seus times" com 2 linhas; e onde fica o Vou do próximo jogo ─────────────
   {
     const pesado = payloadInicio({
       jogos: [jogo('g1', TIMES[0], 2), jogo('g2', TIMES[1], 3)],
@@ -210,40 +184,36 @@ export async function rodar({ navegador, base, t }) {
       admin: 4,
     });
     const { ctx, page } = await abrir(navegador, base, { inicio: pesado });
-    await page.locator('[data-aviso="jogo"]').waitFor({ timeout: 25000 });
+    await cartaoDoJogo(page, 'g1').locator('[data-vou]').waitFor({ timeout: 25000 });
     await fontesProntas(page);
     await page.waitForTimeout(600);
     const m = await page.evaluate(() => {
-      const aviso = document.querySelector('[data-aviso="jogo"]').getBoundingClientRect();
+      const vou = document.querySelector('.gcard [data-vou]').getBoundingClientRect();
       const rotulo = [...document.querySelectorAll('.games-label')].find((el) => /próximos jogos/i.test(el.textContent));
       const card = document.querySelector('[data-seus-times]');
       return {
-        avisoBase: Math.round(aviso.bottom),
+        vouBase: Math.round(vou.bottom),
         rotuloBase: rotulo ? Math.round(rotulo.getBoundingClientRect().bottom) : null,
         linhas: card ? card.querySelectorAll('[data-time-linha]').length : 0,
         verTodos: card ? !!card.querySelector('[data-ver-todos]') : false,
       };
     });
-    t(`estado pesado (pedido pendente + notificações + 4 times): o aviso do jogo termina em ${m.avisoBase} px, dentro dos ${ALTURA} px da primeira tela`, m.avisoBase <= ALTURA, JSON.stringify(m));
-    t('e o "Seus times" mostra só 2 linhas, com o "Ver todos (4)"', m.linhas === 2 && m.verTodos, JSON.stringify(m));
+    t(`estado pesado: o "Seus times" mostra só 2 linhas, com o "Ver todos (4)" (medida: o Vou do próximo jogo termina em ${m.vouBase} px)`, m.linhas === 2 && m.verTodos, JSON.stringify(m));
     t(`(medida) o rótulo "Próximos jogos" termina em ${m.rotuloBase} px — antes, no mesmo estado, era 973`, m.rotuloBase !== null && m.rotuloBase < 973, JSON.stringify(m));
     await ctx.close();
   }
 
   // ── 165 · o rabicho leva a cidade do time ("horário de Brasília"), para quem está noutro relógio ────────────────────────────────────────
   {
-    const inicio = payloadInicio({ jogos: [jogo('g1', TIMES[0], 2), jogo('g2', TIMES[1], 3)], rsvp: rsvpAberto('g1') });
+    const inicio = payloadInicio({ jogos: [jogo('g1', TIMES[0], 2), jogo('g2', TIMES[1], 3)] });
     const { ctx, page } = await abrir(navegador, base, { inicio, tz: 'Europe/Lisbon' });
-    await page.locator('[data-aviso="jogo"]').waitFor({ timeout: 25000 });
-    await page.getByText('Confirme presença').waitFor({ timeout: 10000 });
-    t('aviso do jogo (time de Brasília) visto de Lisboa: "· horário de Brasília"', /horário de Brasília/.test(await page.locator('[data-aviso="jogo"] [data-aviso-quando]').innerText()));
-    t('o prazo do cartão "Confirme presença" também', /horário de Brasília/.test(await page.locator('text=/^até /').first().innerText()));
-    t('o card do jogo na lista também — e nenhum "horário de São Paulo" no time de Brasília', /horário de Brasília/.test(await page.locator('.gcard:has-text("Campo g1") .gcard__meta').innerText()) && !/horário de São Paulo/.test((await page.locator('.gcard:has-text("Campo g1")').innerText())));
-    t('o time de São Paulo (g2) continua "horário de São Paulo"', /horário de São Paulo/.test(await page.locator('.gcard:has-text("Campo g2") .gcard__meta').innerText()));
+    await cartaoDoJogo(page, 'g1').waitFor({ timeout: 25000 });
+    t('o card do jogo (time de Brasília) visto de Lisboa: "horário de Brasília" — e nenhum "horário de São Paulo" nele', /horário de Brasília/.test(await cartaoDoJogo(page, 'g1').locator('.gcard__meta').innerText()) && !/horário de São Paulo/.test(await cartaoDoJogo(page, 'g1').innerText()));
+    t('o time de São Paulo (g2) continua "horário de São Paulo"', /horário de São Paulo/.test(await cartaoDoJogo(page, 'g2').locator('.gcard__meta').innerText()));
     await ctx.close();
     const { ctx: ctx2, page: page2 } = await abrir(navegador, base, { inicio });
-    await page2.locator('[data-aviso="jogo"]').waitFor({ timeout: 25000 });
-    t('quem está no relógio do time não vê rabicho nenhum', !/horário de/.test(await page2.locator('[data-aviso="jogo"]').innerText()));
+    await cartaoDoJogo(page2, 'g1').waitFor({ timeout: 25000 });
+    t('quem está no relógio do time não vê rabicho nenhum', !/horário de/.test(await cartaoDoJogo(page2, 'g1').innerText()));
     await ctx2.close();
   }
 
@@ -298,7 +268,7 @@ export async function rodar({ navegador, base, t }) {
   // ── as peças soltas: "Ver todos", o nome do cromo e o escudo sem logo ───────────────────────────────────────────────────────────────────
   {
     const { ctx, page, erros } = await abrir(navegador, base, { caminho: '/pecas' });
-    await page.locator('[data-aviso-solto]').waitFor({ timeout: 20000 });
+    await page.locator('[data-cartao="1"]').waitFor({ timeout: 20000 });
     await fontesProntas(page);
     await page.waitForTimeout(500);
 
@@ -333,11 +303,6 @@ export async function rodar({ navegador, base, t }) {
     t('logo que carrega continua sendo o logo', esc.bom.tipo === 'logo' && esc.bom.img, JSON.stringify(esc));
     t('time sem logo: as iniciais sem "do" ("Pelada do Bandeirante" → PB)', esc.semLogo.texto === 'PB', JSON.stringify(esc));
 
-    await page.locator('[data-aviso-solto] [data-aviso-vou]').click();
-    await page.locator('[data-aviso-solto] [data-aviso-nao-vou]').click();
-    t('o aviso solto chama onPresence(id, true) e onPresence(id, false)', JSON.stringify(await page.evaluate(() => window.__chamadas)) === JSON.stringify([['g1', true], ['g1', false]]));
-    const semMais = await page.locator('[data-aviso-sem-mais] [data-aviso-mais]').count();
-    t('o "+N" só existe quando há mais jogos esperando (+2 no primeiro, nada no segundo)', (await page.locator('[data-aviso-solto] [data-aviso-mais]').innerText()).trim() === '+2' && semMais === 0);
     t('as peças rodam sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }

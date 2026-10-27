@@ -2,7 +2,7 @@
 //   · a grade de uniformes da Figurinha sem o selo "pintar · 1 geração · ~45 s" (só a estrelinha de IA no tile);
 //   · a confirmação nova ao tocar no uniforme ("Gerar figurinha com este uniforme?" / "Isso usa 1 geração. Você tem N gerações." / Gerar · Agora não);
 //   · "Comprar mais gerações": o link solto saiu; o botão do cartão "Loja de figurinhas" embaixo de "Restam N gerações" é o caminho;
-//   · o Ranking: o confete do pódio sai na 1ª vez e NÃO na segunda entrada na mesma posição (só quando a posição muda).
+//   · o Ranking: desde a 32H, nenhum confete — nem na 1ª entrada no pódio, nem quando a posição muda.
 // Mesma bancada das provas da loja: o app de verdade num Chromium que se declara iOS, o motor de VERDADE por cima de banco falso
 // (scripts/provas/_motor-loja.cjs), o SDK do RevenueCat e o canvas-confetti trocados por mentiras. Nada sai da máquina.
 //
@@ -13,7 +13,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const nome = 'Rodada 31D · grade sem selo, confirmação nova, "Comprar mais gerações" e confete do pódio só na mudança (motor de verdade, nada sai da máquina)';
+export const nome = 'Rodada 31D · grade sem selo, confirmação nova, "Comprar mais gerações" e Ranking sem confete (motor de verdade, nada sai da máquina)';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 const MOTOR = path.join(RAIZ, 'scripts', 'provas', '_motor-loja.cjs');
@@ -208,32 +208,24 @@ export async function rodar({ navegador, base, t }) {
       await foto(fig, `3-cartao-com-loja-${largura}`);
       t(`${r} · a Figurinha não rola para o lado`, !(await fig.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)));
 
-      // ── O Ranking do Pedro: confete na 1ª vez, não na 2ª ──
+      // ── O Ranking do Pedro, no pódio: nenhum confete (32H) — nem na 1ª entrada, nem com outra posição "celebrada" guardada ──
       const rank = await pagina(pedro, `/time/${slug}/ranking`, (p) => p.getByText('Pedro').first().waitFor({ timeout: 40000 }));
-      await rank.waitForTimeout(1500); // o confete sai 400 ms depois da lista
-      const primeira = await rank.evaluate(() => window.__confete || 0);
-      const guardada = await rank.evaluate((s) => localStorage.getItem(`futty_podio_celebrado:${s}`), slug);
-      t(`${r} · Ranking, 1ª entrada no pódio: o confete sai (${primeira} disparo(s)) e a posição fica guardada (${guardada})`, primeira >= 1 && /^[123]$/.test(guardada || ''), `${primeira} · ${guardada}`);
-      await foto(rank, `4-ranking-1a-entrada-${largura}`);
+      await rank.waitForTimeout(1800); // o confete saía 400 ms depois da lista
+      const primeira = await rank.evaluate(() => ({
+        disparos: window.__confete || 0,
+        modulo: performance.getEntriesByType('resource').some((e) => /canvas-confetti/.test(e.name)),
+        guardada: Object.keys(localStorage).filter((k) => k.startsWith('futty_podio_celebrado')).length,
+      }));
+      t(`${r} · Ranking, 1ª entrada no pódio: nenhum confete, o módulo do confete nem é pedido e nada fica guardado`, primeira.disparos === 0 && !primeira.modulo && primeira.guardada === 0, JSON.stringify(primeira));
+      await foto(rank, `4-ranking-sem-confete-${largura}`);
       await rank.close();
-
+      // Como se a última festa tivesse sido noutra posição (a regra antiga celebrava de novo): continua sem confete.
+      await pedro.ctx.addInitScript((s) => { try { localStorage.setItem(`futty_podio_celebrado:${s}`, '3'); } catch { /* sem armazenamento */ } }, slug);
       const rank2 = await pagina(pedro, `/time/${slug}/ranking`, (p) => p.getByText('Pedro').first().waitFor({ timeout: 40000 }));
       await rank2.waitForTimeout(1800);
       const segunda = await rank2.evaluate(() => window.__confete || 0);
-      t(`${r} · Ranking, 2ª entrada na MESMA posição: nenhum confete`, segunda === 0, `${segunda} disparo(s)`);
-      await foto(rank2, `5-ranking-2a-entrada-${largura}`);
-      // A posição mudou (como se ele tivesse sido o outro do pódio da última vez): celebra de novo e guarda a nova.
-      const outra = guardada === '3' ? '2' : '3';
+      t(`${r} · Ranking com outra posição "celebrada" no aparelho: continua sem confete`, segunda === 0, `${segunda} disparo(s)`);
       await rank2.close();
-      // a posição guardada passa a ser OUTRA, posta antes de o app abrir (como se a última festa tivesse sido noutra posição)
-      await pedro.ctx.addInitScript(([s, v]) => { try { localStorage.setItem(`futty_podio_celebrado:${s}`, v); } catch { /* sem armazenamento */ } }, [slug, outra]);
-      const rank3 = await pagina(pedro, `/time/${slug}/ranking`, (p) => p.getByText('Pedro').first().waitFor({ timeout: 40000 }));
-      await rank3.waitForTimeout(1800);
-      const carregouConfete = await rank3.evaluate(() => performance.getEntriesByType('resource').some((e) => /canvas-confetti/.test(e.name)));
-      const terceira = await rank3.evaluate(() => window.__confete || 0);
-      const nova = await rank3.evaluate((s) => localStorage.getItem(`futty_podio_celebrado:${s}`), slug);
-      t(`${r} · Ranking, posição diferente da última celebrada: o confete volta e a posição nova fica guardada`, terceira >= 1 && nova === guardada, `${terceira} · ${nova} (esperava ${guardada}) · módulo do confete pedido: ${carregouConfete}`);
-      await rank3.close();
       t(`${r} · sem erro de página (Pedro)`, pedro.estado.erros.length === 0, pedro.estado.erros.join(' | '));
       await pedro.ctx.close();
 

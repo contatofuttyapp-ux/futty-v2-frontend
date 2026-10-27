@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- página-bancada das provas no navegador, não faz parte do app */
 // Bancada da prova da Rodada 29L (scripts/provas/rodada-29l.prova.mjs): os pedaços de tela da varredura em 390 px, montados com os componentes
-// DE VERDADE (FaixaRolavel, CardSeuTime, GameCard, RSVPCard, ImagemDoPost, RotuloGerar, a página do time, a faixa de cookies com a barra de
+// DE VERDADE (FaixaRolavel, CardSeuTime, GameCard, ImagemDoPost, RotuloGerar, a página do time, a faixa de cookies com a barra de
 // navegação) e com as mesmas fontes e o mesmo CSS do app. O motor é de mentira (a prova responde /api/** com page.route) — nada sai para a rede.
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -16,7 +16,6 @@ import ErrorPage from '../../src/components/ErrorPage';
 import FaixaRolavel from '../../src/components/FaixaRolavel';
 import CardSeuTime from '../../src/components/CardSeuTime';
 import ImagemDoPost from '../../src/components/ImagemDoPost';
-import RSVPCard from '../../src/components/RSVPCard';
 import RotuloGerar from '../../src/components/RotuloGerar';
 import Equipa from '../../src/pages/Equipa';
 import { GameCard } from '../../src/pages/Inicio';
@@ -64,14 +63,15 @@ const TIMES = [
 ];
 const SEM = { pedidos: 0, presenca: null, resultado: null, denuncias: 0, total: 0 };
 const seu = (i, pendencias) => ({ team_id: TIMES[i].id, slug: TIMES[i].slug, nome: TIMES[i].nome, fuso: 'America/Sao_Paulo', pendencias: { ...SEM, ...pendencias } });
-const PRESENCA = { game_id: 'g2', data: '2026-10-09T23:00:00Z' };
+// A pendência do exemplo: o resultado por lançar (a "presença ainda não aberta" não existe mais — o jogo nasce chamando).
+const RESULTADO = { game_id: 'g1', data: '2026-10-01T23:00:00Z' };
 const JOGOS = [{ id: 'g2', team_id: 'T1', status: 'scheduled', date: '2026-10-09T23:00:00Z' }];
 function Cards() {
   return (
     <div style={{ padding: 16 }}>
-      <div data-um><CardSeuTime seuTime={[seu(0, { presenca: PRESENCA, total: 1 })]} teams={TIMES} games={JOGOS} /></div>
-      <div data-dois><CardSeuTime seuTime={[seu(0, { presenca: PRESENCA, total: 1 }), seu(1, {})]} teams={TIMES} games={JOGOS} /></div>
-      <div data-tres><CardSeuTime seuTime={[seu(0, { pedidos: 2, presenca: PRESENCA, denuncias: 1, total: 4 }), seu(1, {}), seu(2, { denuncias: 1, total: 1 })]} teams={TIMES} games={JOGOS} /></div>
+      <div data-um><CardSeuTime seuTime={[seu(0, { resultado: RESULTADO, total: 1 })]} teams={TIMES} games={JOGOS} /></div>
+      <div data-dois><CardSeuTime seuTime={[seu(0, { resultado: RESULTADO, total: 1 }), seu(1, {})]} teams={TIMES} games={JOGOS} /></div>
+      <div data-tres><CardSeuTime seuTime={[seu(0, { pedidos: 2, resultado: RESULTADO, denuncias: 1, total: 4 }), seu(1, {}), seu(2, { denuncias: 1, total: 1 })]} teams={TIMES} games={JOGOS} /></div>
       <div data-proximos style={{ marginTop: 8 }}>PROXIMOS-JOGOS</div>
     </div>
   );
@@ -89,8 +89,9 @@ function Contraste() {
       <div data-jogo-sorteado>
         <GameCard game={{ id: 'b', name: 'Arena Várzea', team_name: 'Várzea FC', team_slug: 'varzea-fc', status: 'drawn', date: AMANHA, fuso, confirmed_count: 17, user_status: null, eu_jogo: true }} busy={false} isNext={false} onPresence={() => {}} onVerSorteio={() => {}} />
       </div>
+      {/* A presença mora no cartão do jogo (não há mais o cartão à parte): a resposta travada, "Trocar resposta" e a hora do sorteio. */}
       <div data-rsvp>
-        <RSVPCard gameId="c" prazo={AMANHA} fuso={fuso} respostaActual="confirmado" onResposta={() => {}} />
+        <GameCard game={{ id: 'c', name: 'Campo do Lago', team_name: 'Várzea FC', team_slug: 'varzea-fc', status: 'scheduled', date: AMANHA, fuso, confirmed_count: 9, user_status: 'going', sorteio_em: new Date(Date.parse(AMANHA) - 3600000).toISOString(), lista_aberta: true }} busy={false} isNext={false} onPresence={() => {}} onVerSorteio={() => {}} />
       </div>
     </div>
   );

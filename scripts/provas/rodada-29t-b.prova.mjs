@@ -145,47 +145,43 @@ export async function rodar({ navegador, base, t }) {
       nascimento: true,
     });
     const { ctx, page, erros, chamadas } = await abrir(navegador, base, { inicio });
-    await esperarAviso(page, 'jogo', 25000);
+    // 32H: o jogo sem resposta não entra na fila do topo — ele pergunta no próprio cartão (um cartão por jogo).
+    await esperarAviso(page, 'pedido', 25000);
     const ordem = [];
     const registrar = async () => { ordem.push(await tipoDoAviso(page)); };
     await registrar();
-    t('1º: o jogo sem resposta, sozinho no topo', ordem[0] === 'jogo', ordem[0]);
-    await imagem(page, 'fila-1-jogo');
-    await page.locator('[data-aviso-vou]').click();
-
-    await esperarAviso(page, 'pedido'); await registrar();
-    t('respondeu o jogo → entra o pedido pendente (um só aviso na tela)', ordem[1] === 'pedido', ordem[1]);
-    t('o jogo respondido chamou a mesma API dos cards: POST /api/games/g1/confirmar', await esperarChamada(chamadas, (c) => c.metodo === 'POST' && c.caminho === '/api/games/g1/confirmar'));
+    t('1º: o pedido pendente, sozinho no topo — o jogo sem resposta não é aviso (o Vou / Não vou está no cartão dele)', ordem[0] === 'pedido' && (await page.locator('.gcard [data-vou]').count()) === 1, ordem[0]);
+    t('nenhuma resposta foi mandada sem a pessoa tocar', !chamadas.some((c) => /\/confirmar$|\/rsvp\/responder$/.test(c.caminho)));
     await imagem(page, 'fila-2-pedido');
     await page.locator('[data-aviso="pedido"]').getByRole('button', { name: 'Cancelar' }).click();
 
     await esperarAviso(page, 'desfecho'); await registrar();
-    t('cancelou o pedido → entra a resposta do outro pedido ("Você entrou no time Racha da Candanga!")', ordem[2] === 'desfecho' && /Você entrou no time Racha da Candanga!/.test(await page.locator('[data-aviso="desfecho"]').innerText()), ordem[2]);
+    t('cancelou o pedido → entra a resposta do outro pedido ("Você entrou no time Racha da Candanga!")', ordem[1] === 'desfecho' && /Você entrou no time Racha da Candanga!/.test(await page.locator('[data-aviso="desfecho"]').innerText()), ordem[1]);
     await imagem(page, 'fila-3-desfecho');
     await page.locator('[data-aviso="desfecho"] [aria-label="Dispensar"]').click();
 
     await esperarAviso(page, 'votacao'); await registrar();
-    t('dispensou a resposta → entra a votação ("Você tem colegas para avaliar")', ordem[3] === 'votacao' && /colegas para avaliar/.test(await page.locator('[data-aviso="votacao"]').innerText()), ordem[3]);
+    t('dispensou a resposta → entra a votação ("Você tem colegas para avaliar")', ordem[2] === 'votacao' && /colegas para avaliar/.test(await page.locator('[data-aviso="votacao"]').innerText()), ordem[2]);
     await imagem(page, 'fila-4-votacao');
     await page.locator('[data-aviso="votacao"] [aria-label="Dispensar"]').click();
 
     await esperarAviso(page, 'denuncia'); await registrar();
-    t('dispensou a votação → entra o desfecho da denúncia (ainda é o que aconteceu, antes dos lembretes)', ordem[4] === 'denuncia', ordem[4]);
+    t('dispensou a votação → entra o desfecho da denúncia (ainda é o que aconteceu, antes dos lembretes)', ordem[3] === 'denuncia', ordem[3]);
     await page.locator('[data-aviso="denuncia"] [aria-label="Fechar"]').click();
 
     await esperarAviso(page, 'nascimento'); await registrar();
-    t('fechou a denúncia → só agora entra o lembrete da data de nascimento', ordem[5] === 'nascimento', ordem[5]);
+    t('fechou a denúncia → só agora entra o lembrete da data de nascimento', ordem[4] === 'nascimento', ordem[4]);
     t('o lembrete traz o "Agora não"', (await page.locator('[data-aviso="nascimento"] [data-agora-nao]').count()) === 1);
     await imagem(page, 'fila-6-nascimento');
     await page.locator('[data-aviso="nascimento"] [data-agora-nao]').click();
     t('"Agora não" guarda o adiamento neste aparelho (7 dias)', await page.evaluate(() => { const v = Number(localStorage.getItem('futty_agora_nao_nascimento')); return v > Date.now() - 60000 && v <= Date.now(); }));
 
     await esperarAviso(page, 'notificacoes'); await registrar();
-    t('"Agora não" → a fila anda: as notificações são o ÚLTIMO', ordem[6] === 'notificacoes', ordem[6]);
+    t('"Agora não" → a fila anda: as notificações são o ÚLTIMO', ordem[5] === 'notificacoes', ordem[5]);
     await imagem(page, 'fila-7-notificacoes');
     await page.locator('[data-aviso="notificacoes"] [aria-label="Fechar"]').click();
     await page.waitForFunction(() => document.querySelectorAll('[data-aviso]').length === 0, null, { timeout: 5000 });
-    t('a ordem inteira: jogo → pedido → resposta do pedido → votação → denúncia → nascimento (lembrete) → notificações', JSON.stringify(ordem) === JSON.stringify(['jogo', 'pedido', 'desfecho', 'votacao', 'denuncia', 'nascimento', 'notificacoes']), JSON.stringify(ordem));
+    t('a ordem inteira: pedido → resposta do pedido → votação → denúncia → nascimento (lembrete) → notificações', JSON.stringify(ordem) === JSON.stringify(['pedido', 'desfecho', 'votacao', 'denuncia', 'nascimento', 'notificacoes']), JSON.stringify(ordem));
     t('fechada a fila, nenhum aviso sobra no topo', (await avisos(page).count()) === 0);
     t('a fila roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();

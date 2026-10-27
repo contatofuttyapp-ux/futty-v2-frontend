@@ -59,6 +59,10 @@ export default function NovoJogo() {
   const [sorteioMexido, setSorteioMexido] = useState(null);
   const inicioIso = data && hora ? instanteNoCampo(data, hora, team?.fuso) : null;
   const sorteioPadraoIso = inicioIso ? new Date(new Date(inicioIso).getTime() - UMA_HORA_MS).toISOString() : null;
+  // O que os campos do sorteio mostram: o que o admin escreveu, ou o padrão (que anda com a hora do jogo).
+  const sorteioNaTela = sorteioMexido || (sorteioPadraoIso ? camposNoCampo(sorteioPadraoIso, team?.fuso) : { data, hora: '' });
+  // O sorteio e quem é chamado ficam dobrados na linha "Sorteio às 20:00 · todo o elenco · mudar" até o admin tocar em "mudar".
+  const [opcoesDaChamada, setOpcoesDaChamada] = useState(false);
   // Quem é chamado: null = o elenco inteiro (também quem entrar depois); um Set = só esses. O elenco só é lido quando o admin vai escolher.
   const [escolhidos, setEscolhidos] = useState(null);
   const [elenco, setElenco] = useState(null);
@@ -177,53 +181,62 @@ export default function NovoJogo() {
             <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>O número de times sai no sorteio, conforme os confirmados. O padrão muda no Painel do time.</span>
           </div>
 
-          {/* A hora do sorteio: a lista de presença fecha nela. Padrão: 1 hora antes do jogo. */}
-          <div className="field" data-campo-sorteio>
-            <label style={ROTULO_COM_ICONE}><Shuffle size={15} aria-hidden="true" /> Sorteio</label>
-            {sorteioMexido == null ? (
+          {/* O sorteio e quem é chamado nascem no padrão (1 hora antes do jogo, todo o elenco), dobrados numa linha só — assim o
+              "Criar jogo" continua na primeira tela. "mudar" abre os dois. */}
+          {!opcoesDaChamada ? (
+            <div className="field" data-resumo-da-chamada>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
-                <span data-sorteio-padrao>{sorteioPadraoIso ? `${textoDoSorteio(sorteioPadraoIso, inicioIso, team?.fuso)} · 1 hora antes do jogo` : '1 hora antes do jogo'}</span>
-                <button type="button" className="btn btn--ghost btn--sm" data-mudar-sorteio onClick={() => setSorteioMexido(sorteioPadraoIso ? camposNoCampo(sorteioPadraoIso, team?.fuso) : { data, hora: '' })}>mudar</button>
+                <Shuffle size={15} aria-hidden="true" style={{ flexShrink: 0 }} />
+                <span data-sorteio-padrao style={{ flex: '1 1 auto', minWidth: 0 }}>
+                  {`${sorteioPadraoIso ? textoDoSorteio(sorteioPadraoIso, inicioIso, team?.fuso) : 'Sorteio 1 hora antes do jogo'} · todo o elenco`}
+                </span>
+                <button type="button" className="btn btn--ghost btn--sm" data-mudar-chamada onClick={() => setOpcoesDaChamada(true)}>mudar</button>
               </div>
-            ) : (
-              <>
+            </div>
+          ) : (
+            <>
+              {/* A hora do sorteio: a lista de presença fecha nela. Sem mexer, acompanha a hora do jogo (1 hora antes). */}
+              <div className="field" data-campo-sorteio>
+                <label style={ROTULO_COM_ICONE}><Shuffle size={15} aria-hidden="true" /> Sorteio</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(146px, 1fr))', gap: '8px 12px' }}>
-                  <input type="date" aria-label="Dia do sorteio" data-sorteio-dia className="input input--hud" style={CAMPO_GRANDE} value={sorteioMexido.data} onChange={(e) => setSorteioMexido((s) => ({ ...s, data: e.target.value }))} />
-                  <input type="time" aria-label="Hora do sorteio" data-sorteio-hora className="input input--hud" style={CAMPO_GRANDE} value={sorteioMexido.hora} onChange={(e) => setSorteioMexido((s) => ({ ...s, hora: e.target.value }))} />
+                  <input type="date" aria-label="Dia do sorteio" data-sorteio-dia className="input input--hud" style={CAMPO_GRANDE} value={sorteioNaTela.data} onChange={(e) => setSorteioMexido({ ...sorteioNaTela, data: e.target.value })} />
+                  <input type="time" aria-label="Hora do sorteio" data-sorteio-hora className="input input--hud" style={CAMPO_GRANDE} value={sorteioNaTela.hora} onChange={(e) => setSorteioMexido({ ...sorteioNaTela, hora: e.target.value })} />
                 </div>
-                <button type="button" className="btn btn--ghost btn--sm" data-sorteio-voltar style={{ justifySelf: 'start', marginTop: 6 }} onClick={() => setSorteioMexido(null)}>voltar a 1 hora antes</button>
-              </>
-            )}
-            <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>A lista de presença fecha na hora do sorteio. Dá para sortear antes.</span>
-          </div>
+                {sorteioMexido ? (
+                  <button type="button" className="btn btn--ghost btn--sm" data-sorteio-voltar style={{ justifySelf: 'start', marginTop: 6 }} onClick={() => setSorteioMexido(null)}>voltar a 1 hora antes</button>
+                ) : null}
+                <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>A lista de presença fecha na hora do sorteio. Dá para sortear antes.</span>
+              </div>
 
-          {/* Quem é chamado: o elenco inteiro (padrão) ou só quem o admin marcar. Quem é chamado recebe o aviso na hora. */}
-          <div className="field" data-quem-chamar>
-            <label style={ROTULO_COM_ICONE}><Users size={15} aria-hidden="true" /> Quem é chamado</label>
-            {escolhidos == null ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
-                <span data-elenco-inteiro>Todo o elenco</span>
-                <button type="button" className="btn btn--ghost btn--sm" data-escolher-quem onClick={escolherQuem}>escolher quem</button>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: 4 }}>
-                {erroDoElenco ? <span className="muted">{erroDoElenco}</span> : elenco == null ? <span className="muted">Carregando o elenco…</span> : (
-                  <>
-                    <span className="muted" style={{ fontSize: 12 }} data-quantos-chamados>{contar(escolhidos.size, 'pessoa chamada', 'pessoas chamadas')} de {elenco.length}</span>
-                    {elenco.map((m) => (
-                      <label key={m.user_id} data-chamar-membro style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, minHeight: 40 }}>
-                        <input type="checkbox" checked={escolhidos.has(m.user_id)} onChange={() => alternar(m.user_id)} />
-                        <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} sm />
-                        <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{nomeExibicao(m)}</span>
-                      </label>
-                    ))}
-                  </>
+              {/* Quem é chamado: o elenco inteiro (padrão) ou só quem o admin marcar. Quem é chamado recebe o aviso na hora. */}
+              <div className="field" data-quem-chamar>
+                <label style={ROTULO_COM_ICONE}><Users size={15} aria-hidden="true" /> Quem é chamado</label>
+                {escolhidos == null ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
+                    <span data-elenco-inteiro>Todo o elenco</span>
+                    <button type="button" className="btn btn--ghost btn--sm" data-escolher-quem onClick={escolherQuem}>escolher quem</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    {erroDoElenco ? <span className="muted">{erroDoElenco}</span> : elenco == null ? <span className="muted">Carregando o elenco…</span> : (
+                      <>
+                        <span className="muted" style={{ fontSize: 12 }} data-quantos-chamados>{contar(escolhidos.size, 'pessoa chamada', 'pessoas chamadas')} de {elenco.length}</span>
+                        {elenco.map((m) => (
+                          <label key={m.user_id} data-chamar-membro style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, minHeight: 40 }}>
+                            <input type="checkbox" checked={escolhidos.has(m.user_id)} onChange={() => alternar(m.user_id)} />
+                            <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} sm />
+                            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{nomeExibicao(m)}</span>
+                          </label>
+                        ))}
+                      </>
+                    )}
+                    <button type="button" className="btn btn--ghost btn--sm" data-chamar-todos style={{ justifySelf: 'start', marginTop: 4 }} onClick={() => { setEscolhidos(null); setErroDoElenco(''); }}>chamar todo o elenco</button>
+                  </div>
                 )}
-                <button type="button" className="btn btn--ghost btn--sm" data-chamar-todos style={{ justifySelf: 'start', marginTop: 4 }} onClick={() => { setEscolhidos(null); setErroDoElenco(''); }}>chamar todo o elenco</button>
+                <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>Quem for chamado recebe o aviso e responde Vou ou Não vou.</span>
               </div>
-            )}
-            <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>Quem for chamado recebe o aviso e responde Vou ou Não vou.</span>
-          </div>
+            </>
+          )}
 
           <button type="submit" className="btn hud-corners-s cta-gold" style={{ width: '100%', marginTop: 8, fontFamily: RAJ, letterSpacing: '0.08em', textTransform: 'uppercase' }} disabled={loading}>
             {loading ? 'Criando…' : 'Criar jogo'}

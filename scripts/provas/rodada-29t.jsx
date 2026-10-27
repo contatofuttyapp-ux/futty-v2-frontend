@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- página-bancada das provas no navegador, não faz parte do app */
 // Bancada da prova da Rodada 29T, bloco A (scripts/provas/rodada-29t.prova.mjs): o Início DE VERDADE (a página inteira, com o Layout, o contexto do
-// Início e a barra de baixo) e os pedaços soltos (o aviso do jogo, "Seus times", o nome do cromo, o escudo), com as mesmas fontes e o mesmo CSS do
+// Início e a barra de baixo) e os pedaços soltos ("Seus times", o nome do cromo, o escudo), com as mesmas fontes e o mesmo CSS do
 // app. O motor é de mentira (a prova responde /api/** com page.route) e a sessão é de mentira (a prova planta a chave do Supabase no
 // localStorage) — nada sai para a rede.
 import { createRoot } from 'react-dom/client';
@@ -10,7 +10,6 @@ import { PerfilProvider } from '../../src/context/PerfilContext';
 import { SessaoProvider } from '../../src/context/SessaoContext';
 import { I18nProvider } from '../../src/context/I18nContext';
 import Layout from '../../src/components/Layout';
-import AvisoDeJogo from '../../src/components/AvisoDeJogo';
 import CardSeuTime from '../../src/components/CardSeuTime';
 import EscudoEquipa from '../../src/components/EscudoEquipa';
 import Inicio, { NomeCromo } from '../../src/pages/Inicio';
@@ -28,25 +27,11 @@ const TIMES = [
 ];
 const SEM = { pedidos: 0, presenca: null, resultado: null, denuncias: 0, total: 0 };
 const seu = (i) => ({ team_id: TIMES[i].id, slug: TIMES[i].slug, nome: TIMES[i].nome, fuso: 'America/Sao_Paulo', pendencias: SEM });
-const AMANHA = new Date(Date.now() + 86400000 * 2).toISOString();
-
-window.__chamadas = []; // o que o aviso solto devolveu ao tocar (a prova lê daqui)
 
 // ── os pedaços soltos ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 function Pecas() {
   return (
     <div style={{ padding: 16, width: 358 }}>
-      <div data-aviso-solto>
-        <AvisoDeJogo
-          game={{ id: 'g1', date: AMANHA, fuso: 'America/Sao_Paulo', team_name: 'Missa de Quinta', team_id: 'T1' }}
-          team={TIMES[0]}
-          mais={2}
-          onPresence={(id, vou) => window.__chamadas.push([id, vou])}
-        />
-      </div>
-      <div data-aviso-sem-mais>
-        <AvisoDeJogo game={{ id: 'g2', date: AMANHA, fuso: 'America/Sao_Paulo', team_name: 'Várzea FC', team_id: 'T2' }} team={TIMES[1]} onPresence={() => {}} />
-      </div>
       {[1, 2, 3, 4].map((n) => (
         <div key={n} data-cartao={n}><CardSeuTime seuTime={TIMES.slice(0, n).map((_, i) => seu(i))} teams={TIMES} games={[]} /></div>
       ))}
