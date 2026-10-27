@@ -320,8 +320,8 @@ export async function rodar({ navegador, base, t }) {
       await foto(jk, `10-jogo-terminado-membro-depois-${largura}`);
       // o jogo futuro continua com a presença
       const jf = await abrir(kimCena, base, `/time/${missa}/jogo/${dados.jogos.futuro}`, 'main');
-      await jf.getByText('Confirmar presença').first().waitFor({ timeout: 15000 }).catch(() => {});
-      t(`${r} · jogo futuro: "Sua presença" e "Confirmar presença" continuam`, /Sua presença/i.test(await textoDe(jf)) && /Confirmar presença/i.test(await textoDe(jf)));
+      await jf.locator('[data-sua-presenca] [data-resposta]').first().waitFor({ timeout: 15000 }).catch(() => {});
+      t(`${r} · jogo futuro: "Sua presença" continua, com o Vou / Não vou (desde a 32H, no lugar do "Confirmar presença")`, /Sua presença/i.test(await textoDe(jf)) && (await jf.locator('[data-sua-presenca] [data-resposta]').count()) === 1);
       t(`${r} · sem erro de página (membro)`, kimCena.estado.erros.length === 0, kimCena.estado.erros.slice(0, 3).join(' | '));
       await kimCena.ctx.close();
 

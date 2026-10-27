@@ -23,7 +23,7 @@ export function motor(papel, { comLogo = false, doisFuturos = false } = {}) {
   const games = [
     { id: 'g-futuro', data: new Date(agora + 3 * DIA).toISOString(), local: 'Campo da Vila', status: 'agendado', confirmados: 4, sorteio_realizado: false },
     { id: 'g-passado', data: new Date(agora - 2 * DIA).toISOString(), local: 'Quadra 2', status: 'terminado', confirmados: 10, sorteio_realizado: true, campeao_time_index: null, resultado_nivel: 0 },
-    // 29R (achado 147): o 2º jogo futuro, para provar que "abrir presença" abre no jogo CERTO. Tem o id que o card "Seu time" da bancada aponta (g2).
+    // O 2º jogo futuro (g2), o que o card "Seu time" da bancada aponta.
     ...(doisFuturos ? [{ id: 'g2', data: new Date(agora + 5 * DIA).toISOString(), local: 'Arena Norte', status: 'agendado', confirmados: 0, sorteio_realizado: false }] : []),
   ];
   const membro = (id, nome, role, goleiro) => ({ user_id: id, nome, role, goleiro, email: `${nome.toLowerCase()}@futtymock.com`, pode_postar: true, visivel_ranking: true, ativo: true, presencas_recentes: [] });
@@ -35,8 +35,8 @@ export function motor(papel, { comLogo = false, doisFuturos = false } = {}) {
     '/api/teams/varzea-fc/membros': { membros: [membro('U1', 'Tonhão', 'admin', false), membro('U2', 'Zeca', 'member', true)] },
     '/api/teams/varzea-fc/convites': { convites: [] },
     '/api/push/preferencias': { preferencias: { jogos: true, pedidos: true, figurinha: true, resenha: true }, admin: true, salvavel: true },
-    '/api/jogos/g-futuro/rsvp': { rsvp_aberto: false, rsvp_fechado: false, confirmados: [], recusados: [], pendentes: [], fuso: 'America/Sao_Paulo' },
-    '/api/jogos/g2/rsvp': { rsvp_aberto: false, rsvp_fechado: false, confirmados: [], recusados: [], pendentes: [], fuso: 'America/Sao_Paulo' },
+    '/api/jogos/g-futuro/rsvp': { sorteio_em: new Date(agora + 3 * DIA - 3600000).toISOString(), lista_aberta: true, chamado: true, confirmados: [], recusados: [], pendentes: [], nao_chamados: [], fuso: 'America/Sao_Paulo' },
+    '/api/jogos/g2/rsvp': { sorteio_em: new Date(agora + 5 * DIA - 3600000).toISOString(), lista_aberta: true, chamado: true, confirmados: [], recusados: [], pendentes: [], nao_chamados: [], fuso: 'America/Sao_Paulo' },
     '/api/feed/denuncias': { denuncias: [] },
     '/api/denuncias/fila': { fila: [] },
     '/api/teams/varzea-fc/logo': { ok: true },
@@ -205,7 +205,8 @@ export async function rodar({ navegador, base, t }) {
     await irPara(page, '/seu-time');
     await page.locator('[data-com-pendencias] [data-seu-time]').waitFor({ timeout: 10000 });
     const linhas = await page.locator('[data-com-pendencias] [data-pendencia]').allInnerTexts();
-    t('uma linha por pendência: pedido, presença, resultado, denúncia', linhas.length === 4 && /2 pedidos de entrada/.test(linhas[0]) && /presença ainda não aberta/.test(linhas[1]) && /por lançar/.test(linhas[2]) && /1 denúncia/.test(linhas[3]), linhas.join(' | '));
+    // 32H: a "presença ainda não aberta" saiu (o jogo nasce chamando) — mesmo com o campo antigo do motor, não vira linha.
+    t('uma linha por pendência: pedido, resultado, denúncia (nenhuma "presença ainda não aberta")', linhas.length === 3 && /2 pedidos de entrada/.test(linhas[0]) && /por lançar/.test(linhas[1]) && /1 denúncia/.test(linhas[2]) && !linhas.some((l) => /presença/.test(l)), linhas.join(' | '));
     const atalhos = await page.locator('[data-com-pendencias] [data-atalho]').evaluateAll((els) => els.map((e) => [e.getAttribute('data-atalho'), e.getAttribute('href')]));
     t('os quatro atalhos com nome: Painel · Novo jogo · Sortear · Convidar', atalhos.map((a) => a[0]).join(' · ') === 'Painel · Novo jogo · Sortear · Convidar', JSON.stringify(atalhos));
     t('"Painel" abre a aba do time (?aba=ajustes); "Sortear" vai ao próximo jogo do time; "Convidar" abre o convite no Elenco', atalhos[0][1] === '/time/varzea-fc?aba=ajustes' && atalhos[2][1] === '/time/varzea-fc/jogo/g2' && atalhos[3][1] === '/time/varzea-fc?aba=elenco&convidar=1', JSON.stringify(atalhos));
@@ -288,74 +289,27 @@ export async function rodar({ navegador, base, t }) {
     await ctx.close();
   }
 
-  // ── achado 147 (29R): a linha "presença ainda não aberta" do Início leva ao jogo certo e já abre o "Abrir presença" dele ───────────
+  // ── 32H: não há mais "Abrir presença" — o jogo nasce chamando e cada jogo do Painel mostra a hora do sorteio e "Sortear agora" ─────────
   {
     const { ctx, page, erros } = await abrir(navegador, base, 'admin', { doisFuturos: true });
     const escritas = [];
     page.on('request', (r) => { if (r.method() !== 'GET') escritas.push(`${r.method()} ${new URL(r.url()).pathname}`); });
-    await page.setViewportSize({ width: 390, height: 520 }); // tela curta: o 2º jogo fica abaixo da dobra e o "rolar até ele" tem o que provar
-    await irPara(page, '/seu-time');
-    const linha = page.locator('[data-com-pendencias] [data-pendencia="presenca"]');
-    await linha.waitFor({ timeout: 10000 });
-    t('147 · a linha "presença ainda não aberta" leva ao jogo: ?aba=jogos&abrir-presenca=<game_id>',
-      (await linha.getAttribute('href')) === '/time/varzea-fc?aba=jogos&abrir-presenca=g2', String(await linha.getAttribute('href')));
-
-    const historicoAntes = await page.evaluate(() => window.history.length);
-    await linha.click(); // o toque de verdade: Início → página do time
-    const campoPrazo = (id) => page.locator(`[data-jogo="${id}"] input[type="datetime-local"]`);
-    await campoPrazo('g2').waitFor({ timeout: 15000 });
-    t('147 · o toque abre o "Abrir presença" do jogo certo (g2): o campo do prazo está na tela', (await campoPrazo('g2').count()) === 1);
-    await page.locator('[data-jogo="g-futuro"]').getByRole('button', { name: 'Abrir presença' }).waitFor({ timeout: 5000 });
-    t('147 · o outro jogo (g-futuro) fica como estava: só o botão "Abrir presença", sem campo aberto', (await campoPrazo('g-futuro').count()) === 0);
-    t('147 · aba Jogos, a mesma de sempre', (await page.locator('[data-aba="jogos"]').getAttribute('aria-selected')) === 'true');
-
-    await page.waitForFunction(() => !location.search.includes('abrir-presenca'), null, { timeout: 5000 });
-    t('147 · depois de usado, o parâmetro sai do endereço e a aba fica (?aba=jogos)', new URL(page.url()).search === '?aba=jogos', page.url());
-    t('147 · sem empilhar histórico: Início → página do time é UMA entrada a mais, não duas', (await page.evaluate(() => window.history.length)) === historicoAntes + 1);
-
-    await page.locator('[data-jogo="g2"].jogo-destaque').waitFor({ timeout: 5000 });
-    t('147 · o cartão do jogo ganha um destaque curto (.jogo-destaque)', (await page.locator('[data-jogo="g2"].jogo-destaque').count()) === 1);
-    await page.waitForFunction(() => { const r = document.querySelector('[data-jogo="g2"]').getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight + 1; }, null, { timeout: 5000 });
-    const rolou = await page.evaluate(() => window.scrollY);
-    t('147 · a tela rolou até o cartão (ele cabe inteiro na tela de 520 px, que o 2º jogo não cabia sem rolar)', rolou > 0, `scrollY ${rolou}`);
-    await page.waitForFunction(() => !document.querySelector('.jogo-destaque'), null, { timeout: 8000 });
-    t('147 · o destaque é curto: some sozinho', (await page.locator('.jogo-destaque').count()) === 0);
-
-    await page.locator('[data-jogo="g2"]').getByRole('button', { name: 'Cancelar', exact: true }).click();
-    await campoPrazo('g2').waitFor({ state: 'detached', timeout: 5000 });
-    const depoisDeCancelar = await page.evaluate(() => { const r = document.querySelector('[data-jogo="g2"]').getBoundingClientRect(); return { dentro: r.top >= 0 && r.top < window.innerHeight }; });
-    t('147 · Cancelar fecha o campo e deixa a pessoa na aba Jogos, no jogo certo: o botão "Abrir presença" volta',
-      (await page.locator('[data-jogo="g2"]').getByRole('button', { name: 'Abrir presença' }).count()) === 1 && (await page.locator('[data-aba="jogos"]').getAttribute('aria-selected')) === 'true' && depoisDeCancelar.dentro);
-
-    await page.goBack(); // /seu-time
-    await linha.waitFor({ timeout: 5000 });
-    await page.goForward(); // a página do time de novo, SEM o parâmetro: nada reabre
-    await page.locator('[data-jogo="g2"]').getByRole('button', { name: 'Abrir presença' }).waitFor({ timeout: 15000 });
-    await page.waitForTimeout(800);
-    t('147 · "Voltar" e depois avançar não reabre nada (o parâmetro já saiu da entrada do histórico)',
-      (await page.locator('input[type="datetime-local"]').count()) === 0 && !page.url().includes('abrir-presenca'), page.url());
-    t('147 · nada foi gravado: abrir o campo não abre a presença (só o "Confirmar" faria isso)', escritas.length === 0, escritas.join(' | '));
-    t('147: roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
-    await ctx.close();
-  }
-
-  // ── achado 147 (29R): sem o parâmetro nada muda; com um jogo que não está na lista, nada abre e o parâmetro sai ──────────────────
-  {
-    const { ctx, page, erros } = await abrir(navegador, base, 'admin', { doisFuturos: true });
-    await page.setViewportSize({ width: 390, height: 520 });
     await irPara(page, '/time/varzea-fc?aba=jogos');
-    await page.locator('[data-jogo="g2"]').getByRole('button', { name: 'Abrir presença' }).waitFor({ timeout: 15000 });
-    await page.locator('[data-jogo="g-futuro"]').getByRole('button', { name: 'Abrir presença' }).waitFor({ timeout: 5000 });
-    await page.waitForTimeout(1200);
-    t('147 · sem o parâmetro, nada muda: nenhum campo aberto, nenhum destaque, a tela no topo',
-      (await page.locator('input[type="datetime-local"]').count()) === 0 && (await page.locator('.jogo-destaque').count()) === 0 && (await page.evaluate(() => window.scrollY)) === 0);
+    await page.locator('[data-jogo="g2"] [data-presenca-admin]').waitFor({ timeout: 15000 });
+    await page.locator('[data-jogo="g-futuro"] [data-presenca-admin]').waitFor({ timeout: 5000 });
+    t('32H · nenhum "Abrir presença", "Fechar presença" nem campo de prazo no Painel',
+      (await page.getByText(/Abrir presença|Fechar presença/).count()) === 0 && (await page.locator('input[type="datetime-local"]').count()) === 0 && !/\bprazo\b/i.test(await page.locator('body').innerText()));
+    t('32H · cada jogo futuro: a hora do sorteio e "Sortear agora"',
+      /Sorteio/.test(await page.locator('[data-jogo="g2"] [data-presenca-admin]').innerText()) && (await page.locator('[data-jogo="g2"] [data-sortear]').innerText()).trim() === 'Sortear agora' && (await page.locator('[data-jogo="g-futuro"] [data-sortear]').count()) === 1);
 
-    await irPara(page, '/time/varzea-fc?aba=jogos&abrir-presenca=jogo-que-nao-existe');
-    await page.waitForFunction(() => !location.search.includes('abrir-presenca'), null, { timeout: 5000 });
+    // O link antigo (?abrir-presenca=, de um app que ainda não atualizou) não abre nada nem quebra a página.
+    await irPara(page, '/time/varzea-fc?aba=jogos&abrir-presenca=g2');
+    await page.locator('[data-jogo="g2"] [data-presenca-admin]').waitFor({ timeout: 15000 });
     await page.waitForTimeout(800);
-    t('147 · um jogo que não está na lista (ou já passou): nada abre e o parâmetro sai do endereço mesmo assim',
-      (await page.locator('input[type="datetime-local"]').count()) === 0 && (await page.locator('.jogo-destaque').count()) === 0 && new URL(page.url()).search === '?aba=jogos', page.url());
-    t('147: o jogo sem parâmetro roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
+    t('32H · o link antigo com ?abrir-presenca= abre a aba Jogos como sempre, sem campo nenhum e sem destaque',
+      (await page.locator('[data-aba="jogos"]').getAttribute('aria-selected')) === 'true' && (await page.locator('input[type="datetime-local"]').count()) === 0 && (await page.locator('.jogo-destaque').count()) === 0);
+    t('32H · nada foi gravado só por abrir a aba', escritas.length === 0, escritas.join(' | '));
+    t('32H: roda sem exceção', erros.length === 0, erros.slice(0, 2).join(' | '));
     await ctx.close();
   }
 }
