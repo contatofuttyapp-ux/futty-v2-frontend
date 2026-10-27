@@ -33,7 +33,7 @@ test('card "Seu time": uma linha por pendência, na ordem, cada uma levando ao l
   });
   assert.deepEqual(linhas, [
     { chave: 'pedidos', para: '/time/missa?aba=elenco', texto: '2 pedidos de entrada' },
-    { chave: 'presenca', para: '/time/missa?aba=jogos&abrir-presenca=g2', texto: 'Quinta, 8 de out.: presença ainda não aberta' }, // 29L, achado 128; 29R, achado 147: leva ao jogo
+    // 32H: a presença não se abre mais (o jogo nasce chamando) — o campo antigo do motor não vira linha nenhuma.
     { chave: 'resultado', para: '/time/missa?aba=jogos', texto: 'Resultado de qui., 1 de out. por lançar' },
     { chave: 'denuncias', para: '/time/missa?aba=ajustes#denuncias', texto: '1 denúncia para ver' },
   ]);
@@ -136,28 +136,22 @@ test('150 · o Início: o cartão de votação diz "Nova temporada de notas no <
   assert.match(inicio, /to=\{`\/time\/\$\{votacaoTop\.slug\}\/ranking`\}/);
 });
 
-test('147 · a linha "presença ainda não aberta" leva ao jogo certo (?abrir-presenca=<game_id>); o texto e as outras linhas não mudam', () => {
-  const pend = (extra) => linhasDePendencia({ slug: 'missa', fuso: SP, pendencias: { presenca: { game_id: 'g-9', data: '2026-10-09T23:00:00Z' }, resultado: { game_id: 'g1', data: '2026-10-01T23:00:00Z' }, ...extra } });
-  const [presenca, resultado] = pend();
-  assert.equal(presenca.para, '/time/missa?aba=jogos&abrir-presenca=g-9');
-  assert.equal(presenca.texto, 'Sexta, 9 de out.: presença ainda não aberta');
-  assert.equal(resultado.para, '/time/missa?aba=jogos', 'o resultado por lançar continua só na aba Jogos');
-  // O id vai codificado: nunca quebra o endereço.
-  assert.equal(linhasDePendencia({ slug: 'm', fuso: SP, pendencias: { presenca: { game_id: 'a b&c', data: '2026-10-09T23:00:00Z' } } })[0].para, '/time/m?aba=jogos&abrir-presenca=a%20b%26c');
-  // Resposta antiga do motor, sem game_id: a aba, como antes (nunca "abrir-presenca=undefined").
-  assert.equal(linhasDePendencia({ slug: 'm', fuso: SP, pendencias: { presenca: { data: '2026-10-09T23:00:00Z' } } })[0].para, '/time/m?aba=jogos');
+test('32H · "presença ainda não aberta" saiu do card "Seu time": nem o campo antigo do motor vira linha', () => {
+  const linhas = linhasDePendencia({ slug: 'missa', fuso: SP, pendencias: { presenca: { game_id: 'g-9', data: '2026-10-09T23:00:00Z' }, resultado: { game_id: 'g1', data: '2026-10-01T23:00:00Z' } } });
+  assert.deepEqual(linhas.map((l) => l.chave), ['resultado']);
+  assert.equal(linhas[0].para, '/time/missa?aba=jogos', 'o resultado por lançar continua só na aba Jogos');
+  assert.doesNotMatch(semComentarios(ler('src/utils/seuTime.js')), /presença ainda não aberta|abrir-presenca/);
 });
 
-test('147 · a página do time lê ?abrir-presenca, entrega ao jogo e apaga do endereço sem empilhar histórico; trocar de aba também apaga', () => {
+test('32H · sem "Abrir presença", "Fechar presença" nem prazo: o ?abrir-presenca e o destaque do jogo saíram junto', () => {
   const equipa = semComentarios(ler('src/pages/Equipa.jsx'));
-  assert.match(equipa, /searchParams\.get\('abrir-presenca'\)/);
-  assert.match(equipa, /<JogosDoAdmin [\s\S]*?abrirPresencaDe=\{abrirPresencaDe\} aoUsarAbrirPresenca=\{usouAbrirPresenca\}/);
-  assert.match(equipa, /p\.delete\('abrir-presenca'\);\s*return p;\s*\}, \{ replace: true \}\)/, 'sai do endereço trocando a entrada do histórico: "Voltar" não reabre');
+  assert.doesNotMatch(equipa, /abrir-presenca|abrirPresencaDe/);
   const painel = semComentarios(lerPagina('AdminPanel'));
-  assert.match(painel, /useState\(abrirInicial\)/, 'o "Abrir presença" do jogo certo já nasce aberto (o mesmo estado do botão)');
-  assert.match(painel, /abrirInicial=\{!!abrirPresencaDe && String\(g\.id\) === String\(abrirPresencaDe\)\}/, 'só o jogo do parâmetro');
-  assert.match(painel, /className=\{destaque === g\.id \? 'jogo-destaque' : undefined\}/, 'destaque curto no cartão');
-  assert.match(lerAppCss(), /\.jogo-destaque \{ animation: jogoDestaque 2\.4s/);
+  assert.doesNotMatch(painel, /Abrir presença|Fechar presença|rsvp\/abrir|rsvp\/fechar|[Pp]razo|jogo-destaque/);
+  assert.match(painel, /<PresencaDoJogo /, 'a presença de cada jogo, com a hora do sorteio');
+  assert.match(painel, /Sortear agora/, 'o admin sorteia antes da hora (e a lista fecha)');
+  assert.match(painel, /Chamar mais gente/);
+  assert.doesNotMatch(lerAppCss(), /jogo-destaque/);
 });
 
 test('item 69: a tela diz que "admin" e "posição em campo" são coisas separadas', () => {
@@ -167,7 +161,7 @@ test('item 69: a tela diz que "admin" e "posição em campo" são coisas separad
 });
 
 test('4b: a hora do jogo na tela é "Hora do jogo" ou "Hora" — nunca "fuso", "hora do campo" nem "horário de Brasília" como rótulo', () => {
-  for (const arquivo of ['src/pages/NovoJogo.jsx', 'src/pages/AdminPanel.jsx', 'src/pages/Jogo.jsx', 'src/components/RSVPCard.jsx', 'src/utils/sorteioCartao.js']) {
+  for (const arquivo of ['src/pages/NovoJogo.jsx', 'src/pages/AdminPanel.jsx', 'src/pages/Jogo.jsx', 'src/components/RespostaDoJogo.jsx', 'src/utils/sorteioCartao.js']) {
     // Só o que a pessoa LÊ: texto de JSX (>…<) e textos entre aspas — não nomes de variável como team?.fuso.
     for (const l of semComentarios(lerArquivoOuPagina(RAIZ, arquivo)).split('\n')) {
       assert.doesNotMatch(l, /((?<!=)>|')[^<>'{}]*(?<![.\w])(fuso|hora do campo|horário de Brasília)\b[^<>'{}]*(<|')/i, `${arquivo}: ${l.trim().slice(0, 90)}`);

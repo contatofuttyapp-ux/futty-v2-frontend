@@ -1,6 +1,6 @@
 // Futty v2.0 — Ranking (modelo definitivo): voto por jogador, de 0 a 10 (a mesma régua da nota em todo o app),
 // score por categoria. Sem jogo de votação nem períodos.
-import { Fragment, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, Suspense, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
@@ -10,8 +10,6 @@ import { useAd } from '../hooks/useAd';
 import { useSessao } from '../context/SessaoContext';
 import { useRanking } from '../hooks/useRanking';
 import { useListaProgressiva } from '../hooks/useListaProgressiva';
-import { celebrarTop3 } from '../hooks/useConfetti';
-import { deveCelebrar, esquecerPosicaoCelebrada, guardarPosicaoCelebrada, lerPosicaoCelebrada } from '../utils/podioCelebrado';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { nomeExibicao } from '../utils/nomeExibicao';
@@ -220,29 +218,8 @@ export default function Ranking() {
   const [toast, setToast] = useState(null);
   const [bannerFechado, setBannerFechado] = useState(false);
   const [verEstatisticas, setVerEstatisticas] = useState(false);
-  const celebrouTop3 = useRef(false);
 
-  // Confetti quando a pessoa chega ao pódio (top 3) ou muda de posição nele — não a cada vez que abre o Ranking: a última posição celebrada fica
-  // guardada por time (utils/podioCelebrado.js). Sai 400 ms depois de a lista estar na tela — criar o canvas de tela cheia e o
-  // worker do confetti no mesmo instante da primeira pintura disputava-a. O temporizador é do PRÓPRIO efeito (a limpeza dele o cancela e o efeito
-  // seguinte o refaz): com o Ranking já em cache o efeito corre na montagem, e um temporizador guardado fora dele era cancelado pela
-  // remontagem do modo de desenvolvimento antes de disparar.
-  useEffect(() => {
-    if (celebrouTop3.current || !slug) return undefined;
-    const eu = ranking.find((p) => p.sou_eu);
-    if (!eu) return undefined;
-    if (eu.posicao > 3 || eu.presenca === 0) {
-      esquecerPosicaoCelebrada(slug); // fora do pódio (ou ainda sem jogo, que nunca é pódio): voltar a ele é uma chegada nova
-      return undefined;
-    }
-    if (!deveCelebrar(lerPosicaoCelebrada(slug), eu.posicao)) return undefined;
-    const festa = setTimeout(() => {
-      celebrouTop3.current = true; // uma festa por abertura da tela
-      guardarPosicaoCelebrada(slug, eu.posicao);
-      celebrarTop3(eu.posicao);
-    }, 400);
-    return () => clearTimeout(festa);
-  }, [ranking, slug]);
+  // Sem confete no Ranking (nem ao abrir, nem ao chegar ao pódio): a festa fica para o campeão do campeonato, no Início.
 
   function openVote(player) {
     setVoteModal(player);

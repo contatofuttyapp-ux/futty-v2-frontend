@@ -143,7 +143,7 @@ export default function Privacidade() {
         <ul style={{ ...ul, marginTop: 6 }}>
           <li>Cópias de segurança podem reter dados apagados por até 30 dias antes de serem sobrescritas.</li>
           <li>Registros de moderação e denúncias podem ser mantidos mesmo após a eliminação da conta, pelo tempo necessário para segurança e cumprimento de obrigações legais.</li>
-          <li>Registros de compras (identificador da transação, produto, valor, moeda e data) podem ser mantidos após a eliminação da conta, sem os seus dados de perfil, pelo prazo exigido pela legislação fiscal.</li>
+          <li>Registros de compras (identificador da transação, produto, valor, moeda e data) podem ser mantidos após a eliminação da conta, sem os seus dados de perfil, pelo tempo exigido pela legislação fiscal.</li>
         </ul>
 
         <h2 style={h2}>8. Cookies e armazenamento local</h2>

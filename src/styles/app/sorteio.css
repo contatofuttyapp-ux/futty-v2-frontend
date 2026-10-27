@@ -685,20 +685,6 @@
 .abas-time--cheia .aba-time { gap: 4px; padding: 0 6px; letter-spacing: 0.2px; }
 .abas-time--cheia .aba-time__selo { font-size: 0; width: 7px; height: 7px; padding: 0; border: none; border-radius: 50%; background: #f0c94a; clip-path: none !important; }
 
-/*
- * O jogo que a linha "presença ainda não aberta" do Início apontou (aba Jogos do admin). Um anel dourado
- * que acende e some em 2,4 s; a classe sai do cartão aos 2,6 s (AdminPanel, TabJogos). Estado natural =
- * cartão normal, nada fica escondido. Movimento reduzido: sem animação, só a borda dourada fixa enquanto
- * a classe estiver lá (o !important vence o estilo em linha do cartão).
- */
-.jogo-destaque { animation: jogoDestaque 2.4s ease-out 1; }
-@keyframes jogoDestaque {
-  0%, 40% { border-color: rgba(212, 160, 23, 0.95); box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.55), 0 0 18px rgba(212, 160, 23, 0.32); }
-  100% { border-color: rgba(255, 255, 255, 0.10); box-shadow: 0 0 0 0 rgba(212, 160, 23, 0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .jogo-destaque { animation: none; border-color: rgba(212, 160, 23, 0.95) !important; }
-}
 
 /*
  * As caixas do placar (ResultadoEditor) mostram um "0" apagado enquanto vazias — a pessoa vê o que se

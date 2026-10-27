@@ -1,24 +1,8 @@
 // Futty v2.0 — o pedido de presença (RSVP), a frase de quando ele falha e o jeito de responder com estado
-// OTIMISTA. Vive aqui, e não no RSVPCard, porque o card "Confirme presença" e o "Vou / Não vou" do jogo no
-// Início respondem pelo MESMO caminho (um destino só, um número só). O miolo é puro de React, para testar no
-// Node.
+// OTIMISTA. O "Vou / Não vou" do cartão do Início e o da página do jogo respondem pelo MESMO caminho (um destino
+// só, um número só). O miolo é puro de React, para testar no Node.
 
 export const MSG_FALHA_RSVP = 'Não deu para registrar sua resposta. Tente de novo.';
-
-/**
- * Por que a janela de RSVP deste jogo (se já foi aberta ao menos uma vez) não aceita mais resposta — ou
- * `null` se ainda aceita, ou se nunca foi aberta (aí vale o "Vou / Não vou" de sempre, sem prazo nenhum).
- * 'fechado' quando o admin fechou (antes ou depois do prazo); 'prazo' quando só o prazo venceu, sozinho.
- */
-export function motivoRsvpEncerrada(rsvp) {
-  if (!rsvp?.rsvp_aberto) return null;
-  if (rsvp.rsvp_fechado) return 'fechado';
-  if (rsvp.rsvp_prazo && new Date(rsvp.rsvp_prazo).getTime() <= Date.now()) return 'prazo';
-  return null;
-}
-
-// Nunca "tente de novo": tentar de novo não resolve nem o prazo vencido nem a presença fechada pelo admin.
-export const FRASE_RSVP_ENCERRADA = { fechado: 'Presença fechada.', prazo: 'Prazo encerrado.' };
 
 /** "Vou" / "Não vou" no RSVP do jogo: status = 'confirmado' | 'recusado'. Devolve a resposta do motor ({ ok, status } ou { espera, posicao }). */
 export async function enviarRsvp(gameId, status) {
@@ -49,8 +33,7 @@ export async function responderComOtimismo({ gameId, status, anterior, aplicar, 
   } catch (err) {
     if (otimista) aplicar(anterior);
     // Erro de rede (apiFetch sem `status`: o fetch nem voltou) fica com a frase genérica — "tente de novo"
-    // ali é verdade. Erro do motor (400, 409…) tem mensagem própria ("O prazo para confirmar presença já
-    // passou.") e mentir com a genérica manda tentar de novo algo que tentar de novo não resolve.
+    // ali é verdade. Erro do motor (400, 409…) tem mensagem própria ("A lista deste jogo já fechou.") e mentir com a genérica manda tentar de novo algo que tentar de novo não resolve.
     const erro = err?.status != null && err?.message ? err.message : MSG_FALHA_RSVP;
     return { ok: false, erro };
   }

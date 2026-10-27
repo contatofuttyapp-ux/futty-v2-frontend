@@ -66,10 +66,8 @@ test('127 · o que a linha do time mostra fechada: nada, o texto da pendência, 
   const base = { slug: 'missa', fuso: SP };
   assert.equal(resumoDoTime({ ...base, pendencias: { pedidos: 0, presenca: null, resultado: null, denuncias: 0 } }), '', 'sem pendência a linha é só escudo e nome');
   assert.equal(resumoDoTime({ ...base, pendencias: { pedidos: 1 } }), '1 pedido de entrada');
-  assert.equal(
-    resumoDoTime({ ...base, pendencias: { presenca: { game_id: 'g', data: '2026-10-09T23:00:00Z' } } }),
-    'Sexta, 9 de out.: presença ainda não aberta',
-  );
+  // 32H: a presença não se abre mais — o campo antigo do motor não vira texto.
+  assert.equal(resumoDoTime({ ...base, pendencias: { presenca: { game_id: 'g', data: '2026-10-09T23:00:00Z' } } }), '');
   assert.equal(resumoDoTime({ ...base, pendencias: { pedidos: 2, denuncias: 1 } }), '2 pendências');
   assert.equal(resumoDoTime({ slug: 'x' }), '', 'resposta antiga do motor, sem pendências');
 });
@@ -86,16 +84,14 @@ test('127 · CardSeuTime: 1 time é o card de sempre; 2+ viram UM card "Seus tim
   assert.match(card, /<Atalhos base=\{`\/time\/\$\{time\.slug\}`\} time=\{time\} games=\{games\} \/>/);
 });
 
-// ── B8 · achado 128: o jogo sem presença aberta lê bem ──────────────────────────────────────────────────────────────────────────────
-test('128 · "Sexta, 9 de out.: presença ainda não aberta" (e a data por extenso vem de dataHora.js)', () => {
+// ── B8 · achado 128: a data por extenso (a linha "presença ainda não aberta" saiu na 32H) ──────────────────────────────────────────
+test('128 · "Sexta, 9 de out." (a data por extenso vem de dataHora.js)', () => {
   assert.equal(dataComDiaPorExtenso('2026-10-09T23:00:00Z', SP), 'Sexta, 9 de out.');
   assert.equal(dataComDiaPorExtenso('2026-10-10T12:00:00Z', SP), 'Sábado, 10 de out.');
   assert.equal(dataComDiaPorExtenso('2026-10-11T12:00:00Z', SP), 'Domingo, 11 de out.');
   assert.equal(dataComDiaPorExtenso('lixo', SP), '');
   // Dia do relógio do CAMPO, não do aparelho: 02:30 UTC de sábado ainda é sexta à noite em São Paulo.
   assert.equal(dataComDiaPorExtenso('2026-10-10T02:30:00Z', SP), 'Sexta, 9 de out.');
-  const [linha] = linhasDePendencia({ slug: 'm', fuso: SP, pendencias: { presenca: { game_id: 'g', data: '2026-10-09T23:00:00Z' } } });
-  assert.equal(linha.texto, 'Sexta, 9 de out.: presença ainda não aberta');
 });
 
 // ── B6 · achado 135: a única palavra de Portugal na tela ───────────────────────────────────────────────────────────────────────────
@@ -167,7 +163,7 @@ test('139 · o jogo ativo tem Editar e Cancelar jogo; "Excluir" só aparece no j
   const apagar = [...painel.matchAll(/setConfirmacao\(\{ tipo: 'apagar', jogo: g \}\)/g)].map((m) => m.index);
   assert.equal(apagar.length, 1, 'um único botão que apaga jogo');
   assert.ok(apagar[0] > abre, 'e ele mora depois (dentro) do cartão do cancelado');
-  const ativo = painel.slice(painel.indexOf('onClick={() => setEditar(g)}'), painel.indexOf('<RSVPAdmin gameId={g.id}'));
+  const ativo = painel.slice(painel.indexOf('onClick={() => setEditar(g)}'), painel.indexOf('<PresencaDoJogo '));
   assert.match(ativo, />Cancelar jogo</);
   assert.doesNotMatch(ativo, /Excluir/, 'a linha de botões do jogo ativo não tem Excluir');
   // O motor só apaga jogo futuro SEM confirmados (409 nos outros): o botão só é oferecido quando ele aceita.
@@ -289,6 +285,6 @@ test('137 · o texto secundário do Início passa de 4,5:1 (WCAG AA) sobre o car
 
   const css = lerAppCss();
   assert.match(css.match(/\.gcard__meta \{[^}]*\}/)[0], /color: var\(--text-dim\);/, '"12 confirmados" usa o cinza claro');
-  const rsvp = semComentarios(ler('src/components/RSVPCard.jsx'));
-  assert.doesNotMatch(rsvp, /color: 'var\(--label-color\)'/, '"até …", "Mudar resposta" e "Sair da lista" não usam mais o branco a 40% (~3,7:1)');
+  const resposta = semComentarios(ler('src/components/RespostaDoJogo.jsx'));
+  assert.doesNotMatch(resposta, /color: 'var\(--label-color\)'/, '"Trocar resposta" e "Sair da lista" não usam o branco a 40% (~3,7:1)');
 });

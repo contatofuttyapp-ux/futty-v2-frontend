@@ -1,10 +1,13 @@
 // Futty v2.0 — Os jogos do time (presença, jogos que se repetem, editar o jogo), na aba JOGOS do admin.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 import { apiFetch } from '../../lib/api';
 import { formatDateTime, STATUS_LABELS } from '../../utils/format';
-import { camposNoCampo, formatarData, formatarDataHora, instanteNoCampo } from '../../utils/dataHora';
+import { camposNoCampo, formatarData, instanteNoCampo } from '../../utils/dataHora';
+import { UMA_HORA_MS, contagemDoSorteio, textoDaListaFechada, textoDoSorteio } from '../../utils/chamada';
+import { useAgora } from '../../hooks/useAgora';
 import { contar, plural } from '../../utils/plural';
 import { nomeExibicao } from '../../utils/nomeExibicao';
 import LoadingFutty from '../../components/LoadingFutty';
@@ -21,10 +24,6 @@ import { ConfirmModal, RabichoDaHora } from './pecas';
 import { CARD, nomeForte, rotuloECampo, textoDeApoio } from './comum';
 
 // ─── TAB: JOGOS ──────────────────────────────────────────────────────────────
-// "sex., 20 de jun. · 22:00" para o prazo do RSVP — no relógio do campo (fuso do time).
-// Com o rabicho, a cidade do time ("horário de Brasília"), não a do fuso.
-const fmtPrazoAdmin = (iso, fuso, cidade) => formatarDataHora(iso, fuso, { cidade });
-
 // Lista compacta de jogadores (avatar + nome) com título opcional.
 function ListaUsers({ users, titulo }) {
   if (!users || users.length === 0) return null;
@@ -45,17 +44,16 @@ function ListaUsers({ users, titulo }) {
   );
 }
 
-// Gestão do RSVP de um jogo (admin): abrir / acompanhar / fechar / sortear.
-// `abrirInicial` = a pessoa chegou pela linha "presença ainda não aberta" do Início; o "Abrir presença" deste jogo
-// já nasce aberto e, quando o cartão tem a forma final (a presença carregou), `aoPronto` rola até ele e o destaca. Só vale no nascimento.
-function RSVPAdmin({ gameId, slug, cidade = null, navigate, showToast, abrirInicial = false, aoPronto = null }) {
+// A presença de um jogo, para o admin: a hora do sorteio (a lista fecha nela) com a contagem, quem vai, quem não vai, quem ainda não
+// respondeu, a lista de espera e "Chamar mais gente" (quando o jogo não chamou o elenco inteiro). Não há abrir, fechar nem prazo: o jogo
+// nasce chamando e a lista fecha sozinha na hora do sorteio — ou quando o admin sorteia antes ("Sortear agora").
+function PresencaDoJogo({ jogo, slug, fuso, navigate, showToast }) {
+  const gameId = jogo.id;
   const [info, setInfo] = useState(null);
   const [erro, setErro] = useState('');
   const [busy, setBusy] = useState(false);
-  const [abrirModal, setAbrirModal] = useState(abrirInicial);
-  const [prazoInput, setPrazoInput] = useState('');
-  const [confirmarFechar, setConfirmarFechar] = useState(false);
-  const faltaAvisarPronto = useRef(abrirInicial);
+  const [chamando, setChamando] = useState(false); // a lista "Chamar mais gente" aberta
+  const [escolhidos, setEscolhidos] = useState(() => new Set());
 
   const carregar = useCallback(async () => {
     try {
@@ -81,62 +79,48 @@ function RSVPAdmin({ gameId, slug, cidade = null, navigate, showToast, abrirInic
     };
   }, [gameId]);
 
-  // Com a presença carregada (ou o erro dela na tela) o cartão não muda mais de altura; é a hora de rolar até ele. Uma vez só.
-  useEffect(() => {
-    if (!faltaAvisarPronto.current || !(info || erro)) return;
-    faltaAvisarPronto.current = false;
-    aoPronto?.(gameId);
-  }, [info, erro, aoPronto, gameId]);
+  const sorteioEm = info?.sorteio_em ?? jogo.sorteio_em ?? null;
+  const agora = useAgora(!!sorteioEm && info?.lista_aberta !== false);
+  const contagem = sorteioEm ? contagemDoSorteio(sorteioEm, agora) : null;
+  const aberta = info?.lista_aberta !== false && (!sorteioEm || contagem != null);
 
-  // Polling de 30s enquanto o RSVP está aberto (atualização em tempo real).
+  // Enquanto a lista está aberta, as respostas chegam sozinhas (de 30 em 30 s).
   useEffect(() => {
-    if (!info?.rsvp_aberto || info?.rsvp_fechado) return undefined;
+    if (!info || !aberta) return undefined;
     const t = setInterval(carregar, 30000);
     return () => clearInterval(t);
-  }, [info?.rsvp_aberto, info?.rsvp_fechado, carregar]);
+  }, [info, aberta, carregar]);
 
-  async function abrir() {
-    if (!prazoInput) {
-      showToast('Informe o prazo de confirmação.', 'error');
-      return;
-    }
-    // O prazo digitado é a hora do CAMPO (fuso do time), qualquer que seja o relógio do aparelho de quem abre a presença.
-    const prazoIso = instanteNoCampo(prazoInput.slice(0, 10), prazoInput.slice(11, 16), info?.fuso);
-    if (!prazoIso) {
-      showToast('Esse prazo não é válido. Confira a data e a hora.', 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      await apiFetch(`/api/jogos/${gameId}/rsvp/abrir`, { method: 'POST', body: JSON.stringify({ prazo: prazoIso }) });
-      setAbrirModal(false);
-      setPrazoInput('');
-      await carregar();
-      showToast('Presença aberta.');
-    } catch (e) {
-      showToast(e.message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function fechar() {
-    setConfirmarFechar(false);
-    setBusy(true);
-    try {
-      await apiFetch(`/api/jogos/${gameId}/rsvp/fechar`, { method: 'POST' });
-      await carregar();
-      showToast('Presença fechada.');
-    } catch (e) {
-      showToast(e.message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  // O sorteio é na página do jogo, com quem confirmou; sortear antes da hora fecha a lista (o motor fecha quando o sorteio é feito).
   function fazerSorteio() {
     const ids = (info?.confirmados || []).map((u) => u.id);
     navigate(`/time/${slug}/jogo/${gameId}`, { state: { rsvpConfirmados: ids } });
+  }
+
+  function alternar(id) {
+    setEscolhidos((cur) => {
+      const novo = new Set(cur);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }
+
+  async function chamar() {
+    if (busy || !escolhidos.size) return;
+    setBusy(true);
+    try {
+      const r = await apiFetch(`/api/games/${gameId}/chamar`, { method: 'POST', body: JSON.stringify({ user_ids: [...escolhidos] }) });
+      const n = r?.novos?.length || 0;
+      showToast(n ? `${contar(n, 'pessoa chamada', 'pessoas chamadas')}. O aviso sai agora.` : 'Essas pessoas já estavam chamadas.');
+      setChamando(false);
+      setEscolhidos(new Set());
+      await carregar();
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
   }
 
   const linha = { marginTop: 12, borderTop: '1px solid #222222', paddingTop: 10 };
@@ -145,68 +129,70 @@ function RSVPAdmin({ gameId, slug, cidade = null, navigate, showToast, abrirInic
     return <div style={{ ...linha, fontSize: 12, color: 'var(--text-dim)' }}>{erro || 'Carregando presenças…'}</div>;
   }
 
-  // C) RSVP FECHADO
-  if (info.rsvp_fechado) {
-    return (
-      <div style={linha}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Presença fechada: {info.confirmados.length} {plural(info.confirmados.length, 'confirmado', 'confirmados')}</div>
-        <ListaUsers users={info.confirmados} />
-        <button type="button" className="btn btn--primary btn--sm" style={{ marginTop: 10 }} onClick={fazerSorteio}>
-          Fazer sorteio com confirmados
-        </button>
-      </div>
-    );
-  }
+  const confirmados = info.confirmados || [];
+  const naoVao = info.recusados || [];
+  const semResposta = info.pendentes || [];
+  const naoChamados = info.nao_chamados || [];
 
-  // B) RSVP ABERTO
-  if (info.rsvp_aberto) {
-    return (
-      <div style={linha}>
-        <div style={{ fontSize: 12, color: 'var(--neon)', fontWeight: 700 }}>Aberto até {fmtPrazoAdmin(info.rsvp_prazo, info.fuso, cidade)}</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
-          {info.confirmados.length} {plural(info.confirmados.length, 'confirmado', 'confirmados')} · {info.recusados.length} {plural(info.recusados.length, 'recusado', 'recusados')} · {info.pendentes.length} {plural(info.pendentes.length, 'pendente', 'pendentes')}
-        </div>
-        <ListaUsers users={info.confirmados} titulo="Confirmados" />
-        <ListaUsers users={info.recusados} titulo="Recusados" />
-        <ListaUsers users={info.pendentes} titulo="Pendentes" />
-        {info.espera?.length ? (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--neon)' }}>Lista de espera</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
-              {info.espera.map((e) => `${e.posicao}. ${e.nome || 'Jogador'}`).join(' · ')}
-            </div>
-          </div>
-        ) : null}
-        <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 10, borderColor: 'var(--danger)', color: '#fda4af' }} disabled={busy} onClick={() => setConfirmarFechar(true)}>
-          Fechar presença</button>
-        {confirmarFechar ? (
-          <ConfirmModal texto="Fechar a presença? Quem não respondeu fica fora." perigo confirmarLabel="Fechar presença" onConfirm={fechar} onCancel={() => setConfirmarFechar(false)} />
-        ) : null}
-      </div>
-    );
-  }
-
-  // A) SEM RSVP ABERTO
   return (
-    <div style={linha}>
-      {abrirModal ? (
-        <div style={{ display: 'grid', gap: 8 }}>
-          <label style={textoDeApoio}>Prazo de confirmação</label>
-          <input
-            type="datetime-local"
-            value={prazoInput}
-            onChange={(e) => setPrazoInput(e.target.value)}
-            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #222222', background: '#0c0c0c', color: '#fff', fontSize: 16 }}
-          />
-          <RabichoDaHora fuso={info?.fuso} />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={abrir}>Confirmar</button>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setAbrirModal(false)}>Cancelar</button>
-          </div>
+    <div style={linha} data-presenca-admin data-lista={aberta ? 'aberta' : 'fechada'}>
+      {aberta ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 8px', fontSize: 12 }}>
+          {sorteioEm ? <span data-hora-do-sorteio style={{ color: 'var(--text-dim)' }}>{textoDoSorteio(sorteioEm, jogo.data, fuso)}</span> : null}
+          {contagem ? <span data-contagem style={{ color: '#f0c94a', fontWeight: 700 }}>{contagem}</span> : null}
         </div>
       ) : (
-        <button type="button" className="btn btn--purple btn--sm" onClick={() => setAbrirModal(true)}>Abrir presença</button>
+        <div data-lista-fechada style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{textoDaListaFechada(confirmados.length)}</div>
       )}
+      {aberta ? (
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+          {contar(confirmados.length, 'confirmado', 'confirmados')} · {naoVao.length} {plural(naoVao.length, 'não vai', 'não vão')} · {semResposta.length} sem resposta
+        </div>
+      ) : null}
+      <ListaUsers users={confirmados} titulo="Confirmados" />
+      {aberta ? <ListaUsers users={naoVao} titulo="Não vão" /> : null}
+      {aberta ? <ListaUsers users={semResposta} titulo="Sem resposta" /> : null}
+      {info.espera?.length ? (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--neon)' }}>Lista de espera</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+            {info.espera.map((e) => `${e.posicao}. ${e.nome || 'Jogador'}`).join(' · ')}
+          </div>
+        </div>
+      ) : null}
+
+      {aberta && chamando ? (
+        <div data-chamar-lista style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+          <div style={textoDeApoio}>Quem mais vai ser chamado? Recebe o aviso na hora.</div>
+          {naoChamados.map((u) => (
+            <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#fff', minHeight: 36 }}>
+              <input type="checkbox" checked={escolhidos.has(u.id)} onChange={() => alternar(u.id)} />
+              <PlayerAvatar nome={nomeExibicao(u)} avatarUrl={u.avatar_url} userId={u.id} avatarGenerico={u.avatar_generico} sm />
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{nomeExibicao(u)}</span>
+            </label>
+          ))}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn--purple btn--sm" data-chamar-confirmar disabled={busy || !escolhidos.size} onClick={chamar}>
+              {busy ? 'Chamando…' : escolhidos.size ? `Chamar ${contar(escolhidos.size, 'pessoa', 'pessoas')}` : 'Chamar'}
+            </button>
+            <button type="button" className="btn btn--ghost btn--sm" disabled={busy} onClick={() => { setChamando(false); setEscolhidos(new Set()); }}>Cancelar</button>
+          </div>
+        </div>
+      ) : null}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+        {aberta && naoChamados.length && !chamando ? (
+          <button type="button" className="btn btn--ghost btn--sm" data-chamar-mais onClick={() => setChamando(true)}>Chamar mais gente</button>
+        ) : null}
+        {jogo.sorteio_realizado ? (
+          // Já sorteado (antes da hora, ou na hora): o que se faz agora é ver os times, na página do jogo.
+          <button type="button" className="btn btn--ghost btn--sm" data-ver-sorteio onClick={() => navigate(`/time/${slug}/jogo/${gameId}`)}>Ver os times</button>
+        ) : (
+          <button type="button" className="btn btn--primary btn--sm" data-sortear onClick={fazerSorteio}>
+            {aberta ? 'Sortear agora' : 'Fazer sorteio com confirmados'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -284,32 +270,13 @@ function FormRecorrentes({ slug, fuso, cidade, showToast, onClose, onCriado }) {
   );
 }
 
-function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoUsarAbrirPresenca = null }) {
+function TabJogos({ slug, team, showToast, navigate }) {
   const fuso = team?.fuso;
   const [games, setGames] = useState(null);
   const [editar, setEditar] = useState(null);
   const [confirmacao, setConfirmacao] = useState(null);
   const [motivoCancel, setMotivoCancel] = useState('');
   const [lancar, setLancar] = useState(null); // o jogo do "Lançar resultado" (era a aba Resultados)
-  const [destaque, setDestaque] = useState(null); // o jogo que a linha do Início apontou, em destaque por um instante
-
-  // O parâmetro vale UMA vez. Com a lista na tela (o RSVPAdmin do jogo certo acabou de nascer lendo-o), sai do
-  // endereço — encontrado ou não (jogo cancelado, já passado ou de outro time): voltar e recarregar não reabrem nada.
-  useEffect(() => {
-    if (games !== null && abrirPresencaDe) aoUsarAbrirPresenca?.();
-  }, [games, abrirPresencaDe, aoUsarAbrirPresenca]);
-
-  const destacarJogo = useCallback((id) => {
-    const cartao = [...document.querySelectorAll('[data-jogo]')].find((el) => el.getAttribute('data-jogo') === String(id));
-    const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    cartao?.scrollIntoView({ block: 'center', behavior: reduzido ? 'auto' : 'smooth' });
-    setDestaque(id);
-  }, []);
-  useEffect(() => {
-    if (!destaque) return undefined;
-    const t = setTimeout(() => setDestaque(null), 2600);
-    return () => clearTimeout(t);
-  }, [destaque]);
 
   useEffect(() => {
     let ativo = true;
@@ -434,7 +401,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
                 );
               }
               return (
-                <div key={g.id} data-jogo={g.id} className={destaque === g.id ? 'jogo-destaque' : undefined} style={{ ...CARD, padding: 12 }}>
+                <div key={g.id} data-jogo={g.id} style={{ ...CARD, padding: 12 }}>
                   <div style={nomeForte}>{g.local || 'Jogo'}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
                     {formatDateTime(g.data, fuso, { cidade: team?.cidade })} · {g.confirmados} {plural(g.confirmados, 'confirmado', 'confirmados')}
@@ -457,7 +424,7 @@ function TabJogos({ slug, team, showToast, navigate, abrirPresencaDe = null, aoU
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditar(g)}>Editar</button>
                     <button type="button" className="btn btn--ghost btn--sm" style={{ borderColor: 'var(--danger)', color: '#fda4af' }} onClick={() => { setMotivoCancel(''); setConfirmacao({ tipo: 'cancelar', jogo: g }); }}>Cancelar jogo</button>
                   </div>
-                  <RSVPAdmin gameId={g.id} slug={slug} cidade={team?.cidade} navigate={navigate} showToast={showToast} abrirInicial={!!abrirPresencaDe && String(g.id) === String(abrirPresencaDe)} aoPronto={destacarJogo} />
+                  <PresencaDoJogo key={`${g.sorteio_em || ''}|${g.data}`} jogo={g} slug={slug} fuso={fuso} navigate={navigate} showToast={showToast} />
                 </div>
               );
             })}
@@ -522,15 +489,32 @@ function EditarJogoModal({ jogo, fuso, cidade, onClose, onSaved, showToast }) {
   const [porTime, setPorTime] = useState(jogo.jogadores_por_time || 5);
   const [maxJog, setMaxJog] = useState(jogo.max_jogadores != null ? String(jogo.max_jogadores) : '');
   const [saving, setSaving] = useState(false);
+  // A hora do sorteio (a lista fecha nela). Enquanto o admin não mexe, ela acompanha o jogo se estava no "1 hora antes" (a mesma regra
+  // do motor); mexeu, vale a que ele escreveu.
+  const sorteioOriginal = jogo.sorteio_em || null;
+  const estavaNoPadrao = !sorteioOriginal || new Date(jogo.data).getTime() - new Date(sorteioOriginal).getTime() === UMA_HORA_MS;
+  const [sorteioMexido, setSorteioMexido] = useState(null); // { data, hora } depois que o admin mexe
+  const inicioNovo = instanteNoCampo(date, time, fuso);
+  const sorteioSugerido = estavaNoPadrao && inicioNovo
+    ? camposNoCampo(new Date(new Date(inicioNovo).getTime() - UMA_HORA_MS).toISOString(), fuso)
+    : camposNoCampo(sorteioOriginal, fuso);
+  const sorteio = sorteioMexido || sorteioSugerido;
+
+  // Esc fecha, como o X (menos no meio do salvar).
+  useEffect(() => {
+    const teclar = (e) => { if (e.key === 'Escape' && !saving) onClose(); };
+    document.addEventListener('keydown', teclar);
+    return () => document.removeEventListener('keydown', teclar);
+  }, [onClose, saving]);
 
   async function guardar() {
     if (saving) return;
     setSaving(true);
     try {
-      const { game } = await apiFetch(`/api/games/${jogo.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ date, time, location: local.trim(), players_per_team: Number(porTime) }),
-      });
+      const corpo = { date, time, location: local.trim(), players_per_team: Number(porTime) };
+      // Só manda a hora do sorteio se o admin mexeu nela; sem ela, o motor leva o sorteio junto com o jogo (se estava no 1 h antes).
+      if (sorteioMexido) Object.assign(corpo, { sorteio_date: sorteioMexido.data, sorteio_time: sorteioMexido.hora });
+      const { game } = await apiFetch(`/api/games/${jogo.id}`, { method: 'PATCH', body: JSON.stringify(corpo) });
       // Capacidade (endpoint dedicado). Vazio = sem limite.
       const maxValor = maxJog.trim() === '' ? null : Number(maxJog);
       const { max_jogadores } = await apiFetch(`/api/games/${jogo.id}/capacidade`, {
@@ -546,11 +530,22 @@ function EditarJogoModal({ jogo, fuso, cidade, onClose, onSaved, showToast }) {
 
   return createPortal(
     <div className="modal-overlay" role="presentation" onClick={() => !saving && onClose()}>
-      <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
-        <div className="modal-card__inner" style={{ textAlign: 'left', display: 'grid', gap: 12 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0 }}>Editar jogo</h2>
+      <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="editar-jogo-titulo" data-editar-jogo onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+        <div className="modal-card__inner" style={{ position: 'relative', textAlign: 'left', display: 'grid', gap: 12 }}>
+          <button type="button" aria-label="Fechar" data-fechar-editar-jogo disabled={saving} onClick={onClose} style={{ position: 'absolute', top: 4, right: 4, width: 44, height: 44, display: 'grid', placeItems: 'center', border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: saving ? 'default' : 'pointer' }}>
+            <X size={20} aria-hidden="true" />
+          </button>
+          <h2 id="editar-jogo-titulo" style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', margin: 0, padding: '0 40px' }}>Editar jogo</h2>
           <label style={rotuloECampo}><span style={lbl}>Data</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} /></label>
           <label style={rotuloECampo}><span style={lbl}>Hora do jogo</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inputStyle} /><RabichoDaHora fuso={fuso} cidade={cidade} /></label>
+          <div style={rotuloECampo} data-campo-sorteio>
+            <span style={lbl}>Sorteio</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
+              <input type="date" aria-label="Dia do sorteio" data-sorteio-dia value={sorteio.data} onChange={(e) => setSorteioMexido({ ...sorteio, data: e.target.value })} style={inputStyle} />
+              <input type="time" aria-label="Hora do sorteio" data-sorteio-hora value={sorteio.hora} onChange={(e) => setSorteioMexido({ ...sorteio, hora: e.target.value })} style={inputStyle} />
+            </div>
+            <span style={textoDeApoio}>A lista de presença fecha na hora do sorteio.</span>
+          </div>
           <label style={rotuloECampo}><span style={lbl}>Local</span><input value={local} onChange={(e) => setLocal(e.target.value)} style={inputStyle} /></label>
           <label style={rotuloECampo}><span style={lbl}>Jogadores por time</span><NumberStepper value={porTime} onChange={setPorTime} min={2} max={11} /></label>
           <label style={rotuloECampo}>

@@ -19,12 +19,9 @@ import { nomeExibicao } from '../utils/nomeExibicao';
 import { IDADE_MINIMA } from '../utils/idade';
 import RolinhosData from '../components/RolinhosData';
 import { mostraFigurinha } from '../utils/figurinhaCanvas';
-import AvisoDeJogo from '../components/AvisoDeJogo';
 import AvisoQuemGanhou from '../components/AvisoQuemGanhou';
 import { cardsQuemGanhou } from '../utils/quemGanhou';
-import { motivoRsvpEncerrada } from '../lib/rsvp';
-import { confirmadosComResposta, respostaNoRsvp, statusDoJogoPelaResposta } from '../utils/presenca';
-import { LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso } from '../utils/avisosDoInicio';
+import { LEMBRETES_SEM_PRAZO, proximoAviso } from '../utils/avisosDoInicio';
 import { esconderLembrete, lembretesEscondidos } from '../utils/lembretes';
 import { ID_PACOTE_NO_INICIO, timesDoDono as timesDoDonoDe } from '../utils/pacoteNoInicio';
 import Topbar from '../components/Topbar';
@@ -37,7 +34,6 @@ import '../styles/app.css';
 import { AgoraNao } from './inicio/AgoraNao';
 import { useAcoesDoInicio } from './inicio/acoesDoInicio';
 import { useCromoDoInicio } from './inicio/useCromoDoInicio';
-import ConfirmarAusencia from './inicio/ConfirmarAusencia';
 import ConteudoDoInicio from './inicio/ConteudoDoInicio';
 import PalcoDoCromo from './inicio/PalcoDoCromo';
 import AvisoCardSemFoto from './inicio/AvisoCardSemFoto';
@@ -84,9 +80,6 @@ export default function Inicio() {
   const [selectedTeam, setSelectedTeam] = useState('all');
   // A faixa de chips de time rola; a borda esmaece onde há mais, e o "Várzea FC" cortado deixa de parecer erro.
   const { aoMontar: montarFaixaDeChips, esquerda: chipsEscondidosEsq, direita: chipsEscondidosDir } = useIndicadorDeRolagem();
-  const [minhaResposta, setMinhaResposta] = useState(null); // 'confirmado' | 'recusado' | null
-  const [ausenciaBusy, setAusenciaBusy] = useState(false);
-  const [confirmarAusencia, setConfirmarAusencia] = useState(false); // pergunta "Avisar o time…?" aberta
   const [toast, setToast] = useState(null); // { msg, tipo }
 
   // Pedido ÚNICO de data de nascimento: sem ela, o /p/ cai em silhueta e o anúncio 18+ nunca aparece (a
@@ -151,13 +144,6 @@ export default function Inicio() {
   if (dadosInicio?.convites !== convitesAnterior) {
     setConvitesAnterior(dadosInicio?.convites);
     if (dadosInicio?.convites) setGames(dadosInicio.convites.games || []);
-  }
-
-  // O "Vou / Não vou" do aviso do topo: a mesma chamada dos cards; só acrescenta a confirmação, porque o
-  // aviso some assim que a resposta vale.
-  async function responderDoAviso(gameId, going) {
-    const fim = await onPresence(gameId, going);
-    if (fim === true) setToast({ msg: going ? 'Presença confirmada.' : 'Anotado: você não vai.', tipo: 'success' });
   }
 
   const user = me?.user;
@@ -259,50 +245,9 @@ export default function Inicio() {
   const { proximos: proximosJogos, ultimos: ultimosJogos, proximo: proximoJogo } = listasDoInicio(filtered);
   const nextId = proximoJogo?.id ?? null;
 
-  // RSVP do próximo jogo: mostra o cartão de confirmação se estiver aberto.
-  // /api/inicio já calculou o próximo jogo com o MESMO critério do `nextId`
-  // abaixo (1º não-encerrado, jogos ordenados por data ASC) e devolveu o RSVP
-  // dele — sem rsvp aqui é porque não há próximo jogo, ou a leitura falhou.
-  const rsvpData = dadosInicio?.rsvp || null;
-  const rsvpInfo = nextId ? { ...(rsvpData || { rsvp_aberto: false }), gameId: nextId } : null;
-  // O RSVPCard do próximo jogo está na tela (e com ele o Vou / Não vou).
-  // Quem só organiza o time não responde presença — nem o cartão, nem o aviso de ausência.
-  const proximoSoOrganizo = proximoJogo?.eu_jogo === false;
-  // "Aberto" para responder de verdade é aberto E dentro do prazo (ou sem prazo fechado pelo admin) — não só
-  // `rsvp_aberto`: essa flag nunca volta a false (abrir é permanente), então sem o prazo o card continuava
-  // ativo depois dele vencer (achado da Rodada 30E).
-  const encerradaNoProximo = !proximoSoOrganizo ? motivoRsvpEncerrada(rsvpInfo) : null;
-  const rsvpAbertoNoProximo = !proximoSoOrganizo && !!(rsvpInfo && rsvpInfo.gameId === nextId && rsvpInfo.rsvp_aberto) && !encerradaNoProximo;
-  // Sincronizado DURANTE o render (mesmo padrão de MeuPerfil.jsx), não num
-  // efeito: `minhaResposta` continua editável localmente pelo RSVPCard
-  // (onResposta={setMinhaResposta}) depois desta sincronização inicial.
-  const [rsvpDataAnterior, setRsvpDataAnterior] = useState(undefined);
-  if (rsvpData !== rsvpDataAnterior) {
-    setRsvpDataAnterior(rsvpData);
-    if (rsvpData) setMinhaResposta(respostaNoRsvp(rsvpData, me?.user?.id));
-  }
-  // O que o card do próximo jogo mostra enquanto o RSVP está aberto: UM número só — os confirmados do
-  // RSVP, que é o que o "Vou" grava — e a resposta da pessoa. `minhaResposta` já inclui o estado
-  // otimista; o número parte do que o motor contou e soma/tira a diferença entre a resposta de agora e a
-  // que o motor conhecia. Sem RSVP aberto vale o que o motor mandou.
-  // O RSVP que o motor mandou é o do 1º jogo não encerrado de TODOS os times; com um chip de time
-  // escolhido o "próximo" da tela pode ser outro jogo — aí o RSVP não é dele, e o card dele fica com o
-  // que o motor contou para ele.
-  const jogoDoRsvpId = (dadosInicio?.convites?.games || []).find((g) => g.status !== 'finished')?.id ?? null;
-  const rsvpValeParaOProximo = rsvpAbertoNoProximo && nextId != null && nextId === jogoDoRsvpId;
-  // O mesmo RSVP, visto do jogo dele — com ou sem chip de time escolhido. É por aqui que o aviso do topo responde (ele não segue o chip).
-  const encerradaNoJogoDoRsvp = motivoRsvpEncerrada(rsvpData);
-  const rsvpAbertoNoJogoDoRsvp = !!(rsvpData && jogoDoRsvpId != null && rsvpData.rsvp_aberto) && !encerradaNoJogoDoRsvp;
-  const rsvpValeParaOJogo = (id) => id != null && id === jogoDoRsvpId && rsvpAbertoNoJogoDoRsvp && (games || []).find((g) => g.id === id)?.eu_jogo !== false;
-  const { guardarDob, onPresence, escolherAvatarGenerico, definirAusencia } = useAcoesDoInicio({ ausenciaBusy, avatarGenericoEscolha, dobBusy, dobInput, games, hidratarPerfil, inicio, me, minhaResposta, proximoJogo, recarregarPerfil, rsvpValeParaOJogo, setAusenciaBusy, setAvatarGenericoOverride, setBusyId, setConfirmarAusencia, setDobBusy, setDobFeito, setError, setGames, setMinhaResposta, setToast });
-  const confirmadosNoRsvp = confirmadosComResposta(rsvpData, me?.user?.id, minhaResposta);
-  const comRsvp = (g) => {
-    const base = g.id === nextId && rsvpValeParaOProximo && confirmadosNoRsvp != null
-      ? { ...g, confirmed_count: confirmadosNoRsvp, user_status: statusDoJogoPelaResposta(minhaResposta) }
-      : g;
-    // Fora do jogo do RSVP isto nunca é setado: o card de sempre (sem prazo) continua como sempre foi.
-    return g.id === jogoDoRsvpId && encerradaNoJogoDoRsvp ? { ...base, rsvp_encerrada: encerradaNoJogoDoRsvp } : base;
-  };
+  // A resposta de cada jogo vem do próprio jogo (o motor manda user_status, lista_aberta, chamado e espera_posicao): UM cartão por jogo,
+  // sem o RSVP "do próximo jogo" à parte (regra do dono — antes o mesmo jogo aparecia em dois ou três cartões).
+  const { guardarDob, onPresence, onSairEspera, escolherAvatarGenerico } = useAcoesDoInicio({ avatarGenericoEscolha, dobBusy, dobInput, games, hidratarPerfil, inicio, me, recarregarPerfil, setAvatarGenericoOverride, setBusyId, setDobBusy, setDobFeito, setError, setGames, setToast });
 
   // Campeonato da equipa principal (card no Início) — mesmo campSlug que o
   // backend usou para calcular `campeonato` dentro de /api/inicio.
@@ -324,7 +269,7 @@ export default function Inicio() {
   // Anúncio nativo: a seguir ao 2º jogo; se houver ≤1 jogo, no fim.
   const items = [];
   proximosJogos.forEach((g, i) => {
-    items.push({ type: 'game', game: comRsvp(g) });
+    items.push({ type: 'game', game: g });
     if (i === 1) items.push({ type: 'ad', key: 'ad-inicio' });
   });
   if (proximosJogos.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
@@ -367,17 +312,8 @@ export default function Inicio() {
     apiFetch(`/api/teams/${p.team.slug}/pedir-entrada`, { method: 'DELETE' }).catch(() => {});
   }
 
-  // UM aviso por vez no topo, o mais importante primeiro (a fila inteira, montada logo abaixo, depois dos
-  // estados de cada aviso). O aviso do jogo não segue o chip de time: quem tem jogo esperando resposta o
-  // vê em qualquer filtro. Para o jogo do RSVP a resposta de agora é a do RSVP (a otimista inclusive).
-  // O jogo do RSVP com o prazo vencido (ou fechado pelo admin) sai da fila de avisos: o aviso pede "Você
-  // vai?" para quem ainda pode responder, não para reabrir uma pergunta que o prazo já encerrou.
-  const jogosParaAviso = (games || []).map((g) => {
-    if (g.id === jogoDoRsvpId && encerradaNoJogoDoRsvp) return { ...g, user_status: g.user_status || 'rsvp_encerrado' };
-    return rsvpValeParaOJogo(g.id)
-      ? { ...g, user_status: statusDoJogoPelaResposta(minhaResposta) || (rsvpData?.minha_posicao_espera != null ? 'espera' : null) }
-      : g;
-  });
+  // UM aviso por vez no topo, o mais importante primeiro (a fila inteira, montada logo abaixo). O "Você vai?" de jogo saiu da fila: o
+  // cartão do jogo, embaixo, já pergunta — o mesmo jogo nunca aparece em dois lugares (regra do dono).
   const timeDoJogo = (teamId) => teams.find((t) => t.id === teamId) || null;
 
   // P1-3 — a votação era invisível fora do Ranking. Banner no Início quando há
@@ -415,7 +351,6 @@ export default function Inicio() {
   // Primeiro o que aconteceu ou tem prazo, depois os lembretes sem prazo (cada um com o "Agora não" de 7
   // dias), por último ativar notificações.
   const aviso = proximoAviso({
-    jogos: jogosQuePedemResposta(jogosParaAviso),
     pedidos: pedidosPendentes,
     desfechos: desfechosResolvidos,
     quemGanhou: cardsDoQuemGanhou,
@@ -449,9 +384,6 @@ export default function Inicio() {
       <Topbar hud="INÍCIO" />
       <main className="app-main" style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 10 }}>
         {/* UM aviso por vez, o mais importante primeiro. O que pede ação sobe; o resto é consulta. */}
-        {aviso?.tipo === 'jogo' ? (
-          <AvisoDeJogo game={aviso.item} team={timeDoJogo(aviso.item.team_id)} mais={aviso.mais} busy={busyId === aviso.item.id} onPresence={responderDoAviso} />
-        ) : null}
 
         {/* QUEM GANHOU? — só o admin: acima de "colegas para avaliar" na fila; um toque abre a pergunta. */}
         {aviso?.tipo === 'quem-ganhou' ? <AvisoQuemGanhou card={aviso.item} mais={aviso.mais} onResolvido={quemGanhouRespondido} /> : null}
@@ -566,14 +498,10 @@ export default function Inicio() {
 
         {(error || (inicio.erro && !semDadosPorErro)) && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error || inicio.erro}</div>}
 
-        <ConteudoDoInicio abrindoSorteioId={abrindoSorteioId} ausenciaBusy={ausenciaBusy} busyId={busyId} campSlug={campSlug} campSlugDoNovo={campSlugDoNovo} campeonato={campeonato} campeonatoNovo={campeonatoNovo} chipsEscondidosDir={chipsEscondidosDir} chipsEscondidosEsq={chipsEscondidosEsq} definirAusencia={definirAusencia} encerradaNoProximo={encerradaNoProximo} fecharPacote={fecharPacote} inicio={inicio} items={items} loadingGames={loadingGames} minhaResposta={minhaResposta} montarFaixaDeChips={montarFaixaDeChips} nextId={nextId} noTeams={noTeams} onPresence={onPresence} onboardingCompleto={onboardingCompleto} pacoteFechado={pacoteFechado} proximoJogo={proximoJogo} proximoSoOrganizo={proximoSoOrganizo} proximosJogos={proximosJogos} rsvpAbertoNoProximo={rsvpAbertoNoProximo} rsvpInfo={rsvpInfo} selectedTeam={selectedTeam} semDadosPorErro={semDadosPorErro} setConfirmarAusencia={setConfirmarAusencia} setMinhaResposta={setMinhaResposta} setSelectedTeam={setSelectedTeam} teams={teams} timeDoJogo={timeDoJogo} timesDoDono={timesDoDono} ultimosJogos={ultimosJogos} verSorteio={verSorteio} />
+        <ConteudoDoInicio abrindoSorteioId={abrindoSorteioId} busyId={busyId} campSlug={campSlug} campSlugDoNovo={campSlugDoNovo} campeonato={campeonato} campeonatoNovo={campeonatoNovo} chipsEscondidosDir={chipsEscondidosDir} chipsEscondidosEsq={chipsEscondidosEsq} fecharPacote={fecharPacote} inicio={inicio} items={items} loadingGames={loadingGames} montarFaixaDeChips={montarFaixaDeChips} nextId={nextId} noTeams={noTeams} onPresence={onPresence} onSairEspera={onSairEspera} onboardingCompleto={onboardingCompleto} pacoteFechado={pacoteFechado} proximosJogos={proximosJogos} selectedTeam={selectedTeam} semDadosPorErro={semDadosPorErro} setSelectedTeam={setSelectedTeam} teams={teams} timeDoJogo={timeDoJogo} timesDoDono={timesDoDono} ultimosJogos={ultimosJogos} verSorteio={verSorteio} />
       </main>
 
       {toast ? <Toast mensagem={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}
-
-      {/* Pergunta do aviso de ausência — portal para o body (overlay fixo nunca
-          dentro do [data-page], ver LoadingFutty.jsx). */}
-      <ConfirmarAusencia confirmarAusencia={confirmarAusencia} definirAusencia={definirAusencia} proximoJogo={proximoJogo} rsvpAbertoNoProximo={rsvpAbertoNoProximo} setConfirmarAusencia={setConfirmarAusencia} />
 
       <AvatarGenericoSheet
         aberto={sheetAvatarAberto}

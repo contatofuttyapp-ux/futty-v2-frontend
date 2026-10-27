@@ -24,8 +24,13 @@ function inicioJogoMs(j) {
   return base.getTime();
 }
 
-// Momento alvo do sorteio = início do jogo - janela (horas).
+// Momento alvo do sorteio: a hora do sorteio que o motor manda (`sorteio_em`, a lista fecha nela); sem ela (dados antigos),
+// início do jogo - janela (horas).
 function alvoSorteioMs(j) {
+  if (j?.sorteio_em) {
+    const ms = new Date(j.sorteio_em).getTime();
+    if (Number.isFinite(ms)) return ms;
+  }
   const start = inicioJogoMs(j);
   if (!Number.isFinite(start)) return NaN;
   const horas = Math.min(168, Math.max(1, Math.round(Number(j?.draw_window_hours ?? j?.horas_antes_para_sortear)) || 24));

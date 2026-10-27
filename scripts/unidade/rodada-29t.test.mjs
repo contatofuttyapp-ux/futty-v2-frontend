@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { jogosQuePedemResposta, proximoAviso } from '../../src/utils/avisosDoInicio.js';
+import { proximoAviso } from '../../src/utils/avisosDoInicio.js';
 import { initials } from '../../src/utils/teamColors.js';
 import { TITULO_SEM_LOCAL, depoisDePedirEntrada, tituloDoRadar } from '../../src/utils/radar.js';
 import { cidadeDoRabicho, formatarDataHora, rabichoDoFuso } from '../../src/utils/dataHora.js';
@@ -20,115 +20,18 @@ const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').split('
 const SP = 'America/Sao_Paulo';
 const LISBOA = 'Europe/Lisbon';
 
-const jogo = (id, resto = {}) => ({ id, team_id: 'T1', status: 'scheduled', date: '2026-10-08T23:00:00Z', user_status: null, eu_jogo: true, ausente_proximo: false, cancelado: false, ...resto });
-
 // ── B · a fila dos avisos do topo ─────────────────────────────────────────────────────────────────────────────────────────────────────
-test('168 · o jogo que pede resposta: marcado, sem Vou / Não vou e de time em que a pessoa joga', () => {
-  const pedem = jogosQuePedemResposta([
-    jogo('a'),
-    jogo('respondido', { user_status: 'going' }),
-    jogo('recusado', { user_status: 'not_going' }),
-    jogo('so-organizo', { eu_jogo: false }),
-    jogo('sorteado', { status: 'drawn' }),
-    jogo('encerrado', { status: 'finished' }),
-    jogo('cancelado', { cancelado: true }),
-  ]);
-  assert.deepEqual(pedem.map((g) => g.id), ['a']);
-});
-
-test('168 · nunca pede resposta de time em que a pessoa só organiza (eu_jogo === false)', () => {
-  assert.deepEqual(jogosQuePedemResposta([jogo('x', { eu_jogo: false })]), []);
-  // O motor antigo não mandava `eu_jogo`: ausente = joga (como o card do jogo, que só esconde os botões com `=== false`).
-  const velho = jogo('y');
-  delete velho.eu_jogo;
-  assert.deepEqual(jogosQuePedemResposta([velho]).map((g) => g.id), ['y']);
-});
-
-test('168 · o mais próximo primeiro, e o jogo sem data vai para o fim da fila', () => {
-  const pedem = jogosQuePedemResposta([
-    jogo('sem-data', { date: null }),
-    jogo('longe', { date: '2026-11-20T23:00:00Z', team_id: 'T2' }),
-    jogo('perto', { date: '2026-10-09T23:00:00Z', team_id: 'T3' }),
-  ]);
-  assert.deepEqual(pedem.map((g) => g.id), ['perto', 'longe', 'sem-data']);
-});
-
-test('168 · quem já avisou que não vai ao próximo jogo do time não é cobrado desse jogo (mas do seguinte, sim)', () => {
-  const pedem = jogosQuePedemResposta([
-    jogo('proximo', { date: '2026-10-09T23:00:00Z', ausente_proximo: true }),
-    jogo('seguinte', { date: '2026-10-16T23:00:00Z', ausente_proximo: true }),
-    jogo('outro-time', { team_id: 'T2', date: '2026-10-10T23:00:00Z' }),
-  ]);
-  assert.deepEqual(pedem.map((g) => g.id), ['outro-time', 'seguinte']);
-});
-
-test('168 · a ordem da fila: jogo sem resposta → pedido pendente → ativar notificações', () => {
-  const g = [jogo('a')];
-  const p = [{ id: 'p1' }];
-  assert.equal(proximoAviso({ jogos: g, pedidos: p, notificacoes: true }).tipo, 'jogo');
-  assert.equal(proximoAviso({ jogos: [], pedidos: p, notificacoes: true }).tipo, 'pedido');
-  assert.equal(proximoAviso({ jogos: [], pedidos: [], notificacoes: true }).tipo, 'notificacoes');
-  assert.equal(proximoAviso({ jogos: [], pedidos: [], notificacoes: false }), null, 'fila vazia: nenhum aviso');
+test('32H · a fila do topo não tem mais o "Você vai?" do jogo: o jogo tem UM cartão só, com o Vou / Não vou dentro', () => {
+  assert.equal(proximoAviso({ jogos: [{ id: 'a' }], pedidos: [], notificacoes: false }), null, 'jogo sem resposta não vira aviso');
+  assert.equal(proximoAviso({ pedidos: [{ id: 'p1' }], notificacoes: true }).tipo, 'pedido');
+  assert.equal(proximoAviso({ pedidos: [], notificacoes: true }).tipo, 'notificacoes');
   assert.equal(proximoAviso(), null);
-});
-
-test('168 · UM aviso por vez: o resultado é um só, com o item e a contagem dos que esperam do mesmo tipo ("+N")', () => {
-  const dois = proximoAviso({ jogos: [jogo('a'), jogo('b'), jogo('c')], pedidos: [{ id: 'p1' }, { id: 'p2' }], notificacoes: true });
-  assert.equal(dois.tipo, 'jogo');
-  assert.equal(dois.item.id, 'a', 'o mais próximo');
-  assert.equal(dois.mais, 2, '"+2": os outros dois jogos');
-  const pedidos = proximoAviso({ jogos: [], pedidos: [{ id: 'p1' }, { id: 'p2' }], notificacoes: true });
-  assert.deepEqual([pedidos.tipo, pedidos.item.id, pedidos.mais], ['pedido', 'p1', 1]);
-  assert.equal(proximoAviso({ jogos: [], pedidos: [], notificacoes: true }).mais, 0);
-});
-
-test('168 · respondeu → entra o próximo da fila (jogo → outro jogo → pedido → notificações)', () => {
-  const jogos = [jogo('a', { date: '2026-10-09T23:00:00Z' }), jogo('b', { date: '2026-10-10T23:00:00Z', team_id: 'T2' })];
-  const pedidos = [{ id: 'p1' }];
-  const fila = () => proximoAviso({ jogos: jogosQuePedemResposta(jogos), pedidos, notificacoes: true });
-  assert.equal(fila().item.id, 'a');
-  jogos[0].user_status = 'going'; // "Vou" no aviso
-  assert.deepEqual([fila().tipo, fila().item.id, fila().mais], ['jogo', 'b', 0]);
-  jogos[1].user_status = 'not_going'; // "Não vou" no seguinte
-  assert.equal(fila().tipo, 'pedido');
-  pedidos.length = 0; // cancelou o pedido
-  assert.equal(fila().tipo, 'notificacoes');
-});
-
-test('168 · o Início usa a fila: um slot só no topo, o aviso do jogo chama a MESMA função dos cards e o pedido segue com "Cancelar"', () => {
   const inicio = semComentarios(lerPagina('Inicio'));
-  assert.match(inicio, /import \{ LEMBRETES_SEM_PRAZO, jogosQuePedemResposta, proximoAviso \} from '\.\.\/utils\/avisosDoInicio';/); // 29T-C: + a lista dos lembretes sem prazo
-  // 29T-B: a mesma fila, agora com todos os avisos do topo (a ordem em si é travada em rodada-29t-b.test.mjs).
-  assert.match(inicio, /const aviso = proximoAviso\(\{\s*jogos: jogosQuePedemResposta\(jogosParaAviso\),\s*pedidos: pedidosPendentes,[\s\S]*?notificacoes: pushEstado === 'suportado' && !pushBannerFechado,\s*\}\);/);
-  // O aviso do jogo: os botões chamam responderDoAviso → onPresence, a função que os cards dos Próximos jogos também usam.
-  assert.match(inicio, /<AvisoDeJogo game=\{aviso\.item\} team=\{timeDoJogo\(aviso\.item\.team_id\)\} mais=\{aviso\.mais\} busy=\{busyId === aviso\.item\.id\} onPresence=\{responderDoAviso\} \/>/);
-  assert.match(inicio, /async function responderDoAviso\(gameId, going\) \{\s*const fim = await onPresence\(gameId, going\);/);
-  assert.match(inicio, /<GameCard\s+key=\{item\.game\.id\}[\s\S]*?onPresence=\{onPresence\}/, 'o card do jogo chama a mesma onPresence');
-  // onPresence: o RSVP aberto responde pelo RSVP; senão, a chamada de sempre do card.
-  assert.match(inicio, /if \(rsvpValeParaOJogo\(gameId\)\) return responderRsvp\(gameId, going \? 'confirmado' : 'recusado'\);/);
-  assert.match(inicio, /apiFetch\(`\/api\/games\/\$\{gameId\}\/confirmar`/);
-  // Um slot só: cada tipo de aviso da fila sai de `aviso?.tipo`, e os dois blocos antigos (banner direto, mapa de pedidos) não existem mais.
-  assert.match(inicio, /aviso\?\.tipo === 'jogo'/);
+  assert.doesNotMatch(inicio, /AvisoDeJogo|aviso\?\.tipo === 'jogo'|RSVPCard|ConfirmarAusencia|Avisar que não vou/);
+  assert.match(inicio, /<RespostaDoJogo/, 'o Vou / Não vou mora no cartão do jogo');
   assert.match(inicio, /aviso\?\.tipo === 'pedido'/);
-  assert.match(inicio, /aviso\?\.tipo === 'notificacoes'/);
-  assert.doesNotMatch(inicio, /pedidosPendentes\.map\(/, 'não são mais vários pedidos empilhados');
-  assert.doesNotMatch(inicio, /\{pushEstado === 'suportado' && !pushBannerFechado \? \(/, 'o banner de notificações só aparece pela fila');
   assert.match(inicio, /cancelarPedidoPendente\(aviso\.item\)/);
-  assert.match(inicio, /Pedido pendente na \{aviso\.item\.team\?\.nome\}/, 'o pedido do dono adorou: o mesmo texto');
   assert.match(inicio, /onClick=\{fecharPushBanner\}/, 'as notificações continuam fechando');
-});
-
-test('168 · o aviso do jogo: escudo, dia e hora pela dataHora.js (com a cidade do time), a pergunta "Você vai?" e Vou / Não vou', () => {
-  const aviso = semComentarios(ler('src/components/AvisoDeJogo.jsx'));
-  assert.match(aviso, /import \{ formatarDataHora \} from '\.\.\/utils\/dataHora';/);
-  assert.match(aviso, /formatarDataHora\(game\.date, game\.fuso, \{ cidade: team\?\.cidade \}\)/);
-  assert.match(aviso, /<EscudoEquipa /);
-  assert.match(aviso, />Você vai\?</);
-  assert.match(aviso, /onClick=\{\(\) => onPresence\(game\.id, true\)\}[\s\S]*?Vou\s*<\/button>/);
-  assert.match(aviso, /onClick=\{\(\) => onPresence\(game\.id, false\)\}[\s\S]*?Não vou\s*<\/button>/);
-  assert.match(aviso, /minHeight: 44/, 'alvo de toque de 44 px');
-  assert.match(aviso, /\+\{mais\}/, 'o "+N" discreto');
-  assert.doesNotMatch(aviso, /formatDateTime|toLocale/, 'nenhuma tela formata data por conta própria (lei da hora do jogo)');
 });
 
 test('168 · "Seus times" mostra até 2 linhas; com mais, "Ver todos (N)" abre o resto no lugar e "Ver menos" fecha', () => {
@@ -295,11 +198,9 @@ test('165 · em todo lugar que mostra o rabicho a cidade do time vai junto (nenh
   };
   varrer('src');
   assert.deepEqual(sem, [], 'chamadas que mostram a hora do jogo sem a cidade do time');
-  // Os três que faltavam: o card do jogo do Início, o prazo do RSVPCard e o painel do time (jogos, cancelar, resultado, prazo da presença).
+  // O card do jogo do Início e o painel do time (jogos, cancelar, resultado).
   assert.match(lerPagina('Inicio'), /formatDateTime\(game\.date, game\.fuso, \{ cidade \}\)/);
-  assert.match(ler('src/components/RSVPCard.jsx'), /formatarDataHora\(iso, fuso, \{ cidade \}\)/);
-  assert.match(lerPagina('AdminPanel'), /fmtPrazoAdmin = \(iso, fuso, cidade\) => formatarDataHora\(iso, fuso, \{ cidade \}\)/);
-  assert.match(lerPagina('AdminPanel'), /<RSVPAdmin gameId=\{g\.id\} slug=\{slug\} cidade=\{team\?\.cidade\}/);
+  assert.match(lerPagina('AdminPanel'), /formatDateTime\(g\.data, fuso, \{ cidade: team\?\.cidade \}\)/);
 });
 
 test('166 · Criar time, passo 1: o Continuar está lá desde o começo, apagado (não-permitido), e acende com nome e cidade', () => {

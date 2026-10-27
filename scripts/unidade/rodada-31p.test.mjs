@@ -25,10 +25,10 @@ test('a Figurinha não solta confete (nem na figurinha pronta, nem no compartilh
   assert.doesNotMatch(fig, /useConfetti|celebrar[A-Z]/);
 });
 
-test('useConfetti só guarda o que ainda tem uso: o top 3 (Ranking e o campeonato terminado do Início)', () => {
+test('useConfetti só guarda o que ainda tem uso: o campeonato terminado do Início (o Ranking não solta mais confete)', () => {
   const exportados = [...ler('src/hooks/useConfetti.js').matchAll(/export (?:async )?function (\w+)/g)].map((m) => m[1]);
   assert.deepEqual(exportados, ['celebrarTop3']);
-  assert.match(ler('src/pages/Ranking.jsx'), /celebrarTop3\(eu\.posicao\)/, 'o confete do Ranking fica');
+  assert.doesNotMatch(ler('src/pages/Ranking.jsx'), /useConfetti|celebrar[A-Z]/, 'o Ranking não solta confete (nem ao abrir, nem no pódio)');
   assert.match(ler('src/components/CampeonatoVistas.jsx'), /Chuva de confete da celebração/, 'a celebração do campeonato fica');
 });
 

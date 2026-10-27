@@ -6,7 +6,7 @@
 // vê, com o selo ADMIN). A aba fica no endereço (?aba=elenco), trocar de aba não empilha histórico, e
 // "Voltar" volta para onde a pessoa estava. As partes do admin vêm de pages/AdminPanel.jsx em lazy: quem
 // não é admin não baixa nada delas.
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ChevronRight, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
@@ -18,7 +18,7 @@ import { lazyComRetry } from '../utils/lazyComRetry';
 import { urlAsset, urlImagem } from '../utils/avatar';
 import { avatarGenericoUrl } from '../utils/avatarGenerico';
 import { copiarTexto } from '../utils/clipboard';
-import { enderecoDoWhatsapp, linkDoConvite } from '../utils/convite';
+import { enderecoDoWhatsapp, linkDoConvite, validadeDoConvite } from '../utils/convite';
 import { plural } from '../utils/plural';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import Topbar from '../components/Topbar';
@@ -166,22 +166,10 @@ export default function Equipa() {
       const p = new URLSearchParams(prev);
       p.set('aba', k);
       p.delete('convidar');
-      p.delete('abrir-presenca');
       p.delete('mes');
       return p;
     }, { replace: true });
   }
-  // A linha "presença ainda não aberta" do Início chega com ?abrir-presenca=<game_id>. A aba Jogos rola até o
-  // jogo e abre o "Abrir presença" dele; depois de usado o parâmetro sai do endereço (troca a entrada do
-  // histórico, não empilha), então "Voltar" e recarregar não reabrem nada.
-  const abrirPresencaDe = searchParams.get('abrir-presenca');
-  const usouAbrirPresenca = useCallback(() => {
-    setSearchParams((prev) => {
-      const p = new URLSearchParams(prev);
-      p.delete('abrir-presenca');
-      return p;
-    }, { replace: true });
-  }, [setSearchParams]);
   const [versaoConvites, setVersaoConvites] = useState(0); // o "Convidar" gerou um link → a lista de links ativos recarrega
   const { perfil: me } = usePerfil();
   const [confirmarSaida, setConfirmarSaida] = useState(false);
@@ -202,6 +190,8 @@ export default function Equipa() {
 
   const [posBusy, setPosBusy] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
+  const [inviteExpira, setInviteExpira] = useState(null); // quando o link vence (expires_at do motor)
+  const [inviteVencido, setInviteVencido] = useState(false);
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -300,14 +290,20 @@ export default function Equipa() {
     }
   }
 
+  function mostrarConvite({ token, codigo, expires_at: expira, vencido = false }) {
+    // O link curto com o nome do time (/c/<nome>-<código>) quando há código; o longo continua valendo.
+    setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo, nomeTime: team?.nome }));
+    setInviteExpira(expira || null);
+    setInviteVencido(!!vencido);
+  }
+
+  // "Gerar link novo": um link novo, valendo 30 dias a partir de agora (os anteriores continuam valendo até vencer ou o admin revogar).
   async function gerarConvite() {
     setActionError('');
     setCopied(false);
     setGenerating(true);
     try {
-      const { token, codigo } = await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' });
-      // O link curto com o nome do time (/c/<nome>-<código>) quando há código; o longo continua valendo.
-      setInviteLink(linkDoConvite({ origem: ORIGEM_DO_SITE, token, codigo, nomeTime: team?.nome }));
+      mostrarConvite(await apiFetch(`/api/teams/${slug}/convite`, { method: 'POST' }));
       setVersaoConvites((v) => v + 1);
     } catch (err) {
       setActionError(err.message);
@@ -316,11 +312,29 @@ export default function Equipa() {
     }
   }
 
+  // "Convidar": o link ATUAL do time, com a validade. Só gera um novo se o time nunca teve link.
+  async function abrirConvite() {
+    setActionError('');
+    setCopied(false);
+    setGenerating(true);
+    try {
+      const { convite } = await apiFetch(`/api/teams/${slug}/convite/atual`);
+      if (convite) {
+        mostrarConvite(convite);
+        setGenerating(false);
+        return;
+      }
+    } catch {
+      // motor antigo (sem a rota): gera um link, como antes
+    }
+    await gerarConvite();
+  }
+
   const pediuConvite = searchParams.get('convidar') === '1';
   useEffect(() => {
     if (!pediuConvite || !team || inviteLink || generating) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot: o atalho "Convidar" do Início pede o link ao abrir
-    gerarConvite();
+    abrirConvite();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corre 1x quando o time carrega com ?convidar=1
   }, [pediuConvite, team]);
 
@@ -329,6 +343,10 @@ export default function Equipa() {
     setCopied(ok);
     if (!ok) setActionError('Não deu para copiar. Copie o link à mão.');
   }
+
+  // A validade do link do convite na tela ("Vale até 26/11 (30 dias)"); o relógio pode vencê-lo com a tela aberta.
+  const validade = inviteExpira ? validadeDoConvite(inviteExpira, { fuso: team?.fuso }) : null;
+  const conviteVencido = inviteVencido || (!!inviteExpira && !validade);
 
   // Quem não é do time vê o aviso próprio (abaixo), não a frase do motor num alerta vermelho.
   const erroNaTela = foraDoTime ? actionError : error || actionError;
@@ -387,7 +405,7 @@ export default function Equipa() {
             {aba === 'jogos' ? (
               ehAdmin ? (
                 <Suspense fallback={<LoadingFutty />}>
-                  <JogosDoAdmin slug={slug} team={team} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} navigate={navigate} abrirPresencaDe={abrirPresencaDe} aoUsarAbrirPresenca={usouAbrirPresenca} />
+                  <JogosDoAdmin slug={slug} team={team} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} navigate={navigate} />
                 </Suspense>
               ) : (
                 <JogosDoTime slug={slug} />
@@ -414,10 +432,10 @@ export default function Equipa() {
               className="btn hud-corners-s cta-gold"
               data-convidar
               style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: "'Rajdhani', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase' }}
-              onClick={gerarConvite}
+              onClick={abrirConvite}
               disabled={generating}
             >
-              <Icon name="partilhar" size={15} /> {generating ? 'Gerando…' : 'Convidar'}
+              <Icon name="partilhar" size={15} /> {generating && !inviteLink ? 'Abrindo…' : 'Convidar'}
             </button>
             {inviteLink ? null : (
               <p className="texto-apoio" style={{ marginBottom: 0 }}>
@@ -427,7 +445,19 @@ export default function Equipa() {
 
             {inviteLink && (
               <div style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px', marginTop: 10 }}>
-                <strong style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, letterSpacing: '0.06em' }}>Link do convite</strong>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                  <strong style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 13, letterSpacing: '0.06em' }}>Link do convite</strong>
+                  {/* A validade (o link vence; o admin gera outro quando quiser). Vencido: diz, e o link não sai para o grupo. */}
+                  {conviteVencido ? (
+                    <span data-convite-vencido style={{ fontSize: 12, fontWeight: 800, color: '#fda4af' }}>Vencido</span>
+                  ) : inviteExpira ? (
+                    <span data-convite-validade style={{ fontSize: 12, color: 'var(--text-dim)' }}>{validade}</span>
+                  ) : null}
+                </div>
+                {conviteVencido ? (
+                  <p className="texto-apoio" style={{ margin: '6px 0 0' }}>Este link venceu e não abre mais. Gere um novo para mandar no grupo.</p>
+                ) : (
+                <>
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <input className="input input--hud" readOnly value={inviteLink} onFocus={(e) => e.target.select()} style={{ flex: 1, minWidth: 0 }} />
                   <button type="button" className="btn btn--sm btn--outline hud-corners-s" onClick={copiar}>
@@ -446,6 +476,11 @@ export default function Equipa() {
                 >
                   Mandar no WhatsApp
                 </a>
+                </>
+                )}
+                <button type="button" data-gerar-link-novo className="btn btn--ghost btn--sm" style={{ marginTop: 8 }} disabled={generating} onClick={gerarConvite}>
+                  {generating ? 'Gerando…' : 'Gerar link novo'}
+                </button>
               </div>
             )}
 

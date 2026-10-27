@@ -35,7 +35,10 @@ import ForaDoTime from '../components/ForaDoTime';
 import { confirmadosDoSorteio } from '../utils/convidadosDoJogo';
 import { ehForaDoTime } from '../utils/foraDoTime';
 import { codigoDoSorteio, linkDoSorteio } from '../utils/linkDoSorteio';
-import { motivoRsvpEncerrada, FRASE_RSVP_ENCERRADA } from '../lib/rsvp';
+import { enviarRsvp } from '../lib/rsvp';
+import { contagemDoSorteio, textoDaListaFechada, textoDoSorteio } from '../utils/chamada';
+import { useAgora } from '../hooks/useAgora';
+import RespostaDoJogo from '../components/RespostaDoJogo';
 import { montadoAMao, soOsCampeoes } from '../utils/seloDoSorteio';
 import { fraseDoFeito, fraseDoFeitoEmTodos } from '../utils/associarJogador';
 import SomSorteio from '../components/somSorteio';
@@ -85,13 +88,12 @@ export default function Jogo() {
   const foraDoTime = ehForaDoTime({ status: errorStatus, code: errorCode, mensagem: error });
   // O que o time conta (gols, artilheiro, destaque) decide quais seções o editor do resultado mostra.
   const { team: timeCompleto } = useTeam(slug);
-  // P2-10: integração SÓ DE LEITURA com o sistema de espera (rsvp_espera). Mostra a
-  // posição na fila dentro do Jogo; NÃO toca na capacidade do /confirmar (vaga futura).
-  const { data: rsvpEstado } = useApi(`/api/jogos/${id}/rsvp`);
+  // A presença do jogo (rsvp): a minha resposta, a posição na lista de espera e se eu só organizo o time.
+  const { data: rsvpEstado, reload: reloadRsvp } = useApi(`/api/jogos/${id}/rsvp`);
   const posEspera = rsvpEstado?.minha_posicao_espera ?? null;
-  // Mesma leitura: se a presença formal foi aberta com prazo (ou o admin fechou), quem ainda não confirmou
-  // não pode mais dizer "Vou" por aqui — o botão avisa em vez de deixar tocar para descobrir com um erro.
-  const encerradaNoJogo = motivoRsvpEncerrada(rsvpEstado);
+  // A contagem até o sorteio anda sozinha; quando a hora passa com a tela aberta, a lista fecha aqui também.
+  const contandoSorteio = !!data?.game?.sorteio_em && data?.game?.lista_aberta !== false;
+  const agora = useAgora(contandoSorteio);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   // O erro do sorteio tem lugar próprio, junto dos botões de sortear: no topo da página (onde vai o actionError) quem
@@ -111,7 +113,7 @@ export default function Jogo() {
   const proximaListaDeConvidados = useRef(null);
   const [toast, setToast] = useState(null);
   const [associando, setAssociando] = useState(null); // o convidado sem app cuja vaga o admin está ligando a um membro (utils/associarJogador.js)
-  const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'refazer-a-mao' | 'cancelar-presenca' | 'campeonato' | null
+  const [confirmacao, setConfirmacao] = useState(null); // 're-sorteio' | 'refazer-a-mao' | 'campeonato' | null
   // A confirmação de trocar os times aparece ACIMA dos times, e o link que a abre ("Sortear de novo" · "Montar à mão") fica lá embaixo: sem rolar até
   // ela, quem tocou no link via o link sumir e nada mais — parecia que o toque não tinha feito nada (o mesmo caso do erro do sorteio).
   const confirmarTrocaRef = useRef(null);
@@ -162,6 +164,33 @@ export default function Jogo() {
   // `goleiro` omitido = o motor decide (o que já estiver marcado neste jogo ou, se ainda não houver, a
   // flag de goleiro do time).
   const confirmar = (confirmado, goleiro) => runAction(`/api/games/${id}/confirmar`, { confirmado, goleiro });
+
+  // "Vou" / "Não vou": a porta única da presença (a mesma do Início). A frase do motor vai para o aviso ("A lista deste jogo já fechou.").
+  async function responder(status) {
+    setBusy(true);
+    try {
+      const r = await enviarRsvp(id, status);
+      if (r?.espera) setToast({ tipo: 'success', mensagem: 'O jogo está cheio. Você entrou na lista de espera.' });
+    } catch (err) {
+      setToast({ tipo: 'error', mensagem: err.message });
+    } finally {
+      await Promise.all([reload(), reloadRsvp()]);
+      setBusy(false);
+    }
+  }
+
+  async function sairDaEspera() {
+    setBusy(true);
+    try {
+      await apiFetch(`/api/jogos/${id}/rsvp/sair-espera`, { method: 'POST' });
+      setToast({ tipo: 'success', mensagem: 'Você saiu da lista de espera.' });
+    } catch (err) {
+      setToast({ tipo: 'error', mensagem: err.message });
+    } finally {
+      await reloadRsvp();
+      setBusy(false);
+    }
+  }
   const marcar = (userId, patch) => runAction(`/api/games/${id}/jogador`, { user_id: userId, ...patch });
 
   // Grava a lista de convidados (a inteira, como está na tela). Uma gravação de cada vez e a última vale: dois toques seguidos não
@@ -291,6 +320,10 @@ export default function Jogo() {
   // Quem não é do time vê o aviso próprio (abaixo), não a frase do motor num alerta vermelho.
   const erroNaTela = foraDoTime ? actionError : error || actionError;
   const estouConfirmado = !!meuEstado?.confirmado;
+  const minhaResposta = estouConfirmado ? 'confirmado' : rsvpEstado?.minha_resposta === 'recusado' ? 'recusado' : null;
+  const contagem = contandoSorteio ? contagemDoSorteio(game.sorteio_em, agora) : null;
+  // A lista aceita resposta enquanto o motor diz que sim e a hora do sorteio não passou (o sorteio feito antes também fecha).
+  const listaAberta = game?.lista_aberta !== false && !game?.sorteio_realizado && (!game?.sorteio_em || contagem != null);
   const souGoleiro = !!meuEstado?.goleiro;
 
   return (
@@ -375,74 +408,50 @@ export default function Jogo() {
 
             {terminado ? null : (
             <>
-            {/* Confirmação de presença */}
+            {/* Sua presença: a hora do sorteio (a lista fecha nela) e o "Vou / Não vou" travado — o mesmo do cartão do Início. */}
             <SecLabel>Sua presença</SecLabel>
             {soOrganizo ? (
               <div data-so-organizo style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px' }}>
                 <span className="muted">Você só organiza este time, então não entra na lista de presença nem no sorteio. Dá para mudar nas configurações do time.</span>
               </div>
+            ) : data?.chamado === false ? (
+              <div data-nao-chamado style={{ ...VIDRO, clipPath: CLIP, padding: '12px 14px' }}>
+                <span className="muted">Você não foi chamado para este jogo.</span>
+              </div>
             ) : (
-            <div style={{ ...VIDRO, clipPath: CLIP, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', flexWrap: 'wrap' }}>
-              {posEspera != null && !estouConfirmado ? (
-                <span style={{ width: '100%', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: RAJ, color: 'var(--neon)', fontWeight: 700, fontSize: 13, letterSpacing: '0.03em' }}>
-                  ⏳ Você está em {posEspera}º na lista de espera
-                </span>
-              ) : null}
-              {estouConfirmado ? (
-                <>
-                  {/* Quem está confirmado veste o dourado da casa, como o "Vou" do card de jogo (sem verde saturado). */}
-                  <span style={{ fontFamily: RAJ, color: 'var(--presenca-sim-texto)', fontWeight: 800, letterSpacing: '0.04em' }}>✓ Você está confirmado</span>
-                  <label className="check-inline" style={{ fontFamily: RAJ }}>
-                    <input
-                      type="checkbox"
-                      checked={souGoleiro}
-                      disabled={busy}
-                      onChange={(e) => confirmar(true, e.target.checked)}
-                    />
-                    Sou goleiro (GOL)
-                  </label>
-                  {/* P2-8: sem confirmação, um dedo mal posto tirava-te do jogo. */}
-                  {confirmacao === 'cancelar-presenca' ? (
-                    <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Cancelar mesmo?</span>
-                      <button type="button" className="btn btn--sm btn--outline hud-corners-s" style={{ borderColor: 'var(--presenca-nao-borda)', color: 'var(--presenca-nao-texto)' }} onClick={() => { setConfirmacao(null); confirmar(false); }} disabled={busy}>
-                        Sim, sair
-                      </button>
-                      <button type="button" className="btn btn--sm btn--ghost" onClick={() => setConfirmacao(null)} disabled={busy}>
-                        Não
-                      </button>
-                    </span>
+            <div data-sua-presenca style={{ ...VIDRO, clipPath: CLIP, display: 'grid', gap: 8, padding: '12px 14px' }}>
+              {game.sorteio_em && !game.sorteio_realizado ? (
+                <div data-sorteio style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 8px', fontSize: 13, color: 'var(--text-dim)' }}>
+                  {listaAberta ? (
+                    <>
+                      <span data-hora-do-sorteio>{textoDoSorteio(game.sorteio_em, game.data, team?.fuso)}</span>
+                      {contagem ? <span data-contagem style={{ color: '#f0c94a', fontWeight: 700 }}>{contagem}</span> : null}
+                    </>
                   ) : (
-                    <button
-                      type="button"
-                      className="btn btn--sm btn--outline hud-corners-s"
-                      style={{ marginLeft: 'auto' }}
-                      onClick={() => setConfirmacao('cancelar-presenca')}
-                      disabled={busy}
-                    >
-                      Cancelar presença
-                    </button>
+                    <span data-lista-fechada style={{ fontWeight: 700 }}>{textoDaListaFechada(confirmadosTodos.length)}</span>
                   )}
-                </>
-              ) : encerradaNoJogo ? (
-                <span className="muted" data-rsvp-encerrada>{FRASE_RSVP_ENCERRADA[encerradaNoJogo]}</span>
-              ) : (
-                <>
-                  <span className="muted">Você ainda não confirmou presença.</span>
-                  <button
-                    type="button"
-                    className="btn btn--sm hud-corners-s cta-gold"
-                    style={{ marginLeft: 'auto', fontFamily: RAJ, letterSpacing: '0.06em', textTransform: 'uppercase' }}
-                    /* Rodada 9: sem `goleiro` no pedido — o motor usa a flag do
-                       time (quem é goleiro do time já entra no gol) e respeita o
-                       que o jogador/admin tenham marcado neste jogo. */
-                    onClick={() => confirmar(true)}
+                </div>
+              ) : null}
+              <RespostaDoJogo
+                resposta={minhaResposta}
+                aberta={listaAberta}
+                espera={posEspera != null && !estouConfirmado ? posEspera : null}
+                ocupado={busy}
+                onResponder={responder}
+                onSairEspera={sairDaEspera}
+                pulsar={false}
+              />
+              {estouConfirmado && !game.sorteio_realizado ? (
+                <label className="check-inline" style={{ fontFamily: RAJ }}>
+                  <input
+                    type="checkbox"
+                    checked={souGoleiro}
                     disabled={busy}
-                  >
-                    Confirmar presença
-                  </button>
-                </>
-              )}
+                    onChange={(e) => confirmar(true, e.target.checked)}
+                  />
+                  Sou goleiro (GOL)
+                </label>
+              ) : null}
             </div>
             )}
 

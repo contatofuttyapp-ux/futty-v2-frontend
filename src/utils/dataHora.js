@@ -148,6 +148,14 @@ export function dataComDiaPorExtenso(iso, fuso) {
   return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${numero} de ${mesCurto(iso, fuso)}.`;
 }
 
+/** O dia da semana curto e a data no relógio do campo: "qui. 29/10" (a hora do sorteio do jogo). */
+export function diaCurtoComData(iso, fuso) {
+  const dia = formatar(iso, fuso, { weekday: 'short' });
+  const data = formatarData(iso, fuso, 'diaMes');
+  if (!dia || !data) return '';
+  return `${dia.endsWith('.') ? dia : `${dia}.`} ${data}`;
+}
+
 /** O dia do mês (número, sem zero na frente) no relógio do campo. */
 export function diaDoMes(iso, fuso) {
   const p = partesDe(iso, fuso, { day: 'numeric' });

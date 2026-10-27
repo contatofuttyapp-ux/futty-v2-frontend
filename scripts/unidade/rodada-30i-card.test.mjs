@@ -59,15 +59,15 @@ test('corpoDaResposta: o índice do time é o campeão (0 é campeão); "empate"
   assert.deepEqual(corpoDaResposta('empate'), { campeao_time_index: null, empate: true });
 });
 
-test('na fila de avisos "Quem ganhou?" fica acima de "colegas para avaliar" e abaixo do jogo sem resposta, do pedido e da resposta do pedido', () => {
+test('na fila de avisos "Quem ganhou?" fica acima de "colegas para avaliar" e abaixo do pedido e da resposta do pedido', () => {
   const i = (tipo) => ORDEM_DOS_AVISOS.indexOf(tipo);
-  assert.ok(i('jogo') < i('quem-ganhou') && i('pedido') < i('quem-ganhou') && i('desfecho') < i('quem-ganhou'));
+  assert.ok(i('pedido') < i('quem-ganhou') && i('desfecho') < i('quem-ganhou'));
   assert.ok(i('quem-ganhou') < i('votacao'), 'prioridade alta: acima de "colegas para avaliar"');
   assert.ok(!LEMBRETES_SEM_PRAZO.includes('quem-ganhou'), 'não é lembrete: é um resultado por lançar, sem "Agora não" de 7 dias');
   const votacoes = [{ slug: 'missa' }];
   const q = [{ game_id: 'g1' }, { game_id: 'g2' }];
   assert.deepEqual(proximoAviso({ quemGanhou: q, votacoes }), { tipo: 'quem-ganhou', item: { game_id: 'g1' }, mais: 1 });
-  assert.equal(proximoAviso({ jogos: [{ id: 'j' }], quemGanhou: q, votacoes }).tipo, 'jogo');
+  assert.equal(proximoAviso({ pedidos: [{ id: 'p' }], quemGanhou: q, votacoes }).tipo, 'pedido');
   assert.equal(proximoAviso({ quemGanhou: [], votacoes }).tipo, 'votacao', 'sem card, a votação volta a ser o aviso');
   assert.equal(proximoAviso({ quemGanhou: q, notificacoes: true, nascimento: true }).tipo, 'quem-ganhou');
 });

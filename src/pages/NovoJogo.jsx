@@ -6,18 +6,24 @@
 // linha discreta embaixo do botão e leva ao passo a passo (/time/:slug/jogo/passado,
 // pages/JogoPassado.jsx) — o destino mora em utils/novoJogo.js (caminhoDoJogoPassado), um ponto só.
 // Um link antigo (?passado=1) para esta página abre o Marcar jogo.
+// O jogo nasce CHAMANDO: o elenco inteiro (ou quem o admin escolher) recebe o aviso e o "Vou / Não vou" na hora. A lista fecha sozinha
+// na hora do sorteio — 1 hora antes do jogo, se o admin não mudar.
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Calendar, Clock, MapPin, Shuffle, Users } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { lerCache } from '../lib/cacheLocal';
 import { useAuth } from '../hooks/useAuth';
 import { useTeam } from '../hooks/useTeam';
-import { instanteNoCampo } from '../utils/dataHora';
+import { camposNoCampo, instanteNoCampo } from '../utils/dataHora';
+import { UMA_HORA_MS, textoDoSorteio } from '../utils/chamada';
+import { nomeExibicao } from '../utils/nomeExibicao';
+import { contar } from '../utils/plural';
 import { caminhoDoJogoPassado, horaSugerida } from '../utils/novoJogo';
 import Topbar from '../components/Topbar';
 import NumberStepper from '../components/NumberStepper';
 import IngressoDoJogo from '../components/IngressoDoJogo';
+import PlayerAvatar from '../components/PlayerAvatar';
 import '../styles/app.css';
 
 const RAJ = "'Rajdhani', sans-serif";
@@ -49,6 +55,37 @@ export default function NovoJogo() {
   const padraoDoTime = team?.jogadores_por_time || 5;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // A hora do sorteio: null = 1 hora antes do jogo (acompanha a hora do jogo); { data, hora } = o admin mudou.
+  const [sorteioMexido, setSorteioMexido] = useState(null);
+  const inicioIso = data && hora ? instanteNoCampo(data, hora, team?.fuso) : null;
+  const sorteioPadraoIso = inicioIso ? new Date(new Date(inicioIso).getTime() - UMA_HORA_MS).toISOString() : null;
+  // Quem é chamado: null = o elenco inteiro (também quem entrar depois); um Set = só esses. O elenco só é lido quando o admin vai escolher.
+  const [escolhidos, setEscolhidos] = useState(null);
+  const [elenco, setElenco] = useState(null);
+  const [erroDoElenco, setErroDoElenco] = useState('');
+
+  async function escolherQuem() {
+    setEscolhidos(new Set());
+    if (elenco) return;
+    try {
+      const { membros } = await apiFetch(`/api/teams/${slug}/membros`);
+      // Quem só organiza não entra na presença; quem está suspenso também não é chamado.
+      const quemJoga = (membros || []).filter((m) => m.joga !== false && m.ativo !== false);
+      setElenco(quemJoga);
+      setEscolhidos(new Set(quemJoga.map((m) => m.user_id)));
+    } catch (err) {
+      setErroDoElenco(err.message);
+    }
+  }
+
+  function alternar(id) {
+    setEscolhidos((cur) => {
+      const novo = new Set(cur);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -62,6 +99,11 @@ export default function NovoJogo() {
       // admin em Lisboa que marca "quinta 20:00" para um time de São Paulo está marcando 20:00 de São Paulo.
       const iso = instanteNoCampo(data, hora, team?.fuso);
       if (!iso) { setError('Confira a data e a hora do jogo.'); setLoading(false); return; }
+      // A hora do sorteio também é a do campo. Sem mexer, vai sem ela (o motor põe 1 hora antes).
+      const sorteioIso = sorteioMexido ? instanteNoCampo(sorteioMexido.data, sorteioMexido.hora, team?.fuso) : null;
+      if (sorteioMexido && !sorteioIso) { setError('Confira o dia e a hora do sorteio.'); setLoading(false); return; }
+      if (sorteioIso && new Date(sorteioIso).getTime() > new Date(iso).getTime()) { setError('O sorteio tem de ser antes do jogo (ou na hora dele).'); setLoading(false); return; }
+      if (escolhidos && elenco && !escolhidos.size) { setError('Escolha pelo menos uma pessoa para chamar.'); setLoading(false); return; }
       const { game } = await apiFetch('/api/games', {
         method: 'POST',
         body: JSON.stringify({
@@ -70,6 +112,8 @@ export default function NovoJogo() {
           local: local.trim() || null,
           ...(porTime != null ? { jogadores_por_time: Number(porTime) } : {}), // sem número: o padrão do time
           historico: false,
+          ...(sorteioIso ? { sorteio_em: sorteioIso } : {}),
+          ...(escolhidos && elenco ? { chamados: [...escolhidos] } : {}), // sem lista: o elenco inteiro
         }),
       });
       // replace: o "Voltar" do jogo leva para onde a pessoa estava antes do formulário, não de volta a ele.
@@ -131,6 +175,54 @@ export default function NovoJogo() {
               </>
             )}
             <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>O número de times sai no sorteio, conforme os confirmados. O padrão muda no Painel do time.</span>
+          </div>
+
+          {/* A hora do sorteio: a lista de presença fecha nela. Padrão: 1 hora antes do jogo. */}
+          <div className="field" data-campo-sorteio>
+            <label style={ROTULO_COM_ICONE}><Shuffle size={15} aria-hidden="true" /> Sorteio</label>
+            {sorteioMexido == null ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
+                <span data-sorteio-padrao>{sorteioPadraoIso ? `${textoDoSorteio(sorteioPadraoIso, inicioIso, team?.fuso)} · 1 hora antes do jogo` : '1 hora antes do jogo'}</span>
+                <button type="button" className="btn btn--ghost btn--sm" data-mudar-sorteio onClick={() => setSorteioMexido(sorteioPadraoIso ? camposNoCampo(sorteioPadraoIso, team?.fuso) : { data, hora: '' })}>mudar</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(146px, 1fr))', gap: '8px 12px' }}>
+                  <input type="date" aria-label="Dia do sorteio" data-sorteio-dia className="input input--hud" style={CAMPO_GRANDE} value={sorteioMexido.data} onChange={(e) => setSorteioMexido((s) => ({ ...s, data: e.target.value }))} />
+                  <input type="time" aria-label="Hora do sorteio" data-sorteio-hora className="input input--hud" style={CAMPO_GRANDE} value={sorteioMexido.hora} onChange={(e) => setSorteioMexido((s) => ({ ...s, hora: e.target.value }))} />
+                </div>
+                <button type="button" className="btn btn--ghost btn--sm" data-sorteio-voltar style={{ justifySelf: 'start', marginTop: 6 }} onClick={() => setSorteioMexido(null)}>voltar a 1 hora antes</button>
+              </>
+            )}
+            <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>A lista de presença fecha na hora do sorteio. Dá para sortear antes.</span>
+          </div>
+
+          {/* Quem é chamado: o elenco inteiro (padrão) ou só quem o admin marcar. Quem é chamado recebe o aviso na hora. */}
+          <div className="field" data-quem-chamar>
+            <label style={ROTULO_COM_ICONE}><Users size={15} aria-hidden="true" /> Quem é chamado</label>
+            {escolhidos == null ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14 }}>
+                <span data-elenco-inteiro>Todo o elenco</span>
+                <button type="button" className="btn btn--ghost btn--sm" data-escolher-quem onClick={escolherQuem}>escolher quem</button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 4 }}>
+                {erroDoElenco ? <span className="muted">{erroDoElenco}</span> : elenco == null ? <span className="muted">Carregando o elenco…</span> : (
+                  <>
+                    <span className="muted" style={{ fontSize: 12 }} data-quantos-chamados>{contar(escolhidos.size, 'pessoa chamada', 'pessoas chamadas')} de {elenco.length}</span>
+                    {elenco.map((m) => (
+                      <label key={m.user_id} data-chamar-membro style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, minHeight: 40 }}>
+                        <input type="checkbox" checked={escolhidos.has(m.user_id)} onChange={() => alternar(m.user_id)} />
+                        <PlayerAvatar nome={nomeExibicao(m)} avatarUrl={m.avatar_url} userId={m.user_id} avatarGenerico={m.avatar_generico} sm />
+                        <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{nomeExibicao(m)}</span>
+                      </label>
+                    ))}
+                  </>
+                )}
+                <button type="button" className="btn btn--ghost btn--sm" data-chamar-todos style={{ justifySelf: 'start', marginTop: 4 }} onClick={() => { setEscolhidos(null); setErroDoElenco(''); }}>chamar todo o elenco</button>
+              </div>
+            )}
+            <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>Quem for chamado recebe o aviso e responde Vou ou Não vou.</span>
           </div>
 
           <button type="submit" className="btn hud-corners-s cta-gold" style={{ width: '100%', marginTop: 8, fontFamily: RAJ, letterSpacing: '0.08em', textTransform: 'uppercase' }} disabled={loading}>

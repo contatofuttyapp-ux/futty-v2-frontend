@@ -24,7 +24,6 @@ const semComentarios = (texto) => texto.replace(/\/\*[\s\S]*?\*\//g, '').split('
 
 // ── 0 · a fila única dos avisos ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 const TUDO = () => ({
-  jogos: [{ id: 'j1' }, { id: 'j2' }],
   pedidos: [{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }],
   quemGanhou: [{ game_id: 'q1' }, { game_id: 'q2' }],
   votacoes: [{ slug: 'v1' }],
@@ -39,7 +38,7 @@ const TUDO = () => ({
   notificacoes: true,
 });
 const CHAVE_DO_TIPO = {
-  jogo: 'jogos', pedido: 'pedidos', 'quem-ganhou': 'quemGanhou', votacao: 'votacoes', 'figurinha-pronta': 'figurinhaPronta', desfecho: 'desfechos', 'figurinha-nascendo': 'figurinhaNascendo',
+  pedido: 'pedidos', 'quem-ganhou': 'quemGanhou', votacao: 'votacoes', 'figurinha-pronta': 'figurinhaPronta', desfecho: 'desfechos', 'figurinha-nascendo': 'figurinhaNascendo',
   uniforme: 'uniforme', 'recado-figurinha': 'recadoFigurinha', nascimento: 'nascimento', denuncia: 'denuncia', card: 'card', notificacoes: 'notificacoes',
 };
 
@@ -54,16 +53,16 @@ test('ajuste 0 · a ordem da fila (revista na 29T-C): o que aconteceu ou tem pra
   }
   // 29T-C: jogo sem resposta, pedido pendente, resposta do pedido, votação, denúncia, figurinha nascendo — e SÓ DEPOIS os lembretes. 30I: "Quem ganhou?" (só o admin)
   // entra acima de "colegas para avaliar" (votação).
-  assert.deepEqual(saiu, ['jogo', 'pedido', 'desfecho', 'quem-ganhou', 'votacao', 'denuncia', 'figurinha-nascendo', 'figurinha-pronta', 'recado-figurinha', 'uniforme', 'card', 'nascimento', 'notificacoes']);
+  assert.deepEqual(saiu, ['pedido', 'desfecho', 'quem-ganhou', 'votacao', 'denuncia', 'figurinha-nascendo', 'figurinha-pronta', 'recado-figurinha', 'uniforme', 'card', 'nascimento', 'notificacoes']);
   assert.deepEqual(saiu, ORDEM_DOS_AVISOS, 'a ordem exportada é a mesma que a fila segue');
-  assert.deepEqual(saiu.slice(0, 7), ['jogo', 'pedido', 'desfecho', 'quem-ganhou', 'votacao', 'denuncia', 'figurinha-nascendo']);
+  assert.deepEqual(saiu.slice(0, 6), ['pedido', 'desfecho', 'quem-ganhou', 'votacao', 'denuncia', 'figurinha-nascendo']);
   assert.equal(saiu.at(-1), 'notificacoes');
   assert.equal(proximoAviso(candidatos), null, 'fila vazia: nenhum aviso');
 });
 
 test('29T-C · a fila não trava: nenhum lembrete sem prazo passa à frente de um aviso que aconteceu, e todos passam à frente de ativar notificações', () => {
   const aconteceu = ORDEM_DOS_AVISOS.filter((tipo) => !LEMBRETES_SEM_PRAZO.includes(tipo) && tipo !== 'notificacoes');
-  assert.deepEqual(aconteceu, ['jogo', 'pedido', 'desfecho', 'quem-ganhou', 'votacao', 'denuncia', 'figurinha-nascendo']);
+  assert.deepEqual(aconteceu, ['pedido', 'desfecho', 'quem-ganhou', 'votacao', 'denuncia', 'figurinha-nascendo']);
   assert.deepEqual(LEMBRETES_SEM_PRAZO, ['figurinha-pronta', 'recado-figurinha', 'uniforme', 'card', 'nascimento']);
   const posicao = (tipo) => ORDEM_DOS_AVISOS.indexOf(tipo);
   for (const tipo of aconteceu) for (const lembrete of LEMBRETES_SEM_PRAZO) assert.ok(posicao(tipo) < posicao(lembrete), `${tipo} antes de ${lembrete}`);
@@ -142,17 +141,17 @@ test('ajuste 0 · cada tipo de aviso passa à frente de todos os que vêm depois
   }
 });
 
-test('ajuste 0 · UM aviso por vez: o resultado é um só; jogo, pedido e desfecho contam os que esperam ("+N"), os outros não', () => {
+test('ajuste 0 · UM aviso por vez: o resultado é um só; pedido e desfecho contam os que esperam ("+N"), os outros não', () => {
   const t = TUDO();
-  const jogo = proximoAviso(t);
-  assert.deepEqual([jogo.tipo, jogo.item.id, jogo.mais], ['jogo', 'j1', 1]);
+  const pedido = proximoAviso(t);
+  assert.deepEqual([pedido.tipo, pedido.item.id, pedido.mais], ['pedido', 'p1', 2]);
   assert.deepEqual([proximoAviso({ pedidos: t.pedidos }).mais, proximoAviso({ desfechos: t.desfechos }).mais], [2, 1]);
   const votacao = proximoAviso({ votacoes: [{ slug: 'a' }, { slug: 'b' }] });
   assert.deepEqual([votacao.tipo, votacao.item.slug, votacao.mais], ['votacao', 'a', 0], 'fechar a votação a esconde para a sessão: não há um "próximo" para anunciar');
   // aviso sem item (um booleano): o item é null, como o das notificações sempre foi
   assert.deepEqual(proximoAviso({ notificacoes: true }), { tipo: 'notificacoes', item: null, mais: 0 });
   assert.deepEqual(proximoAviso({ figurinhaPronta: true }), { tipo: 'figurinha-pronta', item: null, mais: 0 });
-  assert.equal(proximoAviso({ nascimento: false, denuncia: false, card: null, uniforme: null, jogos: [], pedidos: [] }), null);
+  assert.equal(proximoAviso({ nascimento: false, denuncia: false, card: null, uniforme: null, pedidos: [] }), null);
 });
 
 test('ajuste 0 · o Início desenha TODOS os avisos pela fila: nenhum bloco empilhado com a condição própria, e cada um leva data-aviso', () => {

@@ -111,10 +111,9 @@ test('a tela do Início usa as listas da regra (nada de conta própria), o GameC
   assert.match(inicio, /const isPast = game\.status === 'finished' && !emAndamento;/);
   assert.match(inicio, /badge badge--em-andamento hud-corners-s">\{STATUS_LABELS\.em_curso\}/);
   assert.match(inicio, /badge badge--encerrado hud-corners-s">\{STATUS_LABELS\.terminado\}/);
-  // A presença segue no `status` de sempre: o RSVP é do primeiro jogo que não é "finished".
-  assert.match(inicio, /\(dadosInicio\?\.convites\?\.games \|\| \[\]\)\.find\(\(g\) => g\.status !== 'finished'\)/);
+  // 32H: não há mais o cartão de presença à parte — a resposta mora no cartão de cada jogo.
+  assert.doesNotMatch(inicio, /rsvpInfo|RSVPCard/);
   const avisos = semComentarios(ler('src/utils/avisosDoInicio.js'));
-  assert.match(avisos, /jogo\.status === 'scheduled' && !jogo\.cancelado/, 'quem ainda deve resposta de presença: só o jogo marcado');
   assert.doesNotMatch(avisos + semComentarios(ler('src/utils/quemGanhou.js')) + semComentarios(ler('src/utils/seuTime.js')), /estadoDoJogo|em_curso/, 'presença, "Quem ganhou?" e "Sortear" não leem o estado novo');
 });
 

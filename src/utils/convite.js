@@ -1,6 +1,6 @@
 // Futty v2.0 — o que a página do convite escreve. Puro (sem React, sem rede), para testar no Node.
 import { plural } from './plural';
-import { TZ_PADRAO } from './dataHora';
+import { TZ_PADRAO, formatarData } from './dataHora';
 import { caminhoCurtoDoConvite } from './linkCurtoDoConvite';
 
 const UM_DIA = 86400000;
@@ -21,6 +21,18 @@ export function dataCurta(iso, { agora = new Date(), fuso = TZ_PADRAO } = {}) {
   const partes = Object.fromEntries(fmt({ weekday: 'short', day: 'numeric', month: 'short' }).formatToParts(d).map((p) => [p.type, p.value]));
   const limpa = (s) => String(s || '').replace(/\./g, '');
   return `${limpa(partes.weekday)}, ${partes.day} ${limpa(partes.month)}`;
+}
+
+/**
+ * A validade do link do convite na tela "Convidar": "Vale até 26/11 (30 dias)", no relógio do time. null quando já venceu (a tela diz
+ * "vencido" e só oferece "Gerar link novo"). `agora` só existe para o teste.
+ */
+export function validadeDoConvite(expiresAt, { agora = Date.now(), fuso = TZ_PADRAO } = {}) {
+  const fim = new Date(expiresAt).getTime();
+  if (!expiresAt || !Number.isFinite(fim) || fim <= agora) return null;
+  // Arredonda (no mínimo 1): o relógio do aparelho uns minutos atrás do motor não transforma o link de 30 dias em "31 dias".
+  const dias = Math.max(1, Math.round((fim - agora) / UM_DIA));
+  return `Vale até ${formatarData(expiresAt, fuso, 'diaMes')} (${dias} ${plural(dias, 'dia', 'dias')})`;
 }
 
 /**

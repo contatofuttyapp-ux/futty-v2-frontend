@@ -6,11 +6,15 @@ import { STATUS_LABELS, formatDateTime } from '../../utils/format';
 import { ehHoje } from '../../utils/dataHora';
 import { plural } from '../../utils/plural';
 import { jogoEmAndamento } from '../../utils/estadoDoJogo';
-import { FRASE_RSVP_ENCERRADA } from '../../lib/rsvp';
+import { contagemDoSorteio, respostaDoJogo, textoDaListaFechada, textoDoSorteio } from '../../utils/chamada';
 import Icon from '../../components/Icon';
+import RespostaDoJogo from '../../components/RespostaDoJogo';
+import { useAgora } from '../../hooks/useAgora';
 
 // ----- Card de jogo -----
-export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo = false, index = 0, cidade = null }) {
+// UM cartão por jogo (regra do dono): local · data · hora · confirmados, a hora do sorteio com a contagem (ou "Lista fechada · N
+// confirmados") e o "Vou / Não vou" travado (components/RespostaDoJogo.jsx). Não existe mais o cartão "Confirme presença" à parte.
+export function GameCard({ game, busy, isNext, onPresence, onSairEspera = null, onVerSorteio, abrindo = false, index = 0, cidade = null }) {
   const today = ehHoje(game.date, game.fuso); // "hoje" é o dia do campo (fuso do time), não o do aparelho
   // O motor diz o estado (utils/estadoDoJogo.js): o jogo que já começou e ainda não terminou está "em andamento" e não aceita mais presença,
   // como o que terminou — por isso `status === 'finished'` vale para os dois e só o rótulo muda.
@@ -20,6 +24,13 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
   const going = game.user_status === 'going';
   const notGoing = game.user_status === 'not_going';
   const soOrganizo = game.eu_jogo === false; // só organiza este time — não responde presença
+  // A chamada (o motor diz): a lista fecha na hora do sorteio, ou antes se o admin já sorteou. Sem os campos (motor antigo), aberta.
+  const aceitaResposta = !isPast && !emAndamento && !isDrawn;
+  const listaAberta = game.lista_aberta !== false;
+  const agora = useAgora(aceitaResposta && listaAberta && !!game.sorteio_em);
+  const contagem = aceitaResposta && listaAberta && game.sorteio_em ? contagemDoSorteio(game.sorteio_em, agora) : null;
+  // O relógio passou da hora do sorteio com a tela aberta: fecha aqui também, sem esperar a próxima leitura.
+  const aberta = listaAberta && (!game.sorteio_em || contagem != null);
 
   return (
     // Wrapper e card separados porque o card passou a levar cantos a 45°: a ordem
@@ -68,6 +79,20 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
           {` · ${game.confirmed_count} ${plural(game.confirmed_count, 'confirmado', 'confirmados')}`}
         </div>
 
+        {/* A hora do sorteio (a lista fecha nela) e a contagem; depois, "Lista fechada · N confirmados". */}
+        {aceitaResposta && game.sorteio_em ? (
+          <div className="gcard__sorteio" data-sorteio style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 8px', marginTop: 4, fontSize: 13, color: 'var(--text-dim)' }}>
+            {aberta ? (
+              <>
+                <span data-hora-do-sorteio>{textoDoSorteio(game.sorteio_em, game.date, game.fuso)}</span>
+                {contagem ? <span data-contagem style={{ color: '#f0c94a', fontWeight: 700 }}>{contagem}</span> : null}
+              </>
+            ) : (
+              <span data-lista-fechada style={{ fontWeight: 700 }}>{textoDaListaFechada(game.confirmed_count)}</span>
+            )}
+          </div>
+        ) : null}
+
         {emAndamento ? (
           <div className="gcard__drawn" data-em-andamento>
             <span className="badge badge--em-andamento hud-corners-s">{STATUS_LABELS.em_curso}</span>
@@ -106,41 +131,19 @@ export function GameCard({ game, busy, isNext, onPresence, onVerSorteio, abrindo
           <div className="gcard__presence">
             <span className="texto-apoio" data-so-organizo style={{ margin: 0 }}>Você só organiza este time.</span>
           </div>
-        ) : game.rsvp_encerrada ? (
-          // A presença foi aberta com prazo (ou o admin fechou) e agora não aceita mais resposta: os
-          // botões ficam desligados com o motivo — tentar de novo não resolve nem o prazo nem o fechamento.
-          <div className="gcard__presence" style={{ flexWrap: 'wrap' }}>
-            <button type="button" className="pbtn pbtn--go hud-corners-s" disabled style={{ opacity: 0.45, cursor: 'not-allowed' }}>Vou</button>
-            <button type="button" className="pbtn pbtn--no hud-corners-s" disabled style={{ opacity: 0.45, cursor: 'not-allowed' }}>Não vou</button>
-            <span className="texto-apoio" data-rsvp-encerrada style={{ margin: 0, flexBasis: '100%' }}>{FRASE_RSVP_ENCERRADA[game.rsvp_encerrada]}</span>
+        ) : game.chamado === false ? (
+          <div className="gcard__presence">
+            <span className="texto-apoio" data-nao-chamado style={{ margin: 0 }}>Você não foi chamado para este jogo.</span>
           </div>
         ) : (
-          <div className="gcard__presence">
-            {/* O pulso do "Vou" é funcional (marca a acção disponível) e o
-                .pulse-active fá-lo com box-shadow — que os 45° do botão cortariam.
-                Vai para o wrapper em drop-shadow; o .pulse-active fica no botão
-                porque a metade dele que anima a BORDA sobrevive ao recorte. */}
-            <span className={`pbtn-slot ${!going && !busy ? 'pbtn-pulse' : ''}`}>
-              <button
-                type="button"
-                className={`pbtn pbtn--go hud-corners-s ${going ? 'active' : ''} ${!going && !busy ? 'pulse-active tab-shine' : ''}`}
-                disabled={busy}
-                aria-pressed={going}
-                onClick={() => onPresence(game.id, true)}
-              >
-                Vou
-              </button>
-            </span>
-            <button
-              type="button"
-              className={`pbtn pbtn--no hud-corners-s ${notGoing ? 'active' : ''}`}
-              disabled={busy}
-              aria-pressed={notGoing}
-              onClick={() => onPresence(game.id, false)}
-            >
-              Não vou
-            </button>
-          </div>
+          <RespostaDoJogo
+            resposta={respostaDoJogo(game)}
+            aberta={aberta}
+            espera={game.espera_posicao ?? null}
+            ocupado={busy}
+            onResponder={(status) => onPresence(game.id, status === 'confirmado')}
+            onSairEspera={onSairEspera ? () => onSairEspera(game.id) : null}
+          />
         )}
       </div>
     </div>

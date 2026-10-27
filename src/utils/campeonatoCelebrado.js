@@ -1,5 +1,5 @@
 // Futty v2.0 — O confete do campeonato terminado no Início sai UMA vez por campeonato por pessoa: o id do campeonato já celebrado fica no aparelho
-// (por conta) e voltar ao Início nunca repete a festa. Mesmo padrão de utils/podioCelebrado.js: tudo em try/catch. Sem armazenamento (janela
+// (por conta) e voltar ao Início nunca repete a festa. Tudo em try/catch. Sem armazenamento (janela
 // privada, bloqueio) a memória da sessão segura a repetição enquanto o app estiver aberto — nunca quebra a tela.
 const CHAVE = (userId, campeonatoId) => `futty_campeonato_celebrado:${userId}:${campeonatoId}`;
 const celebradosNaSessao = new Set();

@@ -16,12 +16,12 @@
 // mais.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarClock, ChevronDown, ChevronRight, CirclePlus, Flag, Settings, Shuffle, Trophy, UserPlus } from 'lucide-react';
+import { ChevronDown, ChevronRight, CirclePlus, Flag, Settings, Shuffle, Trophy, UserPlus } from 'lucide-react';
 import EscudoEquipa from './EscudoEquipa';
 import { destinoDoSortear, linhasDePendencia, quantosTimesMostrar, resumoDoTime, timesComPendenciaPrimeiro } from '../utils/seuTime';
 
 const RAJ = "'Rajdhani', sans-serif";
-const ICONE = { pedidos: UserPlus, presenca: CalendarClock, resultado: Trophy, denuncias: Flag };
+const ICONE = { pedidos: UserPlus, resultado: Trophy, denuncias: Flag };
 /** Quantos times o card mostra antes de pedir "Ver todos (N)". */
 export const TIMES_VISIVEIS = 2;
 const CASCA = { padding: '12px 14px', marginBottom: 12, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.28)' };

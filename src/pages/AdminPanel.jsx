@@ -106,7 +106,7 @@ function PedirVotarDeNovo({ slug, showToast }) {
 // ─── As abas da página do time ─────────────────────────────────────────
 
 /** Aba JOGOS do admin: "Novo jogo" é a ação principal (o dourado); recorrentes e campeonato, secundários no topo; depois a lista. */
-export function JogosDoAdmin({ slug, team, showToast, navigate, abrirPresencaDe = null, aoUsarAbrirPresenca = null }) {
+export function JogosDoAdmin({ slug, team, showToast, navigate }) {
   const [painel, setPainel] = useState(null); // 'recorrentes' | 'campeonato'
   const [versao, setVersao] = useState(0); // remonta a lista depois de criar os recorrentes
   const alternar = (k) => setPainel((p) => (p === k ? null : k));
@@ -126,7 +126,7 @@ export function JogosDoAdmin({ slug, team, showToast, navigate, abrirPresencaDe 
         <FormRecorrentes slug={slug} fuso={team?.fuso} cidade={team?.cidade} showToast={showToast} onClose={() => setPainel(null)} onCriado={async () => setVersao((v) => v + 1)} />
       ) : null}
       {painel === 'campeonato' ? <TabCampeonato slug={slug} team={team} navigate={navigate} showToast={showToast} /> : null}
-      <TabJogos key={versao} slug={slug} team={team} showToast={showToast} navigate={navigate} abrirPresencaDe={abrirPresencaDe} aoUsarAbrirPresenca={aoUsarAbrirPresenca} />
+      <TabJogos key={versao} slug={slug} team={team} showToast={showToast} navigate={navigate} />
     </div>
   );
 }

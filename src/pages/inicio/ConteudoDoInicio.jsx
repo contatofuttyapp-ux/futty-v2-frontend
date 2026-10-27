@@ -6,16 +6,14 @@ import AtalhosDoInicio from '../../components/AtalhosDoInicio';
 import { nomeCampeao } from '../../utils/campeonato';
 import CardCampeonatoInicio from '../../components/CardCampeonatoInicio';
 import { plural } from '../../utils/plural';
-import RSVPCard from '../../components/RSVPCard';
 import CartaoPacoteInicio from '../../components/CartaoPacoteInicio';
 import TeamAvatar from '../../components/TeamAvatar';
-import Icon from '../../components/Icon';
 import LoadingFutty from '../../components/LoadingFutty';
 import AdCard from '../../components/AdCard';
 import EstadoErroRede from '../../components/EstadoErroRede';
 import { EmptyState, GameCard } from './GameCard';
 
-export default function ConteudoDoInicio({ abrindoSorteioId, ausenciaBusy, busyId, campSlug, campSlugDoNovo, campeonato, campeonatoNovo, chipsEscondidosDir, chipsEscondidosEsq, definirAusencia, encerradaNoProximo, fecharPacote, inicio, items, loadingGames, minhaResposta, montarFaixaDeChips, nextId, noTeams, onPresence, onboardingCompleto, pacoteFechado, proximoJogo, proximoSoOrganizo, proximosJogos, rsvpAbertoNoProximo, rsvpInfo, selectedTeam, semDadosPorErro, setConfirmarAusencia, setMinhaResposta, setSelectedTeam, teams, timeDoJogo, timesDoDono, ultimosJogos, verSorteio }) {
+export default function ConteudoDoInicio({ abrindoSorteioId, busyId, campSlug, campSlugDoNovo, campeonato, campeonatoNovo, chipsEscondidosDir, chipsEscondidosEsq, fecharPacote, inicio, items, loadingGames, montarFaixaDeChips, nextId, noTeams, onPresence, onSairEspera, onboardingCompleto, pacoteFechado, proximosJogos, selectedTeam, semDadosPorErro, setSelectedTeam, teams, timeDoJogo, timesDoDono, ultimosJogos, verSorteio }) {
   return (
     <>
         {semDadosPorErro ? (
@@ -80,29 +78,6 @@ export default function ConteudoDoInicio({ abrindoSorteioId, ausenciaBusy, busyI
             {/* Jogos */}
             <div>
               <div className="games-label">Próximos Jogos</div>
-            {rsvpAbertoNoProximo || encerradaNoProximo ? (
-              <RSVPCard key={`${nextId}:${rsvpInfo.minha_posicao_espera ?? ''}`} gameId={nextId} prazo={rsvpInfo.rsvp_prazo} fuso={rsvpInfo.fuso || proximoJogo?.fuso} cidade={timeDoJogo(proximoJogo?.team_id)?.cidade} respostaActual={minhaResposta} onResposta={setMinhaResposta} cheio={rsvpInfo.cheio} minhaPosicaoEspera={rsvpInfo.minha_posicao_espera} encerrada={encerradaNoProximo} />
-            ) : null}
-            {/* Aviso de ausência. Com o RSVP aberto (ou encerrado) para ESTE jogo, some — o card acima já cobre a
-                resposta (ou diz por que não dá mais para responder). */}
-            {proximoJogo && proximoJogo.team_slug && !rsvpAbertoNoProximo && !encerradaNoProximo && !proximoSoOrganizo ? (
-              proximoJogo.ausente_proximo ? (
-                <div className="hud-corners-s" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 4px', padding: '8px 12px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.45)' }}>
-                  <Icon name="ausente" size={16} color="grey" />
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#f8b4b4' }}>Você avisou que não vai</span>
-                  <button type="button" onClick={() => definirAusencia(false)} disabled={ausenciaBusy} style={{ border: 'none', background: 'transparent', color: 'var(--neon)', fontWeight: 700, fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 3, cursor: ausenciaBusy ? 'default' : 'pointer', padding: '4px 0', flexShrink: 0, opacity: ausenciaBusy ? 0.6 : 1 }}>
-                    {ausenciaBusy ? 'Salvando…' : 'Desfazer'}
-                  </button>
-                </div>
-              ) : (
-                <button type="button" className="hud-corners-s" onClick={() => setConfirmarAusencia(true)} disabled={ausenciaBusy} style={{ margin: '8px 0 4px', border: '1px solid var(--border-subtle)', background: 'var(--surface-1)', color: 'var(--text-dim)', fontWeight: 700, fontSize: 13, cursor: ausenciaBusy ? 'default' : 'pointer', padding: '6px 12px', opacity: ausenciaBusy ? 0.6 : 1 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <Icon name="ausente" size={16} color="grey" />
-                    {ausenciaBusy ? 'Salvando…' : 'Avisar que não vou'}
-                  </span>
-                </button>
-              )
-            ) : null}
             {loadingGames ? (
               <LoadingFutty />
             ) : (
@@ -118,6 +93,7 @@ export default function ConteudoDoInicio({ abrindoSorteioId, ausenciaBusy, busyI
                       busy={busyId === item.game.id}
                       isNext={item.game.id === nextId}
                       onPresence={onPresence}
+                      onSairEspera={onSairEspera}
                       onVerSorteio={verSorteio}
                       abrindo={abrindoSorteioId === item.game.id}
                       index={i}

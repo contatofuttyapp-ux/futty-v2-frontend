@@ -155,7 +155,7 @@ test('as telas de jogo, presença, sorteio, resultado e Resenha não formatam da
   // Cada uma passa pelo utilitário. O que sobra de toLocale*/Intl.DateTimeFormat sem timeZone fica só onde o relógio de quem olha vale
   // de propósito (Gabinete, Diagnóstico, Planos, o texto do "há 5 h"), com o comentário dizendo por quê.
   const telas = [
-    'src/components/RSVPCard.jsx', 'src/pages/Feed.jsx', 'src/pages/Inicio.jsx', 'src/pages/JogadorPerfil.jsx', 'src/pages/Jogo.jsx',
+    'src/components/RespostaDoJogo.jsx', 'src/utils/chamada.js', 'src/pages/NovoJogo.jsx', 'src/pages/Feed.jsx', 'src/pages/Inicio.jsx', 'src/pages/JogadorPerfil.jsx', 'src/pages/Jogo.jsx',
     'src/pages/Jogos.jsx', 'src/pages/SorteioShow.jsx', 'src/pages/AdminPanel.jsx', 'src/utils/format.js', 'src/utils/convite.js',
   ];
   for (const arquivo of telas) {

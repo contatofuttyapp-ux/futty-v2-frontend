@@ -1,9 +1,10 @@
-// Futty v2.0 — Início: as ações da página — responder presença (o card e o RSVP), avisar ausência, guardar a data de nascimento e
-// escolher o avatar genérico. Nascem a cada render da página, com o estado daquele render — como quando moravam dentro dela.
+// Futty v2.0 — Início: as ações da página — responder presença ("Vou / Não vou" do cartão do jogo), sair da lista de espera, guardar a
+// data de nascimento e escolher o avatar genérico. Nascem a cada render da página, com o estado daquele render — como quando moravam
+// dentro dela.
 import { apiFetch } from '../../lib/api';
-import { MSG_FALHA_RSVP, responderComOtimismo } from '../../lib/rsvp';
+import { responderComOtimismo } from '../../lib/rsvp';
 
-export function useAcoesDoInicio({ ausenciaBusy, avatarGenericoEscolha, dobBusy, dobInput, games, hidratarPerfil, inicio, me, minhaResposta, proximoJogo, recarregarPerfil, rsvpValeParaOJogo, setAusenciaBusy, setAvatarGenericoOverride, setBusyId, setConfirmarAusencia, setDobBusy, setDobFeito, setError, setGames, setMinhaResposta, setToast }) {
+export function useAcoesDoInicio({ avatarGenericoEscolha, dobBusy, dobInput, games, hidratarPerfil, inicio, me, recarregarPerfil, setAvatarGenericoOverride, setBusyId, setDobBusy, setDobFeito, setError, setGames, setToast }) {
   async function guardarDob() {
     if (dobBusy || !dobInput) return;
     setDobBusy(true);
@@ -20,59 +21,57 @@ export function useAcoesDoInicio({ ausenciaBusy, avatarGenericoEscolha, dobBusy,
     }
   }
 
-  // Presença com estado otimista + chamada à API: o botão escolhido acende e o contador de confirmados
-  // mexe NA HORA; se o pedido falhar, volta ao estado de antes e diz o que fazer.
-  // Devolve como acabou: true (valeu), false (falhou e a tela voltou ao que era) ou 'espera' (o jogo
-  // estava cheio). O aviso do topo usa isto para dizer "Presença confirmada" só quando valeu.
+  // A resposta no jogo, com o estado OTIMISTA no próprio jogo: o cartão trava na hora ("Você está confirmado") e o contador mexe; se
+  // o pedido falhar, volta ao que era e diz por quê (a frase do motor: "A lista deste jogo já fechou." não manda tentar de novo).
+  // Uma porta só (POST /rsvp/responder): vale para o sorteio na hora. Devolve true (valeu), false (falhou) ou 'espera' (jogo cheio).
   async function onPresence(gameId, going) {
-    // Com o RSVP aberto para o jogo do RSVP a resposta que vale é a do RSVP: o "Vou / Não vou" do card do jogo, o do aviso do topo e o do
-    // cartão "Confirme presença" são o MESMO — um destino só, um número só.
-    if (rsvpValeParaOJogo(gameId)) return responderRsvp(gameId, going ? 'confirmado' : 'recusado');
     setError('');
     setBusyId(gameId);
     const antes = (games || []).find((g) => g.id === gameId);
-    setGames((prev) =>
-      (prev || []).map((g) => {
-        if (g.id !== gameId) return g;
-        let count = g.confirmed_count;
-        if (going && g.user_status !== 'going') count += 1;
-        if (!going && g.user_status === 'going') count -= 1;
-        return { ...g, user_status: going ? 'going' : 'not_going', confirmed_count: Math.max(0, count) };
-      })
-    );
-    try {
-      await apiFetch(`/api/games/${gameId}/confirmar`, {
-        method: 'POST',
-        body: JSON.stringify({ confirmado: going }),
-      });
-      return true;
-    } catch {
-      // Volta ao estado de antes (o do jogo que a tela mostrava) e avisa — sem deixar o botão aceso por um pedido que não valeu.
-      if (antes) setGames((prev) => (prev || []).map((g) => (g.id === gameId ? { ...g, user_status: antes.user_status, confirmed_count: antes.confirmed_count } : g)));
-      setToast({ msg: MSG_FALHA_RSVP, tipo: 'error' });
+    // Põe na tela uma resposta ('confirmado' | 'recusado'); null = volta ao jogo como estava antes do toque.
+    const aplicar = (status) => setGames((prev) => (prev || []).map((g) => {
+      if (g.id !== gameId) return g;
+      if (status == null) return { ...g, user_status: antes?.user_status ?? null, confirmed_count: antes?.confirmed_count ?? g.confirmed_count };
+      const userStatus = status === 'confirmado' ? 'going' : 'not_going';
+      let count = g.confirmed_count;
+      if (userStatus === 'going' && g.user_status !== 'going') count += 1;
+      if (userStatus !== 'going' && g.user_status === 'going') count -= 1;
+      return { ...g, user_status: userStatus, confirmed_count: Math.max(0, count) };
+    }));
+    // A volta (erro, ou jogo cheio) é sempre ao jogo de antes, então o "anterior" é null (= como estava).
+    const r = await responderComOtimismo({ gameId, status: going ? 'confirmado' : 'recusado', anterior: null, aplicar });
+    setBusyId(null);
+    if (!r.ok) {
+      setToast({ msg: r.erro, tipo: 'error' });
+      inicio.reload(); // a lista pode ter fechado: o cartão relê o que vale
       return false;
+    }
+    if (r.espera != null) {
+      setGames((prev) => (prev || []).map((g) => (g.id === gameId ? { ...g, espera_posicao: r.espera } : g)));
+      setToast({ msg: 'O jogo está cheio. Você entrou na lista de espera.', tipo: 'success' });
+      inicio.reload();
+      return 'espera';
+    }
+    // Disse "Não vou" estando na fila: saiu dela.
+    if (!going) setGames((prev) => (prev || []).map((g) => (g.id === gameId ? { ...g, espera_posicao: null } : g)));
+    // Relê por trás: o Início guardado no aparelho (o que abre na próxima visita, antes da rede) passa a ter a resposta — sem isso, reabrir
+    // o app mostrava o "Vou / Não vou" destravado por um instante.
+    inicio.reload();
+    return true;
+  }
+
+  async function onSairEspera(gameId) {
+    setBusyId(gameId);
+    try {
+      await apiFetch(`/api/jogos/${gameId}/rsvp/sair-espera`, { method: 'POST' });
+      setGames((prev) => (prev || []).map((g) => (g.id === gameId ? { ...g, espera_posicao: null } : g)));
+      setToast({ msg: 'Você saiu da lista de espera.', tipo: 'success' });
+      inicio.reload();
+    } catch (e) {
+      setToast({ msg: e.message || 'Não deu agora. Tente de novo.', tipo: 'error' });
     } finally {
       setBusyId(null);
     }
-  }
-
-  // A resposta no RSVP do próximo jogo (o "Vou / Não vou" do card do jogo quando o RSVP está aberto). O cartão "Confirme presença"
-  // faz o mesmo por conta própria (components/RSVPCard.jsx) e avisa a tela por `onResposta`.
-  async function responderRsvp(gameId, status) {
-    setBusyId(gameId);
-    const r = await responderComOtimismo({ gameId, status, anterior: minhaResposta, aplicar: setMinhaResposta });
-    let fim = true;
-    if (!r.ok) {
-      setToast({ msg: r.erro, tipo: 'error' });
-      fim = false;
-    } else if (r.espera != null) {
-      // O jogo está cheio: não confirmou, entrou na fila. Recarrega para o cartão mostrar a posição.
-      setToast({ msg: 'O jogo está cheio. Você entrou na lista de espera.', tipo: 'success' });
-      await inicio.reload();
-      fim = 'espera';
-    }
-    setBusyId(null);
-    return fim;
   }
 
   async function escolherAvatarGenerico(key) {
@@ -92,31 +91,5 @@ export function useAcoesDoInicio({ ausenciaBusy, avatarGenericoEscolha, dobBusy,
     }
   }
 
-  // Aviso de ausência ao próximo jogo (declaração proactiva, sem RSVP). O botão diz o que faz ("Avisar
-  // que não vou") em vez de ler como ESTADO ("Não vou ao próximo jogo / Afinal vou"), pergunta antes, e
-  // depois fica a faixa "Você avisou que não vai · Desfazer". O servidor faz o resto: quando o admin abre
-  // o RSVP, quem avisou entra como "Não vou" (routes/rsvp.js), e a marca zera quando o resultado do jogo
-  // é lançado.
-  async function definirAusencia(novo) {
-    if (!proximoJogo?.team_slug || ausenciaBusy) return;
-    const teamId = proximoJogo.team_id;
-    setConfirmarAusencia(false);
-    setAusenciaBusy(true);
-    // Optimista: a flag é por equipa → atualiza todos os jogos dessa equipa.
-    setGames((prev) => (prev || []).map((g) => (g.team_id === teamId ? { ...g, ausente_proximo: novo } : g)));
-    try {
-      await apiFetch(`/api/teams/${proximoJogo.team_slug}/membros/ausencia`, {
-        method: 'PATCH',
-        body: JSON.stringify({ ausente: novo }),
-      });
-      setToast({ msg: novo ? 'Pronto: o time já sabe que você não vai.' : 'Aviso desfeito.', tipo: 'success' });
-    } catch (err) {
-      setGames((prev) => (prev || []).map((g) => (g.team_id === teamId ? { ...g, ausente_proximo: !novo } : g)));
-      setToast({ msg: err.message || (novo ? 'Não deu para avisar agora. Tente de novo.' : 'Não deu para desfazer agora. Tente de novo.'), tipo: 'error' });
-    } finally {
-      setAusenciaBusy(false);
-    }
-  }
-
-  return { guardarDob, onPresence, escolherAvatarGenerico, definirAusencia };
+  return { guardarDob, onPresence, onSairEspera, escolherAvatarGenerico };
 }

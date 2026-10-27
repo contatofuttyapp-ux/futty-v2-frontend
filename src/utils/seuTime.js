@@ -1,25 +1,21 @@
 // Futty v2.0 — as linhas do card "Seu time" do Início (components/CardSeuTime.jsx), puras para testar no
 // Node. As pendências vêm prontas do motor (GET /api/inicio → seu_time); aqui vira texto e destino de cada
 // linha, na ordem da tela.
-import { dataComDiaPorExtenso, formatarData } from './dataHora';
+import { formatarData } from './dataHora';
 import { plural } from './plural';
 
-/** [{ chave, texto, para }] — pedido de entrada, jogo sem presença aberta, resultado por lançar, denúncia. Vazio = "Tudo tranquilo". */
+/** [{ chave, texto, para }] — pedido de entrada, resultado por lançar, denúncia. Vazio = "Tudo tranquilo". */
 export function linhasDePendencia({ slug, fuso, pendencias: p = {} } = {}) {
   const base = `/time/${slug}`;
   const linhas = [];
   if (p.pedidos > 0) linhas.push({ chave: 'pedidos', para: `${base}?aba=elenco`, texto: `${p.pedidos} ${plural(p.pedidos, 'pedido', 'pedidos')} de entrada` });
-  // "Sexta, 9 de out.: presença ainda não aberta" ("Jogo de sex., 9 de out. sem presença aberta" lia mal).
-  // O toque leva ao jogo certo e já abre o "Abrir presença" dele (?abrir-presenca=<game_id>, que a página
-  // do time lê e apaga do endereço); levar só à aba Jogos não dizia onde agir. Sem game_id (resposta antiga do
-  // motor): a aba.
-  if (p.presenca) linhas.push({ chave: 'presenca', para: `${base}?aba=jogos${p.presenca.game_id ? `&abrir-presenca=${encodeURIComponent(p.presenca.game_id)}` : ''}`, texto: `${dataComDiaPorExtenso(p.presenca.data, fuso)}: presença ainda não aberta` });
+  // Não há mais "presença ainda não aberta": o jogo nasce chamando e a lista fecha sozinha na hora do sorteio.
   if (p.resultado) linhas.push({ chave: 'resultado', para: `${base}?aba=jogos`, texto: `Resultado de ${formatarData(p.resultado.data, fuso)} por lançar` });
   if (p.denuncias > 0) linhas.push({ chave: 'denuncias', para: `${base}?aba=ajustes#denuncias`, texto: `${p.denuncias} ${plural(p.denuncias, 'denúncia', 'denúncias')} para ver` });
   return linhas;
 }
 
-/** O time tem pelo menos uma pendência (pedido de entrada, presença por abrir, resultado por lançar, denúncia)? */
+/** O time tem pelo menos uma pendência (pedido de entrada, resultado por lançar, denúncia)? */
 export function temPendencia(time) {
   return linhasDePendencia(time).length > 0;
 }

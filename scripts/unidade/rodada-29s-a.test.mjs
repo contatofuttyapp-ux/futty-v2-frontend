@@ -105,12 +105,12 @@ test('o ingresso é visual da casa, sem imagem nova, e nenhuma data é formatada
 
 test('155 · os campos Data · Hora do jogo · Local têm ícones do lucide e letra maior; a hora diz "Hora do jogo" (nunca "fuso")', () => {
   const tela = ler('src/pages/NovoJogo.jsx');
-  assert.match(tela, /import \{ Calendar, Clock, MapPin \} from 'lucide-react';/);
+  assert.match(tela, /import \{ Calendar, Clock, MapPin, Shuffle, Users \} from 'lucide-react';/); // + o Sorteio e Quem é chamado
   for (const [icone, rotulo] of [['Calendar', 'Data'], ['Clock', 'Hora do jogo'], ['MapPin', 'Local']]) {
     assert.match(tela, new RegExp(`<${icone} size=\\{15\\} aria-hidden="true" /> ${rotulo}`), `${rotulo} com o ícone ${icone}`);
   }
   assert.match(tela, /const CAMPO_GRANDE = \{ fontFamily: RAJ, fontSize: 18, fontWeight: 600 \};/);
-  assert.equal((tela.match(/style=\{CAMPO_GRANDE\}/g) || []).length, 3, 'os três campos usam a letra maior');
+  assert.equal((tela.match(/style=\{CAMPO_GRANDE\}/g) || []).length, 5, 'os três campos e o dia/hora do sorteio usam a letra maior');
 });
 
 // ── 156 · "Só neste jogo" em roxo ─────────────────────────────────────────────────────────────────────────────────────────────────────
