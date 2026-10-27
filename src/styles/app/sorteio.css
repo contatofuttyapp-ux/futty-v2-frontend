@@ -681,6 +681,9 @@
 @media (max-width: 340px) {
   .aba-time { font-size: 12px; padding: 0 4px; letter-spacing: 0; }
 }
+/* A linha cheia (admin com a mensalidade ligada: 4 abas + o Ranking, que vira troféu): o selo ADMIN é o ponto em qualquer largura. */
+.abas-time--cheia .aba-time { gap: 4px; padding: 0 6px; letter-spacing: 0.2px; }
+.abas-time--cheia .aba-time__selo { font-size: 0; width: 7px; height: 7px; padding: 0; border: none; border-radius: 50%; background: #f0c94a; clip-path: none !important; }
 
 /*
  * O jogo que a linha "presença ainda não aberta" do Início apontou (aba Jogos do admin). Um anel dourado

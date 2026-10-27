@@ -24,6 +24,7 @@ import { apiFetch, apiUpload } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
+import TragaSeuHistorico from '../components/TragaSeuHistorico';
 import { avisoLogoRecusado, motivoDoLogo } from '../utils/logoTime';
 import { copiarTexto } from '../utils/clipboard';
 import { enderecoDoWhatsapp, linkDoConvite } from '../utils/convite';
@@ -526,6 +527,8 @@ export default function CriarEquipa() {
             ) : (
               <p className="texto-apoio texto-apoio--centro" role="status" data-gerando-convite>Preparando o link do convite…</p>
             )}
+            {/* Quem já joga há tempo e tem o histórico numa planilha manda por e-mail (a equipe coloca no time). */}
+            <TragaSeuHistorico team={team} origem="criar_time" style={{ marginTop: 18 }} />
             <div style={{ marginTop: 22 }}>
               {/* Sem state nenhum — a comemoração já aconteceu aqui; a página do time abre direto. */}
               <Cta cheio onClick={() => navigate(`/time/${team.slug}`)}>Ir para o time</Cta>

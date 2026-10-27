@@ -8,6 +8,7 @@
 // não é admin não baixa nada delas.
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { ChevronRight, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { ORIGEM_DO_SITE } from '../lib/linkDoSite';
 import { usePerfil } from '../context/PerfilContext';
@@ -39,6 +40,8 @@ const BoasVindas = lazy(() => import('../components/BoasVindas'));
 const JogosDoAdmin = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.JogosDoAdmin })));
 const ElencoDoAdmin = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.ElencoDoAdmin })));
 const AjustesDoTime = lazyComRetry(() => import('./AdminPanel').then((m) => ({ default: m.AjustesDoTime })));
+// A aba Mensalidade só existe com a mensalidade ligada: quem não tem a aba não baixa nada dela.
+const AbaMensalidade = lazyComRetry(() => import('./mensalidade/AbaMensalidade'));
 
 const VIDRO = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
 const CLIP = 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)';
@@ -101,10 +104,13 @@ const ESTILO_ABA = (on) => ({
   textDecoration: 'none',
 });
 
-function AbasDoTime({ aba, ehAdmin, aoTrocar, slug }) {
-  const abas = [['jogos', 'Jogos'], ['elenco', 'Elenco'], ...(ehAdmin ? [['ajustes', 'Painel']] : [])];
+function AbasDoTime({ aba, ehAdmin, mensalidade = false, aoTrocar, slug }) {
+  const abas = [['jogos', 'Jogos'], ['elenco', 'Elenco'], ...(mensalidade ? [['mensalidade', 'Mensalidade']] : []), ...(ehAdmin ? [['ajustes', 'Painel']] : [])];
+  // Quatro abas (admin com a mensalidade ligada) não cabem com o selo ADMIN escrito e o "Ranking" por extenso num celular de 360 px:
+  // a linha CHEIA usa o selo em ponto (o mesmo das telas estreitas) e o Ranking vira o troféu da barra de baixo. O resto fica como sempre.
+  const cheia = abas.length >= 4;
   return (
-    <div style={{ display: 'flex', gap: 6, marginTop: 14 }}>
+    <div className={cheia ? 'abas-time--cheia' : undefined} style={{ display: 'flex', gap: 6, marginTop: 14 }}>
       <div role="tablist" aria-label="Seções do time" style={{ display: 'flex', gap: 6, flex: `${abas.length} 1 auto`, minWidth: 0 }}>
         {abas.map(([k, rotulo]) => {
           const on = aba === k;
@@ -128,8 +134,8 @@ function AbasDoTime({ aba, ehAdmin, aoTrocar, slug }) {
           );
         })}
       </div>
-      <Link to={`/time/${slug}/ranking`} className="hud-corners-s aba-time" data-botao-ranking style={ESTILO_ABA(false)}>
-        Ranking
+      <Link to={`/time/${slug}/ranking`} className="hud-corners-s aba-time" data-botao-ranking aria-label={cheia ? 'Ranking' : undefined} title={cheia ? 'Ranking' : undefined} style={{ ...ESTILO_ABA(false), ...(cheia ? { flex: '0 0 auto', padding: '0 10px' } : null) }}>
+        {cheia ? <Trophy size={17} aria-hidden="true" /> : 'Ranking'}
       </Link>
     </div>
   );
@@ -152,7 +158,8 @@ export default function Equipa() {
   const { team, members, loading, error, errorStatus, errorCode, reload } = useTeam(slug);
   const foraDoTime = ehForaDoTime({ status: errorStatus, code: errorCode, mensagem: error });
   const ehAdmin = team?.role === 'admin';
-  const aba = abaDoTime(searchParams.get('aba'), ehAdmin);
+  const temMensalidade = team?.mensalidade_ativa === true;
+  const aba = abaDoTime(searchParams.get('aba'), ehAdmin, { mensalidade: temMensalidade });
   // Trocar de aba troca o endereço SEM empilhar histórico: "Voltar" continua indo para onde a pessoa estava antes da página do time.
   function trocarAba(k) {
     setSearchParams((prev) => {
@@ -160,6 +167,7 @@ export default function Equipa() {
       p.set('aba', k);
       p.delete('convidar');
       p.delete('abrir-presenca');
+      p.delete('mes');
       return p;
     }, { replace: true });
   }
@@ -373,7 +381,7 @@ export default function Equipa() {
               </div>
             ) : null}
 
-            <AbasDoTime aba={aba} ehAdmin={ehAdmin} aoTrocar={trocarAba} slug={slug} />
+            <AbasDoTime aba={aba} ehAdmin={ehAdmin} mensalidade={temMensalidade} aoTrocar={trocarAba} slug={slug} />
 
             <div style={{ marginTop: 14 }} role="tabpanel" data-painel-aba={aba}>
             {aba === 'jogos' ? (
@@ -389,6 +397,12 @@ export default function Equipa() {
             {aba === 'ajustes' ? (
               <Suspense fallback={<LoadingFutty />}>
                 <AjustesDoTime slug={slug} team={team} members={members} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} onMudou={reload} />
+              </Suspense>
+            ) : null}
+
+            {aba === 'mensalidade' ? (
+              <Suspense fallback={<LoadingFutty />}>
+                <AbaMensalidade slug={slug} meId={meuId} mesInicial={searchParams.get('mes')} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} aoAbrirAjustes={() => trocarAba('ajustes')} />
               </Suspense>
             ) : null}
 
@@ -468,6 +482,17 @@ export default function Equipa() {
                 <Suspense fallback={<LoadingFutty />}>
                   <ElencoDoAdmin slug={slug} nomeTime={team?.nome} meId={meuId} showToast={(mensagem, tipo = 'success') => setToast({ mensagem, tipo })} versaoConvites={versaoConvites} />
                 </Suspense>
+                {/* Mensalidade desligada: um convite discreto que leva ao cartão dela no Painel. Ligada, a aba já diz tudo. */}
+                {!temMensalidade ? (
+                  <button type="button" data-convite-mensalidade onClick={() => navigate(`/time/${slug}?aba=ajustes#mensalidade`, { replace: true })}
+                    style={{ ...VIDRO, clipPath: CLIP, width: '100%', marginTop: 14, padding: '12px 14px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center', gap: 10, textAlign: 'left', color: '#fff', cursor: 'pointer' }}>
+                    <span>
+                      <span style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14 }}>Controle a mensalidade do time</span>
+                      <span style={{ display: 'block', fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Quem pagou e quem não pagou, mês a mês.</span>
+                    </span>
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </button>
+                ) : null}
               </>
             ) : (
             <div style={{ ...VIDRO, clipPath: CLIP, padding: '4px 12px' }}>

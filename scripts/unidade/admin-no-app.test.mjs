@@ -61,9 +61,10 @@ test('"Sortear" vai ao próximo jogo do time (é lá que se sorteia); sem jogo m
   assert.equal(destinoDoSortear('missa', 'T1', []), '/time/missa/jogo/novo');
 });
 
-test('a página do time: abas Jogos · Elenco · Painel no estilo da Figurinha; o Painel (chave ajustes) só para o admin, com o selo ADMIN', () => {
+test('a página do time: abas Jogos · Elenco · (Mensalidade) · Painel no estilo da Figurinha; Mensalidade só ligada; o Painel (chave ajustes) só para o admin, com o selo ADMIN', () => {
   const equipa = ler('src/pages/Equipa.jsx');
-  assert.match(equipa, /\[\['jogos', 'Jogos'\], \['elenco', 'Elenco'\], \.\.\.\(ehAdmin \? \[\['ajustes', 'Painel'\]\] : \[\]\)\]/);
+  assert.match(equipa, /\[\['jogos', 'Jogos'\], \['elenco', 'Elenco'\], \.\.\.\(mensalidade \? \[\['mensalidade', 'Mensalidade'\]\] : \[\]\), \.\.\.\(ehAdmin \? \[\['ajustes', 'Painel'\]\] : \[\]\)\]/);
+  assert.match(equipa, /const AbaMensalidade = lazyComRetry\(/, 'a aba Mensalidade vem em lazy: sem ela ligada, nada se baixa');
   assert.match(equipa, /data-selo-admin/);
   assert.match(equipa, /className="hud-corners-s aba-time"/);
   assert.match(equipa, /background: on \? 'rgba\(139,92,246,0\.2\)' : 'transparent'/, 'as mesmas medidas das abas da Figurinha');

@@ -102,6 +102,8 @@ test('a aba da página do time: Jogos por padrão; Ajustes só para o admin', ()
   assert.equal(abaDoTime('ajustes', false), 'jogos', 'quem não é admin não tem Ajustes');
   assert.equal(abaDoTime('ajustes', true), 'ajustes');
   assert.equal(abaDoTime('qualquer', true), 'jogos');
+  assert.equal(abaDoTime('mensalidade', false), 'jogos', 'sem a mensalidade ligada não há a aba');
+  assert.equal(abaDoTime('mensalidade', false, { mensalidade: true }), 'mensalidade', 'ligada, todo membro tem a aba');
 });
 
 test('o link universal: /time/ abre o app (iOS AASA, Android intent-filter, parser) e o /equipa/ antigo também', () => {

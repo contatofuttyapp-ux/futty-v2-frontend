@@ -16,7 +16,7 @@ export function abaDoAdmin(parametro) {
 // ─── "Admin não é um lugar" ───────────────────────────────────────────────────────────────────────────
 // O endereço antigo /admin/<slug>?tab=… continua valendo e leva para a casa nova da mesma seção: uma aba da
 // página do time (/time/<slug>?aba=jogos|elenco|ajustes) ou o Ranking.
-export const ABAS_DO_TIME = ['jogos', 'elenco', 'ajustes'];
+export const ABAS_DO_TIME = ['jogos', 'elenco', 'mensalidade', 'ajustes'];
 const CASA_NOVA = {
   dashboard: '', // virou o card "Seu time" do Início; a página do time é o lugar natural de quem chega pelo link
   time: '?aba=ajustes',
@@ -36,8 +36,9 @@ export function caminhoDoAdminAntigo(slug, tab) {
   return base + (CASA_NOVA[abaDoAdmin(tab)] ?? '');
 }
 
-/** A aba da página do time a partir de ?aba=: Ajustes só existe para o admin; sem aba (ou aba que a pessoa não tem), Jogos. */
-export function abaDoTime(parametro, ehAdmin) {
+/** A aba da página do time a partir de ?aba=: Ajustes só existe para o admin, Mensalidade só com ela ligada; sem aba (ou aba que a pessoa não tem), Jogos. */
+export function abaDoTime(parametro, ehAdmin, { mensalidade = false } = {}) {
   const aba = ABAS_DO_TIME.includes(parametro) ? parametro : 'jogos';
-  return aba === 'ajustes' && !ehAdmin ? 'jogos' : aba;
+  if (aba === 'ajustes' && !ehAdmin) return 'jogos';
+  return aba === 'mensalidade' && !mensalidade ? 'jogos' : aba;
 }

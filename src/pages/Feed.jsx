@@ -7,6 +7,7 @@ import { nomeExibicao } from '../utils/nomeExibicao';
 import { primeiroNome } from '../utils/primeiroNome';
 import AdCard from '../components/AdCard';
 import Icon from '../components/Icon';
+import TragaSeuHistorico from '../components/TragaSeuHistorico';
 import Topbar from '../components/Topbar';
 import { useAuth } from '../hooks/useAuth';
 import { usePerfil } from '../context/PerfilContext';
@@ -150,6 +151,10 @@ export default function Feed() {
   // Equipas onde o utilizador pode publicar (admin OU pode_postar).
   const equipasParaPostar = useMemo(() => teams.filter((t) => t.role === 'admin' || t.pode_postar), [teams]);
   const podeCriar = equipasParaPostar.length > 0;
+  // O "Traga seu histórico" do vazio: o time do chip se a pessoa é admin dele; em "Todos", o primeiro que ela administra.
+  const timeDoHistorico = selectedTeam === 'all'
+    ? teams.find((t) => t.role === 'admin') || null
+    : teams.find((t) => t.id === selectedTeam && t.role === 'admin') || null;
 
   const filtrados = useMemo(
     () => (items || []).filter((i) => selectedTeam === 'all' || i.team_id === selectedTeam),
@@ -241,6 +246,8 @@ export default function Feed() {
                   <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                     {podeCriar ? 'Seja o primeiro: o campo de cima é para isso.' : 'Quando alguém postar ou um jogo for fechado, aparece aqui.'}
                   </p>
+                  {/* Para o admin: o time escolhido no chip, ou (em "Todos") o primeiro que ele administra. */}
+                  {timeDoHistorico ? <TragaSeuHistorico team={timeDoHistorico} origem="resenha" style={{ marginTop: 16 }} /> : null}
                 </div>
               ) : (
                 aDesenhar.map((item, i) => {

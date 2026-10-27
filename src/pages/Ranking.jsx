@@ -26,6 +26,7 @@ import { ehForaDoTime } from '../utils/foraDoTime';
 import EstadoSemTime from '../components/EstadoSemTime';
 import Topbar from '../components/Topbar';
 import Toast from '../components/Toast';
+import TragaSeuHistorico from '../components/TragaSeuHistorico';
 import EscudoEquipa from '../components/EscudoEquipa';
 import { lazyComRetry } from '../utils/lazyComRetry';
 import '../styles/app.css';
@@ -313,6 +314,11 @@ export default function Ranking() {
 
             {/* Quem não é do time vê o aviso verdadeiro; o de rede só quando o erro foi mesmo outro, e com a frase que veio. */}
             {foraDoTime ? <ForaDoTime compacto /> : error && ranking.length === 0 ? <EstadoErroRede onRepetir={reload} mensagem={error} /> : null}
+
+            {/* O ranking ainda vazio (nenhum jogo jogado): o admin que já tem histórico em planilha manda por e-mail. */}
+            {equipaAtual?.role === 'admin' && !loading && !error && ranking.every((p) => !(p.presenca > 0)) ? (
+              <TragaSeuHistorico team={equipaAtual} origem="ranking" style={{ marginBottom: 14 }} />
+            ) : null}
 
             {error && ranking.length === 0 ? null : loading && ranking.length === 0 ? (
               <LoadingFutty />

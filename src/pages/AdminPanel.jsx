@@ -3,7 +3,7 @@
 //   · Dashboard            → card "Seu time" no Início (pendências + Novo jogo · Sortear · Convidar · Ajustes)
 //   · Jogos + Resultados + Campeonato → aba JOGOS da página do time (JogosDoAdmin)
 //   · Membros + Convites   → aba ELENCO (ElencoDoAdmin; as ações de cada membro abrem com um toque no nome, sem o "⋯")
-//   · Time + Comunicação + Denúncias + Zona de perigo → aba AJUSTES (AjustesDoTime; a única ação da zona de
+//   · Time + Mensalidade + Comunicação + Denúncias + Zona de perigo → aba AJUSTES (AjustesDoTime; a única ação da zona de
 //     perigo é o cartão "Nova temporada de notas")
 //   · Estatísticas         → Ranking do time (EstatisticasDoTime), para o admin
 // /admin/<slug>?tab=… (link antigo, favorito) continua valendo: leva à aba nova (lib/rotasAntigas.js#caminhoDoAdminAntigo).
@@ -28,6 +28,7 @@ import { TabConvites } from './adminPanel/TabConvites';
 import { TabEquipa } from './adminPanel/TabEquipa';
 import { TabDenuncias } from './adminPanel/TabDenuncias';
 import { TabEstatisticas } from './adminPanel/TabEstatisticas';
+import AjustesDaMensalidade from './mensalidade/AjustesDaMensalidade';
 
 // ─── AJUSTES → NOTIFICAÇÕES DO ADMIN ─────────────────────────────────────
 // O admin recebe push quando chega pedido de entrada (o dono pediu) e pode desligar aqui. As outras ficam em Perfil →
@@ -157,13 +158,16 @@ export function ElencoDoAdmin({ slug, nomeTime = null, meId, showToast, versaoCo
   );
 }
 
-/** Aba AJUSTES (só admin): o time, admins, notificações do admin, avisar o time, denúncias e, no fim, a Nova temporada de notas. */
+/** Aba AJUSTES (só admin): o time, a mensalidade, admins, notificações do admin, avisar o time, denúncias e, no fim, a Nova temporada de notas. */
 export function AjustesDoTime({ slug, team, members = [], showToast, onMudou }) {
   const admins = members.filter((m) => m.role === 'admin');
   return (
     <div style={{ display: 'grid', gap: 18 }} data-ajustes-do-time>
       <Secao titulo="O time">
         <TabEquipa slug={slug} team={team} showToast={showToast} onMudou={onMudou} />
+      </Secao>
+      <Secao titulo="Mensalidade" id="mensalidade">
+        <AjustesDaMensalidade slug={slug} showToast={showToast} onMudou={onMudou} />
       </Secao>
       <Secao titulo={`Admins · ${admins.length}`}>
         <div style={{ ...CARD, padding: '4px 12px' }}>
