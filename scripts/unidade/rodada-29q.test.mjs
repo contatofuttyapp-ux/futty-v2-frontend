@@ -45,8 +45,13 @@ test('29Q · o Início põe os cartões DEPOIS do "Seus times" e ANTES dos chips
   const seus = em('<CardSeuTime ');
   const atalhos = em('<AtalhosDoInicio />');
   const chips = em('className="chips-row"');
-  const proximos = em('className="games-label">Próximos Jogos');
+  // O rótulo da lista de baixo, depois dos chips ('Próximos Jogos', ou 'Outros jogos' quando o começo da lista subiu para baixo do cromo).
+  const proximos = inicio.indexOf('className="games-label">', chips);
+  assert.ok(proximos > chips, 'a lista de jogos de baixo vem depois dos chips');
   assert.ok(stats < seus && seus < atalhos, 'avatar → nome → nota → Seus times → cartões (quem não administra: logo embaixo da nota)');
+  // 32J: o próximo jogo (o do Vou / Não vou) sobe para logo depois da nota, antes do Seus times — na primeira tela mesmo com o Início cheio.
+  const noTopo = em('data-proximo-jogo-no-topo');
+  assert.ok(stats < noTopo && noTopo < seus, 'nota → próximo jogo → Seus times');
   assert.ok(atalhos < chips && chips < proximos, 'os cartões vêm antes dos chips, e os Próximos Jogos seguem depois');
   // Só aparecem para quem tem time: o Início vazio (EmptyState) continua com os seus três botões, sem os cartões.
   // O EmptyState mora em src/pages/inicio/GameCard.jsx (a Início foi dividida): é o fim daquele arquivo.
@@ -63,7 +68,8 @@ test('29Q · o Início põe os cartões DEPOIS do "Seus times" e ANTES dos chips
 
 test('29Q · a fila de chips é só o filtro dos jogos: Todas + os times; saíram o "＋ Criar time" e o "Radar de peladas"', () => {
   const inicio = semComentarios(lerPagina('Inicio'));
-  const fila = inicio.slice(inicio.indexOf('className="chips-row"'), inicio.indexOf('className="games-label">Próximos Jogos'));
+  const inicioDaFila = inicio.indexOf('className="chips-row"');
+  const fila = inicio.slice(inicioDaFila, inicio.indexOf('className="games-label">', inicioDaFila));
   assert.ok(fila.length > 200, 'achou a fila');
   assert.match(fila, /setSelectedTeam\('all'\)/);
   assert.match(fila, /teams\.map\(\(t\) => \(/);

@@ -243,11 +243,11 @@ export default function ResultadoEditor({ modo = 'salvar', gameId, game = {}, go
         </Seccao>
       ) : null}
 
-      {/* FOTO DO CAMPEÃO — só ao salvar: no Jogo passado fica para Ajustes → Jogos. */}
-      {!devolver && d.campeaoIdx !== null ? (
+      {/* FOTO DO CAMPEÃO — com o campeão escolhido, nos dois modos: no Jogo passado ela vai junto no pedido dos prêmios, no fim. */}
+      {d.campeaoIdx !== null ? (
         <div style={{ display: 'grid', gap: 8, borderTop: '1px solid #222', paddingTop: 12, marginTop: 16 }} data-foto-do-campeao>
           <span style={secLbl}>Foto do campeão</span>
-          <UploadComCrop onUpload={(url) => mudar({ campeaoFoto: url })} accept="image/*" aspect={4 / 3} label={estado.campeaoFoto ? '✓ Foto do campeão' : 'Foto do campeão'} />
+          <UploadComCrop onUpload={(url) => mudar({ campeaoFoto: url })} accept="image/*" aspect={4 / 3} label={estado.campeaoFoto ? 'Trocar foto' : 'Adicionar foto'} />
         </div>
       ) : null}
       {!devolver ? (

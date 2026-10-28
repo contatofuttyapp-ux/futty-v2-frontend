@@ -232,6 +232,9 @@ test('4 · quem ganhou vai num campo só — o campeão (ou o empate) no pedido 
   assert.deepEqual(de({ empate: true, temArt: true, artId: 'U2', artGols: 2 }).feed, { artilheiro_user_id: 'U2', artilheiro_gols: 2 }, 'empate com artilheiro: o prêmio vai no feed');
   // Sem resposta à pergunta: nada a gravar.
   assert.deepEqual(de({}), { jogo: null, feed: null });
+  // 32J: a foto do campeão sobe no passo 4 e vai no pedido dos prêmios — só com campeão; a escolhida antes de virar "Empate" não vai.
+  assert.deepEqual(de({ campeaoIdx: 1, campeaoFoto: 'https://x/c.webp' }).feed, { campeao_foto_url: 'https://x/c.webp' });
+  assert.equal(de({ empate: true, campeaoFoto: 'https://x/c.webp' }).feed, null);
 });
 
 test('4 · com 3 ou 4 times: tocar no campeão, no mesmo pedido do jogo (sem placar, sem empate); os gols de todos os times valem', () => {
@@ -271,8 +274,10 @@ test('o editor é UM só, com o modo "devolver" (sem copiar código): o Jogo e A
   assert.match(editor, /import \{[^}]*corpoDoResultadoDoJogo[^}]*corpoDosPremios[^}]*\} from '\.\.\/utils\/resultadoDoJogo';/, 'os dois corpos dos pedidos são de funções só');
   assert.match(editor, /apiFetch\(`\/api\/games\/\$\{gameId\}\/resultado`, \{ method: 'PATCH'/, 'o modo salvar grava o resultado do jogo');
   assert.match(editor, /apiFetch\(`\/api\/feed\/games\/\$\{gameId\}\/resultado`, \{ method: 'PATCH', body: JSON\.stringify\(corpoDosPremios\(estado\)\) \}\)/, 'e os prêmios no pedido do feed');
-  // Em `devolver` não há pedido (o jogo ainda nem existe) nem foto do campeão. A rodada de cerveja saiu do app: em nenhum modo.
-  assert.match(editor, /\{!devolver && d\.campeaoIdx !== null \? \(/, 'sem foto do campeão');
+  // Em `devolver` não há pedido (o jogo ainda nem existe); a foto do campeão aparece nos dois modos, só com o campeão escolhido (32J).
+  // A rodada de cerveja saiu do app: em nenhum modo.
+  assert.match(editor, /\{d\.campeaoIdx !== null \? \(\s*<div[^>]*data-foto-do-campeao>/, 'foto do campeão só com campeão');
+  assert.match(editor, /label=\{estado\.campeaoFoto \? 'Trocar foto' : 'Adicionar foto'\}/);
   assert.doesNotMatch(editor, /Rodada de cerveja|temRodada|rodadaId|rodadaFoto|celebrarCerveja/, 'sem rodada de cerveja');
   assert.match(editor, /titulo=\{ARTILHEIRO\.titulo\}/);
   assert.match(editor, /titulo=\{DESTAQUE\.titulo\}/);

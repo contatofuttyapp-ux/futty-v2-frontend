@@ -121,6 +121,9 @@ async function aoMotor(route, baseDoMotor) {
 // produção — o endereço que a figurinha pronta tem no site.
 const JOB = '5e1f0c1e-0000-4000-8000-0000000032d0';
 const IMAGEM_PRONTA = `${ORIGEM_DO_MOTOR}/api/media/prova-32d-figurinha-pronta`;
+// A foto do motor de produção é pedida pelo SITE (src/utils/avatar.js#pelaBorda: a borda da Cloudflare guarda): é por lá que ela tem de chegar.
+const SITE = 'https://futtyapp.com.br';
+const IMAGEM_PRONTA_PELA_BORDA = IMAGEM_PRONTA.replace(ORIGEM_DO_MOTOR, SITE);
 const pinturaSimulada = (registro) => async (url, route) => {
   const metodo = route.request().method();
   const cors = { 'access-control-allow-origin': route.request().headers().origin || '*', 'access-control-allow-credentials': 'true' };
@@ -134,7 +137,7 @@ const pinturaSimulada = (registro) => async (url, route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ estado: 'pronta', etapa: 'pronta', progresso: 1, estimativaSegundos: 40, decorridoSegundos: 38, avatar_url: IMAGEM_PRONTA, kit: 'dark-gold', figurinha_ativa: true }) });
     return true;
   }
-  if (url.href.startsWith(IMAGEM_PRONTA)) {
+  if (url.href.startsWith(IMAGEM_PRONTA_PELA_BORDA)) {
     registro.push('GET imagem pronta');
     await route.fulfill({ status: 200, contentType: 'image/png', headers: { 'access-control-allow-origin': '*' }, body: PNG_PRONTA });
     return true;
@@ -193,6 +196,8 @@ export async function rodar({ navegador, t }) {
           if (tela.mexer && await tela.mexer(url, route)) return undefined;
           if (url.origin === base) return await route.continue();
           if (url.origin === ORIGEM_DO_MOTOR) return await aoMotor(route, dados.base);
+          // A mídia pelo site: a Pages Function a leva ao motor, como aqui.
+          if (url.origin === SITE && url.pathname.startsWith('/api/media/')) return await aoMotor(route, dados.base);
           if (url.origin === ORIGEM_DOS_ASSETS) {
             const arq = arquivoDoBuild(pasta, url.pathname);
             return await route.fulfill(arq ? { status: 200, headers: { 'access-control-allow-origin': '*', 'content-type': tipoDe(arq) }, body: readFileSync(arq) } : { status: 404, body: '' });
@@ -358,7 +363,7 @@ export async function rodar({ navegador, t }) {
             if (await confirmar.count()) await confirmar.first().click();
             for (let i = 0; i < 60 && !pintura.includes('GET imagem pronta'); i += 1) await p.waitForTimeout(250);
             await p.waitForTimeout(2500);
-            t('…a pintura (simulada) foi pedida, acompanhada e a imagem pronta carregou do proxy do motor', ['POST /api/me/avatar/ai', 'GET job', 'GET imagem pronta'].every((x) => pintura.includes(x)), pintura.join(' · '));
+            t('…a pintura (simulada) foi pedida, acompanhada e a imagem pronta carregou do proxy, pelo site (a borda)', ['POST /api/me/avatar/ai', 'GET job', 'GET imagem pronta'].every((x) => pintura.includes(x)), pintura.join(' · '));
           },
         },
         // A Loja: o botão do topo da Figurinha leva aos Planos. Na web o RevenueCat não existe (só no app da loja, que não recebe estes

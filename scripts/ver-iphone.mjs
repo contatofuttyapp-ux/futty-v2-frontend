@@ -7547,7 +7547,7 @@ async function cenaRodada29bPesada(navegador) {
     });
     let c = await contar();
     verificar('Resenha: a 1ª página traz 20 itens (e não os 120 de antes)', c.total === 20, `${c.total} itens`);
-    verificar('Resenha: o app novo pede `?limite=20`', pedidos.includes('/api/feed?limite=20'), pedidos.filter((p) => p.startsWith('/api/feed')).join(' | '));
+    verificar('Resenha: o app novo pede `?limite=8`', pedidos.includes('/api/feed?limite=8'), pedidos.filter((p) => p.startsWith('/api/feed')).join(' | '));
     const botao = pagina.getByRole('button', { name: 'Ver mais antigos' });
     verificar('Resenha: aparece "Ver mais antigos"', (await botao.count()) === 1);
     await capturar(pagina, '2-resenha-pagina-1');
@@ -7582,7 +7582,7 @@ async function cenaRodada29bPesada(navegador) {
     const rotas = [...new Set(pedidos.filter((p) => !p.startsWith('/api/media/')).map((p) => p.replace(/\/[^/]*\/ranking/, '/{slug}/ranking')))].sort();
     if (rotulo === 'pesada') {
       verificar('Pré-aquecimento (conta pesada): no máximo 12 imagens baixadas por trás (eram 24)', imagens <= 12, `${imagens} imagens`);
-      verificar('Pré-aquecimento (conta pesada): só pede o que as telas comuns leem', JSON.stringify(rotas) === JSON.stringify(['/api/blocks', '/api/feed?limite=20', '/api/inicio', '/api/me/selos', '/api/teams/{slug}/ranking'].sort()), rotas.join(' | '));
+      verificar('Pré-aquecimento (conta pesada): só pede o que as telas comuns leem', JSON.stringify(rotas) === JSON.stringify(['/api/blocks', '/api/feed?limite=8', '/api/inicio', '/api/me/selos', '/api/teams/{slug}/ranking'].sort()), rotas.join(' | '));
     } else {
       verificar('Pré-aquecimento (conta leve): sem imagens e sem rota estranha', imagens === 0 && !rotas.some((p) => /\/api\/super|\/api\/diagnostico/.test(p)), `${imagens} imagens · ${rotas.join(' | ')}`);
     }

@@ -21,8 +21,8 @@ import { registarChamada, lerServerTiming, marcarDadosDaTela } from './diagnosti
 //     A Pages Function não corre no vite dev server; manter absoluto aqui é o
 //     que deixa o LIGAR-FUTTY.bat e o teste no celular funcionarem como sempre.
 //
-// A mídia NÃO segue esta regra: continua a sair de VITE_API_URL/VITE_ASSETS_URL
-// em utils/avatar.js, com URL absoluta, para não perder o cache longo.
+// A mídia segue outra regra (utils/avatar.js#pelaBorda): a foto do motor de produção é pedida pelo
+// domínio do site, no site E no app, para sair da borda da Cloudflare com o cache longo.
 const MOTOR = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 const API_URL = !Capacitor.isNativePlatform() && import.meta.env.PROD ? '' : MOTOR;
 

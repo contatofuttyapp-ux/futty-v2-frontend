@@ -13,7 +13,7 @@ import AdCard from '../../components/AdCard';
 import EstadoErroRede from '../../components/EstadoErroRede';
 import { EmptyState, GameCard } from './GameCard';
 
-export default function ConteudoDoInicio({ abrindoSorteioId, busyId, campSlug, campSlugDoNovo, campeonato, campeonatoNovo, chipsEscondidosDir, chipsEscondidosEsq, fecharPacote, inicio, items, loadingGames, montarFaixaDeChips, nextId, noTeams, onPresence, onSairEspera, onboardingCompleto, pacoteFechado, proximosJogos, selectedTeam, semDadosPorErro, setSelectedTeam, teams, timeDoJogo, timesDoDono, ultimosJogos, verSorteio }) {
+export default function ConteudoDoInicio({ abrindoSorteioId, busyId, campSlug, campSlugDoNovo, campeonato, campeonatoNovo, chipsEscondidosDir, chipsEscondidosEsq, fecharPacote, inicio, items, loadingGames, montarFaixaDeChips, nextId, noTeams, proximoNoTopo = false, onPresence, onSairEspera, onboardingCompleto, pacoteFechado, proximosJogos, selectedTeam, semDadosPorErro, setSelectedTeam, teams, timeDoJogo, timesDoDono, ultimosJogos, verSorteio }) {
   return (
     <>
         {semDadosPorErro ? (
@@ -75,14 +75,16 @@ export default function ConteudoDoInicio({ abrindoSorteioId, busyId, campSlug, c
             {/* O campeonato NOVO do time (em andamento, ou o campeão da última semana): todo membro vê, não só o admin. */}
             {campeonatoNovo && campSlugDoNovo ? <CardCampeonatoInicio campeonato={campeonatoNovo} slug={campSlugDoNovo} /> : null}
 
-            {/* Jogos */}
+            {/* Jogos. Com o próximo lá em cima (logo abaixo do cromo, Inicio.jsx), aqui ficam os outros — e o rótulo some se não sobrar nenhum. */}
             <div>
-              <div className="games-label">Próximos Jogos</div>
+              {!proximoNoTopo || items.some((item) => item.type === 'game') ? (
+                <div className="games-label">{proximoNoTopo ? 'Outros jogos' : 'Próximos Jogos'}</div>
+              ) : null}
             {loadingGames ? (
               <LoadingFutty />
             ) : (
               <>
-                {proximosJogos.length === 0 && <p className="muted">Sem jogos para mostrar.</p>}
+                {proximosJogos.length === 0 && !proximoNoTopo && <p className="muted">Sem jogos para mostrar.</p>}
                 {items.map((item, i) =>
                   item.type === 'ad' ? (
                     <AdCard key={item.key} />

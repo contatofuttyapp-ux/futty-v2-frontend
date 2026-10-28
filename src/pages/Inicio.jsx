@@ -35,6 +35,7 @@ import { AgoraNao } from './inicio/AgoraNao';
 import { useAcoesDoInicio } from './inicio/acoesDoInicio';
 import { useCromoDoInicio } from './inicio/useCromoDoInicio';
 import ConteudoDoInicio from './inicio/ConteudoDoInicio';
+import { GameCard } from './inicio/GameCard';
 import PalcoDoCromo from './inicio/PalcoDoCromo';
 import AvisoCardSemFoto from './inicio/AvisoCardSemFoto';
 import AvisoFigurinhaPronta from './inicio/AvisoFigurinhaPronta';
@@ -266,13 +267,21 @@ export default function Inicio() {
     celebrarTop3(1);
   }, [campeonato, userIdDoConfete]);
 
+  // O começo dos "Próximos Jogos" — o que está em andamento agora (se houver) e o PRÓXIMO, o do "Vou / Não vou", nessa ordem — sobe para
+  // logo abaixo do cromo: com aviso no topo, "Seus times", os atalhos e o pacote de quem administra 4 times, o próximo jogo caía para a
+  // segunda tela, e é a única coisa do Início que pede resposta com hora marcada. O resto da página fica onde estava; os jogos que vêm
+  // depois do próximo ficam lá embaixo, em "Outros jogos" (um cartão por jogo, sem repetir).
+  const fimDoTopo = !loadingGames && proximoJogo ? proximosJogos.findIndex((g) => g.id === proximoJogo.id) + 1 : 0;
+  const jogosNoTopo = proximosJogos.slice(0, fimDoTopo);
+  const outrosProximos = proximosJogos.slice(fimDoTopo);
+
   // Anúncio nativo: a seguir ao 2º jogo; se houver ≤1 jogo, no fim.
   const items = [];
-  proximosJogos.forEach((g, i) => {
+  outrosProximos.forEach((g, i) => {
     items.push({ type: 'game', game: g });
     if (i === 1) items.push({ type: 'ad', key: 'ad-inicio' });
   });
-  if (proximosJogos.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
+  if (outrosProximos.length <= 1) items.push({ type: 'ad', key: 'ad-inicio' });
 
   // "Sem time" só depois de uma resposta que diga isso: com a sessão morta o /api/inicio devolve 401 e o
   // Início diria "Bem-vindo, crie seu time" a quem TEM time. Falha sem dado nenhum é erro com "Tentar de
@@ -492,13 +501,34 @@ export default function Inicio() {
             seco, dourado, sem palco. */}
         <PalcoDoCromo cromo={cromo} cromoAvatarEhIA={cromoAvatarEhIA} cromoFundo={cromoFundo} dadosInicio={dadosInicio} destinoCromo={destinoCromo} modoDoCromo={modoDoCromo} nome={nome} previaCromo={previaCromo} refCromo={refCromo} setSheetAvatarAberto={setSheetAvatarAberto} stats={stats} teams={teams} user={user} />
 
+        {/* O começo dos Próximos Jogos (em andamento + o próximo), na primeira tela mesmo com o Início cheio (ver jogosNoTopo). */}
+        {jogosNoTopo.length > 0 && !noTeams && !semDadosPorErro ? (
+          <div data-proximo-jogo-no-topo style={{ marginTop: 4, marginBottom: 12 }}>
+            <div className="games-label">Próximos Jogos</div>
+            {jogosNoTopo.map((g, i) => (
+              <GameCard
+                key={g.id}
+                game={g}
+                busy={busyId === g.id}
+                isNext={g.id === nextId}
+                onPresence={onPresence}
+                onSairEspera={onSairEspera}
+                onVerSorteio={verSorteio}
+                abrindo={abrindoSorteioId === g.id}
+                index={i}
+                cidade={timeDoJogo(g.team_id)?.cidade}
+              />
+            ))}
+          </div>
+        ) : null}
+
         {/* Embaixo do avatar, como o dono quis: o olho da pessoa cai no avatar, não no topo. O card "Seu time"
             só aparece para quem administra algum time (o Dashboard do painel do admin). */}
         <CardSeuTime seuTime={dadosInicio?.seu_time || []} teams={teams || []} games={games || []} />
 
         {(error || (inicio.erro && !semDadosPorErro)) && <div className="alert alert--error hud-corners" style={{ marginTop: 12 }}>{error || inicio.erro}</div>}
 
-        <ConteudoDoInicio abrindoSorteioId={abrindoSorteioId} busyId={busyId} campSlug={campSlug} campSlugDoNovo={campSlugDoNovo} campeonato={campeonato} campeonatoNovo={campeonatoNovo} chipsEscondidosDir={chipsEscondidosDir} chipsEscondidosEsq={chipsEscondidosEsq} fecharPacote={fecharPacote} inicio={inicio} items={items} loadingGames={loadingGames} montarFaixaDeChips={montarFaixaDeChips} nextId={nextId} noTeams={noTeams} onPresence={onPresence} onSairEspera={onSairEspera} onboardingCompleto={onboardingCompleto} pacoteFechado={pacoteFechado} proximosJogos={proximosJogos} selectedTeam={selectedTeam} semDadosPorErro={semDadosPorErro} setSelectedTeam={setSelectedTeam} teams={teams} timeDoJogo={timeDoJogo} timesDoDono={timesDoDono} ultimosJogos={ultimosJogos} verSorteio={verSorteio} />
+        <ConteudoDoInicio abrindoSorteioId={abrindoSorteioId} busyId={busyId} campSlug={campSlug} campSlugDoNovo={campSlugDoNovo} campeonato={campeonato} campeonatoNovo={campeonatoNovo} chipsEscondidosDir={chipsEscondidosDir} chipsEscondidosEsq={chipsEscondidosEsq} fecharPacote={fecharPacote} inicio={inicio} items={items} loadingGames={loadingGames} montarFaixaDeChips={montarFaixaDeChips} nextId={nextId} noTeams={noTeams} proximoNoTopo={jogosNoTopo.length > 0} onPresence={onPresence} onSairEspera={onSairEspera} onboardingCompleto={onboardingCompleto} pacoteFechado={pacoteFechado} proximosJogos={proximosJogos} selectedTeam={selectedTeam} semDadosPorErro={semDadosPorErro} setSelectedTeam={setSelectedTeam} teams={teams} timeDoJogo={timeDoJogo} timesDoDono={timesDoDono} ultimosJogos={ultimosJogos} verSorteio={verSorteio} />
       </main>
 
       {toast ? <Toast mensagem={toast.msg} tipo={toast.tipo} onClose={() => setToast(null)} /> : null}

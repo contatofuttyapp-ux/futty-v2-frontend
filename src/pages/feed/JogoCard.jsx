@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Eye, Handshake, Share2 } from 'lucide-react';
-import { assetUrl } from '../../lib/api';
+import { apiFetch, assetUrl } from '../../lib/api';
+import UploadComCrop from '../../components/UploadComCrop';
 import { urlImagem } from '../../utils/avatar';
 import { haQuantoTempo } from '../../utils/haQuantoTempo';
 import { contar } from '../../utils/plural';
@@ -16,17 +17,35 @@ import { ComentariosResumo, FeedAvatar, PremioRow } from './pecas';
 
 // ─── Card de JOGO ──────────────────────────────────────────────────────────────
 // Exportado para a bancada das provas no navegador (scripts/provas/rodada-30i.*): o card de verdade, sem a página em volta.
-export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
+// `onFotoDoCampeao(id, url)`: o admin trocou a foto aqui no card — a página atualiza a lista dela (o card já mostra a nova).
+export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, onFotoDoCampeao, index = 0 }) {
   const [detalhes, setDetalhes] = useState(true);
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
   const [contagem, setContagem] = useState(null);
+  const [fotoNova, setFotoNova] = useState(null);
+  const [erroDaFoto, setErroDaFoto] = useState('');
 
   const campeao = timeCampeao(j);
   const jogadoresCampeao = campeao?.jogadores || [];
   const nomesCampeao = jogadoresCampeao.map((p) => p.nome).filter(Boolean).join(' · ');
   // Sem campeão, o jogo que terminou empatado ganha o próprio bloco: "Empate · Ouro 2 × 2 Roxo".
   const empate = campeao ? null : empateDaResenha(j);
-  const foto = j.campeao_foto_url ? assetUrl(j.campeao_foto_url) : null;
+  const fotoGuardada = fotoNova || j.campeao_foto_url;
+  const foto = fotoGuardada ? assetUrl(fotoGuardada) : null;
+
+  // A foto do time campeão direto daqui, sem ir a Ajustes → Jogos: o mesmo recorte 4:3 e o mesmo pedido dos prêmios do jogo (só admin
+  // grava — o motor confere). A resposta traz a foto já no endereço que a tela usa.
+  async function salvarFotoDoCampeao(url) {
+    setErroDaFoto('');
+    try {
+      const r = await apiFetch(`/api/feed/games/${j.id}/resultado`, { method: 'PATCH', body: JSON.stringify({ campeao_foto_url: url }) });
+      const gravada = r?.game?.campeao_foto_url || url;
+      setFotoNova(gravada);
+      onFotoDoCampeao?.(j.id, gravada);
+    } catch (err) {
+      setErroDaFoto(err?.message || 'Não deu para salvar a foto agora. Tente de novo.');
+    }
+  }
 
   async function partilhar() {
     const linhas = [
@@ -81,6 +100,14 @@ export function JogoCard({ j, isAdmin, teamSlug, onOpenImage, index = 0 }) {
               estiloImg={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: 420, objectFit: 'cover', display: 'block' }}
               estiloFalha={{ width: 'calc(100% - 28px)', margin: '8px 14px' }}
             />
+          ) : null}
+
+          {/* B2) SÓ O ADMIN DO TIME: pôr (ou trocar) a foto do time campeão aqui mesmo. Jogador comum não vê. */}
+          {isAdmin ? (
+            <div data-foto-campeao-no-card style={{ padding: foto ? '10px 14px 12px' : '0 14px 12px' }}>
+              <UploadComCrop onUpload={salvarFotoDoCampeao} accept="image/*" aspect={4 / 3} label={foto ? 'Trocar foto' : 'Adicionar foto'} />
+              {erroDaFoto ? <div role="alert" style={{ marginTop: 6, fontSize: 12, color: 'var(--danger)' }}>{erroDaFoto}</div> : null}
+            </div>
           ) : null}
 
           {/* C) TIME CAMPEÃO — respira como o cromo (bob+sway aninhados). */}

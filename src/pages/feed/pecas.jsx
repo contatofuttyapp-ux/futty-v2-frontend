@@ -1,7 +1,8 @@
 // Futty v2.0 — As peças pequenas dos cartões da Resenha: o link da vitrine, o avatar, a linha do prêmio e o resumo dos comentários.
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { usePertoDaTela } from '../../hooks/usePertoDaTela';
 import { assetUrl } from '../../lib/api';
 import { urlImagem } from '../../utils/avatar';
 import { contar } from '../../utils/plural';
@@ -21,13 +22,17 @@ function LinkVitrine({ teamSlug, userId, style, children }) {
 }
 
 // ─── Avatar — moldura V1 do cânone (.avatar-frame), única na página ────────────
+// O avatar só é pedido quando o cartão chega perto da tela (hooks/usePertoDaTela.js): cada cartão traz até uma dúzia deles (time
+// campeão, prêmios, comentários) e a Resenha inteira, centenas. Até lá, a moldura vazia do mesmo tamanho.
 function FeedAvatar({ avatarUrl, size = 48 }) {
   const [falhou, setFalhou] = useState(false);
+  const moldura = useRef(null);
+  const perto = usePertoDaTela(moldura);
   const src = avatarUrl ? urlImagem(assetUrl(avatarUrl), 128, { quadrado: true }) : null;
   return (
-    <span className="avatar-frame" style={{ width: size, height: size, flexShrink: 0 }}>
+    <span ref={moldura} className="avatar-frame" style={{ width: size, height: size, flexShrink: 0 }}>
       <span className="avatar-frame__fill" style={{ fontSize: Math.round(size * 0.34) }}>
-        {src && !falhou ? <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} /> : <SilhuetaJogador size="76%" />}
+        {src && !falhou ? (perto ? <img src={src} alt="" decoding="async" onError={() => setFalhou(true)} /> : null) : <SilhuetaJogador size="76%" />}
       </span>
       <span className="avatar-frame__veil" />
       <span className="avatar-frame__lc avatar-frame__lc--tl" />

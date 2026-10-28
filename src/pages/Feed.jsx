@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
+import { enderecoDaResenha } from '../lib/paginaDaResenha';
 import { nomeExibicao } from '../utils/nomeExibicao';
 import { primeiroNome } from '../utils/primeiroNome';
 import AdCard from '../components/AdCard';
@@ -24,8 +25,9 @@ import { AnuncioCard } from './feed/AnuncioCard';
 import { PostCard } from './feed/PostCard';
 import { JogoCard } from './feed/JogoCard';
 
-// Tamanho da página da Resenha (o motor aceita até 50; o app pede 20, que é o que cabe em três ou quatro telas).
-const PAGINA_FEED = 20;
+// O sentinela do fim da lista pede a página seguinte quando ainda falta mais de uma tela para chegar lá: com páginas de 8, esperar o
+// fim (os 200 px de antes) deixava a pessoa parada no "Carregando…".
+const ANTECEDENCIA_DA_PROXIMA = '900px 0px';
 
 // Enquanto não há NADA para mostrar, três cartões-esqueleto com a forma dos de verdade (avatar, linhas, foto)
 // ocupam o lugar: sem eles a Resenha, que levava mais de 5 s para mostrar os posts, parecia vazia (só o
@@ -67,10 +69,10 @@ export default function Feed() {
   // A Resenha entra no mesmo stale-while-revalidate do resto da casa: pinta o feed da última visita na hora e
   // actualiza por trás. Sem cache, o loader tapava a tela inteira até a resposta chegar de São Paulo, e quem
   // está em Lisboa pagava essa espera em TODA visita à aba.
-  // A Resenha vem em PÁGINAS de 20 (jogos e posts juntos); "Ver mais antigos" busca a seguinte pelo
+  // A Resenha vem em PÁGINAS (lib/paginaDaResenha.js: jogos e posts juntos); rolar busca a seguinte pelo
   // cursor `proximo`. Vir até 120 itens de uma vez era conta pesada, com comentários, reações e fotos de todos
   // os times da pessoa.
-  const { data: feedData, loading: feedCarregando, error: feedErro } = useApiComCache(`/api/feed?limite=${PAGINA_FEED}`, 'feed');
+  const { data: feedData, loading: feedCarregando, error: feedErro } = useApiComCache(enderecoDaResenha(), 'feed');
 
   // O anúncio é pedido AQUI, no topo, em paralelo com o feed. Montar o AdCard só entre o 3º e o 4º item da
   // lista faria o pedido dele começar depois do /api/feed inteiro ter chegado e sido pintado — duas idas a
@@ -111,7 +113,7 @@ export default function Feed() {
     setErro('');
     setErroCarregarMais(false);
     try {
-      const d = await apiFetch(`/api/feed?limite=${PAGINA_FEED}&antes=${encodeURIComponent(proximo)}`);
+      const d = await apiFetch(enderecoDaResenha(proximo));
       setItems((cur) => {
         const jaVistos = new Set((cur || []).map((i) => `${i.kind}-${i.id}`));
         return [...(cur || []), ...(d.items || []).filter((i) => !jaVistos.has(`${i.kind}-${i.id}`))];
@@ -135,7 +137,7 @@ export default function Feed() {
     if (!el || !proximo || erroCarregarMais || typeof IntersectionObserver === 'undefined') return undefined;
     const obs = new IntersectionObserver((entradas) => {
       if (entradas[0]?.isIntersecting) verMais();
-    }, { rootMargin: '200px' });
+    }, { rootMargin: ANTECEDENCIA_DA_PROXIMA });
     obs.observe(el);
     return () => obs.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- verMais lê `carregandoMais` fechado no momento certo (o efeito só reabre quando `proximo` muda, já depois do pedido anterior terminar)
@@ -175,6 +177,11 @@ export default function Feed() {
     } catch (err) {
       setErro(err.message);
     }
+  }
+
+  // O admin pôs (ou trocou) a foto do campeão direto no card: a lista guarda a nova, para o card não voltar à antiga num re-render.
+  function fotoDoCampeaoTrocada(gameId, url) {
+    setItems((cur) => (cur || []).map((i) => (i.kind === 'jogo' && i.id === gameId ? { ...i, campeao_foto_url: url } : i)));
   }
 
   function aoCriarPost(post) {
@@ -272,7 +279,7 @@ export default function Feed() {
                         index={i}
                       />
                     ) : (
-                      <JogoCard j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} index={i} />
+                      <JogoCard j={item} isAdmin={ehAdmin} teamSlug={slug} onOpenImage={setImgFull} onFotoDoCampeao={fotoDoCampeaoTrocada} index={i} />
                     );
                   // P2-11: âncora de scroll + destaque dourado no post recém-criado.
                   const card = (

@@ -41,10 +41,24 @@ function baseAssets() {
 // Após a normalização (scripts/normalizar-avatares.js), os URLs do backend já
 // são absolutos. Só a mídia do frontend precisa de tratamento; o resto é um
 // fallback para caminhos ainda não normalizados.
+// ─── A mídia pela borda da Cloudflare ────────────────────────────────────────
+// O motor devolve as fotos com o endereço dele (o Cloud Run em São Paulo). Pedidas assim, cada foto era uma ida a São Paulo, no
+// site e no app. Pelo domínio do site, a Pages Function (functions/api/[[path]].js) serve a foto da borda da Cloudflare — do
+// datacenter mais perto de quem olha — e só vai ao motor na primeira vez. Só o motor de PRODUÇÃO é trocado: em dev e nas provas o
+// motor é outro endereço e a foto sai dele, como sempre.
+const MOTOR_DE_PRODUCAO = 'https://futty-api-685039278359.southamerica-east1.run.app';
+const SITE = 'https://futtyapp.com.br';
+
+/** O endereço de uma mídia do proxy pelo site (a borda), quando ela vem do motor de produção; qualquer outro, intacto. */
+export function pelaBorda(url) {
+  const s = String(url ?? '');
+  return s.startsWith(`${MOTOR_DE_PRODUCAO}/api/media/`) ? `${SITE}${s.slice(MOTOR_DE_PRODUCAO.length)}` : s;
+}
+
 export function urlAsset(caminho) {
   if (!caminho) return '';
   const s = String(caminho).trim();
-  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+  if (s.startsWith('http://') || s.startsWith('https://')) return pelaBorda(s);
   if (PASTAS_REMOTAS.some((p) => s.startsWith(p))) {
     // encode trata espaços e acentos (ex.: "Peixe boi.png", "Onça.png").
     const base = baseAssets() || (typeof window !== 'undefined' ? window.location.origin : '');
@@ -70,7 +84,7 @@ const DEGRAUS = [128, 256, 512, 1024];
  * do browser — é sempre um dos quatro).
  */
 export function urlImagem(url, w, { quadrado = false } = {}) {
-  const s = String(url ?? '').trim();
+  const s = pelaBorda(String(url ?? '').trim());
   if (!s || !s.includes('/api/media/')) return s;
   const alvo = DEGRAUS.reduce((melhor, d) => (Math.abs(d - w) < Math.abs(melhor - w) ? d : melhor), DEGRAUS[0]);
   // `sq=1` — recorte central QUADRADO no servidor (SPEC-FIGURINHA-3 §3). A

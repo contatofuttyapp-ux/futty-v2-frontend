@@ -3,9 +3,10 @@
 // de imagem quebrada. Por isso a foto que falha vira UMA linha curta, na voz da casa, e um toque tenta de
 // novo (o endereço ganha ?r=N, para o navegador não reaproveitar o erro). A foto boa é um botão que abre a
 // imagem em tela cheia. Os dois nunca se aninham (botão dentro de botão).
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { comTentativa } from '../utils/comTentativa';
+import { usePertoDaTela } from '../hooks/usePertoDaTela';
 
 /**
  * `src`: a miniatura; `onAbrir`: o toque na foto boa; `estiloBotao`: o botão que envolve a foto; `largura`/`altura`: só reservam a
@@ -14,6 +15,9 @@ import { comTentativa } from '../utils/comTentativa';
 export default function ImagemDoPost({ src, onAbrir, estiloBotao, largura, altura, estiloImg, larguraMinFalha = 0, estiloFalha }) {
   const [tentativa, setTentativa] = useState(0);
   const [falhou, setFalhou] = useState(false);
+  // A foto só é pedida quando chega perto da tela (hooks/usePertoDaTela.js); até lá a <img> sem src já reserva a proporção.
+  const caixa = useRef(null);
+  const perto = usePertoDaTela(caixa);
 
   if (falhou) {
     return (
@@ -34,10 +38,11 @@ export default function ImagemDoPost({ src, onAbrir, estiloBotao, largura, altur
   }
 
   return (
-    <button type="button" onClick={onAbrir} style={estiloBotao}>
+    <button ref={caixa} type="button" onClick={onAbrir} style={estiloBotao}>
       <img
         key={tentativa}
-        src={comTentativa(src, tentativa)}
+        src={perto ? comTentativa(src, tentativa) : undefined}
+        data-perto={perto ? '1' : '0'}
         alt=""
         width={largura}
         height={altura}

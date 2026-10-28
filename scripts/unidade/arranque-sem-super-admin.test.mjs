@@ -50,7 +50,8 @@ test('as telas do super-admin entram no app só por import dinâmico (lazy) — 
 
 test('o pré-aquecimento do arranque só pede o que as telas comuns leem (nada de super-admin)', () => {
   const fonte = readFileSync(path.join(SRC, 'lib', 'preaquecerDados.js'), 'utf8');
-  const rotas = [...fonte.matchAll(/passos\.push\(\[\s*[`'"]([^`'"]+)[`'"]/g)].map((m) => m[1].replace(/\$\{[^}]+\}/g, '{slug}'));
-  assert.deepEqual(rotas.sort(), ['/api/blocks', '/api/feed?limite=20', '/api/me/selos', '/api/teams/{slug}/ranking'].sort());
+  const rotas = [...fonte.matchAll(/passos\.push\(\[\s*(?:[`'"]([^`'"]+)[`'"]|(enderecoDaResenha\(\)))/g)]
+    .map((m) => (m[2] ? '/api/feed?limite={pagina}' : m[1].replace(/\$\{[^}]+\}/g, '{slug}')));
+  assert.deepEqual(rotas.sort(), ['/api/blocks', '/api/feed?limite={pagina}', '/api/me/selos', '/api/teams/{slug}/ranking'].sort());
   assert.doesNotMatch(fonte, ROTAS_DO_SUPER_ADMIN);
 });

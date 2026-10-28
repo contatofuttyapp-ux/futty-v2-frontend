@@ -22,7 +22,23 @@ test('30E-4 · o sentinela observa e chama o MESMO verMais() de sempre, sem recr
   assert.match(feed, /<div ref=\{sentinelaRef\} aria-hidden="true" style=\{\{ height: 1 \}\} \/>/);
   // Nada muda no motor: a mesma função, a mesma rota com o mesmo cursor.
   assert.equal((feed.match(/async function verMais\(\)/g) || []).length, 1, 'uma função só — o sentinela não duplica a busca');
-  assert.match(feed, /apiFetch\(`\/api\/feed\?limite=\$\{PAGINA_FEED\}&antes=\$\{encodeURIComponent\(proximo\)\}`\)/);
+  assert.match(feed, /apiFetch\(enderecoDaResenha\(proximo\)\)/);
+});
+
+test('32J · a página é de 8, a tela e o pré-aquecimento pedem o MESMO endereço, e o cursor vai codificado', async () => {
+  const { PAGINA_DA_RESENHA, enderecoDaResenha } = await import('../../src/lib/paginaDaResenha.js');
+  assert.equal(PAGINA_DA_RESENHA, 8);
+  assert.equal(enderecoDaResenha(), '/api/feed?limite=8');
+  assert.equal(enderecoDaResenha('2026-10-20T23:00:00.000Z'), '/api/feed?limite=8&antes=2026-10-20T23%3A00%3A00.000Z');
+  assert.match(lerPagina('Feed'), /useApiComCache\(enderecoDaResenha\(\), 'feed'\)/);
+  assert.match(ler('src/lib/preaquecerDados.js'), /passos\.push\(\[enderecoDaResenha\(\), 'feed',/);
+});
+
+test('32J · a página seguinte é pedida com mais de uma tela de antecedência', () => {
+  const feed = lerPagina('Feed');
+  const px = Number(/const ANTECEDENCIA_DA_PROXIMA = '(\d+)px/.exec(feed)?.[1]);
+  assert.ok(px >= 844, `${px} px`);
+  assert.match(feed, /\{ rootMargin: ANTECEDENCIA_DA_PROXIMA \}/);
 });
 
 test('30E-4 · o botão "Ver mais antigos" é reserva: só aparece se o automático falhar', () => {

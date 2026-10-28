@@ -5884,3 +5884,10 @@ A lista mestra de decisões continua em C:\Users\phfer\Desktop\FUT\LISTA-CURTA.m
 
 ## scripts/provas/rodada-29s-a.prova.mjs (Rodada 32E)
 - O motor de mentira passou a guardar os convidados (PUT /api/games/G1/convidados) e a devolvê-los no GET do admin, como o motor de verdade desde a 32A (games.convidados). Sem isso o "Zé da Esquina" sumia na releitura do jogo e a prova reprovava 2 itens desde a 32A.
+
+## Rodada 32J (28-out) — Resenha em páginas de 8, fotos pela borda, foto do campeão no card, Início cheio
+- (src/lib/paginaDaResenha.js, pages/Feed.jsx, lib/preaquecerDados.js) A Resenha pedia páginas de 20; passou a 8 (13,5 KB contra 29,9 KB na 1ª página do mundo da prova), com a seguinte pedida a 900 px do fim (eram 200 px).
+- (src/hooks/usePertoDaTela.js, components/ImagemDoPost.jsx, pages/feed/pecas.jsx) Fotos e avatares da Resenha só ganham o `src` a 320 px da tela; o `loading="lazy"` do navegador baixava até 1.250–2.500 px adiante e os avatares nem tinham lazy.
+- (src/utils/avatar.js#pelaBorda, functions/api/[[path]].js) A mídia do motor de produção é pedida por futtyapp.com.br/api/media/… (site e app); a função guarda na Cache API da borda (X-Futty-Borda HIT/MISS) com CORS `*` só na mídia. Antes a mídia saía direto do Cloud Run (o comentário de lib/api.js dizia "A mídia NÃO segue esta regra").
+- (pages/feed/JogoCard.jsx, components/ResultadoEditor.jsx, utils/jogoPassado.js) "Adicionar foto"/"Trocar foto" do time campeão no card da Resenha (só admin) e no passo 4 do Jogo passado. Antes: "A foto do campeão fica de fora: dá para pôr depois, em Ajustes → Jogos." e os rótulos "Foto do campeão"/"✓ Foto do campeão".
+- (pages/Inicio.jsx, pages/inicio/ConteudoDoInicio.jsx) O começo dos "Próximos Jogos" (em andamento + o próximo) subiu para logo abaixo do cromo; os seguintes ficam em "Outros jogos". Medido: com aviso + 4 times o "Vou" terminava em 1055 px a 390×844; agora em 645 px.

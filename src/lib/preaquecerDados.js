@@ -19,6 +19,7 @@ import { gravarCache, lerCacheComIdade } from './cacheLocal';
 import { marcarPreaquecimento, registarPreaquecimento, marcarPreaquecimentoAgendado, tarefaEmCurso } from './diagnostico';
 import { esperarSeOcupado, quandoParado, respirar } from './ritmo';
 import { urlImagem } from '../utils/avatar';
+import { enderecoDaResenha } from './paginaDaResenha';
 
 // Duas imagens em paralelo, não quatro: quatro ao mesmo tempo não é só banda, são quatro descodificações a
 // disputar a thread com a tela que a pessoa está a tocar. Duas adiantam quase tanto e não se sentem.
@@ -122,7 +123,7 @@ export function preaquecer(userId, dadosInicio) {
     // 'ranking:<slug>' (useRanking), 'selos' (Figurinha), 'blocks' (MeuPerfil).
     const passos = [];
     if (slug) {
-      passos.push(['/api/feed?limite=20', 'feed', (d) => d]); // a 1ª página da Resenha (pages/Feed.jsx pede a mesma)
+      passos.push([enderecoDaResenha(), 'feed', (d) => d]); // a 1ª página da Resenha (pages/Feed.jsx pede a mesma)
       passos.push([`/api/teams/${slug}/ranking`, `ranking:${slug}`, (d) => d]);
     }
     // A Figurinha guarda só o ARRAY de selos, não o payload — tem de ser igual,
