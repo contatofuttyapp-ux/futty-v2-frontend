@@ -16,7 +16,8 @@ jobs:
   prova:
     name: Compilar e provar no simulador
     if: contains(github.event.head_commit.message, '[prova-ios]')
-    runs-on: macos-latest
+    # macos-15 com o simulador do iOS 18: o do iOS 26 leva 10 minutos para ligar neste Mac virtual e depois congela.
+    runs-on: macos-15
     timeout-minutes: 75
 
     steps:
@@ -66,7 +67,7 @@ jobs:
       - name: Ligar o simulador
         id: sim
         run: |
-          udid=$(xcrun simctl list devices available -j | node -e "const d=JSON.parse(require('fs').readFileSync(0)).devices;const k=Object.keys(d).filter(x=>/iOS/.test(x)).sort().pop();console.log(d[k].find(x=>/^iPhone/.test(x.name)).udid)")
+          udid=$(xcrun simctl list devices available -j | node -e "const d=JSON.parse(require('fs').readFileSync(0)).devices;const t=Object.keys(d).filter(x=>/iOS/.test(x)&&d[x].length).sort();const k=t.filter(x=>/iOS-18/.test(x)).pop()||t.pop();console.log(d[k].find(x=>/^iPhone/.test(x.name)).udid)")
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid"

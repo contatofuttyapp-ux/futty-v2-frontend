@@ -20,7 +20,13 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const simctl = (...a) => new Promise((resolve, reject) => {
   execFile('xcrun', ['simctl', ...a], { encoding: 'utf8', timeout: 300000 }, (erro, saida) => (erro ? reject(erro) : resolve(saida)));
 });
-const captura = (nome) => simctl('io', UDID, 'screenshot', join(SAIDA, `${nome}.png`)).catch((e) => console.log(`[captura ${nome}] ${e.message.slice(0, 120)}`));
+// Uma captura que não sai não pode segurar a prova inteira.
+const captura = (nome) => new Promise((resolve) => {
+  execFile('xcrun', ['simctl', 'io', UDID, 'screenshot', join(SAIDA, `${nome}.png`)], { timeout: 60000 }, (erro) => {
+    if (erro) console.log(`[captura ${nome}] não saiu: ${erro.message.slice(0, 90)}`);
+    resolve();
+  });
+});
 
 const resultados = [];
 function confere(nome, ok, detalhe = '') {
