@@ -1,0 +1,108 @@
+# Prova do app 2.0 no simulador iOS. Existe porque não há Mac aqui e o simulador só roda em macOS.
+#
+# Nada aqui assina nem envia: sem segredos, sem match, sem TestFlight. Quem manda para a loja continua sendo o ios.yml.
+# Só roda no push do `dev` cujo commit diz [prova-ios], porque cada minuto de Mac custa dez da cota do GitHub.
+name: iOS (simulador, prova)
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: read
+
+jobs:
+  prova:
+    name: Compilar e provar no simulador
+    if: contains(github.event.head_commit.message, '[prova-ios]')
+    # macos-15 com o simulador do iOS 18: o do iOS 26 leva 10 minutos para ligar neste Mac virtual e depois congela.
+    runs-on: macos-15
+    timeout-minutes: 75
+
+    steps:
+      - name: Buscar o código
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar as dependências
+        run: npm ci
+
+      # Só a API e o robô mudam em relação à loja, e só no dist desta execução.
+      - name: Montar o dist de prova
+        run: |
+          node scripts/empacotar-sorteio.mjs --do-pacote --api http://localhost:8788 --robo scripts/prova-casca/ios-robo.js
+          npx cap sync ios
+
+      # O servidor da prova é http://localhost; o app da loja não tem esta exceção.
+      - name: Liberar localhost só nesta execução
+        working-directory: ios/App/App
+        run: |
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" Info.plist
+
+      - name: Fixar o Xcode
+        run: |
+          escolhido=$(ls -d /Applications/Xcode*.app | grep -iv beta | sort -V | tail -1)
+          sudo xcode-select -s "$escolhido/Contents/Developer"
+          xcodebuild -version
+
+      - name: pod install
+        working-directory: ios/App
+        run: pod install
+
+      - name: Compilar para o simulador
+        working-directory: ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -25
+          du -sh build/Build/Products/Debug-iphonesimulator/App.app
+
+      # O idioma vai na abertura do app (ios-maestro.mjs): religar o simulador para trocar o do sistema custa minutos no Mac do CI.
+      - name: Ligar o simulador
+        id: sim
+        run: |
+          udid=$(xcrun simctl list devices available -j | node -e "const d=JSON.parse(require('fs').readFileSync(0)).devices;const t=Object.keys(d).filter(x=>/iOS/.test(x)&&d[x].length).sort();const k=t.filter(x=>/iOS-18/.test(x)).pop()||t.pop();console.log(d[k].find(x=>/^iPhone/.test(x.name)).udid)")
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid"
+          xcrun simctl install "$udid" ios/App/build/Build/Products/Debug-iphonesimulator/App.app
+          xcrun simctl list devices | grep "$udid"
+
+      - name: Capturar a rede
+        run: |
+          iface=$(route -n get default | awk '/interface:/{print $2}')
+          sudo tcpdump -i "$iface" -n -s 0 -w "$RUNNER_TEMP/ios.pcap" 'port 53 or port 443 or port 80' > /dev/null 2>&1 &
+          echo "interface $iface"
+
+      - name: Rodar a prova
+        run: node scripts/prova-casca/ios-maestro.mjs "${{ steps.sim.outputs.udid }}" "$RUNNER_TEMP/capturas-ios"
+
+      - name: Ler a captura de rede
+        if: always()
+        run: |
+          sudo pkill tcpdump || true
+          sleep 2
+          sudo chmod a+r "$RUNNER_TEMP/ios.pcap" || true
+          node scripts/prova-casca/rede-do-pcap.mjs "$RUNNER_TEMP/ios.pcap" "$RUNNER_TEMP/capturas-ios/rede-pacotes.json"
+
+      - name: Log do simulador, se a prova falhou
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/capturas-ios"
+          xcrun simctl spawn "${{ steps.sim.outputs.udid }}" log show --last 5m --style compact --predicate 'process == "App"' > "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
+          tail -60 "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
+
+      - name: Guardar as capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-ios-${{ github.run_number }}
+          path: ${{ runner.temp }}/capturas-ios
+          if-no-files-found: warn
+          retention-days: 30

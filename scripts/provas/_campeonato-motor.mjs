@@ -4,7 +4,7 @@
 // `backend/utils/campeonatoStore.js` (calendário, tabela, desempate, final automática, correção, pódio) — só
 // o Storage é trocado por um Map. Nada sai da máquina: este módulo não faz pedido nenhum.
 //
-// O backend mora ao lado (FUTTY-V2/backend). Se não estiver lá, `carregarStore()` devolve null e quem usa avisa que pulou.
+// O backend mora ao lado (APP/codigo/backend). Se não estiver lá, `carregarStore()` devolve null e quem usa avisa que pulou.
 // (Não começa com `.prova.mjs`, então o `provar-navegador` não o trata como prova.)
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';

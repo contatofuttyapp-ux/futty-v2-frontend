@@ -29,7 +29,7 @@
 // (processo filho; ver _camadas.mjs) e a conferência abaixo garante que o mestre de 1024 px, reduzido a
 // 432, ainda é a camada que está no repositório: se alguém mudar a receita ou a camada, o script para.
 //
-// Uso (a partir de FUTTY-V2/frontend, com o backend ao lado e o npm install feito nos dois):
+// Uso (a partir de APP/codigo/frontend, com o backend ao lado e o npm install feito nos dois):
 //   node scripts/gerar-icones.mjs
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';

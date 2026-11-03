@@ -116,10 +116,11 @@ jobs:
           EOF
           echo "Escrito com $(wc -l < .env.production) variáveis."
 
-      # vite build + tirar a mídia pesada de dist/ (o app busca-a do site) +
-      # cap sync ios, que no macOS também roda o pod install.
-      - name: Compilar a web e sincronizar o projeto iOS
-        run: npm run build:native:ios
+      # O app 2.0 é o site do sorteio. O site mora em outro repositório, então o que vai
+      # para a loja é o sorteio-pacote/ commitado aqui (scripts/empacotar-sorteio.mjs),
+      # não um vite build deste repositório. O cap sync ios, no macOS, também roda o pod install.
+      - name: Montar o dist do sorteio e sincronizar o projeto iOS
+        run: npm run build:sorteio:ios
 
       # O runner traz mais de um Xcode e o padrão nem sempre é o mais novo.
       # Fixar explicitamente evita que uma troca de imagem do runner mude a

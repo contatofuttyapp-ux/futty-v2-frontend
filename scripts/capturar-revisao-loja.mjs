@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Futty v2.0 — as capturas da revisão da Apple para os dois consumíveis (futty_minha e futty_pacote): a tela de compra do app, em PNG 1290×2796
-// (iPhone 6,7": viewport 430×932 a 3x). Sai em FUT\LOJAS\revisao-futty_minha.png e revisao-futty_pacote.png.
+// (iPhone 6,7": viewport 430×932 a 3x). Sai em FUT\EMPRESA\LOJAS\revisao-futty_minha.png e revisao-futty_pacote.png.
 //
 // Tudo LOCAL, nada de produção: o app é o de verdade (Vite em 127.0.0.1) num Chromium que se declara iOS (`window.webkit.messageHandlers.bridge`, o que o
 // Capacitor usa para saber a plataforma); o motor é o de verdade por cima de banco e Auth de mentira (scripts/provas/_motor-loja.cjs), com a loja aberta pela
@@ -9,7 +9,7 @@
 // Todo pedido do navegador passa por aqui: /api/** vai ao motor de mentira, o Vite das telas passa, e QUALQUER outro endereço (inclusive o Supabase de produção)
 // é respondido vazio sem sair da máquina — e anotado.
 //
-// Uso: node scripts/capturar-revisao-loja.mjs [pasta-de-saida]     (padrão: ..\..\LOJAS)
+// Uso: node scripts/capturar-revisao-loja.mjs [pasta-de-saida]     (padrão: ..\..\..\EMPRESA\LOJAS)
 import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -18,7 +18,7 @@ import { createServer } from 'vite';
 import { chromium } from 'playwright';
 
 const RAIZ = fileURLToPath(new URL('../', import.meta.url));
-const SAIDA = path.resolve(process.argv[2] || path.join(RAIZ, '..', '..', 'LOJAS'));
+const SAIDA = path.resolve(process.argv[2] || path.join(RAIZ, '..', '..', '..', 'EMPRESA', 'LOJAS'));
 const MOTOR = path.join(RAIZ, 'scripts', 'provas', '_motor-loja.cjs');
 const REF = new URL((readFileSync(path.join(RAIZ, '.env'), 'utf8').match(/^VITE_SUPABASE_URL=(.+)$/m)?.[1] || 'https://prova.supabase.co').trim()).hostname.split('.')[0];
 

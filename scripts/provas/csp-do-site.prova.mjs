@@ -146,7 +146,7 @@ const pinturaSimulada = (registro) => async (url, route) => {
 };
 
 export async function rodar({ navegador, t }) {
-  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
+  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (APP/codigo/backend): a prova foi pulada', true); return; }
   const textoDoHeaders = readFileSync(path.join(RAIZ, 'public', '_headers'), 'utf8');
   const publicado = blocoGeral(textoDoHeaders);
   t('o site publica a CSP de BLOQUEIO (Content-Security-Policy) e nenhuma Report-Only', !!publicado['Content-Security-Policy'] && !/Content-Security-Policy-Report-Only:/.test(textoDoHeaders), Object.keys(publicado).join(', '));

@@ -88,7 +88,7 @@ const primeiroSemPlacarDaLista = async (page) => {
 export async function rodar({ navegador, base, t }) {
   const store = carregarStore();
   if (!store) {
-    t('o backend não está ao lado (FUTTY-V2/backend): a prova do campeonato foi pulada', true);
+    t('o backend não está ao lado (APP/codigo/backend): a prova do campeonato foi pulada', true);
     return;
   }
 

@@ -200,7 +200,7 @@ async function conferirTela(t, rotulo, page, estado, { vistosEsperados, antes = 
 
 export async function rodar({ navegador, base, t }) {
   try { readFileSync(BACKEND_AO_LADO); } catch {
-    t('o backend não está ao lado (FUTTY-V2/backend): a prova de XSS foi pulada', true);
+    t('o backend não está ao lado (APP/codigo/backend): a prova de XSS foi pulada', true);
     return;
   }
   const { filho, dados, errosDoMotor } = await subirMotor();

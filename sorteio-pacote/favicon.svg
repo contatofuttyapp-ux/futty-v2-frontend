@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Camada_1" data-name="Camada 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+  <!-- F de sempre (mesma forma do polygon original) com a pele metálica v4:
+       gradiente ouro escuro→claro + bisel specular. -->
+  <defs>
+    <linearGradient id="favMetal" gradientUnits="objectBoundingBox" x1="0.28" y1="0" x2="0.56" y2="1">
+      <stop offset="0" stop-color="#d69512"/>
+      <stop offset="0.35" stop-color="#a86808"/>
+      <stop offset="0.62" stop-color="#8a5304"/>
+      <stop offset="0.82" stop-color="#5a3703"/>
+      <stop offset="1" stop-color="#341a02"/>
+    </linearGradient>
+    <filter id="favBisel" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="b"/>
+      <feSpecularLighting in="b" surfaceScale="6" specularConstant="1.1" specularExponent="20" lighting-color="#e8b83a" result="s">
+        <feDistantLight azimuth="228" elevation="55"/>
+      </feSpecularLighting>
+      <feComposite in="s" in2="SourceAlpha" operator="in" result="sc"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="sc"/></feMerge>
+    </filter>
+    <filter id="favGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+  </defs>
+  <!-- Glow = cópia do próprio F desfocada (herda o metal). -->
+  <polygon points="392.28 576.53 648.8 576.5 659.27 541.52 398.39 541.46 472.99 285.11 828.3 195.25 839.06 152.39 440.51 257.5 210.76 1049.58 110.36 1049.52 360.67 177.16 983.79 16.94 913.11 270.83 548.68 369.73 532.74 441.62 798.55 441.67 732.82 676.38 462.77 676.38 354.76 1049.56 249.78 1049.53 392.28 576.53" fill="url(#favMetal)" filter="url(#favGlow)" opacity="0.5"/>
+  <polygon points="392.28 576.53 648.8 576.5 659.27 541.52 398.39 541.46 472.99 285.11 828.3 195.25 839.06 152.39 440.51 257.5 210.76 1049.58 110.36 1049.52 360.67 177.16 983.79 16.94 913.11 270.83 548.68 369.73 532.74 441.62 798.55 441.67 732.82 676.38 462.77 676.38 354.76 1049.56 249.78 1049.53 392.28 576.53" fill="url(#favMetal)" filter="url(#favBisel)" stroke="#d69512" stroke-width="1"/>
+</svg>

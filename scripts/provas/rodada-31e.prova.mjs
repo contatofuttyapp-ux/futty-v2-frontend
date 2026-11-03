@@ -144,7 +144,7 @@ async function abrirContexto(navegador, baseDoVite, dados, quem) {
 const texto = (page) => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
 
 export async function rodar({ navegador, base, t }) {
-  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
+  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (APP/codigo/backend): a prova foi pulada', true); return; }
   const { filho, dados } = await subirMotor();
   if (FOTOS) mkdirSync(FOTOS, { recursive: true });
   const foto = async (page, rotulo) => { if (FOTOS) { await page.waitForTimeout(600); await page.screenshot({ path: path.join(FOTOS, `${rotulo}.png`) }); } };

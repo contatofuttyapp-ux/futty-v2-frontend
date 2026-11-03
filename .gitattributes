@@ -1,0 +1,2 @@
+# O pacote do site é build pronto: tem de chegar byte a byte ao Mac do CI, sem o autocrlf do Windows mexer em nada.
+sorteio-pacote/** -text

@@ -19,7 +19,7 @@
 // As duas versões vêm de dois `vite preview` (builds diferentes: o commit de antes e o de depois), cada um com o /api apontado para um
 // motor LOCAL (VITE_PREVIEW_API) — NUNCA a produção. Contas: backend/scripts/_bench/prova-rodada29b.js (usa a `novato`).
 //
-// Uso (de FUTTY-V2/frontend):
+// Uso (de APP/codigo/frontend):
 //   node scripts/medir-onboarding-p1.mjs --antes http://localhost:4233 --depois http://localhost:4234 [--n 5] [--estatico 80] [--api 350] [--digitando 2500]
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';

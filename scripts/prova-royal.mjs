@@ -27,7 +27,7 @@ const opcao = (nome, omissao) => { const i = args.indexOf(`--${nome}`); return i
 const BASE = opcao('url', 'http://localhost:5233').replace(/\/+$/, '');
 const ETIQUETA = opcao('etiqueta', 'antes');
 if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(BASE)) throw new Error(`só servidor LOCAL (CLAUDE.md, 25-set); recebi ${BASE}`);
-const DESIGN = path.resolve(RAIZ, '..', '..', 'DESIGN');
+const DESIGN = path.resolve(RAIZ, '..', '..', '..', 'DESIGN');
 const PASTA = path.join(RAIZ, 'scripts', 'capturas', 'rodada-29h');
 mkdirSync(PASTA, { recursive: true });
 const PRANCHA = path.join(DESIGN, 'golden-variantes.png');

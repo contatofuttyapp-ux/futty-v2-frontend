@@ -8,10 +8,10 @@
 // por mais que cada foto demore.
 //
 // NADA contra produção, nem leitura: o /api/** é o motor de mentira de _mundo-32b.mjs; os rostos, o escudo, os uniformes e os
-// genéricos saem de arquivos locais (FUT/VIDEOS/_rostos, LOJA/demo-logos, backend/scripts/_bench/saida-generico); qualquer outro
+// genéricos saem de arquivos locais (FUT/VIDEOS/_rostos, EMPRESA/LOJA/demo-logos, backend/scripts/_bench/saida-generico); qualquer outro
 // pedido para fora da máquina é respondido aqui mesmo, vazio, e contado.
 //
-// Uso (de FUTTY-V2/frontend):  FFMPEG=<ffmpeg com libx264> node scripts/videos/gravar.mjs [1 2 3 4]
+// Uso (de APP/codigo/frontend):  FFMPEG=<ffmpeg com libx264> node scripts/videos/gravar.mjs [1 2 3 4]
 // Saída: FUT/VIDEOS/NN-nome.mp4 + NN-nome.png (a tela final em 1170 × 2532).
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
@@ -21,11 +21,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ROTA_DOS_ROSTOS, SLUG, ID_DO_JOGO, ELENCO, EU, criarMundo } from './_mundo-32b.mjs';
 
 const FRONTEND = fileURLToPath(new URL('../../', import.meta.url));
-const FUT = fileURLToPath(new URL('../../../../', import.meta.url));
+const FUT = fileURLToPath(new URL('../../../../../', import.meta.url));
 const SAIDA = join(FUT, 'VIDEOS');
 const ROSTOS = join(SAIDA, '_rostos');
-const LOGOS = join(FUT, 'LOJA', 'demo-logos');
-const GENERICOS = join(FUT, 'FUTTY-V2', 'backend', 'scripts', '_bench', 'saida-generico');
+const LOGOS = join(FUT, 'EMPRESA', 'LOJA', 'demo-logos');
+const GENERICOS = join(FUT, 'APP', 'codigo', 'backend', 'scripts', '_bench', 'saida-generico');
 // O splash nativo do iPhone (a imagem do LaunchScreen, 2732², scaleAspectFit sobre #080808): a abertura começa nele.
 const SPLASH_IOS = join(FRONTEND, 'ios', 'App', 'App', 'Assets.xcassets', 'Splash.imageset', 'Default@3x~universal~anyany.png');
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';

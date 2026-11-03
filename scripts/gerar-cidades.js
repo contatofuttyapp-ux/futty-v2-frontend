@@ -12,7 +12,7 @@
 // Servido do SITE (urlAsset → VITE_ASSETS_URL no app nativo), buscado só quando o campo ganha foco: NUNCA no bundle.
 // Meta do dono: ≤ 80 KB comprimido (a Cloudflare serve com gzip/brotli); o script mede e RECUSA passar disso.
 //
-// Uso (a partir de FUTTY-V2/frontend; precisa de internet):  node scripts/gerar-cidades.js
+// Uso (a partir de APP/codigo/frontend; precisa de internet):  node scripts/gerar-cidades.js
 import { gzipSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';

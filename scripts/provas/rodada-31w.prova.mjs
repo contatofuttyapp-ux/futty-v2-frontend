@@ -138,7 +138,7 @@ const FORA_DO_TERMINADO = [
 ];
 
 export async function rodar({ navegador, base, t }) {
-  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
+  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (APP/codigo/backend): a prova foi pulada', true); return; }
   const { filho, dados } = await subirMotor();
   const missa = dados.missa.slug;
   const id = (quem) => dados.pessoas[quem].id;

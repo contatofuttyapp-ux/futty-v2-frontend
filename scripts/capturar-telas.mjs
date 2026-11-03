@@ -811,7 +811,7 @@ async function capturar(navegador, t, estado, dados) {
 async function main() {
   const api = apiLocal();
   const sBase = await status(BASE);
-  if (sBase === null) fatal(`o frontend não responde em ${BASE}. Suba com: cd FUTTY-V2\\frontend ; npm run dev`);
+  if (sBase === null) fatal(`o frontend não responde em ${BASE}. Suba com: cd APP\\codigo\\frontend ; npm run dev`);
   const sApi = await status(api);
   console.log(`frontend ${BASE} → HTTP ${sBase} | API ${api} → ${sApi === null ? 'FORA DO AR' : `HTTP ${sApi}`}`);
 
@@ -824,7 +824,7 @@ async function main() {
     let semSessao = null;
     let dados = null;
     if (SO_PUBLICAS) semSessao = 'execução com --so-publicas';
-    else if (sApi === null) semSessao = `a API local (${api}) está fora do ar; suba com: cd FUTTY-V2\\backend ; npm start`;
+    else if (sApi === null) semSessao = `a API local (${api}) está fora do ar; suba com: cd APP\\codigo\\backend ; npm start`;
     else {
       try {
         if (ESTADO_LIDO) estado = ESTADO_LIDO;

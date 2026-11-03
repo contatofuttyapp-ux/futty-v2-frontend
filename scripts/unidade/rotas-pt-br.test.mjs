@@ -106,14 +106,11 @@ test('a aba da página do time: Jogos por padrão; Ajustes só para o admin', ()
   assert.equal(abaDoTime('mensalidade', false, { mensalidade: true }), 'mensalidade', 'ligada, todo membro tem a aba');
 });
 
-test('o link universal: /time/ abre o app (iOS AASA, Android intent-filter, parser) e o /equipa/ antigo também', () => {
+test('o link universal: /time/ e o /equipa/ antigo seguem no AASA do site antigo', () => {
   const aasa = JSON.parse(ler('public/.well-known/apple-app-site-association'));
   const caminhos = aasa.applinks.details[0].components.map((c) => c['/']);
   assert.ok(caminhos.includes('/time/*'));
   assert.ok(caminhos.includes('/equipa/*'), 'link já enviado continua abrindo o app');
-  const manifesto = ler('android/app/src/main/AndroidManifest.xml');
-  assert.match(manifesto, /android:pathPrefix="\/time"/);
-  assert.match(manifesto, /android:pathPrefix="\/equipa"/);
 });
 
 test('as telas navegam para /time (nenhum link interno com o endereço antigo)', () => {

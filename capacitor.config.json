@@ -14,18 +14,19 @@
     "backgroundColor": "#080808"
   },
   "plugins": {
+    "SystemBars": {
+      "style": "DARK"
+    },
     "SplashScreen": {
-      "launchAutoHide": false,
-      "launchShowDuration": 0,
+      "launchAutoHide": true,
+      "launchShowDuration": 8000,
       "backgroundColor": "#080808",
       "showSpinner": false,
       "launchFadeOutDuration": 200
     },
     "CapacitorUpdater": {
-      "autoUpdate": "atInstall",
-      "autoSplashscreen": true,
-      "autoSplashscreenLoader": true,
-      "autoSplashscreenTimeout": 10000,
+      "autoUpdate": "atBackground",
+      "defaultChannel": "sorteio",
       "appId": "com.futty.app"
     }
   }

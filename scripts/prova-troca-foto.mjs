@@ -18,7 +18,7 @@
 // Cada figurinha é um caminho diferente no bucket, por isso o token do proxy
 // de mídia identifica-a sem ambiguidade: é o que se compara.
 //
-// Uso (a partir de FUTTY-V2/frontend):
+// Uso (a partir de APP/codigo/frontend):
 //   node scripts/prova-troca-foto.mjs --url http://localhost:5174 --etiqueta ANTES
 //
 // CUSTA UMA GERAÇÃO (~US$0,05) — passa mesmo pela fal.
@@ -38,7 +38,7 @@ const FOTO_NOVA = opcao('foto', path.join(RAIZ, '..', '..', 'BANCADA-FOTOS', 'Gu
 const PASTA = path.join(RAIZ, 'scripts', 'capturas');
 
 function lerSenha() {
-  const bruto = readFileSync(path.join(RAIZ, '..', '..', 'LOJA', 'demo-senha.txt'), 'utf8');
+  const bruto = readFileSync(path.join(RAIZ, '..', '..', '..', 'EMPRESA', 'LOJA', 'demo-senha.txt'), 'utf8');
   const linha = bruto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).pop() || '';
   return linha.includes(':') ? linha.split(':').pop().trim() : linha;
 }

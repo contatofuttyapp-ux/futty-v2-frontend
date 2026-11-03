@@ -1,0 +1,30 @@
+{
+  "slots": {
+    "inicio-meio": {
+      "ligado": false,
+      "html": ""
+    },
+    "inicio-rodape": {
+      "ligado": false,
+      "html": ""
+    },
+    "resultado-botoes": {
+      "ligado": false,
+      "html": ""
+    },
+    "link-fim": {
+      "ligado": false,
+      "html": ""
+    },
+    "link-barra": {
+      "ligado": false,
+      "html": ""
+    }
+  },
+  "patrocinio": {
+    "ligado": false,
+    "nome": "",
+    "logo": "",
+    "link": ""
+  }
+}

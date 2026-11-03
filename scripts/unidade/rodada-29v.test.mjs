@@ -1,5 +1,5 @@
 // Futty v2.0 — Rodada 29V (5-out): o F sem o círculo em todo lugar e a faixa de cookies só no site. O dono viu o ícone do app com o F dentro de um anel
-// dourado; a 29V pôs o das lojas (FUT\LOJA\icone-512.png, F amarelo chapado — arte antiga; a 29W trocou pelo "ouro vivo", ver rodada-29w.test.mjs). Aqui trava o RESULTADO — o desenho dos arquivos, não a
+// dourado; a 29V pôs o das lojas (FUT\EMPRESA\LOJA\icone-512.png, F amarelo chapado — arte antiga; a 29W trocou pelo "ouro vivo", ver rodada-29w.test.mjs). Aqui trava o RESULTADO — o desenho dos arquivos, não a
 // receita —, e a faixa que não aparece no app nativo roda de verdade num Chromium em scripts/provas/rodada-29v.prova.mjs (npm run provar:navegador).
 //
 // Uso: npm test

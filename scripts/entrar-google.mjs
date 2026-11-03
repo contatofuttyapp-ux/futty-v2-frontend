@@ -88,7 +88,7 @@ async function procurarSessao(contexto) {
 }
 
 async function main() {
-  if ((await status(BASE)) === null) fatal(`o frontend não responde em ${BASE}. Suba com: cd FUTTY-V2\\frontend ; npm run dev   (ou LIGAR-FUTTY.bat)`);
+  if ((await status(BASE)) === null) fatal(`o frontend não responde em ${BASE}. Suba com: cd APP\\codigo\\frontend ; npm run dev   (ou LIGAR-FUTTY.bat)`);
   const exe = NAVEGADORES.find((c) => c && fs.existsSync(c));
   if (!exe) fatal('não achei o Chrome nem o Edge instalados.');
   const porta = PORTA_FIXA || await portaLivre();

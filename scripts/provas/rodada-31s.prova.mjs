@@ -112,7 +112,7 @@ function ladoNativo(plataforma) {
 }
 
 export async function rodar({ navegador, base, t }) {
-  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
+  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (APP/codigo/backend): a prova foi pulada', true); return; }
   const { filho, dados } = await subirMotor();
   const { slug } = dados.time;
   const linkDoConvite = `${SITE}/c/${slug}-${dados.convite.codigo}`;

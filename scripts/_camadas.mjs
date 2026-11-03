@@ -25,7 +25,7 @@ const RENDERIZADOR = path.join(BACKEND, 'scripts', '_bench', 'renderizar-camadas
  */
 export function renderizarCamadas({ splashAltura } = {}) {
   if (!existsSync(RENDERIZADOR)) {
-    throw new Error(`não achei ${RENDERIZADOR}: a receita do ícone mora no repositório backend (FUTTY-V2/backend, ramo dev), ao lado deste, com o npm install feito`);
+    throw new Error(`não achei ${RENDERIZADOR}: a receita do ícone mora no repositório backend (APP/codigo/backend, ramo dev), ao lado deste, com o npm install feito`);
   }
   const pasta = mkdtempSync(path.join(tmpdir(), 'futty-camadas-'));
   try {

@@ -26,7 +26,7 @@
 //     assets/icon.png (cópia do ícone atual do iPhone, AppIcon-512@2x.png). Quem rodar
 //     `npx @capacitor/assets` parte daqui; nada volta para a arte antiga.
 //
-// Uso (a partir de FUTTY-V2/frontend, com o backend ao lado e o npm install feito nos dois):
+// Uso (a partir de APP/codigo/frontend, com o backend ao lado e o npm install feito nos dois):
 //   node scripts/gerar-splash.mjs
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';

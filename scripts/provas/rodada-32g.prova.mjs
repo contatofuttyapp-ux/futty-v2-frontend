@@ -140,7 +140,7 @@ const abasDe = (page) => page.locator('[role="tablist"] [data-aba]').evaluateAll
 const texto = async (page, sel) => ((await page.locator(sel).count()) ? (await page.locator(sel).first().innerText()).trim() : null);
 
 export async function rodar({ navegador, base, t }) {
-  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
+  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (APP/codigo/backend): a prova foi pulada', true); return; }
   if (FOTOS) mkdirSync(FOTOS, { recursive: true });
   const foto = async (page, nomeDaFoto, opcoes = {}) => { if (FOTOS) await page.screenshot({ path: path.join(FOTOS, `${nomeDaFoto}.png`), fullPage: true, ...opcoes }); };
   const { filho, dados } = await subirMotor();

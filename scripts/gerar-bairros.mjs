@@ -27,7 +27,7 @@
 // bairro. UF sem nenhum bairro (Tocantins) grava []. Servido do SITE (VITE_ASSETS_URL no app nativo), buscado só quando a pessoa escolhe a
 // cidade: NUNCA no bundle nem no pacote nativo (a pasta dados/ sai em scripts/preparar-nativo.js). Cada UF tem o seu teto comprimido (abaixo).
 //
-// Uso (a partir de FUTTY-V2/frontend; precisa de internet):  node scripts/gerar-bairros.mjs
+// Uso (a partir de APP/codigo/frontend; precisa de internet):  node scripts/gerar-bairros.mjs
 //   --zip <arquivo>              usa um BR_bairros_CD2022.zip já baixado (sem internet)
 //   --subdistritos <pasta>       idem para os <UF>_subdistritos_CD2022.zip (uma pasta com os 27 arquivos)
 import { gzipSync, inflateRawSync } from 'node:zlib';

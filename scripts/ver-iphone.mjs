@@ -47,7 +47,7 @@
 // ranking1 não: interceptar desliga o cache HTTP do WebKit e falsearia a medição
 // (só o envio do relatório do Diagnóstico é interceptado, depois de medir).
 //
-// Uso (a partir de FUTTY-V2/frontend; precisa de `npx playwright install webkit`):
+// Uso (a partir de APP/codigo/frontend; precisa de `npx playwright install webkit`):
 //   node scripts/ver-iphone.mjs                                   produção, etiqueta "antes"
 //   node scripts/ver-iphone.mjs --url http://localhost:4179 --etiqueta depois
 //   node scripts/ver-iphone.mjs --cenas campos,voto,aviso,ranking1 --etiqueta 8a-antes
@@ -73,7 +73,7 @@ const opcao = (nome, omissao) => {
 
 const BASE = opcao('url', 'https://futtyapp.com.br').replace(/\/+$/, '');
 const EMAIL = opcao('email', 'demo-loja@futtymock.com');
-const ARQUIVO_SENHA = opcao('senha', path.join(RAIZ, '..', '..', 'LOJA', 'demo-senha.txt'));
+const ARQUIVO_SENHA = opcao('senha', path.join(RAIZ, '..', '..', '..', 'EMPRESA', 'LOJA', 'demo-senha.txt'));
 // A conta demo-loja é membro (admin) só da domingueira-fc-demo: o ranking da
 // vila-olimpica-fc-demo-vila devolveria "não é membro".
 const TIME = opcao('time', 'domingueira-fc-demo');

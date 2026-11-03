@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
-const LOJA = resolve(AQUI, '..', '..', '..', 'LOJA');
+const LOJA = resolve(AQUI, '..', '..', '..', '..', 'EMPRESA', 'LOJA');
 const opcao = (nome) => (process.argv.find((a) => a.startsWith(`--${nome}=`)) || '').slice(nome.length + 3);
 const BASE = (opcao('base') || 'http://localhost:5173').replace(/\/+$/, '');
 const LARGURA = Number(opcao('largura') || 360);
