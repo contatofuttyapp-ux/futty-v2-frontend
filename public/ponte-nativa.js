@@ -202,15 +202,23 @@
   };
 
   // ── Vibração ──
-  // Curta quando a camisa para (.stop no rolo, o mesmo instante do clac) e no jackpot (.premio na máquina).
+  // Curta quando a camisa para (.rev acende a cada jogador, o mesmo instante do clac) e no jackpot (.premio na máquina).
   function vigiarCerimonia(raiz) {
     new MutationObserver(function (mudancas) {
+      // Várias trocas de classe no mesmo quadro chegam juntas e todas veem o estado final: cada elemento vibra uma vez só.
+      var vibrados = [];
       mudancas.forEach(function (m) {
         var alvo = m.target;
-        var antes = String(m.oldValue || '');
-        var ganhou = function (classe) { return alvo.classList.contains(classe) && !new RegExp('(^|\\s)' + classe + '(\\s|$)').test(antes); };
-        if (ganhou('stop')) semErro(nativo('Haptics', 'impact', { style: 'LIGHT' }));
-        else if (ganhou('premio')) semErro(nativo('Haptics', 'notification', { type: 'SUCCESS' }));
+        if (vibrados.indexOf(alvo) >= 0) return;
+        var antes = ' ' + String(m.oldValue || '') + ' ';
+        var ganhou = function (classe) { return alvo.classList.contains(classe) && antes.indexOf(' ' + classe + ' ') < 0; };
+        if (alvo.classList.contains('rev') && ganhou('on')) {
+          vibrados.push(alvo);
+          semErro(nativo('Haptics', 'impact', { style: 'LIGHT' }));
+        } else if (ganhou('premio')) {
+          vibrados.push(alvo);
+          semErro(nativo('Haptics', 'notification', { type: 'SUCCESS' }));
+        }
       });
     }).observe(raiz, { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
   }
