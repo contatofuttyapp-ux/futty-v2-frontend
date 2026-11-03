@@ -21,6 +21,16 @@
   var nativo = function (plugin, metodo, opcoes) { return cap.nativePromise(plugin, metodo, opcoes || {}); };
   var semErro = function (promessa) { return promessa.catch(function () { /* nada a fazer */ }); };
 
+  // ── Área segura do iPhone ──
+  // O WebView do iOS desenha embaixo do relógio e da ilha, e o site não reserva esse espaço: o título ficava coberto. A faixa fixa é o
+  // que o Android já tem de fábrica: o conteúdo rolado não passa por trás do relógio. No Android o WebView já começa abaixo da barra.
+  if (cap.getPlatform && cap.getPlatform() === 'ios') {
+    var areaSegura = document.createElement('style');
+    areaSegura.textContent = 'body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}'
+      + 'body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:#050810;z-index:2147483000;pointer-events:none}';
+    document.head.appendChild(areaSegura);
+  }
+
   // ── Link público ──
   // O site monta o link com location.origin quando não está em futtyapp.com.br, e no app o endereço é o do WebView.
   // No texto copiado o site tira o https://, então o endereço local também chega sem ele; o link sai na mesma forma.

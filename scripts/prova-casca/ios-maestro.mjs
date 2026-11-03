@@ -2,8 +2,11 @@
 // Prova do app 2.0 no simulador iOS, no Mac do CI (.github/workflows/ios-simulador.yml). Faz o papel do servidor do site em localhost:8788
 // (a prova nunca fala com a produção) e dirige a página pelo ios-robo.js em localhost:8799. A folha nativa não fecha sem um dedo: depois de
 // fotografar, o app é fechado e reaberto, e o sorteio continua guardado no aparelho.
+//
+// O simctl é sempre assíncrono: no Mac do CI ele leva minutos, e uma chamada síncrona congelava os dois servidores, deixando o robô sem
+// resposta.
 //   node scripts/prova-casca/ios-maestro.mjs <udid> <pasta de saída>
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
@@ -14,8 +17,10 @@ const PACOTE = 'com.futty.app';
 const LISTA = ['Zanardini', 'Gustavo', 'Higor', 'Gustavo Villela', 'Miguel (g)', 'Erick Lopes', 'Gabriel Vasques', 'Motta', 'Kinho', 'Bruno', 'Caio', 'Diego'].join('\n');
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-const simctl = (...a) => execFileSync('xcrun', ['simctl', ...a], { encoding: 'utf8', timeout: 300000, stdio: ['ignore', 'pipe', 'ignore'] });
-const captura = (nome) => simctl('io', UDID, 'screenshot', join(SAIDA, `${nome}.png`));
+const simctl = (...a) => new Promise((resolve, reject) => {
+  execFile('xcrun', ['simctl', ...a], { encoding: 'utf8', timeout: 300000 }, (erro, saida) => (erro ? reject(erro) : resolve(saida)));
+});
+const captura = (nome) => simctl('io', UDID, 'screenshot', join(SAIDA, `${nome}.png`)).catch((e) => console.log(`[captura ${nome}] ${e.message.slice(0, 120)}`));
 
 const resultados = [];
 function confere(nome, ok, detalhe = '') {
@@ -27,7 +32,6 @@ function confere(nome, ok, detalhe = '') {
 const links = new Map();
 const pedidosDaApi = [];
 const lerCorpo = (req) => new Promise((res) => { const p = []; req.on('data', (d) => p.push(d)); req.on('end', () => res(Buffer.concat(p))); });
-let apiLigada = true;
 const api = createServer(async (req, res) => {
   const corpo = await lerCorpo(req);
   pedidosDaApi.push(`${req.method} ${req.url}`);
@@ -56,7 +60,7 @@ const maestro = createServer(async (req, res) => {
 });
 maestro.listen(8799, '127.0.0.1');
 
-function js(codigo, ms = 20000) {
+function js(codigo, ms = 30000) {
   return new Promise((resolve, reject) => {
     proximoId += 1;
     const id = proximoId;
@@ -65,56 +69,71 @@ function js(codigo, ms = 20000) {
     setTimeout(() => { if (esperando.delete(id)) reject(new Error(`sem resposta do robô: ${codigo.slice(0, 70)}`)); }, ms);
   });
 }
-async function esperaJs(codigo, ms = 30000) {
+async function esperaJs(codigo, ms = 60000) {
   const fim = Date.now() + ms;
   for (;;) {
-    const v = await js(`return (${codigo});`).catch(() => false);
+    const v = await js(`return (${codigo});`, Math.min(30000, ms)).catch(() => false);
     if (v) return v;
     if (Date.now() > fim) throw new Error(`prazo de ${ms} ms: ${codigo.slice(0, 70)}`);
-    await espera(250);
+    await espera(300);
   }
 }
 const clique = (sel) => esperaJs(`!!document.querySelector(${JSON.stringify(sel)})`).then(() => js(`document.querySelector(${JSON.stringify(sel)}).click();`));
 
-function abrirApp() {
-  try { simctl('terminate', UDID, PACOTE); } catch { /* não estava aberto */ }
+async function abrirApp() {
+  await simctl('terminate', UDID, PACOTE).catch(() => { /* não estava aberto */ });
   fila.length = 0;
+  esperando.clear();
   const inicio = Date.now();
-  simctl('launch', UDID, PACOTE, '-AppleLanguages', '(pt-BR)', '-AppleLocale', 'pt_BR');
+  // Sem esperar: o launch pode levar minutos para responder com o app já aberto, e quem diz que abriu é o robô.
+  simctl('launch', UDID, PACOTE, '-AppleLanguages', '(pt-BR)', '-AppleLocale', 'pt_BR').catch((e) => console.log(`[launch] ${e.message.slice(0, 120)}`));
   return inicio;
 }
 
 async function sortear() {
-  await esperaJs(`!!document.querySelector('#lista')`, 60000);
+  await esperaJs(`!!document.querySelector('#lista')`, 300000);
   await js(`const n = document.querySelector('#lista'); n.focus();
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(n, ${JSON.stringify(LISTA)});
     n.dispatchEvent(new Event('input', { bubbles: true })); n.blur();`);
-  await esperaJs(`!!document.querySelector('[data-sortear]:not([disabled])')`, 15000);
+  await esperaJs(`!!document.querySelector('[data-sortear]:not([disabled])')`, 30000);
   await clique('[data-sortear]');
-  await esperaJs(`!!document.querySelector('.saltar.on')`, 30000);
+  await esperaJs(`!!document.querySelector('.saltar.on')`, 120000);
 }
 
-const pngsDoCache = () => {
-  const dados = simctl('get_app_container', UDID, PACOTE, 'data').trim();
+const pngsDoCache = async () => {
+  const dados = (await simctl('get_app_container', UDID, PACOTE, 'data')).trim();
   const pasta = join(dados, 'Library', 'Caches');
   return readdirSync(pasta).filter((n) => /\.png$/i.test(n)).map((n) => join(pasta, n));
 };
 
+async function abrirResultadoGuardado() {
+  await abrirApp();
+  await esperaJs(`!!document.querySelector('#lista')`, 300000);
+  await js(`history.pushState(null, '', '/resultado'); window.dispatchEvent(new PopStateEvent('popstate'));`);
+  await esperaJs(`!!document.querySelector('[data-copiar-link]')`, 60000);
+}
+
 try {
   // ── 1. Abertura ──
-  const inicio = abrirApp();
-  await esperaJs(`!!document.querySelector('#lista')`, 90000);
+  const inicio = await abrirApp();
+  await esperaJs(`!!document.querySelector('#lista')`, 300000);
   const msCampo = Date.now() - inicio;
   await espera(1500);
-  captura('1-inicio');
-  const estado = await js(`return {
+  await captura('1-inicio');
+  const estado = await js(`
+    const sonda = document.createElement('div'); sonda.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px)';
+    document.body.appendChild(sonda); const areaSegura = sonda.getBoundingClientRect().height; sonda.remove();
+    const titulo = document.querySelector('h1, .titulo, [data-pagina="inicio"] h1');
+    return {
     caminho: location.pathname, origem: location.origin, nativo: window.Capacitor.isNativePlatform(), plataforma: window.Capacitor.getPlatform(),
     seo: !!document.querySelector('.seo'), baixeOApp: !!document.querySelector('[data-baixe-o-app]'), ajuda: !!document.querySelector('[data-ajuda]'),
     senha: !!document.querySelector('input[type="password"]'), login: /entrar|criar conta|senha/i.test(document.body.innerText), idioma: document.documentElement.lang,
+    areaSegura, topoDoTitulo: titulo ? titulo.getBoundingClientRect().top : null,
     fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null };`);
   confere('abre direto no início do sorteio', estado.caminho === '/' && estado.nativo && estado.plataforma === 'ios', JSON.stringify({ origem: estado.origem, idioma: estado.idioma }));
   confere('sem login', !estado.senha && !estado.login);
   confere('sem blocos de SEO nem "Baixe o app"; com Ajuda', !estado.seo && !estado.baixeOApp && estado.ajuda);
+  confere('o título fica abaixo do relógio e da ilha', estado.areaSegura > 0 && estado.topoDoTitulo >= estado.areaSegura, `área segura ${estado.areaSegura} px, título em ${estado.topoDoTitulo} px`);
   console.log(`[tempo] até o campo pronto ${msCampo} ms · FCP do WebView ${estado.fcp} ms`);
 
   // ── 2. Sorteio com som ──
@@ -133,85 +152,80 @@ try {
   await sortear();
   await js(`const som = document.querySelector('.somBtn'); if (!som.classList.contains('on')) som.click();`);
   await espera(1800);
-  captura('2-cerimonia');
-  await esperaJs(`!!document.querySelector('[data-baixar]')`, 180000);
+  await captura('2-cerimonia');
+  await esperaJs(`!!document.querySelector('[data-baixar]')`, 300000);
   await espera(800);
-  captura('3-resultado');
+  await captura('3-resultado');
   const tocados = await js('return window.__tocados;');
   confere('cerimônia com som: rolo, clac e jackpot tocaram', ['rolo', 'clac', 'jackpot'].every((n) => tocados.some((x) => x.startsWith(n))) && !tocados.some((x) => x.startsWith('RECUSADO')), `${tocados.length} toques: ${[...new Set(tocados)].slice(0, 8).join(', ')}`);
   const vibracoes = await js('return window.__vibracoes;');
-  confere('vibração quando cada camisa para e uma só no jackpot', vibracoes.filter((v) => v === 'impact').length === 10 && vibracoes.filter((v) => v === 'notification').length === 1, `impact ${vibracoes.filter((v) => v === 'impact').length}, notification ${vibracoes.filter((v) => v === 'notification').length}`);
+  const impactos = vibracoes.filter((v) => v === 'impact').length;
+  const jackpots = vibracoes.filter((v) => v === 'notification').length;
+  confere('vibração quando cada camisa para e uma só no jackpot', impactos === 10 && jackpots === 1, `impact ${impactos}, notification ${jackpots}`);
   const recursos = await js(`return performance.getEntriesByType('resource').map((e) => e.name);`);
 
   // ── 3. Baixar imagem: PNG na cache e folha do sistema ──
   await clique('[data-baixar]');
   await esperaJs(`!!document.querySelector('[data-folha]')`);
   await espera(500);
-  captura('4-escolha-da-imagem');
+  await captura('4-escolha-da-imagem');
   await clique('[data-formato="todos916"]');
-  await espera(9000);
-  captura('5-baixar-imagem-folha-nativa');
-  const pngs = pngsDoCache();
+  await espera(12000);
+  await captura('5-baixar-imagem-folha-nativa');
+  const pngs = await pngsDoCache();
   const png = pngs[0] ? readFileSync(pngs[0]) : Buffer.alloc(0);
   if (png.length) writeFileSync(join(SAIDA, 'imagem-gerada.png'), png);
   confere('a imagem na folha é o PNG do sorteio', png.length > 0 && png.readUInt32BE(20) > png.readUInt32BE(16), pngs[0] ? `${pngs[0].split('/').pop()} ${png.readUInt32BE(16)}×${png.readUInt32BE(20)}, ${png.length} bytes` : 'sem arquivo');
 
   // ── 4. Compartilhar: o sorteio segue guardado; link pelo servidor da prova ──
-  abrirApp();
-  await esperaJs(`!!document.querySelector('#lista')`, 60000);
-  await js(`history.pushState(null, '', '/resultado'); window.dispatchEvent(new PopStateEvent('popstate'));`);
-  await esperaJs(`!!document.querySelector('[data-copiar-link]')`);
+  await abrirResultadoGuardado();
   await js(`document.querySelector('[data-folha]') && document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));`);
   await espera(400);
   // Espia o que a ponte manda para a folha. A prova de que o link é o público está aqui e na captura.
   await js(`window.__folha = []; const pedir = window.Capacitor.nativePromise;
     window.Capacitor.nativePromise = function (plugin, metodo, op) { if (plugin === 'Share') window.__folha.push(op); return pedir.apply(this, arguments); };`);
   await clique('[data-copiar-link]');
-  await esperaJs(`window.__folha.length > 0`, 20000);
-  await espera(5000);
-  captura('6-compartilhar-folha-nativa');
+  await esperaJs(`window.__folha.length > 0`, 60000);
+  await espera(8000);
+  await captura('6-compartilhar-folha-nativa');
   const folha = await js('return window.__folha[0];');
   confere('o link na folha é o público, não o do WebView', /^https:\/\/futtyapp\.com\.br\/s\/PROVA2$/.test(folha.url || ''), folha.url);
   confere('o link foi criado pelo HTTP nativo', pedidosDaApi.includes('POST /api/links'), [...new Set(pedidosDaApi)].join(' · '));
 
   // ── 5. Copiar texto: leva o link público ──
-  abrirApp();
-  await esperaJs(`!!document.querySelector('#lista')`, 60000);
-  await js(`history.pushState(null, '', '/resultado'); window.dispatchEvent(new PopStateEvent('popstate'));`);
+  await abrirResultadoGuardado();
   await clique('[data-copiar-texto]');
-  await espera(1200);
+  await espera(1500);
   const aviso = await js(`return document.querySelector('[data-toast]')?.textContent || document.querySelector('[data-folha] textarea')?.value || '';`);
-  let colado = '';
-  try { colado = simctl('pbpaste', UDID); } catch (e) { colado = `pbpaste falhou: ${e.message}`; }
+  const colado = await simctl('pbpaste', UDID).catch((e) => `pbpaste falhou: ${e.message}`);
   confere('Copiar texto leva o link público', /futtyapp\.com\.br\/s\/PROVA2/.test(colado) && !/localhost/.test(colado), `aviso "${aviso.slice(0, 40)}" · ${colado.split('\n').filter((l) => /\/s\/|falhou/.test(l)).join(' ')}`);
 
   // ── 6. Sem rede: o pf do Mac corta tudo que não é local, e o servidor da prova sai do ar ──
+  // O simulador não tem modo avião. O vigia devolve a rede sozinho: sem ela por muito tempo, o GitHub dá o Mac por perdido.
+  await new Promise((r) => { api.close(r); api.closeAllConnections?.(); });
   execFileSync('sudo', ['sh', '-c', `echo 'block drop out quick on ! lo0 all' | pfctl -f - -E`], { stdio: 'ignore' });
-  apiLigada = false;
-  await new Promise((r) => api.close(r));
-  api.closeAllConnections?.();
+  spawn('sudo', ['sh', '-c', 'sleep 300; pfctl -d'], { detached: true, stdio: 'ignore' }).unref();
   try {
-    abrirApp();
+    await abrirApp();
     await sortear();
     await espera(1500);
     await js(`document.querySelector('.saltar.on button')?.click();`);
-    await esperaJs(`!!document.querySelector('[data-baixar]')`, 60000);
+    await esperaJs(`!!document.querySelector('[data-baixar]')`, 120000);
     await espera(600);
-    captura('8-sem-rede-resultado');
+    await captura('8-sem-rede-resultado');
     confere('sem rede: colar, sortear e cerimônia funcionam', true);
     await clique('[data-baixar]');
     await clique('[data-formato="todos11"]');
-    await espera(8000);
-    captura('9-sem-rede-imagem');
-    confere('sem rede: gerar imagem funciona', pngsDoCache().some((f) => /quadrada/.test(f)), pngsDoCache().map((f) => f.split('/').pop()).join(', '));
-    abrirApp();
-    await esperaJs(`!!document.querySelector('#lista')`, 60000);
-    await js(`history.pushState(null, '', '/resultado'); window.dispatchEvent(new PopStateEvent('popstate'));`);
+    await espera(10000);
+    await captura('9-sem-rede-imagem');
+    const offline = await pngsDoCache();
+    confere('sem rede: gerar imagem funciona', offline.some((f) => /quadrada/.test(f)), offline.map((f) => f.split('/').pop()).join(', '));
+    await abrirResultadoGuardado();
     await clique('[data-copiar-link]');
-    const avisoRede = await esperaJs(`document.querySelector('[data-toast]')?.textContent || ''`, 20000);
+    const avisoRede = await esperaJs(`document.querySelector('[data-toast]')?.textContent || ''`, 40000);
     await espera(300);
     const avisoFinal = await js(`return document.querySelector('[data-toast]')?.textContent || '';`);
-    captura('10-sem-rede-compartilhar');
+    await captura('10-sem-rede-compartilhar');
     confere('sem rede: Compartilhar avisa e não trava', avisoFinal === 'Sem internet pra criar o link', `primeiro: "${avisoRede}" · ficou: "${avisoFinal}"`);
   } finally {
     execFileSync('sudo', ['pfctl', '-d'], { stdio: 'ignore' });
@@ -223,10 +237,10 @@ try {
   const deFora = todos.filter((u) => !/^(capacitor:\/\/localhost|data:|blob:)/.test(u));
   confere('o WebView não pediu nada fora do próprio app', deFora.length === 0, deFora.slice(0, 5).join(' '));
   writeFileSync(join(SAIDA, 'rede-webview.json'), JSON.stringify(todos, null, 1));
-  writeFileSync(join(SAIDA, 'resultado.json'), JSON.stringify({ resultados, tempos: { campoProntoMs: msCampo, fcpMs: estado.fcp }, estado, apiLigadaNoFim: apiLigada }, null, 2));
+  writeFileSync(join(SAIDA, 'resultado.json'), JSON.stringify({ resultados, tempos: { campoProntoMs: msCampo, fcpMs: estado.fcp }, estado }, null, 2));
 } catch (e) {
   confere('a prova chegou ao fim', false, e.message);
-  try { captura('erro'); } catch { /* sem simulador */ }
+  await captura('erro');
 }
 const falhas = resultados.filter((r) => !r.ok);
 console.log(`\n${resultados.length - falhas.length}/${resultados.length} conferidos`);

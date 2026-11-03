@@ -17,7 +17,7 @@ jobs:
     name: Compilar e provar no simulador
     if: contains(github.event.head_commit.message, '[prova-ios]')
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
 
     steps:
       - name: Buscar o código
@@ -94,7 +94,7 @@ jobs:
         if: failure()
         run: |
           mkdir -p "$RUNNER_TEMP/capturas-ios"
-          xcrun simctl spawn "${{ steps.sim.outputs.udid }}" log show --last 15m --style compact --predicate 'process == "App"' > "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
+          xcrun simctl spawn "${{ steps.sim.outputs.udid }}" log show --last 5m --style compact --predicate 'process == "App"' > "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
           tail -60 "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
 
       - name: Guardar as capturas
