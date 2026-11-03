@@ -45,7 +45,7 @@ import { FIGURINHAS_DO_SORTEIO } from './figurinhas-do-sorteio.mjs';
 import { apelidoBanidoEm } from './apelidos-banidos.mjs';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
-const LOJA = resolve(AQUI, '..', '..', '..', '..', 'LOJA');
+const LOJA = resolve(AQUI, '..', '..', '..', '..', '..', 'EMPRESA', 'LOJA');
 const opcao = (nome) => (process.argv.find((a) => a.startsWith(`--${nome}=`)) || '').slice(nome.length + 3);
 const CRUAS = join(LOJA, opcao('cruas') || join('outubro', 'cruas'));
 const BASE = (opcao('base') || 'http://localhost:5173').replace(/\/+$/, '');

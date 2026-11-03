@@ -9,7 +9,7 @@
 // O nome leva a versão (-v1): a imagem é servida com cache longo e os apps de mensagem guardam a prévia
 // por muito tempo; ao trocar a arte, muda o nome (e o og:image do index.html).
 //
-// Uso (a partir de FUTTY-V2/frontend):  node scripts/gerar-og.mjs
+// Uso (a partir de APP/codigo/frontend):  node scripts/gerar-og.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

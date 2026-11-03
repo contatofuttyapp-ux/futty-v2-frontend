@@ -22,7 +22,7 @@ const opcao = (nome, omissao) => {
 
 const BASE = opcao('url', 'http://localhost:4179');
 const EMAIL = opcao('email', 'demo-loja@futtymock.com');
-const FICHEIRO_SENHA = opcao('senha', 'C:/Users/phfer/Desktop/FUT/LOJA/demo-senha.txt');
+const FICHEIRO_SENHA = opcao('senha', 'C:/Users/phfer/Desktop/FUT/EMPRESA/LOJA/demo-senha.txt');
 const SAIDA_JSON = opcao('json', null);
 const ETIQUETA = opcao('etiqueta', 'medição');
 

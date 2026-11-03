@@ -17,7 +17,7 @@
 //   2. se o controlo "TAMANHO" aparece. Ele só existe quando `avatarEhIA` é
 //      verdadeiro, e é o mesmo booleano que decide o que entra no cromo.
 //
-// Uso (a partir de FUTTY-V2/frontend):
+// Uso (a partir de APP/codigo/frontend):
 //   node scripts/prova-cache-figurinha.mjs --url http://localhost:5174 --etiqueta depois
 //
 // Não escreve nada no banco: só GETs e a leitura do localStorage.
@@ -38,7 +38,7 @@ const MARCADOR = `CACHE-VELHO-${Date.now()}`;
 const PASTA = path.join(RAIZ, 'scripts', 'capturas');
 
 function lerSenha() {
-  const bruto = readFileSync(path.join(RAIZ, '..', '..', 'LOJA', 'demo-senha.txt'), 'utf8');
+  const bruto = readFileSync(path.join(RAIZ, '..', '..', '..', 'EMPRESA', 'LOJA', 'demo-senha.txt'), 'utf8');
   const linha = bruto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).pop() || '';
   return linha.includes(':') ? linha.split(':').pop().trim() : linha;
 }

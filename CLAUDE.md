@@ -1,6 +1,6 @@
 # FUTTY — Constituição (frontend)
 
-App de futebol amador. React + Vite. Este repo (`FUTTY-V2/frontend`) é o CANÓNICO;
+App de futebol amador. React + Vite. Este repo (`APP/codigo/frontend`) é o CANÓNICO;
 o clone antigo `FUT/FUTTY/frontend` é só arqueologia (medições da V1) — nunca editar.
 
 ## O processo (inegociável)

@@ -136,7 +136,7 @@ async function abrirAparelho(navegador, baseDoVite, dados, quem, plataforma) {
 const texto = (page) => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
 
 export async function rodar({ navegador, base, t }) {
-  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
+  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (APP/codigo/backend): a prova foi pulada', true); return; }
 
   /** Abre a Figurinha de `quem` na `plataforma` e devolve o que saiu e o que voltou. */
   async function caso(dados, quem, plataforma) {

@@ -190,7 +190,7 @@ async function medirResenha(navegador, baseDasTelas, dados, relogio, { esperaNoI
 }
 
 export async function rodar({ navegador, t }) {
-  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
+  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (APP/codigo/backend): a prova foi pulada', true); return; }
   if (FOTOS) mkdirSync(FOTOS, { recursive: true });
   const foto = async (page, nomeDaFoto, opcoes = {}) => {
     if (!FOTOS) return;

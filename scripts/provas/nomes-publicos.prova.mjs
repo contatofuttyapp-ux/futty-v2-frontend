@@ -116,7 +116,7 @@ async function abrirContexto(navegador, motor, dados, quem, largura) {
 const semCaixa = (s) => s.toLowerCase();
 
 export async function rodar({ navegador, base, t }) {
-  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (FUTTY-V2/backend): a prova foi pulada', true); return; }
+  try { readFileSync(BACKEND_AO_LADO); } catch { t('o backend não está ao lado (APP/codigo/backend): a prova foi pulada', true); return; }
   const { filho, dados } = await subirMotor();
   const motor = { baseDoVite: base };
   const slug = dados.time.slug;

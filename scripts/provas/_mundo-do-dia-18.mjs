@@ -31,7 +31,7 @@ const NOMES_DOS_TIMES = ['Time A', 'Time B', 'Time C', 'Time D', 'Time E', 'Time
  */
 export function criarMundo({ base, papel = 'admin', euId = 'U1' }) {
   const store = carregarStore();
-  if (!store) throw new Error('o backend ao lado (FUTTY-V2/backend) não está acessível');
+  if (!store) throw new Error('o backend ao lado (APP/codigo/backend) não está acessível');
   const { executarSorteio } = requireBackend('./utils/sorteio.js');
 
   let eu = ELENCO.find((j) => j.id === euId);

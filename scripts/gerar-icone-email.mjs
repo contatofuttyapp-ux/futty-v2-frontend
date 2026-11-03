@@ -9,7 +9,7 @@
 //
 // A troca do logo-144.png por este nos 3 templates do Supabase é no painel (EMAILS-SUPABASE.md).
 //
-// Uso (a partir de FUTTY-V2/frontend):  node scripts/gerar-icone-email.mjs
+// Uso (a partir de APP/codigo/frontend):  node scripts/gerar-icone-email.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

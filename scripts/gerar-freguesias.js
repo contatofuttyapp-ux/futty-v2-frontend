@@ -20,7 +20,7 @@
 // Fica num arquivo À PARTE do cidades.json de propósito: a meta do dono para a lista de cidades é ≤ 80 KB comprimido e ela já
 // está em ~66 KB; as freguesias têm o seu próprio teto (abaixo), e quem escolhe uma cidade do Brasil nunca as baixa.
 //
-// Uso (a partir de FUTTY-V2/frontend; precisa de internet):  node scripts/gerar-freguesias.js
+// Uso (a partir de APP/codigo/frontend; precisa de internet):  node scripts/gerar-freguesias.js
 import { gzipSync } from 'node:zlib';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
