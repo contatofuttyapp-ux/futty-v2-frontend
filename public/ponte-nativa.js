@@ -23,8 +23,11 @@
 
   // ── Link público ──
   // O site monta o link com location.origin quando não está em futtyapp.com.br, e no app o endereço é o do WebView.
-  var LINK_LOCAL = /(?:https?|capacitor|ionic):\/\/localhost(?::\d+)?(?=\/s\/)/g;
-  function linkDeVerdade(texto) { return String(texto == null ? '' : texto).replace(LINK_LOCAL, ORIGEM); }
+  // No texto copiado o site tira o https://, então o endereço local também chega sem ele; o link sai na mesma forma.
+  var LINK_LOCAL = /((?:https?|capacitor|ionic):\/\/)?localhost(?::\d+)?(?=\/s\/)/g;
+  function linkDeVerdade(texto) {
+    return String(texto == null ? '' : texto).replace(LINK_LOCAL, function (_, protocolo) { return protocolo ? ORIGEM : ORIGEM.replace(/^https:\/\//, ''); });
+  }
 
   // ── Servidor do site ──
   // Pelo HTTP nativo: o site não libera CORS para o WebView, e o app não precisa disso para falar com ele.
