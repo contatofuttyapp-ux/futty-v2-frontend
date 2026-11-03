@@ -92,7 +92,7 @@ test('coerência: o entitlement do iOS associa o domínio do parser', () => {
   assert.match(ler('ios/App/App.xcodeproj/project.pbxproj'), /CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/);
 });
 
-test('coerência: o Android — assetlinks.json do pacote certo e intent-filter autoVerify com os mesmos prefixos', () => {
+test('coerência: o Android — assetlinks.json do pacote certo e intent-filter autoVerify só com o link do sorteio', () => {
   const links = JSON.parse(ler('public/.well-known/assetlinks.json'));
   assert.equal(links.length, 1);
   assert.deepEqual(links[0].relation, ['delegate_permission/common.handle_all_urls']);
@@ -108,11 +108,8 @@ test('coerência: o Android — assetlinks.json do pacote certo e intent-filter 
   assert.match(filtro[0], /android:name="android\.intent\.action\.VIEW"/);
   assert.match(filtro[0], /android:name="android\.intent\.category\.BROWSABLE"/);
   const dados = [...filtro[0].matchAll(/<data android:scheme="([^"]+)" android:host="([^"]+)" android:pathPrefix="([^"]+)" \/>/g)];
-  assert.deepEqual(dados.map((d) => d[1]), PREFIXOS_DE_LINK.map(() => 'https'));
-  assert.deepEqual(dados.map((d) => d[2]), PREFIXOS_DE_LINK.map(() => HOST_DO_SITE));
-  // O Android escreve "/convite" e "/equipa" sem a barra; o do link curto TEM de levar a barra ("/c" casaria "/criar-equipa"). O
-  // "/auth/confirmar" é exato nos dois lados (o parser também não leva barra nele).
-  assert.deepEqual(dados.map((d) => (d[3].endsWith('/') || PREFIXOS_DE_LINK.includes(d[3]) ? d[3] : `${d[3]}/`)), PREFIXOS_DE_LINK, 'os pathPrefix são os prefixos do parser');
+  assert.deepEqual(dados.map((d) => [d[1], d[2], d[3]]), [['https', HOST_DO_SITE, '/s/']], 'o app 2.0 é o site do sorteio: nenhum link do app antigo abre nele');
+  assert.doesNotMatch(manifesto, /android:scheme="com\.futty\.app"/, 'o retorno do login saiu com o login');
 });
 
 test('o site serve o AASA como JSON e o pacote nativo não o leva', () => {

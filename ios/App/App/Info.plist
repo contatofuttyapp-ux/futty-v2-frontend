@@ -22,43 +22,19 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<!-- Retorno do login Google (Custom Tab / SFSafariViewController) e dos links
-	     de e-mail de recuperar senha: com.futty.app://auth/callback. O mesmo
-	     esquema que o AndroidManifest regista no intent-filter e que
-	     lib/googleAuth.js usa como redirectTo. Quem recebe no iOS é o
-	     SceneDelegate (scene:openURLContexts:), que entrega ao Capacitor, que
-	     dispara o appUrlOpen ouvido por components/DeepLinkListener.jsx. -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string>com.futty.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.futty.app</string>
-			</array>
-		</dict>
-	</array>
 	<!-- Só HTTPS: nenhuma exceção de App Transport Security. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<!-- Textos que o iOS mostra no diálogo de permissão. São exigidos mesmo
-	     usando só o <input type="file"> e o navigator.geolocation do WebView:
-	     sem eles o app fecha na hora em que a permissão é pedida. -->
+	<!-- O escudo do time é um <input type="file" accept="image/*">, e o iOS oferece "Tirar foto" nesse menu por conta
+	     própria: sem este texto o app fecha quando a pessoa toca nessa opção. A galeria não precisa de texto, o seletor
+	     do sistema entrega a foto sem pedir permissão. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Para tirar a foto da sua figurinha</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Para escolher a foto da sua figurinha</string>
-	<!-- Rodada 8A: "Salvar imagem" na folha de compartilhar da figurinha grava
-	     nas Fotos DENTRO do processo do app; sem este texto o iOS fecha o app. -->
+	<string>Para tirar a foto do escudo do seu time.</string>
+	<!-- "Salvar imagem" na folha de compartilhar grava nas Fotos DENTRO do processo do app; sem este texto o iOS fecha o app. -->
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Para salvar sua figurinha nas suas fotos</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Para mostrar peladas perto de você; sua posição não sai do celular</string>
+	<string>Para salvar a imagem do sorteio nas suas fotos.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

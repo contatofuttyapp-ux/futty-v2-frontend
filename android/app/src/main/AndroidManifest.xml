@@ -19,36 +19,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- 14-set (Android): retorno do login Google e dos links de e-mail
-                 (recuperar senha) — com.futty.app://auth/callback. Capturado por
-                 components/DeepLinkListener.jsx via App.addListener('appUrlOpen').
-                 Mesmo host que lib/googleAuth.js (CALLBACK_URL_NATIVO) usa como
-                 redirectTo — os dois lados têm de bater certo. -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.futty.app" android:host="auth" />
-            </intent-filter>
-
-            <!-- Rodada 29B (bloco 3, C): links que abrem no app. Tocar em https://futtyapp.com.br/convite/…
-                 (ou /time, o antigo /equipa, /jogo) no WhatsApp abre o app e não o navegador. autoVerify: o Android confere
-                 https://futtyapp.com.br/.well-known/assetlinks.json (public/.well-known/) — que precisa do
-                 SHA-256 da chave de ASSINATURA DO APP do Play Console (já está em public/.well-known/assetlinks.json).
-                 Sem o app instalado (ou sem a verificação), o link abre o site como sempre. Os caminhos daqui, os
-                 do AASA do iOS e src/lib/linkDoSite.js têm de bater (há um teste). Capturado por
-                 components/DeepLinkListener.jsx via appUrlOpen, como o retorno do Google acima. -->
+            <!-- Links que abrem no app: só o link do sorteio, https://futtyapp.com.br/s/…. autoVerify: o Android confere
+                 https://futtyapp.com.br/.well-known/assetlinks.json, que precisa do SHA-256 da chave de ASSINATURA DO APP do
+                 Play Console. Sem o app instalado (ou sem a verificação), o link abre o site como sempre. Capturado por
+                 public/ponte-nativa.js via appUrlOpen. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/convite" />
-                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/c/" />
-                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/time" />
-                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/equipa" />
-                <!-- O botão do e-mail de cadastro no caminho próprio. Só vale no build de loja que levar esta linha; até lá o e-mail usa
-                     /c/confirmar, que o "/c/" de cima já abre. -->
-                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/auth/confirmar" />
+                <data android:scheme="https" android:host="futtyapp.com.br" android:pathPrefix="/s/" />
             </intent-filter>
         </activity>
 
@@ -64,13 +43,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Foto da figurinha pela câmera (o upload por galeria não precisa disto). -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Localização aproximada da equipa, na Explorar (nunca a pessoal — ver
-         Privacidade.jsx seção 4). Os dois níveis: o Android decide sozinho qual
-         diálogo mostrar conforme o que o código realmente pede em runtime. -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- O referrer da instalação (ConviteDaLojaPlugin.java) é lido de um serviço da Play Store: do Android 11 em diante o app só fala
          com o pacote que declara. Hoje a consulta do Billing já o deixa visível; aqui fica dito, para não depender dela. -->

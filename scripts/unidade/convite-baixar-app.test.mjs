@@ -61,14 +61,11 @@ test('os endereços das lojas: o id do Futty na App Store e o pacote do app na P
   assert.equal(JSON.parse(ler('capacitor.config.json')).appId, pacote);
 });
 
-test('"toque no link do convite de novo: ele abre direto no app" — o link longo e o curto abrem o app no iOS e no Android', () => {
+test('"toque no link do convite de novo: ele abre direto no app" — o link longo e o curto ficam no parser e no AASA do site antigo (o app 2.0 só abre /s/)', () => {
   for (const prefixo of ['/convite/', '/c/']) assert.ok(PREFIXOS_DE_LINK.includes(prefixo), `${prefixo} saiu da lista de links que abrem o app`);
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/k7m2p9qx'), '/c/k7m2p9qx');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/convite/abc123'), '/convite/abc123');
   const aasa = JSON.parse(ler('public/.well-known/apple-app-site-association'));
   const caminhos = aasa.applinks.details.flatMap((d) => d.components.map((c) => c['/']));
   for (const c of ['/convite/*', '/c/*']) assert.ok(caminhos.includes(c), `o AASA do iOS não tem ${c}`);
-  const filtro = ler('android/app/src/main/AndroidManifest.xml').match(/<intent-filter android:autoVerify="true">[\s\S]*?<\/intent-filter>/)?.[0] || '';
-  assert.match(filtro, /android:host="futtyapp\.com\.br" android:pathPrefix="\/c\/"/, 'o manifesto do Android não abre /c/ no app');
-  assert.match(filtro, /android:host="futtyapp\.com\.br" android:pathPrefix="\/convite"/, 'o manifesto do Android não abre /convite no app');
 });

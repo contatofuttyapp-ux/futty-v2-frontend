@@ -70,13 +70,12 @@ test('a tela e a prévia do WhatsApp tiram o MESMO código do link novo e do ant
   assert.equal(codigoDoLinkCurto(uuid), uuid, 'o último pedaço do uuid tem 12 posições: não é código');
 });
 
-test('o link novo abre o app (o parser do app e a lista do iOS/Android cobrem /c/<nome>-<código>)', () => {
+test('o link novo cabe no parser e no AASA do site antigo (/c/<nome>-<código>)', () => {
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/domingueira-fc-epbgx5b3'), '/c/domingueira-fc-epbgx5b3');
   assert.equal(caminhoDoLinkDoSite('https://futtyapp.com.br/c/domingueira-fc-epbgx5b3?origem=zap'), '/c/domingueira-fc-epbgx5b3?origem=zap');
   assert.ok(PREFIXOS_DE_LINK.includes('/c/'));
   const aasa = JSON.parse(ler('public/.well-known/apple-app-site-association'));
   assert.ok(aasa.applinks.details[0].components.some((c) => c['/'] === '/c/*'), 'o "*" do AASA cobre o nome com hífens');
-  assert.match(ler('android/app/src/main/AndroidManifest.xml'), /android:pathPrefix="\/c\/"/);
 });
 
 test('as três telas que geram o link do convite mandam o nome do time', () => {
