@@ -2,6 +2,20 @@
 
 *Fonte dos comandos: `--help` da CLI `@capgo/cli` 8.71, README do `@capgo/capacitor-updater` 8.52.1 e capgo.app/docs, conferidos em 6-out. Se a CLI mudar, o `--help` manda.*
 
+## App 2.0: o canal é `sorteio`
+
+O app 2.0 é o site do sorteio. `capacitor.config.json` aponta para o canal **`sorteio`** (`defaultChannel`), com `autoUpdate: "atBackground"`. O canal `production` segue no 1.0.28 do app antigo e **nada do 2.0 sobe nele**. O `sorteio` foi criado vazio, com auto-atribuição ligada e sem update abaixo da versão nativa.
+
+Para subir um bundle para a 2.0, o dist é o do site, nunca o do `npm run build:native`, que monta o app antigo:
+
+```
+cd C:\Users\phfer\Desktop\FUT\APP\codigo\frontend
+npm run build:sorteio
+npx @capgo/cli@latest bundle upload com.futty.app --channel sorteio --path dist --bundle 2.0.1 --comment "o que mudou"
+```
+
+O resto deste arquivo descreve o app 1.x (canal `production`) e continua valendo para ele.
+
 ## O que é
 
 O app da loja carrega as telas (JS, CSS e imagens leves) de dentro do pacote. O Capgo deixa trocar essas telas **sem passar pela revisão da Apple e do Google**: sobe-se um *bundle* novo, o app o baixa sozinho e passa a usá-lo. Cada build de loja custa dias de espera; o Capgo existe para corrigir uma tela em minutos.

@@ -14,7 +14,7 @@ const PACOTE = 'com.futty.app';
 const LISTA = ['Zanardini', 'Gustavo', 'Higor', 'Gustavo Villela', 'Miguel (g)', 'Erick Lopes', 'Gabriel Vasques', 'Motta', 'Kinho', 'Bruno', 'Caio', 'Diego'].join('\n');
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-const simctl = (...a) => execFileSync('xcrun', ['simctl', ...a], { encoding: 'utf8', timeout: 120000 });
+const simctl = (...a) => execFileSync('xcrun', ['simctl', ...a], { encoding: 'utf8', timeout: 300000, stdio: ['ignore', 'pipe', 'ignore'] });
 const captura = (nome) => simctl('io', UDID, 'screenshot', join(SAIDA, `${nome}.png`));
 
 const resultados = [];
@@ -33,7 +33,7 @@ const api = createServer(async (req, res) => {
   pedidosDaApi.push(`${req.method} ${req.url}`);
   const json = (s, d) => { res.writeHead(s, { 'content-type': 'application/json' }); res.end(JSON.stringify(d)); };
   if (req.method === 'POST' && req.url === '/api/links') { const codigo = 'PROVA2'; links.set(codigo, JSON.parse(corpo.toString())); return json(201, { codigo }); }
-  if (req.method === 'PUT' && req.url === '/api/logos') return json(201, { chave: 'l-abcdefghijklmnopqrstuvwx.png' });
+  if (req.method === 'PUT' && req.url.startsWith('/api/logos')) return json(201, { chave: 'l-abcdefghijklmnopqrstuvwx.png' });
   if (req.method === 'POST' && req.url === '/api/evento') { res.writeHead(204); return res.end(); }
   return json(404, { erro: 'nao_achei' });
 });
@@ -80,7 +80,7 @@ function abrirApp() {
   try { simctl('terminate', UDID, PACOTE); } catch { /* não estava aberto */ }
   fila.length = 0;
   const inicio = Date.now();
-  simctl('launch', UDID, PACOTE);
+  simctl('launch', UDID, PACOTE, '-AppleLanguages', '(pt-BR)', '-AppleLocale', 'pt_BR');
   return inicio;
 }
 
@@ -121,6 +121,8 @@ try {
   await js(`window.__tocados = []; window.__vibracoes = [];
     const pedir = window.Capacitor.nativePromise;
     window.Capacitor.nativePromise = function (plugin, metodo) { if (plugin === 'Haptics') window.__vibracoes.push(metodo); return pedir.apply(this, arguments); };
+    const comecar = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function () { window.__tocados.push('rolo.mp3'); return comecar.apply(this, arguments); };
     const play = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () {
       const nome = (this.currentSrc || this.src).split('/').pop(); const mudo = this.muted;
@@ -136,7 +138,7 @@ try {
   await espera(800);
   captura('3-resultado');
   const tocados = await js('return window.__tocados;');
-  confere('cerimônia com som: tique, clac e jackpot tocaram', ['tique', 'clac', 'jackpot'].every((n) => tocados.some((x) => x.startsWith(n))) && !tocados.some((x) => x.startsWith('RECUSADO')), `${tocados.length} toques: ${[...new Set(tocados)].slice(0, 8).join(', ')}`);
+  confere('cerimônia com som: rolo, clac e jackpot tocaram', ['rolo', 'clac', 'jackpot'].every((n) => tocados.some((x) => x.startsWith(n))) && !tocados.some((x) => x.startsWith('RECUSADO')), `${tocados.length} toques: ${[...new Set(tocados)].slice(0, 8).join(', ')}`);
   const vibracoes = await js('return window.__vibracoes;');
   confere('vibração quando cada camisa para e uma só no jackpot', vibracoes.filter((v) => v === 'impact').length === 10 && vibracoes.filter((v) => v === 'notification').length === 1, `impact ${vibracoes.filter((v) => v === 'impact').length}, notification ${vibracoes.filter((v) => v === 'notification').length}`);
   const recursos = await js(`return performance.getEntriesByType('resource').map((e) => e.name);`);

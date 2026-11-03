@@ -62,15 +62,12 @@ jobs:
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -25
           du -sh build/Build/Products/Debug-iphonesimulator/App.app
 
-      - name: Ligar o simulador em português
+      # O idioma vai na abertura do app (ios-maestro.mjs): religar o simulador para trocar o do sistema custa minutos no Mac do CI.
+      - name: Ligar o simulador
         id: sim
         run: |
           udid=$(xcrun simctl list devices available -j | node -e "const d=JSON.parse(require('fs').readFileSync(0)).devices;const k=Object.keys(d).filter(x=>/iOS/.test(x)).sort().pop();console.log(d[k].find(x=>/^iPhone/.test(x.name)).udid)")
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
-          xcrun simctl boot "$udid"
-          xcrun simctl spawn "$udid" defaults write "Apple Global Domain" AppleLanguages -array pt-BR
-          xcrun simctl spawn "$udid" defaults write "Apple Global Domain" AppleLocale -string pt_BR
-          xcrun simctl shutdown "$udid"
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid"
           xcrun simctl install "$udid" ios/App/build/Build/Products/Debug-iphonesimulator/App.app
@@ -92,6 +89,13 @@ jobs:
           sleep 2
           sudo chmod a+r "$RUNNER_TEMP/ios.pcap" || true
           node scripts/prova-casca/rede-do-pcap.mjs "$RUNNER_TEMP/ios.pcap" "$RUNNER_TEMP/capturas-ios/rede-pacotes.json"
+
+      - name: Log do simulador, se a prova falhou
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/capturas-ios"
+          xcrun simctl spawn "${{ steps.sim.outputs.udid }}" log show --last 15m --style compact --predicate 'process == "App"' > "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
+          tail -60 "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
 
       - name: Guardar as capturas
         if: always()
