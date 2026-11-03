@@ -14,7 +14,7 @@ const le = magia === 0xa1b2c3d4 || magia === 0xa1b23c4d;
 if (!le && b.readUInt32BE(0) !== 0xa1b2c3d4) throw new Error('não é pcap clássico');
 const u32 = (o) => (le ? b.readUInt32LE(o) : b.readUInt32BE(o));
 const tipoDeEnlace = u32(20);
-// 1 = Ethernet; 0 e 108 = loopback do BSD/macOS; 113 = "any" do Linux. Só muda onde o IP começa.
+// 1 = Ethernet; 0 e 108 = loopback do BSD/macOS; 113 e 276 = "any" do Linux. Só muda onde o IP começa.
 const inicioDoIp = (o) => {
   if (tipoDeEnlace === 1) {
     const eth = b.readUInt16BE(o + 12);
@@ -22,6 +22,7 @@ const inicioDoIp = (o) => {
   }
   if (tipoDeEnlace === 0 || tipoDeEnlace === 108) return o + 4;
   if (tipoDeEnlace === 113) return o + 16;
+  if (tipoDeEnlace === 276) return o + 20;
   if (tipoDeEnlace === 101) return o;
   return -1;
 };

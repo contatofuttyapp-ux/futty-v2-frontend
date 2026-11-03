@@ -237,12 +237,8 @@
   function telaInicial() { return /^\/(en|es)?\/?$/.test(location.pathname); }
   function inicioDoIdioma() { var m = /^\/(en|es)\b/.exec(location.pathname); return m ? '/' + m[1] : '/'; }
 
-  // A máquina girando tem o "pular" aceso. Parada, o Voltar sai dela como de qualquer outra tela.
-  function cerimoniaRodando() {
-    if (!document.querySelector('[data-pagina="cerimonia"]')) return false;
-    var pular = document.querySelector('.saltar');
-    return !pular || pular.classList.contains('on');
-  }
+  // A máquina girando tem o "pular" aceso. Parada, os times ficam na mesma tela e o Voltar sai dela como de qualquer outra.
+  function cerimoniaRodando() { return !!document.querySelector('[data-pagina="cerimonia"] .saltar.on'); }
 
   semErro(Promise.resolve(cap.addListener('App', 'backButton', function (evento) {
     // A folha fecha com Esc (componentes/Folha.jsx). O campo aberto de renomear também.

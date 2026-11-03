@@ -70,7 +70,8 @@ async function sortear(page) {
 const ateResultado = (page) => page.waitForSelector('[data-baixar]', 240000);
 const fecharFolhaDoSite = (page) => page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 
-adb('install', '-r', '-t', APK);
+try { adb('uninstall', PACOTE); } catch { /* não estava instalado */ }
+adb('install', '-t', APK);
 adb('reverse', 'tcp:8788', 'tcp:8788');
 shell('cmd', 'connectivity', 'airplane-mode', 'disable');
 // O emulador lento tira o "não está respondendo" na frente da tela; aqui ele só atrapalharia a captura.
@@ -103,6 +104,9 @@ console.log(`[tempo] Android "Displayed" ${msTela} ms · FCP do WebView ${estado
 await page.evaluate(() => {
   window.__tocados = [];
   window.__vibracoes = [];
+  // O rolo é Web Audio, não passa pelo <audio>.
+  const comecar = AudioBufferSourceNode.prototype.start;
+  AudioBufferSourceNode.prototype.start = function () { window.__tocados.push('rolo.mp3'); return comecar.apply(this, arguments); };
   const pedirAoNativo = window.Capacitor.nativePromise;
   window.Capacitor.nativePromise = function (plugin, metodo) {
     if (plugin === 'Haptics') window.__vibracoes.push(metodo);
@@ -137,7 +141,8 @@ await ateResultado(page);
 await espera(800);
 captura('3-resultado');
 const nomes = (await page.evaluate(() => window.__tocados)).map((u) => u.split('/').pop());
-confere('cerimônia com som: tique, clac e jackpot tocaram', ['tique', 'clac', 'jackpot'].every((n) => nomes.some((x) => x.startsWith(n))), `${nomes.length} toques: ${[...new Set(nomes)].join(', ')}`);
+confere('cerimônia com som: rolo, clac e jackpot tocaram', ['rolo', 'clac', 'jackpot'].every((n) => nomes.some((x) => x.startsWith(n))), `${nomes.length} toques: ${[...new Set(nomes)].join(', ')}`);
+confere('a cerimônia termina na mesma tela, sem trocar de rota', (await page.evaluate(() => location.pathname)) === '/sortear');
 // 12 nomes em 2 times de 5: 10 camisas param na máquina (as 2 do banco entram sem rolo) e 1 jackpot.
 const vibracoes = await page.evaluate(() => window.__vibracoes);
 const impactos = vibracoes.filter((v) => v === 'impact').length;
@@ -151,7 +156,7 @@ await espera(400);
 captura('4-escolha-da-imagem');
 voltarDoSistema();
 const folhaFechou = await esperaAte(() => page.evaluate(() => !document.querySelector('[data-folha]')), 3000);
-confere('Voltar fecha o cartão aberto, sem sair da tela', folhaFechou && appNaFrente() && (await page.evaluate(() => location.pathname)) === '/resultado');
+confere('Voltar fecha o cartão aberto, sem sair da tela', folhaFechou && appNaFrente() && (await page.evaluate(() => location.pathname)) === '/sortear');
 
 // ── 4. Baixar imagem: PNG na cache e folha do sistema ──
 shell(`run-as ${PACOTE} sh -c 'rm -f cache/*.png'`);

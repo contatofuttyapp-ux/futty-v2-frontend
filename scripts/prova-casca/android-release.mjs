@@ -2,8 +2,10 @@
 // Prova do APK de release assinado, o mesmo código do .aab. Serve para pegar o que só aparece com o R8 ligado (plugin sumido, tela em
 // branco). Sem DevTools aqui: toca na tela por adb, achando os botões na árvore de acessibilidade.
 //
-// A parte de sortear roda em modo avião de propósito: online, o release fala com futtyapp.com.br de verdade, e prova não encosta em produção.
+// O release fala com futtyapp.com.br de verdade (o site pede /api/config ao abrir), e prova não encosta em produção: na parte online esse
+// domínio fica bloqueado no próprio emulador, e a parte de sortear roda em modo avião. Precisa de adb root.
 import { execFileSync } from 'node:child_process';
+import { lookup } from 'node:dns/promises';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -61,6 +63,7 @@ try { adb('uninstall', PACOTE); } catch { /* não estava instalado */ }
 adb('install', APK);
 
 // Online: só abrir. Nenhum toque, nenhum evento do site, só o que o próprio app faz sozinho.
+for (const { address, family } of await lookup('futtyapp.com.br', { all: true })) shell(family === 6 ? 'ip6tables' : 'iptables', '-I', 'OUTPUT', '-d', address, '-j', 'REJECT');
 shell('cmd', 'connectivity', 'airplane-mode', 'disable');
 await espera(3000);
 shell('logcat', '-c');
@@ -113,8 +116,13 @@ confere('Voltar na cerimônia não fecha o app', appNaFrente());
 const baixar = await acharNo(/BAIXAR IMAGEM/i, 120000);
 confere('modo avião: a cerimônia chega ao resultado', !!baixar);
 captura('r3-resultado');
+// Os botões sobem deslizando no fim da cerimônia: o toque espera eles assentarem.
+await espera(2500);
 await tocar(/BAIXAR IMAGEM/i);
-await tocar(/quadrada/i, 15000);
+await espera(1500);
+captura('r3b-qual-imagem');
+// O cartão é aria-modal e sai da árvore de acessibilidade: "Todos os times · quadrada" é a 2ª linha, ancorada no pé da tela de 720×1600.
+shell('input', 'tap', '360', '1304');
 const fim = Date.now() + 25000;
 while (!folhaDoSistema() && Date.now() < fim) await espera(400);
 await espera(1500);
