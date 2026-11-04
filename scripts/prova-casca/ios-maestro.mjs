@@ -10,11 +10,15 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { CARTAZ, COMBO_VERDE_E_BRANCO, CONGELAR_REFLEXO, HORARIO_NA_TELA, JOGO_NA_TELA, KIT_DO_TIME, LEGENDA, LOCAL, PREENCHER_JOGO, RECURSOS_COM_VERSAO, SOLTAR_REFLEXO, SORTEAR, contaRolo, impressaoDe } from './_site-novo.mjs';
 
 const [UDID, SAIDA] = process.argv.slice(2);
 mkdirSync(SAIDA, { recursive: true });
 const PACOTE = 'com.futty.app';
-const LISTA = ['Zanardini', 'Gustavo', 'Higor', 'Gustavo Villela', 'Miguel (g)', 'Erick Lopes', 'Gabriel Vasques', 'Motta', 'Kinho', 'Bruno', 'Caio', 'Diego'].join('\n');
+const ZIP_DO_BUNDLE = join(SAIDA, 'bundle-da-prova.zip');
+const VERSAO_DA_PROVA = '2.0.1';
+const LISTA =['Zanardini', 'Gustavo', 'Higor', 'Gustavo Villela', 'Miguel (g)', 'Erick Lopes', 'Gabriel Vasques', 'Motta', 'Kinho', 'Bruno', 'Caio', 'Diego'].join('\n');
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const simctl = (...a) => new Promise((resolve, reject) => {
@@ -55,6 +59,7 @@ const fila = [];
 const esperando = new Map();
 const maestro = createServer(async (req, res) => {
   const json = (d) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(d)); };
+  if (req.url === '/bundle.zip') { res.writeHead(200, { 'content-type': 'application/zip' }); return res.end(readFileSync(ZIP_DO_BUNDLE)); }
   if (req.url === '/robo/comando') return json(fila.shift() || {});
   if (req.url === '/robo/resposta') {
     const d = JSON.parse((await lerCorpo(req)).toString());
@@ -96,15 +101,31 @@ async function abrirApp() {
   return inicio;
 }
 
-async function sortear() {
+async function colarLista() {
   await esperaJs(`!!document.querySelector('#lista')`, 300000);
   await js(`const n = document.querySelector('#lista'); n.focus();
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(n, ${JSON.stringify(LISTA)});
     n.dispatchEvent(new Event('input', { bubbles: true })); n.blur();`);
   await esperaJs(`!!document.querySelector('[data-sortear]:not([disabled])')`, 30000);
+}
+
+async function sortear() {
   await clique('[data-sortear]');
   await esperaJs(`!!document.querySelector('.saltar.on')`, 120000);
 }
+
+const ESPIAR_SOM = `window.__tocados = []; window.__vibracoes = [];
+    const pedir = window.Capacitor.nativePromise;
+    window.Capacitor.nativePromise = function (plugin, metodo) { if (plugin === 'Haptics') window.__vibracoes.push(metodo); return pedir.apply(this, arguments); };
+    const comecar = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function () { window.__tocados.push('rolo.mp3'); return comecar.apply(this, arguments); };
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      const nome = (this.currentSrc || this.src).split('/').pop(); const mudo = this.muted;
+      const p = play.apply(this, arguments);
+      if (!mudo) p?.then?.(() => window.__tocados.push(nome), (e) => window.__tocados.push('RECUSADO ' + nome + ' ' + e.name));
+      return p;
+    };`;
 
 const pngsDoCache = async () => {
   const dados = (await simctl('get_app_container', UDID, PACOTE, 'data')).trim();
@@ -142,19 +163,29 @@ try {
   confere('o título fica abaixo do relógio e da ilha', estado.areaSegura > 0 && estado.topoDoTitulo >= estado.areaSegura, `área segura ${estado.areaSegura} px, título em ${estado.topoDoTitulo} px`);
   console.log(`[tempo] até o campo pronto ${msCampo} ms · FCP do WebView ${estado.fcp} ms`);
 
+  // ── 1b. O que o site trouxe de novo na tela inicial, e o som com ?v=2 servido de dentro do pacote ──
+  const DIST_LOCAL = new URL('../../dist/', import.meta.url);
+  const rec = await js(RECURSOS_COM_VERSAO, 60000);
+  confere('rolo.mp3?v=2 sai do pacote com os bytes do dist', rec.rolo.status === 200 && rec.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)) && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
+  confere('o Web Audio decodifica o rolo.mp3?v=2', typeof rec.duracao === 'number' && rec.duracao > 1, `${rec.duracao} s`);
+  confere('o <audio> de reserva abre o rolo.mp3?v=2', typeof rec.reserva === 'number' && rec.reserva > 1, `${rec.reserva} s`);
+  confere('estrela.svg?v=2 sai do pacote com os bytes do dist', rec.estrela.status === 200 && rec.estrela.impressao === impressaoDe(new URL('icones/estrela.svg', DIST_LOCAL)), JSON.stringify(rec.estrela));
+  await colarLista();
+  const legenda = await js(LEGENDA);
+  confere('legenda com a linha do nível e a estrela nova', /Equilibrar por nível: 1 a 5 estrelas/.test(legenda.texto) && legenda.mascara.includes('estrela.svg?v=2') && legenda.interruptor, JSON.stringify(legenda));
+  await js(`document.querySelector('[data-legenda]').scrollIntoView({ block: 'start' });`);
+  await espera(800);
+  await captura('1b-legenda-nivel-estrela');
+  const sortearAceso = await js(SORTEAR);
+  confere('SORTEAR de 64 px com o reflexo andando', sortearAceso.altura === 64 && sortearAceso.reflexo.includes('reflexo') && sortearAceso.traco.length > 0, JSON.stringify(sortearAceso));
+  await js(`document.querySelector('[data-sortear]').scrollIntoView({ block: 'center' });`);
+  await js(CONGELAR_REFLEXO);
+  await espera(800);
+  await captura('1c-sortear-reflexo');
+  await js(SOLTAR_REFLEXO);
+
   // ── 2. Sorteio com som ──
-  await js(`window.__tocados = []; window.__vibracoes = [];
-    const pedir = window.Capacitor.nativePromise;
-    window.Capacitor.nativePromise = function (plugin, metodo) { if (plugin === 'Haptics') window.__vibracoes.push(metodo); return pedir.apply(this, arguments); };
-    const comecar = AudioBufferSourceNode.prototype.start;
-    AudioBufferSourceNode.prototype.start = function () { window.__tocados.push('rolo.mp3'); return comecar.apply(this, arguments); };
-    const play = HTMLMediaElement.prototype.play;
-    HTMLMediaElement.prototype.play = function () {
-      const nome = (this.currentSrc || this.src).split('/').pop(); const mudo = this.muted;
-      const p = play.apply(this, arguments);
-      if (!mudo) p?.then?.(() => window.__tocados.push(nome), (e) => window.__tocados.push('RECUSADO ' + nome + ' ' + e.name));
-      return p;
-    };`);
+  await js(ESPIAR_SOM);
   await sortear();
   await js(`const som = document.querySelector('.somBtn'); if (!som.classList.contains('on')) som.click();`);
   await espera(1800);
@@ -168,7 +199,38 @@ try {
   const impactos = vibracoes.filter((v) => v === 'impact').length;
   const jackpots = vibracoes.filter((v) => v === 'notification').length;
   confere('vibração quando cada camisa para e uma só no jackpot', impactos === 10 && jackpots === 1, `impact ${impactos}, notification ${jackpots}`);
+  const rolo = contaRolo(tocados);
+  confere('o rolo tocou pelo Web Audio, sem cair na reserva', rolo.webAudio > 0 && rolo.reserva === 0, JSON.stringify(rolo));
   const recursos = await js(`return performance.getEntriesByType('resource').map((e) => e.name);`);
+
+  // ── 2b. Folha "Editar pelada" e listras horizontais: a imagem do passo 3 sai com os dois ──
+  await clique('[data-editar-jogo]');
+  await esperaJs(`!!document.querySelector('#jogo-local')`);
+  const tituloFolha = await js(PREENCHER_JOGO);
+  await espera(800);
+  await captura('3b-folha-editar-pelada');
+  confere('a folha "Editar pelada" abre com local e horário', tituloFolha === 'Editar pelada', tituloFolha);
+  await clique('[data-jogo-pronto]');
+  await esperaJs(`!!document.querySelector('[data-jogo-local]')`, 15000);
+  const jogoNaTela = await js(JOGO_NA_TELA);
+  confere('local e horário aparecem na tela', jogoNaTela.local === LOCAL && jogoNaTela.horario === HORARIO_NA_TELA, JSON.stringify(jogoNaTela));
+  await js(`window.scrollTo(0, 0);`);
+  await espera(800);
+  await captura('3c-tela-com-local-e-horario');
+  await clique('[data-editar="0"]');
+  await clique('[data-padrao-uniforme="listrasH"]');
+  await clique(COMBO_VERDE_E_BRANCO);
+  await espera(2500);
+  await captura('3d-editar-listras-horizontais');
+  await clique('[data-editar-pronto]');
+  await esperaJs(`!document.querySelector('[data-folha]')`, 15000);
+  await espera(2500);
+  await js(`document.querySelector('[data-time="0"]').scrollIntoView({ block: 'start' });`);
+  await espera(1000);
+  await captura('3e-listras-horizontais-na-tela');
+  const kit = await js(KIT_DO_TIME);
+  confere('listras horizontais vestem o time', kit.padrao === 'listrasH' && kit.cor === 'verde' && kit.cor2 === 'branco', JSON.stringify(kit));
+  await js(`window.scrollTo(0, 0);`);
 
   // ── 3. Baixar imagem: PNG na cache e folha do sistema ──
   await clique('[data-baixar]');
@@ -182,6 +244,8 @@ try {
   const png = pngs[0] ? readFileSync(pngs[0]) : Buffer.alloc(0);
   if (png.length) writeFileSync(join(SAIDA, 'imagem-gerada.png'), png);
   confere('a imagem na folha é o PNG do sorteio', png.length > 0 && png.readUInt32BE(20) > png.readUInt32BE(16), pngs[0] ? `${pngs[0].split('/').pop()} ${png.readUInt32BE(16)}×${png.readUInt32BE(20)}, ${png.length} bytes` : 'sem arquivo');
+  const cartazOnline = await js(CARTAZ);
+  confere('cartaz-*.js veio de dentro do app', cartazOnline.urls.length > 0 && cartazOnline.urls.every((u) => u.startsWith(`${cartazOnline.origem}/assets/`)), cartazOnline.urls.join(' '));
 
   // ── 4. Compartilhar: o sorteio segue guardado; link pelo servidor da prova ──
   await abrirResultadoGuardado();
@@ -213,6 +277,7 @@ try {
   spawn('sudo', ['sh', '-c', 'sleep 300; pfctl -d'], { detached: true, stdio: 'ignore' }).unref();
   try {
     await abrirApp();
+    await esperaJs(`!!document.querySelector('[data-sortear]:not([disabled])')`, 300000); // a lista segue no rascunho
     await sortear();
     await espera(1500);
     await js(`document.querySelector('.saltar.on button')?.click();`);
@@ -226,6 +291,10 @@ try {
     await captura('9-sem-rede-imagem');
     const offline = await pngsDoCache();
     confere('sem rede: gerar imagem funciona', offline.some((f) => /quadrada/.test(f)), offline.map((f) => f.split('/').pop()).join(', '));
+    const cartazOffline = await js(CARTAZ);
+    confere('sem rede: cartaz-*.js abre de dentro do pacote', cartazOffline.urls.length > 0 && cartazOffline.urls.every((u) => u.startsWith(`${cartazOffline.origem}/assets/`)), cartazOffline.urls.join(' '));
+    const quadrada = offline.find((f) => /quadrada/.test(f));
+    if (quadrada) writeFileSync(join(SAIDA, 'imagem-gerada-sem-rede.png'), readFileSync(quadrada));
     await abrirResultadoGuardado();
     await clique('[data-copiar-link]');
     const avisoRede = await esperaJs(`document.querySelector('[data-toast]')?.textContent || ''`, 40000);
@@ -243,6 +312,45 @@ try {
   const deFora = todos.filter((u) => !/^(capacitor:\/\/localhost|data:|blob:)/.test(u));
   confere('o WebView não pediu nada fora do próprio app', deFora.length === 0, deFora.slice(0, 5).join(' '));
   writeFileSync(join(SAIDA, 'rede-webview.json'), JSON.stringify(todos, null, 1));
+
+  // ── 7. O site rodando como bundle do Capgo: outra pasta, fora do app instalado. O servidor do Capgo na prova é o de mentira (ios-simulador.yml) ──
+  // O app aqui já tem o dist novo de fábrica; o que se prova é a pasta do bundle, não a troca de versão, que o Android prova inteira.
+  await new Promise((resolve, reject) => { execFile('zip', ['-qr', ZIP_DO_BUNDLE, '.'], { cwd: fileURLToPath(new URL('../../dist/', import.meta.url)) }, (e) => (e ? reject(e) : resolve())); });
+  await abrirApp();
+  await esperaJs(`!!document.querySelector('#lista')`, 300000);
+  const baixado = await js(`return window.Capacitor.nativePromise('CapacitorUpdater', 'download', { url: 'http://localhost:8799/bundle.zip', version: ${JSON.stringify(VERSAO_DA_PROVA)} });`, 180000);
+  // O set recarrega a tela: a resposta dele nunca volta, e quem diz que deu certo é a página nova.
+  js(`return window.Capacitor.nativePromise('CapacitorUpdater', 'set', { id: ${JSON.stringify(baixado.id)} });`, 20000).catch(() => {});
+  await espera(8000);
+  fila.length = 0;
+  esperando.clear();
+  await esperaJs(`!!document.querySelector('[data-sortear]:not([disabled])')`, 300000);
+  const noBundle = await js(`return window.Capacitor.nativePromise('CapacitorUpdater', 'current', {});`);
+  confere('roda como bundle do Capgo', noBundle?.bundle?.version === VERSAO_DA_PROVA && noBundle?.bundle?.id !== 'builtin', JSON.stringify(noBundle?.bundle));
+  const recBundle = await js(RECURSOS_COM_VERSAO, 60000);
+  confere('no bundle: rolo.mp3?v=2 com os bytes certos', recBundle.rolo.status === 200 && recBundle.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)), JSON.stringify(recBundle.rolo));
+  confere('no bundle: o Web Audio decodifica o rolo', typeof recBundle.duracao === 'number' && recBundle.duracao > 1, `${recBundle.duracao} s`);
+  confere('no bundle: o <audio> de reserva abre o rolo', typeof recBundle.reserva === 'number' && recBundle.reserva > 1, `${recBundle.reserva} s`);
+  confere('no bundle: estrela.svg?v=2 com os bytes certos', recBundle.estrela.status === 200 && recBundle.estrela.impressao === impressaoDe(new URL('icones/estrela.svg', DIST_LOCAL)), JSON.stringify(recBundle.estrela));
+  await js(ESPIAR_SOM);
+  await sortear();
+  await js(`const som = document.querySelector('.somBtn'); if (!som.classList.contains('on')) som.click();`);
+  await espera(1800);
+  await captura('c3-cerimonia-no-bundle');
+  await esperaJs(`!!document.querySelector('[data-baixar]')`, 300000);
+  await espera(2500);
+  const tocadosBundle = await js('return window.__tocados;');
+  const roloBundle = contaRolo(tocadosBundle);
+  confere('no bundle: o rolo toca pelo Web Audio, com clac e jackpot', roloBundle.webAudio > 0 && roloBundle.reserva === 0 && tocadosBundle.some((x) => x.startsWith('clac')) && tocadosBundle.some((x) => x.startsWith('jackpot')) && !tocadosBundle.some((x) => x.startsWith('RECUSADO')), `${JSON.stringify(roloBundle)} · ${[...new Set(tocadosBundle)].slice(0, 6).join(', ')}`);
+  await clique('[data-baixar]');
+  await clique('[data-formato="todos916"]');
+  await espera(12000);
+  await captura('c4-imagem-no-bundle');
+  const cartazBundle = await js(CARTAZ);
+  const pngsBundle = await pngsDoCache();
+  const storyBundle = pngsBundle.find((f) => /story/.test(f));
+  if (storyBundle) writeFileSync(join(SAIDA, 'c4-imagem-do-bundle.png'), readFileSync(storyBundle));
+  confere('no bundle: cartaz-*.js abre e a imagem sai', !!storyBundle && cartazBundle.urls.length > 0 && cartazBundle.urls.every((u) => u.startsWith(`${cartazBundle.origem}/assets/`)), cartazBundle.urls.join(' '));
   writeFileSync(join(SAIDA, 'resultado.json'), JSON.stringify({ resultados, tempos: { campoProntoMs: msCampo, fcpMs: estado.fcp }, estado }, null, 2));
 } catch (e) {
   confere('a prova chegou ao fim', false, e.message);

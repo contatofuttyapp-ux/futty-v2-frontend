@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { conectar } from './_webview.mjs';
+import { CARTAZ, COMBO_VERDE_E_BRANCO, CONGELAR_REFLEXO, HORARIO_NA_TELA, JOGO_NA_TELA, KIT_DO_TIME, LEGENDA, LOCAL, PREENCHER_JOGO, RECURSOS_COM_VERSAO, SOLTAR_REFLEXO, SORTEAR, contaRolo, corpo, impressaoDe } from './_site-novo.mjs';
 
 const SAIDA = process.argv[2];
 if (!SAIDA) { console.error('uso: android.mjs <pasta das capturas>'); process.exit(1); }
@@ -59,12 +60,26 @@ async function abrirApp({ limpar = false } = {}) {
   return page;
 }
 
-async function sortear(page) {
+async function colarLista(page) {
   await page.fill('#lista', LISTA);
   await page.evaluate(() => document.querySelector('#lista').blur());
   await page.waitForSelector('[data-sortear]:not([disabled])', 15000);
+}
+
+async function sortear(page) {
   await page.click('[data-sortear]');
   await page.waitForSelector('[data-pagina="cerimonia"] .somBtn', 30000);
+}
+
+// Toque do próprio Android, não do DevTools: o da folha "Editar pelada" tem de ser o primeiro dedo que chega ali, depois de um campo editado.
+async function tocarDeVerdade(page, sel) {
+  await page.waitForSelector(sel, 15000);
+  await page.evaluate((s) => document.querySelector(s).scrollIntoView({ block: 'center' }), sel);
+  await espera(500); // a folha ainda sobe, e a rolagem ainda anda
+  const { x, y, dpr } = await page.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, dpr: devicePixelRatio }; }, sel);
+  // O dumpsys, e não o uiautomator: este espera a tela sossegar, e a página nunca sossega, tem luz andando o tempo todo.
+  const webview = /CapacitorWebView\{[^}]*?\s(\d+),(\d+)-\d+,\d+/.exec(shell('dumpsys', 'activity', 'top'));
+  shell('input', 'tap', String(Math.round(Number(webview[1]) + x * dpr)), String(Math.round(Number(webview[2]) + y * dpr)));
 }
 
 const ateResultado = (page) => page.waitForSelector('[data-baixar]', 240000);
@@ -99,6 +114,28 @@ confere('sem blocos de SEO nem "Baixe o app"; com Ajuda', !estadoInicio.seo && !
 const displayed = /Displayed [^ ]*MainActivity[^+]*\+(?:(\d+)s)?(\d+)ms/.exec(shell('logcat', '-d', '-s', 'ActivityTaskManager'));
 const msTela = displayed ? Number(displayed[1] || 0) * 1000 + Number(displayed[2]) : null;
 console.log(`[tempo] Android "Displayed" ${msTela} ms · FCP do WebView ${estadoInicio.fcp} ms · até o campo pronto ${msAtePronta} ms`);
+
+// ── 1b. O que o site trouxe de novo na tela inicial, e o som com ?v=2 servido de dentro do pacote ──
+const DIST_LOCAL = new URL('../../dist/', import.meta.url);
+const rec = await page.evaluate(corpo(RECURSOS_COM_VERSAO));
+const roloDoDist = impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL));
+confere('rolo.mp3?v=2 sai do pacote com os bytes do dist', rec.rolo.status === 200 && rec.rolo.impressao === roloDoDist && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
+confere('o Web Audio decodifica o rolo.mp3?v=2', typeof rec.duracao === 'number' && rec.duracao > 1, `${rec.duracao} s`);
+confere('o <audio> de reserva abre o rolo.mp3?v=2', typeof rec.reserva === 'number' && rec.reserva > 1, `${rec.reserva} s`);
+confere('estrela.svg?v=2 sai do pacote com os bytes do dist', rec.estrela.status === 200 && rec.estrela.impressao === impressaoDe(new URL('icones/estrela.svg', DIST_LOCAL)), JSON.stringify(rec.estrela));
+await colarLista(page);
+const legenda =await page.evaluate(corpo(LEGENDA));
+confere('legenda com a linha do nível e a estrela nova', /Equilibrar por nível: 1 a 5 estrelas/.test(legenda.texto) && legenda.mascara.includes('estrela.svg?v=2') && legenda.interruptor, JSON.stringify(legenda));
+await page.evaluate(() => { document.querySelector('[data-legenda]').scrollIntoView({ block: 'start' }); });
+await espera(500);
+captura('1b-legenda-nivel-estrela');
+const sortearAceso = await page.evaluate(corpo(SORTEAR));
+confere('SORTEAR de 64 px com o reflexo andando', sortearAceso.altura === 64 && sortearAceso.reflexo.includes('reflexo') && sortearAceso.traco.length > 0, JSON.stringify(sortearAceso));
+await page.evaluate(() => { document.querySelector('[data-sortear]').scrollIntoView({ block: 'center' }); });
+await page.evaluate(corpo(CONGELAR_REFLEXO));
+await espera(400);
+captura('1c-sortear-reflexo');
+await page.evaluate(corpo(SOLTAR_REFLEXO));
 
 // ── 2. Sorteio, com som, Voltar no meio da cerimônia ──
 await page.evaluate(() => {
@@ -142,6 +179,8 @@ await espera(800);
 captura('3-resultado');
 const nomes = (await page.evaluate(() => window.__tocados)).map((u) => u.split('/').pop());
 confere('cerimônia com som: rolo, clac e jackpot tocaram', ['rolo', 'clac', 'jackpot'].every((n) => nomes.some((x) => x.startsWith(n))), `${nomes.length} toques: ${[...new Set(nomes)].join(', ')}`);
+const rolo = contaRolo(nomes);
+confere('o rolo tocou pelo Web Audio, sem cair na reserva', rolo.webAudio > 0 && rolo.reserva === 0, JSON.stringify(rolo));
 confere('a cerimônia termina na mesma tela, sem trocar de rota', (await page.evaluate(() => location.pathname)) === '/sortear');
 // 12 nomes em 2 times de 5: 10 camisas param na máquina (as 2 do banco entram sem rolo) e 1 jackpot.
 const vibracoes = await page.evaluate(() => window.__vibracoes);
@@ -158,6 +197,35 @@ voltarDoSistema();
 const folhaFechou = await esperaAte(() => page.evaluate(() => !document.querySelector('[data-folha]')), 3000);
 confere('Voltar fecha o cartão aberto, sem sair da tela', folhaFechou && appNaFrente() && (await page.evaluate(() => location.pathname)) === '/sortear');
 
+// ── 3b. Folha "Editar pelada" e listras horizontais: a imagem do passo 4 sai com os dois ──
+await page.click('[data-editar-jogo]');
+await page.waitForSelector('#jogo-local', 10000);
+const tituloFolha = await page.evaluate(corpo(PREENCHER_JOGO));
+await espera(500);
+captura('3b-folha-editar-pelada');
+confere('a folha "Editar pelada" abre com local e horário', tituloFolha === 'Editar pelada', tituloFolha);
+await tocarDeVerdade(page, '[data-jogo-pronto]');
+await page.waitForSelector('[data-jogo-local]', 8000);
+const jogoNaTela = await page.evaluate(corpo(JOGO_NA_TELA));
+confere('local e horário aparecem na tela', jogoNaTela.local === LOCAL && jogoNaTela.horario === HORARIO_NA_TELA, JSON.stringify(jogoNaTela));
+await page.evaluate(() => window.scrollTo(0, 0));
+await espera(500);
+captura('3c-tela-com-local-e-horario');
+await page.click('[data-editar="0"]');
+await tocarDeVerdade(page, '[data-padrao-uniforme="listrasH"]');
+await tocarDeVerdade(page, COMBO_VERDE_E_BRANCO);
+await espera(1500);
+captura('3d-editar-listras-horizontais');
+await tocarDeVerdade(page, '[data-editar-pronto]');
+await page.waitForFunction(() => !document.querySelector('[data-folha]'), undefined, 8000);
+await espera(2000);
+await page.evaluate(() => { document.querySelector('[data-time="0"]').scrollIntoView({ block: 'start' }); });
+await espera(800);
+captura('3e-listras-horizontais-na-tela');
+const kit = await page.evaluate(corpo(KIT_DO_TIME));
+confere('listras horizontais vestem o time', kit.padrao === 'listrasH' && kit.cor === 'verde' && kit.cor2 === 'branco', JSON.stringify(kit));
+await page.evaluate(() => window.scrollTo(0, 0));
+
 // ── 4. Baixar imagem: PNG na cache e folha do sistema ──
 shell(`run-as ${PACOTE} sh -c 'rm -f cache/*.png'`);
 await page.click('[data-baixar]');
@@ -171,6 +239,8 @@ const png = arquivos[0] ? adbBin('exec-out', 'run-as', PACOTE, 'cat', `cache/${a
 if (png.length) writeFileSync(join(SAIDA, 'imagem-gerada.png'), png);
 const ehPng = png.subarray(0, 4).toString('hex') === '89504e47';
 confere('a imagem na folha é o PNG do sorteio', ehPng && png.readUInt32BE(20) > png.readUInt32BE(16), `${arquivos[0]} ${ehPng ? `${png.readUInt32BE(16)}×${png.readUInt32BE(20)}` : ''}, ${png.length} bytes`);
+const cartazOnline = await page.evaluate(corpo(CARTAZ));
+confere('cartaz-*.js veio de dentro do app', cartazOnline.urls.length > 0 && cartazOnline.urls.every((u) => u.startsWith(`${cartazOnline.origem}/assets/`)), cartazOnline.urls.join(' '));
 voltarDoSistema();
 await esperaAte(appNaFrente, 8000);
 await espera(500);
@@ -201,6 +271,9 @@ if (linkNaFolha) {
   await espera(2500);
   confere('o link /s/ abre o sorteio no app', abriu && appNaFrente(), `/s/${codigo}`);
   captura('7-link-publico');
+  await page.waitForSelector('[data-jogo-local]', 120000).catch(() => {});
+  const noLink = await page.evaluate(corpo(JOGO_NA_TELA));
+  confere('o link leva o local e o horário, pelo HTTP nativo', noLink.local === LOCAL && noLink.horario === HORARIO_NA_TELA, JSON.stringify(noLink));
   await esperaAte(() => page.evaluate(() => !document.querySelector('.saltar.on')), 120000, 500);
   voltarDoSistema();
   const saiu = await esperaAte(() => page.evaluate((c) => location.pathname !== `/s/${c}`, codigo), 8000);
@@ -224,6 +297,7 @@ await espera(2500);
 const pg = await abrirApp();
 await espera(800);
 confere('modo avião: o app abre', await pg.evaluate(() => navigator.onLine === false && location.pathname === '/'), await pg.evaluate(() => `onLine=${navigator.onLine}`));
+await pg.waitForSelector('[data-sortear]:not([disabled])', 15000); // a lista segue no rascunho
 await sortear(pg);
 await espera(1500);
 await pg.evaluate(() => document.querySelector('.saltar.on')?.click());
@@ -239,6 +313,9 @@ await espera(1200);
 captura('9-modo-aviao-imagem');
 const offPng = shell('run-as', PACOTE, 'ls', 'cache').split(/\s+/).filter((n) => /\.png$/i.test(n));
 confere('modo avião: gerar imagem funciona', folhaOff && offPng.length > 0, offPng[0] || '');
+const cartazOffline = await pg.evaluate(corpo(CARTAZ));
+confere('modo avião: cartaz-*.js abre de dentro do pacote', cartazOffline.urls.length > 0 && cartazOffline.urls.every((u) => u.startsWith(`${cartazOffline.origem}/assets/`)), cartazOffline.urls.join(' '));
+if (offPng[0]) writeFileSync(join(SAIDA, 'imagem-gerada-sem-rede.png'), adbBin('exec-out', 'run-as', PACOTE, 'cat', `cache/${offPng[0]}`));
 voltarDoSistema();
 await esperaAte(appNaFrente, 8000);
 await espera(500);

@@ -5900,3 +5900,9 @@ A lista mestra de decisões continua em C:\Users\phfer\Desktop\FUT\LISTA-CURTA.m
 - (capacitor.config.json) Capgo: `autoUpdate` de "atInstall" para "atBackground" no canal `sorteio`, sem `autoSplashscreen`; a tela de abertura sai pela ponte, com 8 s de teto nativo. `SystemBars.style: DARK`: em aparelho no tema claro os ícones da barra saíam escuros sobre o fundo escuro.
 - (scripts/unidade/convite-baixar-app, link-do-site, rodada-31n, rotas-pt-br) Os testes que exigiam /c/, /convite, /time e /equipa no manifesto passaram a exigir só /s/; o que cobre o AASA e o parser do site antigo continua igual.
 - (scripts/prova-casca/, .github/workflows/ios-simulador.yml) Provas no emulador Android (debug, release e HTTP nativo no release) e no simulador iOS, este num Mac do GitHub sem assinar nem enviar nada.
+
+## App 2.0.1 pelo Capgo (4-nov) — pacote do site a47b4ff (T4.5)
+
+- (sorteio-pacote/) O site empacotado passa de 44efa41 para a47b4ff: som novo do rolo, SORTEAR com reflexo, local e horário, cartaz-*.js à parte, legenda com o nível, listras horizontais. Nada mudou na ponte.
+- (scripts/prova-casca/_site-novo.mjs, android.mjs, ios-maestro.mjs) As provas passam a conferir o que o site trouxe, com as mesmas perguntas nos dois aparelhos. O rolo contado à parte: Web Audio ou reserva. A lista só entra uma vez: colada de novo, o site soma aos nomes do rascunho.
+- (scripts/prova-casca/android-capgo.mjs, ios-maestro.mjs, .github/workflows/ios-simulador.yml) Prova do site rodando como bundle, a partir de uma pasta do aparelho, e não dos assets do app. O servidor do Capgo é trocado por um da prova: versão usada lá não volta.

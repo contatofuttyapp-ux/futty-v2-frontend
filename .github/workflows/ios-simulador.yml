@@ -39,6 +39,11 @@ jobs:
           node scripts/empacotar-sorteio.mjs --do-pacote --api http://localhost:8788 --robo scripts/prova-casca/ios-robo.js
           npx cap sync ios
 
+      # O plugin instala um bundle na prova: sem falar com o Capgo de verdade, onde uma versão usada uma vez não volta (CAPGO.md).
+      - name: Tirar o Capgo de verdade desta execução
+        run: |
+          node -e "const f='ios/App/App/capacitor.config.json',fs=require('fs'),c=JSON.parse(fs.readFileSync(f,'utf8'));Object.assign(c.plugins.CapacitorUpdater,{updateUrl:'http://localhost:8799/updates',statsUrl:'http://localhost:8799/stats',channelUrl:'http://localhost:8799/channel_self'});fs.writeFileSync(f,JSON.stringify(c,null,2))"
+
       # O servidor da prova é http://localhost; o app da loja não tem esta exceção.
       - name: Liberar localhost só nesta execução
         working-directory: ios/App/App
