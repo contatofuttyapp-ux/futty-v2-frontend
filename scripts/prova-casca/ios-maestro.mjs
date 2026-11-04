@@ -26,7 +26,7 @@ const simctl = (...a) => new Promise((resolve, reject) => {
 });
 // Uma captura que não sai não pode segurar a prova inteira.
 const captura = (nome) => new Promise((resolve) => {
-  execFile('xcrun', ['simctl', 'io', UDID, 'screenshot', join(SAIDA, `${nome}.png`)], { timeout: 60000 }, (erro) => {
+  execFile('xcrun', ['simctl', 'io', UDID, 'screenshot', join(SAIDA, `${nome}.png`)], { timeout: 180000 }, (erro) => {
     if (erro) console.log(`[captura ${nome}] não saiu: ${erro.message.slice(0, 90)}`);
     resolve();
   });
@@ -71,7 +71,7 @@ const maestro = createServer(async (req, res) => {
 });
 maestro.listen(8799, '127.0.0.1');
 
-function js(codigo, ms = 30000) {
+function js(codigo, ms = 90000) {
   return new Promise((resolve, reject) => {
     proximoId += 1;
     const id = proximoId;
@@ -80,10 +80,10 @@ function js(codigo, ms = 30000) {
     setTimeout(() => { if (esperando.delete(id)) reject(new Error(`sem resposta do robô: ${codigo.slice(0, 70)}`)); }, ms);
   });
 }
-async function esperaJs(codigo, ms = 60000) {
+async function esperaJs(codigo, ms = 240000) {
   const fim = Date.now() + ms;
   for (;;) {
-    const v = await js(`return (${codigo});`, Math.min(30000, ms)).catch(() => false);
+    const v = await js(`return (${codigo});`, Math.min(90000, ms)).catch(() => false);
     if (v) return v;
     if (Date.now() > fim) throw new Error(`prazo de ${ms} ms: ${codigo.slice(0, 70)}`);
     await espera(300);
@@ -112,6 +112,24 @@ async function colarLista() {
 async function sortear() {
   await clique('[data-sortear]');
   await esperaJs(`!!document.querySelector('.saltar.on')`, 120000);
+}
+
+const QUADROS_POR_SEGUNDO = `return await new Promise((res) => { let n = 0; const t0 = performance.now(); const passo = () => { n += 1; const t = performance.now() - t0; if (t > 3000) res(Math.round(n / (t / 1000))); else requestAnimationFrame(passo); }; requestAnimationFrame(passo); });`;
+
+// Com prazo folgado e dizendo por onde vai: lentidão do Mac e cerimônia parada são coisas diferentes, e só o andamento separa uma da outra.
+async function esperarFimDaCerimonia(ms = 900000) {
+  const fim = Date.now() + ms;
+  let ultimo = Date.now();
+  for (;;) {
+    if (await js(`return !!document.querySelector('[data-baixar]');`).catch(() => false)) return;
+    if (Date.now() > fim) throw new Error(`a cerimônia não acabou em ${ms} ms`);
+    if (Date.now() - ultimo > 30000) {
+      ultimo = Date.now();
+      const onde = await js(`return { paradas: [...document.querySelectorAll('.gcont')].map((n) => n.textContent), cheios: document.querySelectorAll('.slot.cheio').length, quem: document.querySelector('.quem')?.textContent, pular: !!document.querySelector('.saltar.on') };`).catch((e) => e.message);
+      console.log(`[andamento] ${JSON.stringify(onde)}`);
+    }
+    await espera(1000);
+  }
 }
 
 const ESPIAR_SOM = `window.__tocados = []; window.__vibracoes = [];
@@ -166,7 +184,8 @@ try {
   // ── 1b. O que o site trouxe de novo na tela inicial, e o som com ?v=2 servido de dentro do pacote ──
   const DIST_LOCAL = new URL('../../dist/', import.meta.url);
   const rec = await js(RECURSOS_COM_VERSAO, 60000);
-  confere('rolo.mp3?v=2 sai do pacote com os bytes do dist', rec.rolo.status === 200 && rec.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)) && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
+  // No iOS o Capacitor responde mídia sem status (WebViewAssetHandler.swift, isMediaExtension): o fetch vê 0, e o site não olha o status. Quem prova são os bytes.
+  confere('rolo.mp3?v=2 sai do pacote com os bytes do dist', rec.rolo.status === 0 && rec.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)) && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
   confere('o Web Audio decodifica o rolo.mp3?v=2', typeof rec.duracao === 'number' && rec.duracao > 1, `${rec.duracao} s`);
   confere('o <audio> de reserva abre o rolo.mp3?v=2', typeof rec.reserva === 'number' && rec.reserva > 1, `${rec.reserva} s`);
   confere('estrela.svg?v=2 sai do pacote com os bytes do dist', rec.estrela.status === 200 && rec.estrela.impressao === impressaoDe(new URL('icones/estrela.svg', DIST_LOCAL)), JSON.stringify(rec.estrela));
@@ -183,6 +202,12 @@ try {
   await espera(800);
   await captura('1c-sortear-reflexo');
   await js(SOLTAR_REFLEXO);
+  const quadros = await js(QUADROS_POR_SEGUNDO, 60000);
+  console.log(`[fôlego] início com o SORTEAR aceso: ${quadros} quadros/s`);
+  if (quadros < 15) {
+    await js(`localStorage.setItem('futty_prova_sem_luzes', '1'); window.__semLuzes();`);
+    console.log(`[fôlego] luzes decorativas desligadas nesta prova: ${await js(QUADROS_POR_SEGUNDO, 60000)} quadros/s`);
+  }
 
   // ── 2. Sorteio com som ──
   await js(ESPIAR_SOM);
@@ -190,7 +215,7 @@ try {
   await js(`const som = document.querySelector('.somBtn'); if (!som.classList.contains('on')) som.click();`);
   await espera(1800);
   await captura('2-cerimonia');
-  await esperaJs(`!!document.querySelector('[data-baixar]')`, 300000);
+  await esperarFimDaCerimonia();
   await espera(800);
   await captura('3-resultado');
   const tocados = await js('return window.__tocados;');
@@ -281,7 +306,7 @@ try {
     await sortear();
     await espera(1500);
     await js(`document.querySelector('.saltar.on button')?.click();`);
-    await esperaJs(`!!document.querySelector('[data-baixar]')`, 120000);
+    await esperarFimDaCerimonia();
     await espera(600);
     await captura('8-sem-rede-resultado');
     confere('sem rede: colar, sortear e cerimônia funcionam', true);
@@ -328,7 +353,7 @@ try {
   const noBundle = await js(`return window.Capacitor.nativePromise('CapacitorUpdater', 'current', {});`);
   confere('roda como bundle do Capgo', noBundle?.bundle?.version === VERSAO_DA_PROVA && noBundle?.bundle?.id !== 'builtin', JSON.stringify(noBundle?.bundle));
   const recBundle = await js(RECURSOS_COM_VERSAO, 60000);
-  confere('no bundle: rolo.mp3?v=2 com os bytes certos', recBundle.rolo.status === 200 && recBundle.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)), JSON.stringify(recBundle.rolo));
+  confere('no bundle: rolo.mp3?v=2 com os bytes certos', recBundle.rolo.status === 0 && recBundle.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)), JSON.stringify(recBundle.rolo));
   confere('no bundle: o Web Audio decodifica o rolo', typeof recBundle.duracao === 'number' && recBundle.duracao > 1, `${recBundle.duracao} s`);
   confere('no bundle: o <audio> de reserva abre o rolo', typeof recBundle.reserva === 'number' && recBundle.reserva > 1, `${recBundle.reserva} s`);
   confere('no bundle: estrela.svg?v=2 com os bytes certos', recBundle.estrela.status === 200 && recBundle.estrela.impressao === impressaoDe(new URL('icones/estrela.svg', DIST_LOCAL)), JSON.stringify(recBundle.estrela));
@@ -337,7 +362,7 @@ try {
   await js(`const som = document.querySelector('.somBtn'); if (!som.classList.contains('on')) som.click();`);
   await espera(1800);
   await captura('c3-cerimonia-no-bundle');
-  await esperaJs(`!!document.querySelector('[data-baixar]')`, 300000);
+  await esperarFimDaCerimonia();
   await espera(2500);
   const tocadosBundle = await js('return window.__tocados;');
   const roloBundle = contaRolo(tocadosBundle);

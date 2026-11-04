@@ -100,7 +100,10 @@ jobs:
         if: failure()
         run: |
           mkdir -p "$RUNNER_TEMP/capturas-ios"
-          xcrun simctl spawn "${{ steps.sim.outputs.udid }}" log show --last 5m --style compact --predicate 'process == "App"' > "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
+          # Com o Mac ocupado o log leva mais de 10 minutos para sair, e o que veio depois da prova não ajuda: fica o que saiu em 2 minutos.
+          xcrun simctl spawn "${{ steps.sim.outputs.udid }}" log show --last 5m --style compact --predicate 'process == "App"' > "$RUNNER_TEMP/capturas-ios/log-do-app.txt" &
+          sleep 120
+          kill $! 2>/dev/null || true
           tail -60 "$RUNNER_TEMP/capturas-ios/log-do-app.txt" || true
 
       - name: Guardar as capturas

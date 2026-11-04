@@ -50,7 +50,7 @@ export const SOLTAR_REFLEXO = `
 export const LEGENDA = `
   const nivel = document.querySelector('[data-nivel]');
   const ic = nivel.querySelector('.ic');
-  return { texto: nivel.innerText.replace(/\\s+/g, ' ').trim(), mascara: ic.style.getPropertyValue('--m'), interruptor: !!nivel.querySelector('input[type=checkbox]') };`;
+  return { texto: nivel.innerText.replace(/\\s+/g, ' ').trim(), mascara: ic.style.getPropertyValue('--m').replace(/\\\\/g, ''), interruptor: !!nivel.querySelector('input[type=checkbox]') }; // o WebKit devolve o endereço com barras de escape`;
 
 export const PREENCHER_JOGO = `
   const pôr = (sel, valor) => {
