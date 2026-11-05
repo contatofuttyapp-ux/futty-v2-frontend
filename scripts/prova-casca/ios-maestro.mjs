@@ -7,11 +7,12 @@
 // resposta.
 //   node scripts/prova-casca/ios-maestro.mjs <udid> <pasta de saída>
 import { execFile, execFileSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CARTAZ, COMBO_VERDE_E_BRANCO, CONGELAR_REFLEXO, HORARIO_NA_TELA, JOGO_NA_TELA, KIT_DO_TIME, LEGENDA, LOCAL, PREENCHER_JOGO, RECURSOS_COM_VERSAO, SOLTAR_REFLEXO, SORTEAR, contaRolo, impressaoDe } from './_site-novo.mjs';
+import { COMBO_VERDE_E_BRANCO, CONGELAR_REFLEXO, HORARIO_NA_TELA, JOGO_NA_TELA, KIT_DO_TIME, LEGENDA, LOCAL, PREENCHER_JOGO, RECURSOS_COM_VERSAO, SOLTAR_REFLEXO, SORTEAR, contaRolo, impressaoDe } from './_site-novo.mjs';
 
 const [UDID, SAIDA] = process.argv.slice(2);
 mkdirSync(SAIDA, { recursive: true });
@@ -125,6 +126,12 @@ async function sortear() {
 const QUADROS_POR_SEGUNDO = `return await new Promise((res) => { let n = 0; const t0 = performance.now(); const passo = () => { n += 1; const t = performance.now() - t0; if (t > 3000) res(Math.round(n / (t / 1000))); else requestAnimationFrame(passo); }; requestAnimationFrame(passo); });`;
 
 // Com prazo folgado e dizendo por onde vai: lentidão do Mac e cerimônia parada são coisas diferentes, e só o andamento separa uma da outra.
+// O WebKit não lista o que vem do capacitor:// em performance.getEntriesByType, então a pergunta é direta: o arquivo do dist abre como módulo?
+const CARTAZ_DO_PACOTE = () => {
+  const nome = readdirSync(new URL('../../dist/assets/', import.meta.url)).find((n) => /^cartaz-.*.js$/.test(n));
+  return `const m = await import('/assets/${nome}'); return { nome: ${JSON.stringify(nome)}, gerarImagens: typeof m.gerarImagens };`;
+};
+
 async function esperarFimDaCerimonia(ms = 900000) {
   const fim = Date.now() + ms;
   let ultimo = Date.now();
@@ -276,8 +283,8 @@ try {
   const png = pngs[0] ? readFileSync(pngs[0]) : Buffer.alloc(0);
   if (png.length) writeFileSync(join(SAIDA, 'imagem-gerada.png'), png);
   confere('a imagem na folha é o PNG do sorteio', png.length > 0 && png.readUInt32BE(20) > png.readUInt32BE(16), pngs[0] ? `${pngs[0].split('/').pop()} ${png.readUInt32BE(16)}×${png.readUInt32BE(20)}, ${png.length} bytes` : 'sem arquivo');
-  const cartazOnline = await js(CARTAZ);
-  confere('cartaz-*.js veio de dentro do app', cartazOnline.urls.length > 0 && cartazOnline.urls.every((u) => u.startsWith(`${cartazOnline.origem}/assets/`)), cartazOnline.urls.join(' '));
+  const cartazOnline = await js(CARTAZ_DO_PACOTE());
+  confere('cartaz-*.js abre de dentro do app', cartazOnline.gerarImagens === 'function', JSON.stringify(cartazOnline));
 
   // ── 4. Compartilhar: o sorteio segue guardado; link pelo servidor da prova ──
   await abrirResultadoGuardado();
@@ -323,8 +330,8 @@ try {
     await captura('9-sem-rede-imagem');
     const offline = await pngsDoCache();
     confere('sem rede: gerar imagem funciona', offline.some((f) => /quadrada/.test(f)), offline.map((f) => f.split('/').pop()).join(', '));
-    const cartazOffline = await js(CARTAZ);
-    confere('sem rede: cartaz-*.js abre de dentro do pacote', cartazOffline.urls.length > 0 && cartazOffline.urls.every((u) => u.startsWith(`${cartazOffline.origem}/assets/`)), cartazOffline.urls.join(' '));
+    const cartazOffline = await js(CARTAZ_DO_PACOTE());
+    confere('sem rede: cartaz-*.js abre de dentro do pacote', cartazOffline.gerarImagens === 'function', JSON.stringify(cartazOffline));
     const quadrada = offline.find((f) => /quadrada/.test(f));
     if (quadrada) writeFileSync(join(SAIDA, 'imagem-gerada-sem-rede.png'), readFileSync(quadrada));
     await abrirResultadoGuardado();
@@ -350,7 +357,8 @@ try {
   await new Promise((resolve, reject) => { execFile('zip', ['-qr', ZIP_DO_BUNDLE, '.'], { cwd: fileURLToPath(new URL('../../dist/', import.meta.url)) }, (e) => (e ? reject(e) : resolve())); });
   await abrirApp();
   await esperaJs(`!!document.querySelector('#lista')`, 300000);
-  const baixado = await js(`return window.Capacitor.nativePromise('CapacitorUpdater', 'download', { url: 'http://localhost:8799/bundle.zip', version: ${JSON.stringify(VERSAO_DA_PROVA)} });`, 180000);
+  const soma = createHash('sha256').update(readFileSync(ZIP_DO_BUNDLE)).digest('hex');
+  const baixado = await js(`return window.Capacitor.nativePromise('CapacitorUpdater', 'download', { url: 'http://localhost:8799/bundle.zip', version: ${JSON.stringify(VERSAO_DA_PROVA)}, checksum: ${JSON.stringify(soma)} });`, 180000);
   // O set recarrega a tela: a resposta dele nunca volta, e quem diz que deu certo é a página nova.
   js(`return window.Capacitor.nativePromise('CapacitorUpdater', 'set', { id: ${JSON.stringify(baixado.id)} });`, 20000).catch(() => {});
   await espera(8000);
@@ -378,11 +386,11 @@ try {
   await clique('[data-formato="todos916"]');
   await espera(12000);
   await captura('c4-imagem-no-bundle');
-  const cartazBundle = await js(CARTAZ);
+  const cartazBundle = await js(CARTAZ_DO_PACOTE());
   const pngsBundle = await pngsDoCache();
   const storyBundle = pngsBundle.find((f) => /story/.test(f));
   if (storyBundle) writeFileSync(join(SAIDA, 'c4-imagem-do-bundle.png'), readFileSync(storyBundle));
-  confere('no bundle: cartaz-*.js abre e a imagem sai', !!storyBundle && cartazBundle.urls.length > 0 && cartazBundle.urls.every((u) => u.startsWith(`${cartazBundle.origem}/assets/`)), cartazBundle.urls.join(' '));
+  confere('no bundle: cartaz-*.js abre e a imagem sai', !!storyBundle && cartazBundle.gerarImagens === 'function', JSON.stringify(cartazBundle));
   writeFileSync(join(SAIDA, 'resultado.json'), JSON.stringify({ resultados, tempos: { campoProntoMs: msCampo, fcpMs: estado.fcp }, estado }, null, 2));
 } catch (e) {
   confere('a prova chegou ao fim', false, e.message);
