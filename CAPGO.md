@@ -11,7 +11,7 @@ Para subir um bundle para a 2.0, o dist é o do site, nunca o do `npm run build:
 ```
 cd C:\Users\phfer\Desktop\FUT\APP\codigo\frontend
 npm run build:sorteio
-npx @capgo/cli@latest bundle upload com.futty.app --channel sorteio --path dist --bundle 2.0.1 --comment "o que mudou"
+npx @capgo/cli@latest bundle upload com.futty.app --channel sorteio --path dist --bundle 2.0.2 --comment "o que mudou"
 ```
 
 O resto deste arquivo descreve o app 1.x (canal `production`) e continua valendo para ele.

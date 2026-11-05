@@ -5906,3 +5906,12 @@ A lista mestra de decisões continua em C:\Users\phfer\Desktop\FUT\LISTA-CURTA.m
 - (sorteio-pacote/) O site empacotado passa de 44efa41 para a47b4ff: som novo do rolo, SORTEAR com reflexo, local e horário, cartaz-*.js à parte, legenda com o nível, listras horizontais. Nada mudou na ponte.
 - (scripts/prova-casca/_site-novo.mjs, android.mjs, ios-maestro.mjs) As provas passam a conferir o que o site trouxe, com as mesmas perguntas nos dois aparelhos. O rolo contado à parte: Web Audio ou reserva. A lista só entra uma vez: colada de novo, o site soma aos nomes do rascunho.
 - (scripts/prova-casca/android-capgo.mjs, ios-maestro.mjs, .github/workflows/ios-simulador.yml) Prova do site rodando como bundle, a partir de uma pasta do aparelho, e não dos assets do app. O servidor do Capgo é trocado por um da prova: versão usada lá não volta.
+
+## App 2.0.2 pelo Capgo (5-nov) — pacote do site 4a4eefe (T4.7)
+
+- (sorteio-pacote/) O site empacotado passa de a47b4ff para 4a4eefe: idiomas pt-pt, fr, cs e ko com fontes sob demanda, som do rolo de volta ao mix (`rolo.mp3?v=3`), legenda nova. O bundle 2.0.1 nunca subiu; o número ficou para trás. Nada mudou na ponte.
+- (scripts/prova-casca/android-idiomas.mjs) Prova nova: troca o idioma do próprio aparelho, porque o que decide é o navigator do WebView. Reiniciar só o Android (reboot ou zygote) derruba este emulador com segmentation fault; por isso grava o idioma, espera, sync, `reboot -p` e liga a frio, sem janela (com janela, depois de uma queda ele para num diálogo de relatório).
+- (android-idiomas.mjs) Antes de fechar o app, espera 8 s: o WebView grava o localStorage em disco com atraso (medido: 0,5 s perde a escolha do rodapé, 8 s não). É do WebView, não do site.
+- (android-idiomas.mjs, android-capgo.mjs) A imagem espera o arquivo em vez de 9 s fixos (medido no emulador: 12 a 18 s). A reserva do rolo só é aceita se o rolo levou mais que os 800 ms de roloPronto, e o tempo vai para o log.
+- (android-capgo.mjs) Coreano aberto de dentro do bundle, e a abertura nova lida do index.html do bundle, sem nome fixo. Depois do rodapé a página rola: volta ao topo e espera antes do próximo toque, senão o clique se perde.
+- (scripts/prova-casca/_site-novo.mjs) O corpo avaliado na página ganha uma quebra de linha: um trecho que termina em comentário comia o fecho da função.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Prova da atualização pelo Capgo no emulador: um APK com o pacote ANTIGO de fábrica, como o da loja, recebe o bundle novo sozinho, pelo
 // caminho de verdade do plugin (autoUpdate atBackground). O bundle roda de uma pasta do aparelho, não dos assets do APK, e é outro
-// trecho do servidor do WebView: é aqui que arquivo com ?v=2 e módulo que chega depois poderiam falhar sem a prova de fábrica ver.
+// trecho do servidor do WebView: é aqui que arquivo com ?v=N, os arquivos de idioma, as fontes e módulo que chega depois poderiam falhar sem a prova de fábrica ver.
 //
 // Nada fala com o Capgo: o capacitor.config.json do APK de prova aponta updateUrl, statsUrl e channelUrl para o servidor daqui. Assim a
 // versão não fica registrada lá, e versão usada uma vez não volta (CAPGO.md).
@@ -42,6 +42,8 @@ function confere(nome, ok, detalhe = '') {
 const zip = readFileSync(ZIP);
 const checksum = createHash('sha256').update(zip).digest('hex');
 const pedidos = [];
+// O módulo do site novo e do antigo têm nomes diferentes: é por eles que a prova sabe qual está na tela.
+const MODULO_NOVO = /index-[\w-]+\.js/.exec(readFileSync(join(DIST_DO_BUNDLE, 'index.html'), 'utf8'))[0];
 const servidor = createServer((req, res) => {
   const partes = [];
   req.on('data', (d) => partes.push(d));
@@ -82,7 +84,7 @@ shell('logcat', '-c');
 let page = await abrir();
 const fabrica = await qualBundle(page);
 const moduloAntigo = await moduloDoSite(page);
-confere('abre no pacote de fábrica, o antigo', fabrica?.bundle?.id === 'builtin' && !/Bix8TVdL/.test(moduloAntigo), `${fabrica?.bundle?.version} ${moduloAntigo}`);
+confere('abre no pacote de fábrica, o antigo', fabrica?.bundle?.id === 'builtin' && !moduloAntigo.includes(MODULO_NOVO), `${fabrica?.bundle?.version} ${moduloAntigo}`);
 captura('c1-fabrica-pacote-antigo');
 
 // ── 2. A pessoa usa e sai: o plugin baixa no fundo e troca numa saída seguinte. Cada ida e volta é contada, é o que o Pedro vai ver no celular ──
@@ -101,16 +103,35 @@ while (atual?.bundle?.version !== VERSAO && idasEVoltas < 6) {
 }
 confere('o bundle chega sozinho, sem nenhum toque além de sair e voltar', atual?.bundle?.version === VERSAO && atual?.bundle?.id !== 'builtin', `${idasEVoltas} idas e voltas, ${Math.round((Date.now() - inicio) / 1000)} s; ${JSON.stringify(atual?.bundle)}`);
 const moduloNovo = await moduloDoSite(page);
-confere('a tela é a do site novo', /Bix8TVdL/.test(moduloNovo), moduloNovo);
+confere('a tela é a do site novo', moduloNovo.includes(MODULO_NOVO), moduloNovo);
 await espera(800);
 captura('c2-depois-da-atualizacao');
 
-// ── 3. O ?v=2 e o resto, servidos da pasta do bundle ──
+// ── 3. O ?v=N e o resto, servidos da pasta do bundle ──
 const rec = await page.evaluate(corpo(RECURSOS_COM_VERSAO));
-confere('no bundle: rolo.mp3?v=2 com os bytes certos', rec.rolo.status === 200 && rec.rolo.impressao === impressaoDe(join(DIST_DO_BUNDLE, 'sons', 'rolo.mp3')) && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
+confere('no bundle: rolo.mp3?v=3 com os bytes certos', rec.rolo.status === 200 && rec.rolo.impressao === impressaoDe(join(DIST_DO_BUNDLE, 'sons', 'rolo.mp3')) && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
 confere('no bundle: o Web Audio decodifica o rolo', typeof rec.duracao === 'number' && rec.duracao > 1, `${rec.duracao} s`);
 confere('no bundle: o <audio> de reserva abre o rolo', typeof rec.reserva === 'number' && rec.reserva > 1, `${rec.reserva} s`);
 confere('no bundle: estrela.svg?v=2 com os bytes certos', rec.estrela.status === 200 && rec.estrela.impressao === impressaoDe(join(DIST_DO_BUNDLE, 'icones', 'estrela.svg')), JSON.stringify(rec.estrela));
+
+// ── 3b. Os idiomas e as fontes também saem da pasta do bundle, que é outro trecho do servidor do WebView ──
+await page.click('[data-idioma-atual]');
+await page.click('[data-idioma-opcao="ko"]');
+await page.waitForFunction(() => document.documentElement.lang === 'ko-KR' && document.querySelector('[data-sortear]')?.textContent.includes('추첨'), undefined, 15000).catch(() => {});
+await page.evaluate(() => document.fonts.ready);
+await espera(1200);
+const coreano = await page.evaluate(() => {
+  const rec = performance.getEntriesByType('resource').map((e) => e.name);
+  return { lang: document.documentElement.lang, botao: document.querySelector('[data-sortear]')?.textContent.trim(), origem: location.origin, arquivo: rec.filter((n) => /\/assets\/ko-/.test(n)), fontes: rec.filter((n) => /noto-sans-kr/.test(n)), carregadas: [...document.fonts].filter((f) => f.status === 'loaded' && /AC00/i.test(f.unicodeRange)).length };
+});
+confere('no bundle: o coreano e a fonte dele abrem da pasta do bundle', coreano.lang === 'ko-KR' && coreano.botao === '추첨하기' && coreano.arquivo.length === 1 && coreano.fontes.length > 0 && coreano.carregadas > 0, JSON.stringify(coreano));
+captura('c2b-coreano-no-bundle');
+await page.click('[data-idioma-atual]');
+await page.click('[data-idioma-opcao="pt"]');
+await page.waitForFunction(() => document.documentElement.lang === 'pt-BR', undefined, 10000);
+// O rodapé fica no fim da página: o próximo toque não pode cair enquanto ela ainda rola.
+await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+await espera(1000);
 
 // ── 4. Sorteio com som e imagem com local e horário ──
 await page.evaluate(() => {
@@ -141,11 +162,33 @@ await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { 
 await page.waitForSelector('[data-jogo-local]', 8000);
 const jogo = await page.evaluate(corpo(JOGO_NA_TELA));
 confere('no bundle: a folha "Editar pelada" grava local e horário', jogo.local === LOCAL, JSON.stringify(jogo));
+// A imagem é pesada para o emulador: espera o arquivo aparecer em vez de um tempo fixo, e diz quanto levou.
+async function esperarImagem(rotulo, limite = 90000) {
+  const inicio = Date.now();
+  for (;;) {
+    const lista = shell('run-as', PACOTE, 'ls', 'cache').split(/\s+/).filter((n) => /\.png$/i.test(n));
+    const passou = Math.round((Date.now() - inicio) / 1000);
+    if (lista.length) {
+      await espera(1500); // o arquivo pode estar acabando de ser escrito
+      console.log(`[imagem] ${rotulo}: ${lista[0]} em ${passou} s`);
+      return lista;
+    }
+    if (Date.now() - inicio > limite) {
+      console.log(`[imagem] ${rotulo}: nada em ${passou} s`);
+      captura(`sem-imagem-${rotulo.split(/[ ,]/)[0]}`);
+      return [];
+    }
+    await espera(1000);
+  }
+}
+
 shell(`run-as ${PACOTE} sh -c 'rm -f cache/*.png'`);
+await espera(1200); // a folha que fechou ainda desce, e o fim da cerimônia ainda rola a tela
 await page.click('[data-baixar]');
+await page.waitForSelector('[data-formato="todos916"]', 10000);
+await espera(700);
 await page.click('[data-formato="todos916"]');
-await espera(9000);
-const pngs = shell('run-as', PACOTE, 'ls', 'cache').split(/\s+/).filter((n) => /\.png$/i.test(n));
+const pngs = await esperarImagem('story');
 if (pngs[0]) writeFileSync(join(SAIDA, 'c4-imagem-do-bundle.png'), adbBin('exec-out', 'run-as', PACOTE, 'cat', `cache/${pngs[0]}`));
 const cartaz = await page.evaluate(corpo(CARTAZ));
 confere('no bundle: cartaz-*.js abre e a imagem sai', pngs.length > 0 && cartaz.urls.length > 0 && cartaz.urls.every((u) => u.startsWith(`${cartaz.origem}/assets/`)), `${pngs[0]} · ${cartaz.urls.join(' ')}`);
@@ -177,9 +220,11 @@ await page.waitForSelector('[data-baixar]', 120000);
 await espera(2500); // o fim da cerimônia ainda rola a tela, e o toque cairia em outro lugar
 shell(`run-as ${PACOTE} sh -c 'rm -f cache/*.png'`);
 await page.click('[data-baixar]');
+await page.waitForSelector('[data-formato="todos11"]', 10000);
+await espera(700);
 await page.click('[data-formato="todos11"]');
-await espera(9000);
-const pngsOff = shell('run-as', PACOTE, 'ls', 'cache').split(/\s+/).filter((n) => /\.png$/i.test(n));
+const pngsOff = await esperarImagem('quadrada, modo avião');
+if (pngsOff[0]) writeFileSync(join(SAIDA, 'c6-imagem-modo-aviao.png'), adbBin('exec-out', 'run-as', PACOTE, 'cat', `cache/${pngsOff[0]}`));
 confere('modo avião: a imagem sai do bundle', pngsOff.length > 0, pngsOff[0] || '');
 captura('c5-modo-aviao-no-bundle');
 shell('cmd', 'connectivity', 'airplane-mode', 'disable');

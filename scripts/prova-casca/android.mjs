@@ -115,13 +115,13 @@ const displayed = /Displayed [^ ]*MainActivity[^+]*\+(?:(\d+)s)?(\d+)ms/.exec(sh
 const msTela = displayed ? Number(displayed[1] || 0) * 1000 + Number(displayed[2]) : null;
 console.log(`[tempo] Android "Displayed" ${msTela} ms · FCP do WebView ${estadoInicio.fcp} ms · até o campo pronto ${msAtePronta} ms`);
 
-// ── 1b. O que o site trouxe de novo na tela inicial, e o som com ?v=2 servido de dentro do pacote ──
+// ── 1b. O que o site trouxe de novo na tela inicial, e o som com ?v=N servido de dentro do pacote ──
 const DIST_LOCAL = new URL('../../dist/', import.meta.url);
 const rec = await page.evaluate(corpo(RECURSOS_COM_VERSAO));
 const roloDoDist = impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL));
-confere('rolo.mp3?v=2 sai do pacote com os bytes do dist', rec.rolo.status === 200 && rec.rolo.impressao === roloDoDist && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
-confere('o Web Audio decodifica o rolo.mp3?v=2', typeof rec.duracao === 'number' && rec.duracao > 1, `${rec.duracao} s`);
-confere('o <audio> de reserva abre o rolo.mp3?v=2', typeof rec.reserva === 'number' && rec.reserva > 1, `${rec.reserva} s`);
+confere('rolo.mp3?v=3 sai do pacote com os bytes do dist', rec.rolo.status === 200 && rec.rolo.impressao === roloDoDist && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
+confere('o Web Audio decodifica o rolo.mp3?v=3', typeof rec.duracao === 'number' && rec.duracao > 1, `${rec.duracao} s`);
+confere('o <audio> de reserva abre o rolo.mp3?v=3', typeof rec.reserva === 'number' && rec.reserva > 1, `${rec.reserva} s`);
 confere('estrela.svg?v=2 sai do pacote com os bytes do dist', rec.estrela.status === 200 && rec.estrela.impressao === impressaoDe(new URL('icones/estrela.svg', DIST_LOCAL)), JSON.stringify(rec.estrela));
 await colarLista(page);
 const legenda =await page.evaluate(corpo(LEGENDA));

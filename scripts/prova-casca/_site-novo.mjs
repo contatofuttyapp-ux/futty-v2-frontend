@@ -1,9 +1,11 @@
 // O que as provas do Android e do iPhone perguntam à página sobre o site empacotado. Cada texto é o corpo de uma função assíncrona: o
 // DevTools do Android embrulha (corpo()), o robô do iPhone já roda assim. Os mesmos arquivos nos dois lados, porque o que pode quebrar
-// aqui é o servidor do WebView: arquivo com ?v=2 no endereço e módulo que chega depois da abertura.
+// aqui é o servidor do WebView: arquivo com ?v=N no endereço e módulo que chega depois da abertura.
 import { readFileSync } from 'node:fs';
 
-export const corpo = (texto) => `(async () => { ${texto} })()`;
+// A quebra de linha antes do fecho: um texto pode terminar em comentário.
+export const corpo = (texto) => `(async () => { ${texto}
+ })()`;
 
 export const LOCAL = 'Quadra do Zé';
 export const DIA = '2026-11-08'; // um domingo
@@ -19,14 +21,14 @@ export const impressaoDe = (arquivo) => fnv(readFileSync(arquivo));
 export const RECURSOS_COM_VERSAO = `
   const fnv = ${FNV};
   const baixar = async (url) => { const r = await fetch(url); const b = new Uint8Array(await r.arrayBuffer()); return { status: r.status, bytes: b.length, impressao: fnv(b), tipo: r.headers.get('content-type') }; };
-  const rolo = await baixar('/sons/rolo.mp3?v=2');
+  const rolo = await baixar('/sons/rolo.mp3?v=3');
   const estrela = await baixar('/icones/estrela.svg?v=2');
   const C = window.AudioContext || window.webkitAudioContext;
   const ctx = new C();
-  const duracao = await ctx.decodeAudioData(await (await fetch('/sons/rolo.mp3?v=2')).arrayBuffer()).then((a) => a.duration, (e) => 'erro ' + e);
+  const duracao = await ctx.decodeAudioData(await (await fetch('/sons/rolo.mp3?v=3')).arrayBuffer()).then((a) => a.duration, (e) => 'erro ' + e);
   ctx.close();
   const reserva = await new Promise((res) => {
-    const a = new Audio('/sons/rolo.mp3?v=2');
+    const a = new Audio('/sons/rolo.mp3?v=3');
     a.preload = 'auto';
     a.onloadedmetadata = () => res(a.duration);
     a.onerror = () => res('erro ' + (a.error && a.error.code));
@@ -81,5 +83,5 @@ export const CARTAZ = `
   const e = performance.getEntriesByType('resource').map((x) => x.name).filter((n) => /\\/assets\\/cartaz-[^/]+\\.js/.test(n));
   return { urls: e, origem: location.origin };`;
 
-/** Quantas vezes o rolo entrou pelo Web Audio. A reserva aparece no <audio> com o ?v=2 no nome. */
+/** Quantas vezes o rolo entrou pelo Web Audio. A reserva aparece no <audio> com o ?v=N no nome. */
 export const contaRolo = (nomes) => ({ webAudio: nomes.filter((n) => n === 'rolo.mp3').length, reserva: nomes.filter((n) => n.startsWith('rolo.mp3?')).length });

@@ -197,13 +197,13 @@ try {
   confere('o título fica abaixo do relógio e da ilha', estado.areaSegura > 0 && estado.topoDoTitulo >= estado.areaSegura, `área segura ${estado.areaSegura} px, título em ${estado.topoDoTitulo} px`);
   console.log(`[tempo] até o campo pronto ${msCampo} ms · FCP do WebView ${estado.fcp} ms`);
 
-  // ── 1b. O que o site trouxe de novo na tela inicial, e o som com ?v=2 servido de dentro do pacote ──
+  // ── 1b. O que o site trouxe de novo na tela inicial, e o som com ?v=N servido de dentro do pacote ──
   const DIST_LOCAL = new URL('../../dist/', import.meta.url);
   const rec = await js(RECURSOS_COM_VERSAO, 60000);
   // No iOS o Capacitor responde mídia sem status (WebViewAssetHandler.swift, isMediaExtension): o fetch vê 0, e o site não olha o status. Quem prova são os bytes.
-  confere('rolo.mp3?v=2 sai do pacote com os bytes do dist', rec.rolo.status === 0 && rec.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)) && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
-  confere('o Web Audio decodifica o rolo.mp3?v=2', typeof rec.duracao === 'number' && rec.duracao > 1, `${rec.duracao} s`);
-  confere('o <audio> de reserva abre o rolo.mp3?v=2', typeof rec.reserva === 'number' && rec.reserva > 1, `${rec.reserva} s`);
+  confere('rolo.mp3?v=3 sai do pacote com os bytes do dist', rec.rolo.status === 0 && rec.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)) && rec.rolo.bytes > 80000, JSON.stringify(rec.rolo));
+  confere('o Web Audio decodifica o rolo.mp3?v=3', typeof rec.duracao === 'number' && rec.duracao > 1, `${rec.duracao} s`);
+  confere('o <audio> de reserva abre o rolo.mp3?v=3', typeof rec.reserva === 'number' && rec.reserva > 1, `${rec.reserva} s`);
   confere('estrela.svg?v=2 sai do pacote com os bytes do dist', rec.estrela.status === 200 && rec.estrela.impressao === impressaoDe(new URL('icones/estrela.svg', DIST_LOCAL)), JSON.stringify(rec.estrela));
   await colarLista();
   const legenda = await js(LEGENDA);
@@ -368,7 +368,7 @@ try {
   const noBundle = await js(`return window.Capacitor.nativePromise('CapacitorUpdater', 'current', {});`);
   confere('roda como bundle do Capgo', noBundle?.bundle?.version === VERSAO_DA_PROVA && noBundle?.bundle?.id !== 'builtin', JSON.stringify(noBundle?.bundle));
   const recBundle = await js(RECURSOS_COM_VERSAO, 60000);
-  confere('no bundle: rolo.mp3?v=2 com os bytes certos', recBundle.rolo.status === 0 && recBundle.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)), JSON.stringify(recBundle.rolo));
+  confere('no bundle: rolo.mp3?v=3 com os bytes certos', recBundle.rolo.status === 0 && recBundle.rolo.impressao === impressaoDe(new URL('sons/rolo.mp3', DIST_LOCAL)), JSON.stringify(recBundle.rolo));
   confere('no bundle: o Web Audio decodifica o rolo', typeof recBundle.duracao === 'number' && recBundle.duracao > 1, `${recBundle.duracao} s`);
   confere('no bundle: o <audio> de reserva abre o rolo', typeof recBundle.reserva === 'number' && recBundle.reserva > 1, `${recBundle.reserva} s`);
   confere('no bundle: estrela.svg?v=2 com os bytes certos', recBundle.estrela.status === 200 && recBundle.estrela.impressao === impressaoDe(new URL('icones/estrela.svg', DIST_LOCAL)), JSON.stringify(recBundle.estrela));
