@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="cs-CZ">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Losování týmů · Futty</title>
+    <meta name="description" content="Vlož seznam z WhatsAppu, označ brankáře a nasazené a za 10 sekund máš týmy na fotbálek. Zdarma, bez registrace, nic nestahuješ." />
+    <meta name="theme-color" content="#050810" />
+    <link rel="canonical" href="https://futtyapp.com.br/cs" />
+    <link rel="alternate" hreflang="pt-BR" href="https://futtyapp.com.br/" />
+    <link rel="alternate" hreflang="pt-PT" href="https://futtyapp.com.br/pt-pt" />
+    <link rel="alternate" hreflang="en" href="https://futtyapp.com.br/en" />
+    <link rel="alternate" hreflang="es" href="https://futtyapp.com.br/es" />
+    <link rel="alternate" hreflang="fr" href="https://futtyapp.com.br/fr" />
+    <link rel="alternate" hreflang="cs" href="https://futtyapp.com.br/cs" />
+    <link rel="alternate" hreflang="ko" href="https://futtyapp.com.br/ko" />
+    <link rel="alternate" hreflang="x-default" href="https://futtyapp.com.br/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon-180.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preload" href="/icone-app.webp" as="image" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Futty" />
+    <meta property="og:title" content="Losování týmů · Futty" />
+    <meta property="og:description" content="Vlož seznam, vylosuj týmy a pošli je do skupiny. Zdarma, bez registrace, nic nestahuješ." />
+    <meta property="og:url" content="https://futtyapp.com.br/cs" />
+    <meta property="og:image" content="https://futtyapp.com.br/og.jpg" />
+    <meta property="og:image:width" content="1080" />
+    <meta property="og:image:height" content="1080" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://futtyapp.com.br/og.jpg" />
+    <style>
+      html, body { background: #050810; }
+      .abertura { position: fixed; inset: 0; display: grid; place-items: center; }
+      .abertura__f { stroke-dasharray: 1; animation: abF 2.7s ease-in-out infinite; }
+      @keyframes abF { 0% { stroke-dashoffset: 1; opacity: 1; } 60% { stroke-dashoffset: 0; opacity: 1; } 78% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+      @media (prefers-reduced-motion: reduce) { .abertura__f { animation: none; stroke-dashoffset: 0; } }
+      /* Os arquivos extras (acentos do tcheco e hangul) entram no mesmo nome de família, com unicode-range: o CSS, o canvas e o SVG continuam
+         pedindo Rajdhani e Inter, e o navegador só baixa o arquivo quando aparece uma letra daquele trecho (RODADA-T4.6 §1). Só compõem as faces com
+         o MESMO peso declarado: com pesos diferentes, o latim cairia na letra de reserva. */
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 400; font-display: swap;
+        src: url('/fonts/rajdhani-400.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 400; font-display: swap;
+        src: url('/fonts/rajdhani-400-latin-ext.woff2') format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 400; font-display: swap;
+        src: url('/fonts/noto-sans-kr-400.woff2') format('woff2');
+        unicode-range: U+AC00-D7A3, U+1100-11FF, U+3000-303F, U+3130-318F, U+FF5E;
+      }
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 600; font-display: swap;
+        src: url('/fonts/rajdhani-600.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 600; font-display: swap;
+        src: url('/fonts/rajdhani-600-latin-ext.woff2') format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 600; font-display: swap;
+        src: url('/fonts/noto-sans-kr-700.woff2') format('woff2');
+        unicode-range: U+AC00-D7A3, U+1100-11FF, U+3000-303F, U+3130-318F, U+FF5E;
+      }
+      /* 700 cobre também o 800 pedido pelo CSS (a família não vai além de 700). */
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 700 800; font-display: swap;
+        src: url('/fonts/rajdhani-700.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 700 800; font-display: swap;
+        src: url('/fonts/rajdhani-700-latin-ext.woff2') format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Rajdhani'; font-style: normal; font-weight: 700 800; font-display: swap;
+        src: url('/fonts/noto-sans-kr-700.woff2') format('woff2');
+        unicode-range: U+AC00-D7A3, U+1100-11FF, U+3000-303F, U+3130-318F, U+FF5E;
+      }
+      /* Inter é variável: o mesmo arquivo serve os dois grupos de peso. O hangul tem um arquivo para cada grupo. */
+      @font-face {
+        font-family: 'Inter'; font-style: normal; font-weight: 100 500; font-display: swap;
+        src: url('/fonts/inter-latin.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'Inter'; font-style: normal; font-weight: 100 500; font-display: swap;
+        src: url('/fonts/inter-latin-ext.woff2') format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Inter'; font-style: normal; font-weight: 100 500; font-display: swap;
+        src: url('/fonts/noto-sans-kr-400.woff2') format('woff2');
+        unicode-range: U+AC00-D7A3, U+1100-11FF, U+3000-303F, U+3130-318F, U+FF5E;
+      }
+      @font-face {
+        font-family: 'Inter'; font-style: normal; font-weight: 600 900; font-display: swap;
+        src: url('/fonts/inter-latin.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'Inter'; font-style: normal; font-weight: 600 900; font-display: swap;
+        src: url('/fonts/inter-latin-ext.woff2') format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Inter'; font-style: normal; font-weight: 600 900; font-display: swap;
+        src: url('/fonts/noto-sans-kr-700.woff2') format('woff2');
+        unicode-range: U+AC00-D7A3, U+1100-11FF, U+3000-303F, U+3130-318F, U+FF5E;
+      }
+    </style>
+    <link rel="preload" href="/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
+    
+    <meta property="og:locale" content="cs_CZ" />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Co je nasazený hráč?","acceptedAnswer":{"@type":"Answer","text":"To je ten, kdo otevírá tým. Když označíš 👑, web dá do každého týmu jednoho nasazeného a teprve pak losuje ostatní: nejlepší nikdy nespadnou spolu."}},{"@type":"Question","name":"A brankáři?","acceptedAnswer":{"@type":"Answer","text":"Označ 🧤. Každý tým dostane brankáře dřív než ostatní. Když je brankářů víc než týmů, ti navíc hrají v poli."}},{"@type":"Question","name":"Dají se týmy vyrovnat podle úrovně?","acceptedAnswer":{"@type":"Answer","text":"Ano. Zapni „Vyrovnat týmy“ a každému dej 1 až 5 hvězd. Losování rozloží silné a slabší hráče tak, aby žádný tým neměl všechno."}},{"@type":"Question","name":"Hodí se to na malou kopanou, futsal a fotbálek s kamarády?","acceptedAnswer":{"@type":"Answer","text":"Ano. Vybereš počet hráčů na tým, od 2 do 11, a losování se přizpůsobí."}},{"@type":"Question","name":"Když losuju znovu, ostatní se to dozvědí?","acceptedAnswer":{"@type":"Answer","text":"Ano. Od druhého losování ukazuje obrazovka, obrázek i odkaz „2. losování“. Aby nebyly žádné domluvy."}},{"@type":"Question","name":"Musím si stáhnout aplikaci nebo se registrovat?","acceptedAnswer":{"@type":"Answer","text":"Ne. Funguje to v prohlížeči v telefonu, zdarma a bez registrace. Aplikace Futty je to samé losování jako aplikace: máš ji na ploše telefonu, otevřeš ji jedním klepnutím a tvoje losování jsou v bezpečí."}}]}</script>
+    <script type="module" crossorigin src="/assets/index-cU6N1jBO.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CcRUoNiF.css">
+    <link rel="modulepreload" href="/assets/cs-CR7M591M.js" />
+  </head>
+  <body>
+    <div id="root"><!--SEO--><div class="abertura" role="status"><svg width="129" height="129" viewBox="0 0 1080 1080" aria-hidden="true"><defs><linearGradient id="abO" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6dc6e"/><stop offset=".5" stop-color="#d4a017"/><stop offset="1" stop-color="#b8860b"/></linearGradient><clipPath id="abF"><path d="M392.28 576.53 L648.8 576.5 L659.27 541.52 L398.39 541.46 L472.99 285.11 L828.3 195.25 L839.06 152.39 L440.51 257.5 L210.76 1049.58 L110.36 1049.52 L360.67 177.16 L983.79 16.94 L913.11 270.83 L548.68 369.73 L532.74 441.62 L798.55 441.67 L732.82 676.38 L462.77 676.38 L354.76 1049.56 L249.78 1049.53 Z"/></clipPath></defs><rect x="11" y="11" width="1058" height="1058" rx="237" fill="#11101a" stroke="url(#abO)" stroke-width="22"/><g transform="translate(109 119) scale(.788)"><path d="M392.28 576.53 L648.8 576.5 L659.27 541.52 L398.39 541.46 L472.99 285.11 L828.3 195.25 L839.06 152.39 L440.51 257.5 L210.76 1049.58 L110.36 1049.52 L360.67 177.16 L983.79 16.94 L913.11 270.83 L548.68 369.73 L532.74 441.62 L798.55 441.67 L732.82 676.38 L462.77 676.38 L354.76 1049.56 L249.78 1049.53 Z" fill="#e3b93a" opacity=".22"/><g clip-path="url(#abF)"><path class="abertura__f" d="M141.16 1116.85 L400.59 217.33 L911.43 84.67 L870.71 233.04 L510.84 327.42 L465.57 491.54 L728.91 491.60 L690.81 626.44 L427.53 626.46 L282.40 1116.65" pathLength="1" fill="none" stroke="#e3b93a" stroke-width="110" stroke-linejoin="miter" stroke-miterlimit="20"/></g></g></svg></div></div>
+  </body>
+</html>
