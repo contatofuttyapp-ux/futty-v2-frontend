@@ -6,9 +6,9 @@
   var MAESTRO = 'http://localhost:8799';
   var Assincrona = Object.getPrototypeOf(async function () {}).constructor;
 
-  // O Mac do CI não tem GPU: as luzes que nunca param derrubam o simulador a poucos quadros por segundo, e a cerimônia passa dos minutos.
-  // Só as decorativas, as mesmas que o site apaga no movimento reduzido. Quem liga é o maestro, depois de medir, e fica registrado.
-  var SEM_LUZES = '.vida,.letreiro,.luzes-maq__fase,.sortear-wrap::before,.sortear__traco,.sortear__pulso,.sortear__bola,.sortear__janela,.sortear__copia,.sortear__reflexo,.botao-imagem::after,.vida__luz,.faisca,.jogadores--vivos .cj__camisa,.jogadores--vivos .cj__brilho::after,.smaq .luz,.smaq .mq,.smaq .lampadas i,.smaq .luzes .fase,.smaq .baseluz .fase,.smaq .lampadas .fase{animation:none!important}.faisca{display:none!important}';
+  // O Mac do CI não tem GPU: com as luzes da moldura acesas no fim da cerimônia, o simulador inteiro para de responder, foto incluída.
+  // Só as decorativas, as mesmas que o site apaga no movimento reduzido, e tudo o que anima depois do fim. Quem liga é o maestro.
+  var SEM_LUZES = '.vida,.letreiro,.luzes-maq__fase,.sortear-wrap::before,.sortear__traco,.sortear__pulso,.sortear__bola,.sortear__janela,.sortear__copia,.sortear__reflexo,.botao-imagem::after,.vida__luz,.faisca,.jogadores--vivos .cj__camisa,.jogadores--vivos .cj__brilho::after,.smaq .luz,.smaq .mq,.smaq .lampadas i,.smaq .luzes .fase,.smaq .baseluz .fase,.smaq .lampadas .fase,.smaq.acabou *,.smaq.acabou *::before,.smaq.acabou *::after{animation:none!important}.faisca{display:none!important}';
   window.__semLuzes = function () {
     var estilo = document.createElement('style');
     estilo.textContent = SEM_LUZES;

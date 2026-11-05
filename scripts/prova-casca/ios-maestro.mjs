@@ -55,12 +55,13 @@ api.listen(8788, '127.0.0.1');
 
 // ── O maestro: fila de comandos que o robô da página vem buscar ──
 let proximoId = 0;
+let perguntasDoRobo = 0;
 const fila = [];
 const esperando = new Map();
 const maestro = createServer(async (req, res) => {
   const json = (d) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(d)); };
   if (req.url === '/bundle.zip') { res.writeHead(200, { 'content-type': 'application/zip' }); return res.end(readFileSync(ZIP_DO_BUNDLE)); }
-  if (req.url === '/robo/comando') return json(fila.shift() || {});
+  if (req.url === '/robo/comando') { perguntasDoRobo += 1; return json(fila.shift() || {}); }
   if (req.url === '/robo/resposta') {
     const d = JSON.parse((await lerCorpo(req)).toString());
     esperando.get(d.id)?.(d);
@@ -76,8 +77,15 @@ function js(codigo, ms = 90000) {
     proximoId += 1;
     const id = proximoId;
     esperando.set(id, (d) => (d.ok ? resolve(d.valor) : reject(new Error(d.erro))));
-    fila.push({ id, codigo });
-    setTimeout(() => { if (esperando.delete(id)) reject(new Error(`sem resposta do robô: ${codigo.slice(0, 70)}`)); }, ms);
+    const comando = { id, codigo };
+    fila.push(comando);
+    // Comando vencido sai da fila: senão o robô lento gasta o tempo que tem respondendo o que ninguém espera mais.
+    setTimeout(() => {
+      if (!esperando.delete(id)) return;
+      const i = fila.indexOf(comando);
+      if (i >= 0) fila.splice(i, 1);
+      reject(new Error(`sem resposta do robô: ${codigo.slice(0, 70)}`));
+    }, ms);
   });
 }
 async function esperaJs(codigo, ms = 240000) {
@@ -126,7 +134,8 @@ async function esperarFimDaCerimonia(ms = 900000) {
     if (Date.now() - ultimo > 30000) {
       ultimo = Date.now();
       const onde = await js(`return { paradas: [...document.querySelectorAll('.gcont')].map((n) => n.textContent), cheios: document.querySelectorAll('.slot.cheio').length, quem: document.querySelector('.quem')?.textContent, pular: !!document.querySelector('.saltar.on') };`).catch((e) => e.message);
-      console.log(`[andamento] ${JSON.stringify(onde)}`);
+      // A página para de perguntar quando ela mesma parou; pergunta e não responde a tempo, é o caminho até ela que está lento.
+      console.log(`[andamento] ${JSON.stringify(onde)} · perguntas do robô até agora: ${perguntasDoRobo}`);
     }
     await espera(1000);
   }
@@ -204,10 +213,8 @@ try {
   await js(SOLTAR_REFLEXO);
   const quadros = await js(QUADROS_POR_SEGUNDO, 60000);
   console.log(`[fôlego] início com o SORTEAR aceso: ${quadros} quadros/s`);
-  if (quadros < 15) {
-    await js(`localStorage.setItem('futty_prova_sem_luzes', '1'); window.__semLuzes();`);
-    console.log(`[fôlego] luzes decorativas desligadas nesta prova: ${await js(QUADROS_POR_SEGUNDO, 60000)} quadros/s`);
-  }
+  await js(`localStorage.setItem('futty_prova_sem_luzes', '1'); window.__semLuzes();`);
+  console.log(`[fôlego] luzes decorativas desligadas daqui em diante: ${await js(QUADROS_POR_SEGUNDO, 60000)} quadros/s`);
 
   // ── 2. Sorteio com som ──
   await js(ESPIAR_SOM);
